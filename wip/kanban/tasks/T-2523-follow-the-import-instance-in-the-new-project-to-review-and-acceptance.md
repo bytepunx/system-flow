@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 851
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 4138
-      cache_read: 3567243
-      cache_write: 29266
-      cost: 1.1787
+      input: 57
+      output: 7453
+      cache_read: 3560574
+      cache_write: 35930
+      cost: 1.1488
 ---
 # T-2523 Follow the import instance in the new project to review and acceptance
 

@@ -24,16 +24,16 @@ touches: [design/issues/summary.md]
 after: [T-2523, T-2526]
 usage:
   source: log
-  seconds: 24
+  seconds: 25
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 13
-      cache_read: 301118
-      cache_write: 4255
-      cost: 0.1
+      input: 5
+      output: 633
+      cache_read: 302320
+      cache_write: 3051
+      cost: 0.0975
 ---
 # T-2534 File each fault the import and cadence runs found in flai as an issue, and say in this task's Notes when they found none
 

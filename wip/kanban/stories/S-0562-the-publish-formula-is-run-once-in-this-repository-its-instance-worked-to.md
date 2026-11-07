@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T08:42:23Z
+updated: 2026-11-07T09:40:04Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:09Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:02:15Z
     by: agent-S-0562
+blocked:
+  - from: 2026-11-07T09:40:04Z
+    reason: awaiting the operator on TH-0867
 tags: [template]
 topics: [orchestration]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md]
@@ -26,31 +29,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 128
-  estimated: true
-  priced_by: estimate
+  seconds: 5869
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      hand_edits: 1
-      work: 20
+      ceremony: 4
+      hand_edits: 2
+      work: 114
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 200
-      cache_read: 1580875
-      cache_write: 83234
-      cost: 0.5955
+      input: 248
+      output: 35998
+      cache_read: 15763471
+      cache_write: 185202
+      cost: 5.3553
   strategic:
     - kind: orchestrator
-      seconds: 64
+      seconds: 142
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 105
-          cache_read: 844618
-          cache_write: 32442
-          cost: 0.2123
+          input: 41
+          output: 338
+          cache_read: 1805083
+          cache_write: 119541
+          cost: 0.4738
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -75,7 +78,7 @@ E-0024's `publish` formula, shipped by S-0423, is run once in this repository be
 ## Acceptance criteria
 
 - [ ] The formula is run once in this repository: its instance story is worked to review and accepted, and its Notes name the release it published, or, when nothing was pending, the evaluation that stopped it.
-- [ ] This story's Notes record the instance's ID, each step's exit, and the versions and tags published, or the evaluation that stopped the instance.
+- [x] This story's Notes record the instance's ID, each step's exit, and the versions and tags published, or the evaluation that stopped the instance.
 - [x] What the run finds wrong is fixed in a task of this story, or recorded as an issue.
 
 ## Tasks
@@ -104,6 +107,23 @@ Preconditions, checked by T-2504 on 2026-11-07 at 08:03Z on the host:
 The live evaluation before the run, `flai release --evaluate --require-met` in the main checkout, exited 2: "release policy judgement not met: … with no accepted story waiting for a release".
 
 Instance: S-0585, "Publish what is accepted and not yet released". It was started by hand by agent-S-0562 at 08:04Z with `flai formula run publish --ready --autocommit` in the main checkout. That made it ready, with tasks T-2546 (fetch), T-2548 (evaluate), and T-2549 (publish), and committed it as ff4e47115. No second instance was run.
+
+What the instance's steps exited with, as S-0585's task Notes give them:
+
+| Step | Task | Exit | What happened |
+|------|------|------|---------------|
+| 1 `fetch` | T-2546 | 0 | `scripts/fetch.sh` ran `git fetch --tags` in the main checkout. The remote had nothing new. Done at 08:06:07Z. |
+| 2 `evaluate` | T-2548 | 2 | `flai release --evaluate --require-met` in the main checkout: "release policy judgement: not met … with no accepted story waiting for a release", count 0, value 0 USD/week. Blocked at 08:06:26Z as a failed step. On TH-0854 the operator confirmed agent-S-0562's recommendation, and the task was closed with the stop in its Notes at 08:15:59Z. |
+| 3 `publish` | T-2549 | not run | Cancelled at 08:16:06Z: "step 2 stopped the run: nothing accepted is waiting for a release". Nothing was tagged or pushed, so the `push` gate was not reached. |
+
+No release was published, and no versions or tags. The evaluation that stopped the instance is step 2's, above. S-0585's Notes name it.
+
+S-0585 reached review at 08:16:55Z. The orchestrator could not accept it, because its criterion 3 (step 3) is unticked. It asked the operator on TH-0855 at 08:18Z.
+
+Faults the run found, for criterion 3:
+
+- I-0283, recorded on this story's branch and bumped once. A publish instance with nothing to release stops at step 2 down the formula's failure path, so it blocks and needs the operator's answer every time. Its unticked criterion for the skipped step then blocks acceptance. The fix is in flai, as a clean-stop exit for a step, so it is an issue and not a task of this story.
+- I-0282, recorded by S-0564 on its branch. A formula instance made with no touches is held (no-touches) while any story is in progress, including the story that started it and waits on it. S-0585 was held this way until agent-S-0562 gave it its own story file as touches at 08:04Z.
 
 ### Planning
 

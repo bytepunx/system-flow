@@ -4,10 +4,10 @@ title: "S-0585 stays in review: flai blocks acceptance while criterion 3 is unti
 anchor:
   path: wip/kanban/stories/S-0585-publish-what-is-accepted-and-not-yet-released.md
   item: S-0585
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-07T08:18:05Z
-updated: 2026-11-07T08:18:05Z
+updated: 2026-11-07T09:41:29Z
 ---
 
 # TH-0855 S-0585 stays in review: flai blocks acceptance while criterion 3 is unticked
@@ -29,3 +29,6 @@ blocked: acceptance criterion 3 of S-0585 is unticked: Publish what is accepted 
 Everything else is clean. The branch head is ff4e47115391, the same as main. The close-out passed at that commit. T-2546 and T-2548 are done, and T-2549 is cancelled. The story's agent left criterion 3 unticked on purpose, because no publish ran. I do not tick criteria myself, and changing a criterion's words changes scope, so this is yours to decide.
 
 **Alternative:** leave it as it is until S-0562's T-2506 settles how an instance stopped at step 2 ends. That may reword the formula's criterion for later instances.
+
+### 2026-11-07T09:41:29Z orchestrator
+Resolved: Its concern is gone: the operator ticked S-0585's criterion 3 at 2026-11-07T08:54:34Z (4f6edab86). What still stops my acceptance is a different blocker, the missing story/S-0585 branch, raised on a new thread.

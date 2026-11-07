@@ -7,11 +7,12 @@ status: backlog
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:16Z
-updated: 2026-10-16T05:14:16Z
+updated: 2026-11-07T09:39:33Z
 transitions: []
 stream: S-0406
 tags: [cli]
 touches: [design/adrs]
+after: [T-1682]
 ---
 # T-1686 An ADR records where flai writes a story's OpenCode configuration so the worktree stays clean, and how it merges the project's own opencode.json
 

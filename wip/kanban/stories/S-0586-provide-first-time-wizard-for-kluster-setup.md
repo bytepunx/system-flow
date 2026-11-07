@@ -6,7 +6,7 @@ title: Provide first time wizard for kluster setup
 status: in-progress
 owner: alex
 created: 2026-11-07T08:24:44Z
-updated: 2026-11-07T08:34:45Z
+updated: 2026-11-07T09:32:23Z
 transitions:
   - to: ready
     at: 2026-11-07T08:24:52Z
@@ -16,27 +16,61 @@ transitions:
     by: agent-S-0586
 tags: [flai, flaiover, kluster]
 topics: [kluster, deployment, manifest, dashboard]
-touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md]
+touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3462
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      hand_edits: 1
+      work: 68
+  models:
+    - model: claude-haiku-5-5
+      input: 10
+      output: 41
+      cache_read: 106965
+      cache_write: 36155
+      cost: 0.0103
+    - model: claude-opus-5-5
+      input: 482
+      output: 2748
+      cache_read: 55923498
+      cache_write: 1097716
+      cost: 20.42
   strategic:
+    - kind: planner
+      seconds: 1715
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 4
+          output: 1882
+          cache_read: 4110
+          cache_write: 5741
+          cost: 0.0017
+        - model: claude-opus-5-5
+          input: 310
+          output: 60455
+          cache_read: 42214092
+          cache_write: 603311
+          cost: 14.4796
     - kind: orchestrator
-      seconds: 102
+      seconds: 136
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 155
-          cache_read: 837936
-          cache_write: 147241
-          cost: 0.2443
+          input: 33
+          output: 222
+          cache_read: 1029751
+          cache_write: 230878
+          cost: 0.3128
 cost_of_delay:
   inputs:
     revenue_per_week: 1250
@@ -71,7 +105,7 @@ When enabling kluster, provide a scaffold for system-flow.yaml that is either fu
 The Klusters page should allow the user to manage all features completely without the need for CLI commands or file edits.
 
 ## Acceptance criteria
-- [ ] When an operator enables the kluster feature, provide a stub/no-op/defaults only block in system-flow.yaml
+- [x] When an operator enables the kluster feature, provide a stub/no-op/defaults only block in system-flow.yaml
 - [ ] The Klusters page should have everything the user needs to set up, manage, observe, and control the kluster for that project
 - [ ] There are no operations, configuration, or commands the operator needs to issue outside of the dashboard to make full use of this feature
 

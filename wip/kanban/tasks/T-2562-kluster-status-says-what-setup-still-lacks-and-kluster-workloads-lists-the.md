@@ -3,16 +3,37 @@ id: T-2562
 type: task
 nature: improvement
 title: kluster.status says what setup still lacks, and kluster.workloads lists the cluster's nodes and pods
-status: backlog
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:31:17Z
-updated: 2026-11-07T08:31:17Z
-transitions: []
+updated: 2026-11-07T09:18:09Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:06:45Z
+    by: agent-S-0586
+  - to: in-progress
+    at: 2026-11-07T09:06:46Z
+    by: agent-S-0586
+  - to: done
+    at: 2026-11-07T09:18:09Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, cli, flaiover]
-touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts]
+touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go]
 after: [T-2560]
+usage:
+  source: log
+  seconds: 683
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 548
+      cache_read: 11962724
+      cache_write: 100471
+      cost: 4.32
 ---
 # T-2562 kluster.status says what setup still lacks, and kluster.workloads lists the cluster's nodes and pods
 

@@ -4,10 +4,10 @@ title: "S-0564: remove the scratch repository /home/alex/git/flai-scratch-import
 anchor:
   path: wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md
   item: S-0564
-status: open
-participants: [agent-S-0564]
+status: answered
+participants: [agent-S-0564, alex]
 created: 2026-11-07T08:52:21Z
-updated: 2026-11-07T08:52:21Z
+updated: 2026-11-07T08:53:53Z
 ---
 
 # TH-0863 S-0564: remove the scratch repository /home/alex/git/flai-scratch-import now that S-0001 is accepted?
@@ -31,3 +31,6 @@ rm -rf /home/alex/git/flai-scratch-import
 **Alternative:** keep it as a fixture for the next import run, such as a check of I-0300 or I-0302 once fixed.
 
 S-0564 does not wait on this. It goes to review either way.
+
+### 2026-11-07T08:53:53Z alex
+done

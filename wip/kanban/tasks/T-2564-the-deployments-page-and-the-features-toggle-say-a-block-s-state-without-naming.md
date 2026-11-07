@@ -3,16 +3,37 @@ id: T-2564
 type: task
 nature: improvement
 title: The Deployments page and the Features toggle say a block's state without naming a command, and a refused toggle shows its real state at once
-status: backlog
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:31:50Z
-updated: 2026-11-07T08:31:50Z
-transitions: []
+updated: 2026-11-07T09:32:23Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:21:30Z
+    by: agent-S-0586
+  - to: in-progress
+    at: 2026-11-07T09:21:31Z
+    by: agent-S-0586
+  - to: done
+    at: 2026-11-07T09:32:23Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, flaiover]
-touches: [flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
+touches: [flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts]
 after: [T-2562]
+usage:
+  source: log
+  seconds: 652
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 324
+      cache_read: 7928988
+      cache_write: 59068
+      cost: 2.8606
 ---
 # T-2564 The Deployments page and the Features toggle say a block's state without naming a command, and a refused toggle shows its real state at once
 

@@ -3,11 +3,11 @@ id: T-2561
 type: task
 nature: improvement
 title: flai serve's kluster pass leaves a project whose block names no deploy alone
-status: in-progress
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:30:03Z
-updated: 2026-11-07T08:39:05Z
+updated: 2026-11-07T09:02:48Z
 transitions:
   - to: ready
     at: 2026-11-07T08:39:02Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:39:05Z
     by: agent-S-0586
+  - to: done
+    at: 2026-11-07T09:02:48Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, cli]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go]
+usage:
+  source: log
+  seconds: 1423
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 346
+      cache_read: 4454048
+      cache_write: 263877
+      cost: 1.6896
 ---
 # T-2561 flai serve's kluster pass leaves a project whose block names no deploy alone
 

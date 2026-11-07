@@ -3,11 +3,17 @@ id: E-0023
 type: epic
 nature: feature
 title: An OpenCode adapter runs a story's agent on OpenCode with the guard, the permission prompt, the roles, and usage measured, through its plugin hooks and its server's events, so a non-Claude model works a story end to end
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-16T04:28:00Z
-updated: 2026-10-20T21:13:23Z
-transitions: []
+updated: 2026-11-07T09:38:06Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:38:00Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-07T09:38:06Z
+    by: agent-S-0406
 tags: [cli, template]
 topics: [cli, agents, template]
 touches: [flai/internal/harness, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver, flai/internal/serve, flai/internal/manifest, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template]
@@ -16,16 +22,26 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 2535
+    - kind: planner
+      seconds: 501
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 313
-          output: 5487
-          cache_read: 103911430
-          cache_write: 96520
-          cost: 26.0738
+          input: 72
+          output: 43732
+          cache_read: 6342587
+          cache_write: 231064
+          cost: 3.992
+    - kind: orchestrator
+      seconds: 2791
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 395
+          output: 6082
+          cache_read: 106894134
+          cache_write: 464262
+          cost: 26.909
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -51,13 +67,13 @@ flai drives one harness fully, Claude Code, and runs anything else through the `
 ## Stories
 
 To be drafted by the planner. Order: the adapter and the headless run first, with the MCP entry, so a story runs with no guard and the findings to check are settled; then the guard plugin and the capabilities it proves; then the permission prompt; then the roles; then usage and pricing; then the status stream and its ADR; then the end-to-end story on a non-Claude model; documentation and the template with each story.
-- S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, and the findings the OpenCode section leaves to check are settled against a real opencode binary
+- S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, tested on fixtures, with the open OpenCode findings settled from its source at a pinned release
 - S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
 - S-0408 An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
 - S-0409 The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
 - S-0410 A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
 - S-0411 A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
-- S-0412 A non-Claude model works one story of this repository end to end on OpenCode through OpenRouter, with the guard and the permission prompt on, and the results record what broke and what it cost
+- S-0412 A story is worked to review end to end on the opencode adapter by a scripted session in OpenRouter's format, with the guard and the permission prompt on, on fixtures alone
 
 ## Notes
 
@@ -66,3 +82,5 @@ To be drafted by the planner. Order: the adapter and the headless run first, wit
 - What the finding leaves to check, and the first story answers: whether a plugin can tell a sub-agent's call from the primary's; whether an `ask` in headless mode can be answered from outside; what fields `step_finish` carries; whether `--attach` to a running `opencode serve` is the better way to run many stories on one host.
 - Spend: an OpenRouter key with a few dollars of credit for the end-to-end story; cap it with a limit on the key. OpenCode is MIT-licensed; its binary is installed by the operator on the host, not by flai.
 - Later harnesses, Gemini CLI, Copilot CLI, Codex CLI, Goose, are not in this epic; each follows the same contracts once this one proves them.
+- 2026-11-07T09:38:00Z: moved to ready: follows S-0406, which moved to ready
+- 2026-11-07T09:38:06Z: moved to in-progress: follows S-0406, which moved to in-progress

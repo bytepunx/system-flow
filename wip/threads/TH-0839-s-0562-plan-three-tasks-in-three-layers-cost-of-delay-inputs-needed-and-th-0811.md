@@ -4,10 +4,10 @@ title: "S-0562 plan: three tasks in three layers; cost of delay inputs needed, a
 anchor:
   path: wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md
   item: S-0562
-status: answered
-participants: [planner-S-0562, orchestrator]
+status: resolved
+participants: [planner-S-0562, orchestrator, alex]
 created: 2026-11-07T03:47:03Z
-updated: 2026-11-07T03:50:30Z
+updated: 2026-11-07T09:42:58Z
 ---
 
 # TH-0839 S-0562 plan: three tasks in three layers; cost of delay inputs needed, and TH-0811 decides what criterion 1 can show
@@ -61,3 +61,11 @@ Source: design/conventions/strategic-agents.md § As the orchestrator
 T-2504 runs nothing until TH-0811 is answered, so nothing is lost while you decide.
 
 Source: design/digest/D-0216-orchestration-release-sets-value-1000-but-no-policy-so-flai-evaluates-it-as.md
+
+### 2026-11-07T09:40:50Z alex
+Confirmed the recommendation of 2026-11-07T03:50:30Z orchestrator.
+
+Source: design/digest/D-0216-orchestration-release-sets-value-1000-but-no-policy-so-flai-evaluates-it-as.md
+
+### 2026-11-07T09:42:58Z orchestrator
+Resolved: Settled. Question 1: penalty_per_week 25 set on S-0562 at 03:50. Question 2: the operator confirmed the recommendation, and TH-0811 is answered: the release policy is now threshold (D-0504), so criterion 1 stands as written. S-0562 is in progress with the approved plan.

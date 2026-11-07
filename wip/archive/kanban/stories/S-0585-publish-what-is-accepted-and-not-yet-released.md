@@ -3,10 +3,10 @@ id: S-0585
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-07T08:03:26Z
-updated: 2026-11-07T08:54:34Z
+updated: 2026-11-07T09:43:02Z
 transitions:
   - to: ready
     at: 2026-11-07T08:03:48Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T08:16:55Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T09:43:02Z
+    by: alex
 blocked:
   - from: 2026-11-07T08:07:13Z
     until: 2026-11-07T08:15:35Z

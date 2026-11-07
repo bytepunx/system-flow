@@ -3,12 +3,18 @@ id: T-1684
 type: task
 nature: feature
 title: flai check warns when a project has neither AGENTS.md nor CLAUDE.md at its root
-status: backlog
+status: in-progress
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:07Z
-updated: 2026-10-16T05:14:07Z
-transitions: []
+updated: 2026-11-07T09:40:16Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:40:15Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T09:40:16Z
+    by: system-flow
 stream: S-0406
 tags: [cli]
 touches: [flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go]

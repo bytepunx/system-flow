@@ -3,11 +3,11 @@ id: S-0564
 type: story
 nature: improvement
 title: The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted
-status: in-progress
+status: review
 parent: E-0024
 owner: alex
 created: 2026-11-02T18:08:35Z
-updated: 2026-11-07T08:50:28Z
+updated: 2026-11-07T09:13:45Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:12Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:02:18Z
     by: agent-S-0564
+  - to: review
+    at: 2026-11-07T09:13:45Z
+    by: system-flow
 blocked:
   - from: 2026-11-07T08:23:28Z
     until: 2026-11-07T08:26:54Z
@@ -36,33 +39,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2212
-  estimated: true
-  priced_by: estimate
+  seconds: 3524
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 3
+      ceremony: 5
       test_runs: 1
       hand_edits: 2
-      work: 131
+      work: 143
   models:
     - model: claude-opus-5-5
-      input: 296
-      output: 31096
-      cache_read: 17121770
-      cache_write: 191379
-      cost: 5.6777
+      input: 326
+      output: 42537
+      cache_read: 20321318
+      cache_write: 205064
+      cost: 6.5568
   strategic:
     - kind: orchestrator
-      seconds: 320
+      seconds: 397
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 466
-          cache_read: 2797693
-          cache_write: 365670
-          cost: 0.7756
+          input: 90
+          output: 573
+          cache_read: 3520303
+          cache_write: 438214
+          cost: 0.9734
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 951
+          cache_read: 198717
+          cache_write: 41489
+          cost: 0.1741
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -89,7 +97,7 @@ Run each baseline formula S-0424 shipped once in this repository, so that the ep
 
 ## Acceptance criteria
 
-- [ ] Each formula is run once in this repository: an import of a scratch repository under a folder named for import, and one analyzer cadence, each instance worked to review and accepted, with its Notes naming what it produced.
+- [x] Each formula is run once in this repository: an import of a scratch repository under a folder named for import, and one analyzer cadence, each instance worked to review and accepted, with its Notes naming what it produced.
 
 ## Tasks
 - T-2514 Check the import run's preconditions, make a scratch repository under a folder named for import, and import it from the board's Import

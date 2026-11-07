@@ -12,6 +12,18 @@ transitions: []
 stream: S-0586
 tags: [kluster, docs]
 touches: [design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md]
+usage:
+  source: log
+  seconds: 0
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-haiku-5-5
+      input: 10
+      output: 41
+      cache_read: 106965
+      cache_write: 36155
+      cost: 0.0103
 ---
 # T-2559 An ADR and kluster.md say what enabling kluster writes and what a block with no deploy means
 

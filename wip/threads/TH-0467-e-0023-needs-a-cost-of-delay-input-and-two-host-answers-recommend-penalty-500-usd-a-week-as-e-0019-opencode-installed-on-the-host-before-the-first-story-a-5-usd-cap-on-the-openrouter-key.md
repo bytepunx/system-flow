@@ -4,10 +4,10 @@ title: "E-0023 needs a cost of delay input and two host answers: recommend penal
 anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
-status: answered
-participants: [planner-E-0023, orchestrator, flai serve]
+status: resolved
+participants: [planner-E-0023, orchestrator, flai serve, alex]
 created: 2026-10-16T05:07:49Z
-updated: 2026-10-28T21:07:40Z
+updated: 2026-11-07T08:56:08Z
 ---
 
 # TH-0467 E-0023 needs a cost of delay input and two host answers: recommend penalty 500 USD a week as E-0019, OpenCode installed on the host before the first story, a 5 USD cap on the OpenRouter key
@@ -92,3 +92,6 @@ flai serve's confirmation changes nothing on the host. Questions 2 and 3 are thi
 This recommendation predates `operator_only`, so it was confirmed without being marked for you alone. From now on I mark any host or money recommendation that way.
 
 Source: design/adrs/0206-flai-serve-confirms-an-orchestrator-recommendation-the-operator-left-unanswered.md
+
+### 2026-11-07T08:56:08Z alex
+Resolved.

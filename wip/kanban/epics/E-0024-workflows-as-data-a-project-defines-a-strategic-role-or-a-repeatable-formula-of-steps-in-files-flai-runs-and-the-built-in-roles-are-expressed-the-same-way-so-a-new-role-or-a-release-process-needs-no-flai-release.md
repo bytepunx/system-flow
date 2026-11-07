@@ -25,9 +25,8 @@ topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 74072
-  estimated: true
-  priced_by: estimate
+  seconds: 81125
+  priced_by: harness
   turns:
     - day: 2026-10-28
       ceremony: 9
@@ -51,10 +50,10 @@ usage:
       hand_edits: 28
       work: 744
     - day: 2026-11-07
-      ceremony: 3
+      ceremony: 9
       test_runs: 1
-      hand_edits: 3
-      work: 151
+      hand_edits: 4
+      work: 257
   models:
     - model: claude-haiku-5-5
       input: 146
@@ -63,11 +62,11 @@ usage:
       cache_write: 372262
       cost: 0.6044
     - model: claude-opus-5-5
-      input: 9552
-      output: 3163900
-      cache_read: 703885772
-      cache_write: 19923808
-      cost: 322.7064
+      input: 9784
+      output: 3211139
+      cache_read: 721267916
+      cache_write: 20039461
+      cost: 328.3453
     - model: claude-sonnet-5-5
       input: 62
       output: 20190
@@ -98,21 +97,21 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 17951
+      seconds: 18107
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2861
-          output: 39172
-          cache_read: 528640432
-          cache_write: 4100622
-          cost: 119.7145
+          input: 2906
+          output: 39517
+          cache_read: 530342834
+          cache_write: 4260711
+          cost: 120.1787
         - model: claude-sonnet-5-5
-          input: 161
-          output: 2461
-          cache_read: 2875987
-          cache_write: 717682
-          cost: 2.4888
+          input: 175
+          output: 3412
+          cache_read: 3074704
+          cache_write: 759171
+          cost: 2.6629
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 

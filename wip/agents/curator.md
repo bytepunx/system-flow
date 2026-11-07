@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 129.6658
-accrued_seconds: 12399
-tasks_completed: 77
-last_run: 2026-11-07T08:39:36Z
+accrued_cost: 131.2896
+accrued_seconds: 12506
+tasks_completed: 78
+last_run: 2026-11-07T08:55:39Z
 ---
 
 # Curator activity
@@ -627,3 +627,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0388, D-0449, D-0499
 - Seconds: 102
 - Cost: 1.3967 USD, estimated
+
+### 2026-11-07T08:55:39Z
+
+- Summary: I wrote no new entries this run. I merged TH-0860 into D-0501 and TH-0863 into D-0502, leading each body with its fact. I absorbed none: only S-0568's docs changed the design, and no active entry states its change. S-0568's three decisions added no entry: one is already in `design/system/flai-cli.md`, and two only record progress. `flai digest compact` compacted none.
+- Trigger: accepted S-0568
+- Items: D-0501, D-0502
+- Seconds: 107
+- Cost: 1.6238 USD, estimated

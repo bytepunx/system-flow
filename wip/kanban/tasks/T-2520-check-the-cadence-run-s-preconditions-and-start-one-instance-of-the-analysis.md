@@ -24,14 +24,14 @@ usage:
   source: log
   seconds: 39
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 343
-      cache_read: 162468
-      cache_write: 1817
-      cost: 0.0539
+      output: 340
+      cache_read: 162644
+      cache_write: 1641
+      cost: 0.0525
 ---
 # T-2520 Check the cadence run's preconditions and start one instance of the analysis-cadence formula from the main checkout
 

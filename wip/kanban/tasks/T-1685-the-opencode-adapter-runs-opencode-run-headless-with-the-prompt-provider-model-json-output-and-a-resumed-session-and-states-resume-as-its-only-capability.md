@@ -7,11 +7,12 @@ status: backlog
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:12Z
-updated: 2026-10-16T05:14:12Z
+updated: 2026-11-07T09:39:39Z
 transitions: []
 stream: S-0406
 tags: [cli]
 touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+after: [T-1682]
 ---
 # T-1685 The opencode adapter runs opencode run headless with the prompt, provider/model, JSON output, and a resumed session, and states resume as its only capability
 

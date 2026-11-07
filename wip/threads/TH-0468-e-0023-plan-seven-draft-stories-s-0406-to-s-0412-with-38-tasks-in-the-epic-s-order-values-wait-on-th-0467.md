@@ -4,10 +4,10 @@ title: "E-0023 plan: seven draft stories, S-0406 to S-0412, with 38 tasks, in th
 anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
-status: answered
-participants: [planner-E-0023, orchestrator, flai serve]
+status: resolved
+participants: [planner-E-0023, orchestrator, flai serve, alex]
 created: 2026-10-16T05:24:38Z
-updated: 2026-10-28T21:06:53Z
+updated: 2026-11-07T08:55:50Z
 ---
 
 # TH-0468 E-0023 plan: seven draft stories, S-0406 to S-0412, with 38 tasks, in the epic's order; values wait on TH-0467
@@ -82,3 +82,6 @@ Source: design/conventions/strategic-agents.md § As the planner
 Confirmed the recommendation of 2026-10-21T11:04:58Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/strategic-agents.md § As the planner
+
+### 2026-11-07T08:55:50Z alex
+Resolved.

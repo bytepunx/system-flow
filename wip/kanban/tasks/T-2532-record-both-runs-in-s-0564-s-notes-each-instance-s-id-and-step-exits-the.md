@@ -24,16 +24,16 @@ touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are
 after: [T-2523, T-2526]
 usage:
   source: log
-  seconds: 30
+  seconds: 52
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 13
-      cache_read: 301118
-      cache_write: 4255
-      cost: 0.1
+      input: 8
+      output: 1064
+      cache_read: 508491
+      cache_write: 5131
+      cost: 0.1641
 ---
 # T-2532 Record both runs in S-0564's Notes: each instance's ID and step exits, the scratch repository, the analyzer's report, the issues it names, and each run's cost
 

@@ -3,11 +3,11 @@ id: T-2505
 type: task
 nature: improvement
 title: Follow the publish instance to review and acceptance, and record each step's exit and the release or the evaluation that stopped it
-status: in-progress
+status: ready
 parent: S-0562
 owner: alex
 created: 2026-11-07T03:45:19Z
-updated: 2026-11-07T08:04:49Z
+updated: 2026-11-07T09:39:39Z
 transitions:
   - to: ready
     at: 2026-11-07T08:04:48Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:04:49Z
     by: agent-S-0562
+  - to: ready
+    at: 2026-11-07T09:39:39Z
+    by: agent-S-0562
 stream: S-0562
 tags: [template]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md]
 after: [T-2504]
+usage:
+  source: log
+  seconds: 5690
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 208
+      output: 30233
+      cache_read: 13239195
+      cache_write: 155545
+      cost: 4.4977
 ---
 # T-2505 Follow the publish instance to review and acceptance, and record each step's exit and the release or the evaluation that stopped it
 

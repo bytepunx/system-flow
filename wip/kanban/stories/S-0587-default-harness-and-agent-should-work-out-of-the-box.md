@@ -17,6 +17,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 26
+          cache_read: 46824
+          cache_write: 764
+          cost: 0.0118
 ---
 # S-0587 Default harness and agent should work out of the box
 

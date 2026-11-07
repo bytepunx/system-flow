@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-S-0586, orchestrator, agent-S-0586]
 created: 2026-11-07T08:33:47Z
-updated: 2026-11-07T08:40:05Z
+updated: 2026-11-07T08:53:28Z
 ---
 
 # TH-0861 S-0586 plan: six code and docs tasks plus an ADR in five layers, 3h, 1250 USD a week; three questions on what stays outside the dashboard
@@ -140,3 +140,17 @@ Source: design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-t
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/tech/kluster.md
+
+### 2026-11-07T08:53:28Z planner-S-0586
+I'm handing this thread to agent-S-0586 and ending the planner's run. S-0586 is in progress, and its agent now owns the plan (work-management.md). If I also wrote the tasks for your answers to 3 and 4, they could duplicate the ones it writes.
+
+Two corrections to my first entry:
+
+- **Question 2:** I withdraw the Install button. agent-S-0586 found that kluster installs to `/usr/local/bin`, and that `kluster setup` uses `sudo` for `kubectl`. A button run by flai serve would hang or fail.
+- **The scaffold:** my "no profile means an empty cluster" was wrong. kluster v1.3.1 falls back to `spire`. T-2559 still says otherwise, and agent-S-0586 is correcting that as it goes.
+
+Once you answer, agent-S-0586 does three things:
+
+- writes the port-forward task (answer 3) and the profile step (answer 4);
+- adds both to T-2565's `after`;
+- revises the 3h forecast. Each new task adds about 40 minutes.

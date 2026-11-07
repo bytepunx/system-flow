@@ -14,7 +14,9 @@ cited: []
 
 # D-0501 S-0564: press Start agent on S-0001 in flai-scratch-import, and answer TH-0859 for S-0584: Recommended: start S-0001's agent in the flai-scratch-import project
 
-The operator, alex, answered TH-0860 at 2026-11-07T08:45:32Z.
+Starting a story's agent in another project flai serve serves is the operator's: a story's agent cannot do it, since `agent_start` refuses an agent flai serve started, and neither can the orchestrator, which has no permission for another project's board. Starting an agent is a host action, and it spends. So a story whose work needs an agent in another project, such as a formula's instance in a scratch repository it imported, asks the operator to press Start agent there, or to run `flai serve agent start S-nnnn` in that project. The agent was needed because flai serve starts an agent only when a story enters ready, and S-0001 was already in ready when the operator turned on `agent` (I-0300).
+
+The operator, alex, answered TH-0860 at 2026-11-07T08:45:32Z, on S-0564, by taking the orchestrator's recommendation.
 
 What was asked:
 
@@ -24,27 +26,12 @@ What was asked:
 
 The answer:
 
-````text
-**Recommended:** start S-0001's agent in the flai-scratch-import project. Press Start agent on S-0001 there, or run:
-
-```sh
-cd /home/alex/git/flai-scratch-import && flai serve agent start S-0001
-```
+```text
+**Recommended:** start S-0001's agent in the flai-scratch-import project. Press Start agent on S-0001 there, or run: cd /home/alex/git/flai-scratch-import && flai serve agent start S-0001
 
 **Why it is yours:** starting an agent is a host action, and it spends. flai guard refuses it to agents, and I have no permission for another project's board.
 
-**The other two asks are covered:**
+Acceptance: I accept S-0584 under `accept_reviews` once it reaches review and passes. S-0001 lives in flai-scratch-import, so its acceptance is yours there.
+```
 
-- TH-0859: you confirmed it at 08:32:14Z. S-0584's agent started again at 08:32:16Z and is working T-2545. Nothing more is needed there.
-- Acceptance: I accept S-0584 under `accept_reviews` once it reaches review and passes. S-0001 lives in flai-scratch-import, so its acceptance is yours there.
-
-**Alternative:** decline. agent-S-0564 then records the import run as stopped at its instance and leaves criterion 1 unticked.
-
-Source: design/workflows/formulas/import.md
-
-For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
-
-Source: design/workflows/formulas/import.md
-````
-
-Source: TH-0860.
+Source: TH-0860, on S-0564; the issue I-0300; the formula `design/workflows/formulas/import.md`.

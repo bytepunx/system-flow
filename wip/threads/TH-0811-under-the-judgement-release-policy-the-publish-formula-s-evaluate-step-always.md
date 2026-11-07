@@ -4,10 +4,10 @@ title: "Under the judgement release policy, the publish formula's evaluate step 
 anchor:
   path: wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md
   item: S-0562
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-02T05:32:39Z
-updated: 2026-11-02T05:32:39Z
+updated: 2026-11-07T09:24:45Z
 ---
 
 # TH-0811 Under the judgement release policy, the publish formula's evaluate step always stops, and from flai 1.80.2 release_publish refuses: nothing can publish
@@ -29,3 +29,9 @@ On wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-
 S-0562's live run would also only show the evaluation stopping, and would release nothing.
 
 **Alternative:** keep judgement, and publish by hand until a story settles it.
+
+### 2026-11-07T09:22:57Z alex
+I changed the policy to threshold instead of judgement
+
+### 2026-11-07T09:24:45Z orchestrator
+Resolved: The operator set orchestration.release.policy to threshold (commit c3467ff92). release_evaluate is now met: count 2 (S-0561, S-0568) at or over the threshold of 1. --require-met can pass, and the publish formula now runs: instance S-0588 is in ready.

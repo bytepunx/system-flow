@@ -23,16 +23,16 @@ tags: [template]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md]
 usage:
   source: log
-  seconds: 73
+  seconds: 74
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 61
-      cache_read: 722644
-      cache_write: 10846
-      cost: 0.2625
+      input: 11
+      output: 1656
+      cache_read: 724977
+      cache_write: 8518
+      cost: 0.2463
 ---
 # T-2504 Check the publish run's preconditions and start one instance of the publish formula from the main checkout
 

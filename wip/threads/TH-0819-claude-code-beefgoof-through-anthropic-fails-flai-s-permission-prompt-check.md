@@ -3,10 +3,10 @@ id: TH-0819
 title: Claude Code BEEFGOOF through anthropic fails flai's permission_prompt check
 anchor:
   path: system-flow.yaml
-status: open
-participants: [flai serve]
+status: answered
+participants: [flai serve, alex]
 created: 2026-11-03T01:17:25Z
-updated: 2026-11-03T01:17:25Z
+updated: 2026-11-07T08:59:18Z
 ---
 
 # TH-0819 Claude Code BEEFGOOF through anthropic fails flai's permission_prompt check
@@ -28,3 +28,6 @@ For reference, the repo at `/tmp/flai-claude-check-1392665426/project` is on `ma
 ```
 
 Until this is fixed, writes to the paths Claude Code protects (.claude/, .mcp.json, and the rest ADR-0106 lists) will not go through permission_prompt: an agent's write to one is refused. The agents still run, and a story that writes no protected path is not held up. flai does not check BEEFGOOF through anthropic again; to check it again, remove the anthropic entry under BEEFGOOF from /home/alex/.flai/serve/claude-checks.json.
+
+### 2026-11-07T08:59:18Z alex
+the entry was removed so we can test this again
