@@ -4,10 +4,10 @@ title: "Plan for S-0596: the agent's five tasks stand; cost of delay inputs need
 anchor:
   path: wip/kanban/stories/S-0596-explore-where-we-can-improve-flai-serve-performance.md
   item: S-0596
-status: open
-participants: [planner-S-0596, orchestrator]
+status: resolved
+participants: [planner-S-0596, orchestrator, alex]
 created: 2026-11-07T22:13:59Z
-updated: 2026-11-07T22:16:12Z
+updated: 2026-11-07T23:38:49Z
 ---
 
 # TH-0884 Plan for S-0596: the agent's five tasks stand; cost of delay inputs needed
@@ -93,3 +93,6 @@ Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-11-07T23:38:49Z alex
+Resolved: S-0596 was accepted

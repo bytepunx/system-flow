@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 151.8078
-accrued_seconds: 14297
-tasks_completed: 94
-last_run: 2026-11-07T23:09:00Z
+accrued_cost: 154.3113
+accrued_seconds: 15329
+tasks_completed: 95
+last_run: 2026-11-07T23:27:17Z
 ---
 
 # Curator activity
@@ -763,3 +763,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0278, D-0279, D-0402, D-0522
 - Seconds: 126
 - Cost: 1.8951 USD, estimated
+
+### 2026-11-07T23:27:17Z
+
+- Summary: No new candidates since 2026-11-07T23:09:00Z, so I wrote 0 entries and merged 0. I absorbed D-0283 (by `design/system/agent-narrative.md`), D-0292 (by `design/system/release-signing.md`) and D-0392 (by ADR-0040), and `flai digest compact` compacted 0.
+- Trigger: accepted S-0597
+- Items: D-0283, D-0292, D-0392
+- Seconds: 1032
+- Cost: 2.5035 USD, estimated

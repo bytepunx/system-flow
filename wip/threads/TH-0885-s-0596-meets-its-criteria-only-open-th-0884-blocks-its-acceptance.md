@@ -4,10 +4,10 @@ title: "S-0596 meets its criteria; only open TH-0884 blocks its acceptance"
 anchor:
   path: wip/kanban/stories/S-0596-explore-where-we-can-improve-flai-serve-performance.md
   item: S-0596
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-07T22:45:53Z
-updated: 2026-11-07T22:45:53Z
+updated: 2026-11-07T23:38:49Z
 ---
 
 # TH-0885 S-0596 meets its criteria; only open TH-0884 blocks its acceptance
@@ -41,3 +41,6 @@ blocked: thread TH-0884 on S-0596 is open, not resolved
 - Resolve TH-0884 with no figure.
 
 **Not checked:** the verifier did not re-measure the document's figures. That would need your serve log and a loaded host.
+
+### 2026-11-07T23:38:49Z alex
+Resolved: S-0596 was accepted

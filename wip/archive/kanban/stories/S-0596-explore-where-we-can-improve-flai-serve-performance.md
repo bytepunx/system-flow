@@ -3,10 +3,10 @@ id: S-0596
 type: story
 nature: research
 title: Explore where we can improve flai serve performance
-status: review
+status: done
 owner: alex
 created: 2026-11-07T22:06:13Z
-updated: 2026-11-07T22:44:10Z
+updated: 2026-11-07T23:38:49Z
 transitions:
   - to: ready
     at: 2026-11-07T22:06:33Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T22:44:10Z
     by: agent-S-0596
+  - to: done
+    at: 2026-11-07T23:38:49Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [design/system/server-performance.md, design/issues/I-0307-flai-guard-refuses-a-story-s-task-sub-agent-flai-hostapi-so-a-measurement-task.md, design/issues/summary.md]

@@ -6,8 +6,8 @@ sources: [S-0106]
 topics: [go, serve, code]
 paths: [flai/internal/host]
 date: 2026-10-28
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0040-one-flai-host-per-machine-runs-flai-serve-and-each-project-s-mcp-server-as-its.md#decision"
 asked_again: []
 cited: []
 ---

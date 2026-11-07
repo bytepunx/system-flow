@@ -6,8 +6,8 @@ sources: [I-0142]
 topics: [cli, release, security, flai, go, code, all]
 paths: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md, docs/users/flai-reference.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md]
 date: 2026-10-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/release-signing.md#how-a-release-is-verified-before-it-is-installed"
 asked_again: []
 cited: []
 ---
