@@ -3,12 +3,15 @@ id: S-0408
 type: story
 nature: feature
 title: An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
-status: backlog
+status: ready
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-11-07T15:21:13Z
-transitions: []
+updated: 2026-11-07T20:43:08Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:08Z
+    by: alex
 tags: [cli, template]
 topics: [agents, cli, template]
 touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go]

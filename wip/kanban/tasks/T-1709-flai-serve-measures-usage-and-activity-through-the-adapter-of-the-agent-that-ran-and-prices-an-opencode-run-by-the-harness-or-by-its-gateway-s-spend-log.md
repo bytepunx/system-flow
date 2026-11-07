@@ -3,16 +3,37 @@ id: T-1709
 type: task
 nature: feature
 title: flai serve measures usage and activity through the adapter of the agent that ran, and prices an OpenCode run by the harness or by its gateway's spend log
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:19:01Z
-updated: 2026-10-16T05:19:01Z
-transitions: []
+updated: 2026-11-07T21:31:13Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:10:44Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T21:10:48Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:31:13Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
 touches: [flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go]
 after: [T-1708]
+usage:
+  source: log
+  seconds: 1225
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 23869
+      cache_read: 9715236
+      cache_write: 191033
+      cost: 3.6017
 ---
 # T-1709 flai serve measures usage and activity through the adapter of the agent that ran, and prices an OpenCode run by the harness or by its gateway's spend log
 

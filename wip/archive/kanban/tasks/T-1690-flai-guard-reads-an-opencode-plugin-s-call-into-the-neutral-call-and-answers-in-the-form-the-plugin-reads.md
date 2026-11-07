@@ -3,15 +3,36 @@ id: T-1690
 type: task
 nature: feature
 title: flai guard reads an OpenCode plugin's call into the neutral Call and answers in the form the plugin reads
-status: backlog
+status: done
 parent: S-0407
 owner: alex
 created: 2026-10-16T05:15:23Z
-updated: 2026-10-16T05:25:08Z
-transitions: []
+updated: 2026-11-07T21:01:14Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:46:02Z
+    by: agent-S-0407
+  - to: in-progress
+    at: 2026-11-07T20:46:03Z
+    by: agent-S-0407
+  - to: done
+    at: 2026-11-07T21:01:13Z
+    by: agent-S-0407
 stream: S-0407
 tags: [cli]
-touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md]
+touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, flai/internal/guard/claudecode_test.go]
+usage:
+  source: log
+  seconds: 910
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 16915
+      cache_read: 6964455
+      cache_write: 86655
+      cost: 2.3577
 ---
 # T-1690 flai guard reads an OpenCode plugin's call into the neutral Call and answers in the form the plugin reads
 

@@ -3,16 +3,37 @@ id: T-1692
 type: task
 nature: feature
 title: The opencode adapter states Guard true where the plugin can tell a sub-agent's call, so a story on it with roles is no longer refused for the guard
-status: backlog
+status: done
 parent: S-0407
 owner: alex
 created: 2026-10-16T05:15:38Z
-updated: 2026-10-16T05:27:12Z
-transitions: []
+updated: 2026-11-07T21:13:24Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:03:58Z
+    by: agent-S-0407
+  - to: in-progress
+    at: 2026-11-07T21:03:59Z
+    by: agent-S-0407
+  - to: done
+    at: 2026-11-07T21:13:24Z
+    by: agent-S-0407
 stream: S-0407
 tags: [cli]
 touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go]
 after: [T-1690]
+usage:
+  source: log
+  seconds: 565
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 15466
+      cache_read: 6367958
+      cache_write: 79234
+      cost: 2.1557
 ---
 # T-1692 The opencode adapter states Guard true where the plugin can tell a sub-agent's call, so a story on it with roles is no longer refused for the guard
 

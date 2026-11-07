@@ -3,16 +3,37 @@ id: T-1711
 type: task
 nature: feature
 title: metrics.md names OpenCode's events, and the design, user, and operator docs say how a story on OpenCode is measured and priced
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:19:09Z
-updated: 2026-10-16T05:19:09Z
-transitions: []
+updated: 2026-11-07T21:39:06Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:31:43Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T21:31:44Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:39:06Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
-touches: [design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
-after: [T-1710]
+touches: [design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md]
+after: [T-1709]
+usage:
+  source: log
+  seconds: 442
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 14760
+      cache_read: 6007664
+      cache_write: 118130
+      cost: 2.2272
 ---
 # T-1711 metrics.md names OpenCode's events, and the design, user, and operator docs say how a story on OpenCode is measured and priced
 

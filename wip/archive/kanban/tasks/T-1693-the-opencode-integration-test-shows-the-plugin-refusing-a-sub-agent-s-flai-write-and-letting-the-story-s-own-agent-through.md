@@ -3,16 +3,37 @@ id: T-1693
 type: task
 nature: feature
 title: The OpenCode integration test shows the plugin refusing a sub-agent's flai write and letting the story's own agent through
-status: backlog
+status: done
 parent: S-0407
 owner: alex
 created: 2026-10-16T05:15:47Z
-updated: 2026-10-16T05:15:47Z
-transitions: []
+updated: 2026-11-07T21:21:17Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:16:12Z
+    by: agent-S-0407
+  - to: in-progress
+    at: 2026-11-07T21:16:15Z
+    by: agent-S-0407
+  - to: done
+    at: 2026-11-07T21:21:17Z
+    by: agent-S-0407
 stream: S-0407
 tags: [cli]
 touches: [flai/tests/integration/opencode_test.go]
 after: [T-1691, T-1692]
+usage:
+  source: log
+  seconds: 302
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 16473
+      cache_read: 6782755
+      cache_write: 84395
+      cost: 2.2962
 ---
 # T-1693 The OpenCode integration test shows the plugin refusing a sub-agent's flai write and letting the story's own agent through
 

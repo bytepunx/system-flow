@@ -3,12 +3,15 @@ id: S-0409
 type: story
 nature: feature
 title: The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
-status: backlog
+status: ready
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:17:17Z
-updated: 2026-11-07T15:21:17Z
-transitions: []
+updated: 2026-11-07T20:43:11Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:11Z
+    by: alex
 tags: [cli]
 topics: [agents, cli]
 touches: [flai/internal/harness/opencodeagents.go, flai/internal/harness/opencodeagents_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/tests/integration/opencode_test.go, design/system/agent-adapters.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/operators/index.md, flai/internal/harness/harness_test.go]

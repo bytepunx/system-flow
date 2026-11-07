@@ -3,12 +3,15 @@ id: S-0412
 type: story
 nature: feature
 title: A story is worked to review end to end on the opencode adapter by a scripted session in OpenRouter's format, with the guard and the permission prompt on, on fixtures alone
-status: backlog
+status: ready
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:20:15Z
-updated: 2026-11-07T15:21:33Z
-transitions: []
+updated: 2026-11-07T20:43:27Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:27Z
+    by: alex
 tags: [cli]
 topics: [agents, cli]
 touches: [flai/tests/integration/opencode_test.go, flai/tests/integration/testdata/opencode/session.jsonl, flai/tests/integration/testdata/opencode/generation.json, design/system/agent-adapters.md, docs/operators/index.md]

@@ -3,15 +3,36 @@ id: T-1706
 type: task
 nature: feature
 title: flai/internal/usage reads OpenCode's JSON events into neutral usage events, tested on recorded output from the known version
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:18:42Z
-updated: 2026-10-16T05:18:42Z
-transitions: []
+updated: 2026-11-07T21:02:38Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:46:29Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T20:46:30Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:02:38Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
 touches: [flai/internal/usage/opencode.go, flai/internal/usage/opencode_test.go, flai/internal/usage/testdata/opencode/run.jsonl, flai/internal/usage/testdata/opencode/resumed.jsonl]
+usage:
+  source: log
+  seconds: 968
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 20242
+      cache_read: 8238803
+      cache_write: 162002
+      cost: 3.0543
 ---
 # T-1706 flai/internal/usage reads OpenCode's JSON events into neutral usage events, tested on recorded output from the known version
 

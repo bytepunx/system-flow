@@ -3,15 +3,27 @@ id: S-0407
 type: story
 nature: feature
 title: flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
-status: backlog
+status: done
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:15:14Z
-updated: 2026-11-07T15:21:07Z
-transitions: []
+updated: 2026-11-07T21:45:57Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:05Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T20:43:12Z
+    by: agent-S-0407
+  - to: review
+    at: 2026-11-07T21:31:02Z
+    by: agent-S-0407
+  - to: done
+    at: 2026-11-07T21:45:57Z
+    by: alex
 tags: [cli, template]
 topics: [agents, cli, template]
-touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/guard/claudecode_test.go]
 after: [S-0406]
 agent:
   harness: claude-code
@@ -19,20 +31,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2882
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 3
+      work: 48
+  models:
+    - model: claude-opus-5-5
+      input: 266
+      output: 97162
+      cache_read: 40005749
+      cache_write: 497773
+      cost: 13.5432
   strategic:
     - kind: orchestrator
-      seconds: 269
+      seconds: 330
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 39
-          output: 534
-          cache_read: 14793890
-          cache_write: 21974
-          cost: 3.7138
+          input: 51
+          output: 610
+          cache_read: 15147178
+          cache_write: 122675
+          cost: 3.8283
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 53
+          cache_read: 32337
+          cache_write: 24295
+          cost: 0.0412
 cost_of_delay:
   value: 69.23
   by: planner-E-0023
@@ -55,11 +86,11 @@ A story's agent on OpenCode is held by the same guard as one on Claude Code. A p
 
 ## Acceptance criteria
 
-- [ ] `flai/internal/guard` has an `opencode` input reader that maps the plugin's input onto the neutral `Call`: OpenCode's tool names (`bash`, `edit`, `write`, `patch`, and flai's MCP tools under their OpenCode names) onto `Kind`, its sub-agent sign onto `Subagent`, and a read-only sub-agent onto `ReadOnly`. `flai guard --harness opencode` decides with the one `Decide` and answers in the form the plugin reads.
-- [ ] `.opencode/plugins/flai-guard.js`, in this repository and in the template, runs `flai guard --harness opencode` on `tool.execute.before` with the call on standard input and throws with the guard's reason when it refuses; it passes every call when `flai` is not on `PATH`, saying so once, so a project opened outside `flai serve` still works.
-- [ ] Where the plugin can tell a sub-agent's call, the adapter states `Guard: true`, and a story on `opencode` with roles is no longer refused for the guard. Where it cannot, `Guard` stays false and `agent-adapters.md` § OpenCode records why and what OpenCode would need to change.
-- [ ] Where `Guard` is true, the integration test shows a sub-agent refused a `flai` write and the story's own agent let through, on the known `opencode` version, and is skipped, saying so, without it.
-- [ ] `docs/operators/index.md` § Harnesses, `docs/users/flai.md`, and `design/system/flai-cli.md` say what the guard holds on OpenCode, and `template/CHANGELOG.md` names the plugin.
+- [x] `flai/internal/guard` has an `opencode` input reader that maps the plugin's input onto the neutral `Call`: OpenCode's tool names (`bash`, `edit`, `write`, `patch`, and flai's MCP tools under their OpenCode names) onto `Kind`, its sub-agent sign onto `Subagent`, and a read-only sub-agent onto `ReadOnly`. `flai guard --harness opencode` decides with the one `Decide` and answers in the form the plugin reads.
+- [x] `.opencode/plugins/flai-guard.js`, in this repository and in the template, runs `flai guard --harness opencode` on `tool.execute.before` with the call on standard input and throws with the guard's reason when it refuses; it passes every call when `flai` is not on `PATH`, saying so once, so a project opened outside `flai serve` still works.
+- [x] Where the plugin can tell a sub-agent's call, the adapter states `Guard: true`, and a story on `opencode` with roles is no longer refused for the guard. Where it cannot, `Guard` stays false and `agent-adapters.md` § OpenCode records why and what OpenCode would need to change.
+- [x] Where `Guard` is true, the integration test shows a sub-agent refused a `flai` write and the story's own agent let through, on the known `opencode` version, and is skipped, saying so, without it.
+- [x] `docs/operators/index.md` § Harnesses, `docs/users/flai.md`, and `design/system/flai-cli.md` say what the guard holds on OpenCode, and `template/CHANGELOG.md` names the plugin.
 
 ## Tasks
 - T-1690 flai guard reads an OpenCode plugin's call into the neutral Call and answers in the form the plugin reads
@@ -73,6 +104,8 @@ A story's agent on OpenCode is held by the same guard as one on Claude Code. A p
 - Drafted by the planner for E-0023, after S-0406, whose finding on the sub-agent sign decides criterion 3.
 - `.opencode/` is on the protected list for `opencode` only (S-0406), so this repository's own agent on `claude-code` writes the plugin without a permission thread.
 - Claude Code records sub-agents through `SubagentStart` and `SubagentStop` for ADR-0092; the reader records OpenCode's sub-agent sessions the same way where the plugin sees them start and end.
+- **As built.** `.opencode/` is protected on every harness, `claude-code` included (D-0514), so this story's branch changes protected paths and is accepted by the operator alone (ADR-0106). Claude Code itself did not ask for the writes, so no permission thread was opened.
+- **Criterion 4's evidence.** `TestFlaiGuardPluginOnOpenCode` in `flai/tests/integration/opencode_test.go` ran and passed against the real opencode 1.19.5 on this host. It was installed for the test with `npm install --prefix .flai-cache/scratch/opencode opencode-ai@1.19.5`, git-ignored and not global. To run it again, put `.flai-cache/scratch/opencode/node_modules/.bin` on `PATH`. Without opencode 1.19.5 on `PATH` the test skips and says why, so the close-out and CI skip it unless the host has it.
 
 ### Planning
 

@@ -3,12 +3,15 @@ id: S-0411
 type: story
 nature: feature
 title: A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
-status: backlog
+status: ready
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:19:30Z
-updated: 2026-11-07T15:21:28Z
-transitions: []
+updated: 2026-11-07T20:43:20Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:20Z
+    by: alex
 tags: [cli]
 topics: [agents, cli]
 touches: [flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/stream_opencode.go, flai/internal/serve/stream_opencode_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md]

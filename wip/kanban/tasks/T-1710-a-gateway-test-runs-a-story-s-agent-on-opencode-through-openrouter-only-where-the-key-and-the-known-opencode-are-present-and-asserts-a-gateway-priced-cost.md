@@ -3,16 +3,37 @@ id: T-1710
 type: task
 nature: feature
 title: A gateway test runs a story's agent on OpenCode through OpenRouter only where the key and the known opencode are present, and asserts a gateway-priced cost
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:19:05Z
-updated: 2026-10-16T05:19:05Z
-transitions: []
+updated: 2026-11-07T21:38:55Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:31:40Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T21:31:41Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:38:55Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
-touches: [flai/internal/serve/gateway_test.go]
+touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh]
 after: [T-1709]
+usage:
+  source: log
+  seconds: 434
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 13846
+      cache_read: 5635565
+      cache_write: 110814
+      cost: 2.0893
 ---
 # T-1710 A gateway test runs a story's agent on OpenCode through OpenRouter only where the key and the known opencode are present, and asserts a gateway-priced cost
 

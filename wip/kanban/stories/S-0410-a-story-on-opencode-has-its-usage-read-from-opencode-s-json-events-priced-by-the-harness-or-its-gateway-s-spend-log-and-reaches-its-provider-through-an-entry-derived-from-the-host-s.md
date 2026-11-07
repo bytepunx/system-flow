@@ -3,15 +3,24 @@ id: S-0410
 type: story
 nature: feature
 title: A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
-status: backlog
+status: review
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-11-07T15:21:22Z
-transitions: []
+updated: 2026-11-07T21:44:17Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:43:16Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T20:43:25Z
+    by: agent-S-0410
+  - to: review
+    at: 2026-11-07T21:44:17Z
+    by: agent-S-0410
 tags: [cli]
 topics: [agents, cli]
-touches: [flai/internal/usage/opencode.go, flai/internal/usage/opencode_test.go, flai/internal/usage/testdata/opencode/run.jsonl, flai/internal/usage/testdata/opencode/resumed.jsonl, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/gateway_test.go, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, flai/internal/harness/harness_test.go]
+touches: [flai/internal/usage/opencode.go, flai/internal/usage/opencode_test.go, flai/internal/usage/testdata/opencode/run.jsonl, flai/internal/usage/testdata/opencode/resumed.jsonl, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/gateway_test.go, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, flai/internal/harness/harness_test.go, flai/internal/harness/harness.go, scripts/gateway-smoke.sh, design/system/agent-adapters.md, design/issues/I-0305-a-story-s-sub-agents-on-opencode-are-not-measured-since-opencode-run-format.md, design/issues/summary.md]
 after: [S-0406]
 agent:
   harness: claude-code
@@ -19,20 +28,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3668
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 4
+      hand_edits: 3
+      work: 47
+  models:
+    - model: claude-opus-5-5
+      input: 314
+      output: 116678
+      cache_read: 47490438
+      cache_write: 933817
+      cost: 17.606
   strategic:
     - kind: orchestrator
-      seconds: 151
+      seconds: 210
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 137
-          cache_read: 2265024
-          cache_write: 5263
-          cost: 0.5691
+          input: 29
+          output: 267
+          cache_read: 3013706
+          cache_write: 98050
+          cost: 0.7815
 cost_of_delay:
   value: 76.92
   by: planner-E-0023
@@ -56,11 +77,11 @@ A story worked on OpenCode carries the same `usage` as one worked on Claude Code
 ## Acceptance criteria
 
 - [ ] `flai/internal/usage` has an OpenCode reader that turns `step_start`, `tool_use`, `text`, and `step_finish` into neutral events: session start, a model call with its tokens (input, output, reasoning, cache read and write), its model, and its cost when reported, the sub-agent call that started it, and the run's end. It is tested on recorded output from the known version.
-- [ ] The adapter's `Reader` returns it and its `Capabilities` say it reports cost. `flai serve` reads a story's, and a strategic agent's, usage and activity through the adapter of the agent that ran, in place of the Claude Code reader it names today in `serve/usage.go` and `serve/activity.go`.
-- [ ] A story on `opencode` with no provider is `priced_by: harness`, from `step_finish`'s cost. One with a provider is priced from the gateway's spend log and is `priced_by: gateway`, with OpenCode's own figure kept as tokens only.
-- [ ] For a story with a provider, the configuration carries an OpenCode provider entry derived from the host's entry: the package for its `api` (`openai-chat`, `openai-responses`, or `anthropic-messages`), its `base_url`, the key as `{env:<key_env>}`, and its `models`. No key is written to the file, a log, or a work item. A provider whose `api` OpenCode cannot speak is refused at start, naming it.
+- [x] The adapter's `Reader` returns it and its `Capabilities` say it reports cost. `flai serve` reads a story's, and a strategic agent's, usage and activity through the adapter of the agent that ran, in place of the Claude Code reader it names today in `serve/usage.go` and `serve/activity.go`.
+- [x] A story on `opencode` with no provider is `priced_by: harness`, from `step_finish`'s cost. One with a provider is priced from the gateway's spend log and is `priced_by: gateway`, with OpenCode's own figure kept as tokens only.
+- [x] For a story with a provider, the configuration carries an OpenCode provider entry derived from the host's entry: the package for its `api` (`openai-chat`, `openai-responses`, or `anthropic-messages`), its `base_url`, the key as `{env:<key_env>}`, and its `models`. No key is written to the file, a log, or a work item. A provider whose `api` OpenCode cannot speak is refused at start, naming it.
 - [ ] A gateway test runs a story's agent on OpenCode through OpenRouter only where `OPENROUTER_API_KEY` and the known `opencode` are both present, asserts `priced_by: gateway` and a cost above zero, and is skipped, saying which is missing, otherwise.
-- [ ] `design/system/metrics.md` names OpenCode's events where it names the harness's, and `design/system/flai-cli.md`, `docs/users/flai.md`, and `docs/operators/index.md` § Harnesses say how a story on OpenCode is measured and priced.
+- [x] `design/system/metrics.md` names OpenCode's events where it names the harness's, and `design/system/flai-cli.md`, `docs/users/flai.md`, and `docs/operators/index.md` § Harnesses say how a story on OpenCode is measured and priced.
 
 ## Tasks
 - T-1706 flai/internal/usage reads OpenCode's JSON events into neutral usage events, tested on recorded output from the known version
@@ -74,6 +95,11 @@ A story worked on OpenCode carries the same `usage` as one worked on Claude Code
 
 - Drafted by the planner for E-0023, after S-0409, in the epic's order. It needs only S-0406's adapter; the holds on the shared adapter files would run it after the roles story in any case.
 - S-0406's finding on `step_finish` decides how a run joins the gateway's spend log: a generation ID per call where OpenCode gives one, else the key's spend before and after the run.
+
+### Unticked criteria (agent-S-0410)
+
+- **Criterion 1** is met except for its last sentence, which could not be checked here. `usage.OpenCode` reads `step_start`, `step_finish`, `tool_use`, `text`, and `error`. Reasoning is counted in output. It reports the `task` call that starts a sub-agent. Its tests pass. This host has no `opencode` binary, so the fixtures under `flai/internal/usage/testdata/opencode/` follow v1.19.5's source shapes (agent-adapters.md); they were not recorded from a run. A sub-agent's own calls are not in the stream (I-0305). To tick it: record a run with `opencode` 1.19.5 and check it against the fixtures.
+- **Criterion 5**: `TestGatewayOpenCode` is written, and it is in `scripts/gateway-smoke.sh`. Its skip, which names what is missing (key, binary, or version), is tested. The paid branch was not run, because this host has neither `OPENROUTER_API_KEY` nor `opencode`. To tick it: run `flai test gateway` on a host that has both.
 
 ### Planning
 

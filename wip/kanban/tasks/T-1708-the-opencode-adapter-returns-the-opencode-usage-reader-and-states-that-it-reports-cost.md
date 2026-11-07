@@ -3,16 +3,37 @@ id: T-1708
 type: task
 nature: feature
 title: The opencode adapter returns the OpenCode usage reader and states that it reports cost
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:18:51Z
-updated: 2026-10-16T05:23:22Z
-transitions: []
+updated: 2026-11-07T21:10:18Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:03:37Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T21:03:38Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:10:18Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
-touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go]
+touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/harness/harness.go]
 after: [T-1706, T-1707]
+usage:
+  source: log
+  seconds: 400
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 12364
+      cache_read: 5032605
+      cache_write: 98957
+      cost: 1.8657
 ---
 # T-1708 The opencode adapter returns the OpenCode usage reader and states that it reports cost
 

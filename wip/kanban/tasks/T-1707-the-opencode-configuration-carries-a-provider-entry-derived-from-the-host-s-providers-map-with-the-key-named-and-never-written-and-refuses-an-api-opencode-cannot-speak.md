@@ -3,15 +3,36 @@ id: T-1707
 type: task
 nature: feature
 title: The opencode configuration carries a provider entry derived from the host's providers map, with the key named and never written, and refuses an api OpenCode cannot speak
-status: backlog
+status: done
 parent: S-0410
 owner: alex
 created: 2026-10-16T05:18:48Z
-updated: 2026-10-16T05:18:48Z
-transitions: []
+updated: 2026-11-07T21:03:11Z
+transitions:
+  - to: ready
+    at: 2026-11-07T20:46:31Z
+    by: agent-S-0410
+  - to: in-progress
+    at: 2026-11-07T20:46:32Z
+    by: agent-S-0410
+  - to: done
+    at: 2026-11-07T21:03:11Z
+    by: agent-S-0410
 stream: S-0410
 tags: [cli]
 touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go]
+usage:
+  source: log
+  seconds: 999
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 8700
+      cache_read: 3541028
+      cache_write: 69628
+      cost: 1.3128
 ---
 # T-1707 The opencode configuration carries a provider entry derived from the host's providers map, with the key named and never written, and refuses an api OpenCode cannot speak
 
