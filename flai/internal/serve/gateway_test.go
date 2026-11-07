@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -631,6 +632,11 @@ func buildFlai(t *testing.T) string {
 	return exe
 }
 
+// guardRun matches a hook's run of flai guard, as a command: at the start of
+// a command substitution or after a semicolon. The text of a hook's message,
+// such as "flai guard did not run", is quoted and so never matches.
+var guardRun = regexp.MustCompile(`(\$\(|; )flai guard\b`)
+
 // guardSettings is the template's .claude/settings.json with flai guard run
 // from flai, this tree's build, rather than the installed flai.
 func guardSettings(t *testing.T, flai string) string {
@@ -639,14 +645,36 @@ func guardSettings(t *testing.T, flai string) string {
 	if err != nil {
 		t.Fatalf("the template's settings: %v", err)
 	}
-	if strings.ContainsAny(flai, `'"\`) {
+	if strings.ContainsAny(flai, `'"\$`) {
 		t.Fatalf("the built flai's path %s cannot be quoted in the hooks", flai)
 	}
 	settings := string(data)
-	if n := strings.Count(settings, "flai guard"); n != 4 {
+	if n := len(guardRun.FindAllString(settings, -1)); n != 4 {
 		t.Fatalf("the template's settings run flai guard %d times, want 4 (PreToolUse twice, SubagentStart, SubagentStop):\n%s", n, settings)
 	}
-	return strings.ReplaceAll(settings, "flai guard", "'"+flai+"' guard")
+	return guardRun.ReplaceAllString(settings, "${1}'"+flai+"' guard")
+}
+
+// TestGuardSettingsRunsTheBuiltFlai checks guardSettings against the
+// template's own settings, outside the paid gateway checks that use it, so
+// that a change to the hooks that breaks it fails here first (I-0303): each
+// of the four runs of flai guard runs the given flai, and the hooks' messages
+// still say flai guard.
+func TestGuardSettingsRunsTheBuiltFlai(t *testing.T) {
+	const flai = "/tmp/built/flai"
+	settings := guardSettings(t, flai)
+	if !json.Valid([]byte(settings)) {
+		t.Fatalf("the rewritten settings are not JSON:\n%s", settings)
+	}
+	if n := strings.Count(settings, "'"+flai+"' guard"); n != 4 {
+		t.Errorf("the rewritten settings run %s guard %d times, want 4:\n%s", flai, n, settings)
+	}
+	if guardRun.MatchString(settings) {
+		t.Errorf("the rewritten settings still run the installed flai guard:\n%s", settings)
+	}
+	if n := strings.Count(settings, "flai guard did not run"); n != 2 {
+		t.Errorf("the rewritten settings say \"flai guard did not run\" %d times, want 2 (the two refusing hooks' messages):\n%s", n, settings)
+	}
 }
 
 // gatewayPrompt asks for the protected Write and for a sub-agent's
