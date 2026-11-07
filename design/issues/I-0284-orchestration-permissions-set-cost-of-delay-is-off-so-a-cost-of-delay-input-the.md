@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-07T08:17:35Z
+updated: 2026-11-07T23:39:56Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,5 @@ waiting.longest: S-0549 TH-0784 135,693 s and S-0547 TH-0789 134,328 s, both awa
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0622 remediates this issue, created from it at 2026-11-07T23:39:56Z.
