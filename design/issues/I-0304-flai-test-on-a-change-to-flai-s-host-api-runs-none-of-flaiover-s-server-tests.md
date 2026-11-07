@@ -7,7 +7,7 @@ count: 2
 cost: 8m
 first_reported: 2026-11-07T11:41:27Z
 last_reported: 2026-11-07T11:47:42Z
-updated: 2026-11-07T11:47:42Z
+updated: 2026-11-07T15:15:58Z
 ---
 
 # I-0304 flai test on a change to flai's host API runs none of flaiover's server tests that drive the real flai, so a changed gate in hostapi first fails in the close-out
@@ -26,3 +26,5 @@ Story: S-0587.
 The same story's second close-out stopped at the integration tier on `TestSettingsIndexIsComplete` (flai/cmd/settings_doc_test.go:41): docs/operators/settings.md named `agent.projects.<root>`, not each key `agent.projects.<name>.command`, `.name`, and `.harnesses.<name>.*`. That test skips under `-short`, so `flai test` on docs/operators/settings.md and flai/internal/config ran it nowhere. T-2580's Done when asked for the settings-index test to pass, and its sub-agent reported that it did. A change to the host configuration's shape meets the settings index first in the close-out.
 
 ## Remediation
+
+Story S-0592 remediates this issue, created from it at 2026-11-07T15:15:58Z.
