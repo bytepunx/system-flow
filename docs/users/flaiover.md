@@ -37,7 +37,7 @@ The nav rail lists six groups. Each page is a section below.
 | Flow | [Board](#board), [Inbox](#inbox) (with the number of things that need you), [Charts](#charts) (which opens to list the charts), and Workflow, still to come and marked soon |
 | Agents | Orchestration (the [Orchestrator](#orchestrator)), Planning (the [Planner](#planner)), Analysis (the [Analyzer](#analyzer)), [Activity](#activity), [Threads](#threads), [Messages](#messages) |
 | Design | System (the [Design system](#design-system)), [Components](#components) |
-| Ops | [Klusters](#klusters) |
+| Ops | [Klusters](#klusters), [Deployments](#deployments) |
 | Documentation | System, Conventions, and Issues, which open those folders in [Docs](#docs); [ADRs](#adrs); [Search](#search) |
 | Configuration | [Features](#features), [Agents](#agents), [File System](#file-system), [Projects](#projects), and [Harnesses](#harnesses), the five pages of the [Settings](#settings); then [Host](#host) |
 
@@ -835,7 +835,7 @@ The page can show a story's worktree instead of the main checkout, so you watch 
 
 ## Ops
 
-The Ops group holds the pages that run the project's local Kubernetes cluster, its kluster ([Running a project's kluster](../../design/system/kluster.md)). Klusters is its first page. The browser remembers whether you left Ops open, as it does the other groups.
+The Ops group holds the pages that run the project's local Kubernetes cluster, its kluster ([Running a project's kluster](../../design/system/kluster.md)). Klusters is its first page, and Deployments its second. The browser remembers whether you left Ops open, as it does the other groups.
 
 ### Klusters
 
@@ -852,6 +852,27 @@ Klusters, at `/ops/klusters`, shows the cluster the manifest's `kluster:` block 
 | The kluster host action is off | Turn `kluster` on from the [Features](#features) page, or run `flai serve enable kluster` on the host, in the project |
 | The project has no `kluster:` block | Add the block to `system-flow.yaml`, as the page's link to the kluster design describes |
 | This flai cannot show the kluster yet | Upgrade flai on the host |
+
+### Deployments
+
+Deployments, at `/ops/deployments`, shows what runs on the project's kluster: main in the default namespace, and each story in a namespace of its own, such as `s-0581`. From here you deploy a story, tear one down, or promote main, through flai on the host. The page acts only while the `kluster` host action is on.
+
+**What it shows.** Main's row comes first, then each story's, then the stories in review that are not deployed yet. Each row shows:
+
+| Field | What it says |
+|-------|--------------|
+| Story | The story's ID and title, linking its page; `main` for the default namespace |
+| Namespace | The Kubernetes namespace it runs in |
+| Commit | The commit deployed, and whether the branch has moved on since |
+| Deployed | When the deploy ended |
+| Outcome | How it ended, and the step that failed |
+| Steps | Each step, build, load, and deploy, with how it ended; open one to read the end of its log |
+
+**Deploy, Teardown, and Promote.** **Deploy** builds a story in review from its worktree and deploys it into its namespace. It shows for a story that is not deployed, is deployed at an older commit, or whose deploy failed. **Teardown** removes a story's namespace and what its deploy made, so it first asks: choose **Tear it down** or **Keep it**. **Promote** deploys main's newest commit into the default namespace. flai serve runs one at a time on the host, in the background, and each takes minutes. While one runs, the page says so, shows the end of its output, and checks again every few seconds; the buttons wait until it ends. When flai refuses, such as while another job runs, the page shows flai's sentence word for word.
+
+**Reaching a deployment for a demo.** Open **Reach it for a demo** on a row. It lists the namespace's services, each with the host it answers on inside the cluster, its ports, and a `kubectl port-forward` command. Run that command on the host, in the project's main checkout, where flai keeps the cluster's kubeconfig. The service then answers on the same port of the host's `localhost`, for as long as the command runs. When flai cannot list the services, such as when `kubectl` is not installed on the host, the page says why and gives the command that lists them.
+
+**When it cannot act.** The page shows the same notices as [Klusters](#klusters): the host action is off, the project has no `kluster:` block, or this flai cannot show the deployments yet. With nothing deployed and no story in review, it says so, and offers **Promote**.
 
 ## Theme
 

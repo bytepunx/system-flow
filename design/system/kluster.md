@@ -209,17 +209,21 @@ To be written by S-0579. This section will hold how `flai serve` queues and runs
 
 ## The dashboard (S-0580, S-0581)
 
-The rail's Ops group sits between Design and Documentation. Its first page is Klusters, at `/ops/klusters` (S-0580). S-0581 adds Deployments to the group. The page's layout and its routes are in [flaiover-dashboard.md](flaiover-dashboard.md#views).
+The rail's Ops group sits between Design and Documentation. Its first page is Klusters, at `/ops/klusters` (S-0580), and its second Deployments, at `/ops/deployments` (S-0581). The page's layout and its routes are in [flaiover-dashboard.md](flaiover-dashboard.md#views).
 
 ### The host methods
 
-`flai/internal/hostapi/kluster.go` gives the dashboard three methods. None runs a flai command: each reads the manifest and opens the cluster as `flai kluster` does.
+`flai/internal/hostapi/kluster.go` gives the dashboard seven methods. None runs a flai command: each reads the manifest and opens the cluster as `flai kluster` does.
 
 | Method | Kind | What it does |
 |--------|------|--------------|
 | `kluster.status` | Read, whatever the host action says | The host action, the block, the cluster as `kluster status` reports it, and the up or down flai serve runs or last ran |
 | `kluster.up` | Write, under the `kluster` host action | Starts kluster up in the background and answers the job at once |
 | `kluster.down` | Write, under the `kluster` host action | Starts kluster down the same way |
+| `kluster.deployments` | Read, whatever the host action says | The namespaces' deployment records, main's first, each with its story, head, steps' logs, and how to reach it for a demo; the stories in review with none; and the deploy, teardown, or promotion that runs (S-0581) |
+| `kluster.deploy` | Write, under the `kluster` host action, with `{"story": "S-nnnn"}` | Starts what `flai kluster deploy` runs, from the story's worktree at its head, and answers the job at once |
+| `kluster.teardown` | Write, under the `kluster` host action, with `{"story": "S-nnnn"}` | Starts what `flai kluster teardown` runs the same way |
+| `kluster.promote` | Write, under the `kluster` host action | Starts what `flai kluster promote` runs, main's head into the default namespace, the same way |
 
 `kluster.status` answers these fields. Those marked optional are left out when empty.
 
@@ -234,12 +238,48 @@ The rail's Ops group sits between Design and Documentation. Its first page is Kl
 | `running`, optional | The job that runs now |
 | `last`, optional | The last job to end since flai serve started |
 
-A job carries `action` (`up` or `down`), `cluster`, `started_at`, and `log`, the file its output goes to: `.flai-cache/kluster/up.log` or `.flai-cache/kluster/down.log`. Once it ends it carries `ended_at`, `outcome` (`done` or `failed`), and `error` when it failed. `kluster.status` adds `log_tail`, the last 4 KB of the log cut to whole lines, since the dashboard cannot read files under `.flai-cache`.
+A job carries `action` (`up`, `down`, `deploy`, `teardown`, or `promote`), `cluster`, `started_at`, and `log`, the file its output goes to: `.flai-cache/kluster/<action>.log`. A deploy, a teardown, or a promotion also carries `namespace`, `story` when it is a story's, and `logs`, the folder its steps' own logs go to, `.flai-cache/kluster/logs/<namespace>`. Once it ends it carries `ended_at`, `outcome` (`done` or `failed`), and `error` when it failed. `kluster.status` and `kluster.deployments` add `log_tail`, the last 4 KB of the log cut to whole lines, since the dashboard cannot read files under `.flai-cache`. The writes answer the job as it started, with no `log_tail`.
+
+`kluster.deployments` answers these fields. Those marked optional are left out when empty.
+
+| Field | What it holds |
+|-------|---------------|
+| `enabled`, `enable`, `block`, `no_block` | As `kluster.status` answers them |
+| `status_error`, optional | Why the block's config could not be read |
+| `cluster`, optional | The cluster's name |
+| `default_namespace`, optional | The namespace main is promoted into |
+| `deployments` | One row per namespace with a record, main's first, then the stories' by number, then any other by name |
+| `review` | The stories in review with no record, each `story`, `title`, `head`, and `head_error` when the head could not be read |
+| `running`, optional | The deploy, teardown, or promotion that runs now. When another process holds kluster's lock, such as `flai kluster deploy` in a shell, it is built from the lock's job, with no log |
+| `last`, optional | The last deploy, teardown, or promotion this flai serve ran |
+
+A row of `deployments` holds the record's fields, `story`, `namespace`, `commit`, `tag`, `checkout`, `images`, `started_at`, `ended_at`, `outcome`, `failed_step`, `exit_code`, and `error`, with the project's root left out of their paths, and these:
+
+| Field | What it holds |
+|-------|---------------|
+| `default` | Whether it is the default namespace |
+| `job`, optional | The job holding kluster's lock against the namespace: `kind`, `story`, `namespace`, `started_at`, `pid`. A record that says `running` with no such job reads `interrupted` |
+| `steps` | Each step's `name`, `started_at`, `ended_at`, `outcome`, `exit_code`, `log`, from the root, and `log_tail`, its last 4 KB |
+| `title`, `status`, optional | The story's, for a story's namespace |
+| `head`, optional | The story branch's head now, or main's for the default namespace, so a deploy at an older commit shows; `head_error` says why it could not be read |
+| `access` | How to reach the namespace for a demo, below |
+
+`access` follows [ADR-0254](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md): a demo reaches a namespace through a port-forward, until a project gives each namespace a host of its own. flai reads the services with one `kubectl get services --all-namespaces --output json` per list, with its kubeconfig and the cluster's context, within 10 seconds, and only when the kubeconfig exists. Its commands name the kubeconfig from the root, so they are run in the project's main checkout.
+
+| Field | What it holds |
+|-------|---------------|
+| `kubeconfig` | flai's kubeconfig of the cluster, `.flai-cache/kluster/kubeconfig` |
+| `context` | The cluster's kube context, `k3d-` and its name |
+| `namespace` | The namespace |
+| `list` | The `kubectl` command that lists the namespace's services |
+| `services` | Each service's `name`, `host` (`<name>.<namespace>.svc.cluster.local`), `ports` (`name`, `port`, `protocol`), and `port_forward`, the `kubectl port-forward service/<name>` command that forwards each port to the same port on the host |
+| `services_error`, optional | Why the services could not be read: no kubeconfig, `kubectl` missing from the host's `PATH`, or kubectl's error |
 
 ### The jobs
 
-- flai serve runs the jobs in its own process, one per project at a time, each bounded by `kluster.timeout`.
-- It keeps the running job and the last one in memory. A restart of flai serve forgets them; the log files stay.
+- flai serve runs the jobs in its own process, one per project at a time, each bounded by `kluster.timeout`. An up, a down, a deploy, a teardown, and a promotion share that one slot.
+- A deploy, a teardown, or a promotion also runs under kluster's own lock, `.flai-cache/kluster/job.lock`, which the commands and flai serve's own kluster jobs take too, so none of them runs beside another.
+- It keeps the running job, the last up or down, and the last deploy, teardown, or promotion in memory, apart, so the Klusters page's last job stays the last up or down. A restart of flai serve forgets them; the log files stay.
 - Stopping flai serve cuts a running job short, and it ends `failed`.
 - The start of each job goes in the host journal. Its end is an info log line, `kluster job ended`.
 
@@ -255,6 +295,22 @@ The writes refuse in this order, each with flai's own sentence:
 | A config flai cannot read | A rule refusal, the kluster package's error |
 | An up or down already runs | A rule refusal naming the job, the cluster, and when it started |
 
+A deploy, a teardown, and a promotion refuse in this order:
+
+| Case | Answer |
+|------|--------|
+| The host action is off | `Disabled`, naming `flai serve enable kluster` |
+| A story that is not an ID, for a deploy or a teardown | Invalid params, before the manifest is read |
+| A flai that runs no kluster jobs | A rule refusal saying flai serve runs them, or to run `flai kluster deploy S-nnnn`, `teardown`, or `promote` in a shell |
+| No `kluster:` block | A rule refusal, the sentence `flai kluster up` gives |
+| A config flai cannot read | A rule refusal, the kluster package's error |
+| No `deploy` command, for a deploy or a promotion, or no kubeconfig | A rule refusal, as `flai kluster deploy` gives it |
+| A job holds kluster's lock | A rule refusal naming the job, the namespace, and when it started |
+| A deploy of a story not in progress or in review, or with no worktree | A rule refusal, as `flai kluster deploy` gives it |
+| A teardown of a story with no deployment recorded | A rule refusal |
+| A promotion with no default namespace | A rule refusal naming `kluster.namespace` |
+| A job already runs in flai serve | A rule refusal naming the job, the cluster, and when it started |
+
 A host without `kluster` on its `PATH` is not refused: the job starts and ends `failed` with kluster's install sentence, which `status_error` shows beforehand.
 
 ### The Klusters page
@@ -265,3 +321,16 @@ The page shows the cluster's name, profile, provider, state (Running, Stopped, o
 |-------|-------------------------|
 | The host action is off | A notice naming `flai serve enable kluster` and linking the Features page |
 | No `kluster:` block | `no_block` and a link to this document |
+
+### The Deployments page
+
+The page lists main's namespace first, then each story's, then the stories in review not yet deployed. Each row shows the story's ID and title, linking its item page, or `main`; the namespace; the commit; when it was deployed; the outcome; and each step, whose log opens in place from its last 4 KB.
+
+| Row | Its actions |
+|-----|-------------|
+| Main's namespace | **Promote** |
+| A story's namespace | **Teardown**, after confirmation; **Deploy** when the story is in review and is deployed at a commit other than its head, or its deploy failed or was interrupted |
+| A story in review not deployed | **Deploy** |
+| Main not deployed | **Promote**, beside the sentence saying so |
+
+Each row's **Reach it for a demo** shows `access`: each service's host, ports, and port-forward command, the command that lists them, and `services_error`. While a job runs the actions wait, the page says which job runs, shows the end of its log, and asks for the deployments again every 3 seconds until it ends. flai's refusals and errors are shown word for word. The host action off, no `kluster:` block, and a flai too old show the notices the Klusters page shows.
