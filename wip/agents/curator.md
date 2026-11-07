@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 143.8505
-accrued_seconds: 13764
-tasks_completed: 88
-last_run: 2026-11-07T15:18:47Z
+accrued_cost: 145.1823
+accrued_seconds: 13835
+tasks_completed: 89
+last_run: 2026-11-07T15:20:08Z
 ---
 
 # Curator activity
@@ -715,3 +715,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0427, D-0464, D-0492, D-0512, D-0515, D-0516, D-0517, D-0518, D-0519
 - Seconds: 167
 - Cost: 2.0566 USD, estimated
+
+### 2026-11-07T15:20:08Z
+
+- Summary: I found nothing new to take in. I wrote no entries, merged none, absorbed none, and `flai digest compact` compacted none. The 13 S-0543 and S-0587 candidates were all handled by the 15:18:47Z run, in D-0427, D-0464, D-0492, and D-0515 to D-0519, or were progress notes and decisions ADR-0261 already records. Only the release commit 3ea7bb925 has landed since. D-0478 and D-0514 to D-0519 stay active, because neither ADR-0251, ADR-0261, nor any design document states their facts.
+- Trigger: accepted S-0587
+- Items: none
+- Seconds: 71
+- Cost: 1.3318 USD, estimated

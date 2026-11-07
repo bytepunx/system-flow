@@ -3,10 +3,10 @@ id: S-0593
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T15:17:08Z
-updated: 2026-11-07T15:17:37Z
+updated: 2026-11-07T15:21:07Z
 transitions:
   - to: ready
     at: 2026-11-07T15:17:32Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T15:17:37Z
     by: agent-S-0593
+  - to: review
+    at: 2026-11-07T15:19:55Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T15:21:07Z
+    by: orchestrator
 tags: []
 agent:
   harness: claude-code
@@ -22,19 +28,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 78
-  estimated: true
-  priced_by: estimate
+  seconds: 146
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      work: 15
+      ceremony: 2
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 208
-      cache_read: 1685001
-      cache_write: 140190
-      cost: 0.6542
+      input: 56
+      output: 6928
+      cache_read: 3586495
+      cache_write: 148754
+      cost: 2.0461
   strategic:
     - kind: orchestrator
       seconds: 21
@@ -56,9 +62,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2586 Fetch the remote's branch and tags
@@ -68,3 +74,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with no inputs.
+
+### Accepted by the orchestrator
+
+- Verified: 3ea7bb9259b448c2c3b2a9b4117d4eb475283abe
+- At: 2026-11-07T15:21:07Z
+
+Verdict: pass. Every step of the publish formula ran and exited 0; the last flai verify passed at 3ea7bb9.
+- 1: T-2586 done
+- 2: T-2587 done
+- 3: T-2588 done
