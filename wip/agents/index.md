@@ -1,12 +1,14 @@
 ---
 title: Active streams
-updated: 2026-11-07T08:01:38Z
+updated: 2026-11-07T08:03:40Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0562](S-0562.md) | The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded | in-progress | agent-S-0562 | 2026-11-07T08:02:15Z |
+| [S-0564](S-0564.md) | The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted | in-progress | agent-S-0564 | 2026-11-07T08:02:18Z |
 
 ## Strategic agents
 
