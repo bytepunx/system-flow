@@ -562,7 +562,8 @@ It is a host action, off until you enable it (flai serve enable agent).
 
 A story names its agent (flai agent, flai edit --harness): a harness, a
 model, and options. flai starts a harness it knows through its adapter
-(claude-code runs claude -p with the story's model, and flai's MCP server),
+(claude-code runs claude -p with the story's model, and flai's MCP server;
+opencode runs opencode run with its provider/model and flai's MCP server),
 with the program and the arguments you set for it here with flai serve agent
 harness, which say what the agent may do. A story names only tunables the
 adapter checks, never a program, a flag, or a permission.
@@ -1267,6 +1268,11 @@ own vocabulary, which flai cannot read, so flai starts the agent on a harness
 that cannot ask before a protected write; --deny-protected=false takes it
 back.
 
+The opencode harness runs opencode run with no arguments of flai's: it can
+neither run flai guard nor ask, so it starts only with the auto-approve host
+action on or --deny-protected, and --deny-protected has flai give OpenCode a
+deny rule for each protected path (ADR-0260).
+
 The container harness runs an inner harness, claude-code, in a Docker
 container, and only it takes --image, --network, and --login.
 --image <inner>=<image> is the image the inner harness runs in,
@@ -1287,6 +1293,7 @@ program and arguments are set with flai serve agent set.`,
   flai serve agent harness command --guard ""
   flai serve agent harness command --deny-protected
   flai serve agent harness command --deny-protected=false
+  flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
   flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
   flai serve agent harness container --network flai-agents`,
 		RunE: func(cmd *cobra.Command, args []string) error {

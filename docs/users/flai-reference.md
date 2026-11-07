@@ -3825,7 +3825,7 @@ flai serve agent
 
 flai serve can start an agent for each story that becomes ready, while the in-progress limit leaves room, review is under its limit, and no agent of yours is attending the project. It is a host action, off until you enable it (flai serve enable agent).
 
-A story names its agent (flai agent, flai edit --harness): a harness, a model, and options. flai starts a harness it knows through its adapter (claude-code runs claude -p with the story's model, and flai's MCP server), with the program and the arguments you set for it here with flai serve agent harness, which say what the agent may do. A story names only tunables the adapter checks, never a program, a flag, or a permission.
+A story names its agent (flai agent, flai edit --harness): a harness, a model, and options. flai starts a harness it knows through its adapter (claude-code runs claude -p with the story's model, and flai's MCP server; opencode runs opencode run with its provider/model and flai's MCP server), with the program and the arguments you set for it here with flai serve agent harness, which say what the agent may do. A story names only tunables the adapter checks, never a program, a flag, or a permission.
 
 A story that names no harness, or names "command", is started with your command, when one is set: an argument list, run as it stands in the project's directory, as you, never through a shell. In an argument {story}, {root}, {model}, and {harness} are replaced; nothing else is interpreted, and the story's options are in FLAI\_AGENT\_CONFIG as JSON.
 
@@ -3896,6 +3896,8 @@ On a harness that cannot run flai guard, a story whose agent has roles is refuse
 
 On a harness that cannot ask before a protected write, a start is refused unless the project's auto-approve host action is on. --deny-protected says that your arguments for the harness already deny the protected paths in its own vocabulary, which flai cannot read, so flai starts the agent on a harness that cannot ask before a protected write; --deny-protected=false takes it back.
 
+The opencode harness runs opencode run with no arguments of flai's: it can neither run flai guard nor ask, so it starts only with the auto-approve host action on or --deny-protected, and --deny-protected has flai give OpenCode a deny rule for each protected path (ADR-0260).
+
 The container harness runs an inner harness, claude-code, in a Docker container, and only it takes --image, --network, and --login. --image &lt;inner&gt;=&lt;image&gt; is the image the inner harness runs in, flai-agent-&lt;inner&gt;:local (make agent-images) unless set; repeat it for each inner harness. --network is the Docker network the container joins, Docker's default bridge with the host reached through Docker's host gateway unless set; --network "" goes back to it. --login is the folder holding your Claude login, mounted read-only, an existing folder given as an absolute path or under ~/; --login "" clears it.
 
 The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
@@ -3911,6 +3913,7 @@ flai serve agent harness command --guard none
 flai serve agent harness command --guard ""
 flai serve agent harness command --deny-protected
 flai serve agent harness command --deny-protected=false
+flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
 flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
 flai serve agent harness container --network flai-agents
 ```

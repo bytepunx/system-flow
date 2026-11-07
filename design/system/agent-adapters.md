@@ -239,6 +239,8 @@ OpenCode reaches a gateway through `provider.<id>` in `opencode.json`: `npm: "@a
 | Usage stream | `--format json`: JSONL with `step_start`, `text`, `tool_use`, `step_finish`, `error`, and `reasoning` under `--thinking`; `step_finish` carries tokens (input, output, reasoning, cache read and write) and `cost` priced from OpenCode's own model table, no model, and only the root session's steps (§ Read from the source at v1.19.5) |
 | Instruction files | `AGENTS.md` up the tree and `~/.config/opencode/AGENTS.md`; falls back to `CLAUDE.md` and `~/.claude/CLAUDE.md`, off under `OPENCODE_DISABLE_CLAUDE_CODE`; `instructions` in `opencode.json` adds paths, globs, or URLs ([rules](https://opencode.ai/docs/rules/)) |
 
+Built since S-0406: the `opencode` adapter runs a story's agent with `opencode run`, resume only, and gives OpenCode its configuration through the environment ([ADR-0260](../adrs/0260-the-opencode-adapter-gives-a-story-s-opencode-its-configuration-through-the.md), [flai-cli.md](flai-cli.md#the-opencode-harness-s-0406)).
+
 #### Read from the source at v1.19.5 (S-0406)
 
 OpenCode's repository moved from `sst/opencode` to [`anomalyco/opencode`](https://github.com/anomalyco/opencode/tree/v1.19.5); GitHub redirects the old name. It is MIT-licensed. The pinned release is `v1.19.5`, tagged 2026-10-28 at commit `810c0eb`, the newest tagged release on 2026-11-07. Everything in this subsection was read from the source and documentation at that tag on 2026-11-07, not run against a binary. The documentation's pages are in the repository at `packages/web/src/content/docs/` and are served at opencode.ai/docs. Where the documentation and the source differ, this records the source and names the difference. Links go to files at the tag.
