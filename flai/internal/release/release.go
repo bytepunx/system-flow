@@ -404,22 +404,9 @@ const unreleasedHeading = "## Unreleased"
 // is returned as it is, when s has no such section.
 func cutUnreleased(s string) (rest, body string, ok bool) {
 	lines := strings.SplitAfter(s, "\n")
-	start := -1
-	for i, l := range lines {
-		if strings.TrimRight(l, " \t\r\n") == unreleasedHeading {
-			start = i
-			break
-		}
-	}
+	start, end := unreleasedSection(lines)
 	if start < 0 {
 		return s, "", false
-	}
-	end := len(lines)
-	for i := start + 1; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i], "## ") {
-			end = i
-			break
-		}
 	}
 	body = strings.TrimLeft(strings.TrimRight(strings.Join(lines[start+1:end], ""), " \t\r\n"), "\n")
 	if body != "" {
