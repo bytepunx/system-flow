@@ -35,6 +35,9 @@ func TestGuard(t *testing.T) {
 		// S-0246, I-0058: a heredoc's text is input, unless a shell reads it.
 		{`{"tool_name":"Bash","tool_input":{"command":"python3 - <<'EOF'\nprint(\"it's flai story new x\")\nEOF"},"agent_type":"general-purpose","agent_id":"a5"}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"bash <<'EOF'\nflai move S-1 review\nEOF"},"agent_type":"general-purpose","agent_id":"a6"}`, 2, "cannot run \"flai move S-1 review\""},
+		// S-0568, I-0245: flai role definition reads; flai role run starts an agent.
+		{`{"tool_name":"Bash","tool_input":{"command":"scripts/flai.sh role definition planner"},"agent_type":"general-purpose","agent_id":"a7"}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai role run reviewer"},"agent_type":"general-purpose","agent_id":"a8"}`, 2, "a sub-agent (general-purpose) cannot run \"flai role run reviewer\""},
 		{`not json`, 0, "hook input is not a tool call"},
 	} {
 		_, errOut, code := runStdin(t, dir, c.in, "guard")

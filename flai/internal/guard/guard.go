@@ -305,8 +305,11 @@ var cliReads = map[string][]string{
 // flai plan without --candidates starts the planner, which with it takes
 // no item; flai verify --record-issues writes issues, which without it it
 // does not (S-0270); and flai verify --job asks flai serve for the close-out
-// job, which commits in the story's worktree (S-0556, ADR-0229). A command
-// with no with flags reads in any form without its without flags.
+// job, which commits in the story's worktree (S-0556, ADR-0229). flai role
+// list, show, and definition read the role files, and flai role alone prints
+// its help, but flai role run starts an agent and flai role definition
+// --write writes the definitions into .flai-cache/agents (S-0568, I-0245).
+// A command with no with flags reads in any form without its without flags.
 var flagReads = map[string]struct {
 	with    []string
 	without []string
@@ -316,7 +319,19 @@ var flagReads = map[string]struct {
 	"plan":    {with: []string{"--candidates"}},
 	"promote": {with: []string{"--candidates", "--drafts"}},
 	"release": {with: []string{"--evaluate"}},
+	"role":    {without: []string{"--write"}, form: readsRoles},
 	"verify":  {without: []string{"--job", "--record-issues"}},
+}
+
+// roleReads are the subcommands of flai role that read, "" for flai role
+// alone.
+var roleReads = []string{"", "definition", "list", "show"}
+
+// readsRoles says whether the words of flai role name a subcommand that
+// reads.
+func readsRoles(words []string) bool {
+	_, sub := subcommands(words, flaiValues)
+	return slices.Contains(roleReads, sub)
 }
 
 // orderValues are the flags of flai order, flai's own among them, that take

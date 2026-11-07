@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -773,5 +774,50 @@ func TestADefinedRolesThreadConditionsHoldItToItsOwnName(t *testing.T) {
 	}
 	if v := Decide(gr, roleShell("flai thread reply TH-0001 x --by alex")); v.Outcome != Deny || !strings.Contains(v.Reason, "only under own-thread") || strings.Contains(v.Reason, "ADR-0143") {
 		t.Errorf("a reply on its own thread naming another: %+v", v)
+	}
+}
+
+// S-0568, I-0245: every sub-agent and every strategic agent's own call reads
+// the roles with flai role, role list, role show, and role definition, but
+// none runs flai role run, which starts an agent, nor flai role definition
+// with --write in any form, which writes the definitions.
+func TestEveryAgentReadsTheRolesButNoneRunsOneOrWritesItsDefinition(t *testing.T) {
+	cmds := append(slices.Clone(g.Commands), "role")
+	sub := Guard{Commands: cmds, Story: "S-0001", ReadOnly: func(agentType string) bool { return agentType == "verifier" || agentType == "explorer" }}
+	plan, orch, curator := planGuard, orchestrator(allOn), itsCurator
+	plan.Commands, orch.Commands, curator.Commands = cmds, cmds, append(slices.Clone(itsCurator.Commands), "role")
+	reads := []string{"flai role", "flai role list --json", "flai role show planner", "flai role definition planner", "scripts/flai.sh role definition planner"}
+	writes := []string{"flai role definition --write", "flai role definition --write planner", "flai role definition --write=true planner"}
+	for _, who := range []string{"explorer", "verifier", "general-purpose"} {
+		for _, c := range reads {
+			if why := sub.Check(bash(who, c)); why != "" {
+				t.Errorf("%s: %q refused: %s", who, c, why)
+			}
+		}
+		for _, c := range append([]string{"flai role run reviewer"}, writes...) {
+			if why := sub.Check(bash(who, c)); !strings.Contains(why, "a sub-agent ("+who+") cannot run "+strconv.Quote(c)) {
+				t.Errorf("%s: %q: %q", who, c, why)
+			}
+		}
+	}
+	for _, s := range []struct {
+		name string
+		gd   Guard
+	}{
+		{"planner", plan},
+		{"orchestrator", orch},
+		{"analyzer", Guard{Commands: cmds, Role: RoleAnalyze}},
+		{"curator", curator},
+	} {
+		for _, c := range reads {
+			if why := s.gd.Check(bash("", c)); why != "" {
+				t.Errorf("the %s: %q refused: %s", s.name, c, why)
+			}
+		}
+		for _, c := range writes {
+			if why := s.gd.Check(bash("", c)); !strings.HasPrefix(why, "the "+s.name+" cannot run "+strconv.Quote(c)) {
+				t.Errorf("the %s: %q: %q", s.name, c, why)
+			}
+		}
 	}
 }
