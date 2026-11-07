@@ -3,10 +3,12 @@
 // through permission_prompt, and no allow rule pre-approves it; the
 // acceptance preview reads the list too (ADR-0106). Claude Code's list
 // follows "Protected paths" in Claude Code's documentation as of Claude Code
-// 2.1.290 (ADR-0106). A harness's own files, such as .codex/, .opencode/,
-// .agents/plugins/, or AGENTS.md, join the list with that harness's adapter,
-// not before. The container harness's list holds this repository's files
-// that change what a containerised agent may do, the images and the scripts
+// 2.1.290 (ADR-0106). A harness's own files, such as .codex/ or
+// .agents/plugins/, join the list with that harness's adapter, not before:
+// OpenCode's list is Claude Code's plus .opencode/, its config file, and
+// AGENTS.md, which it reads as instructions (S-0406). The container
+// harness's list holds this repository's files that change what a
+// containerised agent may do, the images and the scripts
 // that build and run them (ADR-0203), by their path from the repository root.
 // Path and Changed answer for every harness's list at once. .git
 // stays apart, in Git, because permission_prompt never approves it whichever
@@ -23,6 +25,10 @@ import (
 // ClaudeCode is the harness name of Claude Code, the one guard.ClaudeCode
 // names; protected cannot import guard, which imports it.
 const ClaudeCode = "claude-code"
+
+// OpenCode is the harness name of OpenCode, the one the opencode adapter
+// registers.
+const OpenCode = "opencode"
 
 // Container is the harness name of the container adapter, which runs another
 // harness in a container (ADR-0203).
@@ -43,21 +49,28 @@ type List struct {
 	RootFiles []string
 }
 
+// claudeCode is Claude Code's list, which OpenCode's extends.
+var claudeCode = List{
+	Folders: []string{".git", ".config/git", ".vscode", ".idea", ".husky", ".cargo", ".devcontainer", ".yarn", ".mvn", ".claude"},
+	Files: []string{
+		".gitconfig", ".gitmodules",
+		".bashrc", ".bash_profile", ".bash_login", ".bash_aliases", ".bash_logout", ".zshrc", ".zprofile", ".zshenv", ".zlogin", ".zlogout", ".profile", ".envrc",
+		".npmrc", ".yarnrc", ".yarnrc.yml", ".pnp.cjs", ".pnp.loader.mjs", ".pnpmfile.cjs", "bunfig.toml", ".bunfig.toml",
+		".bazelrc", ".bazelversion", ".bazeliskrc",
+		".pre-commit-config.yaml", "lefthook.yml", "lefthook.yaml", ".lefthook.yml", ".lefthook.yaml",
+		"gradle-wrapper.properties", "maven-wrapper.properties",
+		".devcontainer.json",
+		".ripgreprc", "pyrightconfig.json",
+		".mcp.json", ".claude.json",
+	},
+}
+
 // lists are the protected paths of each harness, by harness name.
 var lists = map[string]List{
-	ClaudeCode: {
-		Folders: []string{".git", ".config/git", ".vscode", ".idea", ".husky", ".cargo", ".devcontainer", ".yarn", ".mvn", ".claude"},
-		Files: []string{
-			".gitconfig", ".gitmodules",
-			".bashrc", ".bash_profile", ".bash_login", ".bash_aliases", ".bash_logout", ".zshrc", ".zprofile", ".zshenv", ".zlogin", ".zlogout", ".profile", ".envrc",
-			".npmrc", ".yarnrc", ".yarnrc.yml", ".pnp.cjs", ".pnp.loader.mjs", ".pnpmfile.cjs", "bunfig.toml", ".bunfig.toml",
-			".bazelrc", ".bazelversion", ".bazeliskrc",
-			".pre-commit-config.yaml", "lefthook.yml", "lefthook.yaml", ".lefthook.yml", ".lefthook.yaml",
-			"gradle-wrapper.properties", "maven-wrapper.properties",
-			".devcontainer.json",
-			".ripgreprc", "pyrightconfig.json",
-			".mcp.json", ".claude.json",
-		},
+	ClaudeCode: claudeCode,
+	OpenCode: {
+		Folders: append(slices.Clone(claudeCode.Folders), ".opencode"),
+		Files:   append(slices.Clone(claudeCode.Files), "opencode.json", "opencode.jsonc", "AGENTS.md"),
 	},
 	Container: {
 		RootFolders: []string{"flai/images"},

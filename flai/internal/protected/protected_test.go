@@ -107,10 +107,11 @@ func TestChangedKeepsTheProtectedInOrder(t *testing.T) {
 	}
 }
 
-func TestForPinsClaudeCodesList(t *testing.T) {
-	l := For("claude-code")
-	folders := []string{".git", ".config/git", ".vscode", ".idea", ".husky", ".cargo", ".devcontainer", ".yarn", ".mvn", ".claude"}
-	files := []string{
+// claudeCodeFolders and claudeCodeFiles are Claude Code's list as its
+// documentation states it (ADR-0106).
+var (
+	claudeCodeFolders = []string{".git", ".config/git", ".vscode", ".idea", ".husky", ".cargo", ".devcontainer", ".yarn", ".mvn", ".claude"}
+	claudeCodeFiles   = []string{
 		".gitconfig", ".gitmodules",
 		".bashrc", ".bash_profile", ".bash_login", ".bash_aliases", ".bash_logout", ".zshrc", ".zprofile", ".zshenv", ".zlogin", ".zlogout", ".profile", ".envrc",
 		".npmrc", ".yarnrc", ".yarnrc.yml", ".pnp.cjs", ".pnp.loader.mjs", ".pnpmfile.cjs", "bunfig.toml", ".bunfig.toml",
@@ -121,11 +122,46 @@ func TestForPinsClaudeCodesList(t *testing.T) {
 		".ripgreprc", "pyrightconfig.json",
 		".mcp.json", ".claude.json",
 	}
+)
+
+func TestForPinsClaudeCodesList(t *testing.T) {
+	l := For("claude-code")
+	if !slices.Equal(l.Folders, claudeCodeFolders) {
+		t.Errorf("For(claude-code).Folders = %q, want %q", l.Folders, claudeCodeFolders)
+	}
+	if !slices.Equal(l.Files, claudeCodeFiles) {
+		t.Errorf("For(claude-code).Files = %q, want %q", l.Files, claudeCodeFiles)
+	}
+}
+
+func TestForPinsOpenCodesListAsClaudeCodesPlusItsOwnFiles(t *testing.T) {
+	l := For("opencode")
+	folders := append(slices.Clone(claudeCodeFolders), ".opencode")
+	files := append(slices.Clone(claudeCodeFiles), "opencode.json", "opencode.jsonc", "AGENTS.md")
 	if !slices.Equal(l.Folders, folders) {
-		t.Errorf("For(claude-code).Folders = %q, want %q", l.Folders, folders)
+		t.Errorf("For(opencode).Folders = %q, want %q", l.Folders, folders)
 	}
 	if !slices.Equal(l.Files, files) {
-		t.Errorf("For(claude-code).Files = %q, want %q", l.Files, files)
+		t.Errorf("For(opencode).Files = %q, want %q", l.Files, files)
+	}
+	if len(l.RootFolders) != 0 || len(l.RootFiles) != 0 {
+		t.Errorf("For(opencode) = %+v, want no root folders or files", l)
+	}
+}
+
+func TestPathProtectsOpenCodesOwnFiles(t *testing.T) {
+	for _, p := range []string{
+		".opencode/agents/explorer.md", ".opencode/plugins/flai.ts", "template/root/.opencode/opencode.json",
+		"opencode.json", "opencode.jsonc", "sub/opencode.json", "AGENTS.md", "template/root/AGENTS.md", "flai/AGENTS.md",
+	} {
+		if !Path(p) {
+			t.Errorf("Path(%q) = false, want true: OpenCode's list protects it", p)
+		}
+	}
+	for _, p := range []string{".opencode", "opencode.json.bak", "my-opencode.json", "AGENTS.md.orig", "docs/AGENTS.txt", "opencode/x.ts"} {
+		if Path(p) {
+			t.Errorf("Path(%q) = true, want false: it is in no harness's list", p)
+		}
 	}
 }
 
@@ -143,6 +179,14 @@ func TestForPinsTheContainersList(t *testing.T) {
 }
 
 func TestForReturnsACopy(t *testing.T) {
+	o := For(OpenCode)
+	o.Folders[0], o.Files[len(o.Files)-1] = "x", "y"
+	if again := For(OpenCode); again.Folders[0] != ".git" || again.Files[len(again.Files)-1] != "AGENTS.md" {
+		t.Errorf("For(%s) after changing a copy = %q, %q: the copy changed the list", OpenCode, again.Folders[0], again.Files[len(again.Files)-1])
+	}
+	if again := For(ClaudeCode); len(again.Folders) != len(claudeCodeFolders) || len(again.Files) != len(claudeCodeFiles) {
+		t.Errorf("For(%s) after changing OpenCode's copy = %+v: OpenCode's list shares Claude Code's", ClaudeCode, again)
+	}
 	l := For(ClaudeCode)
 	l.Folders[0], l.Files[0] = "x", "y"
 	if again := For(ClaudeCode); again.Folders[0] != ".git" || again.Files[0] != ".gitconfig" {
@@ -155,9 +199,9 @@ func TestForReturnsACopy(t *testing.T) {
 	}
 }
 
-func TestHarnessesAreClaudeCodeAndContainer(t *testing.T) {
-	if got := Harnesses(); !slices.Equal(got, []string{"claude-code", "container"}) {
-		t.Errorf("Harnesses() = %q, want [claude-code container]", got)
+func TestHarnessesAreClaudeCodeContainerAndOpenCode(t *testing.T) {
+	if got := Harnesses(); !slices.Equal(got, []string{"claude-code", "container", "opencode"}) {
+		t.Errorf("Harnesses() = %q, want [claude-code container opencode]", got)
 	}
 }
 
