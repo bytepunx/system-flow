@@ -402,6 +402,60 @@ export type ComponentsStatus = {
 	servers: ComponentServer[];
 };
 
+/** The project's cluster as flai kluster status reports it (Go's kluster.Status, S-0577). */
+export type KlusterCluster = {
+	name: string;
+	profile?: string;
+	provider: string;
+	/** The kube context kluster names for it. */
+	context: string;
+	/** Whether kluster status lists the cluster; false when it was never brought up or is down. */
+	exists: boolean;
+	/** Whether kluster says it runs. */
+	running: boolean;
+	/** Its age as kluster prints it, such as 2h50m39s. */
+	age?: string;
+	age_seconds?: number;
+};
+
+/** One kluster up or down flai serve ran, or runs, for the project (Go's hostapi.KlusterJob). */
+export type KlusterJob = {
+	action: 'up' | 'down';
+	cluster: string;
+	/** RFC 3339, UTC. */
+	started_at: string;
+	/** Absent while it runs. */
+	ended_at?: string;
+	/** done or failed, once it ended. */
+	outcome?: 'done' | 'failed';
+	/** Why it failed, kluster's or flai's own sentence. */
+	error?: string;
+	/** The file kluster's output goes to, from the project's root. */
+	log: string;
+	/** The end of that file, at most 4 KB; only kluster.status sends it. */
+	log_tail?: string;
+};
+
+/** What flai's kluster.status answers (Go's hostapi.KlusterStatus, S-0580). */
+export type KlusterStatus = {
+	/** Whether the kluster host action is on for the project. */
+	enabled: boolean;
+	/** What the operator runs on the host to turn it on: flai serve enable kluster. */
+	enable: string;
+	/** Whether the manifest has a kluster: block. */
+	block: boolean;
+	/** flai's sentence naming the block to add, when there is none. */
+	no_block?: string;
+	/** Absent when there is no block or its config cannot be read. */
+	cluster?: KlusterCluster;
+	/** Why the cluster could not be read, such as kluster missing from the host's PATH. */
+	status_error?: string;
+	/** The up or down that runs now. */
+	running?: KlusterJob;
+	/** The last up or down to end since flai serve started. */
+	last?: KlusterJob;
+};
+
 /** JSON-RPC's code for a method the host flai does not offer: it is older than this dashboard. */
 const METHOD_NOT_FOUND = -32601;
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
@@ -757,6 +811,36 @@ export class Repo extends EventEmitter {
 				...(project ? { sub_project: project } : {}),
 				...(story ? { story } : {})
 			})
+		);
+		return data;
+	}
+
+	/**
+	 * The project's kluster, flai's kluster.status (S-0580): the cluster its manifest's kluster: block
+	 * names, whether it runs and its age, whether the kluster host action is on, and the up or down
+	 * flai serve runs or last ran, with the end of its log. Asked afresh each time: kluster answers
+	 * from the cluster, not from a file flai watches.
+	 */
+	async klusterStatus(): Promise<KlusterStatus> {
+		return upgraded('show the kluster', () => this.ask<KlusterStatus>('kluster.status'));
+	}
+
+	/**
+	 * Start kluster up of the project's cluster, flai's kluster.up under the kluster host action
+	 * (S-0580). flai answers the job at once and runs it in the background; kluster.status says how
+	 * it ends.
+	 */
+	async klusterUp(): Promise<KlusterJob> {
+		const { data } = await upgraded('bring the kluster up', () =>
+			this.write<KlusterJob>('kluster.up')
+		);
+		return data;
+	}
+
+	/** Start kluster down of the project's cluster, flai's kluster.down, as klusterUp starts up. */
+	async klusterDown(): Promise<KlusterJob> {
+		const { data } = await upgraded('take the kluster down', () =>
+			this.write<KlusterJob>('kluster.down')
 		);
 		return data;
 	}
