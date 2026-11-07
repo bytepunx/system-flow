@@ -6,13 +6,13 @@ title: flai guard still lists the verify MCP tool among a sub-agent's reads, tho
 status: backlog
 owner: alex
 created: 2026-11-01T10:44:38Z
-updated: 2026-11-07T03:29:11Z
+updated: 2026-11-07T03:43:33Z
 transitions: []
 tags: [flai, template]
 topics: [guard, testing]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/orchestrate_test.go, flai/internal/roles/baseline/orchestrator.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/issues/I-0240-flai-guard-still-lists-the-verify-mcp-tool-among-a-sub-agent-s-reads-though-it.md, design/issues/summary.md]
 agent:
-  harness: claude-code
+  harness: container
   model: claude-opus-5-5
   config:
     effort: high

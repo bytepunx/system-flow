@@ -3,15 +3,33 @@ id: T-2449
 type: task
 nature: experiment
 title: The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
-status: backlog
+status: in-progress
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:24:13Z
-updated: 2026-11-03T01:28:37Z
-transitions: []
+updated: 2026-11-07T03:43:20Z
+transitions:
+  - to: ready
+    at: 2026-11-07T03:43:19Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T03:43:20Z
+    by: system-flow
 stream: S-0565
 tags: [docker]
 touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md]
+usage:
+  source: log
+  seconds: 96
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 9207
+      cache_read: 2110426
+      cache_write: 120154
+      cost: 1.5676
 ---
 # T-2449 The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
 

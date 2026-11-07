@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1983.3603
-accrued_seconds: 1510559
-tasks_completed: 1898
-last_run: 2026-11-07T03:30:44Z
+accrued_cost: 1986.0641
+accrued_seconds: 1511430
+tasks_completed: 1929
+last_run: 2026-11-07T03:59:36Z
 ---
 
 # Orchestrator activity
@@ -13317,6 +13317,223 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 15
 - Cost: 0.1876 USD, estimated
 
+### 2026-11-07T03:43:49Z
+
+- Summary: Answered TH-0835, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0565
+- Seconds: 25
+- Cost: 0.0623 USD, estimated
+
+### 2026-11-07T03:44:02Z
+
+- Summary: Approved and resolved planner-S-0565's replan thread TH-0835 under plan_backlog_stories: tasks T-2449..T-2453 and 4 touches unchanged, value 123.85 USD/week from flai cod (E-0029 penalty share), forecast 1h30m kept with reason; no input set. Host upgrade to flai 1.84.0 and TH-0826/TH-0828 left to the operator.
+- Items: S-0565
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:44:18Z
+
+- Summary: I approved the planner's replan of S-0565 on TH-0835 and resolved the thread, as `plan_backlog_stories` allows. That was my only reason to run, and flai serve has confirmed it is done, so I'm ending.
+- Items: none
+- Seconds: 16
+- Cost: 0.2931 USD, estimated
+
+### 2026-11-07T03:45:34Z
+
+- Summary: Answered TH-0837, citing design/digest/D-0168-s-0251-cost-of-delay-inputs-time-lost-per-cycle-5m-5m.md
+- Items: S-0555
+- Seconds: 35
+- Cost: 0.0911 USD, estimated
+
+### 2026-11-07T03:45:51Z
+
+- Summary: Set S-0555's first cost of delay input, time_lost_per_cycle 5m, as planner-S-0555 recommended on TH-0837 (plan_backlog_stories); replied and resolved TH-0837
+- Items: S-0555, TH-0837
+- Seconds: 17
+- Cost: 0.0227 USD, estimated
+
+### 2026-11-07T03:46:17Z
+
+- Summary: Recommended an answer on TH-0836, citing docs/operators/runbooks/agent-container.md § Build
+- Items: S-0565
+- Seconds: 26
+- Cost: 0.0473 USD, estimated
+
+### 2026-11-07T03:46:35Z
+
+- Summary: TH-0836: recommended (operator_only, host change) that the operator upgrade to flai 1.84.0, rebuild the agent images, and set the container login. Held S-0558 out of ready despite promote_candidates rank 1 (12m, throughput): promoting it before those steps would start its container proof on 1.83.0 with no login.
+- Items: S-0565, S-0558, TH-0836
+- Seconds: 18
+- Cost: 0.0251 USD, estimated
+
+### 2026-11-07T03:46:55Z
+
+- Summary: I've handled both threads; you have one host task, on TH-0836.
+- Items: none
+- Seconds: 20
+- Cost: 0.1102 USD, estimated
+
+### 2026-11-07T03:48:25Z
+
+- Summary: Finalized drafts S-0557 (40m, 15 USD/week, position 3) and S-0571 (1h, 25 USD/week, position 5) under finalize_drafts: flai promote --drafts lists both complete, and their criteria, file touches, tasks, forecast, and value are consistent. S-0569 and S-0570 left as drafts: their planners are still running.
+- Items: S-0557, S-0571
+- Seconds: 83
+- Cost: 0.0985 USD, estimated
+
+### 2026-11-07T03:48:53Z
+
+- Summary: Promoted S-0557 (candidate rank 3, 40m) and S-0571 (rank 4, 1h) to ready under promote_to_ready, then ordered ready by throughput: S-0557 first, S-0571 second. Skipped S-0558 (rank 1) and S-0556 (rank 2) as S-0565's container proofs held for the operator on TH-0826, TH-0828, TH-0836, and S-0241 (rank 5) on TH-0790.
+- Items: S-0557, S-0571
+- Seconds: 28
+- Cost: 0.1496 USD, estimated
+
+### 2026-11-07T03:49:35Z
+
+- Summary: Answered TH-0838, citing design/digest/D-0403-a-planner-run-can-draft-tasks-for-a-story-whose-agent-is-writing-its-own-so-the.md
+- Items: S-0567
+- Seconds: 42
+- Cost: 0.1543 USD, estimated
+
+### 2026-11-07T03:50:12Z
+
+- Summary: Answered TH-0839, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0562
+- Seconds: 37
+- Cost: 0.1295 USD, estimated
+
+### 2026-11-07T03:50:30Z
+
+- Summary: Recommended an answer on TH-0839, citing design/digest/D-0216-orchestration-release-sets-value-1000-but-no-policy-so-flai-evaluates-it-as.md
+- Items: S-0562
+- Seconds: 18
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:50:50Z
+
+- Summary: Settled planner threads under plan_backlog_stories. TH-0838 (S-0567, in progress): answered from D-0403 that agent-S-0567 cancels the duplicates, suggested cancelling T-2502 and T-2503, and left the thread open for that agent. TH-0839 (S-0562): set the story's first cost of delay input, penalty_per_week 25, as the planner recommended. Recommended that S-0562 stay a draft until the operator answers TH-0811 on the release policy (D-0216: the operator chose judgement), and left the thread open. Did not start another S-0562 planner run while four planners are running; the next run works out the value.
+- Items: S-0567, S-0562
+- Seconds: 20
+- Cost: 0.0674 USD, estimated
+
+### 2026-11-07T03:51:14Z
+
+- Summary: I acted on all seven reasons. S-0557 and S-0571 went to ready and are now in progress, and the other three drafts stay drafts.
+- Items: none
+- Seconds: 24
+- Cost: 0.1005 USD, estimated
+
+### 2026-11-07T03:52:49Z
+
+- Summary: Answered TH-0844, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0555
+- Seconds: 89
+- Cost: 0.1789 USD, estimated
+
+### 2026-11-07T03:53:08Z
+
+- Summary: Answered TH-0842, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0569
+- Seconds: 19
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:53:23Z
+
+- Summary: Answered TH-0846, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0570
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:53:36Z
+
+- Summary: Answered TH-0840, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0557
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:55:06Z
+
+- Summary: Answered TH-0845, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0564
+- Seconds: 90
+- Cost: 0.1829 USD, estimated
+
+### 2026-11-07T03:55:24Z
+
+- Summary: Recommended an answer on TH-0845, citing design/workflows/formulas/analysis-cadence.md
+- Items: S-0564
+- Seconds: 18
+- Cost: 0.0473 USD, estimated
+
+### 2026-11-07T03:55:55Z
+
+- Summary: Recommended an answer on TH-0843, citing design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md
+- Items: S-0567
+- Seconds: 31
+- Cost: 0.1460 USD, estimated
+
+### 2026-11-07T03:56:19Z
+
+- Summary: Settled planner threads under plan_backlog_stories. Approved and resolved TH-0844 (S-0555), TH-0842 (S-0569), TH-0846 (S-0570), and TH-0840 (S-0557, which its agent had taken). Resolved TH-0838 after agent-S-0567 cancelled the duplicate tasks.
+- Items: S-0555, S-0569, S-0570, S-0557, S-0567
+- Seconds: 24
+- Cost: 0.2048 USD, estimated
+
+### 2026-11-07T03:56:31Z
+
+- Summary: TH-0845, under plan_backlog_stories: set S-0564's first cost of delay input, penalty_per_week 25, the figure the planner recommended and the one sibling S-0562 carries. Posted an operator-only recommendation on the focus (none, all three) and the scratch import folder. S-0564 stays a draft until its value is recomputed and those are answered.
+- Items: S-0564
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:56:44Z
+
+- Summary: TH-0843 (S-0567), under answer_threads autonomous: posted an operator-only recommendation to set the container login, the planner's container harness, and S-0559's plan from the dashboard, then revert planning.agent. I hold off on plan runs while it names container, and skip S-0559 while TH-0843 is open.
+- Items: S-0567, S-0559
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:56:55Z
+
+- Summary: Finalized S-0555 (26m, 12.50/wk), S-0570 (2h, 65/wk), and S-0569 (3h, 52.50/wk), each listed complete by flai promote --drafts with consistent plans. Promoted them to ready from flai promote --candidates at ranks 2, 5, and 6 (throughput). Skipped S-0558, S-0556, and S-0241, which TH-0826, TH-0828, TH-0836, and TH-0790 hold for the operator. Applied flai order --by throughput: S-0555, S-0570, S-0569. Left S-0562 a draft (TH-0811) and S-0564 a draft (TH-0845).
+- Items: S-0555, S-0570, S-0569
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-07T03:57:18Z
+
+- Summary: I worked through all 20 reasons. Three drafts are finalized and in ready, six threads are settled, and three questions now wait on you.
+- Items: none
+- Seconds: 23
+- Cost: 0.3020 USD, estimated
+
+### 2026-11-07T03:58:43Z
+
+- Summary: Answered TH-0845, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0564
+- Seconds: 38
+- Cost: 0.1107 USD, estimated
+
+### 2026-11-07T03:59:00Z
+
+- Summary: Recommended an answer on TH-0845, citing design/workflows/formulas/analysis-cadence.md
+- Items: S-0564
+- Seconds: 17
+- Cost: 0.0248 USD, estimated
+
+### 2026-11-07T03:59:16Z
+
+- Summary: Approved S-0564's plan on TH-0845 under plan_backlog_stories: six tasks in three layers, 1h forecast, value 25.00 USD/week. Left S-0564 a draft though flai promote --drafts lists it complete (position 4), because the focus and import folder (Q1, Q2) are the operator's to choose at finalization. My approval cleared the pending recommendation, so I posted Q1/Q2 again as an operator_only recommendation. TH-0843 needs nothing: its last entry is my pending recommendation.
+- Items: S-0564, TH-0845, TH-0843
+- Seconds: 16
+- Cost: 0.0261 USD, estimated
+
+### 2026-11-07T03:59:36Z
+
+- Summary: I acted on all four reasons. S-0564 stays a draft until you answer questions 1 and 2 on TH-0845.
+- Items: none
+- Seconds: 20
+- Cost: 0.1287 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -13800,6 +14017,16 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-11-07T02:36:36Z
+
+- Call: `flai order --by throughput --apply 2>&1`
+- Needs: none
+
+### 2026-11-07T03:48:46Z
+
+- Call: `flai order --by throughput --apply 2>&1`
+- Needs: none
+
+### 2026-11-07T03:56:12Z
 
 - Call: `flai order --by throughput --apply 2>&1`
 - Needs: none

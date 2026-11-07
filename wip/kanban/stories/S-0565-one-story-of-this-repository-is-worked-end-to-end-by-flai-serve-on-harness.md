@@ -3,12 +3,21 @@ id: S-0565
 type: story
 nature: experiment
 title: One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
-status: backlog
+status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T03:40:41Z
-transitions: []
+updated: 2026-11-07T03:44:57Z
+transitions:
+  - to: ready
+    at: 2026-11-07T03:40:51Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T03:41:00Z
+    by: agent-S-0565
+blocked:
+  - from: 2026-11-07T03:44:57Z
+    reason: awaiting the operator on TH-0836
 tags: []
 topics: [harness, docker]
 touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/experiments/README.md, design/issues, design/issues/summary.md]
@@ -19,40 +28,52 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 240
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 16399
+      cache_read: 3758856
+      cache_write: 214005
+      cost: 2.7921
   strategic:
     - kind: planner
-      seconds: 627
+      seconds: 761
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 96
-          output: 36707
-          cache_read: 8774453
-          cache_write: 247014
-          cost: 4.4655
+          input: 168
+          output: 47513
+          cache_read: 12486805
+          cache_write: 483216
+          cost: 6.2582
     - kind: orchestrator
-      seconds: 316
+      seconds: 376
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 92
-          output: 627
-          cache_read: 3291801
-          cache_write: 382091
-          cost: 0.8715
+          input: 105
+          output: 720
+          cache_read: 3724441
+          cache_write: 453435
+          cost: 0.9937
 cost_of_delay:
-  value: 52.12
+  value: 123.85
   by: planner-S-0565
-  at: 2026-11-03T01:23:20Z
+  at: 2026-11-07T03:42:23Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-07T10:54:00Z
-  basis: "Its own forecast of 1h30m; 19th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556, S-0557, S-0558, S-0559, S-0560, S-0561, S-0562 and S-0564."
-  by: flai
-  at: 2026-11-07T03:29:22Z
+  delivery: 2026-11-07T05:11:00Z
+  basis: "Kept at 1h30m over flai's 27m: two proof runs watched end to end, a stop and a restart, the issues, and the results document, from the story's start at 03:41Z; holds only once the host runs flai 1.84.0 and the proof stories reach ready."
+  by: planner-S-0565
+  at: 2026-11-07T03:42:23Z
 finalized:
   by: alex
   at: 2026-11-07T03:40:41Z
@@ -86,11 +107,11 @@ Criterion 3 moved here from S-0510 on TH-0814 (its criterion 5, and the close-ou
 
 ### Planning
 
-Planned by planner-S-0565 on 2026-11-03; the plan's thread on S-0565, TH-0821, names the tasks, their layers, and the assumptions.
+Planned by planner-S-0565 on 2026-11-03, and planned again on 2026-11-07 after the operator finalized the story and moved it to ready. The plan's thread TH-0821 named the tasks, their layers, and the assumptions, and was resolved with S-0558 and S-0556 as the proof stories, option (a) for criterion 3, and S-0520 in `after`. The replan's thread on S-0565 says what changed since then.
 
 What this story's own branch changes. The proof stories are other stories, worked on their own branches by their own agents in the container; this story's agent sets them up, watches their runs, and records what it found. Its branch holds the results document, the issues it files, and the experiments index.
 
-Touches. The story declared none, so `flai touches suggest S-0565` ran on five seeds (`design/experiments/README.md`, `docs/operators/runbooks/agent-container.md`, `design/tech/docker.md`, `design/system/agent-adapters.md`, `design/issues/summary.md`; 749 of 2940 commits). Everything it listed is left out: `flai-cli.md` and `docs/users/flai.md` (7% each), `docs/operators/index.md` (5%), and the old close-out issues change with the commands and the check, which this story does not change; the limitations it finds become issues, and the fixes are stories of E-0029. What is kept:
+Touches. The story declared none at its first plan, so `flai touches suggest S-0565` ran on five seeds (`design/experiments/README.md`, `docs/operators/runbooks/agent-container.md`, `design/tech/docker.md`, `design/system/agent-adapters.md`, `design/issues/summary.md`; 749 of 2940 commits). On 2026-11-07 it ran again on the four touches the story declares (775 of 3012 commits): its top paths are `design/system/flai-cli.md` and `docs/users/flai.md` (5% each), then `design/adrs/README.md` and `design/system/flaiover-dashboard.md` (3% each), and each changes with the commands, the dashboard, or an ADR, which this story does not change; the limitations it finds become issues, and the fixes are stories of E-0029. So the touches stay as they were:
 
 - `design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md` (layout): the results document an experiment story is accepted with, named for the story as `design/experiments/README.md` asks, started from `template.md`. The story's agent may choose another slug; `flai task done` widens the touches with the committed path (ADR-0144).
 - `design/experiments/README.md` (layout): the index row for the results document.
@@ -99,8 +120,8 @@ Touches. The story declared none, so `flai touches suggest S-0565` ran on five s
 
 The story's own Notes, where criterion 2's record goes, are written with `flai edit` in the main checkout and are no touch of its branch.
 
-`after`. S-0508: the `container` harness adapter, its host settings, and the start path in `flai serve` are S-0508's output, which this story runs. S-0510: criterion 3 runs the project's image layer, `flai/images/system-flow/Dockerfile`, and the manifest key that names it, which S-0510 writes. S-0517: the close-out inside the container syncs and checks the branch with git, which works there only through the two git mounts S-0517 added (ADR-0246). S-0520, added by the planner: `flai verify`, the close-out's first step, reads the main checkout's `wip/` and `system-flow.yaml` and writes its report under `.flai-cache/verify/`, none of which the container mounts today, so `scripts/close-out.sh` stops inside it (I-0218); S-0520 adds those mounts, which criterion 3's close-out inside the container reads, and S-0510's notes name the close-out inside as S-0517's and S-0520's. Each reaches this host's `flai serve` only in the installed release, so the story starts once a release holding all four is published and the host upgraded; that is the operator's, and TH-0821 says so.
+`after`. S-0508: the `container` harness adapter, its host settings, and the start path in `flai serve` are S-0508's output, which this story runs. S-0510: criterion 3 runs the project's image layer, `flai/images/system-flow/Dockerfile`, and the manifest key that names it, which S-0510 writes. S-0517: the close-out inside the container syncs and checks the branch with git, which works there only through the two git mounts S-0517 added (ADR-0246). S-0520, added by the planner: `flai verify`, the close-out's first step, reads the main checkout's `wip/` and `system-flow.yaml` and writes its report under `.flai-cache/verify/`, none of which the container mounts without S-0520 (I-0218); criterion 3's close-out inside the container reads those mounts. All four are accepted. The first release holding each is flai 1.81.0 for S-0508 and S-0517, 1.83.0 for S-0510, and 1.84.0 for S-0520, published 2026-11-07. On 2026-11-07 the host's installed flai was still 1.83.0, so T-2449's first precondition holds only once the host is upgraded to 1.84.0 or later; that is the operator's.
 
-Forecast. `flai forecast S-0565` gave 9m (median 166 s per unit of size over 4 done experiment stories, size 3: 3 criteria, 0 touches), delivery 2026-11-03T07:27Z, 21st in the pull order. Raised to 1h30m of agent time: the size had no touches and no waiting, and the work is two proof runs watched end to end, a stop and a restart arranged with the operator, each limitation filed, and the results document written; S-0505, one hand-built run with a results document, took 2014 s. The proof stories' own agent time is theirs, not this story's. The delivery written is flai's play-out start, 07:27Z less 9m, plus 1h30m: 2026-11-03T08:48Z. It holds only if the release and the host upgrade come first.
+Forecast. `flai forecast S-0565` gave 9m at the first plan and 27m on 2026-11-07 (median 227 s per unit of size over 5 done experiment stories, size 7: 3 criteria, 4 touches). Kept at 1h30m of agent time: the size counts no waiting, and the work is two proof runs watched end to end, a stop and a restart arranged with the operator, each limitation filed, and the results document written; S-0505, one hand-built run with a results document, took 2014 s. The proof stories' own agent time is theirs, not this story's. The delivery written is the story's start, 2026-11-07T03:41Z, plus 1h30m: 2026-11-07T05:11Z. It holds only if the host is upgraded and the proof stories are moved to ready (TH-0826, TH-0828) without a wait.
 
-Cost of delay. `flai cod S-0565` gives 52.12 USD a week after the forecast was raised: S-0565's share of E-0029's 150 USD a week penalty input, 1h30m of the 4h19m forecast over the epic's three open stories without inputs. Written as flai gives it; the story has no inputs of its own, and nothing argues for another share.
+Cost of delay. `flai cod S-0565` gives 123.85 USD a week on 2026-11-07, up from 52.12: S-0565's share of E-0029's 150 USD a week penalty input, 1h30m of the 1h49m forecast over the epic's two open stories without inputs, S-0565 and S-0567, now that the epic's other stories are done. Written as flai gives it; the story has no inputs of its own, and nothing argues for another share.

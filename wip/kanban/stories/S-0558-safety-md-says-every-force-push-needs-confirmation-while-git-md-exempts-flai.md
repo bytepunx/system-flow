@@ -6,13 +6,13 @@ title: safety.md says every force push needs confirmation, while git.md exempts 
 status: backlog
 owner: alex
 created: 2026-11-02T00:04:34Z
-updated: 2026-11-07T03:29:16Z
+updated: 2026-11-07T03:43:26Z
 transitions: []
 tags: [conventions, template]
 topics: [git, safety]
 touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md, design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md]
 agent:
-  harness: claude-code
+  harness: container
   model: claude-opus-5-5
   config:
     effort: high
@@ -22,15 +22,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 154
+      seconds: 163
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 39
-          output: 240
-          cache_read: 1474323
-          cache_write: 155428
-          cost: 0.3883
+          input: 40
+          output: 252
+          cache_read: 1524153
+          cache_write: 157405
+          cost: 0.4009
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
