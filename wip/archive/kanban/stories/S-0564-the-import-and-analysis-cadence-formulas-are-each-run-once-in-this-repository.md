@@ -3,11 +3,11 @@ id: S-0564
 type: story
 nature: improvement
 title: The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted
-status: review
+status: done
 parent: E-0024
 owner: alex
 created: 2026-11-02T18:08:35Z
-updated: 2026-11-07T09:13:45Z
+updated: 2026-11-07T09:43:54Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:12Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-07T09:13:45Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T09:43:54Z
+    by: alex
 blocked:
   - from: 2026-11-07T08:23:28Z
     until: 2026-11-07T08:26:54Z

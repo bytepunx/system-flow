@@ -4,10 +4,10 @@ title: "S-0564 stays in review: TH-0863 is answered but not resolved, which bloc
 anchor:
   path: wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md
   item: S-0564
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-07T09:15:40Z
-updated: 2026-11-07T09:15:40Z
+updated: 2026-11-07T09:43:55Z
 ---
 
 # TH-0864 S-0564 stays in review: TH-0863 is answered but not resolved, which blocks acceptance
@@ -39,3 +39,6 @@ I resolve only threads I opened, so this one is not mine to close.
 - All six tasks are done.
 - S-0584, the cadence instance, is accepted. `design/analysis/2026-11-07-all.md` and its issues exist.
 - The verifier could not check S-0001, the import instance, because `/home/alex/git/flai-scratch-import` no longer exists. That matches your "done" on TH-0863, so I take the Notes' record of S-0001 as it stands.
+
+### 2026-11-07T09:43:55Z alex
+Resolved: S-0564 was accepted

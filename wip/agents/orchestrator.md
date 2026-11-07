@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2007.4204
-accrued_seconds: 1516291
-tasks_completed: 2107
-last_run: 2026-11-07T09:42:12Z
+accrued_cost: 2007.5461
+accrued_seconds: 1516342
+tasks_completed: 2109
+last_run: 2026-11-07T09:43:27Z
 ---
 
 # Orchestrator activity
@@ -14779,6 +14779,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1711 USD, estimated
+
+### 2026-11-07T09:43:01Z
+
+- Summary: Resolved TH-0839, S-0562's planner thread, under plan_backlog_stories: the operator confirmed the recommendation, penalty_per_week 25 was set at 03:50, and TH-0811 moved the release policy to threshold (D-0504), so criterion 1 stands; S-0562 is in progress on the approved plan.
+- Items: S-0562
+- Seconds: 25
+- Cost: 0.0529 USD, estimated
+
+### 2026-11-07T09:43:27Z
+
+- Summary: After alex accepted S-0585, release_evaluate is met under threshold (count 2 >= 1; value 25 USD/week; pending S-0561, S-0568). I did not run flai formula run publish: S-0588, a publish instance made at 09:24, is already open in ready and will publish this batch, so a second instance would duplicate it.
+- Items: S-0585, S-0588, S-0561, S-0568
+- Seconds: 26
+- Cost: 0.0728 USD, estimated
 
 ## Refusals
 

@@ -14,18 +14,12 @@ cited: []
 
 # D-0504 Under the judgement release policy, the publish formula's evaluate step always stops, and from flai 1.80.2 release_publish refuses: nothing can publish: I changed the policy to threshold instead of…
 
-The operator, alex, answered TH-0811 at 2026-11-07T09:22:57Z.
+This project's release policy is `threshold`, not `judgement`: `orchestration.release` in `system-flow.yaml` now has `policy: threshold` beside `value: 1000` and `count: 1`. This reverses the operator's answer on TH-0256 (D-0216), which kept `judgement`.
 
-What was asked:
+The operator, alex, answered TH-0811 at 2026-11-07T09:22:57Z: "I changed the policy to threshold instead of judgement".
 
-```text
-**Recommended:** give this project a release policy that `--require-met` can meet. One way is `policy: threshold` beside the `value: 1000` that `orchestration.release` already has, with a `count: 1` if you want each accepted story released as now. The other way is a story that lets the formula's evaluate step pass under judgement once the orchestrator has judged the batch, for example a `--judged "<reason>"` flag.
-```
+Why it was asked: under `judgement`, `flai release --evaluate --require-met` always exits 2, since judgement is never met by itself, so the publish formula's step 2 stopped every instance. From flai 1.80.2 (T-2014) `release_publish` refuses while a publish formula exists, which left no way to publish under judgement. The orchestrator recommended `policy: threshold`, with `count: 1` to release each accepted story as before.
 
-The answer:
+TH-0839 (D-0508) waited on this answer to word S-0562's criterion 1: with threshold, the instance can release for real.
 
-```text
-I changed the policy to threshold instead of judgement
-```
-
-Source: TH-0811.
+Sources: TH-0811, TH-0256.
