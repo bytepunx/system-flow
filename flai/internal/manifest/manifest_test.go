@@ -2375,6 +2375,35 @@ func TestKlusterBlock(t *testing.T) {
 			t.Errorf("errors: %v", errs)
 		}
 	})
+	// S-0595, ADR-0263: components are read in order, each a name and its
+	// build, and a valid list gives no error.
+	t.Run("components", func(t *testing.T) {
+		m := load(t, "demo", "kluster:\n  config: integration/kluster.yaml\n  components:\n    - name: api\n      build: [scripts/build.sh, api]\n    - {name: web, build: [scripts/build.sh, web]}\n  deploy: [scripts/kluster-deploy.sh]\n")
+		want := []KlusterComponent{{Name: "api", Build: []string{"scripts/build.sh", "api"}}, {Name: "web", Build: []string{"scripts/build.sh", "web"}}}
+		if !reflect.DeepEqual(m.Kluster.Components, want) {
+			t.Fatalf("components = %+v, want %+v", m.Kluster.Components, want)
+		}
+		if errs := m.KlusterErrors(fsys); len(errs) != 0 {
+			t.Errorf("valid components: %v", errs)
+		}
+	})
+	t.Run("components of the wrong kinds", func(t *testing.T) {
+		m := load(t, "demo", "kluster:\n  config: integration/kluster.yaml\n  components:\n    - api\n    - name: [web]\n      build: scripts/build.sh\n      image: web\n")
+		errs := strings.Join(m.KlusterErrors(fsys), "\n")
+		for _, want := range []string{
+			"kluster.components[1] is not a block of keys",
+			"kluster.components[2].name [web] is not text",
+			"kluster.components[2].build is not an argument list",
+			`kluster.components[2] has no key "image"`,
+		} {
+			if !strings.Contains(errs, want) {
+				t.Errorf("errors lack %q:\n%s", want, errs)
+			}
+		}
+		if m := load(t, "demo", "kluster:\n  config: integration/kluster.yaml\n  components: api\n"); !strings.Contains(strings.Join(m.KlusterErrors(fsys), "\n"), "kluster.components is not a list") {
+			t.Errorf("a scalar components: %v", m.KlusterErrors(fsys))
+		}
+	})
 }
 
 // S-0577: each way a kluster: block can be wrong is one sentence naming its
@@ -2409,6 +2438,18 @@ func TestKlusterErrors(t *testing.T) {
 		{"build with no program", func(k *Kluster) { k.Build = []string{" ", "--all"} }, "", "kluster.build has no program first"},
 		{"timeout not a duration", func(k *Kluster) { k.Timeout = "soon" }, "", `kluster.timeout "soon" is not a duration`},
 		{"timeout zero", func(k *Kluster) { k.Timeout = "0s" }, "", `kluster.timeout "0s" is not above zero`},
+		// S-0595, ADR-0263: the components
+		{"components and build", func(k *Kluster) {
+			k.Build = []string{"scripts/build.sh"}
+			k.Components = []KlusterComponent{{Name: "api", Build: []string{"scripts/build.sh"}}}
+		}, "", "kluster.components and kluster.build are both set"},
+		{"component with no name", func(k *Kluster) { k.Components = []KlusterComponent{{Build: []string{"b.sh"}}} }, "", "kluster.components[1] has no name"},
+		{"component name not a label", func(k *Kluster) { k.Components = []KlusterComponent{{Name: "API_1", Build: []string{"b.sh"}}} }, "", `kluster.components[1].name "API_1" is not a DNS label`},
+		{"component name repeated", func(k *Kluster) {
+			k.Components = []KlusterComponent{{Name: "api", Build: []string{"b.sh"}}, {Name: "api", Build: []string{"c.sh"}}}
+		}, "", `kluster.components[2].name "api" is the name of kluster.components[1] too`},
+		{"component with no build", func(k *Kluster) { k.Components = []KlusterComponent{{Name: "api"}} }, "", "kluster.components[1].build is required"},
+		{"component build with no program", func(k *Kluster) { k.Components = []KlusterComponent{{Name: "api", Build: []string{" ", "x"}}} }, "", "kluster.components[1].build has no program first"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			k := ok

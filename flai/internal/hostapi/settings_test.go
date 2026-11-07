@@ -103,6 +103,31 @@ func TestSettingsManifestWritesTheKlusterBlocksCommands(t *testing.T) {
 	}
 }
 
+// S-0595: the dashboard writes kluster.components as a JSON list of
+// {name, build}, which flai manifest set reads as it is, and [] unsets it;
+// anything else is refused naming the key (ADR-0263).
+func TestSettingsManifestWritesTheKlusterBlocksComponents(t *testing.T) {
+	args, _, e := manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"kluster.components":[{"name":"api","build":["scripts/build.sh","api"]}]}}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	want := []string{"manifest", "set", "--autocommit", "--trailer=" + Trailer, "--",
+		`kluster.components=[{"name":"api","build":["scripts/build.sh","api"]}]`}
+	if !slices.Equal(args, want) {
+		t.Errorf("args %q\nwant %q", args, want)
+	}
+	args, _, e = manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"kluster.components":[]}}`))
+	if e != nil || !slices.Contains(args, "kluster.components=[]") {
+		t.Errorf("[] unsets it: %q %+v", args, e)
+	}
+	for _, bad := range []string{`"api"`, `[1]`, `[{"name":"api","image":"x"}]`, `{"name":"api"}`} {
+		_, _, e := manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"kluster.components":`+bad+`}}`))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "kluster.components") || !strings.Contains(e.Message, "list of components") {
+			t.Errorf("%s is not a list of components: %+v", bad, e)
+		}
+	}
+}
+
 // S-0586: enabling kluster from the Features page commits the block it
 // writes with the dashboard's trailer; other actions commit nothing, and
 // keep their command as it was.

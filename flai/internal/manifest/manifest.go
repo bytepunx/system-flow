@@ -1308,6 +1308,10 @@ type Kluster struct {
 	// Build builds the project's images and lists their references in the
 	// file FLAI_KLUSTER_IMAGES names; empty loads nothing.
 	Build []string `yaml:"build,omitempty" json:"build,omitempty"`
+	// Components are the project's components, each built by a command of
+	// its own as a step of its own, in this order, in place of Build
+	// (ADR-0263); a block names Build or Components, not both.
+	Components []KlusterComponent `yaml:"components,omitempty" json:"components,omitempty"`
 	// Deploy makes a namespace's settings in the shared services, applies the
 	// project's manifests into it, and waits for their rollouts; empty means
 	// the project's deploys are not set up yet, and flai deploys nothing.
@@ -1325,9 +1329,22 @@ type Kluster struct {
 	problems []string
 }
 
+// KlusterComponent is one component of the kluster: block: a name, a DNS
+// label unique in the list, and the command that builds its images and lists
+// their references in the file FLAI_KLUSTER_IMAGES names (ADR-0263).
+type KlusterComponent struct {
+	// Name names the component and its build step, build-<name>.
+	Name string `yaml:"name" json:"name"`
+	// Build is the argument list that builds the component, run as it stands.
+	Build []string `yaml:"build" json:"build"`
+}
+
 // The keys of the kluster: block, in the order they are listed to the
 // operator.
-var klusterKeys = []string{"config", "namespace", "build", "deploy", "teardown", "timeout"}
+var klusterKeys = []string{"config", "namespace", "build", "components", "deploy", "teardown", "timeout"}
+
+// The keys of a component of the kluster: block.
+var klusterComponentKeys = []string{"name", "build"}
 
 // DefaultKlusterTimeout is the most one kluster job may take when
 // kluster.timeout is not set.
@@ -1360,25 +1377,29 @@ func (k *Kluster) UnmarshalYAML(unmarshal func(any) error) error {
 			k.problems = append(k.problems, fmt.Sprintf("kluster.%s %v is not text; write it as a string", key, v))
 		}
 	}
-	command := func(key string, into *[]string) {
-		switch v := block[key].(type) {
+	argv := func(field, example string, value any, into *[]string) {
+		switch v := value.(type) {
 		case nil:
 		case []any:
 			for i, a := range v {
 				s, ok := a.(string)
 				if !ok {
-					k.problems = append(k.problems, fmt.Sprintf("kluster.%s argument %d, %v, is not text; write every argument as a string", key, i+1, a))
+					k.problems = append(k.problems, fmt.Sprintf("%s argument %d, %v, is not text; write every argument as a string", field, i+1, a))
 					s = fmt.Sprint(a)
 				}
 				*into = append(*into, s)
 			}
 		default:
-			k.problems = append(k.problems, fmt.Sprintf("kluster.%s is not an argument list; write the program, then its arguments, in brackets, such as [scripts/kluster-%s.sh]", key, key))
+			k.problems = append(k.problems, fmt.Sprintf("%s is not an argument list; write the program, then its arguments, in brackets, such as [%s]", field, example))
 		}
+	}
+	command := func(key string, into *[]string) {
+		argv("kluster."+key, "scripts/kluster-"+key+".sh", block[key], into)
 	}
 	text("config", &k.Config)
 	text("namespace", &k.Namespace)
 	command("build", &k.Build)
+	k.components(block["components"], argv)
 	command("deploy", &k.Deploy)
 	command("teardown", &k.Teardown)
 	switch v := block["timeout"].(type) {
@@ -1394,6 +1415,44 @@ func (k *Kluster) UnmarshalYAML(unmarshal func(any) error) error {
 		}
 	}
 	return nil
+}
+
+// components reads kluster.components leniently into k.Components, adding a
+// problem for each part not of its kind; argv reads a command as
+// UnmarshalYAML's own commands are read.
+func (k *Kluster) components(value any, argv func(field, example string, value any, into *[]string)) {
+	if value == nil {
+		return
+	}
+	list, ok := value.([]any)
+	if !ok {
+		k.problems = append(k.problems, "kluster.components is not a list; write one item per component, each with name: and build:, such as - {name: api, build: [scripts/build.sh, api]}")
+		return
+	}
+	k.Components = []KlusterComponent{}
+	for i, item := range list {
+		field := fmt.Sprintf("kluster.components[%d]", i+1)
+		block, ok := item.(map[string]any)
+		if !ok {
+			k.problems = append(k.problems, fmt.Sprintf("%s is not a block of keys; write it with name: and build:, such as {name: api, build: [scripts/build.sh, api]}", field))
+			continue
+		}
+		var c KlusterComponent
+		switch v := block["name"].(type) {
+		case nil:
+		case string:
+			c.Name = v
+		default:
+			k.problems = append(k.problems, fmt.Sprintf("%s.name %v is not text; write it as a string", field, v))
+		}
+		argv(field+".build", "scripts/build.sh", block["build"], &c.Build)
+		for _, key := range slices.Sorted(maps.Keys(block)) {
+			if !slices.Contains(klusterComponentKeys, key) {
+				k.problems = append(k.problems, fmt.Sprintf("%s has no key %q; write one of %s, or remove it", field, key, strings.Join(klusterComponentKeys, ", ")))
+			}
+		}
+		k.Components = append(k.Components, c)
+	}
 }
 
 // TimeoutDuration is kluster.timeout as a duration, DefaultKlusterTimeout
@@ -1549,8 +1608,44 @@ func (m Manifest) KlusterErrors(fsys fs.FS) []string {
 			errs = append(errs, fmt.Sprintf("kluster.%s has no program first; write the program, then its arguments, such as [scripts/kluster-%s.sh]", c.key, c.key))
 		}
 	}
+	errs = append(errs, k.componentErrors()...)
 	if _, err := k.TimeoutDuration(); err != nil {
 		errs = append(errs, err.Error())
+	}
+	return errs
+}
+
+// componentErrors are what is wrong with kluster.components, one sentence
+// each beginning with the key: a block that names build as well, a
+// component with no name, a repeated name or one that is not a DNS label,
+// and a component whose build is missing or has no program first.
+func (k *Kluster) componentErrors() []string {
+	if len(k.Components) == 0 {
+		return nil
+	}
+	var errs []string
+	if len(k.Build) > 0 {
+		errs = append(errs, "kluster.components and kluster.build are both set; a block builds with one command or one per component, so remove one of them")
+	}
+	seen := map[string]int{}
+	for i, c := range k.Components {
+		field := fmt.Sprintf("kluster.components[%d]", i+1)
+		switch name := strings.TrimSpace(c.Name); {
+		case name == "":
+			errs = append(errs, field+" has no name; give it one, a DNS label such as api, which names its build step build-<name>")
+		case len(name) > 63 || !dnsLabel.MatchString(name):
+			errs = append(errs, fmt.Sprintf("%s.name %q is not a DNS label; write lower-case letters, digits, and hyphens, at most 63, beginning and ending with a letter or digit, such as api", field, c.Name))
+		case seen[name] > 0:
+			errs = append(errs, fmt.Sprintf("%s.name %q is the name of kluster.components[%d] too; give each component a name of its own", field, c.Name, seen[name]))
+		default:
+			seen[name] = i + 1
+		}
+		switch {
+		case len(c.Build) == 0:
+			errs = append(errs, field+".build is required; write the command that builds the component, the program then its arguments, such as [scripts/build.sh, api]")
+		case strings.TrimSpace(c.Build[0]) == "":
+			errs = append(errs, field+".build has no program first; write the program, then its arguments, such as [scripts/build.sh, api]")
+		}
 	}
 	return errs
 }

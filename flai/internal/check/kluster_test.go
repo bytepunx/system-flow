@@ -45,6 +45,10 @@ func TestKlusterBlockIsChecked(t *testing.T) {
 		{"provider not k3d", valid, "name: t\nprovider: kind\n", `names the provider "kind"`},
 		{"namespace story form", valid + "  namespace: s-0042\n", "name: t\n", `kluster.namespace "s-0042" has a story namespace's form`},
 		{"timeout", valid + "  timeout: forever\n", "name: t\n", `kluster.timeout "forever" is not a duration`},
+		// S-0595, ADR-0263: the components
+		{"components and build", valid + "  build: [scripts/build.sh]\n  components:\n    - {name: api, build: [scripts/build.sh, api]}\n", "name: t\n", "kluster.components and kluster.build are both set"},
+		{"component name repeated", valid + "  components:\n    - {name: api, build: [b.sh]}\n    - {name: api, build: [c.sh]}\n", "name: t\n", `kluster.components[2].name "api" is the name of kluster.components[1] too`},
+		{"component with no build", valid + "  components:\n    - {name: api}\n", "name: t\n", "kluster.components[1].build is required"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			got := withConfig(t, c.extra, c.config)

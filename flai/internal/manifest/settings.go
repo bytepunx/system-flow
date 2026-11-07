@@ -57,6 +57,10 @@ const (
 	// as it stands, never through a shell, given as JSON such as
 	// ["scripts/kluster-deploy.sh","--wait"]; [] unsets it.
 	KindCommand Kind = "command"
+	// KindComponents is a list of the kluster: block's components, given as
+	// JSON such as [{"name":"api","build":["scripts/build.sh","api"]}]; []
+	// unsets it (ADR-0263).
+	KindComponents Kind = "components"
 )
 
 // Setting is one key flai manifest set may write.
@@ -89,7 +93,8 @@ type Setting struct {
 type SettingValue struct {
 	Setting
 	// Value is the setting's value as the manifest has it: a bool, a string,
-	// a float64, an int, an *Agent, a []TestTier, or a command's []string;
+	// a float64, an int, an *Agent, a []TestTier, a command's []string, or a
+	// []KlusterComponent;
 	// nil when it is unset.
 	Value any `json:"value,omitempty"`
 	// Set reports whether the manifest sets the key to something other than
@@ -266,6 +271,14 @@ func buildCatalog() []Setting {
 		Setting{Key: "kluster.build", Kind: KindCommand,
 			Meaning: "The command that builds the project's images and lists their references in the file FLAI_KLUSTER_IMAGES names, which flai loads into the cluster; unset, nothing is loaded.",
 			get:     func(m Manifest) (any, bool) { return klusterCommand(m, func(k *Kluster) []string { return k.Build }) }},
+		Setting{Key: "kluster.components", Kind: KindComponents,
+			Meaning: "The project's components, in place of kluster.build: each a name, a DNS label, and the command that builds its images and lists their references in the file FLAI_KLUSTER_IMAGES names, run one at a time as the deploy's steps build-<name>, each with its own log; unset, kluster.build builds, or nothing is loaded.",
+			get: func(m Manifest) (any, bool) {
+				if m.Kluster == nil || len(m.Kluster.Components) == 0 {
+					return nil, false
+				}
+				return m.Kluster.Components, true
+			}},
 		Setting{Key: "kluster.deploy", Kind: KindCommand,
 			Meaning: "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names; unset, the cluster can come up and go down, and flai deploys nothing.",
 			get:     func(m Manifest) (any, bool) { return klusterCommand(m, func(k *Kluster) []string { return k.Deploy }) }},
@@ -919,8 +932,60 @@ func (s Setting) parse(value string) (write, string) {
 		w.want = args
 		w.render = func(indent, old string) []string { return []string{keyLine(indent, s.leaf(), flowList(args), old)} }
 		return w, ""
+	case KindComponents:
+		const example = `such as [{"name":"api","build":["scripts/build.sh","api"]}], or [] to unset it`
+		if !strings.HasPrefix(v, "[") {
+			return w, "is not a list of components; write one as JSON, " + example
+		}
+		var components []KlusterComponent
+		if err := yaml.UnmarshalWithOptions([]byte(v), &components, yaml.Strict()); err != nil {
+			return w, fmt.Sprintf("is not a list of components: %s; write one as JSON, %s", firstLine(err.Error()), example)
+		}
+		if len(components) == 0 {
+			w.unset = true
+			return w, ""
+		}
+		for i, c := range components {
+			for j, a := range append([]string{c.Name}, c.Build...) {
+				if strings.ContainsAny(a, "\n\r\x00") {
+					if j == 0 {
+						return w, fmt.Sprintf("component %d's name spans lines; write it on one line", i+1)
+					}
+					return w, fmt.Sprintf("component %d's argument %d spans lines; write each argument on one line", i+1, j)
+				}
+			}
+		}
+		w.want = components
+		w.render = func(indent, old string) []string { return componentLines(components, indent, s.leaf(), old) }
+		return w, ""
 	}
 	return scalar(settingScalar(v), v)
+}
+
+// componentLines are the lines of the kluster: block's components under key
+// at indent, one component an item with its name and its build on a line
+// each, keeping the comment of the key's line they replace.
+func componentLines(components []KlusterComponent, indent, key, old string) []string {
+	head := indent + key + ":"
+	if rest, ok := keyRest(old, key); ok {
+		_, comment := splitComment(rest)
+		head = withComment(head, comment)
+	}
+	out := []string{head}
+	for _, c := range components {
+		out = append(out,
+			indent+"  - name: "+yamlScalar(c.Name),
+			indent+"    build: "+flowList(c.Build))
+	}
+	return out
+}
+
+// sameComponentList reports whether two lists of the kluster: block's
+// components say the same, a list absent and one empty alike.
+func sameComponentList(a, b []KlusterComponent) bool {
+	return slices.EqualFunc(a, b, func(x, y KlusterComponent) bool {
+		return x.Name == y.Name && slices.Equal(x.Build, y.Build)
+	})
 }
 
 // testsLines are the lines of a list of test tiers under key at indent, one
@@ -1107,6 +1172,9 @@ func readsBack(data []byte, m Manifest, writes []write) error {
 		case []TestTier:
 			tiers, _ := got.([]TestTier)
 			ok = ok && sameTiers(tiers, want)
+		case []KlusterComponent:
+			components, _ := got.([]KlusterComponent)
+			ok = ok && sameComponentList(components, want)
 		case []string:
 			args, _ := got.([]string)
 			ok = ok && slices.Equal(args, want)

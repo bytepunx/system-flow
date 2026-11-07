@@ -1351,6 +1351,86 @@ func TestEditSettingsWritesTheKlusterBlock(t *testing.T) {
 	}
 }
 
+// S-0595, ADR-0263: kluster.components is written as a block list, one
+// component an item with its name and its build, reads back as given, and []
+// removes it; a component that is not of its kind, or that the block's
+// validation faults, is refused naming its field.
+func TestEditSettingsWritesKlusterComponents(t *testing.T) {
+	out, err := EditSettings([]byte(klusterFixture), []Assignment{
+		{"kluster.components", `[{"name":"api","build":["scripts/build.sh","api"]},{"name":"web","build":["scripts/build.sh","two words"]}]`},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(klusterFixture, "  timeout: 45m\n",
+		"  timeout: 45m\n  components:\n    - name: api\n      build: [scripts/build.sh, api]\n    - name: web\n      build: [scripts/build.sh, \"two words\"]\n", 1)
+	if string(out) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", out, want)
+	}
+	path := filepath.Join(t.TempDir(), File)
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantList := []KlusterComponent{{Name: "api", Build: []string{"scripts/build.sh", "api"}}, {Name: "web", Build: []string{"scripts/build.sh", "two words"}}}
+	if m.Kluster == nil || !sameComponentList(m.Kluster.Components, wantList) {
+		t.Errorf("reads back as %+v", m.Kluster)
+	}
+
+	again, err := EditSettings(out, []Assignment{{"kluster.components", `[{"name":"api","build":["scripts/build.sh"]}]`}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := strings.Replace(klusterFixture, "  timeout: 45m\n", "  timeout: 45m\n  components:\n    - name: api\n      build: [scripts/build.sh]\n", 1); string(again) != want {
+		t.Errorf("a second write replaces the list:\n%s", again)
+	}
+
+	unset, err := EditSettings(out, []Assignment{{"kluster.components", "[]"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(unset) != klusterFixture {
+		t.Errorf("[] removes the list:\n%s", unset)
+	}
+
+	for _, c := range []struct {
+		name, value, field, want string
+	}{
+		{"not a list", `{"name":"api"}`, "kluster.components", "is not a list of components"},
+		{"unknown key", `[{"name":"api","build":["b.sh"],"image":"x"}]`, "kluster.components", "is not a list of components"},
+		{"build not a list", `[{"name":"api","build":"b.sh"}]`, "kluster.components", "is not a list of components"},
+		{"name not a label", `[{"name":"API","build":["b.sh"]}]`, "kluster.components[1].name", "is not a DNS label"},
+		{"no build", `[{"name":"api"}]`, "kluster.components[1].build", "is required"},
+		{"repeated name", `[{"name":"api","build":["b.sh"]},{"name":"api","build":["c.sh"]}]`, "kluster.components[2].name", "is the name of kluster.components[1] too"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := EditSettings([]byte(klusterFixture), []Assignment{{"kluster.components", c.value}}, nil)
+			var r *RefusedError
+			if !errors.As(err, &r) {
+				t.Fatalf("err = %v, want a refusal", err)
+			}
+			if !slices.ContainsFunc(r.Problems, func(p Problem) bool { return p.Field == c.field && strings.Contains(p.Reason, c.want) }) {
+				t.Errorf("problems = %+v, want %s with %q", r.Problems, c.field, c.want)
+			}
+		})
+	}
+	withBuild := strings.Replace(klusterFixture, "  timeout: 45m\n", "  timeout: 45m\n  build: [scripts/build.sh]\n", 1)
+	_, err = EditSettings([]byte(withBuild), []Assignment{{"kluster.components", `[{"name":"api","build":["b.sh"]}]`}}, nil)
+	var r *RefusedError
+	both := func(p Problem) bool {
+		return p.Field == "kluster.components" && strings.Contains(p.Reason, "kluster.build are both set")
+	}
+	if !errors.As(err, &r) || !slices.ContainsFunc(r.Problems, both) {
+		t.Errorf("components beside build: %v", err)
+	}
+	if _, err := EditSettings([]byte(withBuild), []Assignment{{"kluster.components", `[{"name":"api","build":["b.sh"]}]`}}, []string{"kluster.build"}); err != nil {
+		t.Errorf("components with build unset in the same edit: %v", err)
+	}
+}
+
 // S-0586: setting kluster.config on a manifest with no block adds one at the
 // end, the rest of the file byte for byte as it was.
 func TestEditSettingsAddsTheKlusterBlock(t *testing.T) {

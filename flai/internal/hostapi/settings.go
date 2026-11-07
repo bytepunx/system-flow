@@ -478,6 +478,22 @@ func settingArg(s manifest.Setting, raw json.RawMessage) (string, string) {
 		}
 		return string(out), ""
 	}
+	if s.Kind == manifest.KindComponents {
+		var list []manifest.KlusterComponent
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.DisallowUnknownFields()
+		if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("[")) || dec.Decode(&list) != nil {
+			return "", `is a list of components, such as [{"name":"api","build":["scripts/build.sh","api"]}], each with a name and its build command; [] unsets it`
+		}
+		if list == nil {
+			list = []manifest.KlusterComponent{}
+		}
+		out, err := json.Marshal(list)
+		if err != nil {
+			return "", err.Error()
+		}
+		return string(out), ""
+	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber()
 	var v any
