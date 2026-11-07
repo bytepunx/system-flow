@@ -18,28 +18,24 @@ import (
 const settingsPage = "../../docs/operators/settings.md"
 
 // The settings index names every key of the configuration and the manifest,
-// each in its own section, and every environment variable flai, flaiover, and
-// install.sh read or set, so that a setting added without a row fails here.
+// each in its own section, so that a key added without a row fails here. It
+// reads one page and reflects over two types, so it runs under -short too,
+// and flai test checks a change to either schema (I-0304).
+func TestSettingsIndexHasEveryKey(t *testing.T) {
+	t.Parallel()
+	page, missing := readSettingsPage(t)
+	missing("## flai configuration", pageSection(page, "## flai configuration"), keyPaths(reflect.TypeFor[config.Config](), "json", ""))
+	missing("## Project manifest", pageSection(page, "## Project manifest"), keyPaths(reflect.TypeFor[manifest.Manifest](), "yaml", ""))
+}
+
+// The settings index names every environment variable flai, flaiover, and
+// install.sh read or set, so that a variable added without a row fails here.
 func TestSettingsIndexIsComplete(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
-		t.Skip("reads the monorepo's docs and sources")
+		t.Skip("walks the monorepo's sources")
 	}
-	data, err := os.ReadFile(settingsPage)
-	if err != nil {
-		t.Fatalf("read the settings index: %v", err)
-	}
-	page := string(data)
-	missing := func(where, text string, names []string) {
-		t.Helper()
-		for _, n := range names {
-			if !strings.Contains(text, "`"+n+"`") {
-				t.Errorf("docs/operators/settings.md: %s does not name `%s`", where, n)
-			}
-		}
-	}
-	missing("## flai configuration", pageSection(page, "## flai configuration"), keyPaths(reflect.TypeFor[config.Config](), "json", ""))
-	missing("## Project manifest", pageSection(page, "## Project manifest"), keyPaths(reflect.TypeFor[manifest.Manifest](), "yaml", ""))
+	page, missing := readSettingsPage(t)
 	// flai also hands the container its secrets' paths and an image its build
 	// arguments, which the flaiover section lists.
 	missing("## Environment variables or ## flaiover container", pageSection(page, "## Environment variables")+pageSection(page, "## flaiover container"), append(
@@ -75,6 +71,24 @@ func TestSettingsIndexWalks(t *testing.T) {
 	re := regexp.MustCompile(`"((?:FLAI|FLAIOVER)_[A-Z0-9_]+)|os\.(?:Getenv|LookupEnv)\("([A-Z][A-Z0-9_]*)"`)
 	if got := strings.Join(namesIn(t, dir, `\.go$`, `_test\.go$`, re), " "); got != "FLAI_STORY HOME" {
 		t.Errorf("names: got %q", got)
+	}
+}
+
+// readSettingsPage reads the settings index and returns it with a check that
+// reports each name a section of it leaves out.
+func readSettingsPage(t *testing.T) (string, func(where, text string, names []string)) {
+	t.Helper()
+	data, err := os.ReadFile(settingsPage)
+	if err != nil {
+		t.Fatalf("read the settings index: %v", err)
+	}
+	return string(data), func(where, text string, names []string) {
+		t.Helper()
+		for _, n := range names {
+			if !strings.Contains(text, "`"+n+"`") {
+				t.Errorf("docs/operators/settings.md: %s does not name `%s`", where, n)
+			}
+		}
 	}
 }
 
