@@ -116,6 +116,8 @@ While the `kluster` host action is on for a project with a `kluster:` block, `fl
 
 ## A failed deploy holds the story
 
+As built by S-0579, a failure opens its thread and moves nothing. The story stays in review. No acceptance is refused for the `kluster` blocker, and `flai accept` has no `--without-kluster`. S-0579's criteria built the thread alone. The send-back and the blocker below are ADR-0254 §5a's, and wait for a story of their own. [flai serve (S-0579)](#flai-serve-s-0579) says what is built.
+
 - A story's failed deploy, or a failed checks run against its namespace, is recorded. `flai serve` opens one thread to the operator on the story, naming the job, the step, the commit, and the log, and sends the story back to in-progress, starting its agent. The agent fixes the change, or says on the thread that the cause is outside the story.
 - While the action is on, every acceptance of a story is refused with the blocker `kluster`, unless the story's namespace was deployed at its head and its checks run against it passed there, or `checks` is off. This holds for the operator's acceptance, the orchestrator's, and the merge queue's. The blocker names the last job and its outcome.
 - `flai accept --without-kluster` lands the story anyway. It is the operator's alone, and it is recorded in the story's Notes.
@@ -174,7 +176,7 @@ The commands run `kluster` in the project's main checkout, with the block's conf
 What else S-0577 built:
 
 - **The check.** `flai check` reports each fault of the block as the error `manifest.kluster` on its line, one sentence each beginning with the key: an unknown key, a value of the wrong kind, a `config` missing, absent, unreadable, naming no cluster, or naming a provider other than `k3d`, a default namespace that is not a DNS label or has a story namespace's form, a missing `deploy`, a command with no program, and a `timeout` that is not a duration above zero. `manifest.Load` never refuses the block ([project-manifest.md](project-manifest.md)).
-- **The host action.** `kluster` is in `hostapi.Actions`, seen by the dashboard, so the Features page lists it and turns it on and off with no change to flaiover. `flai serve enable kluster`, which that toggle runs, is refused for a project with no block; `disable` and `--all-projects` are not. Until S-0579, nothing runs because it is on.
+- **The host action.** `kluster` is in `hostapi.Actions`, seen by the dashboard, so the Features page lists it and turns it on and off with no change to flaiover. `flai serve enable kluster`, which that toggle runs, is refused for a project with no block; `disable` and `--all-projects` are not. Since S-0579, `flai serve` runs its jobs while it is on ([flai serve (S-0579)](#flai-serve-s-0579)).
 - **The guard.** `flai guard` refuses every session `flai serve` started and every sub-agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, named in one list, with the reason and what to do instead; `status` stays open ([flai-cli.md](flai-cli.md#commands)).
 
 What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above and for `flai serve`'s jobs (S-0579):
@@ -205,7 +207,56 @@ What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above 
 
 ## flai serve (S-0579)
 
-To be written by S-0579. This section will hold how `flai serve` queues and runs the jobs, records their outcomes, opens the threads of a failure and sends the story back, starts the checks run after a deploy with the namespace's variables, and gives `flai accept` its `kluster` blocker.
+`flai/internal/serve/kluster.go` is the kluster pass. `serve.Run` starts one per served project, beside the forge pass. It does nothing, and runs no kluster command, unless the project's manifest has a `kluster:` block and the `kluster` host action is on for it. Both are asked at every look and again before every job.
+
+**The looks.** The pass looks at once and then every minute. Each look queues jobs:
+
+| It finds | It queues |
+|----------|-----------|
+| A story in review whose branch's head, `refs/heads/story/S-nnnn` in the main checkout, is neither its namespace record's commit nor the head the pass last tried | A deploy at that head. A deploy waiting for the story at an older head takes the new one in its place |
+| A story namespace with a record, whose story is in any column but review, archived ones included | A teardown, unless one failed while the story stood in that column |
+| A story moved to done since the last look, while the action was on | One promotion, after the teardowns. A promotion already waiting is not queued again |
+
+- The pass finds acceptances with the curate scheduler's `news` and `accepted`, from its own start. So an acceptance made before `flai serve` started, or while the action was off, promotes nothing.
+- A namespace whose story flai cannot find is left as it is.
+
+**The worker.** One worker per project runs the queue in order, one job at a time. A look never waits for a job. Each job runs through `KlusterRunner`: `SystemKluster` calls `Cluster.Deploy`, `Teardown`, `Promote`, `Status`, and `Up` from `flai/internal/kluster`, as the commands do, and the tests give their own (`Options.Kluster`).
+
+- **A deploy** first checks that the story is still in review and has a worktree. When the cluster has no kubeconfig, or `kluster status` does not list it running, the pass brings it up, as `flai kluster up` does. The output goes to `.flai-cache/kluster/up.log`, bounded by `kluster.timeout`. A bring-up the dashboard runs counts as busy. The pass then deploys from the worktree at the queued head.
+- **A teardown** runs from the story's worktree, or the main checkout once the worktree is gone. A story with no record is not torn down.
+- **A promotion** promotes the main branch's head as it is when the job runs, so promotions queued together deploy main's newest head once.
+- **The lock.** A job refused with `kluster.ErrBusy`, because `flai kluster` in a shell or the dashboard holds the lock, is no failure. The next look queues it again.
+
+**Not retrying a failure.** The pass keeps what it last tried for each story namespace in `.flai-cache/kluster/serve/<namespace>.json`: the head, the outcome, and, after a failed teardown, the story's column then.
+
+- A head is tried once, passed or failed, even when a refusal wrote no record.
+- A failed teardown is tried again only once the story moves to another column. A story back in review clears it.
+- A failed promotion waits for the next acceptance.
+- The file is removed after a teardown that passes, and for a namespace with no record once its story has left review.
+
+**The checks.** A checks run against the namespace runs in the same job as the deploy, before the next job. It runs only when the deploy passed, `Options.Checks` (`checksConfig`, wired by `flai serve`) has the `checks` host action on, and checks are named. It runs through `Dir.RunChecksWith`, with the namespace's variables. `KlusterEnv` decides those variables for every checks run, the pass's, `flai checks run`'s, and the dashboard's alike. It answers `Cluster.Env` for the story's namespace only when all of these hold:
+
+- the action is on;
+- the block is set;
+- the namespace's record passed;
+- the record's commit is the story branch's head.
+
+Otherwise it answers nothing, and the run is as before. A run with the variables writes `=== against the kluster namespace <ns> ===` at the top of its log, and `flai checks run` says `S-nnnn: checks run against its kluster namespace s-nnnn` on standard error.
+
+**Failures.** A failure moves nothing. Each kind has one thread by `flai serve`, found again by its title while it is open. A later failure adds an entry to it, and a later success resolves it:
+
+| Failure | Thread title | On |
+|---------|--------------|----|
+| A deploy, or its bring-up | `flai serve could not deploy S-nnnn into its kluster namespace` | The story |
+| The checks run against the namespace | `flai serve's checks against S-nnnn's kluster namespace failed` | The story |
+| A teardown | `flai serve could not tear down S-nnnn's kluster namespace` | The story, or `system-flow.yaml` once the story is archived, since a thread on an archived item is a `threads.archived` finding |
+| A promotion | `flai serve could not promote main into the kluster's default namespace` | `system-flow.yaml` |
+
+Each entry names the job, the step (or "before its first step" for a refusal), its exit code, the commit, the namespace, the log, and the error.
+
+**The journal.** Each job writes two entries to the host journal, one when it starts and one when it ends `done` or `failed`. Each entry has the action `kluster` and the method `serve.kluster`, and names the story, the namespace, the commit, and the failed step. A job refused for the lock ends `failed`, "not run, and queued again at the next look". Each entry has an slog line beside it with `component` `serve`.
+
+**Not built.** ADR-0254 §5a's send-back of a failed story to in-progress, the `kluster` blocker on acceptance, and `flai accept --without-kluster` are not built. A story is accepted whatever its namespace's last job says.
 
 ## The dashboard (S-0580, S-0581)
 

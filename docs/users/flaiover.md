@@ -641,6 +641,8 @@ Commands are written one argument a line, and are run exactly as written, with n
 
 Host actions lists every host action flai has, `plan` and `orchestrate` among them, each with a checkbox and what it does. Tick one to turn it on for this project, or clear it to turn it off. `settings` itself is shown and changed only in a shell. An action on for every project is shown as such and not changed here.
 
+`kluster` is listed for a project whose `system-flow.yaml` has a `kluster:` block. Turning it on lets `flai serve` deploy each story that enters review into its own namespace of the project's cluster, check it there, tear it down when it leaves review, and promote main on each acceptance. It also lets the [Ops](#klusters) pages act. [The kluster host action](../operators/index.md#the-kluster-host-action-s-0577) says what runs and when.
+
 Checks are the commands run on a story in review on this host, each with its name. **Save** changes one, **Remove** deletes it, and **Add check** takes a name and a command. With none set on the host, the section says so and names the manifest's checks, which are used instead. The time limit, in minutes, bounds one run of every check together. Checks are kept for every project on the host.
 
 ### Agents

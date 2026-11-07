@@ -479,8 +479,37 @@ flai serve disable kluster    # tears nothing down
 
 - `flai serve enable kluster` is refused for a project whose manifest has no `kluster:` block, naming the block to add. `--all-projects` and `disable` are not refused.
 - The dashboard's Features page lists it and turns it on and off, through `flai serve enable` while the `settings` host action is on.
-- Today the action gates nothing yet: S-0579 adds the jobs `flai serve` runs while it is on (a deploy for each story entering review, its teardown, and the promotion of main on acceptance), and S-0580 and S-0581 the dashboard's Ops pages.
-- `flai kluster up`, `down`, and `status` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent `up` and `down`.
+- With the action on, `flai serve` runs the jobs below, and the dashboard's Ops pages bring the cluster up or down and deploy, tear down, or promote.
+- `flai kluster up`, `down`, `status`, `deploy`, `teardown`, `promote`, and `deployments` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent the ones that write.
+
+**What `flai serve` runs while it is on.** It looks at the project once a minute, and at once when it starts serving it. It runs one job at a time per project, in the order their causes came, with no model:
+
+| When | What it runs | From |
+|------|--------------|------|
+| A story enters review | A deploy into the story's namespace, such as `s-0579`: `build`, the image load, `deploy` | The story's worktree, at its branch's head |
+| A story in review gets a new head | A deploy again, in place | The worktree, at the new head |
+| A story leaves review, back to in-progress, cancelled, or any other column | A teardown: `teardown`, then the namespace deleted | The worktree, or the main checkout when it is gone |
+| A story is accepted | A teardown of its namespace, then a promotion of main's head into the default namespace | The teardown as above; the promotion in `.flai-cache/kluster/main` |
+| A deploy finds the cluster absent | `kluster up` first, its output to `.flai-cache/kluster/up.log` | The main checkout |
+
+- A head is deployed once. A deploy that failed at a head is not tried again until the story's head changes.
+- A story never deployed is not torn down. Acceptances seen at one look promote once. An acceptance made while `flai serve` was stopped, or while the action was off, promotes nothing; run `flai kluster promote` then.
+- A job that finds another holding kluster's lock, such as `flai kluster deploy` in your shell, waits for the next look.
+- The host journal records each job's start and its end, done or failed, under the action `kluster`, with the story, the namespace, the commit, and the step that failed.
+- `flai serve` never takes the cluster down. Turning the action off starts no job and tears nothing down.
+
+**Checks against the namespace.** A checks run for a story whose namespace was deployed and passed at the story's head gets the namespace's variables in each check's environment: `KUBECONFIG`, `FLAI_KLUSTER_CONTEXT`, `FLAI_KLUSTER_NAMESPACE`, and the rest that [kluster.md](../../design/system/kluster.md#the-steps-and-their-variables) lists. This holds whether `flai checks run`, the review page, or `flai serve` starts the run. `flai checks run` then says so on standard error, and the run's log starts with the namespace. With the `checks` host action on and checks named, `flai serve` runs the story's checks itself after each deploy that passes, in the same job. Any other run gets no variables and runs as before.
+
+**When something fails.** Nothing is moved: the story stays where it is. `flai serve` opens one thread, written by `flai serve`, and adds an entry to it when the next attempt fails too:
+
+| What failed | The thread is on | It names | It is resolved when |
+|-------------|------------------|----------|---------------------|
+| A deploy | The story | The step, its exit code, the commit, and the step's log under `.flai-cache/kluster/logs/<namespace>/` | A later deploy of the story passes |
+| The checks against the namespace | The story | The outcome, the check it ended at, the commit, and the checks log | A later checks run there passes |
+| A teardown | The story, or `system-flow.yaml` once the story is archived | The step, its exit code, the commit, and the log | A later teardown passes. A failed teardown is tried again only once the story moves |
+| A promotion | `system-flow.yaml` | Main's commit, the step, its exit code, and the log | A later promotion passes. The next acceptance promotes again |
+
+`flai kluster deployments` lists every namespace's last job and outcome. The dashboard's Deployments page shows the same, with each step's log.
 
 **Understand what enabling it means.** Whoever can change the project's `build`, `deploy`, and `teardown` commands, on main or on a story's branch, then runs them on your machine, as you, against a cluster that holds the project's shared services and their data.
 
