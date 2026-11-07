@@ -7,8 +7,11 @@
 	// share one answer; without it the notice asks for itself.
 	// The caret beside its bold title collapses it to that title (S-0150). The collapse is kept per
 	// browser against what the notice says, so a reload keeps it and any change to it opens it again.
+	// A waiting reason or a failed start links each story and Configuration page it names by its
+	// /settings path, so the operator goes to the setting it lacks (ADR-0261).
+	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
-	import type { HostAgent } from '$lib/activity';
+	import { reasonParts, type HostAgent } from '$lib/activity';
 	import { localTime } from '$lib/localtime';
 
 	let { refresh = 0, status: given }: { refresh?: number; status?: HostAgent | null } = $props();
@@ -64,6 +67,15 @@
 	}
 </script>
 
+{#snippet linked(reason: string)}{#each reasonParts(reason) as part, i (i)}{#if part.id}<a
+				class="underline"
+				href={resolve('/items/[id]', { id: part.id })}>{part.text}</a
+			>{:else if part.page}<a
+				class="underline"
+				href={resolve('/settings/[page]', { page: part.page })}
+				data-testid="host-agent-settings-link">{part.text}</a
+			>{:else}{part.text}{/if}{/each}{/snippet}
+
 {#snippet title(text: string)}
 	<button
 		type="button"
@@ -94,8 +106,9 @@
 				{@render title('No agent could be started')}
 				{#if open}for {st.last.story}:
 					<code class="rounded bg-surface px-1">{st.last.command}</code>
-					{st.last.error} ({localTime(st.last.started)}). The operator sets the command on the host
-					with <code class="rounded bg-surface px-1">flai serve agent set</code>.{/if}
+					{@render linked(st.last.error)} ({localTime(st.last.started)}). The operator sets the
+					command on the host with
+					<code class="rounded bg-surface px-1">flai serve agent set</code>.{/if}
 			</p>
 		{:else if st.last}
 			<p>
@@ -109,13 +122,13 @@
 		{:else}
 			<p>
 				{@render title('A ready story is waiting')}{#if open}:
-					<span data-testid="host-agent-waiting">{st.waiting}</span>.{/if}
+					<span data-testid="host-agent-waiting">{@render linked(st.waiting ?? '')}</span>.{/if}
 			</p>
 		{/if}
 		{#if open}
 			{#if st.waiting && (st.running || st.last)}
 				<p class="mt-1 text-xs" data-testid="host-agent-waiting">
-					A ready story is waiting: {st.waiting}.
+					A ready story is waiting: {@render linked(st.waiting)}.
 				</p>
 			{/if}
 			<p class="mt-1 text-xs text-muted">

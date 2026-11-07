@@ -13,7 +13,8 @@
 	// serve, it says by whom, where, and when, and Start agent has flai restart it here (S-0177). An agent
 	// that waits on other stories' agents' replies rather than the operator names those stories, linked
 	// (S-0335). Once the agent has started, its stream, as the Activity page shows it, is below, open
-	// while the agent runs (S-0541).
+	// while the agent runs (S-0541). A refusal or a waiting reason that names a Configuration page by
+	// its /settings path links it, so the operator goes to the setting it lacks (ADR-0261).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -132,6 +133,15 @@
 	}
 </script>
 
+{#snippet linked(reason: string)}{#each reasonParts(reason) as part, i (i)}{#if part.id}<a
+				class="underline"
+				href={resolve('/items/[id]', { id: part.id })}>{part.text}</a
+			>{:else if part.page}<a
+				class="underline"
+				href={resolve('/settings/[page]', { page: part.page })}
+				data-testid="story-agent-settings-link">{part.text}</a
+			>{:else}{part.text}{/if}{/each}{/snippet}
+
 {#if activity}
 	<section class="rounded border border-line bg-surface p-3" data-testid="story-agent">
 		<div class="mb-2 flex items-center gap-2">
@@ -147,10 +157,7 @@
 		</div>
 		{#if activity.hold}
 			<p class="text-xs" data-testid="story-agent-held">
-				{#each reasonParts(activity.hold.reason) as part, i (i)}{#if part.id}<a
-							class="underline"
-							href={resolve('/items/[id]', { id: part.id })}>{part.text}</a
-						>{:else}{part.text}{/if}{/each}
+				{@render linked(activity.hold.reason)}
 			</p>
 		{:else}
 			<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
@@ -187,7 +194,7 @@
 		{/if}
 		{#if actError?.action === 'restart'}
 			<p class="mt-1 text-xs text-warn" data-testid="story-agent-retry-error">
-				{actError.message}
+				{@render linked(actError.message)}
 			</p>
 		{/if}
 		{#if canStartHere}
@@ -207,7 +214,9 @@
 			>
 		{/if}
 		{#if actError?.action === 'start'}
-			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">{actError.message}</p>
+			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">
+				{@render linked(actError.message)}
+			</p>
 		{/if}
 		{#if started}
 			<AgentStream {story} started={activity.run.started} open={live} />
@@ -217,7 +226,9 @@
 	<section class="rounded border border-line bg-surface p-3" data-testid="story-agent">
 		<h2 class="mb-2 font-medium">Agent</h2>
 		<p class="text-xs" data-testid="story-agent-line">
-			flai serve has started no agent for this story{waitingWhy ? `: ${waitingWhy}` : '.'}
+			flai serve has started no agent for this story{#if waitingWhy}: {@render linked(
+					waitingWhy
+				)}{:else}.{/if}
 		</p>
 		{#if canStart}
 			<button
@@ -228,7 +239,9 @@
 			>
 		{/if}
 		{#if actError?.action === 'start'}
-			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">{actError.message}</p>
+			<p class="mt-1 text-xs text-warn" data-testid="story-agent-start-error">
+				{@render linked(actError.message)}
+			</p>
 		{/if}
 	</section>
 {/if}

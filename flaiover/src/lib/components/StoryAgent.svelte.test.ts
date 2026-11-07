@@ -6,7 +6,8 @@ import { GATHER_MS } from '$lib/events';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id)
+	resolve: (route: string, params: Record<string, string>) =>
+		route.replace(/\[(\w+)\]/g, (_, k: string) => params[k])
 }));
 
 /** Stands in for the browser's WebSocket, as /api/events speaks through it. */
@@ -420,6 +421,58 @@ describe('StoryAgent (S-0104)', () => {
 			await settle();
 			expect(text()).toContain('agent working');
 			expect(button()).toBeNull();
+		});
+		// ADR-0261: a refusal or a waiting reason names the settings page that fixes it, linked
+		it('links the settings page a start refusal names', async () => {
+			await show({}, true, { status: 'ready', writable: true });
+			api.mockImplementation(async (path: string, init?: RequestInit) =>
+				init?.method === 'POST'
+					? {
+							ok: false,
+							json: async () => ({
+								error:
+									"S-0104's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]"
+							})
+						}
+					: answer({ enabled: true, state: { command: '', stories: {} } })
+			);
+			button()!.click();
+			await settle();
+			const error = document.querySelector('[data-testid="story-agent-start-error"]')!;
+			expect(error.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+				"S-0104's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]"
+			);
+			const link = error.querySelector<HTMLAnchorElement>(
+				'[data-testid="story-agent-settings-link"]'
+			)!;
+			expect(link.textContent).toBe('/settings/harnesses');
+			expect(link.getAttribute('href')).toBe('/settings/harnesses');
+		});
+
+		it('links the settings page a waiting reason names', async () => {
+			api.mockResolvedValue(
+				answer({
+					enabled: true,
+					state: {
+						command: '',
+						waiting:
+							'S-0104 names harness nope, which flai cannot start: set the default agent on /settings/agents',
+						stories: {}
+					}
+				})
+			);
+			c = mount(StoryAgent, {
+				target: document.body,
+				props: { story: 'S-0104', status: 'ready', writable: true }
+			});
+			await settle();
+			expect(text()).toContain(
+				'flai serve has started no agent for this story: S-0104 names harness nope, which flai cannot start: set the default agent on /settings/agents'
+			);
+			const link = section()!.querySelector<HTMLAnchorElement>(
+				'[data-testid="story-agent-settings-link"]'
+			)!;
+			expect(link.getAttribute('href')).toBe('/settings/agents');
 		});
 	});
 

@@ -5,6 +5,10 @@ import type { HostAgent } from '$lib/activity';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+vi.mock('$app/paths', () => ({
+	resolve: (route: string, params: Record<string, string>) =>
+		route.replace(/\[(\w+)\]/g, (_, k: string) => params[k])
+}));
 
 const settle = async () => {
 	for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
@@ -93,6 +97,34 @@ describe('HostAgentNotice (S-0079)', () => {
 	it('says why a ready story waits when no agent has run', async () => {
 		await show({ enabled: true, state: { command: 'claude', waiting: 'S-0150 waits for room' } });
 		expect(text()).toContain('A ready story is waiting: S-0150 waits for room.');
+	});
+
+	// ADR-0261: a waiting reason or a failed start links the settings page it names, and its stories
+	it('links the settings pages and the stories a waiting reason and a failed start name', async () => {
+		await show({
+			enabled: true,
+			state: {
+				command: '',
+				last: {
+					...run,
+					error:
+						"S-0079's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]"
+				},
+				waiting:
+					'S-0150 names harness nope, which flai cannot start: set the default agent on /settings/agents'
+			}
+		});
+		const links = [
+			...notice()!.querySelectorAll<HTMLAnchorElement>('[data-testid="host-agent-settings-link"]')
+		].map((a) => [a.textContent, a.getAttribute('href')]);
+		expect(links).toEqual([
+			['/settings/harnesses', '/settings/harnesses'],
+			['/settings/agents', '/settings/agents']
+		]);
+		expect(notice()!.querySelector('a[href="/items/S-0150"]')!.textContent).toBe('S-0150');
+		expect(text()).toContain(
+			'A ready story is waiting: S-0150 names harness nope, which flai cannot start: set the default agent on /settings/agents.'
+		);
 	});
 
 	// S-0104: the board asks once and shares the answer with its cards

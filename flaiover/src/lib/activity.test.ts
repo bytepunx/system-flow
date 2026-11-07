@@ -123,6 +123,30 @@ describe('a held story (S-0129)', () => {
 			{ text: ' is' }
 		]);
 	});
+	it('cuts out each /settings path that names a Configuration page, so it can be a link (ADR-0261)', () => {
+		expect(
+			reasonParts(
+				"S-0042's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set"
+			)
+		).toEqual([
+			{ text: 'S-0042', id: 'S-0042' },
+			{
+				text: "'s harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, "
+			},
+			{ text: '/settings/harnesses', page: 'harnesses' },
+			{ text: ', or with flai serve agent set' }
+		]);
+		expect(reasonParts('set the default agent on /settings/agents.')).toEqual([
+			{ text: 'set the default agent on ' },
+			{ text: '/settings/agents', page: 'agents' },
+			{ text: '.' }
+		]);
+	});
+	it('leaves a /settings path that names no page as text', () => {
+		expect(reasonParts('see /settings/nowhere or https://host/settings/agents')).toEqual([
+			{ text: 'see /settings/nowhere or https://host/settings/agents' }
+		]);
+	});
 	it('says the hold, not an agent with no name', () => {
 		expect(
 			activityLine({ state: 'waiting', why: overlap.reason, run: standIn, hold: overlap })
