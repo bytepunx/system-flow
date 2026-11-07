@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-07T23:40:28Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ flaiover/src/lib/markdown.ts:15 new MarkdownIt({ html: true }); no sanitizer in 
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0627 remediates this issue, created from it at 2026-11-07T23:40:28Z.
