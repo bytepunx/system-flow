@@ -441,6 +441,41 @@ func TestTheBatchMergesASharedMarkdownFileBySections(t *testing.T) {
 	untouched(t, repo, map[string]string{a: headA, b: headB})
 }
 
+// I-0251, ADR-0257: two stories wrote their changelog lines under
+// "## Unreleased" before a release on main named that section. Union alone
+// would bring the old heading back with the released lines; the batch puts
+// each story's line under main's new top "## Unreleased", in the order the
+// stories are batched, so the batch lints clean, and the stories' own
+// branches are not touched.
+func TestTheBatchPutsEachStorysChangelogLinesUnderTheTopUnreleased(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	before := "# Changelog\n\n## Unreleased\n\n- S-0000 An earlier line.\n\n## 1.0.0 - 2026-01-01\n\n- start\n"
+	writeFile(t, repo.MainRoot, ".gitattributes", "CHANGELOG.md merge=union\n")
+	writeFile(t, repo.MainRoot, "CHANGELOG.md", before)
+	runGit(t, repo.MainRoot, "add", "-A")
+	runGit(t, repo.MainRoot, "commit", "-q", "-m", "a changelog that merges by union")
+	line := func(who string) string { return "- " + who + "'s line." }
+	adding := func(who string) string {
+		return strings.Replace(before, "- S-0000 An earlier line.\n", "- S-0000 An earlier line.\n"+line(who)+"\n", 1)
+	}
+	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "CHANGELOG.md", adding("A"))
+	b, headB := readyStory(t, repo, "B", t0.Add(2*time.Hour), "CHANGELOG.md", adding("B"))
+	released := "# Changelog\n\n## Unreleased\n\n## 1.1.0 - 2026-11-02\n\n- S-0000 An earlier line.\n\n## 1.0.0 - 2026-01-01\n\n- start\n"
+	writeFile(t, repo.MainRoot, "CHANGELOG.md", released)
+	runGit(t, repo.MainRoot, "commit", "-q", "-am", "chore: publish 1.1.0")
+	enqueue(t, repo, a, b)
+
+	_, st := runBatch(t, deps(proc, t1), repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a, b}) || len(st.Batch.LeftOut) != 0 || len(st.Outcomes) != 0 || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, outcomes %+v; want both stories kept", st.Batch, st.Outcomes)
+	}
+	want := strings.Replace(released, "## Unreleased\n\n", "## Unreleased\n\n"+line("A")+"\n"+line("B")+"\n\n", 1)
+	if got := runGit(t, repo.MainRoot, "show", st.Batch.Branch+":CHANGELOG.md") + "\n"; got != want {
+		t.Errorf("the changelog on the batch:\n%s\nwant:\n%s", got, want)
+	}
+	untouched(t, repo, map[string]string{a: headA, b: headB})
+}
+
 // S-0401 criterion 2: a stop on a markdown file inside claims.shared that
 // the section merge cannot settle, the same line changed two ways, here by
 // main, leaves the story waiting with the path: it stays enqueued and in

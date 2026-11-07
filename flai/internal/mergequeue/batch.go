@@ -392,7 +392,8 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 // continued over the stops the issue files, the ADR index, the issue
 // summary, and the shared markdown files merged by sections settle, as flai
 // stream sync continues it (ADR-0175), and one they settle is a rebase that
-// finished. A stop they do not settle is aborted, and answers the story's
+// finished. After a rebase that finished, the story's own changelog lines are
+// put back under the batch's top "## Unreleased" (ADR-0257). A stop they do not settle is aborted, and answers the story's
 // outcome by where its paths conflict, as unsettled decides with before,
 // the stories kept ahead of it, and the paths that stop conflicted on; a
 // rebase git failed without stopping answers it left out. The batch's
@@ -417,6 +418,9 @@ func (b *build) rebase(e Entry, onto string, before []ahead) (rebased, error) {
 		if len(settled.Merged)+len(settled.Regenerated) > 0 {
 			b.d.Log.Info("merge queue batch settled a story's stops by merging and writing files again", "component", "mergequeue",
 				"batch", b.id, "story", e.Story, "merged", settled.Merged, "regenerated", settled.Regenerated)
+		}
+		if err := b.settleChangelogs(e, onto, strings.TrimSpace(from)); err != nil {
+			return rebased{}, err
 		}
 		if _, err := r.Run(wt, "git", "checkout", "--quiet", "-B", b.branch); err != nil {
 			return rebased{}, fmt.Errorf("build merge queue batch %s: move %s to %s rebased: %w; remove the worktree %s, and the queue builds the batch again", b.id, b.branch, e.Story, err, b.path)
@@ -446,6 +450,30 @@ func (b *build) rebase(e Entry, onto string, before []ahead) (rebased, error) {
 		return rebased{}, b.notBack(e, err)
 	}
 	return rebased{out: b.unsettled(e, settled.Conflicts, files, before), paths: settled.Conflicts}, nil
+}
+
+// settleChangelogs puts e's own changelog lines back under the top
+// "## Unreleased" of onto, the batch's head it was rebased onto, in the
+// batch's worktree, as flai stream sync does after its rebase (ADR-0257):
+// from is e's merge base with the main branch. It commits what it wrote on
+// the rebased copy, never on e's own branch. One it could not read for is
+// logged and the batch goes on; files written but not committed are an
+// error, and the queue builds the batch again.
+func (b *build) settleChangelogs(e Entry, onto, from string) error {
+	written, err := storygit.SettleChangelogs(b.d.Runner, b.path, onto, from, e.Head, e.Story)
+	if err != nil && len(written) == 0 {
+		b.d.Log.Warn("merge queue batch did not put a story's changelog lines back under Unreleased", "component", "mergequeue",
+			"batch", b.id, "story", e.Story, "err", err)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("build merge queue batch %s: %w; remove the worktree %s, and the queue builds the batch again", b.id, err, b.path)
+	}
+	if len(written) > 0 {
+		b.d.Log.Info("merge queue batch put a story's changelog lines back under Unreleased", "component", "mergequeue",
+			"batch", b.id, "story", e.Story, "changelogs", written)
+	}
+	return nil
 }
 
 // notBack is the error of a batch worktree git could not check the batch's
