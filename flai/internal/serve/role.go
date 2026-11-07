@@ -84,10 +84,10 @@ func formulaTriggered(trigger string) (name, story string, ok bool) {
 // takes some, and for an item of a kind it does not take or that is
 // archived, done, or cancelled; while a run of the role on the same item, or
 // on none, runs; when its agent's harness is the host's command and none is
-// set, or one flai cannot start; and while the budget state of its agent's provider holds its
-// start, naming the provider and until, with nothing recorded (S-0534). It
-// does not wait for the run: the serving flai settles it once the process is
-// gone.
+// set, or one flai cannot start; and while the budget state of its agent's
+// provider holds its start, naming the provider and until, with nothing
+// recorded (S-0534). It does not wait for the run: the serving flai settles
+// it once the process is gone.
 //
 // With FormulaTrigger's trigger, which runTrigger in cmd gives the agent of
 // a formula's instance for a role step of its formula, the built-in analyzer

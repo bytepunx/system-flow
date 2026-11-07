@@ -396,7 +396,9 @@ describe('StoryAgent (S-0104)', () => {
 				init?.method === 'POST'
 					? {
 							ok: false,
-							json: async () => ({ error: 'S-0104 names no harness, and no command is set' })
+							json: async () => ({
+								error: "S-0104's harness is the host's command, and none is set for this project"
+							})
 						}
 					: answer({ enabled: true, state: { command: '', stories: {} } })
 			);
@@ -407,7 +409,7 @@ describe('StoryAgent (S-0104)', () => {
 			expect(JSON.parse((post[1] as RequestInit).body as string)).toEqual({ action: 'start' });
 			expect(
 				document.querySelector('[data-testid="story-agent-start-error"]')!.textContent
-			).toContain('names no harness, and no command is set');
+			).toContain("harness is the host's command, and none is set");
 			// a start that is taken: the page asks again and shows the agent at work
 			api.mockImplementation(async (path: string, init?: RequestInit) =>
 				init?.method === 'POST'
