@@ -63,7 +63,7 @@ describe('the nav rail (S-0458)', () => {
 		flushSync();
 	};
 
-	it('is the site navigation, with the five groups in order, each a button', () => {
+	it('is the site navigation, with the six groups in order, each a button', () => {
 		show('/');
 		expect(document.querySelector('nav')!.getAttribute('aria-label')).toBe('Site');
 		const groups = [...document.querySelectorAll<HTMLButtonElement>('[data-rail-group]')];
@@ -71,6 +71,7 @@ describe('the nav rail (S-0458)', () => {
 			'Flow',
 			'Agents',
 			'Design',
+			'Ops',
 			'Documentation',
 			'Configuration'
 		]);

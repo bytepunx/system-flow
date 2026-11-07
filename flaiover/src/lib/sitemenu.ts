@@ -1,7 +1,8 @@
-// The nav rail's groups and pages (S-0458, replacing S-0172's two-tier header menu): five groups,
+// The nav rail's groups and pages (S-0458, replacing S-0172's two-tier header menu): six groups,
 // each with its icon and its pages in order, and which group and page a path belongs to. The Charts
 // page carries its charts by group from the catalogue, and a path names the chart it shows (S-0484).
 // The Agents group lists a page for each role agent.status reports, at /workflow/<name> (S-0420).
+// The Ops group holds the pages that run the project's kluster, Klusters first (S-0580).
 import { resolve } from '$app/paths';
 import type { LucideIcon } from '@lucide/svelte';
 // Each icon by its own module, so dev and tests load the icons used and not the whole library.
@@ -26,7 +27,9 @@ import ScaleIcon from '@lucide/svelte/icons/scale';
 import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SearchIcon from '@lucide/svelte/icons/search';
 import ServerIcon from '@lucide/svelte/icons/server';
+import ServerCogIcon from '@lucide/svelte/icons/server-cog';
 import SettingsIcon from '@lucide/svelte/icons/settings';
+import ShipWheelIcon from '@lucide/svelte/icons/ship-wheel';
 import SquareKanbanIcon from '@lucide/svelte/icons/square-kanban';
 import SwatchBookIcon from '@lucide/svelte/icons/swatch-book';
 import ToggleRightIcon from '@lucide/svelte/icons/toggle-right';
@@ -76,7 +79,7 @@ export type MenuGroup = {
 	/** Paths outside its pages that still belong to the group, such as an item's page. */
 	also?: string[];
 };
-export type GroupKey = 'flow' | 'agents' | 'design' | 'documentation' | 'configuration';
+export type GroupKey = 'flow' | 'agents' | 'design' | 'ops' | 'documentation' | 'configuration';
 export type PageKey =
 	| 'board'
 	| 'inbox'
@@ -90,6 +93,7 @@ export type PageKey =
 	| 'messages'
 	| 'design-system'
 	| 'components'
+	| 'klusters'
 	| 'docs-system'
 	| 'conventions'
 	| 'adrs'
@@ -242,6 +246,23 @@ export const SITE_MENU: MenuGroup[] = [
 				href: resolve('/design/components')
 			}
 		]
+	},
+	{
+		key: 'ops',
+		label: 'Ops',
+		icon: ServerCogIcon,
+		pages: [
+			// The project's kluster: whether it runs, and Up and Down through flai (S-0580).
+			{
+				key: 'klusters',
+				label: 'Klusters',
+				icon: ShipWheelIcon,
+				path: '/ops/klusters',
+				href: resolve('/ops/klusters')
+			}
+		],
+		// A page of the group still to come, such as Deployments (S-0581).
+		also: ['/ops']
 	},
 	{
 		key: 'documentation',

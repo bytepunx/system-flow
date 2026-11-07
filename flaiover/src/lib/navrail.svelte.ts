@@ -9,7 +9,15 @@ import type { GroupKey } from '$lib/sitemenu';
 export type RailKey = GroupKey | 'charts';
 export type Chosen = Partial<Record<RailKey, boolean>>;
 const KEY = 'flaiover-nav-rail';
-const keys: RailKey[] = ['flow', 'agents', 'design', 'documentation', 'configuration', 'charts'];
+const keys: RailKey[] = [
+	'flow',
+	'agents',
+	'design',
+	'ops',
+	'documentation',
+	'configuration',
+	'charts'
+];
 
 /** The stored choices, leaving out anything that is not a known key set to a boolean. */
 export function parseChosen(raw: string | null): Chosen {

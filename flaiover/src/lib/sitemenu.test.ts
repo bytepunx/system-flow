@@ -8,15 +8,18 @@ vi.mock('$app/paths', () => ({
 
 import ActivityIcon from '@lucide/svelte/icons/activity';
 import InboxIcon from '@lucide/svelte/icons/inbox';
+import ServerCogIcon from '@lucide/svelte/icons/server-cog';
+import ShipWheelIcon from '@lucide/svelte/icons/ship-wheel';
 import { KINDS, TITLES } from './viz/catalog';
 import { SITE_MENU, groupBadges, locate, siteMenu, withProject } from './sitemenu';
 
 describe('the nav rail (S-0458)', () => {
-	it('has Flow, Agents, Design, Documentation, and Configuration, each with its pages', () => {
+	it('has Flow, Agents, Design, Ops, Documentation, and Configuration, each with its pages', () => {
 		expect(SITE_MENU.map((g) => [g.label, g.pages.map((p) => p.label)])).toEqual([
 			['Flow', ['Board', 'Inbox', 'Charts', 'Workflow']],
 			['Agents', ['Orchestration', 'Planning', 'Analysis', 'Activity', 'Threads', 'Messages']],
 			['Design', ['System', 'Components']],
+			['Ops', ['Klusters']],
 			['Documentation', ['System', 'Conventions', 'ADRs', 'Issues', 'Search']],
 			['Configuration', ['Features', 'Agents', 'File System', 'Projects', 'Harnesses', 'Host']]
 		]);
@@ -46,6 +49,7 @@ describe('the nav rail (S-0458)', () => {
 				'/messages'
 			],
 			['/design', '/design/components'],
+			['/ops/klusters'],
 			[
 				'/docs/design/system/README.md',
 				'/docs/design/conventions/README.md',
@@ -180,6 +184,28 @@ describe('the nav rail (S-0458)', () => {
 		});
 	});
 
+	it('puts Ops between Design and Documentation, with Klusters its first page (S-0580)', () => {
+		const keys = SITE_MENU.map((g) => g.key);
+		expect(keys.indexOf('ops')).toBe(keys.indexOf('design') + 1);
+		expect(keys.indexOf('documentation')).toBe(keys.indexOf('ops') + 1);
+		const ops = SITE_MENU.find((g) => g.key === 'ops')!;
+		expect(ops.icon).toBe(ServerCogIcon);
+		expect(ops.pages[0]).toMatchObject({
+			key: 'klusters',
+			label: 'Klusters',
+			icon: ShipWheelIcon,
+			path: '/ops/klusters',
+			href: '/ops/klusters'
+		});
+	});
+
+	it('places /ops/klusters on Klusters, and /ops or an unknown /ops page in Ops only (S-0580)', () => {
+		expect(locate('/ops/klusters')).toEqual({ group: 'ops', page: 'klusters', child: null });
+		expect(locate('/ops/klusters/k3d')).toEqual({ group: 'ops', page: 'klusters', child: null });
+		expect(locate('/ops')).toEqual({ group: 'ops', page: null, child: null });
+		expect(locate('/ops/deployments')).toEqual({ group: 'ops', page: null, child: null });
+	});
+
 	it('places each Configuration page at its own path (S-0459)', () => {
 		for (const page of ['features', 'agents', 'file-system', 'projects', 'harnesses'])
 			expect(locate(`/settings/${page}`), page).toEqual({
@@ -223,10 +249,11 @@ describe('the nav rail (S-0458)', () => {
 		expect(locate('/boards')).toEqual({ group: null, page: null, child: null });
 		expect(locate('/designs')).toEqual({ group: null, page: null, child: null });
 		expect(locate('/settingsx')).toEqual({ group: null, page: null, child: null });
+		expect(locate('/opsx')).toEqual({ group: null, page: null, child: null });
 	});
 
 	it('gives Flow the Inbox’s indicator, and no other group one', () => {
-		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], [], [], []]);
+		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], [], [], [], []]);
 	});
 
 	it('keeps the project in a page’s href', () => {
