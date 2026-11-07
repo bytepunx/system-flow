@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-11-07T04:46:50Z
-updated: 2026-11-07T04:46:50Z
+updated: 2026-11-07T07:02:21Z
 transitions: []
 tags: []
 agent:
@@ -15,12 +15,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 7m
     by: flai
     at: 2026-11-07T04:46:50Z
+finalized:
+  by: alex
+  at: 2026-11-07T07:02:21Z
 ---
 # S-0583 Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
 
