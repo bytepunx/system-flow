@@ -3,11 +3,11 @@ id: T-2450
 type: task
 nature: experiment
 title: A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
-status: in-progress
+status: ready
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:24:29Z
-updated: 2026-11-07T04:21:37Z
+updated: 2026-11-07T04:45:05Z
 transitions:
   - to: ready
     at: 2026-11-07T04:21:30Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:21:37Z
     by: system-flow
+  - to: ready
+    at: 2026-11-07T04:44:55Z
+    by: system-flow
 stream: S-0565
 tags: [docker]
-after: [T-2449]
+after: [T-2451]
+usage:
+  source: log
+  seconds: 1398
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 215
+      output: 33563
+      cache_read: 25904906
+      cache_write: 222893
+      cost: 7.6363
 ---
 # T-2450 A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
 
@@ -38,3 +53,4 @@ Write what happened in S-0565's `## Notes` under a heading of its own with `flai
 - Each limitation met is named there for T-2451 to file.
 
 ## Notes
+- 2026-11-07T04:44:55Z: moved to ready: S-0558 reached review before the stop; T-2450 moves to S-0556's run, after T-2451

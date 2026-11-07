@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1988.1224
-accrued_seconds: 1512188
-tasks_completed: 1948
-last_run: 2026-11-07T04:42:48Z
+accrued_cost: 1988.9239
+accrued_seconds: 1512436
+tasks_completed: 1956
+last_run: 2026-11-07T04:48:00Z
 ---
 
 # Orchestrator activity
@@ -13666,6 +13666,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 28
 - Cost: 0.2619 USD, estimated
+
+### 2026-11-07T04:44:32Z
+
+- Summary: Accepted S-0558 at 6e4f917cdcd4 under accept_reviews: close-out passed at the branch head, verifier matched both criteria to changed files, dry-run showed no blockers; value 7.50 USD/week, forecast 12m.
+- Items: S-0558
+- Seconds: 78
+- Cost: 0.2410 USD, estimated
+
+### 2026-11-07T04:44:50Z
+
+- Summary: Did not publish after S-0558: release_evaluate under judgement shows 4 accepted unreleased (S-0555, S-0557, S-0558, S-0571), 60 USD/week, not met. Under judgement the publish formula's --require-met step always stops and release_publish refuses while the formula exists; TH-0811 already asks the operator, so no retry until it is answered.
+- Items: S-0555, S-0557, S-0558, S-0571
+- Seconds: 18
+- Cost: 0.0294 USD, estimated
+
+### 2026-11-07T04:45:01Z
+
+- Summary: Ready column at 0: promoted nothing. promote_candidates lists S-0556 (rank 1, 40m, throughput) and S-0241 (rank 2, 2h). S-0556 held in backlog because agent-S-0565 asked on TH-0836 that it wait for alex's word (criterion 2's stop and restart in its container; TH-0828). S-0241 skipped while blocked, as TH-0790 says. No change to ready, so no reorder.
+- Items: S-0556, S-0241
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-07T04:45:24Z
+
+- Summary: I accepted S-0558 and put nothing in ready. Both reasons are handled, and nothing needs a story moved before you act.
+- Items: none
+- Seconds: 23
+- Cost: 0.2446 USD, estimated
+
+### 2026-11-07T04:46:51Z
+
+- Summary: Recommended an answer on TH-0836, citing design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision
+- Items: S-0565
+- Seconds: 49
+- Cost: 0.1283 USD, estimated
+
+### 2026-11-07T04:47:17Z
+
+- Summary: TH-0836 (S-0565): acknowledged agent-S-0565's ask to hold S-0556 in backlog until alex says so, and recommended (operator_only) that alex add the Notes line to S-0556, then move it to ready and Stop and Retry its container agent for criterion 2 (ADR-0058). S-0556 stays unpromoted despite promote_candidates rank 1 (40m, throughput).
+- Items: S-0565, S-0556
+- Seconds: 26
+- Cost: 0.0259 USD, estimated
+
+### 2026-11-07T04:47:32Z
+
+- Summary: release-due S-0558: did not publish. release_evaluate: policy judgement, met false, count 4, 60 USD/week (S-0555 12.5, S-0557 15, S-0558 7.5, S-0571 25), nothing held_by_epic. Same figures as my 04:44:50 decision. Judged not due: S-0570 (in progress) fixes the changelog damage a release does to rebased story branches (I-0251), and under judgement the publish formula's step 2 always stops while TH-0811 awaits the operator. No instance started, no new thread.
+- Items: S-0555, S-0557, S-0558, S-0571
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-07T04:48:00Z
+
+- Summary: I published no release, and S-0556 stays in backlog until you say on TH-0836 that you're ready for it.
+- Items: none
+- Seconds: 28
+- Cost: 0.1323 USD, estimated
 
 ## Refusals
 

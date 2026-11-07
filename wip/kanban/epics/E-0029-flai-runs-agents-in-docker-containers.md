@@ -6,7 +6,7 @@ title: flai runs agents in Docker containers
 status: in-progress
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-11-02T19:02:15Z
+updated: 2026-11-07T04:46:50Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 20822
+  seconds: 22561
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -33,16 +33,16 @@ usage:
       ceremony: 4
       work: 43
     - day: 2026-11-07
-      ceremony: 3
-      hand_edits: 3
-      work: 65
+      ceremony: 5
+      hand_edits: 4
+      work: 179
   models:
     - model: claude-opus-5-5
-      input: 3446
-      output: 1078942
-      cache_read: 286241157
-      cache_write: 6906924
-      cost: 125.594
+      input: 3686
+      output: 1110256
+      cache_read: 319308262
+      cache_write: 7009780
+      cost: 133.6575
   strategic:
     - kind: planner
       seconds: 1247
@@ -61,15 +61,15 @@ usage:
           cache_write: 621376
           cost: 12.8331
     - kind: orchestrator
-      seconds: 31223
+      seconds: 31285
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1097
-          output: 12715
-          cache_read: 154764646
-          cache_write: 1961429
-          cost: 34.7014
+          input: 1112
+          output: 12792
+          cache_read: 155265632
+          cache_write: 2039582
+          cost: 34.8427
         - model: claude-sonnet-5-5
           input: 70
           output: 410
@@ -100,6 +100,7 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - S-0513 docs/operators/runbooks gains a runbook for building the agent images and running a story's agent in a container by hand
 - S-0565 One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
 - S-0567 flai serve starts the planner in a container on harness container, and it plans one backlog story of this repository with its activity logged
+- S-0583 Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
 
 ## Notes
 

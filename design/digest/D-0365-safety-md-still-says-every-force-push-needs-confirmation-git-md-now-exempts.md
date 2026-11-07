@@ -6,8 +6,8 @@ sources: [TH-0498]
 topics: []
 paths: []
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/safety.md#rules"
 asked_again: []
 cited: []
 ---

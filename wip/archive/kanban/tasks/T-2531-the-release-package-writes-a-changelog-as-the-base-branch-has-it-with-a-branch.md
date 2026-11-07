@@ -24,10 +24,16 @@ touches: [flai/internal/release/changelog.go, flai/internal/release/changelog_te
 after: [T-2524]
 usage:
   source: log
-  seconds: 2
+  seconds: 959
   estimated: true
-  priced_by: estimate
-  models: []
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 6463
+      cache_read: 2850131
+      cache_write: 43054
+      cost: 1.025
 ---
 # T-2531 The release package writes a changelog as the base branch has it with a branch's own added lines under its top Unreleased
 

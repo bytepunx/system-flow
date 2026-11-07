@@ -3,16 +3,37 @@ id: T-2451
 type: task
 nature: experiment
 title: The first proof story is worked from story_start to review in its container, its usage measured and its card's status shown as for a host run, and each limitation met is an issue
-status: backlog
+status: done
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:24:49Z
-updated: 2026-11-03T01:24:49Z
-transitions: []
+updated: 2026-11-07T04:47:11Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:45:15Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:45:16Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:46:20Z
+    by: agent-S-0565
 stream: S-0565
 tags: [docker]
-touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/issues/summary.md]
-after: [T-2450]
+touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/issues/summary.md, design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md]
+after: [T-2449]
+usage:
+  source: log
+  seconds: 64
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 2436
+      cache_read: 1879993
+      cache_write: 16176
+      cost: 0.5542
 ---
 # T-2451 The first proof story is worked from story_start to review in its container, its usage measured and its card's status shown as for a host run, and each limitation met is an issue
 

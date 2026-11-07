@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T04:19:08Z
+updated: 2026-11-07T04:48:18Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -18,6 +18,8 @@ transitions:
 blocked:
   - from: 2026-11-07T03:44:57Z
     until: 2026-11-07T04:19:08Z
+    reason: awaiting the operator on TH-0836
+  - from: 2026-11-07T04:48:18Z
     reason: awaiting the operator on TH-0836
 tags: []
 topics: [harness, docker]
@@ -30,20 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 240
+  seconds: 1979
   priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      hand_edits: 1
-      work: 27
+      ceremony: 3
+      hand_edits: 2
+      work: 141
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 16399
-      cache_read: 3758856
-      cache_write: 214005
-      cost: 2.7921
+      input: 306
+      output: 47713
+      cache_read: 36825961
+      cache_write: 316861
+      cost: 10.8556
   strategic:
     - kind: planner
       seconds: 761
@@ -56,15 +58,15 @@ usage:
           cache_write: 483216
           cost: 6.2582
     - kind: orchestrator
-      seconds: 544
+      seconds: 606
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 146
-          output: 1015
-          cache_read: 5375328
-          cache_write: 566733
-          cost: 1.4229
+          input: 161
+          output: 1092
+          cache_read: 5876314
+          cache_write: 644886
+          cost: 1.5642
 cost_of_delay:
   value: 123.85
   by: planner-S-0565
@@ -87,7 +89,7 @@ Prove the container harness S-0508 built in the place it is meant for: `flai ser
 
 ## Acceptance criteria
 
-- [ ] One story of this repository is worked end to end by `flai serve` with `harness: container` on its agent, from `story_start` to review, its usage measured and its card's status shown as for a host run, and each limitation met is an issue under `design/issues`
+- [x] One story of this repository is worked end to end by `flai serve` with `harness: container` on its agent, from `story_start` to review, its usage measured and its card's status shown as for a host run, and each limitation met is an issue under `design/issues`
 - [ ] A stop from the dashboard and a restart after a thread is answered are each tried once on that story's container, and what happened is recorded in this story's notes
 - [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with the project's image layer (`flai/images/system-flow/Dockerfile`, S-0510), and `scripts/close-out.sh` runs every tier the manifest's `tests` select and passes inside the container, and each limitation met is an issue under `design/issues`
 

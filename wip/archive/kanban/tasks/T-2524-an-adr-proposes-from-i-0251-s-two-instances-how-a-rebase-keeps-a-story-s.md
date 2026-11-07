@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 101
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 35
-      cache_read: 1061753
-      cache_write: 4441
-      cost: 0.3811
+      output: 2437
+      cache_read: 1074824
+      cache_write: 16236
+      cost: 0.3866
 ---
 # T-2524 An ADR proposes from I-0251's two instances how a rebase keeps a story's changelog lines under main's top Unreleased, refining ADR-0228 §4
 

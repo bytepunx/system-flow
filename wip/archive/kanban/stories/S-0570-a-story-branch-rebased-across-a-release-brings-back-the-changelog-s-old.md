@@ -3,10 +3,10 @@ id: S-0570
 type: story
 nature: remediation
 title: A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T21:41:52Z
-updated: 2026-11-07T04:14:43Z
+updated: 2026-11-07T05:07:04Z
 transitions:
   - to: ready
     at: 2026-11-07T03:56:09Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:14:43Z
     by: agent-S-0570
+  - to: review
+    at: 2026-11-07T05:05:28Z
+    by: agent-S-0570
+  - to: done
+    at: 2026-11-07T05:07:04Z
+    by: orchestrator
 tags: [cli, git, release]
 topics: [release, git]
-touches: [design/adrs, design/adrs/README.md, flai/internal/release/changelog.go, flai/internal/release/changelog_test.go, flai/internal/release/release.go, flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/workflow.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/contributors/template.md, template/CHANGELOG.md, design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/release/changelog.go, flai/internal/release/changelog_test.go, flai/internal/release/release.go, flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/workflow.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/contributors/template.md, template/CHANGELOG.md, design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md, design/issues/summary.md, flai/cmd/stream.go, design/adrs/0257-a-rebase-of-a-story-branch-puts-the-branch-s-own-changelog-lines-back-under-the.md, design/issues/I-0248-testtheoperatorsstopisonestoppedagentevent-s-waiting-for-an-answer-case-fails.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 244
-  estimated: true
-  priced_by: estimate
+  seconds: 3053
+  priced_by: harness
   turns:
     - day: 2026-11-07
+      ceremony: 2
+      test_runs: 9
       hand_edits: 1
-      work: 17
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 208
-      cache_read: 3229578
-      cache_write: 262177
-      cost: 1.2481
+      input: 196
+      output: 60812
+      cache_read: 26819052
+      cache_write: 405132
+      cost: 9.6454
   strategic:
     - kind: orchestrator
       seconds: 5
@@ -74,8 +81,8 @@ finalized:
 This story remediates [I-0251](../../../design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md), "A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0251 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0251 is closed with `flai issue close I-0251 --reason` saying what fixed it
+- [x] The cause I-0251 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0251 is closed with `flai issue close I-0251 --reason` saying what fixed it
 
 ## Tasks
 - T-2524 An ADR proposes from I-0251's two instances how a rebase keeps a story's changelog lines under main's top Unreleased, refining ADR-0228 §4
@@ -101,3 +108,12 @@ Cost of delay inputs set by flai from I-0251. time_lost_per_cycle 26m: 13m per o
 - **After.** None. The story reads no output of another open story.
 - **Forecast.** 2h against flai's 39m. flai's figure is the remediation median, 101 s per unit, times size 23: two criteria and 21 touches. The story adds an ADR, a changelog merge, the same step in three rebase paths (sync, accept, and the merge queue's batch), and three real-git tests that reproduce both instances, which is about three times the median remediation. Delivery 2026-11-07T11:40Z is flai's play-out, 10:15Z, moved by the raise.
 - **Cost of delay.** 65.00 USD a week, as `flai cod` gives it: 26m lost per 168h cycle, from I-0251's two occurrences at 13m each, at the project's 150 USD an hour. Kept. The inputs are flai's, taken from the issue, and nothing in the instances says the loss is larger. Each release while a story with a changelog line is open costs another fix by hand.
+
+### Accepted by the orchestrator
+
+- Verified: 012fcd7d96902357751997002e968494c170f7dd
+- At: 2026-11-07T05:07:04Z
+
+Verdict: pass
+- 1: flai/internal/release/changelog.go, flai/internal/release/changelog_test.go, flai/internal/release/release.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, design/adrs/0257-a-rebase-of-a-story-branch-puts-the-branch-s-own-changelog-lines-back-under-the.md
+- 2: design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md, design/issues/summary.md

@@ -3,11 +3,11 @@ id: T-2535
 type: task
 nature: remediation
 title: flai stream sync and flai accept put a rebased branch's changelog lines back under main's top Unreleased before checking what the rebase undoes
-status: in-progress
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:48:21Z
-updated: 2026-11-07T04:35:25Z
+updated: 2026-11-07T04:49:20Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:34Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:35:25Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T04:49:19Z
+    by: agent-S-0570
 stream: S-0570
 tags: [cli, git]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go]
 after: [T-2531]
+usage:
+  source: log
+  seconds: 834
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 22091
+      cache_read: 9742353
+      cache_write: 147169
+      cost: 3.5038
 ---
 # T-2535 flai stream sync and flai accept put a rebased branch's changelog lines back under main's top Unreleased before checking what the rebase undoes
 

@@ -23,16 +23,16 @@ tags: [docker]
 touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md]
 usage:
   source: log
-  seconds: 96
+  seconds: 146
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 9207
-      cache_read: 2110426
-      cache_write: 120154
-      cost: 1.5676
+      input: 28
+      output: 4413
+      cache_read: 3406102
+      cache_write: 29307
+      cost: 1.0041
 ---
 # T-2449 The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
 

@@ -3,19 +3,37 @@ id: T-2537
 type: task
 nature: remediation
 title: The design, git.md and its template copy, and the guides say a rebase puts a story's changelog lines back under the top Unreleased
-status: ready
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:48:57Z
-updated: 2026-11-07T04:16:38Z
+updated: 2026-11-07T04:54:41Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:38Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:53:58Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:54:41Z
+    by: agent-S-0570
 stream: S-0570
 tags: [docs, git]
 touches: [design/system/workflow.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/contributors/template.md, template/CHANGELOG.md]
 after: [T-2535, T-2536]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1954
+      cache_read: 861636
+      cache_write: 13016
+      cost: 0.3099
 ---
 # T-2537 The design, git.md and its template copy, and the guides say a rebase puts a story's changelog lines back under the top Unreleased
 

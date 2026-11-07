@@ -3,19 +3,37 @@ id: T-2536
 type: task
 nature: remediation
 title: The merge queue's batch puts each rebased story's changelog lines back under the top Unreleased, so a batch over a release lints clean
-status: ready
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:48:37Z
-updated: 2026-11-07T04:16:36Z
+updated: 2026-11-07T04:53:39Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:36Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:49:41Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:53:39Z
+    by: agent-S-0570
 stream: S-0570
 tags: [cli, git]
 touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go]
 after: [T-2535]
+usage:
+  source: log
+  seconds: 238
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5256
+      cache_read: 2317816
+      cache_write: 35013
+      cost: 0.8336
 ---
 # T-2536 The merge queue's batch puts each rebased story's changelog lines back under the top Unreleased, so a batch over a release lints clean
 

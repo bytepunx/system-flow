@@ -3,19 +3,37 @@ id: T-2538
 type: task
 nature: remediation
 title: I-0251 is closed with flai issue close, its reason naming the ADR and the step that fixed it
-status: ready
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:49:20Z
-updated: 2026-11-07T04:16:40Z
+updated: 2026-11-07T04:54:56Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:40Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:53:59Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:54:56Z
+    by: agent-S-0570
 stream: S-0570
 tags: [issues]
 touches: [design/issues/I-0251-a-story-branch-rebased-across-a-release-brings-back-the-changelog-s-old.md, design/issues/summary.md]
 after: [T-2535, T-2536]
+usage:
+  source: log
+  seconds: 57
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 4337
+      cache_read: 1912576
+      cache_write: 28892
+      cost: 0.6879
 ---
 # T-2538 I-0251 is closed with flai issue close, its reason naming the ADR and the step that fixed it
 
