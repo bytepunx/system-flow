@@ -641,6 +641,9 @@ func (c *checker) triggers(r Role) {
 		if t.Kind == TriggerSchedule && len(r.Item) > 0 && t.When != CondEachReadyStory {
 			at("%s gives the role no item to run on, and it takes one (item: [%s]); add when: %s to run it once for every ready story, or remove the entry (ADR-0250 §4)", t, strings.Join(r.Item, ", "), CondEachReadyStory)
 		}
+		if t.Kind == TriggerSchedule && t.When == CondEachReadyStory && !slices.Contains(r.Item, "story") {
+			at("%s runs the role once for every ready story, and it takes no story (item: [%s]); add story to its item, or remove when: %s (ADR-0250 §5)", t, strings.Join(r.Item, ", "), CondEachReadyStory)
+		}
 	}
 }
 

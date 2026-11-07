@@ -548,6 +548,10 @@ func TestValidateReportsTriggersNoLauncherServes(t *testing.T) {
 		{"defined role on each ready story", "reviewer.md", asDefined(t, plannerFile), ""},
 		{"defined role taking items on a schedule", "reviewer.md", asDefined(t, edit(t, plannerFile, "{schedule: planning.schedule, when: each-ready-story}", "{schedule: roles.reviewer.schedule}")),
 			"{schedule: roles.reviewer.schedule} gives the role no item to run on, and it takes one (item: [epic, story]); add when: each-ready-story to run it once for every ready story, or remove the entry (ADR-0250 §4)"},
+		{"defined role taking epics on each ready story", "reviewer.md", asDefined(t, edit(t, plannerFile, "item: [epic, story]", "item: [epic]")),
+			"{schedule: planning.schedule, when: each-ready-story} runs the role once for every ready story, and it takes no story (item: [epic]); add story to its item, or remove when: each-ready-story (ADR-0250 §5)"},
+		{"defined role taking no item on each ready story", "auditor.md", edit(t, edit(t, edit(t, edit(t, analyzerFile, "name: analyzer", "name: auditor"), "role: analyze", "role: audit"), "action: analyze", "action: audit"), "{schedule: analysis.schedule}", "{schedule: roles.auditor.schedule, when: each-ready-story}"),
+			"runs the role once for every ready story, and it takes no story (item: [])"},
 		{"defined role taking no item on a schedule", "auditor.md", edit(t, edit(t, edit(t, edit(t, analyzerFile, "name: analyzer", "name: auditor"), "role: analyze", "role: audit"), "action: analyze", "action: audit"), "{schedule: analysis.schedule}", "{schedule: roles.auditor.schedule}"), ""},
 		{"an entry already wrong is reported once", "planner.md", edit(t, plannerFile, plannerEntry, "{event: merged}"), "event \"merged\" is none of"},
 	}
