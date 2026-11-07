@@ -6,7 +6,7 @@ title: "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder
 status: backlog
 owner: alex
 created: 2026-10-29T17:25:41Z
-updated: 2026-11-06T23:26:13Z
+updated: 2026-11-07T00:13:48Z
 transitions: []
 tags: [flai, serve, test]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-02T18:12:31Z
 forecast:
   duration: 30m
-  delivery: 2026-11-07T04:07:00Z
-  basis: "Its own forecast of 30m; 9th in the pull order with an in-progress limit of 5, behind S-0576, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0241."
+  delivery: 2026-11-07T04:54:00Z
+  basis: "Its own forecast of 30m; 9th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0241."
   by: flai
-  at: 2026-11-06T23:26:13Z
+  at: 2026-11-07T00:13:48Z
 ---
 # S-0543 TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with "directory not empty", as I-0048's serve tests did
 
