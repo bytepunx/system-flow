@@ -31,12 +31,15 @@ var ErrNotInstalled = errors.New("kluster is not installed: flai runs a project'
 // to add.
 var ErrNoBlock = errors.New("this project's system-flow.yaml has no kluster: block, so flai runs no cluster for it; add one naming the kluster config and the deploy command, such as kluster: {config: integration/kluster.yaml, deploy: [scripts/kluster-deploy.sh]}, as design/system/kluster.md § The kluster: block describes, then run this again")
 
-// Exec runs programs for the package: LookPath finds one on PATH, and Run
-// runs one in dir, writing its standard output and error to out as they
-// come, so that a bring-up of many minutes shows its progress.
+// Exec runs programs for the package: LookPath finds one on PATH, Run runs
+// one in dir, writing its standard output and error to out as they come, so
+// that a bring-up of many minutes shows its progress, and Command runs one as
+// Cmd describes it, with the environment and standard input a deploy's steps
+// need.
 type Exec interface {
 	LookPath(name string) (string, error)
 	Run(ctx context.Context, dir string, out io.Writer, name string, args ...string) error
+	Command(ctx context.Context, cmd Cmd) error
 }
 
 // System is the real Exec.
