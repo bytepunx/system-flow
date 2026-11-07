@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-07T23:40:02Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,5 @@ wip/agents/orchestrator.md Refusals: git tag --sort=-creatordate refused 18 time
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0623 remediates this issue, created from it at 2026-11-07T23:40:02Z.
