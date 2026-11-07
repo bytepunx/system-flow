@@ -869,7 +869,7 @@ func settingKeys(values []manifest.SettingValue) []string {
 	return out
 }
 
-var klusterSettingKeys = []string{"kluster.config", "kluster.namespace", "kluster.build", "kluster.deploy", "kluster.teardown", "kluster.timeout"}
+var klusterSettingKeys = []string{"kluster.config", "kluster.namespace", "kluster.build", "kluster.components", "kluster.deploy", "kluster.teardown", "kluster.timeout"}
 
 // S-0586: with no block, kluster.status still lists the block's keys with
 // their defaults, the host's tools, and whether settings is on, so the
@@ -1136,5 +1136,140 @@ func TestSystemClusterWorkloadsReadsKubectl(t *testing.T) {
 	}
 	if _, err := parsePods([]byte("no")); err == nil {
 		t.Error("JSON that is not kubectl's is an error")
+	}
+}
+
+func TestKlusterLogIsARead(t *testing.T) {
+	if sp := klusterSpecs()["kluster.log"]; sp.action != "" || !sp.reads || sp.do == nil {
+		t.Errorf("kluster.log is a read, answered whatever the action says: %+v", sp)
+	}
+}
+
+// logAt writes text as the log of step in namespace ns under root.
+func logAt(t *testing.T, root, ns, step, text string) {
+	t.Helper()
+	path := kluster.LogPath(root, ns, step)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKlusterLogReadsAStepsLogFromAnOffset(t *testing.T) {
+	p := quayside(t, true, &fakeCluster{name: "harbour"})
+	steps := passedSteps(kluster.StepBuild+"-api", kluster.StepLoad)
+	steps[1].Outcome = kluster.OutcomeRunning
+	recordAt(t, p.Root, kluster.Record{Story: "S-0001", Namespace: "s-0001", Outcome: kluster.OutcomeRunning, StartedAt: t0, Steps: steps})
+	logAt(t, p.Root, "s-0001", "build-api", "one\ntwo\n")
+	for _, on := range []bool{true, false} {
+		journal := []Entry{}
+		host := klusterHost(&on, &journal, nil)
+		var got KlusterLog
+		if e := ask(t, host, p, "kluster.log", `{"namespace":"s-0001","step":"build-api","offset":0}`, &got); e != nil {
+			t.Fatalf("on %v: %v", on, e)
+		}
+		want := KlusterLog{Namespace: "s-0001", Step: "build-api", Log: ".flai-cache/kluster/logs/s-0001/build-api.log", Exists: true, Offset: 0, Next: 8, Size: 8, Text: "one\ntwo\n", Outcome: kluster.OutcomePassed}
+		if got != want {
+			t.Errorf("on %v: from 0\n got %+v\nwant %+v", on, got, want)
+		}
+		if e := ask(t, host, p, "kluster.log", `{"namespace":"s-0001","step":"build-api","offset":4}`, &got); e != nil {
+			t.Fatal(e)
+		}
+		if got.Text != "two\n" || got.Offset != 4 || got.Next != 8 || got.Reset {
+			t.Errorf("from the middle: %+v", got)
+		}
+		if e := ask(t, host, p, "kluster.log", `{"namespace":"s-0001","step":"build-api","offset":8}`, &got); e != nil {
+			t.Fatal(e)
+		}
+		if got.Text != "" || got.Next != 8 || got.Reset {
+			t.Errorf("at the end: %+v", got)
+		}
+	}
+	var running KlusterLog
+	on := true
+	journal := []Entry{}
+	logAt(t, p.Root, "s-0001", "load", "loading\n")
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.log", `{"namespace":"s-0001","step":"load"}`, &running); e != nil {
+		t.Fatal(e)
+	}
+	if running.Outcome != kluster.OutcomeRunning || running.Text != "loading\n" {
+		t.Errorf("the running step's log: %+v", running)
+	}
+	if len(journal) != 0 {
+		t.Errorf("a read journals nothing: %+v", journal)
+	}
+}
+
+func TestKlusterLogAnswersAtMost64KBEndingOnAWholeCharacter(t *testing.T) {
+	p := quayside(t, true, &fakeCluster{name: "harbour"})
+	text := strings.Repeat("a", klusterLogRead-1) + "é" + strings.Repeat("b", 10)
+	logAt(t, p.Root, "s-0001", "deploy", text)
+	on := true
+	journal := []Entry{}
+	host := klusterHost(&on, &journal, nil)
+	var got KlusterLog
+	if e := ask(t, host, p, "kluster.log", `{"namespace":"s-0001","step":"deploy","offset":0}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if int64(len(got.Text)) != klusterLogRead-1 || got.Next != klusterLogRead-1 || got.Size != int64(len(text)) {
+		t.Fatalf("the first read stops before the character it would cut: len %d, next %d, size %d", len(got.Text), got.Next, got.Size)
+	}
+	var rest KlusterLog
+	if e := ask(t, host, p, "kluster.log", fmt.Sprintf(`{"namespace":"s-0001","step":"deploy","offset":%d}`, got.Next), &rest); e != nil {
+		t.Fatal(e)
+	}
+	if got.Text+rest.Text != text || rest.Next != int64(len(text)) {
+		t.Errorf("two reads give the whole log: next %d, rest %q", rest.Next, rest.Text)
+	}
+}
+
+func TestKlusterLogStartsAgainWhenTheLogWasCleared(t *testing.T) {
+	p := quayside(t, true, &fakeCluster{name: "harbour"})
+	logAt(t, p.Root, "harbour", "build", "new\n")
+	on := false
+	journal := []Entry{}
+	var got KlusterLog
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.log", `{"namespace":"harbour","step":"build","offset":100}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if !got.Reset || got.Offset != 0 || got.Text != "new\n" || got.Next != 4 {
+		t.Errorf("a log shorter than the offset is read again from 0: %+v", got)
+	}
+}
+
+func TestKlusterLogOfAMissingLogIsEmpty(t *testing.T) {
+	p := quayside(t, false, &fakeCluster{name: "harbour"})
+	on := false
+	journal := []Entry{}
+	var got KlusterLog
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.log", `{"namespace":"s-0009","step":"teardown","offset":0}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	want := KlusterLog{Namespace: "s-0009", Step: "teardown", Log: ".flai-cache/kluster/logs/s-0009/teardown.log"}
+	if got != want {
+		t.Errorf("no log\n got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestKlusterLogRefusesWhatIsNotANamespaceAStepOrAnOffset(t *testing.T) {
+	p := quayside(t, true, &fakeCluster{name: "harbour"})
+	on := true
+	journal := []Entry{}
+	host := klusterHost(&on, &journal, nil)
+	for _, params := range []string{
+		`{"namespace":"../x","step":"build","offset":0}`,
+		`{"namespace":"S-0001","step":"build","offset":0}`,
+		`{"namespace":"s-0001","step":"../x","offset":0}`,
+		`{"namespace":"s-0001","step":"build/../../kubeconfig","offset":0}`,
+		`{"namespace":"s-0001","step":"images","offset":0}`,
+		`{"namespace":"s-0001","step":"build-","offset":0}`,
+		`{"namespace":"s-0001","step":"build","offset":-1}`,
+	} {
+		e := ask(t, host, p, "kluster.log", params, nil)
+		if e == nil || e.Code != channel.CodeInvalidParams {
+			t.Errorf("%s: want invalid params, got %v", params, e)
+		}
 	}
 }

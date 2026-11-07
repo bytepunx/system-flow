@@ -31,10 +31,12 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 
@@ -1126,6 +1128,121 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	return out, nil
 }
 
+// klusterLogRead is the most of a step's log one kluster.log answers.
+const klusterLogRead = 64 << 10
+
+// klusterStepName is a deploy's, a promotion's, or a teardown's step:
+// build, load, deploy, teardown, or build-<component> (ADR-0263).
+var klusterStepName = regexp.MustCompile(`^(build|load|deploy|teardown|build-[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)$`)
+
+// KlusterLog is kluster.log's answer: a part of a step's log, read from
+// Offset, with where to read from next (ADR-0263 §4).
+type KlusterLog struct {
+	Namespace string `json:"namespace"`
+	Step      string `json:"step"`
+	// Log is the log's path from the project's root.
+	Log string `json:"log"`
+	// Exists says whether the log is there; with none, Text is empty.
+	Exists bool `json:"exists"`
+	// Offset is where Text starts: the offset asked, or 0 after a reset.
+	Offset int64 `json:"offset"`
+	// Next is the offset to ask from next: Offset and Text's length.
+	Next int64 `json:"next"`
+	// Size is the log's size when it was read.
+	Size int64 `json:"size"`
+	// Text is at most 64 KB of the log from Offset, ending on a whole
+	// character.
+	Text string `json:"text"`
+	// Reset is true when the log was shorter than the offset asked, as when
+	// a new job cleared it, and Text then starts at 0.
+	Reset bool `json:"reset,omitempty"`
+	// Outcome is the step's outcome in the namespace's record, empty when the
+	// record has no such step.
+	Outcome string `json:"outcome,omitempty"`
+}
+
+// klusterLogParams are kluster.log's params.
+type klusterLogParams struct {
+	Namespace string `json:"namespace"`
+	Step      string `json:"step"`
+	Offset    int64  `json:"offset"`
+}
+
+// klusterLogIn reads and checks kluster.log's params.
+func klusterLogIn(raw json.RawMessage) (klusterLogParams, *channel.Error) {
+	in, e := decode[klusterLogParams](raw)
+	if e != nil {
+		return in, e
+	}
+	switch {
+	case !dnsLabel.MatchString(in.Namespace):
+		return in, bad("%q is not a namespace; give one kluster.deployments lists, such as s-0586", in.Namespace)
+	case !klusterStepName.MatchString(in.Step):
+		return in, bad("%q is not a step; give one kluster.deployments lists under its namespace, such as build, build-api, load, deploy, or teardown", in.Step)
+	case in.Offset < 0:
+		return in, bad("%d is not an offset; give 0 to read from the start, or the next of the last read", in.Offset)
+	}
+	return in, nil
+}
+
+// klusterLogDo answers kluster.log: at most 64 KB of a step's log from an
+// offset, whatever the host action says.
+func klusterLogDo(_ context.Context, _ Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+	in, e := klusterLogIn(raw)
+	if e != nil {
+		return nil, e
+	}
+	path := kluster.LogPath(p.Root, in.Namespace, in.Step)
+	out := KlusterLog{Namespace: in.Namespace, Step: in.Step, Log: klusterRel(p.Root, path), Offset: in.Offset, Next: in.Offset}
+	if r, ok, err := kluster.ReadRecord(p.Root, in.Namespace); err == nil && ok {
+		for _, st := range r.Steps {
+			if st.Name == in.Step {
+				out.Outcome = st.Outcome
+			}
+		}
+	}
+	f, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		out.Offset, out.Next = 0, 0
+		out.Reset = in.Offset > 0
+		return out, nil
+	}
+	if err != nil {
+		return nil, failed(fmt.Errorf("read the %s log of the namespace %s: %s", in.Step, in.Namespace, klusterRelative(p.Root, err.Error())))
+	}
+	defer func() { _ = f.Close() }()
+	st, err := f.Stat()
+	if err != nil {
+		return nil, failed(fmt.Errorf("read the %s log of the namespace %s: %s", in.Step, in.Namespace, klusterRelative(p.Root, err.Error())))
+	}
+	out.Exists, out.Size = true, st.Size()
+	if in.Offset > out.Size {
+		out.Offset, out.Reset = 0, true
+	}
+	buf := make([]byte, min(out.Size-out.Offset, klusterLogRead))
+	n, err := f.ReadAt(buf, out.Offset)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, failed(fmt.Errorf("read the %s log of the namespace %s: %s", in.Step, in.Namespace, klusterRelative(p.Root, err.Error())))
+	}
+	buf = wholeRunes(buf[:n])
+	out.Text, out.Next = string(buf), out.Offset+int64(len(buf))
+	return out, nil
+}
+
+// wholeRunes is b without a character cut short at its end, so the next
+// read starts where that character does.
+func wholeRunes(b []byte) []byte {
+	for i := 1; i <= utf8.UTFMax && i <= len(b); i++ {
+		if utf8.RuneStart(b[len(b)-i]) {
+			if !utf8.FullRune(b[len(b)-i:]) {
+				return b[:len(b)-i]
+			}
+			return b
+		}
+	}
+	return b
+}
+
 // reviewStories are the project's stories in review, in ID order.
 func reviewStories(repo *workitem.Repo) ([]*workitem.Item, error) {
 	all, err := repo.List(false)
@@ -1371,6 +1488,12 @@ func klusterSpecs() map[string]spec {
 		// kluster.workloads: the cluster's nodes and each namespace's pods
 		// (S-0586).
 		"kluster.workloads": {reads: true, build: none, do: klusterWorkloads},
+		// kluster.log: at most 64 KB of a step's log from an offset, the
+		// dashboard's live feed (ADR-0263).
+		"kluster.log": {reads: true, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			_, e := klusterLogIn(raw)
+			return nil, "", e
+		}, do: klusterLogDo},
 		// kluster.deploy: a story's deploy into its namespace, started.
 		"kluster.deploy": {action: ActionKluster, describe: describeKlusterJob, build: story, do: klusterDeployDo},
 		// kluster.teardown: a story's namespace torn down, started.
