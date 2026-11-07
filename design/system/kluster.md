@@ -305,7 +305,7 @@ The rail's Ops group sits between Design and Documentation. Its first page is Kl
 | `enabled` | Whether the `kluster` host action is on for the project |
 | `enable` | The command that turns it on, `flai serve enable kluster` |
 | `block` | Whether the manifest has a `kluster:` block |
-| `no_block`, optional | flai's sentence naming the block to add, when there is none |
+| `no_block`, optional | flai's sentence, when there is no block, saying to turn the `kluster` host action on, which writes one |
 | `cluster`, optional | `flai kluster status --json`'s object: `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, `age_seconds`. Absent with no block or a config flai cannot read. When `kluster status` fails, it holds what the config names, with `exists` false |
 | `status_error`, optional | Why the cluster could not be read, such as `kluster` missing from the host's `PATH` |
 | `running`, optional | The job that runs now |
@@ -355,10 +355,11 @@ A row of `deployments` holds the record's fields, `story`, `namespace`, `commit`
 | `list` | The `kubectl` command that lists the namespace's services |
 | `services` | Each service's `name`, `host` (`<name>.<namespace>.svc.cluster.local`), `ports` (`name`, `port`, `protocol`), and `port_forward`, the `kubectl port-forward service/<name>` command that forwards each port to the same port on the host |
 | `services_error`, optional | Why the services could not be read: no kubeconfig, `kubectl` missing from the host's `PATH`, or kubectl's error |
+| `forwards` | The port-forwards flai serve runs, or ran, into the namespace (S-0586), each `namespace`, `service`, `port`, `local_port`, `address` (`0.0.0.0`), `started_at`, `running`, and, once it ended on its own, `ended_at` and the end of its `output` |
 
 `kluster.workloads` answers `block`, `no_block`, `cluster`, `context`, `nodes` (each `name`, `ready`, `roles`, `version`), `namespaces` (each `namespace` and its `pods`, each `name`, `phase`, `ready` and `containers`, and `restarts`), and `workloads_error`, why they could not be read: no kubeconfig yet, `kubectl` missing, or kubectl's error. It runs `kubectl get nodes` and `kubectl get pods --all-namespaces`, each `--output json`, with flai's kubeconfig and the cluster's context, within 10 seconds, only when the kubeconfig exists.
 
-`kluster.forward.start` runs `kubectl port-forward --address 0.0.0.0` for one service port of a namespace, on a local port flai picks, and `kluster.forward.stop` stops it ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). flai serve keeps the forwards in memory; they stop when it stops, and a namespace's when it is torn down. A running forward is reachable by anything that reaches the host's network, with no sign-in of its own.
+`kluster.forward.start` runs `kubectl port-forward --address 0.0.0.0` for one service port of a namespace, on a local port flai picks, and `kluster.forward.stop` stops it ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). Both take `{namespace, service, port}` and answer the forward. A start checks that the cluster lists that service port, needs flai's kubeconfig, and answers once kubectl says it is forwarding, or kubectl's output when it exits first or says nothing within 15 seconds; a second start of a running forward answers it and starts nothing. A stop of a port with no forward is refused. flai serve keeps the forwards in memory, on its kluster jobs; they stop when it stops. A teardown through `kluster.teardown` stops its namespace's forwards first. One run by flai serve's pass does not: their kubectl exits when the namespace goes, and the forward is kept as ended, with its output. A running forward is reachable by anything that reaches the host's network, with no sign-in of its own.
 
 ### The jobs
 

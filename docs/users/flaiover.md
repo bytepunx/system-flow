@@ -641,7 +641,7 @@ Commands are written one argument a line, and are run exactly as written, with n
 
 Host actions lists every host action flai has, `plan` and `orchestrate` among them, each with a checkbox and what it does. Tick one to turn it on for this project, or clear it to turn it off. `settings` itself is shown and changed only in a shell. An action on for every project is shown as such and not changed here.
 
-`kluster` is listed for a project whose `system-flow.yaml` has a `kluster:` block. Turning it on lets `flai serve` deploy each story that enters review into its own namespace of the project's cluster, check it there, tear it down when it leaves review, and promote main on each acceptance. It also lets the [Ops](#klusters) pages act. [The kluster host action](../operators/index.md#the-kluster-host-action-s-0577) says what runs and when.
+`kluster` is listed for every project. For a project whose `system-flow.yaml` has no `kluster:` block, turning it on writes one, and a `kluster.yaml` for it, and commits both; [Klusters](#klusters) leads you through the rest. Turning it on lets `flai serve` deploy each story that enters review into its own namespace of the project's cluster, check it there, tear it down when it leaves review, and promote main on each acceptance. It also lets the [Ops](#klusters) pages act. [The kluster host action](../operators/index.md#the-kluster-host-action-s-0577) says what runs and when.
 
 Checks are the commands run on a story in review on this host, each with its name. **Save** changes one, **Remove** deletes it, and **Add check** takes a name and a command. With none set on the host, the section says so and names the manifest's checks, which are used instead. The time limit, in minutes, bounds one run of every check together. Checks are kept for every project on the host.
 
@@ -841,19 +841,23 @@ The Ops group holds the pages that run the project's local Kubernetes cluster, i
 
 ### Klusters
 
-Klusters, at `/ops/klusters`, shows the cluster the manifest's `kluster:` block names, and brings it up or takes it down through flai on the host.
+Klusters, at `/ops/klusters`, sets up the project's cluster and then runs it, through flai on the host. Nothing on it needs a shell or a file edit, but for the two host steps [The kluster host action](../operators/index.md#the-kluster-host-action-s-0577) names: turning `settings` on, and installing the host's tools.
 
-**What it shows.** The cluster's name, profile, provider, state, and age. The state is Running, Stopped, or Not created. When flai cannot read the cluster, such as when `kluster` is not installed on the host, the page shows flai's reason word for word.
+**Setting it up.** Until every step is done, the page opens with **Set up**, five steps that each say **Done** or **To do**. Once all are done, the steps fold away; open **Set up** to change any of them.
 
-**Up and Down.** **Up** brings the cluster up. **Down** takes it down, which deletes it with everything deployed in it, so it first asks: choose **Take it down** or **Keep it**. flai serve runs either in the background on the host, one at a time, and each takes minutes. While one runs, the page says so, shows the end of its output, and checks again every few seconds. The buttons wait until it ends. Then the page shows how it ended, and kluster's error when it failed. When flai refuses, such as while another up or down runs, the page shows flai's sentence word for word.
+1. **The host's tools.** `kluster`, `docker`, and `kubectl`, each found, with its path, or missing, with what flai needs it for, how to install it on the host, and a link to its install guide. flai installs none of them.
+2. **Turn kluster on.** **Turn kluster on** turns the `kluster` host action on. For a project with no `kluster:` block it also writes one, naming only the config file, writes that `kluster.yaml`, and commits both; the page says what flai wrote and the commit.
+3. **The cluster.** The config file, with the cluster's name, provider, profile, and addons as kluster reads them. Choose the profile, the shared services kluster installs, before the first **Up**: `spire`, the default, `signet`, or `authstar`. **Save the profile** saves it. **Edit the whole config file** opens it for any other change, such as addons. The config path itself is a field below.
+4. **Deploying stories.** The block's namespace, build, deploy, teardown, and timeout. A command is written one argument a line, the program first. **Save** saves the fields you changed, and flai's refusal shows beside the field it names. With no deploy command, the page says the cluster can run but no story is deployed yet. The scripts are your project's code: **Write these with an agent** makes a backlog story, under the epic you choose, for an agent to write them and name them here, and links it.
+5. **Bring it up.** **Up**.
 
-**When it cannot act.** In place of the buttons the page says why:
+While the `settings` host action is off, one notice says so and what it allows, and gives the one command to run on the host. Until then **Turn kluster on**, the block's fields, and the config path cannot be saved. The profile and the config file can.
 
-| What it says | What to do |
-|--------------|------------|
-| The kluster host action is off | Turn `kluster` on from the [Features](#features) page, or run `flai serve enable kluster` on the host, in the project |
-| The project has no `kluster:` block | Add the block to `system-flow.yaml`, as the page's link to the kluster design describes |
-| This flai cannot show the kluster yet | Upgrade flai on the host |
+**Running it.** Below the steps: the cluster's name, profile, provider, state, and age. The state is Running, Stopped, or Not created. When flai cannot read the cluster, the page shows flai's reason word for word. flai check's findings on the block are listed. **Nodes and pods** lists the cluster's nodes, with whether each is ready, and each namespace's pods, with their phase, how many containers are ready, and their restarts; the page reads them when it opens and after each job. **Turn kluster off** turns the action off, and tears nothing down. **Deployments** links the next page.
+
+**Up and Down.** **Up** brings the cluster up; it is offered while the cluster is not running. **Down** takes it down, which deletes it with everything deployed in it, so it first asks: choose **Take it down** or **Keep it**. flai serve runs either in the background on the host, one at a time, and each takes minutes. While one runs, the page says so, shows the end of its output, and checks again every few seconds. The buttons wait until it ends. Then the page shows how it ended, and kluster's error when it failed. When flai refuses, such as while another up or down runs, the page shows flai's sentence word for word.
+
+**When it cannot act.** While the kluster host action is off, the page says so in place of the buttons and points to step 2. A flai on the host older than the page says to upgrade flai on the host.
 
 ### Deployments
 
@@ -872,9 +876,9 @@ Deployments, at `/ops/deployments`, shows what runs on the project's kluster: ma
 
 **Deploy, Teardown, and Promote.** **Deploy** builds a story in review from its worktree and deploys it into its namespace. It shows for a story that is not deployed, is deployed at an older commit, or whose deploy failed. **Teardown** removes a story's namespace and what its deploy made, so it first asks: choose **Tear it down** or **Keep it**. **Promote** deploys main's newest commit into the default namespace. flai serve runs one at a time on the host, in the background, and each takes minutes. While one runs, the page says so, shows the end of its output, and checks again every few seconds; the buttons wait until it ends. When flai refuses, such as while another job runs, the page shows flai's sentence word for word.
 
-**Reaching a deployment for a demo.** Open **Reach it for a demo** on a row. It lists the namespace's services, each with the host it answers on inside the cluster, its ports, and a `kubectl port-forward` command. Run that command on the host, in the project's main checkout, where flai keeps the cluster's kubeconfig. The service then answers on the same port of the host's `localhost`, for as long as the command runs. When flai cannot list the services, such as when `kubectl` is not installed on the host, the page says why and gives the command that lists them.
+**Reaching a deployment for a demo.** Open **Reach it for a demo** on a row. It lists the namespace's services, each with the host it answers on inside the cluster and its ports. **Start** on a port asks flai serve to forward it: flai runs `kubectl port-forward` on the host, bound to `0.0.0.0` on a free port, and the page links the forward at the host you reached the dashboard on and that port. **Stop** ends it. A forward that ended on its own shows the end of its output. While any forward runs, the page says once that it is reachable by anything that can reach the host's network, with no sign-in of its own. Forwards end when flai serve stops; a teardown from this page stops its namespace's forwards first. When flai cannot list the services, such as when `kubectl` is not installed on the host, the page says why.
 
-**When it cannot act.** The page shows the same notices as [Klusters](#klusters): the host action is off, the project has no `kluster:` block, or this flai cannot show the deployments yet. With nothing deployed and no story in review, it says so, and offers **Promote**.
+**When it cannot act.** While the host action is off, or the project has no `kluster:` block yet, the page says so and links the Klusters page's setup. With no deploy command set, **Deploy** and **Promote** give way to a sentence saying deploys are not set up yet, with the same link; **Teardown** stays. A flai on the host older than the page says to upgrade it. With nothing deployed and no story in review, the page says so, and offers **Promote**.
 
 ## Theme
 

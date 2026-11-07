@@ -469,7 +469,9 @@ To run the same dev server by hand, without the action or `flai serve`, run `fla
 
 ### The kluster host action (S-0577)
 
-A project that runs on Kubernetes can name a local cluster, made by bytepunx/kluster with k3d and Docker, in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)). The `kluster` host action is your consent to `flai serve` running that cluster's jobs on your machine and to the dashboard bringing it up or down and deploying into it. It is off until you enable it:
+A project that runs on Kubernetes can name a local cluster, made by bytepunx/kluster with k3d and Docker, in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md), [ADR-0259](../../design/adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). The `kluster` host action is your consent to `flai serve` running that cluster's jobs on your machine and to the dashboard bringing it up or down and deploying into it. It is off until you enable it.
+
+Set it up from the dashboard's Klusters page ([Klusters](../users/flaiover.md#klusters)). Its steps check the host's tools, turn the action on, choose the cluster's profile, set the deploy commands, and bring the cluster up. The same from a shell:
 
 ```bash
 flai serve enable kluster     # for the project in the working directory
@@ -477,9 +479,21 @@ flai serve actions            # what each action allows, and where it is on
 flai serve disable kluster    # tears nothing down
 ```
 
-- `flai serve enable kluster` is refused for a project whose manifest has no `kluster:` block, naming the block to add. `--all-projects` and `disable` are not refused.
-- The dashboard's Features page lists it and turns it on and off, through `flai serve enable` while the `settings` host action is on.
-- With the action on, `flai serve` runs the jobs below, and the dashboard's Ops pages bring the cluster up or down and deploy, tear down, or promote.
+- Enabling it for a project with no `kluster:` block writes one, naming only `config: kluster.yaml`, and writes `kluster.yaml` at the repository root when it is absent: the cluster named after the project with `-local`, the provider `k3d`, and the profile `spire`. It commits those two files alone, unless the project sets `dashboard.autocommit: false`. `--all-projects` writes no block.
+- A block with no `deploy` is a cluster whose deploys are not set up yet. It comes up and goes down, and `flai serve` deploys and promotes nothing for it until `kluster.deploy` is set, from the Klusters page or with `flai manifest set`.
+- The dashboard's Features page and the Klusters page turn it on and off, through `flai serve enable` while the `settings` host action is on.
+- With the action on, `flai serve` runs the jobs below, and the dashboard's Ops pages bring the cluster up or down, deploy, tear down, or promote, and start or stop port-forwards.
+
+**What stays outside the dashboard.** Two steps, both on the host:
+
+| Step | Why it stays |
+|------|--------------|
+| Turn the `settings` host action on, with `flai serve enable settings` in a shell in the project | It is your consent, given on the host, for the dashboard to change host actions and the manifest, whose kluster commands run on your machine as you. A dashboard switch for it would make the dashboard token worth a shell on the host ([ADR-0039](../../design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md) stands; your answer 1 on TH-0861) |
+| Install Docker, `kluster`, and `kubectl` on the host | kluster's installer puts it in `/usr/local/bin`, `kluster setup` installs `kubectl` with `sudo`, which `flai serve` cannot answer, and Docker needs root and a daemon. The Klusters page shows which are missing and how to install each (your answer 2 on TH-0861) |
+
+The project's build, deploy, and teardown scripts are the project's code. The Klusters page's **Write these with an agent** makes a backlog story for an agent to write them and name them in the block, for you to review and accept.
+
+**Port-forwards.** The Deployments page starts and stops a port-forward per service port of a namespace. `flai serve` runs each as `kubectl port-forward`, bound to `0.0.0.0` on a free port of the host, so that a flai hosted elsewhere can reach it (your answer 3 on TH-0861). A running forward is reachable by anything that can reach the host's network, with no sign-in of its own. Forwards end when `flai serve` stops. A teardown from the dashboard stops its namespace's forwards first; a teardown by `flai serve`'s own pass ends them when `kubectl` exits.
 - `flai kluster up`, `down`, `status`, `deploy`, `teardown`, `promote`, and `deployments` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent the ones that write.
 
 **What `flai serve` runs while it is on.** It looks at the project once a minute, and at once when it starts serving it. It runs one job at a time per project, in the order their causes came, with no model:

@@ -1801,7 +1801,18 @@ The dev server listens on 127.0.0.1 only, so only a browser on this machine reac
 
 ## Run a project's kluster
 
-A project that runs on Kubernetes can name a local cluster, made by [bytepunx/kluster](../../design/tech/kluster.md), in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md#the-kluster-block), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)). `flai kluster` brings that cluster up, takes it down, and reports it:
+A project that runs on Kubernetes can name a local cluster, made by [bytepunx/kluster](../../design/tech/kluster.md), in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md#the-kluster-block), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md), [ADR-0259](../../design/adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). The dashboard's Klusters page sets it up step by step ([Klusters](flaiover.md#klusters)). From a shell:
+
+```bash
+flai serve enable kluster --trailer "Co-Authored-By: ..."   # writes the block and kluster.yaml when there is none, and commits them
+flai manifest set 'kluster.deploy=["scripts/kluster-deploy.sh","--wait"]'
+flai manifest set 'kluster.teardown=[]'                       # [] unsets a command
+flai manifest set kluster.namespace=app kluster.timeout=45m
+```
+
+`flai serve enable kluster` on a project with no block writes one naming only `config: kluster.yaml`, and `kluster.yaml` at the repository root when it is absent: the cluster named after the project with `-local`, the provider `k3d`, and the profile `spire`, kluster's default, since kluster has no empty cluster. It commits the two files alone, with each `--trailer`, unless the project sets `dashboard.autocommit: false`. The block names no `deploy`: the cluster comes up and goes down, and nothing is deployed until `kluster.deploy` is set. `flai manifest set` writes the block's six keys, `kluster.config`, `namespace`, `build`, `deploy`, `teardown`, and `timeout`, each command as a JSON argument list, the program first, and refuses a bad value naming the key.
+
+`flai kluster` brings that cluster up, takes it down, and reports it:
 
 ```bash
 flai kluster up                # kluster up with the block's config; takes minutes
@@ -1828,10 +1839,10 @@ authstar-integration: running
 
 flai refuses, exit 1, with a sentence that says what to do:
 
-- a project with no `kluster:` block, naming the block to add;
+- a project with no `kluster:` block, saying to turn the `kluster` host action on, which writes one;
 - a host with no `kluster` on `PATH`, naming kluster's `install.sh` and `go install github.com/bytepunx/kluster/kluster@latest`.
 
-`flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, a missing `deploy`, or a `timeout` that is not a duration.
+`flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, or a `timeout` that is not a duration. A block with no `deploy` is valid; `deploy` and `promote` refuse it until `kluster.deploy` is set.
 
 ### Deploy a story, tear it down, and promote main
 
@@ -1899,7 +1910,7 @@ With `--json`, `deploy`, `teardown`, and `promote` print the record, and the ste
 
 One job runs at a time per project. A second `deploy`, `teardown`, or `promote` while one runs is refused, naming the job that runs. flai also refuses a story not in progress or in review, a story with no worktree, and a cluster with no kubeconfig: bring it up with `flai kluster up` first.
 
-These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. `flai serve enable kluster` turns the host action on, and is refused for a project with no block ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
+These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. `flai serve enable kluster` turns the host action on, and writes the block first for a project with none ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
 
 ## Check the repository
 
