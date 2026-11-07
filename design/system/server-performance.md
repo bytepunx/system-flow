@@ -340,7 +340,24 @@ Two choices are the operator's and need no story. Turning the `merge-queue` host
 
 ### Stories
 
-Each cause from 8 to 21 has a draft story, with its numbers and its proposed fix, under the epic this section's table names.
+Each cause from 8 to 21 has a draft story under [E-0033](../../wip/kanban/epics/E-0033-flai-stays-responsive-at-600-stories-checked-writes-kept-parses-and-concurrent.md), with the cause's numbers and its proposed fix. They are drafts for the operator to finalize. Causes 8 and 9 cost the operator most, on every dashboard write and every acceptance; cause 12 costs flai serve most.
+
+| # | Story |
+|---|-------|
+| 8 | [S-0598](../../wip/kanban/stories/S-0598-a-checked-write-runs-only-the-rules-an-item-write-can-affect-so-creating-or.md) A checked write runs only the rules an item write can affect, so creating or editing an item takes about 2 s, not 7 to 18 s |
+| 9 | [S-0599](../../wip/kanban/stories/S-0599-flai-serve-s-replanner-writes-every-forecast-it-moves-in-one-pass-with-one.md) flai serve's replanner writes every forecast it moves in one pass with one check, so an acceptance's replan lands in seconds, not 80 s |
+| 10 | [S-0600](../../wip/kanban/stories/S-0600-a-flai-process-parses-work-items-on-a-pool-of-workers-and-keeps-parses-and-lint.md) A flai process parses work items on a pool of workers and keeps parses and lint results under .flai-cache, so a cold list takes under 0.3 s, not 1.1 to 1.5 s |
+| 11 | [S-0601](../../wip/kanban/stories/S-0601-flai-check-runs-its-rules-at-once-and-keeps-the-component-props-node-read-so-a.md) flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s |
+| 12 | [S-0603](../../wip/kanban/stories/S-0603-agent-status-keeps-agents-json-parsed-and-reads-the-conversations-once-a-call.md) agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s |
+| 13 | [S-0602](../../wip/kanban/stories/S-0602-flai-serve-keeps-threads-conversations-digest-entries-issues-and-activity.md) flai serve keeps threads, conversations, digest entries, issues, and activity documents parsed between requests, so a thread read takes about 5 ms, not 80 to 110 ms |
+| 14 | [S-0604](../../wip/kanban/stories/S-0604-board-get-takes-one-release-lock-per-repository-runs-show-ref-only-when-a-ref.md) board.get takes one release lock per repository, runs show-ref only when a ref moved, and reads no threads with nothing in review, so 13 boards at once stop queueing |
+| 15 | [S-0605](../../wip/kanban/stories/S-0605-settings-get-finds-the-projects-below-the-import-folders-once-a-request-not.md) settings.get finds the projects below the import folders once a request, not once a served project, so it answers in under 100 ms, not 825 ms |
+| 16 | [S-0606](../../wip/kanban/stories/S-0606-item-get-answers-from-a-kept-item-list-and-the-file-watcher-stops-statting.md) item.get answers from a kept item list and the file watcher stops statting every archived file every 300 ms |
+| 17 | [S-0607](../../wip/kanban/stories/S-0607-stats-get-runs-its-reads-at-once-and-its-sections-at-once-and-answers-identical.md) stats.get runs its reads at once and its sections at once, and answers identical requests in flight once |
+| 18 | [S-0608](../../wip/kanban/stories/S-0608-the-chart-data-keeps-the-hold-replay-until-items-or-commits-change-and-sweeps.md) The chart data keeps the hold replay until items or commits change and sweeps the days once, so a 365-day window costs what a 30-day one does |
+| 19 | [S-0609](../../wip/kanban/stories/S-0609-flai-accept-and-flai-task-done-lint-markdown-once-per-set-with-the-installed.md) flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance |
+| 20 | [S-0610](../../wip/kanban/stories/S-0610-the-close-out-runs-independent-test-tiers-at-once-and-smoke-skips-what-the.md) The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out |
+| 21 | [S-0611](../../wip/kanban/stories/S-0611-the-dashboard-asks-threads-list-for-open-threads-and-agent-status-for-open-runs.md) The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB |
 
 ## Stories
 
