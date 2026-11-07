@@ -463,6 +463,96 @@ export type KlusterStatus = {
 	running?: KlusterJob;
 	/** The last up or down to end since flai serve started. */
 	last?: KlusterJob;
+	// What setup still lacks (S-0586), so the Klusters page can lead the operator through it; a
+	// host flai older than S-0586 sends none of these, so each is optional.
+	/** The kluster: block's keys flai manifest set writes, listed with no block too. */
+	settings?: KlusterSetting[];
+	/** Whether the settings host action is on: the block's and the config file's writes need it. */
+	settings_on?: boolean;
+	/** What the operator runs on the host to turn settings on: flai serve enable settings. */
+	settings_enable?: string;
+	/** The config file the block names, from the repository root; absent with no block. */
+	config?: string;
+	/** What that file names; absent with no block or no config named. */
+	config_file?: KlusterConfigFile;
+	/** What flai check finds wrong with the block, one sentence each beginning with its key. */
+	findings?: string[];
+	/** Whether the block names a deploy command; without one flai deploys nothing. */
+	deployable?: boolean;
+	/** kluster, docker, and kubectl, each found on the host's PATH or not, with how to install it. */
+	tools?: KlusterTool[];
+};
+
+/** One key of the kluster: block (Go's manifest.SettingValue, S-0586), with its value. */
+export type KlusterSetting = {
+	key: string;
+	/** text for config and namespace, command for build, deploy, and teardown, duration for timeout. */
+	kind: 'text' | 'command' | 'duration';
+	/** The value in effect when the key is unset, as it would be written. */
+	default?: string;
+	/** A sentence on what the setting does. */
+	meaning: string;
+	/** The value as the manifest has it, a command as its argument list; absent when unset. */
+	value?: string | string[];
+	set: boolean;
+};
+
+/** What the kluster config file names (Go's hostapi.KlusterConfigFile, S-0586). */
+export type KlusterConfigFile = {
+	/** Whether the file is there. */
+	exists: boolean;
+	name?: string;
+	provider?: string;
+	/** The profile it names; empty when none, and kluster then installs default_profile. */
+	profile?: string;
+	default_profile: string;
+	/** The profiles kluster offers: spire, signet, authstar. */
+	profiles: string[];
+	/** The opt-in addons it names. */
+	addons: string[];
+	/** Why it could not be read. */
+	error?: string;
+};
+
+/** One program the project's kluster needs on the host (Go's hostapi.KlusterTool, S-0586). */
+export type KlusterTool = {
+	name: 'kluster' | 'docker' | 'kubectl';
+	found: boolean;
+	path?: string;
+	/** What flai needs it for. */
+	need: string;
+	/** The command the operator runs on the host to install it; absent for docker. */
+	install?: string;
+	/** Where its installation is described. */
+	docs: string;
+};
+
+/** One node of the cluster (Go's hostapi.KlusterNode, S-0586). */
+export type KlusterNode = { name: string; ready: boolean; roles: string[]; version?: string };
+
+/** One pod of a namespace (Go's hostapi.KlusterPod, S-0586). */
+export type KlusterPod = {
+	name: string;
+	/** Pending, Running, Succeeded, Failed, or Unknown. */
+	phase: string;
+	/** How many of its containers are ready, of how many. */
+	ready: number;
+	containers: number;
+	/** Its containers' restarts, summed. */
+	restarts: number;
+};
+
+/** What flai's kluster.workloads answers (Go's hostapi.KlusterWorkloads, S-0586). */
+export type KlusterWorkloads = {
+	block: boolean;
+	no_block?: string;
+	cluster?: string;
+	context?: string;
+	nodes: KlusterNode[];
+	/** Each namespace's pods, namespaces and pods by name. */
+	namespaces: { namespace: string; pods: KlusterPod[] }[];
+	/** Why they could not be read: no kubeconfig yet, kubectl missing, or kubectl's failure. */
+	workloads_error?: string;
 };
 
 /** One step of a deployment (Go's hostapi.KlusterStep): build, load, deploy, or teardown. */
@@ -957,6 +1047,16 @@ export class Repo extends EventEmitter {
 			this.write<KlusterJob>('kluster.down')
 		);
 		return data;
+	}
+
+	/**
+	 * The project's cluster's nodes and each namespace's pods, flai's kluster.workloads (S-0586),
+	 * read with kubectl once flai has the cluster's kubeconfig. Asked afresh each time.
+	 */
+	async klusterWorkloads(): Promise<KlusterWorkloads> {
+		return upgraded('show the kluster workloads', () =>
+			this.ask<KlusterWorkloads>('kluster.workloads')
+		);
 	}
 
 	/**

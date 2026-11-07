@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -37,6 +39,10 @@ type fakeCluster struct {
 	// was given.
 	calls       []string
 	listedTimes int
+	// nodes, namespaces, and workloadsErr are what Workloads answers.
+	nodes        []KlusterNode
+	namespaces   []KlusterNamespace
+	workloadsErr error
 }
 
 func (f *fakeCluster) Named() kluster.Status {
@@ -101,6 +107,10 @@ func (f *fakeCluster) Services(context.Context) ([]KlusterService, error) {
 	f.listedTimes++
 	f.mu.Unlock()
 	return f.services, nil
+}
+
+func (f *fakeCluster) Workloads(context.Context) ([]KlusterNode, []KlusterNamespace, error) {
+	return f.nodes, f.namespaces, f.workloadsErr
 }
 
 func (f *fakeCluster) called() []string {
@@ -811,6 +821,320 @@ func TestParseServicesReadsKubectlsJSON(t *testing.T) {
 		t.Errorf("a service with no port has no port-forward: %+v", a.Services)
 	}
 	if _, err := parseServices([]byte("no")); err == nil {
+		t.Error("JSON that is not kubectl's is an error")
+	}
+}
+
+// setupProject is a project named Harbour whose manifest ends with block,
+// with files written under its root, and c as its cluster for the test's
+// length; the host's tools are found at /usr/bin unless missing names them.
+func setupProject(t *testing.T, block string, files map[string]string, c *fakeCluster, missing ...string) channel.Project {
+	t.Helper()
+	p := quayside(t, false, c)
+	m := "version: 1\nname: Harbour\nkey: harbour\nowner: olive\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + block
+	files[manifest.File] = m
+	for rel, text := range files {
+		path := filepath.Join(p.Root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	was := klusterLookPath
+	t.Cleanup(func() { klusterLookPath = was })
+	klusterLookPath = func(name string) (string, error) {
+		if slices.Contains(missing, name) {
+			return "", errors.New("not found")
+		}
+		return "/usr/bin/" + name, nil
+	}
+	return p
+}
+
+// setupHost is a host whose kluster and settings actions are on as they say.
+func setupHost(kluster, settings bool) Host {
+	return Host{Enabled: func(action, _ string) bool {
+		return (action == ActionKluster && kluster) || (action == ActionSettings && settings)
+	}}
+}
+
+// settingKeys are the keys of values, in order.
+func settingKeys(values []manifest.SettingValue) []string {
+	out := []string{}
+	for _, v := range values {
+		out = append(out, v.Key)
+	}
+	return out
+}
+
+var klusterSettingKeys = []string{"kluster.config", "kluster.namespace", "kluster.build", "kluster.deploy", "kluster.teardown", "kluster.timeout"}
+
+// S-0586: with no block, kluster.status still lists the block's keys with
+// their defaults, the host's tools, and whether settings is on, so the
+// Klusters page can lead the operator to the toggle that writes the block.
+func TestKlusterStatusWithNoBlockListsTheKeysAndTheTools(t *testing.T) {
+	p := setupProject(t, "", map[string]string{}, &fakeCluster{name: "harbour"})
+	var got KlusterStatus
+	if e := ask(t, setupHost(false, true), p, "kluster.status", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Block || got.Deployable || got.Config != "" || got.ConfigFile != nil || len(got.Findings) != 0 || got.Findings == nil {
+		t.Errorf("no block: %+v", got)
+	}
+	if !got.SettingsOn || got.SettingsEnable != "flai serve enable settings" {
+		t.Errorf("settings is on, and the page names its command: %+v", got)
+	}
+	if keys := settingKeys(got.Settings); !slices.Equal(keys, klusterSettingKeys) {
+		t.Errorf("the block's keys: %q", keys)
+	}
+	for _, s := range got.Settings {
+		if s.Set {
+			t.Errorf("%s is unset with no block: %+v", s.Key, s)
+		}
+		if s.Key == "kluster.timeout" && s.Default != "30m" {
+			t.Errorf("timeout's default is 30m: %+v", s)
+		}
+	}
+	if len(got.Tools) != 3 {
+		t.Fatalf("three tools: %+v", got.Tools)
+	}
+	for i, name := range []string{"kluster", "docker", "kubectl"} {
+		if tl := got.Tools[i]; tl.Name != name || !tl.Found || tl.Path != "/usr/bin/"+name || tl.Need == "" || tl.Docs == "" {
+			t.Errorf("tool %d: %+v", i, tl)
+		}
+	}
+}
+
+// S-0586: the block enabling kluster writes names only its config, so the
+// cluster can come up but nothing is deployable, and its config's profile is
+// read from the file.
+func TestKlusterStatusOfTheScaffoldsBlockIsNotDeployable(t *testing.T) {
+	p := setupProject(t, "kluster:\n  config: kluster.yaml\n", map[string]string{
+		"kluster.yaml": kluster.ScaffoldText("Harbour"),
+	}, &fakeCluster{name: "harbour-local", status: runningStatus()})
+	var got KlusterStatus
+	if e := ask(t, setupHost(true, false), p, "kluster.status", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if !got.Block || got.Deployable || got.SettingsOn || got.Config != "kluster.yaml" || len(got.Findings) != 0 {
+		t.Errorf("the scaffold's block: %+v", got)
+	}
+	f := got.ConfigFile
+	if f == nil || !f.Exists || f.Name != "harbour-local" || f.Provider != "k3d" || f.Profile != kluster.ScaffoldProfile || f.DefaultProfile != "spire" || f.Error != "" || len(f.Addons) != 0 || f.Addons == nil {
+		t.Errorf("the scaffold's config: %+v", f)
+	}
+	if !slices.Equal(f.Profiles, []string{"spire", "signet", "authstar"}) {
+		t.Errorf("kluster's profiles: %q", f.Profiles)
+	}
+	for _, s := range got.Settings {
+		if s.Set != (s.Key == "kluster.config") {
+			t.Errorf("only config is set: %+v", s)
+		}
+	}
+}
+
+// S-0586: a full block is deployable, its commands read back as lists, and
+// its config's addons are reported.
+func TestKlusterStatusOfAFullBlockIsDeployable(t *testing.T) {
+	p := setupProject(t, "kluster:\n  config: integration/kluster.yaml\n  namespace: harbour\n  build: [scripts/kluster-build.sh]\n  deploy: [scripts/kluster-deploy.sh, --wait]\n  teardown: [scripts/kluster-teardown.sh]\n  timeout: 20m\n", map[string]string{
+		"integration/kluster.yaml": "name: harbour-integration\nprofile: authstar\naddons: [observability, tracing]\n",
+	}, &fakeCluster{name: "harbour-integration", status: runningStatus()})
+	var got KlusterStatus
+	if e := ask(t, setupHost(true, true), p, "kluster.status", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if !got.Block || !got.Deployable || got.Config != "integration/kluster.yaml" || len(got.Findings) != 0 {
+		t.Errorf("a full block: %+v", got)
+	}
+	if f := got.ConfigFile; f == nil || f.Profile != "authstar" || f.Provider != "k3d" || !slices.Equal(f.Addons, []string{"observability", "tracing"}) {
+		t.Errorf("its config: %+v", f)
+	}
+	raw, err := json.Marshal(got.Settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"value":["scripts/kluster-deploy.sh","--wait"]`) || !strings.Contains(string(raw), `"value":"20m"`) {
+		t.Errorf("the block's values: %s", raw)
+	}
+}
+
+// S-0586: what flai check finds wrong with the block is listed, one
+// sentence each beginning with its key, and a config file that is not there
+// is reported, not an error.
+func TestKlusterStatusListsWhatFlaiCheckFindsInTheBlock(t *testing.T) {
+	p := setupProject(t, "kluster:\n  config: integration/kluster.yaml\n  timeout: soon\n", map[string]string{}, &fakeCluster{name: "harbour"})
+	var got KlusterStatus
+	if e := ask(t, setupHost(true, true), p, "kluster.status", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	keys := []string{}
+	for _, f := range got.Findings {
+		keys = append(keys, strings.Fields(f)[0])
+	}
+	if !slices.Contains(keys, "kluster.config") || !slices.Contains(keys, "kluster.timeout") {
+		t.Errorf("the findings name config, whose file is missing, and timeout: %q", got.Findings)
+	}
+	if f := got.ConfigFile; f == nil || f.Exists || f.Error != "" {
+		t.Errorf("a missing config file: %+v", f)
+	}
+}
+
+// S-0586: each tool missing from the host's PATH is reported with how to
+// install it; flai installs none.
+func TestKlusterStatusSaysHowToInstallEachMissingTool(t *testing.T) {
+	for _, name := range []string{"kluster", "docker", "kubectl"} {
+		p := setupProject(t, "", map[string]string{}, &fakeCluster{name: "harbour"}, name)
+		var got KlusterStatus
+		if e := ask(t, setupHost(true, true), p, "kluster.status", `{}`, &got); e != nil {
+			t.Fatal(e)
+		}
+		for _, tl := range got.Tools {
+			if tl.Found == (tl.Name == name) {
+				t.Errorf("%s missing: %+v", name, tl)
+			}
+			if tl.Name == name && tl.Path != "" {
+				t.Errorf("a missing tool has no path: %+v", tl)
+			}
+		}
+		want := map[string]string{"kluster": "install.sh | bash", "docker": "", "kubectl": "kluster setup"}[name]
+		for _, tl := range got.Tools {
+			if tl.Name == name && (!strings.Contains(tl.Install, want) || (want == "" && tl.Install != "") || !strings.HasPrefix(tl.Docs, "https://")) {
+				t.Errorf("how to install %s: %+v", name, tl)
+			}
+		}
+	}
+}
+
+func TestKlusterWorkloadsIsARead(t *testing.T) {
+	if sp := klusterSpecs()["kluster.workloads"]; sp.action != "" || !sp.reads || sp.do == nil {
+		t.Errorf("kluster.workloads is a read, answered whatever the action says: %+v", sp)
+	}
+}
+
+// S-0586: kluster.workloads lists the cluster's nodes and pods once flai has
+// its kubeconfig, and says why not before.
+func TestKlusterWorkloadsListsNodesAndPodsOnceTheKubeconfigIsThere(t *testing.T) {
+	c := &fakeCluster{name: "harbour",
+		nodes:      []KlusterNode{{Name: "k3d-harbour-server-0", Ready: true, Roles: []string{"control-plane", "master"}, Version: "v1.31.5+k3s1"}},
+		namespaces: []KlusterNamespace{{Namespace: "kube-system", Pods: []KlusterPod{{Name: "coredns-1", Phase: "Running", Ready: 1, Containers: 1}}}},
+	}
+	p := quayside(t, true, c)
+	off := false
+	var got KlusterWorkloads
+	if e := ask(t, klusterHost(&off, &[]Entry{}, nil), p, "kluster.workloads", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if !got.Block || got.Cluster != "harbour" || got.Context != "k3d-harbour" || len(got.Nodes) != 0 || got.Nodes == nil || got.Namespaces == nil || !strings.Contains(got.WorkloadsError, "no kubeconfig") {
+		t.Errorf("no kubeconfig yet: %+v", got)
+	}
+	kubeconfigAt(t, p.Root)
+	got = KlusterWorkloads{}
+	if e := ask(t, klusterHost(&off, &[]Entry{}, nil), p, "kluster.workloads", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.WorkloadsError != "" || len(got.Nodes) != 1 || got.Nodes[0].Name != "k3d-harbour-server-0" || len(got.Namespaces) != 1 || got.Namespaces[0].Pods[0].Name != "coredns-1" {
+		t.Errorf("with the kubeconfig, while the action is off: %+v", got)
+	}
+	c.workloadsErr = errors.New("kubectl get nodes of the cluster harbour failed: exit status 1")
+	got = KlusterWorkloads{}
+	if e := ask(t, klusterHost(&off, &[]Entry{}, nil), p, "kluster.workloads", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.WorkloadsError != c.workloadsErr.Error() || len(got.Nodes) != 0 {
+		t.Errorf("kubectl failed: %+v", got)
+	}
+}
+
+func TestKlusterWorkloadsWithNoBlockNamesTheBlockToAdd(t *testing.T) {
+	p := quayside(t, false, &fakeCluster{name: "harbour"})
+	on := true
+	var got KlusterWorkloads
+	if e := ask(t, klusterHost(&on, &[]Entry{}, nil), p, "kluster.workloads", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if got.Block || got.NoBlock != kluster.ErrNoBlock.Error() || got.WorkloadsError != "" {
+		t.Errorf("no block: %+v", got)
+	}
+}
+
+// kubectlExec is a kluster.Exec that answers kubectl get nodes and get pods
+// with canned JSON, and finds kubectl on PATH unless missing.
+type kubectlExec struct {
+	missing bool
+	nodes   string
+	pods    string
+	args    [][]string
+}
+
+func (x *kubectlExec) LookPath(name string) (string, error) {
+	if x.missing {
+		return "", errors.New("not found")
+	}
+	return "/usr/bin/" + name, nil
+}
+
+func (x *kubectlExec) Run(_ context.Context, _ string, out io.Writer, name string, args ...string) error {
+	x.args = append(x.args, append([]string{name}, args...))
+	switch {
+	case slices.Contains(args, "nodes"):
+		_, _ = io.WriteString(out, x.nodes)
+	case slices.Contains(args, "pods"):
+		_, _ = io.WriteString(out, x.pods)
+	default:
+		return errors.New("unexpected")
+	}
+	return nil
+}
+
+func (x *kubectlExec) Command(context.Context, kluster.Cmd) error { return errors.New("unexpected") }
+
+const kubectlNodes = `{"items":[
+ {"metadata":{"name":"k3d-harbour-server-0","labels":{"node-role.kubernetes.io/master":"true","node-role.kubernetes.io/control-plane":"true","kubernetes.io/os":"linux"}},
+  "status":{"conditions":[{"type":"MemoryPressure","status":"False"},{"type":"Ready","status":"True"}],"nodeInfo":{"kubeletVersion":"v1.31.5+k3s1"}}},
+ {"metadata":{"name":"k3d-harbour-agent-0","labels":{}},"status":{"conditions":[{"type":"Ready","status":"False"}],"nodeInfo":{"kubeletVersion":"v1.31.5+k3s1"}}}]}`
+
+const kubectlPods = `{"items":[
+ {"metadata":{"name":"web-2","namespace":"s-0586"},"spec":{"containers":[{},{}]},"status":{"phase":"Running","containerStatuses":[{"ready":true,"restartCount":2},{"ready":false,"restartCount":1}]}},
+ {"metadata":{"name":"coredns-1","namespace":"kube-system"},"spec":{"containers":[{}]},"status":{"phase":"Running","containerStatuses":[{"ready":true,"restartCount":0}]}},
+ {"metadata":{"name":"web-1","namespace":"s-0586"},"spec":{"containers":[{}]},"status":{"phase":"Pending"}}]}`
+
+// S-0586: the real cluster reads kubectl's JSON with flai's kubeconfig and
+// the cluster's context, and says when kubectl is missing.
+func TestSystemClusterWorkloadsReadsKubectl(t *testing.T) {
+	x := &kubectlExec{nodes: kubectlNodes, pods: kubectlPods}
+	c := systemCluster{kluster.Cluster{Root: "/repo", Name: "harbour", Exec: x}}
+	nodes, namespaces, err := c.Workloads(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(x.args) != 2 || !slices.Equal(x.args[0], []string{"kubectl", "--kubeconfig", kluster.KubeconfigPath("/repo"), "--context", "k3d-harbour", "get", "nodes", "--output", "json"}) ||
+		!slices.Equal(x.args[1], []string{"kubectl", "--kubeconfig", kluster.KubeconfigPath("/repo"), "--context", "k3d-harbour", "get", "pods", "--all-namespaces", "--output", "json"}) {
+		t.Errorf("kubectl's calls: %q", x.args)
+	}
+	wantNodes := []KlusterNode{
+		{Name: "k3d-harbour-agent-0", Ready: false, Roles: []string{}, Version: "v1.31.5+k3s1"},
+		{Name: "k3d-harbour-server-0", Ready: true, Roles: []string{"control-plane", "master"}, Version: "v1.31.5+k3s1"},
+	}
+	if !reflect.DeepEqual(nodes, wantNodes) {
+		t.Errorf("nodes %+v\nwant %+v", nodes, wantNodes)
+	}
+	wantNS := []KlusterNamespace{
+		{Namespace: "kube-system", Pods: []KlusterPod{{Name: "coredns-1", Phase: "Running", Ready: 1, Containers: 1}}},
+		{Namespace: "s-0586", Pods: []KlusterPod{{Name: "web-1", Phase: "Pending", Containers: 1}, {Name: "web-2", Phase: "Running", Ready: 1, Containers: 2, Restarts: 3}}},
+	}
+	if !reflect.DeepEqual(namespaces, wantNS) {
+		t.Errorf("namespaces %+v\nwant %+v", namespaces, wantNS)
+	}
+	x.missing = true
+	if _, _, err := c.Workloads(context.Background()); err == nil || !strings.Contains(err.Error(), "kubectl is not on the host's PATH") || !strings.Contains(err.Error(), "kluster setup") {
+		t.Errorf("kubectl missing: %v", err)
+	}
+	if _, err := parseNodes([]byte("no")); err == nil {
+		t.Error("JSON that is not kubectl's is an error")
+	}
+	if _, err := parsePods([]byte("no")); err == nil {
 		t.Error("JSON that is not kubectl's is an error")
 	}
 }

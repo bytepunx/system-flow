@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AgentError } from '$lib/server/agent';
-import { Repo, useRepo, type Ask, type KlusterJob, type KlusterStatus } from '$lib/server/repo';
+import {
+	Repo,
+	useRepo,
+	type Ask,
+	type KlusterJob,
+	type KlusterStatus,
+	type KlusterWorkloads
+} from '$lib/server/repo';
 
 // /api/kluster, /api/kluster/up, and /api/kluster/down ask flai's kluster.status, kluster.up, and
 // kluster.down (S-0580) of a stubbed host: running a real cluster needs kluster and Docker, which
@@ -23,6 +30,12 @@ const status = (over: Partial<KlusterStatus> = {}): KlusterStatus => ({
 	enabled: true,
 	enable: ENABLE,
 	block: true,
+	settings: [],
+	settings_on: true,
+	settings_enable: 'flai serve enable settings',
+	findings: [],
+	deployable: true,
+	tools: [],
 	cluster: {
 		name: 'authstar',
 		profile: 'integration',
@@ -156,5 +169,120 @@ describe('/api/kluster (S-0580)', () => {
 			expect(error).toContain('the host flai is too old');
 			expect(error).toContain('flai self-upgrade');
 		}
+	});
+});
+
+describe('/api/kluster setup and /api/kluster/workloads (S-0586)', () => {
+	let GET: Handler;
+	let WORKLOADS: Handler;
+	const get = (fn: Handler, path: string) => fn({ url: new URL(`http://x${path}`) } as never);
+
+	const scaffold = status({
+		deployable: false,
+		settings_on: false,
+		config: 'kluster.yaml',
+		config_file: {
+			exists: true,
+			name: 'p-local',
+			provider: 'k3d',
+			profile: 'spire',
+			default_profile: 'spire',
+			profiles: ['spire', 'signet', 'authstar'],
+			addons: []
+		},
+		settings: [
+			{
+				key: 'kluster.config',
+				kind: 'text',
+				meaning: 'The config.',
+				value: 'kluster.yaml',
+				set: true
+			},
+			{ key: 'kluster.deploy', kind: 'command', meaning: 'The deploy.', set: false },
+			{ key: 'kluster.timeout', kind: 'duration', default: '30m', meaning: 'The most.', set: false }
+		],
+		tools: [
+			{
+				name: 'kluster',
+				found: true,
+				path: '/usr/local/bin/kluster',
+				need: 'up',
+				docs: 'https://x'
+			},
+			{
+				name: 'docker',
+				found: false,
+				need: 'nodes',
+				docs: 'https://docs.docker.com/engine/install/'
+			},
+			{ name: 'kubectl', found: false, need: 'pods', install: 'kluster setup', docs: 'https://y' }
+		]
+	});
+
+	const workloads: KlusterWorkloads = {
+		block: true,
+		cluster: 'p-local',
+		context: 'k3d-p-local',
+		nodes: [
+			{ name: 'k3d-p-local-server-0', ready: true, roles: ['control-plane'], version: 'v1.31' }
+		],
+		namespaces: [
+			{
+				namespace: 'kube-system',
+				pods: [{ name: 'coredns-1', phase: 'Running', ready: 1, containers: 1, restarts: 0 }]
+			}
+		]
+	};
+
+	beforeAll(async () => {
+		GET = (await import('./+server')).GET as unknown as Handler;
+		WORKLOADS = (await import('./workloads/+server')).GET as unknown as Handler;
+	});
+	beforeEach(() => {
+		asked = [];
+		script = {
+			'project.info': { data: { name: 'p', key: 'p' } },
+			'kluster.status': { data: scaffold },
+			'kluster.workloads': { data: workloads }
+		};
+		useRepo(new Repo('/nowhere', host));
+	});
+	afterAll(() => useRepo(null));
+
+	it("answers what setup still lacks as flai gives it: the block's keys, its config, the tools", async () => {
+		const r = await get(GET, '/api/kluster');
+		expect(r.status).toBe(200);
+		const body = (await r.json()) as KlusterStatus;
+		expect(body).toMatchObject({ deployable: false, settings_on: false, config: 'kluster.yaml' });
+		expect(body.config_file?.profile).toBe('spire');
+		expect(body.settings?.map((s) => s.key)).toEqual([
+			'kluster.config',
+			'kluster.deploy',
+			'kluster.timeout'
+		]);
+		expect(body.tools?.filter((t) => !t.found).map((t) => t.name)).toEqual(['docker', 'kubectl']);
+	});
+
+	it('answers the nodes and pods, asking flai afresh each time', async () => {
+		const r = await get(WORKLOADS, '/api/kluster/workloads');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(workloads);
+		script['kluster.workloads'] = {
+			data: { ...workloads, nodes: [], namespaces: [], workloads_error: 'no kubeconfig yet' }
+		};
+		const again = (await (
+			await get(WORKLOADS, '/api/kluster/workloads')
+		).json()) as KlusterWorkloads;
+		expect(again.workloads_error).toBe('no kubeconfig yet');
+		expect(asked.filter((a) => a.method === 'kluster.workloads')).toHaveLength(2);
+	});
+
+	it('answers 501 telling to upgrade a host flai without kluster.workloads', async () => {
+		delete script['kluster.workloads'];
+		const r = await get(WORKLOADS, '/api/kluster/workloads');
+		expect(r.status).toBe(501);
+		const error = (await r.json()).error as string;
+		expect(error).toContain('the host flai is too old');
+		expect(error).toContain('flai self-upgrade');
 	});
 });

@@ -433,8 +433,8 @@ func subprojectEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *
 
 // settingArg is a setting's value as flai manifest set reads it from its
 // command line: true or false, a number written out in digits, a line of
-// text as it stands, or an agent as compact JSON; or why the value is not
-// one of these.
+// text as it stands, an agent as compact JSON, or a command as a JSON
+// argument list; or why the value is not one of these.
 func settingArg(s manifest.Setting, raw json.RawMessage) (string, string) {
 	if s.Kind == manifest.KindAgent {
 		dec := json.NewDecoder(bytes.NewReader(raw))
@@ -447,6 +447,20 @@ func settingArg(s manifest.Setting, raw json.RawMessage) (string, string) {
 			return "", err.Error()
 		}
 		out, err := json.Marshal(a)
+		if err != nil {
+			return "", err.Error()
+		}
+		return string(out), ""
+	}
+	if s.Kind == manifest.KindCommand {
+		var args []string
+		if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("[")) || json.Unmarshal(raw, &args) != nil {
+			return "", `is a command, an argument list such as ["scripts/kluster-deploy.sh","--wait"], the program first; [] unsets it`
+		}
+		if args == nil {
+			args = []string{}
+		}
+		out, err := json.Marshal(args)
 		if err != nil {
 			return "", err.Error()
 		}
@@ -823,6 +837,11 @@ func toggleAction(p channel.Project, raw json.RawMessage) ([]string, string, *ch
 		return nil, "", bad("say on: true or on: false")
 	}
 	if *in.On {
+		// enabling kluster writes and commits a kluster: block for a project
+		// with none (S-0586), so its commit carries the dashboard's trailer
+		if in.Action == ActionKluster {
+			return []string{"serve", "enable", in.Action, "--trailer=" + Trailer}, "", nil
+		}
 		return []string{"serve", "enable", in.Action}, "", nil
 	}
 	return []string{"serve", "disable", in.Action}, "", nil

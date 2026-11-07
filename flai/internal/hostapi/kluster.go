@@ -8,6 +8,11 @@ package hostapi
 // per project at a time, and keeps the last one's outcome and log for
 // kluster.status, as Host.Components keeps its dev servers' state.
 //
+// Setup (S-0586): kluster.status also says what setup still lacks, the
+// block's keys, the config file's profile, flai check's findings, whether a
+// deploy is set, and the host's tools; kluster.workloads, a read, lists the
+// cluster's nodes and pods.
+//
 // Deployments (S-0581): kluster.deployments, a read, lists the namespaces'
 // deployment records, main's first, with each story's title and head, each
 // step's log, and how to reach the namespace for a demo; kluster.deploy,
@@ -21,12 +26,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -81,6 +90,9 @@ type KlusterCluster interface {
 	// Services lists the services of every namespace of the cluster, as
 	// kubectl get services reports them.
 	Services(ctx context.Context) ([]KlusterService, error)
+	// Workloads lists the cluster's nodes and each namespace's pods, as
+	// kubectl get nodes and kubectl get pods report them (S-0586).
+	Workloads(ctx context.Context) ([]KlusterNode, []KlusterNamespace, error)
 }
 
 // systemCluster is kluster.Cluster as a KlusterCluster.
@@ -102,6 +114,155 @@ func (c systemCluster) Services(ctx context.Context) ([]KlusterService, error) {
 		return nil, fmt.Errorf("kubectl get services of the cluster %s failed: %w", c.Name, err)
 	}
 	return parseServices([]byte(out.String()))
+}
+
+// Workloads runs kubectl get nodes and kubectl get pods across the cluster's
+// namespaces with flai's kubeconfig and the cluster's context, and reads
+// their JSON.
+func (c systemCluster) Workloads(ctx context.Context) ([]KlusterNode, []KlusterNamespace, error) {
+	if _, err := c.Exec.LookPath("kubectl"); err != nil {
+		return nil, nil, errors.New("kubectl is not on the host's PATH, and flai lists the cluster's nodes and pods with it; install it with kluster setup, then look again")
+	}
+	get := func(what string, args ...string) ([]byte, error) {
+		var out strings.Builder
+		all := append([]string{"--kubeconfig", kluster.KubeconfigPath(c.Root), "--context", c.Context(), "get", what}, args...)
+		if err := c.Exec.Run(ctx, c.Root, &out, "kubectl", append(all, "--output", "json")...); err != nil {
+			return nil, fmt.Errorf("kubectl get %s of the cluster %s failed: %w", what, c.Name, err)
+		}
+		return []byte(out.String()), nil
+	}
+	data, err := get("nodes")
+	if err != nil {
+		return nil, nil, err
+	}
+	nodes, err := parseNodes(data)
+	if err != nil {
+		return nil, nil, err
+	}
+	if data, err = get("pods", "--all-namespaces"); err != nil {
+		return nil, nil, err
+	}
+	namespaces, err := parsePods(data)
+	if err != nil {
+		return nil, nil, err
+	}
+	return nodes, namespaces, nil
+}
+
+// KlusterNode is one node of the cluster, as kubectl get nodes reports it.
+type KlusterNode struct {
+	Name string `json:"name"`
+	// Ready is whether its Ready condition is True.
+	Ready bool `json:"ready"`
+	// Roles are its node-role.kubernetes.io labels, such as control-plane.
+	Roles []string `json:"roles"`
+	// Version is its kubelet's version.
+	Version string `json:"version,omitempty"`
+}
+
+// KlusterPod is one pod of a namespace, as kubectl get pods reports it.
+type KlusterPod struct {
+	Name string `json:"name"`
+	// Phase is its phase: Pending, Running, Succeeded, Failed, or Unknown.
+	Phase string `json:"phase"`
+	// Ready and Containers are how many of its containers are ready, of how
+	// many.
+	Ready      int `json:"ready"`
+	Containers int `json:"containers"`
+	// Restarts is its containers' restarts, summed.
+	Restarts int `json:"restarts"`
+}
+
+// KlusterNamespace is one namespace's pods, by name.
+type KlusterNamespace struct {
+	Namespace string       `json:"namespace"`
+	Pods      []KlusterPod `json:"pods"`
+}
+
+// parseNodes reads kubectl get nodes --output json.
+func parseNodes(data []byte) ([]KlusterNode, error) {
+	var list struct {
+		Items []struct {
+			Metadata struct {
+				Name   string            `json:"name"`
+				Labels map[string]string `json:"labels"`
+			} `json:"metadata"`
+			Status struct {
+				Conditions []struct {
+					Type   string `json:"type"`
+					Status string `json:"status"`
+				} `json:"conditions"`
+				NodeInfo struct {
+					KubeletVersion string `json:"kubeletVersion"`
+				} `json:"nodeInfo"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil, fmt.Errorf("read kubectl get nodes' JSON: %w", err)
+	}
+	out := make([]KlusterNode, 0, len(list.Items))
+	for _, it := range list.Items {
+		n := KlusterNode{Name: it.Metadata.Name, Roles: []string{}, Version: it.Status.NodeInfo.KubeletVersion}
+		for _, c := range it.Status.Conditions {
+			if c.Type == "Ready" {
+				n.Ready = c.Status == "True"
+			}
+		}
+		for label := range it.Metadata.Labels {
+			if role, ok := strings.CutPrefix(label, "node-role.kubernetes.io/"); ok && role != "" {
+				n.Roles = append(n.Roles, role)
+			}
+		}
+		sort.Strings(n.Roles)
+		out = append(out, n)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+// parsePods reads kubectl get pods --all-namespaces --output json into each
+// namespace's pods, namespaces and pods by name.
+func parsePods(data []byte) ([]KlusterNamespace, error) {
+	var list struct {
+		Items []struct {
+			Metadata struct {
+				Name      string `json:"name"`
+				Namespace string `json:"namespace"`
+			} `json:"metadata"`
+			Spec struct {
+				Containers []json.RawMessage `json:"containers"`
+			} `json:"spec"`
+			Status struct {
+				Phase             string `json:"phase"`
+				ContainerStatuses []struct {
+					Ready        bool `json:"ready"`
+					RestartCount int  `json:"restartCount"`
+				} `json:"containerStatuses"`
+			} `json:"status"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil, fmt.Errorf("read kubectl get pods' JSON: %w", err)
+	}
+	byNS := map[string][]KlusterPod{}
+	for _, it := range list.Items {
+		pod := KlusterPod{Name: it.Metadata.Name, Phase: it.Status.Phase, Containers: len(it.Spec.Containers)}
+		for _, c := range it.Status.ContainerStatuses {
+			if c.Ready {
+				pod.Ready++
+			}
+			pod.Restarts += c.RestartCount
+		}
+		byNS[it.Metadata.Namespace] = append(byNS[it.Metadata.Namespace], pod)
+	}
+	out := make([]KlusterNamespace, 0, len(byNS))
+	for ns, pods := range byNS {
+		sort.Slice(pods, func(i, j int) bool { return pods[i].Name < pods[j].Name })
+		out = append(out, KlusterNamespace{Namespace: ns, Pods: pods})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Namespace < out[j].Namespace })
+	return out, nil
 }
 
 // parseServices reads kubectl get services --output json: each service's
@@ -199,6 +360,152 @@ type KlusterStatus struct {
 	Running *KlusterJob `json:"running,omitempty"`
 	// Last is the last up or down that ended since flai serve started.
 	Last *KlusterJob `json:"last,omitempty"`
+
+	// What setup still lacks (S-0586), so the Klusters page can lead the
+	// operator through it.
+
+	// Settings are the kluster: block's keys, as flai manifest set writes
+	// them, each with its value in the manifest and its default; listed with
+	// no block too, since setting kluster.config adds one.
+	Settings []manifest.SettingValue `json:"settings"`
+	// SettingsOn is whether the settings host action is on for the project:
+	// the block's writes and the config file's go through it.
+	SettingsOn bool `json:"settings_on"`
+	// SettingsEnable is what the operator runs on the host to turn it on.
+	SettingsEnable string `json:"settings_enable"`
+	// Config is the config file the block names, from the repository root;
+	// absent with no block.
+	Config string `json:"config,omitempty"`
+	// ConfigFile is what that file names, as kluster reads it; absent with no
+	// block or no config named.
+	ConfigFile *KlusterConfigFile `json:"config_file,omitempty"`
+	// Findings are what flai check finds wrong with the block, one sentence
+	// each beginning with its key.
+	Findings []string `json:"findings"`
+	// Deployable is whether the block names a deploy command: without one the
+	// cluster comes up and goes down, and flai deploys nothing.
+	Deployable bool `json:"deployable"`
+	// Tools are the programs the project's kluster needs on the host, kluster,
+	// docker, and kubectl, each found on PATH or not, with how to install it.
+	Tools []KlusterTool `json:"tools"`
+}
+
+// KlusterConfigFile is what the kluster config file names, read as kluster
+// reads it: the cluster's name, its provider, its profile, and its addons.
+type KlusterConfigFile struct {
+	// Exists is whether the file is there.
+	Exists   bool   `json:"exists"`
+	Name     string `json:"name,omitempty"`
+	Provider string `json:"provider,omitempty"`
+	// Profile is the profile the file names; empty when it names none, and
+	// kluster then installs DefaultProfile.
+	Profile string `json:"profile,omitempty"`
+	// DefaultProfile is the profile kluster up installs when the file names
+	// none.
+	DefaultProfile string `json:"default_profile"`
+	// Profiles are the profiles kluster v1.3.1 offers.
+	Profiles []string `json:"profiles"`
+	// Addons are the opt-in addons the file names.
+	Addons []string `json:"addons"`
+	// Error is why the file could not be read.
+	Error string `json:"error,omitempty"`
+}
+
+// klusterProfiles are the profiles kluster v1.3.1 offers, its default first;
+// none installs nothing.
+var klusterProfiles = []string{"spire", "signet", "authstar"}
+
+// KlusterTool is one program the project's kluster needs on the host.
+type KlusterTool struct {
+	Name string `json:"name"`
+	// Found is whether it is on the host's PATH, and Path where.
+	Found bool   `json:"found"`
+	Path  string `json:"path,omitempty"`
+	// Need says what flai needs it for.
+	Need string `json:"need"`
+	// Install is the command the operator runs on the host to install it;
+	// absent when only its documentation says how.
+	Install string `json:"install,omitempty"`
+	// Docs is where its installation is described.
+	Docs string `json:"docs"`
+}
+
+// klusterTools are the programs a project's kluster needs, with how to
+// install each. flai installs none: each needs the operator on the host,
+// Docker a daemon and root, kubectl sudo through kluster setup on Linux.
+var klusterTools = []KlusterTool{
+	{Name: kluster.Binary, Need: "brings the cluster up and down", Install: "curl -fsSL https://raw.githubusercontent.com/bytepunx/kluster/main/install.sh | bash", Docs: "https://github.com/bytepunx/kluster#install"},
+	{Name: "docker", Need: "runs the cluster's nodes and builds and loads the project's images", Docs: "https://docs.docker.com/engine/install/"},
+	{Name: "kubectl", Need: "lists the cluster's services, nodes, and pods, and deletes a story's namespace", Install: "kluster setup", Docs: "https://kubernetes.io/docs/tasks/tools/"},
+}
+
+// klusterLookPath finds a program on the host's PATH; tests replace it.
+var klusterLookPath = kluster.System{}.LookPath
+
+// hostTools is each of klusterTools, found on PATH or not.
+func hostTools() []KlusterTool {
+	out := make([]KlusterTool, 0, len(klusterTools))
+	for _, t := range klusterTools {
+		if path, err := klusterLookPath(t.Name); err == nil {
+			t.Found, t.Path = true, path
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// readKlusterConfigFile reads the kluster config file cfg names in root.
+func readKlusterConfigFile(root, cfg string) *KlusterConfigFile {
+	out := &KlusterConfigFile{DefaultProfile: klusterProfiles[0], Profiles: klusterProfiles, Addons: []string{}}
+	clean := filepath.Clean(filepath.FromSlash(strings.TrimSpace(cfg)))
+	if !filepath.IsLocal(clean) {
+		out.Error = fmt.Sprintf("kluster.config %q is not a path inside the repository", cfg)
+		return out
+	}
+	data, err := os.ReadFile(filepath.Join(root, clean))
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return out
+	case err != nil:
+		out.Error = klusterRelative(root, err.Error())
+		return out
+	}
+	out.Exists = true
+	var f struct {
+		Name     string   `yaml:"name"`
+		Provider string   `yaml:"provider"`
+		Profile  string   `yaml:"profile"`
+		Addons   []string `yaml:"addons"`
+	}
+	if err := yaml.Unmarshal(data, &f); err != nil {
+		out.Error = fmt.Sprintf("read the kluster config %s: %s", filepath.ToSlash(clean), strings.SplitN(err.Error(), "\n", 2)[0])
+		return out
+	}
+	out.Name, out.Provider, out.Profile = strings.TrimSpace(f.Name), strings.TrimSpace(f.Provider), strings.TrimSpace(f.Profile)
+	if out.Provider == "" {
+		out.Provider = manifest.DefaultKlusterProvider
+	}
+	if f.Addons != nil {
+		out.Addons = f.Addons
+	}
+	return out
+}
+
+// klusterDeployable is whether m's kluster: block names a deploy command,
+// as flai serve's kluster pass reads it.
+func klusterDeployable(m manifest.Manifest) bool {
+	return m.Kluster != nil && len(m.Kluster.Deploy) > 0 && strings.TrimSpace(m.Kluster.Deploy[0]) != ""
+}
+
+// klusterSettings are the kluster: block's keys of m's setting values.
+func klusterSettings(m manifest.Manifest) []manifest.SettingValue {
+	out := []manifest.SettingValue{}
+	for _, v := range m.SettingValues() {
+		if strings.HasPrefix(v.Key, "kluster.") {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // KlusterJobsOptions configure NewKlusterJobs.
@@ -406,7 +713,8 @@ func projectManifest(p channel.Project) (manifest.Manifest, *channel.Error) {
 // klusterStatus answers kluster.status: the host action, the block, the
 // cluster as kluster status reports it, and the running and last jobs.
 func klusterStatus(ctx context.Context, host Host, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
-	out := KlusterStatus{Enabled: host.enabled(ActionKluster, p.Root), Enable: EnableCommand(ActionKluster)}
+	out := KlusterStatus{Enabled: host.enabled(ActionKluster, p.Root), Enable: EnableCommand(ActionKluster),
+		SettingsOn: host.enabled(ActionSettings, p.Root), SettingsEnable: EnableCommand(ActionSettings), Findings: []string{}, Tools: hostTools()}
 	if host.Kluster != nil {
 		running, last := host.Kluster.State(p.Root)
 		out.Running, out.Last = withTail(p.Root, running), withTail(p.Root, last)
@@ -415,11 +723,20 @@ func klusterStatus(ctx context.Context, host Host, p channel.Project, _ json.Raw
 	if e != nil {
 		return nil, e
 	}
+	out.Settings = klusterSettings(m)
 	if m.Kluster == nil {
 		out.NoBlock = kluster.ErrNoBlock.Error()
 		return out, nil
 	}
 	out.Block = true
+	out.Deployable = klusterDeployable(m)
+	if errs := m.KlusterErrors(os.DirFS(p.Root)); len(errs) > 0 {
+		out.Findings = errs
+	}
+	if cfg := strings.TrimSpace(m.Kluster.Config); cfg != "" {
+		out.Config = filepath.ToSlash(filepath.Clean(cfg))
+		out.ConfigFile = readKlusterConfigFile(p.Root, cfg)
+	}
 	c, err := openKluster(p.Root, m)
 	if err != nil {
 		out.StatusError = klusterRelative(p.Root, err.Error())
@@ -433,6 +750,67 @@ func klusterStatus(ctx context.Context, host Host, p channel.Project, _ json.Raw
 		return out, nil
 	}
 	out.Cluster = &s
+	return out, nil
+}
+
+// KlusterWorkloads is what kluster.workloads answers: the cluster's nodes
+// and each namespace's pods, or why they could not be read.
+type KlusterWorkloads struct {
+	// Block and NoBlock are as kluster.status answers them.
+	Block   bool   `json:"block"`
+	NoBlock string `json:"no_block,omitempty"`
+	// Cluster and Context are the cluster's name and kube context.
+	Cluster string `json:"cluster,omitempty"`
+	Context string `json:"context,omitempty"`
+	// Nodes are its nodes, by name.
+	Nodes []KlusterNode `json:"nodes"`
+	// Namespaces are its namespaces' pods, namespaces and pods by name.
+	Namespaces []KlusterNamespace `json:"namespaces"`
+	// WorkloadsError says why they could not be read: the config, no
+	// kubeconfig yet, kubectl missing, or kubectl's failure.
+	WorkloadsError string `json:"workloads_error,omitempty"`
+}
+
+// klusterWorkloadsTimeout bounds the kubectl calls kluster.workloads makes.
+const klusterWorkloadsTimeout = 10 * time.Second
+
+// klusterWorkloads answers kluster.workloads: the cluster's nodes and pods,
+// read with kubectl only once flai has written the cluster's kubeconfig.
+func klusterWorkloads(ctx context.Context, _ Host, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
+	out := KlusterWorkloads{Nodes: []KlusterNode{}, Namespaces: []KlusterNamespace{}}
+	m, e := projectManifest(p)
+	if e != nil {
+		return nil, e
+	}
+	if m.Kluster == nil {
+		out.NoBlock = kluster.ErrNoBlock.Error()
+		return out, nil
+	}
+	out.Block = true
+	c, err := openKluster(p.Root, m)
+	if err != nil {
+		out.WorkloadsError = klusterRelative(p.Root, err.Error())
+		return out, nil
+	}
+	named := c.Named()
+	out.Cluster, out.Context = named.Name, named.Context
+	if _, err := os.Stat(kluster.KubeconfigPath(p.Root)); err != nil {
+		out.WorkloadsError = fmt.Sprintf("the cluster %s has no kubeconfig at .flai-cache/kluster/kubeconfig yet; bring it up on this page", named.Name)
+		return out, nil
+	}
+	wctx, cancel := context.WithTimeout(ctx, klusterWorkloadsTimeout)
+	defer cancel()
+	nodes, namespaces, err := c.Workloads(wctx)
+	if err != nil {
+		out.WorkloadsError = klusterRelative(p.Root, err.Error())
+		return out, nil
+	}
+	if nodes != nil {
+		out.Nodes = nodes
+	}
+	if namespaces != nil {
+		out.Namespaces = namespaces
+	}
 	return out, nil
 }
 
@@ -958,8 +1336,9 @@ func dirIsThere(path string) bool {
 
 // klusterSpecs are the kluster methods. They run no flai command: build
 // takes no params, and do reads the cluster or asks Host.Kluster for a job.
-// kluster.status and kluster.deployments are reads, answered whatever the
-// host action says; the writes are refused while it is off.
+// kluster.status, kluster.deployments, and kluster.workloads are reads,
+// answered whatever the host action says; the writes are refused while it is
+// off.
 func klusterSpecs() map[string]spec {
 	none := func(channel.Project, json.RawMessage) ([]string, string, *channel.Error) { return nil, "", nil }
 	story := func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
@@ -977,6 +1356,9 @@ func klusterSpecs() map[string]spec {
 		// kluster.deployments: each namespace's deployment, main's first, the
 		// stories in review with none, and the deploy that runs (S-0581).
 		"kluster.deployments": {reads: true, build: none, do: klusterDeployments},
+		// kluster.workloads: the cluster's nodes and each namespace's pods
+		// (S-0586).
+		"kluster.workloads": {reads: true, build: none, do: klusterWorkloads},
 		// kluster.deploy: a story's deploy into its namespace, started.
 		"kluster.deploy": {action: ActionKluster, describe: describeKlusterJob, build: story, do: klusterDeployDo},
 		// kluster.teardown: a story's namespace torn down, started.

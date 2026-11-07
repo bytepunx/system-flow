@@ -79,6 +79,49 @@ func TestDefinedRoleSettingsListARolesAgentScheduleAndPermissions(t *testing.T) 
 // S-0420: settings.manifest writes a defined role's agent, schedule, and
 // permissions with flai manifest set, as it writes the strategic agents'
 // keys, and refuses a key flai manifest set does not write, naming it.
+// S-0586: the dashboard writes the kluster: block's commands as JSON
+// argument lists, which flai manifest set reads as they are, and [] unsets
+// one; anything else is refused naming the key.
+func TestSettingsManifestWritesTheKlusterBlocksCommands(t *testing.T) {
+	args, _, e := manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"kluster.deploy":["scripts/kluster-deploy.sh","--wait"],"kluster.build":[],"kluster.config":"kluster.yaml"}}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	want := []string{"manifest", "set", "--autocommit", "--trailer=" + Trailer, "--",
+		"kluster.build=[]", "kluster.config=kluster.yaml", `kluster.deploy=["scripts/kluster-deploy.sh","--wait"]`}
+	if !slices.Equal(args, want) {
+		t.Errorf("args %q\nwant %q", args, want)
+	}
+	for _, bad := range []string{`"scripts/kluster-deploy.sh"`, `[1,2]`, `{"program":"x"}`, `true`} {
+		_, _, e := manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"kluster.teardown":`+bad+`}}`))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "kluster.teardown") || !strings.Contains(e.Message, "argument list") {
+			t.Errorf("%s is not a command: %+v", bad, e)
+		}
+	}
+}
+
+// S-0586: enabling kluster from the Features page commits the block it
+// writes with the dashboard's trailer; other actions commit nothing, and
+// keep their command as it was.
+func TestEnablingKlusterFromTheDashboardCarriesItsTrailer(t *testing.T) {
+	p := channel.Project{Root: t.TempDir()}
+	args, _, e := toggleAction(p, json.RawMessage(`{"action":"kluster","on":true}`))
+	if e != nil || !slices.Equal(args, []string{"serve", "enable", "kluster", "--trailer=" + Trailer}) {
+		t.Errorf("enable kluster: %q %+v", args, e)
+	}
+	args, _, e = toggleAction(p, json.RawMessage(`{"action":"kluster","on":false}`))
+	if e != nil || !slices.Equal(args, []string{"serve", "disable", "kluster"}) {
+		t.Errorf("disable kluster: %q %+v", args, e)
+	}
+	args, _, e = toggleAction(p, json.RawMessage(`{"action":"push","on":true}`))
+	if e != nil || !slices.Equal(args, []string{"serve", "enable", "push"}) {
+		t.Errorf("enable push: %q %+v", args, e)
+	}
+	if say := sayToggle(json.RawMessage(`{"action":"kluster","on":true}`)); say != "flai serve enable kluster" {
+		t.Errorf("the journal names the command without its trailer: %q", say)
+	}
+}
+
 func TestSettingsManifestWritesARolesKeys(t *testing.T) {
 	args, _, e := manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"roles.reviewer.agent":{"model":"claude-sonnet-5"},"roles.reviewer.schedule":"daily","roles.reviewer.permissions.publish":true},"unset":["roles.reviewer.permissions.answer_threads"]}`))
 	if e != nil {
