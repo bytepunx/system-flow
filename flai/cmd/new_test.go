@@ -219,6 +219,63 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 	}
 }
 
+// A project flai new makes from the template names the default agent the
+// template ships, claude-code with no model, and a story made in it carries
+// a copy of it (ADR-0261 § 2, ADR-0037).
+func TestNewWritesTheTemplatesDefaultAgent(t *testing.T) {
+	t.Parallel()
+	proto := filepath.Join("..", "..", "template")
+	if _, err := os.Stat(filepath.Join(proto, "template.yaml")); err != nil {
+		t.Skip("prototype template not present")
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	dest := filepath.Join(t.TempDir(), "sample")
+	if _, errOut, code := runCLI(t, "new", dest, "--template", proto, "--defaults", "--no-git",
+		"--var", "description=Sample project", "--var", "owner=qa"); code != 0 {
+		t.Fatalf("new: %s", errOut)
+	}
+	m, err := manifest.Load(filepath.Join(dest, manifest.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Agent == nil || m.Agent.Harness != "claude-code" || m.Agent.Model != "" {
+		t.Fatalf("system-flow.yaml's agent = %+v, want harness claude-code and no model", m.Agent)
+	}
+	if _, errOut, code := runIn(t, dest, "story", "new", "First slice"); code != 0 {
+		t.Fatalf("story new: %s", errOut)
+	}
+	if got := storyAgentHarness(t, dest, "S-0001"); got != "claude-code" {
+		t.Errorf("S-0001's agent.harness = %q, want the template's default claude-code copied into it", got)
+	}
+}
+
+// storyAgentHarness is agent.harness in the front matter of the story id in
+// the project at root, "" when it has none.
+func storyAgentHarness(t *testing.T, root, id string) string {
+	t.Helper()
+	paths, _ := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", id+"-*.md"))
+	if len(paths) != 1 {
+		t.Fatalf("story files for %s: %v", id, paths)
+	}
+	b, err := os.ReadFile(paths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.SplitN(string(b), "---\n", 3)
+	if len(parts) < 3 {
+		t.Fatalf("%s has no front matter:\n%s", paths[0], b)
+	}
+	var fm struct {
+		Agent struct {
+			Harness string `yaml:"harness"`
+		} `yaml:"agent"`
+	}
+	if err := yaml.Unmarshal([]byte(parts[1]), &fm); err != nil {
+		t.Fatalf("front matter of %s: %v", paths[0], err)
+	}
+	return fm.Agent.Harness
+}
+
 // withoutFormulaInputs is s, the file rel, slash separated from the project
 // root, with the {{name}} placeholders of the inputs it declares removed when
 // it is a formula file in the design folder's formulas folder (ADR-0238 §4,

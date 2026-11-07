@@ -104,6 +104,27 @@ func TestImportDryRunAndApply(t *testing.T) {
 	}
 }
 
+// A project flai import makes from the template names the default agent the
+// template ships, claude-code with no model (ADR-0261 § 2).
+func TestImportWritesTheTemplatesDefaultAgent(t *testing.T) {
+	t.Parallel()
+	if _, err := os.Stat(filepath.Join("..", "..", "template", "template.yaml")); err != nil {
+		t.Skip("prototype template not present")
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := legacyRepo(t)
+	if out, errOut, code := runIn(t, ".", "import", root, "--template", "../../template", "--yes", "--var", "description=Legacy"); code != 0 {
+		t.Fatalf("import: %s\n%s", errOut, out)
+	}
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Agent == nil || m.Agent.Harness != "claude-code" || m.Agent.Model != "" {
+		t.Errorf("system-flow.yaml's agent = %+v, want harness claude-code and no model", m.Agent)
+	}
+}
+
 // An empty required --var stops flai import before it moves a folder or
 // writes a file (I-0041).
 func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
