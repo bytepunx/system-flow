@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.26 - 2026-11-07
+
+- S-0587 Default harness and agent should work out of the box (patch).
 - S-0587 A new project names a default agent (patch, ADR-0261): `system-flow.yaml` ships `agent: { harness: claude-code }` set rather than commented out, with no model, so the harness's own default model is used. `flai new` and `flai import` write it, and every story made then carries a copy of it.
 
 ## 1.1.25 - 2026-11-07

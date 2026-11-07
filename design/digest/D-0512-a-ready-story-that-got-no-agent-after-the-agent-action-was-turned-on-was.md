@@ -6,8 +6,8 @@ sources: [S-0589, I-0300]
 topics: [flai, cli, go, code]
 paths: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, docs/operators/index.md]
 date: 2026-11-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "docs/operators/index.md#starting-an-agent-when-a-story-becomes-ready"
 asked_again: []
 cited: []
 ---

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2014.4059
-accrued_seconds: 1518446
-tasks_completed: 2167
-last_run: 2026-11-07T12:09:41Z
+accrued_cost: 2014.8011
+accrued_seconds: 1518507
+tasks_completed: 2169
+last_run: 2026-11-07T15:17:57Z
 ---
 
 # Orchestrator activity
@@ -15199,6 +15199,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.1753 USD, estimated
+
+### 2026-11-07T15:17:39Z
+
+- Summary: Release due after S-0587's acceptance: threshold policy met (count 1 >= count threshold 1; value 0 USD/week against 1000; S-0587 unvalued; no batch held by whole_epics). Ran flai formula run publish --ready --autocommit: instance S-0593 (tasks T-2586, T-2587, T-2588) moved to ready, committed 7862aac39. Applied flai order --by throughput --apply: S-0593 alone in ready, at rank 1 (no forecast duration).
+- Items: S-0587, S-0593
+- Seconds: 43
+- Cost: 0.0583 USD, estimated
+
+### 2026-11-07T15:17:57Z
+
+- Summary: I started the release that S-0587's acceptance made due. It hasn't published yet: a story's agent is now working the publish formula.
+- Items: none
+- Seconds: 18
+- Cost: 0.3369 USD, estimated
 
 ## Refusals
 

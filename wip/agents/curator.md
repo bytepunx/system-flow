@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 141.7939
-accrued_seconds: 13597
-tasks_completed: 87
-last_run: 2026-11-07T12:10:37Z
+accrued_cost: 143.8505
+accrued_seconds: 13764
+tasks_completed: 88
+last_run: 2026-11-07T15:18:47Z
 ---
 
 # Curator activity
@@ -707,3 +707,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 46
 - Cost: 1.0591 USD, estimated
+
+### 2026-11-07T15:18:47Z
+
+- Summary: Wrote D-0515, D-0516, D-0517, D-0518 and D-0519; merged S-0543 into D-0427, D-0464 and D-0492; absorbed D-0512 into docs/operators/index.md § "Starting an agent when a story becomes ready"; `flai digest compact` compacted none, and I skipped S-0543's and S-0587's progress notes and the decisions ADR-0261 already records (13 candidates, no threads).
+- Trigger: accepted S-0543
+- Items: D-0427, D-0464, D-0492, D-0512, D-0515, D-0516, D-0517, D-0518, D-0519
+- Seconds: 167
+- Cost: 2.0566 USD, estimated
