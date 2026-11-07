@@ -8,9 +8,8 @@
 	// once when the reader asks for reduced motion. From md the list is sticky at the left of the
 	// content; below md it is one row above it that scrolls within itself. A pane's id should not
 	// be an element id on the page, or following its link scrolls to that element. S-0461: an
-	// entry with an href is a plain link to another page, left to the router, and current while the
-	// page's current names it; an entry with neither href nor mode is a label over its children; and
-	// a header, such as a tree of documents, is drawn in the column above the entries.
+	// entry with no mode is a label over its children, and a header, such as a tree of documents,
+	// is drawn in the column above the entries.
 	import { tick, untrack, type Snippet } from 'svelte';
 	import {
 		PageSidebarState,
@@ -141,16 +140,6 @@
 						data-sidebar-entry={e.id}
 						data-sidebar-label>{@render inner(e)}</span
 					>
-				{:else if kind === 'link'}
-					<!-- eslint-disable svelte/no-navigation-without-resolve -- the page resolve()s the entry's href -->
-					<a
-						class={look}
-						href={e.href}
-						aria-current={isCurrent ? 'page' : undefined}
-						data-sidebar-entry={e.id}
-						data-sidebar-link>{@render inner(e)}</a
-					>
-					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{:else}
 					<a
 						class={look}
