@@ -2,12 +2,12 @@
 id: I-0228
 title: Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
 class: defect
-status: open
+status: closed
 count: 3
 cost: 5m
 first_reported: 2026-10-29T00:56:36Z
 last_reported: 2026-11-07T06:52:33Z
-updated: 2026-11-07T06:52:33Z
+updated: 2026-11-07T07:35:06Z
 ---
 
 # I-0228 Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
@@ -32,3 +32,4 @@ S-0556's agent, in a container reaching flai's MCP server over HTTP, called the 
 ## Remediation
 
 S-0506 fixes `wait_for_events` and `wait_for_work`: over HTTP the server holds one call at most 45 seconds, the bound `permission_prompt` holds there, and then answers `timed_out` for the agent to call again ([ADR-0244](../adrs/0244-over-http-one-wait-for-events-or-wait-for-work-call-holds-at-most-the-45.md)). `verify` has answered at once since S-0546 made the close-out a `flai serve` job, whose `verified` event the agent waits for within that bound ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md)). Still open: a `task_done` or `story_start` slower than 60 seconds over HTTP still meets Claude Code's limit while the server finishes it. A per-server `timeout` in the MCP file S-0508's container adapter writes may lift that limit; it does not replace the bound.
+Closed 2026-11-07T07:35:06Z: S-0583 (ADR-0258): the MCP file flai writes for its HTTP server, pilot's mcp.json in the agent container and the sample flai mcp status prints, names a per-server timeout of 1800000 ms, so task_done, story_start, test, and prime run past Claude Code's 60 seconds; a test call of 126.6 s over HTTP in flai-agent-claude-code:local returned its result, and the timeout held a 660 s call. wait_for_events, wait_for_work, and permission_prompt hold 45 seconds over HTTP (ADR-0244, ADR-0215), and verify answers at once (ADR-0229). A running agent image carries the timeout only once make agent-images rebuilds it; a hand-written MCP file without it stays at 60 s.
