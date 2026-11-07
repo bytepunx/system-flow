@@ -46,6 +46,7 @@ agent:
 planning:
   hour_rate: 150
   agent:
+    harness: container
     model: claude-opus-5-5
 claims:
   shared:

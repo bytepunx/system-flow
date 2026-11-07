@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.1.24 - 2026-11-07
+
+- S-0571 flai serve does not start a defined role that takes items on a schedule entry under each-ready-story, though flai check passes it (patch).
+- S-0555 flai check finds `narrative.missing` outside the story at close-out (patch).
+- S-0558 safety.md says every force push needs confirmation, while git.md exempts flai serve's force-with-lease push of a story's branch (patch).
+- S-0570 A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides (patch).
+- S-0556 flai guard still lists the verify MCP tool among a sub-agent's reads, though it now asks flai serve for a close-out job that commits in the story's worktree (patch).
 - S-0556 A sub-agent can no longer start a close-out that commits (patch): the orchestrator's role file names the MCP tool `verify` in its `tools`, and the rule in `delegation.md` says `flai guard` refuses every sub-agent that tool and `flai verify --job`, rather than leaving it to the prompt. A project whose `orchestrator.md` predates this takes its baseline from `flai upgrade`: until then `flai check` reports `roles.definition` and its orchestrator is refused the tool.
 - S-0571 flai serve starts a role your project defines once for each ready story, in pull order, when a `{schedule: <setting>, when: each-ready-story}` entry comes round, and flai check reports that entry on a role that takes no story (patch). The roles README says so.
 - S-0555 flai check finds `narrative.missing` outside the story at close-out (patch).

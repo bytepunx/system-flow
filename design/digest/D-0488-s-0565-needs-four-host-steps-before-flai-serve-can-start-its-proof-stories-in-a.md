@@ -2,12 +2,12 @@
 id: D-0488
 title: "S-0565 needs four host steps before flai serve can start its proof stories in a container: Recommended: do steps 1 to 3 yourself on the host, in this order, then reply \"done\" here"
 kind: answer
-sources: [TH-0836]
+sources: [TH-0836, S-0565]
 topics: [harness, docker, all]
 paths: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/experiments/README.md, design/issues, design/issues/summary.md]
 date: 2026-11-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md#host-preconditions"
 asked_again: []
 cited: [TH-0826, TH-0828, TH-0836]
 ---
@@ -64,9 +64,9 @@ The answer:
 
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
-For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
-
 Source: design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision
 ```
 
-Source: TH-0836.
+S-0565's narrative (`wip/archive/agents/S-0565.md`, Decisions) gives the story's reason for asking rather than running on the older host: it "asked on TH-0836 for the host upgrade to 1.84.0 rather than running criteria 1 and 2 on 1.83.0: without S-0520's mounts (ADR-0253) a failure inside the container would not show which layer broke. Upgrading the host, rebuilding the images, setting `--login`, and moving the proof stories to ready are the operator's (ADR-0220)." The login folder this host actually uses is in D-0494, not the `~/.claude` of step 3.
+
+Sources: TH-0836, S-0565.
