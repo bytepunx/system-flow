@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -346,31 +347,50 @@ func (c Cluster) Deploy(ctx context.Context, m manifest.Manifest, story, status,
 	return c.deploy(ctx, m, "deploy", t, out)
 }
 
+// ready says why a job cannot run for the project: no kluster: block, no
+// deploy command when deploy is set, or no kubeconfig for the cluster.
+func (c Cluster) ready(m manifest.Manifest, deploy bool) error {
+	if m.Kluster == nil {
+		return ErrNoBlock
+	}
+	if deploy && (len(m.Kluster.Deploy) == 0 || strings.TrimSpace(m.Kluster.Deploy[0]) == "") {
+		return errors.New("the kluster: block of system-flow.yaml names no deploy command; write kluster.deploy, the argument list that deploys into a namespace, and run flai check")
+	}
+	if _, err := os.Stat(KubeconfigPath(c.Root)); err != nil {
+		return fmt.Errorf("the cluster %s has no kubeconfig at %s; bring it up with flai kluster up, then run this again", c.Name, KubeconfigPath(c.Root))
+	}
+	return nil
+}
+
+// withTimeout bounds ctx by kluster.timeout, the most one job may take.
+func withTimeout(ctx context.Context, m manifest.Manifest) (context.Context, context.CancelFunc) {
+	if timeout := m.KlusterTimeout(); timeout > 0 {
+		return context.WithTimeout(ctx, timeout)
+	}
+	return context.WithCancel(ctx)
+}
+
 // deploy runs a deploy of t under the project's lock, recorded as kind.
 func (c Cluster) deploy(ctx context.Context, m manifest.Manifest, kind string, t Target, out io.Writer) (Record, error) {
-	if m.Kluster == nil {
-		return Record{}, ErrNoBlock
-	}
-	if len(m.Kluster.Deploy) == 0 || strings.TrimSpace(m.Kluster.Deploy[0]) == "" {
-		return Record{}, errors.New("the kluster: block of system-flow.yaml names no deploy command; write kluster.deploy, the argument list that deploys into a namespace, and run flai check")
+	if err := c.ready(m, true); err != nil {
+		return Record{}, err
 	}
 	if !hexCommit.MatchString(t.Commit) {
 		return Record{}, fmt.Errorf("%q is not a commit's whole hash; give the head of the checkout %s", t.Commit, t.Dir)
-	}
-	if _, err := os.Stat(KubeconfigPath(c.Root)); err != nil {
-		return Record{}, fmt.Errorf("the cluster %s has no kubeconfig at %s; bring it up with flai kluster up, then run this again", c.Name, KubeconfigPath(c.Root))
 	}
 	release, err := acquire(c.Root, Job{Kind: kind, Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid()})
 	if err != nil {
 		return Record{}, err
 	}
 	defer release()
+	ctx, cancel := withTimeout(ctx, m)
+	defer cancel()
+	return c.runDeploy(ctx, m, t, out)
+}
 
-	if timeout := m.KlusterTimeout(); timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
+// runDeploy deploys t, its logs cleared first and its record written as it
+// goes; the caller holds the project's lock and bounds ctx.
+func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, t Target, out io.Writer) (Record, error) {
 	if err := os.RemoveAll(LogDir(c.Root, t.Namespace)); err != nil {
 		return Record{}, fmt.Errorf("clear the logs of %s's last job: %w", t.Namespace, err)
 	}
@@ -383,7 +403,7 @@ func (c Cluster) deploy(ctx context.Context, m manifest.Manifest, kind string, t
 	if err := writeRecord(c.Root, r); err != nil {
 		return r, err
 	}
-	err = c.steps(ctx, m.Kluster, t, &r, out)
+	err := c.steps(ctx, m.Kluster, t, &r, out)
 	r.EndedAt = time.Now().UTC()
 	r.Outcome = OutcomePassed
 	if err != nil {
@@ -543,4 +563,247 @@ func (c Cluster) importInto(ctx context.Context, tar, node string, log io.Writer
 	}
 	defer func() { _ = f.Close() }()
 	return c.Exec.Command(ctx, Cmd{Dir: c.Root, Stdin: f, Out: log, Name: "docker", Args: []string{"exec", "-i", node, "ctr", "-n", "k8s.io", "images", "import", "-"}})
+}
+
+// ErrNotDeployed says a story has no deployment record, so there is nothing
+// to tear down.
+var ErrNotDeployed = errors.New("no deployment is recorded for it, so there is nothing to tear down")
+
+// Teardown tears story's namespace down: the block's teardown command, when
+// it names one, run in dir with the namespace's variables at the commit its
+// record names, then kubectl delete namespace, which passes over a namespace
+// already gone, both logged to the namespace's teardown log. dir is the
+// story's worktree, or the main checkout when the worktree is gone; empty
+// means the main checkout. On success the record, the state folder, and the
+// logs are removed, and the record as it was is returned. A failure keeps the
+// record, marked failed at the teardown step, and is a StepError. A story
+// with no record is ErrNotDeployed and runs nothing. It runs while no other
+// kluster job runs for the project.
+func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir string, out io.Writer) (Record, error) {
+	if err := c.ready(m, false); err != nil {
+		return Record{}, err
+	}
+	t, err := StoryTarget(story, dir, "")
+	if err != nil {
+		return Record{}, err
+	}
+	if t.Dir == "" {
+		t.Dir = c.Root
+	}
+	release, err := acquire(c.Root, Job{Kind: "teardown", Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid()})
+	if err != nil {
+		return Record{}, err
+	}
+	defer release()
+	r, ok, err := ReadRecord(c.Root, t.Namespace)
+	if err != nil {
+		return Record{}, err
+	}
+	if !ok {
+		return Record{}, fmt.Errorf("%s: %w", t.Story, ErrNotDeployed)
+	}
+	t.Commit = r.Commit
+	ctx, cancel := withTimeout(ctx, m)
+	defer cancel()
+	if err := os.MkdirAll(LogDir(c.Root, t.Namespace), 0o755); err != nil {
+		return r, fmt.Errorf("make the folder %s for the namespace %s: %w", LogDir(c.Root, t.Namespace), t.Namespace, err)
+	}
+	kept := r
+	kept.Steps = slices.Clone(r.Steps)
+	err = c.step(ctx, &kept, t, StepTeardown, out, func(log io.Writer) error {
+		return c.teardown(ctx, m.Kluster, t, log)
+	})
+	if err != nil {
+		kept.EndedAt, kept.Outcome, kept.Error = time.Now().UTC(), OutcomeFailed, err.Error()
+		var se *StepError
+		if errors.As(err, &se) {
+			kept.FailedStep, kept.ExitCode = se.Step, se.ExitCode
+		}
+		if werr := writeRecord(c.Root, kept); werr != nil {
+			return kept, errors.Join(err, werr)
+		}
+		return kept, err
+	}
+	for _, p := range []string{RecordPath(c.Root, t.Namespace), StatePath(c.Root, t.Namespace), LogDir(c.Root, t.Namespace)} {
+		if err := os.RemoveAll(p); err != nil {
+			return r, fmt.Errorf("remove %s, left by the namespace %s once it was torn down: %w; remove it by hand", p, t.Namespace, err)
+		}
+	}
+	return r, nil
+}
+
+// teardown runs the block's teardown command, when it names one, then
+// deletes t's namespace, with their output to log.
+func (c Cluster) teardown(ctx context.Context, k *manifest.Kluster, t Target, log io.Writer) error {
+	env := c.Env(t)
+	if len(k.Teardown) > 0 && strings.TrimSpace(k.Teardown[0]) != "" {
+		if err := c.Exec.Command(ctx, Cmd{Dir: t.Dir, Env: env, Out: log, Name: k.Teardown[0], Args: k.Teardown[1:]}); err != nil {
+			return err
+		}
+	}
+	if _, err := c.Exec.LookPath("kubectl"); err != nil {
+		return fmt.Errorf("kubectl is not on PATH, and flai deletes the namespace %s with it; install kubectl, then tear it down again", t.Namespace)
+	}
+	fmt.Fprintf(log, "deleting the namespace %s\n", t.Namespace)
+	return c.Exec.Command(ctx, Cmd{Dir: c.Root, Env: env, Out: log, Name: "kubectl", Args: []string{"--context", c.Context(), "delete", "namespace", t.Namespace, "--wait", "--ignore-not-found"}})
+}
+
+// MainWorktree is the worktree of main's head a promotion builds and deploys
+// in, which flai keeps under the cluster's folder.
+func MainWorktree(root string) string { return filepath.Join(Dir(root), "main") }
+
+// Promote deploys the head of the main branch branch into the default
+// namespace: it makes, or moves, a detached worktree of that head at
+// MainWorktree, then builds, loads, and deploys there as a story's deploy
+// does, recorded under the default namespace. The worktree is prepared under
+// the project's lock, so two promotions never race on it.
+func (c Cluster) Promote(ctx context.Context, m manifest.Manifest, branch string, out io.Writer) (Record, error) {
+	if err := c.ready(m, true); err != nil {
+		return Record{}, err
+	}
+	ns := m.KlusterNamespace()
+	if _, err := DefaultTarget(m, "", ""); err != nil {
+		return Record{}, err
+	}
+	release, err := acquire(c.Root, Job{Kind: "promote", Namespace: ns, StartedAt: time.Now().UTC(), PID: os.Getpid()})
+	if err != nil {
+		return Record{}, err
+	}
+	defer release()
+	ctx, cancel := withTimeout(ctx, m)
+	defer cancel()
+	commit, err := c.checkoutMain(ctx, branch, out)
+	if err != nil {
+		return Record{}, err
+	}
+	t, err := DefaultTarget(m, MainWorktree(c.Root), commit)
+	if err != nil {
+		return Record{}, err
+	}
+	return c.runDeploy(ctx, m, t, out)
+}
+
+// checkoutMain resolves branch's head in the main checkout and puts the
+// worktree at MainWorktree there, detached, making it when it is absent.
+func (c Cluster) checkoutMain(ctx context.Context, branch string, out io.Writer) (string, error) {
+	git := func(what string, args ...string) (string, error) {
+		var buf bytes.Buffer
+		if err := c.Exec.Command(ctx, Cmd{Dir: c.Root, Out: &buf, Name: "git", Args: args}); err != nil {
+			return "", fmt.Errorf("%s with git %s in %s: %w\n%s", what, strings.Join(args, " "), c.Root, err, strings.TrimSpace(buf.String()))
+		}
+		return strings.TrimSpace(buf.String()), nil
+	}
+	head, err := git("resolve the head of "+branch, "rev-parse", "--verify", branch+"^{commit}")
+	if err != nil {
+		return "", err
+	}
+	if !hexCommit.MatchString(head) {
+		return "", fmt.Errorf("git rev-parse gave %q for the head of %s in %s, not a commit's hash; check the branch, then promote again", head, branch, c.Root)
+	}
+	wt := MainWorktree(c.Root)
+	fmt.Fprintf(out, "checkout of %s at %s in %s\n", branch, head, wt)
+	if _, err := os.Stat(filepath.Join(wt, ".git")); err == nil {
+		if _, err := git("move the worktree "+wt+" to "+head, "-C", wt, "checkout", "--detach", "--force", head); err != nil {
+			return "", err
+		}
+		return head, nil
+	}
+	if err := os.RemoveAll(wt); err != nil {
+		return "", fmt.Errorf("remove %s, a folder that is no worktree, before making the worktree of main there: %w", wt, err)
+	}
+	if _, err := git("prune the worktrees", "worktree", "prune"); err != nil {
+		return "", err
+	}
+	if _, err := git("make the worktree "+wt+" of "+head, "worktree", "add", "--detach", "--force", wt, head); err != nil {
+		return "", err
+	}
+	return head, nil
+}
+
+// OutcomeInterrupted is a record left running by a job that no longer runs:
+// it ended without recording its outcome.
+const OutcomeInterrupted = "interrupted"
+
+// Deployment is a namespace's record as the list shows it: whether it is the
+// default namespace, and the job running against it now, if any.
+type Deployment struct {
+	Record
+	Default bool `json:"default"`
+	Job     *Job `json:"job,omitempty"`
+}
+
+// Deployments lists the namespaces' records kept under root, the default
+// namespace, defaultNS, first, then the stories' by their number, then any
+// other by name. A record whose namespace a running job acts on carries that
+// job; a record that still says running while no job runs for its namespace
+// is shown interrupted. None is an empty list.
+func Deployments(root, defaultNS string) ([]Deployment, error) {
+	entries, err := os.ReadDir(filepath.Join(Dir(root), "deployments"))
+	if errors.Is(err, os.ErrNotExist) {
+		return []Deployment{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list the deployment records under %s: %w", filepath.Join(Dir(root), "deployments"), err)
+	}
+	job, running := Running(root)
+	list := []Deployment{}
+	for _, e := range entries {
+		ns, ok := strings.CutSuffix(e.Name(), ".json")
+		if !ok || e.IsDir() {
+			continue
+		}
+		r, ok, err := ReadRecord(root, ns)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		d := Deployment{Record: r, Default: ns == defaultNS}
+		if running && job.Namespace == ns {
+			j := job
+			d.Job = &j
+		} else if d.Outcome == OutcomeRunning {
+			d.Outcome = OutcomeInterrupted
+		}
+		list = append(list, d)
+	}
+	slices.SortFunc(list, func(a, b Deployment) int {
+		ra, rb := rank(a), rank(b)
+		if ra != rb {
+			return ra - rb
+		}
+		if ra == 1 {
+			if c := storyNumber(a.Namespace) - storyNumber(b.Namespace); c != 0 {
+				return c
+			}
+		}
+		return strings.Compare(a.Namespace, b.Namespace)
+	})
+	return list, nil
+}
+
+// rank orders the default namespace first, then stories', then others.
+func rank(d Deployment) int {
+	switch {
+	case d.Default:
+		return 0
+	case storyNumber(d.Namespace) >= 0:
+		return 1
+	}
+	return 2
+}
+
+// storyNumber is the number of a story namespace such as s-0578, -1 for any
+// other.
+func storyNumber(ns string) int {
+	m := storyID.FindStringSubmatch(ns)
+	if m == nil {
+		return -1
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return -1
+	}
+	return n
 }

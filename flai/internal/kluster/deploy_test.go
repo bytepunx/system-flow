@@ -366,3 +366,287 @@ func TestTargets(t *testing.T) {
 		t.Errorf("the default namespace's target: %+v %v", d, err)
 	}
 }
+
+// fakeKubectl is a kubectl on PATH that logs its arguments and the
+// KUBECONFIG it got to $FAKE_LOG, and exits 5 when $FAKE_KUBECTL_FAIL is set.
+const fakeKubectl = `#!/bin/sh
+echo "kubectl $* KUBECONFIG=$KUBECONFIG" >> "$FAKE_LOG"
+if [ -n "$FAKE_KUBECTL_FAIL" ]; then echo "kubectl broke" >&2; exit 5; fi
+echo "namespace deleted"
+`
+
+// fakeGit is a git on PATH that logs its directory and arguments to
+// $FAKE_LOG; answers rev-parse with $FAKE_HEAD, or fails it when
+// $FAKE_GIT_FAIL is set; and makes the worktree worktree add names, with a
+// .git file and a copy of $FAKE_SCRIPTS as its scripts.
+const fakeGit = `#!/bin/sh
+echo "git $(pwd) $*" >> "$FAKE_LOG"
+case "$1" in
+  rev-parse) if [ -n "$FAKE_GIT_FAIL" ]; then echo "fatal: bad revision" >&2; exit 128; fi; echo "$FAKE_HEAD" ;;
+  worktree) if [ "$2" = "add" ]; then mkdir -p "$5"; echo "gitdir: x" > "$5/.git"; cp -r "$FAKE_SCRIPTS" "$5/scripts"; fi ;;
+esac
+`
+
+// teardownSetup is deploySetup with fake kubectl and git on PATH and a
+// teardown script in the story's worktree.
+func teardownSetup(t *testing.T) deployFixture {
+	t.Helper()
+	f := deploySetup(t)
+	bin := t.TempDir()
+	for name, script := range map[string]string{"kubectl": fakeKubectl, "git": fakeGit} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(f.worktree, "scripts", "teardown.sh"), []byte(fakeStep), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("FAKE_KUBECTL_FAIL", "")
+	t.Setenv("FAKE_GIT_FAIL", "")
+	t.Setenv("FAKE_HEAD", commitA)
+	t.Setenv("FAKE_SCRIPTS", filepath.Join(f.worktree, "scripts"))
+	return f
+}
+
+// reset forgets the calls logged so far.
+func (f deployFixture) reset(t *testing.T) {
+	t.Helper()
+	if err := os.Remove(f.log); err != nil && !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
+}
+
+func (f deployFixture) deployed(t *testing.T, story string) {
+	t.Helper()
+	if _, err := f.c.Deploy(context.Background(), f.m, story, "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+const deleteS0578 = "kubectl --context k3d-authstar-integration delete namespace s-0578 --wait --ignore-not-found KUBECONFIG="
+
+func TestATeardownRunsTheTeardownCommandThenDeletesTheNamespace(t *testing.T) {
+	f := teardownSetup(t)
+	f.deployed(t, "S-0578")
+	f.reset(t)
+	f.m.Kluster.Teardown = []string{"scripts/teardown.sh", "--purge"}
+	r, err := f.c.Teardown(context.Background(), f.m, "S-0578", f.worktree, &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"teardown " + f.worktree + " --purge", deleteS0578 + KubeconfigPath(f.root)}
+	if got := f.calls(t); !slices.Equal(got, want) {
+		t.Errorf("the teardown command, then the namespace deleted:\n got %q\nwant %q", got, want)
+	}
+	env := f.envOf(t, "teardown")
+	if env["FLAI_KLUSTER_NAMESPACE"] != "s-0578" || env["FLAI_KLUSTER_PREFIX"] != "s0578_" || env["FLAI_KLUSTER_COMMIT"] != commitA || env["FLAI_STORY"] != "S-0578" {
+		t.Errorf("the teardown command gets the namespace's variables at the recorded commit: %v", env)
+	}
+	if r.Namespace != "s-0578" || r.Commit != commitA {
+		t.Errorf("the record torn down is returned: %+v", r)
+	}
+	for _, p := range []string{RecordPath(f.root, "s-0578"), StatePath(f.root, "s-0578"), LogDir(f.root, "s-0578")} {
+		if _, err := os.Stat(p); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("%s is removed once the namespace is torn down: %v", p, err)
+		}
+	}
+	if _, ok := Running(f.root); ok {
+		t.Error("no job runs once the teardown ends")
+	}
+}
+
+func TestATeardownWithoutATeardownCommandDeletesOnlyTheNamespace(t *testing.T) {
+	f := teardownSetup(t)
+	f.deployed(t, "S-0578")
+	f.reset(t)
+	if _, err := f.c.Teardown(context.Background(), f.m, "s-0578", "", &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.calls(t); !slices.Equal(got, []string{deleteS0578 + KubeconfigPath(f.root)}) {
+		t.Errorf("only the namespace is deleted: %q", got)
+	}
+	if _, ok, _ := ReadRecord(f.root, "s-0578"); ok {
+		t.Error("the record is removed")
+	}
+}
+
+func TestATeardownOfAStoryNeverDeployedRunsNothing(t *testing.T) {
+	f := teardownSetup(t)
+	_, err := f.c.Teardown(context.Background(), f.m, "S-0578", f.worktree, &bytes.Buffer{})
+	if !errors.Is(err, ErrNotDeployed) || !strings.Contains(err.Error(), "S-0578") {
+		t.Errorf("a story never deployed says so: %v", err)
+	}
+	if calls := f.calls(t); len(calls) != 0 {
+		t.Errorf("nothing runs: %q", calls)
+	}
+}
+
+func TestATeardownThatFailsKeepsTheRecord(t *testing.T) {
+	for _, tc := range []struct {
+		name, fail, kubectl string
+		code                int
+		calls               int
+	}{
+		{name: "command", fail: "teardown", code: 3, calls: 1},
+		{name: "kubectl", kubectl: "yes", code: 5, calls: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := teardownSetup(t)
+			f.deployed(t, "S-0578")
+			f.reset(t)
+			f.m.Kluster.Teardown = []string{"scripts/teardown.sh"}
+			t.Setenv("FAKE_FAIL", tc.fail)
+			t.Setenv("FAKE_KUBECTL_FAIL", tc.kubectl)
+			r, err := f.c.Teardown(context.Background(), f.m, "S-0578", f.worktree, &bytes.Buffer{})
+			var se *StepError
+			if !errors.As(err, &se) || se.Step != StepTeardown || se.ExitCode != tc.code || !strings.Contains(err.Error(), LogPath(f.root, "s-0578", StepTeardown)) {
+				t.Fatalf("the failure names the teardown step, its exit code %d, and its log: %v", tc.code, err)
+			}
+			if n := len(f.calls(t)); n != tc.calls {
+				t.Errorf("nothing runs after the failure: %q", f.calls(t))
+			}
+			kept, ok, _ := ReadRecord(f.root, "s-0578")
+			if !ok || kept.Outcome != OutcomeFailed || kept.FailedStep != StepTeardown || kept.ExitCode != tc.code || kept.Commit != commitA {
+				t.Errorf("the record is kept, failed at the teardown: %+v", kept)
+			}
+			if last := kept.Steps[len(kept.Steps)-1]; last.Name != StepTeardown || last.Outcome != OutcomeFailed {
+				t.Errorf("the teardown is the record's last step: %+v", kept.Steps)
+			}
+			if r.FailedStep != StepTeardown {
+				t.Errorf("the record returned says so too: %+v", r)
+			}
+			if _, err := os.Stat(StatePath(f.root, "s-0578")); err != nil {
+				t.Errorf("the state folder stays: %v", err)
+			}
+		})
+	}
+}
+
+func TestPromoteDeploysMainsHeadIntoTheDefaultNamespace(t *testing.T) {
+	f := teardownSetup(t)
+	wt := MainWorktree(f.root)
+	r, err := f.c.Promote(context.Background(), f.m, "main", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := f.calls(t)
+	want := []string{
+		"git " + f.root + " rev-parse --verify main^{commit}",
+		"git " + f.root + " worktree prune",
+		"git " + f.root + " worktree add --detach --force " + wt + " " + commitA,
+		"build " + wt + " --all",
+	}
+	if len(calls) < len(want)+1 || !slices.Equal(calls[:len(want)], want) || calls[len(calls)-1] != "deploy "+wt {
+		t.Errorf("the worktree of main's head is made, then built and deployed there:\n got %q\nwant %q then deploy", calls, want)
+	}
+	env := f.envOf(t, "deploy")
+	if env["FLAI_STORY"] != "" || env["FLAI_KLUSTER_NAMESPACE"] != "authstar" || env["FLAI_KLUSTER_PREFIX"] != "" || env["FLAI_KLUSTER_TAG"] != "main-0123456789ab" || env["FLAI_KLUSTER_COMMIT"] != commitA {
+		t.Errorf("deploy gets the default namespace's variables: %v", env)
+	}
+	if r.Outcome != OutcomePassed || r.Story != "" || r.Namespace != "authstar" || r.Checkout != wt || r.Commit != commitA {
+		t.Errorf("the promotion is recorded under the default namespace: %+v", r)
+	}
+
+	f.reset(t)
+	t.Setenv("FAKE_HEAD", commitB)
+	r, err = f.c.Promote(context.Background(), f.m, "main", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := f.calls(t); len(got) < 2 || got[1] != "git "+f.root+" -C "+wt+" checkout --detach --force "+commitB {
+		t.Errorf("a second promotion moves the worktree to the new head: %q", got)
+	}
+	if r.Commit != commitB || r.Tag != "main-fedcba987654" {
+		t.Errorf("the record is the new head's: %+v", r)
+	}
+}
+
+func TestAPromotionThatFails(t *testing.T) {
+	f := teardownSetup(t)
+	t.Setenv("FAKE_FAIL", "deploy")
+	r, err := f.c.Promote(context.Background(), f.m, "main", &bytes.Buffer{})
+	var se *StepError
+	if !errors.As(err, &se) || se.Step != StepDeploy || se.Namespace != "authstar" {
+		t.Fatalf("a failed deploy of main names the step: %v", err)
+	}
+	if kept, _, _ := ReadRecord(f.root, "authstar"); kept.Outcome != OutcomeFailed || kept.FailedStep != StepDeploy || r.FailedStep != StepDeploy {
+		t.Errorf("the failure is recorded under the default namespace: %+v", kept)
+	}
+
+	g := teardownSetup(t)
+	t.Setenv("FAKE_FAIL", "")
+	t.Setenv("FAKE_GIT_FAIL", "yes")
+	if _, err := g.c.Promote(context.Background(), g.m, "trunk", &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "trunk") || !strings.Contains(err.Error(), "bad revision") {
+		t.Errorf("a branch git cannot resolve is named, with git's words: %v", err)
+	}
+	for _, c := range g.calls(t) {
+		if !strings.HasPrefix(c, "git ") {
+			t.Errorf("nothing but git runs when the head cannot be resolved: %q", c)
+		}
+	}
+	if _, ok := Running(g.root); ok {
+		t.Error("the lock is released")
+	}
+}
+
+func TestDeploymentsListsTheDefaultNamespaceFirst(t *testing.T) {
+	f := teardownSetup(t)
+	if list, err := Deployments(f.root, "authstar"); err != nil || list == nil || len(list) != 0 {
+		t.Errorf("no records is an empty list: %v %v", list, err)
+	}
+	f.deployed(t, "S-0578")
+	f.deployed(t, "S-0012")
+	f.deployed(t, "S-1000")
+	if _, err := f.c.Promote(context.Background(), f.m, "main", &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	list, err := Deployments(f.root, "authstar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, d := range list {
+		got = append(got, d.Namespace)
+		if d.Job != nil {
+			t.Errorf("no job runs: %+v", d)
+		}
+	}
+	if !slices.Equal(got, []string{"authstar", "s-0012", "s-0578", "s-1000"}) {
+		t.Errorf("the default namespace first, then the stories by number: %q", got)
+	}
+	if !list[0].Default || list[1].Default {
+		t.Errorf("only the default namespace is marked default: %+v", list[:2])
+	}
+
+	release, err := acquire(f.root, Job{Kind: "teardown", Story: "S-0578", Namespace: "s-0578", StartedAt: time.Now().UTC(), PID: 7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	stale, _, _ := ReadRecord(f.root, "s-0012")
+	stale.Outcome, stale.EndedAt = OutcomeRunning, time.Time{}
+	if err := writeRecord(f.root, stale); err != nil {
+		t.Fatal(err)
+	}
+	list, err = Deployments(f.root, "authstar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range list {
+		switch d.Namespace {
+		case "s-0578":
+			if d.Job == nil || d.Job.Kind != "teardown" {
+				t.Errorf("the namespace a job acts on carries it: %+v", d)
+			}
+		case "s-0012":
+			if d.Outcome != OutcomeInterrupted || d.Job != nil {
+				t.Errorf("a record left running with no job is interrupted: %+v", d)
+			}
+		default:
+			if d.Job != nil {
+				t.Errorf("a namespace no job acts on carries none: %+v", d)
+			}
+		}
+	}
+}
