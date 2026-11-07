@@ -7,7 +7,7 @@ count: 2
 cost: 5m
 first_reported: 2026-10-29T07:33:59Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-07T23:38:58Z
 usage:
   strategic:
     - kind: analyzer
@@ -50,3 +50,5 @@ wip/agents/orchestrator.md Refusals: 105 entries 2026-10-25 to 2026-11-07, 42 th
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0613 remediates this issue, created from it at 2026-11-07T23:38:58Z.
