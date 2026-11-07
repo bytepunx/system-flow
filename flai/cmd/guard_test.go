@@ -700,3 +700,69 @@ func TestGuardReadsTheInputWithTheHarnessesReader(t *testing.T) {
 		t.Errorf("no reader: code %d, stderr %q", code, errOut)
 	}
 }
+
+// S-0407: flai guard --harness opencode reads the OpenCode plugin's input: a
+// sub-agent's flai write, through flai's MCP tool or the shell, and its
+// write in a .claude/ folder are refused with exit 2 and why on standard
+// error, as with --harness claude-code; the story's agent's own calls pass
+// with exit 0 and nothing written; a patch is refused when any file it writes
+// is; and a sub-agent's session is recorded from its creation to its task's
+// end.
+func TestGuardReadsAnOpenCodePluginsCall(t *testing.T) {
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_STORY", "S-0001")
+	root := tempProject(t)
+	child := map[string]string{"id": "ses_2", "parentID": "ses_1", "agent": "explorer"}
+	own := map[string]string{"id": "ses_1", "agent": "build"}
+	call := func(event, tool string, args any, session map[string]string) string {
+		in, _ := json.Marshal(map[string]any{"event": event, "tool": tool, "sessionID": session["id"], "callID": "c1", "args": args, "session": session})
+		return string(in)
+	}
+	claude := filepath.Join(root, ".claude", "settings.json")
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{call("tool.execute.before", "flai_item_move", map[string]string{"id": "S-1", "to": "review"}, child), exitGuardRefused, "a sub-agent (explorer) cannot call item_move"},
+		{call("tool.execute.before", "bash", map[string]string{"command": "flai move S-1 review"}, child), exitGuardRefused, `a sub-agent (explorer) cannot run "flai move S-1 review"`},
+		{call("tool.execute.before", "write", map[string]string{"filePath": claude, "content": "{}"}, child), exitGuardRefused, "a sub-agent (explorer) cannot use write on " + claude},
+		{call("tool.execute.before", "apply_patch", map[string]string{"patchText": "*** Begin Patch\n*** Update File: flai/a.go\n*** Add File: .claude/agents/x.md\n*** End Patch"}, child), exitGuardRefused, "cannot use apply_patch on .claude/agents/x.md"},
+		{call("tool.execute.before", "bash", map[string]string{"command": "make test"}, child), 0, ""},
+		{call("tool.execute.before", "flai_item_move", map[string]string{"id": "S-1", "to": "review"}, own), 0, ""},
+		{call("", "bash", map[string]string{"command": "flai move S-1 review"}, own), 0, ""},
+		{call("tool.execute.before", "write", map[string]string{"filePath": filepath.Join(root, "flai", "a.go")}, child), 0, ""},
+	} {
+		_, errOut, code := runStdin(t, root, c.in, "guard", "--harness", "opencode")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+	dir := filepath.Join(root, ".flai-cache", "guard")
+	running := func() []string {
+		t.Helper()
+		subs, err := guard.Running(dir, "ses_1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, s := range subs {
+			got = append(got, s.ID+" "+s.Type)
+		}
+		return got
+	}
+	for _, c := range []struct {
+		in   string
+		want []string
+	}{
+		{call("session.created", "", nil, child), []string{"ses_2 explorer"}},
+		{call("tool.execute.after", "task", nil, child), nil},
+	} {
+		if out, errOut, code := runStdin(t, root, c.in, "guard", "--harness", "opencode"); code != 0 || out != "" || errOut != "" {
+			t.Errorf("%s: code %d, stdout %q, stderr %q", c.in, code, out, errOut)
+		}
+		if got := running(); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("after %s: running %v, want %v", c.in, got, c.want)
+		}
+	}
+}

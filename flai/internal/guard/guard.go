@@ -822,16 +822,40 @@ type Reader interface {
 	Answer(v Verdict, stderr io.Writer) int
 }
 
-// Hook is what one hook input asks of the guard: a decision on Call, or,
-// when SubAgent is set, a change to the record of running sub-agents.
+// Hook is what one hook input asks of the guard: a decision on Call, and on
+// each call of Also, which the same tool call makes too, such as each further
+// file an OpenCode patch writes; or, when SubAgent is set, a change to the
+// record of running sub-agents.
 type Hook struct {
 	Call     Call
+	Also     []Call
 	SubAgent *SubAgentChange
+}
+
+// Calls are the calls h asks a decision on: Call, then each of Also.
+func (h Hook) Calls() []Call { return append([]Call{h.Call}, h.Also...) }
+
+// DecideAll decides on each of calls under g's policy, as Decide does, and
+// answers the first refusal, else the first Ask, else lets them through: a
+// tool call that makes several is refused when any one is.
+func DecideAll(g Guard, calls []Call) Verdict {
+	var asked Verdict
+	for _, c := range calls {
+		switch v := Decide(g, c); v.Outcome {
+		case Deny:
+			return v
+		case Ask:
+			if asked.Outcome == Allow {
+				asked = v
+			}
+		}
+	}
+	return asked
 }
 
 // readers are the harnesses' readers, by the name flai guard --harness
 // takes.
-var readers = map[string]Reader{ClaudeCode: claudeCode{}}
+var readers = map[string]Reader{ClaudeCode: claudeCode{}, OpenCode: openCode{}}
 
 // ReaderFor is the reader of a harness's hook input, by the harness's name,
 // and whether there is one.

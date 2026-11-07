@@ -126,10 +126,10 @@ func TestClaudeCodesReaderPassesAStoryAgentsProtectedWriteOnToAsk(t *testing.T) 
 	}
 }
 
-// S-0353: claude-code is the one harness with a reader, and a harness with
-// none has no reader.
+// S-0353, S-0407: claude-code and opencode are the harnesses with a reader,
+// and a harness with none has no reader.
 func TestReadersAreByHarness(t *testing.T) {
-	if got := Harnesses(); !slices.Equal(got, []string{ClaudeCode}) {
+	if got := Harnesses(); !slices.Equal(got, []string{ClaudeCode, OpenCode}) {
 		t.Errorf("harnesses %v", got)
 	}
 	if _, ok := ReaderFor("codex"); ok {

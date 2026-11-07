@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -63,10 +64,27 @@ PATH is not left unguarded (ADR-0235).
 
 --harness names the harness whose hook runs it, and so the reader of the
 hook's input and of the answer it expects (S-0353). claude-code, the
-default and the only reader there is, reads a Claude Code hook's input, as
-this help says, and answers a refusal with exit 2 and why on standard
-error. The reader turns the input into a call that names no harness, which
-the rules below decide on. A harness with no reader passes the call, with a
+default, reads a Claude Code hook's input, as this help says, and answers a
+refusal with exit 2 and why on standard error.
+
+opencode reads what the plugin .opencode/plugins/flai-guard.js hands it
+(S-0407): one JSON object with event (tool.execute.before, the default,
+session.created, or tool.execute.after), tool, sessionID, callID, args, and
+session, the session the event is about, with its id, parentID, and agent.
+A call from a session with a parentID is a sub-agent's, named by its agent:
+OpenCode's Task tool runs a sub-agent in a child session of its caller's.
+bash is a shell command line, edit, write, and multiedit write their
+filePath, apply_patch writes each file its patchText names, each decided
+on and the first refusal answered, and flai_<tool> is flai's MCP tool
+<tool>. A session.created with a parentID records the sub-agent starting in
+its parent's session, and a task's tool.execute.after records it stopping,
+as SubagentStart and SubagentStop do. It answers a refusal with exit 2 and
+why on standard error, which the plugin throws with, and passes every other
+call with exit 0; a write this guard would put to the story's owner passes
+on to OpenCode's own permission rules.
+
+Each reader turns the input into a call that names no harness, which the
+rules below decide on. A harness with no reader passes the call, with a
 warning on standard error naming the readers there are: the guard fails
 open (ADR-0060).
 
@@ -321,6 +339,9 @@ neither is set, a file edit does not run it.`,
 				a.recordSubAgent(*h.SubAgent)
 				return nil
 			}
+			// every call of one tool call shares its caller, its session, and
+			// its kind; an OpenCode patch makes one per file it writes
+			calls := h.Calls()
 			call := h.Call
 			// the orchestrator's permissions, and the activity document its
 			// refusals are logged in; guardRole gives it its role file
@@ -335,7 +356,8 @@ neither is set, a file edit does not run it.`,
 			if guard.HeldByFile(g.Role) && !call.Subagent {
 				a.guardRole(&g, cmd.Root())
 			}
-			if _, ok := guard.ProtectedWrite(call); ok && (call.Subagent || g.Role == "" && g.Story != "") {
+			protectedWrite := slices.ContainsFunc(calls, func(c guard.Call) bool { _, ok := guard.ProtectedWrite(c); return ok })
+			if protectedWrite && (call.Subagent || g.Role == "" && g.Story != "") {
 				g.AutoApprove = a.guardAutoApprove()
 			}
 			if g.Role == "" && g.Story != "" && !call.Subagent {
@@ -344,7 +366,7 @@ neither is set, a file edit does not run it.`,
 			if call.Subagent && call.Kind == guard.Shell {
 				g.ReadOnly = a.guardReadOnly()
 			}
-			v := guard.Decide(g, call)
+			v := guard.DecideAll(g, calls)
 			code := reader.Answer(v, a.errOut)
 			if v.Outcome != guard.Allow && repo != nil && v.Call != "" {
 				if _, err := repo.AppendRefusal(workitem.ActivityOrchestrator, workitem.ActivityRefusal{At: a.now(), Call: v.Call, Needs: v.Needs}); err != nil {

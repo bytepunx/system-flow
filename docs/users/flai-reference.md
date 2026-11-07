@@ -2150,7 +2150,11 @@ Reads a Claude Code PreToolUse hook's input on standard input and refuses the ca
 
 The hooks in .claude/settings.json judge the guard's exit code: 0 and any exit but 2, 126, and 127 pass the call; 2 refuses it with the guard's output; 126 and 127, the guard not found or not executable, refuse it with "flai guard did not run (exit N)", so a host or an image without flai on PATH is not left unguarded (ADR-0235).
 
---harness names the harness whose hook runs it, and so the reader of the hook's input and of the answer it expects (S-0353). claude-code, the default and the only reader there is, reads a Claude Code hook's input, as this help says, and answers a refusal with exit 2 and why on standard error. The reader turns the input into a call that names no harness, which the rules below decide on. A harness with no reader passes the call, with a warning on standard error naming the readers there are: the guard fails open (ADR-0060).
+--harness names the harness whose hook runs it, and so the reader of the hook's input and of the answer it expects (S-0353). claude-code, the default, reads a Claude Code hook's input, as this help says, and answers a refusal with exit 2 and why on standard error.
+
+opencode reads what the plugin .opencode/plugins/flai-guard.js hands it (S-0407): one JSON object with event (tool.execute.before, the default, session.created, or tool.execute.after), tool, sessionID, callID, args, and session, the session the event is about, with its id, parentID, and agent. A call from a session with a parentID is a sub-agent's, named by its agent: OpenCode's Task tool runs a sub-agent in a child session of its caller's. bash is a shell command line, edit, write, and multiedit write their filePath, apply\_patch writes each file its patchText names, each decided on and the first refusal answered, and flai\_&lt;tool&gt; is flai's MCP tool &lt;tool&gt;. A session.created with a parentID records the sub-agent starting in its parent's session, and a task's tool.execute.after records it stopping, as SubagentStart and SubagentStop do. It answers a refusal with exit 2 and why on standard error, which the plugin throws with, and passes every other call with exit 0; a write this guard would put to the story's owner passes on to OpenCode's own permission rules.
+
+Each reader turns the input into a call that names no harness, which the rules below decide on. A harness with no reader passes the call, with a warning on standard error naming the readers there are: the guard fails open (ADR-0060).
 
 A sub-agent's Edit, MultiEdit, Write, or NotebookEdit of a file in a .claude/ folder, one with a folder named .claude along its path, is refused unless the operator enabled the project's auto-approve host action (flai serve enable auto-approve) (S-0299): Claude Code asks a person before each such write, and flai's MCP tool permission\_prompt asks the operator on a thread, which would hold the call, and the sub-agent's layer with it, until they answer. The refusal names the sub-agent and the file and tells it to put the file's whole new content in its final message, for the story's agent to write. A configuration or project it cannot read counts auto-approve as off. The story's agent's own writes, and every write outside a .claude/ folder, pass.
 
@@ -2196,7 +2200,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--harness` string | the harness whose hook runs the guard, which names the reader of its input: claude-code (default `claude-code`) |
+| `--harness` string | the harness whose hook runs the guard, which names the reader of its input: claude-code, opencode (default `claude-code`) |
 
 ### flai host
 
