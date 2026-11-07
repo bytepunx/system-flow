@@ -175,6 +175,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newRoleCmd(a))
 	root.AddCommand(newFormulaCmd(a))
 	root.AddCommand(newActivityCmd(a))
+	root.AddCommand(newKlusterCmd(a))
 	return root
 }
 

@@ -447,6 +447,50 @@ func TestServeFormulaAction(t *testing.T) {
 	}
 }
 
+// S-0577: kluster is off until the operator enables it, the dashboard's
+// settings page lists it, and enable refuses a project whose manifest has no
+// kluster: block, naming the block to add, while disable and --all-projects
+// are not refused (ADR-0254).
+func TestServeKlusterAction(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	bare := tempProject(t)
+	enabled := func(root string) bool {
+		t.Helper()
+		cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.ActionEnabled(hostapi.ActionKluster, root)
+	}
+	if out, _, _ := runIn(t, bare, "serve", "actions"); !strings.Contains(out, "kluster: off everywhere") {
+		t.Errorf("actions names it, off: %s", out)
+	}
+	if _, errOut, code := runIn(t, bare, "serve", "enable", "kluster"); code == 0 || !strings.Contains(errOut, "has no kluster: block") || !strings.Contains(errOut, "config: integration/kluster.yaml") {
+		t.Fatalf("enable without a block is refused, naming the block: %d %s", code, errOut)
+	}
+	if enabled(bare) {
+		t.Error("a refused enable turned it on")
+	}
+	if out, errOut, code := runIn(t, bare, "serve", "disable", "kluster"); code != 0 || !strings.Contains(out, "kluster disabled for t") {
+		t.Errorf("disable without a block: %d %s %s", code, out, errOut)
+	}
+
+	root := tempProject(t)
+	m := filepath.Join(root, "system-flow.yaml")
+	b, _ := os.ReadFile(m)
+	writeFiles(t, root, map[string]string{
+		"system-flow.yaml":         string(b) + "kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n",
+		"integration/kluster.yaml": "name: demo\n",
+	})
+	if out, errOut, code := runIn(t, root, "serve", "enable", "kluster"); code != 0 || !strings.Contains(out, "kluster enabled for t") || !strings.Contains(out, "flai serve disable kluster") {
+		t.Fatalf("enable with a block: %d %s %s", code, out, errOut)
+	}
+	if !enabled(root) {
+		t.Error("enabled, the host's configuration does not say so")
+	}
+}
+
 // S-0223: analyze is off until the operator enables it, flai serve is told
 // whether it is on, and agent.status carries the project's newest analyzer
 // run, with its focus, trigger, outcome, report, and log, null before the

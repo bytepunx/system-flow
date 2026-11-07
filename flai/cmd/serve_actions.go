@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
@@ -296,6 +297,10 @@ to the project in the working directory, or to every project with
 				}
 				root, where = mainRootOf(repo), repo.Manifest.Name
 				roots = []string{root}
+				// a project with no kluster: block has no cluster to run (ADR-0254)
+				if on && action == hostapi.ActionKluster && repo.Manifest.Kluster == nil {
+					return kluster.ErrNoBlock
+				}
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
