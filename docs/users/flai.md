@@ -1831,7 +1831,73 @@ flai refuses, exit 1, with a sentence that says what to do:
 
 `flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, a missing `deploy`, or a `timeout` that is not a duration.
 
-These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up` and `down`, which change shared infrastructure on your machine; any agent may run `status`. `flai serve enable kluster` turns the host action on, and is refused for a project with no block ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
+### Deploy a story, tear it down, and promote main
+
+Once the cluster is up, `flai kluster` deploys a story's change into a namespace of its own, and main into the default namespace:
+
+```bash
+flai kluster deploy S-0578          # build, load, and deploy the story into s-0578
+flai kluster deployments            # what each namespace holds, main's first
+flai kluster teardown S-0578 --yes  # remove the story's namespace
+flai kluster promote                # build, load, and deploy main's head into the default namespace
+```
+
+`deploy` works on a story in progress or in review that has a worktree. It runs in the worktree, at its head, in three steps:
+
+1. **build**: the block's `build` command, which builds the images and lists them in the file `FLAI_KLUSTER_IMAGES` names. A block with no `build` skips build and load.
+2. **load**: flai loads each listed image into every node of the cluster with `docker save` and `docker exec ... ctr images import`.
+3. **deploy**: the block's `deploy` command, into the story's namespace, its ID in lower case.
+
+Each command gets the namespace's variables, such as `FLAI_KLUSTER_NAMESPACE`, `FLAI_KLUSTER_TAG`, and `KUBECONFIG` ([kluster.md](../../design/system/kluster.md#the-steps-and-their-variables)). flai prints each step as it starts, then the record:
+
+```text
+s-0578: build, log /home/you/project/.flai-cache/kluster/logs/s-0578/build.log
+s-0578: load, log /home/you/project/.flai-cache/kluster/logs/s-0578/load.log
+s-0578: deploy, log /home/you/project/.flai-cache/kluster/logs/s-0578/deploy.log
+S-0578 in s-0578: passed
+  commit  3f2a9c0d41b7e8a6c5d4f3e2a1b0c9d8e7f6a5b4
+  tag     s-0578-3f2a9c0d41b7
+  images  authstar/tower:s-0578-3f2a9c0d41b7
+  build    passed, log /home/you/project/.flai-cache/kluster/logs/s-0578/build.log
+  load     passed, log /home/you/project/.flai-cache/kluster/logs/s-0578/load.log
+  deploy   passed, log /home/you/project/.flai-cache/kluster/logs/s-0578/deploy.log
+```
+
+A step that fails stops the deploy. flai prints the record and exits 1:
+
+```text
+S-0578 in s-0578: failed
+  ...
+  deploy   failed, exit code 3, log /home/you/project/.flai-cache/kluster/logs/s-0578/deploy.log
+```
+
+The error it logs on standard error names the step, its exit code, and its log:
+
+```text
+the deploy step for the namespace s-0578 failed with exit code 3: exit status 3; read its log /home/you/project/.flai-cache/kluster/logs/s-0578/deploy.log, fix the cause, and run it again
+```
+
+Deploy again at a new commit to update the namespace in place.
+
+- Each step's output is in `.flai-cache/kluster/logs/<namespace>/<step>.log`, cleared at each deploy. The record of each namespace's last job is `.flai-cache/kluster/deployments/<namespace>.json`: its commit, tag, images, outcome, and each step's outcome, times, and log.
+- `teardown` runs the block's `teardown` command, when it names one, then deletes the namespace with `kubectl delete namespace`. It runs in the story's worktree, or in the main checkout once the worktree is gone. It asks first on a terminal; `--yes` answers, and is needed without a terminal. When it passes, flai removes the namespace's record, state folder, and logs. A story never deployed has nothing to tear down: flai says so and exits 0.
+- `promote` puts a worktree of the main branch's head at `.flai-cache/kluster/main` and deploys it, as `deploy` does a story, into the default namespace, `kluster.namespace` or the project's name. The images are tagged `main-` and the commit's first 12 digits.
+- `deployments` lists the records, the default namespace's first, then the stories' by number:
+
+```text
+NAMESPACE  STORY   COMMIT        OUTCOME         ENDED
+authstar   (main)  9b1e4f7a2c3d  passed          2026-11-07T01:12:40Z
+s-0578     S-0578  3f2a9c0d41b7  deploy running  -
+s-0581     S-0581  0c7d2e9f1a4b  failed          2026-11-07T00:58:02Z
+```
+
+A namespace a job acts on now shows that job. A record left `running` by a job that ended without its outcome shows `interrupted`.
+
+With `--json`, `deploy`, `teardown`, and `promote` print the record, and the step lines go to standard error; `deployments` prints an array of records, each with `default` and, while a job runs on it, `job`.
+
+One job runs at a time per project. A second `deploy`, `teardown`, or `promote` while one runs is refused, naming the job that runs. flai also refuses a story not in progress or in review, a story with no worktree, and a cluster with no kubeconfig: bring it up with `flai kluster up` first.
+
+These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. `flai serve enable kluster` turns the host action on, and is refused for a project with no block ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
 
 ## Check the repository
 

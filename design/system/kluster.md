@@ -24,7 +24,9 @@ What flai keeps, all under `.flai-cache/kluster/`:
 | Path | What it holds |
 |------|---------------|
 | `kubeconfig` | The cluster's kubeconfig |
-| one record per namespace | Its commit, the outcome and times of each step, and the job's log |
+| `deployments/<namespace>.json` | The namespace's record: its commit, the outcome and times of each step, and their logs |
+| `logs/<namespace>/<step>.log` | Each step's output in the namespace's last job, and `images`, the list the build wrote |
+| `job.lock`, `job.json` | The project's job lock, and the job that holds it |
 | `state/<namespace>/` | The namespace's state folder, `FLAI_KLUSTER_STATE` |
 | `main/` | A worktree of main's head, where a promotion builds and deploys |
 
@@ -70,7 +72,7 @@ Each command is an argument list, run as it stands, never through a shell, as th
 A deploy is the first three steps, and a teardown the fourth:
 
 1. **Build.** `build` builds the project's images in the checkout and writes each reference, one a line, to `FLAI_KLUSTER_IMAGES`.
-2. **Load.** flai loads each listed image into every node of the cluster: `docker save <image>` piped into `docker exec -i <node> ctr -n k8s.io images import -`, for each container labelled `k3d.cluster=<name>` with `k3d.role` `server` or `agent`. Once kluster has an image import, flai calls that instead.
+2. **Load.** flai loads each listed image into every node of the cluster: `docker save -o` into a temporary file, which is then fed to `docker exec -i <node> ctr -n k8s.io images import -`, for each container labelled `k3d.cluster=<name>` with `k3d.role` `server` or `agent`. Once kluster has an image import, flai calls that instead.
 3. **Deploy.** `deploy` makes the namespace's settings and applies the manifests, with the images tagged `FLAI_KLUSTER_TAG`.
 4. **Teardown.** `teardown` removes the namespace's settings in the shared services; then flai deletes the namespace with `kubectl delete namespace --wait`. A namespace already gone is torn down.
 
@@ -150,7 +152,7 @@ E-0032 gives the dashboard's rail an Ops group with two pages, each behind the `
 
 ## Commands (S-0577, S-0578)
 
-S-0577 built `flai kluster up`, `down`, and `status`, the check of the `kluster:` block, the `kluster` host action, and the guard's rule. S-0578 adds `deploy`, `teardown`, and `promote`, with the image load.
+S-0577 built `flai kluster up`, `down`, and `status`, the check of the `kluster:` block, the `kluster` host action, and the guard's rule. S-0578 built `deploy`, `teardown`, `promote`, and `deployments`, with the image load, the job lock, the records, and the logs.
 
 The commands run `kluster` in the project's main checkout, with the block's config, whatever the host action says (`flai/internal/kluster`, `flai/cmd/kluster.go`). Each passes `--config <config> --provider <provider>`, the provider as the config names it.
 
@@ -159,6 +161,10 @@ The commands run `kluster` in the project's main checkout, with the block's conf
 | `flai kluster up` | `kluster up`, its output streamed; then `kluster kubeconfig --name <name> --output .flai-cache/kluster/kubeconfig` | kluster's output, then the cluster's name, the kubeconfig's path, and the context `k3d-<name>` | 1 when either fails, naming the step; a failed `up` writes no kubeconfig |
 | `flai kluster down [--yes]` | `kluster down --name <name> --yes`, so kluster never prompts | kluster's output, then `<name> is down` | 1 when kluster fails, when the operator answers no, or without a terminal and without `--yes` |
 | `flai kluster status [--json]` | `kluster status`, read by its `NAME`, `RUNNING`, and `AGE` headers, the row of the config's `name` | The name and running, stopped, or not created, then the profile, provider, context, and age; `--json` prints one object with `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, and `age_seconds` | 0 whether the cluster runs, is stopped, or is absent; 1 when kluster fails or prints a table without `NAME` and `RUNNING` |
+| `flai kluster deploy S-nnnn [--json]` | `git rev-parse HEAD` in the story's worktree, then build, load, and deploy into the story's namespace from that worktree | A line per step, `<namespace>: <step>, log <path>`, then the record: outcome, commit, tag, images, and each step with its outcome and log; `--json` prints the record and sends the step lines to standard error | 1 when a step fails, naming the step, its exit code, and its log, after printing the record; 1 on a refusal |
+| `flai kluster teardown S-nnnn [--yes] [--json]` | The block's `teardown`, when it names one, then `kubectl delete namespace`, in the story's worktree, or the main checkout when it is gone | `<story>'s namespace <namespace> is torn down`; `--json` prints the record removed | 0, saying nothing was deployed, for a story with no record; 1 when a step fails, or when the operator answers no, or without a terminal and without `--yes` |
+| `flai kluster promote [--json]` | Moves the worktree `.flai-cache/kluster/main` to the main branch's head, then build, load, and deploy into the default namespace from it | As `deploy`, for the default namespace | As `deploy` |
+| `flai kluster deployments [--json]` | Nothing: it reads the records | A table, `NAMESPACE`, `STORY` (`(main)` for the default namespace), `COMMIT` (12 digits), `OUTCOME` (or the running job's kind and `running`), and `ENDED`, or `no deployments`; `--json` prints an array of records, `[]` for none | 0; 1 when a record cannot be read |
 
 - `up` and `down` stop on Ctrl-C or SIGTERM. Neither has a timeout of its own; `kluster.timeout` is for `flai serve`'s jobs.
 - `down` asks on a terminal unless `--yes`, and refuses a non-terminal without it, since it deletes the cluster and every namespace in it.
@@ -170,6 +176,32 @@ What else S-0577 built:
 - **The check.** `flai check` reports each fault of the block as the error `manifest.kluster` on its line, one sentence each beginning with the key: an unknown key, a value of the wrong kind, a `config` missing, absent, unreadable, naming no cluster, or naming a provider other than `k3d`, a default namespace that is not a DNS label or has a story namespace's form, a missing `deploy`, a command with no program, and a `timeout` that is not a duration above zero. `manifest.Load` never refuses the block ([project-manifest.md](project-manifest.md)).
 - **The host action.** `kluster` is in `hostapi.Actions`, seen by the dashboard, so the Features page lists it and turns it on and off with no change to flaiover. `flai serve enable kluster`, which that toggle runs, is refused for a project with no block; `disable` and `--all-projects` are not. Until S-0579, nothing runs because it is on.
 - **The guard.** `flai guard` refuses every session `flai serve` started and every sub-agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, named in one list, with the reason and what to do instead; `status` stays open ([flai-cli.md](flai-cli.md#commands)).
+
+What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above and for `flai serve`'s jobs (S-0579):
+
+- **The refusals.** A deploy refuses a story that is not in progress or in review, a story with no worktree (open it with `flai stream open`), a block with no `deploy`, a cluster with no kubeconfig at `.flai-cache/kluster/kubeconfig` (bring it up with `flai kluster up`), and a commit that is not a whole hash. Teardown and promote refuse the same where they apply. Every job refuses while another holds the lock.
+- **The lock.** One job runs at a time per project: a deploy, a teardown, or a promotion. A job takes `.flai-cache/kluster/job.lock`, waiting at most 200 ms, and names itself in `job.json`: its kind, story, namespace, start, and process. A job that finds the lock held is refused with `kluster.ErrBusy`, naming the job that holds it. The lock is released when the process ends, so a crashed job leaves none held; a `job.json` without a held lock names no running job.
+- **The record.** Each namespace has one record, `.flai-cache/kluster/deployments/<namespace>.json`, written whole each time (`atomicfile`). A job writes it as `running` when it starts, again after each step, and with its outcome at the end, so a job cut short leaves what it did. A deploy again at a new commit replaces it.
+
+  | Field | Meaning |
+  |-------|---------|
+  | `story` | The story deployed; empty for the default namespace |
+  | `namespace` | The namespace |
+  | `commit` | The checkout's head, the whole hash |
+  | `tag` | `FLAI_KLUSTER_TAG` |
+  | `checkout` | The folder the commands ran in |
+  | `images` | The images the build listed |
+  | `started_at`, `ended_at` | When the job started and ended; `ended_at` is absent while it runs |
+  | `outcome` | `running`, then `passed` or `failed` |
+  | `failed_step`, `exit_code`, `error` | Which step failed, its exit code (-1 when its program gave none, as when it was killed at `kluster.timeout`), and the error; absent when it passed |
+  | `steps` | Each step: `name`, `started_at`, `ended_at`, `outcome` (`running`, `passed`, `failed`, or `skipped`), `exit_code`, and `log` |
+
+- **The list.** `kluster.Deployments` reads every record: the default namespace's first, then the stories' by their number, then any other by name. Each carries `default`, and `job` while a running job acts on its namespace. A record that still says `running` while no job runs for its namespace is shown `interrupted`.
+- **The logs.** Each step's output goes to `.flai-cache/kluster/logs/<namespace>/<step>.log`, named in the record. A deploy clears the namespace's logs first, so they are its last job's. The build lists its images in `logs/<namespace>/images`, the file `FLAI_KLUSTER_IMAGES` names.
+- **The steps.** Each command runs as an argument list, never through a shell, in the checkout, with the namespace's variables over flai's own environment; a program named with a relative path, such as `scripts/kluster-deploy.sh`, is found from the checkout. A block with no `build` records build and load as `skipped`. The whole job is bounded by `kluster.timeout`.
+- **The load as built.** flai lists the nodes with `docker ps --filter label=k3d.cluster=<name>`, keeping the containers whose `k3d.role` label is `server` or `agent`. For each image it runs `docker save -o` into a temporary file, then gives that file to `docker exec -i <node> ctr -n k8s.io images import -` on each node. A build that lists no image loads nothing.
+- **Teardown.** It reads the story's record, runs the block's `teardown`, when it names one, with the namespace's variables at the record's commit, then `kubectl --context k3d-<name> delete namespace <namespace> --wait --ignore-not-found`, both to the namespace's `teardown.log`. When both pass it removes the record, the state folder, and the logs. When either fails it keeps the record, marked `failed` at `teardown`. A story with no record is `kluster.ErrNotDeployed`: nothing runs.
+- **Promote.** Under the lock, it resolves the main branch's head with `git rev-parse --verify <branch>^{commit}` in the main checkout. It moves the worktree `.flai-cache/kluster/main` there with `git checkout --detach --force`, or, when there is none, makes it with `git worktree prune` and `git worktree add --detach`. Then it deploys from that worktree into the default namespace, as a story's deploy does, with an empty `FLAI_STORY` and prefix and the tag `main-<commit>`. A failure of the git steps writes no record.
 
 ## flai serve (S-0579)
 

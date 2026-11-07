@@ -43,7 +43,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
-| [kluster](#flai-kluster) | Bring the project's kluster up, take it down, and report it |
+| [kluster](#flai-kluster) | Run the project's kluster and deploy stories and main into it |
 | [license](#flai-license) | Print the license flai is distributed under |
 | [manifest](#flai-manifest) | Change the strategic agents' settings in system-flow.yaml |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
@@ -127,7 +127,7 @@ Subcommands:
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
-- [kluster](#flai-kluster): Bring the project's kluster up, take it down, and report it
+- [kluster](#flai-kluster): Run the project's kluster and deploy stories and main into it
 - [license](#flai-license): Print the license flai is distributed under
 - [manifest](#flai-manifest): Change the strategic agents' settings in system-flow.yaml
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
@@ -2599,11 +2599,15 @@ flai issue summary
 
 ### flai kluster
 
-Bring the project's kluster up, take it down, and report it.
+Run the project's kluster and deploy stories and main into it.
 
-A project names its local Kubernetes cluster in the kluster: block of its system-flow.yaml: the kluster config file, made for bytepunx/kluster with the k3d provider, and the commands that deploy into it (design/system/kluster.md, ADR-0254). flai runs the kluster command in the project's main checkout, with that config, so a story's worktree acts on main's cluster.
+A project names its local Kubernetes cluster in the kluster: block of its system-flow.yaml: the kluster config file, made for bytepunx/kluster with the k3d provider, and the commands that build, deploy into, and tear down a namespace of it (design/system/kluster.md, ADR-0254). flai runs the kluster command in the project's main checkout, with that config, so a story's worktree acts on main's cluster.
 
-flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it. They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up and down, which change shared infrastructure on your machine; status reads, and any agent may run it.
+flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it.
+
+flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project.
+
+They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them.
 
 A project with no kluster: block, or a host without kluster on PATH, is refused with what to add or how to install kluster.
 
@@ -2613,14 +2617,68 @@ Examples:
 flai kluster up
 flai kluster status
 flai kluster status --json
+flai kluster deploy S-0578
+flai kluster deployments
+flai kluster teardown S-0578 --yes
+flai kluster promote
 flai kluster down --yes
 ```
 
 Subcommands:
 
+- [deploy](#flai-kluster-deploy): Build a story's images, load them into the cluster, and deploy it into its namespace
+- [deployments](#flai-kluster-deployments): List each namespace's deployment, the default namespace's first
 - [down](#flai-kluster-down): Take the project's cluster down with kluster down
+- [promote](#flai-kluster-promote): Deploy main's head into the default namespace
 - [status](#flai-kluster-status): Report the project's cluster: its name, whether it runs, and its age
+- [teardown](#flai-kluster-teardown): Remove a story's deployment: the teardown command, then its namespace
 - [up](#flai-kluster-up): Bring the project's cluster up with kluster up and keep its kubeconfig
+
+#### flai kluster deploy
+
+Build a story's images, load them into the cluster, and deploy it into its namespace.
+
+```text
+flai kluster deploy S-nnnn
+```
+
+Deploys a story in progress or in review into its own namespace, its ID in lower case such as s-0578, from its worktree at the worktree's head:
+
+```text
+build   the block's build command, in the worktree, lists the images it
+        built in the file FLAI_KLUSTER_IMAGES names (skipped with no build)
+load    each image is saved with docker save and imported into every node
+        of the cluster with ctr
+deploy  the block's deploy command, in the worktree
+```
+
+Every command gets the namespace's variables, FLAI\_STORY, FLAI\_KLUSTER\_NAMESPACE, FLAI\_KLUSTER\_PREFIX, FLAI\_KLUSTER\_TAG, KUBECONFIG, and the rest that design/system/kluster.md lists. Each step's output goes to .flai-cache/kluster/logs/&lt;namespace&gt;/&lt;step&gt;.log, and the deployment is recorded in .flai-cache/kluster/deployments/&lt;namespace&gt;.json: its commit, tag, images, each step's outcome, times, and log. A step that fails stops the deploy, names the step, its exit code, and its log, and exits 1. A deploy again at a new commit updates the namespace and replaces its record.
+
+It refuses a story with no worktree, a story not in progress or in review, a cluster with no kubeconfig (run flai kluster up), and a second job while one runs for the project. --json prints the record, and the step lines go to standard error.
+
+Examples:
+
+```bash
+flai kluster deploy S-0578
+flai kluster deploy S-0578 --json
+```
+
+#### flai kluster deployments
+
+List each namespace's deployment, the default namespace's first.
+
+```text
+flai kluster deployments
+```
+
+Lists the deployments flai recorded under .flai-cache/kluster/deployments: the default namespace's first, then each story's by its number. Each row gives the namespace, the story, the commit, the outcome, and when it ended. A namespace a job acts on now shows that job; a record a job left running when it ended without its outcome shows interrupted. --json prints them as an array of records, each with default and, while a job runs on it, job. It only reads, so any agent may run it.
+
+Examples:
+
+```bash
+flai kluster deployments
+flai kluster deployments --json
+```
 
 #### flai kluster down
 
@@ -2639,6 +2697,23 @@ flai kluster down
 flai kluster down --yes
 ```
 
+#### flai kluster promote
+
+Deploy main's head into the default namespace.
+
+```text
+flai kluster promote
+```
+
+Deploys the head of the main branch into the default namespace, kluster.namespace or the project's name: it makes, or moves, a detached worktree of that head at .flai-cache/kluster/main, then builds, loads, and deploys there as flai kluster deploy does for a story, with FLAI\_STORY and FLAI\_KLUSTER\_PREFIX empty and the tag main-&lt;commit&gt;. The outcome is recorded under the default namespace. A step that fails names the step, its exit code, and its log, and exits 1. --json prints the record, and the step lines go to standard error.
+
+Examples:
+
+```bash
+flai kluster promote
+flai kluster promote --json
+```
+
 #### flai kluster status
 
 Report the project's cluster: its name, whether it runs, and its age.
@@ -2654,6 +2729,25 @@ Examples:
 ```bash
 flai kluster status
 flai kluster status --json
+```
+
+#### flai kluster teardown
+
+Remove a story's deployment: the teardown command, then its namespace.
+
+```text
+flai kluster teardown S-nnnn
+```
+
+Tears a story's namespace down: runs the block's teardown command, when it names one, with the namespace's variables at the commit its record names, in the story's worktree or the main checkout when the worktree is gone; then deletes the namespace with kubectl delete namespace --wait, which passes over a namespace already gone. Both are logged to the namespace's teardown log. Then the record, the namespace's state folder, and its logs are removed.
+
+A story never deployed has no record: flai says so, asks nothing, and runs nothing, and exits 0. Otherwise flai asks first on a terminal, and --yes answers it; without a terminal it needs --yes. A teardown that fails keeps the record, marked failed, and exits 1. --json prints the record removed, or {"story": ..., "deployed": false}.
+
+Examples:
+
+```bash
+flai kluster teardown S-0578
+flai kluster teardown S-0578 --yes --json
 ```
 
 #### flai kluster up
