@@ -7,16 +7,24 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-07T22:39:49Z
+updated: 2026-11-07T23:49:31Z
 transitions: []
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/components/props.go]
+touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+forecast:
+  duration: 40m
+  delivery: 2026-11-08T00:40:00Z
+  basis: "flai forecast's 19m (103 s per unit over 25 medium improvement stories, size 11) raised to 40m: the rules share state the run order hides, byID, vocab, and the findings index advise writes, and the kept read spans Go and props.mjs, and a close-out that runs integration takes p50 about 4 min (server-performance.md cause 20)."
+  by: planner-S-0601
+  at: 2026-11-07T23:47:37Z
+finalized:
+  by: alex
+  at: 2026-11-07T23:49:31Z
 ---
 # S-0601 flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
 
@@ -31,7 +39,31 @@ Cause 11 in [server-performance.md](../../../design/system/server-performance.md
 - [ ] A whole `flai check --strict` on this repository, with nothing changed since the last, takes under 2 s, and server-performance.md records the before and after.
 
 ## Tasks
+- T-2633 check.Run runs its independent rules at once and gives the same findings in the same order
+- T-2643 Keep the props node reads under .flai-cache and start node only for a component whose key changed
+- T-2648 Measure a whole flai check --strict before and after and record it in server-performance.md and component-library.md
 
 ## Notes
 
 - The rules only read, so running them at once needs no other change. Run the tests under `-race`.
+
+### Planning
+
+Touches, and where each came from:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/check/check.go` | declared | `Run` and the rules it calls |
+| `flai/internal/components/props.go` | declared | `ReadProps`, which starts `node` |
+| `flai/internal/check/concurrent_test.go` | layout | the new test of criterion 1, its fixture built in a temporary folder |
+| `flai/internal/components/propscache.go` | layout | the kept props reads of criterion 2, beside `props.go` |
+| `flai/internal/components/propscache_test.go` | layout | its test |
+| `flai/internal/components/props.mjs` | design | S-0478's skeleton cache stamps every file typescript read; the script names them in its answer so the kept read goes stale with them (see the thread) |
+| `design/system/server-performance.md` | design | criterion 3's before and after, under cause 11 |
+| `design/system/component-library.md` | design | § Skeletons (S-0449) and § Examples (S-0443) › The check say how props are read; they gain the kept read |
+
+`flai touches suggest` listed `check_test.go` (34%), `flai-cli.md` and `docs/users/flai.md` (22% each), and the manifest files. None is kept: the new test has a file of its own, and `flai check` changes no finding, flag, or setting a user or the manifest sees, only its speed. A task done widens the touches if an existing test needs changing.
+
+No folder touch, and no `after`: S-0598 and S-0600 change `check.go`'s callers and the item list, but this story reads nothing they write; a trial merge judges the shared file.
+
+Forecast: see the figure on the story and its basis. Cost of delay: no value yet. Neither S-0601 nor E-0033 has inputs, and the operator has not answered TH-0888, which recommends `penalty_per_week: 50` for this story.
