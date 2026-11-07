@@ -534,6 +534,49 @@ func TestRepositoryManifestTypeChecksChangedFlaioverFiles(t *testing.T) {
 	}
 }
 
+// I-0304: this repository's manifest has flai test run flaiover's tests of
+// the built flai, every test file that imports src/lib/server/testing.ts, when
+// flai's host API changes. The vitest tier picks tests by the TypeScript
+// import graph and keeps only paths under flaiover, so S-0587's change to a
+// gate in flai/internal/hostapi/writes.go ran none of them, and
+// writes.test.ts first failed in the close-out. Under --all the flaiover tier
+// covers it, so those tests run once. Not gated under -short, so that make
+// test catches a manifest that drops the tier.
+func TestRepositoryManifestRunsFlaioverTestsOfTheBuiltFlaiForHostAPIChanges(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const changed = "flai/internal/hostapi/writes.go"
+	if _, err := os.Stat(filepath.Join(root, changed)); err != nil {
+		t.Fatalf("%s: %v; name another flai/internal/hostapi file", changed, err)
+	}
+	var got []string
+	ok := false
+	for _, s := range Select(os.DirFS(root), tiers, []string{changed}, false) {
+		if s.Tier.Name == "flaiover-flai" {
+			got, ok = s.Argv, true
+		}
+	}
+	want := []string{"../scripts/flaiover-unit.sh", "related", "--run", "--reporter=json", "src/lib/server/testing.ts"}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Errorf("%s: flaiover-flai runs %q (selected %v), want %q", changed, got, ok, want)
+	}
+	covered := ""
+	for _, s := range Select(os.DirFS(root), tiers, nil, true) {
+		if s.Tier.Name == "flaiover-flai" {
+			covered = s.CoveredBy
+		}
+	}
+	if covered != "flaiover" {
+		t.Errorf("under --all flaiover-flai is covered by %q, want the flaiover tier, which runs every flaiover test", covered)
+	}
+}
+
 // S-0548: this repository's go-test tier runs the changed packages' tests
 // with -short, reversing I-0201's choice. The tests that skip under -short,
 // those that need real git or the monorepo, are the integration tier's own;
