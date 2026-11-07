@@ -6,7 +6,7 @@ title: "TestGatewayLiteLLM fails its setup check: the template's settings run fl
 status: ready
 owner: alex
 created: 2026-11-07T15:15:23Z
-updated: 2026-11-07T22:31:08Z
+updated: 2026-11-07T23:06:27Z
 transitions:
   - to: ready
     at: 2026-11-07T21:49:23Z
@@ -64,10 +64,10 @@ cost_of_delay:
   at: 2026-11-07T21:47:34Z
 forecast:
   duration: 12m
-  delivery: 2026-11-07T22:46:00Z
-  basis: "Its own forecast of 12m; 1st in the pull order with an in-progress limit of 5, behind S-0595 and S-0596."
+  delivery: 2026-11-07T23:22:00Z
+  basis: "Its own forecast of 12m; 1st in the pull order with an in-progress limit of 5, behind S-0597."
   by: flai
-  at: 2026-11-07T22:31:08Z
+  at: 2026-11-07T23:06:27Z
 finalized:
   by: orchestrator
   at: 2026-11-07T21:49:11Z

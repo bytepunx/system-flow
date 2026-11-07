@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-07T22:54:20Z
+updated: 2026-11-07T23:06:43Z
 transitions: []
 tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-07T22:52:00Z
 forecast:
   duration: 45m
-  delivery: 2026-11-08T00:15:00Z
-  basis: "Comparable kept-state stories took 703 s (S-0156), 953 s (S-0500), 1170 s (S-0157), and 2191 s (S-0531); this one builds two mechanisms, a snapshot and a slower archive tier, wires both into flai serve, and measures on the operator's host, so about 2700 s."
-  by: planner-S-0606
-  at: 2026-11-07T22:48:46Z
+  delivery: 2026-11-08T00:25:00Z
+  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0597, S-0591, S-0241, S-0598, S-0599, S-0600, S-0601, S-0602, S-0603, S-0604 and S-0605."
+  by: flai
+  at: 2026-11-07T23:06:43Z
 finalized:
   by: orchestrator
   at: 2026-11-07T22:54:20Z

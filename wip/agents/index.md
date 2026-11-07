@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-07T23:06:27Z
+updated: 2026-11-07T23:06:43Z
 ---
 
 # Active streams
@@ -11,7 +11,7 @@ updated: 2026-11-07T23:06:27Z
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
 | [S-0596](S-0596.md) | Explore where we can improve flai serve performance | review | agent-S-0596 | 2026-11-07T22:43:50Z |
-| [S-0597](S-0597.md) | Publish what is accepted and not yet released | in-progress | agent-S-0597 | 2026-11-07T23:06:04Z |
+| [S-0597](S-0597.md) | Publish what is accepted and not yet released | in-progress | agent-S-0597 | 2026-11-07T23:06:40Z |
 
 ## Strategic agents
 
