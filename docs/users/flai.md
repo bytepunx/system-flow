@@ -2781,6 +2781,7 @@ A role file's `trigger` lists what starts the role (S-0418, [ADR-0207](../../des
 | `asked` | You: `flai role run`, the MCP tool `role_run`, or the host API's `role.run` | The item you name, or none | `asked` |
 | `{event: <event>, when?: <condition>}` | `flai serve`, when an event the entry matches happens | For a role that takes items, the event's item, or the item a thread is on; none for a role that takes none | `<event> <ID>`, such as `moved S-0012` |
 | `{schedule: <setting>}` | `flai serve`, each time the setting comes round | None | `schedule <spec>`, such as `schedule daily` |
+| `{schedule: <setting>, when: each-ready-story}` | `flai serve`, each time the setting comes round, once for each ready story in pull order | Each ready story, for a role whose `item` lists `story` | `schedule <spec>` |
 
 ```yaml
 # design/workflows/roles/auditor.md, in its front matter
@@ -2796,7 +2797,7 @@ flai manifest set roles.auditor.schedule=daily  # or a five-field cron expressio
 ```
 
 - **Events.** The events and conditions are those the roles' [README](../../design/workflows/roles/README.md#triggers) lists. A `thread` event is the role's when a thread awaits it, or, for a role that takes items, its run on the thread's item. `flai serve` waits `orchestration.coalesce` (`30s` by default) from the first event and starts one run for all that came meanwhile: one per item for a role that takes items, one in all for a role that takes none. Its trigger names each, joined by semicolons, such as `moved S-0012; thread TH-0040`. Events that come while a run goes start the next run when it ends. What happened while the action was off starts nothing.
-- **Schedules.** The setting is the role's own `roles.<name>.schedule`, or one of `planning.schedule`, `analysis.schedule`, `digest.schedule`, and `orchestration.schedule`, shared with that built-in role. A schedule starts a role that takes no item only. `flai check` reports a `roles.<name>.schedule` that does not parse or never comes round, and one on a built-in role, as `manifest.roles`.
+- **Schedules.** The setting is the role's own `roles.<name>.schedule`, or one of `planning.schedule`, `analysis.schedule`, `digest.schedule`, and `orchestration.schedule`, shared with that built-in role. A schedule with no condition starts a role that takes no item, once. Under `when: each-ready-story` it starts a role whose `item` lists `story` once for each ready story, in pull order (S-0571); a start held for want of budget waits per story, and is dropped once its story is no longer ready. `flai check` reports, as `roles.file`, a schedule with no condition on a role that takes items, and `each-ready-story` on a role that takes no story. `flai check` reports a `roles.<name>.schedule` that does not parse or never comes round, and one on a built-in role, as `manifest.roles`.
 - **Refused or held.** A start flai refuses, for the reasons [above](#running-a-role-your-project-defines), is logged by `flai serve` and not tried again: the next event the entry matches, or the schedule's next time, starts the next run. While the role's provider is out of budget, the start waits until the limit resets.
 
 [On an event or a schedule](../../design/system/strategic-agents.md#on-an-event-or-a-schedule-s-0418) has the whole of it.

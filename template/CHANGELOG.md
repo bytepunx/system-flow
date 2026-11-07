@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0571 flai serve starts a role your project defines once for each ready story, in pull order, when a `{schedule: <setting>, when: each-ready-story}` entry comes round, and flai check reports that entry on a role that takes no story (patch). The roles README says so.
+
 ## 1.1.23 - 2026-11-07
 
 - S-0545 flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply (patch).
