@@ -166,7 +166,7 @@ Issues met, and what carries each on:
 
 | Issue | What | Carried on by |
 |-------|------|---------------|
-| I-0228 | `story_start` and `task_done` over HTTP within 18 s of Claude Code's 60 s limit | S-0583, in progress |
+| I-0228 | `story_start` and `task_done` over HTTP within 18 s of Claude Code's 60 s limit | S-0583, accepted on 2026-11-07, which closed it: the MCP file flai writes now names a per-server timeout of 30 minutes (ADR-0258) |
 | I-0272 | `flai stream sync` inside the container cannot rebase on the read-only `.git` | none yet |
 | I-0277 | an agent in a container cannot write its narrative's Decisions | none yet |
 | I-0278 | no Retry on the story's agent page after a stop; only on the card's menu | none yet; the dashboard's, not the container's |
@@ -191,7 +191,8 @@ What must change first, in this order:
 
 1. **I-0281.** Add curl and GoReleaser to `flai/images/system-flow/Dockerfile`, and check the built layer with `flai test smoke` in it. Until then no story touching `flai/` or `template/` can close out inside the container.
 2. **I-0272.** Refuse `flai stream sync` inside the container, saying the host syncs through `task_done`, as ADR-0246 meant S-0521 to. Both proof agents tried it, and one was left with a detached HEAD.
-3. **I-0228** (S-0583). The HTTP calls that do the most work came within 18 s of Claude Code's limit.
-4. **I-0277.** An agent in a container needs a way to write its narrative's Decisions through flai.
+3. **I-0277.** An agent in a container needs a way to write its narrative's Decisions through flai.
+
+I-0228, the HTTP calls that came within 18 s of Claude Code's limit, is closed: S-0583 was accepted while this story was in review. The agent images carry its timeout only once `make agent-images` rebuilds them.
 
 I-0279 and I-0280 are for running things by hand in the container. I-0278 belongs to the dashboard. None of the three stands in the way of `flai serve`'s own runs.
