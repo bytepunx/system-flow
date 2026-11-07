@@ -94,15 +94,17 @@ func innerOf(a *manifest.Agent) (string, error) {
 	if a != nil && a.Config["inner"] != "" {
 		inner = a.Config["inner"]
 	}
-	if _, ok := Adapters[inner]; !ok || inner == Container || inner == Command {
-		return "", fmt.Errorf("container cannot run the inner harness %q; set config inner to one of %s", inner, strings.Join(inners(), ", "))
+	if !slices.Contains(ContainerInners(), inner) {
+		return "", fmt.Errorf("container cannot run the inner harness %q; set config inner to one of %s", inner, strings.Join(ContainerInners(), ", "))
 	}
 	return inner, nil
 }
 
-// inners are the inner harnesses a container runs, sorted.
-func inners() []string {
-	return slices.DeleteFunc(Names(), func(n string) bool { return n == Container || n == Command })
+// ContainerInners are the inner harnesses a container runs, sorted: every
+// adapter but the container, the host's command, and opencode, which has no
+// agent image yet and reaches flai's MCP server on the host alone (S-0406).
+func ContainerInners() []string {
+	return slices.DeleteFunc(Names(), func(n string) bool { return n == Container || n == Command || n == OpenCode })
 }
 
 // ContainerName is the name of the container in session of subject, a

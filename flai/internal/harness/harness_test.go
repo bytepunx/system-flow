@@ -130,7 +130,7 @@ func TestAStoryNamesTunablesNeverFlags(t *testing.T) {
 }
 
 func TestWhichAdapterAStoryGets(t *testing.T) {
-	if _, _, err := For(&manifest.Agent{Harness: "cursor"}, true); err == nil || !strings.Contains(err.Error(), `cannot start harness "cursor"; it can start claude-code, command, container`) {
+	if _, _, err := For(&manifest.Agent{Harness: "cursor"}, true); err == nil || !strings.Contains(err.Error(), `cannot start harness "cursor"; it can start claude-code, command, container, opencode`) {
 		t.Fatalf("unknown: %v", err)
 	}
 	if name, _, err := For(nil, true); err != nil || name != Command {
@@ -175,6 +175,7 @@ func TestEachAdapterStatesItsCapabilities(t *testing.T) {
 		ClaudeCode: {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
 		Command:    {},
 		Container:  {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
+		OpenCode:   {Resume: true},
 	}
 	for _, name := range Names() {
 		w, ok := want[name]
@@ -194,7 +195,8 @@ func TestEachAdapterStatesItsCapabilities(t *testing.T) {
 }
 
 // ADR-0130: claude-code's reader reads its stream-json into events, a fresh
-// reader each time; the command's reads nothing of the same log.
+// reader each time; the command's and opencode's read nothing of the same
+// log.
 func TestEachAdapterGivesItsReader(t *testing.T) {
 	wait := []byte(`{"type":"assistant","timestamp":"2026-10-12T10:00:00Z","session_id":"s","message":{"id":"m1","model":"claude-opus-5-5",` +
 		`"content":[{"type":"tool_use","id":"w1","name":"mcp__flai__wait_for_events","input":{}}],"usage":{"input_tokens":1,"output_tokens":1}}}`)
@@ -211,8 +213,10 @@ func TestEachAdapterGivesItsReader(t *testing.T) {
 		t.Errorf("a fresh reader read %+v, want the result of a wait it has not seen unread", got)
 	}
 	for _, line := range [][]byte{wait, woken} {
-		if got, ok := Adapters[Command].Reader().Read(line); ok || got != nil {
-			t.Errorf("the command's reader read %+v, %v; want nothing", got, ok)
+		for _, name := range []string{Command, OpenCode} {
+			if got, ok := Adapters[name].Reader().Read(line); ok || got != nil {
+				t.Errorf("%s's reader read %+v, %v; want nothing", name, got, ok)
+			}
 		}
 	}
 }

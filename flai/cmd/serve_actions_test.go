@@ -891,7 +891,7 @@ func TestConfigContainerNamesAreTheHarnesss(t *testing.T) {
 	if config.ContainerHarness != harness.Container {
 		t.Errorf("config.ContainerHarness %q, harness.Container %q", config.ContainerHarness, harness.Container)
 	}
-	inners := slices.DeleteFunc(harness.Names(), func(n string) bool { return n == harness.Container || n == harness.Command })
+	inners := harness.ContainerInners()
 	if got := config.ContainerInners(); !slices.Equal(got, inners) {
 		t.Errorf("config.ContainerInners %v, harness's %v", got, inners)
 	}

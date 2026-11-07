@@ -391,6 +391,7 @@ var Adapters = map[string]Adapter{
 	ClaudeCode: claudeCode{},
 	Command:    command{},
 	Container:  container{},
+	OpenCode:   openCode{},
 }
 
 // Names are the adapters' names, sorted.
@@ -457,6 +458,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 	var out []string
 	for _, k := range keys {
 		o, ok := takes[k]
+		if !ok && len(takes) == 0 {
+			return nil, fmt.Errorf("%s takes no config, and the agent sets %q; leave config out of the story's agent", harness, k)
+		}
 		if !ok {
 			known := make([]string, 0, len(takes))
 			for n := range takes {
@@ -495,7 +499,7 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // the project defines, is asked what its role file's start prompt says,
 // rendered over the run's fields (startPrompt, ADR-0250). Its error is a
 // start prompt that does not render, which stops the start.
-// Only the claude-code adapter sends a prompt.
+// Only the claude-code and opencode adapters send a prompt.
 func Prompt(r Request) (string, error) {
 	if r.RoleFile != nil {
 		return startPrompt(r)
