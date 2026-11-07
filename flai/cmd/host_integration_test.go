@@ -5,6 +5,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -39,10 +40,31 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 	}
 	addr := ln.Addr().String()
 	_ = ln.Close()
+	// The project's MCP server gets a port of its own too, remembered in its
+	// cache as flai mcp http remembers one: in the default range it races
+	// the host's own MCP servers and this test running in other worktrees
+	// for the first free port, and the loser exits and is restarted on the
+	// same port until the winner lets it go (I-0247).
+	mcpLn, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpAddr := mcpLn.Addr().String()
+	_ = mcpLn.Close()
 	env := append(os.Environ(), "FLAI_CONFIG="+cfg, host.AddrEnv+"="+addr, "FLAI_AGENT=tester", "LOG_FORMAT=json")
 	env = withoutEnv(env, host.URLEnv, host.TokenEnv)
 
 	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte(mcpAddr+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	keyFile := filepath.Join(tmp, "agent-key")
 	_ = os.WriteFile(keyFile, []byte("k\n"), 0o600)
 	sdir := serve.DirFor(cfg)
@@ -108,8 +130,18 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 	if childOf(st, host.MCP).Root != root {
 		t.Errorf("the MCP server is for %q, want %q", childOf(st, host.MCP).Root, root)
 	}
-	repo, _ := workitem.Open(root)
-	waitUntil(t, "the MCP server's own state", func() bool { s, ok := readMCPState(repo, time.Now()); return ok && s.PID == mcpPID })
+	var mcpSt mcpState
+	var mcpOK bool
+	start := time.Now()
+	waitUntilOr(t, "the MCP server's own state", func() bool {
+		mcpSt, mcpOK = readMCPState(repo, time.Now())
+		return mcpOK && mcpSt.PID == mcpPID
+	}, func() string {
+		return fmt.Sprintf("after %s: last state %+v (fresh and alive: %v), want pid %d; host status %+v\nmcp log:\n%s", time.Since(start).Round(time.Millisecond), mcpSt, mcpOK, mcpPID, status(), readFile(mcpFile(repo, mcpLogFile)))
+	})
+	if mcpSt.Addr != mcpAddr {
+		t.Errorf("the MCP server listens at %s, want the port the project remembers, %s", mcpSt.Addr, mcpAddr)
+	}
 
 	flai("host", "restart", "serve")
 	st = until("a new serve", func(st host.Status) bool {
@@ -158,6 +190,12 @@ func readFile(p string) string {
 
 func waitUntil(t *testing.T, what string, ok func() bool) {
 	t.Helper()
+	waitUntilOr(t, what, ok, func() string { return "" })
+}
+
+// waitUntilOr is waitUntil that adds why to its failure.
+func waitUntilOr(t *testing.T, what string, ok func() bool, why func() string) {
+	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		if ok() {
@@ -165,5 +203,5 @@ func waitUntil(t *testing.T, what string, ok func() bool) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	t.Fatalf("never %s", what)
+	t.Fatalf("never %s: %s", what, why())
 }
