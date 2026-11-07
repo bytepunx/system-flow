@@ -418,10 +418,19 @@ export type KlusterCluster = {
 	age_seconds?: number;
 };
 
-/** One kluster up or down flai serve ran, or runs, for the project (Go's hostapi.KlusterJob). */
+/**
+ * One job flai serve ran, or runs, for the project's kluster (Go's hostapi.KlusterJob): an up or a
+ * down of the cluster (S-0580), or a story's deploy or teardown or main's promotion (S-0581).
+ */
 export type KlusterJob = {
-	action: 'up' | 'down';
+	action: 'up' | 'down' | 'deploy' | 'teardown' | 'promote';
 	cluster: string;
+	/** The story a deploy or a teardown is of; absent otherwise. */
+	story?: string;
+	/** The namespace a deploy, a teardown, or a promotion acts on; absent for an up or a down. */
+	namespace?: string;
+	/** The folder each step's own log goes to, for a deploy, a teardown, or a promotion. */
+	logs?: string;
 	/** RFC 3339, UTC. */
 	started_at: string;
 	/** Absent while it runs. */
@@ -453,6 +462,111 @@ export type KlusterStatus = {
 	/** The up or down that runs now. */
 	running?: KlusterJob;
 	/** The last up or down to end since flai serve started. */
+	last?: KlusterJob;
+};
+
+/** One step of a deployment (Go's hostapi.KlusterStep): build, load, deploy, or teardown. */
+export type KlusterStep = {
+	name: string;
+	started_at: string;
+	ended_at?: string;
+	/** running, passed, failed, or skipped. */
+	outcome: string;
+	exit_code?: number;
+	/** The step's log, from the project's root. */
+	log?: string;
+	/** The end of that log, at most 4 KB, cut to whole lines. */
+	log_tail?: string;
+};
+
+/** One port of a service, as kubectl reports it. */
+export type KlusterPort = { name?: string; port: number; protocol?: string };
+
+/** One service of a namespace, with the host it answers on and the command that forwards it. */
+export type KlusterService = {
+	name: string;
+	/** The name it answers on inside the cluster, <name>.<namespace>.svc.cluster.local. */
+	host?: string;
+	ports: KlusterPort[];
+	/** The kubectl port-forward command, run in the project's main checkout. */
+	port_forward?: string;
+};
+
+/** How to reach a namespace for a demo: through a port-forward, as ADR-0254 decides. */
+export type KlusterAccess = {
+	/** flai's kubeconfig of the cluster, from the project's root. */
+	kubeconfig: string;
+	context: string;
+	namespace: string;
+	/** The command that lists the namespace's services, run in the project's main checkout. */
+	list: string;
+	services: KlusterService[];
+	/** Why the services could not be read. */
+	services_error?: string;
+};
+
+/** The job that holds the project's kluster lock (Go's kluster.Job). */
+export type KlusterLockJob = {
+	kind: 'deploy' | 'teardown' | 'promote';
+	story: string;
+	namespace: string;
+	started_at: string;
+	pid: number;
+};
+
+/** One namespace's deployment as kluster.deployments answers it (Go's hostapi.KlusterDeployment). */
+export type KlusterDeployment = {
+	/** The story deployed; empty for the default namespace. */
+	story: string;
+	namespace: string;
+	/** Whether it is the default namespace, main's. */
+	default: boolean;
+	/** The commit deployed, the whole hash. */
+	commit: string;
+	tag: string;
+	/** The checkout the commands ran in, from the project's root. */
+	checkout: string;
+	images: string[] | null;
+	started_at: string;
+	ended_at?: string;
+	/** running, passed, failed, or interrupted. */
+	outcome: string;
+	failed_step?: string;
+	exit_code?: number;
+	error?: string;
+	steps: KlusterStep[];
+	/** The job running against the namespace now, if any. */
+	job?: KlusterLockJob;
+	/** The story's title and status, for a story's namespace. */
+	title?: string;
+	status?: string;
+	/** The story branch's head now, or main's for the default namespace. */
+	head?: string;
+	head_error?: string;
+	access: KlusterAccess;
+};
+
+/** A story in review with no deployment recorded. */
+export type KlusterReview = { story: string; title: string; head?: string; head_error?: string };
+
+/** What flai's kluster.deployments answers (Go's hostapi.KlusterDeployments, S-0581). */
+export type KlusterDeployments = {
+	enabled: boolean;
+	enable: string;
+	block: boolean;
+	no_block?: string;
+	/** Why the block's config could not be read. */
+	status_error?: string;
+	cluster?: string;
+	/** The namespace main is promoted into. */
+	default_namespace?: string;
+	/** The default namespace's first, then the stories' by number. */
+	deployments: KlusterDeployment[];
+	/** The stories in review with no deployment recorded. */
+	review: KlusterReview[];
+	/** The deploy, teardown, or promotion that runs now, whoever started it. */
+	running?: KlusterJob;
+	/** The last deploy, teardown, or promotion this flai serve ran. */
 	last?: KlusterJob;
 };
 
@@ -846,6 +960,45 @@ export class Repo extends EventEmitter {
 	}
 
 	/**
+	 * The namespaces deployed to the project's kluster, flai's kluster.deployments (S-0581): main's
+	 * first, then each story's, with its commit, outcome, each step's log, and how to reach it for a
+	 * demo; the stories in review with no deployment; and the deploy that runs. Asked afresh each
+	 * time: a deploy's record changes under .flai-cache, which flai does not announce.
+	 */
+	async klusterDeployments(): Promise<KlusterDeployments> {
+		return upgraded('show the deployments', () =>
+			this.ask<KlusterDeployments>('kluster.deployments')
+		);
+	}
+
+	/**
+	 * Start a story's deploy into its namespace, flai's kluster.deploy under the kluster host action
+	 * (S-0581). flai answers the job at once and runs it in the background.
+	 */
+	async klusterDeploy(story: string): Promise<KlusterJob> {
+		const { data } = await upgraded(`deploy ${story}`, () =>
+			this.write<KlusterJob>('kluster.deploy', { story })
+		);
+		return data;
+	}
+
+	/** Start the teardown of a story's namespace, flai's kluster.teardown, as klusterDeploy starts. */
+	async klusterTeardown(story: string): Promise<KlusterJob> {
+		const { data } = await upgraded(`tear ${story} down`, () =>
+			this.write<KlusterJob>('kluster.teardown', { story })
+		);
+		return data;
+	}
+
+	/** Start main's promotion into the default namespace, flai's kluster.promote. */
+	async klusterPromote(): Promise<KlusterJob> {
+		const { data } = await upgraded('promote main', () =>
+			this.write<KlusterJob>('kluster.promote')
+		);
+		return data;
+	}
+
+	/**
 	 * Listen for flai's word that a file changed, and for its return: a flai that comes back may have
 	 * missed changes, so everything asked is forgotten and open pages are told to look again.
 	 */
@@ -940,6 +1093,19 @@ export function storyParam(value: unknown): string | undefined {
 		throw new RepoError(
 			400,
 			`story must be a story's ID such as S-0042, not ${JSON.stringify(value)}; leave it out to edit the main checkout`
+		);
+	return value;
+}
+
+/**
+ * The story a kluster deploy or teardown is of (S-0581): a story's ID, which it must name; anything
+ * else is refused with 400 before flai is asked.
+ */
+export function klusterStoryParam(value: unknown): string {
+	if (typeof value !== 'string' || !/^S-\d+$/.test(value))
+		throw new RepoError(
+			400,
+			`story must be the ID of the story to deploy or tear down, such as S-0042, not ${JSON.stringify(value ?? null)}`
 		);
 	return value;
 }
