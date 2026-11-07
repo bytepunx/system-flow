@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-07T10:33:30Z
+updated: 2026-11-07T10:36:20Z
 ---
 
 # Active streams
@@ -11,13 +11,12 @@ updated: 2026-11-07T10:33:30Z
 | [S-0543](S-0543.md) | TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with "directory not empty", as I-0048's serve tests did | review | agent-S-0543 | 2026-11-07T10:21:43Z |
 | [S-0586](S-0586.md) | Provide first time wizard for kluster setup | in-progress | agent-S-0586 | 2026-11-07T10:30:01Z |
 | [S-0587](S-0587.md) | Default harness and agent should work out of the box | in-progress | agent-S-0587 | 2026-11-07T10:32:10Z |
-| [S-0589](S-0589.md) | A story already in ready when the agent host action is turned on gets no agent until someone presses Start agent | review | agent-S-0589 | 2026-11-07T10:31:44Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 143 | 1024.2625 USD | 138085 | 2026-11-07T10:22:42Z |
-| [orchestrator](orchestrator.md) | 2145 | 2011.3352 USD | 1517613 | 2026-11-07T10:32:54Z |
+| [orchestrator](orchestrator.md) | 2148 | 2011.7543 USD | 1517718 | 2026-11-07T10:34:45Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 82 | 135.3662 USD | 12914 | 2026-11-07T10:10:21Z |
+| [curator](curator.md) | 83 | 136.6526 USD | 12998 | 2026-11-07T10:35:13Z |

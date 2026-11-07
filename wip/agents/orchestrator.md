@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2011.1055
-accrued_seconds: 1517485
-tasks_completed: 2144
-last_run: 2026-11-07T10:27:32Z
+accrued_cost: 2011.7543
+accrued_seconds: 1517718
+tasks_completed: 2148
+last_run: 2026-11-07T10:34:45Z
 ---
 
 # Orchestrator activity
@@ -15038,6 +15038,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 47
 - Cost: 0.0998 USD, estimated
+
+### 2026-11-07T10:32:54Z
+
+- Summary: Accepted S-0590 at 1b6fd21c3879 under accept_reviews: close-out passed at the branch head, verifier matched both criteria to changed files, dry run listed no blocker. The first attempt stopped on a transient .git/index.lock from another git process, before the merge; the retry landed it.
+- Items: S-0590
+- Seconds: 128
+- Cost: 0.2297 USD, estimated
+
+### 2026-11-07T10:33:26Z
+
+- Summary: Did not run the publish formula after S-0590's acceptance. release_evaluate is met under threshold: count 4 >= 1, worth 65 USD/week (S-0560, S-0561, S-0568, S-0590). Publish instance S-0588 is already in ready (held no-touches) and publishes everything accepted and unreleased, S-0590 included, so a second instance would duplicate it.
+- Items: S-0590, S-0588
+- Seconds: 32
+- Cost: 0.0743 USD, estimated
+
+### 2026-11-07T10:33:57Z
+
+- Summary: I accepted S-0590 at commit `1b6fd21`. Nothing was published, because the publish story S-0588 is already waiting in ready.
+- Items: none
+- Seconds: 31
+- Cost: 0.1704 USD, estimated
+
+### 2026-11-07T10:34:45Z
+
+- Summary: release (S-0590): release_evaluate met under threshold (count 4 >= 1, 65 USD/week: S-0560, S-0561, S-0568, S-0590), but no new publish formula run: instance S-0588 is already in ready (held no-touches) and publishes everything accepted and unreleased. ready: promote_candidates lists only S-0241 (rank 1, 2h, throughput); skipped while its block stays open, as TH-0790 says; ready column unchanged, so no order run.
+- Items: S-0590, S-0588, S-0241
+- Seconds: 42
+- Cost: 0.1744 USD, estimated
 
 ## Refusals
 

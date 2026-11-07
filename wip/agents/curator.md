@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 135.3662
-accrued_seconds: 12914
-tasks_completed: 82
-last_run: 2026-11-07T10:10:21Z
+accrued_cost: 136.6526
+accrued_seconds: 12998
+tasks_completed: 83
+last_run: 2026-11-07T10:35:13Z
 ---
 
 # Curator activity
@@ -667,3 +667,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0492
 - Seconds: 85
 - Cost: 0.6598 USD, estimated
+
+### 2026-11-07T10:35:13Z
+
+- Summary: No new entries, no merges, no absorptions; `flai digest compact` compacted none (it recorded citers on 2 entries). I-0302's fix and S-0590's lock-hash decision are already in `design/system/template.md` § Variables and `design/system/flai-cli.md` Import flow step 4, and S-0590's other four decisions only record planning and progress.
+- Trigger: accepted S-0590
+- Items: D-0427, D-0491
+- Seconds: 84
+- Cost: 1.2864 USD, estimated

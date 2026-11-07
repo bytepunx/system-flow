@@ -3,10 +3,10 @@ id: S-0589
 type: story
 nature: remediation
 title: A story already in ready when the agent host action is turned on gets no agent until someone presses Start agent
-status: review
+status: done
 owner: alex
 created: 2026-11-07T09:44:04Z
-updated: 2026-11-07T10:31:48Z
+updated: 2026-11-07T10:36:19Z
 transitions:
   - to: ready
     at: 2026-11-07T10:02:33Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T10:31:48Z
     by: agent-S-0589
+  - to: done
+    at: 2026-11-07T10:36:19Z
+    by: orchestrator
 tags: []
 touches: [flai/internal/serve/agents_test.go, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md, design/issues/summary.md]
 agent:
@@ -112,3 +115,12 @@ Figures:
 
 - Forecast: flai gave 24m (117 s per unit over 40 medium remediation stories, size 12). I raised it to 1h30m, delivery 2026-11-07T12:00:00Z. The cause is not confirmed yet. The serve-level loop tests are slow on this host, near their timeouts (S-0560).
 - Cost of delay: 25 USD a week, as flai cod gave it from the operator's input of 10m lost per 168h cycle at 150 USD an hour. I kept it. The issue says every import formula run hits this, but the time lost is the operator's input, not mine.
+
+### Accepted by the orchestrator
+
+- Verified: 2f76320f0969257282d4ba24e320820f5447acf0
+- At: 2026-11-07T10:36:19Z
+
+Verdict: pass at 2f76320f0969257282d4ba24e320820f5447acf0
+- 1: flai/internal/serve/agents_test.go, docs/operators/index.md, design/system/flai-cli.md
+- 2: design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md, design/issues/summary.md
