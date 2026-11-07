@@ -6,7 +6,7 @@ title: safety.md says every force push needs confirmation, while git.md exempts 
 status: backlog
 owner: alex
 created: 2026-11-02T00:04:34Z
-updated: 2026-11-07T03:16:02Z
+updated: 2026-11-07T03:29:16Z
 transitions: []
 tags: [conventions, template]
 topics: [git, safety]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-05T01:35:53Z
 forecast:
   duration: 12m
-  delivery: 2026-11-07T08:33:00Z
-  basis: "Its own forecast of 12m; 13th in the pull order with an in-progress limit of 5, behind S-0579, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556 and S-0557."
+  delivery: 2026-11-07T08:46:00Z
+  basis: "Its own forecast of 12m; 13th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0555, S-0556 and S-0557."
   by: flai
-  at: 2026-11-07T03:16:02Z
+  at: 2026-11-07T03:29:16Z
 finalized:
   by: orchestrator
   at: 2026-11-05T01:36:22Z
