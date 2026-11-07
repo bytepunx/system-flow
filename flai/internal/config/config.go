@@ -253,6 +253,122 @@ type AgentStart struct {
 	// DefaultAutoRestarts, 0 turns the restart off, and a negative count is
 	// refused; read it through AutoRestartLimit.
 	AutoRestarts *int `json:"auto_restarts,omitempty"`
+	// Projects are each project's own command, name, and harnesses, by the
+	// absolute path of its main checkout, as host_actions are keyed
+	// (ADR-0261): read over the host-wide Command, Name, and Harnesses above,
+	// which stay the fallback for a project that sets none. Read a project's
+	// settings through ForProject.
+	Projects map[string]ProjectAgent `json:"projects,omitempty"`
+}
+
+// ProjectAgent is one project's own agent settings on this host, over the
+// host-wide ones (ADR-0261).
+type ProjectAgent struct {
+	// Command is the project's command, the program and its arguments; nil
+	// leaves the host-wide command.
+	Command []string `json:"command,omitempty"`
+	// Name is the FLAI_AGENT the project's sessions work under; empty leaves
+	// the host-wide name.
+	Name string `json:"name,omitempty"`
+	// Harnesses are the project's entries for the harnesses it sets, each
+	// replacing the host-wide entry of that harness whole.
+	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
+}
+
+// IsZero reports whether the entry sets nothing.
+func (p ProjectAgent) IsZero() bool {
+	return len(p.Command) == 0 && p.Name == "" && len(p.Harnesses) == 0
+}
+
+// Project is the project at root's own entry, empty when it sets nothing.
+func (a AgentStart) Project(root string) ProjectAgent { return a.Projects[root] }
+
+// ForProject is the agent settings that apply to the project at root
+// (ADR-0261): its own command and name where it sets them, else the
+// host-wide ones; each harness entry it sets in place of the host-wide
+// entry of that harness, whole; and the host-wide providers and restart
+// limit. The result carries no Projects. The maps are copied.
+func (a AgentStart) ForProject(root string) AgentStart {
+	p := a.Projects[root]
+	out := a
+	out.Projects = nil
+	if len(p.Command) > 0 {
+		out.Command = slices.Clone(p.Command)
+	}
+	if p.Name != "" {
+		out.Name = p.Name
+	}
+	if len(p.Harnesses) > 0 {
+		next := maps.Clone(a.Harnesses)
+		if next == nil {
+			next = map[string]HarnessHost{}
+		}
+		maps.Copy(next, p.Harnesses)
+		out.Harnesses = next
+	}
+	return out
+}
+
+// WithProject returns the settings with the project at root's entry set to
+// p, refusing a root that is not an absolute path (the host-wide settings
+// are AgentStart's own fields, not an entry), a command whose program is empty, and a harness entry checkHarnesses
+// refuses; an entry that sets nothing is removed, and a harness entry that
+// sets nothing is dropped from it. The maps are copied.
+func (a AgentStart) WithProject(root string, p ProjectAgent) (AgentStart, error) {
+	if len(p.Harnesses) > 0 {
+		hs := map[string]HarnessHost{}
+		for name, h := range p.Harnesses {
+			if !h.IsZero() {
+				hs[name] = h
+			}
+		}
+		if len(hs) == 0 {
+			hs = nil
+		}
+		p.Harnesses = hs
+	}
+	if err := checkProjects(map[string]ProjectAgent{root: p}); err != nil {
+		return a, err
+	}
+	next := maps.Clone(a.Projects)
+	if next == nil {
+		next = map[string]ProjectAgent{}
+	}
+	if p.IsZero() {
+		delete(next, root)
+	} else {
+		next[root] = p
+	}
+	if len(next) == 0 {
+		next = nil
+	}
+	a.Projects = next
+	return a, nil
+}
+
+// checkProjects refuses a project entry keyed by anything but an absolute
+// path, one whose command has an empty program, and one whose harness entries
+// checkHarnesses refuses, each naming the project.
+func checkProjects(projects map[string]ProjectAgent) error {
+	var errs []string
+	for _, root := range slices.Sorted(maps.Keys(projects)) {
+		p := projects[root]
+		key := fmt.Sprintf("agent.projects[%q]", root)
+		if !filepath.IsAbs(root) {
+			errs = append(errs, fmt.Sprintf("%s is keyed by %q, which is not the absolute path of a project's main checkout: set a project's own agent settings with flai serve agent set, clear, or harness in the project, or --project <root>", key, root))
+			continue
+		}
+		if len(p.Command) > 0 && strings.TrimSpace(p.Command[0]) == "" {
+			errs = append(errs, fmt.Sprintf("%s.command has an empty program: set it with flai serve agent set --project %s -- <program> [args...], or clear it with flai serve agent clear --project %s", key, root, root))
+		}
+		if err := checkHarnesses(p.Harnesses); err != nil {
+			errs = append(errs, key+": "+err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 // DefaultAutoRestarts is how many times flai serve restarts a story's agent
@@ -838,10 +954,10 @@ func Load(path string) (cfg Config, created bool, err error) {
 
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
 // agent.auto_restarts, an agent.harnesses entry checkHarnesses refuses, an
-// agent.providers entry that is not whole or sets a value flai refuses, a
-// forges entry checkForges refuses, a dashboard.allowed_hosts entry that is
-// not a host name with an optional port, a notify channel checkNotify
-// refuses, and an mcp.bind that is no IP address or host name or names a
+// agent.projects entry checkProjects refuses, an agent.providers entry that
+// is not whole or sets a value flai refuses, a forges entry checkForges
+// refuses, a dashboard.allowed_hosts entry that is not a host name with an
+// optional port, a notify channel checkNotify refuses, and an mcp.bind that is no IP address or host name or names a
 // port.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -856,6 +972,9 @@ func Parse(data []byte) (Config, error) {
 		}
 	}
 	if err := checkHarnesses(cfg.Agent.Harnesses); err != nil {
+		return Config{}, err
+	}
+	if err := checkProjects(cfg.Agent.Projects); err != nil {
 		return Config{}, err
 	}
 	if err := checkProviders(cfg.Agent.Providers); err != nil {
@@ -877,10 +996,13 @@ func Parse(data []byte) (Config, error) {
 }
 
 // Save writes cfg to path atomically, creating parent directories. It
-// refuses an agent.harnesses entry checkHarnesses refuses, which Load would
-// refuse.
+// refuses an agent.harnesses entry checkHarnesses refuses and an
+// agent.projects entry checkProjects refuses, which Load would refuse.
 func Save(path string, cfg Config) error {
 	if err := checkHarnesses(cfg.Agent.Harnesses); err != nil {
+		return err
+	}
+	if err := checkProjects(cfg.Agent.Projects); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

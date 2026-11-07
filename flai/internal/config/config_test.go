@@ -818,3 +818,93 @@ func TestMCPBind(t *testing.T) {
 		}
 	}
 }
+
+// S-0587, ADR-0261: a project's own command, name, and harness entries are
+// read over the host-wide ones, each harness entry replacing that harness's
+// whole; another project, and a configuration without projects, read the
+// host-wide ones as before; the entry round-trips through a save and a load
+// as agent.projects; an entry, or a harness entry, that sets nothing is
+// removed; and a root that is not absolute, an empty program, and a harness
+// entry checkHarnesses refuses are refused, naming the project.
+func TestAgentSettingsPerProject(t *testing.T) {
+	a, b := filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
+	args := []string{"--permission-mode", "acceptEdits"}
+	host := AgentStart{Command: []string{"run-agent", "{story}"}, Name: "builder",
+		Harnesses: map[string]HarnessHost{"claude-code": {Program: "/usr/bin/claude", Args: &args}, "command": {Guard: GuardNone}}}
+	if got := host.ForProject(a); !reflect.DeepEqual(got, host) {
+		t.Errorf("with no entry a project reads the host-wide settings: %+v", got)
+	}
+	own := ProjectAgent{Command: []string{"other-agent"}, Harnesses: map[string]HarnessHost{"claude-code": {Program: "/opt/claude"}}}
+	set, err := host.WithProject(a, own)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if host.Projects != nil {
+		t.Errorf("WithProject copies the map: %+v", host.Projects)
+	}
+	got := set.ForProject(a)
+	if !reflect.DeepEqual(got.Command, []string{"other-agent"}) || got.Name != "builder" || got.Projects != nil {
+		t.Errorf("the project's command over the host-wide name: %+v", got)
+	}
+	if h := got.Harnesses["claude-code"]; h.Program != "/opt/claude" || h.Args != nil {
+		t.Errorf("the project's harness entry replaces the host-wide one whole: %+v", h)
+	}
+	if got.Harnesses["command"].Guard != GuardNone {
+		t.Errorf("a harness the project does not set reads the host-wide entry: %+v", got.Harnesses)
+	}
+	if set.Harnesses["claude-code"].Program != "/usr/bin/claude" {
+		t.Errorf("ForProject copies the host-wide map: %+v", set.Harnesses)
+	}
+	if other := set.ForProject(b); !reflect.DeepEqual(other.Command, host.Command) || other.Harnesses["claude-code"].Program != "/usr/bin/claude" {
+		t.Errorf("another project is unchanged: %+v", other)
+	}
+	c := Default()
+	c.Agent = set
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"projects": {`) || !strings.Contains(string(data), `"other-agent"`) {
+		t.Errorf("written as agent.projects: %s", data)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(back.Agent.Projects, set.Projects) {
+		t.Errorf("round trip: %+v", back.Agent.Projects)
+	}
+	empty, err := set.WithProject(a, ProjectAgent{Harnesses: map[string]HarnessHost{"claude-code": {}}})
+	if err != nil || empty.Projects != nil {
+		t.Errorf("an entry whose harness entries set nothing is removed: %+v %v", empty.Projects, err)
+	}
+	if old, err := Parse([]byte(`{"agent":{"command":["run-agent"],"name":"builder"}}`)); err != nil || old.Agent.ForProject(a).Name != "builder" || len(old.Agent.ForProject(b).Command) != 1 {
+		t.Errorf("a configuration without projects applies to every project: %+v %v", old.Agent, err)
+	}
+	for _, c := range []struct {
+		root string
+		p    ProjectAgent
+		want string
+	}{
+		{"relative/path", ProjectAgent{Name: "x"}, `agent.projects["relative/path"] is keyed by "relative/path", which is not the absolute path`},
+		{AllProjects, ProjectAgent{Name: "x"}, "which is not the absolute path of a project's main checkout"},
+		{a, ProjectAgent{Command: []string{" ", "x"}}, "command has an empty program: set it with flai serve agent set --project " + a},
+		{a, ProjectAgent{Harnesses: map[string]HarnessHost{"claude-code": {Guard: "off"}}}, `agent.projects["` + a + `"]: agent.harnesses.claude-code.guard is "off"`},
+	} {
+		if _, err := host.WithProject(c.root, c.p); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q %+v: %v, want %q", c.root, c.p, err, c.want)
+		}
+	}
+	if _, err := Parse([]byte(`{"agent":{"projects":{"relative":{"name":"x"}}}}`)); err == nil || !strings.Contains(err.Error(), "not the absolute path") {
+		t.Errorf("a project keyed by a relative path is refused on load: %v", err)
+	}
+	bad := c
+	bad.Agent.Projects = map[string]ProjectAgent{"relative": {Name: "x"}}
+	if err := Save(path, bad); err == nil || !strings.Contains(err.Error(), "not the absolute path") {
+		t.Errorf("and on save: %v", err)
+	}
+}

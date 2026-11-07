@@ -48,8 +48,8 @@ func (a *app) host() hostapi.Host {
 			cfg, _, cfgErr := a.loadConfig()
 			st := a.serveDir().AgentStates()[root]
 			command := ""
-			if len(cfg.Agent.Command) > 0 {
-				command = filepath.Base(cfg.Agent.Command[0]) // its name, never its arguments
+			if agent := cfg.Agent.ForProject(root); len(agent.Command) > 0 {
+				command = filepath.Base(agent.Command[0]) // its name, never its arguments
 			}
 			plans := st.Plans // the newest planner run for each item, by its ID (S-0208)
 			if plans == nil {
@@ -574,6 +574,17 @@ project's directory, as you, never through a shell. In an argument {story},
 {root}, {model}, and {harness} are replaced; nothing else is interpreted, and
 the story's options are in FLAI_AGENT_CONFIG as JSON.
 
+A story whose agent and project name no harness, on a project with no
+command, is started with flai's built-in default agent, claude-code with the
+harness's own default model (ADR-0261).
+
+The command, the name, and each harness's program and arguments are kept per
+project (ADR-0261): set, clear, and harness write those of the project in the
+working directory, or of --project <root>, and those of every project, the
+host-wide fallback a project that sets none of its own reads, only with
+--all-projects. A harness a project sets replaces the host-wide entry of that
+harness whole. The providers and the restart limit are host-wide.
+
 Every session's environment carries FLAI_AGENT (your --name and the story,
 such as agent-S-0104), FLAI_STORY, and FLAI_SESSION. Its output goes to a log
 beside flai serve's state, and every start and failure is in flai serve
@@ -581,22 +592,30 @@ journal.`,
 		Example: `  flai serve agent harness claude-code
   flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
   flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
+  flai serve agent set --all-projects --name builder
+  flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
   flai serve agent show
   flai serve enable agent
   flai serve agent clear`,
 		Args: cobra.NoArgs,
-		RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() },
+		RunE: func(*cobra.Command, []string) error { return a.showAgentCommand("") },
 	}
-	var name string
+	var name, setProject, clearProject string
 	var attended, restarts int
+	var setAll, clearAll bool
 	set := &cobra.Command{
-		Use:   "set [--name] [--auto-restarts <n>] [-- <program> [args...]]",
+		Use:   "set [--name] [--auto-restarts <n>] [--project <root> | --all-projects] [-- <program> [args...]]",
 		Short: "Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own",
 		Long: `Sets what you give and leaves the rest as it was: the command, as an
 argument list after --; the name the sessions work under; and, with
 --auto-restarts, how many times flai serve restarts a story's agent on its own
 after it ends with its story in progress, 2 when unset and 0 for never
-(ADR-0108). Past that, flai serve opens a thread on the story for you.`,
+(ADR-0108). Past that, flai serve opens a thread on the story for you.
+
+The command and the name are the project's in the working directory, or of
+--project <root>; with --all-projects they are every project's, the host-wide
+fallback a project that sets none of its own reads (ADR-0261). The restart
+limit is host-wide whichever you give.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			restartsSet := cmd.Flags().Changed("auto-restarts")
@@ -612,6 +631,13 @@ after it ends with its story in progress, 2 when unset and 0 for never
 			if len(args) > 0 && strings.TrimSpace(args[0]) == "" {
 				return fmt.Errorf("the program is empty")
 			}
+			root := ""
+			if len(args) > 0 || name != "" {
+				var err error
+				if root, err = a.agentScope(setProject, setAll); err != nil {
+					return err
+				}
+			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
@@ -621,54 +647,165 @@ after it ends with its story in progress, 2 when unset and 0 for never
 					return err
 				}
 			}
-			if len(args) > 0 {
-				cfg.Agent.Command = args
-			}
-			if name != "" {
-				cfg.Agent.Name = name
+			if root == "" {
+				if len(args) > 0 {
+					cfg.Agent.Command = args
+				}
+				if name != "" {
+					cfg.Agent.Name = name
+				}
+			} else if len(args) > 0 || name != "" {
+				p := cfg.Agent.Project(root)
+				if len(args) > 0 {
+					p.Command = args
+				}
+				if name != "" {
+					p.Name = name
+				}
+				if cfg.Agent, err = cfg.Agent.WithProject(root, p); err != nil {
+					return err
+				}
 			}
 			if err := config.Save(path, cfg); err != nil {
 				return err
 			}
-			return a.showAgentCommand()
+			return a.showAgentCommand(root)
 		},
 	}
 	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
-	set.Flags().IntVar(&restarts, "auto-restarts", config.DefaultAutoRestarts, "how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never")
+	set.Flags().IntVar(&restarts, "auto-restarts", config.DefaultAutoRestarts, "how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never; host-wide")
+	set.Flags().StringVar(&setProject, "project", "", "the main checkout of the project whose command and name these are, not the one in the working directory")
+	set.Flags().BoolVar(&setAll, "all-projects", false, "every project's command and name, the host-wide fallback a project that sets none of its own reads")
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
+	clear := &cobra.Command{Use: "clear [--project <root> | --all-projects]", Short: "Remove the command and the name; the harnesses, the providers, and the restart limit stay",
+		Long: `Removes the command and the name of the project in the working directory,
+or of --project <root>, so that it reads every project's again; with
+--all-projects, every project's own, the host-wide fallback (ADR-0261). The
+harnesses, the providers, and the restart limit stay.`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			root, err := a.agentScope(clearProject, clearAll)
+			if err != nil {
+				return err
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if root == "" {
+				cfg.Agent.Command, cfg.Agent.Name, cfg.Agent.AttendedMinutes = nil, "", 0
+			} else {
+				p := cfg.Agent.Project(root)
+				p.Command, p.Name = nil, ""
+				if cfg.Agent, err = cfg.Agent.WithProject(root, p); err != nil {
+					return err
+				}
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showAgentCommand(root)
+		}}
+	clear.Flags().StringVar(&clearProject, "project", "", "the main checkout of the project whose command and name to remove, not the one in the working directory")
+	clear.Flags().BoolVar(&clearAll, "all-projects", false, "every project's command and name, the host-wide fallback")
 	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentProviderCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
-		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
-		&cobra.Command{Use: "clear", Short: "Remove the command and the name; the harnesses, the providers, and the restart limit stay", Args: cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error {
-				cfg, path, err := a.loadConfig()
-				if err != nil {
-					return err
-				}
-				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses, Providers: cfg.Agent.Providers, AutoRestarts: cfg.Agent.AutoRestarts}
-				if err := config.Save(path, cfg); err != nil {
-					return err
-				}
-				return a.showAgentCommand()
-			}},
+		&cobra.Command{Use: "show", Short: "Print the command, the harnesses, and whether the action is enabled, for the project here", Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand("") }},
+		clear,
 	)
 	return c
 }
 
-func (a *app) showAgentCommand() error {
+// agentScope is whose command, name, and harnesses flai serve agent set,
+// clear, and harness write (ADR-0261): the project of --project, or of the
+// working directory, by its main checkout; or, with --all-projects, every
+// project's, the host-wide fallback, as root "". With neither and no project
+// in the working directory, it refuses, naming both.
+func (a *app) agentScope(project string, all bool) (string, error) {
+	switch {
+	case all && project != "":
+		return "", errors.New("give --project <root> or --all-projects, not both")
+	case all:
+		return "", nil
+	case project != "":
+		abs, err := filepath.Abs(config.ExpandHome(project))
+		if err != nil {
+			return "", fmt.Errorf("--project %q: resolve it to an absolute path: %w", project, err)
+		}
+		repo, err := workitem.Open(abs)
+		if err != nil {
+			return "", fmt.Errorf("--project %q: %w; name the main checkout of a system-flow project", project, err)
+		}
+		return mainRootOf(repo), nil
+	}
+	repo, err := a.project()
+	if err != nil {
+		return "", fmt.Errorf("%w; or name a project with --project <root>, or every project with --all-projects", err)
+	}
+	return mainRootOf(repo), nil
+}
+
+// agentFrom says where a project's agent setting comes from (ADR-0261):
+// fromProject when the project sets it, fromAllProjects when the host-wide
+// fallback does, and "" when neither does.
+func agentFrom(project, everywhere bool) string {
+	switch {
+	case project:
+		return fromProject
+	case everywhere:
+		return fromAllProjects
+	}
+	return ""
+}
+
+// Where a project's agent setting comes from, as show and the settings page
+// say it (ADR-0261).
+const (
+	fromProject     = "project"
+	fromAllProjects = "all-projects"
+)
+
+// fromSaid is agentFrom's answer as show prints it after a value.
+func fromSaid(from string) string {
+	switch from {
+	case fromProject:
+		return " (this project)"
+	case fromAllProjects:
+		return " (every project)"
+	}
+	return ""
+}
+
+// showAgentCommand prints the agent settings that apply to the project at
+// root, or, with root "", to the one in the working directory, each saying
+// whether it is the project's own or every project's (ADR-0261); outside a
+// project, the host-wide ones.
+func (a *app) showAgentCommand(root string) error {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return err
 	}
-	here, enabled := "", false
-	if repo, err := a.project(); err == nil {
-		here = mainRootOf(repo)
+	here, enabled := root, false
+	if here == "" {
+		if repo, err := a.project(); err == nil {
+			here = mainRootOf(repo)
+		}
+	}
+	if here != "" {
 		enabled = cfg.ActionEnabled(hostapi.ActionAgent, here)
 	}
+	agent, own := cfg.Agent.ForProject(here), cfg.Agent.Project(here)
+	commandFrom := agentFrom(len(own.Command) > 0, len(cfg.Agent.Command) > 0)
+	nameFrom := agentFrom(own.Name != "", cfg.Agent.Name != "")
+	harnessFrom := func(name string) string {
+		_, project := own.Harnesses[name]
+		_, everywhere := cfg.Agent.Harnesses[name]
+		return agentFrom(project, everywhere)
+	}
 	if a.jsonOut {
-		cmd := cfg.Agent.Command
+		cmd := agent.Command
 		if cmd == nil {
 			cmd = []string{}
 		}
@@ -682,43 +819,48 @@ func (a *app) showAgentCommand() error {
 			Images        map[string]string `json:"images,omitempty"`
 			Network       string            `json:"network,omitempty"`
 			Login         string            `json:"login,omitempty"`
+			From          string            `json:"from,omitempty"`
 		}
 		hosts := map[string]shown{}
 		for _, name := range settable() {
-			set, h := cfg.Agent.Harnesses[name], a.harnessHost(cfg, name)
-			s := shown{Program: h.Program, Args: h.Args, Guard: set.Guard, DenyProtected: set.DenyProtected}
+			set, h := agent.Harnesses[name], a.harnessHost(agent, name)
+			s := shown{Program: h.Program, Args: h.Args, Guard: set.Guard, DenyProtected: set.DenyProtected, From: harnessFrom(name)}
 			if name == config.ContainerHarness {
 				s.Images, s.Network, s.Login = set.ShownImages(), set.Network, set.Login
 			}
 			hosts[name] = s
 		}
-		if set, ok := cfg.Agent.Harnesses[harness.Command]; ok {
-			s := shown{Guard: set.Guard, DenyProtected: set.DenyProtected}
-			if len(cfg.Agent.Command) > 0 {
-				s.Program, s.Args = cfg.Agent.Command[0], cfg.Agent.Command[1:]
+		if set, ok := agent.Harnesses[harness.Command]; ok {
+			s := shown{Guard: set.Guard, DenyProtected: set.DenyProtected, From: harnessFrom(harness.Command)}
+			if len(agent.Command) > 0 {
+				s.Program, s.Args = agent.Command[0], agent.Command[1:]
 			}
 			hosts[harness.Command] = s
 		}
-		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled})
+		return a.printJSON(map[string]any{"command": cmd, "command_from": commandFrom, "name": agent.Name, "name_from": nameFrom,
+			"harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled, "project": here})
 	}
-	if len(cfg.Agent.Command) == 0 {
-		fmt.Fprintln(a.out, "no command is set, so a story that names no harness is not started; flai serve agent set -- <program> [args...]")
+	if len(agent.Command) == 0 {
+		fmt.Fprintln(a.out, "no command is set, so a story whose agent and project name no harness starts on flai's built-in default, claude-code (ADR-0261); flai serve agent set -- <program> [args...] sets one")
 	} else {
-		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", quoteArgs(cfg.Agent.Command))
+		fmt.Fprintf(a.out, "command: %s%s\n  run as it stands, in the project's directory, never through a shell\n", quoteArgs(agent.Command), fromSaid(commandFrom))
 	}
-	if set, ok := cfg.Agent.Harnesses[harness.Command]; ok {
-		fmt.Fprintf(a.out, "harness %s: the command above\n", harness.Command)
+	if agent.Name != "" {
+		fmt.Fprintf(a.out, "name: %s%s\n", agent.Name, fromSaid(nameFrom))
+	}
+	if set, ok := agent.Harnesses[harness.Command]; ok {
+		fmt.Fprintf(a.out, "harness %s: the command above%s\n", harness.Command, fromSaid(harnessFrom(harness.Command)))
 		printLifts(a, set)
 	}
 	for _, name := range settable() {
-		h := a.harnessHost(cfg, name)
-		fmt.Fprintf(a.out, "harness %s: %s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)))
-		printLifts(a, cfg.Agent.Harnesses[name])
+		h := a.harnessHost(agent, name)
+		fmt.Fprintf(a.out, "harness %s: %s%s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)), fromSaid(harnessFrom(name)))
+		printLifts(a, agent.Harnesses[name])
 		if name == config.ContainerHarness {
-			printContainer(a, cfg.Agent.Harnesses[name])
+			printContainer(a, agent.Harnesses[name])
 		}
 	}
-	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
+	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress, on every project; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
 	if here != "" {
 		if enabled {
 			fmt.Fprintln(a.out, "the agent action is on for this project; flai serve disable agent turns it off")
@@ -807,15 +949,18 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	if err != nil {
 		return serve.AgentConfig{}
 	}
+	// the project's own command, name, and harnesses over the host-wide ones
+	// (ADR-0261)
+	agent := cfg.Agent.ForProject(root)
 	hosts := map[string]harness.Host{}
 	for _, name := range settable() {
-		hosts[name] = a.harnessHost(cfg, name)
+		hosts[name] = a.harnessHost(agent, name)
 	}
-	if len(cfg.Agent.Command) > 0 {
-		hosts[harness.Command] = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+	if len(agent.Command) > 0 {
+		hosts[harness.Command] = harness.Host{Program: agent.Command[0], Args: agent.Command[1:]}
 	}
 	lifts := map[string]serve.HarnessLifts{}
-	for name, set := range cfg.Agent.Harnesses {
+	for name, set := range agent.Harnesses {
 		lifts[name] = serve.HarnessLifts{GuardNone: set.Guard == config.GuardNone, DenyProtected: set.DenyProtected}
 	}
 	var forgeTokens []string
@@ -835,10 +980,10 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Orchestrate:    cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
 		Analyze:        cfg.ActionEnabled(hostapi.ActionAnalyze, root),
 		Curate:         cfg.ActionEnabled(hostapi.ActionCurate, root),
-		Command:        cfg.Agent.Command,
+		Command:        agent.Command,
 		Harnesses:      hosts,
 		Providers:      cfg.Agent.Providers,
-		Name:           cfg.Agent.Name,
+		Name:           agent.Name,
 		AutoRestarts:   cfg.Agent.AutoRestartLimit(),
 		Lifts:          lifts,
 		AutoApprove:    cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
@@ -1209,13 +1354,14 @@ func shortDuration(d time.Duration) string {
 	return s
 }
 
-// harnessHost is the program and arguments a harness runs with here: the
-// operator's where set, the adapter's defaults where not (S-0104); and the
+// harnessHost is the program and arguments a harness runs with under agent,
+// the settings that apply to a project (ADR-0261): the operator's where set,
+// the adapter's defaults where not (S-0104); and the
 // container harness's images, network, and login as the operator sets them,
 // whose defaults the adapter applies (S-0508).
-func (a *app) harnessHost(cfg config.Config, name string) harness.Host {
+func (a *app) harnessHost(agent config.AgentStart, name string) harness.Host {
 	h := harness.Adapters[name].DefaultHost()
-	set := cfg.Agent.Harnesses[name]
+	set := agent.Harnesses[name]
 	if set.Program != "" {
 		h.Program = set.Program
 	}
@@ -1242,11 +1388,11 @@ func quoteArgs(args []string) string {
 // --deny-protected, and --reset: its program is flai serve agent set's. Only
 // the container harness takes --image, --network, and --login (S-0508).
 func newServeAgentHarnessCmd(a *app) *cobra.Command {
-	var program, guard, network, login string
+	var program, guard, network, login, project string
 	var images []string
-	var reset, denyProtected bool
+	var reset, denyProtected, all bool
 	c := &cobra.Command{
-		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [-- args...]",
+		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [--project <root> | --all-projects] [-- args...]",
 		Short: "Set the program a harness is, the arguments that say what its agent may do, and what you lift on it",
 		Long: `A story names its harness, such as claude-code; you say here what that is on
 this host. --program is what is run, and the arguments after -- replace the
@@ -1284,7 +1430,14 @@ login, mounted read-only, an existing folder given as an absolute path or
 under ~/; --login "" clears it.
 
 The command harness takes only --guard, --deny-protected, and --reset: its
-program and arguments are set with flai serve agent set.`,
+program and arguments are set with flai serve agent set.
+
+A harness's entry is the project's in the working directory, or of
+--project <root>, and every project's, the host-wide fallback a project that
+sets none of its own reads, only with --all-projects (ADR-0261). A project's
+entry replaces the host-wide entry of that harness whole: the first change
+for a project starts from the entry it reads, and --reset for a project
+removes its entry, so that it reads every project's again.`,
 		Example: `  flai serve agent harness
   flai serve agent harness claude-code --program /opt/claude/bin/claude
   flai serve agent harness claude-code -- --permission-mode acceptEdits --allowedTools Bash,Edit,mcp__flai
@@ -1295,7 +1448,9 @@ program and arguments are set with flai serve agent set.`,
   flai serve agent harness command --deny-protected=false
   flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
   flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
-  flai serve agent harness container --network flai-agents`,
+  flai serve agent harness container --network flai-agents
+  flai serve agent harness claude-code --all-projects --program /usr/local/bin/claude
+  flai serve agent harness claude-code --project /home/me/src/other --reset`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			guardSet, denySet := cmd.Flags().Changed("guard"), cmd.Flags().Changed("deny-protected")
 			imageSet, networkSet, loginSet := cmd.Flags().Changed("image"), cmd.Flags().Changed("network"), cmd.Flags().Changed("login")
@@ -1310,7 +1465,7 @@ program and arguments are set with flai serve agent set.`,
 				if dash >= 0 || program != "" || reset || guardSet || denySet || containerSet {
 					return fmt.Errorf("name the harness: %s", strings.Join(known, ", "))
 				}
-				return a.showAgentCommand()
+				return a.showAgentCommand("")
 			}
 			if len(names) > 1 {
 				return fmt.Errorf("one harness at a time; arguments for it go after --")
@@ -1337,11 +1492,16 @@ program and arguments are set with flai serve agent set.`,
 					return err
 				}
 			}
+			root, err := a.agentScope(project, all)
+			if err != nil {
+				return err
+			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
 			}
-			h := cfg.Agent.Harnesses[name]
+			// a project's first change starts from the entry it reads
+			h := cfg.Agent.ForProject(root).Harnesses[name]
 			if reset {
 				h = config.HarnessHost{}
 			}
@@ -1371,15 +1531,28 @@ program and arguments are set with flai serve agent set.`,
 			if denySet {
 				h.DenyProtected = denyProtected
 			}
-			if cfg.Agent, err = cfg.Agent.WithHarness(name, h); err != nil {
+			if root == "" {
+				cfg.Agent, err = cfg.Agent.WithHarness(name, h)
+			} else {
+				p := cfg.Agent.Project(root)
+				p.Harnesses = maps.Clone(p.Harnesses)
+				if p.Harnesses == nil {
+					p.Harnesses = map[string]config.HarnessHost{}
+				}
+				p.Harnesses[name] = h // an entry that sets nothing is removed
+				cfg.Agent, err = cfg.Agent.WithProject(root, p)
+			}
+			if err != nil {
 				return err
 			}
 			if err := config.Save(path, cfg); err != nil {
 				return err
 			}
-			return a.showAgentCommand()
+			return a.showAgentCommand(root)
 		},
 	}
+	c.Flags().StringVar(&project, "project", "", "the main checkout of the project whose harness this is, not the one in the working directory")
+	c.Flags().BoolVar(&all, "all-projects", false, "every project's harness, the host-wide fallback a project that sets none of its own reads")
 	c.Flags().StringVar(&program, "program", "", "the program the harness is on this host")
 	c.Flags().StringVar(&guard, "guard", "", `none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back`)
 	c.Flags().BoolVar(&denyProtected, "deny-protected", false, "your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write")
@@ -1936,31 +2109,36 @@ func hostProviders(set map[string]manifest.Provider, lookup func(string) (string
 	return out
 }
 
-// hostHarnesses are the host's harnesses for the settings page: each one's
-// program and arguments, with set saying whether the host gives either rather
+// hostHarnesses are the harnesses of agent, the settings that apply to a
+// project or the host-wide ones, for the settings page: each one's program
+// and arguments, with set saying whether the settings give either rather
 // than the adapter's defaults; its guard and deny_protected (ADR-0131); and
 // whether its adapter runs flai guard and can ask before a protected write,
 // where neither lifts anything; and the container harness's image for each
 // inner harness, the defaults filled in, its network, and its login folder
-// (S-0508). The command's program and arguments are flai serve agent set's
+// (S-0508). from, when given, says for each where its entry comes from
+// (ADR-0261). The command's program and arguments are flai serve agent set's
 // command, never set here.
-func (a *app) hostHarnesses(cfg config.Config) map[string]any {
+func (a *app) hostHarnesses(agent config.AgentStart, from func(name string) string) map[string]any {
 	out := map[string]any{}
 	for _, n := range append(settable(), harness.Command) {
 		var h harness.Host
 		if n != harness.Command {
-			h = a.harnessHost(cfg, n)
-		} else if len(cfg.Agent.Command) > 0 {
-			h = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+			h = a.harnessHost(agent, n)
+		} else if len(agent.Command) > 0 {
+			h = harness.Host{Program: agent.Command[0], Args: agent.Command[1:]}
 		}
 		args := h.Args
 		if args == nil {
 			args = []string{}
 		}
-		set := cfg.Agent.Harnesses[n]
+		set := agent.Harnesses[n]
 		caps := harness.Adapters[n].Capabilities()
 		entry := map[string]any{"program": h.Program, "args": args, "set": set.Program != "" || set.Args != nil,
 			"guard": set.Guard, "deny_protected": set.DenyProtected, "guard_capable": caps.Guard, "ask_capable": caps.Ask}
+		if from != nil {
+			entry["from"] = from(n)
+		}
 		if n == config.ContainerHarness {
 			entry["images"], entry["network"], entry["login"] = set.ShownImages(), set.Network, set.Login
 		}
@@ -1992,11 +2170,18 @@ func (a *app) hostSettings(root string) any {
 			"here": cfg.ActionEnabled(n, root), "everywhere": cfg.ActionEnabled(n, config.AllProjects)})
 	}
 	providers := hostProviders(cfg.Agent.Providers, os.LookupEnv)
-	command := cfg.Agent.Command
-	if command == nil {
-		command = []string{}
-	}
-	harnesses := a.hostHarnesses(cfg)
+	// the project's command, name, and harnesses over every project's, each
+	// saying where it comes from, and every project's own beside them, the
+	// host-wide fallback (ADR-0261)
+	agent, own := cfg.Agent.ForProject(root), cfg.Agent.Project(root)
+	command := nonNil(agent.Command)
+	harnesses := a.hostHarnesses(agent, func(name string) string {
+		_, project := own.Harnesses[name]
+		_, everywhere := cfg.Agent.Harnesses[name]
+		return agentFrom(project, everywhere)
+	})
+	everywhere := map[string]any{"name": cfg.Agent.Name, "command": nonNil(cfg.Agent.Command),
+		"harnesses": a.hostHarnesses(cfg.Agent.ForProject(""), nil)}
 	checks := cfg.Checks.Commands
 	if checks == nil {
 		checks = []config.NamedCommand{}
@@ -2014,8 +2199,9 @@ func (a *app) hostSettings(root string) any {
 	// start gives it (S-0489); flai dashboard status says what it runs with.
 	out := map[string]any{
 		"actions": actions,
-		"agent": map[string]any{"name": cfg.Agent.Name, "command": command,
-			"harnesses": harnesses, "providers": providers},
+		"agent": map[string]any{"name": agent.Name, "command": command,
+			"name_from": agentFrom(own.Name != "", cfg.Agent.Name != ""), "command_from": agentFrom(len(own.Command) > 0, len(cfg.Agent.Command) > 0),
+			"harnesses": harnesses, "providers": providers, "everywhere": everywhere},
 		"allowed_hosts": config.NormalizeAllowedHosts(cfg.Dashboard.AllowedHosts),
 		"checks":        map[string]any{"commands": checks, "timeout_minutes": timeout},
 		"import_roots":  roots,

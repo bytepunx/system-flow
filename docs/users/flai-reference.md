@@ -3829,6 +3829,10 @@ A story names its agent (flai agent, flai edit --harness): a harness, a model, a
 
 A story that names no harness, or names "command", is started with your command, when one is set: an argument list, run as it stands in the project's directory, as you, never through a shell. In an argument {story}, {root}, {model}, and {harness} are replaced; nothing else is interpreted, and the story's options are in FLAI\_AGENT\_CONFIG as JSON.
 
+A story whose agent and project name no harness, on a project with no command, is started with flai's built-in default agent, claude-code with the harness's own default model (ADR-0261).
+
+The command, the name, and each harness's program and arguments are kept per project (ADR-0261): set, clear, and harness write those of the project in the working directory, or of --project &lt;root&gt;, and those of every project, the host-wide fallback a project that sets none of its own reads, only with --all-projects. A harness a project sets replaces the host-wide entry of that harness whole. The providers and the restart limit are host-wide.
+
 Every session's environment carries FLAI\_AGENT (your --name and the story, such as agent-S-0104), FLAI\_STORY, and FLAI\_SESSION. Its output goes to a log beside flai serve's state, and every start and failure is in flai serve journal.
 
 Examples:
@@ -3837,6 +3841,8 @@ Examples:
 flai serve agent harness claude-code
 flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
 flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
+flai serve agent set --all-projects --name builder
+flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
 flai serve agent show
 flai serve enable agent
 flai serve agent clear
@@ -3850,7 +3856,7 @@ Subcommands:
 - [provider](#flai-serve-agent-provider): Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own
-- [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
+- [show](#flai-serve-agent-show): Print the command, the harnesses, and whether the action is enabled, for the project here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
 - [stop](#flai-serve-agent-stop): Stop a story's agent: end its process and everything it started
 - [stream](#flai-serve-agent-stream): Print what a story's agent said and did, from the log flai serve gave it
@@ -3861,8 +3867,17 @@ Subcommands:
 Remove the command and the name; the harnesses, the providers, and the restart limit stay.
 
 ```text
-flai serve agent clear
+flai serve agent clear [--project <root> | --all-projects] [flags]
 ```
+
+Removes the command and the name of the project in the working directory, or of --project &lt;root&gt;, so that it reads every project's again; with --all-projects, every project's own, the host-wide fallback (ADR-0261). The harnesses, the providers, and the restart limit stay.
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--all-projects` | every project's command and name, the host-wide fallback |
+| `--project` string | the main checkout of the project whose command and name to remove, not the one in the working directory |
 
 ##### flai serve agent commit
 
@@ -3887,7 +3902,7 @@ flai serve agent commit S-0140
 Set the program a harness is, the arguments that say what its agent may do, and what you lift on it.
 
 ```text
-flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [-- args...] [flags]
+flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [--project <root> | --all-projects] [-- args...] [flags]
 ```
 
 A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
@@ -3901,6 +3916,8 @@ The opencode harness runs opencode run with no arguments of flai's: it can neith
 The container harness runs an inner harness, claude-code, in a Docker container, and only it takes --image, --network, and --login. --image &lt;inner&gt;=&lt;image&gt; is the image the inner harness runs in, flai-agent-&lt;inner&gt;:local (make agent-images) unless set; repeat it for each inner harness. --network is the Docker network the container joins, Docker's default bridge with the host reached through Docker's host gateway unless set; --network "" goes back to it. --login is the folder holding your Claude login, mounted read-only, an existing folder given as an absolute path or under ~/; --login "" clears it.
 
 The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
+
+A harness's entry is the project's in the working directory, or of --project &lt;root&gt;, and every project's, the host-wide fallback a project that sets none of its own reads, only with --all-projects (ADR-0261). A project's entry replaces the host-wide entry of that harness whole: the first change for a project starts from the entry it reads, and --reset for a project removes its entry, so that it reads every project's again.
 
 Examples:
 
@@ -3916,18 +3933,22 @@ flai serve agent harness command --deny-protected=false
 flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
 flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
 flai serve agent harness container --network flai-agents
+flai serve agent harness claude-code --all-projects --program /usr/local/bin/claude
+flai serve agent harness claude-code --project /home/me/src/other --reset
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--all-projects` | every project's harness, the host-wide fallback a project that sets none of its own reads |
 | `--deny-protected` | your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write |
 | `--guard` string | none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back |
 | `--image` stringArray | the container harness's image for an inner harness, as &lt;inner&gt;=&lt;image&gt;; repeat for each (flai-agent-&lt;inner&gt;:local unless set) |
 | `--login` string | the folder holding your Claude login, which the container harness mounts read-only; "" clears it |
 | `--network` string | the Docker network the container harness's agents join; "" is Docker's default bridge |
 | `--program` string | the program the harness is on this host |
+| `--project` string | the main checkout of the project whose harness this is, not the one in the working directory |
 | `--reset` | go back to the adapter's program and arguments, and lift nothing |
 
 ##### flai serve agent provider
@@ -3985,21 +4006,25 @@ It refuses, and says why, while the agent action is off for the project, when th
 Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own.
 
 ```text
-flai serve agent set [--name] [--auto-restarts <n>] [-- <program> [args...]] [flags]
+flai serve agent set [--name] [--auto-restarts <n>] [--project <root> | --all-projects] [-- <program> [args...]] [flags]
 ```
 
 Sets what you give and leaves the rest as it was: the command, as an argument list after --; the name the sessions work under; and, with --auto-restarts, how many times flai serve restarts a story's agent on its own after it ends with its story in progress, 2 when unset and 0 for never (ADR-0108). Past that, flai serve opens a thread on the story for you.
+
+The command and the name are the project's in the working directory, or of --project &lt;root&gt;; with --all-projects they are every project's, the host-wide fallback a project that sets none of its own reads (ADR-0261). The restart limit is host-wide whichever you give.
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--auto-restarts` int | how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never (default `2`) |
+| `--all-projects` | every project's command and name, the host-wide fallback a project that sets none of its own reads |
+| `--auto-restarts` int | how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never; host-wide (default `2`) |
 | `--name` string | the FLAI\_AGENT the session works under (default agent) |
+| `--project` string | the main checkout of the project whose command and name these are, not the one in the working directory |
 
 ##### flai serve agent show
 
-Print the command and whether the action is enabled here.
+Print the command, the harnesses, and whether the action is enabled, for the project here.
 
 ```text
 flai serve agent show

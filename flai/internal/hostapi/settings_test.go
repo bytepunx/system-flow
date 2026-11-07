@@ -1,12 +1,15 @@
 package hostapi
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -135,5 +138,49 @@ func TestSettingsManifestWritesARolesKeys(t *testing.T) {
 	_, _, e = manifestEdit(channel.Project{}, json.RawMessage(`{"set":{"roles.reviewer.permissions.fly":true}}`))
 	if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "roles.reviewer.permissions.fly") {
 		t.Errorf("an unknown permission: %+v", e)
+	}
+}
+
+// S-0587, ADR-0261: settings.agent and settings.harness write the project's
+// own agent settings, running flai serve agent in its directory with no scope
+// flag, and every project's, the host-wide fallback, only when the request
+// says everywhere, with --all-projects.
+func TestSettingsAgentAndHarnessWriteTheProjectsOwnUnlessEverywhere(t *testing.T) {
+	p := withDocs(t)
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, Host{Enabled: func(a, _ string) bool { return a == ActionSettings }})
+	for i, c := range []struct{ method, params, want string }{
+		{"settings.agent", `{"name":"builder","command":["run-agent","{story}"]`, "serve agent set --name=builder --json -- run-agent {story}"},
+		{"settings.agent", `{"name":"builder","everywhere":true`, "serve agent set --all-projects --name=builder --json"},
+		{"settings.agent", `{"command":null`, "serve agent clear --json"},
+		{"settings.agent", `{"command":null,"everywhere":true`, "serve agent clear --all-projects --json"},
+		{"settings.harness", `{"name":"claude-code","program":"/opt/claude"`, "serve agent harness claude-code --program=/opt/claude --json"},
+		{"settings.harness", `{"name":"claude-code","program":"/opt/claude","everywhere":true`, "serve agent harness claude-code --all-projects --program=/opt/claude --json"},
+		{"settings.harness", `{"name":"claude-code","reset":true,"everywhere":false`, "serve agent harness claude-code --reset --json"},
+	} {
+		n := len(rec.runs)
+		if _, e := m[c.method](context.Background(), p, json.RawMessage(fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 701+i))); e != nil {
+			t.Errorf("%s %s: %+v", c.method, c.params, e)
+			continue
+		}
+		if len(rec.runs) != n+1 {
+			t.Errorf("%s %s ran nothing", c.method, c.params)
+			continue
+		}
+		if got := strings.Join(rec.runs[n].Args, " "); got != c.want {
+			t.Errorf("%s %s ran %q, want %q", c.method, c.params, got, c.want)
+		}
+		if rec.runs[n].Dir != p.Root {
+			t.Errorf("%s %s ran in %q, not the project's directory %q", c.method, c.params, rec.runs[n].Dir, p.Root)
+		}
+	}
+	for i, c := range []struct{ method, params string }{
+		{"settings.agent", `{"everywhere":true`},
+		{"settings.harness", `{"name":"claude-code","everywhere":true`},
+	} {
+		n := len(rec.runs)
+		if _, e := m[c.method](context.Background(), p, json.RawMessage(fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 741+i))); e == nil || !strings.Contains(e.Message, "nothing to set") || len(rec.runs) != n {
+			t.Errorf("%s %s: everywhere alone sets nothing, so it is refused and nothing runs: %+v", c.method, c.params, e)
+		}
 	}
 }

@@ -164,7 +164,7 @@ func TestServeAgentCommand(t *testing.T) {
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "agent")
-	if !strings.Contains(out, "no command is set, so a story that names no harness is not started") || !strings.Contains(out, "off for this project") {
+	if !strings.Contains(out, "no command is set, so a story whose agent and project name no harness starts on flai's built-in default, claude-code") || !strings.Contains(out, "off for this project") {
 		t.Errorf("by default: %s", out)
 	}
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "agent: off everywhere") || !strings.Contains(out, "whoever can move a story to ready") {
@@ -809,8 +809,8 @@ func TestServeAgentHarnessContainer(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := config.HarnessHost{Images: map[string]string{"claude-code": "flai-agent-claude-code:local"}, Login: login}
-	if got := cfg.Agent.Harnesses[config.ContainerHarness]; !reflect.DeepEqual(got, want) {
-		t.Errorf("kept in the host configuration: %+v", got)
+	if got := cfg.Agent.Project(root).Harnesses[config.ContainerHarness]; !reflect.DeepEqual(got, want) {
+		t.Errorf("kept in the host configuration, as the project's: %+v", got)
 	}
 	runIn(t, root, "serve", "agent", "harness", "container", "--network", "flai-agents")
 	if got := (&app{configPath: configOf(t)}).agentConfig(root).Harnesses[config.ContainerHarness]; got.Network != "flai-agents" || got.Login != login || got.Images["claude-code"] != "flai-agent-claude-code:local" {
@@ -848,8 +848,8 @@ func TestServeAgentHarnessContainer(t *testing.T) {
 		t.Errorf(`--network "" and --login "" clear only themselves: %+v`, got)
 	}
 	runIn(t, root, "serve", "agent", "harness", "container", "--reset")
-	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil {
-		t.Errorf("--reset removes the entry: %+v", cfg.Agent.Harnesses)
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil || cfg.Agent.Projects != nil {
+		t.Errorf("--reset removes the entry: %+v %+v", cfg.Agent.Harnesses, cfg.Agent.Projects)
 	}
 }
 
@@ -879,8 +879,8 @@ func TestServeAgentHarnessContainerRefusals(t *testing.T) {
 			t.Errorf("%q: %d %s, want %q", tc.args, code, errOut, tc.want)
 		}
 	}
-	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil {
-		t.Errorf("a refusal changes nothing: %+v", cfg.Agent.Harnesses)
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil || cfg.Agent.Projects != nil {
+		t.Errorf("a refusal changes nothing: %+v %+v", cfg.Agent.Harnesses, cfg.Agent.Projects)
 	}
 }
 
@@ -915,11 +915,11 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return cfg.Agent.Harnesses
+		return cfg.Agent.ForProject(root).Harnesses
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
 	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "command", "--guard", "none")
-	if code != 0 || !strings.Contains(out, "harness command: the command above\n  guard: none, so a story's sub-agents run without flai guard") {
+	if code != 0 || !strings.Contains(out, "harness command: the command above (this project)\n  guard: none, so a story's sub-agents run without flai guard") {
 		t.Fatalf("guard none on the command: %d %s %s", code, out, errOut)
 	}
 	out, _, _ = runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected")
@@ -1231,8 +1231,8 @@ func TestServeAgentAutoRestarts(t *testing.T) {
 		if got.AutoRestarts == nil || *got.AutoRestarts != c.want {
 			t.Errorf("--auto-restarts %s is written: %v", c.n, got.AutoRestarts)
 		}
-		if strings.Join(got.Command, " ") != "run-agent {story}" || got.Name != "builder" || got.Harnesses["claude-code"].Program != "/opt/claude" {
-			t.Errorf("--auto-restarts %s alone keeps the command, the name, and the harnesses: %+v", c.n, got)
+		if p := got.ForProject(root); strings.Join(p.Command, " ") != "run-agent {story}" || p.Name != "builder" || p.Harnesses["claude-code"].Program != "/opt/claude" {
+			t.Errorf("--auto-restarts %s alone keeps the project's command, name, and harnesses: %+v", c.n, got)
 		}
 	}
 	if js, _, _ := runIn(t, root, "serve", "agent", "show", "--json"); !strings.Contains(js, `"auto_restarts": 3`) {
@@ -1516,8 +1516,8 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 	}
 	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
 	for _, want := range []string{
-		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"none","guard_capable":true,"program":"claude","set":false}`,
-		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
+		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"from":"project","guard":"none","guard_capable":true,"program":"claude","set":false}`,
+		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"from":"project","guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
 	} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("settings lack %s:\n%s", want, got)
@@ -2772,5 +2772,82 @@ func TestServeMCPBind(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(cfgPath); strings.Contains(string(data), `"mcp"`) {
 		t.Errorf("a cleared address is not written: %s", data)
+	}
+}
+
+// S-0587, ADR-0261: flai serve agent set and harness write the project in
+// the working directory, or of --project, and leave another project as it
+// was; with --all-projects they write the host-wide fallback every project
+// without its own reads; clear removes only the project's own; show says
+// whose each value is; and outside a project, with neither flag, they refuse
+// naming both.
+func TestServeAgentSettingsArePerProject(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	a, b := tempProject(t), tempProject(t)
+	cfgOf := func(root string) serve.AgentConfig { return (&app{configPath: configOf(t)}).agentConfig(root) }
+	if out, errOut, code := runIn(t, a, "serve", "agent", "set", "--name", "builder", "--", "run-a", "{story}"); code != 0 || !strings.Contains(out, `command: "run-a" "{story}" (this project)`) || !strings.Contains(out, "name: builder (this project)") {
+		t.Fatalf("set in project a: %d %s %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, a, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude-a"); code != 0 || !strings.Contains(out, `harness claude-code: "/opt/claude-a" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,mcp__flai" (this project)`) {
+		t.Fatalf("harness in project a: %d %s %s", code, out, errOut)
+	}
+	if got := cfgOf(a); strings.Join(got.Command, " ") != "run-a {story}" || got.Name != "builder" || got.Harnesses["claude-code"].Program != "/opt/claude-a" {
+		t.Errorf("project a: %+v", got)
+	}
+	if got := cfgOf(b); len(got.Command) != 0 || got.Name != "" || got.Harnesses["claude-code"].Program != "claude" {
+		t.Errorf("project b is unchanged: %+v", got)
+	}
+	// --project from b's directory sets a's, not b's
+	if _, errOut, code := runIn(t, b, "serve", "agent", "harness", "claude-code", "--project", a, "--program", "/opt/claude-a2"); code != 0 {
+		t.Fatalf("--project: %s", errOut)
+	}
+	if cfgOf(a).Harnesses["claude-code"].Program != "/opt/claude-a2" || cfgOf(b).Harnesses["claude-code"].Program != "claude" {
+		t.Errorf("--project names the project written: a %+v, b %+v", cfgOf(a).Harnesses["claude-code"], cfgOf(b).Harnesses["claude-code"])
+	}
+	// --all-projects: every project without its own reads it, a keeps its own
+	if out, errOut, code := runIn(t, b, "serve", "agent", "set", "--all-projects", "--", "run-all"); code != 0 || !strings.Contains(out, `command: "run-all" (every project)`) {
+		t.Fatalf("--all-projects: %d %s %s", code, out, errOut)
+	}
+	runIn(t, b, "serve", "agent", "harness", "claude-code", "--all-projects", "--program", "/usr/local/bin/claude")
+	if got := cfgOf(b); strings.Join(got.Command, " ") != "run-all" || got.Harnesses["claude-code"].Program != "/usr/local/bin/claude" {
+		t.Errorf("project b reads every project's: %+v", got)
+	}
+	if got := cfgOf(a); strings.Join(got.Command, " ") != "run-a {story}" || got.Harnesses["claude-code"].Program != "/opt/claude-a2" {
+		t.Errorf("project a keeps its own: %+v", got)
+	}
+	js, _, _ := runIn(t, b, "serve", "agent", "show", "--json")
+	if !strings.Contains(js, `"command_from": "all-projects"`) || !strings.Contains(js, `"from": "all-projects"`) {
+		t.Errorf("show --json says whose each value is: %s", js)
+	}
+	// clear and --reset in a remove a's own, so that it reads every project's
+	runIn(t, a, "serve", "agent", "clear")
+	runIn(t, a, "serve", "agent", "harness", "claude-code", "--reset")
+	if got := cfgOf(a); strings.Join(got.Command, " ") != "run-all" || got.Name != "" || got.Harnesses["claude-code"].Program != "/usr/local/bin/claude" {
+		t.Errorf("a reads every project's again: %+v", got)
+	}
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Projects != nil {
+		t.Errorf("a's entry, now empty, is removed: %+v", cfg.Agent.Projects)
+	}
+	// outside a project, neither flag is refused; --project and --all-projects together too
+	outside := t.TempDir()
+	for _, args := range [][]string{
+		{"serve", "agent", "set", "--", "x"},
+		{"serve", "agent", "clear"},
+		{"serve", "agent", "harness", "claude-code", "--program", "/x"},
+	} {
+		if _, errOut, code := runIn(t, outside, args...); code == 0 || !strings.Contains(errOut, "--project <root>") || !strings.Contains(errOut, "--all-projects") {
+			t.Errorf("%q outside a project: %d %s", args, code, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, a, "serve", "agent", "set", "--project", a, "--all-projects", "--", "x"); code == 0 || !strings.Contains(errOut, "not both") {
+		t.Errorf("both flags: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, a, "serve", "agent", "set", "--project", outside, "--", "x"); code == 0 || !strings.Contains(errOut, "name the main checkout of a system-flow project") {
+		t.Errorf("--project that is no project: %d %s", code, errOut)
+	}
+	// the restart limit stays host-wide, and needs no project
+	if _, errOut, code := runIn(t, outside, "serve", "agent", "set", "--auto-restarts", "3"); code != 0 || cfgOf(a).AutoRestarts != 3 || cfgOf(b).AutoRestarts != 3 {
+		t.Errorf("--auto-restarts is host-wide: %d %s", code, errOut)
 	}
 }

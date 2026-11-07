@@ -22,10 +22,11 @@ import (
 // now each is a flai command a method builds, as the dashboard's other writes
 // are, gated by the settings host action, which only a shell turns on and
 // off. What the host's configuration keeps for every project (the agent's
-// command, the harnesses, the providers, the checks, the import folders, the
-// dashboard token and accepted hosts) needs it on for every project; what belongs to one project (its host
-// actions, its default agent, its shared paths, its MCP token) needs it on for
-// that project.
+// command and harnesses, kept per project since ADR-0261 over a host-wide
+// fallback, the providers, the checks, the import folders, the dashboard
+// token and accepted hosts) needs it on for every project; what belongs to
+// one project (its host actions, its default agent, its shared paths, its MCP
+// token) needs it on for that project.
 
 var (
 	agentName   = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
@@ -43,6 +44,17 @@ var (
 		}
 	}
 )
+
+// projectScope is the flag that makes flai serve agent set, clear, or
+// harness write every project's settings, the host-wide fallback, when
+// everywhere is true; none otherwise, so that the command, run in the
+// project's directory, writes the project's own (ADR-0261).
+func projectScope(everywhere bool) []string {
+	if everywhere {
+		return []string{"--all-projects"}
+	}
+	return nil
+}
 
 // EnableEverywhere is what the operator runs for a host-wide setting.
 func EnableEverywhere(action string) string { return EnableCommand(action) + " --all-projects" }
@@ -577,24 +589,29 @@ func settingsSpecs() map[string]spec {
 		"settings.subproject": {action: ActionSettings, exits: map[int]int{1: Refused}, describe: settingsDone("the project's sub-projects changed"),
 			say: sayArgs(subprojectEdit), build: subprojectEdit},
 
-		// settings.agent: the agent's name and command, kept for every
-		// project. command null removes the command (and with it the name,
-		// as flai serve agent clear does). attended_minutes is retired
-		// (S-0116, ADR-0043): a dashboard that still sends it is not refused,
-		// and it changes nothing.
+		// settings.agent: the agent's name and command, the project's own
+		// (ADR-0261), run in the project's directory, or with everywhere true
+		// every project's, the host-wide fallback a project that sets none
+		// reads. command null removes the command (and with it the name, as
+		// flai serve agent clear does). attended_minutes is retired (S-0116,
+		// ADR-0043): a dashboard that still sends it is not refused, and it
+		// changes nothing. Its gate stays the host-wide one, the settings
+		// action on for every project, for either.
 		"settings.agent": hostwide("the agent's name or command changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			var in struct {
-				Name     string          `json:"name"`
-				Attended int             `json:"attended_minutes"`
-				Command  json.RawMessage `json:"command"`
+				Name       string          `json:"name"`
+				Attended   int             `json:"attended_minutes"`
+				Command    json.RawMessage `json:"command"`
+				Everywhere bool            `json:"everywhere"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, "", e
 			}
+			scope := projectScope(in.Everywhere)
 			if string(in.Command) == "null" {
-				return []string{"serve", "agent", "clear"}, "", nil
+				return append([]string{"serve", "agent", "clear"}, scope...), "", nil
 			}
-			args := []string{"serve", "agent", "set"}
+			args := append([]string{"serve", "agent", "set"}, scope...)
 			if in.Name != "" {
 				if !agentName.MatchString(in.Name) {
 					return nil, "", bad("%q is not an agent's name: lower-case letters, digits, and -", in.Name)
@@ -611,7 +628,7 @@ func settingsSpecs() map[string]spec {
 				}
 				args = append(append(args, "--"), cmd...)
 			}
-			if len(args) == 3 {
+			if len(args) == 3+len(scope) {
 				return nil, "", bad("nothing to set: give name or command")
 			}
 			return args, "", nil
@@ -621,7 +638,9 @@ func settingsSpecs() map[string]spec {
 		// that say what its agent may do; args null leaves them, [] means none.
 		// guard ("none" or "") and deny_protected are what the operator lifts
 		// on it (ADR-0131); absent leaves them. The command takes only those
-		// and reset: its program and arguments are settings.agent's.
+		// and reset: its program and arguments are settings.agent's. The
+		// entry is the project's own (ADR-0261), or with everywhere true every
+		// project's, the host-wide fallback, as settings.agent's scope is.
 		"settings.harness": hostwide("a harness's program, arguments, guard, or deny_protected changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			var in struct {
 				Name          string          `json:"name"`
@@ -630,6 +649,7 @@ func settingsSpecs() map[string]spec {
 				Reset         bool            `json:"reset"`
 				Guard         *string         `json:"guard"`
 				DenyProtected *bool           `json:"deny_protected"`
+				Everywhere    bool            `json:"everywhere"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, "", e
@@ -640,7 +660,8 @@ func settingsSpecs() map[string]spec {
 			if in.Name == "command" && (in.Program != "" || (len(in.Args) > 0 && string(in.Args) != "null")) {
 				return nil, "", bad("the command's program and arguments are set with settings.agent; the command harness takes only guard, deny_protected, and reset")
 			}
-			args := []string{"serve", "agent", "harness", in.Name}
+			args := append([]string{"serve", "agent", "harness", in.Name}, projectScope(in.Everywhere)...)
+			fixed := len(args)
 			if in.Reset {
 				return append(args, "--reset"), "", nil
 			}
@@ -669,7 +690,7 @@ func settingsSpecs() map[string]spec {
 				}
 				args = append(append(args, "--"), list...)
 			}
-			if len(args) == 4 {
+			if len(args) == fixed {
 				return nil, "", bad("nothing to set: give program, args, guard, deny_protected, or reset")
 			}
 			return args, "", nil
