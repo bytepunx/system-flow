@@ -486,16 +486,25 @@ export type KlusterStatus = {
 /** One key of the kluster: block (Go's manifest.SettingValue, S-0586), with its value. */
 export type KlusterSetting = {
 	key: string;
-	/** text for config and namespace, command for build, deploy, and teardown, duration for timeout. */
-	kind: 'text' | 'command' | 'duration';
+	/**
+	 * text for config and namespace, command for build, deploy, and teardown, duration for timeout,
+	 * components for components, a list of {name, build} (ADR-0263).
+	 */
+	kind: 'text' | 'command' | 'duration' | 'components';
 	/** The value in effect when the key is unset, as it would be written. */
 	default?: string;
 	/** A sentence on what the setting does. */
 	meaning: string;
-	/** The value as the manifest has it, a command as its argument list; absent when unset. */
-	value?: string | string[];
+	/**
+	 * The value as the manifest has it, a command as its argument list, components as their list;
+	 * absent when unset.
+	 */
+	value?: string | string[] | KlusterComponent[];
 	set: boolean;
 };
+
+/** One component of the kluster: block (Go's manifest.KlusterComponent, ADR-0263): its name and build. */
+export type KlusterComponent = { name: string; build: string[] };
 
 /** What the kluster config file names (Go's hostapi.KlusterConfigFile, S-0586). */
 export type KlusterConfigFile = {
@@ -555,12 +564,16 @@ export type KlusterWorkloads = {
 	workloads_error?: string;
 };
 
-/** One step of a deployment (Go's hostapi.KlusterStep): build, load, deploy, or teardown. */
+/**
+ * One step of a deployment (Go's hostapi.KlusterStep): build, build-<name> per component, load,
+ * deploy, or teardown. A deploy records every step it will run as pending before the first starts
+ * (ADR-0263), so a pending step has no started_at yet.
+ */
 export type KlusterStep = {
 	name: string;
-	started_at: string;
+	started_at?: string;
 	ended_at?: string;
-	/** running, passed, failed, or skipped. */
+	/** pending, running, passed, failed, or skipped. */
 	outcome: string;
 	exit_code?: number;
 	/** The step's log, from the project's root. */
@@ -568,6 +581,33 @@ export type KlusterStep = {
 	/** The end of that log, at most 4 KB, cut to whole lines. */
 	log_tail?: string;
 };
+
+/**
+ * A read of one step's log from an offset (Go's hostapi.KlusterLog, ADR-0263): at most 64 KB of
+ * text from offset, and next, the offset to ask from next, so a page follows a running step live.
+ */
+export type KlusterLog = {
+	namespace: string;
+	step: string;
+	/** The log's path, from the project's root. */
+	log: string;
+	/** False when the step has no log yet. */
+	exists: boolean;
+	/** Where text starts in the log. */
+	offset: number;
+	/** The offset to ask from next: offset and the bytes of text. */
+	next: number;
+	/** The log's size when it was read. */
+	size: number;
+	text: string;
+	/** The log was shorter than the offset asked, as when a new deploy cleared it; text starts at 0. */
+	reset?: boolean;
+	/** The step's outcome in the namespace's record; absent when the record has none. */
+	outcome?: string;
+};
+
+/** Which step's log to read, and from where: the query of GET /api/kluster/log. */
+export type KlusterLogTarget = { namespace: string; step: string; offset: number };
 
 /** One port of a service, as kubectl reports it. */
 export type KlusterPort = { name?: string; port: number; protocol?: string };
@@ -1094,6 +1134,14 @@ export class Repo extends EventEmitter {
 	}
 
 	/**
+	 * Read one step's log of a namespace from an offset, flai's kluster.log (ADR-0263): a read,
+	 * whatever the kluster host action says, asked afresh each time so a page can follow it live.
+	 */
+	async klusterLog(t: KlusterLogTarget): Promise<KlusterLog> {
+		return upgraded("read a deployment step's log", () => this.ask<KlusterLog>('kluster.log', t));
+	}
+
+	/**
 	 * Start a story's deploy into its namespace, flai's kluster.deploy under the kluster host action
 	 * (S-0581). flai answers the job at once and runs it in the background.
 	 */
@@ -1269,6 +1317,41 @@ export function klusterForwardParam(body: unknown): KlusterForwardTarget {
 			`port must be one of the service's ports, not ${JSON.stringify(b.port ?? null)}`
 		);
 	return { namespace: b.namespace, service: b.service, port: b.port };
+}
+
+/**
+ * The step log GET /api/kluster/log reads (ADR-0263), from its query: namespace a DNS label, step
+ * build, load, deploy, teardown, or build-<name> with name a DNS label, and offset a whole number of
+ * zero or more, 0 when left out; anything else is refused with 400 before flai is asked.
+ */
+export function klusterLogParam(query: URLSearchParams): KlusterLogTarget {
+	const label = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
+	const namespace = query.get('namespace');
+	if (namespace === null || !label.test(namespace))
+		throw new RepoError(
+			400,
+			`namespace must be a namespace kluster.deployments lists, not ${JSON.stringify(namespace)}`
+		);
+	const step = query.get('step');
+	const component = step?.startsWith('build-') ? step.slice('build-'.length) : null;
+	if (
+		step === null ||
+		!(
+			['build', 'load', 'deploy', 'teardown'].includes(step) ||
+			(component !== null && label.test(component))
+		)
+	)
+		throw new RepoError(
+			400,
+			`step must be build, build-<component>, load, deploy, or teardown, not ${JSON.stringify(step)}`
+		);
+	const raw = query.get('offset') ?? '0';
+	if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)))
+		throw new RepoError(
+			400,
+			`offset must be a whole number of bytes, 0 or more, not ${JSON.stringify(raw)}`
+		);
+	return { namespace, step, offset: Number(raw) };
 }
 
 export function klusterStoryParam(value: unknown): string {

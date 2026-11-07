@@ -101,7 +101,7 @@
 	const jobLine = (j: KlusterJob) => `kluster ${j.action} of the cluster ${j.cluster}`;
 	const typed = (s: KlusterSetting) =>
 		s.kind === 'command'
-			? lines(Array.isArray(s.value) ? s.value : undefined)
+			? lines(Array.isArray(s.value) ? (s.value as string[]) : undefined)
 			: typeof s.value === 'string'
 				? s.value
 				: '';
