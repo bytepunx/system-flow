@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 497
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 295
-      cache_read: 8152369
-      cache_write: 61069
-      cost: 2.9309
+      input: 54
+      output: 22769
+      cache_read: 8313012
+      cache_write: 100202
+      cost: 2.8226
 ---
 # T-2483 The review checks of a deployed story run after its deploy ends, with the namespace and the kube context in their environment
 

@@ -3,10 +3,10 @@ id: E-0032
 type: epic
 nature: feature
 title: Integrate kluster for demo and testing
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-06T21:29:53Z
-updated: 2026-11-06T21:57:39Z
+updated: 2026-11-07T03:28:24Z
 transitions:
   - to: ready
     at: 2026-11-06T21:30:04Z
@@ -14,22 +14,27 @@ transitions:
   - to: in-progress
     at: 2026-11-06T21:57:39Z
     by: agent-S-0575
+  - to: review
+    at: 2026-11-07T03:26:49Z
+    by: agent-S-0579
+  - to: done
+    at: 2026-11-07T03:28:24Z
+    by: orchestrator
 tags: []
 usage:
   source: sum
-  seconds: 19099
-  estimated: true
-  priced_by: estimate
+  seconds: 19891
+  priced_by: harness
   turns:
     - day: 2026-11-06
       ceremony: 3
       hand_edits: 3
       work: 227
     - day: 2026-11-07
-      ceremony: 12
+      ceremony: 13
       test_runs: 1
-      hand_edits: 17
-      work: 291
+      hand_edits: 19
+      work: 319
   models:
     - model: claude-haiku-5-5
       input: 10
@@ -38,11 +43,11 @@ usage:
       cache_write: 33283
       cost: 0.0064
     - model: claude-opus-5-5
-      input: 1882
-      output: 582798
-      cache_read: 261620470
-      cache_write: 3156464
-      cost: 88.6364
+      input: 1954
+      output: 707881
+      cache_read: 274631691
+      cache_write: 3210478
+      cost: 92.3007
   strategic:
     - kind: planner
       seconds: 1128
@@ -61,21 +66,21 @@ usage:
           cache_write: 301635
           cost: 6.8042
     - kind: orchestrator
-      seconds: 1041
+      seconds: 1154
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 308
-          output: 2067
-          cache_read: 11220959
-          cache_write: 1297290
-          cost: 3.0089
+          input: 338
+          output: 2257
+          cache_read: 12260806
+          cache_write: 1433109
+          cost: 3.2931
         - model: claude-sonnet-5-5
-          input: 34
-          output: 302
-          cache_read: 307169
-          cache_write: 180683
-          cost: 0.3464
+          input: 38
+          output: 331
+          cache_read: 319631
+          cache_write: 213652
+          cost: 0.3787
 cost_of_delay:
   inputs:
     revenue_per_week: 1250
@@ -108,3 +113,5 @@ We may need to issue one or more research and/or experiment stories that can hel
 
 ## Notes
 - 2026-11-06T21:57:39Z: moved to in-progress: follows S-0575, which moved to in-progress
+- 2026-11-07T03:26:49Z: moved to review: follows S-0579, which moved to review
+- 2026-11-07T03:28:24Z: moved to done: follows S-0579, which moved to done

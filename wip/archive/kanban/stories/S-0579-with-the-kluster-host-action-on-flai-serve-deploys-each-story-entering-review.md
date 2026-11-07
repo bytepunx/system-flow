@@ -3,11 +3,11 @@ id: S-0579
 type: story
 nature: feature
 title: With the kluster host action on, flai serve deploys each story entering review into its namespace, runs the review checks against it, tears it down when the story leaves review, and promotes main on acceptance
-status: in-progress
+status: done
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:13Z
-updated: 2026-11-07T03:05:32Z
+updated: 2026-11-07T03:28:24Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:00Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T02:36:31Z
     by: agent-S-0579
+  - to: review
+    at: 2026-11-07T03:26:49Z
+    by: agent-S-0579
+  - to: done
+    at: 2026-11-07T03:28:24Z
+    by: orchestrator
 tags: [kluster, flai, serve]
 topics: [kluster, deployment, testing, review, host-actions]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md, flai/cmd/checks.go, flai/cmd/serve.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md, flai/cmd/checks.go, flai/cmd/serve.go, design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md, design/issues/summary.md]
 after: [S-0578]
 agent:
   harness: claude-code
@@ -26,32 +32,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2241
-  estimated: true
-  priced_by: estimate
+  seconds: 3033
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      hand_edits: 3
-      work: 39
+      ceremony: 2
+      hand_edits: 5
+      work: 67
   models:
     - model: claude-opus-5-5
-      input: 226
-      output: 1424
-      cache_read: 33175752
-      cache_write: 502707
-      cost: 12.0178
+      input: 298
+      output: 126507
+      cache_read: 46186973
+      cache_write: 556721
+      cost: 15.6821
   strategic:
     - kind: orchestrator
-      seconds: 52
+      seconds: 72
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 105
-          cache_read: 648040
-          cache_write: 70224
-          cost: 0.1725
+          input: 22
+          output: 127
+          cache_read: 846193
+          cache_write: 92236
+          cost: 0.2257
 cost_of_delay:
   value: 163.4
   by: planner-E-0032
@@ -74,13 +79,13 @@ When the `kluster` host action is on, a story that reaches review is tested agai
 
 ## Acceptance criteria
 
-- [ ] With the `kluster` host action on for a project that has a `kluster:` block, flai serve runs `flai kluster deploy` once for a story that enters review, and again when its branch's head changes while it is in review. flai serve's journal logs each deploy and its outcome.
-- [ ] The review checks of a deployed story run after its deploy ends, with the namespace and the kube context S-0576's ADR names in their environment. With the action off, or no deployment, the checks run as before.
-- [ ] A story that leaves review, back to in progress or cancelled, is torn down. A story that is accepted is torn down, and main is promoted to the default namespace.
-- [ ] One deploy runs at a time per project, and others wait their turn. A deploy that fails opens one thread on the story naming the step and the log, and moves nothing.
-- [ ] With the action off, or no `kluster:` block, flai serve runs no kluster command.
-- [ ] The tests fake the kluster commands, and cover entering review, a new head, leaving review, acceptance, a failure, and the action off.
-- [ ] `docs/operators/index.md` gains a section on the kluster host action, what it runs and when, and how to turn it on. `design/system/kluster.md` and the Features section of `docs/users/flaiover.md` say the same.
+- [x] With the `kluster` host action on for a project that has a `kluster:` block, flai serve runs `flai kluster deploy` once for a story that enters review, and again when its branch's head changes while it is in review. flai serve's journal logs each deploy and its outcome.
+- [x] The review checks of a deployed story run after its deploy ends, with the namespace and the kube context S-0576's ADR names in their environment. With the action off, or no deployment, the checks run as before.
+- [x] A story that leaves review, back to in progress or cancelled, is torn down. A story that is accepted is torn down, and main is promoted to the default namespace.
+- [x] One deploy runs at a time per project, and others wait their turn. A deploy that fails opens one thread on the story naming the step and the log, and moves nothing.
+- [x] With the action off, or no `kluster:` block, flai serve runs no kluster command.
+- [x] The tests fake the kluster commands, and cover entering review, a new head, leaving review, acceptance, a failure, and the action off.
+- [x] `docs/operators/index.md` gains a section on the kluster host action, what it runs and when, and how to turn it on. `design/system/kluster.md` and the Features section of `docs/users/flaiover.md` say the same.
 
 ## Tasks
 
@@ -106,3 +111,17 @@ When the `kluster` host action is on, a story that reaches review is tested agai
   - Layer 3: T-2484 (documents).
 - Forecast 1h, raised from `flai forecast`'s 29m (107 s per unit, size 16). flai serve's passes run in the background, and their tests run long and have failed on timing under load (S-0560, S-0561, S-0569), which costs reruns. The delivery moves by the same 31m.
 - Cost of delay 163.40 USD/week: `flai cod`'s share of E-0032's 1250 USD/week revenue input (alex, TH-0829), by forecast duration. It stands as flai gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 096c6cc19599aeb71035e12224800db7d0f79c7d
+- At: 2026-11-07T03:28:24Z
+
+Verdict: pass. All seven criteria are met in the diff, the close-out passed at the head commit 096c6cc, and nothing is uncommitted.
+- 1: flai/internal/serve/kluster.go, flai/internal/serve/serve.go
+- 2: flai/internal/serve/checks.go, flai/internal/serve/kluster.go, flai/cmd/checks.go, flai/cmd/serve.go, flai/internal/serve/serve.go
+- 3: flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go
+- 4: flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go
+- 5: flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go
+- 6: flai/internal/serve/kluster_test.go, flai/internal/serve/checks_test.go
+- 7: docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md

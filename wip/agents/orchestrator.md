@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1982.1417
-accrued_seconds: 1510261
-tasks_completed: 1888
-last_run: 2026-11-07T02:38:05Z
+accrued_cost: 1982.6727
+accrued_seconds: 1510409
+tasks_completed: 1893
+last_run: 2026-11-07T03:17:18Z
 ---
 
 # Orchestrator activity
@@ -13246,6 +13246,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1173 USD, estimated
+
+### 2026-11-07T03:14:54Z
+
+- Summary: Accepted S-0581 at 409d27b under accept_reviews: close-out passed at the branch head, verifier matched all 7 criteria to changed files, dry run had no blockers. Value 114.38 USD/week, forecast 42m.
+- Items: S-0581
+- Seconds: 66
+- Cost: 0.1803 USD, estimated
+
+### 2026-11-07T03:15:22Z
+
+- Summary: Did not publish after S-0581: policy judgement, 7 accepted stories unreleased worth 503.01 USD/week (release_evaluate not met). E-0032's kluster work is incomplete, with S-0579 still in progress on the same files, and TH-0811 (the publish formula's evaluate step always stops under judgement) is unanswered. Batch waits for S-0579.
+- Items: S-0581, S-0579
+- Seconds: 28
+- Cost: 0.0468 USD, estimated
+
+### 2026-11-07T03:15:44Z
+
+- Summary: I accepted S-0581 at commit 409d27b. It is merged into main, archived, and committed. I did not publish a release.
+- Items: none
+- Seconds: 22
+- Cost: 0.0947 USD, estimated
+
+### 2026-11-07T03:17:05Z
+
+- Summary: release-due S-0581: did not publish. release_evaluate: policy judgement, met false, count 7, 503.01 USD/week (S-0520 25, S-0545 20, S-0577 128, S-0578 73.53, S-0580 117.1, S-0581 114.38, S-0582 25), nothing held_by_epic. I judge the batch incomplete: E-0032's kluster work waits on S-0579, still in progress. Under judgement the publish formula's step 2 (release --evaluate --require-met) always stops, and release_publish refuses beside the formula (ADR-0240); orchestration.release still has only value: 1000, and TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0581, S-0579, E-0032
+- Seconds: 19
+- Cost: 0.0895 USD, estimated
+
+### 2026-11-07T03:17:18Z
+
+- Summary: I didn't publish a release for S-0581. Seven accepted stories are waiting to be released, and the publish path can't release them as things stand.
+- Items: none
+- Seconds: 13
+- Cost: 0.1197 USD, estimated
 
 ## Refusals
 

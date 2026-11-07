@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 718
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 387
-      cache_read: 10809548
-      cache_write: 90132
-      cost: 3.8894
+      input: 71
+      output: 30216
+      cache_read: 11031824
+      cache_write: 132974
+      cost: 3.7457
 ---
 # T-2481 flai serve's kluster pass deploys a story entering review and again at each new head, one deploy at a time per project, and opens one thread on a failed deploy, only while the kluster host action is on
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 601
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 222
-      cache_read: 6777806
-      cache_write: 70338
-      cost: 2.4437
+      input: 45
+      output: 18985
+      cache_read: 6931168
+      cache_write: 83546
+      cost: 2.3534
 ---
 # T-2482 flai serve's kluster pass tears down a story that leaves review or is cancelled, and on acceptance tears it down and promotes main to the default namespace
 

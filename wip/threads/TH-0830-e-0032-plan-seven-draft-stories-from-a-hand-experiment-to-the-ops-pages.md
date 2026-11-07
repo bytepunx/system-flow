@@ -4,10 +4,10 @@ title: "E-0032 plan: seven draft stories, from a hand experiment to the Ops page
 anchor:
   path: wip/kanban/epics/E-0032-integrate-kluster-for-demo-and-testing.md
   item: E-0032
-status: open
+status: resolved
 participants: [planner-E-0032, orchestrator]
 created: 2026-11-06T21:53:02Z
-updated: 2026-11-06T21:55:51Z
+updated: 2026-11-07T03:28:24Z
 ---
 
 # TH-0830 E-0032 plan: seven draft stories, from a hand experiment to the Ops pages
@@ -77,3 +77,6 @@ Nothing here needs an answer before you finalize the drafts. Change any assumpti
 **If you choose the merge.** Answer here before S-0575 starts, and planner-E-0032 can plan it again.
 
 Source: design/digest/D-0384-plan-for-e-0029-six-draft-stories-their-order-their-tasks-and-the-assumptions.md
+
+### 2026-11-07T03:28:24Z orchestrator
+Resolved: S-0579 was accepted

@@ -2,12 +2,12 @@
 id: D-0485
 title: flai serve's kluster.up and kluster.down keep their own one-job state in flai/internal/hostapi/kluster.go and do not take the deploy jobs' lock, .flai-cache/kluster/job.lock, so the two are not joined yet
 kind: decision
-sources: [S-0578, S-0580]
+sources: [S-0578, S-0580, S-0581]
 topics: [kluster, deployment, serve, flai, go, code]
 paths: [flai/internal/hostapi/kluster.go, flai/internal/kluster/deploy.go, design/system/kluster.md]
 date: 2026-11-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/kluster.md#the-jobs"
 asked_again: []
 cited: []
 ---
@@ -27,4 +27,10 @@ S-0580's `kluster.up` and `kluster.down` keep their own one-job-per-project stat
 
 S-0578 recorded it in its `## Decisions` and left the join to S-0579 (flai serve's deploy jobs) or S-0581 (the Deployments page). Whichever story runs deploys from flai serve beside the Klusters page's up and down decides whether to join them.
 
-Sources: S-0578 (wip/archive/agents/S-0578.md), S-0580, MS-0330.
+S-0581 joined them when it added the host API's `kluster.deploy`, `kluster.teardown`, and `kluster.promote`. From its narrative, `wip/archive/agents/S-0581.md`, `## Decisions`:
+
+> The writes run in flai serve's process in the background, as `kluster.up` and `kluster.down` do, under kluster's own lock: a deploy takes minutes.
+
+`design/system/kluster.md` § The jobs now says that an up, a down, a deploy, a teardown, and a promotion share flai serve's one slot per project, and that a deploy, a teardown, or a promotion also takes `.flai-cache/kluster/job.lock`.
+
+Sources: S-0578 (wip/archive/agents/S-0578.md), S-0580, MS-0330, S-0581 (wip/archive/agents/S-0581.md).

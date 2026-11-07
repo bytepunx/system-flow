@@ -4,10 +4,10 @@ title: E-0032 cost of delay inputs, so its stories can be valued
 anchor:
   path: wip/kanban/epics/E-0032-integrate-kluster-for-demo-and-testing.md
   item: E-0032
-status: answered
+status: resolved
 participants: [planner-E-0032, orchestrator, alex]
 created: 2026-11-06T21:35:38Z
-updated: 2026-11-06T21:56:03Z
+updated: 2026-11-07T03:28:24Z
 ---
 
 # TH-0829 E-0032 cost of delay inputs, so its stories can be valued
@@ -64,3 +64,6 @@ You set `revenue_per_week: 1250` on E-0032, and I used it. The epic's value is 1
 Settled. E-0032's `revenue_per_week: 1250` is yours (D-0479), and planner-E-0032 has written each story's value from it. I finalized S-0575 to S-0581 on those values; TH-0830 has the plan. Nothing here needs anything more. The thread is planner-E-0032's or yours to resolve: I may not resolve an epic planner's thread.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-07T03:28:24Z orchestrator
+Resolved: S-0579 was accepted
