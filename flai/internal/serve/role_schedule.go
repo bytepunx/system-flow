@@ -25,17 +25,23 @@ import (
 // analysis.schedule, digest.schedule, and orchestration.schedule, which the
 // role then shares with the built-in role that setting is for. Each time the
 // setting comes round with the host action the role's file names on, it
-// starts the role on no item through startRole, with the schedule as its
-// trigger ("schedule daily"). A start the checks refuse, as while a run of
-// the role goes, is logged and not tried again until the schedule next
-// comes round; a start the budget state holds is tried again at each look
-// until it starts (S-0534). A role whose file takes items is not started:
-// a schedule gives it no item to run on. Times missed between two looks come
-// round once, and a schedule set or changed, or a role or trigger added,
-// comes round first at its next time from then. The built-in roles' own
-// launchers follow the settings their files name, by the same functions
-// (scheduleSettings, scheduleSettingValid, matching), and start their roles
-// themselves (ADR-0250 §4).
+// starts the role through startRole, with the schedule as its trigger
+// ("schedule daily"): a role that takes no item once, on no item, under an
+// entry with no condition; a role whose file takes stories once for each
+// ready story, in the board's pull order (roles.EachReadyStory), under an
+// entry with when: each-ready-story (S-0571, ADR-0250 §5). A role that takes
+// items under an entry with no condition, and one that takes no story under
+// each-ready-story, is not started, which is logged and which flai check
+// reports. A start the checks refuse, as while a run of the role goes on the
+// same item, is logged, naming the item, and not tried again until the
+// schedule next comes round; a start the budget state holds is kept, per
+// item, and tried again at each look until it starts (S-0534), or until its
+// story is no longer ready. Times missed between two looks come round once,
+// and a schedule set or changed, or a role or trigger added, comes round
+// first at its next time from then. The built-in roles' own launchers follow
+// the settings their files name, by the same functions (scheduleSettings,
+// scheduleSettingValid, matching), and start their roles themselves
+// (ADR-0250 §4).
 //
 // What it has seen is kept in memory only, as the analysis scheduler's is.
 // While a role's host action is off its schedules start nothing and keep up,
@@ -61,11 +67,12 @@ type roleSetting struct {
 }
 
 // roleFollow is how a role scheduler follows one role's schedule: its
-// cadence, and heldDue, the trigger of the start the budget state held,
-// which each look tries again until it starts; "" when none waits.
+// cadence, and held, the triggers of the starts the budget state held, by
+// the item each is on ("" for none), which each look tries again until they
+// start.
 type roleFollow struct {
 	cadence cadence
-	heldDue string
+	held    map[string]string
 }
 
 // newRoleScheduler is the role scheduler for project e, starting its roles
@@ -110,55 +117,130 @@ func (s *roleScheduler) look(ctx context.Context) {
 		k := rs.key()
 		f := s.follow(k, repo.Manifest, now)
 		follows[k] = f
-		s.lookAt(ctx, rs.file, rs.setting, f, repo.Manifest, cfg.RoleActions[rs.file.Action], now)
+		s.lookAt(ctx, rs.file, rs.setting, f, repo, cfg.RoleActions[rs.file.Action], now)
 	}
 	s.follows = follows
 }
 
 // lookAt starts the role file names when setting has come round for f by
-// now, or when f holds a start the budget state held, while on, its host
-// action, is. While it is off the schedule keeps up and a held start is
-// dropped. A setting that is not one the role may name, or whose value does
-// not parse, is warned of once and starts nothing.
-func (s *roleScheduler) lookAt(ctx context.Context, file roles.Role, setting string, f *roleFollow, m manifest.Manifest, on bool, now time.Time) {
+// now, on what scheduleTargets gives, and tries again each start f holds
+// that the budget state held, while on, its host action, is. While it is off
+// the schedule keeps up and the held starts are dropped. A setting that is
+// not one the role may name, or whose value does not parse, is warned of
+// once and starts nothing.
+func (s *roleScheduler) lookAt(ctx context.Context, file roles.Role, setting string, f *roleFollow, repo *workitem.Repo, on bool, now time.Time) {
 	if err := scheduleSettingValid(file, setting); err != nil {
 		s.warnOnce("role schedule not valid", err, "role", file.Name)
 		return
 	}
-	_, sched, err := m.ScheduleSetting(setting)
+	_, sched, err := repo.Manifest.ScheduleSetting(setting)
 	if err != nil {
 		s.warnOnce("role schedule not valid", err, "role", file.Name)
 		return
 	}
 	if !on {
-		f.cadence.mark, f.heldDue = now, ""
+		f.cadence.mark, f.held = now, nil
 		return
 	}
-	trigger := f.heldDue
+	trigger := ""
 	if f.cadence.due(sched, now) {
 		trigger = scheduleTrigger(sched)
 	}
-	if trigger == "" {
+	if trigger == "" && len(f.held) == 0 {
 		return
 	}
-	f.heldDue = ""
-	if len(file.Item) > 0 {
-		s.starter.log("scheduled role not started", "role", file.Name, "trigger", trigger,
-			"reason", "the role runs on an item, as its file "+file.Path+" says, and a schedule gives it none")
+	targets, ok := s.scheduleTargets(file, setting, repo, trigger)
+	if !ok {
+		f.held = nil
 		return
 	}
+	held := f.held
+	f.held = nil
 	s.starter.mu.Lock()
 	defer s.starter.mu.Unlock()
-	_, held, err := startRole(ctx, s.o, s.e, s.starter, file.Name, "", trigger)
+	for _, item := range targets {
+		t := trigger
+		if t == "" {
+			t = held[item]
+		}
+		if t == "" {
+			continue
+		}
+		s.startScheduled(ctx, file, item, t, f)
+	}
+}
+
+// scheduleTargets are the items the role file names is started on when
+// setting comes round, in order: "", for no item, for a role that takes
+// none under an entry with no condition; and the ready stories in the
+// board's pull order for one that takes stories under an entry with when:
+// each-ready-story (ADR-0250 §5). It is false, with why logged when the
+// setting came round (trigger set), when the file's entries start the role
+// on nothing: a schedule gives a role that takes items no item, and
+// each-ready-story gives one that takes no story none, as flai check
+// reports.
+func (s *roleScheduler) scheduleTargets(file roles.Role, setting string, repo *workitem.Repo, trigger string) ([]string, bool) {
+	plain, each := false, false
+	for _, t := range matching(file.Trigger, roles.Occurrence{Schedule: setting}) {
+		switch t.When {
+		case "":
+			plain = true
+		case roles.CondEachReadyStory:
+			each = true
+		}
+	}
+	notStarted := func(reason string) ([]string, bool) {
+		if trigger != "" {
+			s.starter.log("scheduled role not started", "role", file.Name, "trigger", trigger, "reason", reason)
+		}
+		return nil, false
+	}
+	switch {
+	case each && slices.Contains(file.Item, string(workitem.Story)):
+		items, err := repo.List(true)
+		if err != nil {
+			s.warnOnce("role scheduler could not read the project", err)
+			return nil, false
+		}
+		board, err := repo.LoadBoard()
+		if err != nil {
+			s.warnOnce("role scheduler could not read the project", err)
+			return nil, false
+		}
+		return roles.EachReadyStory(board.Order, items), true
+	case each && !plain:
+		return notStarted("the role takes no story, as its file " + file.Path + " says, and " + roles.CondEachReadyStory + " starts it only on ready stories")
+	case len(file.Item) > 0:
+		return notStarted("the role runs on an item, as its file " + file.Path + " says, and a schedule gives it none")
+	case plain:
+		return []string{""}, true
+	}
+	return nil, false
+}
+
+// startScheduled starts the role file names on item, "" for none, with
+// trigger, logging a start the checks refuse with the item it was for, and
+// keeping in f a start the budget state holds, to try again at the next
+// look. The caller holds the launcher's lock.
+func (s *roleScheduler) startScheduled(ctx context.Context, file roles.Role, item, trigger string, f *roleFollow) {
+	args := []any{"role", file.Name}
+	if item != "" {
+		args = append(args, "item", item)
+	}
+	args = append(args, "trigger", trigger)
+	_, held, err := startRole(ctx, s.o, s.e, s.starter, file.Name, item, trigger)
 	var no *Refused
 	switch {
 	case errors.As(err, &no):
-		s.starter.log("scheduled role not started", "role", file.Name, "trigger", trigger, "reason", no.Why)
+		s.starter.log("scheduled role not started", append(args, "reason", no.Why)...)
 	case err != nil:
-		s.starter.warn("scheduled role not started", "role", file.Name, "trigger", trigger, "err", err)
+		s.starter.warn("scheduled role not started", append(args, "err", err)...)
 	case held != nil:
-		f.heldDue = trigger
-		s.starter.heldOnce(s.said, "scheduled role held", *held, "role", file.Name, "trigger", trigger)
+		if f.held == nil {
+			f.held = map[string]string{}
+		}
+		f.held[item] = trigger
+		s.starter.heldOnce(s.said, "scheduled role held", *held, args...)
 	}
 }
 

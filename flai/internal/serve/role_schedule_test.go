@@ -6,11 +6,13 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // roleScheduleLab is a roleLab whose auditor and reviewer are started on
@@ -172,8 +174,8 @@ func TestARefusedScheduledRoleWaitsForTheNextTime(t *testing.T) {
 }
 
 // S-0418: a schedule set later comes round first at its next time from
-// then; a role whose file takes items is not started, and that is said once
-// each time its schedule comes round.
+// then; a role whose file takes items is not started under an entry with no
+// condition, and that is said once each time its schedule comes round.
 func TestASetRoleScheduleComesRoundAtItsNextTime(t *testing.T) {
 	lab := newRoleScheduleLab(t, "", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
 	lab.lookAt(lab.clock)
@@ -235,5 +237,154 @@ func TestARoleScheduleThatDoesNotParseStartsNothing(t *testing.T) {
 	}
 	if n := strings.Count(lab.logText(), `msg="role schedule not valid" component=serve project=t role=auditor err="roles.auditor.schedule \"61 * * * *\"`); n != 1 {
 		t.Errorf("warned %d times, want once:\n%s", n, lab.logText())
+	}
+}
+
+// eachReadyStory has the reviewer's schedule entry run it once for every
+// ready story (ADR-0250 §5).
+func (lab *roleScheduleLab) eachReadyStory() {
+	lab.t.Helper()
+	path := filepath.Join(lab.root, "design", "workflows", "roles", "reviewer.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	body := strings.Replace(string(data), "{schedule: roles.reviewer.schedule}", "{schedule: roles.reviewer.schedule, when: each-ready-story}", 1)
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// pullOrder sets the board's pull order.
+func (lab *roleScheduleLab) pullOrder(order ...string) {
+	lab.t.Helper()
+	b, err := lab.repo.LoadBoard()
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	b.Order = order
+	if err := b.Save(lab.clock.Format("2006-01-02")); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// reviewerStarts are the stories the reviewer's runs were started on, in
+// the order they started, from the journal.
+func (lab *roleScheduleLab) reviewerStarts(stories ...string) []string {
+	var out []string
+	for _, e := range lab.entries() {
+		if e.Method != MethodRole || !strings.HasPrefix(e.Detail, "started ") {
+			continue
+		}
+		for _, id := range stories {
+			if strings.Contains(e.Detail, id) {
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
+// reviewed waits for the reviewer's run on each of stories to end.
+func (lab *roleScheduleLab) reviewed(stories ...string) {
+	lab.t.Helper()
+	for _, id := range stories {
+		waitFor(lab.t, "the reviewer's run on "+id+" ended", func() bool { r := lab.roleRun("reviewer", id); return r != nil && r.Ended != "" })
+	}
+}
+
+// S-0571 (I-0262): a defined role that takes stories, under a schedule entry
+// with when: each-ready-story, is started once for each ready story in the
+// board's pull order when its schedule comes round, each on its story with
+// the schedule as its trigger, and never on a story that is not ready.
+func TestAnEachReadyStoryScheduleStartsTheRoleOnEveryReadyStory(t *testing.T) {
+	lab := newRoleScheduleLab(t, "", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	lab.eachReadyStory()
+	first, second := lab.ready("First ready"), lab.ready("Second ready")
+	waiting := lab.backlog("Still in backlog", nil)
+	lab.pullOrder(second, first)
+	lab.schedule("", "0 9 * * *")
+	lab.lookAt(lab.clock)
+	lab.lookAt(time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC))
+	if got := lab.reviewerStarts(first, second, waiting); !slices.Equal(got, []string{second, first}) {
+		t.Fatalf("the reviewer was started on %v, want %v in pull order\n%s", got, []string{second, first}, lab.logText())
+	}
+	for _, id := range []string{first, second} {
+		if run := lab.roleRun("reviewer", id); run == nil || run.Trigger != "schedule 0 9 * * *" {
+			t.Errorf("the run on %s = %+v, want one started by schedule 0 9 * * *", id, run)
+		}
+	}
+	if lab.roleRun("reviewer", waiting) != nil {
+		t.Errorf("the reviewer was started on %s, which is in backlog", waiting)
+	}
+	if strings.Contains(lab.logText(), `msg="scheduled role not started"`) {
+		t.Errorf("a start was refused:\n%s", lab.logText())
+	}
+	lab.reviewed(first, second)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.reviewerStarts(first, second)); n != 2 {
+		t.Errorf("the reviewer was started %d times by one time coming round, want two", n)
+	}
+}
+
+// S-0571: a start of a role that takes stories that the budget state holds
+// is kept for its story and tried again at each look until the state clears,
+// once, and dropped for a story no longer ready.
+func TestAnEachReadyStoryStartHeldByTheBudgetIsKeptPerStory(t *testing.T) {
+	lab := newRoleScheduleLab(t, "", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	lab.eachReadyStory()
+	kept, left := lab.ready("Kept ready"), lab.ready("Left ready")
+	lab.schedule("", "0 9 * * *")
+	lab.lookAt(lab.clock)
+	lab.budgetHeldOn(harness.Command, anHour())
+	lab.lookAt(time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC))
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if got := lab.reviewerStarts(kept, left); len(got) != 0 {
+		t.Fatalf("started while held: %v", got)
+	}
+	if n := strings.Count(lab.logText(), `msg="scheduled role held"`); n != 1 {
+		t.Errorf("the hold was logged %d times, want once:\n%s", n, lab.logText())
+	}
+	st, err := lab.repo.Get(left)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(st, workitem.Backlog, "alex", "", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	lab.budgetCleared()
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if got := lab.reviewerStarts(kept, left); !slices.Equal(got, []string{kept}) {
+		t.Fatalf("once the state cleared the reviewer was started on %v, want only %s", got, kept)
+	}
+	if run := lab.roleRun("reviewer", kept); run == nil || run.Trigger != "schedule 0 9 * * *" {
+		t.Errorf("the held run = %+v, want one started by schedule 0 9 * * *", run)
+	}
+	lab.reviewed(kept)
+	lab.lookAt(lab.clock.Add(time.Minute))
+	if n := len(lab.reviewerStarts(kept, left)); n != 1 {
+		t.Errorf("the held start was tried again after it started: %d runs", n)
+	}
+}
+
+// S-0571: a role that takes no item under each-ready-story alone is not
+// started, and that is said when its schedule comes round.
+func TestAnEachReadyStoryScheduleStartsNoRoleThatTakesNoStory(t *testing.T) {
+	lab := newRoleScheduleLab(t, "0 9 * * *", time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC))
+	path := filepath.Join(lab.root, "design", "workflows", "roles", "auditor.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(data), "{schedule: roles.auditor.schedule}", "{schedule: roles.auditor.schedule, when: each-ready-story}", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.ready("A ready story")
+	lab.lookAt(time.Date(2026, 10, 7, 9, 0, 0, 0, time.UTC))
+	if n := lab.starts(); n != 0 {
+		t.Errorf("the auditor, which takes no story, was started %d times", n)
+	}
+	if !strings.Contains(lab.logText(), `msg="scheduled role not started" component=serve project=t role=auditor trigger="schedule 0 9 * * *" reason="the role takes no story`) {
+		t.Errorf("why it was not started is not logged:\n%s", lab.logText())
 	}
 }
