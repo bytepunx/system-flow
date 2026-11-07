@@ -2,11 +2,11 @@
 id: I-0235
 title: "flai check finds `narrative.missing` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 7
 first_reported: 2026-10-31T09:53:32Z
 last_reported: 2026-11-01T10:59:26Z
-updated: 2026-11-01T23:36:06Z
+updated: 2026-11-07T04:14:53Z
 ---
 
 # I-0235 flai check finds `narrative.missing` outside the story at close-out
@@ -44,3 +44,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0555 remediates this issue, created from it at 2026-11-01T05:45:09Z.
+Closed 2026-11-07T04:14:53Z: S-0555: ScopeToStories (flai/internal/check/scope.go) now leaves a narrative.missing outside the story out of a check scoped to a story (ADR-0256), so a close-out neither notes it nor records it here. TestScopedCheckLeavesOutANarrativeMissingOutsideTheStory and TestCheckRecordIssuesLeavesOutANarrativeMissingOutsideTheStory reproduce the S-0549 case: another story in progress with no narrative. A story's own missing narrative stays inside its check, an error, and flai check in the main checkout still reports every story in progress or in review with no narrative.
