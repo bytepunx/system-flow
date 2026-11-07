@@ -509,6 +509,69 @@ func TestScopedCheckLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0235: five close-outs met narrative.missing on S-0549, a story moved to
+// in progress with no narrative, which none of them touched, and recorded it.
+// Scoped to another story, the check leaves it out (ADR-0256); scoped to the
+// story that lacks its narrative, the finding is its own, an error inside it;
+// unscoped, it is reported.
+func TestScopedCheckLeavesOutANarrativeMissingOutsideTheStory(t *testing.T) {
+	const rel = "wip/kanban/stories/S-006-six.md"
+	root := scopeProject(t)
+	edit(t, root, "wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
+	addStory(t, root, "S-006", "E-001", "")
+	if err := os.Remove(filepath.Join(root, "wip/agents/S-006.md")); err != nil {
+		t.Fatal(err)
+	}
+	whole, scoped := runScoped(t, root, nil)
+	want := "S-006 is in-progress but has no narrative; run flai stream open S-006"
+	if got := ruleFindings(whole, "narrative.missing"); len(got) != 1 || got[0].Message != want || got[0].Level != Error ||
+		!strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Fatalf("unscoped, the run should report S-006's narrative.missing as an error: %+v", whole.Findings)
+	}
+	if whole.OK(false) {
+		t.Errorf("unscoped, the run should fail on S-006's narrative.missing: %+v", whole.Findings)
+	}
+	if got := ruleFindings(scoped, "narrative.missing"); len(got) != 0 {
+		t.Errorf("scoped to S-004, the narrative.missing on S-006, which it did not touch, should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Errors != whole.Errors-1 {
+		t.Errorf("scoped findings %d errors %d, want %d, %d", len(scoped.Findings), scoped.Errors, len(whole.Findings)-1, whole.Errors-1)
+	}
+	assertCountsMatch(t, scoped)
+	if !scoped.OK(true) {
+		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+	}
+
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ScopeToStory(own, repo, "S-006", nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := ruleFindings(own, "narrative.missing"); len(got) != 1 || got[0].Outside || got[0].Level != Error {
+		t.Errorf("scoped to S-006, its own narrative.missing should stay inside it, an error: %+v", got)
+	}
+	if own.OK(false) {
+		t.Errorf("scoped to S-006, its own narrative.missing should fail the run: %+v", own.Findings)
+	}
+}
+
+// ruleFindings is res's findings of rule.
+func ruleFindings(res *Result, rule string) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == rule {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // addOpenThread writes an open thread id at rel, anchored on item at path.
 func addOpenThread(t *testing.T, root, rel, id, path, item string) {
 	t.Helper()

@@ -32,7 +32,12 @@ import (
 // thread on an archived item the story did not touch, which only the operator
 // or the thread's opener resolves, in the main checkout, which no story
 // branch changes (ADR-0137, I-0135); one on a thread anchored on the story or
-// one of its tasks is inside it. So is the note components.examples gives
+// one of its tasks is inside it. So is a narrative.missing outside the story:
+// it is on the item file of another story in progress or in review with no
+// narrative, which only that story's agent or the operator opens, with flai
+// stream open in the main checkout, which no story branch changes (ADR-0256,
+// I-0235); one on the story's own item file is inside it, an error, as
+// before. So is the note components.examples gives
 // when it could not check examples for want of node or a sub-project's
 // svelte, unless one of changed is under the examples folder it names, or a
 // folder of changed holds it: only installing the tool clears it, which no
@@ -141,7 +146,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
-			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
+			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing") && !inside(f.Path)) ||
 			(f.unchecked && !under(f.Path) && !slices.ContainsFunc(f.inside, under)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)

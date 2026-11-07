@@ -43,7 +43,10 @@ raised limit clear, an issues.no-story outside the story, which names an
 issue the story did not touch and only the operator's choice to make a story
 for it clears, a threads.archived outside the story, an open or answered
 thread on an archived item that only the operator or the thread's opener
-resolves in the main checkout, the note components.examples gives when it
+resolves in the main checkout, a narrative.missing outside the story, a
+story in progress or in review with no narrative, which only that story's
+agent or the operator opens with flai stream open, the note
+components.examples gives when it
 could not check examples for want of node or a sub-project's svelte, unless
 the story changes a file under the folder it names, which only installing
 the tool clears, the agent.image findings that the project's image layer
@@ -66,7 +69,8 @@ finding is left out on the narrative of an open story that is none of them.
 With --record-issues and one story, each rule with findings outside the
 story is recorded in design/issues, in the checkout the run reads, which is
 the story's worktree at close-out. A wip.overlap is not recorded: the pull
-hold and the other story's agent clear it. Each rule is recorded in the open
+hold and the other story's agent clear it. Nor is what the scoped check
+leaves out, such as a narrative.missing on another story. Each rule is recorded in the open
 issue whose title names it, as "flai check finds ` + "`story.unaccepted`" + ` outside
 the story at close-out" does, opened with class efficiency when none is,
 with an instance naming the story and each finding's path and message. An
@@ -231,7 +235,8 @@ func (r recordedIssue) describe() string {
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
 // does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), a
-// threads.archived (ADR-0137), the components.examples note for examples
+// threads.archived (ADR-0137), a narrative.missing on another story with no
+// narrative (ADR-0256), the components.examples note for examples
 // left unchecked for want of node or a sub-project's svelte (ADR-0171), and
 // the agent.image findings that the image layer went unchecked for want of
 // docker or is not built (ADR-0255), outside the story, and a markdown or

@@ -636,6 +636,54 @@ func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T)
 	}
 }
 
+// I-0235, ADR-0256: S-0549 was in progress with no narrative at the
+// close-outs of S-0548, S-0547, S-0550, S-0546, and S-0551; a close-out of
+// S-004, with S-006 in progress and no narrative, neither notes the
+// narrative.missing nor records it in an issue, while the unscoped check
+// still fails on it.
+func TestCheckRecordIssuesLeavesOutANarrativeMissingOutsideTheStory(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
+	if err := os.Remove(filepath.Join(root, "wip", "agents", "S-006.md")); err != nil {
+		t.Fatal(err)
+	}
+	// With no narrative, S-006 is in no index row, as S-0549 was in none.
+	index := filepath.Join(root, "wip", "agents", "index.md")
+	data, err := os.ReadFile(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []string
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if !strings.Contains(line, "[S-006]") {
+			rows = append(rows, line)
+		}
+	}
+	if err := os.WriteFile(index, []byte(strings.Join(rows, "\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check")
+	if code == 0 || !strings.Contains(out, "error: narrative.missing: S-006 is in-progress but has no narrative; run flai stream open S-006") {
+		t.Fatalf("unscoped, the run should fail on S-006's narrative.missing: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "narrative.missing") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the narrative.missing should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); len(names) != 0 {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+}
+
 // I-0161, ADR-0171: a close-out on a host or in a worktree that cannot read
 // a component's props, here a PATH without node, neither notes nor records
 // the components.examples note for examples the story did not change, while
