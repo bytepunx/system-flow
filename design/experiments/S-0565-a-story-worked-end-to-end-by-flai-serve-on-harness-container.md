@@ -99,7 +99,60 @@ S-0558 had two tasks, the host runs three or four, so the figures say the measur
 
 **Limitations met.** I-0272: `flai stream sync` inside the container cannot rebase and leaves HEAD detached (filed by S-0558's agent, on its branch until it is accepted). [I-0228](../issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md), bumped: `story_start` and `task_done` over HTTP within 18 s of the 60 s limit. I-0270, also filed by S-0558's agent, is not the container's: the integration and smoke tiers do not select a change only under `template/` on the host either.
 
-**The stop and the restart.** Neither happened on S-0558: the run reached review 5 minutes after the operator was asked for the stop, and its agent asked nothing on a thread. Both move to S-0556's run (TH-0836).
+**The stop and the restart.** Neither happened on S-0558: the run reached review 5 minutes after the operator was asked for the stop, and its agent asked nothing on a thread. Both moved to S-0556's run (TH-0836).
+
+### The second run: S-0556, Go, on this repository's layer
+
+S-0556 was worked from `story_start` to review in three container runs on `flai-agent-sf-claude-code:local`, the layer `agent.image.layer` names. It went to ready at 06:17:39 and to review at 06:57:43. The operator moved it to ready and stopped it once from the dashboard, and its agent asked once on a thread.
+
+| Run | Session | Started | Ended | How it ended |
+|-----|---------|---------|-------|--------------|
+| 1 | `fc3d3d78-…` (new) | 06:17:41 | 06:25:00 | `stopped` by the operator from the dashboard, exit 143 |
+| 2 | `c8242e4c-…` (new) | 06:25:30, Retry | 06:51:36 | ended asking on TH-0849 |
+| 3 | `c8242e4c-…` (resumed) | 06:51:55, TH-0849 answered | after 06:57:43 | `worked` |
+
+The stop and the two restarts are written up in S-0565's Notes, under "The stop and the restart (T-2450)". In short:
+
+- The stop removed the container within 3 s.
+- Retry started a new agent in a new session, as Retry does on a host.
+- The answer on TH-0849 started the container again in the same session, from the story's writable Claude Code folder, and the agent went on from where it stopped.
+- The one limitation the operator met was on the dashboard (I-0278).
+
+**The close-out on the host.** The `flai serve` job passed at `45b5126`: rebase, sync, narrative, check, gofmt, vet, golangci-lint, markdown, template, integration (3m52s), and smoke (44s). `go-test` was skipped, covered by integration (`flai verify S-0556 --last`). The orchestrator accepted S-0556 at 06:59:15.
+
+**The close-out inside the container.** TH-0821's option (a) runs it once by hand inside the layered image on S-0556's worktree. Four things stood in the way:
+
+1. `scripts/agent-container.sh` always runs `flai-agent-claude-code:local` and ignores `agent.image.layer` (I-0279). The run used `docker run` on `flai-agent-sf-claude-code:local` directly, with the mounts and environment `flai serve` gave S-0556's agent.
+2. At a commit whose pass the verify record holds, `flai verify` answers from the record and runs nothing (ADR-0229 §5). `scripts/close-out.sh` cannot ask it for `--fresh` (I-0280). The run used the close-out's own two verify steps, `scripts/flai.sh verify S-0556 --fresh --record-issues` and `--sync-only`. The worktree was clean, so its commit step had nothing to do.
+3. The orchestrator's acceptance run had started at about 06:58:21. It accepted S-0556 at 06:59:15 and removed the worktree under the run, 36 s after a hold was asked for on TH-0836. Before the removal, rebase, sync, narrative, check, gofmt, vet, and golangci-lint had passed inside. The markdown tier then failed for a working folder that was gone. The run also left its result in S-0556's verify record at `45b5126`, which `.flai-cache/verify` mounted read-write lets a container write.
+4. The rest of the tiers ran inside on a detached scratch worktree at `45b5126` under `/tmp`, removed afterwards. They used the same image and mounts, with `CLOSE_OUT_STORY=S-0556` for the smoke tier as a close-out sets it.
+
+| Tier | Host close-out | Inside the container |
+|------|----------------|---------------------|
+| gofmt | passed | passed, 14 ms |
+| vet | passed | passed, 16.5 s |
+| golangci-lint | passed | passed, 7.5 s |
+| go-test (`-race -short`) | covered by integration | passed, 3m38s |
+| markdown | passed | passed, 6.7 s |
+| template | passed | passed, 177 ms |
+| integration | passed, 3m52s | passed, 4m10s |
+| smoke | passed, 44 s | **failed** at its installer test |
+
+Smoke inside passed its template render, its repository check (3152 items, 0 findings), and its markdown lint, then failed in `scripts/install-test.sh`. The layer has no curl, so `install.sh` stops with "curl is required". On a throwaway image of the layer plus curl, the test failed next at `scripts/flai-snapshot.sh`: "goreleaser: not found". GoReleaser lives in the host's `bin/`, not in the layer. Both are I-0281.
+
+**I-0259.** No container run installed `flaiover/node_modules`: the markdown lint ran from the container's own cache, and S-0556 selected no flaiover tier. The host's flaiover tiers, run afterwards with `flai test flaiover` on the main checkout, passed: flaiover-lint, vitest, and svelte-check.
+
+**The usage.** S-0556 records 2291 agent seconds over its three runs and 9.40 USD on `claude-opus-5-5`, with one empty wake. It is `priced_by: estimate`, not `harness`, because the stopped run's log has no result line to price it by. A run stopped on the host would read the same.
+
+**Limitations met in this run.**
+
+- I-0272, bumped by S-0556's agent: its in-container `flai stream sync` failed on the read-only `.git` again, this time with HEAD left attached.
+- I-0228, bumped by S-0556's agent.
+- I-0277, filed by S-0556's agent: an agent in a container cannot write its narrative's Decisions, since `wip/` is read-only there and `stream_state` writes only Current state and Next steps.
+- I-0278: no Retry on the agent page after a stop.
+- I-0279: the hand-start script ignores the layer.
+- I-0280: `close-out.sh` cannot force a fresh run.
+- I-0281: the layer lacks curl and GoReleaser, so smoke fails inside.
 
 ## Recommendation
 
