@@ -997,6 +997,9 @@ func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
 		return doc.Entries
 	}
 	waitFor(t, "the first look finds the watcher on", func() bool { return lab.o.Dir.roleQueues()[lab.root]["watcher"].On })
+	// the move is made once the watcher has taken its first snapshot, which
+	// would otherwise hold it: then only the next minute's look sees it
+	watcherReports(t, dash.Wait(t), lab.root)
 
 	// an event: the story moved to review
 	it, err = lab.repo.Get(story)
@@ -1032,4 +1035,45 @@ func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
 	if n := starts(); n != 2 {
 		t.Errorf("%d runs started in all, want one for the move and one for the schedule\n%s", n, lab.logText())
 	}
+}
+
+// watcherReports returns once flai serve's watcher for the project at root
+// reports a change to conn, the dashboard's connection. flai serve takes the
+// watcher's first snapshot in a goroutine of its own, after its first looks,
+// so a change made before that snapshot is in it, and no look sees it until
+// the next minute's (I-0247). It writes a new file under docs every 200
+// milliseconds until one is reported, so that one comes after the snapshot
+// however late it is taken.
+func watcherReports(t *testing.T, conn *channeltest.Conn, root string) {
+	t.Helper()
+	dir := filepath.Join(root, "docs")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stop, stopped := make(chan struct{}), make(chan struct{})
+	defer func() { close(stop); <-stopped }()
+	go func() {
+		defer close(stopped)
+		for i := 0; ; i++ {
+			_ = os.WriteFile(filepath.Join(dir, fmt.Sprintf("probe-%d.md", i)), []byte("# Probe\n"), 0o644)
+			select {
+			case <-stop:
+				return
+			case <-time.After(200 * time.Millisecond):
+			}
+		}
+	}()
+	deadline := time.Now().Add(30 * time.Second)
+	var heard []string
+	for time.Now().Before(deadline) {
+		method, params := conn.Next(t)
+		var p struct {
+			Path string `json:"path"`
+		}
+		if method == "change" && json.Unmarshal(params, &p) == nil && strings.HasPrefix(filepath.ToSlash(p.Path), "docs/probe-") {
+			return
+		}
+		heard = append(heard, method+" "+string(params))
+	}
+	t.Fatalf("the watcher reported no probe under docs within 30s; heard %q", heard)
 }
