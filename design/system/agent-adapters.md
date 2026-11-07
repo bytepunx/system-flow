@@ -234,10 +234,164 @@ OpenCode reaches a gateway through `provider.<id>` in `opencode.json`: `npm: "@a
 | Headless, resume | `opencode run "<prompt>"`, `--session <id>`, `--continue`, `--fork`, `--agent`, `--model provider/model`, `--format json`, `--auto`; `--attach` to a running server avoids MCP startup on each call ([CLI](https://opencode.ai/docs/cli/)) |
 | MCP | `mcp.<name>` with `type: "local"`, `command: [...]`, `environment`, `cwd`, `timeout`, or `type: "remote"` with `url`, `headers`, `oauth` ([MCP servers](https://opencode.ai/docs/mcp-servers/)) |
 | Sub-agents, own model | `agent.<name>` in `opencode.json` or markdown in `.opencode/agents/` and `~/.config/opencode/agents/`; `mode: subagent`, `model`, `prompt`, `tools`, `permission`, `steps`; a subagent without `model` inherits the caller's; the Task tool gated by `permission.task` ([agents](https://opencode.ai/docs/agents/)) |
-| Tool-refusal hook | A plugin in `.opencode/plugins/` or `~/.config/opencode/plugins/`: `tool.execute.before` throws to block the call; `permission.asked` and `permission.replied` are events ([plugins](https://opencode.ai/docs/plugins/)). Whether a plugin can tell a sub-agent's call from the primary's is **to check** |
-| Permission handler | `permission` map: `allow`, `ask`, `deny` per tool, with glob rules per command or path, and per agent; `opencode run --auto` approves whatever is not denied, otherwise an `ask` in headless mode has no answerer ([permissions](https://opencode.ai/docs/permissions/)). No documented external approval callback for the CLI; the server API may offer one, **to check** |
-| Usage stream | `--format json`: JSONL with `step_start`, `text`, `tool_use`, `step_finish`; `step_finish` carries tokens (input, output, reasoning, cache read and write) and `cost` in USD, priced from OpenCode's own model table (third-party write-ups; the official page lists only the formats, so the fields are **to check**) |
-| Instruction files | `AGENTS.md` up the tree and `~/.config/opencode/AGENTS.md`; falls back to `CLAUDE.md` and `~/.claude/CLAUDE.md`; `instructions` in `opencode.json` adds paths, globs, or URLs ([rules](https://opencode.ai/docs/rules/)) |
+| Tool-refusal hook | A plugin in `.opencode/plugins/` or `~/.config/opencode/plugins/`: `tool.execute.before` throws to block the call; `permission.asked` and `permission.replied` are events ([plugins](https://opencode.ai/docs/plugins/)). A sub-agent's call is told by its `sessionID`: the Task tool runs it in a child session whose `parentID` is the caller's (§ Read from the source at v1.19.5) |
+| Permission handler | `permission` map: `allow`, `ask`, `deny` per tool, with glob rules per command or path, and per agent ([permissions](https://opencode.ai/docs/permissions/)). Headless `opencode run` answers every `ask` itself, `reject`, or `once` under `--auto`; only a client of `opencode serve` can answer from outside, through `POST /permission/{requestID}/reply`, with no time bound (§ Read from the source at v1.19.5) |
+| Usage stream | `--format json`: JSONL with `step_start`, `text`, `tool_use`, `step_finish`, `error`, and `reasoning` under `--thinking`; `step_finish` carries tokens (input, output, reasoning, cache read and write) and `cost` priced from OpenCode's own model table, no model, and only the root session's steps (§ Read from the source at v1.19.5) |
+| Instruction files | `AGENTS.md` up the tree and `~/.config/opencode/AGENTS.md`; falls back to `CLAUDE.md` and `~/.claude/CLAUDE.md`, off under `OPENCODE_DISABLE_CLAUDE_CODE`; `instructions` in `opencode.json` adds paths, globs, or URLs ([rules](https://opencode.ai/docs/rules/)) |
+
+#### Read from the source at v1.19.5 (S-0406)
+
+OpenCode's repository moved from `sst/opencode` to [`anomalyco/opencode`](https://github.com/anomalyco/opencode/tree/v1.19.5); GitHub redirects the old name. It is MIT-licensed. The pinned release is `v1.19.5`, tagged 2026-10-28 at commit `810c0eb`, the newest tagged release on 2026-11-07. Everything in this subsection was read from the source and documentation at that tag on 2026-11-07, not run against a binary. The documentation's pages are in the repository at `packages/web/src/content/docs/` and are served at opencode.ai/docs. Where the documentation and the source differ, this records the source and names the difference. Links go to files at the tag.
+
+The four findings S-0406 settles:
+
+1. **A plugin can tell a sub-agent's call, by `sessionID`.** `tool.execute.before` gets `{tool, sessionID, callID}` and `{args}`, with no agent or parent field ([plugin/src/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/plugin/src/index.ts), [session/tools.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/session/tools.ts)). The Task tool, `task`, runs a sub-agent in a new session created with `parentID` set to the caller's session and `agent` set to the sub-agent's name ([tool/task.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/tool/task.ts)). So any call whose `sessionID` is not the story's root session is a sub-agent's. The plugin learns it by looking the session up (`GET /session/{id}`, whose `Session` carries `parentID` and `agent`, [schema/src/v1/session.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/schema/src/v1/session.ts)), or by recording `session.created` events whose `info.parentID` is set. The `task` call itself arrives first, in the parent's session, with `args` `subagent_type`, `description`, `prompt`, and optional `task_id` and `background`. Sub-agents do not nest unless `subagent_depth` is raised from its default of 1. Read, not run.
+2. **An `ask` in `opencode run` cannot be answered from outside.** The run's own event loop answers every `permission.asked` for its session and the sub-agent sessions it saw created: `reject` at once, printing `permission requested: <permission> (<patterns>); auto-rejecting`, or `once` under `--auto` ([cli/cmd/run.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/cli/cmd/run.ts)). Its server runs in-process, reached through a `fetch` function with no listening port, so no other process reaches its API. The plugin hook `permission.ask` is declared in [plugin/src/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/plugin/src/index.ts), but nothing in `packages/opencode/src` triggers it at this tag. A plugin's `event` hook does receive `permission.asked`, called without being awaited ([plugin/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/plugin/index.ts)), and the plugin's client could reply, but the run's reply follows at once, so a plugin that waits for a person loses the race. From outside, a client of `opencode serve` that drives the session itself answers with `POST /permission/{requestID}/reply` and `{"reply": "once" | "always" | "reject", "message"?: "..."}`, or the older `POST /session/{id}/permissions/{permissionID}` with `{"response", "remember"?}`; `GET /permission` lists the pending asks ([groups/permission.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/server/routes/instance/httpapi/groups/permission.ts), [server.mdx](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/web/src/content/docs/server.mdx)). `opencode run --attach` is not such a client: it runs the same loop and rejects too. The server holds an ask with no time bound: it waits until a reply comes or the instance is disposed. A `reject` also rejects the session's other pending asks, and a `message` with it goes back to the model as the user's correction ([permission/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/permission/index.ts)). Under `opencode run`, the place flai can hold a call and ask is the plugin's `tool.execute.before`, which OpenCode awaits; no timeout around it was found at this tag, and a throw refuses the call. Read, not run.
+3. **`step_finish` carries tokens and OpenCode's own cost, with no model and no gateway ID.** Its `part` has `id`, `sessionID`, `messageID`, `type: "step-finish"`, `reason`, `snapshot`, `cost`, and `tokens` with `total` (optional, the provider's), `input`, `output`, `reasoning`, and `cache.read` and `cache.write` ([schema/src/v1/session.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/schema/src/v1/session.ts)). `input` excludes the cache tokens and `output` excludes reasoning. `cost` is OpenCode's sum of each kind times the model's price in its catalogue or the config's `cost`, reasoning at the output rate, so it is 0 for a model with no price ([session/session.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/session/session.ts), [session/processor.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/session/processor.ts)). The model is on the assistant message (`providerID`, `modelID`), which `--format json` does not print. No provider response or generation ID is kept. The join a gateway can make is the session: every model request to a provider other than OpenCode's own carries `x-opencode-session-id`, `x-session-affinity`, and `X-Session-Id` set to the `sessionID`, and a sub-agent's request adds `x-opencode-parent-session-id` and `x-parent-session-id` ([session/llm/request.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/session/llm/request.ts)). The plugin hook `chat.headers` can add headers to each request. The stream holds the root session's steps only (§ The `--format json` events). Read, not run.
+4. **One `opencode run` per story, not `--attach`.** `opencode serve` serves every directory from one process, one instance per directory, picked by the `x-opencode-directory` header or `--dir` ([cli/cmd/serve.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/cli/cmd/serve.ts)). Its environment is shared: `OPENCODE_CONFIG_CONTENT`, `OPENCODE_PERMISSION`, and `OPENCODE_CONFIG` are read from the server's environment, and each MCP server and shell inherits the server's environment ([mcp/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/mcp/index.ts)). So flai's per-story `FLAI_AGENT`, `FLAI_SESSION`, `FLAI_STORY`, `FLAI_ROLE`, and MCP arguments cannot be given per run; they would need a file in each worktree. `--attach` gains nothing for permissions, since its loop rejects every ask as a local run does. Under `--attach` the run does not wait for its event loop after the prompt returns and does not set exit 1 on a `session.error` ([cli/cmd/run.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/cli/cmd/run.ts)). One server is one process to fail for every story. What `--attach` saves is each run's start: the config load, the plugin install, and the MCP connections. flai starts one long run per story, so it pays that once per start. Read, not run.
+
+#### `opencode run` at v1.19.5
+
+From [cli/cmd/run.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/cli/cmd/run.ts) and [cli.mdx](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/web/src/content/docs/cli.mdx):
+
+| Flag or variable | At v1.19.5 |
+|------------------|------------|
+| Prompt | Positional, `run [message..]`: the words are joined with spaces, and a word holding a space is quoted. Piped standard input is appended after a newline. No message and no `--command` exits 1 |
+| `--model`, `-m` | `provider/model`, split at the first `/`, so the model ID may hold more `/` |
+| `--agent` | A primary agent; an unknown name or a subagent falls back to the default agent with a warning |
+| `--format` | `default` or `json` |
+| `--session`, `-s` | An existing session ID; one not found exits 1. OpenCode makes every session ID (`ses_` and 26 characters); no flag names a new one's, so flai reads it from the first event's `sessionID` |
+| `--continue`, `-c`, `--fork` | `--continue` takes the most recently updated session without a parent; `--fork` copies the session first and needs `--continue` or `--session` |
+| `--auto` | Replies `once` to every `ask`; a `deny` rule still refuses. Hidden aliases `--yolo` and `--dangerously-skip-permissions` |
+| `--variant` | Provider-specific reasoning effort, such as `high` |
+| `--thinking` | Prints `reasoning` events |
+| `--dir` | The directory to run in, or the server's path under `--attach` |
+| `--attach`, `--password`/`-p`, `--username`/`-u` | A running server's URL; basic auth from `OPENCODE_SERVER_PASSWORD` and `OPENCODE_SERVER_USERNAME` (default `opencode`) |
+| `--port` | Declared, but not read by the handler at this tag |
+| `--title`, `--file`/`-f`, `--command` | The session's title, files attached to the message, a slash command run with the message as its arguments |
+| Session rules | A new run's session denies `question`, `plan_enter`, and `plan_exit` |
+| End | When the root session's status is `idle`; exit 1 if a `session.error` came for it |
+
+Variables that matter headless ([core/src/flag/flag.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/core/src/flag/flag.ts), [effect/runtime-flags.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/effect/runtime-flags.ts)): `OPENCODE_CONFIG`, `OPENCODE_CONFIG_CONTENT`, `OPENCODE_CONFIG_DIR`, `OPENCODE_PERMISSION`, `OPENCODE_DISABLE_PROJECT_CONFIG`, `OPENCODE_DISABLE_AUTOUPDATE`, `OPENCODE_DISABLE_CLAUDE_CODE` and its `_PROMPT` and `_SKILLS` forms, `OPENCODE_PURE` (no external plugins), and `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` (the Task tool's `background`).
+
+#### OpenCode's configuration and merging
+
+From [config/config.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/config/config.ts), [config/paths.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/config/paths.ts), and [config.mdx](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/web/src/content/docs/config.mdx). Sources load in this order, each over the last:
+
+1. Remote config from the `.well-known/opencode` of a logged-in well-known provider.
+2. The global files `~/.config/opencode/config.json`, `opencode.json`, and `opencode.jsonc`.
+3. `OPENCODE_CONFIG`, one file's path.
+4. Every `opencode.jsonc` and `opencode.json` from the run's directory up to the worktree root, the outermost first, unless `OPENCODE_DISABLE_PROJECT_CONFIG` is set.
+5. The config folders: `~/.config/opencode`, each `.opencode/` from the directory up to the worktree root (not under `OPENCODE_DISABLE_PROJECT_CONFIG`), `~/.opencode`, and `OPENCODE_CONFIG_DIR`. From each: `opencode.json` and `opencode.jsonc`, `agent/` or `agents/**/*.md`, commands, and `plugin/` or `plugins/*.{ts,js}`.
+6. `OPENCODE_CONFIG_CONTENT`, inline JSONC, merged as project config based at the run's directory.
+7. The active OpenCode console organisation's config, when logged in.
+8. Managed config, `/etc/opencode/opencode.json` and `.jsonc` on Linux, then macOS managed preferences.
+9. `OPENCODE_PERMISSION`, a JSON permission object deep-merged into `permission`, last. The documentation's list stops at 8.
+
+Each source is deep-merged over the result. Objects such as `mcp`, `permission`, `provider`, and `agent` merge key by key, and the later source wins on a conflict. A string or an array is replaced whole, except `instructions`, which is concatenated without duplicates, and `plugin`, which accumulates without duplicates. A key keeps its first position, so a `permission` key a later source adds comes after the keys already there.
+
+Loading writes files. A config file without `$schema` gets one written into it. Each config folder gets a `.gitignore` if it has none and a background npm install of `@opencode-ai/plugin`. A worktree's `.opencode/`, if it exists, is written to.
+
+So flai can give a story's MCP entry and deny rules without a file in the worktree: `mcp.flai` in `OPENCODE_CONFIG_CONTENT`, and the denies there or in `OPENCODE_PERMISSION`, which comes after every file. The guard plugin is the one part that is code. It can be named in `plugin` within `OPENCODE_CONFIG_CONTENT` by an absolute path or a `file://` URL, since a relative path is resolved against the file that declares it and inline content has none ([config/plugin.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/config/plugin.ts)). Or it can sit in `plugins/` under an `OPENCODE_CONFIG_DIR` that flai owns outside the worktree; that folder then also gets the npm install and holds the global `AGENTS.md`.
+
+#### OpenCode's MCP entry
+
+From [core/src/v1/config/mcp.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/core/src/v1/config/mcp.ts), [mcp/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/mcp/index.ts), and [mcp/catalog.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/mcp/catalog.ts):
+
+```json
+{
+  "mcp": {
+    "flai": {
+      "type": "local",
+      "command": ["/abs/path/to/flai", "mcp", "--agent", "S-0406"],
+      "environment": { "FLAI_AGENT": "S-0406", "FLAI_STORY": "S-0406" },
+      "enabled": true,
+      "timeout": 1800000
+    }
+  }
+}
+```
+
+| Field | At v1.19.5 |
+|-------|------------|
+| `type` | `"local"` (stdio); `"remote"` takes `url`, `headers`, `oauth`, `enabled`, `timeout` |
+| `command` | An array, the program then its arguments |
+| `cwd` | Optional; relative paths resolve from the run's directory, which is the default |
+| `environment` | Laid over OpenCode's own process environment |
+| `enabled` | `false` skips the server |
+| `timeout` | Milliseconds. It bounds the connection (default 30000) and each tool call. A call with no `timeout` falls back to `experimental.mcp_timeout`, then to the MCP SDK's own default (SDK 1.29.0; not read here). A progress notification resets it. The schema's text says "Defaults to 5000"; the code does not. flai's long-holding tools need it set |
+
+A server's tools reach the model as `<server>_<tool>`, each part sanitized, so `flai_inbox`; that name is the `tool` a plugin's `tool.execute.before` sees.
+
+#### OpenCode's permission rules
+
+From [core/src/v1/config/permission.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/core/src/v1/config/permission.ts), [permission/index.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/permission/index.ts), [agent/agent.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/agent/agent.ts), [core/src/util/wildcard.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/core/src/util/wildcard.ts), [tool/edit.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/tool/edit.ts), and [permissions.mdx](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/web/src/content/docs/permissions.mdx):
+
+- `permission` is one action, `"allow"`, `"ask"`, or `"deny"`, read as `{"*": action}`, or an object of keys. A key takes an action or an object of `{"<pattern>": action}`.
+- Typed keys: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `external_directory`, `lsp`, and `skill` take patterns; `todowrite`, `question`, `webfetch`, `websearch`, and `doom_loop` take an action only. Any other key is accepted and matched as a wildcard against the permission's name, an MCP tool's for one.
+- `edit` covers the `edit`, `write`, and `apply_patch` tools. Their pattern is the file's path relative to the worktree root. A path outside it asks `external_directory` too.
+- Each key and pattern becomes a rule, in the order written. The rules are concatenated: OpenCode's defaults for the agent, the config's `permission`, the agent's own `agent.<name>.permission`, then the session's. The last rule whose permission and pattern both match wins; with none, the action is `ask`.
+- The defaults allow everything (`"*": "allow"`) except `doom_loop` and `external_directory`, which ask (OpenCode's own temporary and skill folders are allowed), and `read` of `*.env` and `*.env.*`, which asks.
+- Wildcards: `*` matches any characters, `/` included, and `?` one; the whole string must match. A pattern ending in a space and `*`, such as `git status *`, also matches the command with nothing after it. A leading `~` or `$HOME` is the home folder.
+- `deny` refuses at once, with no ask. A `deny` on `*` hides the tool from the model.
+
+The form that denies writing a path is a pattern under `edit`. `*` crosses `/`, so `.claude/*` covers everything below `.claude/`, and `*/AGENTS.md` covers the file in any subfolder:
+
+```json
+{
+  "permission": {
+    "edit": {
+      ".claude/*": "deny",
+      "*/.claude/*": "deny",
+      ".git/*": "deny",
+      ".opencode/*": "deny",
+      "opencode.json": "deny",
+      "opencode.jsonc": "deny",
+      "AGENTS.md": "deny",
+      "*/AGENTS.md": "deny"
+    }
+  }
+}
+```
+
+Three limits. `edit` rules do not cover a write through `bash`, whose patterns match the command text. If a project's `edit` is a string, such as `"ask"`, a later object for `edit` replaces it whole. And `tool.execute.before` runs before the tool's own permission check, so a write a plugin lets through is still refused by a `deny` rule.
+
+#### The `--format json` events
+
+Every line is one JSON object: `type`, `timestamp` (milliseconds since the epoch, when printed), `sessionID` (the run's root session), and `part` or `error` ([cli/cmd/run.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/cli/cmd/run.ts)). Each `part` is OpenCode's own part ([schema/src/v1/session.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/schema/src/v1/session.ts)), with `id` (`prt_`), `sessionID` (`ses_`), and `messageID` (`msg_`).
+
+| `type` | Printed when | Carries |
+|--------|--------------|---------|
+| `step_start` | A model call starts | `part`: `type: "step-start"`, `snapshot` |
+| `text` | A text part ends (`time.end` set) | `part`: `type: "text"`, `text`, `time.start`, `time.end`; optional `synthetic`, `ignored`, `metadata` |
+| `reasoning` | A reasoning part ends, under `--thinking` only | `part`: `type: "reasoning"`, `text`, `time`, optional `metadata` |
+| `tool_use` | A tool call completes or fails | `part`: `type: "tool"`, `callID`, `tool`, `state`. Completed: `status`, `input`, `output`, `title`, `metadata`, `time.start`, `time.end`, optional `attachments`. Failed: `status: "error"`, `input`, `error`, optional `metadata`, `time` |
+| `step_finish` | A model call ends | `part`: `type: "step-finish"`, `reason`, `snapshot`, `cost`, `tokens` |
+| `error` | A `session.error` for the root session, or the prompt request failed | `error`: `name` and `data`, with `data.message` |
+
+Only parts whose `sessionID` is the root session's are printed: a sub-agent's steps, text, and tools are not in the stream. The `task` call's `tool_use` carries `state.metadata.sessionId` (the child session), `parentSessionId`, and `model` (`providerID`, `modelID`), and its `output` begins `<task id="ses_..." state="completed">`. A sub-agent's usage is read from its session: `opencode export <sessionID>` prints the session and its messages, and each assistant message carries `providerID`, `modelID`, `cost`, and `tokens`.
+
+One line per type, with made-up values in the shapes above:
+
+```jsonl
+{"type":"step_start","timestamp":1794045600000,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","part":{"id":"prt_9a8b7c6d5e4fAbCdEfGhIjKlM1","sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","messageID":"msg_9a8b7c6d5e40AbCdEfGhIjKlMn","type":"step-start","snapshot":"4b825dc642cb6eb9a060e54bf8d69288fbee4904"}}
+{"type":"text","timestamp":1794045602000,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","part":{"id":"prt_9a8b7c6d5e4fAbCdEfGhIjKlM2","sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","messageID":"msg_9a8b7c6d5e40AbCdEfGhIjKlMn","type":"text","text":"I will read the board first.","time":{"start":1794045601000,"end":1794045602000}}}
+{"type":"tool_use","timestamp":1794045603000,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","part":{"id":"prt_9a8b7c6d5e4fAbCdEfGhIjKlM3","sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","messageID":"msg_9a8b7c6d5e40AbCdEfGhIjKlMn","type":"tool","callID":"call_1","tool":"bash","state":{"status":"completed","input":{"command":"git status --short"},"output":"","title":"git status --short","metadata":{"output":"","exit":0,"truncated":false},"time":{"start":1794045602500,"end":1794045603000}}}}
+{"type":"step_finish","timestamp":1794045603100,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","part":{"id":"prt_9a8b7c6d5e4fAbCdEfGhIjKlM4","sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","messageID":"msg_9a8b7c6d5e40AbCdEfGhIjKlMn","type":"step-finish","reason":"tool-calls","snapshot":"4b825dc642cb6eb9a060e54bf8d69288fbee4904","cost":0.0123,"tokens":{"total":15230,"input":1200,"output":230,"reasoning":0,"cache":{"read":13800,"write":0}}}}
+{"type":"reasoning","timestamp":1794045604000,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","part":{"id":"prt_9a8b7c6d5e4fAbCdEfGhIjKlM5","sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","messageID":"msg_9a8b7c6d5e41AbCdEfGhIjKlMn","type":"reasoning","text":"The tree is clean.","time":{"start":1794045603500,"end":1794045604000}}}
+{"type":"error","timestamp":1794045605000,"sessionID":"ses_0b1c2d3e4f5aAbCdEfGhIjKlMn","error":{"name":"APIError","data":{"message":"Unauthorized","statusCode":401,"isRetryable":false}}}
+```
+
+The `bash` tool's `input` is `command` with optional `timeout` and `workdir`; `edit` takes `filePath`, `oldString`, `newString`, and `replaceAll`; `write` takes `filePath` and `content`; `apply_patch` takes `patchText`.
+
+#### OpenCode's instruction files
+
+From [session/instruction.ts](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/session/instruction.ts) and [rules.mdx](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/web/src/content/docs/rules.mdx):
+
+- Global: the first that exists of `~/.config/opencode/AGENTS.md` (`$OPENCODE_CONFIG_DIR/AGENTS.md` when that is set) and `~/.claude/CLAUDE.md`.
+- Project: the first name of `AGENTS.md`, `CLAUDE.md`, and `CONTEXT.md` (deprecated) found from the run's directory up to the worktree root. Every file of that name up the tree is loaded, and the later names are not looked for. A worktree with `CLAUDE.md` and no `AGENTS.md` gets `CLAUDE.md`.
+- `instructions` in the config adds paths and globs, relative ones looked for up the tree, and URLs, fetched with a 5-second bound.
+- The `CLAUDE.md` fallback, global and project, is off under `OPENCODE_DISABLE_CLAUDE_CODE=1` or `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1`. The rules page says the second turns off only `~/.claude/CLAUDE.md`; the source turns off both. `OPENCODE_DISABLE_PROJECT_CONFIG` stops the project files too.
 
 ### Goose (Block)
 
@@ -379,7 +533,7 @@ What the documentation does not settle:
 - Whether LiteLLM's `/v1/messages` carries every beta header and body field Claude Code sends, which the compatibility guide says a gateway must forward byte for byte; LiteLLM's unified endpoint translates, so some fields may be dropped. Checked in part: with an Anthropic-format deployment it carried every feature the check exercised, and with its `openrouter/` provider Claude Code stalled (§ Checked against LiteLLM). OpenRouter's carried every feature the check exercised (§ Checked against OpenRouter).
 - Whether Codex's `PreToolUse` `ask` and OpenCode's `permission.asked` can be answered by an outside process in a headless run, as `permission_prompt` is answered on a thread today.
 - Whether Codex's and Goose's hooks tell a sub-agent's tool call from the main agent's, as Claude Code's `agent_id` does; Codex has `SubagentStart` and `SubagentStop`, Goose has neither.
-- The exact fields of OpenCode's `step_finish` and Goose's `stream-json` events, read only from third-party write-ups.
+- The exact fields of Goose's `stream-json` events, read only from third-party write-ups. OpenCode's `step_finish` is settled from its source in § OpenCode.
 - Which `wire_api` Codex should use against each gateway, and whether OpenCode's Anthropic provider accepts a custom base URL.
 - Whether aider's current release is an MCP client; its own documentation does not say.
 - What any harness reports as cost over a gateway: Claude Code and OpenCode price from their own tables, Codex and Goose report tokens only. Only the gateway knows what was charged: OpenRouter's `usage.cost` and its key's `usage` (its `/api/v1/generation` cannot be reached from Claude Code's stream, § Checked against OpenRouter), LiteLLM's `x-litellm-response-cost` and `/spend/logs`.
