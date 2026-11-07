@@ -3,11 +3,11 @@ id: S-0406
 type: story
 nature: feature
 title: A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, tested on fixtures, with the open OpenCode findings settled from its source at a pinned release
-status: in-progress
+status: done
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:13:48Z
-updated: 2026-11-07T11:06:18Z
+updated: 2026-11-07T11:23:54Z
 transitions:
   - to: ready
     at: 2026-11-07T09:38:00Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:38:06Z
     by: agent-S-0406
+  - to: review
+    at: 2026-11-07T11:21:54Z
+    by: agent-S-0406
+  - to: done
+    at: 2026-11-07T11:23:54Z
+    by: orchestrator
 tags: [cli, template]
 topics: [agents, cli, template]
-touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go, flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/root/opencode.json, template/CHANGELOG.md, flai/internal/metrics/testdata/good/CLAUDE.md, flai/cmd/serve_actions_test.go, flai/internal/harness/container.go, flai/internal/serve/agents.go]
+touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/check/instructions.go, flai/internal/check/instructions_test.go, flai/internal/check/check.go, flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, template/root/opencode.json, template/CHANGELOG.md, flai/internal/metrics/testdata/good/CLAUDE.md, flai/cmd/serve_actions_test.go, flai/internal/harness/container.go, flai/internal/serve/agents.go, docs/operators/settings.md, flai/cmd/serve_actions.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5278
-  estimated: true
-  priced_by: estimate
+  seconds: 6240
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      hand_edits: 1
-      work: 50
+      ceremony: 2
+      hand_edits: 2
+      work: 69
   models:
     - model: claude-opus-5-5
-      input: 580
-      output: 3306
-      cache_read: 35057339
-      cache_write: 1255141
-      cost: 13.0257
+      input: 748
+      output: 253870
+      cache_read: 50318817
+      cache_write: 1450750
+      cost: 23.6654
   strategic:
     - kind: orchestrator
       seconds: 245
@@ -77,10 +82,10 @@ An operator can set a story's `agent.harness` to `opencode` and `flai serve` run
 - [x] At start flai writes or merges an OpenCode configuration with a local MCP entry `flai mcp --agent <name>`, keeping every other key the project's own `opencode.json` has, and the story's worktree is left with no uncommitted change from it. An ADR records where that configuration lives and why.
 - [x] The adapter's `Capabilities` say resume only: no guard, no ask, no role models, no strategic definitions, no cost. A story on `opencode` whose `roles` name a sub-agent is refused at start with the setting that lifts it, and a start without `auto-approve` is refused unless the host sets `--deny-protected`, which the adapter writes as `deny` rules in OpenCode's `permission` map for every path the protected list holds for `opencode`.
 - [x] `flai/internal/protected` holds an `opencode` list: Claude Code's paths plus `.opencode/`, `opencode.json`, and `AGENTS.md` (ADR-0130).
-- [ ] `flai check` warns when the project has neither `AGENTS.md` nor `CLAUDE.md` at its root. The template keeps `CLAUDE.md` as the map, which OpenCode reads as its fallback, and ships an `opencode.json` skeleton with no MCP entry and no key.
+- [x] `flai check` warns when the project has neither `AGENTS.md` nor `CLAUDE.md` at its root. The template keeps `CLAUDE.md` as the map, which OpenCode reads as its fallback, and ships an `opencode.json` skeleton with no MCP entry and no key.
 - [x] `agent-adapters.md` § OpenCode names the pinned OpenCode release and records, for it, from its source and documentation: whether a plugin's `tool.execute.before` input can tell a sub-agent's call from the primary's, whether an `ask` in headless mode can be answered from outside, the fields `step_finish` carries, and whether `--attach` to a running `opencode serve` is better for many stories on one host. Each names the source file or page it was read from and says it was read, not run against a binary.
 - [x] The adapter and `flai serve`'s start, resume, and refusals for it are tested on fixtures alone: a stub `opencode` the test writes, as `claudecheck_test.go` writes its stub `claude`, records its arguments, environment, and configuration and replays a `--format json` stream written from the pinned release's event types. No test, tier, or close-out needs an `opencode` binary, a network, or a provider key.
-- [ ] `docs/operators/index.md` gains a § Harnesses that says how to set the harness and what a story on it has and lacks today, and that the adapter is tested on fixtures, not against a live `opencode`; `docs/users/flai.md`, the generated reference, and `design/system/flai-cli.md` name the harness.
+- [x] `docs/operators/index.md` gains a § Harnesses that says how to set the harness and what a story on it has and lacks today, and that the adapter is tested on fixtures, not against a live `opencode`; `docs/users/flai.md`, the generated reference, and `design/system/flai-cli.md` name the harness.
 
 ## Tasks
 - T-1682 agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release
@@ -108,3 +113,18 @@ An operator can set a story's `agent.harness` to `opencode` and `flai serve` run
   - **Co-change:** `flai touches suggest` lists hub documents (`work-management.md`, `project-manifest.md`, `strategic-agents.md`, `template/template.yaml`) and `flai/internal/serve/agents.go`, `serve_actions.go`, and `mcpserver/server.go`, each under 6% of the seed commits. None of the criteria reach them: `agents.go` reads the capabilities unchanged and `serve_actions.go` takes its names from `harness.Names()`. None was added, and no setting key is added, so `settings.md` stays as it is.
 - **Forecast.** 1h05m against flai's 52m, the median over 115 done large feature stories at size 29. Reading the four findings from OpenCode's source on the web at a pinned release, and the ADR on where the configuration lives, add a quarter. The old raise for checking by hand against a binary and for a binary-gated test and smoke step is gone with them. The delivery, 2026-11-07T10:50Z, is flai's 10:37Z play-out moved by the 13m raise.
 - **Cost of delay.** 97.01 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20. `flai cod` shares it among the epic's seven open stories by forecast, 1h05m of 5h35m. Kept as flai gives it: this story is the gate every later E-0023 story waits for, and that is already priced as the epic's penalty while it is open.
+
+### Accepted by the orchestrator
+
+- Verified: 5bf5f9ec226f7a25f50b84a0c007a9905b8b6705
+- At: 2026-11-07T11:23:54Z
+
+Verdict: pass, at commit 5bf5f9ec226f7a25f50b84a0c007a9905b8b6705; flai verify S-0406 --last passed every step at the branch's head.
+- 1: flai/internal/harness/opencode.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/opencode_test.go, flai/cmd/serve_actions.go
+- 2: flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, design/adrs/0260-the-opencode-adapter-gives-a-story-s-opencode-its-configuration-through-the.md, design/adrs/README.md
+- 3: flai/internal/harness/opencode.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go
+- 4: flai/internal/protected/protected.go, flai/internal/protected/protected_test.go
+- 5: flai/internal/check/instructions.go, flai/internal/check/check.go, flai/internal/check/instructions_test.go, template/root/opencode.json, template/CHANGELOG.md, flai/internal/metrics/testdata/good/CLAUDE.md
+- 6: design/system/agent-adapters.md
+- 7: flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl
+- 8: docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md

@@ -3,16 +3,16 @@ id: MS-0346
 title: The claims of S-0587 and S-0406 now overlap
 from: S-0587
 to: S-0406
-about: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/serve_actions_test.go, template/CHANGELOG.md, docs/users/flai-reference.md, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, docs/operators/settings.md, flai/cmd/serve_actions.go]
-status: open
-participants: [agent-S-0587, agent-S-0406]
+about: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/serve_actions_test.go, template/CHANGELOG.md, docs/users/flai-reference.md, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, docs/operators/settings.md, flai/cmd/serve_actions.go, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md]
+status: closed
+participants: [agent-S-0587, agent-S-0406, flai, orchestrator]
 created: 2026-11-07T10:30:48Z
-updated: 2026-11-07T11:13:01Z
+updated: 2026-11-07T11:23:54Z
 ---
 
 # MS-0346 The claims of S-0587 and S-0406 now overlap
 
-Between S-0587 and S-0406, about `flai/internal/harness/harness.go`, `flai/internal/harness/harness_test.go`, `flai/cmd/serve_actions_test.go`, `template/CHANGELOG.md`, `docs/users/flai-reference.md`, `flai/internal/serve/agents.go`, `flai/internal/serve/agents_test.go`, `docs/operators/settings.md`, `flai/cmd/serve_actions.go`.
+Between S-0587 and S-0406, about `flai/internal/harness/harness.go`, `flai/internal/harness/harness_test.go`, `flai/cmd/serve_actions_test.go`, `template/CHANGELOG.md`, `docs/users/flai-reference.md`, `flai/internal/serve/agents.go`, `flai/internal/serve/agents_test.go`, `docs/operators/settings.md`, `flai/cmd/serve_actions.go`, `design/system/agent-adapters.md`, `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -74,3 +74,28 @@ S-0406's change to `flai/internal/serve/agents.go` is committed (fdb6626) and sm
 The claims of S-0406 and S-0587 now overlap.
 
 A write grew the claim of S-0406 to cover `docs/operators/settings.md`, `flai/cmd/serve_actions.go`, which the claim of S-0587 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-07T11:15:15Z agent-S-0406 S-0406 (notice)
+T-1689 of S-0406 changed paths S-0587's claim covers.
+
+T-1689, The operator, user, and design docs, the reference, and the template describe the opencode harness and what a story on it has and lacks, committed a880a30 on story/S-0406, `docs: [S-0406] describe the opencode harness and ship an opencode.json skeleton`, changing `design/system/agent-adapters.md`, `design/system/flai-cli.md`, `docs/operators/index.md`, `docs/operators/settings.md`, `docs/users/flai-reference.md`, `docs/users/flai.md`, `flai/cmd/serve_actions.go`, `template/CHANGELOG.md`. It reaches the main branch when S-0406 is accepted; `git show a880a30` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-07T11:15:15Z flai S-0406
+story/S-0406 and story/S-0587 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `docs/operators/settings.md`
+
+Whichever of S-0406 and S-0587 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-07T11:15:21Z agent-S-0406 S-0406
+The claims of S-0406 and S-0587 now overlap.
+
+A write grew the claim of S-0406 to cover `docs/operators/settings.md`, `flai/cmd/serve_actions.go`, which the claim of S-0587 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-07T11:15:43Z agent-S-0406 S-0406 (settled)
+The trial merge of our branches conflicts on `docs/operators/settings.md`. S-0406's change there is one added row in "Set by flai for the processes it starts": `OPENCODE_CONFIG_CONTENT`, `OPENCODE_PERMISSION`, `OPENCODE_DISABLE_AUTOUPDATE`, just above the `ANTHROPIC_*` row. If that file is regenerated, the row is hand-written; the generated part is the flag index. In `flai/cmd/serve_actions.go`, S-0406 adds an opencode paragraph and one example to `flai serve agent harness`'s help, and half a sentence to `flai serve agent`'s Long. S-0406 is done with all of these and is going to its close-out. Whichever story lands second keeps both sides; I will do that if it is S-0406.
+
+### 2026-11-07T11:23:54Z orchestrator
+Closed: S-0406 was accepted

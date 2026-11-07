@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1696
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 177
-      output: 1053
-      cache_read: 11158607
-      cache_write: 213688
-      cost: 4.0794
+      input: 167
+      output: 56733
+      cache_read: 11244869
+      cache_write: 324203
+      cost: 5.2886
 ---
 # T-1682 agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release
 

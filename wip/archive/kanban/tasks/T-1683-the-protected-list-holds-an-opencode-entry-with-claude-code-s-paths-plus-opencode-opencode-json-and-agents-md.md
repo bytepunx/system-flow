@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1636
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 271
-      cache_read: 1347008
-      cache_write: 87758
-      cost: 0.5147
+      input: 21
+      output: 7158
+      cache_read: 1418708
+      cache_write: 40903
+      cost: 0.6672
 ---
 # T-1683 The protected list holds an opencode entry with Claude Code's paths plus .opencode/, opencode.json, and AGENTS.md
 

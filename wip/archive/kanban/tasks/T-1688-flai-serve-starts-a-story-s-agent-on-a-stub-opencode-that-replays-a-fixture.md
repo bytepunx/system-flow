@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 617
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 409
-      cache_read: 3440655
-      cache_write: 120884
-      cost: 1.2776
+      input: 52
+      output: 17768
+      cache_read: 3521648
+      cache_write: 101533
+      cost: 1.6563
 ---
 # T-1688 flai serve starts a story's agent on a stub opencode that replays a fixture stream, and its refusals for opencode are tested
 

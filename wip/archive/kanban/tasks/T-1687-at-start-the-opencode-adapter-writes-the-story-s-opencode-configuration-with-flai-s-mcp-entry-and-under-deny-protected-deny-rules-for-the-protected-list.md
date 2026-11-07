@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 686
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 415
-      cache_read: 3946424
-      cache_write: 133791
-      cost: 1.4636
+      input: 60
+      output: 20355
+      cache_read: 4034512
+      cache_write: 116320
+      cost: 1.8975
 ---
 # T-1687 At start the opencode adapter writes the story's OpenCode configuration with flai's MCP entry and, under deny-protected, deny rules for the protected list
 

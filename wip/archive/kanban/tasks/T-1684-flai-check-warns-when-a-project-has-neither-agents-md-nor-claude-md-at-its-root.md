@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1655
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 311
-      cache_read: 2063648
-      cache_write: 100236
-      cost: 0.7763
+      input: 32
+      output: 10795
+      cache_read: 2139654
+      cache_write: 61689
+      cost: 1.0063
 ---
 # T-1684 flai check warns when a project has neither AGENTS.md nor CLAUDE.md at its root
 

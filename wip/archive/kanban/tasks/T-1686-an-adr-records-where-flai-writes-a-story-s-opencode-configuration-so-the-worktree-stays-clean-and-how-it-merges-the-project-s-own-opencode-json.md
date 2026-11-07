@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 52
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 6
-      cache_read: 313912
-      cache_write: 6374
-      cost: 0.1149
+      input: 5
+      output: 1598
+      cache_read: 316693
+      cache_write: 9131
+      cost: 0.1489
 ---
 # T-1686 An ADR records where flai writes a story's OpenCode configuration so the worktree stays clean, and how it merges the project's own opencode.json
 

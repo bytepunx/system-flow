@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2009
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 531
-      cache_read: 7292356
-      cache_write: 315662
-      cost: 2.729
+      input: 112
+      output: 37954
+      cache_read: 7522760
+      cache_write: 216890
+      cost: 3.538
 ---
 # T-1685 The opencode adapter runs opencode run headless with the prompt, provider/model, JSON output, and a resumed session, and states resume as its only capability
 
