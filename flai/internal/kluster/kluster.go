@@ -29,7 +29,7 @@ var ErrNotInstalled = errors.New("kluster is not installed: flai runs a project'
 
 // ErrNoBlock says the project's manifest names no cluster, and which block
 // to add.
-var ErrNoBlock = errors.New("this project's system-flow.yaml has no kluster: block, so flai runs no cluster for it; add one naming the kluster config and the deploy command, such as\n\n  kluster:\n    config: integration/kluster.yaml\n    deploy: [scripts/kluster-deploy.sh]\n\nas design/system/kluster.md § The kluster: block describes, then run this again")
+var ErrNoBlock = errors.New("this project's system-flow.yaml has no kluster: block, so flai runs no cluster for it; add one naming the kluster config and the deploy command, such as kluster: {config: integration/kluster.yaml, deploy: [scripts/kluster-deploy.sh]}, as design/system/kluster.md § The kluster: block describes, then run this again")
 
 // Exec runs programs for the package: LookPath finds one on PATH, and Run
 // runs one in dir, writing its standard output and error to out as they
