@@ -334,9 +334,53 @@ export type StrategicForm = { values: Record<string, string>; agents: Record<str
  * list (S-0586), and the keys to remove.
  */
 export type ManifestChange = {
-	set: Record<string, boolean | number | string | string[] | Agent>;
+	set: Record<string, boolean | number | string | string[] | Agent | BuildComponent[]>;
 	unset: string[];
 };
+
+/**
+ * One of the kluster: block's components (ADR-0263): its name, a DNS label, and the argument list
+ * that builds its images, run as the deploy's step build-<name>.
+ */
+export type BuildComponent = { name: string; build: string[] };
+
+/** A component as the page edits it: its name, and its build one argument a line. */
+export type ComponentRow = { name: string; build: string };
+
+/** The rows of the components the manifest has; none when the value is not a list of them. */
+export function componentRows(value: unknown): ComponentRow[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.filter(
+			(c): c is BuildComponent =>
+				!!c && typeof c === 'object' && typeof (c as BuildComponent).name === 'string'
+		)
+		.map((c) => ({ name: c.name, build: lines(Array.isArray(c.build) ? c.build : []) }));
+}
+
+/**
+ * The components the rows say, as settings.manifest takes them: each name trimmed, each build an
+ * argument list, a row left wholly empty dropped. A row with only a name or only a build is kept,
+ * for flai to refuse with its reason.
+ */
+export function componentList(rows: ComponentRow[]): BuildComponent[] {
+	return rows
+		.map((r) => ({ name: r.name.trim(), build: argv(r.build) }))
+		.filter((c) => c.name !== '' || c.build.length > 0);
+}
+
+/** Whether two lists of components say the same, in the same order. */
+export function sameComponents(a: BuildComponent[], b: BuildComponent[]): boolean {
+	return (
+		a.length === b.length &&
+		a.every(
+			(c, i) =>
+				c.name === b[i].name &&
+				c.build.length === b[i].build.length &&
+				c.build.every((x, j) => x === b[i].build[j])
+		)
+	);
+}
 
 /** The settings of one block, in catalog order. */
 export function inBlock(s: StrategicSettings, block: StrategicBlock): StrategicSetting[] {

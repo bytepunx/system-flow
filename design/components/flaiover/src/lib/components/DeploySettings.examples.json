@@ -1,0 +1,49 @@
+{
+  "examples": [
+    {
+      "name": "One build per component",
+      "props": {
+        "settingsOn": true,
+        "settingsEnable": "flai serve enable settings",
+        "deployable": true,
+        "settings": [
+          { "key": "kluster.config", "kind": "text", "meaning": "The kluster config file, from the repository root.", "value": "kluster.yaml", "set": true },
+          { "key": "kluster.namespace", "kind": "text", "default": "authstar", "meaning": "The default namespace, which main deploys into.", "set": false },
+          { "key": "kluster.build", "kind": "command", "meaning": "The command that builds the project's images.", "set": false },
+          {
+            "key": "kluster.components",
+            "kind": "components",
+            "meaning": "The project's components, each a name and the command that builds its images, run one at a time as the deploy's steps build-<name>.",
+            "value": [
+              { "name": "api", "build": ["scripts/kluster-build.sh", "api"] },
+              { "name": "web", "build": ["scripts/kluster-build.sh", "web"] },
+              { "name": "worker", "build": ["scripts/kluster-build.sh", "worker"] }
+            ],
+            "set": true
+          },
+          { "key": "kluster.deploy", "kind": "command", "meaning": "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names.", "value": ["scripts/kluster-deploy.sh"], "set": true },
+          { "key": "kluster.teardown", "kind": "command", "meaning": "The command that removes what deploy made outside the namespace.", "value": ["scripts/kluster-teardown.sh"], "set": true },
+          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false }
+        ]
+      }
+    },
+    {
+      "name": "Nothing deployed yet, settings off",
+      "props": {
+        "settingsOn": false,
+        "settingsEnable": "flai serve enable settings",
+        "deployable": false,
+        "settings": [
+          { "key": "kluster.config", "kind": "text", "meaning": "The kluster config file, from the repository root.", "value": "kluster.yaml", "set": true },
+          { "key": "kluster.namespace", "kind": "text", "default": "authstar", "meaning": "The default namespace, which main deploys into.", "set": false },
+          { "key": "kluster.build", "kind": "command", "meaning": "The command that builds the project's images.", "set": false },
+          { "key": "kluster.components", "kind": "components", "meaning": "The project's components, each a name and the command that builds its images.", "set": false },
+          { "key": "kluster.deploy", "kind": "command", "meaning": "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names.", "set": false },
+          { "key": "kluster.teardown", "kind": "command", "meaning": "The command that removes what deploy made outside the namespace.", "set": false },
+          { "key": "kluster.timeout", "kind": "duration", "default": "30m", "meaning": "The most one job may take.", "set": false }
+        ]
+      },
+      "width": 375
+    }
+  ]
+}
