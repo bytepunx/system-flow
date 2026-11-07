@@ -7,7 +7,7 @@ status: backlog
 parent: E-0029
 owner: alex
 created: 2026-11-02T19:02:15Z
-updated: 2026-11-02T19:02:15Z
+updated: 2026-11-07T03:41:47Z
 transitions: []
 tags: []
 topics: [harness, docker, planning]
@@ -18,7 +18,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-11-07T03:41:47Z
 ---
 # S-0567 flai serve starts the planner in a container on harness container, and it plans one backlog story of this repository with its activity logged
 
