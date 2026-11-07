@@ -1309,8 +1309,9 @@ type Kluster struct {
 	// file FLAI_KLUSTER_IMAGES names; empty loads nothing.
 	Build []string `yaml:"build,omitempty" json:"build,omitempty"`
 	// Deploy makes a namespace's settings in the shared services, applies the
-	// project's manifests into it, and waits for their rollouts. Required.
-	Deploy []string `yaml:"deploy" json:"deploy"`
+	// project's manifests into it, and waits for their rollouts; empty means
+	// the project's deploys are not set up yet, and flai deploys nothing.
+	Deploy []string `yaml:"deploy,omitempty" json:"deploy,omitempty"`
 	// Teardown removes what Deploy made outside the namespace; empty means
 	// flai deletes only the namespace.
 	Teardown []string `yaml:"teardown,omitempty" json:"teardown,omitempty"`
@@ -1347,7 +1348,7 @@ func (k *Kluster) UnmarshalYAML(unmarshal func(any) error) error {
 	*k = Kluster{}
 	block, ok := raw.(map[string]any)
 	if !ok {
-		k.problems = append(k.problems, "kluster is not a block of keys; write it with config: and deploy: under it, as design/system/kluster.md shows")
+		k.problems = append(k.problems, "kluster is not a block of keys; write it with config: under it, and deploy: once the project deploys, as design/system/kluster.md shows")
 		return nil
 	}
 	text := func(key string, into *string) {
@@ -1503,7 +1504,10 @@ func ReadKlusterConfig(fsys fs.FS, name string) (KlusterConfig, error) {
 
 // KlusterErrors are what is wrong with the kluster: block, one sentence each
 // beginning with the key it is about; none when the block is valid or the
-// manifest has none. fsys is the repository, where the config file is read.
+// manifest has none. fsys is the repository, where the config file is read;
+// nil checks the config's path but not the file. A block with no deploy is
+// valid: its cluster can come up and go down, and nothing is deployed until
+// kluster.deploy is set.
 func (m Manifest) KlusterErrors(fsys fs.FS) []string {
 	k := m.Kluster
 	if k == nil {
@@ -1515,6 +1519,8 @@ func (m Manifest) KlusterErrors(fsys fs.FS) []string {
 		errs = append(errs, "kluster.config is required; write the kluster config file, from the repository root, such as integration/kluster.yaml")
 	case repoPathProblem(cfg, "a file", "integration/kluster.yaml", "integration/kluster.yaml") != "":
 		errs = append(errs, fmt.Sprintf("kluster.config %q %s", k.Config, repoPathProblem(cfg, "a file", "integration/kluster.yaml", "integration/kluster.yaml")))
+	case fsys == nil:
+		// no repository to read the config file in: its path alone is checked
 	case !isFile(fsys, cfg):
 		errs = append(errs, fmt.Sprintf("kluster.config %q does not exist; write the path of the kluster config file, from the repository root, or add the file", k.Config))
 	default:
@@ -1534,9 +1540,6 @@ func (m Manifest) KlusterErrors(fsys fs.FS) []string {
 		errs = append(errs, fmt.Sprintf("kluster.namespace is not set, and the manifest's name %q makes no DNS label; set kluster.namespace, such as app", m.Name))
 	} else {
 		errs = append(errs, namespaceProblems("kluster.namespace", fmt.Sprintf("is not set, and the manifest's name makes %q, which", ns), ns)...)
-	}
-	if len(k.Deploy) == 0 {
-		errs = append(errs, "kluster.deploy is required; write the command that deploys into a namespace, the program then its arguments, such as [scripts/kluster-deploy.sh]")
 	}
 	for _, c := range []struct {
 		key  string

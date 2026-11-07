@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -447,10 +448,10 @@ func TestServeFormulaAction(t *testing.T) {
 	}
 }
 
-// S-0577: kluster is off until the operator enables it, the dashboard's
-// settings page lists it, and enable refuses a project whose manifest has no
-// kluster: block, naming the block to add, while disable and --all-projects
-// are not refused (ADR-0254).
+// S-0577: kluster is off until the operator enables it, and the dashboard's
+// settings page lists it; S-0586: enabling it for a project with no kluster:
+// block writes one rather than refusing, while disable and --all-projects
+// write nothing (ADR-0254).
 func TestServeKlusterAction(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
@@ -466,28 +467,164 @@ func TestServeKlusterAction(t *testing.T) {
 	if out, _, _ := runIn(t, bare, "serve", "actions"); !strings.Contains(out, "kluster: off everywhere") {
 		t.Errorf("actions names it, off: %s", out)
 	}
-	if _, errOut, code := runIn(t, bare, "serve", "enable", "kluster"); code == 0 || !strings.Contains(errOut, "has no kluster: block") || !strings.Contains(errOut, "config: integration/kluster.yaml") {
-		t.Fatalf("enable without a block is refused, naming the block: %d %s", code, errOut)
-	}
-	if enabled(bare) {
-		t.Error("a refused enable turned it on")
-	}
+	before, _ := os.ReadFile(filepath.Join(bare, "system-flow.yaml"))
 	if out, errOut, code := runIn(t, bare, "serve", "disable", "kluster"); code != 0 || !strings.Contains(out, "kluster disabled for t") {
 		t.Errorf("disable without a block: %d %s %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, bare, "serve", "enable", "kluster", "--all-projects"); code != 0 || !strings.Contains(out, "kluster enabled for every project") {
+		t.Errorf("enable --all-projects: %d %s %s", code, out, errOut)
+	}
+	if after, _ := os.ReadFile(filepath.Join(bare, "system-flow.yaml")); string(after) != string(before) {
+		t.Errorf("disable and --all-projects wrote the manifest:\n%s", after)
+	}
+	if _, err := os.Stat(filepath.Join(bare, "kluster.yaml")); err == nil {
+		t.Error("--all-projects wrote kluster.yaml")
+	}
+	if out, errOut, code := runIn(t, bare, "serve", "disable", "kluster", "--all-projects"); code != 0 {
+		t.Errorf("disable --all-projects: %d %s %s", code, out, errOut)
 	}
 
 	root := tempProject(t)
 	m := filepath.Join(root, "system-flow.yaml")
 	b, _ := os.ReadFile(m)
+	withBlock := string(b) + "kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n"
 	writeFiles(t, root, map[string]string{
-		"system-flow.yaml":         string(b) + "kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n",
+		"system-flow.yaml":         withBlock,
 		"integration/kluster.yaml": "name: demo\n",
 	})
-	if out, errOut, code := runIn(t, root, "serve", "enable", "kluster"); code != 0 || !strings.Contains(out, "kluster enabled for t") || !strings.Contains(out, "flai serve disable kluster") {
+	if out, errOut, code := runIn(t, root, "serve", "enable", "kluster"); code != 0 || !strings.Contains(out, "kluster enabled for t") || !strings.Contains(out, "flai serve disable kluster") || strings.Contains(out, "wrote") {
 		t.Fatalf("enable with a block: %d %s %s", code, out, errOut)
 	}
 	if !enabled(root) {
 		t.Error("enabled, the host's configuration does not say so")
+	}
+	if got, _ := os.ReadFile(m); string(got) != withBlock {
+		t.Errorf("enable with a block changed the manifest:\n%s", got)
+	}
+	if _, err := os.Stat(filepath.Join(root, "kluster.yaml")); err == nil {
+		t.Error("enable with a block wrote kluster.yaml")
+	}
+}
+
+// klusterGitProject is a tempProject committed in a git repository of its
+// own, with extra written before the first commit.
+func klusterGitProject(t *testing.T, extra map[string]string) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := tempProject(t)
+	writeFiles(t, root, extra)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "start")
+	return root
+}
+
+// S-0586: enabling kluster for a project with no kluster: block writes a
+// block naming only config: kluster.yaml at the end of system-flow.yaml,
+// every other line as it was, and kluster.yaml naming the cluster, k3d, and
+// spire; commits those two files alone, with the trailer; turns the action
+// on; and leaves flai check with no manifest.kluster finding. Enabled again,
+// it writes nothing.
+func TestServeEnableKlusterWritesTheBlock(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := klusterGitProject(t, nil)
+	before, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	_ = os.WriteFile(filepath.Join(root, "notes.txt"), []byte("not mine\n"), 0o644)
+
+	out, errOut, code := runIn(t, root, "serve", "enable", "kluster", "--trailer", "Co-Authored-By: someone <s@s>")
+	if code != 0 || !strings.Contains(out, "wrote a kluster: block naming kluster.yaml") || !strings.Contains(out, "committed as") || !strings.Contains(out, "kluster enabled for t") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	after, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	if want := string(before) + "kluster:\n  config: kluster.yaml\n"; string(after) != want {
+		t.Errorf("manifest:\n%s\nwant:\n%s", after, want)
+	}
+	cfg, _ := os.ReadFile(filepath.Join(root, "kluster.yaml"))
+	for _, want := range []string{"\nname: t-local\n", "\nprovider: k3d\n", "\nprofile: spire\n"} {
+		if !strings.Contains(string(cfg), want) {
+			t.Errorf("kluster.yaml lacks %q:\n%s", want, cfg)
+		}
+	}
+	if files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); files != "kluster.yaml\nsystem-flow.yaml" {
+		t.Errorf("the commit holds the two files alone: %q", files)
+	}
+	if msg := gitIn(t, root, "log", "-1", "--format=%B"); !strings.Contains(msg, "kluster: block") || !strings.Contains(msg, "Co-Authored-By: someone <s@s>") {
+		t.Errorf("commit message: %q", msg)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "?? notes.txt" {
+		t.Errorf("status after the commit: %q", st)
+	}
+	conf, _, err := (&app{configPath: configOf(t)}).loadConfig()
+	if err != nil || !conf.ActionEnabled(hostapi.ActionKluster, root) {
+		t.Errorf("the action is on: %v", err)
+	}
+	if out, _, _ := runIn(t, root, "check", "--strict"); strings.Contains(out, "manifest.kluster") {
+		t.Errorf("flai check finds the scaffold faulty: %s", out)
+	}
+
+	head := gitIn(t, root, "rev-parse", "HEAD")
+	if out, errOut, code := runIn(t, root, "serve", "enable", "kluster"); code != 0 || strings.Contains(out, "wrote") {
+		t.Errorf("enabled again: %d %s %s", code, out, errOut)
+	}
+	if again := gitIn(t, root, "rev-parse", "HEAD"); again != head {
+		t.Error("enabled again, it committed")
+	}
+	if got, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml")); string(got) != string(after) {
+		t.Errorf("enabled again, it wrote the manifest:\n%s", got)
+	}
+}
+
+// S-0586: an existing kluster.yaml is kept and only the manifest committed,
+// and dashboard.autocommit: false leaves what enabling wrote uncommitted;
+// --json says what it wrote.
+func TestServeEnableKlusterKeepsTheConfigAndHonoursAutocommit(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	kept := klusterGitProject(t, map[string]string{"kluster.yaml": "name: mine\nprofile: authstar\n"})
+	out, errOut, code := runIn(t, kept, "serve", "enable", "kluster", "--json")
+	if code != 0 {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	var got struct {
+		Enabled bool `json:"enabled"`
+		Kluster struct {
+			Wrote  []string `json:"wrote"`
+			Kept   bool     `json:"kept"`
+			Commit string   `json:"commit"`
+		} `json:"kluster"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if !got.Enabled || !got.Kluster.Kept || len(got.Kluster.Wrote) != 1 || got.Kluster.Wrote[0] != "system-flow.yaml" || got.Kluster.Commit == "" {
+		t.Errorf("--json: %+v", got)
+	}
+	if cfg, _ := os.ReadFile(filepath.Join(kept, "kluster.yaml")); string(cfg) != "name: mine\nprofile: authstar\n" {
+		t.Errorf("the existing kluster.yaml was changed:\n%s", cfg)
+	}
+	if files := gitIn(t, kept, "show", "--name-only", "--format=", "HEAD"); files != "system-flow.yaml" {
+		t.Errorf("the commit holds the manifest alone: %q", files)
+	}
+
+	off := klusterGitProject(t, nil)
+	b, _ := os.ReadFile(filepath.Join(off, "system-flow.yaml"))
+	writeFiles(t, off, map[string]string{"system-flow.yaml": string(b) + "dashboard:\n  autocommit: false\n"})
+	gitIn(t, off, "commit", "-q", "-am", "no autocommit")
+	head := gitIn(t, off, "rev-parse", "HEAD")
+	out, errOut, code = runIn(t, off, "serve", "enable", "kluster")
+	if code != 0 || !strings.Contains(out, "not committed") {
+		t.Fatalf("enable with autocommit off: %d %s %s", code, out, errOut)
+	}
+	if gitIn(t, off, "rev-parse", "HEAD") != head {
+		t.Error("dashboard.autocommit: false, it committed")
+	}
+	if st := gitIn(t, off, "status", "--porcelain"); st != "M system-flow.yaml\n?? kluster.yaml" {
+		t.Errorf("status: %q", st)
 	}
 }
 

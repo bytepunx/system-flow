@@ -263,6 +263,7 @@ func oneOrMany(n int, one, many string) string {
 
 func newServeEnableCmd(a *app, on bool) *cobra.Command {
 	var all bool
+	var trailers []string
 	use, short := "enable <action>", "Let flai serve perform a host action for this project when its dashboard asks"
 	if !on {
 		use, short = "disable <action>", "Stop flai serve performing a host action for this project"
@@ -276,8 +277,17 @@ says what each one means. None is enabled until you enable it by name, in a
 shell on the host; nothing a dashboard can ask for changes that. It applies
 to the project in the working directory, or to every project with
 --all-projects, and takes effect at once, with no restart. disable
---all-projects removes it everywhere.`,
+--all-projects removes it everywhere.
+
+Enabling kluster for a project whose system-flow.yaml has no kluster: block
+writes one, naming only config: kluster.yaml, and writes kluster.yaml at the
+repository root when it is absent, naming the cluster, the provider k3d, and
+the profile spire; it commits those two files alone, with each --trailer,
+unless the project sets dashboard.autocommit: false. The block names no
+deploy, so flai deploys nothing until kluster.deploy is set. --all-projects
+writes no block.`,
 		Example: `  flai serve enable push
+  flai serve enable kluster
   flai serve actions
   flai serve disable push --all-projects`,
 		Args: cobra.ExactArgs(1),
@@ -297,10 +307,6 @@ to the project in the working directory, or to every project with
 				}
 				root, where = mainRootOf(repo), repo.Manifest.Name
 				roots = []string{root}
-				// a project with no kluster: block has no cluster to run (ADR-0254)
-				if on && action == hostapi.ActionKluster && repo.Manifest.Kluster == nil {
-					return kluster.ErrNoBlock
-				}
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
@@ -311,16 +317,31 @@ to the project in the working directory, or to every project with
 			if err := knownAction(action, actions); err != nil && (on || len(cfg.HostActions[action]) == 0) {
 				return err
 			}
+			// a project with no kluster: block is given one before the action
+			// is on, so that it has a cluster to run (S-0586)
+			var scaffold *klusterScaffold
+			if on && !all && action == hostapi.ActionKluster {
+				if scaffold, err = a.scaffoldKluster(root, trailers); err != nil {
+					return err
+				}
+			}
 			next := cfg.WithAction(action, root, on)
 			if err := config.Save(path, next); err != nil {
 				return err
 			}
 			still := !on && !all && next.ActionEnabled(action, root)
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"action": action, "enabled": next.ActionEnabled(action, root), "for": root, "config": path})
+				out := map[string]any{"action": action, "enabled": next.ActionEnabled(action, root), "for": root, "config": path}
+				if scaffold != nil {
+					out["kluster"] = scaffold
+				}
+				return a.printJSON(out)
 			}
 			switch {
 			case on:
+				if scaffold != nil {
+					scaffold.print(a)
+				}
 				fmt.Fprintf(a.out, "%s enabled for %s\n  it %s\n", action, where, actionMeans(action, actions))
 				if dashboardSees(action) {
 					fmt.Fprintln(a.out, "  every use is journalled: flai serve journal")
@@ -335,7 +356,85 @@ to the project in the working directory, or to every project with
 		},
 	}
 	c.Flags().BoolVar(&all, "all-projects", false, "every project on this host, not only the one in the working directory")
+	if on {
+		c.Flags().StringArrayVar(&trailers, "trailer", nil, "a trailer line for the commit of the kluster: block enabling kluster writes (repeatable)")
+	}
 	return c
+}
+
+// klusterScaffold is what enabling kluster wrote for a project with no
+// kluster: block, and the commit that holds it.
+type klusterScaffold struct {
+	kluster.Scaffold
+	// Commit is the short hash of the commit of Wrote; empty when nothing was
+	// written or the project does not commit what flai writes.
+	Commit string `json:"commit,omitempty"`
+}
+
+// print says what enabling kluster wrote and the commit.
+func (s *klusterScaffold) print(a *app) {
+	if len(s.Wrote) == 0 {
+		return
+	}
+	fmt.Fprintf(a.out, "wrote a kluster: block naming %s, with no deploy, so nothing is deployed until kluster.deploy is set: %s\n", s.Config, strings.Join(s.Wrote, ", "))
+	if s.Kept {
+		fmt.Fprintf(a.out, "  kept the %s that was there\n", s.Config)
+	}
+	if s.Commit != "" {
+		fmt.Fprintf(a.out, "  committed as %s\n", s.Commit)
+	} else {
+		fmt.Fprintln(a.out, "  not committed: dashboard.autocommit is false, or the commit failed; commit them by hand")
+	}
+}
+
+// scaffoldKluster gives the project at root a kluster: block and its config
+// when its manifest has none, and commits what it wrote; nil when it had a
+// block already (ADR-0254, S-0586).
+func (a *app) scaffoldKluster(root string, trailers []string) (*klusterScaffold, error) {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	if repo.Manifest.Kluster != nil {
+		return nil, nil
+	}
+	s, err := kluster.Init(root, repo.Manifest)
+	if err != nil {
+		return nil, err
+	}
+	out := &klusterScaffold{Scaffold: s}
+	if len(s.Wrote) > 0 {
+		out.Commit = a.commitScaffold(repo, trailers, s.Wrote)
+	}
+	return out, nil
+}
+
+// commitScaffold commits the paths the kluster scaffold wrote, and nothing
+// else, unless the project sets dashboard.autocommit: false; it says the
+// commit, or nothing, warning on standard error when the commit fails.
+func (a *app) commitScaffold(repo *workitem.Repo, trailers, paths []string) string {
+	if !repo.Manifest.Autocommit() {
+		return ""
+	}
+	msg := "chore: give the project a kluster: block and its config"
+	if len(trailers) > 0 {
+		msg += "\n\n" + strings.Join(trailers, "\n")
+	}
+	fail := func(err error) string {
+		a.logger().Warn("kluster scaffold written but not committed", "component", "cmd", "paths", strings.Join(paths, ","), "error", err, "fix", "commit the paths by hand")
+		return ""
+	}
+	if _, err := a.runner.Run(repo.Root, "git", append([]string{"add", "--"}, paths...)...); err != nil {
+		return fail(err)
+	}
+	if _, err := a.runner.Run(repo.Root, "git", append([]string{"commit", "-q", "-m", msg, "--"}, paths...)...); err != nil {
+		return fail(err)
+	}
+	sha, err := a.runner.Run(repo.Root, "git", "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return fail(err)
+	}
+	return strings.TrimSpace(sha)
 }
 
 func newServeActionsCmd(a *app) *cobra.Command {

@@ -842,6 +842,10 @@ func TestSettingsCatalogAgreesWithTheValidation(t *testing.T) {
 		}
 		for _, v := range values {
 			set := append([]Assignment{{s.Key, v}}, with[v]...)
+			if strings.HasPrefix(s.Key, "kluster.") && s.Key != "kluster.config" {
+				// a kluster: block needs its config beside any other key
+				set = append(set, Assignment{"kluster.config", "kluster.yaml"})
+			}
 			if _, err := EditSettings([]byte(base), set, nil); err != nil {
 				t.Errorf("%s=%s is listed but refused: %v", s.Key, v, err)
 			}
@@ -1280,5 +1284,113 @@ func TestEditSettingsWritesWhen(t *testing.T) {
 	unwhen[0].When = []string{"flai/internal/serve/**"}
 	if sameTiers(m.Tests, unwhen) {
 		t.Error("tiers that differ in when are the same")
+	}
+}
+
+// klusterFixture is a manifest with a kluster: block written by hand, with
+// comments, and keys around it.
+const klusterFixture = `version: 1
+name: demo   # the project's name
+key: d
+layout:
+  design: design
+  docs: docs
+  wip: wip
+kluster:                          # the project's cluster
+  config: integration/kluster.yaml   # its config
+  timeout: 45m
+claims:
+  shared:
+    - design/adrs   # shared
+`
+
+// S-0586: each key of the kluster: block is written, a command as a flow
+// list, its comment kept, and every other byte of the file as it was; []
+// unsets a command.
+func TestEditSettingsWritesTheKlusterBlock(t *testing.T) {
+	out, err := EditSettings([]byte(klusterFixture), []Assignment{
+		{"kluster.deploy", `["scripts/kluster-deploy.sh", "--wait", "two words"]`},
+		{"kluster.build", `["scripts/kluster-build.sh"]`},
+		{"kluster.teardown", `["scripts/kluster-teardown.sh"]`},
+		{"kluster.namespace", "shop"},
+		{"kluster.timeout", "1h"},
+		{"kluster.config", "kluster.yaml"},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.NewReplacer(
+		"  config: integration/kluster.yaml   # its config\n  timeout: 45m\n",
+		"  config: kluster.yaml               # its config\n  timeout: 1h\n  deploy: [scripts/kluster-deploy.sh, \"--wait\", \"two words\"]\n  build: [scripts/kluster-build.sh]\n  teardown: [scripts/kluster-teardown.sh]\n  namespace: shop\n",
+	).Replace(klusterFixture)
+	if got, want := strings.Split(string(out), "\n"), strings.Split(want, "\n"); !slices.Equal(got, want) {
+		for i := range max(len(got), len(want)) {
+			if i >= len(got) || i >= len(want) || got[i] != want[i] {
+				t.Fatalf("line %d differs:\ngot  %q\nwant %q\nwhole:\n%s", i+1, got[min(i, len(got)-1)], want[min(i, len(want)-1)], out)
+			}
+		}
+	}
+	path := filepath.Join(t.TempDir(), File)
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := m.Kluster; k == nil || !slices.Equal(k.Deploy, []string{"scripts/kluster-deploy.sh", "--wait", "two words"}) || k.Namespace != "shop" || k.Timeout != "1h" || k.Config != "kluster.yaml" {
+		t.Errorf("reads back as %+v", m.Kluster)
+	}
+
+	unset, err := EditSettings(out, []Assignment{{"kluster.deploy", "[]"}}, []string{"kluster.build"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(unset), "deploy:") || strings.Contains(string(unset), "build:") || !strings.Contains(string(unset), "teardown: [scripts/kluster-teardown.sh]") {
+		t.Errorf("[] and --unset remove the commands:\n%s", unset)
+	}
+}
+
+// S-0586: setting kluster.config on a manifest with no block adds one at the
+// end, the rest of the file byte for byte as it was.
+func TestEditSettingsAddsTheKlusterBlock(t *testing.T) {
+	out, err := EditSettings([]byte(settingsFixture), []Assignment{{"kluster.config", "kluster.yaml"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := settingsFixture + "kluster:\n  config: kluster.yaml\n"; string(out) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", out, want)
+	}
+}
+
+// S-0586: a kluster value of the wrong kind, or one the block's validation
+// faults, is refused naming its field, and nothing is written.
+func TestEditSettingsRefusesBadKlusterValues(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		data  string
+		set   []Assignment
+		field string
+		want  string
+	}{
+		{"command not a list", klusterFixture, []Assignment{{"kluster.deploy", "scripts/kluster-deploy.sh"}}, "kluster.deploy", "is not an argument list"},
+		{"command not text", klusterFixture, []Assignment{{"kluster.deploy", `[{"a": 1}]`}}, "kluster.deploy", "is not an argument list"},
+		{"command with no program", klusterFixture, []Assignment{{"kluster.build", `["", "--all"]`}}, "kluster.build", "has no program first"},
+		{"namespace not a label", klusterFixture, []Assignment{{"kluster.namespace", "Auth_Star"}}, "kluster.namespace", "is not a DNS label"},
+		{"namespace story form", klusterFixture, []Assignment{{"kluster.namespace", "s-0042"}}, "kluster.namespace", "has a story namespace's form"},
+		{"timeout", klusterFixture, []Assignment{{"kluster.timeout", "soon"}}, "kluster.timeout", "is not a duration"},
+		{"config outside", klusterFixture, []Assignment{{"kluster.config", "../kluster.yaml"}}, "kluster.config", "leaves the repository"},
+		{"deploy with no block", settingsFixture, []Assignment{{"kluster.deploy", `["scripts/kluster-deploy.sh"]`}}, "kluster.config", "is required"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := EditSettings([]byte(c.data), c.set, nil)
+			var r *RefusedError
+			if !errors.As(err, &r) {
+				t.Fatalf("err = %v, want a refusal", err)
+			}
+			if !slices.ContainsFunc(r.Problems, func(p Problem) bool { return p.Field == c.field && strings.Contains(p.Reason, c.want) }) {
+				t.Errorf("problems = %+v, want %s with %q", r.Problems, c.field, c.want)
+			}
+		})
 	}
 }

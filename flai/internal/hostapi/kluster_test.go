@@ -198,8 +198,8 @@ func TestKlusterStatusWithNoBlockNamesTheBlockToAdd(t *testing.T) {
 	if got.Block || got.NoBlock != kluster.ErrNoBlock.Error() || got.Cluster != nil {
 		t.Errorf("no block: %+v", got)
 	}
-	if !strings.Contains(got.NoBlock, "kluster:") || !strings.Contains(got.NoBlock, "design/system/kluster.md") {
-		t.Errorf("the sentence names the block and where it is described: %q", got.NoBlock)
+	if !strings.Contains(got.NoBlock, "kluster:") || !strings.Contains(got.NoBlock, "turn the kluster host action on") {
+		t.Errorf("the sentence names the block and how to get one: %q", got.NoBlock)
 	}
 }
 

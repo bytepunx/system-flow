@@ -2405,7 +2405,7 @@ func TestKlusterErrors(t *testing.T) {
 		{"namespace story form", func(k *Kluster) { k.Namespace = "s-0576" }, "", `kluster.namespace "s-0576" has a story namespace's form`},
 		{"name makes story form", func(k *Kluster) {}, "S-0001", `kluster.namespace is not set, and the manifest's name makes "s-0001", which has a story namespace's form`},
 		{"name makes no label", func(k *Kluster) {}, "!!!", "makes no DNS label; set kluster.namespace"},
-		{"deploy missing", func(k *Kluster) { k.Deploy = nil }, "", "kluster.deploy is required"},
+		{"deploy with no program", func(k *Kluster) { k.Deploy = []string{""} }, "", "kluster.deploy has no program first"},
 		{"build with no program", func(k *Kluster) { k.Build = []string{" ", "--all"} }, "", "kluster.build has no program first"},
 		{"timeout not a duration", func(k *Kluster) { k.Timeout = "soon" }, "", `kluster.timeout "soon" is not a duration`},
 		{"timeout zero", func(k *Kluster) { k.Timeout = "0s" }, "", `kluster.timeout "0s" is not above zero`},

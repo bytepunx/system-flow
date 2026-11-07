@@ -2609,7 +2609,7 @@ flai kluster deploy S-nnnn builds a story's images in its worktree, loads them i
 
 They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them.
 
-A project with no kluster: block, or a host without kluster on PATH, is refused with what to add or how to install kluster.
+A project with no kluster: block is refused, saying to turn the kluster host action on, from the dashboard's Features page or with flai serve enable kluster, which writes the block and a kluster.yaml for it. A block with no deploy brings the cluster up and down, and deploy and promote refuse it until kluster.deploy is set. A host without kluster on PATH is refused with how to install kluster.
 
 Examples:
 
@@ -2850,6 +2850,12 @@ acceptance.forge (choice: github; default github)
 acceptance.merge_method (choice: merge, squash, rebase; default merge)
 merge_queue.batch_max (number, whole; default 4)
 merge_queue.coalesce (duration; default 3m)
+kluster.config (text)
+kluster.namespace (text)
+kluster.build (command)
+kluster.deploy (command)
+kluster.teardown (command)
+kluster.timeout (duration; default 30m)
 tests (tests)
 ```
 
@@ -4221,10 +4227,13 @@ flai serve disable <action> [flags]
 
 A host action is something flai serve does on this host, as you and with your credentials, because a dashboard asked: flai serve actions lists them and says what each one means. None is enabled until you enable it by name, in a shell on the host; nothing a dashboard can ask for changes that. It applies to the project in the working directory, or to every project with --all-projects, and takes effect at once, with no restart. disable --all-projects removes it everywhere.
 
+Enabling kluster for a project whose system-flow.yaml has no kluster: block writes one, naming only config: kluster.yaml, and writes kluster.yaml at the repository root when it is absent, naming the cluster, the provider k3d, and the profile spire; it commits those two files alone, with each --trailer, unless the project sets dashboard.autocommit: false. The block names no deploy, so flai deploys nothing until kluster.deploy is set. --all-projects writes no block.
+
 Examples:
 
 ```bash
 flai serve enable push
+flai serve enable kluster
 flai serve actions
 flai serve disable push --all-projects
 ```
@@ -4245,10 +4254,13 @@ flai serve enable <action> [flags]
 
 A host action is something flai serve does on this host, as you and with your credentials, because a dashboard asked: flai serve actions lists them and says what each one means. None is enabled until you enable it by name, in a shell on the host; nothing a dashboard can ask for changes that. It applies to the project in the working directory, or to every project with --all-projects, and takes effect at once, with no restart. disable --all-projects removes it everywhere.
 
+Enabling kluster for a project whose system-flow.yaml has no kluster: block writes one, naming only config: kluster.yaml, and writes kluster.yaml at the repository root when it is absent, naming the cluster, the provider k3d, and the profile spire; it commits those two files alone, with each --trailer, unless the project sets dashboard.autocommit: false. The block names no deploy, so flai deploys nothing until kluster.deploy is set. --all-projects writes no block.
+
 Examples:
 
 ```bash
 flai serve enable push
+flai serve enable kluster
 flai serve actions
 flai serve disable push --all-projects
 ```
@@ -4258,6 +4270,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--all-projects` | every project on this host, not only the one in the working directory |
+| `--trailer` stringArray | a trailer line for the commit of the kluster: block enabling kluster writes (repeatable) |
 
 #### flai serve forge
 

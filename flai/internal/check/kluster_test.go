@@ -32,12 +32,16 @@ func TestKlusterBlockIsChecked(t *testing.T) {
 	if got := withConfig(t, valid, "name: t-integration\nprofile: t\n"); len(got) != 0 {
 		t.Errorf("valid block: %+v", got)
 	}
+	// S-0586: a block with no deploy, as enabling kluster writes it, is valid
+	if got := withConfig(t, "kluster:\n  config: integration/kluster.yaml\n", "name: t-local\nprovider: k3d\nprofile: spire\n"); len(got) != 0 {
+		t.Errorf("a block with no deploy: %+v", got)
+	}
 	for _, c := range []struct {
 		name, extra, config, want string
 	}{
 		{"config does not exist", valid, "", `kluster.config "integration/kluster.yaml" does not exist`},
 		{"unknown key", valid + "  namespce: t\n", "name: t\n", `kluster has no key "namespce"`},
-		{"deploy missing", "kluster:\n  config: integration/kluster.yaml\n", "name: t\n", "kluster.deploy is required"},
+		{"deploy with no program", valid + "  build: [\"\"]\n", "name: t\n", "kluster.build has no program first"},
 		{"provider not k3d", valid, "name: t\nprovider: kind\n", `names the provider "kind"`},
 		{"namespace story form", valid + "  namespace: s-0042\n", "name: t\n", `kluster.namespace "s-0042" has a story namespace's form`},
 		{"timeout", valid + "  timeout: forever\n", "name: t\n", `kluster.timeout "forever" is not a duration`},

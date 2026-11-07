@@ -46,8 +46,9 @@ var runCheck = check.Run
 
 // FileReach maps a repository path to a file FileShow and FileSave reach
 // under the manifest m, and returns it cleaned: a file under the design or
-// docs folder, or the design token file or stylesheet m names. The wip
-// folder, a markdown file, and any other path are refused, each with why.
+// docs folder, the design token file or stylesheet m names, or the kluster
+// config file its kluster: block names (S-0586). The wip folder, a markdown
+// file, and any other path are refused, each with why.
 func FileReach(m manifest.Manifest, rel string) (string, error) {
 	clean := filepath.ToSlash(filepath.Clean(strings.TrimPrefix(rel, "./")))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || filepath.IsAbs(clean) || strings.HasPrefix(clean, "/") {
@@ -67,17 +68,42 @@ func FileReach(m manifest.Manifest, rel string) (string, error) {
 	if clean == path.Clean(m.DesignTokens()) || (sheet != "" && clean == path.Clean(sheet)) {
 		return clean, nil
 	}
+	cfg := klusterConfig(m)
+	if cfg != "" && clean == cfg {
+		return clean, nil
+	}
 	if _, ok := under("design"); ok {
 		return clean, nil
 	}
 	if _, ok := under("docs"); ok {
 		return clean, nil
 	}
-	named := "the design token file " + m.DesignTokens()
+	named := []string{"the design token file " + m.DesignTokens()}
 	if sheet != "" {
-		named += " or the design stylesheet " + sheet
+		named = append(named, "the design stylesheet "+sheet)
 	}
-	return "", fmt.Errorf("%s is outside the design and docs folders and is not %s; file show and file save reach only those", clean, named)
+	if cfg != "" {
+		named = append(named, "the kluster config "+cfg)
+	}
+	list := strings.Join(named, " or ")
+	if len(named) > 2 {
+		list = strings.Join(named[:len(named)-1], ", ") + ", or " + named[len(named)-1]
+	}
+	return "", fmt.Errorf("%s is outside the design and docs folders and is not %s; file show and file save reach only those", clean, list)
+}
+
+// klusterConfig is the kluster config file m's kluster: block names, cleaned,
+// or empty when there is no block, it names none, or the path leaves the
+// repository.
+func klusterConfig(m manifest.Manifest) string {
+	if m.Kluster == nil || strings.TrimSpace(m.Kluster.Config) == "" {
+		return ""
+	}
+	cfg := path.Clean(filepath.ToSlash(strings.TrimSpace(m.Kluster.Config)))
+	if cfg == "." || cfg == ".." || strings.HasPrefix(cfg, "../") || strings.HasPrefix(cfg, "/") {
+		return ""
+	}
+	return cfg
 }
 
 // FileShow loads a text file that is not markdown for editing, from story's

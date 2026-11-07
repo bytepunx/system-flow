@@ -85,8 +85,8 @@ func TestNewReadsTheConfig(t *testing.T) {
 	if f.c.Name != "shop" || f.c.Provider != "k3d" || f.c.Profile != "" || f.c.Context() != "k3d-shop" || f.c.Config != "integration/kluster.yaml" {
 		t.Errorf("the cluster is what its config names, k3d by default: %+v", f.c)
 	}
-	if _, err := New(f.root, manifest.Manifest{Name: "x"}, System{}); !errors.Is(err, ErrNoBlock) || !strings.Contains(err.Error(), "kluster:") || !strings.Contains(err.Error(), "design/system/kluster.md") {
-		t.Errorf("no block names the block to add: %v", err)
+	if _, err := New(f.root, manifest.Manifest{Name: "x"}, System{}); !errors.Is(err, ErrNoBlock) || !strings.Contains(err.Error(), "kluster:") || !strings.Contains(err.Error(), "turn the kluster host action on") || strings.Contains(err.Error(), "add one") {
+		t.Errorf("no block says to turn the kluster host action on, not to edit the file: %v", err)
 	}
 	m := manifest.Manifest{Kluster: &manifest.Kluster{Config: "nowhere.yaml"}}
 	if _, err := New(f.root, m, System{}); err == nil || !strings.Contains(err.Error(), "nowhere.yaml") {

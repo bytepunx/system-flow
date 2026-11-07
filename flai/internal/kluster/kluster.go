@@ -27,9 +27,9 @@ const Binary = "kluster"
 // ErrNotInstalled says kluster is not on PATH, and how to install it.
 var ErrNotInstalled = errors.New("kluster is not installed: flai runs a project's kluster with the kluster command, and none is on PATH; install it with curl -fsSL https://raw.githubusercontent.com/bytepunx/kluster/main/install.sh | bash, or go install github.com/bytepunx/kluster/kluster@latest, then run this again")
 
-// ErrNoBlock says the project's manifest names no cluster, and which block
-// to add.
-var ErrNoBlock = errors.New("this project's system-flow.yaml has no kluster: block, so flai runs no cluster for it; add one naming the kluster config and the deploy command, such as kluster: {config: integration/kluster.yaml, deploy: [scripts/kluster-deploy.sh]}, as design/system/kluster.md § The kluster: block describes, then run this again")
+// ErrNoBlock says the project's manifest names no cluster, and how to give
+// it one: turning the kluster host action on writes the block.
+var ErrNoBlock = errors.New("this project's system-flow.yaml has no kluster: block, so flai runs no cluster for it; turn the kluster host action on, with its toggle on the dashboard's Features page or flai serve enable kluster, which writes the block and a kluster.yaml for it, then run this again")
 
 // Exec runs programs for the package: LookPath finds one on PATH, Run runs
 // one in dir, writing its standard output and error to out as they come, so

@@ -134,6 +134,34 @@ func TestFileReach(t *testing.T) {
 	}
 }
 
+// S-0586: file show and file save reach the kluster config file the
+// manifest's kluster: block names, at the repository root, and still no
+// other path outside the design and docs folders.
+func TestFileReachTheKlusterConfig(t *testing.T) {
+	repo, root, _ := fileProject(t, "kluster:\n  config: ./kluster.yaml\n")
+	put(t, filepath.Join(root, "kluster.yaml"), "name: demo-local\nprofile: spire\n")
+	clean, err := FileReach(repo.Manifest, "kluster.yaml")
+	if err != nil || clean != "kluster.yaml" {
+		t.Fatalf("the kluster config: %q %v", clean, err)
+	}
+	f, err := FileShow(repo, "kluster.yaml", "")
+	if err != nil || f.Content != "name: demo-local\nprofile: spire\n" {
+		t.Errorf("show: %+v %v", f, err)
+	}
+	if _, err := FileReach(repo.Manifest, "src/main.go"); err == nil || !strings.Contains(err.Error(), ", or the kluster config kluster.yaml") {
+		t.Errorf("another path is refused, naming the kluster config: %v", err)
+	}
+	for _, out := range []string{"../kluster.yaml", "/kluster.yaml"} {
+		m := repo.Manifest
+		k := *m.Kluster
+		k.Config = out
+		m.Kluster = &k
+		if _, err := FileReach(m, "kluster.yaml"); err == nil {
+			t.Errorf("a block naming %s reaches kluster.yaml", out)
+		}
+	}
+}
+
 // S-0436: a binary file and one over the size limit are refused, as is
 // content of either kind, and nothing is written.
 func TestFileRefusesBinaryAndOversize(t *testing.T) {

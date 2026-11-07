@@ -48,8 +48,12 @@ refuses every agent and sub-agent up, down, deploy, teardown, and promote,
 which change shared infrastructure on your machine; status and deployments
 read, and any agent may run them.
 
-A project with no kluster: block, or a host without kluster on PATH, is
-refused with what to add or how to install kluster.`,
+A project with no kluster: block is refused, saying to turn the kluster host
+action on, from the dashboard's Features page or with flai serve enable
+kluster, which writes the block and a kluster.yaml for it. A block with no
+deploy brings the cluster up and down, and deploy and promote refuse it
+until kluster.deploy is set. A host without kluster on PATH is refused with
+how to install kluster.`,
 		Example: `  flai kluster up
   flai kluster status
   flai kluster status --json

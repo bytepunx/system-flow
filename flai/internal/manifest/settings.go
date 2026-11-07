@@ -22,11 +22,12 @@ import (
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
 // most stories a batch of the merge queue holds (S-0399) and how long it
-// waits for a batch to fill (S-0552). The catalog says
+// waits for a batch to fill (S-0552); and the kluster: block's keys (S-0586).
+// The catalog says
 // of each its kind, its values, its default, and what it does; whether a value is allowed is always the manifest's own
 // validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
 // Digest.Errors, Threads.Errors, Acceptance.Errors, MergeQueue.Errors,
-// TestErrors) on the manifest as it would be, so flai manifest set and flai
+// TestErrors, KlusterErrors) on the manifest as it would be, so flai manifest set and flai
 // check cannot disagree.
 
 // Kind is what a setting's value is, and so how it is written and edited.
@@ -52,6 +53,10 @@ const (
 	// KindTests is a list of test tiers, given as JSON such as
 	// [{"name":"test","command":["scripts/test.sh"],"paths":["**"]}].
 	KindTests Kind = "tests"
+	// KindCommand is an argument list, the program then its arguments, run
+	// as it stands, never through a shell, given as JSON such as
+	// ["scripts/kluster-deploy.sh","--wait"]; [] unsets it.
+	KindCommand Kind = "command"
 )
 
 // Setting is one key flai manifest set may write.
@@ -84,7 +89,8 @@ type Setting struct {
 type SettingValue struct {
 	Setting
 	// Value is the setting's value as the manifest has it: a bool, a string,
-	// a float64, an int, an *Agent, or a []TestTier; nil when it is unset.
+	// a float64, an int, an *Agent, a []TestTier, or a command's []string;
+	// nil when it is unset.
 	Value any `json:"value,omitempty"`
 	// Set reports whether the manifest sets the key to something other than
 	// its zero: a permission written false reads as unset, as it acts.
@@ -251,6 +257,26 @@ func buildCatalog() []Setting {
 		Setting{Key: "merge_queue.coalesce", Kind: KindDuration, Default: durationText(DefaultMergeQueueCoalesce),
 			Meaning: "How long after the first of a batch's stories was enqueued flai serve's merge queue waits for more before it builds a batch of fewer than merge_queue.batch_max, so that stories enqueued close together are verified together; a batch of merge_queue.batch_max starts at once, and 0 builds each batch at once.",
 			get:     func(m Manifest) (any, bool) { return text(m.MergeQueue.Coalesce) }},
+		Setting{Key: "kluster.config", Kind: KindText,
+			Meaning: "The kluster config file, from the repository root, that names the project's local Kubernetes cluster, its provider, and the profile of shared services it installs; setting it adds the kluster: block, and enabling the kluster host action writes kluster.yaml for a project with none.",
+			get:     func(m Manifest) (any, bool) { return klusterText(m, func(k *Kluster) string { return k.Config }) }},
+		Setting{Key: "kluster.namespace", Kind: KindText,
+			Meaning: "The default namespace main deploys into, a DNS label not of a story namespace's form; unset, the manifest's name as a DNS label.",
+			get:     func(m Manifest) (any, bool) { return klusterText(m, func(k *Kluster) string { return k.Namespace }) }},
+		Setting{Key: "kluster.build", Kind: KindCommand,
+			Meaning: "The command that builds the project's images and lists their references in the file FLAI_KLUSTER_IMAGES names, which flai loads into the cluster; unset, nothing is loaded.",
+			get:     func(m Manifest) (any, bool) { return klusterCommand(m, func(k *Kluster) []string { return k.Build }) }},
+		Setting{Key: "kluster.deploy", Kind: KindCommand,
+			Meaning: "The command that deploys a build into the namespace FLAI_KLUSTER_NAMESPACE names; unset, the cluster can come up and go down, and flai deploys nothing.",
+			get:     func(m Manifest) (any, bool) { return klusterCommand(m, func(k *Kluster) []string { return k.Deploy }) }},
+		Setting{Key: "kluster.teardown", Kind: KindCommand,
+			Meaning: "The command that removes what deploy made outside a namespace before flai deletes the namespace; unset, flai deletes only the namespace.",
+			get: func(m Manifest) (any, bool) {
+				return klusterCommand(m, func(k *Kluster) []string { return k.Teardown })
+			}},
+		Setting{Key: "kluster.timeout", Kind: KindDuration, Default: durationText(DefaultKlusterTimeout),
+			Meaning: "The most one kluster job, a deploy, a teardown, or a promotion, may take; more than zero.",
+			get:     func(m Manifest) (any, bool) { return klusterText(m, func(k *Kluster) string { return k.Timeout }) }},
 		Setting{Key: "tests", Kind: KindTests,
 			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {
@@ -281,6 +307,24 @@ func count(c *int) (any, bool) {
 		return nil, false
 	}
 	return *c, true
+}
+
+// klusterText is a text key of the kluster: block, unset when the manifest
+// has no block.
+func klusterText(m Manifest, key func(*Kluster) string) (any, bool) {
+	if m.Kluster == nil {
+		return nil, false
+	}
+	return text(key(m.Kluster))
+}
+
+// klusterCommand is a command of the kluster: block, unset when the
+// manifest has no block or the command is empty.
+func klusterCommand(m Manifest, key func(*Kluster) []string) (any, bool) {
+	if m.Kluster == nil || len(key(m.Kluster)) == 0 {
+		return nil, false
+	}
+	return key(m.Kluster), true
 }
 
 func agent(a *Agent) (any, bool) {
@@ -851,6 +895,30 @@ func (s Setting) parse(value string) (write, string) {
 		w.want = tiers
 		w.render = func(indent, old string) []string { return testsLines(tiers, indent, s.leaf(), old) }
 		return w, ""
+	case KindCommand:
+		example := fmt.Sprintf(`the program, then its arguments, as JSON, such as ["scripts/kluster-%s.sh"], or [] to unset it`, s.leaf())
+		if !strings.HasPrefix(v, "[") {
+			return w, "is not an argument list; write " + example
+		}
+		var args []string
+		if err := yaml.UnmarshalWithOptions([]byte(v), &args, yaml.Strict()); err != nil {
+			return w, fmt.Sprintf("is not an argument list: %s; write %s", firstLine(err.Error()), example)
+		}
+		if len(args) == 0 {
+			w.unset = true
+			return w, ""
+		}
+		for i, a := range args {
+			if strings.ContainsAny(a, "\n\r\x00") {
+				return w, fmt.Sprintf("argument %d spans lines; write each argument on one line", i+1)
+			}
+		}
+		if strings.TrimSpace(args[0]) == "" {
+			return w, "has no program first; write " + example
+		}
+		w.want = args
+		w.render = func(indent, old string) []string { return []string{keyLine(indent, s.leaf(), flowList(args), old)} }
+		return w, ""
 	}
 	return scalar(settingScalar(v), v)
 }
@@ -993,6 +1061,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Acceptance.Errors()...)
 	msgs = append(msgs, m.MergeQueue.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
+	msgs = append(msgs, m.KlusterErrors(nil)...)
 	msgs = append(msgs, m.ProviderErrors()...)
 	msgs = append(msgs, m.ProjectErrors(nil)...)
 	msgs = append(msgs, m.ComponentErrors(nil)...)
@@ -1038,6 +1107,9 @@ func readsBack(data []byte, m Manifest, writes []write) error {
 		case []TestTier:
 			tiers, _ := got.([]TestTier)
 			ok = ok && sameTiers(tiers, want)
+		case []string:
+			args, _ := got.([]string)
+			ok = ok && slices.Equal(args, want)
 		default:
 			ok = ok && got == want
 		}

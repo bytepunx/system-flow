@@ -169,12 +169,12 @@ func TestKlusterStatus(t *testing.T) {
 }
 
 // S-0577: a project with no kluster: block, and a host with no kluster on
-// PATH, are refused with what to add or how to install kluster.
+// PATH, are refused with how to get a block or how to install kluster.
 func TestKlusterRefusals(t *testing.T) {
 	bare := tempProject(t)
 	for _, sub := range []string{"up", "down", "status"} {
 		_, errOut, code := runKluster(t, bare, false, "", "kluster", sub, "--yes")
-		if code == 0 || !strings.Contains(errOut, "has no kluster: block") || !strings.Contains(errOut, "config: integration/kluster.yaml") {
+		if code == 0 || !strings.Contains(errOut, "has no kluster: block") || !strings.Contains(errOut, "flai serve enable kluster") {
 			t.Errorf("%s without a block: %d %s", sub, code, errOut)
 		}
 	}
