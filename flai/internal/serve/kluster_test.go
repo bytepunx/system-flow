@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,20 +21,26 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// fakeKluster is a KlusterRunner that runs nothing: it records each call,
+// fakeKluster is a KlusterRunner that runs no cluster: it records each call,
 // answers Absent with absent, fails Up with upErr, and fails each deploy with
-// what fail answers for its story and head. While gate is not nil, each
-// deploy says it started on started and waits for gate before it ends.
+// what fail answers for its story and head. A deploy writes the namespace's
+// record, as the kluster package does, unless it was refused before its
+// first step; a teardown removes it, or fails with teardownErr, and answers
+// kluster.ErrNotDeployed without one; a promotion fails with promoteErr.
+// While gate is not nil, each deploy says it started on started and waits for
+// gate before it ends.
 type fakeKluster struct {
-	mu       sync.Mutex
-	calls    []string // "absent", "up", or "deploy S-nnnn <head>"
-	absent   bool
-	upErr    error
-	fail     func(story, head string) error
-	gate     chan struct{}
-	started  chan string
-	inFlight int
-	most     int
+	mu          sync.Mutex
+	calls       []string // "absent", "up", "deploy S-nnnn <head>", "teardown S-nnnn", or "promote <branch>"
+	absent      bool
+	upErr       error
+	fail        func(story, head string) error
+	teardownErr error
+	promoteErr  error
+	gate        chan struct{}
+	started     chan string
+	inFlight    int
+	most        int
 }
 
 func (f *fakeKluster) note(call string) {
@@ -60,7 +67,7 @@ func (f *fakeKluster) Up(_ context.Context, _ string, _ manifest.Manifest, out i
 	return f.upErr
 }
 
-func (f *fakeKluster) Deploy(_ context.Context, _ string, _ manifest.Manifest, story, _, commit string) (kluster.Record, error) {
+func (f *fakeKluster) Deploy(_ context.Context, root string, _ manifest.Manifest, story, _, commit string) (kluster.Record, error) {
 	f.note("deploy " + story + " " + commit)
 	f.mu.Lock()
 	f.inFlight++
@@ -76,12 +83,66 @@ func (f *fakeKluster) Deploy(_ context.Context, _ string, _ manifest.Manifest, s
 	f.mu.Lock()
 	f.inFlight--
 	f.mu.Unlock()
+	r := kluster.Record{Story: story, Commit: commit, Outcome: kluster.OutcomePassed}
+	var err error
 	if fail != nil {
-		if err := fail(story, commit); err != nil {
-			return kluster.Record{}, err
-		}
+		err = fail(story, commit)
 	}
-	return kluster.Record{Story: story, Commit: commit, Outcome: kluster.OutcomePassed}, nil
+	var se *kluster.StepError
+	if err != nil && !errors.As(err, &se) {
+		return kluster.Record{}, err // refused before its first step: no record
+	}
+	if err != nil {
+		r.Outcome, r.FailedStep, r.ExitCode = kluster.OutcomeFailed, se.Step, se.ExitCode
+	}
+	writeFakeRecord(root, r)
+	return r, err
+}
+
+// writeFakeRecord writes r as its namespace's record, as a deploy does.
+func writeFakeRecord(root string, r kluster.Record) {
+	ns, _ := kluster.StoryNamespace(r.Story)
+	r.Namespace = ns
+	data, _ := json.Marshal(r)
+	_ = os.MkdirAll(filepath.Dir(kluster.RecordPath(root, ns)), 0o755)
+	_ = os.WriteFile(kluster.RecordPath(root, ns), data, 0o644)
+}
+
+func (f *fakeKluster) Teardown(_ context.Context, root string, _ manifest.Manifest, story, _ string) (kluster.Record, error) {
+	f.note("teardown " + story)
+	ns, _ := kluster.StoryNamespace(story)
+	r, ok, err := kluster.ReadRecord(root, ns)
+	if err != nil {
+		return kluster.Record{}, err
+	}
+	if !ok {
+		return kluster.Record{}, fmt.Errorf("%s: %w", story, kluster.ErrNotDeployed)
+	}
+	f.mu.Lock()
+	terr := f.teardownErr
+	f.mu.Unlock()
+	if terr != nil {
+		return r, terr
+	}
+	_ = os.Remove(kluster.RecordPath(root, ns))
+	return r, nil
+}
+
+func (f *fakeKluster) Promote(_ context.Context, _ string, _ manifest.Manifest, branch string) (kluster.Record, error) {
+	f.note("promote " + branch)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	r := kluster.Record{Namespace: "t", Commit: klHeadC, Outcome: kluster.OutcomePassed}
+	if f.promoteErr != nil {
+		r.Outcome = kluster.OutcomeFailed
+		return r, f.promoteErr
+	}
+	return r, nil
+}
+
+// since are the calls made after the first n.
+func (f *fakeKluster) since(n int) []string {
+	return f.all()[n:]
 }
 
 // deploys are the deploy calls made so far.
@@ -118,6 +179,9 @@ func (g *klusterHeads) set(story, head string) {
 func (g *klusterHeads) Run(_, name string, args ...string) (string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	if name == "git" && len(args) == 3 && args[0] == "rev-parse" && args[1] == "--abbrev-ref" && args[2] == "HEAD" {
+		return "main", nil
+	}
 	if name == "git" && len(args) > 0 && args[0] == "rev-parse" {
 		ref := args[len(args)-1]
 		story := strings.TrimSuffix(strings.TrimPrefix(ref, "refs/heads/story/"), "^{commit}")
@@ -145,6 +209,7 @@ type klusterLab struct {
 	git     *klusterHeads
 	kluster *fakeKluster
 	pass    *klusterPass
+	opts    Options
 	mu      sync.Mutex
 	journal []hostapi.Entry
 	clock   time.Time // a minute later at each round, as flai serve's looks are
@@ -189,8 +254,55 @@ func newKlusterLab(t *testing.T, block string) *klusterLab {
 			},
 		},
 	}
+	lab.opts = o
 	lab.pass = newKlusterPass(o, Entry{Key: "t", Name: "t", Root: root}, &sync.WaitGroup{})
 	return lab
+}
+
+// restart is flai serve started again: a new pass, which counts no
+// acceptance from before it.
+func (lab *klusterLab) restart() {
+	lab.mu.Lock()
+	lab.clock = lab.clock.Add(time.Hour)
+	lab.mu.Unlock()
+	lab.pass = newKlusterPass(lab.opts, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+}
+
+// accept moves a story to done a second after the lab's clock, so that the
+// pass's next look sees it as an acceptance since its last.
+func (lab *klusterLab) accept(id string) {
+	lab.t.Helper()
+	lab.mu.Lock()
+	at := lab.clock.Add(time.Second)
+	lab.mu.Unlock()
+	items, err := lab.repo.List(false)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	for _, task := range items {
+		if task.Type != workitem.Task || task.Parent != id {
+			continue
+		}
+		for _, to := range []string{workitem.Ready, workitem.InProgress, workitem.Done} {
+			if _, err := lab.repo.Transition(task, to, "alex", "the test finishes it", at); err != nil {
+				lab.t.Fatal(err)
+			}
+		}
+	}
+	it, err := lab.repo.Get(id)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	data, _ := os.ReadFile(it.Path)
+	if err := os.WriteFile(it.Path, []byte(strings.Replace(string(data), "- [ ] deploys", "- [x] deploys", 1)), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+	if it, err = lab.repo.Get(id); err != nil {
+		lab.t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(it, workitem.Done, "alex", "accepted", at); err != nil {
+		lab.t.Fatal(err)
+	}
 }
 
 func (lab *klusterLab) setOn(on bool) {
@@ -253,14 +365,20 @@ func (lab *klusterLab) round() {
 // threadsOn are the deploy failure threads flai serve opened on story, open
 // or not.
 func (lab *klusterLab) threadsOn(story string) []*threads.Thread {
+	return lab.titled(story, klusterFailureTitle(story))
+}
+
+// titled are the threads titled title that flai serve opened on on, open or
+// not.
+func (lab *klusterLab) titled(on, title string) []*threads.Thread {
 	lab.t.Helper()
-	all, err := threads.For(lab.repo, story)
+	all, err := threads.For(lab.repo, on)
 	if err != nil {
 		lab.t.Fatal(err)
 	}
 	var out []*threads.Thread
 	for _, th := range all {
-		if th.Opener() == forgeAuthor && th.Title == workitem.CleanTitle(klusterFailureTitle(story)) {
+		if th.Opener() == forgeAuthor && th.Title == workitem.CleanTitle(title) {
 			out = append(out, th)
 		}
 	}
@@ -499,5 +617,216 @@ func TestAnAbsentClusterIsBroughtUpBeforeTheDeploy(t *testing.T) {
 	ths := failing.threadsOn(other)
 	if len(ths) != 1 || !strings.Contains(ths[0].Body, "up step") || !strings.Contains(ths[0].Body, klusterUpLog(failing.root)) {
 		t.Fatalf("a failed bring-up should open one thread naming the up step and its log; got %d", len(ths))
+	}
+}
+
+func TestAStoryThatLeavesReviewIsTornDownOnce(t *testing.T) {
+	for _, to := range []string{workitem.InProgress, workitem.Cancelled} {
+		t.Run(to, func(t *testing.T) {
+			lab := newKlusterLab(t, klusterBlock)
+			story := lab.inReview("Leaves", klHeadA)
+			lab.round()
+			n := len(lab.kluster.all())
+			lab.move(story, workitem.InProgress)
+			if to != workitem.InProgress {
+				lab.move(story, to)
+			}
+			lab.round()
+			if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
+				t.Fatalf("calls after %s left review for %s = %v, want one teardown", story, to, got)
+			}
+			ns, _ := kluster.StoryNamespace(story)
+			if _, ok := readKlusterTried(lab.root, ns); ok {
+				t.Errorf("what flai serve tried for %s is kept after its teardown passed", ns)
+			}
+			journal := lab.entries()
+			if last := journal[len(journal)-1]; last.Outcome != "done" || !strings.Contains(last.Detail, "tore down") {
+				t.Errorf("the journal's last entry is %+v, want the teardown done", last)
+			}
+			n = len(lab.kluster.all())
+			lab.round()
+			if got := lab.kluster.since(n); len(got) != 0 {
+				t.Fatalf("a second look after the teardown ran %v", got)
+			}
+		})
+	}
+}
+
+func TestAStoryNeverDeployedIsNotTornDown(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	never := lab.inReview("Never", klHeadA)
+	lab.setOn(false)
+	lab.round()
+	lab.move(never, workitem.InProgress)
+	lab.setOn(true)
+
+	refused := lab.inReview("Refused", klHeadB)
+	lab.kluster.fail = func(story, _ string) error {
+		if story == refused {
+			return errors.New("the cluster has no kubeconfig")
+		}
+		return nil
+	}
+	lab.round()
+	ns, _ := kluster.StoryNamespace(refused)
+	if _, ok := readKlusterTried(lab.root, ns); !ok {
+		t.Fatalf("a refused deploy left no record of what flai serve tried")
+	}
+	lab.move(refused, workitem.InProgress)
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("stories with no deployment were torn down: %v", got)
+	}
+	if _, ok := readKlusterTried(lab.root, ns); ok {
+		t.Errorf("what flai serve tried for %s is kept though it left review with nothing deployed", ns)
+	}
+}
+
+func TestAnAcceptedStoryIsTornDownThenMainPromoted(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	story := lab.inReview("Accepted", klHeadA)
+	lab.round()
+	n := len(lab.kluster.all())
+	lab.accept(story)
+	lab.round()
+	want := "teardown " + story + ";promote main"
+	if got := strings.Join(lab.kluster.since(n), ";"); got != want {
+		t.Fatalf("calls after the acceptance = %s, want %s", got, want)
+	}
+	journal := lab.entries()
+	if last := journal[len(journal)-1]; last.Outcome != "done" || !strings.Contains(last.Detail, "promoted main") {
+		t.Errorf("the journal's last entry is %+v, want the promotion done", last)
+	}
+	n = len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a second look after the promotion ran %v", got)
+	}
+}
+
+func TestTwoAcceptancesAtOneLookPromoteOnce(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	first := lab.inReview("First", klHeadA)
+	second := lab.inReview("Second", klHeadB)
+	lab.round()
+	n := len(lab.kluster.all())
+	lab.accept(first)
+	lab.accept(second)
+	lab.round()
+	want := "teardown " + first + ";teardown " + second + ";promote main"
+	if got := strings.Join(lab.kluster.since(n), ";"); got != want {
+		t.Fatalf("calls after two acceptances = %s, want %s", got, want)
+	}
+}
+
+func TestAnAcceptanceBeforeThePassStartedPromotesNothing(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	story := lab.inReview("Earlier", klHeadA)
+	lab.round()
+	lab.accept(story)
+	lab.restart()
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := strings.Join(lab.kluster.since(n), ";"); got != "teardown "+story {
+		t.Fatalf("calls after a restart = %s, want only the teardown of the story that left review", got)
+	}
+}
+
+func TestAFailedTeardownOpensOneThreadAndIsNotTriedAgainUntilTheStoryMoves(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	story := lab.inReview("Stuck", klHeadA)
+	lab.round()
+	ns, _ := kluster.StoryNamespace(story)
+	log := kluster.LogPath(lab.root, ns, kluster.StepTeardown)
+	lab.kluster.teardownErr = &kluster.StepError{Namespace: ns, Step: kluster.StepTeardown, ExitCode: 2, Log: log, Err: errors.New("exit status 2")}
+	lab.move(story, workitem.InProgress)
+	lab.round()
+	ths := lab.titled(story, teardownFailureTitle(story))
+	if len(ths) != 1 {
+		t.Fatalf("threads after a failed teardown = %d, want 1", len(ths))
+	}
+	for _, want := range []string{"teardown step", "exit code 2", log, klHeadA, ns} {
+		if !strings.Contains(ths[0].Body, want) {
+			t.Errorf("the teardown failure thread does not name %q:\n%s", want, ths[0].Body)
+		}
+	}
+	if got := lab.status(story); got != workitem.InProgress {
+		t.Fatalf("the story is %s after a failed teardown, want it left in progress", got)
+	}
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a failed teardown was tried again at the next look: %v", got)
+	}
+
+	lab.kluster.teardownErr = nil
+	lab.move(story, workitem.Cancelled)
+	lab.round()
+	if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
+		t.Fatalf("calls once the story moved again = %v, want the teardown tried again", got)
+	}
+	if ths := lab.titled(story, teardownFailureTitle(story)); len(ths) != 1 || ths[0].Open() {
+		t.Fatalf("a passing teardown should resolve the one failure thread")
+	}
+}
+
+func TestAFailedPromotionOpensOneThreadOnTheManifestAndAPassResolvesIt(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	first := lab.inReview("First", klHeadA)
+	second := lab.inReview("Second", klHeadB)
+	lab.round()
+	log := kluster.LogPath(lab.root, "t", kluster.StepDeploy)
+	lab.kluster.promoteErr = &kluster.StepError{Namespace: "t", Step: kluster.StepDeploy, ExitCode: 4, Log: log, Err: errors.New("exit status 4")}
+	lab.accept(first)
+	lab.round()
+	ths := lab.titled(manifest.File, promoteFailureTitle())
+	if len(ths) != 1 {
+		t.Fatalf("threads on %s after a failed promotion = %d, want 1", manifest.File, len(ths))
+	}
+	for _, want := range []string{"deploy step", "exit code 4", log, klHeadC, "`t`"} {
+		if !strings.Contains(ths[0].Body, want) {
+			t.Errorf("the promotion failure thread does not name %q:\n%s", want, ths[0].Body)
+		}
+	}
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a failed promotion was tried again with no new acceptance: %v", got)
+	}
+	if ths := lab.titled(manifest.File, promoteFailureTitle()); len(ths) != 1 || len(ths[0].Entries()) != 1 {
+		t.Fatalf("a second look changed the promotion's threads")
+	}
+
+	lab.kluster.promoteErr = nil
+	lab.accept(second)
+	lab.round()
+	if got := strings.Join(lab.kluster.since(n), ";"); got != "teardown "+second+";promote main" {
+		t.Fatalf("calls after the next acceptance = %s, want its teardown and a promotion", got)
+	}
+	if ths := lab.titled(manifest.File, promoteFailureTitle()); len(ths) != 1 || ths[0].Open() {
+		t.Fatalf("a passing promotion should resolve the one failure thread")
+	}
+}
+
+func TestNoTeardownOrPromotionRunsWithTheActionOff(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	left := lab.inReview("Left", klHeadA)
+	accepted := lab.inReview("Accepted", klHeadB)
+	lab.round()
+	n := len(lab.kluster.all())
+	lab.setOn(false)
+	lab.move(left, workitem.InProgress)
+	lab.accept(accepted)
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("the action off ran %v", got)
+	}
+	lab.setOn(true)
+	lab.round()
+	for _, c := range lab.kluster.since(n) {
+		if strings.HasPrefix(c, "promote") {
+			t.Fatalf("an acceptance while the action was off promoted main: %v", lab.kluster.since(n))
+		}
 	}
 }
