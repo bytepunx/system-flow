@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T03:49:49Z
+updated: 2026-11-07T04:18:35Z
 transitions: []
 tags: [template]
 topics: [orchestration]
@@ -41,10 +41,10 @@ cost_of_delay:
     at: 2026-11-07T03:49:49Z
 forecast:
   duration: 45m
-  delivery: 2026-11-07T09:45:00Z
-  basis: "flai forecast's 4m from size 3 raised to 45m for watching one publish instance through three main-checkout steps, review, and acceptance; delivery is flai's pull-order date moved by the added time, and holds only once TH-0811 is answered and the draft finalized."
-  by: planner-S-0562
-  at: 2026-11-07T03:46:28Z
+  delivery: 2026-11-07T10:25:00Z
+  basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 5, behind S-0555, S-0565, S-0567, S-0569, S-0570, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0556, S-0558, S-0559, S-0560 and S-0561."
+  by: flai
+  at: 2026-11-07T04:18:35Z
 ---
 # S-0562 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 
