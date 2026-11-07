@@ -3,14 +3,35 @@ id: T-2514
 type: task
 nature: improvement
 title: Check the import run's preconditions, make a scratch repository under a folder named for import, and import it from the board's Import
-status: backlog
+status: done
 parent: S-0564
 owner: alex
 created: 2026-11-07T03:46:58Z
-updated: 2026-11-07T03:49:46Z
-transitions: []
+updated: 2026-11-07T08:27:24Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:03:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:03:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T08:27:24Z
+    by: agent-S-0564
 stream: S-0564
 tags: [template]
+usage:
+  source: log
+  seconds: 1233
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 11217
+      cache_read: 5482957
+      cache_write: 63017
+      cost: 1.8255
 ---
 # T-2514 Check the import run's preconditions, make a scratch repository under a folder named for import, and import it from the board's Import
 

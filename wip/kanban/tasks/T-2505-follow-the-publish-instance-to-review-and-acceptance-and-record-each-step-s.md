@@ -3,12 +3,18 @@ id: T-2505
 type: task
 nature: improvement
 title: Follow the publish instance to review and acceptance, and record each step's exit and the release or the evaluation that stopped it
-status: backlog
+status: in-progress
 parent: S-0562
 owner: alex
 created: 2026-11-07T03:45:19Z
-updated: 2026-11-07T03:45:19Z
-transitions: []
+updated: 2026-11-07T08:04:49Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:04:48Z
+    by: agent-S-0562
+  - to: in-progress
+    at: 2026-11-07T08:04:49Z
+    by: agent-S-0562
 stream: S-0562
 tags: [template]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md]

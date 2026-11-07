@@ -3,15 +3,28 @@ id: S-0564
 type: story
 nature: improvement
 title: The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted
-status: backlog
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-11-02T18:08:35Z
-updated: 2026-11-07T08:01:35Z
-transitions: []
+updated: 2026-11-07T08:33:39Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:02:12Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T08:02:18Z
+    by: agent-S-0564
+blocked:
+  - from: 2026-11-07T08:23:28Z
+    until: 2026-11-07T08:26:54Z
+    reason: awaiting the operator on TH-0853
+  - from: 2026-11-07T08:32:14Z
+    until: 2026-11-07T08:33:39Z
+    reason: awaiting the operator on TH-0853
 tags: [template]
 topics: [orchestration]
-touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md, design/issues/summary.md]
+touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md, design/issues/summary.md, design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md]
 after: [S-0424]
 agent:
   harness: claude-code
@@ -19,20 +32,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1579
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 3
+      test_runs: 1
+      hand_edits: 1
+      work: 106
+  models:
+    - model: claude-opus-5-5
+      input: 236
+      output: 25344
+      cache_read: 12388021
+      cache_write: 142379
+      cost: 4.1245
   strategic:
     - kind: orchestrator
-      seconds: 179
+      seconds: 293
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 191
-          cache_read: 1505469
-          cache_write: 107968
-          cost: 0.3918
+          input: 62
+          output: 405
+          cache_read: 2603215
+          cache_write: 306293
+          cost: 0.7126
 cost_of_delay:
   inputs:
     penalty_per_week: 25

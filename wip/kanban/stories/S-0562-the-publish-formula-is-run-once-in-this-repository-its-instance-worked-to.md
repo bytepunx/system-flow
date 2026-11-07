@@ -3,12 +3,18 @@ id: S-0562
 type: story
 nature: improvement
 title: The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
-status: backlog
+status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T08:01:33Z
-transitions: []
+updated: 2026-11-07T08:04:13Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:02:09Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T08:02:15Z
+    by: agent-S-0562
 tags: [template]
 topics: [orchestration]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md]
@@ -19,20 +25,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 128
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      hand_edits: 1
+      work: 20
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 200
+      cache_read: 1580875
+      cache_write: 83234
+      cost: 0.5955
   strategic:
     - kind: orchestrator
-      seconds: 57
+      seconds: 64
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 73
-          cache_read: 761554
-          cache_write: 10270
-          cost: 0.1863
+          input: 16
+          output: 105
+          cache_read: 844618
+          cache_write: 32442
+          cost: 0.2123
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -71,6 +89,21 @@ E-0024's `publish` formula, shipped by S-0423, is run once in this repository be
 - `after: S-0423`: this story reads S-0423's output, the `publish` formula file and the flai changes its steps run.
 - How to run it: with the `formula` and `push` host actions on, run `flai formula run publish --ready` in the main checkout, or let the orchestrator start it under `publish` when `release_evaluate` is met. `flai serve` starts the instance's agent, which runs the `in: main` steps from the main checkout. If those steps run the installed `flai` rather than `scripts/flai.sh`, the run waits until S-0423's flai is published too.
 - Criterion 1 needs the operator's `push` host action on. When no accepted story is unreleased, the run shows the evaluation stopping the instance cleanly.
+
+### Run
+
+Preconditions, checked by T-2504 on 2026-11-07 at 08:03Z on the host:
+
+| Precondition | Result |
+|--------------|--------|
+| Installed flai holds S-0423's change | Holds. `flai version` gives 1.84.0. `flai release --evaluate --require-met` exists, and `flai release --help` documents the `push` gate for agents `flai serve` started. |
+| `push` host action on | On for this project (`flai serve actions`). |
+| `formula` host action on | Off. It governs only the dashboard's scheduled runs, so a run from the shell does not need it. |
+| TH-0811 answered | Not answered. This does not block the run: `release_evaluate` gave policy judgement, count 0, value 0 USD/week, with nothing accepted waiting for a release, because flai 1.84.1 had just been published. With nothing pending, step 2 stops under judgement or threshold alike, and criterion 1 accepts that stop as written. |
+
+The live evaluation before the run, `flai release --evaluate --require-met` in the main checkout, exited 2: "release policy judgement not met: … with no accepted story waiting for a release".
+
+Instance: S-0585, "Publish what is accepted and not yet released". It was started by hand by agent-S-0562 at 08:04Z with `flai formula run publish --ready --autocommit` in the main checkout. That made it ready, with tasks T-2546 (fetch), T-2548 (evaluate), and T-2549 (publish), and committed it as ff4e47115. No second instance was run.
 
 ### Planning
 

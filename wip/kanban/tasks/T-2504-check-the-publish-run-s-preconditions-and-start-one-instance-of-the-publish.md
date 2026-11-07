@@ -3,15 +3,36 @@ id: T-2504
 type: task
 nature: improvement
 title: Check the publish run's preconditions and start one instance of the publish formula from the main checkout
-status: backlog
+status: done
 parent: S-0562
 owner: alex
 created: 2026-11-07T03:45:06Z
-updated: 2026-11-07T03:45:06Z
-transitions: []
+updated: 2026-11-07T08:04:22Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:03:06Z
+    by: agent-S-0562
+  - to: in-progress
+    at: 2026-11-07T08:03:08Z
+    by: agent-S-0562
+  - to: done
+    at: 2026-11-07T08:04:22Z
+    by: agent-S-0562
 stream: S-0562
 tags: [template]
 touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md]
+usage:
+  source: log
+  seconds: 73
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 61
+      cache_read: 722644
+      cache_write: 10846
+      cost: 0.2625
 ---
 # T-2504 Check the publish run's preconditions and start one instance of the publish formula from the main checkout
 

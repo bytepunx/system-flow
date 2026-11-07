@@ -7,9 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0568
-  - S-0584
-  - S-0585
   - S-0406
   - S-0407
   - S-0408

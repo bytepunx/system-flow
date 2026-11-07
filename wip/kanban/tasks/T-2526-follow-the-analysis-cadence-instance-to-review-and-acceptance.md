@@ -3,15 +3,33 @@ id: T-2526
 type: task
 nature: improvement
 title: Follow the analysis-cadence instance to review and acceptance
-status: backlog
+status: in-progress
 parent: S-0564
 owner: alex
 created: 2026-11-07T03:47:38Z
-updated: 2026-11-07T03:47:55Z
-transitions: []
+updated: 2026-11-07T08:04:28Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:04:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:04:28Z
+    by: system-flow
 stream: S-0564
 tags: [template]
 after: [T-2520]
+usage:
+  source: log
+  seconds: 1447
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 105
+      output: 11282
+      cache_read: 5514569
+      cache_write: 63380
+      cost: 1.836
 ---
 # T-2526 Follow the analysis-cadence instance to review and acceptance
 

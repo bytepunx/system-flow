@@ -3,11 +3,29 @@ id: I-0246
 title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
 class: defect
 status: open
-count: 9
+count: 10
 cost: 6m
 first_reported: 2026-11-02T00:55:15Z
-last_reported: 2026-11-07T04:28:27Z
-updated: 2026-11-07T04:28:27Z
+last_reported: 2026-11-07T08:17:37Z
+updated: 2026-11-07T08:17:37Z
+usage:
+  strategic:
+    - kind: analyzer
+      seconds: 42
+      estimated: true
+      models:
+        - model: claude-fable-5-1
+          input: 33
+          output: 3103
+          cache_read: 238317
+          cache_write: 16129
+          cost: 0.5376
+        - model: claude-opus-5-5
+          input: 15
+          output: 2841
+          cache_read: 759050
+          cache_write: 13855
+          cost: 0.278
 ---
 
 # I-0246 TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80
@@ -53,6 +71,17 @@ S-0580's close-out at 27220c8 stopped at integration on TestServeStartsADefinedR
 Story: S-0555.
 S-0555's close-out at 713c603 stopped at integration after 8m13s on TestWaitForWorkPassesOverAHeldStory (flai/internal/mcpserver/work_test.go:266): the wait answered timed_out after the held story cleared. The host's load average was 87. S-0555 does not change flai/internal/mcpserver. Earlier in the story a task sub-agent's flai test run also failed go-test twice on serve tests it did not touch: TestServeStartsADefinedRoleOnAnEventAndOnASchedule (serve_test.go:1009) and TestARepositoryIsOfferedImportedAndThenServed (candidates_test.go:125, EOF). The same paths passed flai test later.
 
+### 2026-11-07T08:17:37Z
+Report: design/analysis/2026-11-07-all.md.
+Analysis 2026-11-07: the same cause under five titles; each timing failure is a send-back, a thread, and a second close-out of the integration and smoke tiers.
+
+## Impact
+design/issues/summary.md: I-0246 count 9, I-0248 3, I-0252, I-0267, I-0269 each 1, 15 occurrences naming host load, 13 since 2026-11-02; queue.weeks[] W44 sent_back 6, bisections 7, verifications_per_landed 2.95; go test timeout 20m in system-flow.yaml and scripts/integration.sh, none in scripts/test.sh; flai has 185,784 test lines to 150,805 of code and 224 t.Skip calls
+
+- time_lost_per_cycle: 4h
+
 ## Remediation
 
 Story S-0560 remediates this issue, created from it at 2026-11-02T03:55:02Z.
+
+Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).

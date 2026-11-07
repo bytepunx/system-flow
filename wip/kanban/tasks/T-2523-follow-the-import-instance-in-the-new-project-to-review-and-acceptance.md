@@ -3,15 +3,33 @@ id: T-2523
 type: task
 nature: improvement
 title: Follow the import instance in the new project to review and acceptance
-status: backlog
+status: in-progress
 parent: S-0564
 owner: alex
 created: 2026-11-07T03:47:29Z
-updated: 2026-11-07T03:47:29Z
-transitions: []
+updated: 2026-11-07T08:27:41Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:27:39Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:27:41Z
+    by: system-flow
 stream: S-0564
 tags: [template]
 after: [T-2514]
+usage:
+  source: log
+  seconds: 272
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 1224
+      cache_read: 598512
+      cache_write: 6879
+      cost: 0.1993
 ---
 # T-2523 Follow the import instance in the new project to review and acceptance
 
