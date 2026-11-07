@@ -730,6 +730,68 @@ func TestNothingIsStartedWhenItShouldNotBe(t *testing.T) {
 	})
 }
 
+// I-0300, S-0589: a story already in ready when the agent action is turned on
+// gets its agent at the next look, with no Start agent and no move back to
+// ready, since the launcher reads the action at every look (ADR-0041). In
+// I-0300's instance it waited because its project's default agent named no
+// harness and no command was set; once something can start it, it starts.
+func TestAStoryAlreadyReadyGetsItsAgentOnceTheActionIsOnAndSomethingStartsIt(t *testing.T) {
+	ctx := context.Background()
+	startedFor := func(lab *agentLab, id string) int {
+		n := 0
+		for _, e := range lab.entries() {
+			if strings.Contains(e.Detail, "for "+id+" ") {
+				n++
+			}
+		}
+		return n
+	}
+	t.Run("ready while the action was off", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Enabled = false
+		id := lab.ready("Waited")
+		lab.l.look(ctx, false)
+		if st := lab.state(); st.Stories[id] != nil || !strings.Contains(st.Waiting, "the agent host action is off") {
+			t.Fatalf("off: %+v", st)
+		}
+		lab.cfg.Enabled = true
+		lab.l.look(ctx, false)
+		waitFor(t, "its agent starts", func() bool { r := lab.run(id); return r != nil && r.Started != "" })
+		lab.l.look(ctx, false)
+		if n := startedFor(lab, id); n != 1 {
+			t.Errorf("started %d times, want once: %+v", n, lab.entries())
+		}
+	})
+	t.Run("on, but nothing to start it with until its agent can be started", func(t *testing.T) {
+		lab := newAgentLab(t)
+		command := lab.cfg.Command
+		lab.cfg.Enabled, lab.cfg.Command = false, nil
+		id := lab.ready("Imported")
+		lab.l.look(ctx, false)
+		if st := lab.state(); !strings.Contains(st.Waiting, "the agent host action is off") {
+			t.Fatalf("off: %q", st.Waiting)
+		}
+		// the operator turns the action on: the story names no harness, as the
+		// project's default agent named none, and no command is set
+		lab.cfg.Enabled = true
+		lab.l.look(ctx, false)
+		if st := lab.state(); st.Stories[id] != nil || len(lab.entries()) != 0 || !strings.Contains(st.Waiting, id+" names no harness, and no command is set") {
+			t.Fatalf("on with nothing to start it: %+v %+v", st, lab.entries())
+		}
+		// something can start it now; the story stays in ready all along
+		lab.cfg.Command = command
+		lab.l.look(ctx, false)
+		waitFor(t, "its agent starts", func() bool { r := lab.run(id); return r != nil && r.Started != "" })
+		lab.l.look(ctx, false)
+		if n := startedFor(lab, id); n != 1 {
+			t.Errorf("started %d times, want once: %+v", n, lab.entries())
+		}
+		if it, _ := lab.repo.Get(id); len(it.Transitions) != 1 {
+			t.Errorf("the story moved: %+v", it.Transitions)
+		}
+	})
+}
+
 // S-0104: what each story's agent is doing, as the board's dots show it.
 func TestWhatEachStorysAgentIsDoing(t *testing.T) {
 	lab := newAgentLab(t)
