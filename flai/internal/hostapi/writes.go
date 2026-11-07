@@ -578,6 +578,10 @@ type Host struct {
 	// serve's own process (S-0438, ADR-0163). Nil when nothing runs them
 	// here: components.status says none runs, and components.start refuses.
 	Components ComponentServers
+	// Kluster runs each project's kluster up and kluster down in flai serve's
+	// own process (S-0580, ADR-0254). Nil when nothing runs them here:
+	// kluster.status reports no job, and kluster.up and kluster.down refuse.
+	Kluster *KlusterJobs
 }
 
 // Entry is one host action asked for, whatever became of it.
@@ -3018,6 +3022,7 @@ func withJSON(args []string) []string {
 func writeMethods(run Runner, now func() time.Time, host Host) map[string]channel.Method {
 	out := methodsFrom(specs(), run, now, host)
 	maps.Copy(out, methodsFrom(componentSpecs(), run, now, host))
+	maps.Copy(out, methodsFrom(klusterSpecs(), run, now, host))
 	maps.Copy(out, methodsFrom(queueSpecs(now, systemGit), run, now, host))
 	return out
 }

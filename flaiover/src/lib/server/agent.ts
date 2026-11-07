@@ -154,6 +154,10 @@ export const REQUIRED_METHODS = [
 	'components.list',
 	'components.start',
 	'components.stop',
+	// S-0580: the project's kluster, its status, and up and down behind the kluster host action
+	'kluster.status',
+	'kluster.up',
+	'kluster.down',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',

@@ -910,8 +910,10 @@ func (a *app) showChecksCommands() error {
 // most components.max_servers per project and stops each one idle for
 // components.idle, and each of a story's worktree once the story leaves
 // review (S-0442), until ctx ends, and then every one.
+// It also runs each project's kluster up and kluster down that the
+// dashboard asks for (S-0580, ADR-0254), until ctx ends.
 // stop ends it as ctx ending does and waits until every dev server has
-// stopped; flai serve calls it as it stops.
+// stopped and every kluster job has ended; flai serve calls it as it stops.
 func (a *app) serveHost(ctx context.Context) (host hostapi.Host, stop func()) {
 	comps := serve.NewComponents(serve.ComponentsOptions{Idle: a.componentsIdle, MaxServers: a.componentsMaxServers, Now: a.now, Logger: a.logger()})
 	runCtx, cancel := context.WithCancel(ctx)
@@ -922,11 +924,14 @@ func (a *app) serveHost(ctx context.Context) (host hostapi.Host, stop func()) {
 			a.logger().Warn("component dev servers not all stopped", "component", "components", "err", err.Error())
 		}
 	}()
+	jobs := hostapi.NewKlusterJobs(runCtx, hostapi.KlusterJobsOptions{Now: a.now, Logger: a.logger()})
 	host = a.host()
 	host.Components = comps
+	host.Kluster = jobs
 	return host, func() {
 		cancel()
 		<-done
+		jobs.Wait()
 	}
 }
 
