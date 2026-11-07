@@ -3,11 +3,11 @@ id: I-0247
 title: TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
 class: defect
 status: open
-count: 3
-cost: 7m
+count: 4
+cost: 8m
 first_reported: 2026-11-02T01:00:19Z
-last_reported: 2026-11-02T04:06:44Z
-updated: 2026-11-02T21:41:39Z
+last_reported: 2026-11-07T02:10:46Z
+updated: 2026-11-07T02:10:46Z
 ---
 
 # I-0247 TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
@@ -28,6 +28,10 @@ S-0518's close-out at 2026-11-02T03:58Z, after the T-2425 changelog fix, failed 
 ### 2026-11-02T04:06:44Z
 Story: S-0518.
 The next close-out of S-0518, at 2026-11-02T04:03Z, failed the integration tier (4m0s) on a third test outside the story, `flai/internal/mcpserver/folder_test.go:371 TestWaitForEventsAcrossAFolder: changed paths are relative to the folder: []` (I-0186's test, closed). The host's load average was 76.81 (1 min), 59.37 (5 min), 40.60 (15 min) right after. The waits in these tests do not hold on a host this loaded, whichever test meets them.
+
+### 2026-11-07T02:10:46Z
+Story: S-0578.
+S-0578, which touches flai/internal/kluster and flai/cmd/kluster.go only, failed two close-outs at the integration tier on timing tests outside it: at 9ae5a92, TestHostRunsServeAndTheMCPServersAndTakesThemWithIt (flai/cmd/host_integration_test.go:112, "never the MCP server's own state"); at 0401e58, TestServeStartsADefinedRoleOnAnEventAndOnASchedule (flai/internal/serve/serve_test.go:1009, "never happened: the watcher's run for the move ended"). S-0580's agent ran its own work on the host at the same time.
 
 ## Remediation
 
