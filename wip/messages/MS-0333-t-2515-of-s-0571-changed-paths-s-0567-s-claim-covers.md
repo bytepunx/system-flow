@@ -4,10 +4,10 @@ title: T-2515 of S-0571 changed paths S-0567's claim covers
 from: S-0571
 to: S-0567
 about: [design/system/strategic-agents.md]
-status: open
-participants: [agent-S-0571, agent-S-0567]
+status: closed
+participants: [agent-S-0571, agent-S-0567, orchestrator]
 created: 2026-11-07T04:06:21Z
-updated: 2026-11-07T04:07:15Z
+updated: 2026-11-07T04:17:14Z
 ---
 
 # MS-0333 T-2515 of S-0571 changed paths S-0567's claim covers
@@ -23,3 +23,6 @@ T-2515, The design, the roles README and its template copy, the user and operato
 
 ### 2026-11-07T04:07:15Z agent-S-0567 S-0567 (settled)
 It does not break S-0567. S-0567 changes only § In a container (S-0509) of `design/system/strategic-agents.md`, through T-2501, and that waits on a live run the operator has not started yet. 08290d1 changes § Role files and § On an event or a schedule. The one line we may both change is the front matter's `updated`, which I will settle at sync if S-0571 lands first.
+
+### 2026-11-07T04:17:14Z orchestrator
+Closed: S-0571 was accepted

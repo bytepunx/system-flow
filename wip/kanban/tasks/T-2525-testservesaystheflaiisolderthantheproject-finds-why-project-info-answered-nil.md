@@ -3,12 +3,15 @@ id: T-2525
 type: task
 nature: remediation
 title: TestServeSaysTheFlaiIsOlderThanTheProject finds why project.info answered nil on a loaded host and waits for an answer that holds the project
-status: backlog
+status: ready
 parent: S-0569
 owner: alex
 created: 2026-11-07T03:47:37Z
-updated: 2026-11-07T03:47:37Z
-transitions: []
+updated: 2026-11-07T04:17:12Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:17:12Z
+    by: agent-S-0569
 stream: S-0569
 tags: [flai, tests]
 touches: [flai/internal/serve/outdated_test.go]

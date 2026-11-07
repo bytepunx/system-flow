@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-07T04:16:42Z
+updated: 2026-11-07T04:17:12Z
 ---
 
 # Active streams
@@ -12,7 +12,6 @@ updated: 2026-11-07T04:16:42Z
 | [S-0567](S-0567.md) | flai serve starts the planner in a container on harness container, and it plans one backlog story of this repository with its activity logged | in-progress | agent-S-0567 | 2026-11-07T04:07:31Z |
 | [S-0569](S-0569.md) | TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve | in-progress | agent-S-0569 | 2026-11-07T04:15:08Z |
 | [S-0570](S-0570.md) | A story branch rebased across a release brings back the changelog's old Unreleased heading and the lines the release moved, since union merge keeps both sides | in-progress | agent-S-0570 | 2026-11-07T04:14:43Z |
-| [S-0571](S-0571.md) | flai serve does not start a defined role that takes items on a schedule entry under each-ready-story, though flai check passes it | review | agent-S-0571 | 2026-11-07T04:14:58Z |
 
 ## Strategic agents
 

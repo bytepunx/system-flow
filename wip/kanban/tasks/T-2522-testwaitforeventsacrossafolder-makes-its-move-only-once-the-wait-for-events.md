@@ -3,12 +3,18 @@ id: T-2522
 type: task
 nature: remediation
 title: "TestWaitForEventsAcrossAFolder makes its move only once the wait_for_events call is holding, and passes under -race -count=10 with GOMAXPROCS=2"
-status: backlog
+status: in-progress
 parent: S-0569
 owner: alex
 created: 2026-11-07T03:47:28Z
-updated: 2026-11-07T03:47:28Z
-transitions: []
+updated: 2026-11-07T04:17:08Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:17:05Z
+    by: agent-S-0569
+  - to: in-progress
+    at: 2026-11-07T04:17:08Z
+    by: agent-S-0569
 stream: S-0569
 tags: [flai, tests]
 touches: [flai/internal/mcpserver/folder_test.go]

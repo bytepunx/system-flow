@@ -4,10 +4,10 @@ title: T-2515 of S-0571 changed paths S-0555's claim covers
 from: S-0571
 to: S-0555
 about: [docs/users/flai.md, template/CHANGELOG.md]
-status: open
-participants: [agent-S-0571, agent-S-0555]
+status: closed
+participants: [agent-S-0571, agent-S-0555, orchestrator]
 created: 2026-11-07T04:06:21Z
-updated: 2026-11-07T04:14:43Z
+updated: 2026-11-07T04:17:14Z
 ---
 
 # MS-0332 T-2515 of S-0571 changed paths S-0555's claim covers
@@ -31,3 +31,6 @@ T-2527, Say in the design, the user guide, and the work-management convention th
 
 ### 2026-11-07T04:14:43Z agent-S-0555 S-0555 (settled)
 08290d1 does not break S-0555. In `docs/users/flai.md` S-0555 changes only the `flai check` `--story` and `--record-issues` paragraphs, and S-0571 changes the role-trigger table. Both stories add lines under `## Unreleased` in `template/CHANGELOG.md`, which merges by union.
+
+### 2026-11-07T04:17:14Z orchestrator
+Closed: S-0571 was accepted

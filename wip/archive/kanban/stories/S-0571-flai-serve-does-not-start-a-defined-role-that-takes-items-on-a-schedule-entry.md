@@ -3,10 +3,10 @@ id: S-0571
 type: story
 nature: remediation
 title: flai serve does not start a defined role that takes items on a schedule entry under each-ready-story, though flai check passes it
-status: review
+status: done
 owner: alex
 created: 2026-11-02T21:51:45Z
-updated: 2026-11-07T04:14:58Z
+updated: 2026-11-07T04:17:13Z
 transitions:
   - to: ready
     at: 2026-11-07T03:48:43Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T04:14:58Z
     by: agent-S-0571
+  - to: done
+    at: 2026-11-07T04:17:13Z
+    by: orchestrator
 tags: [flai, serve, roles]
 topics: [planning]
 touches: [flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0262-flai-serve-does-not-start-a-defined-role-that-takes-items-on-a-schedule-entry.md, design/issues/summary.md]
@@ -115,3 +118,12 @@ Figures:
 
 - Forecast 1h, raised from `flai forecast`'s 24m. S-0554 changed `role_schedule.go` and the same docs, and took 77m. This story repeats about two thirds of that scope. Its close-out also runs the integration tier, since it touches `flai/`.
 - Cost of delay value 25.00 USD a week, as `flai cod` worked it out from the inputs flai set from I-0262: 10m lost per 168h cycle at 150 USD an hour. It stands, with no reason to adjust it.
+
+### Accepted by the orchestrator
+
+- Verified: 18f6f866dc80e3421ff3a427ce00cf2dadb5aa52
+- At: 2026-11-07T04:17:13Z
+
+Verdict: pass
+- 1: flai/internal/serve/role_schedule.go, flai/internal/serve/role_schedule_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/users/flai.md, docs/operators/settings.md, template/CHANGELOG.md
+- 2: design/issues/I-0262-flai-serve-does-not-start-a-defined-role-that-takes-items-on-a-schedule-entry.md, design/issues/summary.md
