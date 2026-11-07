@@ -103,10 +103,7 @@ func TestServeAsksItsHostToUpgradeWithAutoUpgradeOn(t *testing.T) {
 			asked = append(asked, version)
 			return true, nil
 		}})
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) && !strings.Contains(logs.String(), "flai upgrade asked") {
-		time.Sleep(20 * time.Millisecond)
-	}
+	waitForLog(t, logs, "flai upgrade asked")
 	time.Sleep(100 * time.Millisecond) // a few more looks, which must not ask again within the minute
 	mu.Lock()
 	defer mu.Unlock()
@@ -123,10 +120,7 @@ func TestServeAsksTheOperatorWithAutoUpgradeOff(t *testing.T) {
 		t.Error("the host was asked with auto-upgrade off")
 		return false, nil
 	}})
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) && !strings.Contains(logs.String(), "flai upgrade asked on a thread") {
-		time.Sleep(20 * time.Millisecond)
-	}
+	waitForLog(t, logs, "flai upgrade asked on a thread")
 	time.Sleep(100 * time.Millisecond)
 	repo, err := workitem.Open(root)
 	if err != nil {
@@ -169,16 +163,63 @@ func TestServeSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
 		}
 	})
 	conn := dash.Wait(t)
-	res, rerr := conn.Ask(t, "project.info", `{"project":"harbour"}`)
-	var info hostapi.ProjectInfo
-	if rerr != nil || json.Unmarshal(res, &info) != nil || info.FlaiOutdated == nil || info.FlaiOutdated.Newest != "1.27.0" || info.FlaiOutdated.Running != "1.26.4" {
-		t.Errorf("project.info: %v %s", rerr, res)
+	info := askProjectInfo(t, conn, "harbour")
+	if info.FlaiOutdated == nil || info.FlaiOutdated.Newest != "1.27.0" || info.FlaiOutdated.Running != "1.26.4" {
+		t.Errorf("project.info's flai_outdated: %+v", info.FlaiOutdated)
 	}
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) && !strings.Contains(logs.String(), "flai is older than the project it serves") {
-		time.Sleep(20 * time.Millisecond)
-	}
+	waitForLog(t, &logs, "flai is older than the project it serves")
 	if got := logs.String(); !strings.Contains(got, "level=WARN msg=\"flai is older than the project it serves\"") || !strings.Contains(got, "newest=1.27.0") || !strings.Contains(got, "flai host upgrade") {
 		t.Errorf("serve log:\n%s", got)
+	}
+}
+
+// outdatedWait bounds the waits of these tests: far beyond what they take on
+// an idle host, and beyond what a close-out's host at a load average of 76
+// reached (I-0247).
+const outdatedWait = 30 * time.Second
+
+// waitForLog waits for flai serve's log to hold want, and fails naming it
+// when the log never does.
+func waitForLog(t *testing.T, logs *syncBuffer, want string) {
+	t.Helper()
+	deadline := time.Now().Add(outdatedWait)
+	for !strings.Contains(logs.String(), want) {
+		if time.Now().After(deadline) {
+			t.Fatalf("serve never logged %q within %s; serve log:\n%s", want, outdatedWait, logs.String())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// askProjectInfo asks project.info until an answer names the project. Ask
+// returns the next message flai sends, and flai may send a notification
+// first, such as the watcher's change for a file serve wrote in the project:
+// that message has neither a result nor an error, and the reply to the ask
+// comes after it (I-0247).
+func askProjectInfo(t *testing.T, conn *channeltest.Conn, key string) hostapi.ProjectInfo {
+	t.Helper()
+	deadline := time.Now().Add(outdatedWait)
+	var skipped int
+	for {
+		res, rerr := conn.Ask(t, "project.info", `{"project":"`+key+`"}`)
+		if rerr != nil {
+			t.Fatalf("project.info: %v", rerr)
+		}
+		var info hostapi.ProjectInfo
+		if res != nil {
+			if err := json.Unmarshal(res, &info); err != nil {
+				t.Fatalf("project.info: %v: %s", err, res)
+			}
+			if info.Key == key {
+				if skipped > 0 {
+					t.Logf("project.info answered after %d messages that were not its reply", skipped)
+				}
+				return info
+			}
+		}
+		skipped++
+		if time.Now().After(deadline) {
+			t.Fatalf("project.info never answered for %s within %s: last %s", key, outdatedWait, res)
+		}
 	}
 }
