@@ -317,6 +317,11 @@ type Host struct {
 	// Login is the folder of the operator's login to the inner harness, which
 	// the container harness mounts read-only at ContainerLogin.
 	Login string
+	// DenyProtected is the operator's say that their arguments deny the
+	// harness's protected paths (ADR-0131), from the host's deny_protected
+	// for it: the opencode adapter then writes a deny rule for each into
+	// OpenCode's permission map (ADR-0260).
+	DenyProtected bool
 }
 
 // Start is what to run.
@@ -384,6 +389,14 @@ type Adapter interface {
 	// Reader is a fresh reader of the harness's log into usage events, for
 	// the logs of one measurement read in order (ADR-0130).
 	Reader() usage.Reader
+}
+
+// SessionReader is an adapter whose harness makes its own session IDs, so
+// that flai serve learns from a run's log the session a later run resumes.
+type SessionReader interface {
+	// Session is the ID of the session the run that wrote log ran in, and
+	// whether log names one.
+	Session(log []byte) (string, bool)
 }
 
 // Adapters are the harnesses flai can start, by name.

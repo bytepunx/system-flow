@@ -34,7 +34,8 @@ func TestAStoryOnOpenCodeGetsTheOpenCodeAdapter(t *testing.T) {
 // S-0406: a new run is opencode run with the operator's arguments, its
 // events as JSON, the story's model as provider/model, and the prompt last
 // as its message; it names no session, since OpenCode makes its own, and its
-// environment keeps OpenCode from updating itself.
+// environment keeps OpenCode from updating itself and gives it flai's MCP
+// server, and without deny_protected no permission.
 func TestOpenCodeRunsHeadlessWithTheStorysModelAndJSON(t *testing.T) {
 	r := req(openCodeAgent("anthropic/claude-opus-5-5"))
 	r.Session = "6f1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
@@ -46,8 +47,12 @@ func TestOpenCodeRunsHeadlessWithTheStorysModelAndJSON(t *testing.T) {
 	if !slices.Equal(s.Argv, want) {
 		t.Errorf("argv %q,\nwant %q", s.Argv, want)
 	}
-	if s.Harness != OpenCode || !slices.Equal(s.Env, []string{"OPENCODE_DISABLE_AUTOUPDATE=1"}) || s.EnvFrom != nil || s.Files != nil || s.Stdin != nil {
-		t.Errorf("start %+v, want opencode's with OPENCODE_DISABLE_AUTOUPDATE=1 alone in its environment", s)
+	content, err := openCodeConfigContent(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Harness != OpenCode || !slices.Equal(s.Env, []string{"OPENCODE_DISABLE_AUTOUPDATE=1", "OPENCODE_CONFIG_CONTENT=" + content}) || s.EnvFrom != nil || s.Files != nil || s.Stdin != nil {
+		t.Errorf("start %+v, want opencode's with OPENCODE_DISABLE_AUTOUPDATE=1 and flai's MCP server alone in its environment, no OPENCODE_PERMISSION, and no file", s)
 	}
 
 	s, err = (openCode{}).Start(r, Host{Program: "/opt/bin/opencode", Args: []string{"--agent", "build"}})
@@ -123,10 +128,10 @@ func TestOpenCodeRefusesAModelItCannotSplit(t *testing.T) {
 }
 
 // S-0406: what opencode cannot do yet is refused at start, each saying what
-// to do: a config key, a strategic role, a provider (S-0410), and a start in
-// a container.
+// to do: a config key other than effort, a strategic role, a provider
+// (S-0410), and a start in a container.
 func TestOpenCodeRefusesWhatItCannotDoYet(t *testing.T) {
-	config := req(&manifest.Agent{Harness: OpenCode, Model: "anthropic/claude-opus-5-5", Config: map[string]string{"effort": "high"}})
+	config := req(&manifest.Agent{Harness: OpenCode, Model: "anthropic/claude-opus-5-5", Config: map[string]string{"max_budget_usd": "5"}})
 	plan := planReq("E-0001", openCodeAgent("anthropic/claude-opus-5-5"))
 	defined := Request{Root: "/p/flow", Project: "flow", Agent: openCodeAgent("anthropic/claude-opus-5-5"), Name: "triage", Role: "triage",
 		RoleFile: &roles.Role{Name: "triage", Role: "triage", Path: "design/workflows/roles/triage.md"}}
@@ -139,7 +144,7 @@ func TestOpenCodeRefusesWhatItCannotDoYet(t *testing.T) {
 		r    Request
 		says string
 	}{
-		{"config", config, `opencode takes no config, and the agent sets "effort"; leave config out of the story's agent`},
+		{"config", config, `opencode takes no config key "max_budget_usd"; it takes effort`},
 		{"planner", plan, "opencode cannot run the strategic role plan: flai runs a strategic agent from its definition, and has none for opencode yet; run the role on claude-code"},
 		{"defined role", defined, "opencode cannot run the strategic role triage"},
 		{"provider named", named, "opencode cannot call the agent's provider litellm yet"},

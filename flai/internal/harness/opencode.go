@@ -1,7 +1,10 @@
 package harness
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -33,21 +36,31 @@ func (openCode) Capabilities() Capabilities { return Capabilities{Resume: true} 
 // Reader reads nothing yet: usage on OpenCode comes with S-0410.
 func (openCode) Reader() usage.Reader { return unread{} }
 
-// openCodeTakes are the config keys opencode takes: none yet.
-var openCodeTakes = map[string]option{}
+// openCodeTakes are the config keys opencode takes: effort, as --variant,
+// the model variant OpenCode names by its reasoning effort for the model's
+// provider (provider/transform.ts at v1.19.5). A variant the model lacks
+// leaves its default effort.
+var openCodeTakes = map[string]option{
+	"effort": {flag: "--variant", value: regexp.MustCompile(`^(none|minimal|low|medium|high|xhigh|max)$`), says: "none, minimal, low, medium, high, xhigh, or max"},
+}
 
 // openCodeSession is a session ID OpenCode makes, as --session takes one:
 // ses_ and its letters and digits.
 var openCodeSession = regexp.MustCompile(`^ses_[0-9A-Za-z]+$`)
 
 // Start runs opencode run with the operator's arguments, its events as JSON,
-// the story's model as provider/model, the session it resumes, and the
-// prompt last, as its message. OpenCode makes its own session IDs, so a new
-// run passes none, and a resumed one passes the ses_ ID it is given and
-// refuses any other, which OpenCode would not find. Its environment keeps
-// OpenCode from updating the host's binary. It works a story alone: a
-// strategic role, a provider, a config key, a model OpenCode cannot split,
-// and a start in a container are refused, each saying what to do.
+// the story's model as provider/model, its effort as --variant, the session
+// it resumes, and the prompt last, as its message. OpenCode makes its own
+// session IDs, so a new run passes none, and a resumed one passes the ses_
+// ID it is given and refuses any other, which OpenCode would not find. Its
+// environment keeps OpenCode from updating the host's binary and gives it
+// its configuration (ADR-0260): flai's MCP server in
+// OPENCODE_CONFIG_CONTENT, and, when the host denies the protected paths,
+// their deny rules in OPENCODE_PERMISSION, read over the project's own
+// opencode.json and opencode.jsonc at r.Root. It works a story alone: a
+// strategic role, a provider, a config key it does not take, a model
+// OpenCode cannot split, and a start in a container are refused, each
+// saying what to do.
 func (openCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -74,8 +87,24 @@ func (openCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
-	if _, err := options(OpenCode, config, openCodeTakes); err != nil {
+	flags, err := options(OpenCode, config, openCodeTakes)
+	if err != nil {
 		return Start{}, err
+	}
+	content, err := openCodeConfigContent(r)
+	if err != nil {
+		return Start{}, err
+	}
+	env = append(env, "OPENCODE_DISABLE_AUTOUPDATE=1", "OPENCODE_CONFIG_CONTENT="+content)
+	if host.DenyProtected {
+		if r.Root == "" {
+			return Start{}, fmt.Errorf("opencode cannot deny the protected paths: the start names no project root, where flai reads the project's opencode.json and opencode.jsonc to keep its permission; name the project's root in the start")
+		}
+		permission, err := openCodePermission(r.Root, os.DirFS(r.Root))
+		if err != nil {
+			return Start{}, err
+		}
+		env = append(env, "OPENCODE_PERMISSION="+permission)
 	}
 	def := openCode{}.DefaultHost()
 	if host.Program == "" {
@@ -92,6 +121,7 @@ func (openCode) Start(r Request, host Host) (Start, error) {
 		}
 		argv = append(argv, "--model", model)
 	}
+	argv = append(argv, flags...)
 	if r.resumes() {
 		if !openCodeSession.MatchString(r.Session) {
 			return Start{}, fmt.Errorf("opencode resumes a session by the ses_ ID OpenCode made for it, and the start names %q, which it would not find; restart the story's agent in a new session with flai serve agent restart %s", r.Session, r.Story)
@@ -103,6 +133,26 @@ func (openCode) Start(r Request, host Host) (Start, error) {
 		return Start{}, err
 	}
 	argv = append(argv, prompt)
-	env = append(env, "OPENCODE_DISABLE_AUTOUPDATE=1")
 	return Start{Harness: OpenCode, Argv: argv, Env: env}, nil
+}
+
+// Session is the ses_ ID of the session an opencode run --format json ran
+// in: the sessionID of its first event, the log's first line that is a JSON
+// object with a type, since each event names the run's root session. It is
+// false when no line is an event, or the first names no ID OpenCode makes.
+func (openCode) Session(log []byte) (string, bool) {
+	for line := range bytes.Lines(log) {
+		var event struct {
+			Type      string `json:"type"`
+			SessionID string `json:"sessionID"`
+		}
+		if json.Unmarshal(line, &event) != nil || event.Type == "" {
+			continue
+		}
+		if !openCodeSession.MatchString(event.SessionID) {
+			return "", false
+		}
+		return event.SessionID, true
+	}
+	return "", false
 }
