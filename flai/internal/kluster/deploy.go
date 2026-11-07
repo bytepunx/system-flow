@@ -67,8 +67,11 @@ const (
 	StepTeardown = "teardown"
 )
 
-// The outcomes of a deployment and of each of its steps.
+// The outcomes of a deployment and of each of its steps. A step is pending
+// from the job's start, when the record lists every step the job will run,
+// until it starts (ADR-0263).
 const (
+	OutcomePending = "pending"
 	OutcomeRunning = "running"
 	OutcomePassed  = "passed"
 	OutcomeFailed  = "failed"
@@ -88,6 +91,10 @@ func LogDir(root, ns string) string { return filepath.Join(Dir(root), "logs", ns
 
 // LogPath is the log of one step of namespace ns's last job.
 func LogPath(root, ns, step string) string { return filepath.Join(LogDir(root, ns), step+".log") }
+
+// ComponentStep is the build step of the kluster: block's component name,
+// build-<name> (ADR-0263).
+func ComponentStep(name string) string { return StepBuild + "-" + name }
 
 // StatePath is namespace ns's state folder, FLAI_KLUSTER_STATE.
 func StatePath(root, ns string) string { return filepath.Join(Dir(root), "state", ns) }
@@ -157,7 +164,7 @@ func (t Target) Tag() string {
 
 // Env is the environment every command run against the target gets, as
 // design/system/kluster.md § The steps and their variables names it, but
-// FLAI_KLUSTER_IMAGES, which only build gets.
+// FLAI_KLUSTER_IMAGES and FLAI_KLUSTER_COMPONENT, which only a build gets.
 func (c Cluster) Env(t Target) []string {
 	return []string{
 		"FLAI_STORY=" + t.Story,
@@ -172,10 +179,11 @@ func (c Cluster) Env(t Target) []string {
 	}
 }
 
-// Step is one step of a job, as its record keeps it.
+// Step is one step of a job, as its record keeps it: pending, with no start,
+// until it runs.
 type Step struct {
 	Name      string    `json:"name"`
-	StartedAt time.Time `json:"started_at"`
+	StartedAt time.Time `json:"started_at,omitzero"`
 	EndedAt   time.Time `json:"ended_at,omitzero"`
 	Outcome   string    `json:"outcome"`
 	// ExitCode is the step's exit code when it failed, -1 when its program
@@ -405,7 +413,7 @@ func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, t Target, o
 			return Record{}, fmt.Errorf("make the folder %s for the namespace %s: %w", d, t.Namespace, err)
 		}
 	}
-	r := Record{Story: t.Story, Namespace: t.Namespace, Commit: t.Commit, Tag: t.Tag(), Checkout: t.Dir, Images: []string{}, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Steps: []Step{}}
+	r := Record{Story: t.Story, Namespace: t.Namespace, Commit: t.Commit, Tag: t.Tag(), Checkout: t.Dir, Images: []string{}, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Steps: plan(m.Kluster, time.Now().UTC())}
 	if err := writeRecord(c.Root, r); err != nil {
 		return r, err
 	}
@@ -419,34 +427,92 @@ func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, t Target, o
 			r.FailedStep, r.ExitCode = se.Step, se.ExitCode
 		}
 	}
+	skipPending(&r)
 	if werr := writeRecord(c.Root, r); werr != nil && err == nil {
 		err = werr
 	}
 	return r, err
 }
 
-// steps runs build, load, and deploy for t, recording each in r.
+// plan is every step a deploy by k will run, in order, each pending but a
+// build and a load k gives nothing to do, which are skipped at now: one build
+// step per component, or build, then load, then deploy (ADR-0263).
+func plan(k *manifest.Kluster, now time.Time) []Step {
+	var steps []Step
+	switch {
+	case len(k.Components) > 0:
+		for _, comp := range k.Components {
+			steps = append(steps, Step{Name: ComponentStep(comp.Name), Outcome: OutcomePending})
+		}
+		steps = append(steps, Step{Name: StepLoad, Outcome: OutcomePending})
+	case len(k.Build) > 0:
+		steps = append(steps, Step{Name: StepBuild, Outcome: OutcomePending}, Step{Name: StepLoad, Outcome: OutcomePending})
+	default:
+		steps = append(steps, Step{Name: StepBuild, StartedAt: now, EndedAt: now, Outcome: OutcomeSkipped},
+			Step{Name: StepLoad, StartedAt: now, EndedAt: now, Outcome: OutcomeSkipped})
+	}
+	return append(steps, Step{Name: StepDeploy, Outcome: OutcomePending})
+}
+
+// skipPending records as skipped each step of r still pending when its job
+// ended: the steps after the one that failed.
+func skipPending(r *Record) {
+	for i := range r.Steps {
+		if r.Steps[i].Outcome == OutcomePending {
+			r.Steps[i].Outcome = OutcomeSkipped
+		}
+	}
+}
+
+// build is one build a deploy runs: its step's name, its command, its images
+// file, and the component it builds, empty for the block's build.
+type build struct {
+	step, component, images string
+	cmd                     []string
+}
+
+// builds are the builds k gives a deploy into t: one per component, each
+// with its own images file, or the block's build alone.
+func (c Cluster) builds(k *manifest.Kluster, t Target) []build {
+	dir := LogDir(c.Root, t.Namespace)
+	if len(k.Components) > 0 {
+		var out []build
+		for _, comp := range k.Components {
+			out = append(out, build{step: ComponentStep(comp.Name), component: comp.Name, images: filepath.Join(dir, "images-"+comp.Name), cmd: comp.Build})
+		}
+		return out
+	}
+	if len(k.Build) > 0 {
+		return []build{{step: StepBuild, images: filepath.Join(dir, "images"), cmd: k.Build}}
+	}
+	return nil
+}
+
+// steps runs the builds, the load, and deploy for t, recording each in r.
 func (c Cluster) steps(ctx context.Context, k *manifest.Kluster, t Target, r *Record, out io.Writer) error {
 	env := c.Env(t)
-	images := filepath.Join(LogDir(c.Root, t.Namespace), "images")
-	if len(k.Build) == 0 {
-		r.Steps = append(r.Steps, Step{Name: StepBuild, StartedAt: time.Now().UTC(), EndedAt: time.Now().UTC(), Outcome: OutcomeSkipped},
-			Step{Name: StepLoad, StartedAt: time.Now().UTC(), EndedAt: time.Now().UTC(), Outcome: OutcomeSkipped})
-	} else {
-		if err := os.WriteFile(images, nil, 0o644); err != nil {
-			return fmt.Errorf("make the images file %s for the build of %s: %w", images, t.Namespace, err)
+	if bs := c.builds(k, t); len(bs) > 0 {
+		list := []string{}
+		for _, b := range bs {
+			if err := os.WriteFile(b.images, nil, 0o644); err != nil {
+				return fmt.Errorf("make the images file %s for the %s step of %s: %w", b.images, b.step, t.Namespace, err)
+			}
+			buildEnv := append(append([]string{}, env...), "FLAI_KLUSTER_IMAGES="+b.images)
+			if b.component != "" {
+				buildEnv = append(buildEnv, "FLAI_KLUSTER_COMPONENT="+b.component)
+			}
+			if err := c.step(ctx, r, t, b.step, out, func(log io.Writer) error {
+				return c.Exec.Command(ctx, Cmd{Dir: t.Dir, Env: buildEnv, Out: log, Name: b.cmd[0], Args: b.cmd[1:]})
+			}); err != nil {
+				return err
+			}
+			got, err := readImages(b.images)
+			if err != nil {
+				return err
+			}
+			list = append(list, got...)
+			r.Images = list
 		}
-		buildEnv := append(append([]string{}, env...), "FLAI_KLUSTER_IMAGES="+images)
-		if err := c.step(ctx, r, t, StepBuild, out, func(log io.Writer) error {
-			return c.Exec.Command(ctx, Cmd{Dir: t.Dir, Env: buildEnv, Out: log, Name: k.Build[0], Args: k.Build[1:]})
-		}); err != nil {
-			return err
-		}
-		list, err := readImages(images)
-		if err != nil {
-			return err
-		}
-		r.Images = list
 		if err := c.step(ctx, r, t, StepLoad, out, func(log io.Writer) error {
 			return c.load(ctx, list, log)
 		}); err != nil {
@@ -458,20 +524,44 @@ func (c Cluster) steps(ctx context.Context, k *manifest.Kluster, t Target, r *Re
 	})
 }
 
-// step runs one step with its output to its log, records it in r, and
-// writes r so that a job cut short leaves what it did.
+// step runs one step with its output to its log. It records the step in r
+// as running, in place of the step's pending entry when r plans it, and
+// writes r, so that a reader sees which step runs; then it records the
+// step's outcome and writes r again, so that a job cut short leaves what it
+// did.
 func (c Cluster) step(ctx context.Context, r *Record, t Target, name string, out io.Writer, run func(log io.Writer) error) error {
 	path := LogPath(c.Root, t.Namespace, name)
-	s := Step{Name: name, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Log: path}
+	at := -1
+	for i := len(r.Steps) - 1; i >= 0; i-- {
+		if r.Steps[i].Name == name && r.Steps[i].Outcome == OutcomePending {
+			at = i
+			break
+		}
+	}
+	if at < 0 {
+		r.Steps = append(r.Steps, Step{})
+		at = len(r.Steps) - 1
+	}
+	r.Steps[at] = Step{Name: name, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Log: path}
 	fmt.Fprintf(out, "%s: %s, log %s\n", t.Namespace, name, path)
 	f, err := os.Create(path)
+	if err == nil {
+		err = writeRecord(c.Root, *r)
+		if err != nil {
+			_ = f.Close()
+		}
+	} else {
+		err = &StepError{Namespace: t.Namespace, Step: name, ExitCode: -1, Log: path, Err: fmt.Errorf("make its log: %w", err)}
+	}
 	if err != nil {
-		return &StepError{Namespace: t.Namespace, Step: name, ExitCode: -1, Log: path, Err: fmt.Errorf("make its log: %w", err)}
+		r.Steps[at].EndedAt, r.Steps[at].Outcome, r.Steps[at].ExitCode = time.Now().UTC(), OutcomeFailed, -1
+		return err
 	}
 	err = run(f)
 	if cerr := f.Close(); cerr != nil && err == nil {
 		err = cerr
 	}
+	s := &r.Steps[at]
 	s.EndedAt, s.Outcome = time.Now().UTC(), OutcomePassed
 	if err != nil {
 		if ctx.Err() != nil {
@@ -480,7 +570,6 @@ func (c Cluster) step(ctx context.Context, r *Record, t Target, name string, out
 		s.Outcome, s.ExitCode = OutcomeFailed, ExitCode(err)
 		err = &StepError{Namespace: t.Namespace, Step: name, ExitCode: s.ExitCode, Log: path, Err: err}
 	}
-	r.Steps = append(r.Steps, s)
 	if werr := writeRecord(c.Root, *r); werr != nil && err == nil {
 		err = werr
 	}
@@ -615,11 +704,15 @@ func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir s
 		return r, fmt.Errorf("make the folder %s for the namespace %s: %w", LogDir(c.Root, t.Namespace), t.Namespace, err)
 	}
 	kept := r
-	kept.Steps = slices.Clone(r.Steps)
+	kept.Steps = append(slices.Clone(r.Steps), Step{Name: StepTeardown, Outcome: OutcomePending})
+	if err := writeRecord(c.Root, kept); err != nil {
+		return r, err
+	}
 	err = c.step(ctx, &kept, t, StepTeardown, out, func(log io.Writer) error {
 		return c.teardown(ctx, m.Kluster, t, log)
 	})
 	if err != nil {
+		skipPending(&kept)
 		kept.EndedAt, kept.Outcome, kept.Error = time.Now().UTC(), OutcomeFailed, err.Error()
 		var se *StepError
 		if errors.As(err, &se) {

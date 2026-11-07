@@ -3,6 +3,7 @@ package kluster
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -31,13 +32,17 @@ esac
 
 // fakeStep is a project script: it logs its name, its directory, and its
 // arguments to $FAKE_LOG, writes the FLAI_ variables and KUBECONFIG it got to
-// $FAKE_ENV/<name>, lists $FAKE_IMAGES_OUT in FLAI_KLUSTER_IMAGES when that is
-// set, and exits 3 when $FAKE_FAIL names it.
+// $FAKE_ENV/<name>, copies the record $FAKE_RECORD names, when set, to
+// $FAKE_ENV/<name>.record, lists acme/<component> in FLAI_KLUSTER_IMAGES for
+// a component's build and $FAKE_IMAGES_OUT for the block's build, and exits
+// 3 when $FAKE_FAIL names it.
 const fakeStep = `#!/bin/sh
 name=$(basename "$0" .sh)
 echo "$name $(pwd) $*" >> "$FAKE_LOG"
 env | grep -E '^(FLAI_|KUBECONFIG=)' | sort > "$FAKE_ENV/$name"
-if [ -n "$FLAI_KLUSTER_IMAGES" ]; then printf '%b' "$FAKE_IMAGES_OUT" > "$FLAI_KLUSTER_IMAGES"; fi
+if [ -n "$FAKE_RECORD" ]; then cp "$FAKE_RECORD" "$FAKE_ENV/$name.record"; fi
+if [ -n "$FLAI_KLUSTER_COMPONENT" ]; then echo "acme/$FLAI_KLUSTER_COMPONENT:$FLAI_KLUSTER_TAG" > "$FLAI_KLUSTER_IMAGES"
+elif [ -n "$FLAI_KLUSTER_IMAGES" ]; then printf '%b' "$FAKE_IMAGES_OUT" > "$FLAI_KLUSTER_IMAGES"; fi
 echo "$name ran"
 if [ "$name" = "$FAKE_FAIL" ]; then echo "$name broke" >&2; exit 3; fi
 `
@@ -236,8 +241,22 @@ func TestADeployStopsAtTheStepThatFails(t *testing.T) {
 			if kept.Outcome != OutcomeFailed || kept.FailedStep != tc.step || kept.ExitCode != se.ExitCode {
 				t.Errorf("the kept record says so too: %+v", kept)
 			}
-			if last := kept.Steps[len(kept.Steps)-1]; last.Name != tc.step || last.Outcome != OutcomeFailed {
-				t.Errorf("the failing step is the record's last, failed: %+v", kept.Steps)
+			var after bool
+			for _, s := range kept.Steps {
+				switch {
+				case s.Name == tc.step:
+					after = true
+					if s.Outcome != OutcomeFailed {
+						t.Errorf("the failing step is recorded failed: %+v", s)
+					}
+				case after && s.Outcome != OutcomeSkipped:
+					t.Errorf("a step after the failing one is recorded skipped: %+v", s)
+				case !after && s.Outcome != OutcomePassed:
+					t.Errorf("a step before the failing one is recorded passed: %+v", s)
+				}
+			}
+			if len(kept.Steps) != 3 {
+				t.Errorf("the record keeps every step of the plan: %+v", kept.Steps)
 			}
 		})
 	}
@@ -331,6 +350,167 @@ func TestADeployWithoutABuildLoadsNothing(t *testing.T) {
 	}
 	if len(r.Images) != 0 || r.Steps[0].Outcome != OutcomeSkipped || r.Steps[1].Outcome != OutcomeSkipped || r.Steps[2].Outcome != OutcomePassed {
 		t.Errorf("build and load are skipped, and no image is recorded: %+v", r)
+	}
+}
+
+// componentSetup is deploySetup with three components, a, b, and c, each
+// built by its own script, scripts/build-<name>.sh, in place of the block's
+// build.
+func componentSetup(t *testing.T) deployFixture {
+	t.Helper()
+	f := deploySetup(t)
+	f.m.Kluster.Build = nil
+	for _, name := range []string{"a", "b", "c"} {
+		script := filepath.Join(f.worktree, "scripts", "build-"+name+".sh")
+		if err := os.WriteFile(script, []byte(fakeStep), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		f.m.Kluster.Components = append(f.m.Kluster.Components, manifest.KlusterComponent{Name: name, Build: []string{"scripts/build-" + name + ".sh", name}})
+	}
+	return f
+}
+
+func stepNames(steps []Step) []string {
+	var names []string
+	for _, s := range steps {
+		names = append(names, s.Name+"="+s.Outcome)
+	}
+	return names
+}
+
+// S-0595: each component builds as its own step, build-<name>, with its own
+// log and images file and FLAI_KLUSTER_COMPONENT, and one load takes every
+// image they listed (ADR-0263).
+func TestADeployBuildsEachComponentAsItsOwnStep(t *testing.T) {
+	f := componentSetup(t)
+	r, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stepNames(r.Steps), []string{"build-a=passed", "build-b=passed", "build-c=passed", "load=passed", "deploy=passed"}; !slices.Equal(got, want) {
+		t.Errorf("one build step per component, then load and deploy:\n got %q\nwant %q", got, want)
+	}
+	for _, name := range []string{"a", "b", "c"} {
+		step := ComponentStep(name)
+		data, err := os.ReadFile(LogPath(f.root, "s-0578", step))
+		if err != nil || !strings.Contains(string(data), step+" ran") {
+			t.Errorf("%s's output is in its own log: %q %v", step, data, err)
+		}
+		env := f.envOf(t, step)
+		if env["FLAI_KLUSTER_COMPONENT"] != name || env["FLAI_KLUSTER_IMAGES"] != filepath.Join(LogDir(f.root, "s-0578"), "images-"+name) {
+			t.Errorf("%s gets its component and its own images file: %v", step, env)
+		}
+	}
+	if _, ok := f.envOf(t, "deploy")["FLAI_KLUSTER_COMPONENT"]; ok {
+		t.Error("only a component's build gets FLAI_KLUSTER_COMPONENT")
+	}
+	want := []string{"acme/a:s-0578-0123456789ab", "acme/b:s-0578-0123456789ab", "acme/c:s-0578-0123456789ab"}
+	if !slices.Equal(r.Images, want) {
+		t.Errorf("the record names every component's images: %q", r.Images)
+	}
+	var saved []string
+	for _, c := range f.calls(t) {
+		if strings.HasPrefix(c, "docker save ") {
+			saved = append(saved, strings.TrimPrefix(c, "docker save "))
+		}
+	}
+	if !slices.Equal(saved, want) {
+		t.Errorf("one load takes every component's images: %q", saved)
+	}
+}
+
+// S-0595: a component whose build fails stops the deploy, and the steps after
+// it are recorded skipped.
+func TestAComponentThatFailsSkipsTheStepsAfterIt(t *testing.T) {
+	f := componentSetup(t)
+	t.Setenv("FAKE_FAIL", "build-b")
+	r, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{})
+	var se *StepError
+	if !errors.As(err, &se) || se.Step != "build-b" || se.ExitCode != 3 {
+		t.Fatalf("build-b's failure is a StepError naming it: %v", err)
+	}
+	if got, want := stepNames(r.Steps), []string{"build-a=passed", "build-b=failed", "build-c=skipped", "load=skipped", "deploy=skipped"}; !slices.Equal(got, want) {
+		t.Errorf("the steps after the failing component are skipped:\n got %q\nwant %q", got, want)
+	}
+	kept, _, _ := ReadRecord(f.root, "s-0578")
+	if kept.FailedStep != "build-b" || kept.Outcome != OutcomeFailed || !slices.Equal(stepNames(kept.Steps), stepNames(r.Steps)) {
+		t.Errorf("the kept record says so too: %+v", kept)
+	}
+	var ran []string
+	for _, c := range f.calls(t) {
+		ran = append(ran, strings.Fields(c)[0])
+	}
+	if !slices.Equal(ran, []string{"build-a", "build-b"}) {
+		t.Errorf("nothing runs after build-b: %q", ran)
+	}
+}
+
+// S-0595: the record lists every step as pending before the first runs, and
+// the step that runs as running, with its start and its log, while it runs
+// (ADR-0263).
+func TestTheRecordListsEveryStepPendingAndTheOneThatRuns(t *testing.T) {
+	f := componentSetup(t)
+	t.Setenv("FAKE_RECORD", RecordPath(f.root, "s-0578"))
+	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	read := func(step string) Record {
+		t.Helper()
+		data, err := os.ReadFile(filepath.Join(f.env, step+".record"))
+		if err != nil {
+			t.Fatalf("%s saw no record: %v", step, err)
+		}
+		var r Record
+		if err := json.Unmarshal(data, &r); err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	first := read("build-a")
+	if got, want := stepNames(first.Steps), []string{"build-a=running", "build-b=pending", "build-c=pending", "load=pending", "deploy=pending"}; !slices.Equal(got, want) {
+		t.Errorf("while the first step runs:\n got %q\nwant %q", got, want)
+	}
+	if s := first.Steps[0]; s.StartedAt.IsZero() || s.Log != LogPath(f.root, "s-0578", "build-a") || !s.EndedAt.IsZero() {
+		t.Errorf("the running step has its start and its log and no end: %+v", s)
+	}
+	if s := first.Steps[1]; !s.StartedAt.IsZero() || s.Log != "" {
+		t.Errorf("a pending step has no start and no log: %+v", s)
+	}
+	if first.Outcome != OutcomeRunning {
+		t.Errorf("the deployment runs: %+v", first)
+	}
+	if got, want := stepNames(read("deploy").Steps), []string{"build-a=passed", "build-b=passed", "build-c=passed", "load=passed", "deploy=running"}; !slices.Equal(got, want) {
+		t.Errorf("while deploy runs:\n got %q\nwant %q", got, want)
+	}
+	data, err := os.ReadFile(filepath.Join(f.env, "build-a.record"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(data), `"started_at"`) != 2 {
+		t.Errorf("only the deployment and the running step have a start in the JSON:\n%s", data)
+	}
+}
+
+// S-0595: the block's single build keeps its step, build, in the plan.
+func TestASingleBuildIsPlannedAsBuildLoadDeploy(t *testing.T) {
+	f := deploySetup(t)
+	t.Setenv("FAKE_RECORD", RecordPath(f.root, "s-0578"))
+	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(f.env, "build.record"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r Record
+	if err := json.Unmarshal(data, &r); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stepNames(r.Steps), []string{"build=running", "load=pending", "deploy=pending"}; !slices.Equal(got, want) {
+		t.Errorf("while build runs:\n got %q\nwant %q", got, want)
+	}
+	if e := f.envOf(t, "build"); e["FLAI_KLUSTER_IMAGES"] != filepath.Join(LogDir(f.root, "s-0578"), "images") || e["FLAI_KLUSTER_COMPONENT"] != "" {
+		t.Errorf("the block's build keeps its images file and names no component: %v", e)
 	}
 }
 
