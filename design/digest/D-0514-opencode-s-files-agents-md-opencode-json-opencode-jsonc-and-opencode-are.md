@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0407]
+cited: [S-0407, S-0408]
 ---
 
 # D-0514 OpenCode's files, AGENTS.md, opencode.json, opencode.jsonc, and .opencode/, are protected on every harness, so a story whose branch changes one is accepted by the operator alone, on claude-code too

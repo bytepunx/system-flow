@@ -21,6 +21,18 @@ transitions:
 stream: S-0409
 tags: [cli]
 touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go]
+usage:
+  source: log
+  seconds: 245
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 13771
+      cache_read: 4572000
+      cache_write: 304078
+      cost: 2.9933
 ---
 # T-1703 The guard's opencode reader marks a call from a read-only translated agent ReadOnly and a strategic agent's call with its role
 

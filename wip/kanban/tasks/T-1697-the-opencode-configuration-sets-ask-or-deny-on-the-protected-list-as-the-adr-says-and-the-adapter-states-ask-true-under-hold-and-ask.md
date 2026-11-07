@@ -7,7 +7,7 @@ status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:31Z
-updated: 2026-11-07T21:53:43Z
+updated: 2026-11-07T22:13:46Z
 transitions:
   - to: ready
     at: 2026-11-07T21:50:54Z
@@ -20,8 +20,20 @@ transitions:
     by: alex
 stream: S-0408
 tags: [cli]
-touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go]
+touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go]
 after: [T-1695]
+usage:
+  source: log
+  seconds: 168
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 18184
+      cache_read: 7256466
+      cache_write: 298167
+      cost: 3.5761
 ---
 # T-1697 The opencode configuration sets ask or deny on the protected list as the ADR says, and the adapter states Ask true under hold-and-ask
 

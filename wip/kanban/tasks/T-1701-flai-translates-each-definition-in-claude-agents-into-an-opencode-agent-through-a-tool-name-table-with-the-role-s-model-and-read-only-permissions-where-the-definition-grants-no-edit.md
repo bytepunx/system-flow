@@ -21,6 +21,18 @@ transitions:
 stream: S-0409
 tags: [cli]
 touches: [flai/internal/harness/opencodeagents.go, flai/internal/harness/opencodeagents_test.go]
+usage:
+  source: log
+  seconds: 247
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 10856
+      cache_read: 3604241
+      cache_write: 239713
+      cost: 2.3597
 ---
 # T-1701 flai translates each definition in .claude/agents into an OpenCode agent through a tool-name table, with the role's model and read-only permissions where the definition grants no edit
 

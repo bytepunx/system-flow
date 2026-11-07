@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/adrs]
 usage:
   source: log
-  seconds: 82
+  seconds: 84
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 33
-      cache_read: 1488893
-      cache_write: 9027
-      cost: 0.5371
+      output: 3701
+      cache_read: 1476940
+      cache_write: 60687
+      cost: 0.7279
 ---
 # T-1695 An ADR records how an OpenCode agent asks before a protected write, OpenCode's bound for a held call, and the way not taken
 

@@ -3,11 +3,23 @@ id: S-0592
 type: story
 nature: improvement
 title: flai test on a change to flai's host API runs none of flaiover's server tests that drive the real flai, so a changed gate in hostapi first fails in the close-out
-status: backlog
+status: done
 owner: alex
 created: 2026-11-07T15:15:58Z
-updated: 2026-11-07T22:02:45Z
-transitions: []
+updated: 2026-11-07T22:31:02Z
+transitions:
+  - to: ready
+    at: 2026-11-07T22:04:23Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-07T22:04:54Z
+    by: agent-S-0592
+  - to: review
+    at: 2026-11-07T22:29:29Z
+    by: agent-S-0592
+  - to: done
+    at: 2026-11-07T22:31:02Z
+    by: orchestrator
 tags: [flai, flaiover, tests]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, flai/cmd/settings_doc_test.go, design/conventions/tooling.md, design/system/devex.md, design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md]
 agent:
@@ -21,16 +33,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 16
+      seconds: 176
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 71022
-          cache_write: 18113
-          cost: 0.0225
-draft: true
+          input: 40
+          output: 297
+          cache_read: 1203964
+          cache_write: 200939
+          cost: 0.3554
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -45,6 +56,9 @@ forecast:
   basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0595, S-0591 and S-0241."
   by: flai
   at: 2026-11-07T22:02:42Z
+finalized:
+  by: orchestrator
+  at: 2026-11-07T22:03:33Z
 ---
 # S-0592 flai test on a change to flai's host API runs none of flaiover's server tests that drive the real flai, so a changed gate in hostapi first fails in the close-out
 
@@ -53,12 +67,14 @@ forecast:
 This story remediates [I-0304](../../../design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md), "flai test on a change to flai's host API runs none of flaiover's server tests that drive the real flai, so a changed gate in hostapi first fails in the close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0304 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0304 is closed with `flai issue close I-0304 --reason` saying what fixed it
+- [x] The cause I-0304 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0304 is closed with `flai issue close I-0304 --reason` saying what fixed it
 
 ## Tasks
 - T-2594 TestSettingsIndexIsComplete checks the settings index's keys under -short
 - T-2595 A change to flai's host API selects a tier that runs flaiover's tests of the real flai
+- T-2596 A change to the settings index selects a tier that runs TestSettingsIndex
+- T-2597 The tier lists name the two new tiers, and I-0304 is closed
 
 ## Notes
 
@@ -89,3 +105,12 @@ Figures:
 - Forecast 45m, adjusted from flai's 3m. flai sized the story at 2 with 0 touches, so it counted only the criteria. S-0530, which added one selected tier with its repository-manifest test, took 1135 s; this story adds two tiers, splits a Go test, and closes the issue.
 - Delivery 2026-11-07T22:50:00Z: the forecast from now, since the in-progress limit has room. It moves once the operator finalizes the draft.
 - Cost of delay 40 USD a week, as `flai cod` gives it from the issue's input of 16m a cycle at 150 USD an hour. It stands: the issue's count and cost are what it rests on.
+
+### Accepted by the orchestrator
+
+- Verified: bd7a67504cce7445c4552a93b2414c55d93df0e9
+- At: 2026-11-07T22:31:02Z
+
+Verdict: pass at bd7a67504cce7445c4552a93b2414c55d93df0e9
+- 1: system-flow.yaml, flai/cmd/settings_doc_test.go, flai/internal/verify/select_test.go, design/conventions/tooling.md, design/system/devex.md
+- 2: design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md

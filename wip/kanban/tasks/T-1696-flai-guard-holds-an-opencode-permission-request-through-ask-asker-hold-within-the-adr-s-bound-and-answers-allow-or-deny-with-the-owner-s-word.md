@@ -7,7 +7,7 @@ status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:27Z
-updated: 2026-11-07T21:53:43Z
+updated: 2026-11-07T22:13:46Z
 transitions:
   - to: ready
     at: 2026-11-07T21:50:51Z
@@ -20,8 +20,20 @@ transitions:
     by: alex
 stream: S-0408
 tags: [cli]
-touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go]
+touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, docs/users/flai-reference.md]
 after: [T-1695]
+usage:
+  source: log
+  seconds: 171
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 25664
+      cache_read: 10241218
+      cache_write: 420809
+      cost: 5.047
 ---
 # T-1696 flai guard holds an OpenCode permission request through ask.Asker.Hold within the ADR's bound and answers allow or deny with the owner's word
 
