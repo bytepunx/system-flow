@@ -9,6 +9,7 @@ vi.mock('$app/paths', () => ({
 import ActivityIcon from '@lucide/svelte/icons/activity';
 import InboxIcon from '@lucide/svelte/icons/inbox';
 import ServerCogIcon from '@lucide/svelte/icons/server-cog';
+import RocketIcon from '@lucide/svelte/icons/rocket';
 import ShipWheelIcon from '@lucide/svelte/icons/ship-wheel';
 import { KINDS, TITLES } from './viz/catalog';
 import { SITE_MENU, groupBadges, locate, siteMenu, withProject } from './sitemenu';
@@ -19,7 +20,7 @@ describe('the nav rail (S-0458)', () => {
 			['Flow', ['Board', 'Inbox', 'Charts', 'Workflow']],
 			['Agents', ['Orchestration', 'Planning', 'Analysis', 'Activity', 'Threads', 'Messages']],
 			['Design', ['System', 'Components']],
-			['Ops', ['Klusters']],
+			['Ops', ['Klusters', 'Deployments']],
 			['Documentation', ['System', 'Conventions', 'ADRs', 'Issues', 'Search']],
 			['Configuration', ['Features', 'Agents', 'File System', 'Projects', 'Harnesses', 'Host']]
 		]);
@@ -49,7 +50,7 @@ describe('the nav rail (S-0458)', () => {
 				'/messages'
 			],
 			['/design', '/design/components'],
-			['/ops/klusters'],
+			['/ops/klusters', '/ops/deployments'],
 			[
 				'/docs/design/system/README.md',
 				'/docs/design/conventions/README.md',
@@ -203,7 +204,25 @@ describe('the nav rail (S-0458)', () => {
 		expect(locate('/ops/klusters')).toEqual({ group: 'ops', page: 'klusters', child: null });
 		expect(locate('/ops/klusters/k3d')).toEqual({ group: 'ops', page: 'klusters', child: null });
 		expect(locate('/ops')).toEqual({ group: 'ops', page: null, child: null });
-		expect(locate('/ops/deployments')).toEqual({ group: 'ops', page: null, child: null });
+		expect(locate('/ops/unknown')).toEqual({ group: 'ops', page: null, child: null });
+	});
+
+	it('gives Ops Deployments after Klusters, at /ops/deployments (S-0581)', () => {
+		const ops = SITE_MENU.find((g) => g.key === 'ops')!;
+		expect(ops.pages.map((p) => p.key)).toEqual(['klusters', 'deployments']);
+		expect(ops.pages[1]).toMatchObject({
+			key: 'deployments',
+			label: 'Deployments',
+			icon: RocketIcon,
+			path: '/ops/deployments',
+			href: '/ops/deployments'
+		});
+		expect(locate('/ops/deployments')).toEqual({ group: 'ops', page: 'deployments', child: null });
+		expect(locate('/ops/deployments/s-0581')).toEqual({
+			group: 'ops',
+			page: 'deployments',
+			child: null
+		});
 	});
 
 	it('places each Configuration page at its own path (S-0459)', () => {

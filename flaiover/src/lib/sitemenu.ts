@@ -23,6 +23,7 @@ import MicroscopeIcon from '@lucide/svelte/icons/microscope';
 import NetworkIcon from '@lucide/svelte/icons/network';
 import PaletteIcon from '@lucide/svelte/icons/palette';
 import PlugIcon from '@lucide/svelte/icons/plug';
+import RocketIcon from '@lucide/svelte/icons/rocket';
 import ScaleIcon from '@lucide/svelte/icons/scale';
 import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SearchIcon from '@lucide/svelte/icons/search';
@@ -94,6 +95,7 @@ export type PageKey =
 	| 'design-system'
 	| 'components'
 	| 'klusters'
+	| 'deployments'
 	| 'docs-system'
 	| 'conventions'
 	| 'adrs'
@@ -259,9 +261,18 @@ export const SITE_MENU: MenuGroup[] = [
 				icon: ShipWheelIcon,
 				path: '/ops/klusters',
 				href: resolve('/ops/klusters')
+			},
+			// Main's namespace and each story's on the kluster, with Deploy,
+			// Teardown, and Promote through flai (S-0581).
+			{
+				key: 'deployments',
+				label: 'Deployments',
+				icon: RocketIcon,
+				path: '/ops/deployments',
+				href: resolve('/ops/deployments')
 			}
 		],
-		// A page of the group still to come, such as Deployments (S-0581).
+		// The group's own path, which has no page of its own.
 		also: ['/ops']
 	},
 	{
