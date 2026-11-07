@@ -3,10 +3,10 @@ id: S-0561
 type: story
 nature: remediation
 title: "TestTheOperatorsStopIsOneStoppedAgentEvent's waiting-for-an-answer case fails under a loaded close-out: the ended event is missing before stopped"
-status: review
+status: done
 owner: alex
 created: 2026-11-02T03:56:56Z
-updated: 2026-11-07T08:34:35Z
+updated: 2026-11-07T08:36:58Z
 transitions:
   - to: ready
     at: 2026-11-07T08:22:45Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T08:34:35Z
     by: agent-S-0561
+  - to: done
+    at: 2026-11-07T08:36:58Z
+    by: orchestrator
 tags: []
 touches: [flai/internal/serve/stop_test.go, design/issues/I-0248-testtheoperatorsstopisonestoppedagentevent-s-waiting-for-an-answer-case-fails.md, design/issues/summary.md]
 agent:
@@ -115,3 +118,12 @@ The story declared no touches. `flai touches suggest` from the test file listed 
 Forecast: 20m, adjusted up from `flai forecast`'s 11m. S-0488 took 1167 s with the same shape, one flaky test file, its issue, and the summary, and a path under `flai/` selects the integration and smoke tiers at close-out. Delivery is flai's 2026-11-07T13:06:00Z plus the 9m added.
 
 Cost of delay: 12.50 USD a week stands, as `flai cod` works it out from the inputs: 5m per 168h cycle at 150 USD an hour. Those inputs date from the first occurrence; I-0248 now counts 3 within one cycle. They are the operator's and are unchanged.
+
+### Accepted by the orchestrator
+
+- Verified: 0178c4c23e9f756e3c0a6c120ff2f11b7e3953d0
+- At: 2026-11-07T08:36:58Z
+
+Verdict: pass. Both criteria are met at commit 0178c4c23e9f756e3c0a6c120ff2f11b7e3953d0; the close-out passed every step there.
+- 1: flai/internal/serve/stop_test.go
+- 2: design/issues/I-0248-testtheoperatorsstopisonestoppedagentevent-s-waiting-for-an-answer-case-fails.md, design/issues/summary.md
