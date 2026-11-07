@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-07T23:06:43Z
+updated: 2026-11-07T23:09:55Z
 transitions: []
 tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-07T22:52:00Z
 forecast:
   duration: 45m
-  delivery: 2026-11-08T00:25:00Z
-  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0597, S-0591, S-0241, S-0598, S-0599, S-0600, S-0601, S-0602, S-0603, S-0604 and S-0605."
+  delivery: 2026-11-08T00:26:00Z
+  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0591, S-0241, S-0598, S-0599, S-0600, S-0601, S-0602, S-0603, S-0604 and S-0605."
   by: flai
-  at: 2026-11-07T23:06:43Z
+  at: 2026-11-07T23:09:55Z
 finalized:
   by: orchestrator
   at: 2026-11-07T22:54:20Z
