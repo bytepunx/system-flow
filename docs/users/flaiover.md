@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-02
+updated: 2026-11-07
 status: active
 ---
 
@@ -30,13 +30,14 @@ The top bar holds, from the left:
 - **Theme button**: see [Theme](#theme).
 - **Host flai badge**, at the right: whether a flai on the host has the dashboard connected, and a link to the [Host](#host) page. See [Host flai](#host-flai).
 
-The nav rail lists five groups. Each page is a section below.
+The nav rail lists six groups. Each page is a section below.
 
 | Group | Pages |
 |-------|-------|
 | Flow | [Board](#board), [Inbox](#inbox) (with the number of things that need you), [Charts](#charts) (which opens to list the charts), and Workflow, still to come and marked soon |
 | Agents | Orchestration (the [Orchestrator](#orchestrator)), Planning (the [Planner](#planner)), Analysis (the [Analyzer](#analyzer)), [Activity](#activity), [Threads](#threads), [Messages](#messages) |
 | Design | System (the [Design system](#design-system)), [Components](#components) |
+| Ops | [Klusters](#klusters) |
 | Documentation | System, Conventions, and Issues, which open those folders in [Docs](#docs); [ADRs](#adrs); [Search](#search) |
 | Configuration | [Features](#features), [Agents](#agents), [File System](#file-system), [Projects](#projects), and [Harnesses](#harnesses), the five pages of the [Settings](#settings); then [Host](#host) |
 
@@ -831,6 +832,26 @@ The page can show a story's worktree instead of the main checkout, so you watch 
 | An error under **Start** naming `components.max_servers` | As many dev servers as the host allows already run, each named. Stop one, or ask the operator to raise the limit |
 
 **From review.** On a story's review page, under **Changes on the branch**, a story whose branch changes a component names them, with **Open in Components**. It opens this page with the story picked.
+
+## Ops
+
+The Ops group holds the pages that run the project's local Kubernetes cluster, its kluster ([Running a project's kluster](../../design/system/kluster.md)). Klusters is its first page. The browser remembers whether you left Ops open, as it does the other groups.
+
+### Klusters
+
+Klusters, at `/ops/klusters`, shows the cluster the manifest's `kluster:` block names, and brings it up or takes it down through flai on the host.
+
+**What it shows.** The cluster's name, profile, provider, state, and age. The state is Running, Stopped, or Not created. When flai cannot read the cluster, such as when `kluster` is not installed on the host, the page shows flai's reason word for word.
+
+**Up and Down.** **Up** brings the cluster up. **Down** takes it down, which deletes it with everything deployed in it, so it first asks: choose **Take it down** or **Keep it**. flai serve runs either in the background on the host, one at a time, and each takes minutes. While one runs, the page says so, shows the end of its output, and checks again every few seconds. The buttons wait until it ends. Then the page shows how it ended, and kluster's error when it failed. When flai refuses, such as while another up or down runs, the page shows flai's sentence word for word.
+
+**When it cannot act.** In place of the buttons the page says why:
+
+| What it says | What to do |
+|--------------|------------|
+| The kluster host action is off | Turn `kluster` on from the [Features](#features) page, or run `flai serve enable kluster` on the host, in the project |
+| The project has no `kluster:` block | Add the block to `system-flow.yaml`, as the page's link to the kluster design describes |
+| This flai cannot show the kluster yet | Upgrade flai on the host |
 
 ## Theme
 

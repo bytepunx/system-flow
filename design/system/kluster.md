@@ -145,7 +145,7 @@ E-0032 gives the dashboard's rail an Ops group with two pages, each behind the `
 
 | Page | What it shows | What it does |
 |------|---------------|--------------|
-| Klusters | The project's cluster: its name, its state, and its shared services | Brings the cluster up or takes it down |
+| Klusters | The project's cluster: its name, profile, provider, state, and age, and the up or down flai serve runs or last ran | Brings the cluster up or takes it down |
 | Deployments | Main's namespace and each story's, with its commit, outcome, log, and how to reach it for a demo | Deploys, tears down, or promotes |
 
 ## Commands (S-0577, S-0578)
@@ -177,4 +177,59 @@ To be written by S-0579. This section will hold how `flai serve` queues and runs
 
 ## The dashboard (S-0580, S-0581)
 
-To be written by S-0580 and S-0581. This section will hold the Ops group's Klusters and Deployments pages as built, the host methods they call, and what each shows while the host action is off.
+The rail's Ops group sits between Design and Documentation. Its first page is Klusters, at `/ops/klusters` (S-0580). S-0581 adds Deployments to the group. The page's layout and its routes are in [flaiover-dashboard.md](flaiover-dashboard.md#views).
+
+### The host methods
+
+`flai/internal/hostapi/kluster.go` gives the dashboard three methods. None runs a flai command: each reads the manifest and opens the cluster as `flai kluster` does.
+
+| Method | Kind | What it does |
+|--------|------|--------------|
+| `kluster.status` | Read, whatever the host action says | The host action, the block, the cluster as `kluster status` reports it, and the up or down flai serve runs or last ran |
+| `kluster.up` | Write, under the `kluster` host action | Starts kluster up in the background and answers the job at once |
+| `kluster.down` | Write, under the `kluster` host action | Starts kluster down the same way |
+
+`kluster.status` answers these fields. Those marked optional are left out when empty.
+
+| Field | What it holds |
+|-------|---------------|
+| `enabled` | Whether the `kluster` host action is on for the project |
+| `enable` | The command that turns it on, `flai serve enable kluster` |
+| `block` | Whether the manifest has a `kluster:` block |
+| `no_block`, optional | flai's sentence naming the block to add, when there is none |
+| `cluster`, optional | `flai kluster status --json`'s object: `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, `age_seconds`. Absent with no block or a config flai cannot read. When `kluster status` fails, it holds what the config names, with `exists` false |
+| `status_error`, optional | Why the cluster could not be read, such as `kluster` missing from the host's `PATH` |
+| `running`, optional | The job that runs now |
+| `last`, optional | The last job to end since flai serve started |
+
+A job carries `action` (`up` or `down`), `cluster`, `started_at`, and `log`, the file its output goes to: `.flai-cache/kluster/up.log` or `.flai-cache/kluster/down.log`. Once it ends it carries `ended_at`, `outcome` (`done` or `failed`), and `error` when it failed. `kluster.status` adds `log_tail`, the last 4 KB of the log cut to whole lines, since the dashboard cannot read files under `.flai-cache`.
+
+### The jobs
+
+- flai serve runs the jobs in its own process, one per project at a time, each bounded by `kluster.timeout`.
+- It keeps the running job and the last one in memory. A restart of flai serve forgets them; the log files stay.
+- Stopping flai serve cuts a running job short, and it ends `failed`.
+- The start of each job goes in the host journal. Its end is an info log line, `kluster job ended`.
+
+### Refusals
+
+The writes refuse in this order, each with flai's own sentence:
+
+| Case | Answer |
+|------|--------|
+| The host action is off | `Disabled`, naming `flai serve enable kluster` |
+| A flai that runs no kluster jobs | A rule refusal saying flai serve runs them, or to run `flai kluster up` or `down` in a shell |
+| No `kluster:` block | A rule refusal, the sentence `flai kluster up` gives |
+| A config flai cannot read | A rule refusal, the kluster package's error |
+| An up or down already runs | A rule refusal naming the job, the cluster, and when it started |
+
+A host without `kluster` on its `PATH` is not refused: the job starts and ends `failed` with kluster's install sentence, which `status_error` shows beforehand.
+
+### The Klusters page
+
+The page shows the cluster's name, profile, provider, state (Running, Stopped, or Not created), and age, with **Up** and **Down**. **Down** asks for confirmation first. While a job runs the page says so, shows the end of its log, and asks for the status again every 3 seconds until it ends. Then it shows how the last job ended. flai's refusals and errors are shown word for word.
+
+| State | In place of the buttons |
+|-------|-------------------------|
+| The host action is off | A notice naming `flai serve enable kluster` and linking the Features page |
+| No `kluster:` block | `no_block` and a link to this document |
