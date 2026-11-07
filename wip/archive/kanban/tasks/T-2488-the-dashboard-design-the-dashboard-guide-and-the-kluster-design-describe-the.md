@@ -3,16 +3,37 @@ id: T-2488
 type: task
 nature: feature
 title: The dashboard design, the dashboard guide, and the kluster design describe the Ops group and the Klusters page
-status: backlog
+status: done
 parent: S-0580
 owner: alex
 created: 2026-11-06T21:45:43Z
-updated: 2026-11-06T21:45:43Z
-transitions: []
+updated: 2026-11-07T01:58:32Z
+transitions:
+  - to: ready
+    at: 2026-11-07T01:56:03Z
+    by: agent-S-0580
+  - to: in-progress
+    at: 2026-11-07T01:56:05Z
+    by: agent-S-0580
+  - to: done
+    at: 2026-11-07T01:58:32Z
+    by: agent-S-0580
 stream: S-0580
 tags: [kluster, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]
 after: [T-2487]
+usage:
+  source: log
+  seconds: 147
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 12052
+      cache_read: 5586408
+      cache_write: 67201
+      cost: 1.8206
 ---
 # T-2488 The dashboard design, the dashboard guide, and the kluster design describe the Ops group and the Klusters page
 

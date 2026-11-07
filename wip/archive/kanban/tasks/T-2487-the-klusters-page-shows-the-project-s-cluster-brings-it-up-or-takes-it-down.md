@@ -3,16 +3,37 @@ id: T-2487
 type: task
 nature: feature
 title: The Klusters page shows the project's cluster, brings it up or takes it down through the dashboard's API routes, and says when the host action is off or the block is missing
-status: backlog
+status: done
 parent: S-0580
 owner: alex
 created: 2026-11-06T21:45:32Z
-updated: 2026-11-06T21:45:32Z
-transitions: []
+updated: 2026-11-07T01:55:01Z
+transitions:
+  - to: ready
+    at: 2026-11-07T01:48:49Z
+    by: agent-S-0580
+  - to: in-progress
+    at: 2026-11-07T01:48:51Z
+    by: agent-S-0580
+  - to: done
+    at: 2026-11-07T01:55:01Z
+    by: agent-S-0580
 stream: S-0580
 tags: [kluster, flaiover]
-touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/+server.ts, flaiover/src/routes/api/kluster/up/+server.ts, flaiover/src/routes/api/kluster/down/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts]
+touches: [flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/+server.ts, flaiover/src/routes/api/kluster/up/+server.ts, flaiover/src/routes/api/kluster/down/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts]
 after: [T-2485, T-2486]
+usage:
+  source: log
+  seconds: 370
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 22534
+      cache_read: 10445035
+      cache_write: 125648
+      cost: 3.404
 ---
 # T-2487 The Klusters page shows the project's cluster, brings it up or takes it down through the dashboard's API routes, and says when the host action is off or the block is missing
 

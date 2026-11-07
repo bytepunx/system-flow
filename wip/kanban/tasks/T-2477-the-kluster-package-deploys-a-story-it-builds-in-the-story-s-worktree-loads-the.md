@@ -3,15 +3,36 @@ id: T-2477
 type: task
 nature: feature
 title: "The kluster package deploys a story: it builds in the story's worktree, loads the images, runs the deploy command in the story's namespace, logs each step, and records the deployment under .flai-cache"
-status: backlog
+status: done
 parent: S-0578
 owner: alex
 created: 2026-11-06T21:43:18Z
-updated: 2026-11-06T21:43:18Z
-transitions: []
+updated: 2026-11-07T01:40:22Z
+transitions:
+  - to: ready
+    at: 2026-11-07T01:33:44Z
+    by: agent-S-0578
+  - to: in-progress
+    at: 2026-11-07T01:33:44Z
+    by: agent-S-0578
+  - to: done
+    at: 2026-11-07T01:40:22Z
+    by: agent-S-0578
 stream: S-0578
 tags: [kluster, flai]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go]
+usage:
+  source: log
+  seconds: 398
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 148
+      cache_read: 4042302
+      cache_write: 51283
+      cost: 1.4605
 ---
 # T-2477 The kluster package deploys a story: it builds in the story's worktree, loads the images, runs the deploy command in the story's namespace, logs each step, and records the deployment under .flai-cache
 

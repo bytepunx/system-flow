@@ -3,16 +3,37 @@ id: T-2480
 type: task
 nature: feature
 title: The kluster design, the CLI design, and the user guide describe deploy, teardown, promote, deployments, the record, and the logs
-status: backlog
+status: done
 parent: S-0578
 owner: alex
 created: 2026-11-06T21:43:58Z
-updated: 2026-11-06T21:43:58Z
-transitions: []
+updated: 2026-11-07T02:07:01Z
+transitions:
+  - to: ready
+    at: 2026-11-07T01:58:08Z
+    by: agent-S-0578
+  - to: in-progress
+    at: 2026-11-07T01:58:08Z
+    by: agent-S-0578
+  - to: done
+    at: 2026-11-07T02:00:27Z
+    by: agent-S-0578
 stream: S-0578
 tags: [kluster, docs]
-touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-2479]
+usage:
+  source: log
+  seconds: 133
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 325
+      cache_read: 6455513
+      cache_write: 26192
+      cost: 2.3126
 ---
 # T-2480 The kluster design, the CLI design, and the user guide describe deploy, teardown, promote, deployments, the record, and the logs
 

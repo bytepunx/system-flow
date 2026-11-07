@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:56Z
-updated: 2026-11-07T01:32:23Z
+updated: 2026-11-07T02:16:07Z
 transitions:
   - to: ready
     at: 2026-11-07T00:51:57Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0578
 tags: [kluster, flai, cli]
 topics: [kluster, deployment, testing]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/kluster/kluster.go, docs/operators/settings.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md]
 after: [S-0577]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1688
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      hand_edits: 1
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 1013
+      cache_read: 22390687
+      cache_write: 429169
+      cost: 8.1419
   strategic:
     - kind: orchestrator
       seconds: 35
@@ -61,13 +73,13 @@ A story's change can be tried on a kluster without a full build and deploy loop.
 
 ## Acceptance criteria
 
-- [ ] `flai kluster deploy S-nnnn` runs the block's build command in the story's worktree, loads each image it names into the cluster as S-0576's ADR decides, and runs the deploy command with the namespace, the story, the image tag, and the kube context the ADR names. It records the deployment (story, namespace, commit, images, time, outcome) in a file under `.flai-cache`, and `--json` prints it.
-- [ ] Each step's output goes to a log file the record names. A step that fails stops the deploy, and flai names the step and its exit code.
-- [ ] `flai kluster teardown S-nnnn` runs the teardown command, or deletes the namespace when the block names none, and removes the record. `flai kluster promote` deploys main's head from the main checkout into the default namespace and records it.
-- [ ] `flai kluster deployments` lists the records, the default namespace's first, and `--json` prints them as data the dashboard reads.
-- [ ] A deploy refuses a story that is not in progress or in review, and a second deploy while one runs for the project.
-- [ ] The tests run with `kluster`, `docker`, and the project's commands faked. No test needs a real cluster or Docker.
-- [ ] `design/system/kluster.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated `docs/users/flai-reference.md` describe the commands, the record, and the logs.
+- [x] `flai kluster deploy S-nnnn` runs the block's build command in the story's worktree, loads each image it names into the cluster as S-0576's ADR decides, and runs the deploy command with the namespace, the story, the image tag, and the kube context the ADR names. It records the deployment (story, namespace, commit, images, time, outcome) in a file under `.flai-cache`, and `--json` prints it.
+- [x] Each step's output goes to a log file the record names. A step that fails stops the deploy, and flai names the step and its exit code.
+- [x] `flai kluster teardown S-nnnn` runs the teardown command, or deletes the namespace when the block names none, and removes the record. `flai kluster promote` deploys main's head from the main checkout into the default namespace and records it.
+- [x] `flai kluster deployments` lists the records, the default namespace's first, and `--json` prints them as data the dashboard reads.
+- [x] A deploy refuses a story that is not in progress or in review, and a second deploy while one runs for the project.
+- [x] The tests run with `kluster`, `docker`, and the project's commands faked. No test needs a real cluster or Docker.
+- [x] `design/system/kluster.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated `docs/users/flai-reference.md` describe the commands, the record, and the logs.
 
 ## Tasks
 
@@ -91,3 +103,8 @@ A story's change can be tried on a kluster without a full build and deploy loop.
   - T-2480 (documents) describes them.
 - Forecast 27m: `flai forecast` as it stands, 107 s per unit over 110 large feature stories on claude-opus-5-5, at size 15.
 - Cost of delay 73.53 USD/week: `flai cod`'s share of E-0032's 1250 USD/week revenue input (alex, TH-0829), by forecast duration. It stands as flai gives it.
+
+### As built
+
+- Criterion 3: teardown runs the block's `teardown` when it names one and then always deletes the namespace, as `design/system/kluster.md` § The steps says (step 4), so a block with no `teardown` gets only the delete. Promote builds and deploys main's head from a detached worktree of it under the main checkout, `.flai-cache/kluster/main`, as ADR-0254 §5 says, not from the main checkout's own files, which may hold uncommitted work.
+- Records are one file per namespace, `.flai-cache/kluster/deployments/<namespace>.json`, as ADR-0254 §1 says, rather than one `deployments.json`.

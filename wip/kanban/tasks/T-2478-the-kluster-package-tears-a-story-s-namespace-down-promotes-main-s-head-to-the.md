@@ -3,16 +3,37 @@ id: T-2478
 type: task
 nature: feature
 title: The kluster package tears a story's namespace down, promotes main's head to the default namespace, and lists the deployments with the default namespace first
-status: backlog
+status: done
 parent: S-0578
 owner: alex
 created: 2026-11-06T21:43:33Z
-updated: 2026-11-06T21:43:33Z
-transitions: []
+updated: 2026-11-07T01:47:31Z
+transitions:
+  - to: ready
+    at: 2026-11-07T01:42:26Z
+    by: agent-S-0578
+  - to: in-progress
+    at: 2026-11-07T01:42:26Z
+    by: agent-S-0578
+  - to: done
+    at: 2026-11-07T01:47:31Z
+    by: agent-S-0578
 stream: S-0578
 tags: [kluster, flai]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 after: [T-2477]
+usage:
+  source: log
+  seconds: 305
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 108
+      cache_read: 3256230
+      cache_write: 42373
+      cost: 1.1769
 ---
 # T-2478 The kluster package tears a story's namespace down, promotes main's head to the default namespace, and lists the deployments with the default namespace first
 

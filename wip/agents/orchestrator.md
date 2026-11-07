@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1979.9858
-accrued_seconds: 1509681
-tasks_completed: 1869
-last_run: 2026-11-07T00:51:25Z
+accrued_cost: 1980.6871
+accrued_seconds: 1509854
+tasks_completed: 1876
+last_run: 2026-11-07T01:35:44Z
 ---
 
 # Orchestrator activity
@@ -13114,6 +13114,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 12
 - Cost: 0.1322 USD, estimated
 
+### 2026-11-07T01:32:56Z
+
+- Summary: review:S-0577: accepted nothing. The verifier passed it at 541b9a1 and flai verify passed there, but alex accepted it at 2026-11-07T01:32:09Z before my dry run, which flai refused as "S-0577 is already done".
+- Items: S-0577
+- Seconds: 83
+- Cost: 0.2610 USD, estimated
+
+### 2026-11-07T01:33:03Z
+
+- Summary: Did not publish after S-0577's acceptance. release_evaluate: policy judgement, met false, 4 pending (S-0520 25, S-0545 20, S-0577 128, S-0582 25) worth 198 USD/week, nothing held_by_epic. Under judgement the publish formula's evaluate step (--require-met) always stops, and TH-0811 still awaits the operator, so I started no instance and opened no thread.
+- Items: S-0577, S-0520, S-0545, S-0582
+- Seconds: 7
+- Cost: 0.0232 USD, estimated
+
+### 2026-11-07T01:33:11Z
+
+- Summary: ready: promoted nothing. The promote_candidates throughput ranks are S-0558 (1, 12m), S-0556 (2, 40m), and S-0241 (3, 2h), and my open threads TH-0826, TH-0828, and TH-0790 hold all three for the operator. S-0578 and S-0580 were pulled to in-progress. I applied flai order --by throughput to the ready column: S-0581 (42m), then S-0579 (1h).
+- Items: S-0558, S-0556, S-0241, S-0581, S-0579
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-11-07T01:33:28Z
+
+- Summary: I did not accept S-0577 because you had already accepted it, at 2026-11-07T01:32:09Z, before my dry run. Nothing went to ready, and no release was published.
+- Items: none
+- Seconds: 17
+- Cost: 0.1831 USD, estimated
+
+### 2026-11-07T01:35:17Z
+
+- Summary: reordered: ran flai order --by throughput --apply; ready stays S-0581 (42m), S-0579 (1h), both held by after. Promoted nothing: promote_candidates lists S-0558 (rank 1, 12m), S-0556 (rank 2, 40m), S-0241 (rank 3, 2h), each skipped while TH-0826, TH-0828, and TH-0790 await the operator.
+- Items: S-0581, S-0579, S-0558, S-0556, S-0241
+- Seconds: 31
+- Cost: 0.1109 USD, estimated
+
+### 2026-11-07T01:35:28Z
+
+- Summary: release-due S-0577: did not publish. release_evaluate: policy judgement, met false, count 4, 198 USD/week (S-0520 25, S-0545 20, S-0577 128, S-0582 25), nothing held_by_epic. orchestration.release has only value: 1000, no policy key; under judgement the publish formula's step 2 (--require-met) always stops and release_publish refuses beside the formula (ADR-0240). TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0577, S-0520, S-0545, S-0582
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-07T01:35:44Z
+
+- Summary: I published nothing after S-0577, and I moved no story to ready. Both reasons are done.
+- Items: none
+- Seconds: 16
+- Cost: 0.1231 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -13584,4 +13633,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-07T00:49:46Z
 
 - Call: `git branch --list story/S-0582`
+- Needs: none
+
+### 2026-11-07T01:35:08Z
+
+- Call: `flai order --by throughput --apply 2>&1`
 - Needs: none
