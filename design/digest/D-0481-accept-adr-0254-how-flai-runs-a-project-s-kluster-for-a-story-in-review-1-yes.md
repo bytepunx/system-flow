@@ -2,14 +2,14 @@
 id: D-0481
 title: "Accept ADR-0254: how flai runs a project's kluster for a story in review: 1 - yes, bring up on demand is correct 2 - a failed deploy is necessary when using a cluster since we can't verify the…"
 kind: recommendation
-sources: [TH-0832]
+sources: [TH-0832, S-0576]
 topics: [kluster, testing, deployment, manifest, all]
 paths: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/README.md, design/conventions/tooling.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md#decision"
 asked_again: []
-cited: []
+cited: [S-0576, TH-0832]
 ---
 
 # D-0481 Accept ADR-0254: how flai runs a project's kluster for a story in review: 1 - yes, bring up on demand is correct 2 - a failed deploy is necessary when using a cluster since we can't verify the…
