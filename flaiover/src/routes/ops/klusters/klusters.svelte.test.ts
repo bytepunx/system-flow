@@ -349,35 +349,14 @@ describe('Klusters page (S-0580, S-0586)', () => {
 		expect(buttonNamed('Install')).toBeUndefined();
 	});
 
-	it("shows a refused field with flai's reason beside the field it names", async () => {
+	// S-0595: step 4 is DeploySettings, the form the Deployments page's Setup shares; its fields,
+	// its refusals, and its agent story are tested in DeploySettings.svelte.test.ts (ADR-0263).
+	it("holds the deploy setup form in step 4, and links the Deployments page's Setup", async () => {
 		await show();
-		type(fieldOf('kluster.namespace'), 's-0001');
-		const reason = 'kluster.namespace "s-0001" has a story namespace\'s form, s- and digits';
-		writes['/api/settings'] = answer(
-			{ error: 'refused', refused: [{ field: 'kluster.namespace', reason }] },
-			422
-		);
-		buttonNamed('Save')!.click();
-		await settle();
-		expect(sent('/api/settings')).toEqual({
-			kind: 'manifest',
-			set: { 'kluster.namespace': 's-0001' }
-		});
-		expect(q('refused-kluster.namespace')!.textContent).toBe(reason);
-		expect(q('kluster-save-deploy')!.textContent).toContain('flai refused what is marked');
-	});
-
-	it('unsets a command emptied, and says when nothing changed', async () => {
-		await show();
-		buttonNamed('Save')!.click();
-		await settle();
-		expect(writesTo('/api/settings')).toEqual([]);
-		expect(q('kluster-save-deploy')!.textContent).toContain('Nothing changed');
-		type(fieldOf('kluster.deploy'), '');
-		writes['/api/settings'] = answer({});
-		buttonNamed('Save')!.click();
-		await settle();
-		expect(sent('/api/settings')).toEqual({ kind: 'manifest', unset: ['kluster.deploy'] });
+		const step = q('step-deploy')!;
+		expect(step.querySelector('[data-testid="deploy-settings"]')).not.toBeNull();
+		expect(step.querySelector('[data-testid="field-kluster.deploy"]')).not.toBeNull();
+		expect(q('kluster-deploy-setup-link')!.getAttribute('href')).toBe('/ops/deployments#setup');
 	});
 
 	it('says once that settings is off, with the one host step, and saves nothing', async () => {
@@ -400,19 +379,6 @@ describe('Klusters page (S-0580, S-0586)', () => {
 		expect((q('kluster-config-text') as HTMLTextAreaElement).disabled).toBe(false);
 		expect(buttonNamed('Save the config path')!.disabled).toBe(true);
 		expect(fieldOf('kluster.deploy').disabled).toBe(true);
-	});
-
-	it('makes a backlog story for an agent to write the scripts, and links it', async () => {
-		reads = [answer(status({ deployable: false }))];
-		await show();
-		writes['/api/items'] = answer({ item: { id: 'S-0042' } });
-		buttonNamed('Write these with an agent')!.click();
-		await settle();
-		const body = sent('/api/items');
-		expect(body).toMatchObject({ type: 'story', parent: 'E-0001', nature: 'feature' });
-		expect(String(body.title)).toContain('build, deploy, and teardown scripts');
-		expect(String(body.body)).toContain('## Acceptance criteria');
-		expect(q('kluster-agent-made')!.querySelector('a')!.getAttribute('href')).toBe('/items/S-0042');
 	});
 
 	it('turns the kluster host action off', async () => {

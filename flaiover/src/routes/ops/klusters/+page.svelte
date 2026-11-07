@@ -21,24 +21,13 @@
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import DeploySettings from '$lib/components/DeploySettings.svelte';
 
 	// How often the page asks again while an up or down runs; either takes minutes.
 	const POLL_MS = 3000;
 	const button = 'rounded px-3 py-1 text-sm disabled:opacity-50';
 	const field = 'w-full rounded border border-line bg-surface px-2 py-1 font-mono text-sm';
-	// The keys step 4 sets: what deploys a story into the cluster.
-	const DEPLOY_KEYS = [
-		'kluster.namespace',
-		'kluster.build',
-		'kluster.deploy',
-		'kluster.teardown',
-		'kluster.timeout'
-	];
-	const AGENT_TITLE =
-		"Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block";
-
 	type Said = { ok: boolean; text: string };
-	type Epic = { id: string; title: string; status: string };
 
 	let status = $state<KlusterStatus | null>(null);
 	let error = $state<string | null>(null);
@@ -58,7 +47,8 @@
 	let toggleSaid = $state<Said | null>(null);
 	let wrote = $state<{ wrote?: string[]; commit?: string; kept?: boolean } | null>(null);
 
-	// Steps 3 and 4: the block's keys as typed, and flai's refusals by field.
+	// Step 3: the block's config key as typed, and flai's refusals by field. Step 4's keys are
+	// DeploySettings', the form the Deployments page's Setup shares (ADR-0263).
 	let form = $state<Record<string, string>>({});
 	let before = $state<Record<string, string>>({});
 	let refused = $state<Refusal[]>([]);
@@ -70,12 +60,6 @@
 	let configText = $state('');
 	let profile = $state('');
 	let configSaid = $state<Said | null>(null);
-
-	// Step 4: the backlog story an agent writes the scripts on.
-	let epics = $state<Epic[]>([]);
-	let epic = $state('');
-	let made = $state<string | null>(null);
-	let storySaid = $state<Said | null>(null);
 
 	const cluster = $derived(status?.cluster);
 	const running = $derived(status?.running);
@@ -312,61 +296,8 @@
 		}
 	}
 
-	/** Reads the open epics a story for the scripts can go under. */
-	async function loadEpics() {
-		try {
-			const r = await api('/api/items?type=epic&archived=false');
-			if (!r.ok) return;
-			const all = (await r.json()) as Epic[];
-			epics = all.filter((e) => e.status !== 'done' && e.status !== 'cancelled');
-			if (!epic && epics.length) epic = epics[0].id;
-		} catch {
-			epics = [];
-		}
-	}
-
-	/** Makes a backlog story for an agent to write the project's scripts, through item.new. */
-	async function writeWithAgent() {
-		busy = true;
-		storySaid = null;
-		const goal =
-			"Give this project's kluster: block the commands that build its images, deploy a build into a namespace, and tear a namespace down, as design/system/kluster.md describes, so that flai deploys each story in review into its own namespace.";
-		const criteria = [
-			'Scripts under scripts/ build the images, deploy into FLAI_KLUSTER_NAMESPACE, and tear it down',
-			'The kluster: block names them as build, deploy, and teardown',
-			'A story in review deploys into its namespace and its teardown removes it'
-		]
-			.map((c) => `- [ ] ${c}`)
-			.join('\n');
-		try {
-			const r = await api('/api/items', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					type: 'story',
-					title: AGENT_TITLE,
-					nature: 'feature',
-					parent: epic,
-					touches: ['system-flow.yaml', 'scripts'],
-					body: `## Goal\n\n${goal}\n\n## Acceptance criteria\n\n${criteria}\n\n## Tasks\n\n## Notes\n`
-				})
-			});
-			const body = await r.json().catch(() => ({}));
-			if (!r.ok) {
-				storySaid = { ok: false, text: `The story was not created: ${body.error ?? r.statusText}` };
-				return;
-			}
-			made = (body as { item: { id: string } }).item.id;
-		} catch (e) {
-			storySaid = { ok: false, text: errorText(e) };
-		} finally {
-			busy = false;
-		}
-	}
-
 	onMount(() => {
 		void load();
-		void loadEpics();
 		// asked again only while a job runs: nothing else here changes without the page asking
 		const timer = setInterval(() => {
 			if (status?.running) void load();
@@ -653,62 +584,22 @@
 						Turn kluster on in step 2 first: the block these are written in comes with it.
 					</p>
 				{:else}
-					{#if !status.deployable}
-						<p class="mt-1 text-sm text-warn" data-testid="kluster-no-deploy">
-							The cluster can come up and go down, but no story is deployed into it until the deploy
-							command is set.
-						</p>
-					{/if}
-					{#each DEPLOY_KEYS as key (key)}
-						{@render settingField(key)}
-					{/each}
-					<button
-						type="button"
-						class="{button} mt-3 bg-primary text-on-primary"
-						disabled={!settingsOn || busy}
-						onclick={() => save('deploy', DEPLOY_KEYS)}>Save</button
-					>
-					{@render said(saveSaid.deploy, 'kluster-save-deploy')}
-
-					<div class="mt-4 rounded border border-line p-3 text-sm" data-testid="kluster-agent">
-						<p>
-							The build, deploy, and teardown scripts are the project's code. An agent can write
-							them on a story, for you to review and accept.
-						</p>
-						{#if made}
-							<p class="mt-2" data-testid="kluster-agent-made">
-								Made
-								<a class="font-mono underline" href={resolve('/items/[id]', { id: made })}>{made}</a
-								>
-								in backlog.
-							</p>
-						{:else if epics.length}
-							<div class="mt-2 flex flex-wrap items-end gap-2">
-								<label class="text-sm">
-									<span class="block text-xs text-muted">Under the epic</span>
-									<select
-										class="rounded border border-line bg-surface px-2 py-1 text-sm"
-										bind:value={epic}
-									>
-										{#each epics as e (e.id)}
-											<option value={e.id}>{e.id} {e.title}</option>
-										{/each}
-									</select>
-								</label>
-								<button
-									type="button"
-									class="{button} border border-line"
-									disabled={busy || !epic}
-									onclick={writeWithAgent}>Write these with an agent</button
-								>
-							</div>
-						{:else}
-							<p class="mt-2 text-muted">
-								A story needs an open epic to go under; make one from the board first.
-							</p>
-						{/if}
-						{@render said(storySaid, 'kluster-agent-said')}
-					</div>
+					<DeploySettings
+						settings={status.settings ?? []}
+						{settingsOn}
+						settingsEnable={status.settings_enable}
+						deployable={!!status.deployable}
+						notice={false}
+						saved={() => load()}
+					/>
+					<p class="mt-2 text-sm">
+						The same setup is on the Deployments page's
+						<a
+							class="underline"
+							href="{resolve('/ops/deployments')}#setup"
+							data-testid="kluster-deploy-setup-link">Setup</a
+						>, beside each build and its live log.
+					</p>
 				{/if}
 			</li>
 
