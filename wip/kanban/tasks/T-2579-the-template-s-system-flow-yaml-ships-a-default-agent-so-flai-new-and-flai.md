@@ -24,16 +24,16 @@ touches: [template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/cmd/n
 after: [T-2577]
 usage:
   source: log
-  seconds: 1171
+  seconds: 1198
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 204
-      cache_read: 4392746
-      cache_write: 353354
-      cost: 1.7024
+      input: 26
+      output: 7564
+      cache_read: 4934943
+      cache_write: 42678
+      cost: 1.3985
 ---
 # T-2579 The template's system-flow.yaml ships a default agent, so flai new and flai import write one into every new project
 

@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaio
 after: [T-2577]
 usage:
   source: log
-  seconds: 1162
+  seconds: 1203
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 357
-      cache_read: 8303203
-      cache_write: 36086
-      cost: 2.9912
+      input: 45
+      output: 13431
+      cache_read: 8763099
+      cache_write: 75785
+      cost: 2.4833
 ---
 # T-2583 The story page and the host agent notice render the refusal's settings pages as links
 

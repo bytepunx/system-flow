@@ -25,20 +25,20 @@ usage:
   source: log
   seconds: 180
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
-      input: 40
-      output: 184
-      cache_read: 1244236
-      cache_write: 99357
-      cost: 0.0966
+      input: 42
+      output: 15957
+      cache_read: 1343593
+      cache_write: 99819
+      cost: 0.0339
     - model: claude-opus-5-5
-      input: 16
-      output: 118
-      cache_read: 2387820
-      cache_write: 19317
-      cost: 0.8634
+      input: 13
+      output: 3742
+      cache_read: 2441719
+      cache_write: 21116
+      cost: 0.6919
 ---
 # T-2577 An ADR decides the built-in default agent, the template's default, per-project host agent settings, and the refusal's links to the settings pages
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.25 - 2026-11-07
+
+- S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, tested on fixtures, with the open OpenCode findings settled from its source at a pinned release (patch).
 - S-0406 A story's agent may run on OpenCode, the template ships an `opencode.json` skeleton, flai check warns when the root has neither AGENTS.md nor CLAUDE.md, and OpenCode's files are protected (minor).
 - S-0406 The template ships `opencode.json` for the `opencode` harness (minor, ADR-0260): a skeleton holding only `$schema`, with no MCP entry and no key, since `flai serve` gives a story's OpenCode flai's MCP entry, and under `--deny-protected` its deny rules, through the environment at each start, and OpenCode merges the project's file under them. The template keeps `CLAUDE.md` as the map, which OpenCode reads when there is no `AGENTS.md`.
 - S-0406 `flai check` warns `instructions.missing` when the project's root has neither `AGENTS.md` nor `CLAUDE.md` (minor): a project made from the template has `CLAUDE.md` and gets no warning.

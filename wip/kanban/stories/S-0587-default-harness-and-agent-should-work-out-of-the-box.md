@@ -3,10 +3,10 @@ id: S-0587
 type: story
 nature: remediation
 title: Default harness and agent should work out of the box
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T08:40:55Z
-updated: 2026-11-07T10:30:40Z
+updated: 2026-11-07T12:05:01Z
 transitions:
   - to: ready
     at: 2026-11-07T08:41:12Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:22:00Z
     by: agent-S-0587
+  - to: review
+    at: 2026-11-07T12:05:01Z
+    by: system-flow
 tags: [cli, dashboard, template]
 topics: [agents, settings]
-touches: [design/adrs, design/adrs/README.md, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/agent.go, flai/internal/workitem/agent_test.go, flai/internal/workitem/create.go, flai/internal/serve/default_agent_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/cmd/new_test.go, flai/cmd/import_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flai/internal/serve/start.go, flai/internal/serve/restart.go, flai/internal/serve/commit.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role.go, flai/internal/serve/start_test.go, flai/internal/serve/agents_test.go, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/runbooks/install.md, design/system/agent-adapters.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/template.md]
+touches: [design/adrs/README.md, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/agent.go, flai/internal/workitem/agent_test.go, flai/internal/serve/default_agent_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/cmd/new_test.go, flai/cmd/import_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flai/internal/serve/start.go, flai/internal/serve/restart.go, flai/internal/serve/commit.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role.go, flai/internal/serve/start_test.go, flai/internal/serve/agents_test.go, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/runbooks/install.md, design/system/agent-adapters.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/template.md, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/flaiover-dashboard.md, design/system/strategic-agents.md, design/adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md, flai/cmd/agent.go, flai/cmd/analyze_test.go, flai/cmd/curate_test.go, flai/cmd/plan_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/role.go, flai/internal/serve/analyze_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/curate_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/plan_test.go, flai/internal/serve/review_wait_test.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/stop_test.go, flaiover/src/lib/server/writes.test.ts, design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,27 +27,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1773
-  estimated: true
-  priced_by: estimate
+  seconds: 6202
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 2
-      hand_edits: 1
-      work: 34
+      ceremony: 6
+      hand_edits: 2
+      work: 102
   models:
     - model: claude-haiku-5-5
-      input: 40
-      output: 184
-      cache_read: 1244236
-      cache_write: 99357
-      cost: 0.0966
+      input: 42
+      output: 15957
+      cache_read: 1343593
+      cache_write: 99819
+      cost: 0.0339
     - model: claude-opus-5-5
-      input: 268
-      output: 1613
-      cache_read: 41704731
-      cache_write: 833995
-      cost: 15.2581
+      input: 766
+      output: 226393
+      cache_read: 147712245
+      cache_write: 1277443
+      cost: 41.8591
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 6547
+      cache_read: 401569
+      cache_write: 78320
+      cost: 0.3015
   strategic:
     - kind: planner
       seconds: 1121
@@ -94,10 +102,10 @@ This indicates a failure of flai to provide the default settings (the system alr
 Finally, if it were missing, the error message to direct the user to the configuration pages or sub-pages necessary to complete configuration.
 
 ## Acceptance criteria
-- [ ] A default agent should always be provided to stories
-- [ ] A default harness should always be provided to stories
-- [ ] Error messages must provide a link to the page(s) where the user can enter the missing information if no default exists
-- [ ] Harness and agent settings should be independent of other projects (setting these for one should never change another project's harness or agent)
+- [x] A default agent should always be provided to stories
+- [x] A default harness should always be provided to stories
+- [x] Error messages must provide a link to the page(s) where the user can enter the missing information if no default exists
+- [x] Harness and agent settings should be independent of other projects (setting these for one should never change another project's harness or agent)
 
 ## Tasks
 - T-2577 An ADR decides the built-in default agent, the template's default, per-project host agent settings, and the refusal's links to the settings pages

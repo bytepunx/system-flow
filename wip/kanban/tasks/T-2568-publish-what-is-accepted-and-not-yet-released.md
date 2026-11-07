@@ -3,12 +3,18 @@ id: T-2568
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0588
 owner: alex
 created: 2026-11-07T09:24:05Z
-updated: 2026-11-07T09:24:05Z
-transitions: []
+updated: 2026-11-07T12:06:42Z
+transitions:
+  - to: ready
+    at: 2026-11-07T12:06:41Z
+    by: agent-S-0588
+  - to: in-progress
+    at: 2026-11-07T12:06:42Z
+    by: agent-S-0588
 stream: S-0588
 tags: []
 after: [T-2567]

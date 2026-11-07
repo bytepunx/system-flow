@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1177
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 123
-      cache_read: 2987510
-      cache_write: 25310
-      cost: 1.0807
+      input: 16
+      output: 4684
+      cache_read: 3056102
+      cache_write: 26430
+      cost: 0.866
 ---
 # T-2578 flai's built-in default agent, claude-code with no model, is what an agent falls back to when neither it, the project's default, nor the host's command names a harness
 

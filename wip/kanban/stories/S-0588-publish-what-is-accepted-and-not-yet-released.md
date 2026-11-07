@@ -3,14 +3,17 @@ id: S-0588
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T09:24:05Z
-updated: 2026-11-07T09:24:27Z
+updated: 2026-11-07T12:05:12Z
 transitions:
   - to: ready
     at: 2026-11-07T09:24:27Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T12:05:12Z
+    by: agent-S-0588
 tags: []
 agent:
   harness: claude-code
@@ -18,20 +21,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 86
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      work: 13
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 300
+      cache_read: 1610761
+      cache_write: 139044
+      cost: 0.6271
   strategic:
     - kind: orchestrator
-      seconds: 176
+      seconds: 192
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 232
-          cache_read: 1275285
-          cache_write: 136839
-          cost: 0.3543
+          input: 42
+          output: 259
+          cache_read: 1467946
+          cache_write: 164680
+          cost: 0.4099
         - model: claude-sonnet-5-5
           input: 5
           output: 372

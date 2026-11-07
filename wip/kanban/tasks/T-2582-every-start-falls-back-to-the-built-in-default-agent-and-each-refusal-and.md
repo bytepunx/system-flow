@@ -3,11 +3,11 @@ id: T-2582
 type: task
 nature: remediation
 title: Every start falls back to the built-in default agent, and each refusal and waiting reason that remains names the missing setting, the dashboard page that sets it, and the command
-status: in-progress
+status: done
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:12:31Z
-updated: 2026-11-07T11:13:26Z
+updated: 2026-11-07T11:58:31Z
 transitions:
   - to: ready
     at: 2026-11-07T10:57:48Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:57:51Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T11:25:03Z
+    by: agent-S-0587
 stream: S-0587
 tags: [cli]
-touches: [flai/internal/serve/start.go, flai/internal/serve/restart.go, flai/internal/serve/commit.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role.go, flai/internal/serve/claudecheck.go, flai/internal/serve/start_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/default_agent_test.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate_test.go, flai/internal/serve/plan_test.go, flai/internal/serve/role_test.go, flai/internal/serve/role_events_test.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/claudecheck_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/analyze_test.go, flai/cmd/curate_test.go, flai/cmd/plan_test.go, flai/cmd/role_test.go, flai/cmd/role.go, flai/cmd/agent.go, flai/internal/mcpserver/role.go, flai/internal/hostapi/settings.go]
+touches: [flai/internal/serve/start.go, flai/internal/serve/restart.go, flai/internal/serve/commit.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role.go, flai/internal/serve/claudecheck.go, flai/internal/serve/start_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/default_agent_test.go, flai/internal/serve/analyze_test.go, flai/internal/serve/curate_test.go, flai/internal/serve/plan_test.go, flai/internal/serve/role_test.go, flai/internal/serve/role_events_test.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/review_wait_test.go, flai/internal/serve/stop_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/analyze_test.go, flai/cmd/curate_test.go, flai/cmd/plan_test.go, flai/cmd/role_test.go, flai/cmd/role.go, flai/cmd/agent.go, flai/internal/mcpserver/role.go, flai/internal/hostapi/settings.go, docs/users/flai-reference.md, flaiover/src/lib/components/StoryAgent.svelte.test.ts]
 after: [T-2578, T-2580]
+usage:
+  source: log
+  seconds: 1632
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 70401
+      cache_read: 45933504
+      cache_write: 397241
+      cost: 13.0168
 ---
 # T-2582 Every start falls back to the built-in default agent, and each refusal and waiting reason that remains names the missing setting, the dashboard page that sets it, and the command
 

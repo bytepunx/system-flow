@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 138.8591
-accrued_seconds: 13250
-tasks_completed: 85
-last_run: 2026-11-07T11:16:11Z
+accrued_cost: 140.7348
+accrued_seconds: 13551
+tasks_completed: 86
+last_run: 2026-11-07T11:29:40Z
 ---
 
 # Curator activity
@@ -691,3 +691,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0511
 - Seconds: 66
 - Cost: 0.6217 USD, estimated
+
+### 2026-11-07T11:29:40Z
+
+- Summary: Wrote D-0514; merged none, absorbed none, and `flai digest compact` compacted none. D-0514 records that S-0406 made OpenCode's files (`AGENTS.md`, `opencode.json`, `opencode.jsonc`, `.opencode/`) protected on every harness, so a story that changes one is accepted by the operator alone. The other 11 S-0406 decisions were already in `design/system/flai-cli.md`, `design/system/agent-adapters.md` and ADR-0260, or were only progress notes.
+- Trigger: accepted S-0406
+- Items: D-0514
+- Seconds: 301
+- Cost: 1.8757 USD, estimated

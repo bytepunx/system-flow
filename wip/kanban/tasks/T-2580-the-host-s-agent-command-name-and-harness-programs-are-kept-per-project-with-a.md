@@ -24,16 +24,16 @@ touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, f
 after: [T-2577]
 usage:
   source: log
-  seconds: 1166
+  seconds: 1237
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 523
-      cache_read: 18047673
-      cache_write: 107799
-      cost: 6.5121
+      input: 99
+      output: 29261
+      cache_read: 19091341
+      cache_write: 165105
+      cost: 5.4102
 ---
 # T-2580 The host's agent command, name, and harness programs are kept per project, with a host-wide fallback, so setting them for one project changes no other
 
