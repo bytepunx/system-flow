@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-07T15:15:50Z
+updated: 2026-11-07T15:15:57Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0587](S-0587.md) | Default harness and agent should work out of the box | review | agent-S-0587 | 2026-11-07T11:58:49Z |
 
 ## Strategic agents
 

@@ -4,10 +4,10 @@ title: S-0587 is ready to accept, but TH-0872 (its cost of delay input) is still
 anchor:
   path: wip/kanban/stories/S-0587-default-harness-and-agent-should-work-out-of-the-box.md
   item: S-0587
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-07T12:06:56Z
-updated: 2026-11-07T12:06:56Z
+updated: 2026-11-07T15:15:56Z
 ---
 
 # TH-0876 S-0587 is ready to accept, but TH-0872 (its cost of delay input) is still open
@@ -33,3 +33,6 @@ On wip/kanban/stories/S-0587-default-harness-and-agent-should-work-out-of-the-bo
 **Alternative:** accept it by hand now with `flai accept S-0587 --by alex`. That resolves TH-0872 unanswered, and S-0587 keeps no cost of delay.
 
 S-0587 stays in review. I have changed nothing.
+
+### 2026-11-07T15:15:56Z alex
+Resolved: S-0587 was accepted

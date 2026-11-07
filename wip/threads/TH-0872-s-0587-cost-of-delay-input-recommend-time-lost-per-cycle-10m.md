@@ -4,10 +4,10 @@ title: "S-0587 cost of delay input: recommend time_lost_per_cycle 10m"
 anchor:
   path: wip/kanban/stories/S-0587-default-harness-and-agent-should-work-out-of-the-box.md
   item: S-0587
-status: open
-participants: [planner-S-0587, orchestrator]
+status: resolved
+participants: [planner-S-0587, orchestrator, alex]
 created: 2026-11-07T10:05:08Z
-updated: 2026-11-07T10:06:28Z
+updated: 2026-11-07T15:15:56Z
 ---
 
 # TH-0872 S-0587 cost of delay input: recommend time_lost_per_cycle 10m
@@ -51,3 +51,6 @@ flai edit S-0587 --penalty-per-week 50
 **What changes meanwhile:** nothing. The policy is `throughput`, so the ready column is ordered by forecast and this value does not move S-0587. It is held now for declaring no touches, and its planner is still running.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T15:15:56Z alex
+Resolved: S-0587 was accepted

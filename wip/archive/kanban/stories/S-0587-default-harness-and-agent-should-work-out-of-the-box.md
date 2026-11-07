@@ -3,10 +3,10 @@ id: S-0587
 type: story
 nature: remediation
 title: Default harness and agent should work out of the box
-status: review
+status: done
 owner: alex
 created: 2026-11-07T08:40:55Z
-updated: 2026-11-07T12:05:01Z
+updated: 2026-11-07T15:15:56Z
 transitions:
   - to: ready
     at: 2026-11-07T08:41:12Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T12:05:01Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T15:15:56Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [agents, settings]
 touches: [design/adrs/README.md, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/agent.go, flai/internal/workitem/agent_test.go, flai/internal/serve/default_agent_test.go, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/cmd/new_test.go, flai/cmd/import_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flai/internal/serve/start.go, flai/internal/serve/restart.go, flai/internal/serve/commit.go, flai/internal/serve/agents.go, flai/internal/serve/plan.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role.go, flai/internal/serve/start_test.go, flai/internal/serve/agents_test.go, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators/runbooks/install.md, design/system/agent-adapters.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/template.md, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/flaiover-dashboard.md, design/system/strategic-agents.md, design/adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md, flai/cmd/agent.go, flai/cmd/analyze_test.go, flai/cmd/curate_test.go, flai/cmd/plan_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/role.go, flai/internal/serve/analyze_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/curate_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/plan_test.go, flai/internal/serve/review_wait_test.go, flai/internal/serve/role_events_test.go, flai/internal/serve/role_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/stop_test.go, flaiover/src/lib/server/writes.test.ts, design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md]
