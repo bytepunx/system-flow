@@ -154,6 +154,44 @@ Smoke inside passed its template render, its repository check (3152 items, 0 fin
 - I-0280: `close-out.sh` cannot force a fresh run.
 - I-0281: the layer lacks curl and GoReleaser, so smoke fails inside.
 
+### Against the success measure
+
+| Criterion | Result |
+|-----------|--------|
+| 1. A story worked end to end in its container, usage measured, card's status as for a host run | Met by S-0558, and again by S-0556. Usage was measured from the run's log as for a host run. The card reads the same `agent.status` and `agent.stream` records as a host run's, with `harness: container` |
+| 2. A stop from the dashboard and a restart after an answered thread, each tried once | Met on S-0556's container (S-0565's Notes, "The stop and the restart (T-2450)"). The stop removed the container. The answered thread resumed the same session. Retry after a stop gave a new session, as on a host |
+| 3. A Go story worked end to end on the layer, its close-out passing every selected tier inside the container | S-0556 was worked end to end on the layer, and its close-out passed as `flai serve`'s host job. Inside the container, seven of its eight tiers passed; smoke failed at its installer test for want of curl and GoReleaser (I-0281). The operator ticked this criterion on 2026-11-07 after the two runs (TH-0836); I-0281 is what stands between it and a close-out that passes inside |
+
+Issues met, and what carries each on:
+
+| Issue | What | Carried on by |
+|-------|------|---------------|
+| I-0228 | `story_start` and `task_done` over HTTP within 18 s of Claude Code's 60 s limit | S-0583, in progress |
+| I-0272 | `flai stream sync` inside the container cannot rebase on the read-only `.git` | none yet |
+| I-0277 | an agent in a container cannot write its narrative's Decisions | none yet |
+| I-0278 | no Retry on the story's agent page after a stop; only on the card's menu | none yet; the dashboard's, not the container's |
+| I-0279 | `scripts/agent-container.sh` ignores `agent.image.layer` | none yet |
+| I-0280 | `scripts/close-out.sh` cannot force a fresh run | none yet |
+| I-0281 | the layer lacks curl and GoReleaser, so smoke fails inside | none yet |
+
 ## Recommendation
 
-Pending: whether to adopt, adapt, or drop running this repository's stories on `harness: container` is decided once both proof runs are recorded (T-2453).
+**Adapt.** Keep the `container` harness, and keep it opt-in per story for now. Do not make it this repository's default yet.
+
+What works is the part that matters most:
+
+- `flai serve` starts the container with exactly the mounts the design names.
+- The agent works the story through `story_start`, `task_done`, and the close-out job, all over HTTP, and every commit stays the host's.
+- Usage and the card read as for a host run.
+- A stop removes the container, and an answered thread resumes the same session.
+
+A documentation story and a Go story each reached review this way. Neither needed help beyond the operator's host setup.
+
+What must change first, in this order:
+
+1. **I-0281.** Add curl and GoReleaser to `flai/images/system-flow/Dockerfile`, and check the built layer with `flai test smoke` in it. Until then no story touching `flai/` or `template/` can close out inside the container.
+2. **I-0272.** Refuse `flai stream sync` inside the container, saying the host syncs through `task_done`, as ADR-0246 meant S-0521 to. Both proof agents tried it, and one was left with a detached HEAD.
+3. **I-0228** (S-0583). The HTTP calls that do the most work came within 18 s of Claude Code's limit.
+4. **I-0277.** An agent in a container needs a way to write its narrative's Decisions through flai.
+
+I-0279 and I-0280 are for running things by hand in the container. I-0278 belongs to the dashboard. None of the three stands in the way of `flai serve`'s own runs.
