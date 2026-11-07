@@ -173,6 +173,12 @@
 // and the forge's token, which no agent holds; flai forge push is the
 // operator's. flai forge check and status read, and are left alone.
 //
+// No session flai serve starts, and no sub-agent, runs flai kluster up,
+// down, deploy, teardown, or promote (S-0577, ADR-0254 §7): they change the
+// project's kluster, shared infrastructure on the operator's machine, which
+// is the operator's, and flai serve's behind the kluster host action. flai
+// kluster status reads, and is left alone.
+//
 // No session flai serve starts, and no sub-agent, writes the host
 // configuration, ~/.flai/config.json or the file FLAI_CONFIG names (S-0511,
 // ADR-0220): flai serve enable and disable; flai serve agent set and clear,
@@ -605,23 +611,62 @@ var forging = rules{
 	},
 }
 
+// klusterWrites are the subcommands of flai kluster that change the
+// project's cluster or a namespace in it, the operator's alone (S-0577,
+// ADR-0254 §7). flai kluster status reads and is open to every agent.
+var klusterWrites = []string{"up", "down", "deploy", "teardown", "promote"}
+
+// operatorsKluster says why no agent runs a flai kluster command that writes
+// (S-0577, ADR-0254 §7).
+const operatorsKluster = "flai kluster up, down, deploy, teardown, and promote change the project's kluster, shared infrastructure on the operator's machine, so they are the operator's, from a shell or the dashboard's Ops pages, and flai serve's behind the kluster host action (ADR-0254, safety.md)"
+
+// askForKluster ends the refusal of a session's own flai kluster command
+// that writes: what it does instead.
+const askForKluster = "Ask the operator on a thread with thread_open; flai kluster status reads and is open to you."
+
+// klustering are the rules that find a flai kluster command that writes on a
+// command line, and no git command.
+var klustering = rules{
+	flai: func(cmd, sub string, _ []string) (string, string) {
+		if cmd == "kluster" && slices.Contains(klusterWrites, sub) {
+			return operatorsKluster, ""
+		}
+		return "", ""
+	},
+}
+
 // forgePush decides on a command line that runs flai forge push, by a
 // sub-agent or in a session flai serve started: the zero Verdict when it runs
 // none or the operator's own session runs it. The orchestrator's refusal
 // names the call, so that its activity document logs it.
 func (g Guard) forgePush(c Call) Verdict {
+	return g.operatorsOnly(c, forging, operatorsPush, askForPush, "Put what you need pushed in your final message.")
+}
+
+// klusterWrite decides on a command line that runs a flai kluster command
+// that writes (S-0577), as forgePush does on flai forge push.
+func (g Guard) klusterWrite(c Call) Verdict {
+	return g.operatorsOnly(c, klustering, operatorsKluster, askForKluster, "Put what you need done to the kluster in your final message.")
+}
+
+// operatorsOnly decides on a command line that runs a command found by
+// found, the operator's alone, by a sub-agent or in a session flai serve
+// started: refused with why and, for a sub-agent, subAsk, or for a served
+// session, ask; the zero Verdict when it runs none or the operator's own
+// session runs it. The orchestrator's refusal names the call.
+func (g Guard) operatorsOnly(c Call, found rules, why, ask, subAsk string) Verdict {
 	if c.Kind != Shell || !c.Subagent && !g.served(c) {
 		return Verdict{}
 	}
 	for _, words := range commands(c.Command) {
-		if why, _ := g.refuse(words, forging); why == "" {
+		if refused, _ := g.refuse(words, found); refused == "" {
 			continue
 		}
 		call := strings.Join(words, " ")
 		if c.Subagent {
-			return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need pushed in your final message.", cmp.Or(c.Agent, "unnamed"), call, operatorsPush))
+			return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. %s", cmp.Or(c.Agent, "unnamed"), call, why, subAsk))
 		}
-		v := deny(fmt.Sprintf("%s cannot run %q: %s. %s", g.who(c), call, operatorsPush, askForPush))
+		v := deny(fmt.Sprintf("%s cannot run %q: %s. %s", g.who(c), call, why, ask))
 		if c.Role == RoleOrchestrate {
 			v.Call = call
 		}

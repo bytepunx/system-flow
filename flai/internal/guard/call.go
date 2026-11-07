@@ -114,7 +114,8 @@ func deny(why string) Verdict {
 }
 
 // Decide decides on c under g's policy: the shared paths, flai forge push,
-// and the commands that write the host configuration (ADR-0220) for every
+// the flai kluster commands that write (S-0577), and the commands that write
+// the host configuration (ADR-0220) for every
 // caller, then the rules of a sub-agent, or of the session's own
 // role, each role's from its role file, and the author a served agent writes
 // as. A session with no role, or a story's or a verifier's, never publishes.
@@ -126,6 +127,9 @@ func Decide(g Guard, c Call) Verdict {
 		return v
 	}
 	if v := g.forgePush(c); v.Outcome != Allow {
+		return v
+	}
+	if v := g.klusterWrite(c); v.Outcome != Allow {
 		return v
 	}
 	if v := g.hostConfig(c); v.Outcome != Allow {
