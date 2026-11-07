@@ -574,11 +574,16 @@ describe.skipIf(!haveFlai)('host settings through flai', () => {
 		await expect(
 			r.write('settings.action', { action: 'settings', on: false })
 		).rejects.toMatchObject({ status: 400 });
-		// a setting kept for every project needs settings on for every project
-		await expect(r.write('settings.agent', { name: 'builder' })).rejects.toMatchObject({
+		// the agent's settings are this project's with settings on here, and every
+		// project's only with settings on for every project (ADR-0261)
+		await expect(
+			r.write('settings.agent', { name: 'builder', everywhere: true })
+		).rejects.toMatchObject({
 			status: 403,
 			message: expect.stringContaining('--all-projects')
 		});
+		await r.write('settings.agent', { name: 'builder' });
+		expect((await get()).host.agent).toMatchObject({ name: 'builder', name_from: 'project' });
 
 		await r.write('settings.default_agent', {
 			agent: { harness: 'claude-code', model: 'claude-haiku-4-5', config: { effort: 'low' } }
