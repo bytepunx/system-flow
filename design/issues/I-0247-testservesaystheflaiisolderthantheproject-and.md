@@ -2,12 +2,12 @@
 id: I-0247
 title: TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
 class: defect
-status: open
+status: closed
 count: 5
 cost: 8m
 first_reported: 2026-11-02T01:00:19Z
 last_reported: 2026-11-07T02:26:34Z
-updated: 2026-11-07T02:26:34Z
+updated: 2026-11-07T05:27:19Z
 ---
 
 # I-0247 TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
@@ -40,3 +40,9 @@ S-0578's third and fourth close-outs at 0264cef failed the integration tier on t
 ## Remediation
 
 Story S-0569 remediates this issue, created from it at 2026-11-02T21:41:39Z.
+Closed 2026-11-07T05:27:19Z: fixed by S-0569. Each test raced its own setup; the load only widened the window. Each fix waits for the event it depends on.
+- TestWaitForEventsAcrossAFolder and its two wait_for_work siblings slept 150 ms, then changed the project, before the wait had fingerprinted it. They now wait for the wait's first progress heartbeat and hold up to 30 s (T-2522).
+- TestServeSaysTheFlaiIsOlderThanTheProject read the watcher's change notification for serve's upgrade thread as project.info's reply, because channeltest's Ask returns the next message. It now asks until an answer names the project (T-2525).
+- TestServeStartsADefinedRoleOnAnEventAndOnASchedule moved the story before serve's watcher took its first snapshot, so only the next minute's look saw the move. It now waits for the watcher to report a probe file (T-2528; serve's window is I-0273).
+- TestHostRunsServeAndTheMCPServersAndTakesThemWithIt lost the first free MCP port to concurrent runs, so the state came with another PID. It now seeds its own kernel-picked port (T-2529; the host's same-port restart is I-0271).
+Each fix reproduced its failure before it changed anything, under GOMAXPROCS=2 -race beside busy loops pinned to the test's CPUs. All six tests then passed 60 of 60 together, pinned to CPUs 20-23 beside 6 busy loops.
