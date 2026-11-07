@@ -8,6 +8,7 @@ wip_limits:
   review: 5
 order:
   - S-0591
+  - S-0597
 ---
 
 # Board
