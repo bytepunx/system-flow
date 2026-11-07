@@ -1,0 +1,100 @@
+{
+  "examples": [
+    {
+      "name": "A component's build waiting for its turn",
+      "props": {
+        "namespace": "s-0595",
+        "step": "build-worker",
+        "label": "worker",
+        "outcome": "pending"
+      }
+    },
+    {
+      "name": "A component's build running, its log open",
+      "props": {
+        "namespace": "s-0595",
+        "step": "build-api",
+        "label": "api",
+        "outcome": "running",
+        "startedAt": "2026-11-07T22:40:00Z",
+        "open": true
+      },
+      "answers": [
+        {
+          "path": "/api/kluster/log",
+          "method": "GET",
+          "body": {
+            "namespace": "s-0595",
+            "step": "build-api",
+            "log": ".flai-cache/kluster/logs/s-0595/build-api.log",
+            "exists": true,
+            "offset": 0,
+            "next": 96,
+            "size": 96,
+            "text": "#1 [internal] load build definition from Dockerfile\n#2 [build 1/4] FROM golang:1.26-alpine\n#3 [build 2/4] COPY . .\n",
+            "outcome": "running"
+          }
+        }
+      ]
+    },
+    {
+      "name": "A component's build that passed",
+      "props": {
+        "namespace": "s-0595",
+        "step": "build-web",
+        "label": "web",
+        "outcome": "passed",
+        "startedAt": "2026-11-07T22:30:00Z",
+        "endedAt": "2026-11-07T22:32:14Z",
+        "open": true
+      },
+      "answers": [
+        {
+          "path": "/api/kluster/log",
+          "method": "GET",
+          "body": {
+            "namespace": "s-0595",
+            "step": "build-web",
+            "log": ".flai-cache/kluster/logs/s-0595/build-web.log",
+            "exists": true,
+            "offset": 0,
+            "next": 64,
+            "size": 64,
+            "text": "#9 exporting to image\n#9 naming to acme/web:s-0595-0123456789ab done\n",
+            "outcome": "passed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "A component's build that failed",
+      "props": {
+        "namespace": "s-0595",
+        "step": "build-api",
+        "label": "api",
+        "outcome": "failed",
+        "startedAt": "2026-11-07T22:30:00Z",
+        "endedAt": "2026-11-07T22:30:41Z",
+        "exitCode": 1,
+        "open": true
+      },
+      "answers": [
+        {
+          "path": "/api/kluster/log",
+          "method": "GET",
+          "body": {
+            "namespace": "s-0595",
+            "step": "build-api",
+            "log": ".flai-cache/kluster/logs/s-0595/build-api.log",
+            "exists": true,
+            "offset": 0,
+            "next": 70,
+            "size": 70,
+            "text": "#4 [build 3/4] RUN go build ./cmd/api\n#4 ERROR: process did not complete\n",
+            "outcome": "failed"
+          }
+        }
+      ]
+    }
+  ]
+}
