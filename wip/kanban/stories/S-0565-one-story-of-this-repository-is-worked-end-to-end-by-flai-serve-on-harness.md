@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T06:53:04Z
+updated: 2026-11-07T07:00:16Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -95,7 +95,7 @@ Prove the container harness S-0508 built in the place it is meant for: `flai ser
 
 - [x] One story of this repository is worked end to end by `flai serve` with `harness: container` on its agent, from `story_start` to review, its usage measured and its card's status shown as for a host run, and each limitation met is an issue under `design/issues`
 - [x] A stop from the dashboard and a restart after a thread is answered are each tried once on that story's container, and what happened is recorded in this story's notes
-- [ ] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with the project's image layer (`flai/images/system-flow/Dockerfile`, S-0510), and `scripts/close-out.sh` runs every tier the manifest's `tests` select and passes inside the container, and each limitation met is an issue under `design/issues`
+- [x] One story of this repository that changes Go is worked end to end by `flai serve` on `harness: container` with the project's image layer (`flai/images/system-flow/Dockerfile`, S-0510), and `scripts/close-out.sh` runs every tier the manifest's `tests` select and passes inside the container, and each limitation met is an issue under `design/issues`
 
 ## Tasks
 - T-2449 The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
