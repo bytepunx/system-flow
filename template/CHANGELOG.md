@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- S-0556 A sub-agent can no longer start a close-out that commits (patch): the orchestrator's role file names the MCP tool `verify` in its `tools`, and the rule in `delegation.md` says `flai guard` refuses every sub-agent that tool and `flai verify --job`, rather than leaving it to the prompt. A project whose `orchestrator.md` predates this takes its baseline from `flai upgrade`: until then `flai check` reports `roles.definition` and its orchestrator is refused the tool.
 - S-0571 flai serve starts a role your project defines once for each ready story, in pull order, when a `{schedule: <setting>, when: each-ready-story}` entry comes round, and flai check reports that entry on a role that takes no story (patch). The roles README says so.
 - S-0555 flai check finds `narrative.missing` outside the story at close-out (patch).
 - S-0555 A close-out records no `narrative.missing` outside the story (patch, ADR-0256): the close-out rule in `work-management.md` says that a `narrative.missing` on another story, one in progress or in review with no narrative, is left out of a close-out's check and recorded in no issue, since only that story's agent or the operator clears it, with `flai stream open` on that story, and the main checkout's check still reports it.

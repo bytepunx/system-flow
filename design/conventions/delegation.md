@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-31
+updated: 2026-11-07
 audience: agent
 order: 130
 status: active
@@ -74,7 +74,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Do not move, create, or edit work items, write to threads or send messages, read the inbox, or wait for events or work; your tools leave them out; never work around that through the shell.
 - Answer the question you were given. Do not do the story's work.
 - As a verifier, review the diff against the story's acceptance criteria and the conventions, naming the criteria it meets by number. Do not run the tests, the lint, or `flai check` to learn whether they pass: read the story's last result with `flai verify S-nnnn --last`, and say so when it did not pass or its commit is not the branch's head.
-- Never ask flai serve for the story's close-out job, with the MCP tool `verify` or `flai verify S-nnnn --job`, unless your prompt asks: the story's agent asks for it and waits for its `verified` event.
+- Never ask flai serve for the story's close-out job, with the MCP tool `verify` or `flai verify S-nnnn --job`: `flai guard` refuses both to every sub-agent, since the job commits in the story's worktree. The story's agent asks for it and waits for its `verified` event.
 - Run the close-out, or `flai verify`, only when your prompt asks. Then run it once, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `flai verify S-nnnn; echo "exit $?"`. Never pipe its output, which loses the exit status, and never redirect it into a file. Read its last line, which names the outcome and the step it stopped at.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the agent that started you sees. Lead with the answer, then the evidence, then what you could not check.
