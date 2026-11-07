@@ -6,7 +6,7 @@ title: "TestGatewayLiteLLM fails its setup check: the template's settings run fl
 status: ready
 owner: alex
 created: 2026-11-07T15:15:23Z
-updated: 2026-11-07T21:49:27Z
+updated: 2026-11-07T21:53:50Z
 transitions:
   - to: ready
     at: 2026-11-07T21:49:23Z
@@ -19,9 +19,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 17
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      work: 2
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 1226
+      cache_read: 141627
+      cache_write: 44176
+      cost: 0.4063
   strategic:
     - kind: planner
       seconds: 199
@@ -34,15 +45,15 @@ usage:
           cache_write: 155960
           cost: 2.0166
     - kind: orchestrator
-      seconds: 67
+      seconds: 72
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 214
-          cache_read: 1232130
-          cache_write: 70782
-          cost: 0.3291
+          input: 33
+          output: 225
+          cache_read: 1281250
+          cache_write: 83867
+          cost: 0.3448
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -53,10 +64,10 @@ cost_of_delay:
   at: 2026-11-07T21:47:34Z
 forecast:
   duration: 12m
-  delivery: 2026-11-07T22:05:00Z
-  basis: "Its own forecast of 12m; 1st in the pull order with an in-progress limit of 5, behind S-0408, S-0409 and S-0410."
+  delivery: 2026-11-07T22:09:00Z
+  basis: "Its own forecast of 12m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-11-07T21:49:27Z
+  at: 2026-11-07T21:53:50Z
 finalized:
   by: orchestrator
   at: 2026-11-07T21:49:11Z
