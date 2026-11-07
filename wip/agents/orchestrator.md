@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1988.9239
-accrued_seconds: 1512436
-tasks_completed: 1956
-last_run: 2026-11-07T04:48:00Z
+accrued_cost: 1990.1125
+accrued_seconds: 1512705
+tasks_completed: 1966
+last_run: 2026-11-07T05:12:08Z
 ---
 
 # Orchestrator activity
@@ -13723,6 +13723,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 28
 - Cost: 0.1323 USD, estimated
 
+### 2026-11-07T05:07:25Z
+
+- Summary: Accepted S-0570 at 012fcd7d9690 under accept_reviews: close-out passed every step at the branch head, verifier matched both criteria to changed files, dry run had no blockers (merge queue off). Value 65 USD/week, forecast 2h.
+- Items: S-0570
+- Seconds: 69
+- Cost: 0.2120 USD, estimated
+
+### 2026-11-07T05:07:46Z
+
+- Summary: Did not publish after S-0570: release_evaluate is judgement, not met by itself, 5 accepted unreleased (S-0555, S-0557, S-0558, S-0570, S-0571) worth 125 USD/week. The publish formula's step 2 (--require-met) always stops under judgement and release_publish refuses while the formula exists; TH-0811 asking the operator to settle the policy is still open, so no new run or thread.
+- Items: S-0570
+- Seconds: 21
+- Cost: 0.0524 USD, estimated
+
+### 2026-11-07T05:08:03Z
+
+- Summary: I accepted S-0570 at commit `012fcd7d9690`, and I did not publish a release.
+- Items: none
+- Seconds: 17
+- Cost: 0.1067 USD, estimated
+
+### 2026-11-07T05:09:58Z
+
+- Summary: Answered TH-0847, citing design/issues/I-0190-pagesidebar-s-link-entries-have-no-page-using-them-since-the-charts-page-dropped-its-sidebar.md § Instances
+- Items: S-0559
+- Seconds: 48
+- Cost: 0.1894 USD, estimated
+
+### 2026-11-07T05:10:25Z
+
+- Summary: draft:S-0559: approved planner-S-0559's plan on TH-0847 (remove PageSidebar's link kind, T-2539 then T-2540; the 8 touches equal the tasks' touches; forecast 16m and value 10 USD/week are flai's) under plan_backlog_stories and resolved it. Then finalized S-0559 under finalize_drafts: flai promote --drafts lists it complete, rank 1 by throughput (16m).
+- Items: S-0559
+- Seconds: 27
+- Cost: 0.1136 USD, estimated
+
+### 2026-11-07T05:10:49Z
+
+- Summary: Promoted S-0559 to ready under promote_to_ready: flai promote --candidates rank 1 by throughput (16m), ready column 0 of 10. Then ordered ready by throughput with flai order --apply: S-0559 is 1st. Skipped S-0556 (rank 2, held for the operator on TH-0836) and S-0241 (rank 3, blocked, TH-0790 open). flai guard refused the order command when it was prefixed with cd; the plain command ran.
+- Items: S-0559
+- Seconds: 24
+- Cost: 0.1495 USD, estimated
+
+### 2026-11-07T05:11:06Z
+
+- Summary: release-due S-0570: did not publish. release_evaluate: policy judgement, met false, count 5, 125 USD/week (S-0555 12.5, S-0557 15, S-0558 7.5, S-0570 65, S-0571 25), nothing held_by_epic. With S-0570 accepted, the changelog fix is now in the batch, so it is coherent. But under judgement the publish formula's step 2 (release --evaluate --require-met) always stops, and release_publish refuses while the formula exists (ADR-0240). orchestration.release still has only value: 1000, and TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0570
+- Seconds: 17
+- Cost: 0.0304 USD, estimated
+
+### 2026-11-07T05:11:24Z
+
+- Summary: I finished both reasons. S-0559 is now in progress, and no release was published: the project's publish path can't release anything until you answer TH-0811.
+- Items: none
+- Seconds: 18
+- Cost: 0.0812 USD, estimated
+
+### 2026-11-07T05:11:51Z
+
+- Summary: Nothing to do on TH-0847, S-0559's draft edit, or its plan (T-2539, T-2540): the earlier run approved and resolved TH-0847, finalized S-0559, and promoted it, and agent-S-0559 has started it (in-progress 05:10:48Z). The ready column is empty, so there is nothing to order.
+- Items: S-0559, T-2539, T-2540
+- Seconds: 11
+- Cost: 0.0620 USD, estimated
+
+### 2026-11-07T05:12:08Z
+
+- Summary: There was nothing left to do for any of the three reasons. An earlier run of mine had already handled them, so this run changed nothing.
+- Items: none
+- Seconds: 17
+- Cost: 0.1914 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -14231,6 +14301,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-11-07T04:21:56Z
+
+- Call: `flai order --by throughput --apply 2>&1`
+- Needs: none
+
+### 2026-11-07T05:10:42Z
 
 - Call: `flai order --by throughput --apply 2>&1`
 - Needs: none

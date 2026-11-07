@@ -23,16 +23,16 @@ tags: [flai, tests]
 touches: [flai/cmd/host_integration_test.go]
 usage:
   source: log
-  seconds: 1405
+  seconds: 1406
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 474
-      cache_read: 8980939
-      cache_write: 60262
-      cost: 3.2322
+      input: 72
+      output: 19122
+      cache_read: 9032375
+      cache_write: 303786
+      cost: 3.8824
 ---
 # T-2529 TestHostRunsServeAndTheMCPServersAndTakesThemWithIt waits for the MCP server's state within a bound that outlasts its staleness check on a loaded host
 

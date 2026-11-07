@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 119.5053
-accrued_seconds: 11441
-tasks_completed: 70
-last_run: 2026-11-07T04:47:10Z
+accrued_cost: 121.1884
+accrued_seconds: 11660
+tasks_completed: 71
+last_run: 2026-11-07T05:12:19Z
 ---
 
 # Curator activity
@@ -571,3 +571,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0365
 - Seconds: 70
 - Cost: 1.1521 USD, estimated
+
+### 2026-11-07T05:12:19Z
+
+- Summary: Wrote D-0490 (`storygit` may import `release`, so S-0570's changelog merge is the pure function `release.SettleChangelog`); merged none, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0570
+- Items: D-0490
+- Seconds: 219
+- Cost: 1.6831 USD, estimated

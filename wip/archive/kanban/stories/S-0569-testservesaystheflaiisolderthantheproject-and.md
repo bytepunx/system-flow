@@ -3,10 +3,10 @@ id: S-0569
 type: story
 nature: remediation
 title: TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T21:41:39Z
-updated: 2026-11-07T04:41:16Z
+updated: 2026-11-07T05:34:34Z
 transitions:
   - to: ready
     at: 2026-11-07T03:56:09Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:15:08Z
     by: agent-S-0569
+  - to: review
+    at: 2026-11-07T05:32:57Z
+    by: agent-S-0569
+  - to: done
+    at: 2026-11-07T05:34:34Z
+    by: orchestrator
 tags: [flai, tests]
 topics: [testing]
-touches: [flai/internal/serve/outdated_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/agents_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/host_integration_test.go, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md]
+touches: [flai/internal/serve/outdated_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/agents_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/host_integration_test.go, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md, design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1542
-  estimated: true
-  priced_by: estimate
+  seconds: 4688
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      hand_edits: 2
-      work: 19
+      ceremony: 2
+      hand_edits: 4
+      work: 32
   models:
     - model: claude-opus-5-5
-      input: 198
-      output: 1406
-      cache_read: 21652754
-      cache_write: 1117021
-      cost: 8.1402
+      input: 358
+      output: 94688
+      cache_read: 44726735
+      cache_write: 1504297
+      cost: 19.2249
   strategic:
     - kind: planner
       seconds: 319
@@ -91,8 +96,8 @@ finalized:
 This story remediates [I-0247](../../../design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md), "TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRoleOnAnEventAndOnASchedule fail the close-out's integration tier on timing, on a branch that does not touch flai/internal/serve". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0247 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0247 is closed with `flai issue close I-0247 --reason` saying what fixed it
+- [x] The cause I-0247 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0247 is closed with `flai issue close I-0247 --reason` saying what fixed it
 
 ## Tasks
 - T-2522 TestWaitForEventsAcrossAFolder makes its move only once the wait_for_events call is holding, and passes under -race -count=10 with GOMAXPROCS=2
@@ -116,3 +121,12 @@ Forecast: `flai forecast` gave 18m, 115 s per unit of size over 37 remediation s
 Cost of delay: `flai cod` gives 52.50 USD a week from the 21m lost per 168h cycle at 150 USD an hour. The value stands. The inputs were set from three occurrences; I-0247 now has five, which would raise them, and that is the operator's to change.
 
 After: none. S-0569 reads no other story's output.
+
+### Accepted by the orchestrator
+
+- Verified: 55c53a18b25071f1534b06c29a55b15afa2f9b9f
+- At: 2026-11-07T05:34:34Z
+
+Verdict: pass — both criteria are met by test-only race fixes inside the declared touches, I-0247 is closed with a per-test remediation, and the two new issues are recorded findings; verified at 55c53a18b25071f1534b06c29a55b15afa2f9b9f.
+- 1: flai/internal/mcpserver/folder_test.go, flai/internal/serve/outdated_test.go, flai/internal/serve/serve_test.go, flai/cmd/host_integration_test.go
+- 2: design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md

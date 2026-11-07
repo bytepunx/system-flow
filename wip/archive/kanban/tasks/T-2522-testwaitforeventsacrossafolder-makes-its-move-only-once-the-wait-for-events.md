@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1396
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 386
-      cache_read: 5820973
-      cache_write: 546779
-      cost: 2.2765
+      input: 51
+      output: 13468
+      cache_read: 6361537
+      cache_write: 213958
+      cost: 2.7344
 ---
 # T-2522 TestWaitForEventsAcrossAFolder makes its move only once the wait_for_events call is holding, and passes under -race -count=10 with GOMAXPROCS=2
 

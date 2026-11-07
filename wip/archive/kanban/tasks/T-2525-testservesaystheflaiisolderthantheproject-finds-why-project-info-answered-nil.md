@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1402
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 292
-      cache_read: 5209836
-      cache_write: 289145
-      cost: 1.9659
+      input: 44
+      output: 11630
+      cache_read: 5493613
+      cache_write: 184767
+      cost: 2.3613
 ---
 # T-2525 TestServeSaysTheFlaiIsOlderThanTheProject finds why project.info answered nil on a loaded host and waits for an answer that holds the project
 

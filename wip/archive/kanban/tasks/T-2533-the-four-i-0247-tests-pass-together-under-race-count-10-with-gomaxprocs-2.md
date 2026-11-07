@@ -3,16 +3,37 @@ id: T-2533
 type: task
 nature: remediation
 title: "The four I-0247 tests pass together under -race -count=10 with GOMAXPROCS=2 beside a CPU load, and I-0247 is closed with what fixed each"
-status: backlog
+status: done
 parent: S-0569
 owner: alex
 created: 2026-11-07T03:48:10Z
-updated: 2026-11-07T03:48:10Z
-transitions: []
+updated: 2026-11-07T05:27:26Z
+transitions:
+  - to: ready
+    at: 2026-11-07T05:23:18Z
+    by: agent-S-0569
+  - to: in-progress
+    at: 2026-11-07T05:23:20Z
+    by: agent-S-0569
+  - to: done
+    at: 2026-11-07T05:27:26Z
+    by: agent-S-0569
 stream: S-0569
 tags: [flai, tests]
 touches: [design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md]
 after: [T-2522, T-2525, T-2528, T-2529]
+usage:
+  source: log
+  seconds: 246
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 5651
+      cache_read: 2669296
+      cache_write: 89777
+      cost: 1.1473
 ---
 # T-2533 The four I-0247 tests pass together under -race -count=10 with GOMAXPROCS=2 beside a CPU load, and I-0247 is closed with what fixed each
 
