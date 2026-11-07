@@ -2,12 +2,12 @@
 id: I-0302
 title: flai import writes no system-flow.lock.yaml, so the import formula's flai check --strict step fails on layout.lock
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-07T08:50:28Z
 last_reported: 2026-11-07T08:50:28Z
-updated: 2026-11-07T09:44:23Z
+updated: 2026-11-07T10:20:20Z
 ---
 
 # I-0302 flai import writes no system-flow.lock.yaml, so the import formula's flai check --strict step fails on layout.lock
@@ -24,3 +24,4 @@ S-0564's import run: the board's Import of /home/alex/git/flai-scratch-import (f
 ## Remediation
 
 Story S-0590 remediates this issue, created from it at 2026-11-07T09:44:23Z.
+Closed 2026-11-07T10:20:20Z: flai import writes system-flow.lock.yaml from the render's hashes and commits it with the import (S-0590, T-2570), so the import formula's flai check --strict step no longer fails on layout.lock
