@@ -3,12 +3,18 @@ id: T-2528
 type: task
 nature: remediation
 title: TestServeStartsADefinedRoleOnAnEventAndOnASchedule waits for the watcher's run for the move within a bound a host at load 76 does not reach
-status: backlog
+status: in-progress
 parent: S-0569
 owner: alex
 created: 2026-11-07T03:47:46Z
-updated: 2026-11-07T04:16:38Z
-transitions: []
+updated: 2026-11-07T04:41:22Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:41:20Z
+    by: agent-S-0569
+  - to: in-progress
+    at: 2026-11-07T04:41:22Z
+    by: agent-S-0569
 stream: S-0569
 tags: [flai, tests]
 touches: [flai/internal/serve/serve_test.go, flai/internal/serve/agents_test.go]

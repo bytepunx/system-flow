@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 117.5909
-accrued_seconds: 11321
-tasks_completed: 68
-last_run: 2026-11-07T04:26:34Z
+accrued_cost: 118.3532
+accrued_seconds: 11371
+tasks_completed: 69
+last_run: 2026-11-07T04:41:35Z
 ---
 
 # Curator activity
@@ -555,3 +555,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0168, D-0216, D-0272, D-0287, D-0311, D-0329, D-0356, D-0382, D-0403, D-0436, D-0470, D-0488, D-0489
 - Seconds: 460
 - Cost: 3.5292 USD, estimated
+
+### 2026-11-07T04:41:35Z
+
+- Summary: The digest gained nothing this run: no entries written, merged, or absorbed, and `flai digest compact` compacted none. S-0555's three candidates were left out because ADR-0256 already states its `narrative.missing` decision and the other two are planning notes.
+- Trigger: accepted S-0555
+- Items: none
+- Seconds: 50
+- Cost: 0.7623 USD, estimated

@@ -23,16 +23,16 @@ tags: [conventions, template]
 touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md]
 usage:
   source: log
-  seconds: 11
+  seconds: 23
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 10
-      cache_read: 395528
-      cache_write: 2809
-      cost: 0.1424
+      output: 1235
+      cache_read: 386569
+      cache_write: 11768
+      cost: 0.1962
 ---
 # T-2457 Both copies of safety.md name flai serve's force-with-lease push of a story's branch as the one exception git.md makes, and the template's changelog records it
 

@@ -3,10 +3,10 @@ id: S-0558
 type: story
 nature: remediation
 title: safety.md says every force push needs confirmation, while git.md exempts flai serve's force-with-lease push of a story's branch
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T00:04:34Z
-updated: 2026-11-07T04:37:10Z
+updated: 2026-11-07T04:44:25Z
 transitions:
   - to: ready
     at: 2026-11-07T04:21:54Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:37:10Z
     by: agent-S-0558
+  - to: review
+    at: 2026-11-07T04:42:37Z
+    by: agent-S-0558
+  - to: done
+    at: 2026-11-07T04:44:25Z
+    by: orchestrator
 tags: [conventions, template]
 topics: [git, safety]
-touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md, design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md]
+touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md, design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md, design/issues/I-0270-the-integration-and-smoke-tiers-when-names-template-but-their-paths-do-not.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md]
 agent:
   harness: container
   model: claude-opus-5-5
@@ -24,19 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 109
-  estimated: true
-  priced_by: estimate
+  seconds: 376
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      work: 9
+      test_runs: 1
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 74
-      cache_read: 1111501
-      cache_write: 199609
-      cost: 0.4687
+      input: 84
+      output: 25930
+      cache_read: 8116449
+      cache_write: 247089
+      cost: 4.1189
   strategic:
     - kind: orchestrator
       seconds: 188
@@ -73,8 +79,8 @@ finalized:
 This story remediates [I-0189](../../../design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md), "safety.md says every force push needs confirmation, while git.md exempts flai serve's force-with-lease push of a story's branch". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0189 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0189 is closed with `flai issue close I-0189 --reason` saying what fixed it
+- [x] The cause I-0189 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0189 is closed with `flai issue close I-0189 --reason` saying what fixed it
 
 ## Tasks
 - T-2457 Both copies of safety.md name flai serve's force-with-lease push of a story's branch as the one exception git.md makes, and the template's changelog records it
@@ -105,3 +111,20 @@ Cost of delay: 7.50 USD a week, flai's figure, kept. The input, `time_lost_per_c
 No story in `after`: the story reads only `git.md`'s exception, which S-0393 wrote and is on main.
 
 Test: none is planned. The cause is a contradiction between two sentences of prose. The template tier renders the template and runs `flai check --strict` on it, which is the check that applies.
+
+### Working
+
+Plan: the planner's two tasks kept unchanged, in two layers. T-2457 is the first. T-2458 waits for it, because its reason names the clause T-2457 writes. The story's agent worked both, without sub-agents: each is one line of prose or one call.
+
+No automated test reproduces the cause: it is a contradiction between two sentences of prose, which no test can judge. The template tier's render and `flai check --strict` of the rendered project is the check that applies, and a `diff` of the two baselines showed them identical.
+
+These decisions are recorded here, not in the narrative's `## Decisions`: this agent runs in a container that mounts `wip/` read-only, and `stream_state` writes only `## Current state` and `## Next steps`.
+
+### Accepted by the orchestrator
+
+- Verified: 6e4f917cdcd4afe0ec2e2dfbbd999b5aaeeff841
+- At: 2026-11-07T04:44:25Z
+
+Verdict: pass — both safety.md copies now name flai serve's --force-with-lease push of a story's own branch as the one exception git.md makes, and I-0189 is closed with a reason.
+- 1: design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md
+- 2: design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md

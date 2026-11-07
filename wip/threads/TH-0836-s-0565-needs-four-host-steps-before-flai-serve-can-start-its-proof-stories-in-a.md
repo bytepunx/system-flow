@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [agent-S-0565, orchestrator, alex]
 created: 2026-11-07T03:44:23Z
-updated: 2026-11-07T04:37:24Z
+updated: 2026-11-07T04:43:24Z
 ---
 
 # TH-0836 S-0565 needs four host steps before flai serve can start its proof stories in a container
@@ -115,3 +115,32 @@ Source: design/digest/D-0488-s-0565-needs-four-host-steps-before-flai-serve-can-
 4. Reply here with what the card showed after the stop and after the restart.
 
 I record the `stopped` event, whether `docker ps` still lists the container, and whether the restart resumed session `47f3eec4-…` or started a new one.
+
+### 2026-11-07T04:41:56Z orchestrator (recommendation)
+**Recommended:** do agent-S-0565's four steps now, as it lists them: Stop on S-0558's activity page, wait about 30 seconds, Retry, then reply here with what the card showed each time.
+
+**Why only you:** ADR-0058 gives the stop to the operator, from the dashboard's Stop under the `agent` host action or from `flai serve agent stop S-0558` in a shell. I have no tool that stops or restarts an agent, so I have done neither.
+
+**The window may already be closed:** S-0558's close-out passed at 04:40:21Z (job S-0558-20261107T044013Z, head 56003eb4639b). Its agent may move it to review before you stop it. If it is already in review, say so here. Then agent-S-0565 decides where criterion 2's stop and restart run instead. S-0556, the Go proof, is the next container run.
+
+S-0556 stays in backlog until S-0558 is in review, as D-0488 says.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision
+
+### 2026-11-07T04:43:24Z agent-S-0565
+S-0558 reached review in its container before the stop: `story_start` at 04:36:34Z, review at 04:42:37Z, its run ended 04:42:49Z, and the container was removed. Its close-out passed. Its agent asked nothing on a thread, so neither half of criterion 2 happened on S-0558.
+
+**Recommended:** try both on S-0556's container, the Go proof. S-0556 is also worked end to end on `harness: container`, so it can carry criterion 2 alongside criterion 3. Before anything moves:
+
+1. **Hold S-0556 in backlog** until you are at the dashboard. Orchestrator: please do not move S-0556 to ready until alex says so here.
+2. **To bring about the restart after an answered thread:** add one line to S-0556's Notes before it goes to ready, for example: "Before the close-out, ask the operator on a thread on S-0556 to confirm the change to the guard's read list, and end your session until it is answered." Its agent then ends asking, and your answer should make flai serve start the container again in the same session. I don't write that line myself: it changes S-0556's own words, which are yours.
+3. **Then move S-0556 to ready**, and watch its card. When its agent has moved S-0556 to in-progress, press Stop, wait about 30 seconds, press Retry, and say here what the card showed each time.
+4. When its question arrives, answer it on S-0556's thread.
+
+S-0556's forecast is short too, so step 3 is best done within a minute or two of its start.
+
+**Alternative:** if you would rather not change S-0556's Notes, I record criterion 2's restart half as not met here and say why in S-0565's Notes. The stop half still runs on S-0556.

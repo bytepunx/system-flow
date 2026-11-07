@@ -6,7 +6,7 @@ title: TestServeSaysTheFlaiIsOlderThanTheProject and TestServeStartsADefinedRole
 status: in-progress
 owner: alex
 created: 2026-11-02T21:41:39Z
-updated: 2026-11-07T04:15:08Z
+updated: 2026-11-07T04:41:16Z
 transitions:
   - to: ready
     at: 2026-11-07T03:56:09Z
@@ -16,16 +16,29 @@ transitions:
     by: agent-S-0569
 tags: [flai, tests]
 topics: [testing]
-touches: [flai/internal/serve/outdated_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/agents_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/host_integration_test.go, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md]
+touches: [flai/internal/serve/outdated_test.go, flai/internal/serve/serve_test.go, flai/internal/serve/agents_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/host_integration_test.go, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1542
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 2
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 198
+      output: 1406
+      cache_read: 21652754
+      cache_write: 1117021
+      cost: 8.1402
   strategic:
     - kind: planner
       seconds: 319
