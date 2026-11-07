@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 140.7348
-accrued_seconds: 13551
-tasks_completed: 86
-last_run: 2026-11-07T11:29:40Z
+accrued_cost: 141.7939
+accrued_seconds: 13597
+tasks_completed: 87
+last_run: 2026-11-07T12:10:37Z
 ---
 
 # Curator activity
@@ -699,3 +699,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0514
 - Seconds: 301
 - Cost: 1.8757 USD, estimated
+
+### 2026-11-07T12:10:37Z
+
+- Summary: Nothing to take in: `flai digest harvest --since 2026-11-07T11:29:40Z` found no candidates, so I wrote no entries and merged none. I absorbed none: the only file changed under `design/` or `docs/` since the last run is D-0514 itself, and no design document or ADR states D-0514's fact, so it stays active. `flai digest compact` compacted none.
+- Trigger: accepted S-0588
+- Items: none
+- Seconds: 46
+- Cost: 1.0591 USD, estimated

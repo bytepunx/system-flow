@@ -3,10 +3,10 @@ id: S-0543
 type: story
 nature: remediation
 title: "TestAChangedFileReachesTheDashboardAsANotification fails its temp folder's cleanup with \"directory not empty\", as I-0048's serve tests did"
-status: review
+status: done
 owner: alex
 created: 2026-10-29T17:25:41Z
-updated: 2026-11-07T10:21:44Z
+updated: 2026-11-07T15:15:20Z
 transitions:
   - to: ready
     at: 2026-11-07T10:02:26Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T10:21:44Z
     by: agent-S-0543
+  - to: done
+    at: 2026-11-07T15:15:20Z
+    by: alex
 tags: [flai, serve, test]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md, design/issues/summary.md]
 agent:
