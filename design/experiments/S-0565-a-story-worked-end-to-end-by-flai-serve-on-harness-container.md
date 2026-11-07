@@ -63,4 +63,4 @@ Not yet run.
 
 ## Recommendation
 
-Not yet made.
+Pending: whether to adopt, adapt, or drop running this repository's stories on `harness: container` is decided once both proof runs are recorded (T-2453).
