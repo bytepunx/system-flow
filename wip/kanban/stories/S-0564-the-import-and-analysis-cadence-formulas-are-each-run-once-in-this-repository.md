@@ -114,6 +114,38 @@ Run each baseline formula S-0424 shipped once in this repository, so that the ep
 - **The import run (from T-1787).** Make a scratch git repository under a folder the host serves for import (`flai serve import add`), outside this repository. Import it from the board's Import, which runs `flai import --formula`. The instance is a story in the imported project, worked by a story's agent on its branch and worktree, so the host needs the `agent` host action on for the new project. Watch the instance reach review, and have it accepted. Record the instance's ID and each step's exit in this story's Notes. Remove the scratch repository afterwards only with the operator's word.
 - **The cadence run (from T-1788).** With the `analyze` host action on, run `flai formula run analysis-cadence --input focus=<focus> --ready --autocommit` in the main checkout, with the focus the operator chooses when finalizing this story, or none for all three. The instance's agent starts the analyzer step with `role_run`, waits for the run's `agent` event on the instance, then runs the listing step. Watch the instance reach review, and have it accepted. Record in this story's Notes the instance's ID, the report it wrote, the issues it names, and the run's cost.
 
+### The runs, 2026-11-07
+
+**The import run: S-0001 in `/home/alex/git/flai-scratch-import`, accepted.**
+
+- **Scratch repository.** `/home/alex/git/flai-scratch-import`, below `/home/alex/git`, a folder `flai serve import list` names. One commit, `aedf008`, with a `README.md` and a `Makefile` whose `test` target passes. It stays until the operator says to remove it.
+- **Import.** The operator pressed Import on the board at 08:25:46Z (TH-0853). `flai import --formula` committed the import as `1e7935b` and made the instance S-0001, ready, at `f52c1d3`. The operator turned on `agent` for the project at 08:26:06Z.
+- **No agent until started by hand.** S-0001 had entered ready before `agent` was on, so flai serve never started it (I-0300). The operator started it on TH-0860.
+- **Step 1, T-0001, `flai check --strict`.** It exited 1 on one warning: `layout.lock: template 1.1.24 is recorded but there is no system-flow.lock.yaml`. The import writes no lock (I-0302). The agent blocked on TH-0001 from 08:42:57Z to 08:48:56Z. The operator allowed `flai upgrade --relock` as a one-off, which relocked 74 files in `f71d76d`. The check then exited 0.
+- **Step 2, T-0002, `flai import test`.** It exited 0: `make test` passed.
+- **Acceptance.** S-0001 was accepted and archived at `049cf36`. Its branch changed `system-flow.yaml` and `system-flow.lock.yaml`, through the relock, though the formula says the branch changes nothing.
+- **Cost.** 0.27 USD and 0.43 USD over S-0001's two agent sessions (30 s and 60 s), from their logs.
+
+**The cadence run: S-0584, accepted.**
+
+- **Instance.** `flai formula run analysis-cadence --ready --autocommit` ran in the main checkout with the focus empty, so all three areas. The operator finalized this story without choosing a focus, and the Notes say none in that case. It made S-0584 (T-2545 analyze, T-2547 issues) in ready at `aa01853e5`.
+- **Held by its own starter.** S-0584 entered ready with no touches, and was held (no-touches) by S-0564 itself. `flai touches S-0584 --add` on its own story file cleared it (I-0282).
+- **Step 1, T-2545, the analyzer role step.** The analyzer started at 08:04:52Z and ended with its work done at 08:22:44Z. The end came late: the stdio `flai mcp` held the run as a zombie, so S-0584 waited on TH-0859 (I-0299, recorded by S-0584).
+  - It wrote `design/analysis/2026-11-07-all.md`, with 18 findings.
+  - It filed I-0284 to I-0298, and bumped I-0230, I-0246, I-0257, and I-0268.
+- **Step 2, T-2547, `flai issue list --report latest --json`.** It exited 0 in the main checkout. It named 19 open issues: I-0230, I-0246, I-0257, I-0268, and I-0284 to I-0298. S-0584's Notes list each with its title and class.
+- **Acceptance.** The orchestrator accepted S-0584 under `accept_reviews`, archived at `07fa45be7`.
+- **Cost.** The analyzer: 15.50 USD over 796 s, from its log. S-0584's agent: 5.20 USD in its first session. Its second session's log reports 6.56 USD, which looks cumulative across both.
+
+**Faults the runs found in flai, filed by T-2534:**
+
+| Issue | Class | Fault |
+|-------|-------|-------|
+| I-0282 | defect | A formula's instance declares no touches, so the story that started it holds it until that story leaves in-progress |
+| I-0300 | defect | A story already in ready when `agent` is turned on gets no agent until someone presses Start agent |
+| I-0302 | defect | `flai import` writes no `system-flow.lock.yaml`, so the import formula's `flai check --strict` step fails on `layout.lock` |
+| I-0299 | defect | Recorded by S-0584: a role run that the stdio MCP server starts through `role_run` is never reaped |
+
 ### Planning
 
 - **Plan thread.** TH-0845, 2026-11-07. It asks the operator three questions, each with a recommendation. Question 1 is the cadence's focus: none, for all three, is recommended. Question 2 is where the scratch repository goes and who presses the board's Import: the story's agent makes it below a folder already named for import, and the operator presses Import and turns on `agent` for the new project. Question 3 is the cost of delay's basis, which the orchestrator settled with an input. T-2514 and T-2520 check the first two answers before they run anything.
