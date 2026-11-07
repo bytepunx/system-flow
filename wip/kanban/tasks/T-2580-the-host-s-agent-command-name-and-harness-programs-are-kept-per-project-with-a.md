@@ -3,11 +3,11 @@ id: T-2580
 type: task
 nature: remediation
 title: The host's agent command, name, and harness programs are kept per project, with a host-wide fallback, so setting them for one project changes no other
-status: in-progress
+status: done
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:12:11Z
-updated: 2026-11-07T10:32:03Z
+updated: 2026-11-07T10:52:40Z
 transitions:
   - to: ready
     at: 2026-11-07T10:32:00Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:32:03Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:52:40Z
+    by: agent-S-0587
 stream: S-0587
 tags: [cli, config]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
 after: [T-2577]
+usage:
+  source: log
+  seconds: 1166
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 523
+      cache_read: 18047673
+      cache_write: 107799
+      cost: 6.5121
 ---
 # T-2580 The host's agent command, name, and harness programs are kept per project, with a host-wide fallback, so setting them for one project changes no other
 

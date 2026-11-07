@@ -3,11 +3,11 @@ id: T-2583
 type: task
 nature: remediation
 title: The story page and the host agent notice render the refusal's settings pages as links
-status: in-progress
+status: done
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:12:44Z
-updated: 2026-11-07T10:32:07Z
+updated: 2026-11-07T10:52:10Z
 transitions:
   - to: ready
     at: 2026-11-07T10:32:05Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:32:07Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:52:10Z
+    by: agent-S-0587
 stream: S-0587
 tags: [dashboard]
 touches: [flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts]
 after: [T-2577]
+usage:
+  source: log
+  seconds: 1162
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 357
+      cache_read: 8303203
+      cache_write: 36086
+      cost: 2.9912
 ---
 # T-2583 The story page and the host agent notice render the refusal's settings pages as links
 

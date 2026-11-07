@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 652
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 67
-      output: 22160
-      cache_read: 8058371
-      cache_write: 135751
-      cost: 2.8388
+      input: 53
+      output: 16031
+      cache_read: 8047698
+      cache_write: 102356
+      cost: 2.5139
 ---
 # T-2564 The Deployments page and the Features toggle say a block's state without naming a command, and a refused toggle shows its real state at once
 

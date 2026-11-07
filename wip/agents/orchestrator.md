@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2011.7543
-accrued_seconds: 1517718
-tasks_completed: 2148
-last_run: 2026-11-07T10:34:45Z
+accrued_cost: 2012.2822
+accrued_seconds: 1517968
+tasks_completed: 2152
+last_run: 2026-11-07T10:39:08Z
 ---
 
 # Orchestrator activity
@@ -15066,6 +15066,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0590, S-0588, S-0241
 - Seconds: 42
 - Cost: 0.1744 USD, estimated
+
+### 2026-11-07T10:36:37Z
+
+- Summary: Accepted S-0589 at 2f76320f under accept_reviews: verify passed at the branch head, verifier passed both criteria (agents_test.go, operators guide, flai-cli.md; I-0300 closed), dry run had no blockers. Then release_evaluate met under threshold (count 5 >= 1, 90 USD/week: S-0560, S-0561, S-0568, S-0589, S-0590); no new publish formula run, since instance S-0588 is already in ready and publishes the whole batch.
+- Items: S-0589, S-0588
+- Seconds: 112
+- Cost: 0.1186 USD, estimated
+
+### 2026-11-07T10:37:19Z
+
+- Summary: I accepted S-0589, and I published nothing new because the publish story S-0588 is already waiting in ready. All three reasons are done and this run is over.
+- Items: none
+- Seconds: 42
+- Cost: 0.2462 USD, estimated
+
+### 2026-11-07T10:38:11Z
+
+- Summary: release-due S-0589: release_evaluate met under threshold (count 5 >= 1, 90 USD/week against 1000: S-0560, S-0561, S-0568, S-0589, S-0590). No new publish formula run: instance S-0588 is already in ready (held no-touches by S-0406, S-0586, S-0587) and publishes everything accepted and unreleased, so a second instance would duplicate it.
+- Items: S-0589, S-0588
+- Seconds: 39
+- Cost: 0.0880 USD, estimated
+
+### 2026-11-07T10:39:08Z
+
+- Summary: A release is due, but I didn't start a new publish run: S-0588, the publish story made earlier today, is already in ready and will release this batch.
+- Items: none
+- Seconds: 57
+- Cost: 0.0751 USD, estimated
 
 ## Refusals
 

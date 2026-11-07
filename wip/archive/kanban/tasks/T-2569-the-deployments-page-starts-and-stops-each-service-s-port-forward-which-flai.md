@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1089
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 87
-      output: 650
-      cache_read: 16768231
-      cache_write: 103340
-      cost: 5.8295
+      input: 113
+      output: 33859
+      cache_read: 16997510
+      cache_write: 216185
+      cost: 5.3096
 ---
 # T-2569 The Deployments page starts and stops each service's port-forward, which flai serve runs on the host bound to 0.0.0.0
 

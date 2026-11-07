@@ -24,7 +24,7 @@ touches: [design/adrs]
 after: [T-1682]
 usage:
   source: log
-  seconds: 49
+  seconds: 52
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 6
       cache_read: 313912
       cache_write: 6374
-      cost: 0.1148
+      cost: 0.1149
 ---
 # T-1686 An ADR records where flai writes a story's OpenCode configuration so the worktree stays clean, and how it merges the project's own opencode.json
 

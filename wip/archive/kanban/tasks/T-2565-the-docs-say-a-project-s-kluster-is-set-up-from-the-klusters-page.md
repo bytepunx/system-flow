@@ -24,16 +24,16 @@ touches: [design/system/kluster.md, design/system/flai-cli.md, design/system/fla
 after: [T-2559, T-2561, T-2563, T-2564, T-2569]
 usage:
   source: log
-  seconds: 630
+  seconds: 662
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 384
-      cache_read: 10646628
-      cache_write: 51972
-      cost: 3.6966
+      input: 72
+      output: 21471
+      cache_read: 10778463
+      cache_write: 137087
+      cost: 3.3669
 ---
 # T-2565 The docs say a project's kluster is set up from the Klusters page
 

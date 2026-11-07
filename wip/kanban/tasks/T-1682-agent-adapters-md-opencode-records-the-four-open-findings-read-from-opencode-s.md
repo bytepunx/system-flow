@@ -32,7 +32,7 @@ usage:
       output: 1053
       cache_read: 11158607
       cache_write: 213688
-      cost: 4.0781
+      cost: 4.0794
 ---
 # T-1682 agent-adapters.md § OpenCode records the four open findings, read from OpenCode's source and documentation at a pinned release
 

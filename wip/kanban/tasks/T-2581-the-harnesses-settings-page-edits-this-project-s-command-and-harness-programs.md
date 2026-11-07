@@ -3,15 +3,21 @@ id: T-2581
 type: task
 nature: remediation
 title: The Harnesses settings page edits this project's command and harness programs, and changes every project only when the operator chooses everywhere
-status: backlog
+status: in-progress
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:12:25Z
-updated: 2026-11-07T10:12:25Z
-transitions: []
+updated: 2026-11-07T10:57:45Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:57:41Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:57:45Z
+    by: system-flow
 stream: S-0587
 tags: [dashboard]
-touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
+touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
 after: [T-2580]
 ---
 # T-2581 The Harnesses settings page edits this project's command and harness programs, and changes every project only when the operator chooses everywhere

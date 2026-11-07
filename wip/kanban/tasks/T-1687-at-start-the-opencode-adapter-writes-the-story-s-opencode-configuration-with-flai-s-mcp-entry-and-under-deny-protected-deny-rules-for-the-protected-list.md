@@ -3,16 +3,37 @@ id: T-1687
 type: task
 nature: feature
 title: At start the opencode adapter writes the story's OpenCode configuration with flai's MCP entry and, under deny-protected, deny rules for the protected list
-status: backlog
+status: done
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:27Z
-updated: 2026-10-16T05:14:27Z
-transitions: []
+updated: 2026-11-07T10:55:17Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:43:48Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:43:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T10:55:17Z
+    by: agent-S-0406
 stream: S-0406
 tags: [cli]
-touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go]
+touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness.go]
 after: [T-1683, T-1685, T-1686]
+usage:
+  source: log
+  seconds: 686
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 415
+      cache_read: 3946424
+      cache_write: 133791
+      cost: 1.4636
 ---
 # T-1687 At start the opencode adapter writes the story's OpenCode configuration with flai's MCP entry and, under deny-protected, deny rules for the protected list
 

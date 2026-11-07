@@ -3,11 +3,11 @@ id: T-2578
 type: task
 nature: remediation
 title: flai's built-in default agent, claude-code with no model, is what an agent falls back to when neither it, the project's default, nor the host's command names a harness
-status: in-progress
+status: done
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:11:59Z
-updated: 2026-11-07T10:31:52Z
+updated: 2026-11-07T10:51:29Z
 transitions:
   - to: ready
     at: 2026-11-07T10:31:50Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:31:52Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:51:29Z
+    by: agent-S-0587
 stream: S-0587
 tags: [cli]
 touches: [flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/agent.go, flai/internal/workitem/agent_test.go]
 after: [T-2577]
+usage:
+  source: log
+  seconds: 1177
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 123
+      cache_read: 2987510
+      cache_write: 25310
+      cost: 1.0807
 ---
 # T-2578 flai's built-in default agent, claude-code with no model, is what an agent falls back to when neither it, the project's default, nor the host's command names a harness
 

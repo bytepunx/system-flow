@@ -3,16 +3,37 @@ id: T-1688
 type: task
 nature: feature
 title: flai serve starts a story's agent on a stub opencode that replays a fixture stream, and its refusals for opencode are tested
-status: backlog
+status: done
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:38Z
-updated: 2026-11-07T09:39:45Z
-transitions: []
+updated: 2026-11-07T11:06:02Z
+transitions:
+  - to: ready
+    at: 2026-11-07T10:55:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T10:55:45Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T11:06:02Z
+    by: agent-S-0406
 stream: S-0406
 tags: [cli]
 touches: [flai/internal/serve/agents_test.go, flai/internal/serve/testdata/opencode-run.jsonl, flai/internal/serve/agents.go]
 after: [T-1682, T-1687]
+usage:
+  source: log
+  seconds: 617
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 409
+      cache_read: 3440655
+      cache_write: 120884
+      cost: 1.2776
 ---
 # T-1688 flai serve starts a story's agent on a stub opencode that replays a fixture stream, and its refusals for opencode are tested
 

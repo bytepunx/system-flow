@@ -3,15 +3,21 @@ id: T-1689
 type: task
 nature: feature
 title: The operator, user, and design docs, the reference, and the template describe the opencode harness and what a story on it has and lacks
-status: backlog
+status: in-progress
 parent: S-0406
 owner: alex
 created: 2026-10-16T05:14:43Z
-updated: 2026-11-07T09:33:10Z
-transitions: []
+updated: 2026-11-07T11:12:55Z
+transitions:
+  - to: ready
+    at: 2026-11-07T11:06:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T11:06:25Z
+    by: system-flow
 stream: S-0406
 tags: [cli, template]
-touches: [docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, template/root/opencode.json, template/CHANGELOG.md]
+touches: [docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, template/root/opencode.json, template/CHANGELOG.md, design/system/agent-adapters.md, docs/operators/settings.md, flai/cmd/serve_actions.go]
 after: [T-1684, T-1688]
 ---
 # T-1689 The operator, user, and design docs, the reference, and the template describe the opencode harness and what a story on it has and lacks

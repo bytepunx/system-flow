@@ -24,13 +24,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 553
+  seconds: 1773
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-07
       ceremony: 2
-      work: 26
+      hand_edits: 1
+      work: 34
   models:
     - model: claude-haiku-5-5
       input: 40
@@ -39,11 +40,11 @@ usage:
       cache_write: 99357
       cost: 0.0966
     - model: claude-opus-5-5
-      input: 60
-      output: 347
-      cache_read: 6370491
-      cache_write: 297163
-      cost: 2.3912
+      input: 268
+      output: 1613
+      cache_read: 41704731
+      cache_write: 833995
+      cost: 15.2581
   strategic:
     - kind: planner
       seconds: 1121

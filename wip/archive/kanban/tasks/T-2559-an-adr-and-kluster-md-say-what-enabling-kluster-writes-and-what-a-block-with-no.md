@@ -25,7 +25,7 @@ usage:
   source: log
   seconds: 1126
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
       input: 12
@@ -34,11 +34,11 @@ usage:
       cache_write: 52289
       cost: 0.0096
     - model: claude-opus-5-5
-      input: 37
-      output: 247
-      cache_read: 6190643
-      cache_write: 54139
-      cost: 2.1577
+      input: 42
+      output: 12532
+      cache_read: 6291400
+      cache_write: 80018
+      cost: 1.9653
 ---
 # T-2559 An ADR and kluster.md say what enabling kluster writes and what a block with no deploy means
 

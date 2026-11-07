@@ -32,7 +32,7 @@ usage:
       output: 311
       cache_read: 2063648
       cache_write: 100236
-      cost: 0.776
+      cost: 0.7763
 ---
 # T-1684 flai check warns when a project has neither AGENTS.md nor CLAUDE.md at its root
 

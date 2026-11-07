@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 136.6526
-accrued_seconds: 12998
-tasks_completed: 83
-last_run: 2026-11-07T10:35:13Z
+accrued_cost: 138.2374
+accrued_seconds: 13184
+tasks_completed: 84
+last_run: 2026-11-07T10:39:40Z
 ---
 
 # Curator activity
@@ -675,3 +675,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0427, D-0491
 - Seconds: 84
 - Cost: 1.2864 USD, estimated
+
+### 2026-11-07T10:39:40Z
+
+- Summary: I wrote D-0512 and D-0513 from S-0589, merged S-0589 into D-0501, absorbed none, and `flai digest compact` compacted none. D-0512 records the cause of I-0300: the ready story got no agent because the imported project's default agent named no harness and no host command was set, not because of when it entered ready, and the reason shows in `serve.log` and the story's `waiting`, never the journal. D-0513 records that the `time.After` timer in `flai serve`'s project loop stays unchanged until a measurement shows a delay. D-0501 now corrects the reason it gave, which S-0589 disproved, and points to D-0512. S-0589's other three decisions only record planning and progress. The absorption search covered the entries near `design/system/flai-cli.md`, the one design file changed since the last run: it now states ADR-0041's behaviour, but no entry's fact.
+- Trigger: accepted S-0589
+- Items: D-0501, D-0512, D-0513
+- Seconds: 186
+- Cost: 1.5848 USD, estimated

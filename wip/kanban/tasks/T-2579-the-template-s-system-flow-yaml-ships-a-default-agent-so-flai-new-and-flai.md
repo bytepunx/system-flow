@@ -3,11 +3,11 @@ id: T-2579
 type: task
 nature: remediation
 title: The template's system-flow.yaml ships a default agent, so flai new and flai import write one into every new project
-status: in-progress
+status: done
 parent: S-0587
 owner: alex
 created: 2026-11-07T10:12:05Z
-updated: 2026-11-07T10:31:58Z
+updated: 2026-11-07T10:51:56Z
 transitions:
   - to: ready
     at: 2026-11-07T10:31:56Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T10:31:58Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T10:51:56Z
+    by: agent-S-0587
 stream: S-0587
 tags: [template, cli]
 touches: [template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/cmd/new_test.go, flai/cmd/import_test.go]
 after: [T-2577]
+usage:
+  source: log
+  seconds: 1171
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 204
+      cache_read: 4392746
+      cache_write: 353354
+      cost: 1.7024
 ---
 # T-2579 The template's system-flow.yaml ships a default agent, so flai new and flai import write one into every new project
 

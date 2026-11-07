@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1442
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 184
-      output: 60476
-      cache_read: 21991459
-      cache_write: 370468
-      cost: 7.7472
+      input: 146
+      output: 43749
+      cache_read: 21962331
+      cache_write: 279330
+      cost: 6.8605
 ---
 # T-2563 The Klusters page leads an operator through first-time setup and then manages the cluster, with no shell or file edit
 

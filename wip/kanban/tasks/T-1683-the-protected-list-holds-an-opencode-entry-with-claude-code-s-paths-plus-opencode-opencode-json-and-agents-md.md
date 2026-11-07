@@ -32,7 +32,7 @@ usage:
       output: 271
       cache_read: 1347008
       cache_write: 87758
-      cost: 0.5146
+      cost: 0.5147
 ---
 # T-1683 The protected list holds an opencode entry with Claude Code's paths plus .opencode/, opencode.json, and AGENTS.md
 

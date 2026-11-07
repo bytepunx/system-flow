@@ -23,7 +23,7 @@ tags: [cli, adr]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 178
+  seconds: 180
   estimated: true
   priced_by: estimate
   models:
@@ -38,7 +38,7 @@ usage:
       output: 118
       cache_read: 2387820
       cache_write: 19317
-      cost: 0.8633
+      cost: 0.8634
 ---
 # T-2577 An ADR decides the built-in default agent, the template's default, per-project host agent settings, and the refusal's links to the settings pages
 
