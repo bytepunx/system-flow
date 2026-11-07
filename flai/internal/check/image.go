@@ -45,9 +45,13 @@ func DockerImage(r execx.Runner) ImageProbe {
 // image, built over the claude-code harness image, is not on this host, a
 // warning --strict passes over, since only building it clears it, which no
 // story branch does. When docker is not on PATH or cannot say, it adds a note
-// --strict passes over that the image went unchecked. A manifest naming no
-// layer gets nothing. The caller supplies the probe so this package runs no
-// commands (S-0510).
+// --strict passes over that the image went unchecked. Those three are marked
+// unchecked, with the manifest and the layer as the paths whose change brings
+// them inside a story, so a check scoped to a story that changes neither
+// leaves them out (ADR-0255, I-0264); the warning for a layer that is not a
+// file is not, since a story can fix it. A manifest naming no layer gets
+// nothing. The caller supplies the probe so this package runs no commands
+// (S-0510).
 func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 	layer := repo.Manifest.Layer()
 	if layer == "" {
@@ -56,7 +60,12 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 	mf := filepath.Join(repo.Root, manifest.File)
 	line := layerLine(mf)
 	add := func(advisory bool, msg string) {
-		res.Findings = append(res.Findings, Finding{Level: Warning, Rule: "agent.image", Path: manifest.File, Line: line, Message: msg, advisory: advisory})
+		f := Finding{Level: Warning, Rule: "agent.image", Path: manifest.File, Line: line, Message: msg, advisory: advisory}
+		if advisory {
+			// Only the host clears it (ADR-0255).
+			f.unchecked, f.inside = true, []string{manifest.File, layer}
+		}
+		res.Findings = append(res.Findings, f)
 		res.Warnings++
 		if advisory {
 			res.Advisory++

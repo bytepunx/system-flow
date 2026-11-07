@@ -3,6 +3,7 @@ package check
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -36,7 +37,12 @@ import (
 // svelte, unless one of changed is under the examples folder it names, or a
 // folder of changed holds it: only installing the tool clears it, which no
 // story branch does; when one is, the story's own examples went unchecked,
-// and the note is inside it (ADR-0171, I-0161). So is a markdown or
+// and the note is inside it (ADR-0171, I-0161). So are the agent.image
+// findings only the host clears, docker not on PATH, docker unable to say,
+// and the layer's image not built, unless one of changed is system-flow.yaml
+// or the layer's Dockerfile, or a folder of changed holds either: only
+// installing or starting Docker, or building the image, clears them, which no
+// story branch does (ADR-0255, I-0264). So is a markdown or
 // narrative.state finding on the narrative of another story that is neither
 // done nor cancelled: that story's own close-out finds it (ADR-0123, I-0096;
 // ADR-0125, I-0109). So is a touches.folder on another story, and a
@@ -116,7 +122,8 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	}
 	// under reports whether a changed path is folder or under it, or a
 	// changed folder holds it: an unchecked note's folder is no changed path
-	// itself (ADR-0171).
+	// itself (ADR-0171). folder may be a file, as an agent.image finding's
+	// manifest and layer are (ADR-0255).
 	under := func(folder string) bool {
 		folder = resolve(folder)
 		for _, p := range paths {
@@ -135,7 +142,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
 			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
-			(f.unchecked && !under(f.Path)) ||
+			(f.unchecked && !under(f.Path) && !slices.ContainsFunc(f.inside, under)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue

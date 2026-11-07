@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -85,6 +86,12 @@ func TestAgentImage(t *testing.T) {
 			}
 			if f.advisory != c.advisory || (res.Advisory == 1) != c.advisory {
 				t.Errorf("advisory = %v (count %d), want %v", f.advisory, res.Advisory, c.advisory)
+			}
+			// Only the host clears an advisory one, so it is marked for a
+			// scoped check to leave out unless the manifest or the layer
+			// changed (ADR-0255).
+			if f.unchecked != c.advisory || (c.advisory && !slices.Equal(f.inside, []string{manifest.File, layer})) {
+				t.Errorf("unchecked = %v inside %v, want %v", f.unchecked, f.inside, c.advisory)
 			}
 			if res.OK(true) == !c.advisory {
 				t.Errorf("--strict passes = %v, want %v", res.OK(true), c.advisory)

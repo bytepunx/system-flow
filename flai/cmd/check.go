@@ -46,9 +46,12 @@ thread on an archived item that only the operator or the thread's opener
 resolves in the main checkout, the note components.examples gives when it
 could not check examples for want of node or a sub-project's svelte, unless
 the story changes a file under the folder it names, which only installing
-the tool clears, and a markdown or narrative.state finding on the narrative
-of another story that is neither done nor cancelled, which that story's own
-close-out finds. A finding outside keeps its level and is printed with
+the tool clears, the agent.image findings that the project's image layer
+went unchecked for want of docker or is not built, unless the story changes
+system-flow.yaml or the layer's Dockerfile, which only the host's Docker and
+its built image clear, and a markdown or narrative.state finding on the
+narrative of another story that is neither done nor cancelled, which that
+story's own close-out finds. A finding outside keeps its level and is printed with
 "(outside S-nnnn)"; it is a note that neither an error nor --strict fails
 on, and the summary counts it, as does outside in --json. Without --story
 every finding counts, as the main branch's check needs.
@@ -228,10 +231,12 @@ func (r recordedIssue) describe() string {
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
 // does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), a
-// threads.archived (ADR-0137), and the components.examples note for examples
-// left unchecked for want of node or a sub-project's svelte (ADR-0171)
-// outside the story and a markdown or narrative.state finding on another open
-// story's narrative (ADR-0123, ADR-0125).
+// threads.archived (ADR-0137), the components.examples note for examples
+// left unchecked for want of node or a sub-project's svelte (ADR-0171), and
+// the agent.image findings that the image layer went unchecked for want of
+// docker or is not built (ADR-0255), outside the story, and a markdown or
+// narrative.state finding on another open story's narrative (ADR-0123,
+// ADR-0125).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {

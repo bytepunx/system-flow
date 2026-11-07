@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -950,4 +951,131 @@ func writeConversation(t *testing.T, root, from, to string) {
 	if err := os.WriteFile(p, []byte(doc), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// runScopedImage is runScoped with the agent.image check run over a manifest
+// naming the layer images/agent/Dockerfile, which exists, and probe
+// answering for its image.
+func runScopedImage(t *testing.T, root string, changed []string, layerFile bool, probe ImageProbe) (*Result, *Result) {
+	t.Helper()
+	if layerFile {
+		writeFile(t, filepath.Join(root, "images", "agent", "Dockerfile"), "ARG BASE\nFROM ${BASE}\n")
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo.Manifest.Agent = &manifest.Agent{Image: &manifest.AgentImage{Layer: "images/agent/Dockerfile"}}
+	run := func() *Result {
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		AgentImage(res, repo, probe)
+		return res
+	}
+	whole, scoped := run(), run()
+	if err := ScopeToStory(scoped, repo, "S-004", changed); err != nil {
+		t.Fatal(err)
+	}
+	return whole, scoped
+}
+
+// imageFindings is res's agent.image findings.
+func imageFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "agent.image" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// I-0264, ADR-0255: S-0520's close-out, run inside the agent container where
+// docker is never on PATH, recorded the agent.image note on system-flow.yaml,
+// which S-0520 did not change, and then stopped on the uncommitted issue
+// file. Scoped to a story that changes neither the manifest nor the layer's
+// Dockerfile, the three findings only the host clears are left out, with the
+// counts they added; scoped to one that changes either, they are inside it,
+// advisory. Unscoped, each is reported as before.
+func TestScopedCheckLeavesOutAnAgentImageFindingOnlyTheHostClears(t *testing.T) {
+	probes := []struct {
+		name  string
+		probe ImageProbe
+	}{
+		{"docker not on PATH", func(string) (bool, error) { return false, ErrNoDocker }},
+		{"docker cannot say", func(string) (bool, error) { return false, os.ErrDeadlineExceeded }},
+		{"not built", func(string) (bool, error) { return false, nil }},
+	}
+	for _, p := range probes {
+		for _, tc := range []struct {
+			name    string
+			changed []string
+			inside  bool
+		}{
+			{"nothing of the image changed", []string{"flai/main.go"}, false},
+			{"no changed path", nil, false},
+			{"a file beside the layer", []string{"images/agent/README.md"}, false},
+			{"the manifest changed", []string{"system-flow.yaml"}, true},
+			{"the Dockerfile changed", []string{"images/agent/Dockerfile"}, true},
+			{"a folder holding the Dockerfile changed", []string{"images/"}, true},
+		} {
+			t.Run(p.name+", "+tc.name, func(t *testing.T) {
+				whole, scoped := runScopedImage(t, scopeProject(t), tc.changed, true, p.probe)
+				got := imageFindings(whole)
+				if len(got) != 1 || !got[0].unchecked || !got[0].advisory || got[0].Outside {
+					t.Fatalf("unscoped, the run should report one unchecked agent.image finding: %+v", got)
+				}
+				got = imageFindings(scoped)
+				if !tc.inside {
+					if len(got) != 0 {
+						t.Errorf("scoped to S-004, which changes %v, the finding should be left out: %+v", tc.changed, got)
+					}
+					if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+						t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+					}
+					for _, f := range scoped.Findings {
+						if f.Rule == "agent.image" {
+							t.Errorf("left out, yet kept: %+v", f)
+						}
+					}
+				} else if len(got) != 1 || got[0].Outside || !got[0].advisory {
+					t.Errorf("scoped to S-004, which changes %v, the finding should be inside it, advisory: %+v", tc.changed, got)
+				}
+				assertCountsMatch(t, scoped)
+				advisory := 0
+				for _, f := range scoped.Findings {
+					if f.advisory && !f.Outside {
+						advisory++
+					}
+				}
+				if scoped.Advisory != advisory {
+					t.Errorf("scoped advisory %d, the findings kept give %d", scoped.Advisory, advisory)
+				}
+				if !scoped.OK(true) {
+					t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+				}
+			})
+		}
+	}
+}
+
+// ADR-0255 §1: a layer that is not a file is a story's to fix, so scoped to a
+// story that does not change the manifest it stays a note outside the story,
+// as any other finding there does.
+func TestScopedCheckNotesAMissingLayerOutsideTheStory(t *testing.T) {
+	built := func(string) (bool, error) { return true, nil }
+	whole, scoped := runScopedImage(t, scopeProject(t), []string{"flai/main.go"}, false, built)
+	if got := imageFindings(whole); len(got) != 1 || got[0].unchecked || got[0].advisory || !strings.Contains(got[0].Message, "not a file") {
+		t.Fatalf("unscoped, the run should report the missing layer: %+v", got)
+	}
+	got := imageFindings(scoped)
+	if len(got) != 1 || !got[0].Outside || !strings.Contains(got[0].Message, "not a file") {
+		t.Errorf("scoped to S-004, the missing layer should be a note outside it: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings) || scoped.Warnings != whole.Warnings {
+		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings), whole.Warnings)
+	}
+	assertCountsMatch(t, scoped)
 }

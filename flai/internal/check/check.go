@@ -63,10 +63,16 @@ type Finding struct {
 	Stories []string `json:"stories,omitempty"`
 	// advisory marks a warning --strict passes over (advise).
 	advisory bool
-	// unchecked marks a components.examples note that examples were left
-	// unchecked for want of a tool on the host or in the worktree, node or a
-	// sub-project's svelte (ADR-0171).
+	// unchecked marks a finding only the host clears: a components.examples
+	// note that examples were left unchecked for want of a tool on the host or
+	// in the worktree, node or a sub-project's svelte (ADR-0171), or an
+	// agent.image finding that the layer's image went unchecked for want of
+	// docker or is not built (ADR-0255, I-0264). A check scoped to a story
+	// leaves it out unless the story changes its path or one of inside.
 	unchecked bool
+	// inside are the paths, relative to the project root, besides Path, whose
+	// change brings an unchecked finding inside a story (ADR-0255).
+	inside []string
 }
 
 // Result is a whole run.
