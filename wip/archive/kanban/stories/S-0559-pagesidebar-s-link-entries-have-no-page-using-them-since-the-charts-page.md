@@ -3,10 +3,10 @@ id: S-0559
 type: story
 nature: improvement
 title: PageSidebar's link entries have no page using them since the charts page dropped its sidebar
-status: review
+status: done
 owner: alex
 created: 2026-11-02T00:04:42Z
-updated: 2026-11-07T05:21:37Z
+updated: 2026-11-07T06:09:52Z
 transitions:
   - to: ready
     at: 2026-11-07T05:10:40Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-07T05:21:37Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T06:09:52Z
+    by: alex
 tags: []
 touches: [flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, design/system/flaiover-dashboard.md, design/issues/I-0190-pagesidebar-s-link-entries-have-no-page-using-them-since-the-charts-page-dropped-its-sidebar.md, design/issues/summary.md]
 agent:

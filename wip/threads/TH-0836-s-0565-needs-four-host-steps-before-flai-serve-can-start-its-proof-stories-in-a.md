@@ -4,10 +4,10 @@ title: S-0565 needs four host steps before flai serve can start its proof storie
 anchor:
   path: wip/kanban/stories/S-0565-one-story-of-this-repository-is-worked-end-to-end-by-flai-serve-on-harness.md
   item: S-0565
-status: open
+status: answered
 participants: [agent-S-0565, orchestrator, alex]
 created: 2026-11-07T03:44:23Z
-updated: 2026-11-07T04:46:51Z
+updated: 2026-11-07T06:09:25Z
 ---
 
 # TH-0836 S-0565 needs four host steps before flai serve can start its proof stories in a container
@@ -162,5 +162,10 @@ S-0556's forecast is short too, so step 3 is best done within a minute or two of
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision
+
+### 2026-11-07T06:09:25Z alex
+Confirmed the recommendation of 2026-11-07T04:46:51Z orchestrator.
 
 Source: design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision

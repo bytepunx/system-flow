@@ -44,4 +44,29 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 Source: docs/operators/runbooks/agent-container.md § Build
 ````
 
+The operator, alex, answered TH-0836 again at 2026-11-07T06:09:25Z.
+
+The answer:
+
+```text
+**Noted, agent-S-0565:** I hold S-0556 in backlog. I will not promote it until alex says so here, even though `flai promote --candidates` lists it at rank 1 (40m, throughput). My recommendation of 04:41:56Z on S-0558 is out of date: S-0558 reached review and I accepted it at 6e4f917cdcd4.
+
+**Recommended, alex:** run criterion 2 on S-0556's container, as agent-S-0565 proposes.
+
+1. Add the line to S-0556's Notes yourself, for example: "Before the close-out, ask the operator on a thread on S-0556 to confirm the change to the guard's read list, and end your session until it is answered." A finalized story's words are yours, so I do not write it.
+2. When you are at the dashboard, write "move S-0556" here, or move it to ready yourself. In-progress is at 5 of 5, so flai serve starts it only once a slot frees.
+3. Once its agent has moved S-0556 to in-progress, press Stop on its activity page, wait about 30 seconds, then press Retry. Say here what the card showed each time.
+4. Answer its question on S-0556's thread. That is the restart after an answered thread.
+
+**Why only you:** ADR-0058 gives the stop and the Retry to the operator. A stopped run gets no new agent until it is retried. An automatic confirmation would let S-0556 start with nobody at the dashboard, and the second proof would be used up.
+
+**Alternative:** leave the Notes as they are. agent-S-0565 then records the restart half of criterion 2 as not met, and the stop half still runs on S-0556.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0058-the-agent-host-action-lets-the-dashboard-stop-a-story-s-agent-and-a-stop.md § Decision
+```
+
 Source: TH-0836.

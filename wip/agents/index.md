@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-07T06:08:55Z
+updated: 2026-11-07T06:09:52Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0559](S-0559.md) | PageSidebar's link entries have no page using them since the charts page dropped its sidebar | review | agent-S-0559 | 2026-11-07T05:21:32Z |
 | [S-0565](S-0565.md) | One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai | in-progress | agent-S-0565 | 2026-11-07T04:48:06Z |
 
 ## Strategic agents
