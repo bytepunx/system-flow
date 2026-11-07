@@ -2,12 +2,12 @@
 id: I-0180
 title: The top bar's project switcher has no maximum width, so with two projects connected the page is wider than a 390px viewport
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-21T09:26:50Z
 last_reported: 2026-10-21T09:26:50Z
-updated: 2026-11-02T00:04:25Z
+updated: 2026-11-07T04:01:14Z
 ---
 
 # I-0180 The top bar's project switcher has no maximum width, so with two projects connected the page is wider than a 390px viewport
@@ -24,3 +24,4 @@ S-0462's Playwright test first answered the board from a fake flai under a secon
 ## Remediation
 
 Story S-0557 remediates this issue, created from it at 2026-11-02T00:04:25Z.
+Closed 2026-11-07T04:01:14Z: S-0557 fixed it. ProjectSwitcher.svelte's select is capped at 12rem, 20rem from sm, and its wrapper shrinks and wraps, so a long label can no longer widen the top bar; the current project's whole label leads the select's title (T-2507). flaiover/e2e/project-switcher.e2e.ts reproduces I-0180 with two long-named projects at 390px and 1440px: it fails on the old switcher, the select ending at 548px, and passes with the cap (T-2509).
