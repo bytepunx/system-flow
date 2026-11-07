@@ -3,16 +3,21 @@ id: T-2560
 type: task
 nature: improvement
 title: flai serve enable kluster writes and commits a block and a config for a project with none, and flai manifest set changes the block's keys
-status: backlog
+status: in-progress
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:29:53Z
-updated: 2026-11-07T08:29:53Z
-transitions: []
+updated: 2026-11-07T08:38:59Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:38:57Z
+    by: agent-S-0586
+  - to: in-progress
+    at: 2026-11-07T08:38:59Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, cli]
 touches: [flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md]
-after: [T-2559]
 ---
 # T-2560 flai serve enable kluster writes and commits a block and a config for a project with none, and flai manifest set changes the block's keys
 

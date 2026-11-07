@@ -3,11 +3,11 @@ id: T-2555
 type: task
 nature: remediation
 title: wait_for_work and the folder's waits take their snapshot before their first check, so a change made between the two wakes the wait
-status: in-progress
+status: done
 parent: S-0560
 owner: alex
 created: 2026-11-07T08:19:45Z
-updated: 2026-11-07T08:35:24Z
+updated: 2026-11-07T08:45:33Z
 transitions:
   - to: ready
     at: 2026-11-07T08:35:23Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:35:24Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T08:45:33Z
+    by: agent-S-0560
 stream: S-0560
 tags: [flai, tests]
 touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/timing_test.go]
+usage:
+  source: log
+  seconds: 608
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 430
+      cache_read: 6289533
+      cache_write: 64341
+      cost: 2.2751
 ---
 # T-2555 wait_for_work and the folder's waits take their snapshot before their first check, so a change made between the two wakes the wait
 

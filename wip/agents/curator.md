@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 128.2691
-accrued_seconds: 12297
-tasks_completed: 76
-last_run: 2026-11-07T07:58:16Z
+accrued_cost: 129.6658
+accrued_seconds: 12399
+tasks_completed: 77
+last_run: 2026-11-07T08:39:36Z
 ---
 
 # Curator activity
@@ -619,3 +619,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0488, D-0497
 - Seconds: 133
 - Cost: 1.6687 USD, estimated
+
+### 2026-11-07T08:39:36Z
+
+- Summary: I wrote no new entries this run. I merged I-0248 and S-0561 into D-0388. I absorbed none: D-0388, D-0498, D-0499 and D-0500 stay active, no design file changed since the last run, and D-0498–D-0500 had already been written when their threads were answered. `flai digest compact` compacted none and recorded citers on 2 entries.
+- Trigger: accepted S-0561, S-0584
+- Items: D-0388, D-0449, D-0499
+- Seconds: 102
+- Cost: 1.3967 USD, estimated

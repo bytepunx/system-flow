@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0853]
 ---
 
 # D-0499 S-0564: press Import for flai-scratch-import on the board, and turn on agent for the new project: I see `S-0001` in the board for this newly imported project

@@ -3,11 +3,11 @@ id: T-2554
 type: task
 nature: improvement
 title: Close I-0245 saying what fixed it
-status: in-progress
+status: done
 parent: S-0568
 owner: alex
 created: 2026-11-07T08:19:20Z
-updated: 2026-11-07T08:37:00Z
+updated: 2026-11-07T08:37:32Z
 transitions:
   - to: ready
     at: 2026-11-07T08:36:59Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:37:00Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T08:37:32Z
+    by: agent-S-0568
 stream: S-0568
 tags: [flai, issues]
 touches: [design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/summary.md]
 after: [T-2551, T-2553]
+usage:
+  source: log
+  seconds: 32
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 1430
+      cache_read: 1478733
+      cache_write: 15879
+      cost: 0.4452
 ---
 # T-2554 Close I-0245 saying what fixed it
 

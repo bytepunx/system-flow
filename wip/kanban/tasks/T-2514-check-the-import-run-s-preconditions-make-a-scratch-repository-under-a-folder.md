@@ -24,14 +24,14 @@ usage:
   source: log
   seconds: 1233
   estimated: true
-  priced_by: harness
+  priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 11217
-      cache_read: 5482957
-      cache_write: 63017
-      cost: 1.8255
+      input: 99
+      output: 11569
+      cache_read: 5484655
+      cache_write: 61325
+      cost: 1.8193
 ---
 # T-2514 Check the import run's preconditions, make a scratch repository under a folder named for import, and import it from the board's Import
 

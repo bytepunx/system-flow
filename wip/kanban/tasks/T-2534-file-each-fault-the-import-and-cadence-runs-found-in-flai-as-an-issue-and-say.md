@@ -3,16 +3,37 @@ id: T-2534
 type: task
 nature: improvement
 title: File each fault the import and cadence runs found in flai as an issue, and say in this task's Notes when they found none
-status: backlog
+status: done
 parent: S-0564
 owner: alex
 created: 2026-11-07T03:48:11Z
-updated: 2026-11-07T03:48:11Z
-transitions: []
+updated: 2026-11-07T08:52:08Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:51:40Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:51:43Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T08:52:08Z
+    by: agent-S-0564
 stream: S-0564
 tags: [template]
 touches: [design/issues/summary.md]
 after: [T-2523, T-2526]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 13
+      cache_read: 301118
+      cache_write: 4255
+      cost: 0.1
 ---
 # T-2534 File each fault the import and cadence runs found in flai as an issue, and say in this task's Notes when they found none
 

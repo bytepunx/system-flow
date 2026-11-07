@@ -24,16 +24,16 @@ touches: [flai/cmd/guard.go, docs/users/flai-reference.md, docs/users/flai.md, d
 after: [T-2551]
 usage:
   source: log
-  seconds: 318
+  seconds: 326
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 293
-      cache_read: 4480347
-      cache_write: 29941
-      cost: 1.6147
+      input: 39
+      output: 4390
+      cache_read: 4540162
+      cache_write: 48752
+      cost: 1.3668
 ---
 # T-2553 The guard's help, the user guide, and the design say flai role list, show, and definition are reads
 

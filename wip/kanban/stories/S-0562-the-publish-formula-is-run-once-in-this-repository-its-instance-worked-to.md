@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T08:04:13Z
+updated: 2026-11-07T08:42:23Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:09Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0562
 tags: [template]
 topics: [orchestration]
-touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md]
+touches: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md]
 after: [S-0423]
 agent:
   harness: claude-code
@@ -76,7 +76,7 @@ E-0024's `publish` formula, shipped by S-0423, is run once in this repository be
 
 - [ ] The formula is run once in this repository: its instance story is worked to review and accepted, and its Notes name the release it published, or, when nothing was pending, the evaluation that stopped it.
 - [ ] This story's Notes record the instance's ID, each step's exit, and the versions and tags published, or the evaluation that stopped the instance.
-- [ ] What the run finds wrong is fixed in a task of this story, or recorded as an issue.
+- [x] What the run finds wrong is fixed in a task of this story, or recorded as an issue.
 
 ## Tasks
 - T-2504 Check the publish run's preconditions and start one instance of the publish formula from the main checkout

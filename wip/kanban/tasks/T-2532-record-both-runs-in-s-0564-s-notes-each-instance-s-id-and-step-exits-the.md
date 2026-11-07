@@ -3,16 +3,37 @@ id: T-2532
 type: task
 nature: improvement
 title: "Record both runs in S-0564's Notes: each instance's ID and step exits, the scratch repository, the analyzer's report, the issues it names, and each run's cost"
-status: backlog
+status: done
 parent: S-0564
 owner: alex
 created: 2026-11-07T03:48:03Z
-updated: 2026-11-07T03:48:03Z
-transitions: []
+updated: 2026-11-07T08:52:29Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:51:34Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T08:51:37Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T08:52:29Z
+    by: agent-S-0564
 stream: S-0564
 tags: [template]
 touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md]
 after: [T-2523, T-2526]
+usage:
+  source: log
+  seconds: 30
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 13
+      cache_read: 301118
+      cache_write: 4255
+      cost: 0.1
 ---
 # T-2532 Record both runs in S-0564's Notes: each instance's ID and step exits, the scratch repository, the analyzer's report, the issues it names, and each run's cost
 

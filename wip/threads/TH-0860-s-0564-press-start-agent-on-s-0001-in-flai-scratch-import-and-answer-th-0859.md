@@ -4,10 +4,10 @@ title: "S-0564: press Start agent on S-0001 in flai-scratch-import, and answer T
 anchor:
   path: wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md
   item: S-0564
-status: open
-participants: [agent-S-0564, orchestrator]
+status: resolved
+participants: [agent-S-0564, orchestrator, alex]
 created: 2026-11-07T08:31:57Z
-updated: 2026-11-07T08:33:16Z
+updated: 2026-11-07T08:51:30Z
 ---
 
 # TH-0860 S-0564: press Start agent on S-0001 in flai-scratch-import, and answer TH-0859 for S-0584
@@ -48,3 +48,11 @@ Source: design/workflows/formulas/import.md
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/workflows/formulas/import.md
+
+### 2026-11-07T08:45:32Z alex
+Confirmed the recommendation of 2026-11-07T08:33:16Z orchestrator.
+
+Source: design/workflows/formulas/import.md
+
+### 2026-11-07T08:51:30Z agent-S-0564
+Resolved: The operator started S-0001's agent. S-0001 worked both steps (check after a relock allowed on TH-0001; import test passed) and was accepted at 049cf36. S-0584 was accepted at 07fa45be7.

@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0586-provide-first-time-wizard-for-kluster-setup.md
   item: S-0586
 status: open
-participants: [planner-S-0586, orchestrator]
+participants: [planner-S-0586, orchestrator, agent-S-0586]
 created: 2026-11-07T08:33:47Z
-updated: 2026-11-07T08:34:58Z
+updated: 2026-11-07T08:40:05Z
 ---
 
 # TH-0861 S-0586 plan: six code and docs tasks plus an ADR in five layers, 3h, 1250 USD a week; three questions on what stays outside the dashboard
@@ -94,3 +94,49 @@ Source: design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-t
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md § Decision
+
+### 2026-11-07T08:37:51Z agent-S-0586 (recommendation)
+S-0586 is started. I checked kluster against its source, and it changes one assumption of the plan. I am building the parts no answer changes now.
+
+## Finding: kluster v1.3.1 has no empty cluster
+
+- A config with no `profile` gets kluster's default profile, `spire`: cert-manager, SPIRE, and traefik-tls (`kluster/cmd/up.go`, `stringFlag` in `kluster/cmd/config.go`).
+- An empty `profile` falls back to the same default, and an unknown one is refused (`resolveProfiles` in `kluster-lib/cluster/cluster.go`).
+- So the planner's "a config with no profile is an empty cluster" is false. I did not run `kluster up`: the source settles it, and a bring-up changes your host.
+
+The block flai writes is still a no-op. It names no `deploy`, so flai runs no job until you set one.
+
+## Question 4: which profile should the scaffold name
+
+I recommend `spire`, written out.
+
+- `spire` is kluster's default and its smallest documented profile.
+- The Klusters page would let you change the profile (`spire`, `signet`, `authstar`) and the addons before the first Up.
+- The alternative is a lighter group such as `tracing`. kluster accepts it, but it is undocumented as a base profile.
+
+## My recommendation on all four
+
+1. Yes: `settings` stays the one shell step (ADR-0039).
+2. Report missing tools, and give the install sentence, with no Install button. `kluster setup` installs `kubectl` with `sudo` on Linux, so a button in `flai serve` would hang or fail without passwordless sudo. Docker cannot be installed by it at all.
+3. Yes: Start and Stop for each port-forward on the Deployments page, bound to `127.0.0.1`.
+4. `profile: spire`, changeable on the Klusters page.
+
+Confirm this to make it the answer, or answer otherwise per number. Until then I build the block, the optional `deploy`, the serve pass, and the status read. Those need no answer.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md
+
+### 2026-11-07T08:40:05Z orchestrator (recommendation)
+**Recommended:** take agent-S-0586's four answers as they stand. I withdraw my own answer 2.
+
+1. **Yes:** `settings` stays the one shell step (ADR-0039).
+2. **No Install button.** The page reports what is missing and gives the install sentence. kluster's own install puts its binary in `/usr/local/bin`, and `kluster setup` installs `kubectl` with `sudo` on Linux. A button in `flai serve` would hang or fail without passwordless sudo, and Docker cannot be installed that way at all.
+3. **Yes:** Start and Stop for each port-forward on the Deployments page, bound to `127.0.0.1`.
+4. **`profile: spire`**, written out in the scaffold and changeable on the Klusters page. kluster v1.3.1 has no empty cluster, and `spire` is its default.
+
+**What this means for criterion 3:** with answer 2, two steps stay outside the dashboard: turning on `settings`, and installing Docker, `kluster`, and `kubectl` on the host. T-2565 lists both in the docs. Both are host changes, so they are yours to accept.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/tech/kluster.md

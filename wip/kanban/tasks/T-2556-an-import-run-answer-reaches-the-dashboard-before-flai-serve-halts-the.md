@@ -3,11 +3,11 @@ id: T-2556
 type: task
 nature: remediation
 title: An import.run answer reaches the dashboard before flai serve halts the candidate's connection, so TestARepositoryIsOfferedImportedAndThenServed gets no EOF
-status: in-progress
+status: done
 parent: S-0560
 owner: alex
 created: 2026-11-07T08:19:54Z
-updated: 2026-11-07T08:35:27Z
+updated: 2026-11-07T08:46:28Z
 transitions:
   - to: ready
     at: 2026-11-07T08:35:26Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:35:27Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T08:46:28Z
+    by: agent-S-0560
 stream: S-0560
 tags: [flai, tests]
 touches: [flai/internal/serve/candidates.go, flai/internal/serve/candidates_test.go, flai/internal/hostapi/import.go]
+usage:
+  source: log
+  seconds: 605
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 315
+      cache_read: 4948024
+      cache_write: 40792
+      cost: 1.7863
 ---
 # T-2556 An import.run answer reaches the dashboard before flai serve halts the candidate's connection, so TestARepositoryIsOfferedImportedAndThenServed gets no EOF
 

@@ -3,11 +3,14 @@ id: S-0587
 type: story
 nature: remediation
 title: Default harness and agent should work out of the box
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T08:40:55Z
-updated: 2026-11-07T08:40:55Z
-transitions: []
+updated: 2026-11-07T08:41:12Z
+transitions:
+  - to: ready
+    at: 2026-11-07T08:41:12Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

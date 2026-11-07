@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 340
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 331
-      cache_read: 4516419
-      cache_write: 30347
-      cost: 1.6278
+      input: 39
+      output: 4426
+      cache_read: 4576888
+      cache_write: 49147
+      cost: 1.3779
 ---
 # T-2551 flai guard lets every agent read the roles with flai role list, show, definition, and role alone, and keeps run and --write refused
 

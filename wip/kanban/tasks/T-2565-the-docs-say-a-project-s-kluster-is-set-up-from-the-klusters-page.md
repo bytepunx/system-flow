@@ -7,12 +7,12 @@ status: backlog
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:32:12Z
-updated: 2026-11-07T08:32:12Z
+updated: 2026-11-07T08:38:46Z
 transitions: []
 stream: S-0586
 tags: [kluster, docs]
 touches: [design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/index.md, docs/operators/settings.md]
-after: [T-2561, T-2563, T-2564]
+after: [T-2559, T-2561, T-2563, T-2564]
 ---
 # T-2565 The docs say a project's kluster is set up from the Klusters page
 

@@ -3,10 +3,10 @@ id: S-0568
 type: story
 nature: improvement
 title: flai guard refuses a sub-agent every flai role subcommand, the reads list, show, and definition among them
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-02T20:31:49Z
-updated: 2026-11-07T08:35:17Z
+updated: 2026-11-07T08:52:49Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:15Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:19:52Z
     by: agent-S-0568
+  - to: review
+    at: 2026-11-07T08:50:44Z
+    by: agent-S-0568
+  - to: done
+    at: 2026-11-07T08:52:49Z
+    by: orchestrator
 tags: []
-touches: [flai/internal/guard/guard.go, design/system/flai-cli.md, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/summary.md, wip/kanban/stories/S-0568-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, flai/cmd/guard_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/guard.go]
+touches: [flai/internal/guard/guard.go, design/system/flai-cli.md, design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/summary.md, wip/kanban/stories/S-0568-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, flai/cmd/guard_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/guard.go, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 978
-  estimated: true
-  priced_by: estimate
+  seconds: 1927
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
+      ceremony: 6
       hand_edits: 1
-      work: 42
+      work: 103
   models:
     - model: claude-opus-5-5
-      input: 142
-      output: 1069
-      cache_read: 11665996
-      cache_write: 304279
-      cost: 4.2855
+      input: 282
+      output: 31728
+      cache_read: 32810094
+      cache_write: 352316
+      cost: 9.8776
   strategic:
     - kind: orchestrator
       seconds: 124
@@ -75,7 +80,7 @@ This story remediates [I-0245](../../../design/issues/I-0245-flai-guard-refuses-
 
 ## Acceptance criteria
 - [x] The cause I-0245 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0245 is closed with `flai issue close I-0245 --reason` saying what fixed it
+- [x] I-0245 is closed with `flai issue close I-0245 --reason` saying what fixed it
 
 ## Tasks
 - T-2551 flai guard lets every agent read the roles with flai role list, show, definition, and role alone, and keeps run and --write refused
@@ -106,3 +111,12 @@ Where each predicted touch came from. The story declared none, so `flai touches 
 The agent also added this story's own file to the touches. No folder touch and no `after`: nothing here reads another open story's output.
 
 Figures. The forecast stands at 12m from `flai forecast`: median 88 s per unit of size over 23 done improvement stories in the medium band, times size 8, the story's 2 criteria and the 6 touches it holds now. The same run over the 10 predicted touches gave 18m, so `flai task done` widening the touches back would make 12m low. Delivery, 2026-11-07T08:36:00Z, counts from the story's start. Neither figure was adjusted, because no measurement gives an amount to adjust by. The cost of delay value stands at 12.50 USD a week from `flai cod`: 5m lost per 168h cycle at 150 USD an hour. I-0245's one occurrence gives no reason to change it.
+
+### Accepted by the orchestrator
+
+- Verified: 7aee328fb4c94ab032c3f2c34d2aa644bf77fd67
+- At: 2026-11-07T08:52:49Z
+
+Verdict: pass at 7aee328fb4c94ab032c3f2c34d2aa644bf77fd67
+- 1: flai/internal/guard/guard.go, flai/internal/guard/roles_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai-reference.md, docs/users/flai.md
+- 2: design/issues/I-0245-flai-guard-refuses-a-sub-agent-every-flai-role-subcommand-the-reads-list-show.md, design/issues/summary.md

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0024
 owner: alex
 created: 2026-11-02T18:08:35Z
-updated: 2026-11-07T08:33:39Z
+updated: 2026-11-07T08:50:28Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:12Z
@@ -22,9 +22,12 @@ blocked:
   - from: 2026-11-07T08:32:14Z
     until: 2026-11-07T08:33:39Z
     reason: awaiting the operator on TH-0853
+  - from: 2026-11-07T08:37:54Z
+    until: 2026-11-07T08:45:33Z
+    reason: awaiting the operator on TH-0860
 tags: [template]
 topics: [orchestration]
-touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md, design/issues/summary.md, design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md]
+touches: [wip/kanban/stories/S-0564-the-import-and-analysis-cadence-formulas-are-each-run-once-in-this-repository.md, design/issues/summary.md, design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md, design/issues/I-0300-a-story-already-in-ready-when-the-agent-host-action-is-turned-on-gets-no-agent.md, design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md]
 after: [S-0424]
 agent:
   harness: claude-code
@@ -33,32 +36,33 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1579
-  priced_by: harness
+  seconds: 2212
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-07
       ceremony: 3
       test_runs: 1
-      hand_edits: 1
-      work: 106
+      hand_edits: 2
+      work: 131
   models:
     - model: claude-opus-5-5
-      input: 236
-      output: 25344
-      cache_read: 12388021
-      cache_write: 142379
-      cost: 4.1245
+      input: 296
+      output: 31096
+      cache_read: 17121770
+      cache_write: 191379
+      cost: 5.6777
   strategic:
     - kind: orchestrator
-      seconds: 293
+      seconds: 320
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 405
-          cache_read: 2603215
-          cache_write: 306293
-          cost: 0.7126
+          input: 70
+          output: 466
+          cache_read: 2797693
+          cache_write: 365670
+          cost: 0.7756
 cost_of_delay:
   inputs:
     penalty_per_week: 25
