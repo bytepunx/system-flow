@@ -7,7 +7,7 @@ topics: [kluster, deployment, manifest]
 
 # Running a project's kluster
 
-How flai runs a project's local Kubernetes cluster, made by `bytepunx/kluster`, so that each story in review is deployed into a namespace of its own over the project's shared infrastructure, checked there, and promoted to the default namespace on acceptance. [ADR-0254](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md) decides it and gives the reasons. [S-0575's results](../experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md) show it working by hand on authstar, with the times of each step. [ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md) refines it (S-0586): turning kluster on gives a project with no block one that names only its config, `deploy` is optional, and the dashboard's Klusters page holds the whole setup.
+How flai runs a project's local Kubernetes cluster, made by `bytepunx/kluster`, so that each story in review is deployed into a namespace of its own over the project's shared infrastructure, checked there, and promoted to the default namespace on acceptance. [ADR-0254](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md) decides it and gives the reasons. [S-0575's results](../experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md) show it working by hand on authstar, with the times of each step. [ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md) refines it (S-0586): turning kluster on gives a project with no block one that names only its config, `deploy` is optional, and the dashboard's Klusters page holds the whole setup. [ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md) refines both (S-0595): a block may list components, each built as its own step with its own log, a job's record lists every step before the first runs, `kluster.log` reads a step's log from an offset, and the Deployments page holds the deploy setup, the builds, and the live logs in an in-page rail.
 
 system-flow itself runs no cluster. This is what flai does for a project that names one in its manifest, behind the `kluster` host action.
 
@@ -25,7 +25,7 @@ What flai keeps, all under `.flai-cache/kluster/`:
 |------|---------------|
 | `kubeconfig` | The cluster's kubeconfig |
 | `deployments/<namespace>.json` | The namespace's record: its commit, the outcome and times of each step, and their logs |
-| `logs/<namespace>/<step>.log` | Each step's output in the namespace's last job, and `images`, the list the build wrote |
+| `logs/<namespace>/<step>.log` | Each step's output in the namespace's last job, and `images`, or `images-<name>` per component, the lists the builds wrote |
 | `job.lock`, `job.json` | The project's job lock, and the job that holds it |
 | `state/<namespace>/` | The namespace's state folder, `FLAI_KLUSTER_STATE` |
 | `main/` | A worktree of main's head, where a promotion builds and deploys |
@@ -64,14 +64,30 @@ kluster:
 | `config` | yes | none | The kluster config file, from the repository root |
 | `namespace` | no | the manifest's `name` as a DNS label | The default namespace, which main deploys into |
 | `build` | no | none: nothing is loaded | Builds the images and lists their references in the file `FLAI_KLUSTER_IMAGES` names |
+| `components` | no | none: `build` builds, or nothing is loaded | In place of `build`: a list of components, each a `name`, a DNS label unique in the list, and its own `build`, an argument list, run one at a time as the steps `build-<name>` |
 | `deploy` | no | none: the cluster comes up and goes down, and flai deploys nothing | Makes the namespace's settings in the shared services, applies the project's manifests into the namespace, and waits for their rollouts |
 | `teardown` | no | none: flai deletes only the namespace | Removes what `deploy` made outside the namespace |
 | `timeout` | no | `30m` | The most one job may take, a Go duration |
 
+A project that builds several images names one build per component instead of `build` ([ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)):
+
+```yaml
+kluster:
+  config: kluster.yaml
+  components:
+    - name: api
+      build: [scripts/build.sh, api]
+    - name: web
+      build: [scripts/build.sh, web]
+  deploy: [scripts/kluster-deploy.sh]
+```
+
+A block names `build` or `components`, not both.
+
 Each command is an argument list, run as it stands, never through a shell, as the manifest's `tests` are. It runs in the checkout being deployed, with the variables below in its environment. A command that exits other than 0 fails its job. `deploy` is idempotent: a second deploy into the same namespace, at a new commit, updates it in place.
 
 - A block with no `deploy` is a project whose deploys are not set up yet ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md), replacing ADR-0254's `deploy` required). `flai serve` deploys and promotes nothing for it, and `flai kluster deploy` and `promote` refuse it.
-- Each key is a setting `flai manifest set` writes, `kluster.config` to `kluster.timeout`, the commands as JSON argument lists such as `["scripts/kluster-deploy.sh","--wait"]`, `[]` to unset one. The Klusters page writes them through `settings.manifest`, under the `settings` host action, since the commands run on the host as the operator.
+- Each key is a setting `flai manifest set` writes, `kluster.config` to `kluster.timeout`, the commands as JSON argument lists such as `["scripts/kluster-deploy.sh","--wait"]`, `[]` to unset one, and `kluster.components` as a JSON list such as `[{"name":"api","build":["scripts/build.sh","api"]}]`, `[]` to unset it, written into the block as a YAML list. The setup form both Ops pages show writes them through `settings.manifest`, under the `settings` host action, since the commands run on the host as the operator.
 - The config file `kluster.config` names is read and saved from the Klusters page through `file.get` and `file.save` ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)), whatever `settings` says: it names a profile and addons, not a command.
 
 ## The namespaces
@@ -90,7 +106,7 @@ Each command is an argument list, run as it stands, never through a shell, as th
 
 A deploy is the first three steps, and a teardown the fourth:
 
-1. **Build.** `build` builds the project's images in the checkout and writes each reference, one a line, to `FLAI_KLUSTER_IMAGES`.
+1. **Build.** `build` builds the project's images in the checkout and writes each reference, one a line, to `FLAI_KLUSTER_IMAGES`. With `components`, each component's build is a step of its own, `build-<name>`, in the list's order, with its own log and its own images file, and `FLAI_KLUSTER_COMPONENT` set to its name. A failed build stops the deploy, and the steps after it are recorded `skipped`.
 2. **Load.** flai loads each listed image into every node of the cluster: `docker save -o` into a temporary file, which is then fed to `docker exec -i <node> ctr -n k8s.io images import -`, for each container labelled `k3d.cluster=<name>` with `k3d.role` `server` or `agent`. Once kluster has an image import, flai calls that instead.
 3. **Deploy.** `deploy` makes the namespace's settings and applies the manifests, with the images tagged `FLAI_KLUSTER_TAG`.
 4. **Teardown.** `teardown` removes the namespace's settings in the shared services; then flai deletes the namespace with `kubectl delete namespace --wait`. A namespace already gone is torn down.
@@ -105,7 +121,8 @@ Every command, and a checks run against a namespace, gets these variables. No pl
 | `FLAI_KLUSTER_PREFIX` | `s0576_` | empty |
 | `FLAI_KLUSTER_COMMIT` | The story branch's head, the whole hash | Main's head |
 | `FLAI_KLUSTER_TAG` | `s-0576-` and the head's first 12 hex digits | `main-` and the head's first 12 hex digits |
-| `FLAI_KLUSTER_IMAGES` | `build` only: the file it lists its images in | The same |
+| `FLAI_KLUSTER_IMAGES` | A build only: the file it lists its images in, `logs/<namespace>/images` for `build` and `logs/<namespace>/images-<name>` for a component | The same |
+| `FLAI_KLUSTER_COMPONENT` | A component's build only: the component's name | The same |
 | `FLAI_KLUSTER_STATE` | `.flai-cache/kluster/state/s-0576` | `.flai-cache/kluster/state/authstar` |
 | `KUBECONFIG` | flai's kubeconfig for the cluster | The same |
 | `FLAI_KLUSTER_CONTEXT` | `k3d-` and the cluster's name | The same |
@@ -170,7 +187,7 @@ E-0032 gives the dashboard's rail an Ops group with two pages, each behind the `
 | Page | What it shows | What it does |
 |------|---------------|--------------|
 | Klusters | The setup's steps and what each lacks; then the project's cluster: its name, profile, provider, state, and age, the up or down flai serve runs or last ran, `flai check`'s findings, and the nodes and pods | Turns the action on, edits the block and the config, makes a story for the scripts, brings the cluster up or takes it down |
-| Deployments | Main's namespace and each story's, with its commit, outcome, log, and how to reach it for a demo | Deploys, tears down, or promotes, and starts and stops port-forwards |
+| Deployments | Main's namespace and each story's, with its commit, outcome, each build and step with its live log, and how to reach it for a demo | Deploys, tears down, or promotes, starts and stops port-forwards, and edits the block's deploy setup |
 
 ## Commands (S-0577, S-0578)
 
@@ -195,7 +212,7 @@ The commands run `kluster` in the project's main checkout, with the block's conf
 
 What else S-0577 built:
 
-- **The check.** `flai check` reports each fault of the block as the error `manifest.kluster` on its line, one sentence each beginning with the key: an unknown key, a value of the wrong kind, a `config` missing, absent, unreadable, naming no cluster, or naming a provider other than `k3d`, a default namespace that is not a DNS label or has a story namespace's form, a command with no program, and a `timeout` that is not a duration above zero. `manifest.Load` never refuses the block ([project-manifest.md](project-manifest.md)). Since S-0586 a missing `deploy` is no fault ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)).
+- **The check.** `flai check` reports each fault of the block as the error `manifest.kluster` on its line, one sentence each beginning with the key: an unknown key, a value of the wrong kind, a `config` missing, absent, unreadable, naming no cluster, or naming a provider other than `k3d`, a default namespace that is not a DNS label or has a story namespace's form, a command with no program, and a `timeout` that is not a duration above zero. Since S-0595 it also reports `build` and `components` both set, and a component that is not a block, has an unknown key, has no `name`, a name that is not a DNS label or that another component has, or has no `build` or no program ([ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)). `manifest.Load` never refuses the block ([project-manifest.md](project-manifest.md)). Since S-0586 a missing `deploy` is no fault ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)).
 - **The host action.** `kluster` is in `hostapi.Actions`, seen by the dashboard, so the Features page lists it and turns it on and off with no change to flaiover. `flai serve enable kluster`, which that toggle runs, was refused for a project with no block until S-0586, which has it write the block instead ([the `kluster` host action](#the-kluster-host-action)). Since S-0579, `flai serve` runs its jobs while it is on ([flai serve (S-0579)](#flai-serve-s-0579)).
 - **The guard.** `flai guard` refuses every session `flai serve` started and every sub-agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, named in one list, with the reason and what to do instead; `status` stays open ([flai-cli.md](flai-cli.md#commands)).
 
@@ -203,7 +220,7 @@ What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above 
 
 - **The refusals.** A deploy refuses a story that is not in progress or in review, a story with no worktree (open it with `flai stream open`), a block with no `deploy`, a cluster with no kubeconfig at `.flai-cache/kluster/kubeconfig` (bring it up with `flai kluster up`), and a commit that is not a whole hash. Teardown and promote refuse the same where they apply. Every job refuses while another holds the lock.
 - **The lock.** One job runs at a time per project: a deploy, a teardown, or a promotion. A job takes `.flai-cache/kluster/job.lock`, waiting at most 200 ms, and names itself in `job.json`: its kind, story, namespace, start, and process. A job that finds the lock held is refused with `kluster.ErrBusy`, naming the job that holds it. The lock is released when the process ends, so a crashed job leaves none held; a `job.json` without a held lock names no running job.
-- **The record.** Each namespace has one record, `.flai-cache/kluster/deployments/<namespace>.json`, written whole each time (`atomicfile`). A job writes it as `running` when it starts, again after each step, and with its outcome at the end, so a job cut short leaves what it did. A deploy again at a new commit replaces it.
+- **The record.** Each namespace has one record, `.flai-cache/kluster/deployments/<namespace>.json`, written whole each time (`atomicfile`). A job writes it as `running` when it starts, with every step it will run listed `pending` (S-0595, [ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)): a deploy or a promotion its builds, `load`, and `deploy`, a teardown its `teardown` after the steps the record already holds. Each step is written `running`, with its start and its log, when it starts, and with its outcome when it ends, in place of its pending entry. At the job's end the steps still pending, those after a failure, are written `skipped`. So the record says at any moment which steps passed, which runs, which failed, and which wait, and a job cut short leaves what it did. A deploy again at a new commit replaces it.
 
   | Field | Meaning |
   |-------|---------|
@@ -216,11 +233,11 @@ What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above 
   | `started_at`, `ended_at` | When the job started and ended; `ended_at` is absent while it runs |
   | `outcome` | `running`, then `passed` or `failed` |
   | `failed_step`, `exit_code`, `error` | Which step failed, its exit code (-1 when its program gave none, as when it was killed at `kluster.timeout`), and the error; absent when it passed |
-  | `steps` | Each step: `name`, `started_at`, `ended_at`, `outcome` (`running`, `passed`, `failed`, or `skipped`), `exit_code`, and `log` |
+  | `steps` | Each step: `name` (`build`, `build-<name>`, `load`, `deploy`, or `teardown`), `started_at`, absent while it is pending, `ended_at`, `outcome` (`pending`, `running`, `passed`, `failed`, or `skipped`), `exit_code`, and `log` |
 
 - **The list.** `kluster.Deployments` reads every record: the default namespace's first, then the stories' by their number, then any other by name. Each carries `default`, and `job` while a running job acts on its namespace. A record that still says `running` while no job runs for its namespace is shown `interrupted`.
-- **The logs.** Each step's output goes to `.flai-cache/kluster/logs/<namespace>/<step>.log`, named in the record. A deploy clears the namespace's logs first, so they are its last job's. The build lists its images in `logs/<namespace>/images`, the file `FLAI_KLUSTER_IMAGES` names.
-- **The steps.** Each command runs as an argument list, never through a shell, in the checkout, with the namespace's variables over flai's own environment; a program named with a relative path, such as `scripts/kluster-deploy.sh`, is found from the checkout. A block with no `build` records build and load as `skipped`. The whole job is bounded by `kluster.timeout`.
+- **The logs.** Each step's output goes to `.flai-cache/kluster/logs/<namespace>/<step>.log`, named in the record. A deploy clears the namespace's logs first, so they are its last job's. The build lists its images in `logs/<namespace>/images`, and a component's build in `logs/<namespace>/images-<name>`, the file `FLAI_KLUSTER_IMAGES` names; the load takes the images of every build.
+- **The steps.** Each command runs as an argument list, never through a shell, in the checkout, with the namespace's variables over flai's own environment; a program named with a relative path, such as `scripts/kluster-deploy.sh`, is found from the checkout. A block with no `build` and no `components` records build and load as `skipped`. The whole job is bounded by `kluster.timeout`.
 - **The load as built.** flai lists the nodes with `docker ps --filter label=k3d.cluster=<name>`, keeping the containers whose `k3d.role` label is `server` or `agent`. For each image it runs `docker save -o` into a temporary file, then gives that file to `docker exec -i <node> ctr -n k8s.io images import -` on each node. A build that lists no image loads nothing.
 - **Teardown.** It reads the story's record, runs the block's `teardown`, when it names one, with the namespace's variables at the record's commit, then `kubectl --context k3d-<name> delete namespace <namespace> --wait --ignore-not-found`, both to the namespace's `teardown.log`. When both pass it removes the record, the state folder, and the logs. When either fails it keeps the record, marked `failed` at `teardown`. A story with no record is `kluster.ErrNotDeployed`: nothing runs.
 - **Promote.** Under the lock, it resolves the main branch's head with `git rev-parse --verify <branch>^{commit}` in the main checkout. It moves the worktree `.flai-cache/kluster/main` there with `git checkout --detach --force`, or, when there is none, makes it with `git worktree prune` and `git worktree add --detach`. Then it deploys from that worktree into the default namespace, as a story's deploy does, with an empty `FLAI_STORY` and prefix and the tag `main-<commit>`. A failure of the git steps writes no record.
@@ -296,6 +313,7 @@ The rail's Ops group sits between Design and Documentation. Its first page is Kl
 | `kluster.teardown` | Write, under the `kluster` host action, with `{"story": "S-nnnn"}` | Starts what `flai kluster teardown` runs the same way |
 | `kluster.promote` | Write, under the `kluster` host action | Starts what `flai kluster promote` runs, main's head into the default namespace, the same way |
 | `kluster.workloads` | Read, whatever the host action says | The cluster's nodes and each namespace's pods (S-0586), below |
+| `kluster.log` | Read, whatever the host action says, with `{"namespace", "step", "offset"}` | At most 64 KB of a step's log from an offset, for the live feed (S-0595), below |
 | `kluster.forward.start`, `kluster.forward.stop` | Write, under the `kluster` host action | Start or stop a service port's port-forward, which flai serve runs bound to `0.0.0.0` (S-0586), below |
 
 `kluster.status` answers these fields. Those marked optional are left out when empty.
@@ -310,7 +328,7 @@ The rail's Ops group sits between Design and Documentation. Its first page is Kl
 | `status_error`, optional | Why the cluster could not be read, such as `kluster` missing from the host's `PATH` |
 | `running`, optional | The job that runs now |
 | `last`, optional | The last job to end since flai serve started |
-| `settings` | The block's keys as `flai manifest set` writes them, `kluster.config` to `kluster.timeout`, each with its `kind` (`text`, `command`, or `duration`), `default`, `meaning`, `value`, and `set`; listed with no block too, since setting `kluster.config` adds one (S-0586) |
+| `settings` | The block's keys as `flai manifest set` writes them, `kluster.config` to `kluster.timeout`, each with its `kind` (`text`, `command`, `components`, or `duration`), `default`, `meaning`, `value`, and `set`; listed with no block too, since setting `kluster.config` adds one (S-0586) |
 | `settings_on` | Whether the `settings` host action is on, which the block's writes need |
 | `settings_enable` | What the operator runs on the host to turn `settings` on, `flai serve enable settings` |
 | `config`, optional | The config file the block names |
@@ -361,6 +379,20 @@ A row of `deployments` holds the record's fields, `story`, `namespace`, `commit`
 
 `kluster.forward.start` runs `kubectl port-forward --address 0.0.0.0` for one service port of a namespace, on a local port flai picks, and `kluster.forward.stop` stops it ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). Both take `{namespace, service, port}` and answer the forward. A start checks that the cluster lists that service port, needs flai's kubeconfig, and answers once kubectl says it is forwarding, or kubectl's output when it exits first or says nothing within 15 seconds; a second start of a running forward answers it and starts nothing. A stop of a port with no forward is refused. flai serve keeps the forwards in memory, on its kluster jobs; they stop when it stops. A teardown through `kluster.teardown` stops its namespace's forwards first. One run by flai serve's pass does not: their kubectl exits when the namespace goes, and the forward is kept as ended, with its output. A running forward is reachable by anything that reaches the host's network, with no sign-in of its own.
 
+`kluster.log` reads `.flai-cache/kluster/logs/<namespace>/<step>.log` ([ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)). It needs no `kluster:` block, since it only reads files. `namespace` is a DNS label, `step` is `build`, `build-<name>`, `load`, `deploy`, or `teardown`, and `offset` is 0 or more; anything else is refused as invalid params. It answers:
+
+| Field | What it holds |
+|-------|---------------|
+| `namespace`, `step` | As asked |
+| `log` | The log's path from the root |
+| `exists` | Whether the log is there; without it the text is empty |
+| `offset` | Where `text` starts: the offset asked, or 0 after a reset |
+| `next` | The offset to ask from next, `offset` and the length of `text` in bytes |
+| `size` | The log's size when it was read |
+| `text` | At most 64 KB of the log from `offset`, ending on a whole character |
+| `reset`, optional | True when the log is shorter than the offset asked, or gone while the offset asked was above 0, as when a new job cleared it; `text` then starts at 0 |
+| `outcome`, optional | The step's outcome in the namespace's record |
+
 ### The jobs
 
 - flai serve runs the jobs in its own process, one per project at a time, each bounded by `kluster.timeout`. An up, a down, a deploy, a teardown, and a promotion share that one slot.
@@ -406,7 +438,7 @@ The page holds everything setting up and running the project's cluster needs, wi
 1. **The host's tools.** `kluster`, `docker`, and `kubectl`, each found with its path or missing, with what flai needs it for, the sentence that installs it, and a link to its documentation. flai installs none of them.
 2. **Turn kluster on.** A button that turns the `kluster` host action on through `settings.action`. For a project with no block it says what flai wrote and the commit.
 3. **The cluster.** The config file's name, provider, profile, and addons; a choice of profile, saved by rewriting the file's `profile:` line; the whole file, edited in place; and the `kluster.config` path. The file is saved through `file.save`, whatever `settings` says.
-4. **Deploying stories.** Fields for `namespace`, `build`, `deploy`, `teardown`, and `timeout`, the commands one argument a line, saved through `settings.manifest` with flai's refusal beside the field it names. With no `deploy`, the page says the cluster can run but no story is deployed yet. **Write these with an agent** makes a backlog story, under an open epic the operator picks, to write the project's build, deploy, and teardown scripts and name them in the block, and links it.
+4. **Deploying stories.** The setup form, `DeploySettings`, which the Deployments page's Setup pane shows too, so the two pages cannot drift (S-0595, [ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)). It has fields for `namespace`, `deploy`, `teardown`, and `timeout`, and a choice between one build command, `build`, and one build per component, `components`, edited as rows of a name and its command, with add, remove, and move up and down. Commands are one argument a line. A save goes through `settings.manifest`, sets the chosen build key and unsets the other in the same call, and shows flai's refusal beside the field it names. The choice is hidden when flai lists no `kluster.components`, as an older flai does. With no `deploy`, the form says the cluster can run but no story is deployed yet. **Write these with an agent** makes a backlog story, under an open epic the operator picks, to write the project's build, deploy, and teardown scripts and name them in the block, and links it; with components, the story names them. Below the form a link opens the Deployments page's Setup pane.
 5. **Bring it up.** **Up**.
 
 Below it the page shows the cluster's name, profile, provider, state (Running, Stopped, or Not created), and age, with **Up**, offered only while the cluster is not running, **Down**, which asks for confirmation first, **Turn kluster off**, a link to Deployments, `flai check`'s findings on the block, and the nodes and pods from `kluster.workloads`, read when the page opens and after each job. While a job runs the page says so, shows the end of its log, and asks for the status again every 3 seconds until it ends. Then it shows how the last job ended. flai's refusals and errors are shown word for word.
@@ -415,7 +447,19 @@ The two steps left on the host are turning `settings` on and installing the tool
 
 ### The Deployments page
 
-The page lists main's namespace first, then each story's, then the stories in review not yet deployed. Each row shows the story's ID and title, linking its item page, or `main`; the namespace; the commit; when it was deployed; the outcome; and each step, whose log opens in place from its last 4 KB.
+Since S-0595 the page groups what it shows in an in-page rail, the `PageSidebar` the item page uses, with one pane per entry, kept in the URL's hash ([ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)). It reads `kluster.deployments`, and `kluster.status` for the settings and `deployable`.
+
+Above the rail a row of badges says whether the `kluster` host action is on, the cluster's name, whether deploys are set up, and whether a job runs. Below them come flai's errors word for word, the notice that the host action is off, linking the Klusters page's setup, and the job that runs, with **Follow it**, which opens Logs at its namespace, or the job a shell holds kluster's lock for, or the last job and its outcome. With no `kluster:` block the page shows only a notice linking the Klusters page's setup, with no rail, and a flai too old shows the notice the Klusters page shows.
+
+| Pane | Hash | What it shows and does |
+|------|------|------------------------|
+| Overview | `#overview`, the default | Main's namespace first, then each story's, then the stories in review not yet deployed. Each row shows the story's ID and title, linking its item page, or `main`; the namespace; the commit, and the head when it differs; when it was deployed; the outcome and the step it failed at; and a badge per step with its outcome, which opens Build for a build step and Logs for any other. The entry counts the rows |
+| Build | `#build` | A choice of namespace, then one panel per build step of its record, `build` or `build-<name>` per component, in order, each with its status and its live feed; a line counting them, such as "3 builds: 1 passed, 1 running, 1 waiting"; then the load step, with the images it loaded. A deploy that built nothing says so and links Setup. The entry counts the build steps |
+| Logs | `#logs` | The running or last job's own log path and the end of its log, then one panel per step of the chosen namespace, each with its live feed and its log's path |
+| Access | `#access` | Each namespace's `access`: each service's host and ports, with **Start** and **Stop** for each port's forward and a link to it once it runs, and `services_error`. The pane says once, while a forward runs, that it is reachable from the host's network, with no sign-in of its own ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). The entry counts the running forwards |
+| Setup | `#setup` | The setup form the Klusters page's step 4 shows, `DeploySettings`, which writes the new status back into the page after a save, and a link to the Klusters page for the cluster and its config file |
+
+The chosen namespace is the one the reader picked, else the running job's, else main's, else the first. Overview's actions:
 
 | Row | Its actions |
 |-----|-------------|
@@ -424,4 +468,6 @@ The page lists main's namespace first, then each story's, then the stories in re
 | A story in review not deployed | **Deploy** |
 | Main not deployed | **Promote**, beside the sentence saying so |
 
-Each row's **Reach it for a demo** shows `access`: each service's host and ports, with **Start** and **Stop** for each port's forward and a link to it once it runs, and `services_error`. The page says once that a running forward is reachable from the host's network, with no sign-in of its own ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). While a job runs the actions wait, the page says which job runs, shows the end of its log, and asks for the deployments again every 3 seconds until it ends. flai's refusals and errors are shown word for word. The host action off and no `kluster:` block each show a notice linking the Klusters page's setup, naming no command. With no `deploy` set, read from `kluster.status`'s `deployable`, **Deploy** and **Promote** give way to a sentence saying deploys are not set up yet, linking the same setup; **Teardown** stays. A flai too old shows the notice the Klusters page shows.
+With no `deploy` set, read from `kluster.status`'s `deployable`, Overview says deploys are not set up yet, and **Deploy** and **Promote** give way to **Set up deploys**, which opens Setup and asks flai nothing; **Teardown** stays. While a job runs the actions wait, and the page asks for the deployments again every 3 seconds until it ends. flai's refusals and errors are shown word for word.
+
+**The live feed.** Each step's panel, `LogFeed`, shows the step's name, a badge of its outcome, its duration or when it started, and its exit code. It starts folded. Opened, it reads the step's log through `kluster.log`, from 0 and then from each answer's `next`, again at once while `next` is below `size`, about every second while the step runs, and once more when it ends. A `reset` clears the text. It keeps the newest 256 KB, cut at a whole line, saying earlier lines are in the log on the host, and stays scrolled to the end unless the reader scrolls up. After a failed read it tries again every 5 seconds while the step runs. Folding it or leaving the page stops the reads.

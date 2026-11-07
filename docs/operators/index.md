@@ -589,7 +589,7 @@ The project's build, deploy, and teardown scripts are the project's code. The Kl
 | A teardown | The story, or `system-flow.yaml` once the story is archived | The step, its exit code, the commit, and the log | A later teardown passes. A failed teardown is tried again only once the story moves |
 | A promotion | `system-flow.yaml` | Main's commit, the step, its exit code, and the log | A later promotion passes. The next acceptance promotes again |
 
-`flai kluster deployments` lists every namespace's last job and outcome. The dashboard's Deployments page shows the same, with each step's log.
+`flai kluster deployments` lists every namespace's last job and outcome. The dashboard's Deployments page shows the same, with each build and step's log as it is written: the page reads it through the host method `kluster.log`, about once a second while the step runs, from `.flai-cache/kluster/logs/<namespace>/` ([kluster.md § The Deployments page](../../design/system/kluster.md#the-deployments-page)).
 
 **Understand what enabling it means.** Whoever can change the project's `build`, `deploy`, and `teardown` commands, on main or on a story's branch, then runs them on your machine, as you, against a cluster that holds the project's shared services and their data.
 

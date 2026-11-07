@@ -1810,10 +1810,11 @@ A project that runs on Kubernetes can name a local cluster, made by [bytepunx/kl
 flai serve enable kluster --trailer "Co-Authored-By: ..."   # writes the block and kluster.yaml when there is none, and commits them
 flai manifest set 'kluster.deploy=["scripts/kluster-deploy.sh","--wait"]'
 flai manifest set 'kluster.teardown=[]'                       # [] unsets a command
+flai manifest set 'kluster.build=[]' 'kluster.components=[{"name":"api","build":["scripts/build.sh","api"]}]'  # one build per component
 flai manifest set kluster.namespace=app kluster.timeout=45m
 ```
 
-`flai serve enable kluster` on a project with no block writes one naming only `config: kluster.yaml`, and `kluster.yaml` at the repository root when it is absent: the cluster named after the project with `-local`, the provider `k3d`, and the profile `spire`, kluster's default, since kluster has no empty cluster. It commits the two files alone, with each `--trailer`, unless the project sets `dashboard.autocommit: false`. The block names no `deploy`: the cluster comes up and goes down, and nothing is deployed until `kluster.deploy` is set. `flai manifest set` writes the block's six keys, `kluster.config`, `namespace`, `build`, `deploy`, `teardown`, and `timeout`, each command as a JSON argument list, the program first, and refuses a bad value naming the key.
+`flai serve enable kluster` on a project with no block writes one naming only `config: kluster.yaml`, and `kluster.yaml` at the repository root when it is absent: the cluster named after the project with `-local`, the provider `k3d`, and the profile `spire`, kluster's default, since kluster has no empty cluster. It commits the two files alone, with each `--trailer`, unless the project sets `dashboard.autocommit: false`. The block names no `deploy`: the cluster comes up and goes down, and nothing is deployed until `kluster.deploy` is set. `flai manifest set` writes the block's seven keys, `kluster.config`, `namespace`, `build`, `components`, `deploy`, `teardown`, and `timeout`, each command as a JSON argument list, the program first, and `components` as a JSON list of `{name, build}`, and refuses a bad value naming the key. `components` is for a project that builds several images: each component's build runs as its own step, `build-<name>`, with its own log, in place of `build` ([ADR-0263](../../design/adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)). A block takes one of the two.
 
 `flai kluster` brings that cluster up, takes it down, and reports it:
 
@@ -1845,7 +1846,7 @@ flai refuses, exit 1, with a sentence that says what to do:
 - a project with no `kluster:` block, saying to turn the `kluster` host action on, which writes one;
 - a host with no `kluster` on `PATH`, naming kluster's `install.sh` and `go install github.com/bytepunx/kluster/kluster@latest`.
 
-`flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, or a `timeout` that is not a duration. A block with no `deploy` is valid; `deploy` and `promote` refuse it until `kluster.deploy` is set.
+`flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, a `timeout` that is not a duration, `build` and `components` both set, or a component with no name, a repeated name, or no build command. A block with no `deploy` is valid; `deploy` and `promote` refuse it until `kluster.deploy` is set.
 
 ### Deploy a story, tear it down, and promote main
 
@@ -1895,7 +1896,7 @@ the deploy step for the namespace s-0578 failed with exit code 3: exit status 3;
 
 Deploy again at a new commit to update the namespace in place.
 
-- Each step's output is in `.flai-cache/kluster/logs/<namespace>/<step>.log`, cleared at each deploy. The record of each namespace's last job is `.flai-cache/kluster/deployments/<namespace>.json`: its commit, tag, images, outcome, and each step's outcome, times, and log.
+- Each step's output is in `.flai-cache/kluster/logs/<namespace>/<step>.log`, cleared at each deploy; a component's build is the step `build-<name>`. The record of each namespace's last job is `.flai-cache/kluster/deployments/<namespace>.json`: its commit, tag, images, outcome, and each step's outcome, times, and log. It lists every step the job will run as `pending` before the first starts, so it says which steps passed, which runs, and which wait; the steps after a failure are `skipped`.
 - `teardown` runs the block's `teardown` command, when it names one, then deletes the namespace with `kubectl delete namespace`. It runs in the story's worktree, or in the main checkout once the worktree is gone. It asks first on a terminal; `--yes` answers, and is needed without a terminal. When it passes, flai removes the namespace's record, state folder, and logs. A story never deployed has nothing to tear down: flai says so and exits 0.
 - `promote` puts a worktree of the main branch's head at `.flai-cache/kluster/main` and deploys it, as `deploy` does a story, into the default namespace, `kluster.namespace` or the project's name. The images are tagged `main-` and the commit's first 12 digits.
 - `deployments` lists the records, the default namespace's first, then the stories' by number:
