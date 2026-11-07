@@ -3,10 +3,10 @@ id: S-0588
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T09:24:05Z
-updated: 2026-11-07T12:05:12Z
+updated: 2026-11-07T12:09:09Z
 transitions:
   - to: ready
     at: 2026-11-07T09:24:27Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T12:05:12Z
     by: agent-S-0588
+  - to: review
+    at: 2026-11-07T12:07:48Z
+    by: agent-S-0588
+  - to: done
+    at: 2026-11-07T12:09:09Z
+    by: orchestrator
 tags: []
 agent:
   harness: claude-code
@@ -22,20 +28,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 86
-  estimated: true
-  priced_by: estimate
+  seconds: 177
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 1
-      work: 13
+      ceremony: 2
+      work: 23
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 300
-      cache_read: 1610761
-      cache_write: 139044
-      cost: 0.6271
+      input: 54
+      output: 6329
+      cache_read: 3501450
+      cache_write: 148393
+      cost: 2.0142
   strategic:
     - kind: orchestrator
       seconds: 192
@@ -63,9 +68,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2566 Fetch the remote's branch and tags
@@ -75,3 +80,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with no inputs.
+
+### Accepted by the orchestrator
+
+- Verified: 0794a48d276966a39ad60ef490b8d171e434d1a2
+- At: 2026-11-07T12:09:09Z
+
+Verdict: pass
+- 1: T-2566 done
+- 2: T-2567 done
+- 3: T-2568 done
