@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0565-one-story-of-this-repository-is-worked-end-to-end-by-flai-serve-on-harness.md
   item: S-0565
 status: open
-participants: [agent-S-0565, orchestrator]
+participants: [agent-S-0565, orchestrator, alex]
 created: 2026-11-07T03:44:23Z
-updated: 2026-11-07T03:46:17Z
+updated: 2026-11-07T04:37:24Z
 ---
 
 # TH-0836 S-0565 needs four host steps before flai serve can start its proof stories in a container
@@ -62,3 +62,56 @@ flai serve agent harness container --login ~/.claude   # 3. the container login
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: docs/operators/runbooks/agent-container.md § Build
+
+### 2026-11-07T04:19:06Z alex
+Confirmed the recommendation of 2026-11-07T03:46:17Z orchestrator.
+
+Source: docs/operators/runbooks/agent-container.md § Build
+
+### 2026-11-07T04:20:11Z orchestrator
+Noted: the confirmed answer (D-0488) is that you do steps 1 to 3 on the host, and S-0558 goes to ready only once they are done.
+
+I have not moved S-0558. The confirmation does not say steps 1 to 3 are done yet. The CLI on PATH answers `flai 1.84.0`, but I cannot check the images or the container login: flai guard refuses me `flai serve agent harness`.
+
+**Next:** agent-S-0565 has restarted and checks T-2449's preconditions again. Once it or you writes here that steps 1 to 3 hold, I move S-0558, and only S-0558, to ready under `promote_to_ready` on my next run. S-0556 waits until S-0558 is in review.
+
+Source: design/digest/D-0488-s-0565-needs-four-host-steps-before-flai-serve-can-start-its-proof-stories-in-a.md
+
+### 2026-11-07T04:21:22Z agent-S-0565
+Steps 1 to 3 hold. I checked each on the host at 2026-11-07T04:19Z.
+
+| Step | Command | Answer |
+|------|---------|--------|
+| 1. Host at 1.84.0 | `flai version`; `flai serve status` | flai 1.84.0. `flai serve` 1.84.0 has run since 03:56:31Z |
+| 2. Images rebuilt | `docker image inspect`; `flai version` and `claude --version` inside the layer | bedrock 03:46:02Z, claude-code 03:46:25Z, `flai-agent-sf-claude-code:local` 03:47:29Z. Inside: flai 1.84.0 (`e41d6124e`), Claude Code 2.1.312 |
+| 3. Login set | `flai serve agent harness` | `/home/alex/.claude-me`, mounted read-only |
+
+T-2449 is closed. The table is in S-0565's results document.
+
+**Next:** orchestrator, please move S-0558, and only S-0558, to ready, as D-0488 says. The in-progress limit is full (5 of 5), so flai serve starts S-0558 only once a slot frees.
+
+While S-0558's container runs, I will ask here for the dashboard stop (criterion 2). S-0556 stays in backlog until S-0558 is in review.
+
+Source: design/digest/D-0488-s-0565-needs-four-host-steps-before-flai-serve-can-start-its-proof-stories-in-a.md
+
+### 2026-11-07T04:22:08Z orchestrator
+S-0558 is in ready, and it is the only story I moved. I moved it under `promote_to_ready` (`flai promote --candidates` rank 1, 12m, throughput), then ordered the column with `flai order --by throughput --apply`. flai serve starts it on `harness: container` once an in-progress slot frees (5 of 5 now).
+
+S-0556 stays in backlog until S-0558 is in review. TH-0828 stays open as my reminder to skip it.
+
+Source: design/digest/D-0488-s-0565-needs-four-host-steps-before-flai-serve-can-start-its-proof-stories-in-a.md
+
+### 2026-11-07T04:37:24Z agent-S-0565
+**Please stop S-0558's agent from the dashboard now** (criterion 2). Its container is running and its forecast is only 12m, so the window is short.
+
+- Container: `flai-agent-S-0558-47f3eec4-8dd1-41ac-adfb-cbc7c6aff228` on `flai-agent-sf-claude-code:local`, started 04:36:27Z.
+- Its agent called `story_start` at 04:36:34Z and moved S-0558 to in-progress at 04:37:10Z.
+
+**Steps:**
+
+1. Open S-0558's card or page and use the agent's Stop.
+2. Wait about 30 seconds.
+3. Restart it from the dashboard.
+4. Reply here with what the card showed after the stop and after the restart.
+
+I record the `stopped` event, whether `docker ps` still lists the container, and whether the restart resumed session `47f3eec4-…` or started a new one.

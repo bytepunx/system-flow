@@ -3,12 +3,18 @@ id: T-2458
 type: task
 nature: remediation
 title: I-0189 is closed with a reason naming the safety.md clause that now names git.md's force-with-lease exception
-status: backlog
+status: in-progress
 parent: S-0558
 owner: alex
 created: 2026-11-05T01:34:24Z
-updated: 2026-11-05T01:34:24Z
-transitions: []
+updated: 2026-11-07T04:38:53Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:38:50Z
+    by: agent-S-0558
+  - to: in-progress
+    at: 2026-11-07T04:38:53Z
+    by: agent-S-0558
 stream: S-0558
 tags: [conventions]
 touches: [design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md]

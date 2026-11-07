@@ -3,15 +3,36 @@ id: T-2457
 type: task
 nature: remediation
 title: Both copies of safety.md name flai serve's force-with-lease push of a story's branch as the one exception git.md makes, and the template's changelog records it
-status: backlog
+status: done
 parent: S-0558
 owner: alex
 created: 2026-11-05T01:34:11Z
-updated: 2026-11-05T01:34:11Z
-transitions: []
+updated: 2026-11-07T04:38:32Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:37:59Z
+    by: agent-S-0558
+  - to: in-progress
+    at: 2026-11-07T04:38:09Z
+    by: agent-S-0558
+  - to: done
+    at: 2026-11-07T04:38:32Z
+    by: agent-S-0558
 stream: S-0558
 tags: [conventions, template]
 touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 11
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 10
+      cache_read: 395528
+      cache_write: 2809
+      cost: 0.1424
 ---
 # T-2457 Both copies of safety.md name flai serve's force-with-lease push of a story's branch as the one exception git.md makes, and the template's changelog records it
 

@@ -6,8 +6,8 @@ sources: [TH-0454]
 topics: [design, flaiover, dashboard, sveltekit, code, all]
 paths: [flaiover/src/lib/design/tokens.ts, flaiover/src/lib/design/tokens.test.ts, flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/TokenEditor.svelte, flaiover/src/lib/components/design/TokenEditor.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/design/tokens/+server.ts, flaiover/src/routes/api/design/tokens/tokens.test.ts, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md]
 date: 2026-10-15
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md#consequences"
 asked_again: []
 cited: []
 ---

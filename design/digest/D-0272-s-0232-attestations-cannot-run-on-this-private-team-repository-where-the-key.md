@@ -6,8 +6,8 @@ sources: [TH-0324]
 topics: [release, security, releases, flai, cli, go, flaiover, dashboard, sveltekit, code, all]
 paths: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, flai/internal/buildinfo/cosign.pub, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/I-0134-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md]
 date: 2026-10-12
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: design/system/release-signing.md
 asked_again: []
 cited: []
 ---

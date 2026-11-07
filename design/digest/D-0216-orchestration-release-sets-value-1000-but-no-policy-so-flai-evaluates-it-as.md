@@ -9,7 +9,7 @@ date: 2026-10-07
 status: absorbed
 absorbed_by: "design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md#decision"
 asked_again: []
-cited: []
+cited: [TH-0839]
 ---
 
 # D-0216 orchestration.release sets value 1000 but no policy, so flai evaluates it as judgement: judgement

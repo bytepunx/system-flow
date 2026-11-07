@@ -3,11 +3,17 @@ id: S-0558
 type: story
 nature: remediation
 title: safety.md says every force push needs confirmation, while git.md exempts flai serve's force-with-lease push of a story's branch
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-02T00:04:34Z
-updated: 2026-11-07T04:18:28Z
-transitions: []
+updated: 2026-11-07T04:37:10Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:21:54Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-07T04:37:10Z
+    by: agent-S-0558
 tags: [conventions, template]
 topics: [git, safety]
 touches: [design/conventions/safety.md, template/root/design/conventions/safety.md, template/CHANGELOG.md, design/issues/I-0189-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai-serve-s-force-with-lease-push-of-a-story-s-branch.md, design/issues/summary.md]
@@ -17,20 +23,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 109
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      work: 9
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 74
+      cache_read: 1111501
+      cache_write: 199609
+      cost: 0.4687
   strategic:
     - kind: orchestrator
-      seconds: 163
+      seconds: 188
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 252
-          cache_read: 1524153
-          cache_write: 157405
-          cost: 0.4009
+          input: 45
+          output: 303
+          cache_read: 1653077
+          cache_write: 190715
+          cost: 0.4404
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

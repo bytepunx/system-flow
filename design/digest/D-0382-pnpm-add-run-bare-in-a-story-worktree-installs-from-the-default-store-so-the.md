@@ -6,8 +6,8 @@ sources: [I-0177, S-0481]
 topics: [all]
 paths: [design/tech/node.md, scripts/README.md, scripts/flaiover-install-test.sh, scripts/flaiover-install.sh, scripts/flaiover-pnpm.sh, scripts/flaiover-test.sh, design/issues/I-0177-pnpm-add-run-bare-in-a-story-worktree-installs-from-the-default-store-so-the-next-flaiover-install-sh-aborts-with-err-pnpm-aborted-remove-modules-dir-no-tty.md, design/issues/summary.md]
 date: 2026-10-23
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/tech/node.md#nodejs-and-pnpm"
 asked_again: []
 cited: [S-0429, S-0432]
 ---

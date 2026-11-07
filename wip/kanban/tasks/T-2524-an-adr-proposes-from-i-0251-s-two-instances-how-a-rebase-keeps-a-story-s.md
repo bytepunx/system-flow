@@ -3,11 +3,11 @@ id: T-2524
 type: task
 nature: research
 title: "An ADR proposes from I-0251's two instances how a rebase keeps a story's changelog lines under main's top Unreleased, refining ADR-0228 §4"
-status: in-progress
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:47:31Z
-updated: 2026-11-07T04:16:42Z
+updated: 2026-11-07T04:18:23Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:29Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T04:16:42Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T04:18:23Z
+    by: agent-S-0570
 stream: S-0570
 tags: [adr, git, release]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 101
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 35
+      cache_read: 1061753
+      cache_write: 4441
+      cost: 0.3811
 ---
 # T-2524 An ADR proposes from I-0251's two instances how a rebase keeps a story's changelog lines under main's top Unreleased, refining ADR-0228 §4
 

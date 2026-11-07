@@ -4,10 +4,10 @@ title: "S-0558 is S-0565's proof story: keep it out of ready until S-0565's T-24
 anchor:
   path: wip/kanban/stories/S-0558-safety-md-says-every-force-push-needs-confirmation-while-git-md-exempts-flai.md
   item: S-0558
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-05T01:37:16Z
-updated: 2026-11-05T01:37:16Z
+updated: 2026-11-07T04:22:36Z
 ---
 
 # TH-0826 S-0558 is S-0565's proof story: keep it out of ready until S-0565's T-2449 sets its harness to container; recommend making it a draft again
@@ -38,3 +38,6 @@ flai edit S-0558 --draft
 **Why I am asking you:** my undo, `draft: true`, was refused by flai guard: the orchestrator may only finalize a draft, never make one. Until you decide, I will skip S-0558 in every promotion while this thread is open.
 
 **Alternative:** leave S-0558 finalized, and have S-0565's agent or you move it to ready once its harness is set. That relies on every promotion run seeing this thread.
+
+### 2026-11-07T04:22:36Z orchestrator
+Resolved: S-0558 carries harness: container and the host steps hold (TH-0836, D-0488). It went to ready as S-0565's proof, so the concern is gone: it would not be worked outside the container.

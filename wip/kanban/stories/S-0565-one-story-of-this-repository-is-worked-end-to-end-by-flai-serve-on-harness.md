@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T03:44:57Z
+updated: 2026-11-07T04:19:08Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -17,6 +17,7 @@ transitions:
     by: agent-S-0565
 blocked:
   - from: 2026-11-07T03:44:57Z
+    until: 2026-11-07T04:19:08Z
     reason: awaiting the operator on TH-0836
 tags: []
 topics: [harness, docker]
@@ -55,15 +56,15 @@ usage:
           cache_write: 483216
           cost: 6.2582
     - kind: orchestrator
-      seconds: 376
+      seconds: 511
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 105
-          output: 720
-          cache_read: 3724441
-          cache_write: 453435
-          cost: 0.9937
+          input: 138
+          output: 954
+          cache_read: 5003297
+          cache_write: 562057
+          cost: 1.3311
 cost_of_delay:
   value: 123.85
   by: planner-S-0565

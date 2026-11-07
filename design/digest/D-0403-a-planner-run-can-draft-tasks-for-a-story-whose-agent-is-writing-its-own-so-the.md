@@ -9,7 +9,7 @@ date: 2026-10-28
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0567, TH-0838]
 ---
 
 # D-0403 A planner run can draft tasks for a story whose agent is writing its own, so the story's agent cancels the duplicates on the plan thread before its layers run

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 888
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 119
-      cache_read: 2385882
-      cache_write: 23940
-      cost: 0.8613
+      input: 19
+      output: 3173
+      cache_read: 2426094
+      cache_write: 49971
+      cost: 0.871
 ---
 # T-2527 Say in the design, the user guide, and the work-management convention that a close-out leaves out narrative.missing
 

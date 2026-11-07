@@ -3,12 +3,18 @@ id: T-2529
 type: task
 nature: remediation
 title: TestHostRunsServeAndTheMCPServersAndTakesThemWithIt waits for the MCP server's state within a bound that outlasts its staleness check on a loaded host
-status: backlog
+status: in-progress
 parent: S-0569
 owner: alex
 created: 2026-11-07T03:47:55Z
-updated: 2026-11-07T03:47:55Z
-transitions: []
+updated: 2026-11-07T04:17:22Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:17:19Z
+    by: agent-S-0569
+  - to: in-progress
+    at: 2026-11-07T04:17:22Z
+    by: agent-S-0569
 stream: S-0569
 tags: [flai, tests]
 touches: [flai/cmd/host_integration_test.go]

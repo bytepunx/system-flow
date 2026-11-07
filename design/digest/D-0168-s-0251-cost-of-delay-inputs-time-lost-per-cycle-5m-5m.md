@@ -9,7 +9,7 @@ date: 2026-10-05
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0682]
+cited: [TH-0682, TH-0837]
 ---
 
 # D-0168 S-0251 cost of delay inputs: time lost per cycle 5m: 5m

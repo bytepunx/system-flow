@@ -3,12 +3,18 @@ id: T-2450
 type: task
 nature: experiment
 title: A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
-status: backlog
+status: in-progress
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:24:29Z
-updated: 2026-11-03T01:28:19Z
-transitions: []
+updated: 2026-11-07T04:21:37Z
+transitions:
+  - to: ready
+    at: 2026-11-07T04:21:30Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:21:37Z
+    by: system-flow
 stream: S-0565
 tags: [docker]
 after: [T-2449]

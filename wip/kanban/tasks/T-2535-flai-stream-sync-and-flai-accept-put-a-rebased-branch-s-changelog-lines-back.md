@@ -3,14 +3,17 @@ id: T-2535
 type: task
 nature: remediation
 title: flai stream sync and flai accept put a rebased branch's changelog lines back under main's top Unreleased before checking what the rebase undoes
-status: ready
+status: in-progress
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:48:21Z
-updated: 2026-11-07T04:16:34Z
+updated: 2026-11-07T04:35:25Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:34Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:35:25Z
     by: system-flow
 stream: S-0570
 tags: [cli, git]

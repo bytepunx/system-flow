@@ -3,19 +3,31 @@ id: T-2531
 type: task
 nature: remediation
 title: The release package writes a changelog as the base branch has it with a branch's own added lines under its top Unreleased
-status: ready
+status: done
 parent: S-0570
 owner: alex
 created: 2026-11-07T03:48:02Z
-updated: 2026-11-07T04:16:31Z
+updated: 2026-11-07T04:34:44Z
 transitions:
   - to: ready
     at: 2026-11-07T04:16:31Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T04:18:45Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:34:44Z
+    by: agent-S-0570
 stream: S-0570
 tags: [cli, release]
 touches: [flai/internal/release/changelog.go, flai/internal/release/changelog_test.go, flai/internal/release/release.go]
 after: [T-2524]
+usage:
+  source: log
+  seconds: 2
+  estimated: true
+  priced_by: estimate
+  models: []
 ---
 # T-2531 The release package writes a changelog as the base branch has it with a branch's own added lines under its top Unreleased
 

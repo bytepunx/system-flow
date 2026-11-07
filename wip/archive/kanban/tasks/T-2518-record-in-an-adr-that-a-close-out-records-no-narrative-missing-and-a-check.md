@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 93
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 152
-      cache_read: 2023095
-      cache_write: 13129
-      cost: 0.7278
+      input: 16
+      output: 2681
+      cache_read: 2049976
+      cache_write: 42224
+      cost: 0.736
 ---
 # T-2518 Record in an ADR that a close-out records no narrative.missing and a check scoped to a story leaves it out
 

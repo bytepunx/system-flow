@@ -24,16 +24,16 @@ touches: [design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-st
 after: [T-2521, T-2527]
 usage:
   source: log
-  seconds: 14
+  seconds: 19
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 48
-      cache_read: 848392
-      cache_write: 2317
-      cost: 0.3041
+      input: 7
+      output: 1120
+      cache_read: 856453
+      cache_write: 17641
+      cost: 0.3075
 ---
 # T-2530 Close I-0235 saying what fixed it
 

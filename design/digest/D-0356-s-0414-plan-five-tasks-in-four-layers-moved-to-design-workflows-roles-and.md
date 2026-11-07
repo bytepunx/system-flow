@@ -6,8 +6,8 @@ sources: [TH-0567]
 topics: [cli, planning, orchestration, template, conventions, flai, go, code, all]
 paths: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/workflows/roles/analyzer.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, design/workflows/roles/README.md, design/system/repository-layout.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/root.go, flai/internal/check/check.go, flai/internal/check/roles_test.go, flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/root/design/workflows/roles/analyzer.md, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, template/root/design/workflows/roles/README.md, template/template.yaml, design/system/flai-cli.md, design/system/project-manifest.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl]
 date: 2026-10-21
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0236-a-built-in-role-s-claude-code-definition-is-generated-into-flai-cache-agents-by.md#decision"
 asked_again: []
 cited: []
 ---

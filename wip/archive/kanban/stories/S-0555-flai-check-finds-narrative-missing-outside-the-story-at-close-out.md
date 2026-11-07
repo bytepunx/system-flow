@@ -3,10 +3,10 @@ id: S-0555
 type: story
 nature: improvement
 title: "flai check finds `narrative.missing` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-01T05:45:09Z
-updated: 2026-11-07T03:56:17Z
+updated: 2026-11-07T04:39:00Z
 transitions:
   - to: ready
     at: 2026-11-07T03:56:08Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T03:56:17Z
     by: agent-S-0555
+  - to: review
+    at: 2026-11-07T04:36:21Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T04:39:00Z
+    by: orchestrator
 tags: [flai, check]
 topics: [testing, cli]
-touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1126
-  estimated: true
-  priced_by: estimate
+  seconds: 2417
+  priced_by: harness
   turns:
     - day: 2026-11-07
+      ceremony: 2
       hand_edits: 1
-      work: 25
+      work: 77
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 864
-      cache_read: 12633580
-      cache_write: 588013
-      cost: 4.7256
+      input: 238
+      output: 39341
+      cache_read: 30075828
+      cache_write: 619483
+      cost: 10.7978
   strategic:
     - kind: orchestrator
       seconds: 146
@@ -74,8 +80,8 @@ finalized:
 This story remediates [I-0235](../../../design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md), "flai check finds `narrative.missing` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0235 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0235 is closed with `flai issue close I-0235 --reason` saying what fixed it
+- [x] The cause I-0235 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0235 is closed with `flai issue close I-0235 --reason` saying what fixed it
 
 ## Tasks
 - T-2518 Record in an ADR that a close-out records no narrative.missing and a check scoped to a story leaves it out
@@ -110,3 +116,12 @@ No `after`: the story reads no output of another open story.
 Forecast: 26m, as `flai forecast` gives it at size 17. Kept: S-0365 and S-0366, the same fix for `issues.no-story` and `threads.archived`, took 18m and 17m of agent time. Close-outs now also run the integration and smoke tiers for a story that touches `flai/` or `template/`.
 
 Cost of delay: 12.50 USD a week, as `flai cod` works it out from the operator's `time_lost_per_cycle: 5m` (TH-0837), at 150 USD an hour and one cycle a week. Kept as it is, since S-0556, a defect of the same kind, has the same figure.
+
+### Accepted by the orchestrator
+
+- Verified: 7bef3eda279499d5698a0237cb1e4ccbe9c17f04
+- At: 2026-11-07T04:39:00Z
+
+Verdict: pass — a check scoped to a story now leaves out narrative.missing outside the story and the close-out records no issue for it, tests reproduce the S-0549 case, and I-0235 is closed with a reason.
+- 1: flai/internal/check/scope.go, flai/cmd/check.go, flai/internal/check/scope_test.go, flai/cmd/check_test.go
+- 2: design/issues/I-0235-flai-check-finds-narrative-missing-outside-the-story-at-close-out.md, design/issues/summary.md

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 849
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 308
-      cache_read: 4936502
-      cache_write: 303340
-      cost: 1.8728
+      input: 42
+      output: 6900
+      cache_read: 5275221
+      cache_write: 108656
+      cost: 1.8939
 ---
 # T-2521 Leave narrative.missing outside the story out of a check scoped to a story, with a test that reproduces I-0235
 
