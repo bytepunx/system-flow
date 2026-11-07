@@ -1,10 +1,11 @@
 ---
 id: ADR-0254
 title: "flai runs one kluster per project from the config its manifest's kluster block names, deploys each story in review into a namespace named for its serial through the project's own build, deploy, and teardown commands, and on acceptance tears the story's namespace down and deploys main to the default namespace, behind the kluster host action, off by default"
-status: proposed
-date: 2026-11-06
+status: accepted
+date: 2026-11-07
 supersedes: []
 superseded_by: []
+topics: [kluster, deployment, manifest]
 ---
 
 # ADR-0254 flai runs one kluster per project from the config its manifest's kluster block names, deploys each story in review into a namespace named for its serial through the project's own build, deploy, and teardown commands, and on acceptance tears the story's namespace down and deploys main to the default namespace, behind the kluster host action, off by default
@@ -44,7 +45,8 @@ The recommendation was to adapt: one cluster per project and a namespace per sto
 - Main deploys into the default namespace, `kluster.namespace`. It defaults to the manifest's `name` made a DNS label. For authstar it is `authstar`, the namespace its profile deploys into.
 - `flai check` reports a default namespace that is not a DNS label or that has a story namespace's form, `s-` and digits.
 - Each namespace has a prefix for the names it makes in shared services, such as databases: the namespace with its hyphens taken out and an underscore after, `s0576_`. The default namespace's prefix is empty, so main keeps the names the profile made.
-- The settings a story owns in the shared services, its vhost and user, its databases, its signet bundles and policies, its keys and tokens, are made by the project's deploy command from the namespace and the prefix, and removed by its teardown command. flai does not know them.
+- The settings a story owns in the shared services, its vhost and user, its databases, its signet bundles and policies, its keys and tokens, and its tenant where the project has tenants, as authstar has, are made by the project's deploy command from the namespace and the prefix, and removed by its teardown command. flai does not know them. So each story's environment stays apart from the others' inside one cluster, over infrastructure the project does not own.
+- A project that works with flai's kluster takes the namespace as a parameter in its Kubernetes manifests and its scripts, with the default namespace as the default, and never names it as a constant. authstar's manifests name `authstar` today, and S-0575 renamed it with `sed`; making it a parameter is authstar's change. The default namespace itself has a default, the manifest's name, which `kluster.namespace` overrides.
 
 ### 3. The manifest's `kluster:` block
 
@@ -60,7 +62,7 @@ kluster:                                     # optional (S-0577): the project's 
 
 - Each command is an argument list, run as it stands, never through a shell, as the manifest's `tests` and the `checks` host action run theirs. It runs in the checkout being deployed (§5) with the variables of §4 in its environment. A command that exits other than 0 fails its job.
 - `build` builds the project's images and writes the reference of each, one a line, to the file `FLAI_KLUSTER_IMAGES` names. flai loads each (§6). With no `build`, flai loads nothing: the deploy then pulls what it needs or builds it itself.
-- `deploy` makes the namespace's settings in the shared services and applies the project's manifests into the namespace, with the images tagged `FLAI_KLUSTER_TAG`, and waits for their rollouts. It must be idempotent: a second deploy into the same namespace, at a new commit, updates it in place. In the default namespace it replaces what the profile deployed, as S-0575's promotion did by deleting the profile's Deployments and CronJobs first.
+- `deploy` makes the namespace's settings in the shared services and applies the project's manifests into the namespace given as their parameter (§2), with the images tagged `FLAI_KLUSTER_TAG`, and waits for their rollouts. It must be idempotent: a second deploy into the same namespace, at a new commit, updates it in place. In the default namespace it replaces what the profile deployed, as S-0575's promotion did by deleting the profile's Deployments and CronJobs first.
 - `teardown` removes what `deploy` made outside the namespace: its vhost and user, its databases, its signet bundles and policies. flai then deletes the namespace itself, with `kubectl delete namespace --wait`. With no `teardown`, flai deletes only the namespace.
 
 ### 4. The variables
@@ -91,14 +93,22 @@ While the `kluster` host action is on for a project with a `kluster:` block, `fl
 | When | Job | Where it runs |
 |------|-----|---------------|
 | A story enters review, or is in review at a new head | Deploy the story: `build`, load, `deploy`, into its namespace | The story's worktree, at its head |
-| A story leaves review other than by acceptance: back to in-progress, or cancelled | Tear the story down: `teardown`, then delete its namespace | The story's worktree, or the main checkout when it is gone |
+| A story leaves review, back to in-progress or cancelled, other than by acceptance or by a failure §5a sends back | Tear the story down: `teardown`, then delete its namespace | The story's worktree, or the main checkout when it is gone |
 | A story is accepted | Tear the story down, then promote: `build`, load, `deploy`, into the default namespace | Teardown as above; the promotion in a worktree of main's head that flai keeps, `.flai-cache/kluster/main` |
 
 - Jobs run one at a time per project, in the order their causes came. Builds share the host's Docker cache and loads share the nodes, so running them at once would gain little and race. Promotions that queue up behind one another run once, at main's newest head.
 - A story never deployed is not torn down. A teardown of a namespace that is gone succeeds.
 - Each job's outcome, step times, and log are kept per namespace (§1), for `flai kluster status` and the dashboard's Deployments page (S-0581).
-- A job that fails is recorded and stops there. It opens no thread and moves no work item: the operator sees it on the story's review page and in the journal. A failed deploy is not a finding against the story, since S-0575's baseline failed for reasons that were no story's.
 - The close-out and `flai verify` do not use the cluster. They run before review, when the story has no namespace. A project's integration and smoke tiers stay its own.
+
+### 5a. A failed deploy holds the story
+
+A change that cannot be deployed cannot be verified, so it is not shipped. A failure is how the operator learns that something is amiss, even when the cause is not the story's own, such as drift between the project and the cluster's services, as in S-0575's baseline.
+
+- When a story's deploy fails, or its checks run against its namespace fails (§8), `flai serve` records it, opens one thread to the operator on the story naming the job, the step, the commit, and the log, and sends the story back to in-progress, starting its agent, as a failing required check does under pull-request acceptance ([ADR-0167](0167-flai-serve-reads-each-pull-request-s-required-checks-and-reviews-into-kept.md)). The agent fixes the change or, when the cause is outside the story, says so on the thread.
+- A story sent back this way keeps its namespace, so that its agent and the operator can look at what failed. It is deployed again in place when the story returns to review, and torn down when it is cancelled or accepted.
+- While the `kluster` host action is on for the project, every acceptance of a story, the operator's, the orchestrator's, and the merge queue's alike, is refused unless the story's namespace was deployed at the story's head and its checks run against it passed there, or `checks` is off. The refusal is the blocker `kluster`, naming the last job and its outcome. `flai accept --without-kluster` lands the story anyway, on the operator's word only, and records it in the story's Notes, as `--without-queue-tiers` does ([ADR-0221](0221-while-the-merge-queue-can-batch-a-hand-acceptance-is-refused-until-the-queue.md)).
+- A promotion that fails has no story to send back. `flai serve` records it and opens one thread to the operator on `system-flow.yaml`, naming the commit, the step, and the log. The default namespace keeps what the failed deploy left; the next acceptance promotes again.
 
 ### 6. How an image reaches the cluster
 
@@ -118,12 +128,14 @@ Once kluster gains an import (Consequences), flai calls it instead, and keeps th
 - While both `kluster` and `checks` are on, `flai serve` starts the story's checks run once its deploy has passed at the story's head, not when the story enters review. With `checks` off, it deploys and runs no check.
 - That run, and any checks run started for a story whose namespace is deployed at its head, gets the variables of §4 for the story's namespace in its environment, beside `{story}` and `{root}` in its arguments. So a project's check, such as authstar's golden path, reaches the story's own namespace through `KUBECONFIG` and `FLAI_KLUSTER_NAMESPACE`.
 - A checks run for a story whose namespace is not deployed at its head gets none of them, and runs as it does today.
+- A checks run against the story's namespace that fails holds the story as a failed deploy does (§5a).
 - Checks runs against the cluster run one at a time per project, after the job queue of §5, because authstar's scenario holds fixed local ports. A project whose checks can share the cluster may be allowed to run them at once later.
 
 ## Consequences
 
-- S-0577 adds the `kluster:` block, its checks, `flai kluster up`, `down`, and `status`, and the host action. S-0578 adds `deploy`, `teardown`, and `promote` with the image load. S-0579 adds the jobs of §5 and the checks' environment of §8 to `flai serve`. S-0580 and S-0581 add the dashboard's Ops group. `design/system/kluster.md` describes the whole.
-- A project fills in a build, a deploy, and a teardown script of its own. authstar's would be S-0575's `build.sh`, `ns-up.sh`, and `ns-down.sh` made into its repository's scripts.
+- S-0577 adds the `kluster:` block, its checks, `flai kluster up`, `down`, and `status`, and the host action. S-0578 adds `deploy`, `teardown`, and `promote` with the image load. S-0579 adds the jobs of §5, the hold of §5a, and the checks' environment of §8 to `flai serve`, and the `kluster` blocker to `flai accept`. S-0580 and S-0581 add the dashboard's Ops group. `design/system/kluster.md` describes the whole.
+- A project fills in a build, a deploy, and a teardown script of its own. authstar's would be S-0575's `build.sh`, `ns-up.sh`, and `ns-down.sh` made into its repository's scripts, over manifests that take the namespace as a parameter in place of S-0575's `sed`, and a tenant per story where its tenant host allows.
+- Until a project's baseline passes in the default namespace, every story of it that enters review is sent back by its first deploy or checks run. That is the alert §5a means: the operator fixes the baseline, or lands a story with `--without-kluster`, or turns the action off.
 - Signet keeps a torn-down namespace's bundles and policies until kluster or signet can delete them. A story's serial is never reused, so they only accumulate.
 - A browser demo of two authstar namespaces at once needs a tenant host per namespace in portcullis's config and Dex's client. That is authstar's to change. Until then a demo reaches a namespace through a port-forward.
 - Each story in review holds a namespace and its pods. On a 24-core, 62 GB host, two authstar namespaces and the default one ran together with room to spare; the review WIP limit bounds how many there are.
@@ -154,5 +166,5 @@ Outside kluster, S-0575 found faults for signet (a bundle with config and no sec
 - **A fixed image tag per namespace, as S-0575 used.** Under `IfNotPresent` a deploy at a new commit would keep the old image. Rejected for the namespace and the commit.
 - **Placeholders such as `{namespace}` in the commands' arguments.** The checks host action's `{story}` and `{root}` stay, but a deploy script needs ten values and its checks the same ones; environment variables reach both alike, and reach the scripts they call.
 - **Give the shared services' addresses as variables.** They are the profile's, not flai's, and change with it. The project's scripts know them.
-- **Gate acceptance on a passing deploy.** S-0575's baseline failed for drift no story caused. The operator sees the outcome and decides; the orchestrator's acceptance may take it as evidence in a later decision.
+- **Record a failed deploy and gate nothing.** Proposed first, since S-0575's baseline failed for drift no story caused. The operator chose otherwise on TH-0832: a change the cluster cannot run cannot be verified, and the failure is what tells the operator something is amiss before broken code ships. So a failure holds the story (§5a), and `--without-kluster` is the operator's way past a cause outside it.
 - **Deploy on the move to review in the story's agent's turn.** A deploy takes minutes and changes shared infrastructure on the operator's machine. A job in `flai serve` with no model, behind a host action, as the close-out and the merge queue are, keeps it the operator's.
