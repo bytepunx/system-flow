@@ -293,6 +293,10 @@ type Options struct {
 	// flai serve notify set is seen without a restart; nil is no channel,
 	// with which a reminder is logged instead.
 	Notify func() config.Notify
+	// Kluster runs each served project's kluster jobs, the deploys of its
+	// stories in review, behind the kluster host action (S-0579, ADR-0254);
+	// SystemKluster when nil.
+	Kluster KlusterRunner
 }
 
 // allowsUnsigned is whether the allowance is in force for the project at
@@ -552,6 +556,11 @@ func Run(ctx context.Context, o Options) error {
 	// forge host action is on (ADR-0166); a push in flight is waited for.
 	var forgeLooks sync.WaitGroup
 	defer forgeLooks.Wait()
+	// Each served project's stories in review are deployed into its kluster,
+	// one job at a time, while its kluster host action is on (S-0579,
+	// ADR-0254); a job running is cut short with the project and waited for.
+	var klusterJobs sync.WaitGroup
+	defer klusterJobs.Wait()
 	// Each served project's merge queue builds and verifies one batch at a
 	// time, off the agents' turns, behind the merge-queue host action
 	// (S-0399, ADR-0173); a batch running is cancelled and waited for.
@@ -732,6 +741,9 @@ func Run(ctx context.Context, o Options) error {
 			// second and run as jobs in its worktree, with no model; a job
 			// running is stopped with the project and waited for (S-0546)
 			newVerifyPass(o, e, &forgeLooks).start(cctx)
+			// the stories in review are deployed into the project's kluster,
+			// one job at a time, behind the kluster host action (S-0579)
+			newKlusterPass(o, e, &klusterJobs).start(cctx)
 			queue := newQueuePass(o, e, queues)
 			queue.start(cctx)
 			// The project's loop and its watcher's looks are waited for once its
