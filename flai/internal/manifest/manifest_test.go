@@ -2305,3 +2305,152 @@ func TestAgentImageLayer(t *testing.T) {
 		t.Errorf("planning.agent naming an image: %q", got)
 	}
 }
+
+// S-0577: the kluster: block is read with its defaults, a manifest with none
+// has none, and a misspelt key or a value of the wrong kind loads and is
+// named by KlusterErrors with its key.
+func TestKlusterBlock(t *testing.T) {
+	load := func(t *testing.T, name, extra string) Manifest {
+		t.Helper()
+		root := t.TempDir()
+		body := "version: 1\nname: " + name + "\nkey: k\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + extra
+		if err := os.WriteFile(filepath.Join(root, File), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		m, err := Load(filepath.Join(root, File))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	fsys := fstest.MapFS{"integration/kluster.yaml": {Data: []byte("name: demo-integration\nprofile: demo\nprovider: k3d\n")}}
+
+	t.Run("none", func(t *testing.T) {
+		m := load(t, "demo", "")
+		if m.Kluster != nil || m.KlusterNamespace() != "" || m.KlusterTimeout() != 0 || m.KlusterErrors(fsys) != nil {
+			t.Fatalf("no block: %+v, namespace %q, timeout %v", m.Kluster, m.KlusterNamespace(), m.KlusterTimeout())
+		}
+	})
+	t.Run("full", func(t *testing.T) {
+		m := load(t, "demo", "kluster:\n  config: integration/kluster.yaml\n  namespace: authstar\n  build: [scripts/kluster-build.sh, --all]\n  deploy: [scripts/kluster-deploy.sh]\n  teardown: [scripts/kluster-teardown.sh]\n  timeout: 45m\n")
+		want := Kluster{Config: "integration/kluster.yaml", Namespace: "authstar", Build: []string{"scripts/kluster-build.sh", "--all"}, Deploy: []string{"scripts/kluster-deploy.sh"}, Teardown: []string{"scripts/kluster-teardown.sh"}, Timeout: "45m"}
+		if !reflect.DeepEqual(*m.Kluster, want) {
+			t.Fatalf("block = %+v, want %+v", *m.Kluster, want)
+		}
+		if m.KlusterNamespace() != "authstar" || m.KlusterTimeout() != 45*time.Minute {
+			t.Errorf("namespace %q, timeout %v", m.KlusterNamespace(), m.KlusterTimeout())
+		}
+		if errs := m.KlusterErrors(fsys); len(errs) != 0 {
+			t.Errorf("valid block: %v", errs)
+		}
+	})
+	t.Run("required keys only", func(t *testing.T) {
+		m := load(t, "My App_2", "kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n")
+		if m.KlusterNamespace() != "my-app-2" || m.KlusterTimeout() != DefaultKlusterTimeout {
+			t.Errorf("defaults: namespace %q, timeout %v", m.KlusterNamespace(), m.KlusterTimeout())
+		}
+		if len(m.Kluster.Build) != 0 || len(m.Kluster.Teardown) != 0 {
+			t.Errorf("build %v, teardown %v, want none", m.Kluster.Build, m.Kluster.Teardown)
+		}
+		if errs := m.KlusterErrors(fsys); len(errs) != 0 {
+			t.Errorf("valid block: %v", errs)
+		}
+	})
+	t.Run("unknown key and wrong kinds", func(t *testing.T) {
+		m := load(t, "demo", "kluster:\n  config: integration/kluster.yaml\n  deploy: scripts/kluster-deploy.sh\n  timout: 5m\n  timeout: 30\n")
+		errs := strings.Join(m.KlusterErrors(fsys), "\n")
+		for _, want := range []string{
+			`kluster has no key "timout"`,
+			"kluster.deploy is not an argument list",
+			"kluster.timeout 30 is not a duration",
+		} {
+			if !strings.Contains(errs, want) {
+				t.Errorf("errors lack %q:\n%s", want, errs)
+			}
+		}
+	})
+	t.Run("not a block", func(t *testing.T) {
+		m := load(t, "demo", "kluster: integration/kluster.yaml\n")
+		if errs := m.KlusterErrors(fsys); len(errs) == 0 || !strings.Contains(errs[0], "kluster is not a block of keys") {
+			t.Errorf("errors: %v", errs)
+		}
+	})
+}
+
+// S-0577: each way a kluster: block can be wrong is one sentence naming its
+// key and the reason.
+func TestKlusterErrors(t *testing.T) {
+	fsys := fstest.MapFS{
+		"integration/kluster.yaml": {Data: []byte("name: demo\n")},
+		"kind.yaml":                {Data: []byte("name: demo\nprovider: kind\n")},
+		"nameless.yaml":            {Data: []byte("profile: demo\n")},
+		"broken.yaml":              {Data: []byte("name: [\n")},
+	}
+	ok := Kluster{Config: "integration/kluster.yaml", Deploy: []string{"scripts/deploy.sh"}}
+	for _, c := range []struct {
+		name string
+		edit func(*Kluster)
+		mf   string // the manifest's name, demo when empty
+		want string
+	}{
+		{"config missing", func(k *Kluster) { k.Config = "" }, "", "kluster.config is required"},
+		{"config absent", func(k *Kluster) { k.Config = "nowhere.yaml" }, "", `kluster.config "nowhere.yaml" does not exist`},
+		{"config outside", func(k *Kluster) { k.Config = "../kluster.yaml" }, "", `kluster.config "../kluster.yaml" leaves the repository`},
+		{"config absolute", func(k *Kluster) { k.Config = "/etc/kluster.yaml" }, "", "is an absolute path"},
+		{"config not yaml", func(k *Kluster) { k.Config = "broken.yaml" }, "", `kluster.config "broken.yaml" does not read as a kluster config`},
+		{"config nameless", func(k *Kluster) { k.Config = "nameless.yaml" }, "", "names no cluster"},
+		{"provider kind", func(k *Kluster) { k.Config = "kind.yaml" }, "", `names the provider "kind"; flai runs only k3d`},
+		{"namespace not a label", func(k *Kluster) { k.Namespace = "Auth_Star" }, "", `kluster.namespace "Auth_Star" is not a DNS label`},
+		{"namespace too long", func(k *Kluster) { k.Namespace = strings.Repeat("a", 64) }, "", "is not a DNS label"},
+		{"namespace story form", func(k *Kluster) { k.Namespace = "s-0576" }, "", `kluster.namespace "s-0576" has a story namespace's form`},
+		{"name makes story form", func(k *Kluster) {}, "S-0001", `kluster.namespace is not set, and the manifest's name makes "s-0001", which has a story namespace's form`},
+		{"name makes no label", func(k *Kluster) {}, "!!!", "makes no DNS label; set kluster.namespace"},
+		{"deploy missing", func(k *Kluster) { k.Deploy = nil }, "", "kluster.deploy is required"},
+		{"build with no program", func(k *Kluster) { k.Build = []string{" ", "--all"} }, "", "kluster.build has no program first"},
+		{"timeout not a duration", func(k *Kluster) { k.Timeout = "soon" }, "", `kluster.timeout "soon" is not a duration`},
+		{"timeout zero", func(k *Kluster) { k.Timeout = "0s" }, "", `kluster.timeout "0s" is not above zero`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			k := ok
+			c.edit(&k)
+			name := c.mf
+			if name == "" {
+				name = "demo"
+			}
+			errs := Manifest{Name: name, Kluster: &k}.KlusterErrors(fsys)
+			if len(errs) != 1 || !strings.Contains(errs[0], c.want) {
+				t.Errorf("errors = %q, want one with %q", errs, c.want)
+			}
+		})
+	}
+	if errs := (Manifest{Name: "demo", Kluster: &ok}).KlusterErrors(fsys); len(errs) != 0 {
+		t.Errorf("valid block: %v", errs)
+	}
+}
+
+// S-0577: a kluster config is read for its name, provider, and profile, the
+// provider k3d when it names none.
+func TestReadKlusterConfig(t *testing.T) {
+	fsys := fstest.MapFS{"k.yaml": {Data: []byte("name: authstar-integration\nprofile: authstar\ntrust-domain: authstar.cluster.local\n")}}
+	c, err := ReadKlusterConfig(fsys, "k.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (KlusterConfig{Name: "authstar-integration", Provider: "k3d", Profile: "authstar"}); c != want {
+		t.Errorf("config = %+v, want %+v", c, want)
+	}
+	if _, err := ReadKlusterConfig(fsys, "absent.yaml"); err == nil {
+		t.Error("an absent file read")
+	}
+}
+
+func TestDNSLabel(t *testing.T) {
+	for in, want := range map[string]string{
+		"authstar": "authstar", "My App_2": "my-app-2", "--x--": "x", "!!!": "", "system-flow": "system-flow",
+		strings.Repeat("ab-", 30): strings.TrimRight(strings.Repeat("ab-", 21), "-"),
+	} {
+		if got := DNSLabel(in); got != want {
+			t.Errorf("DNSLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

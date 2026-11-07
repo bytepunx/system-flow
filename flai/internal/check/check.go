@@ -300,6 +300,11 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.providers", mf, keyLine(mf, "providers"), "%s", msg)
 	}
+	// the kluster: block (S-0577, ADR-0254): each finding names its key
+	for _, msg := range m.KlusterErrors(os.DirFS(c.repo.Root)) {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.kluster", mf, keyLine(mf, "kluster"), "%s", msg)
+	}
 	c.sharedPatterns()
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {
