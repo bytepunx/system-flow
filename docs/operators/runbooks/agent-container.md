@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-06
+updated: 2026-11-07
 status: active
 ---
 
@@ -50,7 +50,7 @@ It runs `claude -p` headless in `flai-agent-claude-code:local` with the argument
 
 Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is git-ignored:
 
-- `mcp.json`, mode 600, naming the HTTP MCP server with the token. It holds a secret: do not copy it or commit it.
+- `mcp.json`, mode 600, naming the HTTP MCP server with the token and a `timeout` of 1800000 milliseconds, so that a slow `task_done`, `story_start`, or `test` is not dropped at 60 seconds ([ADR-0258](../../../design/adrs/0258-the-mcp-file-flai-writes-for-its-http-server-names-a-per-server-timeout-of.md)). pilot in the image writes it, so an image built before that change writes it without the `timeout` and keeps the 60-second limit until `make agent-images` builds it again. It holds a secret: do not copy it or commit it.
 - `.credentials.json`, a symbolic link to `/run/claude-login/.credentials.json`, the login inside the container. It does not resolve on the host, and nothing from the login is copied.
 - `flai/`, an empty folder for the container's flai. On its first run that flai writes its config there, `flai/config.json`, and keeps its cache in `flai/cache`.
 
