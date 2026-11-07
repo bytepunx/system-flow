@@ -195,6 +195,26 @@ The planner, the orchestrator, the analyzer, and the curator run in a container 
 
 Nothing else is mounted: no home, no `~/.ssh`, no `~/.flai`, no Docker socket. The container is named `flai-agent-<role>-<session>`, and a stop stops it by that name. pilot's start request carries the run's role, item, focus, since, and asked-on thread, so the inner harness starts with `--agent <role>` and `FLAI_ROLE` as on the host, and pilot reads the role file from the mounted checkout. The guard runs inside the container from the checkout's `.claude/settings.json` and holds each role to what it holds it to on the host: its writes are the ones its guard allows there. A role a project defines in a role file of its own is refused on the container harness.
 
+### The live run (S-0567)
+
+S-0509 proved these start paths with docker faked. S-0567 ran them once on this host, on 2026-11-07, with flai serve 1.83.0. The operator set the container harness's login and `planning.agent.harness: container`, and asked for the plan of S-0559 from the dashboard.
+
+| What | What the run showed |
+|------|---------------------|
+| The start | `flai serve` started `planner-S-0559` on the container harness, with `command: docker`. pilot started Claude Code 2.1.312, the image's version, where the host runs 2.1.319. By `containerImageHost`, the image is the project's layer, `flai-agent-sf-claude-code:local`, as it is for a story's agent. |
+| The image | The host's images predated S-0509's pilot change, so a planner in them would not have received its role. They had to be rebuilt with `make agent-images` before the run. |
+| The mounts | The inner harness's working directory was the main checkout. The role's cache folder `.flai-cache/agents/plan` was made at the start, and holds the inner harness's configuration, flai's, pilot's, and the MCP configuration. The planner's shell commands read the checkout's files. |
+| The plan | Written through flai's MCP tools alone: `item_new` for T-2539 and T-2540, `item_edit` for S-0559's touches, forecast, cost of delay, and notes, and `thread_open` for TH-0847. There were no file edits. |
+| The activity entry | `wip/agents/planner.md` gained the run's entry, 239 seconds and 2.1455 USD, estimated, as a host run's reads. Both figures are the container log's `duration_ms` and `costUSD`, which pilot relays unchanged. |
+| The guard | The run met no refusal, since the planner made no call the guard refuses. By hand, the image's `flai guard` with `FLAI_ROLE=plan` refuses a `Write`, `git commit`, and a move to `ready` with the host's words, and lets a read through. |
+
+What the run could not show is recorded as issues:
+
+- [I-0274](../issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md): no record names the run's image, container, or mounts, and the container is removed when it ends.
+- [I-0275](../issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md): inside the container this repository's hooks run `scripts/flai.sh guard`, which builds flai with the layer's Go, and they let a call through on any exit but 2, 126, and 127.
+- [I-0276](../issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md): a container started by hand from a story's agent's shell sees the checkout as an empty folder, so those hooks could not be replayed in it.
+- [I-0256](../issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md), [I-0257](../issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md), and [I-0258](../issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md) stand as S-0509 recorded them. A planner's run uses no host configuration, `.git/config`, or role file of a project's own, so it neither met nor cleared them.
+
 ## The planner
 
 The planner plans one epic or one story and ends (S-0208, [ADR-0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md)). For an epic with no stories it drafts them, enriches each one, and drafts each one's tasks (S-0300); for a story it adds touches, a forecast, and a cost of delay value ([Enriching a story](#enriching-a-story-s-0210)), and drafts its tasks or revisits those it has (S-0255); for an epic with stories it revisits each one not done or cancelled, enriches it again, and proposes on the epic's plan thread what it would split, merge, add, or drop, drafting the additions (S-0209) and the tasks of each story it adds and of each draft it revisits that has none (S-0300). One run plans an epic's stories and their tasks: `flai serve` queues no planner for a story the epic's planner drafted. It writes through flai alone, every story it creates is a draft, and it moves nothing past backlog.
