@@ -29,12 +29,14 @@ func (f *fixture) held(t *testing.T, timeout int) <-chan map[string]any {
 	return done
 }
 
+// answered is what a wait_for_work made with held or heldWork answered,
+// waiting past heldWait for it: a longer bound costs only a run that fails.
 func answered(t *testing.T, done <-chan map[string]any) map[string]any {
 	t.Helper()
 	select {
 	case out := <-done:
 		return out
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_work never answered")
 		return nil
 	}
@@ -80,14 +82,13 @@ func TestWaitForWorkResumesYourOwnStory(t *testing.T) {
 // pull within a second.
 func TestWaitForWorkWaitsForAStoryToBeReady(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	f.toReview(t)
 	quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
 	if quiet["timed_out"] != true || quiet["waiting_for"] != "ready" || quiet["reason"] != "" {
 		t.Fatalf("nothing ready: %v", quiet)
 	}
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	next := f.readyStory(t, "Next", t0.Add(2*time.Minute))
 	start := time.Now()
 	out := answered(t, done)
@@ -120,7 +121,7 @@ func TestWaitForWorkHoldsUpToTheLongestWait(t *testing.T) {
 // once another agent's story leaves in-progress.
 func TestWaitForWorkWaitsForRoomUnderTheLimit(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	f.toReview(t)
 	first := f.readyStory(t, "First", t0)
 	f.readyStory(t, "Second", t0)
@@ -143,8 +144,7 @@ func TestWaitForWorkWaitsForRoomUnderTheLimit(t *testing.T) {
 		t.Fatalf("limit full: %v", quiet)
 	}
 
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	if _, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "T", Parent: theirs.ID, Owner: "alex", Now: t0}); err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func (f *fixture) limits(t *testing.T, inProgress, review int) {
 // why, inbox says the same, and a story is offered once one leaves review.
 func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	f.toReview(t) // the fixture's story is the one in review
 	next := f.readyStory(t, "Next", t0)
 	f.limits(t, 3, 1)
@@ -205,8 +205,7 @@ func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
 			}
 		}
 	}
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	mine, _ := f.repo.Get(f.story.ID)
 	if _, err := f.repo.Transition(mine, workitem.Done, "alex", "", t0); err != nil {
 		t.Fatal(err)
@@ -223,7 +222,7 @@ func TestWaitForWorkWaitsWhileReviewIsFull(t *testing.T) {
 // agent's story, in progress, touches flai/internal/mcpserver.
 func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	f.toReview(t)
 	theirs := f.readyStory(t, "Theirs", t0, "flai/internal/mcpserver")
 	if _, err := f.repo.Transition(theirs, workitem.InProgress, "gemini", "", t0); err != nil {
@@ -255,8 +254,7 @@ func TestWaitForWorkPassesOverAHeldStory(t *testing.T) {
 	}
 
 	// the story in progress narrows its claim: the held story is clear, and offered
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	s, _ := f.repo.Get(theirs.ID)
 	s.Touches = []string{"design/system"}
 	if err := f.repo.Save(s); err != nil {
@@ -334,7 +332,7 @@ func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
 // A thread written to while it waits is work too; one that was already
 // awaiting the agent before does not wake it again and again.
 func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	// the threads are on the agent's own story, so they await it (ADR-0181)
 	t.Setenv("FLAI_STORY", f.story.ID)
 	f.toReview(t)
@@ -345,8 +343,7 @@ func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
 	if quiet["reason"] != "" || len(quiet["threads"].([]any)) != 0 {
 		t.Fatalf("an old thread woke it: %v", quiet)
 	}
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Question", On: f.story.ID, Author: "alex", Text: "Which port?", Now: t0.Add(2 * time.Minute)})
 	if err != nil {
 		t.Fatal(err)
@@ -364,7 +361,7 @@ func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
 // answer, and it is.
 func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	f.toReview(t)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.story.ID, Author: "claude", Text: "Eight or nine?", Now: t0})
 	if err != nil {
@@ -373,8 +370,7 @@ func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T
 	if quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); quiet["reason"] != "" {
 		t.Fatalf("nothing to do yet: %v", quiet)
 	}
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	source := threads.Source{Path: "design/system/plan.md", Heading: "Shape"}
 	if _, err := threads.ReplyWith(f.repo, th.ID, workitem.ActivityOrchestrator, "Nine.", t0.Add(2*time.Minute), threads.Marks{Recommendation: true, Source: source}); err != nil {
 		t.Fatal(err)
@@ -438,15 +434,14 @@ func TestAnAnswerWithASourceIsAnAnswerToTheAgentThatAsked(t *testing.T) {
 // task of the agent's own story whose last entry is the operator's wakes it,
 // and awaits it.
 func TestTheOperatorsThreadsAwaitTheOperatorNotTheAgent(t *testing.T) {
-	f := setupWith(t, func(o *Options) { o.Repo.Manifest.Owner = "alex" })
+	f := setupWith(t, func(o *Options) { o.Repo.Manifest.Owner = "alex"; holdLong(o) })
 	t.Setenv("FLAI_STORY", f.story.ID)
 	f.toReview(t)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Parent: f.story.Parent, Owner: "alex", Now: t0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	done := f.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := f.heldWork(t, heldSeconds)
 	at := t0.Add(2 * time.Minute)
 	authors := []string{"planner", workitem.ActivityOrchestrator, "flai"}
 	for i := range 31 {

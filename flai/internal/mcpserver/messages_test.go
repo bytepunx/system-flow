@@ -20,7 +20,13 @@ import (
 // that a test names the session's story itself.
 func messagesFixture(t *testing.T) (*fixture, *workitem.Item) {
 	t.Helper()
-	f := setup(t)
+	return messagesFixtureWith(t, nil)
+}
+
+// messagesFixtureWith is messagesFixture with options changed by with.
+func messagesFixtureWith(t *testing.T, with func(*Options)) (*fixture, *workitem.Item) {
+	t.Helper()
+	f := setupWith(t, with)
 	epic, err := f.repo.Get(f.story.Parent)
 	if err != nil {
 		t.Fatal(err)
@@ -326,37 +332,29 @@ func messageEvents(out map[string]any) []map[string]any {
 // session's story, as an event of kind message naming the conversation and
 // the sender's story, told once; the story's own reply is not told back.
 func TestAMessageWakesAWaitingAgent(t *testing.T) {
-	f, other := messagesFixture(t)
+	f, other := messagesFixtureWith(t, holdLong)
 	t.Setenv("FLAI_STORY", f.story.ID)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
 
-	type waited struct {
-		out     map[string]any
-		elapsed time.Duration
-	}
-	done := make(chan waited, 1)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	start := time.Now()
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- waited{out, time.Since(start)}
-	}()
-	time.Sleep(150 * time.Millisecond)
 	c, err := messages.Send(f.repo, messages.SendOptions{From: other.ID, To: f.story.ID, Author: "agent-" + other.ID, Text: "Will you leave plan.md to me?", About: []string{"design/system/plan.md"}, Now: *f.clock})
 	if err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case w := <-done:
+		elapsed := time.Since(start)
 		got := messageEvents(w.out)
-		if w.out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["title"] != c.Title || got[0]["cause"] != other.ID || got[0]["by"] != "agent-"+other.ID || got[0]["to"] != "design/system/plan.md" {
+		if w.failed != "" || w.out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["title"] != c.Title || got[0]["cause"] != other.ID || got[0]["by"] != "agent-"+other.ID || got[0]["to"] != "design/system/plan.md" {
 			t.Fatalf("one message event naming the conversation and the sender's story: %v", w.out)
 		}
-		if w.elapsed > 1500*time.Millisecond {
-			t.Errorf("the agent should hear within a poll, took %v", w.elapsed)
+		if elapsed > 1500*time.Millisecond {
+			t.Errorf("the agent should hear within a poll of the message, took %v", elapsed)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 
@@ -456,7 +454,7 @@ func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
 // the session's story, as an event of kind message whose summary says no
 // reply is owed, not that the agent answer it.
 func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
-	f, other := messagesFixture(t)
+	f, other := messagesFixtureWith(t, holdLong)
 	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "I changed plan.md.", About: []string{"design/system/plan.md"}, Now: t0})
 	if err != nil {
 		t.Fatal(err)
@@ -466,25 +464,21 @@ func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
 		t.Fatal(failed)
 	}
 
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	if _, err := messages.ReplyWith(f.repo, c.ID, other.ID, "agent-"+other.ID, "Agreed; it does not break us.", *f.clock, messages.Marks{Settled: true}); err != nil {
 		t.Fatal(err)
 	}
 	select {
-	case out := <-done:
+	case a := <-done:
+		out := a.out
 		got := messageEvents(out)
-		if out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["cause"] != other.ID {
-			t.Fatalf("one message event for the settled reply: %v", out)
+		if a.failed != "" || out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["cause"] != other.ID {
+			t.Fatalf("one message event for the settled reply: %v %s", out, a.failed)
 		}
 		if summary, _ := got[0]["summary"].(string); !strings.HasSuffix(summary, ", settled: read it with message_get; no reply is owed") || strings.Contains(summary, "message_reply") {
 			t.Errorf("the event says no reply is owed: %q", summary)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 }

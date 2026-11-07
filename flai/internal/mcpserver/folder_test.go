@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -72,18 +71,10 @@ func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time,
 }
 
 type folderFixture struct {
-	root string
-	cs   *mcp.ClientSession
-	// held has a channel per progress token callHeld gave a call, told on
-	// the first progress notification of that call
-	mu   sync.Mutex
-	held map[any]chan struct{}
+	root  string
+	cs    *mcp.ClientSession
+	waits *heldWaits // the waits callHeld made, told by their heartbeats
 }
-
-// heldWait is how long a test holds a wait it changes the project under:
-// long enough that a loaded host's polls see the change (I-0247), and spent
-// only on a run that fails, since the wait answers as soon as it sees it.
-const heldWait = 30 * time.Second
 
 func folderSetup(t *testing.T, root string) *folderFixture {
 	t.Helper()
@@ -107,17 +98,8 @@ func folderSetupWith(t *testing.T, root string, with func(*Options)) *folderFixt
 	if _, err := srv.Connect(ctx, st, nil); err != nil {
 		t.Fatal(err)
 	}
-	f := &folderFixture{root: root, held: map[any]chan struct{}{}}
-	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, &mcp.ClientOptions{
-		ProgressNotificationHandler: func(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
-			f.mu.Lock()
-			defer f.mu.Unlock()
-			if ch, ok := f.held[req.Params.ProgressToken]; ok {
-				close(ch)
-				delete(f.held, req.Params.ProgressToken)
-			}
-		},
-	}).Connect(ctx, ct, nil)
+	f := &folderFixture{root: root, waits: newHeldWaits()}
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, &mcp.ClientOptions{ProgressNotificationHandler: f.waits.heard}).Connect(ctx, ct, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,34 +140,10 @@ type toolAnswer struct {
 	failed string
 }
 
-// callHeld makes a wait in a goroutine and returns once the wait is holding,
-// so that a test changes the project only after the wait has fingerprinted
-// it: a change made before then is read by the wait's catch-up or its first
-// look, or lost between them (I-0186, I-0247). The answer comes on the
-// channel; a wait that answers before it holds fails the test.
+// callHeld is heldWaits.callHeld on the fixture's client.
 func (f *folderFixture) callHeld(t *testing.T, name string, args map[string]any) <-chan toolAnswer {
 	t.Helper()
-	token := name + "-" + t.Name()
-	holding := make(chan struct{})
-	f.mu.Lock()
-	f.held[token] = holding
-	f.mu.Unlock()
-	params := &mcp.CallToolParams{Name: name, Arguments: args}
-	params.SetProgressToken(token)
-	done := make(chan toolAnswer, 1)
-	go func() {
-		res, err := f.cs.CallTool(context.Background(), params)
-		done <- answerOf(name, res, err)
-	}()
-	select {
-	case <-holding:
-		return done
-	case a := <-done:
-		t.Fatalf("%s answered before it held: %v %s", name, a.out, a.failed)
-	case <-time.After(heldWait):
-		t.Fatalf("%s never held", name)
-	}
-	return nil
+	return f.waits.callHeld(t, f.cs, name, args)
 }
 
 // answerOf is what call reads from a tool's result, for a call made in a

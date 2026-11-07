@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -82,6 +83,7 @@ type fixture struct {
 	story *workitem.Item
 	task  *workitem.Item
 	clock *time.Time // what the server reads as now; tests move it
+	waits *heldWaits // the waits callHeld made, told by their heartbeats; nil where the client hears none
 }
 
 func setup(t *testing.T) *fixture {
@@ -120,7 +122,9 @@ func setupWith(t *testing.T, with func(*Options)) *fixture {
 	}
 
 	clock := t0.Add(time.Minute)
-	opt := Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second}
+	// a held wait's first heartbeat comes once it has fingerprinted the
+	// project, which is how callHeld knows it is holding
+	opt := Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second, Heartbeat: 10 * time.Millisecond}
 	if with != nil {
 		with(&opt)
 	}
@@ -131,12 +135,102 @@ func setupWith(t *testing.T, with func(*Options)) *fixture {
 	if _, err := srv.Connect(ctx, st, nil); err != nil {
 		t.Fatal(err)
 	}
-	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil).Connect(ctx, ct, nil)
+	waits := newHeldWaits()
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, &mcp.ClientOptions{ProgressNotificationHandler: waits.heard}).Connect(ctx, ct, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	return &fixture{repo: repo, cs: cs, story: story, task: task, clock: &clock}
+	return &fixture{repo: repo, cs: cs, story: story, task: task, clock: &clock, waits: waits}
+}
+
+// heldWait is how long a test holds a wait it changes the project under:
+// long enough that a loaded host's polls see the change (I-0246, I-0247),
+// and spent only on a run that fails, since the wait answers as soon as it
+// sees it.
+const heldWait = 30 * time.Second
+
+// heldSeconds is heldWait as a wait's timeout_seconds.
+const heldSeconds = int(heldWait / time.Second)
+
+// holdLong lets the server hold a wait up to heldWait, for a test that
+// changes the project under a held wait.
+func holdLong(o *Options) { o.MaxWait = heldWait }
+
+// heldWaits has a channel per progress token callHeld gave a call, closed on
+// the first progress notification of that call.
+type heldWaits struct {
+	mu   sync.Mutex
+	held map[any]chan struct{}
+}
+
+func newHeldWaits() *heldWaits { return &heldWaits{held: map[any]chan struct{}{}} }
+
+// heard is the client's progress handler: a call's first heartbeat says its
+// wait holds.
+func (h *heldWaits) heard(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if ch, ok := h.held[req.Params.ProgressToken]; ok {
+		close(ch)
+		delete(h.held, req.Params.ProgressToken)
+	}
+}
+
+// callHeld makes a wait on cs in a goroutine and returns once the wait is
+// holding, so that a test changes the project only after the wait has
+// fingerprinted it: a change made before then is read by the wait's
+// catch-up or its first look, or lost between them (I-0186, I-0246,
+// I-0247). The answer comes on the channel; a wait that answers before it
+// holds fails the test.
+func (h *heldWaits) callHeld(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any) <-chan toolAnswer {
+	t.Helper()
+	token := name + "-" + t.Name()
+	holding := make(chan struct{})
+	h.mu.Lock()
+	h.held[token] = holding
+	h.mu.Unlock()
+	params := &mcp.CallToolParams{Name: name, Arguments: args}
+	params.SetProgressToken(token)
+	done := make(chan toolAnswer, 1)
+	go func() {
+		res, err := cs.CallTool(context.Background(), params)
+		done <- answerOf(name, res, err)
+	}()
+	select {
+	case <-holding:
+		return done
+	case a := <-done:
+		t.Fatalf("%s answered before it held: %v %s", name, a.out, a.failed)
+	case <-time.After(heldWait):
+		t.Fatalf("%s never held", name)
+	}
+	return nil
+}
+
+// callHeld is heldWaits.callHeld on the fixture's client.
+func (f *fixture) callHeld(t *testing.T, name string, args map[string]any) <-chan toolAnswer {
+	t.Helper()
+	if f.waits == nil {
+		t.Fatal("this fixture's client hears no heartbeats: make it with setupWith")
+	}
+	return f.waits.callHeld(t, f.cs, name, args)
+}
+
+// heldWork is held for a wait_for_work of timeout seconds made with
+// callHeld: it returns once the wait holds.
+func (f *fixture) heldWork(t *testing.T, timeout int) <-chan map[string]any {
+	t.Helper()
+	held := f.callHeld(t, "wait_for_work", map[string]any{"timeout_seconds": timeout})
+	done := make(chan map[string]any, 1)
+	go func() {
+		a := <-held
+		if a.failed != "" {
+			t.Errorf("wait_for_work: %s", a.failed)
+		}
+		done <- a.out
+	}()
+	return done
 }
 
 // call invokes a tool and decodes its structured result; failed is the
@@ -374,7 +468,7 @@ func TestDocumentsAndResources(t *testing.T) {
 // the wait returns within a second, and the inbox shows the thread.
 func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Ready for review?", On: f.story.ID, Author: "claude", Text: "I think it is.", Now: t0})
 	if err != nil {
 		t.Fatal(err)
@@ -382,30 +476,22 @@ func TestDesignerReplyReachesAWaitingAgent(t *testing.T) {
 	if out, _ := f.call(t, "inbox", map[string]any{}); out["awaiting_you"].(float64) != 0 {
 		t.Fatalf("my own thread awaits the designer, not me: %v", out)
 	}
-	type waited struct {
-		out     map[string]any
-		elapsed time.Duration
-	}
-	done := make(chan waited, 1)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	start := time.Now()
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- waited{out, time.Since(start)}
-	}()
-	time.Sleep(150 * time.Millisecond)
 	if _, err := threads.Reply(f.repo, th.ID, "alex", "Not yet: add the docs.", t0.Add(2*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case w := <-done:
-		changed := w.out["changed"].([]any)
-		if w.out["timed_out"] == true || len(changed) == 0 || !strings.Contains(changed[0].(string), "wip/threads/"+th.ID) {
-			t.Fatalf("wait: %v", w.out)
+		elapsed := time.Since(start)
+		changed, _ := w.out["changed"].([]any)
+		if w.failed != "" || w.out["timed_out"] == true || len(changed) == 0 || !strings.Contains(changed[0].(string), "wip/threads/"+th.ID) {
+			t.Fatalf("wait: %v %s", w.out, w.failed)
 		}
-		if w.elapsed > 1500*time.Millisecond {
-			t.Errorf("the agent should hear within a second, took %v", w.elapsed)
+		if elapsed > 1500*time.Millisecond {
+			t.Errorf("the agent should hear within a second of the reply, took %v", elapsed)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 	out, _ := f.call(t, "inbox", map[string]any{"story": f.story.ID})
@@ -577,20 +663,27 @@ func TestWaitForEventsReturnsWhatIsAlreadyBehindTheCursor(t *testing.T) {
 
 func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
 	*f.clock = t0.Add(10 * time.Minute)
-	go func() {
-		time.Sleep(150 * time.Millisecond)
-		it, _ := f.repo.Get(f.story.ID)
-		// stamped with the very second the cursor stands at: the boundary case
-		if err := workitem.BlockItem(it, "waiting on the designer", t0.Add(10*time.Minute)); err == nil {
-			_ = f.repo.Save(it)
-		}
-	}()
-	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
+	it, _ := f.repo.Get(f.story.ID)
+	// stamped with the very second the cursor stands at: the boundary case
+	if err := workitem.BlockItem(it, "waiting on the designer", t0.Add(10*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.repo.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	var w toolAnswer
+	select {
+	case w = <-done:
+	case <-time.After(heldWait + 10*time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+	out, failed := w.out, w.failed
 	if failed != "" || out["timed_out"] == true {
 		t.Fatalf("held wait: %v %s", out, failed)
 	}
@@ -813,7 +906,7 @@ func TestALaterLookReportsTasksAndIsStillCapped(t *testing.T) {
 // changed; its own edits are not news to it; a waiting agent wakes for it.
 func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
 	}
@@ -840,15 +933,14 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 	// a notice is stamped when it is written, which is after the waiting agent's look, here
 	// within the same second: the cursor's keys, not its time, tell it is news
 	stamp := f.clock.Format(workitem.TimeFormat)
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	itemedit.Record(f.repo, itemedit.Notice{At: stamp, By: "alex", ID: f.story.ID, Type: workitem.Story, Title: "Story, renamed", Changed: []string{"touches"}})
 	select {
-	case w := <-done:
+	case a := <-done:
+		w := a.out
+		if a.failed != "" {
+			t.Fatalf("wait_for_events: %s", a.failed)
+		}
 		events := w["events"].([]any)
 		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["to"] != "touches" {
 			t.Errorf("wait: %v", w)
@@ -858,7 +950,7 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 				t.Errorf("the notices wake the agent and are not shown to it as a path: %v", w["changed"])
 			}
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 }
@@ -868,7 +960,7 @@ func TestAnEditBySomeoneElseReachesTheAgent(t *testing.T) {
 // it, and the log is not shown to it as a path.
 func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
 	}
@@ -893,15 +985,14 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 
 	*f.clock = f.clock.Add(time.Minute)
 	stamp := f.clock.Format(workitem.TimeFormat)
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	itemedit.RecordOverlap(f.repo, itemedit.Overlap{At: stamp, By: "alex", ID: f.story.ID, Title: "Open", Accepted: "S-0098", Paths: []string{"flai/cmd/c.go"}})
 	select {
-	case w := <-done:
+	case a := <-done:
+		w := a.out
+		if a.failed != "" {
+			t.Fatalf("wait_for_events: %s", a.failed)
+		}
 		events := w["events"].([]any)
 		if w["timed_out"] == true || len(events) != 1 || events[0].(map[string]any)["cause"] != "S-0098" {
 			t.Errorf("wait: %v", w)
@@ -911,7 +1002,7 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 				t.Errorf("the log wakes the agent and is not shown to it as a path: %v", w["changed"])
 			}
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 }
@@ -925,18 +1016,13 @@ func TestAnOverlapAtAcceptanceReachesTheAgent(t *testing.T) {
 // answers with, not an empty answer that neither timed out nor changed.
 func TestAnEmptyEventLogDoesNotWakeWaitForEventsBeforeItsEvent(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
 	}
 	*f.clock = f.clock.Add(time.Minute)
 	stamp := f.clock.Format(workitem.TimeFormat)
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	path := inbox.EventsPath(f.repo)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
@@ -951,7 +1037,11 @@ func TestAnEmptyEventLogDoesNotWakeWaitForEventsBeforeItsEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 	select {
-	case w := <-done:
+	case a := <-done:
+		w := a.out
+		if a.failed != "" {
+			t.Fatalf("wait_for_events: %s", a.failed)
+		}
 		events := w["events"].([]any)
 		if w["timed_out"] == true || len(events) != 1 {
 			t.Fatalf("wait: %v", w)
@@ -959,32 +1049,31 @@ func TestAnEmptyEventLogDoesNotWakeWaitForEventsBeforeItsEvent(t *testing.T) {
 		if got := events[0].(map[string]any); got["kind"] != inbox.ReadyEmpty {
 			t.Errorf("the event: %v", got)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 }
 
 func TestALoggedEventWakesWaitForEvents(t *testing.T) {
 	t.Parallel()
-	f := setup(t)
+	f := setupWith(t, holdLong)
 	if out, _ := f.call(t, "inbox", map[string]any{}); out == nil {
 		t.Fatal("first look")
 	}
 	*f.clock = f.clock.Add(time.Minute)
 	stamp := f.clock.Format(workitem.TimeFormat)
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 	e := inbox.ReadyEmptyEvent(1, 3, 5, "flai serve")
 	e.At = stamp
 	if err := inbox.AppendEvent(f.repo, e); err != nil {
 		t.Fatal(err)
 	}
 	select {
-	case w := <-done:
+	case a := <-done:
+		w := a.out
+		if a.failed != "" {
+			t.Fatalf("wait_for_events: %s", a.failed)
+		}
 		events := w["events"].([]any)
 		if w["timed_out"] == true || len(events) != 1 {
 			t.Fatalf("wait: %v", w)
@@ -999,7 +1088,7 @@ func TestALoggedEventWakesWaitForEvents(t *testing.T) {
 				t.Errorf("the log wakes the agent and is not shown to it as a path: %v", w["changed"])
 			}
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never returned")
 	}
 }
@@ -1184,20 +1273,19 @@ func TestAnAgentEventIsReportedOnceWhileWaitForEventsIsHeld(t *testing.T) {
 	for _, c := range agentEventCases() {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			f := setup(t)
+			f := setupWith(t, holdLong)
 			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 				t.Fatal(failed)
 			}
 			*f.clock = f.clock.Add(time.Minute)
-			done := make(chan map[string]any, 1)
-			go func() {
-				out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-				done <- out
-			}()
-			time.Sleep(150 * time.Millisecond)
+			done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
 			id := c.write(t, f.repo, f.story.ID, *f.clock)
 			select {
-			case w := <-done:
+			case a := <-done:
+				w := a.out
+				if a.failed != "" {
+					t.Fatalf("wait_for_events: %s", a.failed)
+				}
 				if w["timed_out"] == true {
 					t.Fatalf("the event wakes the wait: %v", w)
 				}
@@ -1211,7 +1299,7 @@ func TestAnAgentEventIsReportedOnceWhileWaitForEventsIsHeld(t *testing.T) {
 				if wrong != "" {
 					t.Errorf("wait_for_events: %s: %v", wrong, w)
 				}
-			case <-time.After(5 * time.Second):
+			case <-time.After(heldWait + 10*time.Second):
 				t.Fatal("wait_for_events never returned")
 			}
 			out, failed := f.call(t, "inbox", map[string]any{})

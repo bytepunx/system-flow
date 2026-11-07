@@ -108,7 +108,7 @@ func answeringFixture(t *testing.T, mode string) *answering {
 	// neither session has a story of its own: the asker takes part in the
 	// thread it opens, and the orchestrator in none until it replies
 	t.Setenv("FLAI_STORY", "")
-	asker := setupWith(t, func(o *Options) { o.Now = clock.now })
+	asker := setupWith(t, func(o *Options) { o.Now = clock.now; holdLong(o) })
 	root := projectRoot(asker.repo)
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    answer_threads: " + mode + "\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
@@ -369,8 +369,7 @@ var inProgressWait = idleAt.Sub(askedAt).Seconds()
 // counts the wait as ended by a confirmation.
 func TestTheOrchestratorRecommendsAndTheOperatorConfirms(t *testing.T) {
 	a := answeringFixture(t, manifest.AnswerRecommend)
-	done := a.asker.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := a.asker.heldWork(t, heldSeconds)
 	a.clock.set(repliedAt)
 
 	out, r, _ := a.tool(t, "thread_reply", map[string]any{"id": a.thread, "text": "Nine.", "source": answerSource})
@@ -420,8 +419,7 @@ func TestTheOrchestratorRecommendsAndTheOperatorConfirms(t *testing.T) {
 // the orchestrator.
 func TestTheOrchestratorAnswersCitingItsSource(t *testing.T) {
 	a := answeringFixture(t, manifest.AnswerAutonomous)
-	done := a.asker.held(t, 3)
-	time.Sleep(150 * time.Millisecond)
+	done := a.asker.heldWork(t, heldSeconds)
 	a.clock.set(repliedAt)
 
 	out, r, failed := a.tool(t, "thread_reply", map[string]any{"id": a.thread, "text": "Nine, as the plan's shape has it.", "source": answerSource})
@@ -451,8 +449,8 @@ func TestTheOrchestratorAnswersCitingItsSource(t *testing.T) {
 // confirmation.
 func TestTheOrchestratorEscalatesWhatItCannotSource(t *testing.T) {
 	a := answeringFixture(t, manifest.AnswerAutonomous)
-	done := a.asker.held(t, 1)
-	time.Sleep(150 * time.Millisecond)
+	// it times out: no answer comes that wakes it
+	done := a.asker.heldWork(t, 1)
 	a.clock.set(repliedAt)
 
 	out, r, _ := a.tool(t, "thread_reply", map[string]any{"id": a.thread, "text": "Nine."})
