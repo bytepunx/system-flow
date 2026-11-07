@@ -7,12 +7,12 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-11-07T08:53:21Z
+updated: 2026-11-07T09:38:31Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
 touches: [flai/internal/usage/opencode.go, flai/internal/usage/opencode_test.go, flai/internal/usage/testdata/opencode/run.jsonl, flai/internal/usage/testdata/opencode/resumed.jsonl, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/gateway_test.go, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, flai/internal/harness/harness_test.go]
-after: [S-0409]
+after: [S-0406]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-20T21:13:43Z
 forecast:
   duration: 50m
-  delivery: 2026-11-07T13:57:00Z
-  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 5, behind S-0560, S-0562, S-0564, S-0586, S-0587, S-0406, S-0407, S-0408 and S-0409."
+  delivery: 2026-11-07T11:53:00Z
+  basis: "Its own forecast of 50m; 7th in the pull order with an in-progress limit of 5, behind S-0560, S-0562, S-0586, S-0406, S-0587, S-0588, S-0407, S-0408 and S-0409."
   by: flai
-  at: 2026-11-07T08:53:21Z
+  at: 2026-11-07T09:38:31Z
 finalized:
   by: orchestrator
   at: 2026-10-20T21:14:08Z

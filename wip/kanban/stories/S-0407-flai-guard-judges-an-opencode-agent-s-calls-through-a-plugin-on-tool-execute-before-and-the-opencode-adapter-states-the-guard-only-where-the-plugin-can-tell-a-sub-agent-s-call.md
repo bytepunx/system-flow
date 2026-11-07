@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:15:14Z
-updated: 2026-11-07T08:53:01Z
+updated: 2026-11-07T09:38:14Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -24,25 +24,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 265
+      seconds: 266
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 38
-          output: 527
-          cache_read: 14735981
-          cache_write: 18025
-          cost: 3.6984
+          output: 531
+          cache_read: 14755308
+          cache_write: 18471
+          cost: 3.7033
 cost_of_delay:
   value: 69.23
   by: planner-E-0023
   at: 2026-10-20T21:13:38Z
 forecast:
   duration: 45m
-  delivery: 2026-11-07T11:14:00Z
-  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0560, S-0562, S-0564, S-0586, S-0587 and S-0406."
+  delivery: 2026-11-07T11:47:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0560, S-0562, S-0586, S-0406, S-0587 and S-0588."
   by: flai
-  at: 2026-11-07T08:53:01Z
+  at: 2026-11-07T09:38:14Z
 finalized:
   by: orchestrator
   at: 2026-10-20T21:14:03Z
