@@ -2,12 +2,12 @@
 id: I-0248
 title: "TestTheOperatorsStopIsOneStoppedAgentEvent's waiting-for-an-answer case fails under a loaded close-out: the ended event is missing before stopped"
 class: defect
-status: open
+status: closed
 count: 3
 cost: 5m
 first_reported: 2026-11-02T02:50:06Z
 last_reported: 2026-11-07T05:00:15Z
-updated: 2026-11-07T05:00:15Z
+updated: 2026-11-07T08:29:09Z
 ---
 
 # I-0248 TestTheOperatorsStopIsOneStoppedAgentEvent's waiting-for-an-answer case fails under a loaded close-out: the ended event is missing before stopped
@@ -32,3 +32,4 @@ S-0570's close-out (job S-0570-20261107T045512Z, head ae84860) stopped at integr
 ## Remediation
 
 Story S-0561 remediates this issue, created from it at 2026-11-02T03:56:56Z.
+Closed 2026-11-07T08:29:09Z: S-0561 (T-2550, 375012db1): the waiting-for-an-answer case in flai/internal/serve/stop_test.go now waits for the ended event before it stops the agent. The launcher's endRun records the run's outcome, then appends its ended event; the case stopped the agent as soon as the outcome read asked, so on a loaded host the stopped event could be appended in between. With a 300ms sleep held between those two steps, the old case failed exactly as I-0248's instances record and the new one passed 3 of 3. No product code changed: the event log is news, not state (ADR-0211 §4), and a stop in that gap only reorders two events a reader still gets.
