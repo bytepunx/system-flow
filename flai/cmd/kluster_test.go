@@ -200,3 +200,275 @@ func TestKlusterUpFails(t *testing.T) {
 		t.Error("a failed up keeps no kubeconfig")
 	}
 }
+
+// The fakes a deploy runs, each logging one line a call to $FAKE_LOG: docker
+// lists one server node and a load balancer, saves an image to the file -o
+// names, and reads an import from its standard input; kubectl only logs; git
+// answers the head of a checkout with $FAKE_HEAD, the main branch with main,
+// and makes a worktree with the project's scripts in it, and fails anything
+// else as outside a repository.
+const (
+	fakeDocker = `#!/bin/sh
+echo "docker $*" >> "$FAKE_LOG"
+case "$1" in
+  ps) echo "k3d-demo-integration-server-0 server"; echo "k3d-demo-integration-serverlb loadbalancer" ;;
+  save) echo saved > "$3" ;;
+  exec) cat > /dev/null ;;
+esac
+`
+	fakeKubectl = `#!/bin/sh
+echo "kubectl $*" >> "$FAKE_LOG"
+`
+	fakeGit = `#!/bin/sh
+case "$*" in
+  "rev-parse HEAD"|"rev-parse --verify main^{commit}") echo "git $(pwd) $*" >> "$FAKE_LOG"; echo "$FAKE_HEAD"; exit 0 ;;
+  "rev-parse --abbrev-ref HEAD") echo main; exit 0 ;;
+  "worktree prune") exit 0 ;;
+  "worktree add --detach --force "*) echo "git $*" >> "$FAKE_LOG"; mkdir -p "$5"; echo "gitdir: x" > "$5/.git"; cp -R scripts "$5/"; exit 0 ;;
+  "-C "*) echo "git $*" >> "$FAKE_LOG"; exit 0 ;;
+esac
+echo "fatal: not a git repository" >&2
+exit 128
+`
+	klusterBuildScript = `#!/bin/sh
+echo "build $(pwd) story=$FLAI_STORY ns=$FLAI_KLUSTER_NAMESPACE tag=$FLAI_KLUSTER_TAG" >> "$FAKE_LOG"
+echo "demo/app:$FLAI_KLUSTER_TAG" > "$FLAI_KLUSTER_IMAGES"
+`
+	klusterDeployScript = `#!/bin/sh
+echo "deploy $(pwd) story=$FLAI_STORY ns=$FLAI_KLUSTER_NAMESPACE prefix=$FLAI_KLUSTER_PREFIX tag=$FLAI_KLUSTER_TAG context=$FLAI_KLUSTER_CONTEXT" >> "$FAKE_LOG"
+if [ -n "$FAKE_DEPLOY_EXIT" ]; then echo "deploy broke"; exit "$FAKE_DEPLOY_EXIT"; fi
+echo "rolled out"
+`
+	klusterTeardownScript = `#!/bin/sh
+echo "teardown $(pwd) story=$FLAI_STORY ns=$FLAI_KLUSTER_NAMESPACE" >> "$FAKE_LOG"
+`
+)
+
+const klusterHead = "0123456789abcdef0123456789abcdef01234567"
+
+// deployProject is a klusterProject whose block builds, deploys, and tears
+// down with scripts, its default namespace demo, with a kubeconfig kept, the
+// fakes on PATH, and the story S-0007 in status with a worktree holding the
+// scripts. It returns the root and the fakes' log.
+func deployProject(t *testing.T, status string) (root, log string) {
+	t.Helper()
+	root, log = klusterProject(t, "")
+	b, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	b = append(b, []byte("  namespace: demo\n  build: [scripts/kluster-build.sh]\n  teardown: [scripts/kluster-teardown.sh]\n")...)
+	scripts := map[string]string{
+		"scripts/kluster-build.sh":    klusterBuildScript,
+		"scripts/kluster-deploy.sh":   klusterDeployScript,
+		"scripts/kluster-teardown.sh": klusterTeardownScript,
+	}
+	files := map[string]string{
+		"system-flow.yaml":               string(b),
+		".flai-cache/kluster/kubeconfig": "apiVersion: v1\n",
+		"wip/kanban/stories/S-0007-demo.md": "---\nid: S-0007\ntitle: Demo\ntype: story\nnature: feature\nstatus: " + status +
+			"\ncreated: 2026-11-07T00:00:00Z\nupdated: 2026-11-07T00:00:00Z\ntransitions:\n  - {to: " + status + ", at: 2026-11-07T00:00:00Z, by: alex}\n---\n\n# S-0007 Demo\n",
+	}
+	for p, s := range scripts {
+		files[p] = s
+		files[".flai-cache/worktrees/S-0007/"+p] = s
+	}
+	writeFiles(t, root, files)
+	for p := range scripts {
+		for _, f := range []string{filepath.Join(root, p), filepath.Join(root, ".flai-cache/worktrees/S-0007", p)} {
+			if err := os.Chmod(f, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	bin := strings.SplitN(os.Getenv("PATH"), string(os.PathListSeparator), 2)[0]
+	for name, s := range map[string]string{"docker": fakeDocker, "kubectl": fakeKubectl, "git": fakeGit} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(s), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("FAKE_HEAD", klusterHead)
+	t.Setenv("FAKE_DEPLOY_EXIT", "")
+	return root, log
+}
+
+// S-0578: flai kluster deploy builds in the story's worktree, loads the
+// image into the cluster's node, deploys into the story's namespace with its
+// variables, and prints the record, which --json prints as data.
+func TestKlusterDeploy(t *testing.T) {
+	root, log := deployProject(t, "in-progress")
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0007")
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-7")
+	if code != 0 {
+		t.Fatalf("deploy: %d %s %s", code, out, errOut)
+	}
+	for _, want := range []string{"s-0007: build, log", "S-0007 in s-0007: passed", "commit  " + klusterHead, "tag     s-0007-0123456789ab", "images  demo/app:s-0007-0123456789ab", "deploy   passed, log " + kluster.LogPath(root, "s-0007", "deploy")} {
+		if !strings.Contains(out, want) {
+			t.Errorf("deploy prints %q: %s", want, out)
+		}
+	}
+	calls := readLog(t, log)
+	for _, want := range []string{
+		"build " + wt + " story=S-0007 ns=s-0007 tag=s-0007-0123456789ab",
+		"docker save -o",
+		"docker exec -i k3d-demo-integration-server-0 ctr -n k8s.io images import -",
+		"deploy " + wt + " story=S-0007 ns=s-0007 prefix=s0007_ tag=s-0007-0123456789ab context=k3d-demo-integration",
+	} {
+		if !strings.Contains(calls, want) {
+			t.Errorf("the deploy ran %q:\n%s", want, calls)
+		}
+	}
+	if strings.Contains(calls, "serverlb") {
+		t.Errorf("the load balancer is no node to load into:\n%s", calls)
+	}
+
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--json")
+	if code != 0 {
+		t.Fatalf("deploy --json: %d %s %s", code, out, errOut)
+	}
+	var r map[string]any
+	if err := json.Unmarshal([]byte(out), &r); err != nil {
+		t.Fatalf("deploy --json prints only the record: %v %s", err, out)
+	}
+	if r["story"] != "S-0007" || r["namespace"] != "s-0007" || r["commit"] != klusterHead || r["outcome"] != "passed" || len(r["steps"].([]any)) != 3 {
+		t.Errorf("deploy --json: %v", r)
+	}
+	if !strings.Contains(errOut, "s-0007: deploy, log") {
+		t.Errorf("with --json the step lines go to standard error: %s", errOut)
+	}
+}
+
+// S-0578: a step that fails stops the deploy, exits 1, and names the step,
+// its exit code, and its log; the record says so.
+func TestKlusterDeployFails(t *testing.T) {
+	root, _ := deployProject(t, "review")
+	t.Setenv("FAKE_DEPLOY_EXIT", "4")
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007")
+	log := kluster.LogPath(root, "s-0007", "deploy")
+	if code == 0 || !strings.Contains(out, "S-0007 in s-0007: failed") || !strings.Contains(out, "deploy   failed, exit code 4, log "+log) {
+		t.Fatalf("a failed deploy prints its record: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "the deploy step for the namespace s-0007 failed with exit code 4") || !strings.Contains(errOut, log) {
+		t.Errorf("the error names the step, its exit code, and its log: %s", errOut)
+	}
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "deploy broke") {
+		t.Errorf("the step's output is in its log: %q", b)
+	}
+	out, _, code = runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--json")
+	var r map[string]any
+	if code == 0 || json.Unmarshal([]byte(out), &r) != nil || r["outcome"] != "failed" || r["failed_step"] != "deploy" || r["exit_code"] != float64(4) {
+		t.Errorf("a failed deploy --json prints the record and exits 1: %d %s", code, out)
+	}
+}
+
+// S-0578: a story not in progress or in review, and a story with no
+// worktree, are refused, and nothing runs.
+func TestKlusterDeployRefusals(t *testing.T) {
+	root, log := deployProject(t, "ready")
+	_, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007")
+	if code == 0 || !strings.Contains(errOut, "S-0007 is ready, and flai deploys only a story in progress or in review") {
+		t.Errorf("a ready story is refused: %d %s", code, errOut)
+	}
+	root2, log2 := deployProject(t, "in-progress")
+	if err := os.RemoveAll(filepath.Join(root2, ".flai-cache", "worktrees", "S-0007")); err != nil {
+		t.Fatal(err)
+	}
+	_, errOut, code = runKluster(t, root2, false, "", "kluster", "deploy", "S-0007")
+	if code == 0 || !strings.Contains(errOut, "S-0007 has no worktree") || !strings.Contains(errOut, "flai stream open S-0007") {
+		t.Errorf("a story with no worktree is refused: %d %s", code, errOut)
+	}
+	if calls := readLog(t, log) + readLog(t, log2); strings.Contains(calls, "build ") || strings.Contains(calls, "deploy ") {
+		t.Errorf("a refusal runs nothing:\n%s", calls)
+	}
+}
+
+// S-0578: flai kluster teardown asks first, or needs --yes without a
+// terminal; it runs the teardown command and deletes the namespace, and a
+// story never deployed has nothing to tear down.
+func TestKlusterTeardown(t *testing.T) {
+	root, log := deployProject(t, "in-progress")
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "teardown", "S-0007")
+	if code != 0 || !strings.Contains(out, "S-0007 has no deployment recorded; nothing to tear down") {
+		t.Fatalf("a story never deployed: %d %s %s", code, out, errOut)
+	}
+	out, _, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--json")
+	var nd map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &nd) != nil || nd["deployed"] != false || nd["story"] != "S-0007" {
+		t.Errorf("a story never deployed, --json: %d %s", code, out)
+	}
+	if _, _, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007"); code != 0 {
+		t.Fatal("deploy")
+	}
+	before := readLog(t, log)
+	_, errOut, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007")
+	if code == 0 || !strings.Contains(errOut, "pass --yes") || readLog(t, log) != before {
+		t.Fatalf("teardown without --yes on a non-terminal is refused, running nothing: %d %s", code, errOut)
+	}
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--yes")
+	if code != 0 || !strings.Contains(out, "S-0007's namespace s-0007 is torn down") {
+		t.Fatalf("teardown --yes: %d %s %s", code, out, errOut)
+	}
+	calls := readLog(t, log)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0007")
+	if !strings.Contains(calls, "teardown "+wt+" story=S-0007 ns=s-0007") || !strings.Contains(calls, "kubectl --context k3d-demo-integration delete namespace s-0007 --wait --ignore-not-found") {
+		t.Errorf("teardown runs the command in the worktree, then deletes the namespace:\n%s", calls)
+	}
+	if _, err := os.Stat(kluster.RecordPath(root, "s-0007")); !os.IsNotExist(err) {
+		t.Errorf("the record is removed: %v", err)
+	}
+}
+
+// S-0578: flai kluster promote deploys main's head from a worktree of it
+// into the default namespace, and flai kluster deployments lists it first.
+func TestKlusterPromoteAndDeployments(t *testing.T) {
+	root, log := deployProject(t, "in-progress")
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deployments")
+	if code != 0 || strings.TrimSpace(out) != "no deployments" {
+		t.Fatalf("no deployments: %d %s %s", code, out, errOut)
+	}
+	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json")
+	if code != 0 || strings.TrimSpace(out) != "[]" {
+		t.Errorf("no deployments, --json, is an empty array: %d %s", code, out)
+	}
+	if _, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007"); code != 0 {
+		t.Fatalf("deploy: %s", errOut)
+	}
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "promote")
+	if code != 0 || !strings.Contains(out, "demo: passed") || !strings.Contains(out, "tag     main-0123456789ab") {
+		t.Fatalf("promote: %d %s %s", code, out, errOut)
+	}
+	main := kluster.MainWorktree(root)
+	calls := readLog(t, log)
+	if !strings.Contains(calls, "git worktree add --detach --force "+main+" "+klusterHead) || !strings.Contains(calls, "deploy "+main+" story= ns=demo prefix= tag=main-0123456789ab") {
+		t.Errorf("promote deploys main's head from its worktree into the default namespace:\n%s", calls)
+	}
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "deployments")
+	if code != 0 {
+		t.Fatalf("deployments: %d %s %s", code, out, errOut)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) != 3 || !strings.HasPrefix(lines[0], "NAMESPACE") || !strings.HasPrefix(lines[1], "demo ") || !strings.Contains(lines[1], "(main)") || !strings.HasPrefix(lines[2], "s-0007 ") || !strings.Contains(lines[2], "0123456789ab") || !strings.Contains(lines[2], "passed") {
+		t.Errorf("deployments lists the default namespace first:\n%s", out)
+	}
+	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json")
+	var list []map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &list) != nil || len(list) != 2 || list[0]["namespace"] != "demo" || list[0]["default"] != true || list[1]["story"] != "S-0007" {
+		t.Errorf("deployments --json: %d %s", code, out)
+	}
+}
+
+// S-0578: flai kluster --help lists the four commands S-0578 adds, and each
+// refuses a project with no kluster: block.
+func TestKlusterDeployCommandsListedAndRefused(t *testing.T) {
+	root, _ := klusterProject(t, "")
+	out, _, _ := runKluster(t, root, false, "", "kluster", "--help")
+	for _, sub := range []string{"deploy", "teardown", "promote", "deployments"} {
+		if !strings.Contains(out, "\n  "+sub+" ") {
+			t.Errorf("--help lists %s: %s", sub, out)
+		}
+	}
+	bare := tempProject(t)
+	for _, args := range [][]string{{"deploy", "S-0001"}, {"teardown", "S-0001", "--yes"}, {"promote"}, {"deployments"}} {
+		_, errOut, code := runKluster(t, bare, false, "", append([]string{"kluster"}, args...)...)
+		if code == 0 || !strings.Contains(errOut, "has no kluster: block") {
+			t.Errorf("%s without a block: %d %s", args[0], code, errOut)
+		}
+	}
+}
