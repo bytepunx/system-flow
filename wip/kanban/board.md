@@ -8,6 +8,7 @@ wip_limits:
   review: 5
 order:
   - S-0587
+  - S-0588
   - S-0406
   - S-0407
   - S-0408
