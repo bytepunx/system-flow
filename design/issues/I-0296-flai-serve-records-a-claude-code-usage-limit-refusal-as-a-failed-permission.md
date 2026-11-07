@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:37Z
 last_reported: 2026-11-07T08:17:37Z
-updated: 2026-11-07T08:17:37Z
+updated: 2026-11-07T23:40:41Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ Analysis 2026-11-07: a 429 is not a prompt failure, yet protected-path writes un
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0629 remediates this issue, created from it at 2026-11-07T23:40:41Z.
