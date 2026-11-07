@@ -213,9 +213,11 @@ import (
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
-// verify runs a story's checks and stores its last result in flai's cache,
-// which is neither a work item, a thread, nor history (S-0270).
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", Subprojects, "test", "thread_get", "verify", "who_touches"}
+// verify is not among them: it asks flai serve for a close-out job, which
+// commits in the story's worktree (ADR-0229), so only the story's agent, whose
+// own calls pass, and the orchestrator, which holds it in MCPOrchestrates and
+// its role file, call it (S-0556).
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", Subprojects, "test", "thread_get", "who_touches"}
 
 // Subprojects is flai's MCP tool that lists the manifest's sub-projects, a
 // read open to every agent; SubprojectEdit is the one that adds, changes, and
@@ -301,9 +303,10 @@ var cliReads = map[string][]string{
 // set. flai order --by computes an order and --apply writes it; flai order
 // that names a story places it; flai release without --evaluate releases;
 // flai plan without --candidates starts the planner, which with it takes
-// no item; and flai verify --record-issues writes issues, which without it
-// it does not (S-0270). A command with no with flags reads in any form
-// without its without flags.
+// no item; flai verify --record-issues writes issues, which without it it
+// does not (S-0270); and flai verify --job asks flai serve for the close-out
+// job, which commits in the story's worktree (S-0556, ADR-0229). A command
+// with no with flags reads in any form without its without flags.
 var flagReads = map[string]struct {
 	with    []string
 	without []string
@@ -313,7 +316,7 @@ var flagReads = map[string]struct {
 	"plan":    {with: []string{"--candidates"}},
 	"promote": {with: []string{"--candidates", "--drafts"}},
 	"release": {with: []string{"--evaluate"}},
-	"verify":  {without: []string{"--record-issues"}},
+	"verify":  {without: []string{"--job", "--record-issues"}},
 }
 
 // orderValues are the flags of flai order, flai's own among them, that take
@@ -1320,7 +1323,7 @@ func ProtectedWrite(c Call) (string, bool) { return protectedWrite(c) }
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
 // it would not return, and how to wait instead.
-const waitsOnSubAgents = "wait_for_events reports work items and threads, not sub-agents, so it would run to its timeout. Wait for a sub-agent by launching it with the Agent tool's run_in_background set to false, so that its result comes back as the tool's result; launch a layer's sub-agents in one message, each so. Use wait_for_events only for a thread awaiting the designer (delegation.md)."
+const waitsOnSubAgents = "wait_for_events reports work items and threads, not sub-agents, so it would run to its timeout. Wait for a sub-agent by launching it with the Agent tool's run_in_background set to false, so that its result comes back as the tool's result; launch a layer's sub-agents in one message, each so. Use wait_for_events only for a thread awaiting the designer or the verified event of the story's close-out job (delegation.md)."
 
 // wait says why a story's agent's own call is refused, or "" when it is not
 // (S-0285): wait_for_events while a sub-agent of its session runs, unless a

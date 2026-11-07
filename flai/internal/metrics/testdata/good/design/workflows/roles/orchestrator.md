@@ -28,6 +28,7 @@ tools:
   - activity_log
   - inbox
   - thread_open
+  - verify
   - wait_for_events
   - {call: thread_reply, when: own-thread}
   - {call: thread_resolve, when: own-thread}

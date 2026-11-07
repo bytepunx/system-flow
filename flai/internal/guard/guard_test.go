@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -489,13 +490,64 @@ func TestASubAgentRunsFlaiVerifyButRecordsNoIssues(t *testing.T) {
 		"flai verify S-0001 --record-issues",
 		"flai verify S-0001 --record-issues=false",
 		"flai verify S-0001 --last; flai verify S-0001 --record-issues",
+		"flai verify S-0001 --job",
+		"flai verify S-0001 --job -m x",
+		"flai verify S-0001 --job=true",
+		"flai verify S-0001 --last; flai verify S-0001 --job",
 	} {
 		if why := g.Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") {
 			t.Errorf("sub-agent %q: %q", c, why)
 		}
 	}
-	if why := g.Check(Event{ToolName: MCPPrefix + "verify", AgentID: "a1", AgentType: "verifier"}); why != "" {
-		t.Errorf("sub-agent verify refused: %s", why)
+}
+
+// I-0240, S-0556: the MCP tool verify asks flai serve for a close-out job that
+// commits in the story's worktree, so no sub-agent calls it, and no strategic
+// agent but the orchestrator, with a role file held or with none, nor asks for
+// the job with flai verify --job. The story's agent's own call passes.
+func TestOnlyTheStorysAgentAndTheOrchestratorAskForTheCloseOutJob(t *testing.T) {
+	if slices.Contains(MCPReads, "verify") {
+		t.Errorf("MCPReads holds verify: %v", MCPReads)
+	}
+	for _, who := range []string{"verifier", "explorer", "general-purpose"} {
+		e := Event{ToolName: MCPPrefix + "verify", AgentID: "a1", AgentType: who}
+		if why := g.Check(e); !strings.Contains(why, "a sub-agent ("+who+") cannot call verify") {
+			t.Errorf("%s verify: %q", who, why)
+		}
+	}
+	held := func(gd Guard, role string) Guard {
+		gd.RoleFile = builtInFile(t, role)
+		return gd
+	}
+	analyzer := analyzerIn(t.TempDir())
+	for name, gd := range map[string]Guard{
+		"planner":                planGuard,
+		"planner with its file":  held(planGuard, "planner"),
+		"analyzer":               analyzer,
+		"analyzer with its file": held(analyzer, "analyzer"),
+		"curator":                itsCurator,
+		"curator with its file":  held(itsCurator, "curator"),
+	} {
+		if why := gd.Check(itemOf("verify", "S-0001", "")); !strings.Contains(why, "cannot call verify") {
+			t.Errorf("%s verify: %q", name, why)
+		}
+		if why := gd.Check(bash("", "flai verify S-0001 --job -m x")); !strings.Contains(why, "cannot run") {
+			t.Errorf("%s flai verify --job: %q", name, why)
+		}
+		if why := gd.Check(bash("", "flai verify S-0001 --last")); why != "" {
+			t.Errorf("%s flai verify --last refused: %s", name, why)
+		}
+	}
+	if why := g.Check(itemOf("verify", "S-0001", "")); why != "" {
+		t.Errorf("the session's own verify refused: %s", why)
+	}
+	own := g
+	own.Story = "S-0001"
+	if why := own.Check(itemOf("verify", "S-0001", "")); why != "" {
+		t.Errorf("the story's agent's verify refused: %s", why)
+	}
+	if why := own.Check(bash("", "flai verify S-0001 --job -m x")); why != "" {
+		t.Errorf("the story's agent's flai verify --job refused: %s", why)
 	}
 }
 
