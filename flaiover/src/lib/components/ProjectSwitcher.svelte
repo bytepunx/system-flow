@@ -18,6 +18,12 @@
 	const projects = $derived((projectState.list as Listed[]).filter((p) => !p.candidate));
 	const offered = $derived(projectState.list.filter((p) => p.candidate));
 	const down = $derived(projects.filter((p) => !p.connected));
+	// The select is capped in width so a long label cannot widen the page (I-0180, S-0557), so the
+	// current project's whole label is in its title too, where a name cut short can still be read.
+	const chosen = $derived(projectState.list.find((p) => p.key === projectState.current));
+	const chosenLabel = $derived(
+		!chosen ? '' : chosen.candidate ? `${chosen.name} (not imported)` : label(chosen as Listed)
+	);
 
 	function label(p: Listed): string {
 		if (p.connected) {
@@ -51,16 +57,18 @@
 	}
 </script>
 
-<span class="flex items-center gap-2">
-	<label class="flex items-center gap-1 text-sm" data-testid="project-switcher">
+<span class="flex max-w-full min-w-0 flex-wrap items-center gap-x-2">
+	<label class="flex max-w-full min-w-0 items-center gap-1 text-sm" data-testid="project-switcher">
 		<span class="sr-only">Project</span>
 		<select
-			class="rounded border border-line-strong bg-surface px-2 py-1 text-sm"
+			class="max-w-48 min-w-0 rounded border border-line-strong bg-surface px-2 py-1 text-sm sm:max-w-xs"
 			value={projectState.current ?? ''}
 			disabled={projectState.list.length === 0}
 			title={projectState.list.length === 0
 				? 'No project is connected yet: flai dashboard or flai serve on the host connects them'
-				: 'Switch project, or pick a repository to import it'}
+				: chosenLabel
+					? `${chosenLabel}\nSwitch project, or pick a repository to import it`
+					: 'Switch project, or pick a repository to import it'}
 			{onchange}
 			{onfocus}
 		>

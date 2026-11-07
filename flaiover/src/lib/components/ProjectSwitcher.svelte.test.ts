@@ -64,6 +64,30 @@ describe('ProjectSwitcher (S-0080)', () => {
 		expect(options).toContain('Quay (not connected)');
 	});
 
+	it('caps the select in width and keeps the whole label of the current project in its title (I-0180)', () => {
+		const long = 'E2E board with a name long enough to widen a phone';
+		projectState.list = [
+			{ key: 'long', name: long, connected: true },
+			{ key: 'quay', name: 'Quay', connected: false }
+		];
+		projectState.pick('long', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		const select = document.querySelector('select')!;
+		expect(select.classList).toContain('max-w-48');
+		expect(select.classList).toContain('min-w-0');
+		expect(select.title.split('\n')[0]).toBe(long);
+		expect(select.options[0].textContent).toBe(long);
+		// the wrapper may shrink and wrap the settings link under the select
+		const wrapper = document.querySelector('[data-testid="project-switcher"]')!.parentElement!;
+		expect(wrapper.classList).toContain('flex-wrap');
+		expect(wrapper.classList).toContain('min-w-0');
+		// choosing another project puts its label in the title in place of the first
+		projectState.pick('quay', false);
+		flushSync();
+		expect(select.title.split('\n')[0]).toBe('Quay (not connected)');
+	});
+
 	it('picking an option switches to that project in place, without a reload (S-0095)', () => {
 		projectState.list = [
 			{ key: 'harbour', name: 'Harbour', connected: true },
