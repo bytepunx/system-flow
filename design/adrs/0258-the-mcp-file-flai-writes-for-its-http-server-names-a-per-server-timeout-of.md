@@ -6,6 +6,7 @@ date: 2026-11-07
 supersedes: []
 superseded_by: []
 refines: [ADR-0244]
+topics: [mcp, harness]
 ---
 
 # ADR-0258 The MCP file flai writes for its HTTP server names a per-server timeout of 1800000 milliseconds, so a call that does work runs past Claude Code's 60 seconds, while the 45-second holds stay
