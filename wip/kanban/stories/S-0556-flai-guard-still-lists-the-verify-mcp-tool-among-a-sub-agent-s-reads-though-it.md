@@ -6,7 +6,7 @@ title: flai guard still lists the verify MCP tool among a sub-agent's reads, tho
 status: backlog
 owner: alex
 created: 2026-11-01T10:44:38Z
-updated: 2026-11-07T04:18:20Z
+updated: 2026-11-07T04:40:17Z
 transitions: []
 tags: [flai, template]
 topics: [guard, testing]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-05T01:41:54Z
 forecast:
   duration: 40m
-  delivery: 2026-11-07T09:46:00Z
-  basis: "Its own forecast of 40m; 10th in the pull order with an in-progress limit of 5, behind S-0555, S-0565, S-0567, S-0569, S-0570, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241 and S-0543."
+  delivery: 2026-11-07T10:07:00Z
+  basis: "Its own forecast of 40m; 10th in the pull order with an in-progress limit of 5, behind S-0558, S-0565, S-0567, S-0569, S-0570, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241 and S-0543."
   by: flai
-  at: 2026-11-07T04:18:20Z
+  at: 2026-11-07T04:40:17Z
 finalized:
   by: orchestrator
   at: 2026-11-05T01:43:38Z
