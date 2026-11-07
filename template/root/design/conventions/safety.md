@@ -1,6 +1,6 @@
 ---
 title: Safety
-updated: 2026-10-02
+updated: 2026-11-07
 audience: agent
 order: 80
 status: active
@@ -19,7 +19,7 @@ What is never done without asking, what is never written down, and what is never
   - sending messages
   - calling paid services
   - changing shared infrastructure or configuration.
-  - pushing commits and release tags that the workflow produces (see `git.md`) is part of the workflow and needs no separate confirmation; force pushes always do.
+  - pushing commits and release tags that the workflow produces (see `git.md`) is part of the workflow and needs no separate confirmation; an agent's force push always needs it. The one force push that needs none is `flai serve`'s `--force-with-lease` push of a story's own branch under pull-request acceptance, the one exception [`git.md`](git.md) makes.
 - Confirmation is per action and per context.
 - Before deleting or overwriting, look at the target.
 - Before changing system state, check that evidence supports that specific action, not just a pattern that resembles a known problem.

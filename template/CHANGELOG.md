@@ -5,6 +5,7 @@
 - S-0571 flai serve starts a role your project defines once for each ready story, in pull order, when a `{schedule: <setting>, when: each-ready-story}` entry comes round, and flai check reports that entry on a role that takes no story (patch). The roles README says so.
 - S-0555 flai check finds `narrative.missing` outside the story at close-out (patch).
 - S-0555 A close-out records no `narrative.missing` outside the story (patch, ADR-0256): the close-out rule in `work-management.md` says that a `narrative.missing` on another story, one in progress or in review with no narrative, is left out of a close-out's check and recorded in no issue, since only that story's agent or the operator clears it, with `flai stream open` on that story, and the main checkout's check still reports it.
+- S-0558 `safety.md` no longer says every force push needs confirmation against `git.md`'s exception (patch): the clause says an agent's force push always needs it, and names `flai serve`'s `--force-with-lease` push of a story's own branch under pull-request acceptance as the one force push that needs none, linking `git.md`.
 
 ## 1.1.23 - 2026-11-07
 
