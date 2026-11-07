@@ -11,9 +11,11 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/importer"
+	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/upgrade"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -34,7 +36,10 @@ func newImportCmd(a *app) *cobra.Command {
 documentation folders, render the template files that do not already exist,
 offer to move existing documentation folders and markdown files into the
 new structure (git mv when tracked), detect code sub-projects by their build
-files, and write system-flow.yaml. Nothing existing is overwritten.
+files, and write system-flow.yaml, with system-flow.lock.yaml beside it as
+flai new writes it (I-0302). Nothing existing is overwritten; a file the
+import kept counts in the lock as the project's own, so the next flai
+upgrade reports it as a conflict rather than replace it.
 
 Interactive in a terminal; --yes accepts every default; --dry-run prints the
 proposal and stops.
@@ -265,6 +270,16 @@ func (a *app) runImport(dir string, o importOptions) error {
 	// 2. render the template without overwriting anything
 	res, err := template.Render(m, src.Dir, an.Root, template.Options{Vars: vars, Layout: layout, Source: src, Force: false})
 	if err != nil {
+		return err
+	}
+	// the lock, as flai new writes it (I-0302), so that flai check finds no
+	// layout.lock. Its hashes are the render's, kept files included: a file
+	// the repository already had and the import kept counts as the project's
+	// own wherever it differs from the template, and the next flai upgrade
+	// reports it as a conflict rather than replace it. Hashing the files as
+	// they are, as upgrade.Relock does, would let that upgrade overwrite the
+	// repository's own file as unchanged baseline.
+	if err := lock.Save(an.Root, &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: a.now().UTC().Format("2006-01-02T15:04:05Z")}, Files: res.Hashes, Topics: upgrade.TopicsOf(an.Root, res.Written), Vars: lockVars(vars)}); err != nil {
 		return err
 	}
 

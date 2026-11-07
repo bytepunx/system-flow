@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
@@ -124,7 +125,8 @@ func TestImportRefusesAnEmptyRequiredVarBeforeMovingAnything(t *testing.T) {
 // With no --ref, an import applies the template's newest release when the
 // configured ref follows releases; --ref, as a tag or as the version it
 // spells, wins; a configured ref naming another branch is used as given
-// (ADR-0103). An import writes no lock, so system-flow.yaml is the record.
+// (ADR-0103). system-flow.yaml and the lock the import writes beside it
+// (I-0302) both record what was applied.
 func TestImportAppliesTheNewestRelease(t *testing.T) {
 	t.Parallel()
 	url := releasedTemplate(t)
@@ -140,6 +142,10 @@ func TestImportAppliesTheNewestRelease(t *testing.T) {
 		m, err := manifest.Load(filepath.Join(root, manifest.File))
 		if err != nil || m.Template.Repo != url || m.Template.Ref != ref || m.Template.Version != version {
 			t.Errorf("system-flow.yaml must record %s at %s from %s: %+v %v", ref, version, url, m.Template, err)
+		}
+		l, err := lock.Load(root)
+		if err != nil || l == nil || l.Template.Repo != url || l.Template.Ref != ref || l.Template.Version != version || len(l.Files) == 0 {
+			t.Errorf("system-flow.lock.yaml must record %s at %s from %s: %+v %v", ref, version, url, l, err)
 		}
 	}
 

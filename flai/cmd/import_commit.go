@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/importer"
+	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/template"
@@ -180,13 +181,14 @@ func (a *app) commitImportUntested(root string, written []string, moved []import
 	return res, nil
 }
 
-// commitImportPaths commits exactly the paths the import wrote or moved, and
-// the manifest, with the trailers, and returns the commit's short hash.
+// commitImportPaths commits exactly the paths the import wrote or moved, the
+// manifest, and the lock, with the trailers, and returns the commit's short
+// hash.
 func (a *app) commitImportPaths(root string, written []string, moved []importer.Move, trailers []string) (string, error) {
 	// what the import wrote, and where it moved things to: a move's source is
 	// already staged as removed by git mv, and naming a path that is gone
 	// would make git add refuse the whole list
-	paths := map[string]bool{manifest.File: true}
+	paths := map[string]bool{manifest.File: true, lock.File: true}
 	for _, p := range written {
 		paths[p] = true
 	}

@@ -2340,7 +2340,7 @@ Bring an existing repository under the system-flow standard.
 flai import [dir] [flags]
 ```
 
-Analyse a repository, propose the layout, and apply it: create the documentation folders, render the template files that do not already exist, offer to move existing documentation folders and markdown files into the new structure (git mv when tracked), detect code sub-projects by their build files, and write system-flow.yaml. Nothing existing is overwritten.
+Analyse a repository, propose the layout, and apply it: create the documentation folders, render the template files that do not already exist, offer to move existing documentation folders and markdown files into the new structure (git mv when tracked), detect code sub-projects by their build files, and write system-flow.yaml, with system-flow.lock.yaml beside it as flai new writes it (I-0302). Nothing existing is overwritten; a file the import kept counts in the lock as the project's own, so the next flai upgrade reports it as a conflict rather than replace it.
 
 Interactive in a terminal; --yes accepts every default; --dry-run prints the proposal and stops.
 

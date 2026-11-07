@@ -295,6 +295,43 @@ func TestImportFormulaCommitsBeforeAnyTestAndMakesTheInstanceReady(t *testing.T)
 	}
 }
 
+// I-0302: flai import writes system-flow.lock.yaml as flai new does and the
+// import's commit holds it, so the import formula's first step, flai check
+// --strict, finds no layout.lock; and --dry-run writes no lock.
+func TestImportFormulaCommitsTheLockSoCheckFindsNoLayoutLock(t *testing.T) {
+	t.Parallel()
+	templateOrSkip(t)
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	tpl := importTemplate(t, true)
+
+	dry := goRepo(t, true)
+	if out, errOut, code := runIn(t, ".", "import", dry, "--template", tpl, "--yes", "--formula", "--dry-run"); code != 0 {
+		t.Fatalf("import --dry-run: %d %s %s", code, out, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(dry, "system-flow.lock.yaml")); !os.IsNotExist(err) {
+		t.Errorf("--dry-run wrote a lock: %v", err)
+	}
+
+	root := goRepo(t, true)
+	out, errOut, code := runIn(t, ".", "import", root, "--template", tpl, "--yes", "--formula", "--json")
+	if code != 0 {
+		t.Fatalf("import --formula: %d %s %s", code, out, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(root, "system-flow.lock.yaml")); err != nil {
+		t.Fatalf("no lock after the import: %v", err)
+	}
+	if imported := git(t, root, "show", "--name-only", "--format=", "HEAD~1"); !strings.Contains(imported, "system-flow.lock.yaml") {
+		t.Errorf("the import's commit does not hold the lock: %s", imported)
+	}
+	if st := git(t, root, "status", "--porcelain"); st != "" && st != "?? .flai-cache/" {
+		t.Errorf("left behind: %s", st)
+	}
+	checked, errOut, _ := runIn(t, root, "check", "--strict", "--json")
+	if strings.Contains(checked, "layout.lock") || strings.Contains(errOut, "layout.lock") {
+		t.Errorf("flai check --strict reports layout.lock after the import: %s %s", checked, errOut)
+	}
+}
+
 // --formula refuses, before anything changes, --commit beside it, a
 // template that ships no import formula, and a tree --commit would refuse.
 func TestImportFormulaRefusesBeforeAnythingChanges(t *testing.T) {
