@@ -80,6 +80,11 @@ tests:
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
+  - name: settings-index
+    command: [go, test, "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^TestSettingsIndex", "./cmd"]
+    dir: flai
+    paths: ["docs/operators/settings.md"]
+    format: go-test-json
   - name: flaiover-lint
     command: ["../scripts/flaiover-lint.sh", "{files}"]
     dir: flaiover
@@ -129,7 +134,7 @@ tests:
     paths: ["flai/**", "scripts/integration.sh"]
     format: go-test-json
     all_only: true
-    covers: [go-test]
+    covers: [go-test, settings-index]
     queue: true
     when: ["flai/**", "template/**"]
   - name: smoke

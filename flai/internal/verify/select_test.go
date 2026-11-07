@@ -577,6 +577,45 @@ func TestRepositoryManifestRunsFlaioverTestsOfTheBuiltFlaiForHostAPIChanges(t *t
 	}
 }
 
+// I-0304: this repository's manifest has flai test check the settings index
+// against the configuration and the manifest when the index changes. A
+// change to docs/operators/settings.md alone selected only the markdown tier,
+// so a row named wrongly first failed in the close-out's integration tier.
+// The settings-index tier runs TestSettingsIndexHasEveryKey under -short, and
+// under --all the integration tier covers it, running the whole test. Not
+// gated under -short, so that make test catches a manifest that drops it.
+func TestRepositoryManifestChecksTheSettingsIndexWhenItChanges(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const changed = "docs/operators/settings.md"
+	var got []string
+	ok := false
+	for _, s := range Select(os.DirFS(root), tiers, []string{changed}, false) {
+		if s.Tier.Name == "settings-index" {
+			got, ok = s.Argv, true
+		}
+	}
+	want := []string{"go", "test", "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^TestSettingsIndex", "./cmd"}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Errorf("%s: settings-index runs %q (selected %v), want %q", changed, got, ok, want)
+	}
+	covered := ""
+	for _, s := range Select(os.DirFS(root), tiers, nil, true) {
+		if s.Tier.Name == "settings-index" {
+			covered = s.CoveredBy
+		}
+	}
+	if covered != "integration" {
+		t.Errorf("under --all settings-index is covered by %q, want the integration tier, which runs the whole test", covered)
+	}
+}
+
 // S-0548: this repository's go-test tier runs the changed packages' tests
 // with -short, reversing I-0201's choice. The tests that skip under -short,
 // those that need real git or the monorepo, are the integration tier's own;
