@@ -13,9 +13,13 @@
 	// actions and links the Klusters page's setup, naming no command and no file to edit (S-0586).
 	// With a block that names no deploy, which kluster.status says (deployable), Deploy and Promote
 	// give way to a sentence that deploys are not set up yet, linking the same setup.
+	// Each service port of a namespace has Start and Stop for a port-forward flai serve runs on the
+	// host, through flai's kluster.forward.start and kluster.forward.stop (S-0586), bound to 0.0.0.0
+	// as the operator chose on TH-0861, and links it once it runs; the page names no command.
 	import type {
 		KlusterDeployment,
 		KlusterDeployments,
+		KlusterForward,
 		KlusterJob,
 		KlusterReview,
 		KlusterStatus
@@ -43,6 +47,8 @@
 	let busy = $state(false);
 	// The story whose teardown awaits the operator's confirmation.
 	let confirming = $state<string | null>(null);
+	// flai's refusal or error for a port-forward's start or stop, beside its row, by forwardKey.
+	let forwardSaid = $state<Record<string, string>>({});
 
 	const off = $derived(refused || (!!data && !data.enabled));
 	// no deploy command yet: flai deploys and promotes nothing, so neither is offered
@@ -75,6 +81,13 @@
 		d.status === 'review' &&
 		((!!d.head && d.head !== d.commit) || d.outcome === 'failed' || d.outcome === 'interrupted');
 	const stepId = (ns: string, step: string) => `log-${ns}-${step}`;
+	const forwardKey = (ns: string, service: string, port: number) => `${ns}/${service}/${port}`;
+	const forwardOf = (d: KlusterDeployment, service: string, port: number) =>
+		d.access.forwards?.find((f) => f.service === service && f.port === port);
+	// A forward listens on 0.0.0.0 of the host, so it answers on whatever address the browser reached
+	// the dashboard on: the host's own name, with the forward's port.
+	const forwardUrl = (f: KlusterForward) => `http://${window.location.hostname}:${f.local_port}`;
+	const anyForward = $derived(!!data?.deployments.some((d) => d.access.forwards?.length));
 
 	/** Reads the deployments; a failed read keeps what was last shown. */
 	async function load() {
@@ -130,6 +143,34 @@
 			}
 		} catch (e) {
 			actionError = errorText(e);
+		} finally {
+			busy = false;
+		}
+	}
+
+	/** Starts or stops a port-forward through flai, taking the deployments the host answers. */
+	async function forward(ns: string, service: string, port: number, on: boolean) {
+		const key = forwardKey(ns, service, port);
+		busy = true;
+		forwardSaid = Object.fromEntries(Object.entries(forwardSaid).filter(([k]) => k !== key));
+		try {
+			const r = await api('/api/kluster/forward', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ namespace: ns, service, port, on })
+			});
+			const body = await r.json().catch(() => ({}));
+			if (r.ok) {
+				data = body as KlusterDeployments;
+				return;
+			}
+			if (r.status === 501) tooOld = body.error ?? r.statusText;
+			else {
+				if (r.status === 403) refused = true;
+				forwardSaid = { ...forwardSaid, [key]: body.error ?? r.statusText };
+			}
+		} catch (e) {
+			forwardSaid = { ...forwardSaid, [key]: errorText(e) };
 		} finally {
 			busy = false;
 		}
@@ -213,9 +254,8 @@
 	<details class="mt-3 text-sm" data-testid="deployment-access">
 		<summary class="cursor-pointer">Reach it for a demo</summary>
 		<p class="mt-1 text-xs text-muted">
-			Run these on the host, in the project's main checkout, where flai keeps the cluster's
-			kubeconfig, <code class="font-mono">{d.access.kubeconfig}</code>. Each port-forward serves the
-			service on the same port of the host's localhost.
+			Start a port-forward to reach a service from your browser. flai runs it on the host, on a port
+			of its own.
 		</p>
 		{#if d.access.services_error}
 			<p class="mt-2 text-danger" data-testid="deployment-services-error">
@@ -226,34 +266,60 @@
 			<ul class="mt-2 space-y-2">
 				{#each d.access.services as s (s.name)}
 					<li data-testid="deployment-service">
-						<p>
-							<code class="font-mono">{s.host ?? s.name}</code>
-							{#if s.ports.length}
-								<span class="text-muted">
-									on {s.ports
-										.map(
-											(p) =>
-												`${p.port}${p.protocol && p.protocol !== 'TCP' ? `/${p.protocol}` : ''}`
-										)
-										.join(', ')}</span
-								>
-							{/if}
-						</p>
-						{#if s.port_forward}
-							<pre
-								class="mt-1 overflow-auto rounded bg-surface p-2 font-mono text-xs"
-								data-testid="deployment-port-forward">{s.port_forward}</pre>
-						{/if}
+						<p><code class="font-mono">{s.host ?? s.name}</code></p>
+						<ul class="mt-1 space-y-1">
+							{#each s.ports as p (p.port)}
+								{@const f = forwardOf(d, s.name, p.port)}
+								{@const key = forwardKey(d.namespace, s.name, p.port)}
+								<li class="flex flex-wrap items-center gap-2" data-testid="deployment-port">
+									<span class="text-muted"
+										>port {p.port}{p.protocol && p.protocol !== 'TCP' ? `/${p.protocol}` : ''}</span
+									>
+									{#if f?.running}
+										<!-- eslint-disable svelte/no-navigation-without-resolve -- the forward on the host, not a route of the dashboard -->
+										<a
+											href={forwardUrl(f)}
+											class="underline"
+											target="_blank"
+											rel="noreferrer"
+											data-testid="deployment-forward-link">{forwardUrl(f)}</a
+										>
+										<!-- eslint-enable svelte/no-navigation-without-resolve -->
+										<button
+											type="button"
+											class="{button} border border-line"
+											disabled={busy || !!off}
+											onclick={() => forward(d.namespace, s.name, p.port, false)}>Stop</button
+										>
+									{:else if !p.protocol || p.protocol === 'TCP'}
+										<button
+											type="button"
+											class="{button} border border-line"
+											disabled={busy || !!off}
+											onclick={() => forward(d.namespace, s.name, p.port, true)}>Start</button
+										>
+									{/if}
+									{#if f && !f.running && f.output}
+										<span class="text-xs text-danger" data-testid="deployment-forward-ended"
+											>Its port-forward ended: {f.output}</span
+										>
+									{/if}
+									{#if forwardSaid[key]}
+										<span
+											class="text-xs text-danger"
+											role="alert"
+											data-testid="deployment-forward-said">{forwardSaid[key]}</span
+										>
+									{/if}
+								</li>
+							{/each}
+						</ul>
 					</li>
 				{/each}
 			</ul>
 		{:else if !d.access.services_error}
 			<p class="mt-2 text-muted">The namespace has no services.</p>
 		{/if}
-		<p class="mt-2 text-xs text-muted">Its services, listed:</p>
-		<pre
-			class="mt-1 overflow-auto rounded bg-surface p-2 font-mono text-xs"
-			data-testid="deployment-list">{d.access.list}</pre>
 	</details>
 {/snippet}
 
@@ -443,6 +509,16 @@
 			</p>
 			<p class="mt-1">Name it on the {@render setup("Klusters page's setup")}.</p>
 		</div>
+	{/if}
+	{#if anyForward}
+		<p
+			class="mt-4 rounded border border-warn bg-warn-soft p-3 text-sm text-warn"
+			role="status"
+			data-testid="deployments-forwards-open"
+		>
+			A port-forward listens on every address of the host, so anything that can reach the host's
+			network can reach it, with no sign-in of its own. Stop it when the demo is over.
+		</p>
 	{/if}
 	{#if actionError}
 		<p

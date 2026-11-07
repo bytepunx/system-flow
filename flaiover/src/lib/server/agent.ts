@@ -163,8 +163,10 @@ export const REQUIRED_METHODS = [
 	'kluster.deploy',
 	'kluster.teardown',
 	'kluster.promote',
-	// S-0586: the cluster's nodes and pods
+	// S-0586: the cluster's nodes and pods, and port-forwards behind the kluster host action
 	'kluster.workloads',
+	'kluster.forward.start',
+	'kluster.forward.stop',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',

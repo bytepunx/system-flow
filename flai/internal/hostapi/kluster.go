@@ -28,6 +28,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -529,7 +530,9 @@ type KlusterJobs struct {
 	last    map[string]KlusterJob // the last up or down
 	// lastDeploy is the last deploy, teardown, or promotion.
 	lastDeploy map[string]KlusterJob
-	wg         sync.WaitGroup
+	// forwards are the port-forwards flai serve runs (S-0586).
+	forwards klusterForwards
+	wg       sync.WaitGroup
 }
 
 // NewKlusterJobs is a KlusterJobs whose jobs end, failed, when ctx ends.
@@ -907,6 +910,9 @@ type KlusterAccess struct {
 	Services []KlusterService `json:"services"`
 	// ServicesError says why the services could not be read.
 	ServicesError string `json:"services_error,omitempty"`
+	// Forwards are the port-forwards flai serve runs, or ran, into the
+	// namespace, each on a port of the host bound to 0.0.0.0 (S-0586).
+	Forwards []KlusterForward `json:"forwards"`
 }
 
 // KlusterStep is one step of a deployment, its log from the project's root
@@ -1008,7 +1014,7 @@ func accessCommands(context, ns string) string {
 // in services, or servicesErr.
 func klusterAccess(context, ns string, services []KlusterService, servicesErr string) KlusterAccess {
 	base := accessCommands(context, ns)
-	a := KlusterAccess{Kubeconfig: filepath.ToSlash(filepath.Join(".flai-cache", "kluster", "kubeconfig")), Context: context, Namespace: ns, List: base + " get services", Services: []KlusterService{}, ServicesError: servicesErr}
+	a := KlusterAccess{Kubeconfig: filepath.ToSlash(filepath.Join(".flai-cache", "kluster", "kubeconfig")), Context: context, Namespace: ns, List: base + " get services", Services: []KlusterService{}, ServicesError: servicesErr, Forwards: []KlusterForward{}}
 	for _, s := range services {
 		if s.Namespace != ns {
 			continue
@@ -1111,6 +1117,9 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 			row.Head, row.HeadError = mainHead, mainErr
 		}
 		row.Access = klusterAccess(named.Context, d.Namespace, services, servicesErr)
+		if host.Kluster != nil {
+			row.Access.Forwards = host.Kluster.Forwards(p.Root, d.Namespace)
+		}
 		out.Deployments = append(out.Deployments, row)
 	}
 	out.Review = reviewRows(ctx, p.Root, review, deployed)
@@ -1302,7 +1311,10 @@ func klusterTeardownDo(_ context.Context, host Host, p channel.Project, raw json
 	if wt := repo.WorktreePath(story); dirIsThere(wt) {
 		dir = wt
 	}
+	jobs := host.Kluster
 	return startDeployJob(host, p, m, KlusterJob{Action: KlusterTeardown, Cluster: c.Named().Name, Story: story, Namespace: ns}, func(ctx context.Context, out io.Writer) error {
+		// a forward into a namespace being torn down has nothing left to reach
+		jobs.StopForwards(p.Root, ns)
 		_, err := c.Teardown(ctx, m, story, dir, out)
 		return err
 	})
@@ -1345,7 +1357,7 @@ func klusterSpecs() map[string]spec {
 		_, e := klusterStory(raw)
 		return nil, "", e
 	}
-	return map[string]spec{
+	out := map[string]spec{
 		// kluster.status: the cluster, whether it runs, its age, and the up or
 		// down flai serve runs or ran, with the end of its log.
 		"kluster.status": {reads: true, build: none, do: klusterStatus},
@@ -1367,4 +1379,6 @@ func klusterSpecs() map[string]spec {
 		// started.
 		"kluster.promote": {action: ActionKluster, describe: describeKlusterJob, build: none, do: klusterPromoteDo},
 	}
+	maps.Copy(out, klusterForwardSpecs())
+	return out
 }

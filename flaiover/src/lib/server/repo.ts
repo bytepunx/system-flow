@@ -593,6 +593,28 @@ export type KlusterAccess = {
 	services: KlusterService[];
 	/** Why the services could not be read. */
 	services_error?: string;
+	/** The port-forwards flai serve runs, or ran, into the namespace (S-0586); absent from an older flai. */
+	forwards?: KlusterForward[];
+};
+
+/**
+ * One port-forward flai serve runs, or ran, to a service port of a namespace (Go's
+ * hostapi.KlusterForward, S-0586): kubectl port-forward on local_port of the host, bound to address,
+ * 0.0.0.0, so anything that reaches the host's network reaches it, with no sign-in of its own.
+ */
+export type KlusterForward = {
+	namespace: string;
+	service: string;
+	/** The service's port in the cluster. */
+	port: number;
+	/** The host's port it listens on. */
+	local_port: number;
+	address: string;
+	started_at: string;
+	/** Whether kubectl still runs; an ended forward is kept with the end of its output. */
+	running: boolean;
+	ended_at?: string;
+	output?: string;
 };
 
 /** The job that holds the project's kluster lock (Go's kluster.Job). */
@@ -1090,6 +1112,26 @@ export class Repo extends EventEmitter {
 		return data;
 	}
 
+	/**
+	 * Start a port-forward of a service port of a namespace, flai's kluster.forward.start under the
+	 * kluster host action (S-0586): flai serve runs kubectl port-forward bound to 0.0.0.0 on a free
+	 * port of the host, and answers the forward once it forwards, or the one that runs.
+	 */
+	async klusterForwardStart(f: KlusterForwardTarget): Promise<KlusterForward> {
+		const { data } = await upgraded(`forward ${f.service} port ${f.port}`, () =>
+			this.write<KlusterForward>('kluster.forward.start', f)
+		);
+		return data;
+	}
+
+	/** Stop a port-forward, flai's kluster.forward.stop, as klusterForwardStart starts one. */
+	async klusterForwardStop(f: KlusterForwardTarget): Promise<KlusterForward> {
+		const { data } = await upgraded(`stop forwarding ${f.service} port ${f.port}`, () =>
+			this.write<KlusterForward>('kluster.forward.stop', f)
+		);
+		return data;
+	}
+
 	/** Start main's promotion into the default namespace, flai's kluster.promote. */
 	async klusterPromote(): Promise<KlusterJob> {
 		const { data } = await upgraded('promote main', () =>
@@ -1201,6 +1243,34 @@ export function storyParam(value: unknown): string | undefined {
  * The story a kluster deploy or teardown is of (S-0581): a story's ID, which it must name; anything
  * else is refused with 400 before flai is asked.
  */
+/** The service port of a namespace a port-forward is of (S-0586). */
+export type KlusterForwardTarget = { namespace: string; service: string; port: number };
+
+/**
+ * A port-forward's target from a request's body (S-0586): a namespace and a service that are DNS
+ * labels and a port from 1 to 65535, else 400, before flai is asked.
+ */
+export function klusterForwardParam(body: unknown): KlusterForwardTarget {
+	const b = (body ?? {}) as Record<string, unknown>;
+	const label = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
+	if (typeof b.namespace !== 'string' || !label.test(b.namespace))
+		throw new RepoError(
+			400,
+			`namespace must be a namespace kluster.deployments lists, not ${JSON.stringify(b.namespace ?? null)}`
+		);
+	if (typeof b.service !== 'string' || !label.test(b.service))
+		throw new RepoError(
+			400,
+			`service must be a service kluster.deployments lists, not ${JSON.stringify(b.service ?? null)}`
+		);
+	if (typeof b.port !== 'number' || !Number.isInteger(b.port) || b.port < 1 || b.port > 65535)
+		throw new RepoError(
+			400,
+			`port must be one of the service's ports, not ${JSON.stringify(b.port ?? null)}`
+		);
+	return { namespace: b.namespace, service: b.service, port: b.port };
+}
+
 export function klusterStoryParam(value: unknown): string {
 	if (typeof value !== 'string' || !/^S-\d+$/.test(value))
 		throw new RepoError(

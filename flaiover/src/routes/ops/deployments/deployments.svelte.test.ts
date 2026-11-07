@@ -202,7 +202,7 @@ describe('Deployments page (S-0581)', () => {
 		);
 	});
 
-	it('shows how to reach each deployment for a demo: its hosts, port-forwards, and services', async () => {
+	it('shows how to reach each deployment for a demo: its hosts and ports, with no command', async () => {
 		reads = [
 			answer(
 				list({
@@ -222,17 +222,82 @@ describe('Deployments page (S-0581)', () => {
 		await show();
 		const demo = rowOf('main').querySelector('[data-testid="deployment-access"]')!;
 		expect(demo.textContent).toContain('web.authstar.svc.cluster.local');
-		expect(demo.textContent).toContain('8080');
-		expect(demo.querySelector('[data-testid="deployment-port-forward"]')!.textContent).toBe(
-			access('authstar').services[0].port_forward
-		);
-		expect(demo.querySelector('[data-testid="deployment-list"]')!.textContent).toBe(
-			access('authstar').list
-		);
-		expect(demo.textContent).toContain('main checkout');
+		expect(demo.textContent).toContain('port 8080');
+		expect(buttonIn(demo, 'Start')).toBeDefined();
+		expect(demo.textContent).not.toContain('kubectl');
+		expect(demo.querySelector('[data-testid="deployment-port-forward"]')).toBeNull();
+		expect(demo.querySelector('[data-testid="deployment-list"]')).toBeNull();
 		expect(
 			rowOf('S-0581').querySelector('[data-testid="deployment-services-error"]')!.textContent
 		).toContain("kubectl is not on the host's PATH");
+		expect(q('deployments-forwards-open')).toBeNull();
+	});
+
+	const running = (ns: string) => ({
+		namespace: ns,
+		service: 'web',
+		port: 8080,
+		local_port: 41234,
+		address: '0.0.0.0',
+		started_at: '2026-11-07T10:00:00Z',
+		running: true
+	});
+	const withForwards = (forwards: ReturnType<typeof running>[]) =>
+		list({
+			deployments: [main(), story('S-0581', { access: { ...access('s-0581'), forwards } })]
+		});
+
+	it('starts a port-forward, links it on the host, says it is open to the network, and stops it', async () => {
+		await show();
+		const row = () => rowOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
+		writes['/api/kluster/forward'] = answer(withForwards([running('s-0581')]));
+		buttonIn(row(), 'Start')!.click();
+		await settle();
+		const [path, init] = posts().at(-1)!;
+		expect(path).toBe('/api/kluster/forward');
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			namespace: 's-0581',
+			service: 'web',
+			port: 8080,
+			on: true
+		});
+		const link = row().querySelector<HTMLAnchorElement>('[data-testid="deployment-forward-link"]')!;
+		expect(link.getAttribute('href')).toBe(`http://${window.location.hostname}:41234`);
+		expect(q('deployments-forwards-open')!.textContent).toContain("reach the host's");
+		expect(document.body.textContent).not.toMatch(/kubectl|flai (serve|kluster)/);
+
+		writes['/api/kluster/forward'] = answer(withForwards([]));
+		buttonIn(row(), 'Stop')!.click();
+		await settle();
+		expect(JSON.parse(String((posts().at(-1)![1] as RequestInit).body))).toMatchObject({
+			on: false
+		});
+		expect(row().querySelector('[data-testid="deployment-forward-link"]')).toBeNull();
+		expect(buttonIn(row(), 'Start')).toBeDefined();
+		expect(q('deployments-forwards-open')).toBeNull();
+	});
+
+	it("shows flai's refusal of a forward beside its port, and an ended forward's output", async () => {
+		reads = [
+			answer(
+				withForwards([
+					{ ...running('s-0581'), running: false, output: 'lost connection to pod' } as never
+				])
+			)
+		];
+		await show();
+		const row = () => rowOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
+		expect(row().querySelector('[data-testid="deployment-forward-ended"]')!.textContent).toContain(
+			'lost connection to pod'
+		);
+		const said =
+			'the cluster authstar lists no service web with the port 8080 in the namespace s-0581; pick one kluster.deployments lists';
+		writes['/api/kluster/forward'] = answer({ error: said }, 400);
+		buttonIn(row(), 'Start')!.click();
+		await settle();
+		const port = row().querySelector('[data-testid="deployment-port"]')!;
+		expect(port.querySelector('[data-testid="deployment-forward-said"]')!.textContent).toBe(said);
+		expect(q('deployments-action-error')).toBeNull();
 	});
 
 	it('offers Deploy only where it fits: not deployed, or deployed behind its head', async () => {
