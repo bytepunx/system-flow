@@ -5,7 +5,10 @@
 // /api/kluster/*; says while a job runs and asks again until it ends; shows flai's refusal word for
 // word; and says when the kluster host action is off or nothing is deployed. S-0586: the notices
 // link the Klusters page's setup and name no command, and with no deploy set the page says deploys
-// are not set up yet in place of Deploy and Promote.
+// are not set up yet in place of Deploy and Promote. S-0595 (ADR-0263 §5): the page groups them in
+// its own rail, Overview, Build, Logs, Access, and Setup, kept in the hash; Build shows one panel per
+// component build with its status; with no deploy set, a link opens Setup in place of a call flai
+// refuses; and Setup holds the deploy settings, so no one edits system-flow.yaml.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterDeployment, KlusterDeployments, KlusterJob } from '$lib/server/repo';
@@ -130,6 +133,26 @@ const buttonIn = (el: Element | Document, name: string) =>
 	[...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent!.trim() === name);
 const posts = () =>
 	api.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'POST');
+// the rail's entry for a pane, and the pane shown
+const entry = (id: string) =>
+	document.querySelector<HTMLAnchorElement>(`[data-sidebar-entry="${id}"]`)!;
+const paneShown = () =>
+	document.querySelector('[data-sidebar-pane]')?.getAttribute('data-sidebar-pane');
+const accessOf = (who: string) =>
+	all('access-row').find((r) =>
+		r.querySelector('[data-testid="deployment-who"]')!.textContent!.includes(who)
+	)!;
+const step = (name: string, outcome: string, over: Record<string, unknown> = {}) => ({
+	name,
+	outcome,
+	...(outcome === 'pending'
+		? {}
+		: { started_at: '2026-11-07T01:00:00Z', log: `.flai-cache/kluster/logs/s-0590/${name}.log` }),
+	...(outcome === 'passed' || outcome === 'failed' || outcome === 'skipped'
+		? { ended_at: '2026-11-07T01:01:30Z' }
+		: {}),
+	...over
+});
 
 describe('Deployments page (S-0581)', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -143,8 +166,14 @@ describe('Deployments page (S-0581)', () => {
 		c = mount(DeploymentsPage, { target: document.body });
 		await settle();
 	};
+	// opens a pane from the rail, as the reader does
+	const go = async (id: string) => {
+		entry(id).click();
+		await settle();
+	};
 
 	beforeEach(() => {
+		history.replaceState(null, '', '/ops/deployments');
 		reads = [answer(list())];
 		writes = {};
 		status = answer({ block: true, deployable: true });
@@ -152,6 +181,9 @@ describe('Deployments page (S-0581)', () => {
 		api.mockImplementation(async (path: string) => {
 			if (path === '/api/kluster/deployments') return reads.length > 1 ? reads.shift()! : reads[0];
 			if (path === '/api/kluster') return status;
+			if (path.startsWith('/api/kluster/log?'))
+				return answer({ exists: true, offset: 0, next: 4, size: 4, text: 'log\n' });
+			if (path.startsWith('/api/items?')) return answer([]);
 			const w = writes[path];
 			if (!w) throw new Error(`unexpected ${path}`);
 			return w;
@@ -191,15 +223,121 @@ describe('Deployments page (S-0581)', () => {
 		expect(q('deployments-no-main')).toBeNull();
 	});
 
-	it("links each step to its log, with the log's path and its end", async () => {
+	it('groups the page in its rail: Overview first, then Build, Logs, Access, and Setup', async () => {
 		await show();
-		const steps = [...rowOf('S-0581').querySelectorAll('[data-testid="deployment-step"]')];
-		expect(steps.map((s) => s.id)).toEqual(['log-s-0581-build', 'log-s-0581-deploy']);
-		expect(steps[0].querySelector('summary')!.textContent).toContain('its log');
-		expect(steps[0].textContent).toContain('.flai-cache/kluster/logs/s-0581/build.log');
-		expect(steps[0].querySelector('[data-testid="deployment-step-log"]')!.textContent).toBe(
-			'built s-0581\n'
+		const ids = [...document.querySelectorAll('[data-sidebar-entry]')].map((e) =>
+			e.getAttribute('data-sidebar-entry')
 		);
+		expect(ids).toEqual(['overview', 'build', 'logs', 'access', 'setup']);
+		expect(paneShown()).toBe('overview');
+		expect(entry('overview').textContent).toContain('4');
+		await go('setup');
+		expect(paneShown()).toBe('setup');
+		expect(window.location.hash).toBe('#setup');
+		expect(all('deployment-row')).toEqual([]);
+		await go('overview');
+		expect(all('deployment-row').length).toBe(4);
+	});
+
+	it("shows each step's outcome on its row, and opens its log in Logs, with the log's path", async () => {
+		await show();
+		const steps = [
+			...rowOf('S-0581').querySelectorAll<HTMLAnchorElement>('[data-testid="deployment-step"]')
+		];
+		expect(steps.map((s) => s.textContent!.trim())).toEqual(['build · passed', 'deploy · passed']);
+		steps[1].click();
+		await settle();
+		expect(paneShown()).toBe('logs');
+		expect(q('deployments-chosen')!.textContent).toContain('s-0581');
+		const panels = all('step-panel');
+		expect(panels.map((p) => p.getAttribute('data-step'))).toEqual(['build', 'deploy']);
+		expect(panels[0].textContent).toContain('.flai-cache/kluster/logs/s-0581/build.log');
+		expect(panels[0].querySelector('[data-testid="log-feed-status"]')!.textContent).toBe('passed');
+	});
+
+	it('builds one panel per component, each with its status: passed, running, and waiting', async () => {
+		const building = story('S-0590', {
+			outcome: 'running',
+			ended_at: undefined,
+			steps: [
+				step('build-api', 'passed'),
+				step('build-web', 'running'),
+				step('build-worker', 'pending'),
+				step('load', 'pending'),
+				step('deploy', 'pending')
+			]
+		});
+		reads = [
+			answer(
+				list({
+					deployments: [main(), building],
+					running: job('deploy', 'S-0590')
+				})
+			)
+		];
+		await show();
+		await go('build');
+		expect(q('deployments-chosen')!.textContent).toContain('s-0590');
+		const panels = all('build-panel');
+		expect(panels.map((p) => p.getAttribute('data-step'))).toEqual([
+			'build-api',
+			'build-web',
+			'build-worker'
+		]);
+		expect(
+			panels.map((p) => p.querySelector('[data-testid="log-feed-status"]')!.textContent)
+		).toEqual(['passed', 'running', 'pending']);
+		expect(panels.map((p) => p.querySelector('summary')!.textContent)).toEqual([
+			expect.stringContaining('api'),
+			expect.stringContaining('web'),
+			expect.stringContaining('worker')
+		]);
+		expect(q('deployments-build-summary')!.textContent).toContain(
+			'3 builds: 1 passed, 1 running, 1 waiting'
+		);
+		expect(q('build-load')!.querySelector('[data-testid="log-feed-status"]')!.textContent).toBe(
+			'pending'
+		);
+		expect(entry('build').textContent).toContain('3');
+	});
+
+	it('shows a component whose build failed, and the builds after it skipped', async () => {
+		const failed = story('S-0590', {
+			outcome: 'failed',
+			failed_step: 'build-web',
+			steps: [
+				step('build-api', 'passed'),
+				step('build-web', 'failed', { exit_code: 2 }),
+				step('build-worker', 'skipped'),
+				step('load', 'skipped'),
+				step('deploy', 'skipped')
+			]
+		});
+		reads = [answer(list({ deployments: [main(), failed] }))];
+		await show();
+		await go('build');
+		// main is the default without a job running: the reader picks the story's namespace
+		const select = q('deployments-build-namespace') as HTMLSelectElement;
+		select.value = 's-0590';
+		select.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(
+			all('build-panel').map((p) => p.querySelector('[data-testid="log-feed-status"]')!.textContent)
+		).toEqual(['passed', 'failed', 'skipped']);
+		expect(all('build-panel')[1].textContent).toContain('exit code 2');
+		expect(q('deployments-build-summary')!.textContent).toContain('1 passed, 1 failed, 1 skipped');
+		expect(q('deployments-chosen')!.textContent).toContain('at its build-web step');
+	});
+
+	it('says a deploy that built nothing names no build', async () => {
+		const bare = story('S-0581', {
+			steps: [step('build', 'skipped'), step('load', 'skipped'), step('deploy', 'passed')]
+		});
+		reads = [answer(list({ deployments: [bare] }))];
+		await show();
+		await go('build');
+		expect(q('deployments-build-none')!.textContent).toContain('names no build command');
+		expect(all('build-panel')).toEqual([]);
 	});
 
 	it('shows how to reach each deployment for a demo: its hosts and ports, with no command', async () => {
@@ -220,7 +358,8 @@ describe('Deployments page (S-0581)', () => {
 			)
 		];
 		await show();
-		const demo = rowOf('main').querySelector('[data-testid="deployment-access"]')!;
+		await go('access');
+		const demo = accessOf('main').querySelector('[data-testid="deployment-access"]')!;
 		expect(demo.textContent).toContain('web.authstar.svc.cluster.local');
 		expect(demo.textContent).toContain('port 8080');
 		expect(buttonIn(demo, 'Start')).toBeDefined();
@@ -228,7 +367,7 @@ describe('Deployments page (S-0581)', () => {
 		expect(demo.querySelector('[data-testid="deployment-port-forward"]')).toBeNull();
 		expect(demo.querySelector('[data-testid="deployment-list"]')).toBeNull();
 		expect(
-			rowOf('S-0581').querySelector('[data-testid="deployment-services-error"]')!.textContent
+			accessOf('S-0581').querySelector('[data-testid="deployment-services-error"]')!.textContent
 		).toContain("kubectl is not on the host's PATH");
 		expect(q('deployments-forwards-open')).toBeNull();
 	});
@@ -249,7 +388,8 @@ describe('Deployments page (S-0581)', () => {
 
 	it('starts a port-forward, links it on the host, says it is open to the network, and stops it', async () => {
 		await show();
-		const row = () => rowOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
+		await go('access');
+		const row = () => accessOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
 		writes['/api/kluster/forward'] = answer(withForwards([running('s-0581')]));
 		buttonIn(row(), 'Start')!.click();
 		await settle();
@@ -264,6 +404,7 @@ describe('Deployments page (S-0581)', () => {
 		const link = row().querySelector<HTMLAnchorElement>('[data-testid="deployment-forward-link"]')!;
 		expect(link.getAttribute('href')).toBe(`http://${window.location.hostname}:41234`);
 		expect(q('deployments-forwards-open')!.textContent).toContain("reach the host's");
+		expect(entry('access').textContent).toContain('1');
 		expect(document.body.textContent).not.toMatch(/kubectl|flai (serve|kluster)/);
 
 		writes['/api/kluster/forward'] = answer(withForwards([]));
@@ -286,7 +427,8 @@ describe('Deployments page (S-0581)', () => {
 			)
 		];
 		await show();
-		const row = () => rowOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
+		await go('access');
+		const row = () => accessOf('S-0581').querySelector('[data-testid="deployment-access"]')!;
 		expect(row().querySelector('[data-testid="deployment-forward-ended"]')!.textContent).toContain(
 			'lost connection to pod'
 		);
@@ -326,9 +468,11 @@ describe('Deployments page (S-0581)', () => {
 		expect(q('deployments-running')!.textContent).toContain(
 			'kluster deploy of S-0584 in the namespace s-0584 runs'
 		);
-		expect(q('deployments-log')!.textContent).toBe('building s-0584\n');
 		expect(buttonIn(rowOf('S-0583'), 'Deploy')!.disabled).toBe(true);
 		expect(buttonIn(rowOf('main'), 'Promote')!.disabled).toBe(true);
+		await go('logs');
+		expect(q('deployments-log')!.textContent).toBe('building s-0584\n');
+		await go('overview');
 
 		const done = job('deploy', 'S-0584', { ended_at: '2026-11-07T02:04:00Z', outcome: 'done' });
 		const after = list({
@@ -478,17 +622,70 @@ describe('Deployments page (S-0581)', () => {
 		const nd = q('deployments-no-deploy')!;
 		expect(nd.textContent).toContain('Deploys are not set up yet');
 		expect(nd.textContent).not.toContain('flai ');
-		expect(nd.querySelector('a')!.getAttribute('href')).toBe('/ops/klusters');
+		expect(nd.querySelector('a')!.getAttribute('href')).toBe('#setup');
 		expect(buttonIn(document, 'Deploy')).toBeUndefined();
 		expect(buttonIn(document, 'Promote')).toBeUndefined();
+		expect(rowOf('S-0584').querySelector('[data-testid="deployment-to-setup"]')).not.toBeNull();
+		expect(rowOf('main').querySelector('[data-testid="deployment-to-setup"]')).not.toBeNull();
 		// a deployed story's namespace can still be torn down
 		expect(buttonIn(rowOf('S-0581'), 'Teardown')).toBeDefined();
+		// the link opens Setup, and asks flai nothing
+		rowOf('S-0584')
+			.querySelector<HTMLAnchorElement>('[data-testid="deployment-to-setup"]')!
+			.click();
+		await settle();
+		expect(paneShown()).toBe('setup');
+		expect(posts()).toEqual([]);
+		await go('overview');
 		reads = [answer(list({ deployments: [], review: [] }))];
 		if (c) unmount(c);
 		document.body.innerHTML = '';
 		await show();
 		expect(q('deployments-no-main')).not.toBeNull();
 		expect(buttonIn(q('deployments-no-main')!, 'Promote')).toBeUndefined();
+	});
+
+	it("holds the deploy setup in Setup, from kluster.status's settings, saving back into the page", async () => {
+		const setting = (key: string, kind: string, value?: unknown) => ({
+			key,
+			kind,
+			default: '',
+			meaning: `the ${key}`,
+			value,
+			set: value !== undefined
+		});
+		status = answer({
+			block: true,
+			deployable: false,
+			settings_on: true,
+			settings_enable: 'flai serve enable settings',
+			settings: [
+				setting('kluster.config', 'text', 'kluster.yaml'),
+				setting('kluster.namespace', 'text'),
+				setting('kluster.build', 'command'),
+				setting('kluster.components', 'components'),
+				setting('kluster.deploy', 'command'),
+				setting('kluster.teardown', 'command'),
+				setting('kluster.timeout', 'duration')
+			]
+		});
+		await show();
+		expect(q('deployments-deployable')!.textContent).toContain('deploys not set up');
+		await go('setup');
+		const pane = q('deployments-setup-pane')!;
+		expect(pane.querySelector('[data-testid="deploy-settings"]')).not.toBeNull();
+		expect(pane.querySelector('[data-testid="field-kluster.deploy"]')).not.toBeNull();
+		expect(
+			pane
+				.querySelector<HTMLAnchorElement>('[data-testid="deployments-setup"]')!
+				.getAttribute('href')
+		).toBe('/ops/klusters');
+	});
+
+	it('says where the setup is when kluster.status gives no settings', async () => {
+		await show();
+		await go('setup');
+		expect(q('deployments-setup-unknown')!.textContent).toContain('Klusters page');
 	});
 
 	it('offers Deploy and Promote when kluster.status cannot be read, as from an older flai', async () => {
