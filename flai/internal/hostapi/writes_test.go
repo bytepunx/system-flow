@@ -1917,6 +1917,18 @@ func TestTheFormulaActionIsSeenAndOffByDefault(t *testing.T) {
 	}
 }
 
+// S-0577: kluster is a host action the dashboard sees, so that the Features
+// page lists it and turns it on and off, off by default (ADR-0254).
+func TestTheKlusterActionIsSeenAndOffByDefault(t *testing.T) {
+	p := withDocs(t)
+	if ActionKluster != "kluster" || !DashboardSees(ActionKluster) || !strings.Contains(Actions[ActionKluster], "kluster: block") {
+		t.Errorf("the dashboard is not told what the kluster action does: %q", Actions[ActionKluster])
+	}
+	if on, ok := enabledActions(Host{}, p.Root)[ActionKluster]; !ok || on {
+		t.Errorf("project.info names kluster, off by default: %v %v", on, ok)
+	}
+}
+
 // S-0218: orchestrate is a host action the dashboard sees, as plan is, off
 // until the operator turns it on, and turned on and off from the settings
 // page as the others are; of its own, only the stop and the start ask for

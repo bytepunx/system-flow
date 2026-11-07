@@ -408,6 +408,15 @@ const ActionComponents = "components"
 // batch starts.
 const ActionMergeQueue = "merge-queue"
 
+// ActionKluster is the host action under which flai serve runs a project's
+// kluster jobs, with no model, and the dashboard's Ops pages bring the
+// project's cluster up or down and deploy, tear down, or promote through
+// flai (S-0577, ADR-0254). flai kluster in a shell works whatever it says.
+// Off, which is the default, no job starts and every namespace is left as it
+// is; turning it off tears nothing down. flai serve enable refuses it for a
+// project whose manifest has no kluster: block.
+const ActionKluster = "kluster"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -427,6 +436,7 @@ var Actions = map[string]string{
 	ActionMergeQueue:  "run the merge queue in flai serve, with no model, on this machine and as you, while orchestration.permissions.accept_reviews in system-flow.yaml is on and acceptance.mode is local: it takes up to merge_queue.batch_max (4 by default) eligible stories enqueued in review, in queue order, rebases each one's branch onto the one before it from the main branch, in a worktree of its own under .flai-cache/worktrees, and verifies the batch once with the tiers flai verify runs, running the project's tests on this host; a story whose rebase stops is left out of the batch. No batch starts while flai queue hold holds the queue. Off, or under pull-request acceptance, no batch starts and enqueued stories wait",
 	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai analyze or call analyze.run, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 	ActionCurate:      "start the curator, with the project's digest agent (digest.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai curate or call curate.run; it takes in what the archive and the threads gained since the day or time you give, or since its last run, as digest entries written through flai digest new and edit alone, edits no file, authors no work item, and leaves its entries uncommitted, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
+	ActionKluster:     "run the project's local Kubernetes cluster, the one the kluster: block of its system-flow.yaml names, made by bytepunx/kluster with k3d and Docker, on this machine and as you: deploy each story that enters review into a namespace of its own with the project's own build, deploy, and teardown commands, tear it down when the story leaves review, deploy main into the default namespace on each acceptance, and bring the cluster up when a deploy finds it absent, but never take it down; and let the dashboard bring the cluster up or take it down, and deploy, tear down, or promote, through flai. Whoever can change those commands on a story's branch then runs them on this host. Off, no job starts and every namespace stays as it is; flai kluster in a shell works either way",
 	ActionFormula:     "make a formula's instance each time the schedule its file under design/workflows/formulas names comes round, by running flai formula run <name> --ready --autocommit in the project's main checkout, on this machine and as you, with no inputs, so that the instance is committed in ready and its story's agent starts as any ready story's does; a formula flai check refuses is not made and is tried again when its schedule next comes round. Whoever can change a formula's file on the main branch then decides what runs on this host, and when",
 }
 
