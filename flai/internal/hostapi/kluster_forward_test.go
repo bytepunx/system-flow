@@ -130,6 +130,38 @@ func TestAForwardStartsOn0000AndIsListedThenStopped(t *testing.T) {
 	}
 }
 
+func TestASecondStartWaitsUntilTheFirstForwards(t *testing.T) {
+	kc := fakeForwards(t, `sleep 0.4; echo "Forwarding from 0.0.0.0:41234 -> 8080"; exec sleep 60`)
+	p, _ := forwardBerth(t)
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{})
+	t.Cleanup(func() { jobs.StopForwards(p.Root, "s-0001"); jobs.Wait() })
+	first := make(chan error, 1)
+	go func() {
+		_, err := jobs.StartForward(p.Root, "k3d-harbour", "s-0001", "web", 8080)
+		first <- err
+	}()
+	for deadline := time.Now().Add(5 * time.Second); len(kc.started()) == 0; {
+		if time.Now().After(deadline) {
+			t.Fatal("the first start ran no kubectl")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	began := time.Now()
+	got, err := jobs.StartForward(p.Root, "k3d-harbour", "s-0001", "web", 8080)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if waited := time.Since(began); waited < 200*time.Millisecond {
+		t.Errorf("the second start answered after %s, before kubectl said it forwards", waited)
+	}
+	if !got.Running || got.LocalPort != 41234 || len(kc.started()) != 1 {
+		t.Errorf("the second start answers the first's forward and runs no kubectl: %+v, %d starts", got, len(kc.started()))
+	}
+	if err := <-first; err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAForwardWhoseKubectlExitsIsKeptEndedWithItsOutput(t *testing.T) {
 	fakeForwards(t, `echo "Forwarding from 0.0.0.0:41234 -> 8080"; sleep 0.2; echo "lost connection to pod"; exit 1`)
 	p, _ := forwardBerth(t)

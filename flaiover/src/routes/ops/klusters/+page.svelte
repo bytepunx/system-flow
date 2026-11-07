@@ -539,8 +539,9 @@
 				{:else}
 					<p class="mt-1 text-sm">
 						Turning it on lets flai bring the cluster up and deploy stories into it. For a project
-						with no kluster: block it also writes one, naming only the config file, and that config
-						file, and commits both. Nothing is deployed until the deploy command is set in step 4.
+						with no kluster: block it also writes one, naming only the config file, writes that
+						config file, and commits both. Nothing is deployed until the deploy command is set in
+						step 4.
 					</p>
 					<button
 						type="button"

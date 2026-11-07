@@ -483,6 +483,7 @@ flai serve disable kluster    # tears nothing down
 - A block with no `deploy` is a cluster whose deploys are not set up yet. It comes up and goes down, and `flai serve` deploys and promotes nothing for it until `kluster.deploy` is set, from the Klusters page or with `flai manifest set`.
 - The dashboard's Features page and the Klusters page turn it on and off, through `flai serve enable` while the `settings` host action is on.
 - With the action on, `flai serve` runs the jobs below, and the dashboard's Ops pages bring the cluster up or down, deploy, tear down, or promote, and start or stop port-forwards.
+- `flai kluster up`, `down`, `status`, `deploy`, `teardown`, `promote`, and `deployments` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent the ones that write.
 
 **What stays outside the dashboard.** Two steps, both on the host:
 
@@ -494,7 +495,6 @@ flai serve disable kluster    # tears nothing down
 The project's build, deploy, and teardown scripts are the project's code. The Klusters page's **Write these with an agent** makes a backlog story for an agent to write them and name them in the block, for you to review and accept.
 
 **Port-forwards.** The Deployments page starts and stops a port-forward per service port of a namespace. `flai serve` runs each as `kubectl port-forward`, bound to `0.0.0.0` on a free port of the host, so that a flai hosted elsewhere can reach it (your answer 3 on TH-0861). A running forward is reachable by anything that can reach the host's network, with no sign-in of its own. Forwards end when `flai serve` stops. A teardown from the dashboard stops its namespace's forwards first; a teardown by `flai serve`'s own pass ends them when `kubectl` exits.
-- `flai kluster up`, `down`, `status`, `deploy`, `teardown`, `promote`, and `deployments` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent the ones that write.
 
 **What `flai serve` runs while it is on.** It looks at the project once a minute, and at once when it starts serving it. It runs one job at a time per project, in the order their causes came, with no model:
 

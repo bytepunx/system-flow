@@ -73,6 +73,8 @@ type klusterForward struct {
 	KlusterForward
 	cancel context.CancelFunc
 	done   chan struct{}
+	// ready is closed once kubectl says it forwards.
+	ready <-chan struct{}
 }
 
 // klusterForwards are the forwards of every project, kept by KlusterJobs.
@@ -149,8 +151,22 @@ func (k *KlusterJobs) StartForward(root, kubeContext, namespace, service string,
 		f.m = map[forwardKey]*klusterForward{}
 	}
 	if fw, ok := f.m[key]; ok && fw.Running {
+		f.mu.Unlock()
+		// a start of the same port may still be waiting for kubectl: answer
+		// once it forwards, or say it ended, never a port not listening yet
+		timer := time.NewTimer(klusterForwardReady)
+		defer timer.Stop()
+		select {
+		case <-fw.ready:
+		case <-fw.done:
+		case <-timer.C:
+		}
+		f.mu.Lock()
 		got := fw.KlusterForward
 		f.mu.Unlock()
+		if !got.Running {
+			return KlusterForward{}, fmt.Errorf("kubectl port-forward of service/%s port %d in the namespace %s ended before it forwarded: %s; start it again", service, port, namespace, strings.TrimSpace(got.Output))
+		}
 		return got, nil
 	}
 	local, err := klusterFreePort()
@@ -170,7 +186,7 @@ func (k *KlusterJobs) StartForward(root, kubeContext, namespace, service string,
 		return KlusterForward{}, fmt.Errorf("start kubectl port-forward of service/%s port %d in the namespace %s: %w; install kubectl on the host, with kluster setup, then start it again", service, port, namespace, err)
 	}
 	fw := &klusterForward{KlusterForward: KlusterForward{Namespace: namespace, Service: service, Port: port, LocalPort: local, Address: KlusterForwardAddress,
-		StartedAt: k.now().UTC().Format(time.RFC3339), Running: true}, cancel: cancel, done: make(chan struct{})}
+		StartedAt: k.now().UTC().Format(time.RFC3339), Running: true}, cancel: cancel, done: make(chan struct{}), ready: out.ready}
 	f.m[key] = fw
 	f.mu.Unlock()
 	k.wg.Add(1)
