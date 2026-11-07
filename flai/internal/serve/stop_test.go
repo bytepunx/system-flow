@@ -317,7 +317,13 @@ func TestTheOperatorsStopIsOneStoppedAgentEvent(t *testing.T) {
 		}
 		lab.release(id)
 		waitFor(t, "it ends asking", func() bool { return lab.run(id).Outcome == OutcomeAsked })
+		// The launcher records the outcome, then appends the ended event
+		// (endRun); a stop in between appends stopped first, which is the
+		// order of two events a reader still gets, not what is under test
+		// here (I-0248). So the stop waits for the end to be told.
+		asked := [2]string{inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which port?"}
+		lab.eventsAre(id, "Asks", started, asked)
 		run := stop(lab, id)
-		lab.eventsAre(id, "Asks", started, [2]string{inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which port?"}, [2]string{inbox.AgentStopped, run.Why})
+		lab.eventsAre(id, "Asks", started, asked, [2]string{inbox.AgentStopped, run.Why})
 	})
 }
