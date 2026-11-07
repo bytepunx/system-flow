@@ -3,11 +3,11 @@ id: I-0228
 title: Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
 class: defect
 status: open
-count: 2
+count: 3
 cost: 5m
 first_reported: 2026-10-29T00:56:36Z
-last_reported: 2026-11-02T06:19:02Z
-updated: 2026-11-02T06:19:02Z
+last_reported: 2026-11-07T06:52:33Z
+updated: 2026-11-07T06:52:33Z
 ---
 
 # I-0228 Claude Code drops any call to flai's HTTP MCP server that answers after 60 seconds, so wait_for_events, wait_for_work, verify, and a slow task_done fail for an agent in a container
@@ -24,6 +24,10 @@ Measured by S-0519 T-2227 with a scratch MCP server answering in JSON response m
 ### 2026-11-02T06:19:02Z
 Story: S-0506.
 S-0506 T-2419 remediated the waits: over HTTP, wait_for_events and wait_for_work now hold a call at most 45 seconds and answer timed_out (ADR-0244), and verify has answered at once since S-0546 made the close-out a flai serve job (ADR-0229). Still open: a task_done or story_start slower than 60 seconds over HTTP, and the per-server timeout in the MCP file the container adapter writes (S-0508).
+
+### 2026-11-07T06:52:33Z
+Story: S-0556.
+S-0556's agent, in a container reaching flai's MCP server over HTTP, called the MCP tool test on flai/internal/guard and the orchestrator role files as its start prompt says. The call answered "The operation timed out." The same paths through flai test in Bash passed, with go-test taking 3m59.7s. The start prompt's instruction to run tests with the MCP tool cannot hold for a Go package whose importers take minutes here; the agent used the CLI for the rest of the story, and told its sub-agents to.
 
 ## Remediation
 
