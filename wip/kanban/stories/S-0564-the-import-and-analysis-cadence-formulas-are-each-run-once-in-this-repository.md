@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-11-02T18:08:35Z
-updated: 2026-11-07T07:55:54Z
+updated: 2026-11-07T08:01:35Z
 transitions: []
 tags: [template]
 topics: [orchestration]
@@ -33,7 +33,6 @@ usage:
           cache_read: 1505469
           cache_write: 107968
           cost: 0.3918
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -48,6 +47,9 @@ forecast:
   basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 5, behind S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0241, S-0543, S-0560, S-0561 and S-0562."
   by: flai
   at: 2026-11-07T07:55:54Z
+finalized:
+  by: alex
+  at: 2026-11-07T08:01:35Z
 ---
 # S-0564 The import and analysis-cadence formulas are each run once in this repository, each instance worked to review and accepted
 
