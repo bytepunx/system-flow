@@ -169,6 +169,12 @@ describe('SettingsPanel (S-0105)', () => {
 	it('changes this project’s own settings when settings is on here, and not the host-wide ones', async () => {
 		const sent = backend(view(true, false));
 		await show('harnesses');
+		// the agent's command and harnesses are this project's (ADR-0261); every project's need more
+		expect(q<HTMLButtonElement>('save-agent')!.disabled).toBe(false);
+		const every = q<HTMLInputElement>('agent-everywhere')!;
+		every.checked = true;
+		every.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
 		expect(q<HTMLButtonElement>('save-agent')!.disabled).toBe(true);
 		expect(q('section-agent')!.textContent).toContain('flai serve enable settings --all-projects');
 		await show('features');
@@ -222,6 +228,46 @@ describe('SettingsPanel (S-0105)', () => {
 		push.dispatchEvent(new Event('change', { bubbles: true }));
 		await settle();
 		expect(q('action-kluster-said')).toBeNull();
+	});
+
+	it('saves the Harnesses page for this project, and for every project only when chosen (ADR-0261)', async () => {
+		const v = view(true, true);
+		v.host!.agent.name_from = 'project';
+		v.host!.agent.command_from = 'all-projects';
+		v.host!.agent.harnesses['claude-code'].from = '';
+		const sent = backend(v);
+		await show('harnesses');
+		expect(q('agent-name-from')!.textContent).toContain("this project's");
+		expect(q('agent-command-from')!.textContent).toContain("every project's");
+		expect(
+			q('harness-claude-code')!.querySelector('[data-testid="harness-from"]')!.textContent
+		).toContain('not set');
+		expect(q<HTMLInputElement>('agent-everywhere')!.checked).toBe(false);
+
+		q<HTMLButtonElement>('save-agent')!.click();
+		await settle();
+		expect(sent[0]).toEqual({ kind: 'agent', name: 'builder', command: ['run-agent', '{story}'] });
+
+		const every = q<HTMLInputElement>('agent-everywhere')!;
+		every.checked = true;
+		every.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		q('harness-claude-code')!
+			.querySelector<HTMLButtonElement>('[data-testid="save-harness"]')!
+			.click();
+		await settle();
+		expect(sent[1]).toEqual({
+			kind: 'harness',
+			name: 'claude-code',
+			program: 'claude',
+			args: ['--permission-mode', 'acceptEdits'],
+			guard: '',
+			deny_protected: false,
+			everywhere: true
+		});
+		q<HTMLButtonElement>('clear-agent-command')!.click();
+		await settle();
+		expect(sent[2]).toEqual({ kind: 'agent', command: null, everywhere: true });
 	});
 
 	it('changes the host-wide settings when settings is on everywhere, and says a refusal', async () => {

@@ -26,10 +26,13 @@ export type SettingsKind = (typeof SETTINGS_KINDS)[number];
 export const SETTINGS_READS = ['shared_check'] as const;
 export type SettingsRead = (typeof SETTINGS_READS)[number];
 
-/** Settings kept in the host's configuration for every project: they need settings on everywhere. */
+/**
+ * Settings kept in the host's configuration for every project: they need settings on everywhere.
+ * The agent's command, name, and harnesses are not among them: they are this project's, over a
+ * host-wide fallback, and need settings on everywhere only when saved for every project (ADR-0261;
+ * see PER_PROJECT).
+ */
 export const HOSTWIDE: readonly SettingsKind[] = [
-	'agent',
-	'harness',
 	'provider',
 	'check',
 	'checks_timeout',
@@ -37,6 +40,32 @@ export const HOSTWIDE: readonly SettingsKind[] = [
 	'dashboard_token',
 	'dashboard_hosts'
 ];
+
+/**
+ * Settings kept for this project on the host over a host-wide fallback (ADR-0261): the agent's
+ * command and name, and each harness's entry. Saved with everywhere, they are every project's.
+ */
+export const PER_PROJECT: readonly SettingsKind[] = ['agent', 'harness'];
+
+/**
+ * Where a host agent setting that applies to the project comes from (ADR-0261): its own entry, the
+ * host-wide fallback every project without one reads, or neither. Absent from a flai before it.
+ */
+export type AgentFrom = 'project' | 'all-projects' | '';
+
+/** What a setting's source reads as on the page. */
+export function fromLabel(from: AgentFrom | undefined): string {
+	switch (from) {
+		case 'project':
+			return "this project's";
+		case 'all-projects':
+			return "every project's";
+		case '':
+			return 'not set';
+		default:
+			return '';
+	}
+}
 
 export type HostAction = { name: string; means: string; here: boolean; everywhere: boolean };
 /**
@@ -52,6 +81,8 @@ export type Harness = {
 	deny_protected?: boolean;
 	guard_capable?: boolean;
 	ask_capable?: boolean;
+	/** Where the entry that applies to the project comes from (ADR-0261). */
+	from?: AgentFrom;
 };
 export type NamedCommand = { name: string; command: string[] };
 
@@ -195,6 +226,11 @@ export type SettingsView = {
 			name: string;
 			command: string[];
 			harnesses: Record<string, Harness>;
+			/** Where the name and the command that apply to the project come from (ADR-0261). */
+			name_from?: AgentFrom;
+			command_from?: AgentFrom;
+			/** The host-wide fallback, every project's, that a project with no entry reads (ADR-0261). */
+			everywhere?: { name: string; command: string[]; harnesses: Record<string, Harness> };
 			/** The host's providers by name (S-0359); absent from a flai that has none to say. */
 			providers?: Record<string, Provider>;
 		};
@@ -598,9 +634,16 @@ export function health(p: ServedProject): string {
 	}
 }
 
-/** Whether the page may change a setting of this kind, and if not the command that allows it. */
-export function allowed(view: SettingsView, kind: SettingsKind): { ok: boolean; enable: string } {
-	return HOSTWIDE.includes(kind)
+/**
+ * Whether the page may change a setting of this kind, and if not the command that allows it. A
+ * PER_PROJECT setting saved for every project, everywhere, needs what a HOSTWIDE one does.
+ */
+export function allowed(
+	view: SettingsView,
+	kind: SettingsKind,
+	everywhere = false
+): { ok: boolean; enable: string } {
+	return HOSTWIDE.includes(kind) || (everywhere && PER_PROJECT.includes(kind))
 		? { ok: view.everywhere, enable: view.enable_everywhere }
 		: { ok: view.here, enable: view.enable };
 }

@@ -633,6 +633,12 @@ type spec struct {
 	// hostwide marks a setting kept for every project (S-0105): it needs its
 	// action enabled for every project, not this one only.
 	hostwide bool
+	// hostwideOf, when set, says from its params whether a call changes a
+	// setting for every project, and so is gated as hostwide is, where the
+	// same setting may also be kept for this project alone: settings.agent
+	// and settings.harness with everywhere true (ADR-0261). Asked once build
+	// has accepted the params.
+	hostwideOf func(raw json.RawMessage) bool
 	// record journals every call under this name without gating it: an act
 	// on the host the operator consented to some other way (S-0098: import,
 	// by naming the folder the repository is in).
@@ -942,7 +948,26 @@ func specs() map[string]spec {
 	for name, sp := range settingsSpecs() {
 		table[name] = sp
 	}
+	// The host's agent command, name, and harnesses are kept per project
+	// over a host-wide fallback (ADR-0261): a write of this project's needs
+	// the settings action on here, and one of every project's, everywhere
+	// true, needs it on for every project.
+	for _, name := range []string{"settings.agent", "settings.harness"} {
+		sp := table[name]
+		sp.hostwide, sp.hostwideOf = false, asksEverywhere
+		table[name] = sp
+	}
 	return table
+}
+
+// asksEverywhere is whether a call's params say everywhere true: it changes
+// the setting for every project, not this one only (ADR-0261).
+func asksEverywhere(raw json.RawMessage) bool {
+	var in struct {
+		Everywhere bool `json:"everywhere"`
+	}
+	_ = json.Unmarshal(raw, &in)
+	return in.Everywhere
 }
 
 func itemSpecs() map[string]spec {
@@ -3240,7 +3265,7 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				host.record(entry)
 				return nil, notEnabled(action, which)
 			}
-			if sp.hostwide && !host.enabledEverywhere(sp.action) {
+			if (sp.hostwide || (sp.hostwideOf != nil && sp.hostwideOf(raw))) && !host.enabledEverywhere(sp.action) {
 				entry.Action, entry.Outcome = sp.action, "disabled"
 				host.record(entry)
 				return nil, &channel.Error{Code: Disabled,

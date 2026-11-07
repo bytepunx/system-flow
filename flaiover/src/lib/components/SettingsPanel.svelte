@@ -14,8 +14,10 @@
 	import {
 		allowed,
 		argv,
+		fromLabel,
 		health,
 		lines,
+		PER_PROJECT,
 		PROVIDER_APIS,
 		providerChange,
 		providerForm,
@@ -26,6 +28,7 @@
 		subprojectForm,
 		subprojectSet,
 		SUBPROJECT_KINDS,
+		type AgentFrom,
 		type Harness,
 		type ProviderForm,
 		type ServedProject,
@@ -49,6 +52,11 @@
 	let busy = $state<string | null>(null);
 	/** What the last change in each section said, by section. */
 	let said = $state<Record<string, { ok: boolean; text: string }>>({});
+	/**
+	 * Whether the Harnesses page saves for every project on the host, the host-wide fallback, in place
+	 * of this project's own entry (ADR-0261): off until the operator chooses it.
+	 */
+	let allProjects = $state(false);
 	/** A rotated token's login link or MCP token, shown once. */
 	let once = $state<Record<string, string>>({});
 
@@ -234,7 +242,12 @@
 		}
 	}
 
-	const can = (kind: SettingsKind) => (view ? allowed(view, kind) : { ok: false, enable: '' });
+	const can = (kind: SettingsKind) =>
+		view
+			? allowed(view, kind, allProjects && PER_PROJECT.includes(kind))
+			: { ok: false, enable: '' };
+	/** The scope a save on the Harnesses page sends: nothing for this project, everywhere for all. */
+	const scope = (): Record<string, unknown> => (allProjects ? { everywhere: true } : {});
 
 	/** flai's refusal of the last toggle of a host action, said beside that action's row (S-0586). */
 	let actionRefused = $state<{ name: string; text: string } | null>(null);
@@ -324,10 +337,10 @@
 			params.program = program.trim();
 			params.args = argv(args);
 		}
-		void change('harness-' + name, 'harness', params);
+		void change('harness-' + name, 'harness', { ...params, ...scope() });
 	}
 	function saveAgent() {
-		const params: Record<string, unknown> = {};
+		const params: Record<string, unknown> = { ...scope() };
 		if (aName.trim()) params.name = aName.trim();
 		const cmd = argv(aCommand);
 		if (cmd.length) params.command = cmd;
@@ -567,6 +580,12 @@
 			/>
 		</label>
 	</div>
+{/snippet}
+
+{#snippet source(from: AgentFrom | undefined, testid: string)}
+	{#if fromLabel(from)}
+		<span class="text-muted" data-testid={testid}> · {fromLabel(from)}</span>
+	{/if}
 {/snippet}
 
 {#snippet result(section: string)}
@@ -1292,10 +1311,31 @@
 		{#if shows('agent')}
 			<section data-testid="section-agent">
 				<h2 class="mb-2 font-medium">Starting agents, on this host</h2>
+				<p class="mb-2 text-xs text-muted">
+					Saved for this project alone unless you choose every project. A project with no setting of
+					its own reads every project's.
+				</p>
+				<label class="mb-2 flex items-start gap-2">
+					<input
+						type="checkbox"
+						class="mt-1"
+						bind:checked={allProjects}
+						data-testid="agent-everywhere"
+					/>
+					<span class="text-xs"
+						>Save for every project on this host, the fallback each project without its own setting
+						reads</span
+					>
+				</label>
 				{@render gate('agent')}
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 					<label class="block">
-						<span class="mb-1 block text-xs text-muted">name: agents work as name-S-0001</span>
+						<span class="mb-1 block text-xs text-muted"
+							>name: agents work as name-S-0001{@render source(
+								h.agent.name_from,
+								'agent-name-from'
+							)}</span
+						>
 						<input
 							class="w-full rounded border border-line-strong bg-surface px-2 py-1"
 							bind:value={aName}
@@ -1307,7 +1347,10 @@
 				<label class="mt-2 block">
 					<span class="mb-1 block text-xs text-muted"
 						>command for stories that name no harness, one argument a line; {'{story}'}, {'{root}'},
-						{'{model}'}, and {'{harness}'} are replaced</span
+						{'{model}'}, and {'{harness}'} are replaced{@render source(
+							h.agent.command_from,
+							'agent-command-from'
+						)}</span
 					>
 					<textarea
 						class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
@@ -1325,14 +1368,20 @@
 						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
 						disabled={!can('agent').ok || busy !== null || h.agent.command.length === 0}
 						data-testid="clear-agent-command"
-						onclick={() => change('agent', 'agent', { command: null })}>Remove the command</button
+						onclick={() => change('agent', 'agent', { command: null, ...scope() })}
+						>Remove the command</button
 					>
 				</div>
 				{@render result('agent')}
 
 				{#each Object.keys(harnessForm).sort() as name (name)}
 					<div class="mt-4 rounded border border-line p-3" data-testid="harness-{name}">
-						<h3 class="mb-2 font-mono text-xs">harness {name}{harnessNote(name)}</h3>
+						<h3 class="mb-2 font-mono text-xs">
+							harness {name}{harnessNote(name)}{@render source(
+								h.agent.harnesses[name]?.from,
+								'harness-from'
+							)}
+						</h3>
 						{#if name !== 'command'}
 							<label class="block">
 								<span class="mb-1 block text-xs text-muted">program</span>
@@ -1389,7 +1438,8 @@
 								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
 								disabled={!can('harness').ok || busy !== null || !harnessSet(name)}
 								data-testid="reset-harness"
-								onclick={() => change('harness-' + name, 'harness', { name, reset: true })}
+								onclick={() =>
+									change('harness-' + name, 'harness', { name, reset: true, ...scope() })}
 								>Back to the defaults</button
 							>
 						</div>

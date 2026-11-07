@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -1206,7 +1207,7 @@ func TestSettingsNeedTheShellsConsent(t *testing.T) {
 	if _, e := m["settings.action"](context.Background(), p, json.RawMessage(good["settings.action"].params)); e != nil {
 		t.Fatalf("a project's own setting, enabled here: %+v", e)
 	}
-	_, e := m["settings.agent"](context.Background(), p, json.RawMessage(good["settings.agent"].params))
+	_, e := m["settings.provider"](context.Background(), p, json.RawMessage(good["settings.provider"].params))
 	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") || e.Data.(map[string]any)["hostwide"] != true {
 		t.Fatalf("a host-wide setting, enabled here only: %+v", e)
 	}
@@ -1219,6 +1220,52 @@ func TestSettingsNeedTheShellsConsent(t *testing.T) {
 	}
 	if len(journal) != 2 || journal[0].Outcome != "done" || journal[0].Action != ActionSettings || journal[0].Detail != "flai serve enable push" || journal[1].Outcome != "disabled" {
 		t.Errorf("journal: %+v", journal)
+	}
+}
+
+// ADR-0261: the host's agent command, name, and harnesses are this
+// project's unless the call says everywhere, so settings.agent and
+// settings.harness need the settings action on here alone for this
+// project's entry, and on for every project for the host-wide fallback.
+func TestSettingsAgentAndHarnessAreThisProjectsUnlessEverywhere(t *testing.T) {
+	p := withDocs(t)
+	everywhere := false
+	host := Host{Enabled: func(a, root string) bool {
+		return a == ActionSettings && (root == p.Root || (everywhere && root == config.AllProjects))
+	}}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	call := func(method, params string) *channel.Error {
+		_, e := m[method](context.Background(), p, json.RawMessage(params))
+		return e
+	}
+	for i, c := range []struct{ method, params, want string }{
+		{"settings.agent", `{"command":["claude","-p"]`, "serve agent set --json -- claude -p"},
+		{"settings.harness", `{"name":"claude-code","program":"/opt/claude"`, "serve agent harness claude-code --program=/opt/claude --json"},
+	} {
+		n := len(rec.runs)
+		if e := call(c.method, fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 71+i)); e != nil {
+			t.Fatalf("%s for this project, with settings on here only: %+v", c.method, e)
+		}
+		if len(rec.runs) != n+1 || strings.Join(rec.runs[n].Args, " ") != c.want {
+			t.Errorf("%s ran %v, want %q", c.method, rec.runs[n:], c.want)
+		}
+		n = len(rec.runs)
+		e := call(c.method, fmt.Sprintf(`%s,"everywhere":true,"request_id":"req-%08d"}`, c.params, 81+i))
+		if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") {
+			t.Errorf("%s for every project, with settings on here only: %+v", c.method, e)
+		}
+		if len(rec.runs) != n {
+			t.Errorf("%s for every project ran %v while refused", c.method, rec.runs[n:])
+		}
+	}
+	everywhere = true
+	n := len(rec.runs)
+	if e := call("settings.harness", `{"name":"claude-code","program":"/opt/claude","everywhere":true,"request_id":"req-00000091"}`); e != nil {
+		t.Fatalf("settings.harness for every project, with settings on everywhere: %+v", e)
+	}
+	if got := strings.Join(rec.runs[n].Args, " "); got != "serve agent harness claude-code --all-projects --program=/opt/claude --json" {
+		t.Errorf("ran %q", got)
 	}
 }
 
