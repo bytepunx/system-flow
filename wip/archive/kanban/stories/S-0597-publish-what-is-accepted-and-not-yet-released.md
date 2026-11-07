@@ -3,10 +3,10 @@ id: S-0597
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T22:31:23Z
-updated: 2026-11-07T23:04:49Z
+updated: 2026-11-07T23:09:44Z
 transitions:
   - to: ready
     at: 2026-11-07T22:31:51Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T23:04:49Z
     by: agent-S-0597
+  - to: review
+    at: 2026-11-07T23:08:22Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T23:09:44Z
+    by: orchestrator
 tags: []
 agent:
   harness: claude-code
@@ -22,19 +28,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 103
-  estimated: true
-  priced_by: estimate
+  seconds: 230
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      work: 15
+      ceremony: 3
+      work: 28
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 170
-      cache_read: 1746374
-      cache_write: 140915
-      cost: 0.6776
+      input: 66
+      output: 8115
+      cache_read: 4547312
+      cache_write: 154821
+      cost: 2.3106
   strategic:
     - kind: orchestrator
       seconds: 42
@@ -56,9 +62,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2612 Fetch the remote's branch and tags
@@ -68,3 +74,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with no inputs.
+
+### Accepted by the orchestrator
+
+- Verified: 3ec051f28cf83a3fcc9e8a5e7e8388256d999966
+- At: 2026-11-07T23:09:44Z
+
+Verdict: pass
+- 1: T-2612 done
+- 2: T-2613 done
+- 3: T-2614 done

@@ -23,16 +23,16 @@ tags: []
 after: [T-2612]
 usage:
   source: log
-  seconds: 22
+  seconds: 33
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 51
-      cache_read: 463100
-      cache_write: 2224
-      cost: 0.1671
+      input: 7
+      output: 803
+      cache_read: 450002
+      cache_write: 15321
+      cost: 0.2287
 ---
 # T-2613 Evaluate the release policy, stopping unless it is met
 
