@@ -151,9 +151,11 @@ orchestration:
     publish: true
     plan_backlog_stories: true
     confirm_after: 48h
+    set_cost_of_delay: true
   policy: throughput
   release:
     value: 1000
+    count: 1
 analysis:
   agent:
     harness: claude-code
