@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1982.6727
-accrued_seconds: 1510409
-tasks_completed: 1893
-last_run: 2026-11-07T03:17:18Z
+accrued_cost: 1983.3603
+accrued_seconds: 1510559
+tasks_completed: 1898
+last_run: 2026-11-07T03:30:44Z
 ---
 
 # Orchestrator activity
@@ -13281,6 +13281,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 13
 - Cost: 0.1197 USD, estimated
+
+### 2026-11-07T03:28:35Z
+
+- Summary: Accepted S-0579 at 096c6cc under accept_reviews: the close-out passed at the branch head, the verifier matched all 7 criteria to changed files, and the dry run had no blockers. E-0032 followed it to done and was archived. Value 163.4 USD/week.
+- Items: S-0579, E-0032
+- Seconds: 67
+- Cost: 0.2168 USD, estimated
+
+### 2026-11-07T03:29:00Z
+
+- Summary: release-due S-0579: did not publish. release_evaluate: policy judgement, met false, count 8, 666.41 USD/week (S-0520 25, S-0545 20, S-0577 128, S-0578 73.53, S-0579 163.4, S-0580 117.1, S-0581 114.38, S-0582 25), nothing held_by_epic. I judge the batch coherent and complete now: E-0032 is done. But under judgement the publish formula's step 2 (release --evaluate --require-met) always stops, and release_publish refuses beside the formula (ADR-0240). orchestration.release still has only value: 1000. TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0579
+- Seconds: 25
+- Cost: 0.0756 USD, estimated
+
+### 2026-11-07T03:29:17Z
+
+- Summary: I accepted S-0579 at commit 096c6cc, but I published no release: as things stand, the project has no way to publish one.
+- Items: none
+- Seconds: 17
+- Cost: 0.1059 USD, estimated
+
+### 2026-11-07T03:30:29Z
+
+- Summary: release-due S-0579 (second start): did not publish. release_evaluate: policy judgement, met false, count 8, 666.41 USD/week (S-0520 25, S-0545 20, S-0577 128, S-0578 73.53, S-0579 163.4, S-0580 117.1, S-0581 114.38, S-0582 25), nothing held_by_epic. I judge the batch coherent and complete (E-0032 done), but under judgement the publish formula's step 2 (release --evaluate --require-met) always stops, and release_publish refuses beside the formula (ADR-0240). Nothing changed since the 03:29 entry; orchestration.release still has only value: 1000; TH-0811 still awaits the operator. No instance started, no new thread.
+- Items: S-0579
+- Seconds: 26
+- Cost: 0.1017 USD, estimated
+
+### 2026-11-07T03:30:44Z
+
+- Summary: I didn't publish a release after S-0579's acceptance, and nothing in this project can publish one until you answer TH-0811.
+- Items: none
+- Seconds: 15
+- Cost: 0.1876 USD, estimated
 
 ## Refusals
 

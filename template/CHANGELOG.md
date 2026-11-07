@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.23 - 2026-11-07
+
+- S-0545 flai serve wakes a story's agent that is paused on a thread for every task-done message from another story, each needing only a settled reply (patch).
+- S-0582 flai check finds `agent.image` outside the story at close-out (patch).
 - S-0582 A story's scoped check leaves out the `agent.image` findings only the host clears (patch, ADR-0255): the close-out rule in `work-management.md` says the findings for `docker` not on `PATH` or unable to say and for the layer's image not built are left out and recorded in no issue unless the story changes `system-flow.yaml` or the layer's Dockerfile, and the main checkout's check still reports them.
 - S-0545 A task-done notice is marked `(notice)`, and an agent ended on its own question is not started again for notices alone (patch, ADR-0252): the work-management rule on a task-done notice says its heading ends in `(notice)`, and that while you have ended on your own question to the designer, `flai serve` starts you again only on the answer, with the notices in your first `inbox` to answer then.
 
