@@ -337,7 +337,10 @@ func TestARoleThatTakesItemsRunsOncePerItem(t *testing.T) {
 func TestARefusedStartDropsItsReasons(t *testing.T) {
 	lab := newRoleEventsLab(t)
 	story := lab.working("Reviewed")
-	lab.cfg.Command = nil // no harness and no command: role.run refuses
+	// its harness is the host's command, and none is set: role.run refuses
+	// (ADR-0261)
+	lab.cfg.Command = nil
+	lab.onTheHostsCommand()
 	base := time.Now().UTC().Truncate(time.Second)
 	lab.lookAt(base)
 	lab.moveAt(story, workitem.Review, base.Add(time.Second))

@@ -22,6 +22,7 @@ func TestPlanStartsThePlannerForAnItem(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfg)
 	root := tempProject(t)
+	onTheHostsCommand(t, root)
 	inProcess(t)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
@@ -39,7 +40,7 @@ func TestPlanStartsThePlannerForAnItem(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "plan", "T-1"); code == 0 || !strings.Contains(errOut, "rule: T-0001 is a task; the planner plans an epic or a story") {
 		t.Errorf("a task: %d %s", code, errOut)
 	}
-	if _, errOut, code := runIn(t, root, "plan", "E-1"); code == 0 || !strings.Contains(errOut, "rule: the planner's agent names no harness") {
+	if _, errOut, code := runIn(t, root, "plan", "E-1"); code == 0 || !strings.Contains(errOut, "rule: the planner's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
 		t.Errorf("nothing to start it with: %d %s", code, errOut)
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "true")

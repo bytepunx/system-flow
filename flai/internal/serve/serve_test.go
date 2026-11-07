@@ -841,13 +841,15 @@ func TestASignedPairWithTheAllowanceShowsNothing(t *testing.T) {
 
 // ADR-0206: flai serve's look at a served project confirms a recommendation
 // of the orchestrator's that waited past confirm_after while orchestrate is
-// on, as the confirmer's own tests show it doing.
+// on, as the confirmer's own tests show it doing. The project's agent names
+// the host's command, and none is set, so no orchestrator is started: flai's
+// built-in default would run the host's claude (ADR-0261).
 func TestServeConfirmsARecommendationPastConfirmAfter(t *testing.T) {
 	dash := channeltest.New(t, "s3cret")
 	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
 	root, keyFile := scratchProject(t, "harbour")
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: harbour\nkey: harbour\nowner: alex\n"+
-		"layout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    answer_threads: recommend\n    confirm_after: 1h\n"), 0o644); err != nil {
+		"layout:\n  design: design\n  docs: docs\n  wip: wip\nagent:\n  harness: command\norchestration:\n  permissions:\n    answer_threads: recommend\n    confirm_after: 1h\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "design", "docs"} {

@@ -35,8 +35,11 @@ func (lab *agentLab) withDefaultAgent() {
 // carries none, and flai serve starts it with the project's default as
 // system-flow.yaml holds it at the start, on the operator's word and on the
 // launcher's own, with no command on the host and nothing written to the
-// story. A story that names a harness keeps its own agent, and with no
-// default and no command the start is refused as before.
+// story. A story that names a harness keeps its own agent. S-0587,
+// ADR-0261: with no default and no command, it starts on flai's built-in
+// default, claude-code with no model; with a command set it starts on the
+// command, as before; and a story whose harness is the command, with none
+// set, is refused naming the page and the command that set it.
 func TestAStoryWithNoAgentStartsWithTheProjectsDefault(t *testing.T) {
 	ctx := context.Background()
 	entry := func(lab *agentLab) Entry { return Entry{Key: "t", Name: "t", Root: lab.root} }
@@ -106,16 +109,84 @@ func TestAStoryWithNoAgentStartsWithTheProjectsDefault(t *testing.T) {
 		}
 		lab.release(id)
 	})
-	t.Run("no default and no command is still refused", func(t *testing.T) {
+	t.Run("no default and no command starts on the built-in default", func(t *testing.T) {
 		lab := lab(t)
 		id := lab.ready("Nothing")
+		run, err := Start(ctx, lab.o, entry(lab), id)
+		if err != nil {
+			t.Fatalf("start %s: %v, want it started on the built-in default", id, err)
+		}
+		if run.Harness != harness.ClaudeCode || run.Model != "" || !run.live() {
+			t.Errorf("run = %+v, want claude-code with no model, running", run)
+		}
+		if it, err := lab.repo.Get(id); err != nil || it.Agent != nil {
+			t.Errorf("the story was written: %+v, %v", it.Agent, err)
+		}
+		lab.release(id)
+	})
+	t.Run("the launcher starts it on the built-in default", func(t *testing.T) {
+		lab := lab(t)
+		id := lab.ready("Nothing")
+		lab.l.look(ctx, false)
+		run := lab.run(id)
+		if run == nil || run.Harness != harness.ClaudeCode || run.Model != "" {
+			t.Fatalf("run = %+v, want claude-code with no model; log:\n%s", run, lab.logText())
+		}
+		if st := lab.state(); strings.Contains(st.Waiting, "no harness") {
+			t.Errorf("waiting = %q, want no story waiting for a harness", st.Waiting)
+		}
+		lab.release(id)
+	})
+	t.Run("a host command still comes before the built-in default", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.hold()
+		lab.claudeStub()
+		id := lab.ready("Nothing")
+		run, err := Start(ctx, lab.o, entry(lab), id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if run.Harness != harness.Command {
+			t.Errorf("run = %+v, want the host's command", run)
+		}
+		lab.release(id)
+	})
+	t.Run("a harness that is the command, with none set, names the page and the command", func(t *testing.T) {
+		lab := lab(t)
+		id := lab.readyWith("Command", &manifest.Agent{Harness: harness.Command})
 		_, err := Start(ctx, lab.o, entry(lab), id)
 		var no *Refused
-		if !errors.As(err, &no) || !strings.Contains(no.Why, id+" names no harness, and no command is set on the host") {
-			t.Errorf("start %s: %v, want refused for naming no harness", id, err)
+		if !errors.As(err, &no) || !strings.Contains(no.Why, id+"'s harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
+			t.Errorf("start %s: %v, want refused naming /settings/harnesses and the command", id, err)
 		}
 		if r := lab.run(id); r != nil {
 			t.Errorf("a refused start left a run: %+v", r)
 		}
 	})
+	t.Run("a harness flai cannot start names the page and the command", func(t *testing.T) {
+		lab := lab(t)
+		id := lab.readyWith("Cursor", &manifest.Agent{Harness: "cursor"})
+		_, err := Start(ctx, lab.o, entry(lab), id)
+		var no *Refused
+		if !errors.As(err, &no) || !strings.Contains(no.Why, `flai cannot start harness "cursor"`) || !strings.Contains(no.Why, "/settings/agents, or with flai agent set --harness <name>") {
+			t.Errorf("start %s: %v, want refused naming /settings/agents and the command", id, err)
+		}
+	})
+}
+
+// S-0587, ADR-0261: the dashboard's stand-in for a story this host has had no
+// agent for names the harness it will start with: flai's built-in default,
+// claude-code, when the story and the project name none and no command is
+// set, and none, the host's command's, when one is.
+func TestAStandInNamesTheBuiltinHarnessWhenNoCommandIsSet(t *testing.T) {
+	lab := newAgentLab(t)
+	id := lab.ready("Begun elsewhere")
+	lab.move(id, workitem.InProgress)
+	a := Activity(lab.root, lab.state(), false)[id]
+	if a.Run == nil || a.Run.Harness != harness.ClaudeCode {
+		t.Errorf("no command set: %+v, want a stand-in on claude-code", a.Run)
+	}
+	if a := Activity(lab.root, lab.state(), true)[id]; a.Run == nil || a.Run.Harness != "" {
+		t.Errorf("a command set: %+v, want a stand-in naming no harness", a.Run)
+	}
 }

@@ -620,7 +620,8 @@ func TestADefinedRoleIsRefusedWithWhy(t *testing.T) {
 		t.Errorf("an item that does not exist: %v", err)
 	}
 	lab.cfg.Command = nil
-	refusedFor("reviewer", open, "the role reviewer's agent names no harness (roles.reviewer.agent or agent in system-flow.yaml), and no command is set on the host")
+	lab.onTheHostsCommand()
+	refusedFor("reviewer", open, "the role reviewer's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses")
 	lab.cfg.RoleActions = map[string]bool{"audit": true}
 	refusedFor("reviewer", open, "the review host action, which the role reviewer's file design/workflows/roles/reviewer.md names, is off for this project: flai serve enable review")
 	if st := lab.state(); len(st.Roles) != 0 || len(lab.entries()) != 0 {

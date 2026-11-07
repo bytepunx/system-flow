@@ -258,6 +258,7 @@ func TestTheOperatorStopsARunNobodyWaitsForAndAFailedOne(t *testing.T) {
 
 	lab = newOrchestrateLab(t)
 	lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+	lab.onTheHostsCommand() // nothing can start it (ADR-0261)
 	lab.look()
 	failed := lab.orchestrator()
 	if failed == nil || failed.Outcome != OutcomeFailed {
@@ -332,6 +333,7 @@ func TestTheOperatorsStopOfTheOrchestratorIsOneStoppedAgentEvent(t *testing.T) {
 	t.Run("a failed run held as it is", func(t *testing.T) {
 		lab := newOrchestrateLab(t)
 		lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+		lab.onTheHostsCommand() // nothing can start it (ADR-0261)
 		lab.look()
 		failed := lab.orchestrator()
 		if _, err := OrchestratorStop(lab.o, lab.entry()); err != nil {

@@ -646,7 +646,8 @@ func TestTheCuratorIsRefusedWithWhy(t *testing.T) {
 		refusedFor(since, `the curator takes a since as a YYYY-MM-DD day in UTC or an RFC 3339 time, such as 2026-10-01 or 2026-10-01T09:00:00Z, and "`+since+`" is neither`)
 	}
 	lab.cfg.Command = nil
-	refusedFor("", "the curator's agent names no harness (digest.agent or agent in system-flow.yaml), and no command is set on the host")
+	lab.onTheHostsCommand()
+	refusedFor("", "the curator's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses")
 	lab.cfg.Curate = false
 	refusedFor("2026-10-01", "the curate host action is off for this project: flai serve enable curate")
 	if st := lab.state(); st.Curator != nil || len(lab.entries()) != 0 {

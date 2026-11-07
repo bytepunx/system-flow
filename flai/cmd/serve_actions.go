@@ -74,7 +74,7 @@ func (a *app) host() hostapi.Host {
 			// held while the operator holds it stopped (S-0228), and the newest
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
-			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st), "plans": plans,
+			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st, command != ""), "plans": plans,
 				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined,
 				"past_orchestrators": pastOrchestrators, "past_analyzers": pastAnalyzers}
 			if budget := a.hostBudget(); len(budget) > 0 {

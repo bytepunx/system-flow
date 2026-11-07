@@ -543,3 +543,16 @@ func TestAnOlderClaudeChecksFileReadsAsAnthropic(t *testing.T) {
 		t.Errorf("the file holds %+v, want the older record under %s and the new one under %s", got, ClaudeCheckAnthropic, claudeLabGateway)
 	}
 }
+
+// S-0587, ADR-0261: a project whose manifest names no agent runs claude-code,
+// flai's built-in default, so the host's claude is checked for it.
+func TestAProjectWithNoAgentHasTheHostsClaudeChecked(t *testing.T) {
+	root := t.TempDir()
+	m := filepath.Join(root, manifest.File)
+	if err := os.WriteFile(m, []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, uses := claudeCodeProject(root); !uses {
+		t.Error("a project that names no agent, and so runs the built-in claude-code, does not have the host's claude checked")
+	}
+}

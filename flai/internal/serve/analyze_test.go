@@ -374,7 +374,8 @@ func TestTheAnalyzerIsRefusedWithWhy(t *testing.T) {
 	refusedFor("velocity", `the analyzer takes the focus bottlenecks, intent, risk, or none for all of them, and "velocity" is none of them`)
 	refusedFor("all", `and "all" is none of them`)
 	lab.cfg.Command = nil
-	refusedFor("risk", "the analyzer's agent names no harness (analysis.agent or agent in system-flow.yaml)")
+	lab.onTheHostsCommand()
+	refusedFor("risk", "the analyzer's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]")
 	lab.cfg.Analyze = false
 	refusedFor("risk", "the analyze host action is off for this project: flai serve enable analyze")
 	if st := lab.state(); st.Analyzer != nil || len(lab.entries()) != 0 {

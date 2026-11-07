@@ -83,8 +83,8 @@ func formulaTriggered(trigger string) (name, story string, ok bool) {
 // the project; for an item when the file takes none, without one when it
 // takes some, and for an item of a kind it does not take or that is
 // archived, done, or cancelled; while a run of the role on the same item, or
-// on none, runs; when its agent names no harness and no command is set on
-// the host; and while the budget state of its agent's provider holds its
+// on none, runs; when its agent's harness is the host's command and none is
+// set, or one flai cannot start; and while the budget state of its agent's provider holds its
 // start, naming the provider and until, with nothing recorded (S-0534). It
 // does not wait for the run: the serving flai settles it once the process is
 // gone.
@@ -179,9 +179,11 @@ func roleCheck(o Options, e Entry, name, item string) (roleStart, error) {
 	if run := o.Dir.AgentStates()[e.Root].Roles[f.Name][item]; run.running() {
 		return roleStart{}, refused("the role %s is already running %s (pid %d, started %s); a role has one run %s at a time", f.Name, onItem(item), run.PID, run.Started, onItem(item))
 	}
-	agent := repo.Manifest.RoleAgent(f.Name)
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return roleStart{}, refused("the role %s's agent names no harness (roles.%s.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])", f.Name, f.Name)
+	// flai's built-in default when nothing names a harness and no command is
+	// set (ADR-0261)
+	agent := cfg.startAgent(repo.Manifest.RoleAgent(f.Name))
+	if err := cfg.refuseUnstartable("the role "+f.Name, agent); err != nil {
+		return roleStart{}, err
 	}
 	return roleStart{cfg: cfg, file: f, item: item, agent: agent}, nil
 }

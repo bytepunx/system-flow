@@ -239,6 +239,7 @@ func TestRoleRunStartsADefinedRole(t *testing.T) {
 		t.Skip("starts true as the agent's command")
 	}
 	root := rolesProject(t, map[string]string{"reviewer.md": reviewerRole})
+	onTheHostsCommand(t, root)
 	t.Setenv("FLAI_STARTED_BY", "") // the operator, whoever runs the tests
 	cfg := configOf(t)
 	inProcess(t)
@@ -273,7 +274,7 @@ func TestRoleRunStartsADefinedRole(t *testing.T) {
 	}{
 		{[]string{"role", "run", "reviewer"}, "rule: the role reviewer runs on an item, a story, as its file design/workflows/roles/reviewer.md says; give it one"},
 		{[]string{"role", "run", "reviewer", "S-2"}, "rule: S-0002 is cancelled; the role reviewer runs on an item still open"},
-		{[]string{"role", "run", "reviewer", "S-1"}, "rule: the role reviewer's agent names no harness"},
+		{[]string{"role", "run", "reviewer", "S-1"}, "rule: the role reviewer's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]"},
 	} {
 		if _, errOut, code := runIn(t, root, r.args...); code == 0 || !strings.Contains(errOut, r.want) {
 			t.Errorf("%v: %d %s", r.args, code, errOut)

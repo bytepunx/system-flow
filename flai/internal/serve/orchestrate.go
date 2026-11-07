@@ -2,7 +2,6 @@ package serve
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -440,9 +439,10 @@ func (r *orchestrator) journalStop(at, detail string) {
 
 // orchestrate starts the orchestrator with agent for reasons, records the
 // run, journals it with its reasons, and returns why it was refused before it
-// could be started, "" when it was not, and whether it was started. It is
-// refused when the agent names no harness and no command is
-// set on the host, when the harness refuses the request, as claude-code
+// could be started, "" when it was not, and whether it was started. An agent
+// that names no harness starts with the host's command, or flai's built-in
+// default when none is set (ADR-0261). It is refused when the harness
+// refuses the request, as claude-code
 // does without the project's orchestrator definition, and when the agent's
 // provider cannot be had or its key is not set (ADR-0129). A refusal that is
 // said, the one returned last time, is not recorded, journalled, or logged
@@ -483,11 +483,10 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		}
 		return err.Error(), nil
 	}
-	commandSet := cfg.host(harness.Command).Program != ""
-	if (agent == nil || agent.Harness == "") && !commandSet {
-		return refuse(errors.New("the orchestrator's agent names no harness (orchestration.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])"))
-	}
-	name, adapter, err := harness.For(agent, commandSet)
+	// flai's built-in default when nothing names a harness and no command is
+	// set (ADR-0261)
+	agent = cfg.startAgent(agent)
+	name, adapter, err := harness.For(agent, cfg.commandSet())
 	run.Harness = name
 	if err != nil {
 		return refuse(err)

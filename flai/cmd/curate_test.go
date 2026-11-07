@@ -49,6 +49,7 @@ func TestCurateStartsTheCuratorForTheProject(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfg)
 	root := tempProject(t)
+	onTheHostsCommand(t, root)
 	inProcess(t)
 	t.Cleanup(func() {
 		if run := curatorRun(t, cfg); run != nil && run.PID > 0 {
@@ -72,7 +73,7 @@ func TestCurateStartsTheCuratorForTheProject(t *testing.T) {
 	if out, _, code := runIn(t, root, "hostapi", "curate.run", `{"since":"last week","request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a51"}`); code == 0 || !strings.Contains(out, badSince) {
 		t.Errorf("curate.run, a bad since: %d %s", code, out)
 	}
-	if _, errOut, code := runIn(t, root, "curate"); code == 0 || !strings.Contains(errOut, "rule: the curator's agent names no harness") {
+	if _, errOut, code := runIn(t, root, "curate"); code == 0 || !strings.Contains(errOut, "rule: the curator's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
 		t.Errorf("nothing to start it with: %d %s", code, errOut)
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "sleep", "30")

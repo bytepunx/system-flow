@@ -139,11 +139,19 @@ func TestWhichAdapterAStoryGets(t *testing.T) {
 	if name, _, err := For(&manifest.Agent{Model: "m"}, true); err != nil || name != Command {
 		t.Fatalf("a model, no harness: %q %v", name, err)
 	}
-	if _, _, err := For(nil, false); err == nil || !strings.Contains(err.Error(), "names no harness") {
-		t.Fatalf("nothing to start: %v", err)
+	// ADR-0261: an agent that names no harness, with no command set, starts
+	// on flai's built-in default rather than being refused
+	if name, _, err := For(nil, false); err != nil || name != ClaudeCode {
+		t.Fatalf("no agent, no command: %q %v", name, err)
 	}
-	if _, _, err := For(&manifest.Agent{Harness: Command}, false); err == nil || !strings.Contains(err.Error(), "none is set") {
+	if name, _, err := For(&manifest.Agent{Model: "m"}, false); err != nil || name != ClaudeCode {
+		t.Fatalf("a model, no harness, no command: %q %v", name, err)
+	}
+	if _, _, err := For(&manifest.Agent{Harness: Command}, false); err == nil || !strings.Contains(err.Error(), "none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
 		t.Fatalf("command harness with no command: %v", err)
+	}
+	if _, _, err := For(&manifest.Agent{Harness: "cursor"}, true); err == nil || !strings.Contains(err.Error(), "on the dashboard's Agents page, /settings/agents, or with flai agent set --harness <name>") {
+		t.Fatalf("unknown harness names no page: %v", err)
 	}
 	for _, commandSet := range []bool{true, false} {
 		name, ad, err := For(&manifest.Agent{Harness: None}, commandSet)

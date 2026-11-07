@@ -160,9 +160,11 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 	if run := o.Dir.AgentStates()[e.Root].Plans[it.ID]; run.running() {
 		return planStart{}, refused("the planner is already running for %s (pid %d, started %s); one item has one planner at a time", it.ID, run.PID, run.Started)
 	}
-	agent := repo.Manifest.PlanningAgent()
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return planStart{}, refused("the planner's agent names no harness (planning.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
+	// flai's built-in default when nothing names a harness and no command is
+	// set (ADR-0261)
+	agent := cfg.startAgent(repo.Manifest.PlanningAgent())
+	if err := cfg.refuseUnstartable("the planner", agent); err != nil {
+		return planStart{}, err
 	}
 	return planStart{cfg: cfg, item: it.ID, agent: agent}, nil
 }

@@ -49,6 +49,7 @@ func TestAnalyzeStartsTheAnalyzerForTheProject(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfg)
 	root := tempProject(t)
+	onTheHostsCommand(t, root)
 	inProcess(t)
 	t.Cleanup(func() {
 		if run := analyzerRun(t, cfg); run != nil && run.PID > 0 {
@@ -73,7 +74,7 @@ func TestAnalyzeStartsTheAnalyzerForTheProject(t *testing.T) {
 	if out, _, code := runIn(t, root, "hostapi", "analyze.run", `{"focus":"style","request_id":"3f0c1a52-7d3b-4f0e-9a51-0c2d4e6f8a41"}`); code == 0 || !strings.Contains(out, badFocus) {
 		t.Errorf("analyze.run, a bad focus: %d %s", code, out)
 	}
-	if _, errOut, code := runIn(t, root, "analyze"); code == 0 || !strings.Contains(errOut, "rule: the analyzer's agent names no harness") {
+	if _, errOut, code := runIn(t, root, "analyze"); code == 0 || !strings.Contains(errOut, "rule: the analyzer's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
 		t.Errorf("nothing to start it with: %d %s", code, errOut)
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "sleep", "30")

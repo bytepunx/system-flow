@@ -114,9 +114,11 @@ func curateCheck(o Options, e Entry, since string) (curateStart, error) {
 	if err != nil {
 		return curateStart{}, err
 	}
-	agent := repo.Manifest.DigestAgent()
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return curateStart{}, refused("the curator's agent names no harness (digest.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
+	// flai's built-in default when nothing names a harness and no command is
+	// set (ADR-0261)
+	agent := cfg.startAgent(repo.Manifest.DigestAgent())
+	if err := cfg.refuseUnstartable("the curator", agent); err != nil {
+		return curateStart{}, err
 	}
 	if since == "" {
 		if since, err = lastCurated(repo); err != nil {

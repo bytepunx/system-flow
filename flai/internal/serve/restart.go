@@ -45,7 +45,8 @@ func StartNow(ctx context.Context, o Options, e Entry, story, restart string) (*
 }
 
 // startNow is StartNow for what want says, its agent read from the story,
-// the project's default when it names no harness (ADR-0251). A
+// the project's default when it names no harness (ADR-0251), and flai's
+// built-in default under both when no command is set (ADR-0261). A
 // start the host's budget state holds is refused, with nothing recorded
 // (S-0534).
 func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentRun, error) {
@@ -60,10 +61,12 @@ func startNow(ctx context.Context, o Options, e Entry, want readyStory) (*AgentR
 	if err != nil {
 		return nil, err
 	}
-	want.ID, want.Agent = it.ID, repo.AgentOf(it) // the default under it, ADR-0251
+	cfg := o.Agent(e.Root)
+	// the default under it (ADR-0251), and the built-in under both (ADR-0261)
+	want.ID, want.Agent = it.ID, cfg.storyAgent(repo, it)
 	l := newLauncher(o, e)
 	l.handOver = true
-	if !l.start(ctx, o.Agent(e.Root), want) {
+	if !l.start(ctx, cfg, want) {
 		if b, held := l.holding[it.ID]; held {
 			return nil, heldRefusal(it.ID, b, l.now())
 		}
@@ -145,13 +148,11 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 	case run.Queued != "" && it.Status == workitem.Ready:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}
-	// the project's default when the story's agent names no harness (ADR-0251)
-	agent := repo.AgentOf(it)
-	if harness.Elsewhere(agent) {
-		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
-	}
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	// the project's default when the story's agent names no harness
+	// (ADR-0251), and flai's built-in default under both (ADR-0261)
+	agent := cfg.storyAgent(repo, it)
+	if err := cfg.refuseHarness(it.ID, agent); err != nil {
+		return nil, err
 	}
 	if err := heldStart(o, e, cfg, it.ID, agent); err != nil {
 		return nil, err

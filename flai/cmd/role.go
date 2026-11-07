@@ -342,8 +342,11 @@ serve enable <action>). It refuses, and says why, for a built-in role
 file gives, while the action is off for the project, for an item when its
 file takes none, without one when it takes some, for an item of a kind it
 does not take or that is archived, done, or cancelled, while a run of the
-role on the same item, or on none, runs, and when its agent names no harness
-and no command is set on the host. The host API's role.run runs this.
+role on the same item, or on none, runs, and when its agent names the host's
+command and none is set for the project, or a harness flai cannot start. An
+agent that names no harness runs on the host's command when one is set, and
+otherwise on flai's built-in default, claude-code (ADR-0261). The host API's
+role.run runs this.
 
 This is the role's asked trigger, which its run records as asked. While
 the action is on, flai serve also starts the role on the other triggers its

@@ -519,7 +519,8 @@ func TestThePlannerIsRefusedWithWhy(t *testing.T) {
 		t.Errorf("an item that does not exist: %v", err)
 	}
 	lab.cfg.Command = nil
-	refusedFor(lab.epic.ID, "the planner's agent names no harness")
+	lab.onTheHostsCommand()
+	refusedFor(lab.epic.ID, "the planner's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses")
 	lab.cfg.Plan = false
 	refusedFor(lab.epic.ID, "the plan host action is off for this project: flai serve enable plan")
 	if st := lab.state(); len(st.Plans) != 0 || len(lab.entries()) != 0 {

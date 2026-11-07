@@ -2122,6 +2122,7 @@ func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
+	onTheHostsCommand(t, root)
 	runIn(t, root, "epic", "new", "Epic")
 	runIn(t, root, "story", "new", "Slice", "--epic", "E-0001")
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-slice.md")
@@ -2137,7 +2138,7 @@ func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
 	if _, errOut, code := runIn(t, root, "move", "S-0001", "ready"); code != 0 {
 		t.Fatal(errOut)
 	}
-	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001 names no harness, and no command is set") {
+	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "rule: S-0001's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
 		t.Errorf("nothing to start it with: %d %s", code, errOut)
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
@@ -2309,6 +2310,7 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfg)
 	root := tempProject(t)
+	onTheHostsCommand(t, root)
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
@@ -2323,8 +2325,8 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 		t.Fatal(errOut)
 	}
 	// with no hold and no run going, start starts a run for asked (ADR-0209),
-	// which this project, with no harness, cannot make
-	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "start"); code == 0 || !strings.Contains(errOut, "names no harness") {
+	// which this project, on the host's command with none set, cannot make
+	if _, errOut, code := runIn(t, root, "serve", "orchestrate", "start"); code == 0 || !strings.Contains(errOut, "harness is the host's command, and none is set for this project") || !strings.Contains(errOut, "/settings/harnesses") {
 		t.Errorf("start with no hold: %d %s", code, errOut)
 	}
 	failed := &serve.AgentRun{Agent: "orchestrator", Harness: "command", Started: "2026-09-15T20:59:00Z", Ended: "2026-09-15T20:59:00Z", Session: "s1",
@@ -2352,7 +2354,7 @@ func TestServeOrchestrateHoldsTheOrchestratorStopped(t *testing.T) {
 	// command, lifts the hold as well, and a stop holds the failed run
 	inProcess(t)
 	m := hostapi.MethodsFor("test", nil, a.host())
-	if _, e := m["orchestrate.start"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000001"}`)); e == nil || !strings.Contains(e.Message, "the orchestrator's agent names no harness") {
+	if _, e := m["orchestrate.start"](context.Background(), p, json.RawMessage(`{"request_id":"req-00000001"}`)); e == nil || !strings.Contains(e.Message, "harness is the host's command, and none is set for this project") {
 		t.Fatalf("orchestrate.start: %+v", e)
 	}
 	run := a.serveDir().AgentStates()[main].Orchestrator
@@ -2849,5 +2851,21 @@ func TestServeAgentSettingsArePerProject(t *testing.T) {
 	// the restart limit stays host-wide, and needs no project
 	if _, errOut, code := runIn(t, outside, "serve", "agent", "set", "--auto-restarts", "3"); code != 0 || cfgOf(a).AutoRestarts != 3 || cfgOf(b).AutoRestarts != 3 {
 		t.Errorf("--auto-restarts is host-wide: %d %s", code, errOut)
+	}
+}
+
+// onTheHostsCommand makes the project at root's default agent the host's
+// command, so a start with no command set is refused rather than falling
+// back to flai's built-in claude-code, which would run the host's real
+// claude (ADR-0261).
+func onTheHostsCommand(t *testing.T, root string) {
+	t.Helper()
+	path := filepath.Join(root, "system-flow.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, append(data, []byte("agent:\n  harness: command\n")...), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

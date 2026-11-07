@@ -170,9 +170,11 @@ func analyzeCheck(o Options, e Entry, focus string) (analyzeStart, error) {
 	if err != nil {
 		return analyzeStart{}, err
 	}
-	agent := repo.Manifest.AnalysisAgent()
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return analyzeStart{}, refused("the analyzer's agent names no harness (analysis.agent or agent in system-flow.yaml), and no command is set on the host (flai serve agent set -- <program> [args...])")
+	// flai's built-in default when nothing names a harness and no command is
+	// set (ADR-0261)
+	agent := cfg.startAgent(repo.Manifest.AnalysisAgent())
+	if err := cfg.refuseUnstartable("the analyzer", agent); err != nil {
+		return analyzeStart{}, err
 	}
 	return analyzeStart{cfg: cfg, agent: agent}, nil
 }

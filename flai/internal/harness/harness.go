@@ -417,11 +417,12 @@ func Names() []string {
 	return out
 }
 
-// For is the adapter a story's agent is started with, and its name. A story
-// that names no harness is started with the operator's command, when one is
-// set; one whose agent runs elsewhere is refused. A container's adapter is
-// the inner harness's its config.inner names, as Capabilities and Reader
-// answer, and an inner harness it cannot run is refused.
+// For is the adapter a story's agent is started with, and its name. An
+// agent that names no harness is started with the operator's command, when
+// one is set, and otherwise with flai's built-in default, claude-code
+// (ADR-0261); one whose agent runs elsewhere is refused. A container's
+// adapter is the inner harness's its config.inner names, as Capabilities and
+// Reader answer, and an inner harness it cannot run is refused.
 func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
 	if Elsewhere(a) {
 		return "", nil, errors.New(ElsewhereRefusal(""))
@@ -431,17 +432,17 @@ func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
 		name = a.Harness
 	}
 	if name == "" {
-		if !commandSet {
-			return "", nil, fmt.Errorf("the story names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])")
+		name = manifest.BuiltinHarness
+		if commandSet {
+			name = Command
 		}
-		name = Command
 	}
 	ad, ok := Adapters[name]
 	if !ok {
-		return "", nil, fmt.Errorf("flai cannot start harness %q; it can start %s", name, strings.Join(Names(), ", "))
+		return "", nil, errors.New(UnknownRefusal("the agent", name))
 	}
 	if name == Command && !commandSet {
-		return "", nil, fmt.Errorf("the story's harness is the host's command, and none is set (flai serve agent set -- <program> [args...])")
+		return "", nil, errors.New(CommandUnsetRefusal("the agent"))
 	}
 	if name == Container {
 		inner, err := innerOf(a)
@@ -451,6 +452,29 @@ func For(a *manifest.Agent, commandSet bool) (string, Adapter, error) {
 		ad = container{inner: inner}
 	}
 	return name, ad, nil
+}
+
+// HarnessesPage and AgentsPage are the dashboard's settings pages that set
+// the host's command and harness programs, and the project's default agent,
+// by their paths, which the dashboard renders as links (ADR-0261 § 4).
+const (
+	HarnessesPage = "/settings/harnesses"
+	AgentsPage    = "/settings/agents"
+)
+
+// CommandUnsetRefusal is the refusal for whose agent, such as "S-0042" or
+// "the planner", whose harness is the host's command when none is set for
+// the project: what is missing, the page that sets it, and the command
+// (ADR-0261 § 4).
+func CommandUnsetRefusal(whose string) string {
+	return fmt.Sprintf("%s's harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, %s, or with flai serve agent set -- <program> [args...]", whose, HarnessesPage)
+}
+
+// UnknownRefusal is the refusal for whose agent naming a harness flai cannot
+// start: the harnesses it can, the page that sets the project's default
+// agent, and the command (ADR-0261 § 4).
+func UnknownRefusal(whose, name string) string {
+	return fmt.Sprintf("flai cannot start harness %q; it can start %s: name one for %s on the dashboard's Agents page, %s, or with flai agent set --harness <name>", name, strings.Join(Names(), ", "), whose, AgentsPage)
 }
 
 // option is a config key a harness takes, and the values it may have.

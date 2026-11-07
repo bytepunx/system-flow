@@ -170,6 +170,57 @@ func (c AgentConfig) host(name string) harness.Host {
 	return harness.Host{}
 }
 
+// commandSet is whether the host's command is set for the project.
+func (c AgentConfig) commandSet() bool { return c.host(harness.Command).Program != "" }
+
+// storyAgent is the agent flai serve starts for the story it (ADR-0261): its
+// own, the project's default under it (ADR-0251), the host's command when
+// neither names a harness and one is set, and otherwise flai's built-in
+// default, claude-code.
+func (c AgentConfig) storyAgent(repo *workitem.Repo, it *workitem.Item) *manifest.Agent {
+	return repo.StartAgentOf(it, c.commandSet())
+}
+
+// startAgent is the agent that a, a story's resolved by AgentOf or a
+// strategic role's, starts with (ADR-0261): a itself, the host's command when
+// it names no harness and one is set, and otherwise flai's built-in default
+// under it.
+func (c AgentConfig) startAgent(a *manifest.Agent) *manifest.Agent {
+	if c.commandSet() {
+		return a
+	}
+	return a.OrBuiltin()
+}
+
+// refuseHarness refuses to start the story id's agent, resolved as
+// storyAgent resolves it, when its agent runs elsewhere (ADR-0242) or
+// refuseUnstartable refuses it; nil when it can be started.
+func (c AgentConfig) refuseHarness(id string, agent *manifest.Agent) error {
+	if harness.Elsewhere(agent) {
+		return refused("%s", harness.ElsewhereRefusal(id))
+	}
+	return c.refuseUnstartable(id, agent)
+}
+
+// refuseUnstartable refuses to start whose agent, a story's ID or a role
+// such as "the planner", when it names the host's command and none is set
+// for the project, or names a harness flai cannot start, each refusal naming
+// the dashboard page and the command that fix it (ADR-0261 § 4); nil
+// otherwise.
+func (c AgentConfig) refuseUnstartable(whose string, agent *manifest.Agent) error {
+	name := ""
+	if agent != nil {
+		name = agent.Harness
+	}
+	if name == harness.Command && !c.commandSet() {
+		return refused("%s", harness.CommandUnsetRefusal(whose))
+	}
+	if _, ok := harness.Adapters[name]; name != "" && name != harness.None && !ok {
+		return refused("%s", harness.UnknownRefusal(whose, name))
+	}
+	return nil
+}
+
 // Outcomes of an agent that has ended.
 const (
 	OutcomeWorked = "worked" // it left its story in review or done
@@ -1188,11 +1239,13 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		sk.add("the agent host action is off for this project", stories...)
 		return
 	}
-	commandSet := cfg.host(harness.Command).Program != ""
-	var todo, away, nothing, noRoom, reviewFull []readyStory
+	var todo, away, noRoom, reviewFull []readyStory
 	byLimit := map[string][]readyStory{} // held by the budget state, by why
 	reserved := 0
 	for _, s := range stories {
+		// what it starts with, flai's built-in default when nothing names a
+		// harness and no command is set (ADR-0261)
+		s.Agent = cfg.startAgent(s.Agent)
 		run := st.Stories[s.ID]
 		answer := ""
 		if asked(run) {
@@ -1214,7 +1267,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			// the limit has room (S-0182)
 			s.Asked, s.Answer = run, answer
 			todo = append(todo, s)
-		case afterLimit(run) && (s.Agent != nil && s.Agent.Harness != "" || commandSet):
+		case afterLimit(run):
 			// its last agent ended on the usage limit before it pulled the
 			// story: started again once the limit no longer holds its
 			// provider, which the start's gate says, spending no restart
@@ -1222,8 +1275,6 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 			todo = append(todo, s)
 		case run != nil && run.Queued == "" && !startedBefore(run, s.Entered) && !agentChanged(run, s.Agent):
 			sk.add(tried(s.ID, run), s)
-		case (s.Agent == nil || s.Agent.Harness == "") && !commandSet:
-			nothing = append(nothing, s) // nothing to start it with, which is no failure
 		default:
 			if run != nil && run.Queued != "" {
 				s.Restart = restartWhy(run) // the operator's retry, waiting for room
@@ -1233,9 +1284,6 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	}
 	for _, s := range away {
 		sk.add(s.ID+"'s agent runs elsewhere (harness none): flai serve starts nothing for it", s)
-	}
-	if len(nothing) > 0 {
-		sk.add(fmt.Sprintf("%s %s no harness, and no command is set on the host", strings.Join(ids(nothing), ", "), oneOrMany(len(nothing), "names", "name")), nothing...)
 	}
 	for _, s := range todo {
 		switch h := holds.Of(s.item); {
@@ -1462,7 +1510,7 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 				l.log("story unblocked for its agent's answer", "story", id, "thread", run.Thread, "answer", answer)
 			}
 		}
-		l.start(ctx, cfg, readyStory{ID: id, Agent: repo.AgentOf(it), Asked: run, Answer: answer})
+		l.start(ctx, cfg, readyStory{ID: id, Agent: cfg.storyAgent(repo, it), Asked: run, Answer: answer})
 	}
 }
 
@@ -1498,8 +1546,8 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 		if at, err := time.Parse(time.RFC3339, b.At); err != nil || !startedBefore(run, at) {
 			continue
 		}
-		agent := repo.AgentOf(it) // the default under it, ADR-0251
-		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261
+		if cfg.refuseHarness(it.ID, agent) != nil {
 			continue
 		}
 		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: b.Thread, What: what}}
@@ -1540,8 +1588,8 @@ func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo
 		if !ok {
 			continue
 		}
-		agent := repo.AgentOf(it) // the default under it, ADR-0251
-		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261
+		if cfg.refuseHarness(it.ID, agent) != nil {
 			continue
 		}
 		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: thread, What: strings.TrimPrefix(o.Detail, "sent back to in-progress: "), Queue: true}}
@@ -1589,8 +1637,8 @@ func (l *launcher) startAcceptSentBack(ctx context.Context, cfg AgentConfig, rep
 		if run == nil || run.live() || run.Stopped != "" || !startedBefore(run, at) {
 			continue
 		}
-		agent := repo.AgentOf(it) // the default under it, ADR-0251
-		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261
+		if cfg.refuseHarness(it.ID, agent) != nil {
 			continue
 		}
 		what := fmt.Sprintf("the acceptance of %s found that %s, which it cannot settle, and sent the story back; the thread says how to settle it in its worktree and sync it with flai stream sync %s",
@@ -1696,8 +1744,8 @@ func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *work
 		if err != nil || it.Status != workitem.InProgress || it.IsBlocked() {
 			continue
 		}
-		agent := repo.AgentOf(it) // the default under it, ADR-0251
-		if harness.Elsewhere(agent) || (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261
+		if cfg.refuseHarness(it.ID, agent) != nil {
 			continue
 		}
 		if again {
@@ -2602,7 +2650,11 @@ func orSomeone(who string) string {
 // story and the harness and model it asks for. A story in progress that
 // this host has had no agent for is waiting, with where it was begun
 // (S-0177), and the same kind of run.
-func Activity(root string, st AgentState) map[string]StoryActivity {
+//
+// commandSet is whether a command is set on the host for the project: a
+// stand-in's harness is then the story's and the project's, else flai's
+// built-in default under them when they name none (ADR-0261).
+func Activity(root string, st AgentState, commandSet bool) map[string]StoryActivity {
 	repo, err := workitem.Open(root)
 	if err != nil {
 		return map[string]StoryActivity{}
@@ -2610,24 +2662,26 @@ func Activity(root string, st AgentState) map[string]StoryActivity {
 	withTrial(repo, nil)
 	out := runActivity(repo, st)
 	for id, h := range held(repo, st) {
-		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, ""), Hold: h}
+		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, "", commandSet), Hold: h}
 	}
 	for id, e := range elsewhere(repo, st) {
-		out[id] = StoryActivity{State: ActivityWaiting, Why: e.Said(), Run: standIn(repo, st, id, e.Agent), Elsewhere: e}
+		out[id] = StoryActivity{State: ActivityWaiting, Why: e.Said(), Run: standIn(repo, st, id, e.Agent, commandSet), Elsewhere: e}
 	}
 	return out
 }
 
 // standIn is story's newest run, or, when it has none, one that names only
 // the story, the agent given, and the harness and model the story will start
-// with, the project's default's when its own names no harness (ADR-0251).
-func standIn(repo *workitem.Repo, st AgentState, story, agent string) *AgentRun {
+// with, the project's default's when its own names no harness (ADR-0251),
+// and flai's built-in default's when neither does and no command is set
+// (ADR-0261).
+func standIn(repo *workitem.Repo, st AgentState, story, agent string, commandSet bool) *AgentRun {
 	if run := st.Stories[story]; run != nil {
 		return run
 	}
 	run := &AgentRun{Story: story, Agent: agent}
 	if it, err := repo.Get(story); err == nil {
-		if a := repo.AgentOf(it); a != nil {
+		if a := repo.StartAgentOf(it, commandSet); a != nil {
 			run.Harness, run.Model = a.Harness, a.Model
 		}
 	}

@@ -232,9 +232,11 @@ func TestAReadyStorysAgentIsStartedOnTheOperatorsWord(t *testing.T) {
 			s.put(&r)
 		})
 		refusedFor(t, lab, running, "waiting for an answer to TH-0001")
-		// nothing to start it with
+		// a harness that is the command, with none set: the refusal names the
+		// page and the command that set it (ADR-0261)
 		lab.cfg.Command = nil
-		refusedFor(t, lab, other, "names no harness, and no command is set")
+		command := lab.readyWith("Command", &manifest.Agent{Harness: harness.Command})
+		refusedFor(t, lab, command, command+"'s harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]")
 		refusedFor(t, lab, "T-0001", "is not a story's ID")
 		// the action off
 		lab.cfg.Enabled = false

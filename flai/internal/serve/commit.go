@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
-	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -62,13 +61,10 @@ func Commit(ctx context.Context, o Options, e Entry, story string) (*AgentRun, e
 	if len(dirty) == 0 {
 		return nil, refused("the worktree %s has nothing uncommitted", repo.RelToMain(wt))
 	}
-	// the project's default when the story's agent names no harness (ADR-0251)
-	agent := repo.AgentOf(it)
-	if harness.Elsewhere(agent) {
-		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
-	}
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	// the project's default when the story's agent names no harness
+	// (ADR-0251), and flai's built-in default under both (ADR-0261)
+	if err := cfg.refuseHarness(it.ID, cfg.storyAgent(repo, it)); err != nil {
+		return nil, err
 	}
 	return startNow(ctx, o, e, readyStory{ID: it.ID, Commit: wt})
 }

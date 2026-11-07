@@ -588,15 +588,17 @@ func (c *claudeChecker) tell(version, program, provider, why string) {
 }
 
 // claudeCodeProject says whether the project's manifest has its agents, a
-// story's or a strategic one's, run claude-code, and the provider its
-// default agent names, "" for none.
+// story's or a strategic one's, run claude-code, an agent that names no
+// harness among them, since it runs on flai's built-in default, claude-code,
+// when no command is set (ADR-0261), and the provider its default agent
+// names, "" for none.
 func claudeCodeProject(root string) (provider string, uses bool) {
 	m, err := manifest.Load(filepath.Join(root, manifest.File))
 	if err != nil {
 		return "", false
 	}
 	for _, a := range []*manifest.Agent{m.Agent, m.PlanningAgent(), m.AnalysisAgent(), m.OrchestrationAgent(), m.DigestAgent()} {
-		if a != nil && a.Harness == harness.ClaudeCode {
+		if a == nil || a.Harness == "" || a.Harness == harness.ClaudeCode {
 			uses = true
 		}
 	}

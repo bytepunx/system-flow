@@ -317,23 +317,28 @@ func TestTheOrchestratorIsStoppedWhenTheActionIsTurnedOff(t *testing.T) {
 	}
 }
 
-// S-0218: the orchestrator is refused, saying why, when its agent names no
-// harness and no command is set, and when the harness refuses it, as
-// claude-code does without orchestrator.md; each refusal is recorded and
-// journalled once, not at every look.
+// S-0218: the orchestrator is refused, saying why, when its harness is the
+// host's command and none is set, naming the page and the command that set
+// it (ADR-0261), and when the harness refuses it, as claude-code does
+// without verifier.md; each refusal is recorded and journalled once, not at
+// every look.
 func TestTheOrchestratorIsRefusedOnce(t *testing.T) {
 	lab := newOrchestrateLab(t)
 	lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+	command := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  agent:\n    harness: command\n"
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(command), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	lab.look()
 	run := lab.orchestrator()
-	if run == nil || run.Outcome != OutcomeFailed || !strings.Contains(run.Error, "the orchestrator's agent names no harness (orchestration.agent or agent in system-flow.yaml), and no command is set on the host") {
-		t.Fatalf("no harness: %+v", run)
+	if run == nil || run.Outcome != OutcomeFailed || !strings.Contains(run.Error, "harness is the host's command, and none is set for this project: set it on the dashboard's Harnesses page, /settings/harnesses, or with flai serve agent set -- <program> [args...]") {
+		t.Fatalf("command harness with no command: %+v", run)
 	}
 	for _, shift := range []time.Duration{0, 2 * orchestrateRetry} {
 		lab.shift = shift
 		lab.look()
 	}
-	if j := lab.orchestrateEntries(); len(j) != 1 || j[0].Outcome != "failed" || !strings.Contains(j[0].Detail, "the orchestrator could not be started: the orchestrator's agent names no harness") {
+	if j := lab.orchestrateEntries(); len(j) != 1 || j[0].Outcome != "failed" || !strings.Contains(j[0].Detail, "the orchestrator could not be started: the agent's harness is the host's command, and none is set") {
 		t.Errorf("journal: %+v", j)
 	}
 	if r := lab.orchestrator(); r.Started != run.Started {
@@ -465,6 +470,7 @@ func TestAnOrchestratorRunAppendsAnAgentEventAtEachStartAndEnd(t *testing.T) {
 func TestAnOrchestratorStartThatCouldNotBeMadeIsOneFailedAgentEvent(t *testing.T) {
 	lab := newOrchestrateLab(t)
 	lab.cfg.Command, lab.cfg.Orchestrate = nil, true
+	lab.onTheHostsCommand() // nothing can start it (ADR-0261)
 	lab.look()
 	run := lab.orchestrator()
 	if run == nil || !strings.HasPrefix(run.Why, "could not be started: ") {

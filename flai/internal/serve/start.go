@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -57,13 +56,11 @@ func Start(ctx context.Context, o Options, e Entry, story string) (*AgentRun, er
 	case run != nil && run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
 	}
-	// the project's default when the story's agent names no harness (ADR-0251)
-	agent := repo.AgentOf(it)
-	if harness.Elsewhere(agent) {
-		return nil, refused("%s", harness.ElsewhereRefusal(it.ID))
-	}
-	if (agent == nil || agent.Harness == "") && cfg.host(harness.Command).Program == "" {
-		return nil, refused("%s names no harness, and no command is set on the host (flai serve agent set -- <program> [args...])", it.ID)
+	// the project's default when the story's agent names no harness
+	// (ADR-0251), and flai's built-in default under both (ADR-0261)
+	agent := cfg.storyAgent(repo, it)
+	if err := cfg.refuseHarness(it.ID, agent); err != nil {
+		return nil, err
 	}
 	if err := heldStart(o, e, cfg, it.ID, agent); err != nil {
 		return nil, err
