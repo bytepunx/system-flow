@@ -118,7 +118,7 @@ Each needs the host action the role's file names on for the project: `flai serve
 - while the host action the file names is off for the project, naming `flai serve enable <action>`;
 - an item when the file's `item` is `none`; no item when it names `epic` or `story`; an item of a kind it does not take; an item that is archived, done, or cancelled;
 - while a run of the role on the same item, or on none, runs: one item has one run of a role at a time;
-- when the role's agent names no harness and no command is set on the host;
+- when the role's harness is `command` and no command is set for the project, or is one flai cannot start; an agent that names no harness falls back to the host's command, then to flai's built-in `claude-code` ([ADR-0261](../adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md));
 - while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `role_run` and `flai role run` also refuse an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`), as `plan` does: running a role is the operator's to ask for. The one exception, since S-0422, is the agent of a formula's instance, for a role step of its formula, on the instance ([Working an instance](#working-an-instance-s-0422)). `flai guard` refuses it to a sub-agent and to every role whose file does not list it.
@@ -237,7 +237,7 @@ Each needs the host action `plan` on for the project: `flai serve enable plan`, 
 - a task, or an ID that is neither an epic's nor a story's;
 - an item that is archived, done, or cancelled;
 - while a planner runs for the item: one item has one planner at a time;
-- when the planner's agent names no harness and no command is set on the host;
+- when the planner's harness is `command` and no command is set for the project, or is one flai cannot start; an agent that names no harness falls back to the host's command, then to flai's built-in `claude-code` ([ADR-0261](../adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md));
 - while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `plan` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): planning is the operator's to ask for. The orchestrator is the one exception: it may ask for an epic `flai plan --candidates` lists while the operator gives it `plan_backlog_epics`, and for a story it lists while the operator gives it `plan_backlog_stories` ([What it does with each permission](#what-it-does-with-each-permission-s-0219), [ADR-0119](../adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md)). Besides the epics and the stories that lack a plan, the list holds a third kind since S-0524: an epic or a story planned before, on which the operator has written since its newest planner run ended ([ADR-0222](../adrs/0222-with-plan-backlog-epics-or-plan-backlog-stories-on-the-orchestrator-may-ask-the.md)). `flai guard` refuses the tool to a sub-agent, to the planner, to the analyzer, and to the curator.
@@ -551,7 +551,7 @@ Reasons that arrive while a run is going start the next run at the first look af
 
 The operator stops it and holds it stopped with **Stop** on the Orchestrator page, the write `orchestrate.stop`, or `flai serve orchestrate stop` (S-0228). The run is stopped as the action turned off stops it, and its activity is logged with the summary `stopped: stopped from the dashboard`. The hold is `held` on its run in `serve/agents.json`, kept on the run that ended. **Start**, `orchestrate.start`, or `flai serve orchestrate start` queues an `asked` reason and starts a run at once, for it and every reason queued, in the main checkout, whether or not the orchestrator was held stopped. Recording the new run lifts the hold; a start that fails lifts the hold too and keeps the reasons, and the next look tries again after the minute. Both are refused while the action is off. A stop is refused when `flai serve` has started no orchestrator for the project and when it is already held; a start, while a run is going or the run it was held on is still being stopped. A run that failed and waits to be started again is held as it is. A start while the host's budget state holds the orchestrator's provider is refused as `held: <provider> usage limit (<limit>) until <until>; …`, with nothing recorded or queued, and the orchestrator stays held stopped. Each is journalled under `orchestrate`.
 
-A start is refused when the orchestrator's agent names no harness and no command is set on the host, and when the harness refuses it. A project with no `.claude/agents/orchestrator.md` is not refused, since `claude-code` generates the definition from the role file (ADR-0236). A refusal is recorded as a failed run and journalled once: the same refusal at the next looks is not recorded again until a start gets past it or the action is turned off.
+A start is refused when the orchestrator's harness is `command` and no command is set for the project, when it is one flai cannot start, and when the harness refuses it. An agent that names no harness falls back to the host's command, then to flai's built-in `claude-code` ([ADR-0261](../adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md)). A project with no `.claude/agents/orchestrator.md` is not refused, since `claude-code` generates the definition from the role file (ADR-0236). A refusal is recorded as a failed run and journalled once: the same refusal at the next looks is not recorded again until a start gets past it or the action is turned off.
 
 ### Its agent
 
@@ -845,7 +845,7 @@ Each needs the host action `analyze` on for the project: `flai serve enable anal
 - while the `analyze` action is off for the project;
 - a focus that is none of `bottlenecks`, `intent`, and `risk`;
 - while an analyzer runs for the project, naming its focus, what started it, its PID, when it started, and its log: one analyzer runs per project at a time;
-- when the analyzer's agent names no harness and no command is set on the host;
+- when the analyzer's harness is `command` and no command is set for the project, or is one flai cannot start; an agent that names no harness falls back to the host's command, then to flai's built-in `claude-code` ([ADR-0261](../adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md));
 - while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `analyze` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): an analysis is the operator's to ask for, or the schedule's. `flai guard` refuses the tool and `flai analyze` to a sub-agent, the planner, the orchestrator, and the analyzer.
@@ -988,7 +988,7 @@ A since is a `YYYY-MM-DD` day in UTC or an RFC 3339 time. Each way needs the hos
 - while the `curate` action is off for the project;
 - a since that is neither a `YYYY-MM-DD` day nor an RFC 3339 time;
 - while a curator runs for the project, naming its since, what started it, its PID, when it started, and its log: one curator runs per project at a time;
-- when the curator's agent names no harness and no command is set on the host;
+- when the curator's harness is `command` and no command is set for the project, or is one flai cannot start; an agent that names no harness falls back to the host's command, then to flai's built-in `claude-code` ([ADR-0261](../adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md));
 - while the host's budget state holds the agent's provider, after a run on it ended on the usage limit: `held: <provider> usage limit (<limit>) until <until>; flai serve starts it when the limit resets`, with nothing recorded (S-0534, [flai-cli.md](flai-cli.md#the-hosts-budget-state)).
 
 The MCP tool `curate` also refuses an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve`): a curation is the operator's to ask for, or an acceptance's or the schedule's. `flai guard` refuses the tool and `flai curate` to a sub-agent and to the curator, and the analyzer's guard refuses them as it refuses every tool and command it does not name.

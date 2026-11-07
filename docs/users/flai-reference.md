@@ -4038,9 +4038,9 @@ Start a ready story's agent now, whatever flai serve's own rules say about when.
 flai serve agent start <story-id>
 ```
 
-Starts the agent of a story in ready now, the way flai serve starts one when a story enters ready: the story's harness, model, and options, or the host's command. It starts whether or not the story was ready before flai serve began, whether or not it has had an agent since it entered ready, and whoever is attending the project. The run is recorded where the serving flai tracks it: the dot on the card, the outcome when it ends, the start again on an answer (S-0115).
+Starts the agent of a story in ready now, the way flai serve starts one when a story enters ready: the story's harness, model, and options, the project's default under them, the host's command when neither names a harness, and flai's built-in default, claude-code, when no command is set either (ADR-0261). It starts whether or not the story was ready before flai serve began, whether or not it has had an agent since it entered ready, and whoever is attending the project. The run is recorded where the serving flai tracks it: the dot on the card, the outcome when it ends, the start again on an answer (S-0115).
 
-It refuses, and says why, while the agent action is off for the project, when the story is not in ready, while its agent runs or waits for an answer, and when nothing can start it (no harness and no command). A full in-progress limit or a full review does not stop it: it starts past them, with a warning, as a move does. A story in progress whose agent dropped or failed, or that has had no agent here, gets one from flai serve agent restart. The story page's Start agent button runs this.
+It refuses, and says why, while the agent action is off for the project, when the story is not in ready, while its agent runs or waits for an answer, and when its harness cannot start: a harness named command with no command set for the project, or one flai has no adapter for, each refusal naming the dashboard's settings page that fixes it. A full in-progress limit or a full review does not stop it: it starts past them, with a warning, as a move does. A story in progress whose agent dropped or failed, or that has had no agent here, gets one from flai serve agent restart. The story page's Start agent button runs this.
 
 Examples:
 

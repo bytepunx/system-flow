@@ -20,7 +20,7 @@ Default source: `https://github.com/bytepunx/system-flow-template`, ref `main`. 
 ├── root/                  # everything below is rendered into the target repo root
 │   ├── CLAUDE.md.tmpl
 │   ├── README.md.tmpl
-│   ├── system-flow.yaml.tmpl
+│   ├── system-flow.yaml.tmpl # sets agent: {harness: claude-code}, so a new project has a default agent (ADR-0261)
 │   ├── .editorconfig
 │   ├── .gitignore
 │   ├── .gitattributes

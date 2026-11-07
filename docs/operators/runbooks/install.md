@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-11-02
+updated: 2026-11-07
 status: active
 ---
 
@@ -45,7 +45,7 @@ Nothing here needs `sudo`. Everything flai keeps is under `~/.flai` and each pro
    flai check --strict          # in a project: the repository conforms
    ```
 
-   Both are in [the flai guide](../../users/flai.md#create-a-project). A project's `.mcp.json` runs `flai mcp` from your `PATH`, so an agent in it reaches the flai you just installed.
+   Both are in [the flai guide](../../users/flai.md#create-a-project). A project's `.mcp.json` runs `flai mcp` from your `PATH`, so an agent in it reaches the flai you just installed. Its `system-flow.yaml` names a default agent, `harness: claude-code`. Once you turn on the `agent` host action (`flai serve enable agent`), `flai serve` starts a ready story's agent with `claude` from your `PATH`, or the program you set for this project with `flai serve agent harness claude-code --program <path>` ([ADR-0261](../../../design/adrs/0261-a-story-or-strategic-agent-that-names-no-harness-falls-back-after-the-project-s.md)).
 
 If the download is refused, the repository is private and no token was found: `gh auth login`, or set `GITHUB_TOKEN`, and run it again.
 
