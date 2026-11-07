@@ -6,7 +6,7 @@ title: flai guard still lists the verify MCP tool among a sub-agent's reads, tho
 status: backlog
 owner: alex
 created: 2026-11-01T10:44:38Z
-updated: 2026-11-07T06:11:13Z
+updated: 2026-11-07T06:17:24Z
 transitions: []
 tags: [flai, template]
 topics: [guard, testing]
@@ -32,15 +32,15 @@ usage:
           cache_write: 420234
           cost: 5.5392
     - kind: orchestrator
-      seconds: 199
+      seconds: 204
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 328
-          cache_read: 1847594
-          cache_write: 214189
-          cost: 0.4921
+          input: 50
+          output: 356
+          cache_read: 1916428
+          cache_write: 244874
+          cost: 0.5165
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -78,6 +78,8 @@ This story remediates [I-0240](../../../design/issues/I-0240-flai-guard-still-li
 ## Notes
 
 I-0240's cost "0m" is not a duration longer than zero, so no time_lost_per_cycle was derived from it.
+
+Before the close-out, ask the operator on a thread on S-0556 to confirm the change to the guard's read list, and end your session until it is answered."
 
 ### Planning
 
