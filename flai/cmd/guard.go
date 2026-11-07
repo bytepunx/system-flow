@@ -36,7 +36,8 @@ thread_get, and who_touches; a flai command other than one that reads
 (board, check, cod, components list or alone, doc search and show,
 forecast, help, issue list, order
 --by without --apply and without a story to place, plan --candidates,
-prime, promote --candidates or --drafts, release --evaluate, shared list
+prime, promote --candidates or --drafts, release --evaluate, role list,
+show, and definition without --write or role alone, shared list
 and check, show, stats, stream diff,
 thread list and show, touches suggest, version, or any with --help); and a
 git
