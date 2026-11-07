@@ -2,11 +2,11 @@
 id: I-0264
 title: "flai check finds `agent.image` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-06T22:37:17Z
 last_reported: 2026-11-06T22:37:17Z
-updated: 2026-11-06T23:25:47Z
+updated: 2026-11-07T00:43:37Z
 ---
 
 # I-0264 flai check finds `agent.image` outside the story at close-out
@@ -26,3 +26,4 @@ It came from `scripts/close-out.sh S-0520` run by hand inside `flai-agent-claude
 ## Remediation
 
 Story S-0582 remediates this issue, created from it at 2026-11-06T23:25:47Z.
+Closed 2026-11-07T00:43:37Z: S-0582 (ADR-0255): check.AgentImage marks the three agent.image findings only the host clears, docker not on PATH, docker unable to say, and the layer's image not built, and a check scoped to a story leaves them out unless the story changes system-flow.yaml or the layer's Dockerfile. So a close-out inside an agent container, where docker is never on PATH, no longer records this issue or stops on its uncommitted file. TestScopedCheckLeavesOutAnAgentImageFindingOnlyTheHostClears reproduces S-0520's case for each of the three findings.
