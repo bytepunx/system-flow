@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 11
-      output: 1776
-      cache_read: 1881791
-      cache_write: 14383
-      cost: 0.527
+      output: 1715
+      cache_read: 1882662
+      cache_write: 13512
+      cost: 0.519
 ---
 # T-2451 The first proof story is worked from story_start to review in its container, its usage measured and its card's status shown as for a host run, and each limitation met is an issue
 

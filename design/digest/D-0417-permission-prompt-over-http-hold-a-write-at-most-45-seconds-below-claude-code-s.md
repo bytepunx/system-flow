@@ -9,7 +9,7 @@ date: 2026-10-29
 status: absorbed
 absorbed_by: "design/adrs/0215-permission-prompt-holds-a-write-at-most-four-minutes-over-stdio-and-at-most-45.md#decision"
 asked_again: []
-cited: []
+cited: [T-2541, TH-0850]
 ---
 
 # D-0417 permission_prompt over HTTP: hold a write at most 45 seconds, below Claude Code's measured 60-second limit: Recommended for the operator: answer "as recommended"

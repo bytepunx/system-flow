@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 125.6831
-accrued_seconds: 12002
-tasks_completed: 74
-last_run: 2026-11-07T07:02:17Z
+accrued_cost: 126.6004
+accrued_seconds: 12164
+tasks_completed: 75
+last_run: 2026-11-07T07:44:43Z
 ---
 
 # Curator activity
@@ -603,3 +603,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0446, D-0488, D-0494, D-0495
 - Seconds: 123
 - Cost: 1.2591 USD, estimated
+
+### 2026-11-07T07:44:43Z
+
+- Summary: I wrote D-0496, merged S-0583 into D-0494, absorbed none, and `flai digest compact` compacted none (it recorded citers on 2 entries); I-0228's fix was left out because ADR-0258 already states it.
+- Trigger: accepted S-0583
+- Items: D-0417, D-0494, D-0496
+- Seconds: 162
+- Cost: 0.9173 USD, estimated

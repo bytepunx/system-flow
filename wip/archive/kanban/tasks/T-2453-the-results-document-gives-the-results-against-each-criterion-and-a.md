@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 2005
-      cache_read: 2124659
-      cache_write: 16239
-      cost: 0.595
+      input: 12
+      output: 1936
+      cache_read: 2125643
+      cache_write: 15256
+      cost: 0.5859
 ---
 # T-2453 The results document gives the results against each criterion and a recommendation, and the experiments index lists it
 

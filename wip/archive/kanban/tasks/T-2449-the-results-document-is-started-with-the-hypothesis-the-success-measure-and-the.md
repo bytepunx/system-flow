@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 20
-      output: 3217
-      cache_read: 3409358
-      cache_write: 26059
-      cost: 0.9548
+      output: 3107
+      cache_read: 3410937
+      cache_write: 24480
+      cost: 0.9403
 ---
 # T-2449 The results document is started with the hypothesis, the success measure, and the host's preconditions, and the two proof stories carry harness container
 

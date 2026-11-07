@@ -2,14 +2,14 @@
 id: D-0494
 title: "On this host the container harness's login folder is /home/alex/.claude-me, neither ~/.claude nor ~/.claude-rmh, which the threads asking for it named"
 kind: answer
-sources: [TH-0843, S-0567, TH-0836]
+sources: [TH-0843, S-0567, TH-0836, S-0583]
 topics: [harness, docker, planning]
 paths: [design/system/strategic-agents.md, docs/operators/runbooks/agent-container.md]
 date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0583]
 ---
 
 # D-0494 On this host the container harness's login folder is /home/alex/.claude-me, neither ~/.claude nor ~/.claude-rmh, which the threads asking for it named
@@ -20,6 +20,8 @@ What the operator set was neither guess. S-0567's Notes, `### Live run`, record:
 
 This is one host setting, shared by every container run on the host. A later story that needs it should check `flai serve agent harness` rather than ask for a folder by name. If it reads `login: not set`, ask the operator for the folder that holds their login's credentials.
 
+S-0583 relied on it without asking: its narrative (wip/archive/agents/S-0583.md, Decisions) records that its probe runs in `flai-agent-claude-code:local` "use the login folder `/home/alex/.claude-me`, the operator's container login setting (D-0494), mounted read-only at `/run/claude-login`".
+
 TH-0836's later answers (06:17Z to 06:54Z) are about S-0565's stop-and-retry proof on S-0556, not the login: S-0565's Notes record them, and I-0278 records that the story's agent page offered no Retry after a stop while the card's right-click menu did.
 
-Sources: TH-0843, TH-0836, S-0567.
+Sources: TH-0843, TH-0836, S-0567, S-0583.

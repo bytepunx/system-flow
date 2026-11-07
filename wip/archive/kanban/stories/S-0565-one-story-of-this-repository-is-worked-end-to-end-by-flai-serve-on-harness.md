@@ -3,11 +3,11 @@ id: S-0565
 type: story
 nature: experiment
 title: One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
-status: review
+status: done
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T07:17:26Z
+updated: 2026-11-07T07:55:05Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -18,6 +18,15 @@ transitions:
   - to: review
     at: 2026-11-07T07:17:18Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-07T07:51:22Z
+    by: flai
+  - to: review
+    at: 2026-11-07T07:53:27Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T07:55:05Z
+    by: orchestrator
 blocked:
   - from: 2026-11-07T03:44:57Z
     until: 2026-11-07T04:19:08Z
@@ -39,20 +48,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5690
+  seconds: 5810
   priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 7
+      ceremony: 9
       hand_edits: 4
-      work: 305
+      work: 321
   models:
     - model: claude-opus-5-5
-      input: 656
-      output: 104366
-      cache_read: 110593844
-      cache_write: 845303
-      cost: 30.9711
+      input: 694
+      output: 110340
+      cache_read: 121126871
+      cache_write: 869326
+      cost: 33.3896
   strategic:
     - kind: planner
       seconds: 761
@@ -65,15 +74,15 @@ usage:
           cache_write: 483216
           cost: 6.2582
     - kind: orchestrator
-      seconds: 920
+      seconds: 944
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 263
-          output: 1762
-          cache_read: 9090538
-          cache_write: 1231858
-          cost: 2.4981
+          input: 271
+          output: 1827
+          cache_read: 9287393
+          cache_write: 1292419
+          cost: 2.5616
         - model: claude-sonnet-5-5
           input: 12
           output: 93
@@ -160,3 +169,14 @@ The story's own Notes, where criterion 2's record goes, are written with `flai e
 Forecast. `flai forecast S-0565` gave 9m at the first plan and 27m on 2026-11-07 (median 227 s per unit of size over 5 done experiment stories, size 7: 3 criteria, 4 touches). Kept at 1h30m of agent time: the size counts no waiting, and the work is two proof runs watched end to end, a stop and a restart arranged with the operator, each limitation filed, and the results document written; S-0505, one hand-built run with a results document, took 2014 s. The proof stories' own agent time is theirs, not this story's. The delivery written is the story's start, 2026-11-07T03:41Z, plus 1h30m: 2026-11-07T05:11Z. It holds only if the host is upgraded and the proof stories are moved to ready (TH-0826, TH-0828) without a wait.
 
 Cost of delay. `flai cod S-0565` gives 123.85 USD a week on 2026-11-07, up from 52.12: S-0565's share of E-0029's 150 USD a week penalty input, 1h30m of the 1h49m forecast over the epic's two open stories without inputs, S-0565 and S-0567, now that the epic's other stories are done. Written as flai gives it; the story has no inputs of its own, and nothing argues for another share.
+- 2026-11-07T07:51:22Z: moved to in-progress: the rebase of story/S-0565 onto main stopped on conflicts in design/issues/I-0228-claude-code-drops-any-call-to-flai-s-http-mcp-server-that-answers-after-60-seconds-so-wait-for-events-wait-for-work-verify-and-a-slow-task-done-fail-for-an-agent-in-a-container.md, which the acceptance of S-0565 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0565
+
+### Accepted by the orchestrator
+
+- Verified: 437677d100cefcca0095dda76fb600cbb1b83996
+- At: 2026-11-07T07:55:05Z
+
+Verdict: pass at 437677d100cefcca0095dda76fb600cbb1b83996
+- 1: design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md, design/issues/summary.md
+- 2: design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md
+- 3: design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md

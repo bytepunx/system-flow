@@ -3,10 +3,10 @@ id: E-0029
 type: epic
 nature: feature
 title: flai runs agents in Docker containers
-status: review
+status: done
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-11-07T07:39:35Z
+updated: 2026-11-07T07:55:05Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
@@ -17,10 +17,19 @@ transitions:
   - to: review
     at: 2026-11-07T07:39:35Z
     by: agent-S-0583
+  - to: in-progress
+    at: 2026-11-07T07:51:22Z
+    by: flai
+  - to: review
+    at: 2026-11-07T07:53:27Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T07:55:05Z
+    by: orchestrator
 tags: []
 usage:
   source: sum
-  seconds: 28494
+  seconds: 28614
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -36,16 +45,16 @@ usage:
       ceremony: 4
       work: 43
     - day: 2026-11-07
-      ceremony: 15
+      ceremony: 17
       hand_edits: 13
-      work: 448
+      work: 464
   models:
     - model: claude-opus-5-5
-      input: 4340
-      output: 1242433
-      cache_read: 434157049
-      cache_write: 8214294
-      cost: 168.7725
+      input: 4378
+      output: 1248407
+      cache_read: 444690076
+      cache_write: 8238317
+      cost: 171.191
   strategic:
     - kind: planner
       seconds: 1622
@@ -64,21 +73,21 @@ usage:
           cache_write: 848530
           cost: 16.0385
     - kind: orchestrator
-      seconds: 31771
+      seconds: 31888
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1272
-          output: 13896
-          cache_read: 160350639
-          cache_write: 2953630
-          cost: 36.3166
+          input: 1308
+          output: 14273
+          cache_read: 161459628
+          cache_write: 3140299
+          cost: 36.6362
         - model: claude-sonnet-5-5
-          input: 88
-          output: 564
-          cache_read: 1179234
-          cache_write: 451441
-          cost: 1.1369
+          input: 94
+          output: 620
+          cache_read: 1220740
+          cache_write: 481490
+          cost: 1.1884
 cost_of_delay:
   inputs:
     penalty_per_week: 150
@@ -116,3 +125,6 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - eagerly look at research or experiment stories where feasible to address anticipated limitations or issues in the ADR
 - 2026-10-28T12:04:42Z: moved to in-progress: follows S-0505, which moved to in-progress
 - 2026-11-07T07:39:35Z: moved to review: follows S-0583, which moved to review
+- 2026-11-07T07:51:22Z: moved to in-progress: follows S-0565, which moved to in-progress
+- 2026-11-07T07:53:27Z: moved to review: follows S-0565, which moved to review
+- 2026-11-07T07:55:05Z: moved to done: follows S-0565, which moved to done

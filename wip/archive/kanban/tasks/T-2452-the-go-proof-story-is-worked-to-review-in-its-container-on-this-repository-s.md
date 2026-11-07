@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 255
-      output: 40588
-      cache_read: 43009830
-      cache_write: 328737
-      cost: 12.0446
+      input: 247
+      output: 39198
+      cache_read: 43029752
+      cache_write: 308824
+      cost: 11.8615
 ---
 # T-2452 The Go proof story is worked to review in its container on this repository's image layer, its close-out passing every tier the manifest's tests select inside the container, and each limitation met is an issue
 

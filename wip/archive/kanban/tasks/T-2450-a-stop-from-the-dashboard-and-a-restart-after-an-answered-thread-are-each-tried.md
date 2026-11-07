@@ -40,11 +40,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 277
-      output: 44118
-      cache_read: 46750944
-      cache_write: 357332
-      cost: 13.0923
+      input: 268
+      output: 42607
+      cache_read: 46772599
+      cache_write: 335686
+      cost: 12.8932
 ---
 # T-2450 A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
 
