@@ -362,6 +362,12 @@ func (c Cluster) ready(m manifest.Manifest, deploy bool) error {
 	return nil
 }
 
+// Ready says why a job cannot run for the project, as Deploy, Teardown, and
+// Promote would refuse it before they start: no kluster: block, no deploy
+// command when deploy is set, or no kubeconfig for the cluster. The
+// dashboard's host methods ask it before they start a job in the background.
+func (c Cluster) Ready(m manifest.Manifest, deploy bool) error { return c.ready(m, deploy) }
+
 // withTimeout bounds ctx by kluster.timeout, the most one job may take.
 func withTimeout(ctx context.Context, m manifest.Manifest) (context.Context, context.CancelFunc) {
 	if timeout := m.KlusterTimeout(); timeout > 0 {

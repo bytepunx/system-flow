@@ -158,6 +158,11 @@ export const REQUIRED_METHODS = [
 	'kluster.status',
 	'kluster.up',
 	'kluster.down',
+	// S-0581: the namespaces deployed to the kluster, and deploy, teardown, and promote
+	'kluster.deployments',
+	'kluster.deploy',
+	'kluster.teardown',
+	'kluster.promote',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',
