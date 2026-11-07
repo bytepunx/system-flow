@@ -6,7 +6,7 @@ title: flai test on a change to flai's host API runs none of flaiover's server t
 status: backlog
 owner: alex
 created: 2026-11-07T15:15:58Z
-updated: 2026-11-07T22:01:21Z
+updated: 2026-11-07T22:02:45Z
 transitions: []
 tags: [flai, flaiover, tests]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, flai/cmd/settings_doc_test.go, design/conventions/tooling.md, design/system/devex.md, design/issues/I-0304-flai-test-on-a-change-to-flai-s-host-api-runs-none-of-flaiover-s-server-tests.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-07T22:01:21Z
 forecast:
   duration: 45m
-  delivery: 2026-11-07T22:50:00Z
-  basis: "S-0530, which added one selected tier to system-flow.yaml with a repository-manifest test, took 19m; this story adds two such tiers and splits a Go test, so about twice that plus the issue close."
-  by: planner-S-0592
-  at: 2026-11-07T22:01:21Z
+  delivery: 2026-11-07T22:58:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0595, S-0591 and S-0241."
+  by: flai
+  at: 2026-11-07T22:02:42Z
 ---
 # S-0592 flai test on a change to flai's host API runs none of flaiover's server tests that drive the real flai, so a changed gate in hostapi first fails in the close-out
 
@@ -57,6 +57,8 @@ This story remediates [I-0304](../../../design/issues/I-0304-flai-test-on-a-chan
 - [ ] I-0304 is closed with `flai issue close I-0304 --reason` saying what fixed it
 
 ## Tasks
+- T-2594 TestSettingsIndexIsComplete checks the settings index's keys under -short
+- T-2595 A change to flai's host API selects a tier that runs flaiover's tests of the real flai
 
 ## Notes
 
