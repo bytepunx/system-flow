@@ -3,12 +3,15 @@ id: T-1718
 type: task
 nature: feature
 title: The integration test asserts the guard's refusal, the permission prompt's answer, the gateway-priced usage, and the card's status from the run
-status: backlog
+status: cancelled
 parent: S-0412
 owner: alex
 created: 2026-10-16T05:20:39Z
-updated: 2026-11-07T09:34:14Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0412
 tags: [cli]
 touches: [flai/tests/integration/opencode_test.go]
@@ -31,3 +34,4 @@ after: [T-1717]
 Each assertion passes in the integration tier with no `opencode`, network, or key.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

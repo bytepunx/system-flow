@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2015.8026
-accrued_seconds: 1518709
-tasks_completed: 2175
-last_run: 2026-11-07T21:45:50Z
+accrued_cost: 2017.6150
+accrued_seconds: 1519082
+tasks_completed: 2188
+last_run: 2026-11-07T21:56:13Z
 ---
 
 # Orchestrator activity
@@ -15256,6 +15256,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 59
 - Cost: 0.2124 USD, estimated
 
+### 2026-11-07T21:46:09Z
+
+- Summary: On ready-empty (ready 4 of 10, all held on after): under promote_to_ready, did not promote S-0241, the only candidate (rank 1, 2h, throughput). It is still blocked ("No candidate solutions yet"), and TH-0790 asks the operator to make it a draft again. Under plan_backlog_stories, started the planner for S-0591, first of the two stories flai plan --candidates lists (S-0591, S-0592: no touches, forecast, value, or tasks). S-0592 follows when that run ends. Ready is unchanged, so order_ready had nothing to apply.
+- Items: S-0591, S-0241
+- Seconds: 9
+- Cost: 0.0242 USD, estimated
+
+### 2026-11-07T21:46:33Z
+
+- Summary: I've left S-0410 in review: flai's acceptance check is blocked by two unticked criteria. The ready column is still 4 short of the in-progress room. The only promotion candidate is S-0241, and I didn't promote it because it's still blocked.
+- Items: none
+- Seconds: 24
+- Cost: 0.1939 USD, estimated
+
+### 2026-11-07T21:47:42Z
+
+- Summary: Release due after S-0407's acceptance: threshold policy met (count 1 at or over threshold 1; value 69.23 USD of 1000), no whole_epics hold; ran flai formula run publish --ready --autocommit, which made publish instance S-0594 in ready (commit a44bb5e78); then ordered ready by throughput: S-0411 (35m), S-0412 (50m), S-0594 (no forecast).
+- Items: S-0407, S-0594, S-0411, S-0412
+- Seconds: 39
+- Cost: 0.0808 USD, estimated
+
+### 2026-11-07T21:47:57Z
+
+- Summary: I've started the release of S-0407: a new story, S-0594, now holds the publish steps, but nothing has been tagged or pushed yet.
+- Items: none
+- Seconds: 15
+- Cost: 0.1569 USD, estimated
+
+### 2026-11-07T21:48:46Z
+
+- Summary: Answered TH-0879, citing no source
+- Items: S-0591
+- Seconds: 40
+- Cost: 0.2209 USD, estimated
+
+### 2026-11-07T21:49:30Z
+
+- Summary: S-0591: approved and resolved planner-S-0591's plan on TH-0879 (two tasks, touches and figures fit); finalized the draft, which flai promote --drafts listed as complete (12m, 12.50 USD/week); promoted it to ready as promote --candidates rank 1 (0.2 h, throughput); applied flai order --by throughput, S-0591 first. Skipped S-0241 (rank 2): its block is open and TH-0790 awaits the operator.
+- Items: S-0591, TH-0879, S-0241
+- Seconds: 44
+- Cost: 0.1922 USD, estimated
+
+### 2026-11-07T21:49:45Z
+
+- Summary: S-0591 is now first in ready, and an agent can pull it.
+- Items: none
+- Seconds: 15
+- Cost: 0.1096 USD, estimated
+
+### 2026-11-07T21:50:23Z
+
+- Summary: Ready column ordered by throughput (flai order --apply): S-0591 12m, S-0411 35m, S-0412 50m, S-0594 no forecast; unchanged. Resolved my TH-0878: alex struck S-0410's criteria 1 and 5 and took the acceptance himself. S-0410 is back in progress on TH-0880 (rebase conflicts, flai's thread for its agent): nothing to accept. TH-0879 and S-0591's plan were settled last run. S-0241 not promoted (candidate rank 1, 2h): still blocked, and TH-0790 awaits the operator.
+- Items: S-0591, S-0411, S-0412, S-0594, S-0410, S-0241
+- Seconds: 29
+- Cost: 0.0943 USD, estimated
+
+### 2026-11-07T21:50:42Z
+
+- Summary: All five reasons are handled. Nothing was accepted and nothing was published.
+- Items: none
+- Seconds: 19
+- Cost: 0.3830 USD, estimated
+
+### 2026-11-07T21:52:32Z
+
+- Summary: Recommended an answer on TH-0881, citing design/system/agent-adapters.md § Read from the source at v1.19.5 (S-0406)
+- Items: S-0408
+- Seconds: 50
+- Cost: 0.1305 USD, estimated
+
+### 2026-11-07T21:52:52Z
+
+- Summary: TH-0881: recommended yes to rewording S-0408 criterion 2 to ADR-0262's tool.execute.before hold (answer_threads autonomous); escalated as a recommendation because it changes a finalized story's criterion, source agent-adapters.md finding 2
+- Items: S-0408, TH-0881
+- Seconds: 20
+- Cost: 0.0000 USD
+
+### 2026-11-07T21:53:14Z
+
+- Summary: I've posted a recommendation on TH-0881 saying yes. It is a recommendation, not an answer, because it rewords a criterion of S-0408, which is already finalized.
+- Items: none
+- Seconds: 22
+- Cost: 0.1585 USD, estimated
+
+### 2026-11-07T21:56:13Z
+
+- Summary: Ready-empty (ready 1 of room 5): flai promote --candidates lists none (S-0241 held no-touches behind S-0594; S-0592 a draft, held, with no forecast or value), so nothing promoted and no reorder needed. Started planner-S-0592 under plan_backlog_stories, as flai plan --candidates lists it (no touches, forecast, cost of delay, or tasks); the planner supplies what flai promote --drafts says the draft lacks, so no draft thread opened.
+- Items: S-0592, S-0591, S-0241
+- Seconds: 47
+- Cost: 0.0676 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -15841,4 +15932,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-07T12:08:39Z
 
 - Call: `git tag -l flai/v1.85.0 flaiover/v0.57.2`
+- Needs: none
+
+### 2026-11-07T21:48:36Z
+
+- Call: `flai serve status 2>&1`
 - Needs: none

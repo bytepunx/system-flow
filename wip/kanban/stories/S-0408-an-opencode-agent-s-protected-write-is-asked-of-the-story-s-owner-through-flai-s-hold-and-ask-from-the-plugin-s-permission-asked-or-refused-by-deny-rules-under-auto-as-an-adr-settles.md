@@ -3,11 +3,11 @@ id: S-0408
 type: story
 nature: feature
 title: An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
-status: in-progress
+status: cancelled
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-11-07T21:46:09Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:08Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T21:46:09Z
     by: agent-S-0408
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 tags: [cli, template]
 topics: [agents, cli, template]
-touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go]
+touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/adrs, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go, design/issues/I-0306-adr-new-over-mcp-refuses-an-adr-for-wip-overlap-findings-between-other-stories.md, design/issues/summary.md]
 after: [S-0407]
 agent:
   harness: claude-code
@@ -25,20 +28,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 257
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 2
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 369
+      cache_read: 4857694
+      cache_write: 290473
+      cost: 1.846
   strategic:
     - kind: orchestrator
-      seconds: 413
+      seconds: 463
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 67
-          output: 1021
-          cache_read: 12769642
-          cache_write: 37505
-          cost: 3.2107
+          input: 83
+          output: 1136
+          cache_read: 13232302
+          cache_write: 91199
+          cost: 3.3412
 cost_of_delay:
   value: 76.92
   by: planner-E-0023
@@ -61,7 +76,7 @@ A story's agent on OpenCode asks before it writes a protected path, as one on Cl
 
 ## Acceptance criteria
 
-- [ ] An ADR, refining ADR-0124 and ADR-0130, records which way OpenCode asks, OpenCode's bound for a held call, and why the other way was not taken.
+- [x] An ADR, refining ADR-0124 and ADR-0130, records which way OpenCode asks, OpenCode's bound for a held call, and why the other way was not taken.
 - [ ] Under hold-and-ask: the configuration sets `ask` for every path the protected list holds for `opencode`; the plugin hands `permission.asked` to `flai guard`, which holds it through `ask.Asker.Hold` within the bound, opening or reusing the story's permission thread as ADR-0124 says; and the plugin replies allow or deny with the owner's answer. Under `--auto` with deny rules: the adapter passes `--auto`, writes the `deny` rules, and the refusal names the thread the agent should open.
 - [ ] The adapter's `Capabilities` say `Ask: true` under hold-and-ask, and `flai serve` then starts a story on `opencode` without `auto-approve` or `--deny-protected`.
 - [ ] The integration test shows a protected write held and then allowed by an owner's answer, or refused by the deny rule, on the known `opencode` version, and is skipped, saying so, without it.
@@ -89,3 +104,4 @@ A story's agent on OpenCode asks before it writes a protected path, as one on Cl
   - **Co-change:** `flai touches suggest` lists hub documents and `harness_test.go`; only `harness_test.go` is added. Left out with reasons: `flai/internal/harness/harness.go`, since `Capabilities` already has `Ask` and `flai/internal/serve/agents.go` already lifts the start refusal on it; `template/template.yaml`, which only a publish bumps; `docs/users/flai-reference.md`, needed only if `flai guard` gains a flag, which T-1696's Notes then add.
 - **Forecast.** 50m against flai's 45m on 2026-10-20. The ADR and the first caller of `guard.Hold`, whose bounded waits and thread reuse need timed tests, add about a ninth. The delivery, 2026-10-21T00:23Z, is flai's play-out moved by the 5m raise.
 - **Cost of delay.** 76.92 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 50m of 5h25m. Kept as flai gives it. This story's plan thread, TH-0490, asked the same input.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

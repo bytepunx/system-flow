@@ -3,12 +3,15 @@ id: T-1713
 type: task
 nature: improvement
 title: flai serve's stream reads its entries through the run's adapter, and a Claude Code run's entries stay the same
-status: backlog
+status: cancelled
 parent: S-0411
 owner: alex
 created: 2026-10-16T05:19:40Z
-updated: 2026-10-16T05:19:40Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0411
 tags: [cli]
 touches: [flai/internal/serve/stream.go, flai/internal/serve/stream_test.go]
@@ -26,3 +29,4 @@ touches: [flai/internal/serve/stream.go, flai/internal/serve/stream_test.go]
 The stream picks its reader by the run's harness, the Claude Code stream tests pass unchanged, and a run on an unknown harness gives an empty stream, not an error.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

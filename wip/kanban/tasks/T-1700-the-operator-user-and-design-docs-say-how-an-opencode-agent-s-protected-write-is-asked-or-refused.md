@@ -3,12 +3,15 @@ id: T-1700
 type: task
 nature: feature
 title: The operator, user, and design docs say how an OpenCode agent's protected write is asked or refused
-status: backlog
+status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:48Z
-updated: 2026-10-16T05:16:48Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0408
 tags: [cli]
 touches: [docs/operators/index.md, docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md]
@@ -28,3 +31,4 @@ after: [T-1699]
 The docs say what the story built, and the markdown lint passes.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

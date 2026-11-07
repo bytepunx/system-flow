@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.27 - 2026-11-07
+
+- S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call (patch).
 - S-0407 The template ships the OpenCode plugin `.opencode/plugins/flai-guard.js` (minor, ADR-0130): it hands each OpenCode tool call to `flai guard --harness opencode` on `tool.execute.before`, with the session's `parentID` that marks a sub-agent's call, and throws the guard's reason when it refuses, so a story's agent on OpenCode and its sub-agents are held as on Claude Code. With `flai` not on `PATH` it passes every call and says so once, but in a session `flai serve` started it refuses every call (ADR-0235). `.opencode/` is a protected path, so `flai upgrade` brings the plugin in only with the operator's approval.
 
 ## 1.1.26 - 2026-11-07

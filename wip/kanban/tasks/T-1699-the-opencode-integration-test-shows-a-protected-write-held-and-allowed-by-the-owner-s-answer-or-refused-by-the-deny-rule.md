@@ -3,12 +3,15 @@ id: T-1699
 type: task
 nature: feature
 title: The OpenCode integration test shows a protected write held and allowed by the owner's answer, or refused by the deny rule
-status: backlog
+status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:41Z
-updated: 2026-10-16T05:16:41Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0408
 tags: [cli]
 touches: [flai/tests/integration/opencode_test.go]
@@ -27,3 +30,4 @@ after: [T-1697, T-1698]
 The test passes on the known `opencode` version and is skipped, saying so, without it.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

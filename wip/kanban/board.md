@@ -7,9 +7,7 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0411
-  - S-0412
-  - S-0594
+  - S-0591
 ---
 
 # Board

@@ -3,16 +3,19 @@ id: T-1705
 type: task
 nature: feature
 title: The user, operator, and design docs say how the roles and the strategic agents run on OpenCode
-status: backlog
+status: cancelled
 parent: S-0409
 owner: alex
 created: 2026-10-16T05:17:44Z
-updated: 2026-10-16T05:17:44Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0409
 tags: [cli]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/agent-adapters.md]
-after: [T-1704]
+after: [T-1702, T-1703]
 ---
 # T-1705 The user, operator, and design docs say how the roles and the strategic agents run on OpenCode
 
@@ -27,3 +30,4 @@ after: [T-1704]
 The docs say what the story built, and the markdown lint passes.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

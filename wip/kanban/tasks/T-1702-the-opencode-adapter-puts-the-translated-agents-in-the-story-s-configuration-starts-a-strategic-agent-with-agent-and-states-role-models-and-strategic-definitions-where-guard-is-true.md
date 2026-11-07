@@ -3,12 +3,15 @@ id: T-1702
 type: task
 nature: feature
 title: The opencode adapter puts the translated agents in the story's configuration, starts a strategic agent with --agent, and states role models and strategic definitions where Guard is true
-status: backlog
+status: cancelled
 parent: S-0409
 owner: alex
 created: 2026-10-16T05:17:30Z
-updated: 2026-10-16T05:23:20Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0409
 tags: [cli]
 touches: [flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/harness_test.go]
@@ -29,3 +32,4 @@ after: [T-1701]
 A start carries the agents and the strategic `--agent`, the capabilities follow `Guard`, and the harness tests pass.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

@@ -3,12 +3,21 @@ id: T-1697
 type: task
 nature: feature
 title: The opencode configuration sets ask or deny on the protected list as the ADR says, and the adapter states Ask true under hold-and-ask
-status: backlog
+status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:31Z
-updated: 2026-10-16T05:23:19Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:50:54Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T21:50:55Z
+    by: system-flow
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0408
 tags: [cli]
 touches: [flai/internal/harness/opencodeconfig.go, flai/internal/harness/opencodeconfig_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go]
@@ -28,3 +37,4 @@ after: [T-1695]
 The configuration and the capability follow the ADR, and the harness tests pass.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

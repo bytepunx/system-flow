@@ -3,14 +3,20 @@ id: S-0409
 type: story
 nature: feature
 title: The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
-status: ready
+status: cancelled
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:17:17Z
-updated: 2026-11-07T21:46:05Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:11Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T21:46:35Z
+    by: agent-S-0409
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
     by: alex
 tags: [cli]
 topics: [agents, cli]
@@ -84,3 +90,4 @@ A story on OpenCode hands search and verification to its explorer and verifier a
   - **Co-change:** `flai touches suggest` lists only hub documents, none of which this story's criteria reach; none was added.
 - **Forecast.** 40m against flai's 31m. A tool-name table over five definitions, and strategic starts checked against the real binary, add about a quarter. The delivery, 2026-10-16T15:16Z, is flai's play-out moved by the raise times the cycle factor.
 - **Cost of delay.** 61.54 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 40m of 5h25m. Kept as flai gives it.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

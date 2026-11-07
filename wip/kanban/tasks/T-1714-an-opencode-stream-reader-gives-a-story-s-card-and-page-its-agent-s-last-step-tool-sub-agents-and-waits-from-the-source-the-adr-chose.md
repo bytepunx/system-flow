@@ -3,12 +3,15 @@ id: T-1714
 type: task
 nature: feature
 title: An OpenCode stream reader gives a story's card and page its agent's last step, tool, sub-agents, and waits from the source the ADR chose
-status: backlog
+status: cancelled
 parent: S-0411
 owner: alex
 created: 2026-10-16T05:19:48Z
-updated: 2026-10-16T05:19:48Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0411
 tags: [cli]
 touches: [flai/internal/serve/stream_opencode.go, flai/internal/serve/stream_opencode_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
@@ -28,3 +31,4 @@ after: [T-1712, T-1713]
 A story on `opencode` has its card's and page's status from the reader, in the entry shape the dashboard reads, and the tests pass.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

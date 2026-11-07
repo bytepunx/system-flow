@@ -3,12 +3,21 @@ id: T-1696
 type: task
 nature: feature
 title: flai guard holds an OpenCode permission request through ask.Asker.Hold within the ADR's bound and answers allow or deny with the owner's word
-status: backlog
+status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:27Z
-updated: 2026-10-17T02:39:26Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:50:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T21:50:52Z
+    by: system-flow
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0408
 tags: [cli]
 touches: [flai/cmd/guard.go, flai/cmd/guard_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go]
@@ -30,3 +39,4 @@ after: [T-1695]
 ## Notes
 
 - If this task gives `flai guard` a flag, add `docs/users/flai-reference.md` to its touches with `flai touches` and regenerate it with `make flai-reference`, as the orchestrator approved on TH-0490.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

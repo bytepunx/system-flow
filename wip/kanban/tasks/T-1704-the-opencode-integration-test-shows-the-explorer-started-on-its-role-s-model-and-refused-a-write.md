@@ -3,12 +3,15 @@ id: T-1704
 type: task
 nature: feature
 title: The OpenCode integration test shows the explorer started on its role's model and refused a write
-status: backlog
+status: cancelled
 parent: S-0409
 owner: alex
 created: 2026-10-16T05:17:41Z
-updated: 2026-10-16T05:17:41Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0409
 tags: [cli]
 touches: [flai/tests/integration/opencode_test.go]
@@ -27,3 +30,4 @@ after: [T-1702, T-1703]
 The test passes on the known `opencode` version and is skipped, saying so, without it.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

@@ -3,11 +3,11 @@ id: S-0410
 type: story
 nature: feature
 title: A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
-status: in-progress
+status: cancelled
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-11-07T21:48:49Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:16Z
@@ -20,6 +20,15 @@ transitions:
     by: agent-S-0410
   - to: in-progress
     at: 2026-11-07T21:46:48Z
+    by: alex
+  - to: review
+    at: 2026-11-07T21:49:09Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T21:49:25Z
+    by: flai
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
     by: alex
 tags: [cli]
 topics: [agents, cli]
@@ -48,15 +57,15 @@ usage:
       cost: 17.606
   strategic:
     - kind: orchestrator
-      seconds: 210
+      seconds: 215
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 267
-          cache_read: 3013706
-          cache_write: 98050
-          cost: 0.7815
+          input: 30
+          output: 278
+          cache_read: 3062825
+          cache_write: 111134
+          cost: 0.7972
 cost_of_delay:
   value: 76.92
   by: planner-E-0023
@@ -113,3 +122,5 @@ A story worked on OpenCode carries the same `usage` as one worked on Claude Code
 - **Forecast.** 50m against flai's 37m. Recorded fixtures, replacing the Claude Code reader named outright in two serve files without changing Claude Code runs, and a gateway test, as S-0357's pricing work had, add a third. The delivery, 2026-10-16T16:12Z, is flai's play-out moved by the raise times the cycle factor.
 - **Cost of delay.** 76.92 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 50m of 5h25m. Kept as flai gives it.
 - 2026-11-07T21:46:48Z: moved to in-progress: Unchecked criteria
+- 2026-11-07T21:49:25Z: moved to in-progress: the rebase of story/S-0410 onto main stopped on conflicts in flai/internal/harness/harness_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, which the acceptance of S-0410 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0410
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

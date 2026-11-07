@@ -3,15 +3,36 @@ id: T-1695
 type: task
 nature: feature
 title: An ADR records how an OpenCode agent asks before a protected write, OpenCode's bound for a held call, and the way not taken
-status: backlog
+status: done
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:20Z
-updated: 2026-10-16T05:16:20Z
-transitions: []
+updated: 2026-11-07T21:50:20Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:48:54Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T21:48:56Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T21:50:20Z
+    by: agent-S-0408
 stream: S-0408
 tags: [cli]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 82
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 33
+      cache_read: 1488893
+      cache_write: 9027
+      cost: 0.5371
 ---
 # T-1695 An ADR records how an OpenCode agent asks before a protected write, OpenCode's bound for a held call, and the way not taken
 

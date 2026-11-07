@@ -3,12 +3,15 @@ id: T-1719
 type: task
 nature: feature
 title: agent-adapters.md and the operator docs say what the fixture run proves and what only a live run would
-status: backlog
+status: cancelled
 parent: S-0412
 owner: alex
 created: 2026-10-16T05:20:42Z
-updated: 2026-11-07T09:34:20Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0412
 tags: [cli]
 touches: [docs/operators/index.md, design/system/agent-adapters.md]
@@ -27,3 +30,4 @@ after: [T-1718]
 The docs say what the fixture run proves and what it does not, and the markdown lint passes.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

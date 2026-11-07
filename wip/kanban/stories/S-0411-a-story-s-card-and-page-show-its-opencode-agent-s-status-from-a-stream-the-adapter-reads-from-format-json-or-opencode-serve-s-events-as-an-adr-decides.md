@@ -3,14 +3,17 @@ id: S-0411
 type: story
 nature: feature
 title: A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
-status: ready
+status: cancelled
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:19:30Z
-updated: 2026-11-07T21:49:32Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:20Z
+    by: alex
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
     by: alex
 tags: [cli]
 topics: [agents, cli]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 158
+      seconds: 163
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 149
-          cache_read: 2294608
-          cache_write: 13544
-          cost: 0.5788
+          input: 11
+          output: 160
+          cache_read: 2343727
+          cache_write: 26629
+          cost: 0.5945
 cost_of_delay:
   value: 53.85
   by: planner-E-0023
@@ -84,3 +87,4 @@ The operator watching the board sees what a story's agent on OpenCode is doing, 
   - **Co-change:** `flai touches suggest` lists `docs/users/flai.md` in half the seed commits, from `agents.go`'s long history; this story changes no user-facing behaviour, so it is not added. The rest are hub documents.
 - **Forecast.** 35m against flai's 24m. Moving `stream.go`'s parsing behind a per-harness reader with Claude Code's entries unchanged, plus an ADR, adds about half. If the ADR chooses `opencode serve`, the story grows and the Notes say to split it. The delivery, 2026-10-16T16:51Z, is flai's play-out moved by the raise times the cycle factor.
 - **Cost of delay.** 53.85 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 35m of 5h25m. Kept as flai gives it.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

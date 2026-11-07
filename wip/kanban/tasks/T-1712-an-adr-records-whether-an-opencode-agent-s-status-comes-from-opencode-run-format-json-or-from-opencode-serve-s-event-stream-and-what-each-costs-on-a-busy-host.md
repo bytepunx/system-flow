@@ -3,12 +3,15 @@ id: T-1712
 type: task
 nature: feature
 title: An ADR records whether an OpenCode agent's status comes from opencode run --format json or from opencode serve's event stream, and what each costs on a busy host
-status: backlog
+status: cancelled
 parent: S-0411
 owner: alex
 created: 2026-10-16T05:19:36Z
-updated: 2026-10-16T05:19:36Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0411
 tags: [cli]
 touches: [design/adrs]
@@ -26,3 +29,4 @@ touches: [design/adrs]
 The ADR is accepted in `design/adrs`, listed in its index, and names the source, the cost on a busy host, and the alternative.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

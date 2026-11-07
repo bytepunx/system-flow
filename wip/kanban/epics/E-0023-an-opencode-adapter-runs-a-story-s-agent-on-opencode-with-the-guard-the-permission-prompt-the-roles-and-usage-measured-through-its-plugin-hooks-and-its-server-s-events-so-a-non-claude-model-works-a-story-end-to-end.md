@@ -3,10 +3,10 @@ id: E-0023
 type: epic
 nature: feature
 title: An OpenCode adapter runs a story's agent on OpenCode with the guard, the permission prompt, the roles, and usage measured, through its plugin hooks and its server's events, so a non-Claude model works a story end to end
-status: in-progress
+status: cancelled
 owner: alex
 created: 2026-10-16T04:28:00Z
-updated: 2026-11-07T09:38:06Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T09:38:00Z
@@ -14,26 +14,30 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:38:06Z
     by: agent-S-0406
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 tags: [cli, template]
 topics: [cli, agents, template]
 touches: [flai/internal/harness, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver, flai/internal/serve, flai/internal/manifest, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 12790
-  priced_by: harness
+  seconds: 13047
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-07
-      ceremony: 8
+      ceremony: 10
       test_runs: 1
       hand_edits: 8
-      work: 164
+      work: 186
   models:
     - model: claude-opus-5-5
-      input: 1328
-      output: 467710
-      cache_read: 137815004
-      cache_write: 2882340
-      cost: 54.8146
+      input: 1380
+      output: 468079
+      cache_read: 142672698
+      cache_write: 3172813
+      cost: 56.6606
   strategic:
     - kind: planner
       seconds: 501
@@ -46,15 +50,15 @@ usage:
           cache_write: 231064
           cost: 3.992
     - kind: orchestrator
-      seconds: 3019
+      seconds: 3113
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 449
-          output: 6462
-          cache_read: 108620939
-          cache_write: 747818
-          cost: 27.4159
+          input: 477
+          output: 6653
+          cache_read: 109435455
+          cache_write: 876114
+          cost: 27.6541
         - model: claude-sonnet-5-5
           input: 16
           output: 94
@@ -103,3 +107,4 @@ To be drafted by the planner. Order: the adapter and the headless run first, wit
 - Later harnesses, Gemini CLI, Copilot CLI, Codex CLI, Goose, are not in this epic; each follows the same contracts once this one proves them.
 - 2026-11-07T09:38:00Z: moved to ready: follows S-0406, which moved to ready
 - 2026-11-07T09:38:06Z: moved to in-progress: follows S-0406, which moved to in-progress
+- 2026-11-07T21:53:43Z: moved to cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

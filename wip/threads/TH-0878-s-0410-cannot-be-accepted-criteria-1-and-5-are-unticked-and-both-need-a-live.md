@@ -4,10 +4,10 @@ title: "S-0410 cannot be accepted: criteria 1 and 5 are unticked, and both need 
 anchor:
   path: wip/kanban/stories/S-0410-a-story-on-opencode-has-its-usage-read-from-opencode-s-json-events-priced-by-the-harness-or-its-gateway-s-spend-log-and-reaches-its-provider-through-an-entry-derived-from-the-host-s.md
   item: S-0410
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-07T21:45:47Z
-updated: 2026-11-07T21:45:47Z
+updated: 2026-11-07T21:50:19Z
 ---
 
 # TH-0878 S-0410 cannot be accepted: criteria 1 and 5 are unticked, and both need a live opencode or a funded key
@@ -50,3 +50,6 @@ flai accept S-0410 --by alex
 ```
 
 Rewording criteria is a change of scope, so it is your call. I have changed nothing on S-0410. S-0411 is held in ready until S-0410 is done.
+
+### 2026-11-07T21:50:19Z orchestrator
+Resolved: Concern gone: alex struck criteria 1 and 5 of S-0410 at 2026-11-07T21:48:58Z and took its acceptance himself. That acceptance was sent back on rebase conflicts (TH-0880), which S-0410's agent settles.

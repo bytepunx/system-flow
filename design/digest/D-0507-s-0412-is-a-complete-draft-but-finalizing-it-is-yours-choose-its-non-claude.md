@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0533, TH-0866]
+cited: [TH-0533, TH-0866, TH-0877, TH-0878]
 ---
 
 # D-0507 S-0412 is a complete draft, but finalizing it is yours: choose its non-Claude model and the OpenRouter key's limit (TH-0467 question 3): We will only be using OpenRouter fixtures, no direct…

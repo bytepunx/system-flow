@@ -3,12 +3,21 @@ id: T-1701
 type: task
 nature: feature
 title: flai translates each definition in .claude/agents into an OpenCode agent through a tool-name table, with the role's model and read-only permissions where the definition grants no edit
-status: backlog
+status: cancelled
 parent: S-0409
 owner: alex
 created: 2026-10-16T05:17:25Z
-updated: 2026-10-16T05:17:25Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:49:35Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T21:49:36Z
+    by: system-flow
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0409
 tags: [cli]
 touches: [flai/internal/harness/opencodeagents.go, flai/internal/harness/opencodeagents_test.go]
@@ -28,3 +37,4 @@ touches: [flai/internal/harness/opencodeagents.go, flai/internal/harness/opencod
 The five definitions translate, read-only ones carry the denials, and the tests pass.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

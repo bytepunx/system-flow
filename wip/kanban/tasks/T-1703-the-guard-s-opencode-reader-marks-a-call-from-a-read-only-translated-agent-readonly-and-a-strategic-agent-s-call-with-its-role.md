@@ -3,16 +3,24 @@ id: T-1703
 type: task
 nature: feature
 title: The guard's opencode reader marks a call from a read-only translated agent ReadOnly and a strategic agent's call with its role
-status: backlog
+status: cancelled
 parent: S-0409
 owner: alex
 created: 2026-10-16T05:17:34Z
-updated: 2026-10-16T05:17:34Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: ready
+    at: 2026-11-07T21:49:37Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T21:49:38Z
+    by: system-flow
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0409
 tags: [cli]
 touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go]
-after: [T-1701]
 ---
 # T-1703 The guard's opencode reader marks a call from a read-only translated agent ReadOnly and a strategic agent's call with its role
 
@@ -27,3 +35,4 @@ after: [T-1701]
 The reader's marks match the Claude Code reader's for the same callers, and the guard's tests pass.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

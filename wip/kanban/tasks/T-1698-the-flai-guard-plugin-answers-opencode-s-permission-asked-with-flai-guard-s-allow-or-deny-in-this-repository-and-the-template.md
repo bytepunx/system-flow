@@ -3,12 +3,15 @@ id: T-1698
 type: task
 nature: feature
 title: The flai-guard plugin answers OpenCode's permission.asked with flai guard's allow or deny, in this repository and the template
-status: backlog
+status: cancelled
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:38Z
-updated: 2026-10-17T02:39:22Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0408
 tags: [cli, template]
 touches: [".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, template/CHANGELOG.md]
@@ -29,3 +32,4 @@ Both copies are the same, and the plugin's reply to a recorded `permission.asked
 ## Notes
 
 - Done when reworded by planner-S-0408, as the orchestrator approved on TH-0490: a task should not depend on the integration run a later layer builds.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

@@ -3,14 +3,17 @@ id: S-0412
 type: story
 nature: feature
 title: A story is worked to review end to end on the opencode adapter by a scripted session in OpenRouter's format, with the guard and the permission prompt on, on fixtures alone
-status: ready
+status: cancelled
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:20:15Z
-updated: 2026-11-07T21:49:38Z
+updated: 2026-11-07T21:53:43Z
 transitions:
   - to: ready
     at: 2026-11-07T20:43:27Z
+    by: alex
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
     by: alex
 tags: [cli]
 topics: [agents, cli]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 265
+      seconds: 270
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 445
-          cache_read: 3656864
-          cache_write: 179637
-          cost: 0.9598
+          input: 48
+          output: 456
+          cache_read: 3705983
+          cache_write: 192722
+          cost: 0.9755
 cost_of_delay:
   value: 74.63
   by: planner-E-0023
@@ -87,3 +90,4 @@ The epic's proof, on fixtures alone. The operator runs no live OpenCode and no O
 - **After.** It reads four stories' output on main: S-0407's `flai guard --harness opencode` and the plugin's input shape, which the stub hands each call to; S-0408's ADR and hold-and-ask, which decide whether the protected write is held or denied; S-0410's OpenCode usage reader and its pricing from OpenRouter's spend log; and S-0411's OpenCode stream, which the card's status comes from. S-0406's adapter reaches it through all four.
 - **Forecast.** 50m against flai's 22m, which rests on only 5 done medium feature stories. A stub `opencode` that speaks to `flai mcp` over standard input and hands each call to `flai guard`, with a fake OpenRouter and assertions over four stories' output in one run, more than doubles it. The delivery, 2026-11-07T18:19Z, is flai's 17:51Z play-out moved by the 28m raise.
 - **Cost of delay.** 74.63 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20. `flai cod` shares it among the epic's seven open stories by forecast, 50m of 5h35m. Kept as flai gives it.
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)

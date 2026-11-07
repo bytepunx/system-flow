@@ -3,12 +3,15 @@ id: T-1716
 type: task
 nature: feature
 title: The scripted OpenCode session and its OpenRouter generation fixture are written from the pinned release's event types and OpenRouter's documented answer
-status: backlog
+status: cancelled
 parent: S-0412
 owner: alex
 created: 2026-10-16T05:20:26Z
-updated: 2026-11-07T09:34:01Z
-transitions: []
+updated: 2026-11-07T21:53:43Z
+transitions:
+  - to: cancelled
+    at: 2026-11-07T21:53:43Z
+    by: alex
 stream: S-0412
 tags: [cli]
 touches: [flai/tests/integration/testdata/opencode/session.jsonl, flai/tests/integration/testdata/opencode/generation.json]
@@ -27,3 +30,4 @@ touches: [flai/tests/integration/testdata/opencode/session.jsonl, flai/tests/int
 Both fixtures exist, each says in the test that reads it which release or page it follows, and neither holds a key.
 
 ## Notes
+- 2026-11-07T21:53:43Z: moved to cancelled: E-0023 cancelled: OpenCode isn't going to receive first-class support given its aversion to supporting before hooks for tool calls (amongst other things)
