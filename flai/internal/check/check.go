@@ -117,6 +117,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	}
 	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, res: &Result{Items: len(items)}}
 	c.layout()
+	c.instructions()
 	c.workItems()
 	c.narratives()
 	c.activities()
