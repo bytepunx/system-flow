@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1416
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 117
-      output: 609
-      cache_read: 14115378
-      cache_write: 402809
-      cost: 5.1991
+      input: 122
+      output: 40276
+      cache_read: 14645998
+      cache_write: 246726
+      cost: 5.1595
 ---
 # T-2560 flai serve enable kluster writes and commits a block and a config for a project with none, and flai manifest set changes the block's keys
 

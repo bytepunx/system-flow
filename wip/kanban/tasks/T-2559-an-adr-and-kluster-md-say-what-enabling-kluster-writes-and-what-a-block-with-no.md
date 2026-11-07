@@ -3,12 +3,18 @@ id: T-2559
 type: task
 nature: improvement
 title: An ADR and kluster.md say what enabling kluster writes and what a block with no deploy means
-status: backlog
+status: in-progress
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:29:22Z
-updated: 2026-11-07T08:29:40Z
-transitions: []
+updated: 2026-11-07T09:54:43Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:54:40Z
+    by: agent-S-0586
+  - to: in-progress
+    at: 2026-11-07T09:54:43Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, docs]
 touches: [design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md]
@@ -16,14 +22,14 @@ usage:
   source: log
   seconds: 0
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
-      input: 10
-      output: 41
-      cache_read: 106965
-      cache_write: 36155
-      cost: 0.0103
+      input: 12
+      output: 3229
+      cache_read: 143120
+      cache_write: 52289
+      cost: 0.0096
 ---
 # T-2559 An ADR and kluster.md say what enabling kluster writes and what a block with no deploy means
 

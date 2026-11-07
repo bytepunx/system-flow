@@ -6,7 +6,7 @@ title: TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEv
 status: in-progress
 owner: alex
 created: 2026-11-02T03:55:02Z
-updated: 2026-11-07T08:34:41Z
+updated: 2026-11-07T09:52:54Z
 transitions:
   - to: ready
     at: 2026-11-07T08:22:47Z
@@ -24,20 +24,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 653
+  seconds: 4703
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-07
-      hand_edits: 1
-      work: 14
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 2
+      work: 30
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 921
-      cache_read: 12500923
-      cache_write: 324616
-      cost: 4.5924
+      input: 228
+      output: 1541
+      cache_read: 26498490
+      cache_write: 2057636
+      cost: 10.231
   strategic:
     - kind: orchestrator
       seconds: 21
@@ -74,8 +76,8 @@ finalized:
 This story remediates [I-0246](../../../design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md), "TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0246 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0246 is closed with `flai issue close I-0246 --reason` saying what fixed it
+- [x] The cause I-0246 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0246 is closed with `flai issue close I-0246 --reason` saying what fixed it
 
 ## Tasks
 - T-2555 wait_for_work and the folder's waits take their snapshot before their first check, so a change made between the two wakes the wait

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 131.2896
-accrued_seconds: 12506
-tasks_completed: 78
-last_run: 2026-11-07T08:55:39Z
+accrued_cost: 133.1238
+accrued_seconds: 12723
+tasks_completed: 80
+last_run: 2026-11-07T09:46:51Z
 ---
 
 # Curator activity
@@ -635,3 +635,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0501, D-0502
 - Seconds: 107
 - Cost: 1.6238 USD, estimated
+
+### 2026-11-07T09:45:04Z
+
+- Summary: I wrote D-0509, merged S-0585 into D-0498, rewrote D-0504, D-0506 and D-0507 to open with their facts, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0585
+- Items: D-0498, D-0504, D-0506, D-0507, D-0509
+- Seconds: 115
+- Cost: 1.0936 USD, estimated
+
+### 2026-11-07T09:46:51Z
+
+- Summary: I wrote no new entries this run. I rewrote D-0503, D-0505 and D-0508 to lead with their facts, and added I-0296 as a source of D-0503. I absorbed none, because no design file changed after the last run. `flai digest compact` compacted none.
+- Trigger: accepted S-0564
+- Items: D-0503, D-0505, D-0508, D-0510
+- Seconds: 102
+- Cost: 0.7406 USD, estimated

@@ -2,9 +2,9 @@
 id: D-0508
 title: "S-0562 plan: three tasks in three layers; cost of delay inputs needed, and TH-0811 decides what criterion 1 can show: Recommended: keep S-0562 a draft until you answer TH-0811"
 kind: answer
-sources: [TH-0839]
-topics: [orchestration, cli, planning, template, conventions, all]
-paths: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md]
+sources: [TH-0839, TH-0811]
+topics: [orchestration, planning, releases, all]
+paths: [system-flow.yaml, wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md]
 date: 2026-11-07
 status: active
 absorbed_by: ""
@@ -14,27 +14,10 @@ cited: []
 
 # D-0508 S-0562 plan: three tasks in three layers; cost of delay inputs needed, and TH-0811 decides what criterion 1 can show: Recommended: keep S-0562 a draft until you answer TH-0811
 
-The operator, alex, answered TH-0839 at 2026-11-07T09:40:50Z.
+Changing this project's release policy is the operator's alone: the orchestrator does not reverse the operator's choice (D-0216), and a draft whose criteria depend on the policy stays a draft until the operator answers.
 
-What was asked:
+planner-S-0562 asked on TH-0839 for S-0562's cost of delay and for a switch to `policy: threshold`, since under `judgement` the publish formula's step 2, `flai release --evaluate --require-met`, always stops. The orchestrator set `penalty_per_week: 25` on S-0562, the figure S-0545 and S-0582 carry for a proof run that blocks no other work, and recommended: "keep S-0562 a draft until you answer TH-0811 ... the release policy belongs to you. On TH-0256 you chose `judgement` over `threshold` (D-0216) ... Only you can do that."
 
-```text
-**Questions for you, each with my recommendation first:**
-```
+The operator, alex, confirmed that recommendation at 2026-11-07T09:40:50Z, and had answered TH-0811 with `threshold` (D-0504), so S-0562's criterion 1 stood as written and the story went ahead.
 
-The answer:
-
-```text
-**Recommended:** keep S-0562 a draft until you answer TH-0811. Then word criterion 1 to match that answer before you finalize it. I will not finalize S-0562 while TH-0811 is open, even though it will be complete once the planner writes its value.
-
-**Why it is your call:** the release policy belongs to you. On TH-0256 you chose `judgement` over `threshold` (D-0216). The planner recommends switching to `policy: threshold`, which would reverse that choice. Only you can do that. Your two options:
-
-- **Switch to `threshold`** on TH-0811. The instance then releases for real, and criterion 1 stays as written.
-- **Keep `judgement`.** Then criterion 1 has to be reworded so that the judgement stop at step 2 counts, because under judgement `--require-met` always stops. In that case the run shows only the stop.
-
-T-2504 runs nothing until TH-0811 is answered, so nothing is lost while you decide.
-
-Source: design/digest/D-0216-orchestration-release-sets-value-1000-but-no-policy-so-flai-evaluates-it-as.md
-```
-
-Source: TH-0839.
+Sources: TH-0839, TH-0811.

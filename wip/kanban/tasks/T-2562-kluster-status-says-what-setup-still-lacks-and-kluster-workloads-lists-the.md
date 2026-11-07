@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 683
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 548
-      cache_read: 11962724
-      cache_write: 100471
-      cost: 4.32
+      input: 102
+      output: 33466
+      cache_read: 12169386
+      cache_write: 205005
+      cost: 4.287
 ---
 # T-2562 kluster.status says what setup still lacks, and kluster.workloads lists the cluster's nodes and pods
 

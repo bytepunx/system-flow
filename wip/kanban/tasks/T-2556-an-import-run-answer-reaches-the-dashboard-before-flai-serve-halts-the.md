@@ -23,16 +23,16 @@ tags: [flai, tests]
 touches: [flai/internal/serve/candidates.go, flai/internal/serve/candidates_test.go, flai/internal/hostapi/import.go]
 usage:
   source: log
-  seconds: 605
+  seconds: 661
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 315
-      cache_read: 4948024
-      cache_write: 40792
-      cost: 1.7863
+      input: 45
+      output: 339
+      cache_read: 5193678
+      cache_write: 52804
+      cost: 1.8797
 ---
 # T-2556 An import.run answer reaches the dashboard before flai serve halts the candidate's connection, so TestARepositoryIsOfferedImportedAndThenServed gets no EOF
 

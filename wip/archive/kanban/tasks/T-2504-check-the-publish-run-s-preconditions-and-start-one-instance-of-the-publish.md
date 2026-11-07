@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 11
-      output: 1656
-      cache_read: 724977
-      cache_write: 8518
-      cost: 0.2463
+      output: 1575
+      cache_read: 725849
+      cache_write: 7647
+      cost: 0.2379
 ---
 # T-2504 Check the publish run's preconditions and start one instance of the publish formula from the main checkout
 

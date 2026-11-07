@@ -9,23 +9,17 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0406, S-0412, T-1682, TH-0532, TH-0533, TH-0866]
 ---
 
 # D-0506 S-0406 is a complete draft, but I leave finalizing it to you: it needs OpenCode installed on the host first (TH-0467 question 2): fixtures only for now - I have no intention of configuring OpenCode…
 
-The operator, alex, answered TH-0532 at 2026-11-07T09:27:45Z.
+OpenCode is not installed on this host, and the operator does not intend to configure it for now: S-0406 and the rest of E-0023 test the opencode adapter on recorded fixtures only, never against a real `opencode` binary.
 
-What was asked:
+The operator, alex, answered TH-0532 at 2026-11-07T09:27:45Z: "fixtures only for now - I have no intention of configuring OpenCode at this time".
 
-```text
-**Recommended:** install OpenCode on this host, then finalize S-0406 yourself. Alternatively, answer TH-0467 question 2 with "fixtures only" and tell me here, and I will finalize it.
-```
+What was asked: the orchestrator left S-0406 a draft because its first criterion checked the four open OpenCode findings against a real `opencode` binary, and flai never installs one. It recommended installing OpenCode, or answering TH-0467 question 2 with "fixtures only". planner-E-0023 then re-planned S-0406 to settle the findings from OpenCode's source at a pinned release (TH-0866), and the orchestrator finalized it.
 
-The answer:
+See D-0507 for the same answer on OpenRouter and S-0412.
 
-```text
-fixtures only for now - I have no intention of configuring OpenCode at this time
-```
-
-Source: TH-0532.
+Sources: TH-0532, TH-0467.

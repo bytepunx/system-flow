@@ -3,11 +3,11 @@ id: S-0562
 type: story
 nature: improvement
 title: The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
-status: in-progress
+status: done
 parent: E-0024
 owner: alex
 created: 2026-11-02T04:14:44Z
-updated: 2026-11-07T09:40:04Z
+updated: 2026-11-07T09:58:51Z
 transitions:
   - to: ready
     at: 2026-11-07T08:02:09Z
@@ -15,8 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:02:15Z
     by: agent-S-0562
+  - to: review
+    at: 2026-11-07T09:48:30Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T09:58:51Z
+    by: alex
 blocked:
   - from: 2026-11-07T09:40:04Z
+    until: 2026-11-07T09:45:31Z
     reason: awaiting the operator on TH-0867
 tags: [template]
 topics: [orchestration]
@@ -29,31 +36,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5869
+  seconds: 6056
   priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 4
-      hand_edits: 2
-      work: 114
+      ceremony: 7
+      hand_edits: 5
+      work: 125
   models:
     - model: claude-opus-5-5
-      input: 248
-      output: 35998
-      cache_read: 15763471
-      cache_write: 185202
-      cost: 5.3553
+      input: 284
+      output: 42471
+      cache_read: 19568835
+      cache_write: 206152
+      cost: 6.4135
   strategic:
     - kind: orchestrator
-      seconds: 167
+      seconds: 281
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 49
-          output: 402
-          cache_read: 1972514
-          cache_write: 164020
-          cost: 0.5267
+          input: 73
+          output: 549
+          cache_read: 2702234
+          cache_write: 285029
+          cost: 0.7394
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 12617
+          cache_write: 33907
+          cost: 0.0336
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -77,7 +90,7 @@ E-0024's `publish` formula, shipped by S-0423, is run once in this repository be
 
 ## Acceptance criteria
 
-- [ ] The formula is run once in this repository: its instance story is worked to review and accepted, and its Notes name the release it published, or, when nothing was pending, the evaluation that stopped it.
+- [x] The formula is run once in this repository: its instance story is worked to review and accepted, and its Notes name the release it published, or, when nothing was pending, the evaluation that stopped it.
 - [x] This story's Notes record the instance's ID, each step's exit, and the versions and tags published, or the evaluation that stopped the instance.
 - [x] What the run finds wrong is fixed in a task of this story, or recorded as an issue.
 
@@ -118,11 +131,11 @@ What the instance's steps exited with, as S-0585's task Notes give them:
 
 No release was published, and no versions or tags. The evaluation that stopped the instance is step 2's, above. S-0585's Notes name it.
 
-S-0585 reached review at 08:16:55Z. The orchestrator could not accept it, because its criterion 3 (step 3) is unticked. It asked the operator on TH-0855 at 08:18Z.
+S-0585 reached review at 08:16:55Z. The orchestrator could not accept it, because its criterion 3 (step 3) was unticked, and it asked the operator on TH-0855 at 08:18Z. The operator ticked that criterion at 08:54Z. The orchestrator still could not accept S-0585, because its branch was gone, so it asked again on TH-0867 and TH-0868. alex accepted S-0585 at 09:43:02Z, and it is archived. Its Notes name the evaluation that stopped it at step 2.
 
 Faults the run found, for criterion 3:
 
-- I-0283, recorded on this story's branch and bumped once. A publish instance with nothing to release stops at step 2 down the formula's failure path, so it blocks and needs the operator's answer every time. Its unticked criterion for the skipped step then blocks acceptance. The fix is in flai, as a clean-stop exit for a step, so it is an issue and not a task of this story.
+- I-0283, recorded on this story's branch and bumped twice, with 3 instances. A publish instance with nothing to release stops at step 2 down the formula's failure path, so it blocks and needs the operator's answer every time. Its unticked criterion for the skipped step then blocks acceptance, and with its branch gone only the operator could accept it. The fix is in flai, as a clean-stop exit for a step, so it is an issue and not a task of this story.
 - I-0282, recorded by S-0564 on its branch. A formula instance made with no touches is held (no-touches) while any story is in progress, including the story that started it and waits on it. S-0585 was held this way until agent-S-0562 gave it its own story file as touches at 08:04Z.
 
 ### Planning

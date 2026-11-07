@@ -23,7 +23,7 @@ tags: [flai, tests]
 touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/timing_test.go]
 usage:
   source: log
-  seconds: 608
+  seconds: 609
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 430
       cache_read: 6289533
       cache_write: 64341
-      cost: 2.2751
+      cost: 2.2765
 ---
 # T-2555 wait_for_work and the folder's waits take their snapshot before their first check, so a change made between the two wakes the wait
 

@@ -3,10 +3,10 @@ id: E-0024
 type: epic
 nature: feature
 title: "Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-11-02T18:08:35Z
+updated: 2026-11-07T09:58:51Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:17Z
@@ -20,12 +20,18 @@ transitions:
   - to: in-progress
     at: 2026-10-28T13:05:49Z
     by: agent-S-0414
+  - to: review
+    at: 2026-11-07T09:48:30Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T09:58:51Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, planning, template, conventions]
 touches: [flai/internal/serve, flai/internal/guard, flai/internal/context, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/strategic-agents.md, ".claude/agents", docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 81125
+  seconds: 81312
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -50,10 +56,10 @@ usage:
       hand_edits: 28
       work: 744
     - day: 2026-11-07
-      ceremony: 9
+      ceremony: 12
       test_runs: 1
-      hand_edits: 4
-      work: 257
+      hand_edits: 7
+      work: 268
   models:
     - model: claude-haiku-5-5
       input: 146
@@ -62,11 +68,11 @@ usage:
       cache_write: 372262
       cost: 0.6044
     - model: claude-opus-5-5
-      input: 9784
-      output: 3211139
-      cache_read: 721267916
-      cache_write: 20039461
-      cost: 328.3453
+      input: 9820
+      output: 3217612
+      cache_read: 725073280
+      cache_write: 20060411
+      cost: 329.4035
     - model: claude-sonnet-5-5
       input: 62
       output: 20190
@@ -97,21 +103,21 @@ usage:
           cache_write: 471093
           cost: 4.2564
     - kind: orchestrator
-      seconds: 18132
+      seconds: 18246
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2914
-          output: 39581
-          cache_read: 530510265
-          cache_write: 4305190
-          cost: 120.2316
+          input: 2938
+          output: 39728
+          cache_read: 531239985
+          cache_write: 4426199
+          cost: 120.4443
         - model: claude-sonnet-5-5
-          input: 175
-          output: 3412
-          cache_read: 3074704
-          cache_write: 759171
-          cost: 2.6629
+          input: 179
+          output: 3452
+          cache_read: 3087321
+          cache_write: 793078
+          cost: 2.6965
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
@@ -156,3 +162,5 @@ To be drafted by the planner. Order: the role file format and its validation fir
 - A role defined by a project runs as the operator, as every agent does: the safety note under `docs/operators/index.md` § Starting an agent when a story becomes ready applies to it, and the convention says so.
 - 2026-10-28T13:01:57Z: moved to ready: follows S-0414, which moved to ready
 - 2026-10-28T13:05:49Z: moved to in-progress: follows S-0414, which moved to in-progress
+- 2026-11-07T09:48:30Z: moved to review: follows S-0562, which moved to review
+- 2026-11-07T09:58:51Z: moved to done: follows S-0562, which moved to done

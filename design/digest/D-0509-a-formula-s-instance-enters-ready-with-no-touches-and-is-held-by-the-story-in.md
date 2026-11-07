@@ -1,0 +1,25 @@
+---
+id: D-0509
+title: A formula's instance enters ready with no touches and is held by the story in progress that started it, so that story's agent clears the hold with flai touches on the instance's own story file
+kind: decision
+sources: [S-0564, I-0282]
+topics: [orchestration, planning]
+paths: [design/workflows/formulas]
+date: 2026-11-07
+status: active
+absorbed_by: ""
+asked_again: []
+cited: []
+---
+
+# D-0509 A formula's instance enters ready with no touches and is held by the story in progress that started it, so that story's agent clears the hold with flai touches on the instance's own story file
+
+`flai formula run --ready` makes an instance story that declares no touches. A ready story with no touches is held (no-touches) by every story in progress, the one that started it included, until those move to review. A story that waits on its instance's acceptance therefore deadlocks with it.
+
+S-0564's agent ran `flai formula run analysis-cadence --ready --autocommit`; the instance S-0584 was held by S-0562 and S-0564. It cleared the hold with `flai touches S-0584 --add` on S-0584's own story file, and recorded the fault as I-0282. S-0585, S-0562's publish instance, was held the same way.
+
+S-0564's narrative, `## Decisions`: "S-0584 given a touch of its own. It entered ready with no touches and was held (no-touches) by S-0564 itself, a deadlock. `flai touches S-0584 --add` on its own story file cleared the hold."
+
+Until I-0282 is fixed, by `flai formula run` giving the instance a touch of its own or by the hold passing an instance that changes nothing, give the instance its own story file as its touch.
+
+Sources: S-0564 (`wip/archive/agents/S-0564.md`), I-0282.

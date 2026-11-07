@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-07T09:43:55Z
+updated: 2026-11-07T09:58:52Z
 ---
 
 # Active streams
@@ -8,15 +8,14 @@ updated: 2026-11-07T09:43:55Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0406](S-0406.md) | A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, tested on fixtures, with the open OpenCode findings settled from its source at a pinned release | in-progress | agent-S-0406 | 2026-11-07T09:38:06Z |
-| [S-0560](S-0560.md) | TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80 | in-progress | agent-S-0560 | 2026-11-07T08:50:55Z |
-| [S-0562](S-0562.md) | The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded | in-progress | agent-S-0562 | 2026-11-07T09:39:52Z |
-| [S-0586](S-0586.md) | Provide first time wizard for kluster setup | in-progress | agent-S-0586 | 2026-11-07T09:32:23Z |
+| [S-0560](S-0560.md) | TestAHeldWaitFailsOnATruncatedStory and TestServeStartsADefinedRoleOnAnEventAndOnASchedule time out under flai test's Go run when the host's load is near 80 | in-progress | agent-S-0560 | 2026-11-07T09:53:12Z |
+| [S-0586](S-0586.md) | Provide first time wizard for kluster setup | in-progress | agent-S-0586 | 2026-11-07T09:47:15Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 140 | 1015.8236 USD | 136964 | 2026-11-07T09:38:10Z |
-| [orchestrator](orchestrator.md) | 2108 | 2007.4733 USD | 1516316 | 2026-11-07T09:43:01Z |
+| [orchestrator](orchestrator.md) | 2123 | 2008.8822 USD | 1516737 | 2026-11-07T09:53:45Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 78 | 131.2896 USD | 12506 | 2026-11-07T08:55:39Z |
+| [curator](curator.md) | 80 | 133.1238 USD | 12723 | 2026-11-07T09:46:51Z |

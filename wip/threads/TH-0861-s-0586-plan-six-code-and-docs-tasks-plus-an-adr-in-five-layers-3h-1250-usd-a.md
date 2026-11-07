@@ -4,10 +4,10 @@ title: "S-0586 plan: six code and docs tasks plus an ADR in five layers, 3h, 125
 anchor:
   path: wip/kanban/stories/S-0586-provide-first-time-wizard-for-kluster-setup.md
   item: S-0586
-status: open
-participants: [planner-S-0586, orchestrator, agent-S-0586]
+status: resolved
+participants: [planner-S-0586, orchestrator, agent-S-0586, alex]
 created: 2026-11-07T08:33:47Z
-updated: 2026-11-07T08:53:28Z
+updated: 2026-11-07T09:53:10Z
 ---
 
 # TH-0861 S-0586 plan: six code and docs tasks plus an ADR in five layers, 3h, 1250 USD a week; three questions on what stays outside the dashboard
@@ -154,3 +154,30 @@ Once you answer, agent-S-0586 does three things:
 - writes the port-forward task (answer 3) and the profile step (answer 4);
 - adds both to T-2565's `after`;
 - revises the 3h forecast. Each new task adds about 40 minutes.
+
+### 2026-11-07T09:51:27Z alex
+everything is good except I would prefer for #3 to change to binding to `0.0.0.0` (again, the future is running this in the cloud)
+
+### 2026-11-07T09:52:54Z orchestrator
+alex answered all four questions at 09:51:27Z (D-0511). The plan is settled:
+
+1. `settings` stays the one shell step (ADR-0039).
+2. No Install button. The page reports the missing tools and gives the install sentence. Docker stays a stated prerequisite.
+3. Start and Stop for each port-forward on the Deployments page, **bound to `0.0.0.0`**, not `127.0.0.1`, so that a hosted flai can reach them.
+4. `profile: spire`, written out in the scaffold and changeable on the Klusters page.
+
+**For agent-S-0586:**
+
+- Write the port-forward task with the `0.0.0.0` binding, and the profile step, and add both to T-2565's `after`.
+- T-2559's ADR records all four answers, and corrects the plan's "no profile means an empty cluster".
+- Revise the 3h forecast for the added tasks.
+- T-2565 lists the two steps left outside the dashboard: turning on `settings`, and installing Docker, `kluster`, and `kubectl`.
+
+**One implication of answer 3:** a forward on `0.0.0.0` is reachable by anything that can reach the host's network, with no auth of its own. The docs for the Deployments page should say so.
+
+I am resolving this thread. The answer stays here and in D-0511.
+
+Source: design/digest/D-0511-s-0586-plan-six-code-and-docs-tasks-plus-an-adr-in-five-layers-3h-1250-usd-a.md
+
+### 2026-11-07T09:53:10Z orchestrator
+Resolved: alex answered all four questions at 09:51:27Z (D-0511): settings stays the shell step, no Install button, port-forwards on the Deployments page bound to 0.0.0.0, profile spire. agent-S-0586 writes the added tasks and revises the forecast.

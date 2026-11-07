@@ -3,11 +3,11 @@ id: T-2563
 type: task
 nature: improvement
 title: The Klusters page leads an operator through first-time setup and then manages the cluster, with no shell or file edit
-status: in-progress
+status: done
 parent: S-0586
 owner: alex
 created: 2026-11-07T08:31:36Z
-updated: 2026-11-07T09:21:29Z
+updated: 2026-11-07T09:45:31Z
 transitions:
   - to: ready
     at: 2026-11-07T09:21:27Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T09:21:29Z
     by: agent-S-0586
+  - to: done
+    at: 2026-11-07T09:45:31Z
+    by: agent-S-0586
 stream: S-0586
 tags: [kluster, flaiover]
-touches: [flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/lib/settings.ts]
+touches: [flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/lib/settings.ts, flaiover/e2e/klusters.e2e.ts]
 after: [T-2562]
 usage:
   source: log
-  seconds: 654
+  seconds: 1442
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 405
-      cache_read: 10981989
-      cache_write: 83551
-      cost: 3.9627
+      input: 184
+      output: 60476
+      cache_read: 21991459
+      cache_write: 370468
+      cost: 7.7472
 ---
 # T-2563 The Klusters page leads an operator through first-time setup and then manages the cluster, with no shell or file edit
 

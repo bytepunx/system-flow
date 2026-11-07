@@ -3,11 +3,11 @@ id: T-2557
 type: task
 nature: remediation
 title: The mcpserver tests that change a project under a held wait wait for its heartbeat instead of sleeping 150 ms, and hold up to 30 s
-status: in-progress
+status: done
 parent: S-0560
 owner: alex
 created: 2026-11-07T08:20:14Z
-updated: 2026-11-07T08:50:50Z
+updated: 2026-11-07T09:50:22Z
 transitions:
   - to: ready
     at: 2026-11-07T08:50:46Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:50:50Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T09:50:22Z
+    by: agent-S-0560
 stream: S-0560
 tags: [flai, tests]
 touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrator_threads_test.go]
 after: [T-2555]
+usage:
+  source: log
+  seconds: 3572
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 378
+      cache_read: 9487791
+      cache_write: 1688213
+      cost: 4.004
 ---
 # T-2557 The mcpserver tests that change a project under a held wait wait for its heartbeat instead of sleeping 150 ms, and hold up to 30 s
 

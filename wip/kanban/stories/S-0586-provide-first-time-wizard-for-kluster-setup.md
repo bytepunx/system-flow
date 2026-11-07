@@ -6,7 +6,7 @@ title: Provide first time wizard for kluster setup
 status: in-progress
 owner: alex
 created: 2026-11-07T08:24:44Z
-updated: 2026-11-07T09:32:23Z
+updated: 2026-11-07T09:54:58Z
 transitions:
   - to: ready
     at: 2026-11-07T08:24:52Z
@@ -14,9 +14,13 @@ transitions:
   - to: in-progress
     at: 2026-11-07T08:34:45Z
     by: agent-S-0586
+blocked:
+  - from: 2026-11-07T09:47:29Z
+    until: 2026-11-07T09:53:17Z
+    reason: awaiting the operator on TH-0869
 tags: [flai, flaiover, kluster]
 topics: [kluster, deployment, manifest, dashboard]
-touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts]
+touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/kluster.md, flai/internal/kluster/init.go, flai/internal/kluster/init_test.go, flai/internal/kluster/kluster.go, flai/internal/kluster/kluster_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/check/kluster_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/workloads/+server.ts, flaiover/src/routes/api/kluster/kluster.test.ts, flaiover/src/routes/ops/klusters/+page.svelte, flaiover/src/routes/ops/klusters/klusters.svelte.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/users/flaiover.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flaiover/src/routes/api/kluster/config/+server.ts, flaiover/src/routes/api/kluster/config/config.test.ts, flaiover/e2e/klusters.e2e.ts, flaiover/src/lib/settings.ts, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,26 +28,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3462
-  estimated: true
-  priced_by: estimate
+  seconds: 4367
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      hand_edits: 1
-      work: 68
+      test_runs: 1
+      hand_edits: 2
+      work: 92
   models:
     - model: claude-haiku-5-5
-      input: 10
-      output: 41
-      cache_read: 106965
-      cache_write: 36155
-      cost: 0.0103
+      input: 12
+      output: 3229
+      cache_read: 143120
+      cache_write: 52289
+      cost: 0.0096
     - model: claude-opus-5-5
-      input: 482
-      output: 2748
-      cache_read: 55923498
-      cache_write: 1097716
-      cost: 20.42
+      input: 592
+      output: 195046
+      cache_read: 70926107
+      cache_write: 1194821
+      cost: 24.9859
   strategic:
     - kind: planner
       seconds: 1715
@@ -62,15 +66,15 @@ usage:
           cache_write: 603311
           cost: 14.4796
     - kind: orchestrator
-      seconds: 136
+      seconds: 238
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 222
-          cache_read: 1029751
-          cache_write: 230878
-          cost: 0.3128
+          input: 57
+          output: 384
+          cache_read: 1722411
+          cache_write: 365732
+          cost: 0.5198
 cost_of_delay:
   inputs:
     revenue_per_week: 1250
@@ -80,11 +84,11 @@ cost_of_delay:
   by: planner-S-0586
   at: 2026-11-07T08:33:18Z
 forecast:
-  duration: 3h
-  delivery: 2026-11-07T13:00:00Z
-  basis: "The agent time of S-0577, S-0580, S-0581, and part of S-0579, which built the same layers, about 2h50m with the docs; flai forecast's 4m counts 3 criteria and no touches. Delivery allows about an hour's wait behind a full in-progress column and S-0560."
-  by: planner-S-0586
-  at: 2026-11-07T08:33:18Z
+  duration: 3h40m
+  delivery: 2026-11-07T12:00:00Z
+  basis: "The planner's 3h for six tasks, plus about 40 minutes for T-2569, the port-forward task the operator's answer 3 on TH-0861 added; T-2560 to T-2564 took about 70 minutes of agent time"
+  by: agent-S-0586
+  at: 2026-11-07T09:54:58Z
 ---
 # S-0586 Provide first time wizard for kluster setup
 
@@ -117,6 +121,7 @@ The Klusters page should allow the user to manage all features completely withou
 - T-2563 The Klusters page leads an operator through first-time setup and then manages the cluster, with no shell or file edit
 - T-2564 The Deployments page and the Features toggle say a block's state without naming a command, and a refused toggle shows its real state at once
 - T-2565 The docs say a project's kluster is set up from the Klusters page
+- T-2569 The Deployments page starts and stops each service's port-forward, which flai serve runs on the host bound to 0.0.0.0
 
 ## Notes
 

@@ -3,16 +3,37 @@ id: T-2558
 type: task
 nature: remediation
 title: "The tests I-0246 names pass together under -race -count=10 with GOMAXPROCS=2 beside a CPU load, and I-0246 is closed with what fixed each"
-status: backlog
+status: done
 parent: S-0560
 owner: alex
 created: 2026-11-07T08:20:34Z
-updated: 2026-11-07T08:20:34Z
-transitions: []
+updated: 2026-11-07T09:53:04Z
+transitions:
+  - to: ready
+    at: 2026-11-07T09:50:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T09:50:46Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T09:53:04Z
+    by: agent-S-0560
 stream: S-0560
 tags: [flai, tests]
 touches: [design/issues/I-0246-testaheldwaitfailsonatruncatedstory-and-testservestartsadefinedroleonaneventando.md, design/issues/summary.md]
 after: [T-2556, T-2557]
+usage:
+  source: log
+  seconds: 137
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 95
+      cache_read: 3211280
+      cache_write: 12688
+      cost: 1.155
 ---
 # T-2558 The tests I-0246 names pass together under -race -count=10 with GOMAXPROCS=2 beside a CPU load, and I-0246 is closed with what fixed each
 

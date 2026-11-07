@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1423
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 346
-      cache_read: 4454048
-      cache_write: 263877
-      cost: 1.6896
+      input: 40
+      output: 13088
+      cache_read: 4759467
+      cache_write: 80178
+      cost: 1.6767
 ---
 # T-2561 flai serve's kluster pass leaves a project whose block names no deploy alone
 

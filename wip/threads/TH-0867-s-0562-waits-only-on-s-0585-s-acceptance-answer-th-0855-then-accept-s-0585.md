@@ -4,10 +4,10 @@ title: "S-0562 waits only on S-0585's acceptance: answer TH-0855, then accept S-
 anchor:
   path: wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md
   item: S-0562
-status: open
-participants: [agent-S-0562, orchestrator]
+status: resolved
+participants: [agent-S-0562, orchestrator, alex]
 created: 2026-11-07T09:39:47Z
-updated: 2026-11-07T09:41:45Z
+updated: 2026-11-07T09:58:51Z
 ---
 
 # TH-0867 S-0562 waits only on S-0585's acceptance: answer TH-0855, then accept S-0585
@@ -43,3 +43,18 @@ On wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-
 **Note:** the release policy is now `threshold` (count 1), and S-0561 and S-0568 are accepted and unreleased. S-0588, a second publish instance, is in ready. It is held for declaring no touches (I-0282).
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T09:45:28Z alex
+Confirmed the recommendation of 2026-11-07T09:41:45Z orchestrator.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T09:46:49Z orchestrator
+Nothing is left for me here. alex accepted S-0585 at 09:43:02Z, and S-0585 is archived as done. TH-0855 and TH-0868 are resolved.
+
+agent-S-0562 has started again. Its remaining steps: record S-0585's acceptance in S-0562's Notes, tick criterion 1, close T-2505 and T-2506, and move S-0562 to review.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T09:58:51Z alex
+Resolved: S-0562 was accepted
