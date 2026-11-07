@@ -3,12 +3,18 @@ id: S-0598
 type: story
 nature: improvement
 title: A checked write runs only the rules an item write can affect, so creating or editing an item takes about 2 s, not 7 to 18 s
-status: backlog
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:02Z
-updated: 2026-11-07T23:48:54Z
-transitions: []
+updated: 2026-11-07T23:52:46Z
+transitions:
+  - to: ready
+    at: 2026-11-07T23:49:08Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T23:49:17Z
+    by: agent-S-0598
 tags: [cli]
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemedit/itemedit.go, flai/internal/check/check.go, flai/internal/check/itemwrite.go, flai/internal/check/itemwrite_test.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/rules_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect.md, design/adrs/README.md]
 agent:
@@ -16,6 +22,17 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  inputs:
+    penalty_per_week: 150
+    by: alex
+    at: 2026-11-07T23:52:46Z
+forecast:
+  duration: 45m
+  delivery: 2026-11-08T00:35:00Z
+  basis: "flai forecast's 26m (median 94 s per unit over 124 done improvement stories in the large band, times size 16), raised to 45m for a refusal test per kept rule on both writes and the scratch-copy timing, which size does not count; started 23:49Z."
+  by: planner-S-0598
+  at: 2026-11-07T23:50:00Z
 finalized:
   by: alex
   at: 2026-11-07T23:48:54Z
@@ -43,3 +60,26 @@ Cause 8 in [server-performance.md](../../../design/system/server-performance.md#
 
 - Proposed fix: a rule set for item writes in `check`, used by `itemnew.Create` and `itemedit.Apply`, in place of `check.Run`. The whole check stays in `flai check`, the close-out, and CI.
 - If the scope of what a checked write refuses changes, that refines ADR-0197 and needs an ADR.
+
+### Planning
+
+Touches, and where each came from:
+
+| Touch | Source |
+|-------|--------|
+| `flai/internal/itemnew/itemnew.go`, `flai/internal/itemedit/itemedit.go`, `flai/internal/check/check.go` | declared |
+| `flai/internal/check/itemwrite.go`, `flai/internal/check/itemwrite_test.go` | layout: the new rule set and its parity test (T-2620) |
+| `flai/internal/itemnew/itemnew_test.go` | co-change and layout: the creation's refusal tests (T-2622) |
+| `flai/internal/itemedit/rules_test.go` | layout: the edit's refusal tests (T-2625) |
+| `design/system/server-performance.md` | design: the goal links it; criterion 3 records there (T-2635) |
+| `design/system/flai-cli.md`, `docs/users/flai.md` | co-change (18% and 19%) and design: both say a write runs the whole check (T-2640) |
+| `design/system/strategic-agents.md` | design: it says a planner's `item_new` runs `flai check` (T-2640) |
+| `design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect.md`, `design/adrs/README.md` | design: the ADR that refines ADR-0197 and ADR-0213 (T-2640); the number is the next free one today, and T-2640 narrows it to the file `flai adr new` names |
+
+No folder touches. `flai touches suggest` also listed `flai/internal/check/check_test.go` (27%), `flai/cmd/edit.go`, `flai/cmd/items.go`, and the manifest files. None is predicted: the commands call `itemnew.Create` and `itemedit.Apply` and need no change, and no manifest key is planned. `flai/internal/serve/replan.go`, `flai/cmd/criteria.go`, and `flai/internal/mcpserver/` save through `Apply` or `Create` and get the change with no edit.
+
+No `after`: the story reads no other story's output. S-0601 (check's rules at once) and S-0599 (the replanner) touch `check.go` and the replan path too, and the trial merge judges that.
+
+Forecast: `flai forecast` gave 26m (median 94 s per unit of size over 124 done improvement stories in the large band, times size 16). It is raised to 45m: criterion 2 asks for a refusal test of each kept rule, for both a creation and an edit, and criterion 3 asks for timings in a scratch copy, before and after. Size counts neither. The delivery is 45m after the story started at 23:49Z.
+
+Cost of delay: `flai cod` refuses for now, since neither the story nor E-0033 has inputs. TH-0888 asks the operator for them and recommends `penalty_per_week: 150` for S-0598. The value is written once the operator answers.
