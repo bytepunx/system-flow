@@ -2,6 +2,8 @@ package harness
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -154,5 +156,35 @@ func TestOpenCodeRefusesWhatItCannotDoYet(t *testing.T) {
 		if s, err := (openCode{}).Start(c.r, Host{}); err == nil || !strings.Contains(err.Error(), c.says) {
 			t.Errorf("%s: %q, %v; want a refusal saying %q", c.what, s.Argv, err, c.says)
 		}
+	}
+}
+
+// S-0407: a story whose agent names roles starts on opencode only in a
+// project that keeps the flai-guard plugin, which guards its sub-agents; the
+// refusal names the plugin and flai upgrade. A story without roles needs none.
+func TestOpenCodeRunsRolesOnlyWhereTheGuardPluginIs(t *testing.T) {
+	root := t.TempDir()
+	agent := openCodeAgent("anthropic/claude-opus-5-5")
+	agent.Roles = map[string]manifest.Role{manifest.RoleExplore: {Model: "anthropic/claude-haiku-5-5"}}
+	r := req(agent)
+	r.Root = root
+	_, err := (openCode{}).Start(r, Host{})
+	if err == nil || !strings.Contains(err.Error(), OpenCodeGuardPlugin) || !strings.Contains(err.Error(), "flai upgrade") {
+		t.Fatalf("roles without the plugin: %v; want refused naming %s and flai upgrade", err, OpenCodeGuardPlugin)
+	}
+	r.Agent = openCodeAgent("anthropic/claude-opus-5-5")
+	if _, err := (openCode{}).Start(r, Host{}); err != nil {
+		t.Errorf("no roles, no plugin: %v; want started", err)
+	}
+	plugin := filepath.Join(root, filepath.FromSlash(OpenCodeGuardPlugin))
+	if err := os.MkdirAll(filepath.Dir(plugin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(plugin, []byte("export const FlaiGuard = async () => ({})\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r.Agent = agent
+	if _, err := (openCode{}).Start(r, Host{}); err != nil {
+		t.Errorf("roles with the plugin: %v; want started", err)
 	}
 }

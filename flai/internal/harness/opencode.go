@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -15,10 +16,15 @@ import (
 // § OpenCode reads it from OpenCode's source at v1.19.5 (S-0406).
 const OpenCode = "opencode"
 
-// openCode runs a story's agent on OpenCode, with no guard and no ask, so
-// that ADR-0131 holds it to the story's own agent and to protected writes
-// refused.
+// openCode runs a story's agent on OpenCode, guarded by the flai-guard
+// plugin the project keeps in .opencode/plugins, and with no ask yet, so that
+// ADR-0131 refuses its protected writes unless auto-approve is on or the host
+// denies the protected paths.
 type openCode struct{}
+
+// OpenCodeGuardPlugin is the plugin, from a project's root, that runs flai
+// guard --harness opencode on OpenCode's tool.execute.before (S-0407).
+const OpenCodeGuardPlugin = ".opencode/plugins/flai-guard.js"
 
 // DefaultHost is opencode with no arguments of flai's: what the agent may do
 // is OpenCode's permission configuration, and --auto, which approves every
@@ -28,10 +34,14 @@ func (openCode) DefaultHost() Host {
 	return Host{Program: "opencode", Args: []string{}}
 }
 
-// Capabilities are resume alone: opencode run --session goes on in a session,
-// and flai has no guard, no ask, no role models, no strategic definitions,
-// and no cost reader for it yet (ADR-0131).
-func (openCode) Capabilities() Capabilities { return Capabilities{Resume: true} }
+// Capabilities are resume and the guard: opencode run --session goes on in a
+// session, and the flai-guard plugin runs flai guard --harness opencode on
+// each call, telling a sub-agent's by its session's parentID, since the Task
+// tool runs a sub-agent in a child session of its caller's (S-0406's finding,
+// agent-adapters.md § Read from the source at v1.19.5). flai has no ask, no
+// role models, no strategic definitions, and no cost reader for it yet
+// (ADR-0131).
+func (openCode) Capabilities() Capabilities { return Capabilities{Resume: true, Guard: true} }
 
 // Reader reads nothing yet: usage on OpenCode comes with S-0410.
 func (openCode) Reader() usage.Reader { return unread{} }
@@ -59,8 +69,9 @@ var openCodeSession = regexp.MustCompile(`^ses_[0-9A-Za-z]+$`)
 // their deny rules in OPENCODE_PERMISSION, read over the project's own
 // opencode.json and opencode.jsonc at r.Root. It works a story alone: a
 // strategic role, a provider, a config key it does not take, a model
-// OpenCode cannot split, and a start in a container are refused, each
-// saying what to do.
+// OpenCode cannot split, a start in a container, and a story whose agent
+// names roles in a project at r.Root without OpenCodeGuardPlugin, whose
+// sub-agents nothing would guard, are refused, each saying what to do.
 func (openCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -82,6 +93,10 @@ func (openCode) Start(r Request, host Host) (Start, error) {
 		return Start{}, fmt.Errorf("opencode cannot call the agent's provider %s yet: OpenCode calls the provider its model names, with its own login; leave provider out of the story's agent and name the model as provider/model, or run the story on claude-code", provider)
 	case r.MCPURLEnv != "":
 		return Start{}, fmt.Errorf("opencode cannot run in a container yet: it reaches flai's MCP server on the host alone; run the story on harness opencode on the host, or set config inner to claude-code")
+	case r.Agent != nil && len(r.Agent.Roles) > 0 && r.Root != "":
+		if _, err := os.Stat(filepath.Join(r.Root, filepath.FromSlash(OpenCodeGuardPlugin))); err != nil {
+			return Start{}, fmt.Errorf("opencode cannot run the story's roles in %s: it has no %s, the plugin that runs flai guard on each call, so nothing would hold its sub-agents (ADR-0131); bring it in with flai upgrade, or leave roles out of the story's agent", r.Root, OpenCodeGuardPlugin)
+		}
 	}
 	env, err := roleEnv(r)
 	if err != nil {

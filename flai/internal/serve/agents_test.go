@@ -2897,6 +2897,8 @@ func TestStartAllowedWeighsWhatAHarnessCannotDo(t *testing.T) {
 	guardRefusal := "harness command cannot run flai guard, so the story's roles (explore, verify) cannot run; flai serve agent harness command --guard none runs them unguarded (ADR-0131)"
 	askRefusal := "harness command cannot ask before a protected write, so flai serve does not start a story's agent on it; turn on the project's auto-approve host action (flai serve enable auto-approve), or say your arguments for it deny the protected paths with flai serve agent harness command --deny-protected (ADR-0131)"
 	unguarded := "its roles (explore, verify) run without flai guard (guard: none on harness command, ADR-0131)"
+	openCode := harness.Adapters[harness.OpenCode].Capabilities()
+	openCodeAskRefusal := strings.ReplaceAll(askRefusal, "harness command", "harness opencode")
 	for _, c := range []struct {
 		name      string
 		harness   string
@@ -2915,6 +2917,10 @@ func TestStartAllowedWeighsWhatAHarnessCannotDo(t *testing.T) {
 		{"another harness's lifts lift nothing", harness.Command, none, nil, AgentConfig{Lifts: map[string]HarnessLifts{harness.ClaudeCode: {DenyProtected: true}}}, "", askRefusal},
 		{"neither", harness.Command, none, roles, AgentConfig{}, "", guardRefusal + "; and " + askRefusal},
 		{"claude-code with roles", harness.ClaudeCode, claude, roles, AgentConfig{}, "", ""},
+		// S-0407: the flai-guard plugin guards opencode, so its roles run;
+		// it still cannot ask, so only that refusal stands.
+		{"opencode with roles, auto-approve on", harness.OpenCode, openCode, roles, AgentConfig{AutoApprove: true}, "", ""},
+		{"opencode with roles, no ask", harness.OpenCode, openCode, roles, AgentConfig{}, "", openCodeAskRefusal},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := startAllowed(c.harness, c.caps, c.agent, c.cfg)
@@ -4558,12 +4564,14 @@ func TestAStorysAgentOnOpenCodeStartsAndResumesInItsSession(t *testing.T) {
 	}
 }
 
-// S-0406, ADR-0131, ADR-0260: opencode can neither run flai guard nor ask
-// before a protected write, so flai serve refuses a story whose agent has
-// roles on it unless the host sets guard none, and any story unless
-// auto-approve is on or the host sets deny_protected for it, naming what
-// lifts each, with no process started. Under deny_protected it starts, and
-// opencode is given the deny rules for the protected paths.
+// S-0406, S-0407, ADR-0131, ADR-0260: opencode runs flai guard through the
+// flai-guard plugin but cannot ask before a protected write, so flai serve
+// starts a story whose agent has roles on it where the project keeps the
+// plugin, refuses it, naming the plugin and flai upgrade, where it does not,
+// and refuses any story unless auto-approve is on or the host sets
+// deny_protected for it, naming what lifts it, with no process started.
+// Under deny_protected it starts, and opencode is given the deny rules for
+// the protected paths.
 func TestAStorysAgentOnOpenCodeIsRefusedWhatOpenCodeCannotDo(t *testing.T) {
 	ctx := context.Background()
 	refused := func(t *testing.T, lab *agentLab, id string, want ...string) {
@@ -4581,12 +4589,33 @@ func TestAStorysAgentOnOpenCodeIsRefusedWhatOpenCodeCannotDo(t *testing.T) {
 			t.Errorf("opencode was started: %+v", calls)
 		}
 	}
-	t.Run("roles without the guard are refused", func(t *testing.T) {
+	roles := &manifest.Agent{Harness: harness.OpenCode, Model: "anthropic/claude-opus-5-5", Roles: map[string]manifest.Role{manifest.RoleVerify: {Model: "anthropic/claude-sonnet-5-5"}}}
+	t.Run("roles without the guard plugin are refused", func(t *testing.T) {
 		lab := newAgentLab(t)
 		lab.openCodeStub()
-		id := lab.readyWith("Roles", &manifest.Agent{Harness: harness.OpenCode, Model: "anthropic/claude-opus-5-5", Roles: map[string]manifest.Role{manifest.RoleVerify: {Model: "sonnet"}}})
+		id := lab.readyWith("Roles", roles)
 		lab.l.look(ctx, false)
-		refused(t, lab, id, "harness opencode cannot run flai guard", "roles (verify)", "flai serve agent harness opencode --guard none")
+		refused(t, lab, id, "opencode cannot run the story's roles", harness.OpenCodeGuardPlugin, "flai upgrade")
+		if r := lab.run(id); strings.Contains(r.Why, "cannot run flai guard") {
+			t.Errorf("the refusal %q says opencode cannot run flai guard, which its plugin runs", r.Why)
+		}
+	})
+	t.Run("roles run where the guard plugin is", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.openCodeStub()
+		plugin := filepath.Join(lab.root, filepath.FromSlash(harness.OpenCodeGuardPlugin))
+		if err := os.MkdirAll(filepath.Dir(plugin), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(plugin, []byte("export const FlaiGuard = async () => ({})\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		id := lab.readyWith("Guarded roles", roles)
+		lab.l.look(ctx, false)
+		waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+		if calls := lab.openCodeCalls(id); len(calls) != 1 {
+			t.Fatalf("%d runs of opencode; want 1", len(calls))
+		}
 	})
 	t.Run("without auto-approve or deny_protected it is refused", func(t *testing.T) {
 		lab := newAgentLab(t)

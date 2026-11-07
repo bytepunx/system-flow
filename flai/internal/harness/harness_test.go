@@ -183,7 +183,7 @@ func TestEachAdapterStatesItsCapabilities(t *testing.T) {
 		ClaudeCode: {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
 		Command:    {},
 		Container:  {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
-		OpenCode:   {Resume: true},
+		OpenCode:   {Resume: true, Guard: true},
 	}
 	for _, name := range Names() {
 		w, ok := want[name]
