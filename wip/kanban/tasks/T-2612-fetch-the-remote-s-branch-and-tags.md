@@ -22,7 +22,7 @@ stream: S-0597
 tags: []
 usage:
   source: log
-  seconds: 28
+  seconds: 29
   estimated: true
   priced_by: estimate
   models:

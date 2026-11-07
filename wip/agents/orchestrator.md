@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2022.5304
-accrued_seconds: 1520308
-tasks_completed: 2225
-last_run: 2026-11-07T22:55:15Z
+accrued_cost: 2022.7562
+accrued_seconds: 1520404
+tasks_completed: 2227
+last_run: 2026-11-07T23:06:58Z
 ---
 
 # Orchestrator activity
@@ -15605,6 +15605,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 33
 - Cost: 0.3376 USD, estimated
+
+### 2026-11-07T23:06:40Z
+
+- Summary: Accepted S-0595 (Build in-depth Deploy UI) at f39e371e083e under accept_reviews: close-out passed at the branch head, the verifier matched all 4 criteria to changed files, and the dry run named no blocker. Value 1250 USD/week.
+- Items: S-0595
+- Seconds: 78
+- Cost: 0.1991 USD, estimated
+
+### 2026-11-07T23:06:58Z
+
+- Summary: Release evaluated after accepting S-0595: threshold met (2 stories, 1290 USD/week >= 1000; count 2 >= 1). Did not run flai formula run publish: publish instance S-0597 is already in progress (T-2614 publish step still ahead), and its flai release --pending bundles S-0592 and S-0595.
+- Items: S-0595, S-0597, S-0592
+- Seconds: 18
+- Cost: 0.0267 USD, estimated
 
 ## Refusals
 

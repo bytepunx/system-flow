@@ -3,11 +3,11 @@ id: T-2613
 type: task
 nature: improvement
 title: Evaluate the release policy, stopping unless it is met
-status: in-progress
+status: done
 parent: S-0597
 owner: alex
 created: 2026-11-07T22:31:23Z
-updated: 2026-11-07T23:06:20Z
+updated: 2026-11-07T23:06:40Z
 transitions:
   - to: ready
     at: 2026-11-07T23:06:06Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-07T23:06:07Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T23:06:40Z
+    by: agent-S-0597
 stream: S-0597
 tags: []
 after: [T-2612]
+usage:
+  source: log
+  seconds: 22
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 51
+      cache_read: 463100
+      cache_write: 2224
+      cost: 0.1671
 ---
 # T-2613 Evaluate the release policy, stopping unless it is met
 
