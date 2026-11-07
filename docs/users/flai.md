@@ -1797,6 +1797,42 @@ flai components serve --story S-0442 --project flaiover
 
 The dev server listens on 127.0.0.1 only, so only a browser on this machine reaches it. It runs the sub-project's code and dependencies as you, as its own dev server does. The dashboard's Components page has `flai serve` run the same dev server, once the operator enables the `components` host action ([The components host action](../operators/index.md#the-components-host-action-s-0438)).
 
+## Run a project's kluster
+
+A project that runs on Kubernetes can name a local cluster, made by [bytepunx/kluster](../../design/tech/kluster.md), in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md#the-kluster-block), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)). `flai kluster` brings that cluster up, takes it down, and reports it:
+
+```bash
+flai kluster up                # kluster up with the block's config; takes minutes
+flai kluster status            # name, profile, provider, context, whether it runs, its age
+flai kluster status --json
+flai kluster down              # asks first; --yes takes it down without asking
+```
+
+Each runs `kluster` in the project's main checkout, with the config the block names, so a story's worktree acts on main's cluster.
+
+- `up` shows kluster's output as it comes. Once the cluster is up, it writes the cluster's kubeconfig to `.flai-cache/kluster/kubeconfig` and prints it with the kube context, `k3d-<name>`. flai never merges it into `~/.kube/config`; point `KUBECONFIG` at it to use `kubectl`.
+- `down` deletes the cluster, every namespace in it, and the shared services' data. kluster's own prompt never appears: flai asks first on a terminal, and `--yes` answers. Without a terminal, such as in a script, it refuses unless you pass `--yes`.
+- `status` reads `kluster status` and exits 0 whether the cluster runs, is stopped, or was never created:
+
+```text
+authstar-integration: running
+  profile   authstar
+  provider  k3d
+  context   k3d-authstar-integration
+  age       2h50m39s
+```
+
+`--json` prints one object with `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, and `age_seconds`.
+
+flai refuses, exit 1, with a sentence that says what to do:
+
+- a project with no `kluster:` block, naming the block to add;
+- a host with no `kluster` on `PATH`, naming kluster's `install.sh` and `go install github.com/bytepunx/kluster/kluster@latest`.
+
+`flai check` reports a block it cannot use as `manifest.kluster`, naming the key and the reason: an unknown key, a config file that does not exist or names no cluster or a provider other than `k3d`, a default namespace that is not a DNS label, a missing `deploy`, or a `timeout` that is not a duration.
+
+These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up` and `down`, which change shared infrastructure on your machine; any agent may run `status`. `flai serve enable kluster` turns the host action on, and is refused for a project with no block ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
+
 ## Check the repository
 
 ```bash

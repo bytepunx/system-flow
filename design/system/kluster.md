@@ -1,6 +1,6 @@
 ---
 title: Running a project's kluster
-updated: 2026-11-06
+updated: 2026-11-07
 status: active
 topics: [kluster, deployment, manifest]
 ---
@@ -150,7 +150,26 @@ E-0032 gives the dashboard's rail an Ops group with two pages, each behind the `
 
 ## Commands (S-0577, S-0578)
 
-To be written by S-0577 and S-0578. This section will hold the `flai kluster` commands as built: `up`, `down`, and `status` from S-0577, with what `flai check` reports of the `kluster:` block; and `deploy`, `teardown`, and `promote` from S-0578, with the image load, their flags, their JSON, and their exit codes.
+S-0577 built `flai kluster up`, `down`, and `status`, the check of the `kluster:` block, the `kluster` host action, and the guard's rule. S-0578 adds `deploy`, `teardown`, and `promote`, with the image load.
+
+The commands run `kluster` in the project's main checkout, with the block's config, whatever the host action says (`flai/internal/kluster`, `flai/cmd/kluster.go`). Each passes `--config <config> --provider <provider>`, the provider as the config names it.
+
+| Command | What it runs | What it prints | Exit |
+|---------|--------------|----------------|------|
+| `flai kluster up` | `kluster up`, its output streamed; then `kluster kubeconfig --name <name> --output .flai-cache/kluster/kubeconfig` | kluster's output, then the cluster's name, the kubeconfig's path, and the context `k3d-<name>` | 1 when either fails, naming the step; a failed `up` writes no kubeconfig |
+| `flai kluster down [--yes]` | `kluster down --name <name> --yes`, so kluster never prompts | kluster's output, then `<name> is down` | 1 when kluster fails, when the operator answers no, or without a terminal and without `--yes` |
+| `flai kluster status [--json]` | `kluster status`, read by its `NAME`, `RUNNING`, and `AGE` headers, the row of the config's `name` | The name and running, stopped, or not created, then the profile, provider, context, and age; `--json` prints one object with `name`, `profile`, `provider`, `context`, `exists`, `running`, `age`, and `age_seconds` | 0 whether the cluster runs, is stopped, or is absent; 1 when kluster fails or prints a table without `NAME` and `RUNNING` |
+
+- `up` and `down` stop on Ctrl-C or SIGTERM. Neither has a timeout of its own; `kluster.timeout` is for `flai serve`'s jobs.
+- `down` asks on a terminal unless `--yes`, and refuses a non-terminal without it, since it deletes the cluster and every namespace in it.
+- A column a later kluster adds to its table is passed over. Once kluster has a JSON status, flai reads that instead ([ADR-0254 § Proposals for kluster's repository](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md#proposals-for-klusters-repository)).
+- A project with no block is refused with the block to add, and a host with no `kluster` on `PATH` with kluster's `install.sh` and `go install github.com/bytepunx/kluster/kluster@latest`. The tests fake `kluster` on `PATH`; none needs a cluster or Docker.
+
+What else S-0577 built:
+
+- **The check.** `flai check` reports each fault of the block as the error `manifest.kluster` on its line, one sentence each beginning with the key: an unknown key, a value of the wrong kind, a `config` missing, absent, unreadable, naming no cluster, or naming a provider other than `k3d`, a default namespace that is not a DNS label or has a story namespace's form, a missing `deploy`, a command with no program, and a `timeout` that is not a duration above zero. `manifest.Load` never refuses the block ([project-manifest.md](project-manifest.md)).
+- **The host action.** `kluster` is in `hostapi.Actions`, seen by the dashboard, so the Features page lists it and turns it on and off with no change to flaiover. `flai serve enable kluster`, which that toggle runs, is refused for a project with no block; `disable` and `--all-projects` are not. Until S-0579, nothing runs because it is on.
+- **The guard.** `flai guard` refuses every session `flai serve` started and every sub-agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, named in one list, with the reason and what to do instead; `status` stays open ([flai-cli.md](flai-cli.md#commands)).
 
 ## flai serve (S-0579)
 

@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-02
+updated: 2026-11-07
 status: active
 ---
 
@@ -466,6 +466,23 @@ The dev server listens on 127.0.0.1, on a port flai picks, and nowhere else. The
 **Understand what enabling it means.** Whoever holds the dashboard token can start and stop a Svelte sub-project's dev server on your machine, as you. That runs the sub-project's code and its dependencies, its Vite config and plugins included, as its own dev server does, from the main checkout or from a story's branch, which an agent may have changed. In the main checkout nothing is installed: a sub-project without `vite` in its `node_modules` is refused with the fix, `npm install` or `pnpm install` in its folder. In a story's worktree flai installs exactly what the branch's lock file pins, which runs the packages' install scripts as you. Reading whether one runs and listing the components needs no action.
 
 To run the same dev server by hand, without the action or `flai serve`, run `flai components serve` in a shell in the project. It stays in the foreground until Ctrl-C ([Render a component live](../users/flai.md#render-a-component-live)).
+
+### The kluster host action (S-0577)
+
+A project that runs on Kubernetes can name a local cluster, made by bytepunx/kluster with k3d and Docker, in the `kluster:` block of its `system-flow.yaml` ([kluster.md](../../design/system/kluster.md), [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)). The `kluster` host action is your consent to `flai serve` running that cluster's jobs on your machine and to the dashboard bringing it up or down and deploying into it. It is off until you enable it:
+
+```bash
+flai serve enable kluster     # for the project in the working directory
+flai serve actions            # what each action allows, and where it is on
+flai serve disable kluster    # tears nothing down
+```
+
+- `flai serve enable kluster` is refused for a project whose manifest has no `kluster:` block, naming the block to add. `--all-projects` and `disable` are not refused.
+- The dashboard's Features page lists it and turns it on and off, through `flai serve enable` while the `settings` host action is on.
+- Today the action gates nothing yet: S-0579 adds the jobs `flai serve` runs while it is on (a deploy for each story entering review, its teardown, and the promotion of main on acceptance), and S-0580 and S-0581 the dashboard's Ops pages.
+- `flai kluster up`, `down`, and `status` work from your shell whatever the action says ([Run a project's kluster](../users/flai.md#run-a-projects-kluster)). `flai guard` refuses every agent `up` and `down`.
+
+**Understand what enabling it means.** Whoever can change the project's `build`, `deploy`, and `teardown` commands, on main or on a story's branch, then runs them on your machine, as you, against a cluster that holds the project's shared services and their data.
 
 ### The host host action (S-0106)
 

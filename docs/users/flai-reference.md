@@ -43,6 +43,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
+| [kluster](#flai-kluster) | Bring the project's kluster up, take it down, and report it |
 | [license](#flai-license) | Print the license flai is distributed under |
 | [manifest](#flai-manifest) | Change the strategic agents' settings in system-flow.yaml |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
@@ -126,6 +127,7 @@ Subcommands:
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
 - [import](#flai-import): Bring an existing repository under the system-flow standard
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
+- [kluster](#flai-kluster): Bring the project's kluster up, take it down, and report it
 - [license](#flai-license): Print the license flai is distributed under
 - [manifest](#flai-manifest): Change the strategic agents' settings in system-flow.yaml
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
@@ -2593,6 +2595,81 @@ Regenerate summary.md and print the open issues table.
 
 ```text
 flai issue summary
+```
+
+### flai kluster
+
+Bring the project's kluster up, take it down, and report it.
+
+A project names its local Kubernetes cluster in the kluster: block of its system-flow.yaml: the kluster config file, made for bytepunx/kluster with the k3d provider, and the commands that deploy into it (design/system/kluster.md, ADR-0254). flai runs the kluster command in the project's main checkout, with that config, so a story's worktree acts on main's cluster.
+
+flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it. They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up and down, which change shared infrastructure on your machine; status reads, and any agent may run it.
+
+A project with no kluster: block, or a host without kluster on PATH, is refused with what to add or how to install kluster.
+
+Examples:
+
+```bash
+flai kluster up
+flai kluster status
+flai kluster status --json
+flai kluster down --yes
+```
+
+Subcommands:
+
+- [down](#flai-kluster-down): Take the project's cluster down with kluster down
+- [status](#flai-kluster-status): Report the project's cluster: its name, whether it runs, and its age
+- [up](#flai-kluster-up): Bring the project's cluster up with kluster up and keep its kubeconfig
+
+#### flai kluster down
+
+Take the project's cluster down with kluster down.
+
+```text
+flai kluster down
+```
+
+Runs kluster down for the project's cluster in its main checkout, without kluster's own prompt: flai asks first on a terminal, and --yes answers it. Taking the cluster down deletes every namespace in it, main's and each story's, and the shared services' data.
+
+Examples:
+
+```bash
+flai kluster down
+flai kluster down --yes
+```
+
+#### flai kluster status
+
+Report the project's cluster: its name, whether it runs, and its age.
+
+```text
+flai kluster status
+```
+
+Reads kluster status and reports the project's cluster: its name, profile, provider, and kube context, from the kluster config, and whether kluster lists it, whether it runs, and its age. A cluster never brought up, or taken down, is reported as not created; that is not a failure. --json prints one object with name, profile, provider, context, exists, running, age, and age\_seconds. It only reads, so any agent may run it.
+
+Examples:
+
+```bash
+flai kluster status
+flai kluster status --json
+```
+
+#### flai kluster up
+
+Bring the project's cluster up with kluster up and keep its kubeconfig.
+
+```text
+flai kluster up
+```
+
+Runs kluster --config &lt;config&gt; up in the project's main checkout, with kluster's output shown as it comes, then writes the cluster's kubeconfig to .flai-cache/kluster/kubeconfig with kluster kubeconfig. A bring-up installs the profile's shared services and takes minutes (11m31s for authstar).
+
+Examples:
+
+```bash
+flai kluster up
 ```
 
 ### flai license
