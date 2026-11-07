@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -143,6 +144,7 @@ type offers struct {
 	found   []Candidate
 	scanned time.Time
 	rescan  atomic.Bool
+	drains  sync.WaitGroup // candidates no longer offered, answering what is in flight
 
 	// the projects below Options.Folder (S-0102) and the import roots
 	// (S-0120), found again every ScanEvery, and where each was placed
@@ -262,8 +264,15 @@ func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 	}
 	for k, r := range f.running {
 		if e, ok := want[k]; !ok || e != r.entry {
-			r.halt()
 			delete(f.running, k)
+			// An import registers its repository before its answer is written,
+			// so the look that stops offering it answers what is in flight
+			// first; halting it there lost the answer (I-0246).
+			f.drains.Add(1)
+			go func() {
+				defer f.drains.Done()
+				r.drain(ctx, f.o.DrainGrace, "it is no longer offered for import")
+			}()
 		}
 	}
 	for k, e := range want {
@@ -279,7 +288,7 @@ func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 		c.Kind = channel.KindCandidate
 		guard(f.o, f.images, e, c)
 		c.Methods = hostapi.ImportMethods(f.o.ImportRun, f.o.Now, f.o.Host, f.imported(e))
-		r := &running{entry: e, client: c, stop: stop, done: make(chan struct{})}
+		r := &running{entry: e, client: c, stop: stop, stopLooks: func() {}, done: make(chan struct{})}
 		f.running[k] = r
 		go func() {
 			c.Run(cctx)
@@ -311,4 +320,5 @@ func (f *offers) halt() {
 	for _, r := range f.running {
 		r.halt()
 	}
+	f.drains.Wait() // each drain's bound is within ctx, which has ended
 }

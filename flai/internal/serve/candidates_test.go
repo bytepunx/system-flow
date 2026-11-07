@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,6 +93,13 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 		}
 		return hostapi.Ran{Stdout: []byte(`{"key":"widget","commit":{"committed":true,"commit":"abc1234"}}`)}, nil
 	}
+	// The answer to import.run is held, as a loaded host can hold it, until
+	// serve has looked again and no longer offers the repository: the look
+	// that once halted the candidate's connection under the answer (I-0246).
+	held := slog.New(holdAnswer{method: "import.run", until: func() bool {
+		st, _ := dir.ReadStatus(time.Now())
+		return st.PID != 0 && len(st.Offered) == 0
+	}})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
@@ -99,7 +107,8 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 			ImportRoots: func() []string { return []string{folder} }, ScanEvery: time.Hour, ImportRun: importRun,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys,
+					Logger: held}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -144,6 +153,33 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 		st, _ := dir.ReadStatus(time.Now())
 		return len(st.Offered) == 0
 	})
+}
+
+// holdAnswer is a log handler that holds a request's answer, which the
+// channel logs just before it writes it, until until reports true or ten
+// seconds pass.
+type holdAnswer struct {
+	method string
+	until  func() bool
+}
+
+func (h holdAnswer) Enabled(context.Context, slog.Level) bool { return true }
+func (h holdAnswer) WithAttrs([]slog.Attr) slog.Handler       { return h }
+func (h holdAnswer) WithGroup(string) slog.Handler            { return h }
+
+func (h holdAnswer) Handle(_ context.Context, r slog.Record) error {
+	if r.Message != "request answered" {
+		return nil
+	}
+	ours := false
+	r.Attrs(func(a slog.Attr) bool {
+		ours = ours || (a.Key == "method" && a.Value.String() == h.method)
+		return true
+	})
+	for deadline := time.Now().Add(10 * time.Second); ours && !h.until() && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	return nil
 }
 
 // S-0101: with no project served, a dashboard flai dashboard recorded
