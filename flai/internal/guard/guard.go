@@ -371,7 +371,7 @@ const Ready = "ready"
 
 // MCPOrchestrates are flai's MCP tools the orchestrator may call besides
 // MCPReads, whatever its permissions.
-var MCPOrchestrates = []string{"activity_log", "inbox", "thread_open", "wait_for_events"}
+var MCPOrchestrates = []string{"activity_log", "inbox", "thread_open", "verify", "wait_for_events"}
 
 // cliOrchestrates are the flai commands the orchestrator may run besides
 // cliReads, whatever its permissions, each with the subcommands it may run:

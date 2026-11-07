@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/roles"
 )
 
 // call is a tool call as Claude Code hands it to the guard, decoded as flai
@@ -19,6 +20,28 @@ func call(t *testing.T, tool, input string) Event {
 		t.Fatalf("%s %s: %v", tool, input, err)
 	}
 	return e
+}
+
+// I-0240, S-0556: the MCP tool verify asks flai serve for a close-out job, so
+// the orchestrator holds it by name, in its role file and in MCPOrchestrates,
+// and its own call passes with a role file held and with none, whatever its
+// permissions.
+func TestTheOrchestratorHoldsVerifyByName(t *testing.T) {
+	if !slices.Contains(MCPOrchestrates, "verify") {
+		t.Errorf("MCPOrchestrates leaves out verify: %v", MCPOrchestrates)
+	}
+	file := builtInFile(t, "orchestrator")
+	if !slices.ContainsFunc(file.Tools, func(e roles.Call) bool { return e.Call == "verify" && e.When == "" }) {
+		t.Errorf("the baseline role file's tools leave out verify: %+v", file.Tools)
+	}
+	for name, gd := range map[string]Guard{
+		"role file held": orchestrating(manifest.Permissions{}, file),
+		"no role file":   orchestrator(manifest.Permissions{}),
+	} {
+		if why := gd.Check(call(t, "verify", `{"story":"S-0001"}`)); why != "" {
+			t.Errorf("%s: verify refused: %s", name, why)
+		}
+	}
 }
 
 // described is a call as a test failure names it.

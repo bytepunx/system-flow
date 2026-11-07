@@ -1,6 +1,6 @@
 ---
 title: Orchestrator
-updated: 2026-11-02
+updated: 2026-11-07
 status: active
 name: orchestrator
 role: orchestrate
@@ -28,6 +28,7 @@ tools:
   - activity_log
   - inbox
   - thread_open
+  - verify
   - wait_for_events
   - {call: thread_reply, when: own-thread}
   - {call: thread_resolve, when: own-thread}
