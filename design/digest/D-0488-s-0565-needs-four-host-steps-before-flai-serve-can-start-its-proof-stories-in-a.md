@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0826, TH-0836]
+cited: [TH-0826, TH-0828, TH-0836]
 ---
 
 # D-0488 S-0565 needs four host steps before flai serve can start its proof stories in a container: Recommended: do steps 1 to 3 yourself on the host, in this order, then reply "done" here

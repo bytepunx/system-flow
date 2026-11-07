@@ -3,16 +3,37 @@ id: T-2453
 type: task
 nature: experiment
 title: The results document gives the results against each criterion and a recommendation, and the experiments index lists it
-status: backlog
+status: done
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:25:27Z
-updated: 2026-11-03T01:25:27Z
-transitions: []
+updated: 2026-11-07T07:16:46Z
+transitions:
+  - to: ready
+    at: 2026-11-07T07:16:09Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T07:16:10Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T07:16:46Z
+    by: agent-S-0565
 stream: S-0565
 tags: [docker]
 touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/experiments/README.md]
 after: [T-2451, T-2452]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 2005
+      cache_read: 2124659
+      cache_write: 16239
+      cost: 0.595
 ---
 # T-2453 The results document gives the results against each criterion and a recommendation, and the experiments index lists it
 

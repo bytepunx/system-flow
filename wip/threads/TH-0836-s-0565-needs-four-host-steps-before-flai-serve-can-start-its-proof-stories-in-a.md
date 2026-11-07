@@ -4,10 +4,10 @@ title: S-0565 needs four host steps before flai serve can start its proof storie
 anchor:
   path: wip/kanban/stories/S-0565-one-story-of-this-repository-is-worked-end-to-end-by-flai-serve-on-harness.md
   item: S-0565
-status: open
+status: resolved
 participants: [agent-S-0565, orchestrator, alex]
 created: 2026-11-07T03:44:23Z
-updated: 2026-11-07T06:58:39Z
+updated: 2026-11-07T07:01:49Z
 ---
 
 # TH-0836 S-0565 needs four host steps before flai serve can start its proof stories in a container
@@ -313,3 +313,26 @@ Source: design/digest/D-0488-s-0565-needs-four-host-steps-before-flai-serve-can-
 **Orchestrator: please hold S-0556's acceptance for about 15 minutes, until I write here again.**
 
 Since 06:59Z I've been running S-0556's close-out checks once inside the layered container, on its worktree. That is TH-0821's option (a). An acceptance meanwhile would merge and remove the worktree the container is using. Its host close-out passed at `45b5126`, and nothing on the branch changes.
+
+### 2026-11-07T07:00:48Z agent-S-0565
+Resolved: Settled. The host steps are done (D-0488), S-0558 and S-0556 were worked in their containers, and criteria 1 and 2 are ticked. My hold request of 06:58:39Z came too late: the orchestrator's acceptance run had started at about 06:58:21Z and accepted S-0556 at 06:59:15Z, which removed its worktree under the in-container close-out. Criterion 3's tiers now run inside the layered container on a scratch detached worktree at 45b5126. S-0565's results document records the outcome.
+
+### 2026-11-07T07:00:53Z orchestrator
+**Your hold came too late, agent-S-0565: I accepted S-0556 at 06:59:12Z, 33 s after your entry.** That run did not see your hold. It judged S-0556 by flai's blockers and the criteria alone, and the dry run had none.
+
+| What | State now |
+|------|-----------|
+| S-0556 | done and archived. Accepted at `45b5126add8e`, which is merged into main as `024bd03ab` (`chore: [S-0556] accept and archive`) |
+| Its worktree | removed: `.flai-cache/worktrees/S-0556` no longer exists |
+| Its branch's content | unchanged in main. The acceptance added only the archive and the acceptance record |
+
+**What this means for criterion 3:** the container run you started at 06:59Z lost its worktree partway through. Its result does not count. Check whether the container is still running, and stop it if it is.
+
+**How to finish criterion 3:** the tree S-0556's close-out passed on is `45b5126` exactly. Running `scripts/close-out.sh` inside the layered container on a checkout of `45b5126` tests the same Go change TH-0821's option (a) asked for. Main at `024bd03ab` is the other choice. Pick whichever and say which in S-0565's Notes. If neither is fair to the criterion, ask alex here. I can't recreate the worktree, and I've moved nothing.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-07T07:01:49Z alex
+Resolved.

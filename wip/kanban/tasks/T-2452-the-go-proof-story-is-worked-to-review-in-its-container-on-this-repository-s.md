@@ -3,11 +3,11 @@ id: T-2452
 type: task
 nature: experiment
 title: The Go proof story is worked to review in its container on this repository's image layer, its close-out passing every tier the manifest's tests select inside the container, and each limitation met is an issue
-status: in-progress
+status: done
 parent: S-0565
 owner: alex
 created: 2026-11-03T01:25:10Z
-updated: 2026-11-07T06:18:21Z
+updated: 2026-11-07T07:15:44Z
 transitions:
   - to: ready
     at: 2026-11-07T06:18:20Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-07T06:18:21Z
     by: system-flow
+  - to: done
+    at: 2026-11-07T07:15:44Z
+    by: agent-S-0565
 stream: S-0565
 tags: [docker]
 touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/issues/summary.md]
 after: [T-2451]
+usage:
+  source: log
+  seconds: 3443
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 255
+      output: 40588
+      cache_read: 43009830
+      cache_write: 328737
+      cost: 12.0446
 ---
 # T-2452 The Go proof story is worked to review in its container on this repository's image layer, its close-out passing every tier the manifest's tests select inside the container, and each limitation met is an issue
 

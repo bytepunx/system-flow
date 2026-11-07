@@ -3,10 +3,10 @@ id: E-0029
 type: epic
 nature: feature
 title: flai runs agents in Docker containers
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-26T04:31:29Z
-updated: 2026-11-07T04:46:50Z
+updated: 2026-11-07T07:39:35Z
 transitions:
   - to: ready
     at: 2026-10-26T04:31:36Z
@@ -14,10 +14,13 @@ transitions:
   - to: in-progress
     at: 2026-10-28T12:04:42Z
     by: agent-S-0505
+  - to: review
+    at: 2026-11-07T07:39:35Z
+    by: agent-S-0583
 tags: []
 usage:
   source: sum
-  seconds: 23159
+  seconds: 28494
   priced_by: harness
   turns:
     - day: 2026-10-28
@@ -33,19 +36,19 @@ usage:
       ceremony: 4
       work: 43
     - day: 2026-11-07
-      ceremony: 9
-      hand_edits: 8
-      work: 247
+      ceremony: 15
+      hand_edits: 13
+      work: 448
   models:
     - model: claude-opus-5-5
-      input: 3844
-      output: 1143842
-      cache_read: 342906566
-      cache_write: 7669189
-      cost: 144.3248
+      input: 4340
+      output: 1242433
+      cache_read: 434157049
+      cache_write: 8214294
+      cost: 168.7725
   strategic:
     - kind: planner
-      seconds: 1247
+      seconds: 1622
       estimated: true
       models:
         - model: claude-fable-5-1
@@ -55,27 +58,27 @@ usage:
           cache_write: 204659
           cost: 8.1773
         - model: claude-opus-5-5
-          input: 372
-          output: 73433
-          cache_read: 34748930
-          cache_write: 621376
-          cost: 12.8331
+          input: 416
+          output: 105389
+          cache_read: 38493202
+          cache_write: 848530
+          cost: 16.0385
     - kind: orchestrator
-      seconds: 31561
+      seconds: 31771
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1209
-          output: 13486
-          cache_read: 157972394
-          cache_write: 2616371
-          cost: 35.6478
+          input: 1272
+          output: 13896
+          cache_read: 160350639
+          cache_write: 2953630
+          cost: 36.3166
         - model: claude-sonnet-5-5
-          input: 76
-          output: 471
-          cache_read: 1023957
-          cache_write: 410547
-          cost: 0.9957
+          input: 88
+          output: 564
+          cache_read: 1179234
+          cache_write: 451441
+          cost: 1.1369
 cost_of_delay:
   inputs:
     penalty_per_week: 150
@@ -112,3 +115,4 @@ The one refinement to make to the ADR as proposed is to look at creating multipl
 - each of the docker images should be built locally for the scope of this epic and skip making changes to github CI/CD
 - eagerly look at research or experiment stories where feasible to address anticipated limitations or issues in the ADR
 - 2026-10-28T12:04:42Z: moved to in-progress: follows S-0505, which moved to in-progress
+- 2026-11-07T07:39:35Z: moved to review: follows S-0583, which moved to review

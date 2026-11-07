@@ -35,16 +35,16 @@ tags: [docker]
 after: [T-2451]
 usage:
   source: log
-  seconds: 1494
+  seconds: 3562
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 250
-      output: 37897
-      cache_read: 31235618
-      cache_write: 473052
-      cost: 10.7905
+      input: 277
+      output: 44118
+      cache_read: 46750944
+      cache_write: 357332
+      cost: 13.0923
 ---
 # T-2450 A stop from the dashboard and a restart after an answered thread are each tried once on the first proof story's container, and what happened is in S-0565's Notes
 

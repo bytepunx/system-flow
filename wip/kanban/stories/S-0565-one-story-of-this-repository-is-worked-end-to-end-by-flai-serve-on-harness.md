@@ -3,11 +3,11 @@ id: S-0565
 type: story
 nature: experiment
 title: One story of this repository is worked end to end by flai serve on harness container, from story_start to review, once S-0508's container harness is in the installed flai
-status: in-progress
+status: review
 parent: E-0029
 owner: alex
 created: 2026-11-02T18:08:56Z
-updated: 2026-11-07T07:00:16Z
+updated: 2026-11-07T07:17:26Z
 transitions:
   - to: ready
     at: 2026-11-07T03:40:51Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-07T03:41:00Z
     by: agent-S-0565
+  - to: review
+    at: 2026-11-07T07:17:18Z
+    by: system-flow
 blocked:
   - from: 2026-11-07T03:44:57Z
     until: 2026-11-07T04:19:08Z
@@ -27,7 +30,7 @@ blocked:
     reason: awaiting the operator on TH-0836
 tags: []
 topics: [harness, docker]
-touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/experiments/README.md, design/issues, design/issues/summary.md]
+touches: [design/experiments/S-0565-a-story-worked-end-to-end-by-flai-serve-on-harness-container.md, design/experiments/README.md, design/issues, design/issues/summary.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md]
 after: [S-0508, S-0510, S-0517, S-0520]
 agent:
   harness: claude-code
@@ -36,20 +39,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2106
+  seconds: 5690
   priced_by: harness
   turns:
     - day: 2026-11-07
-      ceremony: 4
-      hand_edits: 2
-      work: 160
+      ceremony: 7
+      hand_edits: 4
+      work: 305
   models:
     - model: claude-opus-5-5
-      input: 350
-      output: 53122
-      cache_read: 43784592
-      cache_write: 663101
-      cost: 15.1256
+      input: 656
+      output: 104366
+      cache_read: 110593844
+      cache_write: 845303
+      cost: 30.9711
   strategic:
     - kind: planner
       seconds: 761
@@ -62,15 +65,21 @@ usage:
           cache_write: 483216
           cost: 6.2582
     - kind: orchestrator
-      seconds: 786
+      seconds: 920
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 232
-          output: 1598
-          cache_read: 7873973
-          cache_write: 1044398
-          cost: 2.1524
+          input: 263
+          output: 1762
+          cache_read: 9090538
+          cache_write: 1231858
+          cost: 2.4981
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 93
+          cache_read: 155277
+          cache_write: 40894
+          cost: 0.1412
 cost_of_delay:
   value: 123.85
   by: planner-S-0565
