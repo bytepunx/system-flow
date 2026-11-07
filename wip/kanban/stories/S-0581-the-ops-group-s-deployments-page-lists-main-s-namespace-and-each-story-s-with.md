@@ -3,15 +3,18 @@ id: S-0581
 type: story
 nature: feature
 title: The Ops group's Deployments page lists main's namespace and each story's, with its commit, outcome, log, and how to reach it for a demo, and deploys, tears down, or promotes through flai
-status: ready
+status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:41Z
-updated: 2026-11-07T02:25:42Z
+updated: 2026-11-07T02:35:50Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:07Z
     by: alex
+  - to: in-progress
+    at: 2026-11-07T02:35:50Z
+    by: agent-S-0581
 tags: [kluster, flaiover, hostapi]
 topics: [kluster, dashboard, deployment]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/kluster/deployments/+server.ts, flaiover/src/routes/api/kluster/deploy/+server.ts, flaiover/src/routes/api/kluster/teardown/+server.ts, flaiover/src/routes/api/kluster/promote/+server.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/kluster.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-11-06T21:50:24Z
 forecast:
   duration: 42m
-  delivery: 2026-11-07T03:16:00Z
-  basis: "Its own forecast of 42m; 1st in the pull order with an in-progress limit of 5, behind S-0578."
+  delivery: 2026-11-07T03:25:00Z
+  basis: "Its own forecast of 42m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-11-07T02:25:42Z
+  at: 2026-11-07T02:35:38Z
 finalized:
   by: orchestrator
   at: 2026-11-06T21:53:46Z

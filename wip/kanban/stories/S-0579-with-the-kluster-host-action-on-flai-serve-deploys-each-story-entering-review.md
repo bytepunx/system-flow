@@ -3,15 +3,18 @@ id: S-0579
 type: story
 nature: feature
 title: With the kluster host action on, flai serve deploys each story entering review into its namespace, runs the review checks against it, tears it down when the story leaves review, and promotes main on acceptance
-status: ready
+status: in-progress
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:40:13Z
-updated: 2026-11-07T02:26:00Z
+updated: 2026-11-07T02:36:31Z
 transitions:
   - to: ready
     at: 2026-11-07T00:52:00Z
     by: alex
+  - to: in-progress
+    at: 2026-11-07T02:36:31Z
+    by: agent-S-0579
 tags: [kluster, flai, serve]
 topics: [kluster, deployment, testing, review, host-actions]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/serve.go, flai/cmd/serve_actions.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, docs/operators/index.md, design/system/kluster.md, docs/users/flaiover.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-11-06T21:50:14Z
 forecast:
   duration: 1h
-  delivery: 2026-11-07T03:37:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0578 and S-0581."
+  delivery: 2026-11-07T03:47:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0581."
   by: flai
-  at: 2026-11-07T02:26:00Z
+  at: 2026-11-07T02:35:43Z
 finalized:
   by: orchestrator
   at: 2026-11-06T21:53:36Z
