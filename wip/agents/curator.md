@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 107.6786
-accrued_seconds: 10457
-tasks_completed: 63
-last_run: 2026-11-07T01:35:46Z
+accrued_cost: 109.2797
+accrued_seconds: 10553
+tasks_completed: 64
+last_run: 2026-11-07T02:28:51Z
 ---
 
 # Curator activity
@@ -515,3 +515,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0482, D-0483, D-0484
 - Seconds: 122
 - Cost: 1.8141 USD, estimated
+
+### 2026-11-07T02:28:51Z
+
+- Summary: This run added nothing to the digest: I wrote no entries, merged none, absorbed none, and `flai digest compact` compacted none. All nine S-0580 candidates were left out:
+- Trigger: accepted S-0580
+- Items: none
+- Seconds: 96
+- Cost: 1.6011 USD, estimated

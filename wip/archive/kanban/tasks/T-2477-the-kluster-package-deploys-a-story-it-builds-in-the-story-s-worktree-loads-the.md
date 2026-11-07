@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 398
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 148
-      cache_read: 4042302
-      cache_write: 51283
-      cost: 1.4605
+      input: 29
+      output: 11048
+      cache_read: 4173343
+      cache_write: 47590
+      cost: 1.3993
 ---
 # T-2477 The kluster package deploys a story: it builds in the story's worktree, loads the images, runs the deploy command in the story's namespace, logs each step, and records the deployment under .flai-cache
 

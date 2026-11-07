@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 305
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 108
-      cache_read: 3256230
-      cache_write: 42373
-      cost: 1.1769
+      input: 23
+      output: 8902
+      cache_read: 3362870
+      cache_write: 38348
+      cost: 1.1276
 ---
 # T-2478 The kluster package tears a story's namespace down, promotes main's head to the default namespace, and lists the deployments with the default namespace first
 

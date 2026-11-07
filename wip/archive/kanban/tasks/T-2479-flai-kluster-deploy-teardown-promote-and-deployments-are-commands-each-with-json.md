@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 456
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 235
-      cache_read: 5686223
-      cache_write: 50351
-      cost: 2.0467
+      input: 40
+      output: 15482
+      cache_read: 5848336
+      cache_write: 66690
+      cost: 1.9609
 ---
 # T-2479 flai kluster deploy, teardown, promote, and deployments are commands, each with --json
 

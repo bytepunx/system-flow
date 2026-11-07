@@ -3,11 +3,11 @@ id: S-0578
 type: story
 nature: feature
 title: flai kluster deploy builds a story's image, loads it into the project's kluster, and runs the project's deploy command in the story's namespace, and teardown and promote remove it and deploy main to the default namespace
-status: in-progress
+status: done
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:56Z
-updated: 2026-11-07T02:16:07Z
+updated: 2026-11-07T02:35:38Z
 transitions:
   - to: ready
     at: 2026-11-07T00:51:57Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T01:32:23Z
     by: agent-S-0578
+  - to: review
+    at: 2026-11-07T02:32:52Z
+    by: agent-S-0578
+  - to: done
+    at: 2026-11-07T02:35:38Z
+    by: orchestrator
 tags: [kluster, flai, cli]
 topics: [kluster, deployment, testing]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/kluster/kluster.go, docs/operators/settings.md, design/issues/I-0247-testservesaystheflaiisolderthantheproject-and.md, design/issues/summary.md]
@@ -26,31 +32,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1688
-  estimated: true
-  priced_by: estimate
+  seconds: 3650
+  priced_by: harness
   turns:
     - day: 2026-11-07
-      hand_edits: 1
-      work: 31
+      ceremony: 3
+      hand_edits: 3
+      work: 78
   models:
     - model: claude-opus-5-5
-      input: 172
-      output: 1013
-      cache_read: 22390687
-      cache_write: 429169
-      cost: 8.1419
+      input: 288
+      output: 111511
+      cache_read: 42124180
+      cache_write: 480351
+      cost: 14.1241
   strategic:
     - kind: orchestrator
-      seconds: 35
+      seconds: 128
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 62
-          cache_read: 381640
-          cache_write: 53273
-          cost: 0.104
+          input: 36
+          output: 257
+          cache_read: 1321934
+          cache_write: 116521
+          cost: 0.3465
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 46
+          cache_read: 44228
+          cache_write: 33275
+          cost: 0.0551
 cost_of_delay:
   value: 73.53
   by: planner-E-0032
@@ -108,3 +120,17 @@ A story's change can be tried on a kluster without a full build and deploy loop.
 
 - Criterion 3: teardown runs the block's `teardown` when it names one and then always deletes the namespace, as `design/system/kluster.md` § The steps says (step 4), so a block with no `teardown` gets only the delete. Promote builds and deploys main's head from a detached worktree of it under the main checkout, `.flai-cache/kluster/main`, as ADR-0254 §5 says, not from the main checkout's own files, which may hold uncommitted work.
 - Records are one file per namespace, `.flai-cache/kluster/deployments/<namespace>.json`, as ADR-0254 §1 says, rather than one `deployments.json`.
+
+### Accepted by the orchestrator
+
+- Verified: 9728de82247905c29e267c4f006dd86631db1f7d
+- At: 2026-11-07T02:35:38Z
+
+Verdict: pass — all seven criteria are met; the close-out passed at 74529b1 and again at 9728de8, the same change rebased over a wip-only commit of main, and no convention breach was found.
+- 1: flai/internal/kluster/deploy.go, flai/internal/kluster/kluster.go, flai/cmd/kluster.go, flai/internal/kluster/deploy_test.go
+- 2: flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go
+- 3: flai/internal/kluster/deploy.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go
+- 4: flai/internal/kluster/deploy.go, flai/cmd/kluster.go
+- 5: flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go
+- 6: flai/internal/kluster/deploy_test.go, flai/cmd/kluster_test.go
+- 7: design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md

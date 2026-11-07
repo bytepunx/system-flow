@@ -24,16 +24,16 @@ touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.m
 after: [T-2479]
 usage:
   source: log
-  seconds: 133
+  seconds: 139
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 325
-      cache_read: 6455513
-      cache_write: 26192
-      cost: 2.3126
+      input: 45
+      output: 17493
+      cache_read: 6607983
+      cache_write: 75352
+      cost: 2.2156
 ---
 # T-2480 The kluster design, the CLI design, and the user guide describe deploy, teardown, promote, deployments, the record, and the logs
 
