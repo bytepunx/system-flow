@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -73,7 +74,16 @@ func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time,
 type folderFixture struct {
 	root string
 	cs   *mcp.ClientSession
+	// held has a channel per progress token callHeld gave a call, told on
+	// the first progress notification of that call
+	mu   sync.Mutex
+	held map[any]chan struct{}
 }
+
+// heldWait is how long a test holds a wait it changes the project under:
+// long enough that a loaded host's polls see the change (I-0247), and spent
+// only on a run that fails, since the wait answers as soon as it sees it.
+const heldWait = 30 * time.Second
 
 func folderSetup(t *testing.T, root string) *folderFixture {
 	t.Helper()
@@ -84,7 +94,9 @@ func folderSetup(t *testing.T, root string) *folderFixture {
 func folderSetupWith(t *testing.T, root string, with func(*Options)) *folderFixture {
 	t.Helper()
 	clock := t0.Add(time.Minute)
-	opt := Options{Folder: root, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second, Rescan: time.Nanosecond}
+	// a held wait's first heartbeat comes once it has fingerprinted the
+	// projects, which is how callHeld knows it is holding
+	opt := Options{Folder: root, Agent: "claude", Version: "test", Now: func() time.Time { return clock }, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second, Rescan: time.Nanosecond, Heartbeat: 10 * time.Millisecond}
 	if with != nil {
 		with(&opt)
 	}
@@ -95,12 +107,30 @@ func folderSetupWith(t *testing.T, root string, with func(*Options)) *folderFixt
 	if _, err := srv.Connect(ctx, st, nil); err != nil {
 		t.Fatal(err)
 	}
-	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, nil).Connect(ctx, ct, nil)
+	f := &folderFixture{root: root, held: map[any]chan struct{}{}}
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "test-agent", Version: "0"}, &mcp.ClientOptions{
+		ProgressNotificationHandler: func(_ context.Context, req *mcp.ProgressNotificationClientRequest) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			if ch, ok := f.held[req.Params.ProgressToken]; ok {
+				close(ch)
+				delete(f.held, req.Params.ProgressToken)
+			}
+		},
+	}).Connect(ctx, ct, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	return &folderFixture{root: root, cs: cs}
+	f.cs = cs
+	return f
+}
+
+// heldSetup is folderSetup for a test that changes a project under a held
+// wait: the server holds a wait up to heldWait.
+func heldSetup(t *testing.T, root string) *folderFixture {
+	t.Helper()
+	return folderSetupWith(t, root, func(o *Options) { o.MaxWait = heldWait })
 }
 
 func (f *folderFixture) call(t *testing.T, name string, args any) (out map[string]any, failed string) {
@@ -128,15 +158,54 @@ type toolAnswer struct {
 	failed string
 }
 
-// callLater makes the call in a goroutine and answers on the channel, so that
-// a test can change the project while the call is held.
-func (f *folderFixture) callLater(t *testing.T, name string, args any) <-chan toolAnswer {
+// callHeld makes a wait in a goroutine and returns once the wait is holding,
+// so that a test changes the project only after the wait has fingerprinted
+// it: a change made before then is read by the wait's catch-up or its first
+// look, or lost between them (I-0186, I-0247). The answer comes on the
+// channel; a wait that answers before it holds fails the test.
+func (f *folderFixture) callHeld(t *testing.T, name string, args map[string]any) <-chan toolAnswer {
+	t.Helper()
+	token := name + "-" + t.Name()
+	holding := make(chan struct{})
+	f.mu.Lock()
+	f.held[token] = holding
+	f.mu.Unlock()
+	params := &mcp.CallToolParams{Name: name, Arguments: args}
+	params.SetProgressToken(token)
 	done := make(chan toolAnswer, 1)
 	go func() {
-		out, failed := f.call(t, name, args)
-		done <- toolAnswer{out, failed}
+		res, err := f.cs.CallTool(context.Background(), params)
+		done <- answerOf(name, res, err)
 	}()
-	return done
+	select {
+	case <-holding:
+		return done
+	case a := <-done:
+		t.Fatalf("%s answered before it held: %v %s", name, a.out, a.failed)
+	case <-time.After(heldWait):
+		t.Fatalf("%s never held", name)
+	}
+	return nil
+}
+
+// answerOf is what call reads from a tool's result, for a call made in a
+// goroutine, where t.Fatal cannot stop the test.
+func answerOf(name string, res *mcp.CallToolResult, err error) toolAnswer {
+	if err != nil {
+		return toolAnswer{failed: name + ": protocol error: " + err.Error()}
+	}
+	var a toolAnswer
+	if res.IsError {
+		for _, c := range res.Content {
+			if tc, ok := c.(*mcp.TextContent); ok {
+				a.failed += tc.Text
+			}
+		}
+		return a
+	}
+	data, _ := json.Marshal(res.StructuredContent)
+	_ = json.Unmarshal(data, &a.out)
+	return a
 }
 
 func projectKeys(out map[string]any) []string {
@@ -219,14 +288,13 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
-	f := folderSetup(t, root)
+	f := heldSetup(t, root)
 
 	quiet, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
 	if failed != "" || quiet["timed_out"] != true || quiet["waiting_for"] != "ready" || len(quiet["projects"].([]any)) != 2 {
 		t.Fatalf("nothing ready: %v %s", quiet, failed)
 	}
-	done := f.callLater(t, "wait_for_work", map[string]any{"timeout_seconds": 3})
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_work", map[string]any{"timeout_seconds": int(heldWait / time.Second)})
 	story := readyStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
 	select {
 	case a := <-done:
@@ -234,7 +302,7 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 		if a.failed != "" || a.out["reason"] != "pull" || a.out["project"] != "beta" || a.out["folder"] != "beta" || s["id"] != story.ID {
 			t.Errorf("handed over: %v %s", a.out, a.failed)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_work never answered")
 	}
 
@@ -257,10 +325,9 @@ func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := folderSetup(t, root)
+	f := heldSetup(t, root)
 
-	done := f.callLater(t, "wait_for_work", map[string]any{"timeout_seconds": 3})
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_work", map[string]any{"timeout_seconds": int(heldWait / time.Second)})
 	if err := os.Truncate(s.Path, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +336,7 @@ func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
 		if !strings.Contains(a.failed, filepath.Base(s.Path)) {
 			t.Errorf("the wait did not fail on the truncated story: %v %q", a.out, a.failed)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_work never answered")
 	}
 }
@@ -342,15 +409,14 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
-	f := folderSetup(t, root)
+	f := heldSetup(t, root)
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
 	// the story is written before the wait, so that the wait wakes on its
 	// move, not on its creation, which is no event
 	story := backlogStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
-	done := f.callLater(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-	time.Sleep(150 * time.Millisecond)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": int(heldWait / time.Second)})
 	if _, err := beta.Transition(story, workitem.Ready, "alex", "", t0.Add(2*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +436,7 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 		if len(changed) == 0 || !strings.HasPrefix(changed[0].(string), "beta/") {
 			t.Errorf("changed paths are relative to the folder: %v", changed)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_events never answered")
 	}
 }
