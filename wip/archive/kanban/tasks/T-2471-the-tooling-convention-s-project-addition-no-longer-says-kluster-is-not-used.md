@@ -3,16 +3,36 @@ id: T-2471
 type: task
 nature: research
 title: "The tooling convention's project addition no longer says kluster is not used here: system-flow runs no cluster itself, and flai drives a project's kluster behind the kluster host action"
-status: backlog
+status: done
 parent: S-0576
 owner: alex
 created: 2026-11-06T21:42:12Z
-updated: 2026-11-06T21:42:12Z
-transitions: []
+updated: 2026-11-07T00:01:27Z
+transitions:
+  - to: ready
+    at: 2026-11-06T23:59:44Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-06T23:59:45Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T00:01:27Z
+    by: agent-S-0576
 stream: S-0576
 tags: [kluster, conventions]
 touches: [design/conventions/tooling.md]
-after: [T-2469]
+usage:
+  source: log
+  seconds: 102
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 1177
+      cache_read: 347297
+      cache_write: 7069
+      cost: 0.1485
 ---
 # T-2471 The tooling convention's project addition no longer says kluster is not used here: system-flow runs no cluster itself, and flai drives a project's kluster behind the kluster host action
 

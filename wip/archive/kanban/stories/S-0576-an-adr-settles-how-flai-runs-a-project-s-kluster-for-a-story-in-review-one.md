@@ -3,11 +3,11 @@ id: S-0576
 type: story
 nature: research
 title: "An ADR settles how flai runs a project's kluster for a story in review: one shared cluster, a namespace per story, the story's own settings, promotion on acceptance, and the manifest block a project fills in"
-status: in-progress
+status: done
 parent: E-0032
 owner: alex
 created: 2026-11-06T21:39:23Z
-updated: 2026-11-06T23:25:06Z
+updated: 2026-11-07T00:13:07Z
 transitions:
   - to: ready
     at: 2026-11-06T23:24:57Z
@@ -15,9 +15,22 @@ transitions:
   - to: in-progress
     at: 2026-11-06T23:25:06Z
     by: agent-S-0576
+  - to: review
+    at: 2026-11-07T00:11:38Z
+    by: agent-S-0576
+  - to: done
+    at: 2026-11-07T00:13:07Z
+    by: orchestrator
+blocked:
+  - from: 2026-11-06T23:30:14Z
+    until: 2026-11-06T23:57:21Z
+    reason: awaiting the operator on TH-0832
+  - from: 2026-11-07T00:02:11Z
+    until: 2026-11-07T00:09:47Z
+    reason: awaiting the operator on TH-0832
 tags: [kluster, adr]
 topics: [kluster, testing, deployment, manifest]
-touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/README.md, design/conventions/tooling.md]
+touches: [design/adrs, design/adrs/README.md, design/system/kluster.md, design/system/README.md, design/conventions/tooling.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [S-0575]
 agent:
   harness: claude-code
@@ -25,20 +38,36 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 710
+  priced_by: harness
+  turns:
+    - day: 2026-11-06
+      ceremony: 2
+      hand_edits: 1
+      work: 34
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 2
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 49392
+      cache_read: 14569521
+      cache_write: 296546
+      cost: 6.2279
   strategic:
     - kind: orchestrator
-      seconds: 34
+      seconds: 125
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 56
-          cache_read: 329013
-          cache_write: 42391
-          cost: 0.0889
+          input: 53
+          output: 309
+          cache_read: 1486788
+          cache_write: 292342
+          cost: 0.4273
 cost_of_delay:
   value: 163.4
   by: planner-E-0032
@@ -61,7 +90,7 @@ The stories after this one build kluster support into flai and the dashboard. Th
 
 ## Acceptance criteria
 
-- [ ] An ADR under `design/adrs/`, accepted by the operator on a thread, decides:
+- [x] An ADR under `design/adrs/`, accepted by the operator on a thread, decides:
   - one cluster per project, made from the kluster config file the project names, with the shared infrastructure its profile installs;
   - the namespace a story in review deploys into, named from its serial, and the default namespace main deploys into;
   - the `kluster:` block of `system-flow.yaml`: the config path, the build command, the deploy command, the teardown command, the default namespace, and which are optional;
@@ -69,10 +98,10 @@ The stories after this one build kluster support into flai and the dashboard. Th
   - how a locally built image reaches the cluster while kluster has no import command;
   - what acceptance does: tear down the story's namespace and deploy main to the default namespace;
   - the host action that gates it, `kluster`, off by default, and what the review checks see while it is on.
-- [ ] The ADR's Consequences list each change it would ask of kluster's own repository, such as `status --json` or an image import. They are proposals for that repository, not work items here.
-- [ ] `design/system/kluster.md`, a new design document, describes how flai runs a project's kluster as the ADR decides. It is indexed in `design/system/README.md`.
-- [ ] The project addition in `design/conventions/tooling.md` that says k3d and kluster are not used here is reworded. system-flow itself still runs no cluster, and flai drives a project's kluster behind the `kluster` host action.
-- [ ] `flai check --strict` and the markdown lint pass on every file the story changes.
+- [x] The ADR's Consequences list each change it would ask of kluster's own repository, such as `status --json` or an image import. They are proposals for that repository, not work items here.
+- [x] `design/system/kluster.md`, a new design document, describes how flai runs a project's kluster as the ADR decides. It is indexed in `design/system/README.md`.
+- [x] The project addition in `design/conventions/tooling.md` that says k3d and kluster are not used here is reworded. system-flow itself still runs no cluster, and flai drives a project's kluster behind the `kluster` host action.
+- [x] `flai check --strict` and the markdown lint pass on every file the story changes.
 
 ## Tasks
 
@@ -95,3 +124,16 @@ The stories after this one build kluster support into flai and the dashboard. Th
 - Tasks: T-2469 (the ADR) is the first layer. T-2470 (the design document) and T-2471 (the convention) both wait for the accepted ADR. They share no path, so they form the second layer together.
 - Forecast 1h. `flai forecast` gave 45m: 531 s per unit over three small research stories, at size 5, counted before the five touches were set. With the touches, size 10 would give 1h28m. It is held at 1h, since two of the touches are a generated index and one line of a convention. The operator's time to accept the ADR is not agent time and is not counted.
 - Cost of delay 163.40 USD/week: `flai cod`'s share of E-0032's 1250 USD/week revenue input (alex, TH-0829), by forecast duration over the epic's seven open stories. It stands as flai gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 2ccd15b269ef29a2964f1816465068a01a578b7d
+- At: 2026-11-07T00:13:07Z
+
+Verdict: pass, at commit 2ccd15b269ef29a2964f1816465068a01a578b7d; the operator accepted ADR-0254 on TH-0832.
+
+- 1: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md, design/adrs/README.md
+- 2: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md
+- 3: design/system/kluster.md, design/system/README.md
+- 4: design/conventions/tooling.md
+- 5: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md, design/adrs/README.md, design/conventions/tooling.md, design/system/README.md, design/system/kluster.md

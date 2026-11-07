@@ -3,16 +3,36 @@ id: T-2470
 type: task
 nature: research
 title: design/system/kluster.md describes how flai runs a project's kluster as the ADR decides, and the design index lists it
-status: backlog
+status: done
 parent: S-0576
 owner: alex
 created: 2026-11-06T21:42:07Z
-updated: 2026-11-06T21:42:07Z
-transitions: []
+updated: 2026-11-07T00:01:38Z
+transitions:
+  - to: ready
+    at: 2026-11-06T23:59:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-06T23:59:42Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T00:01:38Z
+    by: agent-S-0576
 stream: S-0576
 tags: [kluster, design]
 touches: [design/system/kluster.md, design/system/README.md]
-after: [T-2469]
+usage:
+  source: log
+  seconds: 116
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 4329
+      cache_read: 1276879
+      cache_write: 25989
+      cost: 0.5458
 ---
 # T-2470 design/system/kluster.md describes how flai runs a project's kluster as the ADR decides, and the design index lists it
 

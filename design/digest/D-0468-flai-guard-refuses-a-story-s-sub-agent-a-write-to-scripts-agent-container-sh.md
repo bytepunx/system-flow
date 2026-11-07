@@ -2,7 +2,7 @@
 id: D-0468
 title: flai guard refuses a story's sub-agent a write to scripts/agent-container.sh, scripts/agent-image.sh, or flai/images/ while auto-approve is off, so the story's agent writes those files from the content its sub-agent returns
 kind: decision
-sources: [S-0517, S-0510]
+sources: [S-0517, S-0510, S-0520]
 topics: [harness, docker, planning]
 paths: [scripts/agent-container.sh, scripts/agent-image.sh, flai/images, flai/internal/protected/protected.go, flai/internal/guard/call.go]
 date: 2026-11-02
@@ -30,4 +30,10 @@ S-0510 planned around it from the start. From its Decisions (`wip/archive/agents
 T-2165 changes `flai/images/` and `scripts/agent-image.sh`, which the protected list holds since S-0508. So the story's agent makes those writes itself, through `permission_prompt`, rather than through a sub-agent.
 ```
 
-Sources: S-0517, S-0510.
+S-0520 did the same. From its Decisions (`wip/archive/agents/S-0520.md`):
+
+```text
+T-2232 and T-2235 are mine, not a sub-agent's: the ADR's context is already in this session, and `scripts/agent-container.sh` is a path the guard protects from a sub-agent (D-0468).
+```
+
+Sources: S-0517, S-0510, S-0520.

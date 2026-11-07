@@ -3,15 +3,36 @@ id: T-2469
 type: task
 nature: research
 title: A proposed ADR decides the shared cluster, the story and default namespaces, the manifest's kluster block, the commands' variables, the image load, acceptance, and the kluster host action, and the operator accepts it on a thread
-status: backlog
+status: done
 parent: S-0576
 owner: alex
 created: 2026-11-06T21:41:55Z
-updated: 2026-11-06T21:41:55Z
-transitions: []
+updated: 2026-11-07T00:10:16Z
+transitions:
+  - to: ready
+    at: 2026-11-06T23:27:30Z
+    by: agent-S-0576
+  - to: in-progress
+    at: 2026-11-06T23:27:35Z
+    by: agent-S-0576
+  - to: done
+    at: 2026-11-07T00:10:16Z
+    by: agent-S-0576
 stream: S-0576
 tags: [kluster, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md]
+usage:
+  source: log
+  seconds: 467
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 27059
+      cache_read: 7981927
+      cache_write: 162463
+      cost: 3.412
 ---
 # T-2469 A proposed ADR decides the shared cluster, the story and default namespaces, the manifest's kluster block, the commands' variables, the image load, acceptance, and the kluster host action, and the operator accepts it on a thread
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 102.7696
-accrued_seconds: 10083
-tasks_completed: 59
-last_run: 2026-11-06T23:22:16Z
+accrued_cost: 103.6231
+accrued_seconds: 10186
+tasks_completed: 60
+last_run: 2026-11-06T23:28:45Z
 ---
 
 # Curator activity
@@ -483,3 +483,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0480
 - Seconds: 94
 - Cost: 1.5166 USD, estimated
+
+### 2026-11-06T23:28:45Z
+
+- Summary: No entries written; merged S-0520 into D-0477 (checking a branch's flai inside a container through the worktree's static `bin/flai`) and D-0468 (the story's agent writes `scripts/agent-container.sh` itself, not a sub-agent); absorbed nothing; `flai digest compact` compacted nothing.
+- Trigger: accepted S-0520
+- Items: D-0468, D-0477
+- Seconds: 103
+- Cost: 0.8535 USD, estimated
