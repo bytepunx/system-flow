@@ -6,20 +6,24 @@ title: flai import writes no system-flow.lock.yaml, so the import formula's flai
 status: backlog
 owner: alex
 created: 2026-11-07T09:44:23Z
-updated: 2026-11-07T09:44:23Z
+updated: 2026-11-07T10:02:09Z
 transitions: []
-tags: []
+tags: [flai, import, template]
+topics: [template, import]
+touches: [flai/cmd/import.go, flai/cmd/import_commit.go, flai/cmd/import_test.go, flai/cmd/import_commit_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/template.md, design/issues/I-0302-flai-import-writes-no-system-flow-lock-yaml-so-the-import-formula-s-flai-check.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-11-07T09:44:23Z
+finalized:
+  by: alex
+  at: 2026-11-07T10:02:09Z
 ---
 # S-0590 flai import writes no system-flow.lock.yaml, so the import formula's flai check --strict step fails on layout.lock
 
