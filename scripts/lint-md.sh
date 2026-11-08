@@ -11,20 +11,42 @@
 # MERGE_QUEUE_STORIES, it does the same for what the batch's checkout changes,
 # so a bad line on main's wip fails no batch either (I-0174). The main branch
 # is the one the main checkout has, as close-out.sh takes it.
-# Runs markdownlint-cli2 through npx (Node only; the npm cache lives in .flai-cache
-# via env.sh), so it works on a fresh clone and in CI without pnpm.
+# Runs the markdownlint-cli2 on PATH when it is the pinned version, as
+# scripts/install-tools.sh installs it into the main checkout's bin/, which
+# env.sh puts on PATH; that saves npx's start, about 0.7 to 0.9 s a run (S-0609,
+# cause 19 in design/system/server-performance.md). Otherwise it runs the pinned
+# version through npx (Node only; the npm cache lives in .flai-cache via env.sh),
+# so it works on a fresh clone and in CI without installing anything.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
-command -v npx >/dev/null 2>&1 || { echo "lint-md: npx not found; install Node" >&2; exit 1; }
+# The one pinned version: scripts/install-tools.sh installs this one.
 MDLINT_VERSION="${MDLINT_VERSION:-0.20.0}"
-echo "lint-md: markdownlint-cli2 $MDLINT_VERSION"
+# mdlint_installed says whether the markdownlint-cli2 on PATH is MDLINT_VERSION,
+# from the package.json beside the script its link resolves to, without
+# starting node.
+mdlint_installed() {
+  mdlint_bin="$(command -v markdownlint-cli2 2>/dev/null)" || return 1
+  mdlint_real="$(readlink -f "$mdlint_bin" 2>/dev/null)" || return 1
+  mdlint_pkg="$(dirname "$mdlint_real")/package.json"
+  [ -f "$mdlint_pkg" ] && grep -q "\"version\": \"$MDLINT_VERSION\"" "$mdlint_pkg"
+}
+if mdlint_installed; then
+  echo "lint-md: markdownlint-cli2 $MDLINT_VERSION, installed"
+  mdlint() { markdownlint-cli2 "$@"; }
+else
+  command -v npx >/dev/null 2>&1 || { echo "lint-md: npx not found; install Node, or markdownlint-cli2 $MDLINT_VERSION with scripts/install-tools.sh" >&2; exit 1; }
+  echo "lint-md: markdownlint-cli2 $MDLINT_VERSION, through npx"
+  mdlint() { npx --yes "markdownlint-cli2@$MDLINT_VERSION" "$@"; }
+fi
 if [ "$#" -gt 0 ]; then
-  exec npx --yes "markdownlint-cli2@$MDLINT_VERSION" "$@"
+  mdlint "$@"
+  exit
 fi
 if [ -z "${CLOSE_OUT_STORY:-}" ] && [ -z "${MERGE_QUEUE_STORIES:-}" ]; then
-  exec npx --yes "markdownlint-cli2@$MDLINT_VERSION" \
+  mdlint \
     "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**" "!flaiover/build/**" "!**/.svelte-kit/**" "!.flai-cache/**"
+  exit
 fi
 
 main="$(git -C "$CACHE_ROOT" rev-parse --abbrev-ref HEAD)"
@@ -38,7 +60,7 @@ else
   echo "lint-md: merge queue batch of $MERGE_QUEUE_STORIES: wip/ only where the batch changes it against $main"
 fi
 rc=0
-npx --yes "markdownlint-cli2@$MDLINT_VERSION" \
+mdlint \
   "**/*.md" "!**/node_modules/**" "!**/testdata/**" "!bin/**" "!flaiover/build/**" "!**/.svelte-kit/**" "!.flai-cache/**" "!wip/**" || rc=$?
 # markdownlint-cli2's negated globs apply to named files too, so the changed
 # wip files have a run of their own.
@@ -50,7 +72,7 @@ done <<EOF
 $changed
 EOF
 if [ "$#" -gt 0 ]; then
-  npx --yes "markdownlint-cli2@$MDLINT_VERSION" "$@" || rc=$?
+  mdlint "$@" || rc=$?
 else
   echo "lint-md: the checkout changes no markdown under wip/"
 fi

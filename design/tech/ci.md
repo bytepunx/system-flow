@@ -1,6 +1,6 @@
 ---
 title: CI and repository automation
-updated: 2026-10-12
+updated: 2026-11-08
 status: active
 topics: [code]
 ---
@@ -10,7 +10,7 @@ topics: [code]
 | Component | Use |
 |-----------|-----|
 | GitHub Actions | All CI |
-| `markdownlint-cli2` | Markdown style in monorepo and template output; `scripts/lint-md.sh` runs the same globs locally as part of `make smoke` |
+| `markdownlint-cli2` | Markdown style in monorepo and template output; `scripts/lint-md.sh` runs the same globs locally as part of `make smoke`. Pinned at 0.20.0 as `MDLINT_VERSION` in `scripts/lint-md.sh`. `scripts/install-tools.sh` installs that version into `.flai-cache/markdownlint`, linked from the main checkout's `bin/`, and `lint-md.sh` runs it from there when its `package.json` names the pinned version; otherwise, as in CI and on a fresh clone, it runs `npx --yes markdownlint-cli2@<version>`. `npx` costs about 0.7 to 0.9 s a run, and `flai accept` and `flai task done` run the script several times (S-0609) |
 | `flai check --strict` | Standard conformance, run from a built `flai` in CI |
 | GoReleaser action | Release `flai` on tags `flai/v*`. GoReleaser OSS cannot strip a monorepo tag prefix, so `flai/.goreleaser.yaml` derives the version with `trimprefix .Tag "flai/v"` in every template and the workflow passes `--skip=validate`. `git.ignore_tags` excludes `flaiover/*` when finding the previous tag. |
 | `docker/build-push-action` with `docker/metadata-action` | Build and push `flaiover` on tags `flaiover/v*` and on `main`. The action's digest output, the image index's, is what the digest list, the cosign signature, and the attestation of a tag's build name |

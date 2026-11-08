@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Install the development tools this repo needs (golangci-lint, GoReleaser, ShellCheck) into the main checkout's bin/ (git-ignored),
+# Install the development tools this repo needs (golangci-lint, GoReleaser, ShellCheck, markdownlint-cli2) into the main checkout's bin/ (git-ignored),
 # which env.sh puts on PATH in every story worktree too. Does not touch ~/go/bin.
 set -eu
 . "$(dirname "$0")/env.sh"
@@ -58,6 +58,22 @@ else
   rm -rf "$sc_tmp"
   trap - EXIT
 fi
+# markdownlint-cli2 at the version scripts/lint-md.sh pins, which it then runs
+# from bin/ in place of starting it through npx each time (S-0609).
+# shellcheck disable=SC2016 # the sed pattern matches lint-md.sh's literal ${MDLINT_VERSION:-...}, which must not expand
+MDLINT_VERSION="${MDLINT_VERSION:-$(sed -n 's/^MDLINT_VERSION="\${MDLINT_VERSION:-\(.*\)}"$/\1/p' "$ROOT/scripts/lint-md.sh")}"
+if [ -z "$MDLINT_VERSION" ]; then
+  echo "install-tools: no MDLINT_VERSION found in scripts/lint-md.sh; set MDLINT_VERSION" >&2
+  exit 1
+fi
+MDLINT_PREFIX="$CACHE_ROOT/.flai-cache/markdownlint"
+if grep -qs "\"version\": \"$MDLINT_VERSION\"" "$MDLINT_PREFIX/node_modules/markdownlint-cli2/package.json" && [ -L "$BIN/markdownlint-cli2" ]; then
+  echo "markdownlint-cli2 $MDLINT_VERSION already in $BIN"
+else
+  echo "installing markdownlint-cli2 $MDLINT_VERSION into $MDLINT_PREFIX, linked from $BIN"
+  npm install --prefix "$MDLINT_PREFIX" --no-audit --no-fund --loglevel=error "markdownlint-cli2@$MDLINT_VERSION"
+  ln -sf "$MDLINT_PREFIX/node_modules/.bin/markdownlint-cli2" "$BIN/markdownlint-cli2"
+fi
 PNPM_VERSION="${PNPM_VERSION:-10.34.5}"
 echo "installing pnpm $PNPM_VERSION into $CACHE_ROOT/.flai-cache/pnpm"
 npm install --prefix "$CACHE_ROOT/.flai-cache/pnpm" --no-audit --no-fund --loglevel=error "pnpm@$PNPM_VERSION"
@@ -65,3 +81,4 @@ npm install --prefix "$CACHE_ROOT/.flai-cache/pnpm" --no-audit --no-fund --logle
 "$BIN/golangci-lint" version
 "$BIN/goreleaser" --version | head -1
 "$BIN/shellcheck" --version | sed -n 's/^version: /shellcheck /p'
+"$BIN/markdownlint-cli2" --help | head -1

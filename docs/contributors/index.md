@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-31
+updated: 2026-11-08
 status: draft
 ---
 
@@ -58,7 +58,7 @@ scripts/flai.sh serve enable merge-queue
 
 Without it, every close-out that changes `flai/` runs both tiers, about twelve minutes a round, which is longer than an agent's ten-minute tool call. `flai verify` then prints, before its outcome, the tiers it ran and the condition that is off (S-0466).
 
-Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
+Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2, GoReleaser, ShellCheck, and markdownlint-cli2 into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2. `scripts/lint-md.sh` runs the installed markdownlint-cli2 when it is the version the script pins, and starts it through `npx` otherwise, about 0.7 to 0.9 s slower a run; its first line says which it ran.
 
 ### Gateway checks
 
