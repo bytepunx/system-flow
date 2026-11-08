@@ -39,14 +39,22 @@ func scratchProject(t *testing.T, key string) (root, keyFile string) {
 
 func run(t *testing.T, dir Dir, dash *channeltest.Dashboard) {
 	t.Helper()
+	runWith(t, dir, dash, func(*Options) {})
+}
+
+// runWith runs flai serve as run does, with the options change makes.
+func runWith(t *testing.T, dir Dir, dash *channeltest.Dashboard, change func(*Options)) {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
+	o := Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
+		NewClient: func(e Entry, key []byte) *channel.Client {
+			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+				Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+		}}
+	change(&o)
 	go func() {
-		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
-			NewClient: func(e Entry, key []byte) *channel.Client {
-				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
-			}})
+		done <- Run(ctx, o)
 	}()
 	t.Cleanup(func() {
 		cancel()
@@ -357,6 +365,112 @@ func TestAChangedFileReachesTheDashboardAsANotification(t *testing.T) {
 	_ = json.Unmarshal(params, &p)
 	if method != "change" || p.Project != "harbour" || p.Path != "wip/kanban/stories/S-0001-a.md" {
 		t.Errorf("notification: %s %s", method, params)
+	}
+}
+
+// S-0606: a served project's item folders keep a snapshot, which the
+// watcher's changes mark stale before the dashboard is told of them, so that
+// the next list sees an item another process wrote and an archived item
+// edited by hand in place, which the watcher's slow tier reports.
+func TestAServedProjectsItemSnapshotFollowsTheWatcher(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	root, key := scratchProject(t, "snap")
+	for _, d := range []string{"docs", "wip/kanban/stories", "wip/archive/kanban/stories"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	archived := filepath.Join(root, "wip/archive/kanban/stories/S-0001-old.md")
+	writeStory(t, archived, "S-0001", "Old story", "done")
+	if err := dir.Register(Entry{Key: "snap", Name: "snap", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	runWith(t, dir, dash, func(o *Options) { o.WatchSlowEvery = 200 * time.Millisecond })
+	conn := dash.Wait(t)
+	watcherHasLooked(t, conn, root)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := titles(t, repo); got["S-0001"] != "Old story" {
+		t.Fatalf("before any change: %v", got)
+	}
+
+	// another process writes a story: listed once the watcher reports it
+	writeStory(t, filepath.Join(root, "wip/kanban/stories/S-0002-new.md"), "S-0002", "New story", "backlog")
+	toldOf(t, conn, "wip/kanban/stories/S-0002-new.md")
+	if got := titles(t, repo); got["S-0002"] != "New story" || got["S-0001"] != "Old story" {
+		t.Errorf("after a story was written: %v", got)
+	}
+
+	// an archived story edited by hand in place: listed once the slow tier reports it
+	writeStory(t, archived, "S-0001", "Old Story", "done")
+	toldOf(t, conn, "wip/archive/kanban/stories/S-0001-old.md")
+	if got := titles(t, repo); got["S-0001"] != "Old Story" {
+		t.Errorf("after an archived story was edited by hand: %v", got)
+	}
+	if it, err := repo.Get("S-0001"); err != nil || it.Title != "Old Story" || !it.Archived {
+		t.Errorf("the archived story gets as %+v, %v", it, err)
+	}
+}
+
+// writeStory writes a story's file as another process would, its time an
+// hour back so that the store trusts what it reads of it.
+func writeStory(t *testing.T, path, id, title, status string) {
+	t.Helper()
+	it := &workitem.Item{ID: id, Type: workitem.Story, Nature: "feature", Title: title, Status: status,
+		Owner: "alex", Created: "2026-11-01T00:00:00Z", Updated: "2026-11-01T00:00:00Z"}
+	if err := os.WriteFile(path, []byte(it.Marshal()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	then := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(path, then, then); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// titles lists repo's items, the archive included, by ID.
+func titles(t *testing.T, repo *workitem.Repo) map[string]string {
+	t.Helper()
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	for _, it := range items {
+		out[it.ID] = it.Title
+	}
+	return out
+}
+
+// toldOf returns once conn is told rel changed, passing over what else it is
+// told meanwhile.
+func toldOf(t *testing.T, conn *channeltest.Conn, rel string) {
+	t.Helper()
+	for {
+		if method, params := conn.Next(t); isChange(method, params, rel) {
+			return
+		}
+	}
+}
+
+// The archive is on the watcher's slow tier, under the manifest's wip folder,
+// and the other folders on its fast one.
+func TestTheArchiveIsWatchedOnTheSlowTier(t *testing.T) {
+	root, _ := scratchProject(t, "tiers")
+	if got := slowPaths(root); !slices.Equal(got, []string{"wip/archive"}) {
+		t.Errorf("slow paths: %v", got)
+	}
+	if got := watchedPaths(root); !slices.Equal(got, []string{"system-flow.yaml", "design", "docs", "wip"}) {
+		t.Errorf("fast paths: %v", got)
+	}
+	manifest := "version: 1\nname: tiers\nkey: tiers\nlayout:\n  design: design\n  docs: docs\n  wip: work\n"
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := slowPaths(root); !slices.Equal(got, []string{"work/archive"}) {
+		t.Errorf("slow paths under another wip folder: %v", got)
 	}
 }
 

@@ -115,6 +115,8 @@ func runCommand(ctx context.Context, dir string, env []string, name string, args
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+	// what it wrote under dir's item folders is seen by this process's next list (S-0606)
+	workitem.ItemsChanged(dir)
 	return stderr.Bytes(), err
 }
 

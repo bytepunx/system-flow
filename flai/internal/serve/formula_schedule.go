@@ -62,6 +62,8 @@ func runOutput(ctx context.Context, dir string, env []string, name string, args 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
+	// what it wrote under dir's item folders is seen by this process's next list (S-0606)
+	workitem.ItemsChanged(dir)
 	return stdout.Bytes(), stderr.Bytes(), err
 }
 

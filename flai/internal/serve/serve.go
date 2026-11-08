@@ -230,6 +230,10 @@ type Options struct {
 	Every      time.Duration // how often the registry is read and the status written
 	Now        func() time.Time
 	WatchEvery time.Duration // how often a project's files are looked at; the watcher's default when zero
+	// WatchSlowEvery is how often every file of a project's archive is
+	// looked at, which is when an edit in place there is seen (S-0606); the
+	// watcher's default when zero.
+	WatchSlowEvery time.Duration
 	// Host is the operator's say over host actions and the journal of them
 	// (S-0078); the zero value enables nothing.
 	Host hostapi.Host
@@ -685,7 +689,13 @@ func Run(ctx context.Context, o Options) error {
 			// the allowance is read and the dashboard's image judged before each dial (S-0238, S-0239)
 			guard(o, images, e, r.client)
 			clients[root] = r
-			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
+			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery,
+				Slow: slowPaths(e.Root), SlowEvery: o.WatchSlowEvery}
+			// While the project is served, its item folders keep a snapshot
+			// between lists, which the watcher's changes mark stale, so that
+			// item.get and every list read no file and stat nothing (S-0606).
+			// It is dropped once the watcher has stopped, below.
+			workitem.SnapshotItems(e.Root)
 			starter := newLauncher(o, e)
 			// An agent starting or ending changes no file: the dashboard is told
 			// so that a story page shows it at once (S-0154), a planner's
@@ -759,6 +769,10 @@ func Run(ctx context.Context, o Options) error {
 			looks.Add(2)
 			go func() {
 				defer looks.Done()
+				// A change made before the watcher's first look is in what it
+				// compares with and is never reported, so every item folder is
+				// looked at again at least once a minute (S-0606).
+				refreshed := time.Now()
 				for {
 					select {
 					case <-cctx.Done():
@@ -772,6 +786,10 @@ func Run(ctx context.Context, o Options) error {
 					case <-time.After(time.Minute):
 						// an agent that outlived an earlier flai serve is not waited for
 						starter.look(cctx, false)
+					}
+					if time.Since(refreshed) >= time.Minute {
+						workitem.ItemsChanged(e.Root)
+						refreshed = time.Now()
 					}
 					replanner.look(cctx)
 					orch.look(cctx)
@@ -789,6 +807,9 @@ func Run(ctx context.Context, o Options) error {
 				go func() {
 					defer looks.Done()
 					watcher.Run(cctx, func(rel string) {
+						// the item snapshot hears of it first, so that what the
+						// dashboard and the looks read next is fresh (S-0606)
+						workitem.ItemChanged(e.Root, rel)
 						r.client.Notify("change", map[string]string{"project": e.Key, "path": rel})
 						// the merge queue looks again on a change under kanban or threads,
 						// and on any while its preflight holds it (ADR-0234)
@@ -812,6 +833,8 @@ func Run(ctx context.Context, o Options) error {
 				r.client.Run(clientCtx)
 				stopLooks()
 				looks.Wait()
+				// no watcher marks the snapshot stale any more (S-0606)
+				workitem.StopSnapshotItems(e.Root)
 				close(r.done)
 			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)
@@ -911,6 +934,19 @@ func defaultClient(o Options, e Entry, key []byte) *channel.Client {
 		Methods: hostapi.MethodsFor(o.Version, o.Now, o.Host), Version: o.Version, Logger: o.Logger,
 		Release:     channel.Release{Statement: buildinfo.ReleaseStatement, Signature: buildinfo.ReleaseSignature},
 		ReleaseKeys: keys}
+}
+
+// slowPaths are the folders the watcher looks at on its slow tier: the wip
+// folder's archive, thousands of files that change only when an item is
+// archived or edited by hand there (S-0606).
+func slowPaths(root string) []string {
+	wip := "wip"
+	if m, err := manifest.Load(filepath.Join(root, manifest.File)); err == nil {
+		if dir := m.Layout["wip"]; dir != "" && !filepath.IsAbs(dir) && !strings.HasPrefix(filepath.Clean(dir), "..") {
+			wip = dir
+		}
+	}
+	return []string{filepath.ToSlash(filepath.Join(wip, "archive"))}
 }
 
 // watchedPaths are the manifest's three folders and the manifest itself:
