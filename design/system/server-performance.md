@@ -353,7 +353,7 @@ Each cause is numbered after causes 1 to 7. Each "fix" below keeps the files und
 
 | # | Cause | Measured | Proposed fix | Estimated saving |
 |---|-------|----------|--------------|------------------|
-| 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. | 7 to 13 s down to about 1.5 to 2 s a write |
+| 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. Done in S-0598: [measured](#a-checked-write-runs-only-the-rules-it-can-affect-s-0598). | 7 to 13 s down to about 1.5 to 2 s a write; measured 12 s down to 2.5 s of CPU a write, most of what is left being cause 10 |
 | 9 | flai serve's replanner writes each forecast it moves through `itemedit.Apply`, one after another (`flai/internal/serve/replan.go`, `replan`), so each moved forecast pays cause 8's two checks. | 5 to 6.4 s a forecast. Over the week, 98 replans moved 1,200 forecasts, about 1.7 to 2 h of serve CPU. An acceptance's replan commit lands p50 80 s and p90 127 s after the acceptance. | Write every moved forecast in one pass, with one scoped check and one index write. | About 80 s down to under 5 s a replan |
 | 10 | Every flai process starts cold. The item cache S-0156 added lives in flai serve's memory, so each `flai` a write starts, each `flai check`, and each `flai move` parses all 3,233 items, one file after another (`flai/internal/workitem/store.go` `list`). `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). | Item parse 1.1 to 1.5 s cold: 1.28 s with one worker, 0.65 s with 8, 0.49 s with 16. `move` 1 to 2.5 s, 80% of it the list. The lint of `wip`: 0.98 s, 0.25 s on 8 workers. | Parse on a bounded pool of workers. Keep parsed items and lint results under `.flai-cache`, keyed by path, size, and modification time, as S-0531 keeps the stories' commits. Remedied by S-0600: see [Parses and lint findings kept between processes](#parses-and-lint-findings-kept-between-processes-s-0600). | About 1 s a `move`; 1.5 to 2 s a check run |
 | 11 | `check.Run` runs its rules one after another (`flai/internal/check/check.go` `Run`), and `componentExamples` starts `node` on every run (`flai/internal/components/props.go`). | Whole check: 3.3 s cold and 1.8 s warm without `node`; 7.4 to 8 s cold and 2.6 s warm with it. `node` alone: 0.6 to 4.2 s. | Run the rules at once; they only read, so the findings need one lock. Keep the props `node` read, keyed by the component files' stat. | Whole check to about 1.2 to 1.5 s; helps `flai verify` and `flai task done` too |
@@ -407,6 +407,57 @@ Each cause from 8 to 21 has a draft story under [E-0033](../../wip/kanban/epics/
 | 19 | [S-0609](../../wip/kanban/stories/S-0609-flai-accept-and-flai-task-done-lint-markdown-once-per-set-with-the-installed.md) flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance |
 | 20 | [S-0610](../../wip/kanban/stories/S-0610-the-close-out-runs-independent-test-tiers-at-once-and-smoke-skips-what-the.md) The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out |
 | 21 | [S-0611](../../wip/kanban/stories/S-0611-the-dashboard-asks-threads-list-for-open-threads-and-agent-status-for-open-runs.md) The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB |
+
+### A checked write runs only the rules it can affect (S-0598)
+
+This section covers cause 8.
+
+#### Cause
+
+A checked creation or edit ran the whole of `flai check` twice, before and after the write. The cost was in the rules no item write can affect: the lint of every file under `wip`, `node` for the component examples, the digest, the documentation, and the threads.
+
+#### Fix
+
+`check.RunItemWrite` replaces `check.Run` in `itemnew.Create` and `itemedit.Apply`. It runs only the rules an item write can affect:
+
+- the item rules on the written items, their parents, and their children;
+- the graph rules and the board;
+- the written stories' narratives;
+- the markdown lint and conflict markers of the written files.
+
+Both runs, before and after, cover the same items and files. What a write refuses is unchanged. [ADR-0264](../adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md) records it.
+
+#### Measured on this repository
+
+Setup:
+
+- A scratch clone of the main checkout under `/tmp`, holding 3,278 work items, with the dashboard's `node_modules` linked in so that the old check ran `node` as on the host.
+- `flai` built from `main` (before) and from `story/S-0598` (after).
+- Five runs of each write, alternating story, edit, and task:
+  - `flai story new --epic E-0033 --body-stdin`;
+  - `flai edit <that story> --tag cli`;
+  - the MCP tool `item_new` of a task under it, through `flai mcp` over stdio, timing the call alone.
+
+The host was heavily loaded: 24 cores, load average 46 to 131 during the runs, with other agents running Go tests. Wall times swung with the load. CPU time, user, is the steadier figure. The figures below are medians, with the range in brackets.
+
+| Write | Before, wall | Before, CPU | After, wall | After, CPU |
+|-------|-------------:|------------:|------------:|-----------:|
+| `story new` | 18.7 s (9.8 to 47.3) | 12.6 s (10.0 to 21.6) | 2.7 s (2.3 to 4.0) | 2.5 s (2.4 to 3.0) |
+| `edit` | 17.5 s (11.5 to 37.9) | 12.0 s (11.1 to 13.2) | 2.4 s (2.2 to 4.3) | 2.4 s (2.3 to 3.2) |
+| MCP `item_new` of a task, the call | 18.5 s (8.9 to 21.0) | 12.6 s (10.1 to 13.2), the process | 2.5 s (2.1 to 5.0) | 2.9 s (2.5 to 3.4), the process |
+
+A second set of five after-runs, while the load climbed from 62 to 128, took 4 to 15 s wall each. They still used only 2.9 to 3.6 s of CPU, because the process got 30 to 40% of a core.
+
+A CPU profile of one `story new` after the change, 3.3 s of samples:
+
+| Where | CPU |
+|-------|----:|
+| `Repo.List`, the first, cold parse of all 3,278 items | 2.1 s |
+| `check.ScopeToItem`, which reads the threads and conversations | 0.35 s |
+| `touchesFolder` | 0.19 s |
+| `unaccepted`, which reads `packed-refs` once per archived done story | 0.13 s |
+
+The cold parse is cause 10. [S-0600](../../wip/kanban/stories/S-0600-a-flai-process-parses-work-items-on-a-pool-of-workers-and-keeps-parses-and-lint.md) parses on a pool of workers and keeps the parses under `.flai-cache`. With it, a checked write should come to well under a second of CPU.
 
 ### Cause 9 fixed: the replanner's forecasts written in one pass (S-0599)
 
