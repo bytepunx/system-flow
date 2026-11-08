@@ -65,7 +65,7 @@ func TestApplyForecastsWritesWhatApplyWrites(t *testing.T) {
 			t.Fatalf("Apply %s: %v", m.ID, err)
 		}
 	}
-	res, err := ApplyForecasts(batch, moves(), opt)
+	res, err := ApplyForecasts(batch, nil, moves(), opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,14 +112,14 @@ func TestApplyForecastsWritesTheIndexAndChecksOnce(t *testing.T) {
 	}
 	t.Cleanup(func() { runItems, writeIndex = check.Items, (*workitem.Repo).WriteIndex })
 	at := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
-	if _, err := ApplyForecasts(repo, moves(), Options{By: "flai", Now: at}); err != nil {
+	if _, err := ApplyForecasts(repo, nil, moves(), Options{By: "flai", Now: at}); err != nil {
 		t.Fatal(err)
 	}
 	if checks != 1 || indexes != 1 || !slices.Equal(checked, []string{"S-0001", "S-0002", "S-0003"}) {
 		t.Errorf("checks %d over %v, index writes %d; want one of each over the three", checks, checked, indexes)
 	}
 	// the same moves again change nothing: no write, no index, no check
-	res, err := ApplyForecasts(repo, moves(), Options{By: "flai", Now: at.Add(time.Hour)})
+	res, err := ApplyForecasts(repo, nil, moves(), Options{By: "flai", Now: at.Add(time.Hour)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestApplyForecastsMergesOrRefusesAnotherWritersSave(t *testing.T) {
 	}
 	t.Cleanup(func() { beforeSave = func() {} })
 	at := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
-	res, err := ApplyForecasts(repo, moves(), Options{By: "flai", Now: at})
+	res, err := ApplyForecasts(repo, nil, moves(), Options{By: "flai", Now: at})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestApplyForecastsMergesOrRefusesAnotherWritersSave(t *testing.T) {
 func TestApplyForecastsRefusesWhatItCannotEdit(t *testing.T) {
 	repo := forecastRepo(t)
 	at := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
-	res, err := ApplyForecasts(repo, append(moves()[:1], ForecastChange{ID: "S-0099", Edit: ForecastEdit{Delivery: str("2026-10-06T10:00:00Z")}}), Options{By: "flai", Now: at})
+	res, err := ApplyForecasts(repo, nil, append(moves()[:1], ForecastChange{ID: "S-0099", Edit: ForecastEdit{Delivery: str("2026-10-06T10:00:00Z")}}), Options{By: "flai", Now: at})
 	if err != nil {
 		t.Fatal(err)
 	}

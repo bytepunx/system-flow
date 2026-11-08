@@ -52,7 +52,13 @@ var (
 // edit leaves a valid item not valid, when another writer changed its
 // forecast since the read (ADR-0184), or when the check finds an error on
 // its own file, which puts that item back. It commits nothing.
-func ApplyForecasts(repo *workitem.Repo, changes []ForecastChange, opt Options) (*Batch, error) {
+//
+// all is the project's item list, the archive included, as the caller read
+// it and decided the changes from, or nil to read it here. Each edit is made
+// on the caller's copy, so a save merges against what the caller read: a
+// forecast another writer changed since is refused, and a change to another
+// part is kept (ADR-0184).
+func ApplyForecasts(repo *workitem.Repo, all []*workitem.Item, changes []ForecastChange, opt Options) (*Batch, error) {
 	if opt.Now.IsZero() {
 		opt.Now = time.Now()
 	}
@@ -60,9 +66,11 @@ func ApplyForecasts(repo *workitem.Repo, changes []ForecastChange, opt Options) 
 	if len(changes) == 0 {
 		return res, nil
 	}
-	all, err := repo.List(true)
-	if err != nil {
-		return nil, fmt.Errorf("list the items to replan their forecasts: %w", err)
+	if all == nil {
+		var err error
+		if all, err = repo.List(true); err != nil {
+			return nil, fmt.Errorf("list the items to replan their forecasts: %w", err)
+		}
 	}
 	byID := map[string]*workitem.Item{}
 	for _, it := range all {

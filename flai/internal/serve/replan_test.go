@@ -421,6 +421,110 @@ func TestAStoryAcceptedReplansTheForecastsBehindIt(t *testing.T) {
 	}
 }
 
+// S-0599: a replan that moves several forecasts writes them in one pass:
+// one commit, naming each moved item and wip/agents/index.md once.
+func TestAReplanOfSeveralForecastsWritesThemInOnePass(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.limit(1)
+	ahead := lab.ready("Ahead")
+	behind := []string{lab.ready("One"), lab.ready("Two"), lab.backlog("Three", nil), lab.backlog("Four", nil)}
+	stale := "2026-01-01T00:00:00Z"
+	lab.forecast(ahead, "8h", stale)
+	for _, id := range behind {
+		lab.forecast(id, "1h", stale)
+	}
+	lab.accept(ahead)
+	lab.clock = lab.clock.Add(time.Minute)
+	lab.r.look(ctx)
+	commits := lab.git.commits()
+	if len(commits) != 1 {
+		t.Fatalf("commits = %v, want one", commits)
+	}
+	index := 0
+	for _, arg := range commits[0] {
+		if filepath.ToSlash(arg) == "wip/agents/index.md" {
+			index++
+		}
+	}
+	if index != 1 {
+		t.Errorf("commit names wip/agents/index.md %d times, want once: %v", index, commits[0])
+	}
+	c := strings.Join(commits[0], " ")
+	for _, id := range behind {
+		it := lab.item(id)
+		if f := it.Forecast; f.By != "flai" || f.Delivery == stale || f.Delivery != lab.replayed(id).Delivery {
+			t.Errorf("%s forecast = %+v, want it replanned by flai", id, f)
+		}
+		if !strings.Contains(c, filepath.Base(it.Path)) {
+			t.Errorf("commit %s does not name %s", c, it.Path)
+		}
+	}
+	if !strings.Contains(lab.logText(), `msg="forecasts replanned" component=serve project=t policy=deterministic moved=4`) {
+		t.Errorf("the replan is not logged:\n%s", lab.logText())
+	}
+}
+
+// S-0599, ADR-0184: another writer's change to another part of a story,
+// saved between the replay and the write, is kept beside the replanned
+// forecast, and the other forecasts are written.
+func TestAReplanKeepsAnotherWritersChangeMadeAfterTheReplay(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.limit(1)
+	ahead, tagged, other := lab.ready("Ahead"), lab.ready("Tagged"), lab.backlog("Other", nil)
+	stale := "2026-01-01T00:00:00Z"
+	lab.forecast(ahead, "8h", stale)
+	lab.forecast(tagged, "1h", stale)
+	lab.forecast(other, "2h", stale)
+	lab.accept(ahead)
+	lab.clock = lab.clock.Add(time.Minute)
+	tags := []string{"cli"}
+	beforeWrite = func() { lab.edit(tagged, "alex", lab.clock, itemedit.Change{Tags: &tags}) }
+	t.Cleanup(func() { beforeWrite = func() {} })
+	lab.r.look(ctx)
+	if it := lab.item(tagged); len(it.Tags) != 1 || it.Tags[0] != "cli" || it.Forecast.By != "flai" || it.Forecast.Delivery == stale {
+		t.Errorf("%s tags %v forecast %+v, want alex's tag kept and the forecast replanned", tagged, it.Tags, it.Forecast)
+	}
+	if f := lab.item(other).Forecast; f.By != "flai" || f.Delivery == stale {
+		t.Errorf("%s forecast = %+v, want it replanned", other, f)
+	}
+	if strings.Contains(lab.logText(), "forecast not replanned") {
+		t.Errorf("a forecast was refused:\n%s", lab.logText())
+	}
+}
+
+// S-0599, ADR-0184: a forecast another writer changed between the replay and
+// the write is refused and warned of, and left as that writer saved it; the
+// other forecasts are written.
+func TestAReplanRefusesAForecastAnotherWriterChangedAfterTheReplay(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.limit(1)
+	ahead, theirs, other := lab.ready("Ahead"), lab.ready("Theirs"), lab.backlog("Other", nil)
+	stale := "2026-01-01T00:00:00Z"
+	lab.forecast(ahead, "8h", stale)
+	lab.forecast(theirs, "1h", stale)
+	lab.forecast(other, "2h", stale)
+	lab.accept(ahead)
+	lab.clock = lab.clock.Add(time.Minute)
+	mine := "2026-12-24T12:00:00Z"
+	beforeWrite = func() {
+		lab.edit(theirs, "alex", lab.clock, itemedit.Change{Forecast: &itemedit.ForecastEdit{Delivery: &mine}})
+	}
+	t.Cleanup(func() { beforeWrite = func() {} })
+	lab.r.look(ctx)
+	if f := lab.item(theirs).Forecast; f.Delivery != mine || f.By != "alex" {
+		t.Errorf("%s forecast = %+v, want alex's delivery %s kept", theirs, f, mine)
+	}
+	if f := lab.item(other).Forecast; f.By != "flai" || f.Delivery == stale {
+		t.Errorf("%s forecast = %+v, want it replanned", other, f)
+	}
+	if !strings.Contains(lab.logText(), `msg="forecast not replanned"`) || !strings.Contains(lab.logText(), "item="+theirs) {
+		t.Errorf("the refused forecast is not warned of:\n%s", lab.logText())
+	}
+}
+
 // S-0522, I-0183: a story moved after the replanner's look began, and read
 // moved by it, gets a forecast stamped no earlier than its move: each
 // forecast is stamped from the clock read at its write, not at the look's

@@ -252,9 +252,15 @@ func (r *replanner) schedules(planner roles.Role, m manifest.Manifest, now time.
 	return scheds
 }
 
+// beforeWrite runs between the replay and the write of the forecasts it
+// moved, so that a test can bring another writer's save in between.
+var beforeWrite = func() {}
+
 // replan plays the board out again after triggers as planning.replan says:
-// it writes the forecast deliveries that moved as at now, each stamped at its
-// write (I-0183), and commits them in one commit unless autocommit is off.
+// it writes the forecast deliveries that moved as at now, stamped at the
+// write (I-0183), in one pass under the items lock with one check over the
+// written items and one index write (itemedit.ApplyForecasts, S-0599), and
+// commits them in one commit unless autocommit is off.
 // It returns the policy and the stories it wrote, which replan-agent's
 // entries queue the planner for under agent. A policy that is not valid is
 // warned of once, and nothing is done.
@@ -272,19 +278,27 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 		r.starter.warn("forecast not replayed", "err", err)
 	}
 	var files []string
-	for _, m := range moves {
-		delivery, basis := m.delivery, m.basis
-		res, err := itemedit.Apply(repo, gitOf(r.o), m.id, itemedit.Change{Forecast: &itemedit.ForecastEdit{Delivery: &delivery, Basis: &basis}},
-			itemedit.Options{By: "flai", NoCommit: true, Now: r.o.Now().UTC()})
-		if err != nil {
-			r.starter.warn("forecast not replanned", "item", m.id, "err", err)
-			continue
+	if len(moves) > 0 {
+		changes := make([]itemedit.ForecastChange, 0, len(moves))
+		for _, m := range moves {
+			delivery, basis := m.delivery, m.basis
+			changes = append(changes, itemedit.ForecastChange{ID: m.id, Edit: itemedit.ForecastEdit{Delivery: &delivery, Basis: &basis}})
 		}
-		written = append(written, m.id)
-		for _, f := range res.Files {
-			if !slices.Contains(files, f) {
-				files = append(files, f)
+		beforeWrite()
+		// the replay's own items, so that a save merges against what the
+		// replay read: a forecast another writer changed since is refused
+		batch, err := itemedit.ApplyForecasts(repo, items, changes, itemedit.Options{By: "flai", NoCommit: true, Now: r.o.Now().UTC()})
+		if err != nil {
+			r.starter.warn("forecasts not replanned", "moves", len(moves), "err", err)
+		} else {
+			for _, m := range moves {
+				if err, refused := batch.Refused[workitem.CanonicalID(m.id)]; refused {
+					r.starter.warn("forecast not replanned", "item", m.id, "err", err)
+				} else if slices.Contains(batch.Written, workitem.CanonicalID(m.id)) {
+					written = append(written, m.id)
+				}
 			}
+			files = batch.Files
 		}
 	}
 	why := strings.Join(triggers, "; ")
