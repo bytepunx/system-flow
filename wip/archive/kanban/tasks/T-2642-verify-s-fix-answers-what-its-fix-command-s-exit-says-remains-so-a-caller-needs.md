@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 576
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 237
-      cache_read: 3561754
-      cache_write: 42681
-      cost: 1.3032
+      input: 23
+      output: 8686
+      cache_read: 3657804
+      cache_write: 55082
+      cost: 1.2596
 ---
 # T-2642 verify's fix answers what its fix command's exit says remains, so a caller needs no check after a --fix
 

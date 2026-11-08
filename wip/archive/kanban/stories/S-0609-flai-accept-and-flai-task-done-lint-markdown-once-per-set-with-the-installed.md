@@ -3,11 +3,11 @@ id: S-0609
 type: story
 nature: improvement
 title: flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:56Z
-updated: 2026-11-08T02:43:11Z
+updated: 2026-11-08T03:30:21Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:35Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-08T02:13:30Z
     by: agent-S-0609
+  - to: review
+    at: 2026-11-08T03:28:38Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T03:30:21Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, scripts/lint-md.sh, scripts/install-tools.sh, design/tech/ci.md, design/tech/node.md, docs/contributors/index.md, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/cmd/branch.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_uncommitted_test.go, flai/internal/preview/accept.go, design/system/server-performance.md, design/adrs/0265-flai-accept-takes-a-tier-s-fix-command-s-exit-as-what-the-fix-left-exit-0.md, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, flai/cmd/move_refused_test.go]
 agent:
@@ -24,22 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2597
-  estimated: true
-  priced_by: estimate
+  seconds: 4521
+  priced_by: harness
   turns:
     - day: 2026-11-08
-      ceremony: 1
-      test_runs: 1
-      hand_edits: 1
-      work: 49
+      ceremony: 2
+      test_runs: 2
+      hand_edits: 2
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 250
-      output: 1523
-      cache_read: 35607114
-      cache_write: 501406
-      cost: 13.0553
+      input: 372
+      output: 141480
+      cache_read: 59576522
+      cache_write: 897155
+      cost: 20.5158
   strategic:
     - kind: planner
       seconds: 91
@@ -87,9 +92,9 @@ Cause 19 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `flai accept` lints the uncommitted set and the branch's set in one call each, runs the installed `markdownlint-cli2` without `npx` where it is installed, and runs no check after a `--fix` whose exit already says what remains.
-- [ ] `flai accept` reads `git status --porcelain` once per state of the checkout it needs, not six times.
-- [ ] An acceptance in a scratch copy of this repository takes at least 4 s less than before, refusing the same unfixed markdown as ADR-0140 says, and server-performance.md records the before and after.
+- [x] `flai accept` lints the uncommitted set and the branch's set in one call each, runs the installed `markdownlint-cli2` without `npx` where it is installed, and runs no check after a `--fix` whose exit already says what remains.
+- [x] `flai accept` reads `git status --porcelain` once per state of the checkout it needs, not six times.
+- [x] An acceptance in a scratch copy of this repository takes at least 4 s less than before, refusing the same unfixed markdown as ADR-0140 says, and server-performance.md records the before and after.
 
 ## Tasks
 
@@ -132,3 +137,13 @@ Assumptions:
 - `flai task done` gains from the installed markdownlint through T-2636 alone. Its lint calls are not cut, since no criterion asks for it.
 - The `EpicWalk` listing and running `releaseDue`, `tellAccepted`, and `installAccepted` at once are left out, since no criterion asks for them.
 - The merge queue's preflight (`flai/internal/mergequeue/preflight.go`) keeps its fix-then-check, since no criterion asks for it.
+
+### Accepted by the orchestrator
+
+- Verified: d4f0e421093a48db26357e3e09afb06e5e1b29ed
+- At: 2026-11-08T03:30:21Z
+
+Verdict: met. All three criteria are met at d4f0e42, whose close-out passed every step, integration and smoke included.
+- 1: flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_uncommitted_test.go, scripts/lint-md.sh, scripts/install-tools.sh, design/adrs/0265-flai-accept-takes-a-tier-s-fix-command-s-exit-as-what-the-fix-left-exit-0.md
+- 2: flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/move_refused_test.go, flai/cmd/accept_uncommitted_test.go
+- 3: design/system/server-performance.md, flai/cmd/accept_fix_test.go, flai/cmd/accept_markdown.go

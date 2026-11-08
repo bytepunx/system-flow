@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 24
-      output: 5794
-      cache_read: 3239164
-      cache_write: 117117
-      cost: 1.4267
+      output: 5633
+      cache_read: 3239127
+      cache_write: 112767
+      cost: 1.3997
 ---
 # T-2666 merge.queue reads no thread and runs no git status while no story is in review
 

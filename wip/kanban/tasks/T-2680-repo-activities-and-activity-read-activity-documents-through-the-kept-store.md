@@ -3,22 +3,43 @@ id: T-2680
 type: task
 nature: improvement
 title: Repo.Activities and Activity read activity documents through the kept store
-status: backlog
+status: done
 parent: S-0602
 owner: alex
 created: 2026-11-07T23:50:29Z
-updated: 2026-11-07T23:50:29Z
-transitions: []
+updated: 2026-11-08T03:23:11Z
+transitions:
+  - to: ready
+    at: 2026-11-08T03:08:15Z
+    by: agent-S-0602
+  - to: in-progress
+    at: 2026-11-08T03:08:16Z
+    by: agent-S-0602
+  - to: done
+    at: 2026-11-08T03:23:11Z
+    by: agent-S-0602
 stream: S-0602
 tags: [cli]
 touches: [flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go]
 after: [T-2660]
+usage:
+  source: log
+  seconds: 855
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 144
+      cache_read: 2476612
+      cache_write: 17324
+      cost: 0.9025
 ---
 # T-2680 Repo.Activities and Activity read activity documents through the kept store
 
 ## Work
 
-Move `Repo.Activity` and `Repo.Activities` in `flai/internal/workitem/activity.go` onto a package-level `Kept[*Activity]`, with `ReadActivity` as its parse and a deep copy of an activity and its entries as its clone. Keep the order of `ActivityKinds`, a missing document left out, and the error for a document whose kind is not its file's name. `AppendActivity` and `AppendRefusal` save through `atomicfile` under `lockActivity`, so the next read sees them by stat. `stats.get` reads these documents.
+Move `Repo.Activity` and `Repo.Activities` in `flai/internal/workitem/activity.go` onto a package-level `KeptFiles[*Activity]`, with `ReadActivity` as its parse and a deep copy of an activity and its entries as its clone. Keep the order of `ActivityKinds`, a missing document left out, and the error for a document whose kind is not its file's name. `AppendActivity` and `AppendRefusal` save through `atomicfile` under `lockActivity`, so the next read sees them by stat. `stats.get` reads these documents.
 
 It waits for T-2660, whose store it uses.
 

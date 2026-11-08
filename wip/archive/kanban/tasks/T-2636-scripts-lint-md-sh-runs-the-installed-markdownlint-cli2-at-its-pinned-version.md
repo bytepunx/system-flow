@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 558
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 168
-      cache_read: 4390521
-      cache_write: 27994
-      cost: 1.5975
+      input: 28
+      output: 10648
+      cache_read: 4483940
+      cache_write: 67523
+      cost: 1.5441
 ---
 # T-2636 scripts/lint-md.sh runs the installed markdownlint-cli2 at its pinned version, and install-tools.sh installs it
 

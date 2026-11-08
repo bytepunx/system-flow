@@ -3,16 +3,37 @@ id: T-2664
 type: task
 nature: improvement
 title: Measure an acceptance before and after in a scratch copy and record it in server-performance.md
-status: backlog
+status: done
 parent: S-0609
 owner: alex
 created: 2026-11-07T23:49:51Z
-updated: 2026-11-07T23:49:51Z
-transitions: []
+updated: 2026-11-08T03:22:10Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:59:34Z
+    by: agent-S-0609
+  - to: in-progress
+    at: 2026-11-08T02:59:34Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T03:22:10Z
+    by: agent-S-0609
 stream: S-0609
 tags: [cli]
 touches: [design/system/server-performance.md]
 after: [T-2636, T-2649, T-2658]
+usage:
+  source: log
+  seconds: 1356
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 28578
+      cache_read: 12033964
+      cache_write: 181218
+      cost: 4.144
 ---
 # T-2664 Measure an acceptance before and after in a scratch copy and record it in server-performance.md
 

@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 22
-      output: 5322
-      cache_read: 2975368
-      cache_write: 107579
-      cost: 1.3106
+      output: 5175
+      cache_read: 2975334
+      cache_write: 103583
+      cost: 1.2857
 ---
 # T-2659 The release package's kept history takes one lock per repository root, so one root's git processes never hold another root's call
 

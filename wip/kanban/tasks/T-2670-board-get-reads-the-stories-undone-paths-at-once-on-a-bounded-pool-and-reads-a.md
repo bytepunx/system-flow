@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 45
-      output: 11157
-      cache_read: 6237471
-      cache_write: 225525
-      cost: 2.7474
+      output: 10848
+      cache_read: 6237400
+      cache_write: 217148
+      cost: 2.6953
 ---
 # T-2670 board.get reads the stories' undone paths at once on a bounded pool, and reads a story in review's once
 

@@ -3,26 +3,42 @@ id: S-0602
 type: story
 nature: improvement
 title: flai serve keeps threads, conversations, digest entries, issues, and activity documents parsed between requests, so a thread read takes about 5 ms, not 80 to 110 ms
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:05Z
-updated: 2026-11-08T02:57:43Z
+updated: 2026-11-08T03:01:00Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:21Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T02:58:53Z
+    by: agent-S-0602
 tags: [cli]
-touches: [flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, design/system/server-performance.md, design/system/flai-cli.md]
+touches: [flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/workitem/keptfiles.go, flai/internal/workitem/keptfiles_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1422
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-08
+      ceremony: 2
+      hand_edits: 1
+      work: 32
+  models:
+    - model: claude-opus-5-5
+      input: 194
+      output: 1255
+      cache_read: 23115254
+      cache_write: 715688
+      cost: 8.624
   strategic:
     - kind: orchestrator
       seconds: 173

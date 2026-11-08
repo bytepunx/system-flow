@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 44
-      output: 14876
-      cache_read: 7201725
-      cache_write: 311600
-      cost: 3.4339
+      output: 14661
+      cache_read: 7202452
+      cache_write: 306155
+      cost: 3.4016
 ---
 
 # T-2698 Measure item.get with 13 at once again after T-2697, and record it under cause 16

@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 43
-      output: 11171
-      cache_read: 6114467
-      cache_write: 219360
-      cost: 2.6686
+      output: 11102
+      cache_read: 6116044
+      cache_write: 211786
+      cost: 2.6289
 ---
 # T-2629 agent.status passes its context to the host's Agent and records the phases of the state it builds
 

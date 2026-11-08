@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0509, S-0510, S-0565, TH-0814, TH-0815, TH-0820]
+cited: [S-0509, S-0510, S-0565, TH-0814, TH-0815, TH-0820, TH-0911]
 ---
 
 # D-0466 S-0508: the live container run (criterion 6, T-2169's first half) cannot run before S-0508 is accepted and published; move it to a follow-up story: Recommended: say yes, as you answered for S-0423 on…

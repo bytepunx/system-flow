@@ -24,16 +24,16 @@ touches: [flai/cmd/accept.go, flai/cmd/accept_markdown.go, flai/internal/preview
 after: [T-2649]
 usage:
   source: log
-  seconds: 645
+  seconds: 648
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 279
-      cache_read: 10579699
-      cache_write: 65861
-      cost: 3.8489
+      input: 67
+      output: 25655
+      cache_read: 10803167
+      cache_write: 162683
+      cost: 3.7202
 ---
 # T-2658 flai accept reads git status --porcelain once per state of the checkout it needs, not six times
 

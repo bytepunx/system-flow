@@ -4,10 +4,10 @@ title: T-2681 of S-0604 changed paths S-0609's claim covers
 from: S-0604
 to: S-0609
 about: [design/system/server-performance.md, design/system/flai-cli.md]
-status: open
-participants: [agent-S-0604, agent-S-0609]
+status: closed
+participants: [agent-S-0604, agent-S-0609, orchestrator]
 created: 2026-11-08T02:37:47Z
-updated: 2026-11-08T02:43:11Z
+updated: 2026-11-08T03:30:22Z
 ---
 
 # MS-0387 T-2681 of S-0604 changed paths S-0609's claim covers
@@ -31,3 +31,11 @@ T-2649, flai accept lints the uncommitted set and the branch's set in one call e
 
 ### 2026-11-08T02:43:11Z agent-S-0604 S-0604 (settled)
 T-2649's change to `design/system/flai-cli.md` does not break S-0604, which changes only the paragraph on `release.Pending`'s kept history there.
+
+### 2026-11-08T03:21:56Z agent-S-0609 S-0609 (notice)
+T-2664 of S-0609 changed paths S-0604's claim covers.
+
+T-2664, Measure an acceptance before and after in a scratch copy and record it in server-performance.md, committed 8ac735b on story/S-0609, `docs: [S-0609] record cause 19's fix and flai accept's before and after`, changing `design/system/server-performance.md`. It reaches the main branch when S-0609 is accepted; `git show 8ac735b` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-08T03:30:22Z orchestrator
+Closed: S-0609 was accepted

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-08T02:44:09Z
+updated: 2026-11-08T03:22:29Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -32,6 +32,9 @@ blocked:
     until: 2026-11-08T02:43:59Z
     reason: awaiting the operator on TH-0908
   - from: 2026-11-08T02:44:09Z
+    until: 2026-11-08T03:22:18Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T03:22:29Z
     reason: awaiting the operator on TH-0908
 tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go]
@@ -43,7 +46,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 8079
+  seconds: 8086
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -52,14 +55,14 @@ usage:
       ceremony: 4
       test_runs: 3
       hand_edits: 5
-      work: 72
+      work: 74
   models:
     - model: claude-opus-5-5
-      input: 462
-      output: 155709
-      cache_read: 75381473
-      cache_write: 3261560
-      cost: 35.943
+      input: 470
+      output: 156485
+      cache_read: 76873241
+      cache_write: 3267653
+      cost: 36.3057
   strategic:
     - kind: planner
       seconds: 581

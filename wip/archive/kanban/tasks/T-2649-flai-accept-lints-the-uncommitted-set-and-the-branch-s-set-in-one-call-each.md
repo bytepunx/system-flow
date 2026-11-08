@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 722
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 581
-      cache_read: 13676573
-      cache_write: 92597
-      cost: 4.9784
+      input: 87
+      output: 33183
+      cache_read: 13973037
+      cache_write: 210418
+      cost: 4.8118
 ---
 # T-2649 flai accept lints the uncommitted set and the branch's set in one call each, with no check after a fix whose exit says what remains
 
