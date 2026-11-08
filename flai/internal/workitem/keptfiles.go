@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -89,7 +90,8 @@ func keyPath(path string) string {
 
 // List looks at every regular file of dir whose base name match accepts (nil
 // accepts all), in name order, parsing again only those that are new or may
-// have changed. A folder that does not exist has none. Kept files of dir that
+// have changed. A folder that does not exist, or whose path names a file,
+// has none. Kept files of dir that
 // are gone, or that match no longer accepts, are dropped.
 func (k *KeptFiles[T]) List(dir string, match func(name string) bool) ([]KeptFile[T], error) {
 	dir = keyPath(dir)
@@ -97,7 +99,7 @@ func (k *KeptFiles[T]) List(dir string, match func(name string) bool) ([]KeptFil
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	entries, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
 		clear(f.files)
 		return nil, nil
 	}

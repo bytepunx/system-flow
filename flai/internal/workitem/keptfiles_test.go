@@ -212,6 +212,18 @@ func TestKeptFilesMissingFolderHasNone(t *testing.T) {
 	}
 }
 
+// A folder's path that names a file holds no files, as a missing folder
+// does, so a reader answers nothing rather than failing, as filepath.Glob
+// did before the store.
+func TestKeptFilesPathThatIsAFileHasNone(t *testing.T) {
+	path := writeNote(t, t.TempDir(), "messages", "not a folder", longAgo)
+	k := newNotes()
+	files, err := k.List(path, nil)
+	if err != nil || files != nil {
+		t.Fatalf("List of a path that is a file = %v, %v; want nil, nil", files, err)
+	}
+}
+
 func TestKeptFilesReadSeesChangesAndAGoneFile(t *testing.T) {
 	dir := t.TempDir()
 	path := writeNote(t, dir, "a.md", "one", longAgo)
