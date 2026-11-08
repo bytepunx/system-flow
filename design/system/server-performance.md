@@ -504,6 +504,37 @@ The host was very busy: the one-minute load average was 54 to 136 during the "be
 
 Before, each forecast cost about 14 s of wall time and 8 s of CPU on this host. That is above S-0596's 5 to 6.4 s, which was measured under a lighter load. After, the whole write of 20 takes under a tenth of a second. A replan's time is now its replay and its commit.
 
+### Cause 11: flai check's rules at once and the props node read kept (S-0601)
+
+Two changes:
+
+- `check.Run` runs `workItems` first and alone, since it fills the index of items by ID that the other rules read, and works out the topic vocabulary before any rule. It then runs the other 28 rules at once on at most `GOMAXPROCS` workers. Each rule runs on a copy of the checker with a result of its own, so a rule that marks its last finding, such as `advise`, marks its own. The results are merged in the order `Run` ran the rules before, and sorted stably as before, so the findings, their order, and the counts do not change. `TestRunAtOnceMatchesTheRulesOneAfterAnother` (`flai/internal/check/concurrent_test.go`) checks that over a fixture with a finding of every rule.
+- The props `node` read is kept, so a check whose components did not change starts no `node` ([component-library.md › The kept read](component-library.md#the-kept-read-s-0601)).
+
+Measured on 2026-11-08 between 01:55 and 02:00 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), in the main checkout, with `node` 24.21 on `PATH` and flaiover's `node_modules` installed. That checkout held 3,349 work items. Two binaries were built just before, `main` at 3087d9cf4, which has S-0600's kept parses and lint findings, and `story/S-0601` at 1582a0dd3. Each ran `flai check --strict` as a fresh process, timed by the shell's `time`, five times each, taking turns, after a first run of each that wrote the kept files. Both gave the same output and exited 1 on the same 19 warnings. The host was very busy: the one-minute load average was 84 to 103.
+
+| Warm `flai check --strict` | Wall | CPU (user and system) |
+|----------------------------|-----:|----------------------:|
+| `main` | 7.9 to 11.7 s | 4.9 to 5.3 s |
+| S-0601 | 3.3 to 4.9 s | 3.8 to 3.9 s |
+
+Before S-0600 was accepted, at a load of 61 to 96, `main` at e4e6dff2a took 7.7 to 18.7 s wall and 7.5 to 8.4 s CPU, and S-0601 on it 3.5 to 9.6 s wall and 6.0 to 7.1 s CPU. A first run with no kept props file took 9.3 s against 6.7 to 7.1 s warm.
+
+S-0601 halves the wall time and takes about 1.2 s of CPU off a check. It does not reach the story's 2 s on this host. A small program built with `go build -overlay` timed each step in one process at a load of 103 to 114:
+
+| Step | Time |
+|------|-----:|
+| `Repo.List(true)`, with S-0600's kept items | 0.66 to 1.10 s |
+| `workItems`, alone | about 0.45 to 0.8 s |
+| `digest`, the slowest of the rules at once | 0.76 to 1.77 s |
+| `conflictMarkers` | 0.45 to 1.10 s |
+| `documentation` | 0.28 to 0.85 s |
+| `componentExamples`, from the kept read | 0.19 to 0.36 s |
+| `markdown`, from S-0600's kept findings | 0.13 to 0.29 s |
+| `check.Run` in all, the list included | 2.7 to 3.3 s |
+
+What is left is that critical path: the list, `workItems` alone, and the digest rule, which reads and scans every digest entry. It is recorded as [I-0312](../issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md).
+
 ### Cause 13 fixed: threads, conversations, digest entries, issues, and activity documents kept parsed (S-0602)
 
 Every call read and parsed each of these files again: 884 threads, 351 conversations, 521 digest entries, 295 issues, and the strategic agents' activity documents. Now a long-running flai keeps each kind parsed, as S-0156 keeps items.

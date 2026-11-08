@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-28
+updated: 2026-11-08
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -113,6 +113,18 @@ The program costs time. Listing flaiover's 58 components takes about 2.7 seconds
 - **Stamps.** Each path TypeScript's system looked at while it resolved them, as it was before it looked: a file by its time and size; a missing file, as most of module resolution's probes are, by its folder's time, which a file made there changes; a folder asked to exist by whether it does; a folder listed by its time; a real path by what it resolves to. `typescript` itself is stamped too.
 - **Hit.** A run whose key has a file and whose every stamp is as it was takes the skeletons from it, without loading `typescript`. Listing flaiover's components then takes about 0.45 seconds, of which checking about 6,300 stamps is a few tens of milliseconds.
 - **Miss.** Any other run resolves them as above and writes its file, through a file of its own that it renames, so that a run beside it reads one or the other. A cache file that cannot be read, or whose stamps are malformed, is a miss, never an error (I-0198). A cache that cannot be written costs only the next run's time.
+
+#### The kept read (S-0601)
+
+A skeleton cache hit still starts `node`, which takes 0.6 to 4.2 seconds a sub-project on a busy host. So flai also keeps each component's whole answer, its props or its error, and starts `node` only for the components whose answer may have changed. `flai check`'s examples rule, `flai components list`, and the Components page all read props this way (`flai/internal/components/propscache.go`).
+
+- **Where.** One file a sub-project, `.flai-cache/component-props-kept/<sub-project path>/props.json`, outside the skeleton cache's folder, so the script's pruning of that folder never removes it.
+- **Key.** Parts every component of the file shares: the file's format version, the script's hash, the version in the `svelte/package.json` that `node` would resolve from the sub-project's folder, and the hash of the sub-project's `package.json`. A file whose shared parts differ is read as empty. Each component adds its file's size and modification time, taken before `node` reads it. A component whose skeletons TypeScript resolved also depends on the stamps of that run, which the script names in its answer (`stamps`, and `stamped` on the component), as the skeleton cache's stamps are taken.
+- **Hit.** Each component whose key is unchanged is answered from the file. When every component asked for is, `node` does not start.
+- **Miss.** The rest go to `node`, once for the sub-project, with only those components on its input. What it answers is merged into the file, written through a file of its own and renamed over it. A component that errors is kept with its error.
+- **Kept nowhere.** Nothing is kept unless the project's `.flai-cache` folder exists already, and flai never makes it for this, so a fixture project without a `.gitignore` does not grow one (D-0402). Nothing is kept for a sub-project whose `svelte` flai cannot find. A file that does not parse is a miss, never an error.
+
+Changing one imported type re-reads every typed component of the run that stamped it, still with one `node` start. On this repository the file holds flaiover's 58 components and one run's 6,303 stamps, 1.3 MB.
 
 ### Commands
 
@@ -356,7 +368,7 @@ Each finding names the example and its line: the prop's key for a finding about 
 
 `null` fits every kind but `function`: flai leaves `null` out of a type when it reads its kind ([Props](#props)), so the kind cannot say whether `null` is allowed.
 
-The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why. Without `node`, the format and whether each file's component exists are still checked; only the props are not. A sub-project whose svelte is not installed, such as one in a story's worktree without its `node_modules`, is passed over with one note too, on its examples folder `design/components/<sub-project>`, saying to install it ([ADR-0171](../adrs/0171-a-sub-project-whose-svelte-is-not-installed-gets-one-components-examples-note.md)). Its files' format and components are still checked.
+The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one, through [the kept read](#the-kept-read-s-0601), so a check with no component changed starts no `node`. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why. Without `node`, the format and whether each file's component exists are still checked; only the props are not. A sub-project whose svelte is not installed, such as one in a story's worktree without its `node_modules`, is passed over with one note too, on its examples folder `design/components/<sub-project>`, saying to install it ([ADR-0171](../adrs/0171-a-sub-project-whose-svelte-is-not-installed-gets-one-components-examples-note.md)). Its files' format and components are still checked.
 
 ## flaiover's own components (S-0444)
 
