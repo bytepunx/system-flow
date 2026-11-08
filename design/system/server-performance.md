@@ -535,6 +535,42 @@ The figures are medians. A cold call parses every file, as before. `stats.get` r
 
 The five reads together took 292 ms warm before and 18 ms after: a warm thread read is about 7 ms, not 80 to 110 ms. `threads.list` and `inbox.designer` spend about 220 to 250 ms less in `threads.read`. `stats.get`'s reads spend 260 ms less CPU. Their wall time falls only 46 ms, from 96 to 50 ms, because S-0607 runs the twelve reads at once, so the wall time is that of the slowest. What is left of `statsread.Read` is the reads this story does not keep: the stories' commits, the board, the conflict log, and the merge queue's events.
 
+### Cause 14 fixed: board.get's release lock per root, the watcher's word, and no threads with nothing in review (S-0604)
+
+- The kept history in `flai/internal/release/history.go` is one `keptRoot` per repository root, each with its own lock. The map's lock is held only to find or add a root's entry, never across a git process. `PendingBatch` holds only its root's lock, so one project's `git show-ref` and `git log` never hold another project's board. `TestPendingOnOneRootAnswersWhileAnotherRootsGitRuns` holds one root inside its `show-ref` and shows a second root answers meanwhile.
+- flai serve's main-refs watcher, `mainRefs` in `flai/internal/serve/mergequeue.go`, now watches `.git/refs/tags` beside `HEAD`, `packed-refs`, and `refs/heads`. Each served project's merge queue pass calls `release.Watch` as it starts, and `release.RefsMoved` on every change the watcher reports and once a tick after its first look. `PendingBatchWatched`, which `PendingIDs` calls for `board.get`, the inbox, and the orchestrator's figures, reuses the kept history while a watcher covers the root and no move came since it was read. A generation counter, read before the `show-ref`, keeps a move reported during a read from being lost. The publish that tags and pushes, `release.EvaluateRepo`, and `publish.preview` call `PendingBatch`, which still reads git. Processes other than flai serve never call `Watch`, so they read git as before.
+- `mergequeue.ComputeAt` (`flai/internal/mergequeue/eligible.go`) finds the stories in review first. With none, it answers the queue's saved state with no entries and no window, and reads no thread and runs no `git status`.
+- `board.get`'s `undone.read` phase (`flai/internal/hostapi/hostapi.go`, `boardUndone`) reads the ready, in-progress, and review stories' undone paths at once, on at most 8 goroutines, each writing only its own card. A story in review is still read again by the merge queue; sharing the read would change `mergequeue`'s API.
+
+Measured on 2026-11-08 between 02:34 and 02:36 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0). An in-process Go program, built under `/tmp` against each tree, called `board.get` through `hostapi.MethodsFor` with a request timer, for the 13 projects in `~/.flai/serve/projects.json`. It ran a watcher over `mainRefs` for each root, as flai serve does; only the story's build had `release.Watch` and `release.RefsMoved` to call. Each run made a warm-up call and one sequential call per project, then five rounds of 13 calls released together: 65 calls a run. Before is `main` at 3087d9cf4; after is `story/S-0604` at 481db7030, with T-2659, T-2666, T-2670, and T-2677. The two ran in turn, twice each, so 130 calls a build. The one-minute load average was 80 to 104 on 24 cores, with other agents running Go tests.
+
+| 13 at once, a call | Before | After |
+|--------------------|--------|-------|
+| All 13 projects, p50 | 41 ms | 14 ms |
+| All 13 projects, p90 | 127 ms | 217 ms |
+| All 13 projects, max | 529 ms | 761 ms |
+| The other 12, p50 (max) | 36 ms (190) | 10 ms (293) |
+| This repository, p50 (range) | 415 ms (274 to 529) | 442 ms (342 to 761) |
+| Calls under 300 ms | 121 of 130 | 120 of 130 |
+| Calls that ran `git show-ref` | 70 of 130 | 0 of 130 |
+| Calls that ran `git status` | 130 of 130 | 40 of 130 |
+
+| Phase, 13 at once, p50 (max) | Before | After |
+|------------------------------|--------|-------|
+| `release.pending`, all | 3.9 ms (96) | 0.0 ms (202) |
+| `merge.queue`, all | 21.8 ms (309) | 0.2 ms (339) |
+| `repo.list`, this repository | 56 ms (105) | 93 ms (269) |
+| `release.pending`, this repository | 34 ms (91) | 26 ms (76) |
+| `board.view`, this repository | 71 ms (101) | 69 ms (124) |
+| `merge.queue`, this repository | 216 ms (309) | 224 ms (339) |
+| `undone.read`, all | under 1 ms | under 1 ms (154) |
+
+The board's own git is gone. No call ran `show-ref`, and `git status` ran only for the four projects with a story in review. With nothing in review, a project's `merge.queue` is now a read of the queue's state, and the other 12 projects' p50 fell from 36 to 10 ms. `release.pending` still takes 20 to 76 ms for this repository without starting git: that is working out its plans from every item, the archive included. The after run's maxima on other projects, up to 202 ms in `release.pending` with no git process, came in one round, together, while the host stalled.
+
+The story's target, every call under 300 ms with 13 at once, is not met for this repository. The other 12 answered under 300 ms in every call of both runs. This repository answered in 342 to 761 ms after, as before. Four of its stories were in review, so its `merge.queue` read all its threads, about 200 ms (cause 13, S-0602), and its `repo.list` and `board.view`, the item list and the holds, took 60 to 270 ms (cause 16, S-0606). The serve log's p50 of 800 ms was taken inside flai serve, beside the other requests and the shared lock this story removed. One process making only board calls does not have that contention, so `main` measured 41 ms at p50 here.
+
+The program wrote nothing of its own. Like every `board.get`, its item lists may have written the rebuildable kept items files under `.flai-cache` that S-0600 added.
+
 ### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
 
 The planner's first idea was to take the projects below the import folders from the running flai serve's status. That status cannot say which import folder a registered project is below, since `serve.Place` leaves registered projects out of `ImportProjects` and `Unserved`. So the walk is replaced, not cached.
