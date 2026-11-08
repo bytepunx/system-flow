@@ -22,24 +22,64 @@ type sig struct {
 
 // Watcher reports changes under Paths, which are relative to Root: folders
 // are walked, a file is watched by itself.
+//
+// Slow are folders, relative to Root, on a slow tier (S-0606): on every look
+// only their folders are statted, and a folder whose modification time or
+// size moved is read again and its files statted, so a file added, renamed
+// in, or removed is seen at once. Every file below a slow folder is statted
+// only every SlowEvery, which is when an edit in place is seen, since it
+// moves no folder's modification time. A slow folder below a fast path is
+// left out of the fast walk. A second change to a folder within the file
+// system's timestamp granularity of the first may wait for the next slow look.
 type Watcher struct {
-	Root  string
-	Paths []string
-	Every time.Duration // default 300ms
+	Root      string
+	Paths     []string
+	Every     time.Duration // default 300ms
+	Slow      []string
+	SlowEvery time.Duration // default 10s
+
+	now  func() time.Time                  // the clock; time.Now when nil
+	stat func(string) (fs.FileInfo, error) // the slow tier's stat; os.Lstat when nil
+	slow *slowTier
 }
 
-// snapshot stats every regular file under the watched paths.
+// slowTier is what the slow tier keeps between looks: each folder's own
+// signature and what it held, and the last signature of each file below.
+type slowTier struct {
+	dirs     map[string]*dirState // by full path
+	files    map[string]sig       // by repository-relative path
+	lastFull time.Time
+	looked   bool
+}
+
+type dirState struct {
+	sig     sig
+	subdirs []string // base names
+	files   []string // base names
+}
+
+func sigOf(info fs.FileInfo) sig {
+	return sig{mod: info.ModTime().UnixNano(), size: info.Size()}
+}
+
+// snapshot stats every regular file under the fast paths, and the slow paths
+// as the slow tier allows, carrying the files it does not stat.
 func (w *Watcher) snapshot() map[string]sig {
 	out := map[string]sig{}
+	slow := map[string]bool{}
+	for _, p := range w.Slow {
+		slow[filepath.Clean(filepath.Join(w.Root, p))] = true
+	}
 	add := func(path string, info fs.FileInfo) {
-		rel, err := filepath.Rel(w.Root, path)
-		if err != nil {
-			return
+		if rel, ok := w.rel(path); ok {
+			out[rel] = sigOf(info)
 		}
-		out[filepath.ToSlash(rel)] = sig{mod: info.ModTime().UnixNano(), size: info.Size()}
 	}
 	for _, p := range w.Paths {
-		full := filepath.Join(w.Root, p)
+		full := filepath.Clean(filepath.Join(w.Root, p))
+		if slow[full] {
+			continue
+		}
 		info, err := os.Stat(full)
 		if err != nil {
 			continue
@@ -54,7 +94,7 @@ func (w *Watcher) snapshot() map[string]sig {
 				return nil //nolint:nilerr
 			}
 			if d.IsDir() {
-				if path != full && strings.HasPrefix(d.Name(), ".") {
+				if path != full && (strings.HasPrefix(d.Name(), ".") || slow[path]) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -65,7 +105,121 @@ func (w *Watcher) snapshot() map[string]sig {
 			return nil
 		})
 	}
+	w.walkSlow(out)
 	return out
+}
+
+func (w *Watcher) rel(path string) (string, bool) {
+	rel, err := filepath.Rel(w.Root, path)
+	if err != nil {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
+}
+
+// walkSlow adds the files below the slow paths to out: statted when their
+// folder changed or the slow interval came round, carried from the last look
+// otherwise.
+func (w *Watcher) walkSlow(out map[string]sig) {
+	if len(w.Slow) == 0 {
+		return
+	}
+	if w.slow == nil {
+		w.slow = &slowTier{dirs: map[string]*dirState{}, files: map[string]sig{}}
+	}
+	t := w.slow
+	now := time.Now()
+	if w.now != nil {
+		now = w.now()
+	}
+	every := w.SlowEvery
+	if every <= 0 {
+		every = 10 * time.Second
+	}
+	full := !t.looked || now.Sub(t.lastFull) >= every
+	if full {
+		t.lastFull, t.looked = now, true
+	}
+	seen := map[string]bool{}
+	cur := map[string]sig{}
+	for _, p := range w.Slow {
+		w.lookDir(filepath.Clean(filepath.Join(w.Root, p)), full, seen, cur)
+	}
+	for dir := range t.dirs {
+		if !seen[dir] {
+			delete(t.dirs, dir)
+		}
+	}
+	t.files = cur
+	for rel, s := range cur {
+		out[rel] = s
+	}
+}
+
+// lookDir stats dir and, when it changed or full is set, reads it again and
+// stats its files; otherwise it carries its files' last signatures. Then it
+// looks at the folders below it.
+func (w *Watcher) lookDir(dir string, full bool, seen map[string]bool, cur map[string]sig) {
+	stat := w.stat
+	if stat == nil {
+		stat = os.Lstat
+	}
+	t := w.slow
+	info, err := stat(dir)
+	if err != nil || !info.IsDir() {
+		return // gone: its files are reported removed
+	}
+	seen[dir] = true
+	st := t.dirs[dir]
+	read := false
+	if s := sigOf(info); st == nil || st.sig != s || full {
+		if fresh, ok := w.readDir(dir, s, stat, cur); ok {
+			st, read = fresh, true
+			t.dirs[dir] = st
+		} else if st == nil {
+			return // unreadable and never read: the next look tries again
+		}
+	}
+	if !read { // unchanged, or unreadable now but read before: carried
+		for _, name := range st.files {
+			if rel, ok := w.rel(filepath.Join(dir, name)); ok {
+				if s, kept := t.files[rel]; kept {
+					cur[rel] = s
+				}
+			}
+		}
+	}
+	for _, sub := range st.subdirs {
+		w.lookDir(filepath.Join(dir, sub), full, seen, cur)
+	}
+}
+
+// readDir reads dir again, statting each regular file into cur, and returns
+// what it holds; false when it cannot be read.
+func (w *Watcher) readDir(dir string, s sig, stat func(string) (fs.FileInfo, error), cur map[string]sig) (*dirState, bool) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, false
+	}
+	st := &dirState{sig: s}
+	for _, e := range entries {
+		name, path := e.Name(), filepath.Join(dir, e.Name())
+		if e.IsDir() {
+			if !strings.HasPrefix(name, ".") {
+				st.subdirs = append(st.subdirs, name)
+			}
+			continue
+		}
+		fi, err := stat(path)
+		if err != nil || !fi.Mode().IsRegular() {
+			continue
+		}
+		st.files = append(st.files, name)
+		if rel, ok := w.rel(path); ok {
+			cur[rel] = sigOf(fi)
+		}
+	}
+	return st, true
 }
 
 // debounce holds what one tick needs from the ticks before it: the last

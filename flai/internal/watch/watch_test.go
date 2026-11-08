@@ -113,6 +113,178 @@ func TestReportsChangedAddedAndRemovedFilesUnderTheWatchedPathsOnly(t *testing.T
 	c.wait(t)
 }
 
+// slowFixture is a project with a fast item folder and a slow archive below
+// the fast wip folder, as flai serve watches them, on a clock the test moves
+// and a stat that records each path the slow tier statted.
+type slowFixture struct {
+	root    string
+	w       *Watcher
+	clock   time.Time
+	mu      sync.Mutex
+	statted []string
+}
+
+func newSlowFixture(t *testing.T) *slowFixture {
+	t.Helper()
+	f := &slowFixture{root: t.TempDir(), clock: time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC)}
+	write(t, f.root, "wip/kanban/stories/S-0001-a.md", "a\n")
+	write(t, f.root, "wip/archive/stories/S-0002-b.md", "b\n")
+	write(t, f.root, "wip/archive/tasks/T-0001-c.md", "c\n")
+	// A folder's modification time can be as coarse as a clock tick, so a
+	// change made just after the first look could leave it the same: the
+	// folders start in the past.
+	old := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for _, dir := range []string{"wip/archive", "wip/archive/stories", "wip/archive/tasks"} {
+		if err := os.Chtimes(filepath.Join(f.root, dir), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.w = &Watcher{Root: f.root, Paths: []string{"wip"}, Slow: []string{"wip/archive"}, SlowEvery: 10 * time.Second,
+		now: func() time.Time { return f.clock },
+		stat: func(path string) (os.FileInfo, error) {
+			f.mu.Lock()
+			f.statted = append(f.statted, path)
+			f.mu.Unlock()
+			return os.Lstat(path)
+		}}
+	return f
+}
+
+// filesStatted are the regular files the slow tier statted since the last call.
+func (f *slowFixture) filesStatted(t *testing.T) []string {
+	t.Helper()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var files []string
+	for _, p := range f.statted {
+		if info, err := os.Lstat(p); err == nil && !info.IsDir() {
+			files = append(files, p)
+		}
+	}
+	f.statted = nil
+	return files
+}
+
+// editInPlace rewrites a file without touching its folder, and gives it a
+// modification time of its own, as an editor saving in place does.
+func editInPlace(t *testing.T, root, rel, content string, at time.Time) {
+	t.Helper()
+	full := filepath.Join(root, rel)
+	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(full, at, at); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestASlowPathStatsOnlyItsFoldersBetweenSlowLooks(t *testing.T) {
+	f := newSlowFixture(t)
+	first := f.w.snapshot()
+	for _, rel := range []string{"wip/kanban/stories/S-0001-a.md", "wip/archive/stories/S-0002-b.md", "wip/archive/tasks/T-0001-c.md"} {
+		if _, ok := first[rel]; !ok {
+			t.Fatalf("first look misses %s: %v", rel, first)
+		}
+	}
+	if got := f.filesStatted(t); len(got) != 2 {
+		t.Fatalf("the first look statted %v, want the two archived files", got)
+	}
+	f.clock = f.clock.Add(9 * time.Second)
+	again := f.w.snapshot()
+	if got := f.filesStatted(t); len(got) != 0 {
+		t.Fatalf("a look between slow looks statted files %v", got)
+	}
+	if len(again) != len(first) {
+		t.Fatalf("a look between slow looks has %v, want %v", again, first)
+	}
+	f.clock = f.clock.Add(time.Second)
+	f.w.snapshot()
+	if got := f.filesStatted(t); len(got) != 2 {
+		t.Fatalf("the slow look statted %v, want the two archived files", got)
+	}
+}
+
+func TestAFileMovedIntoASlowPathIsReportedWithinAFastTickOrTwo(t *testing.T) {
+	f := newSlowFixture(t)
+	d := newDebounce(f.w.snapshot())
+	scratch := filepath.Join(t.TempDir(), "T-0002-d.md")
+	if err := os.WriteFile(scratch, []byte("d\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(scratch, filepath.Join(f.root, "wip/archive/tasks/T-0002-d.md")); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "moved in", d.tick(f.w.snapshot()))
+	expect(t, "next fast tick", d.tick(f.w.snapshot()), "wip/archive/tasks/T-0002-d.md")
+
+	if err := os.Remove(filepath.Join(f.root, "wip/archive/stories/S-0002-b.md")); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "removed", d.tick(f.w.snapshot()), "wip/archive/stories/S-0002-b.md")
+	expect(t, "afterwards", d.tick(f.w.snapshot()))
+}
+
+func TestAnEditInPlaceUnderASlowPathIsReportedAtTheSlowInterval(t *testing.T) {
+	for _, tc := range []struct{ name, content string }{{"same size", "x\n"}, {"another size", "longer\n"}} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSlowFixture(t)
+			d := newDebounce(f.w.snapshot())
+			editInPlace(t, f.root, "wip/archive/stories/S-0002-b.md", tc.content, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+			// the fast item folder beside it is still seen at once
+			editInPlace(t, f.root, "wip/kanban/stories/S-0001-a.md", tc.content, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+			for i := range 5 {
+				f.clock = f.clock.Add(time.Second)
+				want := []string{}
+				if i == 1 {
+					want = []string{"wip/kanban/stories/S-0001-a.md"}
+				}
+				expect(t, "before the slow interval", d.tick(f.w.snapshot()), want...)
+			}
+			f.clock = f.clock.Add(5 * time.Second)
+			expect(t, "at the slow interval", d.tick(f.w.snapshot()))
+			expect(t, "next fast tick", d.tick(f.w.snapshot()), "wip/archive/stories/S-0002-b.md")
+		})
+	}
+}
+
+func TestASlowPathBelowAFastPathIsLeftOutOfTheFastWalk(t *testing.T) {
+	f := newSlowFixture(t)
+	f.w.snapshot()
+	f.filesStatted(t)
+	editInPlace(t, f.root, "wip/archive/tasks/T-0001-c.md", "changed, and longer\n", time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+	before, err := os.Stat(filepath.Join(f.root, "wip/archive/tasks/T-0001-c.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := f.w.snapshot()["wip/archive/tasks/T-0001-c.md"]
+	if got == sigOf(before) {
+		t.Fatal("the fast walk statted a file below the slow path")
+	}
+	if files := f.filesStatted(t); len(files) != 0 {
+		t.Fatalf("statted %v between slow looks", files)
+	}
+}
+
+func TestRunReportsAFileMovedIntoAndEditedUnderASlowPath(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "wip/archive/stories/S-0001-a.md", "a\n")
+	w := &Watcher{Root: root, Paths: []string{"wip"}, Slow: []string{"wip/archive"}, Every: 20 * time.Millisecond, SlowEvery: 200 * time.Millisecond}
+	c := &collector{}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { w.Run(ctx, c.emit); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	time.Sleep(60 * time.Millisecond)
+	c.wait(t)
+
+	write(t, root, "wip/archive/stories/S-0002-b.md", "b\n")
+	c.wait(t, "wip/archive/stories/S-0002-b.md")
+	c.reset()
+
+	editInPlace(t, root, "wip/archive/stories/S-0001-a.md", "a, by hand\n", time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+	c.wait(t, "wip/archive/stories/S-0001-a.md")
+}
+
 // snap is a snapshot of files by name; a file's size stands in for its whole
 // signature, since the debounce only compares signatures for equality.
 func snap(sizes map[string]int64) map[string]sig {
