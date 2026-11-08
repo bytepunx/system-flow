@@ -3,11 +3,11 @@ id: T-2697
 type: task
 nature: feature
 title: item.get copies only the item and its children it answers, and reads the rest of the list in place
-status: in-progress
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-08T01:41:02Z
-updated: 2026-11-08T01:42:11Z
+updated: 2026-11-08T01:56:06Z
 transitions:
   - to: ready
     at: 2026-11-08T01:42:04Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:42:11Z
     by: agent-S-0606
+  - to: done
+    at: 2026-11-08T01:56:06Z
+    by: agent-S-0606
 stream: S-0606
 tags: []
 touches: [flai/internal/workitem/view.go, flai/internal/workitem/view_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go]
+usage:
+  source: log
+  seconds: 835
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 25953
+      cache_read: 12564300
+      cache_write: 543625
+      cost: 5.9908
 ---
 
 # T-2697 item.get copies only the item and its children it answers, and reads the rest of the list in place

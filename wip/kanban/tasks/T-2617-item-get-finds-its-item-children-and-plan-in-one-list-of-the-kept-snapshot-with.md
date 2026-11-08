@@ -23,9 +23,17 @@ tags: [cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go]
 after: [T-2615]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1453
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 15627
+      cache_read: 7565420
+      cache_write: 327336
+      cost: 3.6073
   strategic:
     - kind: orchestrator
       seconds: 8

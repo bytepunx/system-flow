@@ -3,11 +3,11 @@ id: T-2656
 type: task
 nature: improvement
 title: stats.get answers identical requests in flight with one computation
-status: in-progress
+status: done
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:49:29Z
-updated: 2026-11-08T01:46:14Z
+updated: 2026-11-08T02:08:03Z
 transitions:
   - to: ready
     at: 2026-11-08T01:46:11Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:46:14Z
     by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:08:03Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli]
 touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/hostapi/hostapi.go]
+usage:
+  source: log
+  seconds: 1309
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 9553
+      cache_read: 4511023
+      cache_write: 277878
+      cost: 2.6179
 ---
 # T-2656 stats.get answers identical requests in flight with one computation
 

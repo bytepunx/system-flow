@@ -3,16 +3,37 @@ id: T-2677
 type: task
 nature: improvement
 title: flai serve's main-refs watcher tells the release package a root's refs are unchanged, so release.pending starts no git process until a ref moves
-status: backlog
+status: done
 parent: S-0604
 owner: alex
 created: 2026-11-07T23:50:23Z
-updated: 2026-11-07T23:50:23Z
-transitions: []
+updated: 2026-11-08T02:31:51Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:20:45Z
+    by: agent-S-0604
+  - to: in-progress
+    at: 2026-11-08T02:20:46Z
+    by: agent-S-0604
+  - to: done
+    at: 2026-11-08T02:31:51Z
+    by: agent-S-0604
 stream: S-0604
 tags: [cli]
-touches: [flai/internal/release/history.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go]
+touches: [flai/internal/release/history.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/release/release.go]
 after: [T-2659]
+usage:
+  source: log
+  seconds: 665
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 17621
+      cache_read: 9851841
+      cache_write: 356208
+      cost: 4.3394
 ---
 # T-2677 flai serve's main-refs watcher tells the release package a root's refs are unchanged, so release.pending starts no git process until a ref moves
 
@@ -33,3 +54,8 @@ Waits for T-2659: it changes the per-root entry that task writes in `history.go`
 - [ ] `go test -race ./internal/release/... ./internal/serve/...` passes.
 
 ## Notes
+
+- Callers that take the watcher's word: `release.PendingIDs`, through `PendingBatchWatched`, which serves `board.get`'s `release.pending`, the inbox, and the orchestrator's reason figures. They only show what is pending.
+- Callers that still read git: `PendingBatch` in the publish that tags and pushes (`flai/cmd/release.go`), `release.EvaluateRepo`, `preview.Publish` (`publish.preview`), and `preview.PushDryRun`. `publish.preview` is left reading git on purpose: the operator reads it right before a publish, and it gains from T-2659's per-root lock already.
+- Only flai serve calls `release.Watch`, from each served project's merge queue pass, which starts for every served project. `flai mcp`, `flai hostapi`, and one-shot commands read git as before.
+- The pass marks the root moved once, one watcher tick after it starts, so a move between `Watch` and the watcher's first look is not lost. A watcher count keeps a stopped pass from leaving a root trusted.

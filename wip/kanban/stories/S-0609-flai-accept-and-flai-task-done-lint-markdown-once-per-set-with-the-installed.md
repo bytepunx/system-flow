@@ -3,26 +3,43 @@ id: S-0609
 type: story
 nature: improvement
 title: flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:56Z
-updated: 2026-11-08T01:47:33Z
+updated: 2026-11-08T02:43:11Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:35Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T02:13:30Z
+    by: agent-S-0609
 tags: [cli]
-touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, scripts/lint-md.sh, scripts/install-tools.sh, design/tech/ci.md, design/tech/node.md, docs/contributors/index.md, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/cmd/branch.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_uncommitted_test.go, flai/internal/preview/accept.go, design/system/server-performance.md]
+touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, scripts/lint-md.sh, scripts/install-tools.sh, design/tech/ci.md, design/tech/node.md, docs/contributors/index.md, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/cmd/branch.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_uncommitted_test.go, flai/internal/preview/accept.go, design/system/server-performance.md, design/adrs/0265-flai-accept-takes-a-tier-s-fix-command-s-exit-as-what-the-fix-left-exit-0.md, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, flai/cmd/move_refused_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2597
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-08
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 1
+      work: 49
+  models:
+    - model: claude-opus-5-5
+      input: 250
+      output: 1523
+      cache_read: 35607114
+      cache_write: 501406
+      cost: 13.0553
   strategic:
     - kind: planner
       seconds: 91

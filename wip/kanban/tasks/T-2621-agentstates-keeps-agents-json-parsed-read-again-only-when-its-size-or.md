@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 usage:
   source: log
-  seconds: 1940
+  seconds: 1941
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 262
-      cache_read: 8386456
-      cache_write: 351105
-      cost: 3.1418
+      input: 61
+      output: 15773
+      cache_read: 8633361
+      cache_write: 309727
+      cost: 3.7679
 ---
 # T-2621 AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
 

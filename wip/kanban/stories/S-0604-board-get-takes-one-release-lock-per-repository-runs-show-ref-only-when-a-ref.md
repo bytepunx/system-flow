@@ -3,15 +3,24 @@ id: S-0604
 type: story
 nature: improvement
 title: board.get takes one release lock per repository, runs show-ref only when a ref moved, and reads no threads with nothing in review, so 13 boards at once stop queueing
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:34Z
-updated: 2026-11-08T01:46:55Z
+updated: 2026-11-08T02:44:24Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:34Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T02:06:43Z
+    by: agent-S-0604
+blocked:
+  - from: 2026-11-08T02:44:08Z
+    until: 2026-11-08T02:44:08Z
+    reason: awaiting the operator on TH-0912
+  - from: 2026-11-08T02:44:24Z
+    reason: awaiting the operator on TH-0912
 tags: [cli]
 touches: [flai/internal/release/history.go, flai/internal/mergequeue/eligible.go, flai/internal/hostapi/hostapi.go, flai/internal/release/release.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/reads_test.go, flai/internal/storygit/undone.go, design/system/server-performance.md, design/system/flai-cli.md]
 agent:
@@ -20,20 +29,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2257
+  priced_by: harness
+  turns:
+    - day: 2026-11-08
+      ceremony: 1
+      hand_edits: 4
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 334
+      output: 82047
+      cache_read: 45870955
+      cache_write: 1658534
+      cost: 20.2047
   strategic:
     - kind: orchestrator
-      seconds: 714
+      seconds: 797
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 48
-          output: 249
-          cache_read: 3270937
-          cache_write: 406295
-          cost: 0.939
+          input: 64
+          output: 349
+          cache_read: 3784615
+          cache_write: 480653
+          cost: 1.0901
 cost_of_delay:
   inputs:
     penalty_per_week: 40
@@ -60,9 +81,9 @@ Cause 14 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `release`'s kept history takes one lock per repository root, and holds none across a git process another repository's call would wait for.
-- [ ] While flai serve's main-refs watcher has seen no change, `release.pending` starts no git process.
-- [ ] `merge.queue` reads no thread while no story is in review, and the undone paths of the stories are read at once.
+- [x] `release`'s kept history takes one lock per repository root, and holds none across a git process another repository's call would wait for.
+- [x] While flai serve's main-refs watcher has seen no change, `release.pending` starts no git process.
+- [x] `merge.queue` reads no thread while no story is in review, and the undone paths of the stories are read at once.
 - [ ] 13 `board.get` calls at once on the operator's host, one per served project, each answer under 300 ms, and server-performance.md records the before and after.
 
 ## Tasks

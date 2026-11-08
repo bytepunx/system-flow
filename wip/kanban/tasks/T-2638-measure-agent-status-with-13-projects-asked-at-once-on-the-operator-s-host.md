@@ -3,16 +3,37 @@ id: T-2638
 type: task
 nature: improvement
 title: Measure agent.status with 13 projects asked at once on the operator's host, before and after, and record it in server-performance.md
-status: backlog
+status: done
 parent: S-0603
 owner: alex
 created: 2026-11-07T23:48:41Z
-updated: 2026-11-07T23:48:41Z
-transitions: []
+updated: 2026-11-08T02:12:34Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:06:31Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-08T02:06:35Z
+    by: system-flow
+  - to: done
+    at: 2026-11-08T02:12:34Z
+    by: agent-S-0603
 stream: S-0603
 tags: [cli]
 touches: [design/system/server-performance.md]
 after: [T-2621, T-2623, T-2629]
+usage:
+  source: log
+  seconds: 359
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 11111
+      cache_read: 6081775
+      cache_write: 218187
+      cost: 2.6543
 ---
 # T-2638 Measure agent.status with 13 projects asked at once on the operator's host, before and after, and record it in server-performance.md
 

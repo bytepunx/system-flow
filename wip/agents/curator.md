@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 156.8701
-accrued_seconds: 15585
-tasks_completed: 97
-last_run: 2026-11-08T01:18:44Z
+accrued_cost: 157.6368
+accrued_seconds: 15682
+tasks_completed: 98
+last_run: 2026-11-08T01:51:17Z
 ---
 
 # Curator activity
@@ -787,3 +787,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0269, D-0470, D-0524, D-0525
 - Seconds: 170
 - Cost: 1.0013 USD, estimated
+
+### 2026-11-08T01:51:17Z
+
+- Summary: Curator run done: merged S-0600 into D-0402, wrote no entries, absorbed none, and compact compacted none.
+- Trigger: accepted S-0600
+- Items: D-0402
+- Seconds: 97
+- Cost: 0.7667 USD, estimated

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 733
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 118
-      cache_read: 3836192
-      cache_write: 31649
-      cost: 1.3903
+      input: 21
+      output: 3690
+      cache_read: 3867636
+      cache_write: 62762
+      cost: 1.2129
 ---
 # T-2641 Apply many forecast changes in one pass with one check and one index write
 

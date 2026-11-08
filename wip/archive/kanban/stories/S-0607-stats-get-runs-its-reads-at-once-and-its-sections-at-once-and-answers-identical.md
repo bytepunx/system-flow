@@ -3,11 +3,11 @@ id: S-0607
 type: story
 nature: improvement
 title: stats.get runs its reads at once and its sections at once, and answers identical requests in flight once
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:34Z
-updated: 2026-11-08T01:44:39Z
+updated: 2026-11-08T02:57:42Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:20Z
@@ -15,17 +15,35 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:44:39Z
     by: agent-S-0607
+  - to: review
+    at: 2026-11-08T02:55:40Z
+    by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:57:42Z
+    by: orchestrator
 tags: [cli]
-touches: [flai/internal/statsread/statsread.go, flai/internal/metrics/metrics.go, flai/internal/hostapi/hostapi.go, flai/internal/statsread/statsread_test.go, flai/internal/statsread/report_test.go, flai/internal/statsread/testdata/good-report.json, flai/internal/metrics/metrics_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/server-performance.md]
+touches: [flai/internal/statsread/statsread.go, flai/internal/metrics/metrics.go, flai/internal/hostapi/hostapi.go, flai/internal/statsread/statsread_test.go, flai/internal/statsread/report_test.go, flai/internal/statsread/testdata/good-report.json, flai/internal/metrics/metrics_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/server-performance.md, design/issues/I-0269-repo-test-ts-s-whole-monorepo-read-times-out-at-vitest-s-5s-default-under-load.md, design/issues/summary.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4276
+  priced_by: harness
+  turns:
+    - day: 2026-11-08
+      ceremony: 5
+      hand_edits: 2
+      work: 45
+  models:
+    - model: claude-opus-5-5
+      input: 284
+      output: 75484
+      cache_read: 35645249
+      cache_write: 2195743
+      cost: 20.6862
   strategic:
     - kind: orchestrator
       seconds: 53
@@ -63,9 +81,9 @@ Cause 17 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `statsread.Read` runs its independent reads at once, and `Compute` runs its sections at once, with `claims` after `replayHolds`, which it reads; the report is the same as before, which a test over `flai/internal/metrics/testdata/good` shows, run under `-race`.
-- [ ] Two `stats.get` requests with the same parameters while one is being computed get one computation's answer.
-- [ ] A warm 30-day `stats.get` on this repository takes at least 250 ms less than before, and server-performance.md records the before and after per window.
+- [x] `statsread.Read` runs its independent reads at once, and `Compute` runs its sections at once, with `claims` after `replayHolds`, which it reads; the report is the same as before, which a test over `flai/internal/metrics/testdata/good` shows, run under `-race`.
+- [x] Two `stats.get` requests with the same parameters while one is being computed get one computation's answer.
+- [x] A warm 30-day `stats.get` on this repository takes at least 250 ms less than before, and server-performance.md records the before and after per window.
 
 ## Tasks
 - T-2637 Pin the stats report over testdata/good in a golden test before anything runs at once
@@ -102,3 +120,13 @@ Figures:
 
 - Forecast: `flai forecast` gave 8m, 79 s a unit times size 6 (3 criteria, 3 touches). Raised to 1h. The story has three separate concurrent changes, each needing a race check, a golden test, and a before-and-after measurement on this repository. Comparable cause stories took 16 to 53 min of agent time: S-0500 953 s, S-0531 2,191 s, S-0471 3,153 s. Delivery moved by the same 52 min, to 2026-11-08T01:11:00Z.
 - Cost of delay: no value yet. `flai cod` refuses, because neither S-0607 nor E-0033 has inputs. TH-0888 on E-0033 recommends `penalty_per_week: 20` for this story. I asked again on the plan thread on S-0607.
+
+### Accepted by the orchestrator
+
+- Verified: 10f140c705c1cfe83fd87b4b1fae89dce0c95d9d
+- At: 2026-11-08T02:57:42Z
+
+Verdict: pass. All three criteria are met at 10f140c, and the close-out passed every step there, the golden test under -race in the integration tier.
+- 1: flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/statsread/report_test.go, flai/internal/statsread/testdata/good-report.json, flai/internal/metrics/metrics.go
+- 2: flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go
+- 3: design/system/server-performance.md

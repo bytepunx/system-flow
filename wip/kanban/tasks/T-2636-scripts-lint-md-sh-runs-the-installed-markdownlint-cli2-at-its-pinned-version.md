@@ -3,15 +3,36 @@ id: T-2636
 type: task
 nature: improvement
 title: scripts/lint-md.sh runs the installed markdownlint-cli2 at its pinned version, and install-tools.sh installs it
-status: backlog
+status: done
 parent: S-0609
 owner: alex
 created: 2026-11-07T23:48:23Z
-updated: 2026-11-07T23:48:23Z
-transitions: []
+updated: 2026-11-08T02:26:31Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:17:12Z
+    by: agent-S-0609
+  - to: in-progress
+    at: 2026-11-08T02:17:13Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T02:26:31Z
+    by: agent-S-0609
 stream: S-0609
 tags: [scripts]
 touches: [scripts/lint-md.sh, scripts/install-tools.sh, design/tech/ci.md, design/tech/node.md, docs/contributors/index.md]
+usage:
+  source: log
+  seconds: 558
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 168
+      cache_read: 4390521
+      cache_write: 27994
+      cost: 1.5975
 ---
 # T-2636 scripts/lint-md.sh runs the installed markdownlint-cli2 at its pinned version, and install-tools.sh installs it
 

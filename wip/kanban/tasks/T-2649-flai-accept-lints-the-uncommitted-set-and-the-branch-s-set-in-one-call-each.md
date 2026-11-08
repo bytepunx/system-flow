@@ -3,16 +3,37 @@ id: T-2649
 type: task
 nature: improvement
 title: flai accept lints the uncommitted set and the branch's set in one call each, with no check after a fix whose exit says what remains
-status: backlog
+status: done
 parent: S-0609
 owner: alex
 created: 2026-11-07T23:49:12Z
-updated: 2026-11-07T23:49:12Z
-transitions: []
+updated: 2026-11-08T02:43:11Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:31:08Z
+    by: agent-S-0609
+  - to: in-progress
+    at: 2026-11-08T02:31:09Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T02:43:11Z
+    by: agent-S-0609
 stream: S-0609
 tags: [cli]
-touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/accept_fix_test.go]
+touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/accept_fix_test.go, flai/cmd/move_refused_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md]
 after: [T-2642]
+usage:
+  source: log
+  seconds: 722
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 90
+      output: 581
+      cache_read: 13676573
+      cache_write: 92597
+      cost: 4.9784
 ---
 # T-2649 flai accept lints the uncommitted set and the branch's set in one call each, with no check after a fix whose exit says what remains
 

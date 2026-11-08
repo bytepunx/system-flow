@@ -3,11 +3,11 @@ id: S-0601
 type: story
 nature: improvement
 title: flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
-status: in-progress
+status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-08T01:45:03Z
+updated: 2026-11-08T02:12:07Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:15Z
@@ -15,8 +15,11 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:10:39Z
     by: agent-S-0601
+  - to: review
+    at: 2026-11-08T02:12:07Z
+    by: agent-S-0601
 tags: [cli]
-touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md]
+touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +27,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1480
-  estimated: true
-  priced_by: estimate
+  seconds: 3699
+  priced_by: harness
   turns:
     - day: 2026-11-08
-      hand_edits: 1
-      work: 18
+      ceremony: 2
+      hand_edits: 2
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 618
-      cache_read: 14496228
-      cache_write: 665652
-      cost: 5.4506
+      input: 290
+      output: 91759
+      cache_read: 40505931
+      cache_write: 1369956
+      cost: 17.8589
   strategic:
     - kind: orchestrator
-      seconds: 32
+      seconds: 141
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 24
-          cache_read: 301229
-          cache_write: 15295
-          cost: 0.0807
+          input: 17
+          output: 111
+          cache_read: 807456
+          cache_write: 90001
+          cost: 0.2298
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 12683
+          cache_write: 29547
+          cost: 0.031
 cost_of_delay:
   inputs:
     penalty_per_week: 50
@@ -87,6 +96,8 @@ Cause 11 in [server-performance.md](../../../design/system/server-performance.md
 ## Notes
 
 - The rules only read, so running them at once needs no other change. Run the tests under `-race`.
+- Criterion 1's "under one lock": each rule writes its findings into its own result, and `Run` merges them in the old order after every worker is done. Nothing is shared while the rules run, so the merge needs no lock.
+- Criterion 3 is left unticked. server-performance.md records the before and after, but the warm whole check is not under 2 s on this host. It took 3.3 to 4.9 s wall, against 7.9 to 11.7 s on `main`, at a load average of 84 to 103 on 24 cores. Under 2 s cannot be shown on a host that busy. The critical path that is left, the item list, `workItems` alone, and the digest rule, is recorded as I-0312.
 
 ### Planning
 

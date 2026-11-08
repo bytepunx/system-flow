@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 707
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 163
-      cache_read: 2521167
-      cache_write: 15626
-      cost: 0.9119
+      input: 14
+      output: 2420
+      cache_read: 2536658
+      cache_write: 41163
+      cost: 0.7955
 ---
 # T-2628 Save many work items under one hold of the items lock
 

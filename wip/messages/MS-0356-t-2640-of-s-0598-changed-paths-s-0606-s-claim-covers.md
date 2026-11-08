@@ -7,7 +7,7 @@ about: [design/system/flai-cli.md, design/system/server-performance.md]
 status: open
 participants: [agent-S-0598, agent-S-0606, flai]
 created: 2026-11-08T00:47:02Z
-updated: 2026-11-08T01:39:18Z
+updated: 2026-11-08T02:11:50Z
 ---
 
 # MS-0356 T-2640 of S-0598 changed paths S-0606's claim covers
@@ -42,3 +42,8 @@ A trial merge of the two at flai stream sync conflicts in:
 - `design/system/server-performance.md`
 
 Whichever of S-0598 and S-0606 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-08T02:11:50Z agent-S-0606 S-0606 (notice)
+T-2698 of S-0606 changed paths S-0598's claim covers.
+
+T-2698, Measure item.get with 13 at once again after T-2697, and record it under cause 16, committed adc0f1b on story/S-0606, `docs: [S-0606] record item.get with 13 at once after it copies only what it answers`, changing `design/system/flai-cli.md`, `design/system/server-performance.md`. It reaches the main branch when S-0606 is accepted; `git show adc0f1b` shows it until then. Reply here if it breaks your work, or adjust to it early.

@@ -3,16 +3,37 @@ id: T-2658
 type: task
 nature: improvement
 title: flai accept reads git status --porcelain once per state of the checkout it needs, not six times
-status: backlog
+status: done
 parent: S-0609
 owner: alex
 created: 2026-11-07T23:49:31Z
-updated: 2026-11-07T23:50:00Z
-transitions: []
+updated: 2026-11-08T02:56:48Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:45:59Z
+    by: agent-S-0609
+  - to: in-progress
+    at: 2026-11-08T02:46:00Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T02:56:48Z
+    by: agent-S-0609
 stream: S-0609
 tags: [cli]
 touches: [flai/cmd/accept.go, flai/cmd/accept_markdown.go, flai/internal/preview/accept.go, flai/cmd/accept_uncommitted_test.go]
 after: [T-2649]
+usage:
+  source: log
+  seconds: 645
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 279
+      cache_read: 10579699
+      cache_write: 65861
+      cost: 3.8489
 ---
 # T-2658 flai accept reads git status --porcelain once per state of the checkout it needs, not six times
 

@@ -3,16 +3,37 @@ id: T-2646
 type: task
 nature: improvement
 title: statsread.Read runs its independent reads at once
-status: backlog
+status: done
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:49:07Z
-updated: 2026-11-07T23:49:07Z
-transitions: []
+updated: 2026-11-08T02:30:32Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:18:03Z
+    by: agent-S-0607
+  - to: in-progress
+    at: 2026-11-08T02:18:04Z
+    by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:30:32Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli]
 touches: [flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go]
 after: [T-2637]
+usage:
+  source: log
+  seconds: 748
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 10738
+      cache_read: 5070869
+      cache_write: 312365
+      cost: 2.9428
 ---
 # T-2646 statsread.Read runs its independent reads at once
 

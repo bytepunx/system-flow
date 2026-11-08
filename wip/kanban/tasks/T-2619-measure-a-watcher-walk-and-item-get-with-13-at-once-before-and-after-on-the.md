@@ -23,9 +23,17 @@ tags: [cli]
 touches: [design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]
 after: [T-2617, T-2618]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1105
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 32345
+      cache_read: 15658684
+      cache_write: 677510
+      cost: 7.4663
   strategic:
     - kind: orchestrator
       seconds: 8

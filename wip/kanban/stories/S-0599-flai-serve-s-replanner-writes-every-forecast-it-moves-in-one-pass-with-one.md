@@ -3,17 +3,20 @@ id: S-0599
 type: story
 nature: improvement
 title: flai serve's replanner writes every forecast it moves in one pass with one check, so an acceptance's replan lands in seconds, not 80 s
-status: in-progress
+status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:17Z
-updated: 2026-11-08T01:43:19Z
+updated: 2026-11-08T02:06:30Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:24Z
     by: alex
   - to: in-progress
     at: 2026-11-07T23:49:39Z
+    by: agent-S-0599
+  - to: review
+    at: 2026-11-08T02:06:30Z
     by: agent-S-0599
 tags: [cli]
 touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go, design/system/server-performance.md, design/system/strategic-agents.md, flai/internal/check/items.go, flai/internal/workitem/repo.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md]
@@ -24,35 +27,41 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4867
-  estimated: true
-  priced_by: estimate
+  seconds: 8245
+  priced_by: harness
   turns:
     - day: 2026-11-07
       ceremony: 1
       hand_edits: 1
       work: 18
     - day: 2026-11-08
-      ceremony: 2
-      work: 23
+      ceremony: 6
+      hand_edits: 1
+      work: 178
   models:
     - model: claude-opus-5-5
-      input: 234
-      output: 1252
-      cache_read: 33018467
-      cache_write: 1206850
-      cost: 12.302
+      input: 568
+      output: 99004
+      cache_read: 103766644
+      cache_write: 1683866
+      cost: 32.5425
   strategic:
     - kind: orchestrator
-      seconds: 143
+      seconds: 232
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 80
-          cache_read: 840919
-          cache_write: 20002
-          cost: 0.2198
+          input: 25
+          output: 204
+          cache_read: 1414233
+          cache_write: 98335
+          cost: 0.387
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 41
+          cache_read: 12661
+          cache_write: 30294
+          cost: 0.0314
 forecast:
   duration: 2h30m
   delivery: 2026-11-08T02:30:00Z

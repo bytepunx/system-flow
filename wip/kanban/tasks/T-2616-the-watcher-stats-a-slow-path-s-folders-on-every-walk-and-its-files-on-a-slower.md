@@ -22,9 +22,17 @@ stream: S-0606
 tags: [cli]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1980
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 6266
+      cache_read: 3033442
+      cache_write: 131249
+      cost: 1.4464
   strategic:
     - kind: orchestrator
       seconds: 8

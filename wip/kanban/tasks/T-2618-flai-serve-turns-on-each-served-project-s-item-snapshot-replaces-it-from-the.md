@@ -23,9 +23,17 @@ tags: [cli]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/formula_schedule.go]
 after: [T-2615, T-2616]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1470
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 13601
+      cache_read: 6584291
+      cache_write: 284885
+      cost: 3.1395
   strategic:
     - kind: orchestrator
       seconds: 8

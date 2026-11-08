@@ -3,11 +3,11 @@ id: T-2637
 type: task
 nature: improvement
 title: Pin the stats report over testdata/good in a golden test before anything runs at once
-status: in-progress
+status: done
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:48:37Z
-updated: 2026-11-08T01:46:07Z
+updated: 2026-11-08T02:07:28Z
 transitions:
   - to: ready
     at: 2026-11-08T01:46:05Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:46:07Z
     by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:07:28Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli]
 touches: [flai/internal/statsread/report_test.go, flai/internal/statsread/testdata/good-report.json]
+usage:
+  source: log
+  seconds: 1281
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 9610
+      cache_read: 4538007
+      cache_write: 279541
+      cost: 2.6336
 ---
 # T-2637 Pin the stats report over testdata/good in a golden test before anything runs at once
 

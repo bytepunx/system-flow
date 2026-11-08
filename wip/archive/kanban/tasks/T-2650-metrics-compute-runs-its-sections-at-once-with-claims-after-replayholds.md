@@ -3,16 +3,37 @@ id: T-2650
 type: task
 nature: improvement
 title: metrics.Compute runs its sections at once, with claims after replayHolds
-status: backlog
+status: done
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:49:17Z
-updated: 2026-11-07T23:49:17Z
-transitions: []
+updated: 2026-11-08T02:31:08Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:18:04Z
+    by: agent-S-0607
+  - to: in-progress
+    at: 2026-11-08T02:18:05Z
+    by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:31:08Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli]
 touches: [flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go]
 after: [T-2637]
+usage:
+  source: log
+  seconds: 783
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 13478
+      cache_read: 6364488
+      cache_write: 392052
+      cost: 3.6935
 ---
 # T-2650 metrics.Compute runs its sections at once, with claims after replayHolds
 

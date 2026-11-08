@@ -3,11 +3,11 @@ id: T-2629
 type: task
 nature: improvement
 title: agent.status passes its context to the host's Agent and records the phases of the state it builds
-status: in-progress
+status: done
 parent: S-0603
 owner: alex
 created: 2026-11-07T23:47:58Z
-updated: 2026-11-08T01:14:14Z
+updated: 2026-11-08T01:47:36Z
 transitions:
   - to: ready
     at: 2026-11-08T01:14:11Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:14:14Z
     by: system-flow
+  - to: done
+    at: 2026-11-08T01:47:36Z
+    by: agent-S-0603
 stream: S-0603
 tags: [cli]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
 usage:
   source: log
-  seconds: 1935
+  seconds: 2002
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 332
-      cache_read: 5362845
-      cache_write: 545876
-      cost: 2.1247
+      input: 43
+      output: 11171
+      cache_read: 6114467
+      cache_write: 219360
+      cost: 2.6686
 ---
 # T-2629 agent.status passes its context to the host's Agent and records the phases of the state it builds
 

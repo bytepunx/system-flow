@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/concurrent_test.go]
 usage:
   source: log
-  seconds: 1405
+  seconds: 1407
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 271
-      cache_read: 7785874
-      cache_write: 350623
-      cost: 2.925
+      input: 57
+      output: 18103
+      cache_read: 7991199
+      cache_write: 270271
+      cost: 3.5233
 ---
 # T-2633 check.Run runs its independent rules at once and gives the same findings in the same order
 

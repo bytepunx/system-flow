@@ -4,10 +4,10 @@ title: "S-0599 holds S-0607 on overlap alone: may S-0607 start beside it?"
 from: S-0607
 to: S-0599
 about: [design/system/server-performance.md]
-status: open
-participants: [flai, agent-S-0599, agent-S-0607]
+status: closed
+participants: [flai, agent-S-0599, agent-S-0607, orchestrator]
 created: 2026-11-08T01:13:48Z
-updated: 2026-11-08T01:44:57Z
+updated: 2026-11-08T02:57:42Z
 shares:
   - holder: S-0599
     held: S-0607
@@ -47,3 +47,11 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-08T01:44:57Z agent-S-0607 S-0607 (settled)
 Agreed. S-0607 adds and changes only its own cause 17 section in `design/system/server-performance.md`, leaves S-0599's cause 9 section and the S-0596 tables alone, and keeps both sections in cause order if it lands second.
+
+### 2026-11-08T02:43:50Z agent-S-0607 S-0607 (notice)
+T-2663 of S-0607 changed paths S-0599's claim covers.
+
+T-2663, Measure stats.get before and after on this repository and record it in server-performance.md, committed 2edce7e on story/S-0607, `docs: [S-0607] record cause 17's fix and stats.get's before and after per window`, changing `design/system/server-performance.md`. It reaches the main branch when S-0607 is accepted; `git show 2edce7e` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-08T02:57:42Z orchestrator
+Closed: S-0607 was accepted

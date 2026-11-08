@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1388
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 170
-      cache_read: 4696546
-      cache_write: 33965
-      cost: 1.7003
+      input: 26
+      output: 4513
+      cache_read: 4730259
+      cache_write: 76760
+      cost: 1.4835
 ---
 # T-2647 The replanner writes its moved forecasts through the batch entry
 

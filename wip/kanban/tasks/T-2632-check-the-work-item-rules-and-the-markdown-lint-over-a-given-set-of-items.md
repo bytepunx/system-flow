@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 774
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 130
-      cache_read: 3387197
-      cache_write: 30732
-      cost: 1.2286
+      input: 19
+      output: 3261
+      cache_read: 3417748
+      cache_write: 55461
+      cost: 1.0718
 ---
 # T-2632 Check the work-item rules and the markdown lint over a given set of items
 

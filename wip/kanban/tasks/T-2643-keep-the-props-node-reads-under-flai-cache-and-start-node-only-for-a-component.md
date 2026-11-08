@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/components/props.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs]
 usage:
   source: log
-  seconds: 1397
+  seconds: 1474
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 212
-      cache_read: 4937140
-      cache_write: 80100
-      cost: 1.8037
+      input: 39
+      output: 12432
+      cache_read: 5487857
+      cache_write: 185605
+      cost: 2.4196
 ---
 # T-2643 Keep the props node reads under .flai-cache and start node only for a component whose key changed
 

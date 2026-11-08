@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-08T01:41:10Z
+updated: 2026-11-08T02:44:09Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -15,8 +15,26 @@ transitions:
   - to: in-progress
     at: 2026-11-07T23:59:20Z
     by: agent-S-0606
+blocked:
+  - from: 2026-11-08T02:13:26Z
+    until: 2026-11-08T02:13:45Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T02:14:30Z
+    until: 2026-11-08T02:20:37Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T02:21:00Z
+    until: 2026-11-08T02:31:46Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T02:31:53Z
+    until: 2026-11-08T02:32:04Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T02:32:22Z
+    until: 2026-11-08T02:43:59Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-08T02:44:09Z
+    reason: awaiting the operator on TH-0908
 tags: [cli]
-touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go]
+touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go]
 after: [S-0596]
 agent:
   harness: claude-code
@@ -24,9 +42,24 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 8079
+  priced_by: harness
+  turns:
+    - day: 2026-11-07
+      work: 5
+    - day: 2026-11-08
+      ceremony: 4
+      test_runs: 3
+      hand_edits: 5
+      work: 72
+  models:
+    - model: claude-opus-5-5
+      input: 462
+      output: 155709
+      cache_read: 75381473
+      cache_write: 3261560
+      cost: 35.943
   strategic:
     - kind: planner
       seconds: 581

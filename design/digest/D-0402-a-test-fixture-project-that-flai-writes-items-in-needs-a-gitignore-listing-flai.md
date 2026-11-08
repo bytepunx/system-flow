@@ -2,9 +2,9 @@
 id: D-0402
 title: A test fixture project that flai writes items in needs a .gitignore listing .flai-cache/, since the items lock lives there and the write check refuses a project without it
 kind: cause
-sources: [S-0479, S-0484, I-0191, S-0531, I-0221, S-0525]
+sources: [S-0479, S-0484, I-0191, S-0531, I-0221, S-0525, S-0600]
 topics: [testing, code, flai, flaiover, performance, cli]
-paths: [flaiover/src/lib/server/writes.test.ts, flai/cmd, flai/internal/storygit/committed.go, design/system/server-performance.md, flai/internal/itemnew/itemnew.go, flai/internal/check/scope.go]
+paths: [flaiover/src/lib/server/writes.test.ts, flai/cmd, flai/internal/storygit/committed.go, design/system/server-performance.md, flai/internal/itemnew/itemnew.go, flai/internal/check/scope.go, flai/internal/workitem/kept.go, flai/internal/mdlint/kept.go]
 date: 2026-10-28
 status: active
 absorbed_by: ""
@@ -22,4 +22,6 @@ So a new fixture that writes items through flai, or runs `flai check` after one,
 
 The same holds for flai's own code that keeps a file under `.flai-cache`. S-0531's `storygit.Committed` first made the folder to keep `stories-commits.json`, and five `flai/cmd` check tests failed on `layout.gitignore` in `metrics/testdata/good`, a fixture with no `.gitignore`. S-0531 decided: "`Committed` writes the kept file only into a `.flai-cache` folder that already exists", so a project without one keeps nothing and reads `git log` each time (`design/system/server-performance.md`). The close-out's Go tier ran only the changed packages and passed over the failure, recorded as I-0221.
 
-Sources: S-0479, S-0484, I-0191, S-0525 (`wip/archive/agents/S-0525.md` § Decisions), S-0531 (`wip/archive/agents/S-0531.md` § Decisions), I-0221.
+S-0600 followed the same rule for its kept items and lint findings files: "the kept file is written only into a `.flai-cache` that exists, as S-0531 decided (D-0402)" (`wip/archive/agents/S-0600.md` § Decisions). `design/system/server-performance.md` § Parses and lint findings kept between processes (S-0600) records it. So any new file flai keeps under `.flai-cache` writes only into a folder that exists.
+
+Sources: S-0479, S-0484, I-0191, S-0525 (`wip/archive/agents/S-0525.md` § Decisions), S-0531 (`wip/archive/agents/S-0531.md` § Decisions), I-0221, S-0600 (`wip/archive/agents/S-0600.md` § Decisions).

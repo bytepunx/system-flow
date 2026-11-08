@@ -3,15 +3,36 @@ id: T-2642
 type: task
 nature: improvement
 title: verify's fix answers what its fix command's exit says remains, so a caller needs no check after a --fix
-status: backlog
+status: done
 parent: S-0609
 owner: alex
 created: 2026-11-07T23:48:45Z
-updated: 2026-11-07T23:48:45Z
-transitions: []
+updated: 2026-11-08T02:26:52Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:17:14Z
+    by: agent-S-0609
+  - to: in-progress
+    at: 2026-11-08T02:17:16Z
+    by: agent-S-0609
+  - to: done
+    at: 2026-11-08T02:26:52Z
+    by: agent-S-0609
 stream: S-0609
 tags: [cli]
 touches: [flai/internal/verify/fix.go, flai/internal/verify/fix_test.go]
+usage:
+  source: log
+  seconds: 576
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 237
+      cache_read: 3561754
+      cache_write: 42681
+      cost: 1.3032
 ---
 # T-2642 verify's fix answers what its fix command's exit says remains, so a caller needs no check after a --fix
 

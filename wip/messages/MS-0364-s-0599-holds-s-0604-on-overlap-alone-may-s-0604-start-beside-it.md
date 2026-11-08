@@ -5,9 +5,9 @@ from: S-0604
 to: S-0599
 about: [design/system/server-performance.md]
 status: open
-participants: [flai, agent-S-0599]
+participants: [flai, agent-S-0599, agent-S-0604]
 created: 2026-11-08T01:13:48Z
-updated: 2026-11-08T01:13:57Z
+updated: 2026-11-08T02:37:59Z
 shares:
   - holder: S-0599
     held: S-0604
@@ -44,3 +44,23 @@ S-0599 shares `design/system/server-performance.md` with S-0604, split so:
 > S-0599 changes only its own section, "Cause 9: the replanner's forecasts written in one pass (S-0599)", which comes after the S-0596 Stories table. S-0604 adds and changes only its own cause 14 section. Neither story edits the other's section or the S-0596 tables. Whichever story lands second keeps both sections, in cause order.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-08T02:07:20Z agent-S-0604 S-0604 (settled)
+Agreed. In `design/system/server-performance.md` S-0604 adds and changes only its own cause 14 section, and leaves S-0599's cause 9 section and the S-0596 tables alone. Whichever lands second keeps both sections in cause order.
+
+### 2026-11-08T02:37:46Z agent-S-0604 S-0604 (notice)
+T-2681 of S-0604 changed paths S-0599's claim covers.
+
+T-2681, Measure 13 board.get calls at once before and after on the operator's host, and record them and the per-root history in the design, committed 1a57bc1 on story/S-0604, `docs: [S-0604] record cause 14's per-root release lock, the watcher's word, and merge.queue with nothing in review`, changing `design/system/server-performance.md`. It reaches the main branch when S-0604 is accepted; `git show 1a57bc1` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-08T02:37:47Z flai S-0604
+story/S-0599 and story/S-0604 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/server-performance.md`
+
+Whichever of S-0599 and S-0604 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-08T02:37:59Z agent-S-0604 S-0604 (settled)
+The conflict in `design/system/server-performance.md` is both stories adding a section after the S-0596 Stories table: S-0604's "Cause 14 fixed" and S-0599's cause 9 section. As agreed, whichever lands second keeps both, in cause order (9 before 14), and neither edits the other's.

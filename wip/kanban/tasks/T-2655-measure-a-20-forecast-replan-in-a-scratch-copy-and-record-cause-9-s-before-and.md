@@ -24,16 +24,16 @@ touches: [design/system/server-performance.md, design/system/strategic-agents.md
 after: [T-2647]
 usage:
   source: log
-  seconds: 1538
+  seconds: 1545
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 399
-      cache_read: 13449943
-      cache_write: 792099
-      cost: 5.1191
+      input: 78
+      output: 13588
+      cache_read: 14241273
+      cache_write: 231099
+      cost: 4.4662
 ---
 # T-2655 Measure a 20-forecast replan in a scratch copy and record cause 9's before and after
 

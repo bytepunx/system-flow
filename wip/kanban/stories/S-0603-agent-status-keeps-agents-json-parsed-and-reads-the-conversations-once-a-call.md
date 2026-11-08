@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-08T01:12:15Z
+updated: 2026-11-08T02:38:45Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
@@ -15,8 +15,14 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:12:15Z
     by: agent-S-0603
+blocked:
+  - from: 2026-11-08T02:23:41Z
+    until: 2026-11-08T02:31:46Z
+    reason: awaiting the operator on TH-0911
+  - from: 2026-11-08T02:38:45Z
+    reason: awaiting the operator on TH-0911
 tags: [cli]
-touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md]
+touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2059
-  estimated: true
-  priced_by: estimate
+  seconds: 4703
+  priced_by: harness
   turns:
     - day: 2026-11-08
+      ceremony: 2
       hand_edits: 2
-      work: 19
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 140
-      output: 704
-      cache_read: 15225239
-      cache_write: 1128938
-      cost: 5.8806
+      input: 376
+      output: 97371
+      cache_read: 53295717
+      cache_write: 1912015
+      cost: 23.2603
   strategic:
     - kind: orchestrator
-      seconds: 32
+      seconds: 139
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 24
-          cache_read: 301229
-          cache_write: 15295
-          cost: 0.0807
+          input: 22
+          output: 161
+          cache_read: 875190
+          cache_write: 69806
+          cost: 0.2421
 cost_of_delay:
   inputs:
     penalty_per_week: 100
@@ -75,8 +81,8 @@ Cause 12 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `AgentStates` keeps `agents.json` parsed, read again only when its size or modification time changed, and holds `agentsMu` only to read or replace what is kept.
-- [ ] The activity a call builds reads the conversations once, whatever the number of live runs, and gives the same answer as before, which a test with three live runs shows.
+- [x] `AgentStates` keeps `agents.json` parsed, read again only when its size or modification time changed, and holds `agentsMu` only to read or replace what is kept.
+- [x] The activity a call builds reads the conversations once, whatever the number of live runs, and gives the same answer as before, which a test with three live runs shows.
 - [ ] `agent.status` records its phases, and on this repository, 13 projects asked at once, each answers under 200 ms on the operator's host; server-performance.md records the before and after.
 
 ## Tasks

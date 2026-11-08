@@ -22,9 +22,17 @@ stream: S-0606
 tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1920
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 12428
+      cache_read: 6016735
+      cache_write: 260328
+      cost: 2.8689
   strategic:
     - kind: orchestrator
       seconds: 8

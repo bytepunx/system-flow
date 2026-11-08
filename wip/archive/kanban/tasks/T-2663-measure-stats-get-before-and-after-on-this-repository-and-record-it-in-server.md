@@ -3,16 +3,37 @@ id: T-2663
 type: task
 nature: improvement
 title: Measure stats.get before and after on this repository and record it in server-performance.md
-status: backlog
+status: done
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:49:47Z
-updated: 2026-11-07T23:49:47Z
-transitions: []
+updated: 2026-11-08T02:43:53Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:35:13Z
+    by: agent-S-0607
+  - to: in-progress
+    at: 2026-11-08T02:35:14Z
+    by: agent-S-0607
+  - to: done
+    at: 2026-11-08T02:43:53Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli, docs]
 touches: [design/system/server-performance.md]
 after: [T-2646, T-2650, T-2656]
+usage:
+  source: log
+  seconds: 519
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 11182
+      cache_read: 5280396
+      cache_write: 325272
+      cost: 3.0644
 ---
 # T-2663 Measure stats.get before and after on this repository and record it in server-performance.md
 

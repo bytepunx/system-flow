@@ -3,16 +3,37 @@ id: T-2698
 type: task
 nature: feature
 title: Measure item.get with 13 at once again after T-2697, and record it under cause 16
-status: backlog
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-08T01:41:10Z
-updated: 2026-11-08T01:41:10Z
-transitions: []
+updated: 2026-11-08T02:12:00Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:07:19Z
+    by: agent-S-0606
+  - to: in-progress
+    at: 2026-11-08T02:07:20Z
+    by: agent-S-0606
+  - to: done
+    at: 2026-11-08T02:12:00Z
+    by: agent-S-0606
 stream: S-0606
 tags: []
 touches: [design/system/server-performance.md, design/system/flai-cli.md]
 after: [T-2697]
+usage:
+  source: log
+  seconds: 280
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 14876
+      cache_read: 7201725
+      cache_write: 311600
+      cost: 3.4339
 ---
 
 # T-2698 Measure item.get with 13 at once again after T-2697, and record it under cause 16

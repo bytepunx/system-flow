@@ -3,15 +3,36 @@ id: T-2670
 type: task
 nature: improvement
 title: board.get reads the stories' undone paths at once on a bounded pool, and reads a story in review's once
-status: backlog
+status: done
 parent: S-0604
 owner: alex
 created: 2026-11-07T23:50:03Z
-updated: 2026-11-07T23:50:03Z
-transitions: []
+updated: 2026-11-08T02:20:04Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:07:54Z
+    by: agent-S-0604
+  - to: in-progress
+    at: 2026-11-08T02:07:55Z
+    by: agent-S-0604
+  - to: done
+    at: 2026-11-08T02:20:04Z
+    by: agent-S-0604
 stream: S-0604
 tags: [cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flai/internal/storygit/undone.go]
+usage:
+  source: log
+  seconds: 729
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 11157
+      cache_read: 6237471
+      cache_write: 225525
+      cost: 2.7474
 ---
 # T-2670 board.get reads the stories' undone paths at once on a bounded pool, and reads a story in review's once
 
@@ -29,3 +50,6 @@ Waits for no task: the release and merge queue tasks change other files.
 - [ ] `go test -race ./internal/hostapi/... ./internal/storygit/...` passes, including `timing_test.go`'s phase names.
 
 ## Notes
+
+- `RecordedUndone` and `MainBranch` are safe at once: each story reads and rewrites only its own record file, written atomically, and runs read-only git; `MainBranch` is one `rev-parse` with no shared state. `undone.go` is unchanged.
+- A story in review is still read twice, here and in `mergequeue.Compute`. One read serving both would need `board.get` to pass what it read into the merge queue, a change to `mergequeue`'s API beyond this task; the T-2666 change already spares the queue every read while no story is in review.

@@ -3,16 +3,37 @@ id: T-2681
 type: task
 nature: improvement
 title: Measure 13 board.get calls at once before and after on the operator's host, and record them and the per-root history in the design
-status: backlog
+status: done
 parent: S-0604
 owner: alex
 created: 2026-11-07T23:50:38Z
-updated: 2026-11-07T23:50:38Z
-transitions: []
+updated: 2026-11-08T02:37:50Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:32:30Z
+    by: agent-S-0604
+  - to: in-progress
+    at: 2026-11-08T02:32:30Z
+    by: agent-S-0604
+  - to: done
+    at: 2026-11-08T02:37:50Z
+    by: agent-S-0604
 stream: S-0604
 tags: [cli]
 touches: [design/system/server-performance.md, design/system/flai-cli.md]
 after: [T-2677, T-2666, T-2670]
+usage:
+  source: log
+  seconds: 320
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 18223
+      cache_read: 10188340
+      cache_write: 368375
+      cost: 4.4876
 ---
 # T-2681 Measure 13 board.get calls at once before and after on the operator's host, and record them and the per-root history in the design
 

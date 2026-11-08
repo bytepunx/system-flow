@@ -3,15 +3,36 @@ id: T-2659
 type: task
 nature: improvement
 title: The release package's kept history takes one lock per repository root, so one root's git processes never hold another root's call
-status: backlog
+status: done
 parent: S-0604
 owner: alex
 created: 2026-11-07T23:49:37Z
-updated: 2026-11-07T23:49:37Z
-transitions: []
+updated: 2026-11-08T02:19:10Z
+transitions:
+  - to: ready
+    at: 2026-11-08T02:07:51Z
+    by: agent-S-0604
+  - to: in-progress
+    at: 2026-11-08T02:07:52Z
+    by: agent-S-0604
+  - to: done
+    at: 2026-11-08T02:19:10Z
+    by: agent-S-0604
 stream: S-0604
 tags: [cli]
 touches: [flai/internal/release/history.go, flai/internal/release/release.go, flai/internal/release/history_test.go]
+usage:
+  source: log
+  seconds: 678
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 5322
+      cache_read: 2975368
+      cache_write: 107579
+      cost: 1.3106
 ---
 # T-2659 The release package's kept history takes one lock per repository root, so one root's git processes never hold another root's call
 
