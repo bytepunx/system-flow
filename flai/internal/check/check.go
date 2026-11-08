@@ -107,6 +107,9 @@ type checker struct {
 	byID  map[string]*workitem.Item
 	res   *Result
 	vocab map[string]bool // topics a story can have (ADR-0047)
+	// write narrows the rules that read files to what a work item write
+	// touches (RunItemWrite); nil runs them over the whole repository.
+	write *writeScope
 }
 
 // Run executes every rule against the repo.
@@ -393,8 +396,13 @@ func (c *checker) workItems() {
 			c.byID[it.ID] = it
 		}
 	}
+	if c.write != nil {
+		c.write.pick(c)
+	}
 	for _, it := range c.items {
-		c.oneItem(it)
+		if c.write == nil || c.write.items[it.ID] {
+			c.oneItem(it)
+		}
 	}
 }
 
@@ -933,7 +941,7 @@ func (c *checker) narratives() {
 	dir := c.repo.AgentsDir()
 	active := map[string]bool{}
 	for _, it := range c.items {
-		if it.Type == workitem.Story && !it.Archived && (it.Status == workitem.InProgress || it.Status == workitem.Review) {
+		if it.Type == workitem.Story && !it.Archived && (it.Status == workitem.InProgress || it.Status == workitem.Review) && c.write.story(it.ID) {
 			if _, err := os.Stat(c.repo.NarrativePath(it.ID)); err != nil {
 				c.add(Error, "narrative.missing", it.Path, keyLine(it.Path, "status"), "%s is %s but has no narrative; run flai stream open %s", it.ID, it.Status, it.ID)
 			}
@@ -942,6 +950,12 @@ func (c *checker) narratives() {
 	matches, _ := filepath.Glob(filepath.Join(dir, "S-*.md"))
 	for _, path := range matches {
 		want := strings.TrimSuffix(filepath.Base(path), ".md")
+		if !c.write.story(want) {
+			// a write's run reads only its stories' narratives; the index
+			// still counts this one as a stream (RunItemWrite)
+			active[want] = true
+			continue
+		}
 		n, err := workitem.ReadNarrative(path)
 		if err != nil {
 			// The index lists it as unreadable (I-0129), so this is its one
@@ -974,6 +988,9 @@ func (c *checker) narratives() {
 		}
 	}
 	indexPath := filepath.Join(dir, "index.md")
+	if c.write != nil && !c.write.paths[filepath.Clean(indexPath)] {
+		return // a write that did not write the index brings no finding on it
+	}
 	data, err := os.ReadFile(indexPath)
 	if err != nil {
 		if len(active) > 0 {
@@ -1912,6 +1929,23 @@ func (c *checker) markdown() {
 	if cfg == nil {
 		return
 	}
+	if c.write != nil {
+		// a write's run lints only the files it wrote under wip (S-0598)
+		wip := c.repo.WipDir()
+		for _, path := range c.write.files {
+			if !strings.HasSuffix(path, ".md") || !within(path, wip) {
+				continue
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				continue // unreadable files are skipped, as the other rules skip what they cannot read
+			}
+			for _, f := range cfg.Lint(string(data)) {
+				c.add(Warning, "markdown."+f.Rule, path, f.Line, "%s", f)
+			}
+		}
+		return
+	}
 	// Each file's findings are kept in the cache folder between runs, so a
 	// check lints only the files that changed (S-0600).
 	for _, ff := range cfg.LintFolderKept(c.repo.WipDir(), c.repo.CacheDir()) {
@@ -2096,10 +2130,23 @@ func (c *checker) conflictMarkers() {
 		}
 	}
 	root := filepath.Clean(c.repo.Root)
+	var dirs []string
 	for _, dir := range []string{c.repo.Manifest.Dir(c.repo.Root, "design"), c.repo.Manifest.Dir(c.repo.Root, "docs"), c.repo.WipDir()} {
 		if filepath.Clean(dir) == root {
 			continue // a folder laid out at the root: its markdown is the root's, below
 		}
+		dirs = append(dirs, dir)
+	}
+	if c.write != nil {
+		// a write's run scans only the files it wrote that the whole run scans
+		for _, path := range c.write.files {
+			if strings.HasSuffix(path, ".md") && (filepath.Dir(path) == root || slices.ContainsFunc(dirs, func(dir string) bool { return within(path, dir) })) {
+				scan(path)
+			}
+		}
+		return
+	}
+	for _, dir := range dirs {
 		_ = filepath.WalkDir(dir, func(path string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {
 				return nil //nolint:nilerr // an unreadable entry is skipped, the walk continues
