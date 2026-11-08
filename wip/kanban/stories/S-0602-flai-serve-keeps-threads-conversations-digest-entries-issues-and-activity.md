@@ -3,12 +3,15 @@ id: S-0602
 type: story
 nature: improvement
 title: flai serve keeps threads, conversations, digest entries, issues, and activity documents parsed between requests, so a thread read takes about 5 ms, not 80 to 110 ms
-status: backlog
+status: ready
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:05Z
-updated: 2026-11-07T23:49:37Z
-transitions: []
+updated: 2026-11-08T00:28:49Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:11:21Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, design/system/server-performance.md, design/system/flai-cli.md]
 agent:
@@ -16,12 +19,35 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 164
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 50
+          cache_read: 662198
+          cache_write: 18479
+          cost: 0.1736
+cost_of_delay:
+  inputs:
+    penalty_per_week: 50
+    by: orchestrator
+    at: 2026-11-07T23:55:48Z
+  value: 50
+  by: planner-E-0033
+  at: 2026-11-08T00:00:43Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-08T01:30:00Z
-  basis: "flai's 13m (103 s a unit of size times 7) scaled up: S-0156 kept one kind in 703 s, and this story keeps five kinds on a shared store, with tests for each and a measurement on the host."
-  by: planner-S-0602
-  at: 2026-11-07T23:48:53Z
+  delivery: 2026-11-08T03:43:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 5, behind S-0598, S-0599, S-0600, S-0605, S-0606, S-0601, S-0603, S-0607, S-0604 and S-0609."
+  by: flai
+  at: 2026-11-08T00:28:49Z
 finalized:
   by: alex
   at: 2026-11-07T23:49:33Z
@@ -40,6 +66,12 @@ Cause 13 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Tasks
 - T-2660 workitem keeps parsed files of any kind by path, stat, and the racy window, for the five readers to share
+- T-2667 threads.List and Get read threads through the kept store
+- T-2671 messages.List and workitem's Conversations read conversations through the kept store
+- T-2673 digest.List and Get read digest entries through the kept store
+- T-2676 issues.List and Get read issues through the kept store
+- T-2680 Repo.Activities and Activity read activity documents through the kept store
+- T-2684 Measure warm threads.list, inbox.designer, and stats.get before and after, and record them in the design
 
 ## Notes
 

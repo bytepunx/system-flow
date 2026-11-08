@@ -3,12 +3,15 @@ id: S-0603
 type: story
 nature: improvement
 title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s
-status: backlog
+status: ready
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-07T23:49:36Z
-transitions: []
+updated: 2026-11-08T00:25:18Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:11:17Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md]
 agent:
@@ -16,6 +19,35 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 28
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 18
+          cache_read: 270295
+          cache_write: 5839
+          cost: 0.0704
+cost_of_delay:
+  inputs:
+    penalty_per_week: 100
+    by: orchestrator
+    at: 2026-11-07T23:51:56Z
+  value: 100
+  by: planner-S-0603
+  at: 2026-11-07T23:52:33Z
+forecast:
+  duration: 1h
+  delivery: 2026-11-08T02:03:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0598, S-0599, S-0600, S-0605, S-0606 and S-0601."
+  by: flai
+  at: 2026-11-08T00:25:18Z
 finalized:
   by: alex
   at: 2026-11-07T23:49:36Z
@@ -42,3 +74,29 @@ Cause 12 in [server-performance.md](../../../design/system/server-performance.md
 
 - With the story for cause 13, agent.state's CPU falls from about 450 ms to under 60 ms.
 - One agent state file per project instead of the host-wide one would change how flai keeps state, and is out of this epic.
+
+### Planning
+
+Touches, file by file, no folder:
+
+| Touch | From | Why |
+|-------|------|-----|
+| `flai/internal/serve/agents.go` | declared | `AgentStates`, `agentsMu`, `updateAgent`, `Activity`, `runActivity`, `held`, `awaitingOther` |
+| `flai/cmd/serve_actions.go` | declared | `host().Agent`, which builds the `agent.status` state; its phases |
+| `flai/internal/serve/agents_test.go` | co-change (34%) | the kept parse and the three-live-run test |
+| `flai/cmd/serve_actions_test.go` | co-change (41%) | the phases test |
+| `flai/internal/hostapi/writes.go` | co-change (23%), layout | `Host.Agent` takes a context |
+| `flai/internal/hostapi/writes_test.go` | co-change (20%), layout | its stub of `Host.Agent` |
+| `flai/internal/hostapi/hostapi.go` | layout | the `agent.status` method passes its context |
+| `flai/internal/messages/messages.go` | layout | `AwaitingOther` over a list read once |
+| `flai/internal/workitem/hold.go` | layout | `Repo.Holds` from shares and asks already read |
+| `flai/internal/workitem/share.go` | layout | `Repo.Conversations`, which `Holds` reads today |
+| `design/system/server-performance.md` | design | criterion 3: the before and after |
+
+Left out of `flai touches suggest`: `docs/users/flai-reference.md`, `docs/operators/settings.md`, `design/system/flai-cli.md`, and the config, harness, restart, and start files. The story adds no command, flag, or setting, and changes no agent start.
+
+No `after`: the story reads no other story's output. S-0602 (cause 13) also changes how conversations are read, in `flai/internal/messages/messages.go`; the trial merge judges that overlap.
+
+Forecast: `flai forecast` gave 22m, 94 s per unit of size over 124 done improvement stories on claude-opus-5-5, times size 14. Raised to 1h. The median is mostly smaller changes. This one changes a host-wide lock with concurrency tests across three packages, and measures 13 concurrent calls on the loaded host. Its close-out runs the integration and `flaiover-flai` tiers, since it changes `flai/internal/hostapi/`. The delivery moves the playout's start, 00:23, on by the hour.
+
+Cost of delay: 100 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 100`, which the orchestrator set at 2026-11-07T23:51:56Z from TH-0888's table. Kept as given: no revenue rides on the story, and nothing else is lost each cycle.

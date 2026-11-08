@@ -3,12 +3,15 @@ id: S-0601
 type: story
 nature: improvement
 title: flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
-status: backlog
+status: ready
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-07T23:49:31Z
-transitions: []
+updated: 2026-11-08T00:23:55Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:11:15Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md]
 agent:
@@ -16,12 +19,35 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 28
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 18
+          cache_read: 270295
+          cache_write: 5839
+          cost: 0.0704
+cost_of_delay:
+  inputs:
+    penalty_per_week: 50
+    by: orchestrator
+    at: 2026-11-07T23:51:41Z
+  value: 50
+  by: planner-E-0033
+  at: 2026-11-08T00:00:08Z
 forecast:
   duration: 40m
-  delivery: 2026-11-08T00:40:00Z
-  basis: "flai forecast's 19m (103 s per unit over 25 medium improvement stories, size 11) raised to 40m: the rules share state the run order hides, byID, vocab, and the findings index advise writes, and the kept read spans Go and props.mjs, and a close-out that runs integration takes p50 about 4 min (server-performance.md cause 20)."
-  by: planner-S-0601
-  at: 2026-11-07T23:47:37Z
+  delivery: 2026-11-08T01:23:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0598, S-0599, S-0600, S-0605 and S-0606."
+  by: flai
+  at: 2026-11-08T00:23:55Z
 finalized:
   by: alex
   at: 2026-11-07T23:49:31Z
@@ -66,4 +92,6 @@ Touches, and where each came from:
 
 No folder touch, and no `after`: S-0598 and S-0600 change `check.go`'s callers and the item list, but this story reads nothing they write; a trial merge judges the shared file.
 
-Forecast: see the figure on the story and its basis. Cost of delay: no value yet. Neither S-0601 nor E-0033 has inputs, and the operator has not answered TH-0888, which recommends `penalty_per_week: 50` for this story.
+Forecast: `flai forecast` gave 19m, 103 s per unit of size over 25 medium improvement stories, times size 11. Raised to 40m: the rules share state their order hides (`byID`, `vocab`, and the last-finding writes of `advise`), the kept read spans Go and `props.mjs`, and a close-out that runs `integration` takes about 4 min at p50 (server-performance.md cause 20). Delivery moves by the same 21 minutes, to 2026-11-08T00:40Z.
+
+Cost of delay: no value yet. Neither S-0601 nor E-0033 has inputs, so `flai cod` refuses. The operator has not answered TH-0888, which recommends `penalty_per_week: 50` for this story.
