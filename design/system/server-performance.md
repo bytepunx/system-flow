@@ -535,6 +535,52 @@ S-0601 halves the wall time and takes about 1.2 s of CPU off a check. It does no
 
 What is left is that critical path: the list, `workItems` alone, and the digest rule, which reads and scans every digest entry. It is recorded as [I-0312](../issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md).
 
+### Cause 12 fixed: agents.json kept parsed and the conversations read once (S-0603)
+
+#### Cause
+
+Each `agent.status` read and parsed the host's whole `agents.json`, 701 KB on the day measured, under the host-wide `agentsMu`. The 13 projects' calls queued on that lock. `serve.Activity` then read every conversation once for each live run, through `awaitingOther`, and again for `held`, through `Repo.Holds`. The host's `Agent` took no context, so the serve log showed one phase, `agent.state`, and nothing inside it.
+
+#### Fix
+
+- `Dir.AgentStates` (`flai/internal/serve/agents.go`) keeps what it parsed with the file's stat. It parses again only when the file, its size, or its modification time changed. It parses outside `agentsMu`, which it holds only to read or replace what is kept. Every write flai makes renames a new file into place, so the clock's granularity cannot hide one.
+- What `AgentStates` returns is shared, and its callers only read it. `updateAgent` works on a deep copy, keeps what it wrote with the stat after the write, and serializes writers on a lock of its own, `agentsWriteMu`, with the file lock for other processes. A reader never waits on a write.
+- `serve.Activity` reads the conversations once a call, with `messages.ReadAll`. Each live run is judged from that list with `messages.AwaitingOtherIn`. The holds are built from its shares and asks with `Repo.HoldsFrom` and `workitem.SharesAndAsks`. The answer is the same.
+- `Host.Agent` takes the request's context. Inside `agent.state` the serve log now shows `agent.states`, reading the agent states; `agent.roles`, the roles' states; and `agent.activity`, `serve.Activity`.
+
+#### Measured on this repository
+
+On 2026-11-08 between about 02:08 and 02:11 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0). An in-process Go program, built under `/tmp` against each tree, did per call what the host's `Agent` does, without the configuration: `AgentStates`, `RoleStates`, and `Activity`. It read the host's own `~/.flai/serve/agents.json` and the 13 projects it names that exist. Before is `main` at 3087d9cf4; after is `story/S-0603` with T-2621, T-2629, and T-2623. The two ran in turn, twice each.
+
+- Sequential: one warm call per project, after a warm-up round.
+- At once: 13 calls, one per project, released together, five rounds a run: 65 calls.
+
+The host was very busy throughout: the one-minute load average was 95 to 101, on 24 cores, with other agents running Go tests. Wall times swing with it.
+
+| Case | Before | After |
+|------|--------|-------|
+| This repository, sequential | 1,494 to 2,391 ms | 966 to 1,201 ms |
+| The other 12, sequential, p50 | 54 to 90 ms | 64 to 73 ms |
+| 13 at once, a call, p50 | 369 to 463 ms | 221 to 283 ms |
+| 13 at once, a call, p90 | 675 to 925 ms | 395 to 451 ms |
+| 13 at once, a call, max | 2,620 to 3,288 ms | 1,542 to 1,593 ms |
+| 13 at once, a round's wall time | 1.8 to 3.3 s | 1.0 to 1.6 s |
+| 13 at once, a round's CPU | 1.44 to 1.62 s | 0.74 to 1.14 s |
+| 13 at once, calls under 200 ms | 11 and 11 of 65 | 26 and 14 of 65 |
+| 13 at once, this repository, p50 | 2,092 to 2,952 ms | 1,097 to 1,107 ms |
+
+| Phase, 13 at once | Before p50 (max) | After p50 (max) |
+|-------------------|------------------|-----------------|
+| `agent.states` | 315 to 327 ms (892) | 4 to 159 ms (289) |
+| `agent.roles` | 32 to 51 ms (182) | 99 to 111 ms (367) |
+| `agent.activity` | 17 ms (2,482) | 21 to 29 ms (1,262) |
+
+The queue on `agentsMu` is gone. Reading the agent states took a third of a second at the median with 13 at once; it is now a stat, and a sequential call takes under 1 ms. What it still takes with 13 at once, and the rise in `agent.roles`, whose code did not change, is the process waiting for a core on a host at a load of 100. With five live runs, this repository's `Activity` reads the conversations once instead of six times, and its call takes about half the time.
+
+The story's target, every call under 200 ms with 13 at once, is not met on this host. At head, 14 and 26 of 65 calls answered under 200 ms. This repository's call took about 1.1 s in every round, and the other projects' p50 was about 200 to 280 ms, waiting for cores. Alone, this repository's `Activity` took 540 to 600 ms, of which reading its 909 threads took 180 to 210 ms, its 381 conversations 70 to 180 ms, and building the holds 85 to 150 ms; the rest is the trial merges of the holds, one `git merge-tree` for each overlap with a story in progress, and `elsewhere`. The threads and the conversations are cause 13's, which S-0602 keeps parsed between requests.
+
+The program wrote nothing of its own. Like every `agent.status` in flai serve, its trial merges wrote tree objects into each project's object store, with no ref and no worktree, and its item lists may have written the rebuildable kept items files under `.flai-cache` that S-0600 added.
+
 ### Cause 13 fixed: threads, conversations, digest entries, issues, and activity documents kept parsed (S-0602)
 
 Every call read and parsed each of these files again: 884 threads, 351 conversations, 521 digest entries, 295 issues, and the strategic agents' activity documents. Now a long-running flai keeps each kind parsed, as S-0156 keeps items.
