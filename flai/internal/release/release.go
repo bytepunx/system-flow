@@ -597,15 +597,17 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 // item is looked up once and its Compute()-equivalent reused for every
 // component it touches or delivers to. What it needs of git comes from the
 // repository's kept history (S-0157): one git process while HEAD and the
-// tags are unchanged.
+// tags are unchanged. It holds root's own lock, never another root's, so
+// one project's git processes never hold another project's call (S-0604).
 func PendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) (*Batch, error) {
 	batch := &Batch{}
 	if len(m.Projects) == 0 {
 		return batch, nil // no component, nothing to release, and no git asked
 	}
-	kept.Lock()
-	defer kept.Unlock()
-	h, err := readHistory(r, root)
+	e := keptFor(root)
+	e.Lock()
+	defer e.Unlock()
+	h, err := readHistory(r, e, root)
 	if err != nil {
 		return nil, err
 	}

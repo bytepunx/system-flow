@@ -357,3 +357,68 @@ func TestPendingOnThisRepositoryAnswersAsTheProcessesDid(t *testing.T) {
 		}
 	}
 }
+
+// holding blocks the first git show-ref started in one root until it is let
+// go, and says when that process has started.
+type holding struct {
+	execx.Runner
+	root    string
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (h *holding) Run(dir, name string, args ...string) (string, error) {
+	return h.RunInput(dir, name, "", args...)
+}
+
+func (h *holding) RunInput(dir, name, input string, args ...string) (string, error) {
+	if dir == h.root && len(args) > 0 && args[0] == "show-ref" {
+		held := false
+		h.once.Do(func() { held = true })
+		if held {
+			close(h.started)
+			<-h.release
+		}
+	}
+	return h.Runner.RunInput(dir, name, input, args...)
+}
+
+// S-0604: the kept history takes one lock per repository root, so a call on
+// one root answers while another root's call is inside a git process.
+func TestPendingOnOneRootAnswersWhileAnotherRootsGitRuns(t *testing.T) {
+	rootA, sys := gitRepo(t)
+	rootB, _ := gitRepo(t)
+	writeAcceptedItem(t, rootA, sys, "S-101", workitem.Story, "remediation", "Fix A", map[string]string{"cli/a.go": "package main\n"})
+	writeAcceptedItem(t, rootB, sys, "S-201", workitem.Story, "remediation", "Fix B", map[string]string{"cli/b.go": "package main\n"})
+	r := &holding{Runner: sys, root: rootA, started: make(chan struct{}), release: make(chan struct{})}
+
+	doneA := make(chan map[string]bool, 1)
+	go func() {
+		doneA <- PendingIDs(r, rootA, m, &workitem.Repo{Root: rootA, Manifest: m})
+	}()
+	select {
+	case <-r.started:
+	case <-time.After(30 * time.Second):
+		close(r.release)
+		t.Fatal("root A's git show-ref never started")
+	}
+
+	doneB := make(chan map[string]bool, 1)
+	go func() {
+		doneB <- PendingIDs(r, rootB, m, &workitem.Repo{Root: rootB, Manifest: m})
+	}()
+	select {
+	case ids := <-doneB:
+		if !ids["S-201"] || len(ids) != 1 {
+			t.Errorf("root B answers its own pending items: %v", ids)
+		}
+	case <-time.After(30 * time.Second):
+		t.Error("root B's call waited for root A's git process")
+	}
+
+	close(r.release)
+	if ids := <-doneA; !ids["S-101"] || len(ids) != 1 {
+		t.Errorf("root A answers its own pending items once let go: %v", ids)
+	}
+}

@@ -40,12 +40,33 @@ type history struct {
 	templates map[string]string   // template.yaml path and version → the commit git log -S finds
 }
 
-// kept holds each repository's history. Pending holds its lock throughout,
-// which also guards the commits a history shares with the one before it.
+// keptRoot is one repository root's kept history under that root's own lock
+// (S-0604). PendingBatch holds the lock throughout, git processes included,
+// which also guards the commits a history shares with the one before it; a
+// call on another root takes another lock and never waits for it.
+type keptRoot struct {
+	sync.Mutex
+	h *history
+}
+
+// kept holds each repository root's entry. Its own lock is held only to find
+// or add an entry, never across a git process.
 var kept = struct {
 	sync.Mutex
-	roots map[string]*history
-}{roots: map[string]*history{}}
+	roots map[string]*keptRoot
+}{roots: map[string]*keptRoot{}}
+
+// keptFor returns root's entry, adding an empty one the first time.
+func keptFor(root string) *keptRoot {
+	kept.Lock()
+	defer kept.Unlock()
+	e := kept.roots[root]
+	if e == nil {
+		e = &keptRoot{}
+		kept.roots[root] = e
+	}
+	return e
+}
 
 // logFormat separates commits with RS and fields with US; the files
 // --name-only lists follow the last US.
@@ -56,13 +77,13 @@ var bracketedID = regexp.MustCompile(`^[EST]-\d+$`)
 // readHistory returns root's history, reading from git only what changed
 // since the last call: one process when nothing did, two when commits were
 // added, and the whole history when there is none kept or it was rewritten.
-// The caller holds kept.
-func readHistory(r execx.Runner, root string) (*history, error) {
+// The caller holds e, root's entry.
+func readHistory(r execx.Runner, e *keptRoot, root string) (*history, error) {
 	key, err := r.Run(root, "git", "show-ref", "--head", "--tags", "-d")
 	if err != nil {
 		return nil, err
 	}
-	prev := kept.roots[root]
+	prev := e.h
 	if prev != nil && prev.key == key {
 		return prev, nil
 	}
@@ -88,7 +109,7 @@ func readHistory(r execx.Runner, root string) (*history, error) {
 	if prev != nil {
 		h.commits = prev.commits
 		if h.follow(r, root, prev) {
-			kept.roots[root] = h
+			e.h = h
 			return h, nil
 		}
 	}
@@ -97,7 +118,7 @@ func readHistory(r execx.Runner, root string) (*history, error) {
 		return nil, err
 	}
 	h.walk(h.parse(out, false))
-	kept.roots[root] = h
+	e.h = h
 	return h, nil
 }
 
