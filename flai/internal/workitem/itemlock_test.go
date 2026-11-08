@@ -335,3 +335,109 @@ func TestRestoreRefusesAKeyChangedAgainSince(t *testing.T) {
 		t.Errorf("restore of a file that is gone wrote\n%s\nwant\n%s", got, before)
 	}
 }
+
+// countLocks counts the items locks taken while the test runs.
+func countLocks(t *testing.T) *int {
+	t.Helper()
+	n := new(int)
+	orig := lockFile
+	lockFile = func(path string, wait time.Duration) (func(), error) {
+		*n++
+		return orig(path, wait)
+	}
+	t.Cleanup(func() { lockFile = orig })
+	return n
+}
+
+// S-0599: the replanner writes every forecast it moves under one hold of the
+// items lock, merging each with what another writer saved since (ADR-0184).
+func TestSaveAllWritesEveryItemUnderOneLock(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	mustCreate(t, r, Story, "Second", "")
+	mustCreate(t, r, Story, "Third", "")
+	var items []*Item
+	for _, id := range []string{"S-0001", "S-0002", "S-0003"} {
+		it, err := r.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Forecast = &Forecast{Duration: "2h", Delivery: stamp(time.Hour), By: "flai", At: stamp(time.Minute)}
+		it.Updated = stamp(time.Minute)
+		items = append(items, it)
+	}
+	locks := countLocks(t)
+	written, errs := r.SaveAll(items)
+	if len(errs) > 0 {
+		t.Fatalf("SaveAll: %v", errs)
+	}
+	if *locks != 1 {
+		t.Errorf("SaveAll took the items lock %d times, want once", *locks)
+	}
+	if len(written) != len(items) {
+		t.Errorf("SaveAll wrote %d items, want %d", len(written), len(items))
+	}
+	for _, it := range items {
+		if got := onDisk(t, it.Path); got.Forecast.IsZero() || got.Forecast.Delivery != stamp(time.Hour) {
+			t.Errorf("%s forecast not written:\n%s", it.ID, got.Marshal())
+		}
+	}
+}
+
+func TestSaveAllMergesAPartAnotherWriterSavedSince(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	c := copies(t, r, 2)
+	starter, planner := c[0], c[1]
+	if _, err := r.TransitionAll(starter, InProgress, "agent", "", t0.Add(time.Minute), false); err != nil {
+		t.Fatal(err)
+	}
+	planner.Forecast = &Forecast{Duration: "2h", Delivery: stamp(time.Hour), By: "flai", At: stamp(2 * time.Minute)}
+	planner.Updated = stamp(2 * time.Minute)
+	if _, errs := r.SaveAll([]*Item{planner}); len(errs) > 0 {
+		t.Fatalf("SaveAll: %v", errs)
+	}
+	got := onDisk(t, planner.Path)
+	if got.Status != InProgress {
+		t.Errorf("the move saved since was lost: status %s", got.Status)
+	}
+	if got.Forecast.IsZero() || got.Forecast.Delivery != stamp(time.Hour) {
+		t.Errorf("the forecast was not written:\n%s", got.Marshal())
+	}
+}
+
+func TestSaveAllRefusesOnlyTheItemWhosePartBothChanged(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	mustCreate(t, r, Story, "Second", "")
+	c := copies(t, r, 2)
+	other, mine := c[0], c[1]
+	other.Forecast = &Forecast{Duration: "3h", Delivery: stamp(3 * time.Hour), By: "planner", At: stamp(time.Minute)}
+	other.Updated = stamp(time.Minute)
+	if err := r.Save(other); err != nil {
+		t.Fatal(err)
+	}
+	kept := onDisk(t, other.Path).Marshal()
+	second, err := r.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, it := range []*Item{mine, second} {
+		it.Forecast = &Forecast{Duration: "2h", Delivery: stamp(time.Hour), By: "flai", At: stamp(2 * time.Minute)}
+		it.Updated = stamp(2 * time.Minute)
+	}
+	written, errs := r.SaveAll([]*Item{mine, second})
+	var conflict *ConflictError
+	if !errors.As(errs["S-0001"], &conflict) || conflict.ID != "S-0001" || !slices.Contains(conflict.Keys, "forecast") {
+		t.Fatalf("S-0001: %v, want a *ConflictError on forecast", errs["S-0001"])
+	}
+	if len(errs) != 1 || len(written) != 1 || written[0].ID != "S-0002" {
+		t.Errorf("written %d, errs %v; want S-0002 written and S-0001 refused", len(written), errs)
+	}
+	if got := onDisk(t, mine.Path).Marshal(); got != kept {
+		t.Errorf("a refused item's file changed:\n%s\nwant\n%s", got, kept)
+	}
+	if got := onDisk(t, second.Path); got.Forecast.IsZero() || got.Forecast.Delivery != stamp(time.Hour) {
+		t.Errorf("S-0002's forecast was not written:\n%s", got.Marshal())
+	}
+}

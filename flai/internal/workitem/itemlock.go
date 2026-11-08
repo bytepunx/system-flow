@@ -38,7 +38,61 @@ func (e *ConflictError) Error() string {
 // operating system lock on a file in .flai-cache, so that two writers do not
 // each read a file, then write it, the second over the first (I-0175).
 func (r *Repo) lockItems() (unlock func(), err error) {
-	return filelock.Lock(filepath.Join(r.CacheDir(), "items.lock"), itemsLockWait)
+	return lockFile(filepath.Join(r.CacheDir(), "items.lock"), itemsLockWait)
+}
+
+// lockFile takes an operating system lock on a file; tests count its calls.
+var lockFile = filelock.Lock
+
+// saveLocked is Save's write of it, made while the caller holds the items
+// lock.
+func (r *Repo) saveLocked(it *Item) error {
+	if it.Path == "" {
+		it.Path = filepath.Join(r.ItemDir(it.Type, it.Archived), FileName(it.ID, it.Title))
+	}
+	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
+		return err
+	}
+	doc, err := mergeSaved(it)
+	if err != nil {
+		return err
+	}
+	if raiseUpdated(it) {
+		doc = it.Marshal()
+	}
+	if err := atomicfile.WriteFile(it.Path, []byte(doc), 0o644); err != nil {
+		return err
+	}
+	it.readAs = doc
+	return nil
+}
+
+// SaveAll saves each item as Save does, under one hold of the items lock.
+// An item Save would refuse, such as one with a *ConflictError, is refused
+// alone and keyed by its ID in errs; the others are written, and written
+// lists them in the order given. A lock that cannot be taken refuses them
+// all.
+func (r *Repo) SaveAll(items []*Item) (written []*Item, errs map[string]error) {
+	errs = map[string]error{}
+	if len(items) == 0 {
+		return nil, errs
+	}
+	unlock, err := r.lockItems()
+	if err != nil {
+		for _, it := range items {
+			errs[it.ID] = fmt.Errorf("save %s: %w", it.ID, err)
+		}
+		return nil, errs
+	}
+	defer unlock()
+	for _, it := range items {
+		if err := r.saveLocked(it); err != nil {
+			errs[it.ID] = err
+			continue
+		}
+		written = append(written, it)
+	}
+	return written, errs
 }
 
 // mergeSaved is the document Save writes for it, under the items lock: it as

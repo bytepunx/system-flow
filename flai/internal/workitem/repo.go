@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
@@ -281,29 +280,12 @@ func FileName(id, title string) string {
 // is raised to the later of the two (I-0183). On success the item is what was
 // written.
 func (r *Repo) Save(it *Item) error {
-	if it.Path == "" {
-		it.Path = filepath.Join(r.ItemDir(it.Type, it.Archived), FileName(it.ID, it.Title))
-	}
-	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
-		return err
-	}
 	unlock, err := r.lockItems()
 	if err != nil {
 		return fmt.Errorf("save %s: %w", it.ID, err)
 	}
 	defer unlock()
-	doc, err := mergeSaved(it)
-	if err != nil {
-		return err
-	}
-	if raiseUpdated(it) {
-		doc = it.Marshal()
-	}
-	if err := atomicfile.WriteFile(it.Path, []byte(doc), 0o644); err != nil {
-		return err
-	}
-	it.readAs = doc
-	return nil
+	return r.saveLocked(it)
 }
 
 func lessID(a, b string) bool {
