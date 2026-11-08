@@ -265,6 +265,55 @@ A fresh process no longer reads the log while no branch moves. A cold `stats.get
 
 The two binaries give the same report. In each of the six pairs compared, three of `stats.get` and three of `flai stats --json`, run about two seconds apart, `claims.drift`, all 491 entries, and `claims.days` are identical. `claims.weeks` differs only in the current week's held seconds, `after` and `overlap`, by 1 to 14 seconds, which grow with now while a story is held: `main` ran first in each pair, and S-0531's figures are the larger.
 
+## Parses and lint findings kept between processes (S-0600)
+
+This section covers cause 10 of [the second pass](#a-second-pass-at-596-stories-s-0596).
+
+### Cause
+
+The item cache S-0156 added lived only in a process's memory, so every one-shot `flai`, every `flai move`, and every `flai check` parsed all the items one file after another (`flai/internal/workitem/store.go` `list`). Every `flai check` linted every markdown file under `wip` again, one after another (`flai/internal/check/check.go` `markdown`).
+
+### Fix
+
+- `store.list` stats each file of a folder under the folder's lock, takes the kept item of each file whose key still matches, and parses the rest on min(GOMAXPROCS, 16) workers, keeping them in file name order.
+- `mdlint.LintFolder` walks the folder and lints its files on the same bound of workers, in walk order (`flai/internal/mdlint/folder.go`).
+- A folder's first list in a process reads its kept items file, `.flai-cache/items-<folder>.json`, such as `items-wip-archive-kanban-tasks.json` (`flai/internal/workitem/kept.go`). A file whose size and modification time match its kept entry takes the kept item without a parse. A restored item equals `ReadItem`'s, its unknown fields and the form it was read as included.
+- `flai check` keeps each file's findings in `.flai-cache/lint-findings-<hash of the folder>.json` (`flai/internal/mdlint/kept.go`). An entry is keyed by the file's path, size, and modification time, and the file as a whole by the configuration's hash: its bytes, its rules, a rule-set version, and the format version. A file whose key matches takes its kept findings unread.
+- Only a read made at least two seconds after the file last changed is kept, as S-0156 trusts one in memory.
+- Both files are written again only when what they hold changed. Each is written beside the old one and renamed over it, and only into a `.flai-cache` that exists, as S-0531's kept commits are.
+- A file that is missing, damaged, of another version, or another folder's or configuration's is a miss, never an error or a finding. It costs that process the parses or the lint, and is written again.
+
+### Measured on this repository
+
+On 2026-11-08, between 01:04 and 01:14 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), in a scratch copy of the main checkout under `/tmp`. The copy held its working tree with the uncommitted `wip`: 3,343 work items and 5,209 markdown files under `wip`. It had an empty `.flai-cache`, which its `.gitignore` lists. Two binaries were built just before: `main` at 9fa3fec41, and `story/S-0600` at bf246d07d. Each ran with a scratch `FLAI_CONFIG`.
+
+- Each run is a fresh process, timed by the shell's `time`. The three cases ran in turn in each round:
+  - `main`;
+  - S-0600 with the kept items and lint files deleted first, the first process after a cache is lost;
+  - S-0600 with the kept files a previous process wrote, the usual case.
+- `flai move` moved backlog task T-1269 to `ready` and back, both moves timed, five rounds: ten moves a case. `flai check --strict` ran five rounds; `flai show T-1269` ran five.
+- The figure is the median, of wall time and of CPU time (user and system).
+- The list alone was timed in process by a small program built against each tree with `go build -overlay`, calling `Repo.List(true)` from a fresh process, ten rounds.
+
+The host was very busy: the one-minute load average was 84 to 115 during the moves, 51 to 83 during the checks, 101 to 118 during the shows, and 34 to 66 during the lists. Wall times swing with it, so the CPU times are given beside them.
+
+| Fresh process | `main` | S-0600, no kept files | S-0600, kept files |
+|---------------|--------|-----------------------|--------------------|
+| `flai move` | 4.54 s wall, 2.86 s CPU | 2.87 s wall, 3.26 s CPU | 0.99 s wall, 0.89 s CPU |
+| `flai check --strict` | 6.81 s wall, 7.14 s CPU | 4.51 s wall, 8.26 s CPU | 3.30 s wall, 3.81 s CPU |
+| `flai show` | 5.26 s wall, 2.88 s CPU | 4.04 s wall, 3.48 s CPU | 1.31 s wall, 0.91 s CPU |
+| `Repo.List(true)` in process | 4.54 s | 2.70 s | 0.94 s (0.31 to 1.37) |
+
+Criterion 3 of S-0600 holds. With the kept files, a fresh `flai move` takes 3.55 s less wall time and 1.97 s less CPU than `main`. A fresh `flai check` takes 3.51 s less wall time and 3.33 s less CPU. With no kept files, the first process after a cache is lost takes 1.67 s and 2.30 s less wall time, but 0.40 s and 1.12 s more CPU. That CPU goes to the workers and to writing the kept files whole.
+
+The two binaries give the same `flai check --strict` output, byte for byte, and both exit 1 on the same findings.
+
+What is left:
+
+- A fresh list with the kept files took 0.31 s at the lowest load, a load average of 35, and 0.94 s at the median. That is not yet the 0.3 s the story's title names. Most of it is decoding the kept items files: 10.5 MB of JSON, 6.0 MB of it the archived tasks and 3.8 MB the archived stories. The kept lint findings file is 0.9 MB.
+- About 2.8 s of a check's CPU is its other rules, cause 11's (S-0601).
+- `flai move` still lists twice (`flai/internal/workitem/transition.go`). In one process the second list stats the files and parses only what the move wrote.
+
 ## A second pass at 596 stories (S-0596)
 
 The operator found flai slow again with 596 stories: the board, creating and editing items, the charts (especially over windows longer than 7 days), the close-out, and acceptance. S-0596 measured where the time goes now. Causes 1 to 7 above stay fixed. The time now goes to work that grows with the number of files, and to steps that run one after another.
@@ -306,7 +355,7 @@ Each cause is numbered after causes 1 to 7. Each "fix" below keeps the files und
 |---|-------|----------|--------------|------------------|
 | 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. | 7 to 13 s down to about 1.5 to 2 s a write |
 | 9 | flai serve's replanner writes each forecast it moves through `itemedit.Apply`, one after another (`flai/internal/serve/replan.go`, `replan`), so each moved forecast pays cause 8's two checks. | 5 to 6.4 s a forecast. Over the week, 98 replans moved 1,200 forecasts, about 1.7 to 2 h of serve CPU. An acceptance's replan commit lands p50 80 s and p90 127 s after the acceptance. | Write every moved forecast in one pass, with one scoped check and one index write. | About 80 s down to under 5 s a replan |
-| 10 | Every flai process starts cold. The item cache S-0156 added lives in flai serve's memory, so each `flai` a write starts, each `flai check`, and each `flai move` parses all 3,233 items, one file after another (`flai/internal/workitem/store.go` `list`). `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). | Item parse 1.1 to 1.5 s cold: 1.28 s with one worker, 0.65 s with 8, 0.49 s with 16. `move` 1 to 2.5 s, 80% of it the list. The lint of `wip`: 0.98 s, 0.25 s on 8 workers. | Parse on a bounded pool of workers. Keep parsed items and lint results under `.flai-cache`, keyed by path, size, and modification time, as S-0531 keeps the stories' commits. | About 1 s a `move`; 1.5 to 2 s a check run |
+| 10 | Every flai process starts cold. The item cache S-0156 added lives in flai serve's memory, so each `flai` a write starts, each `flai check`, and each `flai move` parses all 3,233 items, one file after another (`flai/internal/workitem/store.go` `list`). `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). | Item parse 1.1 to 1.5 s cold: 1.28 s with one worker, 0.65 s with 8, 0.49 s with 16. `move` 1 to 2.5 s, 80% of it the list. The lint of `wip`: 0.98 s, 0.25 s on 8 workers. | Parse on a bounded pool of workers. Keep parsed items and lint results under `.flai-cache`, keyed by path, size, and modification time, as S-0531 keeps the stories' commits. Remedied by S-0600: see [Parses and lint findings kept between processes](#parses-and-lint-findings-kept-between-processes-s-0600). | About 1 s a `move`; 1.5 to 2 s a check run |
 | 11 | `check.Run` runs its rules one after another (`flai/internal/check/check.go` `Run`), and `componentExamples` starts `node` on every run (`flai/internal/components/props.go`). | Whole check: 3.3 s cold and 1.8 s warm without `node`; 7.4 to 8 s cold and 2.6 s warm with it. `node` alone: 0.6 to 4.2 s. | Run the rules at once; they only read, so the findings need one lock. Keep the props `node` read, keyed by the component files' stat. | Whole check to about 1.2 to 1.5 s; helps `flai verify` and `flai task done` too |
 | 12 | `agent.status` reads the host's whole `agents.json`, 663 KB for 14 projects, under one host-wide `agentsMu` (`flai/internal/serve/agents.go` `AgentStates`). It then reads all 884 threads, and all 351 conversations once for each live run, through `awaitingOther`, and again for `held` (`Repo.Holds`). It answers 437 finished runs and 288 planner runs. The dashboard asks for it every 30 s for all 13 projects at once, and the board, the activity page, and a story's agent panel every 15 s. | 1.4 to 2.4 s wall, about 450 ms CPU, 392 KB per call. 8 calls at once: 435 ms each; 32 at once: 1,185 ms. A project with a 1 KB answer still takes p50 780 ms. | Keep `agents.json` parsed, checked by size and modification time. Read the conversations once per call. | 15 to 150 ms and the lock queue; with cause 13, agent.state's CPU from about 450 to under 60 ms |
 | 13 | Threads, conversations, digest entries, issues, and activity documents are read and parsed again on every call (`flai/internal/threads/threads.go` `List`, `flai/internal/messages`, `flai/internal/digest`, `flai/internal/issues`). Readers: `agent.state`, `inbox.designer`, `threads.list`, `messages.list`, `board.get`'s `merge.queue`, and `stats.get`. | Threads 80 to 110 ms, conversations 35 to 50 ms, digest 60 to 85 ms, issues 22 to 30 ms per read; YAML parsing is about a fifth of the CPU. | Keep them parsed between requests as S-0156 keeps items: stat each file, and parse again only the files that changed. | About 90 ms down to about 5 ms per thread read; about 180 to 200 ms a `stats.get` |
