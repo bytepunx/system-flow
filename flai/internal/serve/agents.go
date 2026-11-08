@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
@@ -658,33 +659,196 @@ func (s *AgentState) put(r *AgentRun) {
 
 func (d Dir) agents() string { return filepath.Join(string(d), "agents.json") }
 
-var agentsMu sync.Mutex
-
-// AgentStates reads the state of every project's agents.
-func (d Dir) AgentStates() map[string]AgentState {
-	agentsMu.Lock()
-	defer agentsMu.Unlock()
-	return d.agentStates()
+// keptAgents is agents.json as last parsed or written, with the file's stat
+// at that moment (S-0603).
+type keptAgents struct {
+	info   os.FileInfo
+	states map[string]AgentState
 }
 
-func (d Dir) agentStates() map[string]AgentState {
+var (
+	// agentsMu guards kept, and is held only to read or replace an entry,
+	// never across a read, a parse, or a write of the file (S-0603).
+	agentsMu sync.Mutex
+	kept     = map[string]*keptAgents{} // by agents.json's path
+	// agentsWriteMu serializes this process's read-modify-write of
+	// agents.json; the file lock serializes it with other processes.
+	agentsWriteMu sync.Mutex
+	// agentsParsed, when set, is called before each parse of agents.json:
+	// the tests' count of parses.
+	agentsParsed atomic.Pointer[func(path string)]
+)
+
+// AgentStates reads the state of every project's agents. It parses
+// agents.json again only when the file's size, modification time, or file
+// changed since it was last parsed or written, and keeps what it parsed
+// (S-0603). What it returns is shared with every other caller: read it,
+// never change it. A change goes through updateAgent, on a copy.
+func (d Dir) AgentStates() map[string]AgentState {
+	path := d.agents()
+	info, err := os.Stat(path)
+	if err != nil {
+		forget(path)
+		return map[string]AgentState{}
+	}
+	agentsMu.Lock()
+	k := kept[path]
+	agentsMu.Unlock()
+	if k != nil && sameFile(k.info, info) {
+		return k.states
+	}
+	// stat before the read: a write during it changes the stat, and the
+	// next call parses again
+	states, err := parseAgents(path)
+	if err != nil {
+		return states
+	}
+	agentsMu.Lock()
+	if kept[path] == k { // not replaced meanwhile by a newer read or write
+		kept[path] = &keptAgents{info: info, states: states}
+	}
+	agentsMu.Unlock()
+	return states
+}
+
+// sameFile is whether two stats of agents.json name the same contents: the
+// same file, size, and modification time. Every write flai makes renames a
+// new file into place (Dir.write), so each is a new file whatever the
+// clock's granularity.
+func sameFile(a, b os.FileInfo) bool {
+	return os.SameFile(a, b) && a.Size() == b.Size() && a.ModTime().Equal(b.ModTime())
+}
+
+func forget(path string) {
+	agentsMu.Lock()
+	delete(kept, path)
+	agentsMu.Unlock()
+}
+
+// parseAgents reads and parses agents.json, empty when it cannot be read and
+// as far as it parses when it is not valid, as before S-0603; the error says
+// only that it could not be read.
+func parseAgents(path string) (map[string]AgentState, error) {
+	if parsed := agentsParsed.Load(); parsed != nil {
+		(*parsed)(path)
+	}
 	out := map[string]AgentState{}
-	if data, err := os.ReadFile(d.agents()); err == nil {
-		_ = json.Unmarshal(data, &out)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return out, err
+	}
+	_ = json.Unmarshal(data, &out)
+	return out, nil
+}
+
+func (d Dir) updateAgent(root string, change func(*AgentState)) {
+	agentsWriteMu.Lock()
+	defer agentsWriteMu.Unlock()
+	path := d.agents()
+	// flai serve agent restart writes here from a process of its own (S-0116).
+	defer lockFile(path + ".lock")()
+	all := d.statesToChange(path)
+	st := all[root]
+	change(&st)
+	all[root] = st
+	if err := d.write(path, all); err != nil {
+		forget(path)
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		forget(path)
+		return
+	}
+	// a copy: change may have put in runs its caller goes on changing
+	agentsMu.Lock()
+	kept[path] = &keptAgents{info: info, states: cloneStates(all)}
+	agentsMu.Unlock()
+}
+
+// statesToChange is agents.json for a change to work on: a copy of what is
+// kept while the file is as it was kept, else parsed again. Read under the
+// file lock, so no other process writes it meanwhile.
+func (d Dir) statesToChange(path string) map[string]AgentState {
+	agentsMu.Lock()
+	k := kept[path]
+	agentsMu.Unlock()
+	if info, err := os.Stat(path); err == nil && k != nil && sameFile(k.info, info) {
+		return cloneStates(k.states)
+	}
+	all, _ := parseAgents(path)
+	return all
+}
+
+// cloneStates copies every project's state deep, so that a change to the
+// copy, or to a run put in it, leaves the original as it was.
+func cloneStates(all map[string]AgentState) map[string]AgentState {
+	out := make(map[string]AgentState, len(all))
+	for root, s := range all {
+		out[root] = s.clone()
 	}
 	return out
 }
 
-func (d Dir) updateAgent(root string, change func(*AgentState)) {
-	agentsMu.Lock()
-	defer agentsMu.Unlock()
-	// flai serve agent restart writes here from a process of its own (S-0116).
-	defer lockFile(d.agents() + ".lock")()
-	all := d.agentStates()
-	st := all[root]
-	change(&st)
-	all[root] = st
-	_ = d.write(d.agents(), all)
+func (s AgentState) clone() AgentState {
+	c := s
+	c.Running, c.Last = s.Running.clone(), s.Last.clone()
+	c.Orchestrator, c.Analyzer, c.Curator = s.Orchestrator.clone(), s.Analyzer.clone(), s.Curator.clone()
+	c.Stories, c.Plans = cloneRuns(s.Stories), cloneRuns(s.Plans)
+	if s.Roles != nil {
+		c.Roles = make(map[string]map[string]*AgentRun, len(s.Roles))
+		for name, runs := range s.Roles {
+			c.Roles[name] = cloneRuns(runs)
+		}
+	}
+	c.PastOrchestrators, c.PastAnalyzers = cloneList(s.PastOrchestrators), cloneList(s.PastAnalyzers)
+	c.PastPlans, c.PastCurators = cloneList(s.PastPlans), cloneList(s.PastCurators)
+	if s.PastRoles != nil {
+		c.PastRoles = make(map[string][]*AgentRun, len(s.PastRoles))
+		for name, runs := range s.PastRoles {
+			c.PastRoles[name] = cloneList(runs)
+		}
+	}
+	return c
+}
+
+func cloneRuns(runs map[string]*AgentRun) map[string]*AgentRun {
+	if runs == nil {
+		return nil
+	}
+	out := make(map[string]*AgentRun, len(runs))
+	for k, r := range runs {
+		out[k] = r.clone()
+	}
+	return out
+}
+
+func cloneList(runs []*AgentRun) []*AgentRun {
+	if runs == nil {
+		return nil
+	}
+	out := make([]*AgentRun, len(runs))
+	for i, r := range runs {
+		out[i] = r.clone()
+	}
+	return out
+}
+
+// clone copies the run with every field it points to; a field of a kind
+// that points is cloned here, which TestAgentRunCloneCoversEveryField holds
+// to.
+func (r *AgentRun) clone() *AgentRun {
+	if r == nil {
+		return nil
+	}
+	c := *r
+	if r.Exit != nil {
+		exit := *r.Exit
+		c.Exit = &exit
+	}
+	c.Entries, c.Conversations, c.WaitsOn = slices.Clone(r.Entries), slices.Clone(r.Conversations), slices.Clone(r.WaitsOn)
+	c.StoryAgent = r.StoryAgent.Clone()
+	return &c
 }
 
 // StoryID matches a story ID: S-, then three or more digits.

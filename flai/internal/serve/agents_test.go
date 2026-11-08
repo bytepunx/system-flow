@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -4649,4 +4650,163 @@ func TestAStorysAgentOnOpenCodeIsRefusedWhatOpenCodeCannotDo(t *testing.T) {
 			}
 		}
 	})
+}
+
+// countParses counts the parses of agents.json under d, and calls each with
+// the parse's number, from 1, before it parses.
+func countParses(t *testing.T, d Dir, each func(n int)) func() int {
+	t.Helper()
+	var mu sync.Mutex
+	n := 0
+	hook := func(path string) {
+		if path != d.agents() {
+			return
+		}
+		mu.Lock()
+		n++
+		at := n
+		mu.Unlock()
+		if each != nil {
+			each(at)
+		}
+	}
+	agentsParsed.Store(&hook)
+	t.Cleanup(func() { agentsParsed.Store(nil) })
+	return func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return n
+	}
+}
+
+func writeAgentsFile(t *testing.T, d Dir, all map[string]AgentState) {
+	t.Helper()
+	data, err := json.Marshal(all)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(string(d), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(d.agents(), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0603: AgentStates keeps agents.json parsed. Two reads of an unchanged
+// file parse it once; a write by updateAgent is read back without a parse;
+// a write from outside, with a new size or a new modification time, is
+// parsed on the next read.
+func TestAgentStatesKeepsTheParse(t *testing.T) {
+	d := Dir(filepath.Join(t.TempDir(), "serve"))
+	parses := countParses(t, d, nil)
+	writeAgentsFile(t, d, map[string]AgentState{"/p": {Waiting: "one"}})
+
+	if got := d.AgentStates()["/p"].Waiting; got != "one" {
+		t.Fatalf("first read: waiting %q, want one", got)
+	}
+	if got := d.AgentStates()["/p"].Waiting; got != "one" || parses() != 1 {
+		t.Fatalf("an unchanged file read twice: waiting %q, %d parses, want one and 1", got, parses())
+	}
+
+	d.updateAgent("/p", func(s *AgentState) { s.Waiting = "two" })
+	if parses() != 1 {
+		t.Errorf("updateAgent parsed a file it had kept: %d parses, want 1", parses())
+	}
+	if got := d.AgentStates()["/p"].Waiting; got != "two" || parses() != 1 {
+		t.Errorf("read after updateAgent: waiting %q, %d parses, want two and 1", got, parses())
+	}
+
+	// from outside, a new size
+	writeAgentsFile(t, d, map[string]AgentState{"/p": {Waiting: "three!"}})
+	if got := d.AgentStates()["/p"].Waiting; got != "three!" || parses() != 2 {
+		t.Errorf("read after a write of a new size: waiting %q, %d parses, want three! and 2", got, parses())
+	}
+
+	// from outside, the same size in place, with only the modification time to tell
+	info, err := os.Stat(d.agents())
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeAgentsFile(t, d, map[string]AgentState{"/p": {Waiting: "four!!"}})
+	at := info.ModTime().Add(time.Second)
+	if err := os.Chtimes(d.agents(), at, at); err != nil {
+		t.Fatal(err)
+	}
+	if got := d.AgentStates()["/p"].Waiting; got != "four!!" || parses() != 3 {
+		t.Errorf("read after a write of the same size and a new time: waiting %q, %d parses, want four!! and 3", got, parses())
+	}
+
+	// gone: nothing, and nothing kept
+	if err := os.Remove(d.agents()); err != nil {
+		t.Fatal(err)
+	}
+	if got := d.AgentStates(); len(got) != 0 {
+		t.Errorf("read of no file: %v, want nothing", got)
+	}
+}
+
+// S-0603: a parse of agents.json holds no lock: a read that finds the file
+// changed parses it while another's parse is under way, and is kept; the
+// older parse, ending after, does not replace it.
+func TestAgentStatesDoesNotWaitOnAnotherParse(t *testing.T) {
+	d := Dir(filepath.Join(t.TempDir(), "serve"))
+	entered, release := make(chan struct{}), make(chan struct{})
+	parses := countParses(t, d, func(n int) {
+		if n == 2 { // the first read after the outside write
+			close(entered)
+			<-release
+		}
+	})
+	writeAgentsFile(t, d, map[string]AgentState{"/p": {Waiting: "one"}})
+	d.AgentStates()
+	writeAgentsFile(t, d, map[string]AgentState{"/p": {Waiting: "two!"}})
+
+	done := make(chan string)
+	go func() { done <- d.AgentStates()["/p"].Waiting }()
+	<-entered
+	if got := d.AgentStates()["/p"].Waiting; got != "two!" {
+		t.Errorf("a read beside a parse under way: waiting %q, want two!", got)
+	}
+	if got := d.AgentStates()["/p"].Waiting; got != "two!" || parses() != 3 {
+		t.Errorf("a read once the file is kept again: waiting %q, %d parses, want two! and 3", got, parses())
+	}
+	close(release)
+	if got := <-done; got != "two!" {
+		t.Errorf("the held read: waiting %q, want two!", got)
+	}
+	if d.AgentStates(); parses() != 3 {
+		t.Errorf("the held read replaced what was kept after it: %d parses, want 3", parses())
+	}
+}
+
+// S-0603: what updateAgent keeps is a copy, so a run its change put in and
+// its caller goes on changing does not change what AgentStates returns.
+func TestUpdateAgentKeepsACopy(t *testing.T) {
+	d := Dir(filepath.Join(t.TempDir(), "serve"))
+	exit := 0
+	run := &AgentRun{Story: "S-0001", Agent: "agent-S-0001", Started: "2026-11-08T00:00:00Z", PID: 42, Exit: &exit,
+		Entries: []string{"a"}, StoryAgent: &manifest.Agent{Harness: "claude-code", Config: map[string]string{"effort": "high"}}}
+	d.updateAgent("/p", func(s *AgentState) { s.put(run) })
+	run.Why, *run.Exit, run.Entries[0], run.StoryAgent.Config["effort"] = "changed", 1, "b", "low"
+	got := d.AgentStates()["/p"].Stories["S-0001"]
+	if got.Why != "" || *got.Exit != 0 || got.Entries[0] != "a" || got.StoryAgent.Config["effort"] != "high" {
+		t.Errorf("a change to the run after the write reached what is kept: %+v", got)
+	}
+}
+
+// S-0603: clone copies every field of a run that points, so a field added
+// with a pointer, a slice, or a map must be cloned there too.
+func TestAgentRunCloneCoversEveryField(t *testing.T) {
+	cloned := map[string]bool{"Exit": true, "Entries": true, "Conversations": true, "WaitsOn": true, "StoryAgent": true}
+	typ := reflect.TypeOf(AgentRun{})
+	for i := range typ.NumField() {
+		f := typ.Field(i)
+		switch f.Type.Kind() {
+		case reflect.Pointer, reflect.Slice, reflect.Map, reflect.Interface, reflect.Func, reflect.Chan:
+			if !cloned[f.Name] {
+				t.Errorf("AgentRun.%s points, and AgentRun.clone does not copy it", f.Name)
+			}
+		}
+	}
 }
