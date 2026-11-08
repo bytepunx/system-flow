@@ -408,6 +408,37 @@ Each cause from 8 to 21 has a draft story under [E-0033](../../wip/kanban/epics/
 | 20 | [S-0610](../../wip/kanban/stories/S-0610-the-close-out-runs-independent-test-tiers-at-once-and-smoke-skips-what-the.md) The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out |
 | 21 | [S-0611](../../wip/kanban/stories/S-0611-the-dashboard-asks-threads-list-for-open-threads-and-agent-status-for-open-runs.md) The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB |
 
+### Cause 13 fixed: threads, conversations, digest entries, issues, and activity documents kept parsed (S-0602)
+
+Every call read and parsed each of these files again: 884 threads, 351 conversations, 521 digest entries, 295 issues, and the strategic agents' activity documents. Now a long-running flai keeps each kind parsed, as S-0156 keeps items.
+
+- `workitem.KeptFiles` (`flai/internal/workitem/keptfiles.go`) keeps the parse of files of one kind, by absolute path. `List` reads a folder and stats each file it matches. `Read` stats one file. A file is parsed again only when it is new, is not the same file (`os.SameFile`), or its size or modification time changed. A file read within `racyWindow` of its change is parsed again on every look until it is older. A file gone from the folder is dropped. One lock per folder lets readers at once share one parse. Each caller gets its own copy through the kind's clone, and a parse error is not kept.
+- Each kind keeps one store, process-wide: `threads.List` and `Get`, `messages.List` and `Get`, `digest.List` and `Get`, `issues.List` and `Get`, and `Repo.Activity` and `Repo.Activities`. `Repo.Conversations`, which `Repo.Holds` calls for `agent.state` and `board.get`, keeps its own store of each conversation's shares and asks. `workitem` cannot import `messages`, so the two stores are separate. Unknown fields are warned of once per parse, not on every list. A write replaces the file, or rewrites it in place as `issues.Save` does, and the next read sees it by its stat.
+- Each kind's tests show that a changed, an added, and a removed file is seen on the next read, that a second read with nothing changed parses no file, that readers at once get equal answers, and that changing a returned value changes nothing kept.
+
+Measured on 2026-11-08 between 03:25 and 03:30 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), on the main checkout. Before is `main` at 17097cea1; after is `story/S-0602` at cdb0441a5. Both binaries were built under `/tmp` with `go build -overlay`, which changes no file in the repository. A one-shot `flai hostapi --timing` is always cold, so the methods were timed by a build of each tree whose `hostapi --timing` calls the method six times in one process. The first call is cold and the other five warm. The two binaries took turns for five rounds, 25 warm calls each per method. The load average over one minute was 37 to 49 at the rounds' starts.
+
+| Method | Phase | Before, warm | After, warm | Before, cold | After, cold |
+|--------|-------|-------------:|------------:|-------------:|------------:|
+| `threads.list` | `threads.read` | 262 ms | 14 ms | 345 ms | 385 ms |
+| `threads.list` | whole call | 271 ms | 28 ms | 367 ms | 402 ms |
+| `inbox.designer` | `threads.read` | 233 ms | 13 ms | 217 ms | 333 ms |
+| `inbox.designer` | whole call | 354 ms | 131 ms | 385 ms | 508 ms |
+| `stats.get` | `stats.compute` | 942 ms | 807 ms | 1,388 ms | 1,531 ms |
+
+The figures are medians. A cold call parses every file, as before. `stats.get` records no phase of its own for its reads. So each read, and `statsread.Read` as `stats.get` calls it, was timed apart. A program built from each tree under `/tmp` opened the main checkout and called each read six times in one process. It recorded the wall time and the process's CPU time of each call. The two binaries took turns for eight rounds; the load average was 15 to 19.
+
+| Read | Before, warm | After, warm | Before, warm CPU | After, warm CPU |
+|------|-------------:|------------:|-----------------:|----------------:|
+| `threads.List` | 99.5 ms | 7.5 ms | 133.0 ms | 7.6 ms |
+| `messages.List` | 56.2 ms | 2.4 ms | 80.8 ms | 2.4 ms |
+| `digest.List` | 95.4 ms | 6.2 ms | 140.2 ms | 6.3 ms |
+| `issues.List` | 33.8 ms | 1.9 ms | 47.5 ms | 1.9 ms |
+| `Repo.Activities` | 7.3 ms | 0.3 ms | 11.5 ms | 0.3 ms |
+| `statsread.Read` | 95.8 ms | 49.5 ms | 388.8 ms | 128.9 ms |
+
+The five reads together took 292 ms warm before and 18 ms after: a warm thread read is about 7 ms, not 80 to 110 ms. `threads.list` and `inbox.designer` spend about 220 to 250 ms less in `threads.read`. `stats.get`'s reads spend 260 ms less CPU. Their wall time falls only 46 ms, from 96 to 50 ms, because S-0607 runs the twelve reads at once, so the wall time is that of the slowest. What is left of `statsread.Read` is the reads this story does not keep: the stories' commits, the board, the conflict log, and the merge queue's events.
+
 ### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
 
 The planner's first idea was to take the projects below the import folders from the running flai serve's status. That status cannot say which import folder a registered project is below, since `serve.Place` leaves registered projects out of `ImportProjects` and `Unserved`. So the walk is replaced, not cached.
