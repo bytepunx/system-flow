@@ -1,10 +1,11 @@
 // Package itemnew creates a work item whose body its author has already
 // written, as one step that happens or does not (S-0059): the item is made
-// from the project's template, flai check runs with it in place, anything it
-// introduces inside the item's story refuses it and leaves nothing behind
-// (ADR-0197, I-0191), and what is kept is
-// committed on its own. It is what the dashboard's "new" form calls, and the
-// same from a script: flai story new --body-stdin.
+// from the project's template, the rules of flai check a work item write can
+// affect run with it in place (check.RunItemWrite, S-0598), anything they
+// introduce inside the item's story refuses it and leaves nothing behind
+// (ADR-0197, I-0191), and what is kept is committed on its own. It is what
+// the dashboard's "new" form calls, and the same from a script: flai story
+// new --body-stdin.
 package itemnew
 
 import (
@@ -51,8 +52,9 @@ type Result struct {
 	CommitError string          `json:"commit_error,omitempty"`
 }
 
-// Create makes the item, checks the repository with it in place, scoped to
-// the item's story, and keeps it only when the check reports nothing new
+// Create makes the item, runs the rules a work item write can affect before
+// and after with it in place (check.RunItemWrite, S-0598), the second run
+// scoped to the item's story, and keeps it only when that reports nothing new
 // inside that story but a wip.overlap, a touches.folder, a wip.after-hub, or
 // a wip.after-reason, which are advisory (ADR-0019, ADR-0188, ADR-0230) and come back in Warnings (I-0169),
 // as does a new finding outside the story (I-0191). A refusal is a
@@ -66,18 +68,24 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 			return nil, err
 		}
 	}
-	before, err := check.Run(repo, opt.New.Now)
-	if err != nil {
-		return nil, err
-	}
 	// The parent's file is rewritten to link the child; keep what it was.
-	var parentPath string
+	var parentID, parentPath string
 	var parentWas []byte
 	if opt.New.Parent != "" {
 		if p, err := repo.Get(opt.New.Parent); err == nil {
-			parentPath = p.Path
+			parentID, parentPath = p.ID, p.Path
 			parentWas, _ = os.ReadFile(p.Path)
 		}
+	}
+	// the run before the write covers the rules the run after does, on the
+	// parent and its file: the new item's file does not exist yet
+	var beforeWrite check.Write
+	if parentPath != "" {
+		beforeWrite = check.Write{Items: []string{parentID}, Paths: []string{relTo(repo.Root, parentPath)}}
+	}
+	before, err := check.RunItemWrite(repo, opt.New.Now, beforeWrite)
+	if err != nil {
+		return nil, err
 	}
 	it, err := repo.Create(opt.New)
 	var lint *mdlint.Error
@@ -96,19 +104,20 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		}
 		return nil
 	}
-	after, err := check.Run(repo, opt.New.Now)
+	rel := relTo(repo.Root, it.Path)
+	written := []string{rel}
+	items := []string{it.ID}
+	if parentPath != "" {
+		written = append(written, relTo(repo.Root, parentPath))
+		items = append(items, parentID)
+	}
+	after, err := check.RunItemWrite(repo, opt.New.Now, check.Write{Items: items, Paths: written})
 	if err != nil {
 		_ = undo()
 		return nil, err
 	}
-	rel := relTo(repo.Root, it.Path)
 	// the second run is scoped to the new item's story, as a checked edit's
-	// is: a finding the write did not bring, such as layout.gitignore once
-	// the items lock made .flai-cache, refuses nothing (ADR-0197, I-0191)
-	written := []string{rel}
-	if parentPath != "" {
-		written = append(written, relTo(repo.Root, parentPath))
-	}
+	// is: a finding the write did not bring refuses nothing (ADR-0197, I-0191)
 	key := func(f check.Finding) string { return f.Rule + "\x00" + f.Path + "\x00" + f.Message }
 	all := slices.Clone(after.Findings)
 	outside, err := check.ScopeToItem(after, repo, it, written)

@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -464,10 +466,12 @@ func TestAStoryAfterWithNoReasonIsKeptWithAWarning(t *testing.T) {
 
 // I-0191: in a project with no .gitignore and no .flai-cache, the first
 // checked creation makes .flai-cache/items.lock, which brings the check's
-// layout.gitignore on the repository's root between its two runs. The finding
-// is outside the new item's story, so the epic, a story under it, and a task
-// of that story are each kept, with layout.gitignore among the first one's
-// warnings, while a finding inside the story still refuses it (ADR-0197).
+// layout.gitignore on the repository's root between its two runs. The epic,
+// a story under it, and a task of that story are each kept, while a finding
+// inside the story still refuses it (ADR-0197). Since S-0598 a creation runs
+// only the rules an item write can affect, and the layout is not one, so
+// layout.gitignore is not among the warnings either; the whole check still
+// reports it.
 func TestTheFirstCreationInAProjectWithNoGitignoreIsKeptWithAWarning(t *testing.T) {
 	repo := project(t)
 	if err := os.Remove(filepath.Join(repo.Root, ".gitignore")); err != nil {
@@ -487,17 +491,17 @@ func TestTheFirstCreationInAProjectWithNoGitignoreIsKeptWithAWarning(t *testing.
 	if _, err := os.Stat(filepath.Join(repo.CacheDir(), "items.lock")); err != nil {
 		t.Fatalf("the creation made the items lock: %v", err)
 	}
-	var gitignore bool
 	for _, f := range res.Warnings {
 		if f.Rule == "layout.gitignore" {
-			gitignore = true
-			if !f.Outside {
-				t.Errorf("layout.gitignore is outside the new epic: %+v", f)
-			}
+			t.Errorf("a creation runs no layout rule, so layout.gitignore is no warning: %+v", f)
 		}
 	}
-	if !gitignore {
-		t.Errorf("layout.gitignore comes back as a warning: %+v", res.Warnings)
+	whole, err := check.Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(whole.Findings, func(f check.Finding) bool { return f.Rule == "layout.gitignore" }) {
+		t.Errorf("the whole check still reports layout.gitignore: %+v", whole.Findings)
 	}
 	story := func(body string) workitem.NewOptions {
 		return workitem.NewOptions{Type: workitem.Story, Title: "First story", Nature: "feature", Parent: res.Item.ID, Owner: "alex", Now: now, Body: body}
@@ -514,5 +518,125 @@ func TestTheFirstCreationInAProjectWithNoGitignoreIsKeptWithAWarning(t *testing.
 	task.After = nil
 	if _, err := Create(repo, nil, Options{New: task}); err != nil {
 		t.Fatalf("a task of the story is kept: %v", err)
+	}
+}
+
+// conflicted is a body whose Notes hold a merge conflict's markers, each
+// paragraph on its own so that the markdown lint finds nothing in it.
+const conflicted = "## Goal\n\nResolve it.\n\n## Acceptance criteria\n\n- [ ] It is resolved.\n\n## Tasks\n\n## Notes\n\n<<<<<<< ours\n\nOurs.\n\n=======\n\nTheirs.\n\n>>>>>>> theirs\n"
+
+// S-0598: a story and a task that each bring a finding of a rule the item
+// write run keeps, inside the new item's story, are refused as before: every
+// finding is on the new item, nothing is created, and the parent's file is
+// byte for byte as it was (ADR-0213).
+func TestANewItemThatBringsAKeptRulesFindingIsRefused(t *testing.T) {
+	now := time.Date(2026, 11, 8, 9, 0, 0, 0, time.UTC)
+	const body = "## Goal\n\nWait.\n\n## Acceptance criteria\n\n- [ ] It waits.\n\n## Tasks\n\n## Notes\n\nIt reads S-0099's output.\n"
+	for _, tc := range []struct {
+		name, rule string
+		item       func(epic string) workitem.NewOptions
+	}{
+		{"a story after a story that does not exist", "story.after", func(epic string) workitem.NewOptions {
+			return workitem.NewOptions{Type: workitem.Story, Title: "Waits", Parent: epic, Owner: "alex", Now: now, After: []string{"S-0099"}, Body: body}
+		}},
+		{"a story with conflict markers", "markdown.conflict-marker", func(epic string) workitem.NewOptions {
+			return workitem.NewOptions{Type: workitem.Story, Title: "Conflicted", Parent: epic, Owner: "alex", Now: now, Body: conflicted}
+		}},
+		{"a task with conflict markers", "markdown.conflict-marker", func(string) workitem.NewOptions {
+			task := plannedTask(now)
+			task.Body = "## Work\n\nResolve it.\n\n## Done when\n\n- It is resolved.\n\n## Notes\n\n<<<<<<< ours\n\nOurs.\n\n=======\n\nTheirs.\n\n>>>>>>> theirs\n"
+			return task
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := planned(t, now)
+			epic, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Waiting", Owner: "alex", Now: now})
+			if err != nil {
+				t.Fatal(err)
+			}
+			opt := tc.item(epic.ID)
+			parent, err := repo.Get(opt.Parent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			parentWas, err := os.ReadFile(parent.Path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before := func(dir string) []string {
+				m, _ := filepath.Glob(filepath.Join(repo.Root, "wip/kanban", dir, "*.md"))
+				return m
+			}
+			stories, tasks := before("stories"), before("tasks")
+			_, err = Create(repo, nil, Options{New: opt})
+			refused, ok := docedit.IsRefused(err)
+			if !ok {
+				t.Fatalf("want a refusal, got %v", err)
+			}
+			if !slices.ContainsFunc(refused.Findings, func(f check.Finding) bool { return f.Rule == tc.rule }) {
+				t.Errorf("the refusal names %s: %+v", tc.rule, refused.Findings)
+			}
+			for _, f := range refused.Findings {
+				if f.Path != refused.Path {
+					t.Errorf("a finding off the new item %s: %+v", refused.Path, f)
+				}
+			}
+			if got := before("stories"); len(got) != len(stories) {
+				t.Errorf("no story is created: %v", got)
+			}
+			if got := before("tasks"); len(got) != len(tasks) {
+				t.Errorf("no task is created: %v", got)
+			}
+			if now, _ := os.ReadFile(parent.Path); string(now) != string(parentWas) {
+				t.Errorf("the parent is byte for byte as it was:\n%s", now)
+			}
+		})
+	}
+}
+
+// S-0598: findings of rules a work item write cannot affect, already in the
+// repository, refuse no creation and come back in no warning: a design
+// document's front matter, a markdown finding on another wip file, and a
+// components examples file, whose rule is the one that starts node. The
+// whole check reports each, so the fixture holds them; a creation runs none
+// of those rules (check.RunItemWrite).
+func TestASkippedRulesFindingRefusesNothing(t *testing.T) {
+	now := time.Date(2026, 11, 8, 9, 0, 0, 0, time.UTC)
+	repo := planned(t, now)
+	files := map[string]string{
+		"design/system/broken.md":                  "# No front matter\n",
+		"wip/notes.md":                             "# Notes\n\n\n\nToo many blank lines.\n",
+		"design/components/web/Card.examples.json": "{ not json\n",
+	}
+	for p, data := range files {
+		full := filepath.Join(repo.Root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	whole, err := check.Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"design/system/broken.md", "wip/notes.md", "design/components"} {
+		if !slices.ContainsFunc(whole.Findings, func(f check.Finding) bool { return strings.Contains(filepath.ToSlash(f.Path), p) }) {
+			t.Fatalf("the whole check finds something on %s: %+v", p, whole.Findings)
+		}
+	}
+	const body = "## Goal\n\nA story.\n\n## Acceptance criteria\n\n- [ ] It is kept.\n\n## Tasks\n\n## Notes\n\nNone.\n"
+	for _, opt := range []workitem.NewOptions{
+		{Type: workitem.Story, Title: "Kept", Owner: "alex", Now: now, Body: body},
+		plannedTask(now),
+	} {
+		res, err := Create(repo, nil, Options{New: opt})
+		if err != nil {
+			t.Fatalf("the new %s is kept: %v", opt.Type, err)
+		}
+		if len(res.Warnings) != 0 {
+			t.Errorf("the new %s comes with no warning: %+v", opt.Type, res.Warnings)
+		}
 	}
 }
