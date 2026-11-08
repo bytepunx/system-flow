@@ -147,7 +147,9 @@ func (r *Repo) ItemDir(typ string, archived bool) string {
 
 // List loads every item, optionally including the archive. Items are sorted
 // by ID. Each is the caller's own copy; only files that changed since the
-// process last read them are read again (S-0156).
+// process last read them are read again (S-0156), and a process's first list
+// of a folder parses only the files that changed since a process last kept
+// it in the cache folder (S-0600).
 func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	var items []*Item
 	scopes := []bool{false}
@@ -156,7 +158,7 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	}
 	for _, archived := range scopes {
 		for _, typ := range Types {
-			found, err := parsed.list(r.ItemDir(typ, archived))
+			found, err := parsed.list(r.ItemDir(typ, archived), r.CacheDir())
 			if err != nil {
 				return nil, err
 			}

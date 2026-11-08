@@ -13,6 +13,13 @@ import (
 // treeOf reads every file under root, by its path, but the lock files in
 // .flai-cache: an OS file lock's file stays once it is freed (S-0377), and is
 // not the board.
+// keptParse says whether a file in the cache folder is one of the parses or
+// lint results a flai process keeps there (S-0600), which any list or check
+// rewrites and which are rebuilt from wip.
+func keptParse(name string) bool {
+	return strings.HasPrefix(name, "items-") || strings.HasPrefix(name, "lint-findings-")
+}
+
 func treeOf(t *testing.T, root string) map[string]string {
 	t.Helper()
 	cache := filepath.Join(root, ".flai-cache") + string(filepath.Separator)
@@ -21,8 +28,8 @@ func treeOf(t *testing.T, root string) map[string]string {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		if strings.HasPrefix(p, cache) && strings.HasSuffix(p, ".lock") {
-			return nil
+		if strings.HasPrefix(p, cache) && (strings.HasSuffix(p, ".lock") || keptParse(filepath.Base(p))) {
+			return nil // a lock, or a parse or lint result flai keeps (S-0600): neither is the board
 		}
 		data, err := os.ReadFile(p)
 		out[p] = string(data)

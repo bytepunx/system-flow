@@ -563,6 +563,9 @@ func TestVerifyRunsWithAMainCheckoutOfOnlyGitWipAndManifest(t *testing.T) {
 	}
 	var wrote []string
 	for _, e := range entries {
+		if keptParse(e.Name()) {
+			continue // the parses and lint findings flai keeps (S-0600), rebuilt from wip
+		}
 		wrote = append(wrote, e.Name())
 	}
 	if strings.Join(wrote, ",") != "verify,worktrees" {

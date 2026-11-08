@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,12 +37,21 @@ type folder struct {
 	mu     sync.Mutex
 	files  map[string]*kept // by base name
 	parses int              // files parsed, for tests
+
+	// loaded is set once the folder's kept items file was read, by its first
+	// list in the process; disk is what it held, by base name, for the files
+	// not yet listed, and written the keys the file holds now, nil while that
+	// is not known (S-0600).
+	loaded  bool
+	disk    map[string]keptRecord
+	written map[string]fileKey
 }
 
 type kept struct {
 	info    os.FileInfo
-	item    *Item // never handed out; callers get a copy
-	trusted bool  // read later than racyWindow after it was modified
+	item    *Item           // never handed out; callers get a copy
+	trusted bool            // read later than racyWindow after it was modified
+	raw     json.RawMessage // item's JSON in the kept items file, once made
 }
 
 var parsed = &store{folders: map[string]*folder{}}
@@ -79,17 +89,38 @@ type look struct {
 	err    error
 	readAt time.Time
 	parsed bool // item is a fresh parse, not yet kept
+
+	// rec is the kept items file's entry whose key matches the file's stat,
+	// for parseAll to restore in place of a parse; restored is set when it
+	// did.
+	rec      *keptRecord
+	restored bool
 }
 
-// list returns a copy of every item in dir, in file name order. A folder that
-// does not exist has none. It holds the folder's lock throughout, so that
-// lists at once share one parse of each changed file: it stats every file,
-// takes the kept item of each whose key still matches, parses the rest on a
-// bounded pool of workers, and keeps what they parsed.
-func (s *store) list(dir string) ([]*Item, error) {
+// list returns a copy of every item in dir, in file name order. A folder
+// that does not exist has none. It holds the folder's lock throughout, so
+// that lists at once share one parse of each changed file: it stats every
+// file, takes the kept item of each whose key still matches, in memory or,
+// on the folder's first list in the process, in its kept items file in the
+// cache folder cache (S-0600), parses the rest on a bounded pool of
+// workers, keeps what they parsed, and writes the kept items file again when
+// what it holds changed. With no cache, or a cache folder that does not
+// exist, nothing is kept between processes.
+func (s *store) list(dir, cache string) ([]*Item, error) {
 	f := s.folder(dir)
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	path := keptItemsPath(cache, dir)
+	if !f.loaded && path != "" {
+		f.loaded = true
+		f.disk = readKeptItems(path, dir)
+		if f.disk != nil {
+			f.written = make(map[string]fileKey, len(f.disk))
+			for name, rec := range f.disk {
+				f.written[name] = fileKey{size: rec.Size, mod: rec.ModTime}
+			}
+		}
+	}
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		clear(f.files)
@@ -117,7 +148,7 @@ func (s *store) list(dir string) ([]*Item, error) {
 			}
 			return nil, l.err
 		}
-		if l.parsed {
+		if l.parsed || l.restored {
 			f.keep(dir, l)
 		}
 		seen[l.name] = true
@@ -128,6 +159,8 @@ func (s *store) list(dir string) ([]*Item, error) {
 			delete(f.files, name)
 		}
 	}
+	f.disk = nil // every file now has its entry in memory, or is gone
+	f.writeKept(path, dir)
 	return out, nil
 }
 
@@ -142,13 +175,16 @@ func (f *folder) lookup(dir, name string) *look {
 	if k := f.files[name]; k != nil && k.trusted && os.SameFile(k.info, l.info) &&
 		k.info.ModTime().Equal(l.info.ModTime()) && k.info.Size() == l.info.Size() {
 		l.item = k.item
+	} else if rec, ok := f.disk[name]; ok && (fileKey{size: rec.Size, mod: rec.ModTime}) == keyOf(l.info) {
+		l.rec = &rec
 	}
 	return l
 }
 
 // parseAll parses every file lookup left without an item, on at most
-// parsers() workers. It writes only each file's own look, so it needs no
-// lock of its own.
+// parsers() workers, restoring instead the item of one whose kept items
+// file's entry matched, unless that entry does not decode. It writes only
+// each file's own look, so it needs no lock of its own.
 func parseAll(dir string, files []*look) {
 	var todo []*look
 	for _, l := range files {
@@ -157,6 +193,13 @@ func parseAll(dir string, files []*look) {
 		}
 	}
 	parse := func(l *look) {
+		if l.rec != nil {
+			if it, err := restoreItem(filepath.Join(dir, l.name), *l.rec); err == nil {
+				l.item, l.restored = it, true
+				return
+			}
+			l.rec = nil // a damaged entry is a miss: parse the file
+		}
 		l.readAt = time.Now()
 		l.item, l.err = readItem(filepath.Join(dir, l.name))
 		l.parsed = l.err == nil
@@ -184,12 +227,22 @@ func parseAll(dir string, files []*look) {
 	wg.Wait()
 }
 
-// keep records a fresh parse as the folder's item for its file, trusted once
-// the read came racyWindow after the file's modification. The caller holds
+// keep records a fresh parse, or an item restored from the kept items file,
+// as the folder's item for its file. A parse is trusted once the read came
+// racyWindow after the file's modification; a restored item was, since only
+// trusted parses are written to the file. The item's unknown fields are
+// warned of once in the process, as a parse of them is. The caller holds
 // f.mu.
 func (f *folder) keep(dir string, l *look) {
-	f.parses++
 	WarnUnknown(filepath.Join(dir, l.name), l.item.Unknown)
+	if l.restored {
+		f.files[l.name] = &kept{info: l.info, item: l.item, trusted: true, raw: l.rec.Item}
+		return
+	}
+	f.parses++
+	// The kept items file's entry for the file, if any, no longer holds:
+	// the file changed, or its entry would not decode.
+	delete(f.written, l.name)
 	f.files[l.name] = &kept{info: l.info, item: l.item, trusted: l.info.ModTime().Before(l.readAt.Add(-racyWindow))}
 }
 

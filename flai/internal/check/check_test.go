@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -952,6 +953,74 @@ func TestMarkdownRules(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: [oops\n"), 0o644)
 	if got := run(); len(got) != 1 || got[0].Rule != "markdown.config" {
 		t.Errorf("an unreadable configuration is reported once: %v", got)
+	}
+}
+
+// S-0600: with a .flai-cache folder, a second check takes the findings of
+// each unchanged wip file from it and lints none of them again; without one,
+// it keeps nothing and makes no folder.
+func TestMarkdownKeepsEachFilesFindingsInTheCacheFolder(t *testing.T) {
+	for _, cached := range []bool{true, false} {
+		t.Run(fmt.Sprintf("cache folder %t", cached), func(t *testing.T) {
+			root := t.TempDir()
+			_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+			for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+				_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+			}
+			if cached {
+				_ = os.MkdirAll(filepath.Join(root, ".flai-cache"), 0o755)
+			}
+			_ = os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\n"), 0o644)
+			note := filepath.Join(root, "wip/notes.md")
+			old := time.Now().Add(-time.Hour)
+			write := func(body string) {
+				t.Helper()
+				if err := os.WriteFile(note, []byte(body), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chtimes(note, old, old); err != nil {
+					t.Fatal(err)
+				}
+			}
+			run := func() []Finding {
+				t.Helper()
+				repo, err := workitem.Open(root)
+				if err != nil {
+					t.Fatal(err)
+				}
+				res, err := Run(repo, now)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var out []Finding
+				for _, f := range res.Findings {
+					if strings.HasPrefix(f.Rule, "markdown.") {
+						out = append(out, f)
+					}
+				}
+				return out
+			}
+			write("# Notes\n\nTrailing  \n\nEnd")
+			first := run()
+			if len(first) == 0 {
+				t.Fatal("the note's findings are missing")
+			}
+			// The same size and time with clean content: a kept finding
+			// stays, a fresh lint finds nothing.
+			write("# Notes\n\nTrailing.\n\nEnd\n")
+			second := run()
+			if cached && !reflect.DeepEqual(second, first) {
+				t.Fatalf("the second check linted the unchanged note again: %v, want the kept %v", second, first)
+			}
+			if !cached {
+				if len(second) != 0 {
+					t.Fatalf("without a cache folder the edit was not linted: %v", second)
+				}
+				if _, err := os.Stat(filepath.Join(root, ".flai-cache")); !os.IsNotExist(err) {
+					t.Fatalf("a check without a cache folder made one: %v", err)
+				}
+			}
+		})
 	}
 }
 
