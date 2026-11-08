@@ -105,7 +105,11 @@ func (r *Repo) PlanArchive(items []*Item, ids []string) (*ArchivePlan, error) {
 func (r *Repo) Archive(plan *ArchivePlan) error {
 	for _, it := range plan.Items {
 		dest := filepath.Join(r.ItemDir(it.Type, true), filepath.Base(it.Path))
-		if err := moveFile(it.Path, dest); err != nil {
+		err := moveFile(it.Path, dest)
+		// this process's own move is seen by its next list of either folder (S-0606)
+		parsed.stale(filepath.Dir(it.Path))
+		parsed.stale(filepath.Dir(dest))
+		if err != nil {
 			return err
 		}
 		it.Path, it.Archived = dest, true

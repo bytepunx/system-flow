@@ -218,16 +218,30 @@ func (r *Repo) Get(id string) (*Item, error) {
 	for _, cand := range idCandidates(id) {
 		for _, archived := range []bool{false, true} {
 			dir := r.ItemDir(typ, archived)
-			matches, _ := filepath.Glob(filepath.Join(dir, cand+"-*.md"))
-			if len(matches) == 0 {
-				continue
-			}
-			it, err := parsed.get(matches[0])
-			if err != nil {
-				return nil, err
+			var it *Item
+			if parsed.snapshotting(dir) {
+				// the folder's snapshot answers, with no glob (S-0606)
+				found, err := parsed.find(dir, cand+"-", r.CacheDir())
+				if err != nil {
+					return nil, err
+				}
+				if found == nil {
+					continue
+				}
+				it = found
+			} else {
+				matches, _ := filepath.Glob(filepath.Join(dir, cand+"-*.md"))
+				if len(matches) == 0 {
+					continue
+				}
+				found, err := parsed.get(matches[0])
+				if err != nil {
+					return nil, err
+				}
+				it = found
 			}
 			if it.ID != cand {
-				return nil, fmt.Errorf("%s: front matter id is %s", matches[0], it.ID)
+				return nil, fmt.Errorf("%s: front matter id is %s", it.Path, it.ID)
 			}
 			it.Archived = archived
 			return it, nil

@@ -421,3 +421,256 @@ func TestAListOfADamagedItemFailsWithItsParseError(t *testing.T) {
 		t.Errorf("list of a damaged item: %v, want %v", err, want)
 	}
 }
+
+// looks is how many times the store has read dir and statted its files.
+func looks(dir string) int {
+	f := parsed.folder(dir)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.looks
+}
+
+// totalLooks is looks across the project's item folders, archive included.
+func totalLooks(r *Repo) int {
+	n := 0
+	for _, archived := range []bool{false, true} {
+		for _, typ := range Types {
+			n += looks(r.ItemDir(typ, archived))
+		}
+	}
+	return n
+}
+
+// snapshotting turns the store's snapshot on for r's root until the test ends.
+func snapshotting(t *testing.T, r *Repo) {
+	t.Helper()
+	SnapshotItems(r.Root)
+	t.Cleanup(func() { StopSnapshotItems(r.Root) })
+}
+
+// rel is path relative to r's root, as the watcher reports it.
+func rel(t *testing.T, r *Repo, path string) string {
+	t.Helper()
+	out, err := filepath.Rel(r.Root, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.ToSlash(out)
+}
+
+// With the snapshot on, a list and a get after the first list read no folder,
+// stat no file, and parse nothing: an edit behind the store's back is not seen
+// until the store is told of it.
+func TestASnapshotAnswersWithoutLooking(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	s := mustCreate(t, r, Story, "Story one", "E-0001")
+	snapshotting(t, r)
+	age(t, r, time.Now().Add(-time.Hour))
+	ItemsChanged(r.Root) // the ages are changes too
+	listed(t, r, true)
+	lookedBefore, parsedBefore := totalLooks(r), totalParses(r)
+
+	sameSizeEdit(t, s.Path, "Story one", "Story One")
+	later := time.Now().Add(-30 * time.Minute)
+	if err := os.Chtimes(s.Path, later, later); err != nil {
+		t.Fatal(err)
+	}
+	if got := listed(t, r, true)["S-0001"].Title; got != "Story one" {
+		t.Errorf("an untold edit lists as %q, want the snapshot's", got)
+	}
+	if got, err := r.Get("S-0001"); err != nil || got.Title != "Story one" {
+		t.Errorf("an untold edit gets as %v, %v, want the snapshot's", got, err)
+	}
+	if got, err := r.Get("s-1"); err != nil || got.ID != "S-0001" {
+		t.Errorf("a short ID gets %v, %v", got, err)
+	}
+	if _, err := r.Get("S-0099"); err == nil {
+		t.Error("an unknown ID was found")
+	}
+	if got := totalLooks(r) - lookedBefore; got != 0 {
+		t.Errorf("lists and gets of a fresh snapshot looked at folders %d times", got)
+	}
+	if got := totalParses(r) - parsedBefore; got != 0 {
+		t.Errorf("lists and gets of a fresh snapshot parsed %d files", got)
+	}
+
+	ItemChanged(r.Root, rel(t, r, s.Path))
+	if got := listed(t, r, true)["S-0001"].Title; got != "Story One" {
+		t.Errorf("a told edit lists as %q", got)
+	}
+	if got := totalLooks(r) - lookedBefore; got != 1 {
+		t.Errorf("a told change looked at %d folders, want only the one that holds it", got)
+	}
+	if got := totalParses(r) - parsedBefore; got != 1 {
+		t.Errorf("a told change parsed %d files, want the one that changed", got)
+	}
+	if got, _ := r.Get("S-0001"); got.Title != "Story One" {
+		t.Errorf("a told edit gets as %q", got.Title)
+	}
+}
+
+// A save by this process, a move into the archive, and a file added or removed
+// by another process that the store is told of all reach the next list.
+func TestASnapshotSeesSavesAndToldChanges(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	mustCreate(t, r, Story, "Story zero", "E-0001")
+	task := mustCreate(t, r, Task, "Task one", "S-0001")
+	snapshotting(t, r)
+	listed(t, r, true)
+
+	mustCreate(t, r, Story, "Story one", "E-0001")
+	if got := listed(t, r, true)["S-0002"]; got == nil || got.Title != "Story one" {
+		t.Fatalf("a story this process created is not listed: %v", got)
+	}
+	s, err := r.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Body = strings.Replace(s.Body, "- [ ]\n", "- [x] ok\n", 1)
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	mustMove(t, r, s, Ready, "")
+	if got := listed(t, r, false)["S-0002"].Status; got != Ready {
+		t.Errorf("a story this process moved lists as %s", got)
+	}
+
+	// archived by this process's Save at the archive's path, its old file removed
+	old := task.Path
+	task.Archived, task.Path = true, ""
+	if err := r.Save(task); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(old); err != nil {
+		t.Fatal(err)
+	}
+	ItemChanged(r.Root, rel(t, r, old))
+	if got := listed(t, r, true)["T-0001"]; got == nil || !got.Archived {
+		t.Errorf("a task saved into the archive lists as %v", got)
+	}
+	if got, err := r.Get("T-0001"); err != nil || !got.Archived {
+		t.Errorf("a task saved into the archive gets as %v, %v", got, err)
+	}
+
+	// written and removed by another process, and told
+	data, _ := os.ReadFile(s.Path)
+	other := strings.Replace(strings.Replace(string(data), "id: S-0002", "id: S-0009", 1), "Story one", "Story nine", 1)
+	handmade := filepath.Join(r.ItemDir(Story, false), "S-0009-story-nine.md")
+	if err := os.WriteFile(handmade, []byte(other), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ItemChanged(r.Root, handmade) // an absolute path is taken as it is
+	if got := listed(t, r, false)["S-0009"]; got == nil || got.Title != "Story nine" {
+		t.Errorf("a story another process wrote is not listed: %v", got)
+	}
+	if err := os.Remove(handmade); err != nil {
+		t.Fatal(err)
+	}
+	ItemsChanged(r.Root + string(filepath.Separator)) // a root with a trailing slash is the same root
+	if got := listed(t, r, false)["S-0009"]; got != nil {
+		t.Error("a story another process removed is still listed")
+	}
+	if _, err := r.Get("S-0009"); err == nil {
+		t.Error("a story another process removed is still found")
+	}
+}
+
+// A folder whose look read a file too recently modified to trust stays stale,
+// so that a same-size write in the same tick is still seen; once every file is
+// old enough, the folder is fresh and lists without looking.
+func TestASnapshotOfARecentlyWrittenFolderStaysStale(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	e, _ := r.Get("E-0001")
+	snapshotting(t, r)
+	tick := time.Now().Add(-time.Second / 2)
+	if err := os.Chtimes(e.Path, tick, tick); err != nil {
+		t.Fatal(err)
+	}
+	listed(t, r, false)
+	sameSizeEdit(t, e.Path, "Epic", "Eric")
+	if err := os.Chtimes(e.Path, tick, tick); err != nil {
+		t.Fatal(err)
+	}
+	dir := r.ItemDir(Epic, false)
+	before := looks(dir)
+	if got := listed(t, r, false)["E-0001"].Title; got != "Eric" {
+		t.Errorf("an untold same-size write in the same tick lists as %q", got)
+	}
+	if looks(dir) == before {
+		t.Error("a folder with an untrusted file was not looked at again")
+	}
+	past := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(e.Path, past, past); err != nil {
+		t.Fatal(err)
+	}
+	listed(t, r, false)
+	before = looks(dir)
+	listed(t, r, false)
+	if got := looks(dir) - before; got != 0 {
+		t.Errorf("a folder of trusted files looked at again %d times", got)
+	}
+}
+
+// A snapshot hands out copies: a caller's change reaches no one else, and
+// turning the snapshot off looks at the folders again.
+func TestASnapshotHandsOutCopiesAndStops(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	snapshotting(t, r)
+	age(t, r, time.Now().Add(-time.Hour))
+	ItemsChanged(r.Root)
+	first := listed(t, r, false)["E-0001"]
+	first.Title = "changed"
+	first.Tags = append(first.Tags, "changed")
+	got, _ := r.Get("E-0001")
+	got.Title = "changed too"
+	again := listed(t, r, false)["E-0001"]
+	if again.Title != "Epic" || len(again.Tags) != 0 {
+		t.Errorf("a caller's change reached the next list: %+v", again)
+	}
+
+	StopSnapshotItems(r.Root)
+	dir := r.ItemDir(Epic, false)
+	before := looks(dir)
+	listed(t, r, false)
+	if looks(dir) == before {
+		t.Error("a list with the snapshot off did not look at the folder")
+	}
+}
+
+// Lists and changes at once are safe, and a change told during a look is not
+// lost to it.
+func TestASnapshotUnderConcurrentListsAndChanges(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	for range 10 {
+		mustCreate(t, r, Story, "Story", "E-0001")
+	}
+	snapshotting(t, r)
+	var wg sync.WaitGroup
+	for i := range 8 {
+		wg.Go(func() {
+			for range 20 {
+				if i%2 == 0 {
+					ItemChanged(r.Root, "wip/kanban/stories/S-0001.md")
+				}
+				if items, err := r.List(true); err != nil || len(items) != 11 {
+					t.Errorf("list: %d items, %v", len(items), err)
+				}
+				if _, err := r.Get("S-0002"); err != nil {
+					t.Error(err)
+				}
+			}
+		})
+	}
+	wg.Wait()
+	s, _ := r.Get("S-0003")
+	sameSizeEdit(t, s.Path, "Story", "Stork")
+	ItemChanged(r.Root, rel(t, r, s.Path))
+	if got := listed(t, r, false)["S-0003"].Title; got != "Stork" {
+		t.Errorf("an edit told after concurrent lists lists as %q", got)
+	}
+}

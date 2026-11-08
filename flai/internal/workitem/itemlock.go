@@ -60,7 +60,9 @@ func (r *Repo) saveLocked(it *Item) error {
 	if raiseUpdated(it) {
 		doc = it.Marshal()
 	}
-	if err := atomicfile.WriteFile(it.Path, []byte(doc), 0o644); err != nil {
+	err = atomicfile.WriteFile(it.Path, []byte(doc), 0o644)
+	parsed.stale(filepath.Dir(it.Path)) // this process's own write is seen by its next list (S-0606)
+	if err != nil {
 		return err
 	}
 	it.readAs = doc
@@ -172,6 +174,7 @@ func (r *Repo) Restore(path string, wrote, before []byte) error {
 		return fmt.Errorf("restore %s: %w", path, err)
 	}
 	defer unlock()
+	defer parsed.stale(filepath.Dir(path)) // this process's own write is seen by its next list (S-0606)
 	data, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("restore %s: read it for what another writer saved since: %w", path, err)
