@@ -1912,7 +1912,9 @@ func (c *checker) markdown() {
 	if cfg == nil {
 		return
 	}
-	for _, ff := range cfg.LintFolder(c.repo.WipDir()) {
+	// Each file's findings are kept in the cache folder between runs, so a
+	// check lints only the files that changed (S-0600).
+	for _, ff := range cfg.LintFolderKept(c.repo.WipDir(), c.repo.CacheDir()) {
 		for _, f := range ff.Findings {
 			c.add(Warning, "markdown."+f.Rule, ff.Path, f.Line, "%s", f)
 		}

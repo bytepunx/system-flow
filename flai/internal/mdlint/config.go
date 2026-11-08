@@ -1,6 +1,8 @@
 package mdlint
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +26,35 @@ type Config struct {
 	Path    string
 	enabled map[string]bool
 	options map[string]map[string]any
+	hash    string
+}
+
+// RulesVersion is the version of what flai's rules find. Bump it in the
+// same change as any change to what a rule reports, its findings, lines, or
+// words, so that findings kept under .flai-cache by an older flai are linted
+// again rather than reused (S-0600).
+const RulesVersion = 1
+
+// Hash identifies the configuration and the rules it is applied with: the
+// configuration's bytes and form, the rules flai implements, RulesVersion,
+// and the kept findings' format. Findings kept under one hash are reused only
+// under the same hash. A nil configuration has none.
+func (c *Config) Hash() string {
+	if c == nil {
+		return ""
+	}
+	return c.hash
+}
+
+// configHash is the hash Parse gives a configuration read from data.
+func configHash(data []byte, cli2, json bool) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "mdlint rules %d kept %d cli2 %t json %t\n", RulesVersion, keptVersion, cli2, json)
+	for _, id := range Rules() {
+		fmt.Fprintf(h, "%s\n", id)
+	}
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Load reads the project's markdownlint configuration from root. A project
@@ -52,6 +83,7 @@ func Load(root string) (*Config, error) {
 // rule, alias, or tag. cli2 says the rules are under the config key; json
 // that the file is JSON or JSONC, whose comments are taken out first.
 func Parse(data []byte, cli2, json bool) (*Config, error) {
+	hash := configHash(data, cli2, json)
 	if json {
 		data = stripComments(data)
 	}
@@ -68,7 +100,7 @@ func Parse(data []byte, cli2, json bool) (*Config, error) {
 		}
 		top = rules
 	}
-	c := &Config{enabled: map[string]bool{}, options: map[string]map[string]any{}}
+	c := &Config{enabled: map[string]bool{}, options: map[string]map[string]any{}, hash: hash}
 	def := true
 	for _, it := range top {
 		if k, _ := it.Key.(string); strings.EqualFold(k, "default") {
