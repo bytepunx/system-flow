@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 topics: [cli]
 ---
@@ -630,6 +630,19 @@ Every request `flai serve` answers over the channel, and every request `flai mcp
 Work items, `board.md`, narratives and their index, and threads (with the block mirrored into a narrative) are written with `atomicfile.WriteFile`, a temporary file beside the target renamed over it (S-0100). It syncs the temporary file before the rename and the folder after it, so a host crash leaves the old content or the new, never an empty file (S-0375, I-0137); it skips the folder sync on Windows and where the file system answers EINVAL or not supported. They are read while they change: by the MCP server's `inbox` and `wait_for_events`, by `flai serve`'s watcher, and by the dashboard through flai. `os.WriteFile` truncates first, and a reader in between saw an empty file ("no front matter", I-0036).
 
 A process keeps the work items it has parsed (S-0156). `workitem.Repo.List` and `Repo.Get` go through a process-wide store in `flai/internal/workitem/store.go`, keyed by file path, because `flai serve`'s methods open a `Repo` per request. Each list walks the item folders and stats each file; a file is parsed again only when it is new, or is not the same file (`os.SameFile`: renamed over, as git and editors do), or its modification time or size changed, and a file gone from the walk leaves the store. A file read within two seconds of its modification time is read again on every list until it is older, so that a same-size write in the same timestamp tick is never missed (the racy-git rule). Each caller gets its own deep copy of every item, so that one that changes an item changes nothing another sees. One caller at a time refreshes a folder, so that lists at once share one read. On this repository a warm list of every item, archive included, takes 3 to 5 ms against 105 to 120 ms before. A short-lived command pays one stat per file, and a second list in the same command is cheaper.
+
+Since S-0600 a process also starts warm. The files a list must parse are parsed on a pool of workers, `GOMAXPROCS` of them and at most 16, and then kept in file name order. The parsed items are kept between processes too, in one file per item folder in the project's cache folder: `.flai-cache/items-<folder>.json`, such as `items-wip-kanban-stories.json` (`flai/internal/workitem/kept.go`). The file holds a format version, the folder's absolute path, and, for each item file, its name, size, and modification time with the parsed item. A folder's first list in a process takes the kept item of each file whose size and modification time still match, and parses only the rest. A restored item equals a fresh parse, unknown fields included. The file is written again when the files it would hold change.
+
+The markdown lint of `wip` that `flai check` runs works the same way (`flai/internal/mdlint/folder.go`, `kept.go`). It lints the folder's files on the same bounded pool. It keeps each file's findings in `.flai-cache/lint-findings-<hash of the folder>.json`, keyed by the file's path, size, and modification time. The whole file is also keyed by the lint configuration's hash, taken over the configuration file's bytes, its rules, `mdlint.RulesVersion`, and the file's format version. A changed configuration, or a flai whose rules changed, so lints every file again. Raise `RulesVersion` with any change to what a rule reports.
+
+Both files follow S-0531's rules for `stories-commits.json`:
+
+- They are written atomically, and only into a `.flai-cache` that exists, so a project without one keeps nothing ([D-0402](../digest/D-0402-a-test-fixture-project-that-flai-writes-items-in-needs-a-gitignore-listing-flai.md)).
+- A file read within two seconds of its modification time is not kept.
+- A missing, damaged, or foreign file is a miss, never an error, and is written whole again. So is one with another format version. It costs that run a parse or a lint.
+- Deleting them is safe.
+
+The figures are in [server-performance.md](server-performance.md).
 
 Front matter is parsed with goccy/go-yaml but written by a small purpose-built emitter, so timestamps stay unquoted, sequences stay indented, and a `flai` edit never rewrites lines it did not change. Item bodies come from the template's `items/` when the project's template is in the cache, else from copies embedded in the binary.
 
