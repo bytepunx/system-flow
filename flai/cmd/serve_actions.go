@@ -2267,13 +2267,16 @@ func strategicSettings(root string, m manifest.Manifest, editable bool) map[stri
 // servedView is what the settings page shows of the projects flai serve
 // serves, and of those below the folders named for import that it does not,
 // with why (S-0122): what flai serve project list says, without the
-// dashboard's address or the credential's path.
+// dashboard's address or the credential's path. It reads the configuration
+// once and walks no folder for candidates, which it does not show; while
+// flai serve runs it walks none at all, and works out each project's below
+// from its path (S-0605).
 func (a *app) servedView() map[string]any {
-	l, err := a.listServedProjects()
+	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return map[string]any{"error": err.Error()}
 	}
-	cfg, _, err := a.loadConfig()
+	l, err := a.servedListing(cfg.ImportRoots, false)
 	if err != nil {
 		return map[string]any{"error": err.Error()}
 	}
@@ -2299,7 +2302,7 @@ func (a *app) servedView() map[string]any {
 	served := make([]project, 0, len(l.Served))
 	for _, p := range l.Served {
 		// a registered one below such a folder too: removing it lists it (S-0123)
-		below := a.servedBelow(p.Root)
+		below := servedBelowIn(cfg.ImportRoots, l.folder, p.Root)
 		served = append(served, project{Key: p.Key, Name: p.Name, Root: p.Root, From: p.From, Below: below,
 			State: p.State, Since: p.Since, LastError: p.LastError, Reason: p.Reason, Settings: cfg.ActionEnabled(hostapi.ActionSettings, p.Root)})
 	}

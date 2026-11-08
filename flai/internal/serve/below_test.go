@@ -250,3 +250,87 @@ func TestServeServesTheProjectsBelowTheImportRoots(t *testing.T) {
 	for conn := dash.Wait(t); conn.Project != "blog"; conn = dash.Wait(t) {
 	}
 }
+
+// S-0605: ImportRootOf answers from a root's path what FindBelow's walk of
+// the folders named for import finds, for every folder of a tree that holds
+// each case the walk treats apart, and for folders that overlap in either
+// order.
+func TestImportRootOfAgreesWithTheWalk(t *testing.T) {
+	tmp := t.TempDir()
+	a, b := filepath.Join(tmp, "a"), filepath.Join(tmp, "b")
+	for _, dir := range []string{
+		filepath.Join(a, "p1"),                 // depth 1
+		filepath.Join(a, "org", "p2"),          // depth 2
+		filepath.Join(a, "x", "y", "p3"),       // depth 3, as deep as the walk looks
+		filepath.Join(a, "x", "y", "z", "p4"),  // depth 4, past it
+		filepath.Join(a, ".hidden", "p5"),      // hidden
+		filepath.Join(a, "node_modules", "p6"), // skipped
+		filepath.Join(a, "outer"),              // a repository
+		filepath.Join(a, "outer", "inner"),     // inside a repository
+		filepath.Join(tmp, "elsewhere", "p7"),  // only reached through a link
+		b,                                      // an import folder that is a repository
+		filepath.Join(b, "sub"),                // inside it
+	} {
+		repoAt(t, dir, true)
+	}
+	repoAt(t, filepath.Join(a, "bare"), false) // a repository with no system-flow.yaml
+	if err := os.Symlink(filepath.Join(tmp, "elsewhere"), filepath.Join(a, "link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(tmp, "elsewhere", "p7"), filepath.Join(a, "p7")); err != nil {
+		t.Fatal(err)
+	}
+	var dirs []string
+	_ = filepath.WalkDir(tmp, func(p string, d os.DirEntry, err error) error {
+		if err == nil && (d.IsDir() || d.Type()&os.ModeSymlink != 0) && d.Name() != ".git" {
+			dirs = append(dirs, p)
+		}
+		return nil
+	})
+	dirs = append(dirs, filepath.Join(a, "link", "p7"), "relative/p1", a+"/p1/")
+
+	cases := []struct {
+		roots []string
+		found []string // what must be found, so the agreement is not empty
+		not   []string
+	}{
+		{[]string{a, b}, []string{filepath.Join(a, "p1"), filepath.Join(a, "org", "p2"), filepath.Join(a, "x", "y", "p3"), filepath.Join(a, "outer"), b},
+			[]string{filepath.Join(a, "x", "y", "z", "p4"), filepath.Join(a, ".hidden", "p5"), filepath.Join(a, "node_modules", "p6"),
+				filepath.Join(a, "outer", "inner"), filepath.Join(a, "bare"), filepath.Join(a, "link", "p7"), filepath.Join(a, "p7"), filepath.Join(b, "sub")}},
+		{[]string{b, a}, []string{filepath.Join(a, "p1"), b}, nil},
+		// a/x walked first reaches p4 at depth 3; a's walk then stops at a/x
+		{[]string{filepath.Join(a, "x"), a}, []string{filepath.Join(a, "x", "y", "z", "p4"), filepath.Join(a, "p1")}, nil},
+		// a walked first enters a/x and stops short of p4; a/x's walk adds nothing
+		{[]string{a, filepath.Join(a, "x")}, []string{filepath.Join(a, "x", "y", "p3")}, []string{filepath.Join(a, "x", "y", "z", "p4")}},
+	}
+	for _, c := range cases {
+		listed := map[string]bool{}
+		for _, r := range repositories(c.roots) {
+			listed[r] = exists(filepath.Join(r, "system-flow.yaml"))
+		}
+		for _, dir := range dirs {
+			want := ""
+			if listed[dir] {
+				for _, r := range c.roots {
+					if within(r, dir) {
+						want = r
+						break
+					}
+				}
+			}
+			if got := ImportRootOf(c.roots, dir); got != want {
+				t.Errorf("roots %v, %s: got %q, the walk says %q", c.roots, dir, got, want)
+			}
+		}
+		for _, dir := range c.found {
+			if ImportRootOf(c.roots, dir) == "" {
+				t.Errorf("roots %v: %s not found", c.roots, dir)
+			}
+		}
+		for _, dir := range c.not {
+			if got := ImportRootOf(c.roots, dir); got != "" {
+				t.Errorf("roots %v: %s found below %s", c.roots, dir, got)
+			}
+		}
+	}
+}

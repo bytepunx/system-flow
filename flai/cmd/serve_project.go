@@ -277,11 +277,22 @@ func (a *app) projectsBelow() []serve.Found {
 // a folder named for import, or the folder a running flai serve was started
 // in (S-0102). Empty otherwise.
 func (a *app) servedBelow(root string) string {
-	if r := a.importRootOf(root); r != "" {
+	folder := ""
+	if st, alive := a.serveDir().ReadStatus(time.Now()); alive {
+		folder = st.Folder
+	}
+	return servedBelowIn(a.importRoots(), folder, root)
+}
+
+// servedBelowIn is servedBelow with the folders named for import and the
+// folder a running flai serve was started in already read, so that a caller
+// asking for many roots reads them once (S-0605).
+func servedBelowIn(importRoots []string, folder, root string) string {
+	if r := serve.ImportRootOf(importRoots, root); r != "" {
 		return r
 	}
-	if st, alive := a.serveDir().ReadStatus(time.Now()); alive && st.Folder != "" && within(st.Folder, root) {
-		return st.Folder
+	if folder != "" && within(folder, root) {
+		return folder
 	}
 	return ""
 }
@@ -290,23 +301,6 @@ func (a *app) servedBelow(root string) string {
 func within(folder, root string) bool {
 	rel, err := filepath.Rel(folder, root)
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-// importRootOf is the folder named for import that root is served below, as
-// flai serve finds them (S-0120), or empty.
-func (a *app) importRootOf(root string) string {
-	roots := a.importRoots()
-	for _, f := range serve.FindBelow("", roots) {
-		if f.Root != root {
-			continue
-		}
-		for _, r := range roots {
-			if within(r, root) {
-				return r
-			}
-		}
-	}
-	return ""
 }
 
 // servedProject is one project flai serve serves, and how it is.
@@ -332,9 +326,23 @@ type projectListing struct {
 	// folder flai serve was started in, that it does not serve, and why (S-0120).
 	Unserved []serve.Found `json:"unserved"`
 	Roots    []string      `json:"import_roots"`
+	// folder is the folder a running flai serve was started in, if any.
+	folder string
 }
 
 func (a *app) listServedProjects() (projectListing, error) {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return projectListing{}, err
+	}
+	return a.servedListing(cfg.ImportRoots, true)
+}
+
+// servedListing is what flai serve project list says, given the folders named
+// for import as the configuration has them. Without candidates it walks none
+// of those folders for them, as the settings page, which shows none, asks
+// (S-0605).
+func (a *app) servedListing(importRoots []string, candidates bool) (projectListing, error) {
 	ss, err := a.readServeStatus()
 	if err != nil {
 		return projectListing{}, err
@@ -343,6 +351,7 @@ func (a *app) listServedProjects() (projectListing, error) {
 	var st serve.Status
 	if ss.Running {
 		st = *ss.Status
+		out.folder = st.Folder
 	}
 	describe := func(e serve.Entry, from string) servedProject {
 		p := servedProject{Entry: e, From: from}
@@ -372,13 +381,11 @@ func (a *app) listServedProjects() (projectListing, error) {
 	add(st.ImportProjects, "import")
 	sort.Slice(out.Served, func(i, j int) bool { return out.Served[i].Key < out.Served[j].Key })
 
-	cfg, _, err := a.loadConfig()
-	if err != nil {
-		return out, err
-	}
-	out.Roots = append(out.Roots, cfg.ImportRoots...)
-	if found := serve.FindCandidates(cfg.ImportRoots, served, taken); found != nil {
-		out.Candidates = found
+	out.Roots = append(out.Roots, importRoots...)
+	if candidates {
+		if found := serve.FindCandidates(importRoots, served, taken); found != nil {
+			out.Candidates = found
+		}
 	}
 	if _, unserved := a.belowImportRoots(ss); unserved != nil {
 		out.Unserved = unserved

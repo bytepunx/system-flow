@@ -2,8 +2,10 @@ package serve
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -61,6 +63,71 @@ func FindBelow(folder string, importRoots []string) []Found {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Root < out[j].Root })
 	return out
+}
+
+// ImportRootOf is the first of importRoots holding root when FindBelow would
+// find root below them, or empty, worked out from root's path without a walk.
+//
+// It answers as repositories(importRoots) and a system-flow.yaml at root
+// would, for a root given as the clean, absolute path FindBelow lists: each
+// folder's walk is followed down the path to root alone, in the order the
+// walk takes the folders, so a folder an earlier walk entered adds nothing
+// (S-0605).
+func ImportRootOf(importRoots []string, root string) string {
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root || !reachedBelow(importRoots, root) || !exists(filepath.Join(root, manifest.File)) {
+		return ""
+	}
+	for _, r := range importRoots {
+		if within(r, root) {
+			return r
+		}
+	}
+	return ""
+}
+
+// reachedBelow says whether repositories(roots) lists root, by following
+// each folder's walk down root's path rather than through the whole tree.
+func reachedBelow(roots []string, root string) bool {
+	seen := map[string]bool{}
+	for _, r := range roots {
+		abs, err := filepath.Abs(r)
+		if err != nil {
+			continue
+		}
+		cur := filepath.Clean(abs)
+		if !within(cur, root) {
+			continue // its walk enters none of root's folders
+		}
+		for depth := 0; !seen[cur]; depth++ {
+			seen[cur] = true
+			if isRepository(cur) {
+				if cur == root {
+					return true
+				}
+				break
+			}
+			if depth >= candidateDepth || cur == root {
+				break
+			}
+			rel, _ := filepath.Rel(cur, root)
+			name := strings.SplitN(rel, string(filepath.Separator), 2)[0]
+			if strings.HasPrefix(name, ".") || skipScanning[name] {
+				break
+			}
+			next := filepath.Join(cur, name)
+			if info, err := os.Lstat(next); err != nil || !info.IsDir() {
+				break // the walk follows no symbolic link
+			}
+			cur = next
+		}
+	}
+	return false
+}
+
+// within says whether root is folder or below it.
+func within(folder, root string) bool {
+	rel, err := filepath.Rel(folder, root)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // Place decides which of the found projects are served, and for which

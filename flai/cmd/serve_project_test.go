@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -363,5 +364,94 @@ func TestServeProjectListSaysWhyAProjectIsNotShowing(t *testing.T) {
 	var ss serveStatus
 	if err := json.Unmarshal([]byte(js), &ss); err != nil || ss.Unavailable[quay] != "the folder is gone" {
 		t.Errorf("status json: %v %+v", err, ss.Unavailable)
+	}
+}
+
+// S-0605: the settings page's projects say, for each served project, the
+// folder named for import it is below, worked out from its path, with three
+// served below two such folders, one of them registered, and one registered
+// below neither; and the unserved list is flai serve's own while it runs.
+func TestServedViewSaysWhichImportFolderEachProjectIsBelow(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	useConfig(t, cfg)
+	git1, git2 := filepath.Join(home, "git1"), filepath.Join(home, "git2")
+	alpha, beta, gamma := keyedProject(t, git1, "alpha"), keyedProject(t, git1, "beta"), keyedProject(t, git2, "gamma")
+	nokey := filepath.Join(git2, "nokey")
+	solo := keyedProject(t, home, "solo")
+	for _, p := range []string{alpha, beta, gamma, nokey, solo} {
+		_ = os.MkdirAll(filepath.Join(p, ".git"), 0o755)
+	}
+	_ = os.WriteFile(filepath.Join(nokey, "system-flow.yaml"), []byte("version: 1\nname: nokey\n"), 0o644)
+	for _, p := range []string{beta, solo} {
+		if _, errOut, code := serveProjectRun(t, p, "add"); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	for _, f := range []string{git1, git2} {
+		if _, errOut, code := runIn(t, home, "serve", "import", "add", f); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	type project struct {
+		Key, Root, From, Below, Reason string
+	}
+	view := func() (bool, map[string]project, []project) {
+		t.Helper()
+		raw, _ := json.Marshal((&app{configPath: configOf(t), cwd: home}).servedView())
+		var v struct {
+			Running  bool      `json:"running"`
+			Served   []project `json:"served"`
+			Unserved []project `json:"unserved"`
+		}
+		if err := json.Unmarshal(raw, &v); err != nil {
+			t.Fatalf("%s: %v", raw, err)
+		}
+		served := map[string]project{}
+		for _, p := range v.Served {
+			served[p.Key] = p
+		}
+		return v.Running, served, v.Unserved
+	}
+
+	// flai serve runs, serving alpha and gamma from below the folders
+	dir := serve.DirFor(cfg)
+	now := time.Now().UTC().Format(time.RFC3339)
+	why := "its system-flow.yaml has no key (flai check says how to add one)"
+	st, _ := json.Marshal(serve.Status{PID: os.Getpid(), Version: "test", Started: now, Updated: now,
+		ImportProjects: []serve.Entry{{Key: "alpha", Name: "alpha", Root: alpha}, {Key: "gamma", Name: "gamma", Root: gamma}},
+		Unserved:       []serve.Found{{Entry: serve.Entry{Name: "nokey", Root: nokey}, Imported: true, Reason: why}}})
+	_ = os.MkdirAll(string(dir), 0o700)
+	if err := os.WriteFile(filepath.Join(string(dir), "state.json"), st, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	running, served, unserved := view()
+	want := map[string]project{
+		"alpha": {Key: "alpha", Root: alpha, From: "import", Below: git1},
+		"beta":  {Key: "beta", Root: beta, From: "registry", Below: git1},
+		"gamma": {Key: "gamma", Root: gamma, From: "import", Below: git2},
+		"solo":  {Key: "solo", Root: solo, From: "registry"},
+	}
+	if !running || !reflect.DeepEqual(served, want) {
+		t.Errorf("running %v, served:\n%+v\nwant\n%+v", running, served, want)
+	}
+	if len(unserved) != 1 || unserved[0] != (project{Root: nokey, Reason: why}) {
+		t.Errorf("unserved: %+v", unserved)
+	}
+
+	// flai serve does not run: the registered ones are below as before, and
+	// the rest are found and unserved
+	_ = os.Remove(filepath.Join(string(dir), "state.json"))
+	running, served, unserved = view()
+	if running || len(served) != 2 || served["beta"].Below != git1 || served["solo"].Below != "" {
+		t.Errorf("not running: %v %+v", running, served)
+	}
+	var roots []string
+	for _, p := range unserved {
+		roots = append(roots, p.Root)
+	}
+	if strings.Join(roots, ",") != strings.Join([]string{alpha, gamma, nokey}, ",") {
+		t.Errorf("unserved not running: %+v", unserved)
 	}
 }
