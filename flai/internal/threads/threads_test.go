@@ -4,7 +4,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -708,5 +710,118 @@ func TestOpenedByAgentIsAStorysAgentOrAPlanner(t *testing.T) {
 		if got := th.OpenedByAgent(); got != want {
 			t.Errorf("opened by %q: %v, want %v", opener, got, want)
 		}
+	}
+}
+
+// age moves every thread file's modification time an hour back, so that the
+// kept store trusts its parse (racyWindow).
+func age(t *testing.T, r *workitem.Repo) {
+	t.Helper()
+	files, _ := filepath.Glob(filepath.Join(Dir(r), "TH-*.md"))
+	old := time.Now().Add(-time.Hour)
+	for _, f := range files {
+		if err := os.Chtimes(f, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0602: List keeps each thread's parse between calls, parses nothing when
+// nothing changed, and sees a reply, a new thread, and a removed one on the
+// next call.
+func TestListKeepsThreadsAndSeesEachChange(t *testing.T) {
+	r := project(t)
+	a, err := New(r, NewOptions{Title: "Shape?", On: "design/system/plan.md", Author: "alex", Text: "I wonder.", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := New(r, NewOptions{Title: "Risks?", On: "design/system/plan.md", Author: "alex", Text: "And these?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	age(t, r)
+	if _, err := List(r); err != nil {
+		t.Fatal(err)
+	}
+	before := kept.Parses()
+	list, err := List(r)
+	if err != nil || len(list) != 2 {
+		t.Fatalf("second list: %v %+v", err, list)
+	}
+	if n := kept.Parses() - before; n != 0 {
+		t.Errorf("a second list with nothing changed parsed %d files, want 0", n)
+	}
+
+	if _, err := Reply(r, a.ID, "claude", "It is.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	list, err = List(r)
+	if err != nil || len(list) != 2 || !strings.Contains(list[0].Body, "It is.") {
+		t.Fatalf("after a reply: %v %+v", err, list)
+	}
+
+	c, err := New(r, NewOptions{Title: "Names?", On: "design/system/plan.md", Author: "alex", Text: "Which?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err = List(r)
+	if err != nil || len(list) != 3 || list[2].ID != c.ID {
+		t.Fatalf("after a new thread: %v %+v", err, list)
+	}
+
+	if err := os.Remove(b.Path); err != nil {
+		t.Fatal(err)
+	}
+	list, err = List(r)
+	if err != nil || len(list) != 2 || list[0].ID != a.ID || list[1].ID != c.ID {
+		t.Fatalf("after a removal: %v %+v", err, list)
+	}
+	if _, err := Get(r, b.ID); err == nil {
+		t.Errorf("Get found the removed thread %s", b.ID)
+	}
+	got, err := Get(r, c.ID)
+	if err != nil || got.Title != "Names?" {
+		t.Errorf("Get(%s) = %v %+v", c.ID, err, got)
+	}
+}
+
+// S-0602: two lists at once get equal threads, and a caller's change to a
+// thread it got changes nothing the next list returns.
+func TestListsAtOnceAgreeAndCallersGetCopies(t *testing.T) {
+	r := project(t)
+	for _, title := range []string{"Shape?", "Risks?", "Names?"} {
+		if _, err := New(r, NewOptions{Title: title, On: "design/system/plan.md", Author: "alex", Text: "I wonder.", Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	age(t, r)
+	want, err := List(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const readers = 8
+	got := make([][]*Thread, readers)
+	errs := make([]error, readers)
+	var wg sync.WaitGroup
+	for i := range readers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got[i], errs[i] = List(r)
+		}()
+	}
+	wg.Wait()
+	for i := range readers {
+		if errs[i] != nil || !reflect.DeepEqual(got[i], want) {
+			t.Errorf("reader %d: %v, got %+v, want %+v", i, errs[i], got[i], want)
+		}
+	}
+
+	got[0][0].Title = "Changed"
+	got[0][0].Participants[0] = "someone"
+	got[0][0].Body = ""
+	again, err := List(r)
+	if err != nil || !reflect.DeepEqual(again, want) {
+		t.Errorf("a caller's change reached the kept thread: %v %+v", err, again)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -385,17 +386,41 @@ func (th *Thread) OrchestratorsOwn() bool {
 	return true
 }
 
-// List loads every thread, sorted by ID.
+// kept keeps every thread file's parse between calls, so that a long-running
+// flai (serve, mcp) parses again only the threads that changed (S-0602).
+var kept = workitem.NewKeptFiles(Read, (*Thread).clone)
+
+// clone copies th, its slices included, so that a caller's change leaves
+// what is kept as it was.
+func (th *Thread) clone() *Thread {
+	c := *th
+	c.Participants = slices.Clone(th.Participants)
+	c.Unknown = slices.Clone(th.Unknown)
+	return &c
+}
+
+// isThreadFile says whether name is a thread file's name, TH-*.md.
+func isThreadFile(name string) bool {
+	ok, _ := filepath.Match("TH-*.md", name)
+	return ok
+}
+
+// List loads every thread, sorted by ID, parsing again only the files that
+// changed since the last call (S-0602).
 func List(r *workitem.Repo) ([]*Thread, error) {
-	matches, _ := filepath.Glob(filepath.Join(Dir(r), "TH-*.md"))
+	files, err := kept.List(Dir(r), isThreadFile)
+	if err != nil {
+		return nil, err
+	}
 	var out []*Thread
-	for _, m := range matches {
-		th, err := Read(m)
-		if err != nil {
-			return nil, err
+	for _, f := range files {
+		if f.Err != nil {
+			return nil, f.Err
 		}
-		workitem.WarnUnknown(m, th.Unknown)
-		out = append(out, th)
+		if f.Parsed {
+			workitem.WarnUnknown(f.Path, f.Value.Unknown)
+		}
+		out = append(out, f.Value)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })
 	return out, nil
@@ -407,7 +432,7 @@ func Get(r *workitem.Repo, id string) (*Thread, error) {
 	for _, cand := range []string{id, canon} {
 		matches, _ := filepath.Glob(filepath.Join(Dir(r), cand+"-*.md"))
 		if len(matches) > 0 {
-			return Read(matches[0])
+			return kept.Read(matches[0])
 		}
 	}
 	return nil, fmt.Errorf("%s not found", id)
