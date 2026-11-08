@@ -334,6 +334,10 @@ type accepted struct {
 	// landing it, while the queue batches and is not held (S-0552); nil for
 	// an acceptance that lands the story.
 	Queue *acceptQueued `json:"queue,omitempty"`
+	// linted are the main checkout's files whose lint the acceptance's first
+	// fix passed, which the fixes before its commits pass over while they are
+	// unchanged (S-0609).
+	linted lintedFiles
 }
 
 // acceptQueued is the merge queue's hold on a story the operator accepted
@@ -450,9 +454,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// what the acceptance commits from the main checkout passes the lint
 	// its fix leaves, or nothing changes (S-0367, TH-0413)
 	if useGit {
-		if err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root, leftUncommitted(res)); err != nil {
+		linted, err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root, leftUncommitted(res))
+		if err != nil {
 			return nil, err
 		}
+		acc.linted = linted
 	}
 	if res.CommitOnly {
 		return a.finishCommit(repo, it, acc, o, a.answerRelease(repo, it, useGit))
@@ -478,7 +484,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		if hasBranch {
 			// the shared set the story's change would overwrite goes on the
 			// main branch first, so the rebase settles it (ADR-0248)
-			if err := a.commitSharedBeforeMerge(repo, it, res); err != nil {
+			if err := a.commitSharedBeforeMerge(repo, it, res, acc.linted); err != nil {
 				return nil, err
 			}
 			before = a.headOf(repo.MainRoot)
@@ -596,7 +602,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// computed, no tag created, no push made (S-0087) — that is a publish, a
 	// deliberate step of its own over everything accumulated on main, not
 	// tied to any one item's acceptance. See flai release --pending.
-	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
+	if err := a.commitAcceptance(repo, it, res, o.trailers, acc.linted); err != nil {
 		return nil, err
 	}
 	// 3a. say so when the acceptance changed what flai release --evaluate
@@ -811,7 +817,7 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted
 	if err := a.closeAccepted(repo, it, acc, archived, o.by); err != nil {
 		return nil, err
 	}
-	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
+	if err := a.commitAcceptance(repo, it, res, o.trailers, acc.linted); err != nil {
 		return nil, err
 	}
 	a.releaseDue(repo, it, answered, res.By)
@@ -965,7 +971,7 @@ func canonicalSet(ids []string) map[string]bool {
 // the change would overwrite none, nothing is committed here: the shared set
 // goes with the acceptance commit. A commit that fails refuses the
 // acceptance, before anything is merged, with git's output and what to do.
-func (a *app) commitSharedBeforeMerge(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance) error {
+func (a *app) commitSharedBeforeMerge(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, linted lintedFiles) error {
 	if len(res.SharedUncommitted) == 0 {
 		return nil
 	}
@@ -980,7 +986,7 @@ func (a *app) commitSharedBeforeMerge(repo *workitem.Repo, it *workitem.Item, re
 	if len(overwritten) == 0 {
 		return nil
 	}
-	a.fixUncommitted(context.Background(), it.ID, repo.Root, res.Uncommitted)
+	a.fixUncommitted(context.Background(), it.ID, repo.Root, res.Uncommitted, linted)
 	args := []string{"add", "-A", "--"}
 	for _, p := range res.SharedUncommitted {
 		args = append(args, ":(literal)"+p)
@@ -1017,9 +1023,9 @@ func notCommittedShared(id, step, said string) error {
 // them (S-0402, ADR-0248). git add and git commit are run again while another
 // git process holds the index lock (I-0100). A commit that fails even so says
 // what the acceptance has done and how to finish it.
-func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string) error {
+func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string, linted lintedFiles) error {
 	left := leftUncommitted(res)
-	a.fixUncommitted(context.Background(), it.ID, repo.Root, left)
+	a.fixUncommitted(context.Background(), it.ID, repo.Root, left, linted)
 	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, addArgs(left)...); err != nil {
 		return notCommitted(it.ID, res, "not yet staged", err)
 	}

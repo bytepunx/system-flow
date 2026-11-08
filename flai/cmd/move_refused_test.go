@@ -29,7 +29,7 @@ func moveRefusal(t *testing.T, root, id string) (int, string, unfixedRefusal) {
 // fix leaves is refused as flai accept --json refuses it: exit 4 and the same
 // refused object, each finding naming the story's branch as its checkout.
 func testMoveToDoneJSONRefusesABranchsLintAsAcceptDoes(t *testing.T) {
-	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: "+mdCheck+"\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")
@@ -54,7 +54,7 @@ func testMoveToDoneJSONRefusesABranchsLintAsAcceptDoes(t *testing.T) {
 // accept --json, naming the main checkout; without --json it is the text it
 // was, with exit 1.
 func testMoveToDoneJSONRefusesTheMainCheckoutsLintAsAcceptDoes(t *testing.T) {
-	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: "+mdCheck+"\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")

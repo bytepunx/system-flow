@@ -86,9 +86,10 @@ func testAcceptFixesTheMainCheckoutsMarkdownBeforeItCommits(t *testing.T) {
 
 // TH-0413: a story branch whose markdown the fix after the rebase leaves
 // failing is refused before the merge, with the file and line, and stays in
-// review with main unchanged.
+// review with main unchanged. The fix fixes nothing and its exit says what it
+// left, as markdownlint-cli2 --fix does (S-0609).
 func testAcceptRefusesABranchWhoseLintTheFixLeaves(t *testing.T) {
-	root := lintProject(t, "  - name: md\n    command: "+badCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: md\n    command: "+badCheck+"\n    paths: [\"docs/**\"]\n    fix_command: "+badCheck+"\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")
@@ -115,9 +116,10 @@ func testAcceptRefusesABranchWhoseLintTheFixLeaves(t *testing.T) {
 }
 
 // TH-0413: an uncommitted main-checkout file whose lint the fix leaves
-// refuses the acceptance before anything changes.
+// refuses the acceptance before anything changes. The fix cannot start, so
+// its exit says nothing and the check runs after it (S-0609, ADR-0140).
 func testAcceptRefusesTheMainCheckoutsLintBeforeAnythingChanges(t *testing.T) {
-	root := lintProject(t, "  - name: notes\n    command: "+badCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: notes\n    command: "+badCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"./no-such-fix\"]\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")
@@ -167,7 +169,7 @@ func acceptRefusal(t *testing.T, root, id string) (int, unfixedRefusal) {
 // refused with exit 4 and each finding as data, naming the story's branch as
 // where to correct it.
 func testAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
-	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: "+mdCheck+"\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")
@@ -192,7 +194,7 @@ func testAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
 // S-0378: with --json, an uncommitted main-checkout file whose markdown the
 // fix leaves failing is refused with exit 4, naming the main checkout.
 func testAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
-	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: "+mdCheck+"\n")
 	wt := openSyncStory(t, root, 1, "docs")
 	commitIn(t, wt, "docs/new.md", "new\n")
 	issueStoryInReview(t, root, "S-0001", "T-0001")
@@ -214,6 +216,106 @@ func testAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
 	// without --json the refusal is the text it was, with exit 1
 	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 1 || !strings.Contains(errOut, "wip/notes/n.md:1:3 error MD009") {
 		t.Errorf("without --json: exit %d\n%s", code, errOut)
+	}
+}
+
+// TestAcceptLintsEachSetOnce runs, as the agent tester, the tests of how
+// often an acceptance lints each set (S-0609). Integration: they run real git.
+func TestAcceptLintsEachSetOnce(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "tester")
+	together(t,
+		testAcceptLintsTheUncommittedSetAndTheBranchsSetOnceEach,
+		testAcceptChecksABranchWhoseFixCannotSay,
+	)
+}
+
+// countingTier is a tier over docs and wip/notes whose fix and check each
+// log a line naming their files to log, and whose fix makes fixme fixed and
+// exits 0, so nothing remains.
+func countingTier(log string) string {
+	return "  - name: md\n" +
+		"    command: [sh, -c, 'echo \"check $*\" >> " + log + "', sh, \"{files}\"]\n" +
+		"    paths: [\"docs/**\", \"wip/notes/**\"]\n" +
+		"    fix_command: [sh, -c, 'echo \"fix $*\" >> " + log + "; for f; do sed s/fixme/fixed/ \"$f\" > \"$f.t\" && mv \"$f.t\" \"$f\"; done', sh, \"{files}\"]\n"
+}
+
+// runsNaming are the lines of the log at path that begin with kind and name
+// file.
+func runsNaming(t *testing.T, path, kind, file string) int {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, kind+" ") && strings.Contains(line, file) {
+			n++
+		}
+	}
+	return n
+}
+
+// S-0609 criterion 1: an acceptance with markdown in the main checkout's
+// uncommitted set and in the branch's set fixes each once, and checks
+// neither after the fix, whose exit says nothing remains. The acceptance's
+// own writes fall under no path the tier selects, so the fixes before its
+// commits run nothing; before S-0609 the uncommitted file was fixed twice and
+// checked once, and the branch's file fixed and checked.
+func testAcceptLintsTheUncommittedSetAndTheBranchsSetOnceEach(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "lint.log")
+	root := lintProject(t, countingTier(log))
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/new.md", "fixme\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	if err := os.MkdirAll(filepath.Join(root, "wip/notes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "wip/notes/n.md"), []byte("fixme\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %d %s", code, errOut)
+	}
+	for _, c := range []struct {
+		kind, file string
+		want       int
+	}{{"fix", "wip/notes/n.md", 1}, {"check", "wip/notes/n.md", 0}, {"fix", "docs/new.md", 1}, {"check", "docs/new.md", 0}} {
+		if got := runsNaming(t, log, c.kind, c.file); got != c.want {
+			data, _ := os.ReadFile(log)
+			t.Errorf("%s runs naming %s: %d, want %d; the log:\n%s", c.kind, c.file, got, c.want, data)
+		}
+	}
+	if got := gitIn(t, root, "show", "HEAD:wip/notes/n.md"); got != "fixed" {
+		t.Errorf("the acceptance committed wip/notes/n.md as %q", got)
+	}
+	if got := gitIn(t, root, "show", "main:docs/new.md"); got != "fixed" {
+		t.Errorf("main has docs/new.md as %q", got)
+	}
+}
+
+// S-0609, ADR-0140: a branch whose fix cannot start says nothing of what it
+// left, so the check runs after it and refuses the acceptance before the
+// merge.
+func testAcceptChecksABranchWhoseFixCannotSay(t *testing.T) {
+	root := lintProject(t, "  - name: md\n    command: "+badCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"./no-such-fix\"]\n")
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	before := gitIn(t, root, "rev-parse", "main")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0001")
+	if code == 0 {
+		t.Fatal("accept passed a branch whose fix could not start and whose check fails")
+	}
+	for _, want := range []string{"docs/bad.md:2:BAD line", "story/S-0001", "md tier"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal lacks %q:\n%s", want, errOut)
+		}
+	}
+	if got := gitIn(t, root, "rev-parse", "main"); got != before {
+		t.Errorf("main moved from %s to %s", before, got)
 	}
 }
 

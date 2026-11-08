@@ -147,18 +147,27 @@ func nonNil(l []string) []string {
 // worktree with storygit.Rebase, the rebase of flai stream sync without its
 // checks (ADR-0069, ADR-0098), its lint fix included (S-0367). It answers
 // the paths the rebased branch undoes of the main branch's changes, which the
-// rebase also records (ADR-0155). A refusal or a rebase left for the agent is
-// a *syncStopped, with the conflicting paths when there are any.
-func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, undone []storygit.Undone, err error) {
+// rebase also records (ADR-0155), and what the lint fix after the rebase
+// left, nil when it did not run (S-0609). A refusal or a rebase left for the
+// agent is a *syncStopped, with the conflicting paths when there are any.
+func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, undone []storygit.Undone, fixed *verify.FixOutcome, err error) {
+	fix := func(dir string, paths []string) ([]string, error) {
+		out, err := verify.CheckoutFixRemaining(context.Background(), dir, paths, a.logger())
+		if err != nil {
+			return nil, err
+		}
+		fixed = &out
+		return out.Changed, nil
+	}
 	// the rebase reads only the story's ID
-	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Fix: a.checkoutFix(context.Background()), Log: a.logger()})
+	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Fix: fix, Log: a.logger()})
 	if err != nil {
-		return res.Base, nil, err
+		return res.Base, nil, nil, err
 	}
 	if !res.Synced {
-		return res.Base, nil, syncStoppedFrom(res)
+		return res.Base, nil, nil, syncStoppedFrom(res)
 	}
-	return res.Base, res.UndoesMain, nil
+	return res.Base, res.UndoesMain, fixed, nil
 }
 
 // checkoutFix runs the fix commands of the tiers a story's worktree declares
@@ -181,12 +190,13 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string, keep []preview.Ke
 	branch, path := storyBranch(id), repo.WorktreePath(id)
 	hasWorktree, base := false, ""
 	var undone []storygit.Undone
+	var fixed *verify.FixOutcome
 	if _, err := os.Stat(path); err == nil {
 		hasWorktree = true
 		if st, _ := a.runner.Run(path, "git", "status", "--porcelain"); strings.TrimSpace(st) != "" {
 			return false, fmt.Errorf("the worktree %s has uncommitted changes; commit them on %s (or discard them) before accepting", relPath(repo.MainRoot, path), branch)
 		}
-		if base, undone, err = a.syncStoryBranch(repo, id); err != nil {
+		if base, undone, fixed, err = a.syncStoryBranch(repo, id); err != nil {
 			return false, err
 		}
 	}
@@ -199,9 +209,10 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string, keep []preview.Ke
 	if left := notKept(preview.UndonePaths(undone, keep)); len(left) > 0 {
 		return false, undoneRefused(id, nil, left)
 	}
-	// nor lint the fix after the rebase left (S-0367, TH-0413)
+	// nor lint the fix after the rebase left (S-0367, TH-0413), as its exit
+	// says (S-0609)
 	if hasWorktree {
-		if err := a.refuseUnfixedBranch(repo, id, base); err != nil {
+		if err := a.refuseUnfixedBranch(repo, id, base, fixed); err != nil {
 			return false, err
 		}
 	}

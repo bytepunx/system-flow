@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 topics: [cli, template]
 ---
@@ -58,7 +58,7 @@ tests:                                       # optional (S-0273): the test tiers
     paths: ["flai/**", "!flai/testdata/**"]  # globs from the root that select it, as claims.shared; ! takes paths out; required unless all_only or manual
     format: go-test-json                     # go-test-json, vitest-json, golangci-json, gofmt-list, or plain; default plain
     all_command: [go, test, -json, ./...]    # optional: what runs instead under --all, with no placeholder
-    fix_command: [gofmt, -w, "{files}"]      # optional (S-0367): rewrites the files it selects before flai commits them; its exit status is ignored
+    fix_command: [gofmt, -w, "{files}"]      # optional (S-0367): rewrites the files it selects before flai commits them; flai accept takes its exit as what it left (ADR-0265)
   - name: smoke
     command: [scripts/smoke.sh]
     all_only: true                           # runs only under --all
@@ -211,12 +211,12 @@ Rules:
   - `paths`, glob patterns relative to the root with the syntax of `claims.shared` (below); one beginning with `!` takes paths out again. Required, with at least one pattern without `!`, unless `all_only` or `manual` is set.
   - `format`, how the command's output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads no findings from the output: a failing `plain` tier is one finding, its exit status after its last 20 lines, and ahead of them, at most 20 lines naming a failure that the last lines left out, `go test`'s `--- FAIL:` lines with the indented lines under them, its `FAIL<tab><package>` lines, and `panic:` lines (S-0313), so a `plain` tier running `go test` over many packages still names the failing test. A format that finds nothing in a failing tier's output falls back to the `plain` finding. `go-test-json` names each test still running when `go test`'s timeout panics, with how long it had run, placed by its own frame in the panic's stacks, rather than the package alone: `go test -json` writes that panic as output of the running test and fails only the package (S-0540, [I-0227](../issues/I-0227-flai-test-s-go-test-tier-runs-the-mcpserver-package-with-race-into-go-test-s-10-minute-default-timeout-on-a-loaded-host-and-names-only-the-package-so-a-story-that-changes-mcpserver-cannot-pass-its-tests.md)). Unset, it is `plain`. The list is `manifest.TestFormats`. This repository's `integration` tier runs `scripts/integration.sh -json` in `flai` as `go-test-json`, so its findings name each failing test by file and line.
   - `all_only`, set for a tier that runs only under `flai test --all`, such as integration and smoke tests, and `all_command`, an argument list with no placeholder that runs instead of `command` under `--all`.
-  - `fix_command` (S-0367, [ADR-0139](../adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md)), an argument list that rewrites in place the files the tier selects, so that what flai commits is fixed. It runs as `command` runs: never through a shell, in `dir`, with the same placeholders, filled for the existing files the tier's `paths` select among the paths flai is about to commit. Its exit status is ignored: a command that cannot start or exits non-zero is logged at warn and stops nothing, and the tier's `command` still reports what is left. flai runs it in three places:
+  - `fix_command` (S-0367, [ADR-0139](../adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md)), an argument list that rewrites in place the files the tier selects, so that what flai commits is fixed. It runs as `command` runs: never through a shell, in `dir`, with the same placeholders, filled for the existing files the tier's `paths` select among the paths flai is about to commit. In `flai task done` and `flai stream sync` its exit status is ignored: a command that cannot start or exits non-zero is logged at warn and stops nothing, and the tier's `command` still reports what is left. `flai accept` takes its exit as what it left ([ADR-0265](../adrs/0265-flai-accept-takes-a-tier-s-fix-command-s-exit-as-what-the-fix-left-exit-0.md)), so a fix command must exit non-zero while lint remains and print it as `command` does, as `markdownlint-cli2 --fix` does. flai runs it in three places:
     - `flai task done`, over the paths it is about to commit, before it commits them.
     - `flai stream sync`, and the rebase `flai accept` runs on the story's branch, after a clean rebase, over every file the branch changes against the main branch. What it changed is committed on the branch as `chore: [S-nnnn] fix the lint of the files the branch changes, after the sync`.
-    - `flai accept`, in the main checkout, over the paths it has not committed, at preflight and again just before its `git add -A` and commit.
+    - `flai accept`, in the main checkout, over the paths it has not committed, at preflight, and again just before each of its commits over the files that are new or changed since the preflight fix passed them (S-0609).
 
-    What a fix leaves refuses an acceptance ([ADR-0140](../adrs/0140-flai-accept-refuses-an-acceptance-whose-files-a-tier-with-a-fix-command-still.md)): `flai accept` runs the `command` of each tier that has a `fix_command` over the main checkout's uncommitted files at preflight, and over the files the branch changes after its rebase and fix, and refuses when one fails, naming each file, line, and error.
+    What a fix leaves refuses an acceptance ([ADR-0140](../adrs/0140-flai-accept-refuses-an-acceptance-whose-files-a-tier-with-a-fix-command-still.md), ADR-0265): over the main checkout's uncommitted files at preflight, and over the files the branch changes after its rebase, a fix that exits 0 passes them and one that exits non-zero refuses the acceptance, naming each file, line, and error its output gives. Only when the fix cannot say, because it could not start, was cut short, or its structured output gives no finding, or when the branch's fix did not run, does `flai accept` run the tier's `command` after it and refuse when that fails. So each set is linted once.
 
     This repository's `markdown` tier has `fix_command: [scripts/lint-md.sh, --fix, "{files}"]`. The template's manifest has none.
   - `covers`, the names of the tiers whose tests this one runs too (S-0342).
