@@ -629,6 +629,7 @@ The serve log's p50 of 825 ms was taken inside flai serve, beside the other requ
 
 - While flai serve serves a project, the item store keeps a snapshot of each item folder (`flai/internal/workitem/store.go`). A list or a get of a fresh folder reads and stats nothing. The watcher's changes, the process's own writes, and the flai subprocesses serve runs mark a folder stale, and so does a look once a minute; a stale folder refreshes through the stat-and-compare path of S-0156. [flai-cli.md](flai-cli.md) says what marks it.
 - The watcher has a slow tier (`flai/internal/watch/watch.go`). flai serve puts `wip/archive` on it: its folders are statted on every poll, which shows a file added, renamed in, or removed, and its files every 10 s, which shows an edit in place.
+- `item.get` copies only what it answers (T-2697, `flai/internal/workitem/view.go`). It takes the item with `Repo.Get`, its children with `Repo.ChildrenOf`, which copies only them, and the stories' usage for the cost per agent hour with `Repo.Visit`, which reads the kept items in place. It no longer copies and sorts the whole list.
 
 #### Measured on this repository
 
@@ -649,10 +650,24 @@ The host was very busy: the one-minute load average was 110 to 172 on 24 cores t
 
 A walk between slow looks costs about 45 ms of CPU, against about 75 ms. `item.get` with 13 at once is about five times faster per call, and spends a seventh of the system time.
 
-Neither meets S-0606's targets, a walk under 30 ms and `item.get` with 13 at once under 50 ms, on this host under this load:
+In this first run neither met S-0606's targets, a walk under 30 ms and `item.get` with 13 at once under 50 ms, on this host under this load:
 
 - The fast look still stats the 2,695 files outside the archive: 908 threads, 526 digest entries, 370 conversations, 297 issues, and 264 ADRs make up most of them. A third program put `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on the slow tier too: a fast look then cost 22 to 23 ms of CPU, p90 27 to 30 ms. That change is not made here: those folders change often, and an edit in place there would reach the dashboard up to 10 s late.
 - With the snapshot on, a call reads no file, but it still copies and sorts the whole list. A CPU profile of S-0606's `item.get` over 23 rounds found `Repo.List` in 67% of the samples: the deep copy of every item 46%, its sort 20%. `workitem.Open`, which loads the manifest again for every call, took 12%. That is about 27 ms of CPU a call, so 13 calls at once queue on a loaded host. Copying only the items an answer returns, and keeping the sorted list with the snapshot, would take most of it.
+
+#### Measured again after T-2697
+
+On 2026-11-08, between 02:09 and 02:11 UTC, on the same host, against the main checkout, read only: 6,498 files under the watched paths, 3,791 of them under `wip/archive`, and 3,349 work items, 3,209 of them archived. The two programs were built at 02:08 UTC, one from `main` at 3087d9cf4, which now holds S-0600's worker pool and kept items file, and one from `story/S-0606` at d0d2cff8c, with T-2697. Both copies read the kept items file but were changed not to write it, so that nothing was written in the main checkout. The calls, the IDs, and the rounds are those above. The runs were interleaved, two of each. The one-minute load average was 86 to 101 on 24 cores. CPU of a run is the process's user and system time, its start and first list included.
+
+| What | `main` | S-0606 |
+|------|--------|--------|
+| Walk, wall, median (p90) | 56 ms (66), 65 ms (93) | fast look 44 ms (95), 34 ms (66); slow look 72 ms (81), 74 ms (104) |
+| Walk, CPU, median (p90) | 57 ms (64), 60 ms (66) | fast look 37 ms (43), 34 ms (55); slow look 67 ms (69), 66 ms (72) |
+| `item.get`, 13 at once, wall per call, median (p90) | 456 ms (787), 415 ms (724) | 15 ms (32), 13 ms (25) |
+| `item.get`, 13 at once, wall per round of 13, median (p90) | 819 ms (884), 738 ms (1,022) | 40 ms (58), 29 ms (41) |
+| `item.get`, CPU of a whole run of 299 calls | 10.9 s user, 7.4 s system; 10.6 s user, 6.9 s system | 2.3 s user, 0.3 s system; 2.0 s user, 0.3 s system |
+
+`item.get` with 13 at once now takes 13 to 15 ms a call at the median and 25 to 32 ms at p90, under the 50 ms target, about 30 times faster than `main` with S-0600's pool. A walk between slow looks takes 34 to 44 ms wall and 34 to 37 ms of CPU at the median, against 56 to 65 ms and 57 to 60 ms on `main`. It still misses the 30 ms target, for the reason above: the fast look stats the 2,700 files outside the archive.
 
 ### Cause 17 fixed: stats.get runs its reads and its sections at once and shares a computation in flight (S-0607)
 
