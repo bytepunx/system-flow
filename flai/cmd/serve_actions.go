@@ -45,9 +45,13 @@ func (a *app) host() hostapi.Host {
 			cfg, _, err := a.loadConfig()
 			return err == nil && cfg.ActionEnabled(action, root)
 		},
-		Agent: func(root string) any {
+		// Agent times each part of the state it builds as a phase of the
+		// request, inside hostapi's agent.state (S-0603).
+		Agent: func(ctx context.Context, root string) any {
 			cfg, _, cfgErr := a.loadConfig()
+			done := perf.Track(ctx, "agent.states")
 			st := a.serveDir().AgentStates()[root]
+			done()
 			command := ""
 			if agent := cfg.Agent.ForProject(root); len(agent.Command) > 0 {
 				command = filepath.Base(agent.Command[0]) // its name, never its arguments
@@ -59,9 +63,11 @@ func (a *app) host() hostapi.Host {
 			// every role the project runs, the built-in ones included, by its
 			// name: its host action's state, its run under way, its past runs,
 			// and held (S-0420)
+			done = perf.Track(ctx, "agent.roles")
 			defined := serve.RoleStates(st, hostapi.ProjectRoles(root), func(action string) bool {
 				return cfgErr == nil && cfg.ActionEnabled(action, root)
 			})
+			done()
 			// the orchestrator's and the analyzer's runs before their newest,
 			// newest first (S-0228), which the dashboard's pages list
 			pastOrchestrators, pastAnalyzers := st.PastOrchestrators, st.PastAnalyzers
@@ -75,7 +81,10 @@ func (a *app) host() hostapi.Host {
 			// held while the operator holds it stopped (S-0228), and the newest
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
-			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": serve.Activity(root, st, command != ""), "plans": plans,
+			done = perf.Track(ctx, "agent.activity")
+			stories := serve.Activity(root, st, command != "")
+			done()
+			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": stories, "plans": plans,
 				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined,
 				"past_orchestrators": pastOrchestrators, "past_analyzers": pastAnalyzers}
 			if budget := a.hostBudget(); len(budget) > 0 {

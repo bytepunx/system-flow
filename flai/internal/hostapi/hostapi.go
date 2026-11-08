@@ -388,7 +388,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			out := map[string]any{"enabled": host.enabled(ActionAgent, p.Root)}
 			if host.Agent != nil {
 				done := perf.Track(ctx, "agent.state")
-				out["state"] = host.Agent(p.Root)
+				out["state"] = host.Agent(ctx, p.Root)
 				done()
 			}
 			return out, nil

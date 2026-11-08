@@ -1789,7 +1789,7 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	state := map[string]any{"command": "claude", "waiting": "an agent is attending"}
 	host := Host{
 		Enabled: func(action, root string) bool { return action == ActionAgent && root == p.Root },
-		Agent:   func(string) any { return state },
+		Agent:   func(context.Context, string) any { return state },
 	}
 	res, e := MethodsFor("test", nil, host)["agent.status"](context.Background(), p, json.RawMessage(`{}`))
 	if e != nil {

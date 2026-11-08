@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -218,7 +219,7 @@ func TestServeOrchestrateAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -250,6 +251,51 @@ func TestServeOrchestrateAction(t *testing.T) {
 	}
 }
 
+// S-0603: agent.status records agent.state on the request's recorder, and
+// inside it the three parts of the state the host builds: reading the agent
+// states, the stories' activity, and the roles.
+func TestAgentStatusRecordsItsPhases(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	root := tempProject(t)
+	// each look at the clock is a millisecond on, so a phase that holds
+	// another is longer than it
+	var ticks atomic.Int64
+	at := time.Date(2026, 11, 8, 0, 0, 0, 0, time.UTC)
+	ctx, rec := perf.StartAt(context.Background(), func() time.Time {
+		return at.Add(time.Duration(ticks.Add(1)) * time.Millisecond)
+	})
+	host := (&app{configPath: configOf(t), errOut: io.Discard}).host()
+	res, e := hostapi.MethodsFor("test", nil, host)["agent.status"](ctx, channel.Project{Key: "t", Root: root}, json.RawMessage(`{}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if out, _ := res.(map[string]any); out["state"] == nil {
+		t.Fatalf("agent.status carries no state: %v", res)
+	}
+	got := map[string]perf.Phase{}
+	for _, ph := range rec.Phases() {
+		got[ph.Name] = ph
+	}
+	outer, ok := got["agent.state"]
+	if !ok || outer.Count != 1 {
+		t.Fatalf("agent.state not recorded once: %v", rec)
+	}
+	var inner time.Duration
+	for _, name := range []string{"agent.states", "agent.activity", "agent.roles"} {
+		ph, ok := got[name]
+		if !ok || ph.Count != 1 {
+			t.Errorf("%s not recorded once: %v", name, rec)
+			continue
+		}
+		inner += ph.Total
+	}
+	if inner >= outer.Total {
+		t.Errorf("the three phases (%v) are not inside agent.state (%v): %v", inner, outer.Total, rec)
+	}
+}
+
 // S-0534, ADR-0209 §5: agent.status's state carries the host's budget state,
 // one entry per provider held, read from budget.json in the serve folder,
 // and leaves it out once the state is cleared or the file cannot be read.
@@ -271,7 +317,7 @@ func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
 	var warned bytes.Buffer
 	status := func() map[string]any {
 		t.Helper()
-		out, ok := (&app{configPath: configOf(t), errOut: &warned}).host().Agent(root).(map[string]any)
+		out, ok := (&app{configPath: configOf(t), errOut: &warned}).host().Agent(context.Background(), root).(map[string]any)
 		if !ok {
 			t.Fatal("agent.status's state is not a map")
 		}
@@ -646,7 +692,7 @@ func TestServeAnalyzeAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -699,7 +745,7 @@ func TestServeCurateAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2537,7 +2583,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2620,7 +2666,7 @@ func TestAgentStatusCarriesEveryRoleByName(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(state), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := json.Marshal((&app{configPath: cfgPath}).host().Agent(root))
+	raw, err := json.Marshal((&app{configPath: cfgPath}).host().Agent(context.Background(), root))
 	if err != nil {
 		t.Fatal(err)
 	}
