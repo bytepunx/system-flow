@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -46,55 +47,100 @@ import (
 // missing digest folder is no entries; and a story's kept forge state that
 // cannot be read is left out. Read logs a warning on log for each; any other
 // read that fails stops it.
+//
+// The reads run at once, each in its own goroutine, so Read takes about as
+// long as its slowest read (S-0607). When several fail, the error is the one
+// of the first in the order above, and each warning is logged with its
+// detail as before; the warnings may come in another order, and those of the
+// reads that warn are logged even when another read fails.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
+	var (
+		wg                                            sync.WaitGroup
+		items                                         []*workitem.Item
+		activities                                    []*workitem.Activity
+		roles                                         []string
+		threadList                                    []*threads.Thread
+		issueList                                     []*issues.Issue
+		board                                         *workitem.Board
+		commits                                       map[string][]string
+		convs                                         []*messages.Conversation
+		conflicts                                     []storygit.Conflict
+		queue                                         []mergequeue.Event
+		queueLogged, digestUnreadable                 bool
+		entries                                       []digest.Entry
+		forged                                        map[string][]forge.StatusEvent
+		errItems, errActivities, errRoles, errThreads error
+		errIssues, errBoard, errConflicts             error
+	)
+	cacheDir := repo.CacheDir()
+	wg.Go(func() { items, errItems = repo.List(true) })
+	wg.Go(func() { activities, errActivities = repo.Activities() })
+	wg.Go(func() { roles, errRoles = repo.Roles() })
+	wg.Go(func() { threadList, errThreads = threads.List(repo) })
+	wg.Go(func() { issueList, errIssues = issues.List(repo) })
+	wg.Go(func() { board, errBoard = repo.LoadBoard() })
+	wg.Go(func() {
+		var err error
+		if commits, err = storygit.Committed(r, repo); err != nil {
+			log.Warn("cannot read the stories' commits for touches drift", "component", "stats", "err", err.Error(),
+				"detail", "claims.drift is left out; run flai stats in the project's git checkout, with git installed, to compare touches with commits")
+		}
+	})
+	wg.Go(func() { convs = conversations(repo, log) })
+	wg.Go(func() {
+		if conflicts, errConflicts = storygit.ReadConflicts(cacheDir); errConflicts != nil {
+			log.Warn("cannot read the conflict log", "component", "stats", "err", errConflicts.Error(),
+				"detail", "coordination's conflicts are left out and coordination.logged is false; correct or remove the line the error names in "+storygit.ConflictsPath(cacheDir))
+		}
+	})
+	wg.Go(func() { queue, queueLogged = queueEvents(cacheDir, log) })
+	wg.Go(func() {
+		var err error
+		if entries, err = digest.List(repo); err != nil {
+			log.Warn("cannot read the digest", "component", "stats", "err", err.Error(),
+				"detail", "the digest section is left out; run flai check to see what is wrong with the entry the error names in "+digest.Dir(repo.Manifest))
+			entries, digestUnreadable = nil, true
+		}
+	})
+	if repo.Manifest.Acceptance.PullRequest() {
+		wg.Go(func() { forged = forgeEvents(cacheDir, log) })
+	}
+	wg.Wait()
+
 	var opt metrics.Options
-	items, err := repo.List(true)
-	if err != nil {
-		return nil, opt, err
+	if errItems != nil {
+		return nil, opt, errItems
 	}
-	if opt.Activities, err = repo.Activities(); err != nil {
-		return nil, opt, fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", err)
+	if errActivities != nil {
+		return nil, opt, fmt.Errorf("cannot read the strategic agents' activity documents: %w; flai writes them, so restore the file from git or run flai check to see what is wrong", errActivities)
 	}
-	if opt.Roles, err = repo.Roles(); err != nil {
-		return nil, opt, err
+	if errRoles != nil {
+		return nil, opt, errRoles
 	}
-	if opt.Threads, err = threads.List(repo); err != nil {
-		return nil, opt, fmt.Errorf("cannot read the threads: %w; restore the thread from git or run flai check to see what is wrong", err)
+	if errThreads != nil {
+		return nil, opt, fmt.Errorf("cannot read the threads: %w; restore the thread from git or run flai check to see what is wrong", errThreads)
 	}
-	if opt.Issues, err = issues.List(repo); err != nil {
-		return nil, opt, fmt.Errorf("cannot read the issues: %w; restore the issue from git or run flai check to see what is wrong", err)
+	if errIssues != nil {
+		return nil, opt, fmt.Errorf("cannot read the issues: %w; restore the issue from git or run flai check to see what is wrong", errIssues)
 	}
-	board, err := repo.LoadBoard()
-	if err != nil {
-		return nil, opt, fmt.Errorf("cannot read the board's in-progress limit and pull order: %w; restore board.md from git or run flai check to see what is wrong", err)
+	if errBoard != nil {
+		return nil, opt, fmt.Errorf("cannot read the board's in-progress limit and pull order: %w; restore board.md from git or run flai check to see what is wrong", errBoard)
 	}
-	opt.WIPLimit, opt.Order = board.WIPLimits[workitem.InProgress], board.Order
+	var err error
 	if opt.Fallback, err = repo.Manifest.Planning.FallbackDuration(); err != nil {
 		return nil, opt, fmt.Errorf("cannot project the ready column's cost of delay: %w", err)
 	}
+	opt.Activities, opt.Roles, opt.Threads, opt.Issues = activities, roles, threadList, issueList
+	opt.WIPLimit, opt.Order = board.WIPLimits[workitem.InProgress], board.Order
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
-	if opt.Commits, err = storygit.Committed(r, repo); err != nil {
-		log.Warn("cannot read the stories' commits for touches drift", "component", "stats", "err", err.Error(),
-			"detail", "claims.drift is left out; run flai stats in the project's git checkout, with git installed, to compare touches with commits")
-	}
-	opt.Conversations = conversations(repo, log)
-	conflicts, err := storygit.ReadConflicts(repo.CacheDir())
-	if err != nil {
-		log.Warn("cannot read the conflict log", "component", "stats", "err", err.Error(),
-			"detail", "coordination's conflicts are left out and coordination.logged is false; correct or remove the line the error names in "+storygit.ConflictsPath(repo.CacheDir()))
-	}
-	opt.Conflicts, opt.ConflictsUnreadable = conflicts, err != nil
-	opt.QueueEvents, opt.QueueLogged = queueEvents(repo.CacheDir(), log)
+	opt.Commits = commits
+	opt.Conversations = convs
+	opt.Conflicts, opt.ConflictsUnreadable = conflicts, errConflicts != nil
+	opt.QueueEvents, opt.QueueLogged = queue, queueLogged
 	opt.Owner = repo.Manifest.Owner
-	if opt.Entries, err = digest.List(repo); err != nil {
-		log.Warn("cannot read the digest", "component", "stats", "err", err.Error(),
-			"detail", "the digest section is left out; run flai check to see what is wrong with the entry the error names in "+digest.Dir(repo.Manifest))
-		opt.Entries, opt.DigestUnreadable = nil, true
-	}
-	if repo.Manifest.Acceptance.PullRequest() {
-		opt.Forge = forgeEvents(repo.CacheDir(), log)
-	}
+	opt.Entries, opt.DigestUnreadable = entries, digestUnreadable
+	opt.Forge = forged
 	return items, opt, nil
 }
 

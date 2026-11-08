@@ -287,6 +287,32 @@ func TestReadStopsOnAnUnreadableThread(t *testing.T) {
 	}
 }
 
+// S-0607: the reads run at once, and when two fail the error is still the
+// one of the read that comes first, the threads before the board, whichever
+// ends first; the board's error is the answer once the threads read.
+func TestReadReturnsTheFirstReadsErrorWhenTwoFail(t *testing.T) {
+	repo := project(t)
+	thread := filepath.Join(threads.Dir(repo), "TH-0009-bad.md")
+	if err := os.WriteFile(thread, []byte("---\nid: [\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo.KanbanDir(), workitem.BoardFile), []byte("---\nwip_limits: [\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 20 {
+		_, _, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+		if err == nil || !strings.Contains(err.Error(), "cannot read the threads") || strings.Contains(err.Error(), "in-progress limit") {
+			t.Fatalf("read %d with an unreadable thread and board: %v", i, err)
+		}
+	}
+	if err := os.Remove(thread); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler)); err == nil || !strings.Contains(err.Error(), "cannot read the board's in-progress limit") {
+		t.Errorf("an unreadable board alone: %v", err)
+	}
+}
+
 // writeFile writes data to the path under the project's root, making its
 // folder.
 func writeFile(t *testing.T, path, data string) {
