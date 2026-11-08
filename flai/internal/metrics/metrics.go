@@ -5,6 +5,7 @@ package metrics
 import (
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/digest"
@@ -284,18 +285,73 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep := &Report{
 		GeneratedAt: opt.Now.Format(workitem.TimeFormat), Type: opt.Type,
 		WindowDays: opt.Since.Hours() / 24, WindowStart: start.Format(workitem.TimeFormat),
-		Burnup: map[string][]DayPoint{},
 	}
-	perItem := map[string]ItemMetrics{}
-	waits := threadWaits(all, opt.Threads, opt.Now)
-	pulls := forgeWaits(opt.Forge, opt.Now)
-	replay := replayHolds(items, all, start, opt)
+	// The sections run at once (S-0607). Each goroutine writes only its own
+	// field of rep, or a local the end copies in, and none changes what
+	// another reads: items, all, opt, perItem, waits, pulls, and replay are
+	// read only once they are built. They run in three stages:
+	//   - the sections that need only the inputs start at once and run to
+	//     the end, beside everything else;
+	//   - the per-item loop's inputs are built at once, and claims starts as
+	//     soon as replayHolds, which it reads, is done;
+	//   - after the per-item loop, the sections that read perItem run at
+	//     once, aging and readyWait after summarise, whose figures they read.
+	var sections sync.WaitGroup
+	var throughputs []WeekBucket
+	var burnups map[string][]DayPoint
+	var cfds []DayPoint
+	var spend UsageReport
+	var cod CostOfDelay
+	var order CostOrder
+	sections.Go(func() { throughputs = throughput(items, start, opt.Now) })
+	sections.Go(func() { burnups = burnupsByParent(items, start, opt.Now) })
+	sections.Go(func() { cfds = cfd(items, start, opt.Now) })
+	sections.Go(func() {
+		spend = spendReport(items, start, opt.Now)
+		spend.Bucket = opt.Bucket
+		spend.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
+		spend.Strategic = strategicTotals(items, start, opt.Now)
+	})
+	sections.Go(func() {
+		var onIssues map[string]StrategicAmount
+		rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
+		rep.Strategic = strategic(opt.Activities, opt.Roles, all, onIssues, start, opt.Now)
+	})
+	sections.Go(func() { cod = costOfDelay(items, start, opt.Now) })
+	sections.Go(func() { order = costOrder(all, opt) })
+	sections.Go(func() { rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit) })
+	sections.Go(func() { rep.Turns = turns(all, start, opt.Now) })
+	sections.Go(func() {
+		rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
+	})
+	if !opt.DigestUnreadable {
+		sections.Go(func() {
+			rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
+		})
+	}
+	if opt.CloseOuts != nil {
+		sections.Go(func() { rep.CloseOuts = closeOuts(*opt.CloseOuts, start, opt.Now) })
+	}
+
+	var waits map[string][]wait
+	var pulls map[string]forgeWait
 	var queued map[string]float64
-	if opt.QueueLogged {
-		rep.Queue, queued = mergeQueue(opt.QueueEvents, start, opt.Now)
-	}
+	var rate *float64
+	var inputs sync.WaitGroup
+	inputs.Go(func() { waits = threadWaits(all, opt.Threads, opt.Now) })
+	inputs.Go(func() { pulls = forgeWaits(opt.Forge, opt.Now) })
+	inputs.Go(func() {
+		if opt.QueueLogged {
+			rep.Queue, queued = mergeQueue(opt.QueueEvents, start, opt.Now)
+		}
+	})
+	inputs.Go(func() { rate = CostPerAgentHour(all) })
+	replay := replayHolds(items, all, start, opt)
+	sections.Go(func() { rep.Claims = claims(items, all, start, opt, replay) })
+	inputs.Wait()
+
+	perItem := map[string]ItemMetrics{}
 	held := replay.seconds
-	rate := CostPerAgentHour(all)
 	for _, it := range items {
 		m := Derive(it, opt.Now)
 		m.ExpectedCost = ExpectedCostOf(it, rate)
@@ -310,63 +366,25 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		c := it.CompletedAt()
 		return !c.IsZero() && !c.Before(start) && !c.After(opt.Now)
 	}
-	rep.Summary = summarise("", items, perItem, inWindow, opt)
+	var after sync.WaitGroup
+	after.Go(func() {
+		rep.Summary = summarise("", items, perItem, inWindow, opt)
+		after.Go(func() { rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85) })
+		after.Go(func() { rep.ReadyWait = readyWait(rep.Summary.QueueTime) })
+	})
 	if opt.By != "" {
-		groups := map[string][]*workitem.Item{}
-		var keys []string
-		for _, it := range items {
-			k := groupKey(it, opt.By)
-			if _, ok := groups[k]; !ok {
-				keys = append(keys, k)
-			}
-			groups[k] = append(groups[k], it)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			rep.Groups = append(rep.Groups, summarise(k, groups[k], perItem, inWindow, opt))
-		}
+		after.Go(func() { rep.Groups = groups(items, perItem, inWindow, opt) })
 	}
-	rep.Throughput = throughput(items, start, opt.Now)
-	rep.Burnup["all"] = burnup(items, start, opt.Now)
-	parents := map[string]bool{}
-	for _, it := range items {
-		if it.Parent != "" && !parents[it.Parent] {
-			parents[it.Parent] = true
-			var sub []*workitem.Item
-			for _, x := range items {
-				if x.Parent == it.Parent {
-					sub = append(sub, x)
-				}
-			}
-			rep.Burnup[it.Parent] = burnup(sub, start, opt.Now)
-		}
-	}
-	rep.CFD = cfd(items, start, opt.Now)
-	rep.Aging = aging(items, perItem, rep.Summary.CycleTime.P85)
-	rep.Usage = spendReport(items, start, opt.Now)
-	rep.Usage.Bucket = opt.Bucket
-	rep.Usage.Spend = spendOverTime(all, start, opt.Now, opt.Bucket)
-	rep.Usage.Strategic = strategicTotals(items, start, opt.Now)
+	after.Go(func() { rep.Forecasts = forecasts(items, perItem, inWindow) })
+	after.Go(func() { rep.Waiting = waiting(items, perItem, waits, pulls, start, opt.Now) })
+	after.Go(func() { rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now) })
+	after.Wait()
+	sections.Wait()
+	rep.Throughput, rep.CFD, rep.Burnup = throughputs, cfds, burnups
+	rep.Usage = spend
 	rep.Usage.CostPerAgentHour = rate
-	var onIssues map[string]StrategicAmount
-	rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
-	rep.Strategic = strategic(opt.Activities, opt.Roles, all, onIssues, start, opt.Now)
-	rep.Forecasts = forecasts(items, perItem, inWindow)
-	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
-	rep.CostOfDelay.Order = costOrder(all, opt)
-	rep.Waiting = waiting(items, perItem, waits, pulls, start, opt.Now)
-	rep.Claims = claims(items, all, start, opt, replay)
-	rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit)
-	rep.ReadyWait = readyWait(rep.Summary.QueueTime)
-	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
-	rep.Turns = turns(all, start, opt.Now)
-	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
-	if !opt.DigestUnreadable {
-		rep.Digest = digestSection(all, opt.Threads, opt.Entries, opt.Activities, opt.Owner, start, opt.Now)
-	}
-	if opt.CloseOuts != nil {
-		rep.CloseOuts = closeOuts(*opt.CloseOuts, start, opt.Now)
-	}
+	rep.CostOfDelay = cod
+	rep.CostOfDelay.Order = order
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
@@ -381,10 +399,47 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	if rep.Aging == nil {
 		rep.Aging = []AgingItem{}
 	}
-	if rep.Burnup == nil {
-		rep.Burnup = map[string][]DayPoint{}
-	}
 	return rep
+}
+
+// groups summarises the items by opt.By, one summary per key in key order.
+func groups(items []*workitem.Item, perItem map[string]ItemMetrics, inWindow func(*workitem.Item) bool, opt Options) []Summary {
+	byKey := map[string][]*workitem.Item{}
+	var keys []string
+	for _, it := range items {
+		k := groupKey(it, opt.By)
+		if _, ok := byKey[k]; !ok {
+			keys = append(keys, k)
+		}
+		byKey[k] = append(byKey[k], it)
+	}
+	sort.Strings(keys)
+	var out []Summary
+	for _, k := range keys {
+		out = append(out, summarise(k, byKey[k], perItem, inWindow, opt))
+	}
+	return out
+}
+
+// burnupsByParent is the burn-up of all the items, under all, and of each
+// parent's, under the parent's ID.
+func burnupsByParent(items []*workitem.Item, start, now time.Time) map[string][]DayPoint {
+	out := map[string][]DayPoint{"all": burnup(items, start, now)}
+	parents := map[string]bool{}
+	for _, it := range items {
+		if it.Parent == "" || parents[it.Parent] {
+			continue
+		}
+		parents[it.Parent] = true
+		var sub []*workitem.Item
+		for _, x := range items {
+			if x.Parent == it.Parent {
+				sub = append(sub, x)
+			}
+		}
+		out[it.Parent] = burnup(sub, start, now)
+	}
+	return out
 }
 
 // Derive computes the per-item values for one item.
