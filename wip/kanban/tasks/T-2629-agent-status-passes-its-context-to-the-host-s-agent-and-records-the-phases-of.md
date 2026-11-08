@@ -1,0 +1,33 @@
+---
+id: T-2629
+type: task
+nature: improvement
+title: agent.status passes its context to the host's Agent and records the phases of the state it builds
+status: backlog
+parent: S-0603
+owner: alex
+created: 2026-11-07T23:47:58Z
+updated: 2026-11-07T23:48:17Z
+transitions: []
+stream: S-0603
+tags: [cli]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+---
+# T-2629 agent.status passes its context to the host's Agent and records the phases of the state it builds
+
+## Work
+
+Criterion 3, its phases. `hostapi.Host.Agent` is `func(root string) any` (`flai/internal/hostapi/writes.go`), so the `agent.status` method in `flai/internal/hostapi/hostapi.go` tracks one phase, `agent.state`, and nothing inside it.
+
+- Give `Host.Agent` the request's context: `func(ctx context.Context, root string) any`, and pass it from `agent.status`. Keep the `agent.state` phase around the whole call.
+- In `flai/cmd/serve_actions.go`, track a phase with `perf.Track` around each part of the state: reading the agent states, `serve.Activity`, and `serve.RoleStates`, named `agent.states`, `agent.activity`, and `agent.roles`.
+- Update the callers and the stub in `flai/internal/hostapi/writes_test.go`.
+
+Waits for nothing: it changes none of the files of T-2621 and T-2623, so it runs in the first layer beside T-2621.
+
+## Done when
+
+- A test shows `agent.status` records `agent.state` and the three phases inside it on the request's recorder.
+- `flai test` on the changed paths passes.
+
+## Notes

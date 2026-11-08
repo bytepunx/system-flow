@@ -3,15 +3,24 @@ id: T-2615
 type: task
 nature: improvement
 title: The item store keeps one snapshot of a root's item list, replaced on a change it is told of or on the process's own save, and lists and gets from it without statting
-status: backlog
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-07T22:48:59Z
-updated: 2026-11-07T22:48:59Z
-transitions: []
+updated: 2026-11-08T00:35:11Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:03:02Z
+    by: agent-S-0606
+  - to: in-progress
+    at: 2026-11-08T00:03:10Z
+    by: agent-S-0606
+  - to: done
+    at: 2026-11-08T00:35:10Z
+    by: agent-S-0606
 stream: S-0606
 tags: [cli]
-touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go]
+touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go]
 usage:
   source: sum
   seconds: 0
@@ -42,3 +51,5 @@ Waits for no task. It shares no path with the watcher task, so the two run toget
 - [ ] With snapshot mode off, the existing store tests pass unchanged.
 
 ## Notes
+
+- Reviewed by agent-S-0606: keep the snapshot per item folder, not one list per root. A told-of change marks only the folder that holds the path stale, and the next read of a stale folder refreshes it through today's stat-and-compare path, which parses again only the files that changed; so a change under `kanban/stories` never re-stats the archive's 3,800 files. A folder whose refresh read a file within `racyWindow` of its modification time stays stale, so the racy-git rule still holds. Add a call that marks every folder of a root stale (for a write made by a flai subprocess this process ran), and make `Repo.Save` mark its folders stale. Exported: turn snapshot mode on and off for a root, tell the store of a changed path, mark a root stale.

@@ -3,44 +3,67 @@ id: E-0033
 type: epic
 nature: improvement
 title: "flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-07T22:38:45Z
-updated: 2026-11-07T22:42:08Z
-transitions: []
+updated: 2026-11-07T23:49:17Z
+transitions:
+  - to: ready
+    at: 2026-11-07T23:49:08Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-07T23:49:17Z
+    by: agent-S-0598
 tags: [cli, dashboard]
 topics: [server-side, back-end]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 16906
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-07
+      ceremony: 1
+      hand_edits: 3
+      work: 52
+    - day: 2026-11-08
+      ceremony: 5
+      hand_edits: 5
+      work: 179
+  models:
+    - model: claude-opus-5-5
+      input: 1004
+      output: 182871
+      cache_read: 147129442
+      cache_write: 4547233
+      cost: 55.1875
   strategic:
     - kind: planner
-      seconds: 581
+      seconds: 1958
       estimated: true
       models:
         - model: claude-haiku-5-5
-          input: 66
-          output: 37240
-          cache_read: 2919837
-          cache_write: 141523
-          cost: 0.2272
+          input: 338
+          output: 38199
+          cache_read: 14666696
+          cache_write: 822422
+          cost: 1.048
         - model: claude-opus-5-5
-          input: 84
-          output: 29871
-          cache_read: 9235195
-          cache_write: 266116
-          cost: 4.5737
+          input: 2077
+          output: 137305
+          cache_read: 177386605
+          cache_write: 2725272
+          cost: 52.2198
     - kind: orchestrator
-      seconds: 179
+      seconds: 1843
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 58
-          output: 434
-          cache_read: 1822280
-          cache_write: 299157
-          cost: 0.5392
+          input: 195
+          output: 1459
+          cache_read: 11862907
+          cache_write: 1075693
+          cost: 3.2995
 ---
 # E-0033 flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads
 
@@ -70,3 +93,5 @@ S-0596 measured the causes in [server-performance.md § A second pass at 596 sto
 
 - Causes 8 and 9 cost the operator most: every dashboard write and every acceptance's replan. Cause 12 costs flai serve most: about 30% of its wall time.
 - Each story remeasures its cause on the same host and repository, as E-0012's did, and records it in server-performance.md.
+- 2026-11-07T23:49:08Z: moved to ready: follows S-0598, which moved to ready
+- 2026-11-07T23:49:17Z: moved to in-progress: follows S-0598, which moved to in-progress

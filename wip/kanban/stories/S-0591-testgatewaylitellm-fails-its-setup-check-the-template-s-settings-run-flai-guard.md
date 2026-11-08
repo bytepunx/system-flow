@@ -3,14 +3,20 @@ id: S-0591
 type: story
 nature: remediation
 title: "TestGatewayLiteLLM fails its setup check: the template's settings run flai guard 6 times, and it wants 4"
-status: ready
+status: review
 owner: alex
 created: 2026-11-07T15:15:23Z
-updated: 2026-11-07T23:38:49Z
+updated: 2026-11-08T00:00:13Z
 transitions:
   - to: ready
     at: 2026-11-07T21:49:23Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-07T23:44:33Z
+    by: agent-S-0591
+  - to: review
+    at: 2026-11-08T00:00:13Z
+    by: system-flow
 tags: [flai, test]
 touches: [flai/internal/serve/gateway_test.go, design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md, design/issues/summary.md]
 agent:
@@ -20,19 +26,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 17
+  seconds: 976
   priced_by: harness
   turns:
     - day: 2026-11-07
+      ceremony: 4
+      hand_edits: 2
+      work: 114
+    - day: 2026-11-08
       ceremony: 1
-      work: 2
+      work: 1
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 1226
-      cache_read: 141627
-      cache_write: 44176
-      cost: 0.4063
+      input: 254
+      output: 19040
+      cache_read: 31069355
+      cache_write: 319486
+      cost: 9.1516
   strategic:
     - kind: planner
       seconds: 199
@@ -79,8 +89,8 @@ finalized:
 This story remediates [I-0303](../../../design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md), "TestGatewayLiteLLM fails its setup check: the template's settings run flai guard 6 times, and it wants 4". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0303 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0303 is closed with `flai issue close I-0303 --reason` saying what fixed it
+- [x] The cause I-0303 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0303 is closed with `flai issue close I-0303 --reason` saying what fixed it
 
 ## Tasks
 - T-2592 guardSettings counts and rewrites only the hooks' flai guard invocations, with a test on the template's settings that -short runs

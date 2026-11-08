@@ -1,13 +1,17 @@
 ---
 title: Board
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 wip_limits:
   ready: 10
   in-progress: 5
   review: 5
 order:
-  - S-0591
+  - S-0607
+  - S-0604
+  - S-0609
+  - S-0602
+  - S-0610
 ---
 
 # Board

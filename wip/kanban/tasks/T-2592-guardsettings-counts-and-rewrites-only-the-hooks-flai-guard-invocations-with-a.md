@@ -3,15 +3,36 @@ id: T-2592
 type: task
 nature: remediation
 title: guardSettings counts and rewrites only the hooks' flai guard invocations, with a test on the template's settings that -short runs
-status: backlog
+status: done
 parent: S-0591
 owner: alex
 created: 2026-11-07T21:48:10Z
-updated: 2026-11-07T21:48:10Z
-transitions: []
+updated: 2026-11-07T23:49:21Z
+transitions:
+  - to: ready
+    at: 2026-11-07T23:45:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-07T23:45:28Z
+    by: system-flow
+  - to: done
+    at: 2026-11-07T23:49:21Z
+    by: agent-S-0591
 stream: S-0591
 tags: [flai, test]
 touches: [flai/internal/serve/gateway_test.go]
+usage:
+  source: log
+  seconds: 233
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 543
+      cache_read: 942393
+      cache_write: 8389
+      cost: 0.2665
 ---
 # T-2592 guardSettings counts and rewrites only the hooks' flai guard invocations, with a test on the template's settings that -short runs
 

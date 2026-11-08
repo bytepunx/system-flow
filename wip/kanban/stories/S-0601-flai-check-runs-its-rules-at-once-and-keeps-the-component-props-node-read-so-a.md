@@ -3,15 +3,18 @@ id: S-0601
 type: story
 nature: improvement
 title: flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-08T00:23:55Z
+updated: 2026-11-08T01:10:39Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:15Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T01:10:39Z
+    by: agent-S-0601
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md]
 agent:
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 28
+      seconds: 32
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 18
-          cache_read: 270295
-          cache_write: 5839
-          cost: 0.0704
+          input: 3
+          output: 24
+          cache_read: 301229
+          cache_write: 15295
+          cost: 0.0807
 cost_of_delay:
   inputs:
     penalty_per_week: 50

@@ -3,12 +3,21 @@ id: T-2616
 type: task
 nature: improvement
 title: The watcher stats a slow path's folders on every walk and its files on a slower interval, and a test sees an archived item arrive and a hand edit of one
-status: backlog
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-07T22:49:05Z
-updated: 2026-11-07T22:49:05Z
-transitions: []
+updated: 2026-11-08T00:36:22Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:03:17Z
+    by: agent-S-0606
+  - to: in-progress
+    at: 2026-11-08T00:03:22Z
+    by: agent-S-0606
+  - to: done
+    at: 2026-11-08T00:36:22Z
+    by: agent-S-0606
 stream: S-0606
 tags: [cli]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go]

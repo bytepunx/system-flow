@@ -3,20 +3,67 @@ id: S-0605
 type: story
 nature: improvement
 title: settings.get finds the projects below the import folders once a request, not once a served project, so it answers in under 100 ms, not 825 ms
-status: backlog
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:46Z
-updated: 2026-11-07T23:49:40Z
-transitions: []
+updated: 2026-11-08T01:13:20Z
+transitions:
+  - to: ready
+    at: 2026-11-08T00:11:13Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T00:11:31Z
+    by: agent-S-0605
+  - to: review
+    at: 2026-11-08T01:10:32Z
+    by: agent-S-0605
+  - to: done
+    at: 2026-11-08T01:13:20Z
+    by: orchestrator
 tags: [cli]
-touches: [flai/cmd/serve_actions.go, flai/cmd/serve_project.go, flai/internal/serve/below.go, flai/cmd/serve_project_test.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/server-performance.md]
+touches: [flai/cmd/serve_actions.go, flai/cmd/serve_project.go, flai/internal/serve/below.go, flai/cmd/serve_project_test.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/server-performance.md, flai/internal/serve/below_test.go, flai/cmd/serve_settings.go]
 after: [S-0596]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 3554
+  priced_by: harness
+  turns:
+    - day: 2026-11-08
+      ceremony: 1
+      hand_edits: 3
+      work: 68
+  models:
+    - model: claude-opus-5-5
+      input: 202
+      output: 51814
+      cache_read: 27832124
+      cache_write: 671431
+      cost: 10.9871
+  strategic:
+    - kind: orchestrator
+      seconds: 182
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 159
+          cache_read: 1243952
+          cache_write: 126930
+          cost: 0.3495
+cost_of_delay:
+  inputs:
+    penalty_per_week: 20
+    by: orchestrator
+    at: 2026-11-07T23:50:59Z
+  value: 20
+  by: planner-E-0033
+  at: 2026-11-08T00:01:11Z
 forecast:
   duration: 30m
   delivery: 2026-11-08T00:33:00Z
@@ -35,9 +82,9 @@ Cause 15 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `settings.get` works out the projects below the import folders once a request, or takes what the running flai serve already found, and answers what it answered before, which a test with three served projects under two import folders shows.
-- [ ] `settings.get` records its phases.
-- [ ] `settings.get` on the operator's host answers under 100 ms, and server-performance.md records the before and after.
+- [x] `settings.get` works out the projects below the import folders once a request, or takes what the running flai serve already found, and answers what it answered before, which a test with three served projects under two import folders shows.
+- [x] `settings.get` records its phases.
+- [x] `settings.get` on the operator's host answers under 100 ms, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2639 servedView works out the projects below the import folders once a request, from the running flai serve's status when it runs, and a test with three served projects under two import folders shows the same answer
@@ -77,3 +124,13 @@ Figures:
 - Forecast 30m, against flai's 8m (79 s per unit of size over 20 done improvement stories on claude-opus-5-5 in the small band, times size 6). The size counts three touches, but the change threads a context through the host API and its tests and ends in a measurement on the operator's host. S-0606 forecasts 45m for two mechanisms and a measurement; this one is about two thirds of that.
 - Delivery 2026-11-08T00:33:00Z: flai's delivery for its queue position, 9th behind S-0591 to S-0604 with an in-progress limit of 5, moved by the 22 minutes the duration adds.
 - Cost of delay: no value yet. Neither S-0605 nor E-0033 has inputs, so `flai cod S-0605` refuses. The plan's thread on S-0605 asks for `penalty_per_week: 20`, the figure on TH-0888; the value follows once an input is set.
+
+### Accepted by the orchestrator
+
+- Verified: 8793f269a5f7f4d9a7d1fc0bd7467493fa43f5a2
+- At: 2026-11-08T01:13:20Z
+
+Verdict: pass at 8793f269a5f7f4d9a7d1fc0bd7467493fa43f5a2
+- 1: flai/cmd/serve_actions.go, flai/cmd/serve_project.go, flai/internal/serve/below.go, flai/cmd/serve_project_test.go, flai/internal/serve/below_test.go
+- 2: flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/cmd/serve_actions.go, flai/cmd/serve_settings.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes_test.go
+- 3: design/system/server-performance.md

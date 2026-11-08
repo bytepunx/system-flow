@@ -3,15 +3,18 @@ id: S-0603
 type: story
 nature: improvement
 title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-08T00:25:18Z
+updated: 2026-11-08T01:12:15Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T01:12:15Z
+    by: agent-S-0603
 tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md]
 agent:
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 28
+      seconds: 32
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 18
-          cache_read: 270295
-          cache_write: 5839
-          cost: 0.0704
+          input: 2
+          output: 24
+          cache_read: 301229
+          cache_write: 15295
+          cost: 0.0807
 cost_of_delay:
   inputs:
     penalty_per_week: 100

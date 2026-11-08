@@ -3,14 +3,20 @@ id: S-0606
 type: story
 nature: improvement
 title: item.get answers from a kept item list and the file watcher stops statting every archived file every 300 ms
-status: backlog
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-07T23:39:00Z
-transitions: []
+updated: 2026-11-08T01:11:53Z
+transitions:
+  - to: ready
+    at: 2026-11-07T23:58:41Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-07T23:59:20Z
+    by: agent-S-0606
 tags: [cli]
-touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]
+touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go]
 after: [S-0596]
 agent:
   harness: claude-code
@@ -39,15 +45,15 @@ usage:
           cache_write: 266116
           cost: 4.5737
     - kind: orchestrator
-      seconds: 160
+      seconds: 249
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 364
-          cache_read: 1564195
-          cache_write: 252630
-          cost: 0.4618
+          input: 70
+          output: 561
+          cache_read: 2338123
+          cache_write: 337409
+          cost: 0.6807
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -91,7 +97,7 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 
 ### Planning
 
-Planned by planner-S-0606. No earlier plan and no thread on the story existed. The plan's thread is TH-0886, which the orchestrator approved and resolved.
+Planned by planner-S-0606 on 2026-11-07, first at 22:50 (TH-0886, approved and resolved by the orchestrator), then again at 23:46, when the operator asked for every E-0033 story to be planned. The second run found no operator entry on S-0606's threads and nothing in the story's words changed, so it revisited the plan against what changed since: S-0596 was accepted at 23:38, and its section of `design/system/server-performance.md`, cause 16 included, is now on main. All five tasks stand unchanged; none was added, split, merged, or dropped. The second run's thread is TH-0889.
 
 Touches, and where each came from:
 
@@ -103,19 +109,21 @@ Touches, and where each came from:
 | `flai/internal/workitem/repo.go` | layout: `Repo.List`, `Repo.Get`, and `Repo.Save` are where a snapshot is read and where the process's own save replaces it |
 | `flai/internal/workitem/store_test.go` | layout: the store's tests, which the snapshot extends |
 | `flai/internal/watch/watch_test.go` | layout: criterion 2's test of an archived item and a hand edit of one |
-| `flai/internal/hostapi/hostapi_test.go` | co-change, 19%: `item.get`'s tests |
+| `flai/internal/hostapi/hostapi_test.go` | co-change: `item.get`'s tests |
 | `flai/internal/serve/serve.go` | layout: the watcher's callback and `watchedPaths`, where a project's snapshot is replaced and the archive is watched on the slower tier |
 | `flai/internal/serve/serve_test.go` | layout: the wiring's test |
 | `design/system/server-performance.md` | design: criterion 3 records the before and after under S-0596's section |
-| `design/system/flai-cli.md` | co-change, 14%; design: its Internal structure describes the store and the watcher's 300 ms walk |
+| `design/system/flai-cli.md` | co-change; design: its Internal structure describes the store and the watcher's 300 ms walk |
 | `design/tech/go-libraries.md` | design: it says the watcher stats every file every 300 ms and why fsnotify was not taken |
 
-Not taken from `flai touches suggest`: `flai/internal/hostapi/writes.go` (38%), since a write saves through `Repo.Save`, which replaces the snapshot itself; `flai/cmd/serve_actions.go`, `flaiover/src/lib/server/agent.ts`, and `flai/internal/mcpserver/server.go`, which neither list items through the store nor watch; and `docs/users/flai.md` and `docs/users/flai-reference.md`, since no command or setting changes. No folder touch.
+Not taken from `flai touches suggest`, which now ranks documentation first: `docs/users/flai.md` (63%), `docs/users/flai-reference.md` (22%), and `docs/operators/index.md` (26%), since no command, setting, or operator step changes; `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md`, since the dashboard asks the same methods; `flai/internal/hostapi/writes.go` (7%), since a write saves through `Repo.Save`, which replaces the snapshot itself; `flai/cmd/serve_actions.go` and `flaiover/src/lib/server/agent.ts`, which neither list items through the store nor watch. No folder touch.
 
-`after`: S-0596. It writes the section of `design/system/server-performance.md` this story's goal links, cause 16 and its figures, on its branch; criterion 3 records the before and after there.
+`after`: S-0596, now done. It wrote the section of `design/system/server-performance.md` this story's goal links, cause 16 and its figures; criterion 3 records the before and after there.
+
+S-0600 (cause 10) also changes `flai/internal/workitem/store.go`, and S-0604 (cause 14) `flai/internal/hostapi/hostapi.go`. Neither writes output this story reads, so neither is in `after`; the trial merge judges the overlap.
 
 Figures:
 
-- Forecast 45m, adjusted from flai's 8m (80 s per unit of size over 19 done improvement stories, times size 6). Comparable stories that kept state between requests and measured it took 703 s (S-0156), 953 s (S-0500), 1170 s (S-0157), and 2191 s (S-0531). This one builds two mechanisms, wires both into flai serve, and measures on the operator's host, about 2700 s.
-- Delivery 2026-11-08T00:15:00Z: flai's delivery for its queue position, 23:36, moved by the 37 minutes added to the duration.
-- Cost of delay 30 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 30`, which the orchestrator set at 22:51 on TH-0886. It stands unadjusted: no revenue rides on the story, and the penalty is the cost of a slow dashboard.
+- Forecast 45m, kept against flai's 24m now (94 s per unit of size over 124 done improvement stories on claude-opus-5-5, times size 15). Comparable stories that kept state between requests and measured it took 703 s (S-0156), 953 s (S-0500), 1170 s (S-0157), and 2191 s (S-0531). This one builds two mechanisms, wires both into flai serve, and measures on the operator's host, about 2700 s.
+- Delivery 2026-11-08T00:55:00Z: flai's own delivery for its queue position, 10th behind S-0591 to S-0605 with an in-progress limit of 5, with the 45m duration.
+- Cost of delay 30 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 30`, which the orchestrator set at 22:51 on TH-0886. It stands unadjusted: no revenue rides on the story, and the penalty is the cost of a slow dashboard. It sits on TH-0888's scale for E-0033, between S-0605's and S-0607's 20 and S-0604's 40.
