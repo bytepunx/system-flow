@@ -15,7 +15,7 @@ func (r *Repo) Visit(includeArchive bool, fn func(it *Item, archived bool)) erro
 	}
 	for _, archived := range scopes {
 		for _, typ := range Types {
-			items, err := parsed.items(r.ItemDir(typ, archived))
+			items, err := parsed.items(r.ItemDir(typ, archived), r.CacheDir())
 			if err != nil {
 				return err
 			}
