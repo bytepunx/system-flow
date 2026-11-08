@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -422,5 +423,126 @@ func TestAcceptPreviewListsTheQueueTiersWhileTheQueueBatches(t *testing.T) {
 	}
 	if got := preview(false); got["queue_tiers_blocker"] != nil || got["queue_tiers"] != nil {
 		t.Errorf("with the merge-queue host action off, accept.preview lists no queue tiers: %v", got)
+	}
+}
+
+// statsAnswer is one stats.get call's answer.
+type statsAnswer struct {
+	v   any
+	err *channel.Error
+}
+
+// TestStatsGetAnswersIdenticalRequestsInFlightOnce: two stats.get requests
+// with the same parameters while one is computed get that computation's
+// answer; different parameters compute apart, and a request after the
+// computation ends computes again (S-0607).
+func TestStatsGetAnswersIdenticalRequestsInFlightOnce(t *testing.T) {
+	p := harbour(t)
+	stats := readMethods(func() time.Time { return t0.Add(time.Hour) }, Host{})["stats.get"]
+	var computed atomic.Int32
+	started, joined := make(chan struct{}, 8), make(chan struct{}, 8)
+	release := make(chan struct{}, 8)
+	flightHook = func(j bool) {
+		if j {
+			joined <- struct{}{}
+			return
+		}
+		computed.Add(1)
+		started <- struct{}{}
+		<-release
+	}
+	t.Cleanup(func() { flightHook = nil })
+	call := func(ctx context.Context, params string) <-chan statsAnswer {
+		out := make(chan statsAnswer, 1)
+		go func() {
+			v, err := stats(ctx, p, json.RawMessage(params))
+			out <- statsAnswer{v, err}
+		}()
+		return out
+	}
+	month := `{"since":"30d","type":"story"}`
+
+	// the same parameters, the second asked while the first is computed
+	a := call(context.Background(), month)
+	<-started
+	b := call(context.Background(), `{"type":"story","since":"30d"}`)
+	<-joined
+	release <- struct{}{}
+	first, second := <-a, <-b
+	if first.err != nil || second.err != nil {
+		t.Fatalf("stats.get: %+v %+v", first.err, second.err)
+	}
+	if !reflect.DeepEqual(first.v, second.v) {
+		t.Errorf("the request that joined got another answer:\n%+v\n%+v", first.v, second.v)
+	}
+	if n := computed.Load(); n != 1 {
+		t.Errorf("two identical requests in flight computed %d times, want once", n)
+	}
+
+	// different parameters, asked together, compute apart
+	c, d := call(context.Background(), `{"since":"7d"}`), call(context.Background(), month)
+	<-started
+	<-started
+	release <- struct{}{}
+	release <- struct{}{}
+	if got := <-c; got.err != nil {
+		t.Errorf("stats.get 7d: %+v", got.err)
+	}
+	if got := <-d; got.err != nil {
+		t.Errorf("stats.get 30d: %+v", got.err)
+	}
+	if n := computed.Load(); n != 3 {
+		t.Errorf("two different requests computed %d times in all, want 3", n)
+	}
+
+	// once it ended, the same parameters compute again
+	e := call(context.Background(), month)
+	<-started
+	release <- struct{}{}
+	if got := <-e; got.err != nil || !reflect.DeepEqual(got.v, first.v) {
+		t.Errorf("stats.get after the first ended: %+v %+v", got.v, got.err)
+	}
+	if n := computed.Load(); n != 4 {
+		t.Errorf("a request after the computation ended computed %d times in all, want 4", n)
+	}
+}
+
+// TestAStatsGetThatJoinedStopsWaitingOnItsOwnContext: a request that joined
+// a computation stops when its own context ends, and the computation goes
+// on for the request that started it (S-0607).
+func TestAStatsGetThatJoinedStopsWaitingOnItsOwnContext(t *testing.T) {
+	p := harbour(t)
+	stats := readMethods(func() time.Time { return t0.Add(time.Hour) }, Host{})["stats.get"]
+	started, joined, release := make(chan struct{}, 2), make(chan struct{}, 2), make(chan struct{})
+	flightHook = func(j bool) {
+		if j {
+			joined <- struct{}{}
+			return
+		}
+		started <- struct{}{}
+		<-release
+	}
+	t.Cleanup(func() { flightHook = nil })
+
+	a := make(chan statsAnswer, 1)
+	go func() {
+		v, err := stats(context.Background(), p, json.RawMessage(`{}`))
+		a <- statsAnswer{v, err}
+	}()
+	<-started
+	ctx, cancel := context.WithCancel(context.Background())
+	b := make(chan statsAnswer, 1)
+	go func() {
+		v, err := stats(ctx, p, json.RawMessage(`{}`))
+		b <- statsAnswer{v, err}
+	}()
+	<-joined
+	cancel()
+	if got := <-b; got.err == nil || got.err.Code != channel.CodeInternal || !strings.Contains(got.err.Message, "canceled") {
+		t.Errorf("the request whose context ended: %+v %+v, want its context's error", got.v, got.err)
+	}
+	close(release)
+	if got := <-a; got.err != nil || got.v == nil {
+		t.Errorf("the request that started the computation: %+v %+v", got.v, got.err)
 	}
 }

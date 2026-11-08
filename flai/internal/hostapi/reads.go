@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
@@ -111,7 +112,71 @@ func keptPullRequest(root, cacheDir, story string) (storyPullRequest, error) {
 	return out, nil
 }
 
+// flights shares one computation between the requests that ask for the same
+// answer while it runs (S-0607): the dashboard asks for stats.get again on
+// every item change, often twice within a few seconds. Each table of
+// methods has its own.
+type flights struct {
+	mu sync.Mutex
+	m  map[string]*flight
+}
+
+// flight is one computation in progress and, once done is closed, its answer.
+type flight struct {
+	done chan struct{}
+	v    any
+	err  *channel.Error
+}
+
+// flightHook, when a test sets it, is called with false as a shared
+// computation starts and with true as a request joins one in progress.
+var flightHook func(joined bool)
+
+// do answers with the computation in flight for key, or starts compute for
+// it. compute runs under context.WithoutCancel(ctx), so the end of the
+// request that started it does not end it for the others; each request
+// stops waiting when its own ctx ends. Once it ends, the key is gone, so a
+// later request computes again and no answer is ever kept. A request that
+// joins records the time it waited under phase; the one that started it
+// records what compute records.
+func (f *flights) do(ctx context.Context, key, phase string, compute func(context.Context) (any, *channel.Error)) (any, *channel.Error) {
+	hook := flightHook
+	f.mu.Lock()
+	if f.m == nil {
+		f.m = map[string]*flight{}
+	}
+	fl, joined := f.m[key]
+	if !joined {
+		fl = &flight{done: make(chan struct{})}
+		f.m[key] = fl
+		go func(ctx context.Context) {
+			if hook != nil {
+				hook(false)
+			}
+			fl.v, fl.err = compute(ctx)
+			f.mu.Lock()
+			delete(f.m, key)
+			f.mu.Unlock()
+			close(fl.done)
+		}(context.WithoutCancel(ctx))
+	}
+	f.mu.Unlock()
+	if joined {
+		if hook != nil {
+			hook(true)
+		}
+		defer perf.Track(ctx, phase)()
+	}
+	select {
+	case <-fl.done:
+		return fl.v, fl.err
+	case <-ctx.Done():
+		return nil, failed(ctx.Err())
+	}
+}
+
 func readMethods(now func() time.Time, host Host) map[string]channel.Method {
+	stats := &flights{}
 	return map[string]channel.Method{
 		// item.show: what flai edit --show prints, an item's own words and
 		// the hash an edit gives back (S-0085).
@@ -279,24 +344,28 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 			if in.Bucket != "" && in.Bucket != metrics.BucketHour && in.Bucket != metrics.BucketDay && in.Bucket != metrics.BucketWeek {
 				return nil, bad("bucket must be hour, day, or week")
 			}
-			return answer(ctx, p, "stats.compute", func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
-				since := in.Since
-				if since == "" {
-					since = metrics.DefaultWindow
-				}
-				window, err := metrics.ParseWindow(since)
-				if err != nil {
-					return nil, err
-				}
-				if err := metrics.CheckBucket(in.Bucket, window); err != nil {
-					return nil, err
-				}
-				items, opt, err := statsread.Read(r, repo, log)
-				if err != nil {
-					return nil, err
-				}
-				opt.Now, opt.Since, opt.Type, opt.By, opt.Bucket = now(), window, in.Type, in.By, in.Bucket
-				return metrics.Compute(items, opt), nil
+			since := in.Since
+			if since == "" {
+				since = metrics.DefaultWindow
+			}
+			// the same report asked for while one is computed gets that one
+			key := strings.Join([]string{p.Root, since, in.Type, in.By, in.Bucket}, "\x00")
+			return stats.do(ctx, key, "stats.compute", func(ctx context.Context) (any, *channel.Error) {
+				return answer(ctx, p, "stats.compute", func(r execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
+					window, err := metrics.ParseWindow(since)
+					if err != nil {
+						return nil, err
+					}
+					if err := metrics.CheckBucket(in.Bucket, window); err != nil {
+						return nil, err
+					}
+					items, opt, err := statsread.Read(r, repo, log)
+					if err != nil {
+						return nil, err
+					}
+					opt.Now, opt.Since, opt.Type, opt.By, opt.Bucket = now(), window, in.Type, in.By, in.Bucket
+					return metrics.Compute(items, opt), nil
+				})
 			})
 		},
 
