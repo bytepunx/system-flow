@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -204,6 +206,124 @@ func TestListAndGetReadTheEntries(t *testing.T) {
 	write(t, r.Root, "design/digest/D-0011-broken.md", "no front matter\n")
 	if _, err := List(r); err == nil || !strings.Contains(err.Error(), "D-0011-broken.md") {
 		t.Errorf("a broken entry is named: %v", err)
+	}
+}
+
+// settle moves a digest file's modification time an hour back, past the
+// racy window, so that the kept store trusts its parse.
+func settle(t *testing.T, root, rel string) {
+	t.Helper()
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(filepath.Join(root, filepath.FromSlash(rel)), old, old); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// entryNamed is good as the entry id with title.
+func entryNamed(id, title string) string {
+	return strings.NewReplacer("D-0003", id, "The digest is one file per entry", title).Replace(good)
+}
+
+// S-0602: List keeps what it parsed between calls, so a second List with
+// nothing changed parses no file, and an entry edited, added, or removed is
+// seen on the next List.
+func TestListKeepsEntriesAndSeesEachChange(t *testing.T) {
+	r := newRepo(t)
+	files := map[string]string{
+		"design/digest/D-0001-one.md": entryNamed("D-0001", "One"),
+		"design/digest/D-0002-two.md": entryNamed("D-0002", "Two"),
+	}
+	for rel, text := range files {
+		write(t, r.Root, rel, text)
+		settle(t, r.Root, rel)
+	}
+	titles := func() []string {
+		t.Helper()
+		got, err := List(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, e := range got {
+			out = append(out, e.Title)
+		}
+		return out
+	}
+	if got := titles(); !reflect.DeepEqual(got, []string{"One", "Two"}) {
+		t.Fatalf("first list %v", got)
+	}
+	before := kept.Parses()
+	if got := titles(); !reflect.DeepEqual(got, []string{"One", "Two"}) {
+		t.Fatalf("second list %v", got)
+	}
+	if n := kept.Parses() - before; n != 0 {
+		t.Errorf("a second List with nothing changed parsed %d files", n)
+	}
+
+	write(t, r.Root, "design/digest/D-0001-one.md", entryNamed("D-0001", "One, edited"))
+	settle(t, r.Root, "design/digest/D-0001-one.md")
+	if got := titles(); !reflect.DeepEqual(got, []string{"One, edited", "Two"}) {
+		t.Errorf("after an edit %v", got)
+	}
+	write(t, r.Root, "design/digest/D-0003-three.md", entryNamed("D-0003", "Three"))
+	if got := titles(); !reflect.DeepEqual(got, []string{"One, edited", "Two", "Three"}) {
+		t.Errorf("after an add %v", got)
+	}
+	if err := os.Remove(filepath.Join(r.Root, "design", "digest", "D-0002-two.md")); err != nil {
+		t.Fatal(err)
+	}
+	if got := titles(); !reflect.DeepEqual(got, []string{"One, edited", "Three"}) {
+		t.Errorf("after a removal %v", got)
+	}
+	if _, err := Get(r, "D-0002"); err == nil {
+		t.Error("Get found a removed entry")
+	}
+	if e, err := Get(r, "D-0001"); err != nil || e.Title != "One, edited" || e.Path != "design/digest/D-0001-one.md" {
+		t.Errorf("Get after an edit = %+v, %v", e, err)
+	}
+
+	got, err := List(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got[0].Topics[0] = "changed"
+	got[0].Title = "changed"
+	again, err := List(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again[0].Topics[0] != "digest" || again[0].Title != "One, edited" {
+		t.Errorf("changing a returned entry changed what List returns next: %+v", again[0])
+	}
+}
+
+// S-0602: two List calls at once return equal entries.
+func TestTwoListsAtOnceReturnEqualEntries(t *testing.T) {
+	r := newRepo(t)
+	for i, title := range []string{"One", "Two", "Three"} {
+		id := "D-000" + string(rune('1'+i))
+		rel := "design/digest/" + id + "-entry.md"
+		write(t, r.Root, rel, entryNamed(id, title))
+		settle(t, r.Root, rel)
+	}
+	var wg sync.WaitGroup
+	got := make([][]Entry, 2)
+	errs := make([]error, 2)
+	for i := range got {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got[i], errs[i] = List(r)
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(got[0]) != 3 || !reflect.DeepEqual(got[0], got[1]) {
+		t.Errorf("two lists at once differ:\n%+v\n%+v", got[0], got[1])
 	}
 }
 

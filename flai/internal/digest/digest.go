@@ -137,26 +137,55 @@ func number(s string) int {
 	return n
 }
 
+// kept keeps the entries List and Get parse, by file, so that a long-running
+// flai (serve, mcp) parses again only the entries that changed (S-0602). Its
+// entries carry no Path: List and Get set it from the project they read.
+var kept = workitem.NewKeptFiles(readEntry, cloneEntry)
+
+// parseError is an entry file that was read but does not parse, apart from
+// one that could not be read, so that each keeps its own wording.
+type parseError struct{ err error }
+
+func (e parseError) Error() string { return e.err.Error() }
+func (e parseError) Unwrap() error { return e.err }
+
+// readEntry reads and parses the entry file at path, for kept.
+func readEntry(path string) (Entry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Entry{}, err
+	}
+	e, err := parse(string(data))
+	if err != nil {
+		return Entry{}, parseError{err}
+	}
+	return e, nil
+}
+
+// cloneEntry copies an entry and its lists, so that a caller changing one
+// changes nothing kept.
+func cloneEntry(e Entry) Entry {
+	for _, l := range []*[]string{&e.Sources, &e.Topics, &e.Paths, &e.AskedAgain, &e.Cited} {
+		*l = slices.Clone(*l)
+	}
+	return e
+}
+
 // List reads every entry in the checkout's digest folder, sorted by ID. A
 // missing folder is no entries.
 func List(repo *workitem.Repo) ([]Entry, error) {
-	dir := filepath.Join(repo.Root, filepath.FromSlash(Dir(repo.Manifest)))
-	files, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
+	files, err := kept.List(folder(repo), func(name string) bool { return entryFile.MatchString(name) })
 	if err != nil {
 		return nil, fmt.Errorf("reading the digest folder %s: %w", Dir(repo.Manifest), err)
 	}
 	var out []Entry
 	for _, f := range files {
-		if f.IsDir() || !entryFile.MatchString(f.Name()) {
-			continue
+		name := filepath.Base(f.Path)
+		if f.Err != nil {
+			return nil, entryError(repo, name, f.Err)
 		}
-		e, err := read(repo, f.Name())
-		if err != nil {
-			return nil, err
-		}
+		e := f.Value
+		e.Path = path.Join(Dir(repo.Manifest), name)
 		out = append(out, e)
 	}
 	slices.SortFunc(out, func(a, b Entry) int { return number(path.Base(a.Path)) - number(path.Base(b.Path)) })
@@ -169,7 +198,7 @@ func Get(repo *workitem.Repo, id string) (Entry, error) {
 	if n == 0 {
 		return Entry{}, fmt.Errorf("%q is not a digest entry ID; an entry's ID is D-nnnn, such as D-0007", id)
 	}
-	dir := filepath.Join(repo.Root, filepath.FromSlash(Dir(repo.Manifest)))
+	dir := folder(repo)
 	files, err := os.ReadDir(dir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return Entry{}, fmt.Errorf("reading the digest folder %s: %w", Dir(repo.Manifest), err)
@@ -182,19 +211,30 @@ func Get(repo *workitem.Repo, id string) (Entry, error) {
 	return Entry{}, fmt.Errorf("%s is not in %s; flai digest list lists the entries", CanonicalID(id), Dir(repo.Manifest))
 }
 
-// read parses the entry file named name in the checkout's digest folder.
+// folder is the checkout's digest folder on disk.
+func folder(repo *workitem.Repo) string {
+	return filepath.Join(repo.Root, filepath.FromSlash(Dir(repo.Manifest)))
+}
+
+// read parses the entry file named name in the checkout's digest folder,
+// through kept.
 func read(repo *workitem.Repo, name string) (Entry, error) {
-	rel := path.Join(Dir(repo.Manifest), name)
-	data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(rel)))
+	e, err := kept.Read(filepath.Join(folder(repo), name))
 	if err != nil {
-		return Entry{}, fmt.Errorf("reading digest entry %s: %w", rel, err)
+		return Entry{}, entryError(repo, name, err)
 	}
-	e, err := parse(string(data))
-	if err != nil {
-		return Entry{}, fmt.Errorf("digest entry %s: %w; flai check names what to fix", rel, err)
-	}
-	e.Path = rel
+	e.Path = path.Join(Dir(repo.Manifest), name)
 	return e, nil
+}
+
+// entryError says which entry file named name could not be read or parsed.
+func entryError(repo *workitem.Repo, name string, err error) error {
+	rel := path.Join(Dir(repo.Manifest), name)
+	var pe parseError
+	if errors.As(err, &pe) {
+		return fmt.Errorf("digest entry %s: %w; flai check names what to fix", rel, pe.err)
+	}
+	return fmt.Errorf("reading digest entry %s: %w", rel, err)
 }
 
 // parse decodes an entry's front matter and body, with every list empty
