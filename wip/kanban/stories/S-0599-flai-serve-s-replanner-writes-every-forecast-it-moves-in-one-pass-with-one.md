@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:17Z
-updated: 2026-11-08T01:10:59Z
+updated: 2026-11-08T01:43:19Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:24Z
@@ -16,7 +16,7 @@ transitions:
     at: 2026-11-07T23:49:39Z
     by: agent-S-0599
 tags: [cli]
-touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go, design/system/server-performance.md, design/system/strategic-agents.md, flai/internal/check/items.go, flai/internal/workitem/repo.go]
+touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go, design/system/server-performance.md, design/system/strategic-agents.md, flai/internal/check/items.go, flai/internal/workitem/repo.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

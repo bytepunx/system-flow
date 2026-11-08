@@ -3,15 +3,36 @@ id: T-2621
 type: task
 nature: improvement
 title: AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
-status: backlog
+status: done
 parent: S-0603
 owner: alex
 created: 2026-11-07T23:47:30Z
-updated: 2026-11-07T23:47:30Z
-transitions: []
+updated: 2026-11-08T01:46:30Z
+transitions:
+  - to: ready
+    at: 2026-11-08T01:14:07Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-08T01:14:09Z
+    by: system-flow
+  - to: done
+    at: 2026-11-08T01:46:30Z
+    by: agent-S-0603
 stream: S-0603
 tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 1940
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 262
+      cache_read: 8386456
+      cache_write: 351105
+      cost: 3.1418
 ---
 # T-2621 AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
 

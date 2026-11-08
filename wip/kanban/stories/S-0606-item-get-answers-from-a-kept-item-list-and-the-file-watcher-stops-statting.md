@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-08T01:11:53Z
+updated: 2026-11-08T01:41:10Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -45,15 +45,15 @@ usage:
           cache_write: 266116
           cost: 4.5737
     - kind: orchestrator
-      seconds: 249
+      seconds: 371
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 561
-          cache_read: 2338123
-          cache_write: 337409
-          cost: 0.6807
+          input: 94
+          output: 685
+          cache_read: 3017430
+          cache_write: 400785
+          cost: 0.871
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -80,8 +80,8 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] flai serve keeps one snapshot of the item list, replaced when the watcher sees a change under the work item folders, and `item.get` and the methods that list every item read it without statting the files again.
-- [ ] The watcher notices a change under `wip/archive` without statting every file there on every walk, and a test shows an archived item, and a hand edit of one, are still seen.
+- [x] flai serve keeps one snapshot of the item list, replaced when the watcher sees a change under the work item folders, and `item.get` and the methods that list every item read it without statting the files again.
+- [x] The watcher notices a change under `wip/archive` without statting every file there on every walk, and a test shows an archived item, and a hand edit of one, are still seen.
 - [ ] A walk of this project's watched folders takes under 30 ms on the operator's host, `item.get` with 13 asked at once under 50 ms, and server-performance.md records the before and after.
 
 ## Tasks
@@ -90,6 +90,8 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 - T-2617 item.get finds its item, children, and plan in one list of the kept snapshot, with no glob and no second list
 - T-2618 flai serve turns on each served project's item snapshot, replaces it from the watcher's changes under the item folders, and watches wip/archive on the slow tier
 - T-2619 Measure a watcher walk and item.get with 13 at once before and after on the operator's host, and record them with the snapshot and the slow tier in the design
+- T-2697 item.get copies only the item and its children it answers, and reads the rest of the list in place
+- T-2698 Measure item.get with 13 at once again after T-2697, and record it under cause 16
 
 ## Notes
 

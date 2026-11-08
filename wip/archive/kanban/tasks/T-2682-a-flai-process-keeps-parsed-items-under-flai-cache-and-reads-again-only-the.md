@@ -24,16 +24,16 @@ touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, f
 after: [T-2674]
 usage:
   source: log
-  seconds: 1447
+  seconds: 1448
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 229
-      cache_read: 8778983
-      cache_write: 400134
-      cost: 3.2991
+      input: 62
+      output: 19016
+      cache_read: 9198177
+      cache_write: 281920
+      cost: 3.8139
 ---
 # T-2682 A flai process keeps parsed items under .flai-cache and reads again only the files whose key differs
 

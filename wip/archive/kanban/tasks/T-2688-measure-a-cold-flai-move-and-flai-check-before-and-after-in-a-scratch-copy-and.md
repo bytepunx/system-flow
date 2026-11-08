@@ -3,11 +3,11 @@ id: T-2688
 type: task
 nature: improvement
 title: Measure a cold flai move and flai check before and after in a scratch copy, and record them in server-performance.md
-status: in-progress
+status: done
 parent: S-0600
 owner: alex
 created: 2026-11-07T23:51:43Z
-updated: 2026-11-08T01:02:17Z
+updated: 2026-11-08T01:16:24Z
 transitions:
   - to: ready
     at: 2026-11-08T01:02:16Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:02:17Z
     by: agent-S-0600
+  - to: done
+    at: 2026-11-08T01:16:24Z
+    by: agent-S-0600
 stream: S-0600
 tags: [cli, docs]
 touches: [design/system/server-performance.md]
 after: [T-2682, T-2685]
+usage:
+  source: log
+  seconds: 847
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 22107
+      cache_read: 10693288
+      cache_write: 327744
+      cost: 4.4338
 ---
 # T-2688 Measure a cold flai move and flai check before and after in a scratch copy, and record them in server-performance.md
 

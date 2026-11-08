@@ -3,12 +3,18 @@ id: T-2656
 type: task
 nature: improvement
 title: stats.get answers identical requests in flight with one computation
-status: backlog
+status: in-progress
 parent: S-0607
 owner: alex
 created: 2026-11-07T23:49:29Z
-updated: 2026-11-07T23:49:29Z
-transitions: []
+updated: 2026-11-08T01:46:14Z
+transitions:
+  - to: ready
+    at: 2026-11-08T01:46:11Z
+    by: agent-S-0607
+  - to: in-progress
+    at: 2026-11-08T01:46:14Z
+    by: agent-S-0607
 stream: S-0607
 tags: [cli]
 touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flai/internal/hostapi/hostapi.go]

@@ -3,15 +3,18 @@ id: S-0607
 type: story
 nature: improvement
 title: stats.get runs its reads at once and its sections at once, and answers identical requests in flight once
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:34Z
-updated: 2026-11-08T01:13:21Z
+updated: 2026-11-08T01:44:39Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:20Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-08T01:44:39Z
+    by: agent-S-0607
 tags: [cli]
 touches: [flai/internal/statsread/statsread.go, flai/internal/metrics/metrics.go, flai/internal/hostapi/hostapi.go, flai/internal/statsread/statsread_test.go, flai/internal/statsread/report_test.go, flai/internal/statsread/testdata/good-report.json, flai/internal/metrics/metrics_test.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, design/system/server-performance.md]
 agent:
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 46
+      seconds: 53
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 36
-          cache_read: 451609
-          cache_write: 17334
-          cost: 0.1196
+          input: 7
+          output: 38
+          cache_read: 467460
+          cache_write: 17507
+          cost: 0.1237
 cost_of_delay:
   inputs:
     penalty_per_week: 20

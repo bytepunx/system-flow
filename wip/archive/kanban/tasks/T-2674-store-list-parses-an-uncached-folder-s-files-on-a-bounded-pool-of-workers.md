@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1200
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 104
-      cache_read: 2188088
-      cache_write: 20202
-      cost: 0.7937
+      input: 15
+      output: 4575
+      cache_read: 2212878
+      cache_write: 67824
+      cost: 0.9175
 ---
 # T-2674 store.list parses an uncached folder's files on a bounded pool of workers
 

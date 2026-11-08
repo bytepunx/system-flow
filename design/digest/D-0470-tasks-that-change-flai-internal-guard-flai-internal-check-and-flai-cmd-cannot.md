@@ -9,7 +9,7 @@ date: 2026-11-03
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0601]
 ---
 
 # D-0470 Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change

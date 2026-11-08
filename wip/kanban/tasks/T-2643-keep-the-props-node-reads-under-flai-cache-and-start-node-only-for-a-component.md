@@ -3,11 +3,11 @@ id: T-2643
 type: task
 nature: improvement
 title: Keep the props node reads under .flai-cache and start node only for a component whose key changed
-status: in-progress
+status: done
 parent: S-0601
 owner: alex
 created: 2026-11-07T23:48:46Z
-updated: 2026-11-08T01:12:00Z
+updated: 2026-11-08T01:36:34Z
 transitions:
   - to: ready
     at: 2026-11-08T01:11:54Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:12:00Z
     by: agent-S-0601
+  - to: done
+    at: 2026-11-08T01:36:34Z
+    by: agent-S-0601
 stream: S-0601
 tags: [cli]
 touches: [flai/internal/components/props.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs]
+usage:
+  source: log
+  seconds: 1397
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 212
+      cache_read: 4937140
+      cache_write: 80100
+      cost: 1.8037
 ---
 # T-2643 Keep the props node reads under .flai-cache and start node only for a component whose key changed
 

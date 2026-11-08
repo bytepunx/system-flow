@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1266
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 206
-      cache_read: 4051512
-      cache_write: 55093
-      cost: 1.476
+      input: 28
+      output: 8508
+      cache_read: 4115139
+      cache_write: 126127
+      cost: 1.7063
 ---
 # T-2678 The markdown lint of a folder lints its files on a bounded pool of workers
 

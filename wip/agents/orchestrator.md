@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2028.2657
-accrued_seconds: 1522896
-tasks_completed: 2268
-last_run: 2026-11-08T00:35:12Z
+accrued_cost: 2029.3514
+accrued_seconds: 1523563
+tasks_completed: 2278
+last_run: 2026-11-08T01:44:29Z
 ---
 
 # Orchestrator activity
@@ -15906,6 +15906,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 32
 - Cost: 0.2834 USD, estimated
+
+### 2026-11-08T01:13:42Z
+
+- Summary: Accepted S-0605 at 8793f269a5f7: close-out passed at the branch head, verifier matched criteria 1-3 to changed files, dry run had no blockers; value 20 USD/week
+- Items: S-0605
+- Seconds: 149
+- Cost: 0.2151 USD, estimated
+
+### 2026-11-08T01:15:27Z
+
+- Summary: Started publish formula instance S-0635 (ready, committed cfd4f1145) after S-0605's acceptance: threshold policy met, count 1 at or over threshold 1, value 20 USD/week against 1000
+- Items: S-0635, S-0605
+- Seconds: 105
+- Cost: 0.0728 USD, estimated
+
+### 2026-11-08T01:16:05Z
+
+- Summary: Ordered ready by throughput after S-0635 joined it: S-0607 1h, S-0604 1h, S-0609 1h, S-0602 1h30m, S-0610 1h30m, S-0635 last (no forecast duration)
+- Items: S-0607, S-0604, S-0609, S-0602, S-0610, S-0635
+- Seconds: 38
+- Cost: 0.0246 USD, estimated
+
+### 2026-11-08T01:16:53Z
+
+- Summary: I accepted S-0605 and merged it into main at commit `8793f269a5f7`. That made a release due, so I started the publish formula as story S-0635.
+- Items: none
+- Seconds: 48
+- Cost: 0.0869 USD, estimated
+
+### 2026-11-08T01:18:20Z
+
+- Summary: Left S-0598 in review: close-out passed at b74843e, but flai accept --dry-run blocks on unticked criterion 3 (under 3 s; medians 2.4-2.7 s, 2 of 5 runs over under load). Opened TH-0907 recommending the operator reword it to the median and tick it.
+- Items: S-0598, TH-0907
+- Seconds: 76
+- Cost: 0.1446 USD, estimated
+
+### 2026-11-08T01:19:00Z
+
+- Summary: Release due on S-0605 (threshold: count 1 of 1, value 20 USD): started no second publish run, since publish instance S-0635 made by flai formula run publish at 01:14:12Z for this batch is already in ready.
+- Items: S-0605, S-0635
+- Seconds: 40
+- Cost: 0.0000 USD
+
+### 2026-11-08T01:19:42Z
+
+- Summary: S-0598 is still in review, because criterion 3 (under 3 s) is not ticked. The release S-0605 made due already has a publish story, S-0635, so I started no second one.
+- Items: none
+- Seconds: 42
+- Cost: 0.2676 USD, estimated
+
+### 2026-11-08T01:43:10Z
+
+- Summary: Recommended an answer on TH-0908, citing design/system/server-performance.md § Where the time goes
+- Items: S-0606
+- Seconds: 90
+- Cost: 0.1679 USD, estimated
+
+### 2026-11-08T01:43:42Z
+
+- Summary: Recommended on TH-0908 (answer_threads autonomous, escalated as a scope change): option 1, put wip/threads, wip/messages, design/digest, design/issues, and design/adrs on the watcher's slow tier with atomic issue and ADR writes, keeping S-0606 criterion 3's 30 ms target (measured 22 to 23 ms CPU a fast look vs about 45 ms with only the archive). Source: server-performance.md § Where the time goes.
+- Items: S-0606, TH-0908
+- Seconds: 32
+- Cost: 0.0224 USD, estimated
+
+### 2026-11-08T01:44:29Z
+
+- Summary: I posted a recommendation on TH-0908. Nothing else was owed on this run's reason, and flai serve says my reasons are done, so I'm ending.
+- Items: none
+- Seconds: 47
+- Cost: 0.0838 USD, estimated
 
 ## Refusals
 

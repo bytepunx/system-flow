@@ -24,16 +24,16 @@ touches: [flai/internal/mdlint/config.go, flai/internal/mdlint/kept.go, flai/int
 after: [T-2678]
 usage:
   source: log
-  seconds: 1438
+  seconds: 1483
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 258
-      cache_read: 6043215
-      cache_write: 670922
-      cost: 2.4132
+      input: 47
+      output: 14567
+      cache_read: 7045896
+      cache_write: 215954
+      cost: 2.9215
 ---
 # T-2685 The markdown lint keeps each file's findings under .flai-cache, keyed by its stat and the lint configuration's hash
 

@@ -3,11 +3,11 @@ id: T-2633
 type: task
 nature: improvement
 title: check.Run runs its independent rules at once and gives the same findings in the same order
-status: in-progress
+status: done
 parent: S-0601
 owner: alex
 created: 2026-11-07T23:48:15Z
-updated: 2026-11-08T01:11:52Z
+updated: 2026-11-08T01:35:19Z
 transitions:
   - to: ready
     at: 2026-11-08T01:11:50Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:11:52Z
     by: agent-S-0601
+  - to: done
+    at: 2026-11-08T01:35:19Z
+    by: agent-S-0601
 stream: S-0601
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/concurrent_test.go]
+usage:
+  source: log
+  seconds: 1405
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 271
+      cache_read: 7785874
+      cache_write: 350623
+      cost: 2.925
 ---
 # T-2633 check.Run runs its independent rules at once and gives the same findings in the same order
 

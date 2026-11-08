@@ -3,12 +3,18 @@ id: T-2648
 type: task
 nature: improvement
 title: Measure a whole flai check --strict before and after and record it in server-performance.md and component-library.md
-status: backlog
+status: in-progress
 parent: S-0601
 owner: alex
 created: 2026-11-07T23:49:12Z
-updated: 2026-11-07T23:49:12Z
-transitions: []
+updated: 2026-11-08T01:45:26Z
+transitions:
+  - to: ready
+    at: 2026-11-08T01:45:22Z
+    by: agent-S-0601
+  - to: in-progress
+    at: 2026-11-08T01:45:26Z
+    by: agent-S-0601
 stream: S-0601
 tags: [cli]
 touches: [design/system/server-performance.md, design/system/component-library.md]

@@ -3,12 +3,21 @@ id: T-2619
 type: task
 nature: improvement
 title: Measure a watcher walk and item.get with 13 at once before and after on the operator's host, and record them with the snapshot and the slow tier in the design
-status: backlog
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-07T22:49:36Z
-updated: 2026-11-07T22:49:36Z
-transitions: []
+updated: 2026-11-08T01:39:29Z
+transitions:
+  - to: ready
+    at: 2026-11-08T01:21:00Z
+    by: agent-S-0606
+  - to: in-progress
+    at: 2026-11-08T01:21:04Z
+    by: agent-S-0606
+  - to: done
+    at: 2026-11-08T01:39:29Z
+    by: agent-S-0606
 stream: S-0606
 tags: [cli]
 touches: [design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]

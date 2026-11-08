@@ -3,11 +3,11 @@ id: T-2686
 type: task
 nature: improvement
 title: The design and the backup runbook say which parses and lint findings flai keeps under .flai-cache
-status: in-progress
+status: done
 parent: S-0600
 owner: alex
 created: 2026-11-07T23:51:16Z
-updated: 2026-11-08T01:02:14Z
+updated: 2026-11-08T01:15:46Z
 transitions:
   - to: ready
     at: 2026-11-08T01:02:12Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-08T01:02:14Z
     by: agent-S-0600
+  - to: done
+    at: 2026-11-08T01:15:46Z
+    by: agent-S-0600
 stream: S-0600
 tags: [cli, docs]
 touches: [design/system/flai-cli.md, docs/operators/runbooks/backup.md]
 after: [T-2682, T-2685]
+usage:
+  source: log
+  seconds: 812
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5303
+      cache_read: 2565103
+      cache_write: 78619
+      cost: 1.0636
 ---
 # T-2686 The design and the backup runbook say which parses and lint findings flai keeps under .flai-cache
 

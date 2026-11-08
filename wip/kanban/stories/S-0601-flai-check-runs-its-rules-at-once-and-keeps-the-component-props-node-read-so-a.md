@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-08T01:10:39Z
+updated: 2026-11-08T01:45:03Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:15Z
@@ -23,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1480
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-08
+      hand_edits: 1
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 618
+      cache_read: 14496228
+      cache_write: 665652
+      cost: 5.4506
   strategic:
     - kind: orchestrator
       seconds: 32
@@ -63,8 +75,8 @@ Cause 11 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `check.Run` runs its independent rules at once, gathering their findings under one lock, and gives the same findings in the same order as before, which a test over a fixture project with a finding of every rule shows.
-- [ ] The props `node` reads are kept under `.flai-cache`, keyed by each component file's path, size, and modification time and by the sub-project's svelte version, and `node` starts only for a component whose key changed.
+- [x] `check.Run` runs its independent rules at once, gathering their findings under one lock, and gives the same findings in the same order as before, which a test over a fixture project with a finding of every rule shows.
+- [x] The props `node` reads are kept under `.flai-cache`, keyed by each component file's path, size, and modification time and by the sub-project's svelte version, and `node` starts only for a component whose key changed.
 - [ ] A whole `flai check --strict` on this repository, with nothing changed since the last, takes under 2 s, and server-performance.md records the before and after.
 
 ## Tasks
