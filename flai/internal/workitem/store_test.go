@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -341,4 +342,82 @@ func TestCloneSharesNothing(t *testing.T) {
 		}
 	}
 	shared("Item", reflect.ValueOf(it), reflect.ValueOf(c))
+}
+
+// A cold list parses a folder's files on more than one worker, at most the
+// bound, each file once, and lists them in name order as one by one would.
+func TestAColdListParsesOnABoundedPool(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	for range 40 {
+		mustCreate(t, r, Story, "Story", "E-0001")
+	}
+	age(t, r, time.Now().Add(-time.Hour))
+	var inFlight, most atomic.Int32
+	readItem = func(path string) (*Item, error) {
+		n := inFlight.Add(1)
+		for m := most.Load(); n > m && !most.CompareAndSwap(m, n); m = most.Load() {
+		}
+		time.Sleep(5 * time.Millisecond)
+		inFlight.Add(-1)
+		return ReadItem(path)
+	}
+	t.Cleanup(func() { readItem = ReadItem })
+	dir := r.ItemDir(Story, false)
+	before := parses(dir)
+	items, err := r.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parses(dir) - before; got != 40 {
+		t.Errorf("a cold list parsed %d story files, want each of 40 once", got)
+	}
+	got := int(most.Load())
+	if got > parsers() {
+		t.Errorf("%d parses ran at once, more than the bound %d", got, parsers())
+	}
+	if parsers() > 1 && got < 2 {
+		t.Errorf("a cold list parsed on %d worker, want more than one (bound %d)", got, parsers())
+	}
+	files, _ := filepath.Glob(filepath.Join(dir, "*.md"))
+	var stories []*Item
+	for _, it := range items {
+		if it.Type == Story {
+			stories = append(stories, it)
+		}
+	}
+	if len(stories) != len(files) {
+		t.Fatalf("listed %d stories, want %d", len(stories), len(files))
+	}
+	for i, path := range files { // Glob sorts, as ReadDir does
+		want, err := ReadItem(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if stories[i].Path != want.Path || stories[i].ID != want.ID || stories[i].Marshal() != want.Marshal() {
+			t.Errorf("story %d lists as %s at %s, want %s at %s", i, stories[i].ID, stories[i].Path, want.ID, want.Path)
+		}
+	}
+}
+
+// A damaged item fails the list with the error its parse gives, as it did
+// before the pool.
+func TestAListOfADamagedItemFailsWithItsParseError(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	for range 10 {
+		mustCreate(t, r, Story, "Story", "E-0001")
+	}
+	damaged := mustCreate(t, r, Story, "Damaged", "E-0001").Path
+	if err := os.WriteFile(damaged, []byte("---\nid: [unclosed\n---\n# no\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, want := ReadItem(damaged)
+	if want == nil {
+		t.Fatal("the damaged item parses")
+	}
+	_, err := r.List(false)
+	if err == nil || err.Error() != want.Error() {
+		t.Errorf("list of a damaged item: %v, want %v", err, want)
+	}
 }
