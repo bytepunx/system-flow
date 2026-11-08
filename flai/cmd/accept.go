@@ -454,11 +454,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// what the acceptance commits from the main checkout passes the lint
 	// its fix leaves, or nothing changes (S-0367, TH-0413)
 	if useGit {
-		linted, err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root, leftUncommitted(res))
-		if err != nil {
-			return nil, err
+		if paths, ok := a.previewedToLint(it.ID, repo, res, leftUncommitted(res)); ok {
+			linted, err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root, paths)
+			if err != nil {
+				return nil, err
+			}
+			acc.linted = linted
 		}
-		acc.linted = linted
 	}
 	if res.CommitOnly {
 		return a.finishCommit(repo, it, acc, o, a.answerRelease(repo, it, useGit))
@@ -986,7 +988,11 @@ func (a *app) commitSharedBeforeMerge(repo *workitem.Repo, it *workitem.Item, re
 	if len(overwritten) == 0 {
 		return nil
 	}
-	a.fixUncommitted(context.Background(), it.ID, repo.Root, res.Uncommitted, linted)
+	// nothing has changed the checkout since the preview read it but the
+	// preflight fix, which changes no file's place (S-0609)
+	if paths, ok := a.previewedToLint(it.ID, repo, res, res.Uncommitted); ok {
+		a.fixPaths(context.Background(), it.ID, repo.Root, paths, linted)
+	}
 	args := []string{"add", "-A", "--"}
 	for _, p := range res.SharedUncommitted {
 		args = append(args, ":(literal)"+p)

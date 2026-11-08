@@ -7,7 +7,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
 
 // S-0051, ADR-0248: the dry run lists the main checkout's uncommitted files
@@ -113,5 +116,77 @@ func TestAcceptReportsUncommittedPathsInTheDryRun(t *testing.T) {
 	}
 	if st := gitIn(t, root, "status", "--porcelain"); st != "" {
 		t.Errorf("tree should be clean after acceptance with --yes: %s", st)
+	}
+}
+
+// statusRunner is the real runner that records, in order, each git status
+// --porcelain run in the checkout at root, with the git commands run there
+// before it.
+type statusRunner struct {
+	execx.System
+	root  string
+	mu    sync.Mutex
+	reads [][]string
+	since []string
+}
+
+func (s *statusRunner) Run(dir, name string, args ...string) (string, error) {
+	if name == "git" && samePath(dir, s.root) {
+		s.mu.Lock()
+		if slices.Contains(args, "status") && slices.Contains(args, "--porcelain") {
+			s.reads = append(s.reads, s.since)
+			s.since = nil
+		} else {
+			s.since = append(s.since, strings.Join(args, " "))
+		}
+		s.mu.Unlock()
+	}
+	return s.System.Run(dir, name, args...)
+}
+
+// samePath reports whether a and b name one folder.
+func samePath(a, b string) bool {
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && ra == rb
+}
+
+// S-0609 criterion 2: an acceptance reads the main checkout's git status
+// once before it changes anything and once more only before its commit,
+// after the merge and the archive changed the checkout; the file outside
+// the shared set is left as it is (ADR-0248).
+func TestAcceptReadsTheMainCheckoutsStatusOncePerState(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "tester")
+	log := filepath.Join(t.TempDir(), "lint.log")
+	root := lintProject(t, countingTier(log))
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/new.md", "fixme\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	for rel, content := range map[string]string{"wip/notes/n.md": "fixme\n", "notes/mine.txt": "mine\n"} {
+		_ = os.MkdirAll(filepath.Join(root, filepath.Dir(rel)), 0o755)
+		if err := os.WriteFile(filepath.Join(root, rel), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := &statusRunner{root: root}
+	if out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: r}, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %d %s %s", code, out, errOut)
+	}
+	// before S-0609 the preflight lint read it again between the two, with
+	// nothing changed since the preview's read
+	if len(r.reads) != 2 {
+		t.Fatalf("git status --porcelain of the main checkout ran %d times, want 2: %q", len(r.reads), r.reads)
+	}
+	if !slices.ContainsFunc(r.reads[1], func(c string) bool { return strings.HasPrefix(c, "merge --ff-only") }) {
+		t.Errorf("the second read follows the merge, which changed the checkout; it followed %q", r.reads[1])
+	}
+	if got := runsNaming(t, log, "fix", "wip/notes/n.md"); got != 1 {
+		t.Errorf("wip/notes/n.md is fixed once, from the preview's read: %d", got)
+	}
+	if got := gitIn(t, root, "show", "HEAD:wip/notes/n.md"); got != "fixed" {
+		t.Errorf("the acceptance committed wip/notes/n.md as %q", got)
+	}
+	if got := gitIn(t, root, "status", "--porcelain"); got != "?? notes/" {
+		t.Errorf("the file outside the shared set is left as it is: %q", got)
 	}
 }

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -64,15 +66,30 @@ func (a *app) uncommittedToLint(id, root string, left []string) ([]string, bool)
 	return verify.WithoutLeft(paths, left), true
 }
 
-// fixUncommitted runs the lint fix before a commit over what the checkout at
-// root has not committed but the paths left, passing over the files linted
-// holds unchanged, and logs at warn what it could not do. With none left to
-// fix it runs nothing (S-0609).
-func (a *app) fixUncommitted(ctx context.Context, id, root string, left []string, linted lintedFiles) {
-	paths, ok := a.uncommittedToLint(id, root, left)
-	if !ok {
-		return
+// previewedToLint are the main checkout's uncommitted files that the preview
+// res read before the acceptance changed anything, but the paths left, so
+// that the lint before the first change reads git status no second time
+// (S-0609). The preview reads repo's main checkout; an acceptance whose
+// checkout is another reads its own.
+func (a *app) previewedToLint(id string, repo *workitem.Repo, res *preview.Acceptance, left []string) ([]string, bool) {
+	if filepath.Clean(repo.Root) != filepath.Clean(repo.MainRoot) {
+		return a.uncommittedToLint(id, repo.Root, left)
 	}
+	return verify.WithoutLeft(slices.Concat(res.SharedUncommitted, res.Uncommitted), left), true
+}
+
+// fixUncommitted runs the lint fix before a commit over what the checkout at
+// root has not committed but the paths left, as fixPaths does.
+func (a *app) fixUncommitted(ctx context.Context, id, root string, left []string, linted lintedFiles) {
+	if paths, ok := a.uncommittedToLint(id, root, left); ok {
+		a.fixPaths(ctx, id, root, paths, linted)
+	}
+}
+
+// fixPaths runs the lint fix over the paths of the checkout at root, passing
+// over the files linted holds unchanged, and logs at warn what it could not
+// do. With none left to fix it runs nothing (S-0609).
+func (a *app) fixPaths(ctx context.Context, id, root string, paths []string, linted lintedFiles) {
 	var changed []string
 	for _, p := range paths {
 		if !linted.unchanged(root, p) {
@@ -103,14 +120,14 @@ type unfixedAt struct {
 	fixIn    string // where to correct it, as the refusal says it
 }
 
-// refuseUnfixedUncommitted fixes the lint of what the main checkout at root
-// has not committed, but the paths left, and refuses id's acceptance for what
-// the fix left, before anything else changes. The fix's own exit says what it
-// left; only when it cannot say is the check run after it (S-0609). It
-// answers the files whose lint passed, for the fixes before the commits.
-func (a *app) refuseUnfixedUncommitted(ctx context.Context, id, root string, left []string) (lintedFiles, error) {
-	paths, ok := a.uncommittedToLint(id, root, left)
-	if !ok || len(paths) == 0 {
+// refuseUnfixedUncommitted fixes the lint of paths, what the main checkout at
+// root has not committed and the acceptance commits, and refuses id's
+// acceptance for what the fix left, before anything else changes. The fix's
+// own exit says what it left; only when it cannot say is the check run after
+// it (S-0609). It answers the files whose lint passed, for the fixes before
+// the commits.
+func (a *app) refuseUnfixedUncommitted(ctx context.Context, id, root string, paths []string) (lintedFiles, error) {
+	if len(paths) == 0 {
 		return nil, nil
 	}
 	at := unfixedAt{root: root, checkout: verify.CheckoutMain, where: "the main checkout's uncommitted files", fixIn: "in the main checkout"}

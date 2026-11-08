@@ -225,11 +225,14 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		return nil, fmt.Errorf("%s is a task; accept its story instead", it.ID)
 	}
 	res := &Acceptance{ID: it.ID, Status: it.Status, DryRun: true, Orchestrator: opts.Orchestrator}
+	// the main checkout's git status is read once, for every question the
+	// preview asks of it (S-0609)
+	dirty := &mainStatus{r: r, root: repo.MainRoot}
 	switch {
 	case it.Status == workitem.Done && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.
 		res.Resumed = true
-	case it.Status == workitem.Done && useGit && uncommitted(r, repo.MainRoot, it.Path):
+	case it.Status == workitem.Done && useGit && dirty.has(it.Path):
 		// Done and archived, its archived file not committed: its acceptance
 		// commit failed (I-0100), so the commit is finished. The item's own
 		// file decides, not the wip folder, where flai leaves other changes
@@ -247,10 +250,16 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		// the shared set is committed, the rest left as it is (ADR-0248);
 		// what git cannot read is a blocker, since the merge would meet it
 		// unread
-		if d, err := storygit.DirtyMain(r, repo); err != nil {
+		if files, err := dirty.files(); err != nil {
 			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot %v", err))
 		} else {
-			res.SharedUncommitted, res.Uncommitted = d.Shared, d.Rest
+			for _, f := range files {
+				if storygit.InSharedSet(repo.Manifest, f) {
+					res.SharedUncommitted = append(res.SharedUncommitted, f)
+				} else {
+					res.Uncommitted = append(res.Uncommitted, f)
+				}
+			}
 		}
 		if _, err := r.Run(repo.MainRoot, "git", "var", "GIT_COMMITTER_IDENT"); err != nil {
 			res.Blockers = append(res.Blockers, "git has no committer identity here; set user.name and user.email (git config), or restart the dashboard with flai dashboard so it passes yours into the container")
@@ -261,7 +270,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if res.CommitOnly {
 		// The merge, the transition, and the archive are behind it, so
 		// nothing they check applies; the commit names the epic it archived.
-		res.Epic = archivedEpic(r, repo, it)
+		res.Epic = archivedEpic(repo, it, dirty)
 		threadsToResolve(repo, it, res)
 		return res, nil
 	}
@@ -639,22 +648,70 @@ func ThreadItems(items []*workitem.Item, it *workitem.Item, epic *workitem.Follo
 	return ids
 }
 
-// uncommitted reports whether path has changes the checkout at root has not
-// committed, staged or not; false when git cannot say.
-func uncommitted(r execx.Runner, root, path string) bool {
-	st, err := r.Run(root, "git", "status", "--porcelain", "--", path)
-	return err == nil && strings.TrimSpace(st) != ""
+// mainStatus is the main checkout's uncommitted and untracked files, read
+// with storygit.DirtyFiles the first time they are asked for and kept for the
+// rest of the preview (S-0609).
+type mainStatus struct {
+	r     execx.Runner
+	root  string
+	read  bool
+	dirty []string
+	err   error
+}
+
+// files are the checkout's uncommitted and untracked files, each file of an
+// untracked folder named, or why git could not read them.
+func (m *mainStatus) files() ([]string, error) {
+	if !m.read {
+		m.dirty, m.err = storygit.DirtyFiles(m.r, m.root)
+		m.read = true
+	}
+	return m.dirty, m.err
+}
+
+// has reports whether the file at path, absolute or relative to the
+// checkout, has changes the checkout has not committed, staged or not;
+// false when git cannot say.
+func (m *mainStatus) has(path string) bool {
+	if filepath.IsAbs(path) {
+		rel, ok := relativeTo(m.root, path)
+		if !ok {
+			return false
+		}
+		path = rel
+	}
+	files, err := m.files()
+	return err == nil && slices.Contains(files, filepath.ToSlash(path))
+}
+
+// relativeTo is path, absolute, relative to root, with the symbolic links of
+// both resolved when it does not lie below root as written, as git resolves
+// them; false when it lies outside root.
+func relativeTo(root, path string) (string, bool) {
+	below := func(root, path string) (string, bool) {
+		rel, err := filepath.Rel(root, path)
+		return rel, err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	}
+	if rel, ok := below(root, path); ok {
+		return rel, true
+	}
+	rr, err1 := filepath.EvalSymlinks(root)
+	rp, err2 := filepath.EvalSymlinks(path)
+	if err1 != nil || err2 != nil {
+		return "", false
+	}
+	return below(rr, rp)
 }
 
 // archivedEpic is the walk the epic of story took with it to done, when the
 // epic's archived file is not committed either: the acceptance whose commit
 // is missing archived it with the story. Nil otherwise.
-func archivedEpic(r execx.Runner, repo *workitem.Repo, story *workitem.Item) *workitem.Followed {
+func archivedEpic(repo *workitem.Repo, story *workitem.Item, dirty *mainStatus) *workitem.Followed {
 	if story.Type != workitem.Story || story.Parent == "" {
 		return nil
 	}
 	epic, err := repo.Get(story.Parent)
-	if err != nil || epic.Type != workitem.Epic || epic.Status != workitem.Done || !epic.Archived || !uncommitted(r, repo.MainRoot, epic.Path) {
+	if err != nil || epic.Type != workitem.Epic || epic.Status != workitem.Done || !epic.Archived || !dirty.has(epic.Path) {
 		return nil
 	}
 	return &workitem.Followed{ID: epic.ID, Type: epic.Type, Title: epic.Title, From: walkedFrom(epic.Transitions), To: workitem.Done, Story: story.ID}
