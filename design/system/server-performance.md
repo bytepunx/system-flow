@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -358,6 +358,23 @@ Each cause from 8 to 21 has a draft story under [E-0033](../../wip/kanban/epics/
 | 19 | [S-0609](../../wip/kanban/stories/S-0609-flai-accept-and-flai-task-done-lint-markdown-once-per-set-with-the-installed.md) flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance |
 | 20 | [S-0610](../../wip/kanban/stories/S-0610-the-close-out-runs-independent-test-tiers-at-once-and-smoke-skips-what-the.md) The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out |
 | 21 | [S-0611](../../wip/kanban/stories/S-0611-the-dashboard-asks-threads-list-for-open-threads-and-agent-status-for-open-runs.md) The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB |
+
+### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
+
+The planner's first idea was to take the projects below the import folders from the running flai serve's status. That status cannot say which import folder a registered project is below, since `serve.Place` leaves registered projects out of `ImportProjects` and `Unserved`. So the walk is replaced, not cached.
+
+- `serve.ImportRootOf` (`flai/internal/serve/below.go`) answers which import folder a root is below from the root's own path. It follows each import folder's walk down that path alone, by the walk's rules: no hidden or skipped folder, no symbolic link, at most `candidateDepth` deep, no repository above the root. The root must be a repository with a `system-flow.yaml`. That is a few stats a project, with no walk and no manifest load. `TestImportRootOfAgreesWithTheWalk` checks it against the walk on every folder of a tree that has each of those cases, with overlapping import folders.
+- `servedView` (`flai/cmd/serve_actions.go`) reads the configuration once a call. It no longer asks for the candidates, which the settings page does not show, so `serve.FindCandidates` no longer walks the import folders for it. While flai serve runs, a `settings.get` walks no folder. When it does not run, `belowImportRoots`' one `FindBelow` is the only walk. `TestServedViewSaysWhichImportFolderEachProjectIsBelow` (`flai/cmd/serve_project_test.go`) checks the answer for three served projects under two import folders, with flai serve running and stopped.
+- `settings.get` passes its context to `Host.Settings`, which records three phases: `settings.config`, the host configuration and what it says of the project; `settings.served`, the projects flai serve serves; and `settings.project`, the project's own manifest and MCP server.
+
+Measured on 2026-11-08 between 00:50 and 00:55 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), with the host's own configuration: flai serve running, 13 served projects, and 3 import folders. Both binaries ran `flai hostapi --timing settings.get` from the main checkout. Before is `main` at 9fa3fec41; after is `story/S-0605` at 2e6f35ff4. The two binaries took turns for eight rounds, and then the story's binary ran 20 more times. Both answered the same `host.projects`, byte for byte, and the same keys. The host was very busy: the load average was 58 to 63 over one minute and about 128 over fifteen.
+
+| Binary | Runs | p50 | Range | Where the time went (typical run) |
+|--------|-----:|----:|-------|-----------------------------------|
+| `main` | 8 | 336 ms | 268 to 601 ms | no phases recorded |
+| S-0605 | 28 | 91 ms | 62 to 211 ms | `settings.served` 33, `settings.project` 26, `settings.config` 17 |
+
+The serve log's p50 of 825 ms was taken inside flai serve, beside the other requests it was answering. A one-shot process does not have that contention, so `main` measured 336 ms here. The 13 walks are gone. In the 28 runs, 18 answered under 100 ms; the slowest ran during the busiest moments. What is left is in `settings.served`: `readServeStatus` opens every registered project to describe it. `settings.project` is the project's own `workitem.Open`. Neither grows with the import folders.
 
 ## Stories
 
