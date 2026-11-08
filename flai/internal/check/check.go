@@ -13,9 +13,11 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -112,44 +114,110 @@ type checker struct {
 	write *writeScope
 }
 
-// Run executes every rule against the repo.
+// rule is one of the rules Run runs; first marks workItems, which fills the
+// checker's byID that the rules after it read, so it runs before them, alone.
+type rule struct {
+	run   func(*checker)
+	first bool
+}
+
+// sequence is every rule Run runs, in the order their findings are merged:
+// the order Run ran them in, one after another, before S-0601. sortFindings
+// is stable, so findings at one path and line keep this order.
+var sequence = []rule{
+	{run: (*checker).layout},
+	{run: (*checker).instructions},
+	{run: (*checker).workItems, first: true},
+	{run: (*checker).narratives},
+	{run: (*checker).activities},
+	{run: (*checker).overlap},
+	{run: (*checker).componentTag},
+	{run: (*checker).after},
+	{run: (*checker).touchesFolder},
+	{run: (*checker).afterHub},
+	{run: (*checker).afterReason},
+	{run: (*checker).unaccepted},
+	{run: (*checker).epicLags},
+	{run: (*checker).board},
+	{run: (*checker).documentation},
+	{run: (*checker).adrIndex},
+	{run: (*checker).conventions},
+	{run: (*checker).roles},
+	{run: (*checker).formulas},
+	{run: (*checker).issues},
+	{run: (*checker).experiments},
+	{run: (*checker).analysis},
+	{run: (*checker).digest},
+	{run: (*checker).designTokens},
+	{run: (*checker).componentExamples},
+	{run: (*checker).threads},
+	{run: (*checker).messages},
+	{run: (*checker).markdown},
+	{run: (*checker).conflictMarkers},
+}
+
+// Run executes every rule against the repo: workItems first, then the rest
+// at once on at most GOMAXPROCS workers, each into a Result of its own, merged
+// in sequence's order (S-0601). The rules only read, but for what each adds
+// to its own Result; the topic vocabulary they share is worked out before.
 func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
 	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, res: &Result{Items: len(items)}}
-	c.layout()
-	c.instructions()
-	c.workItems()
-	c.narratives()
-	c.activities()
-	c.overlap()
-	c.componentTag()
-	c.after()
-	c.touchesFolder()
-	c.afterHub()
-	c.afterReason()
-	c.unaccepted()
-	c.epicLags()
-	c.board()
-	c.documentation()
-	c.adrIndex()
-	c.conventions()
-	c.roles()
-	c.formulas()
-	c.issues()
-	c.experiments()
-	c.analysis()
-	c.digest()
-	c.designTokens()
-	c.componentExamples()
-	c.threads()
-	c.messages()
-	c.markdown()
-	c.conflictMarkers()
+	c.vocab = Vocabulary(repo, items)
+	results := make([]*Result, len(sequence))
+	for i, r := range sequence {
+		if r.first {
+			results[i] = c.runRule(r.run)
+		}
+	}
+	next := make(chan int)
+	var wg sync.WaitGroup
+	for range min(runtime.GOMAXPROCS(0), len(sequence)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range next {
+				results[i] = c.runRule(sequence[i].run)
+			}
+		}()
+	}
+	for i, r := range sequence {
+		if !r.first {
+			next <- i
+		}
+	}
+	close(next)
+	wg.Wait()
+	for _, r := range results {
+		c.res.absorb(r)
+	}
 	sortFindings(c.res.Findings)
 	return c.res, nil
+}
+
+// runRule runs one rule on a copy of c with a Result of its own, so that what
+// add, advise, and the rules that set Stories write by the last finding's
+// index stays in that rule's findings, and returns that Result. The copy
+// shares c's items, byID, and vocab, which no rule writes.
+func (c *checker) runRule(run func(*checker)) *Result {
+	rc := *c
+	rc.res = &Result{}
+	run(&rc)
+	return rc.res
+}
+
+// absorb adds o's findings after r's and o's counts to r's.
+func (r *Result) absorb(o *Result) {
+	r.Findings = append(r.Findings, o.Findings...)
+	r.Errors += o.Errors
+	r.Warnings += o.Warnings
+	r.Advisory += o.Advisory
+	r.Outside += o.Outside
+	r.outsideErrors += o.outsideErrors
+	r.outsideWarnings += o.outsideWarnings
 }
 
 // Overlaps returns the wip.overlap findings of Run among items, in Run's
