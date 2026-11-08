@@ -5,7 +5,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1004,6 +1006,104 @@ func TestEscalateRefusals(t *testing.T) {
 	for path, was := range before {
 		if readFile(t, path) != was {
 			t.Errorf("a refused escalation leaves %s as it was:\n%s", path, readFile(t, path))
+		}
+	}
+}
+
+// age moves every conversation's modification time an hour back, out of the
+// racy window, so that what the kept store parsed of it is trusted.
+func age(t *testing.T, r *workitem.Repo) {
+	t.Helper()
+	entries, err := os.ReadDir(Dir(r))
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	for _, e := range entries {
+		if err := os.Chtimes(filepath.Join(Dir(r), e.Name()), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0602: List keeps the conversations it parsed, so a second List with
+// nothing changed parses no file, and a reply written, a conversation added,
+// and one removed are each seen on the next read; changing a conversation
+// read changes nothing the next read returns.
+func TestListKeepsWhatItParsed(t *testing.T) {
+	r := project(t)
+	send(t, r, "S-0001", "S-0002", "First", t0)
+	send(t, r, "S-0003", "S-0002", "Second", t0)
+	age(t, r)
+	if all, err := List(r); err != nil || ids(all) != "MS-0001 MS-0002" {
+		t.Fatalf("first list: %s %v", ids(all), err)
+	}
+	before := kept.Parses()
+	if all, err := List(r); err != nil || ids(all) != "MS-0001 MS-0002" {
+		t.Fatalf("second list: %s %v", ids(all), err)
+	}
+	if n := kept.Parses() - before; n != 0 {
+		t.Errorf("a second List with nothing changed parsed %d files", n)
+	}
+
+	if _, err := Reply(r, "MS-0001", "S-0002", "agent-S-0002", "Agreed.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	all, err := List(r)
+	if err != nil || len(all) != 2 || len(all[0].Entries()) != 2 || all[0].Entries()[1].Text != "Agreed." {
+		t.Errorf("a reply written is not seen: %v %+v", err, all)
+	}
+	if c, err := Get(r, "MS-0001"); err != nil || len(c.Entries()) != 2 {
+		t.Errorf("Get misses the reply: %v %+v", err, c)
+	}
+	send(t, r, "S-0001", "S-0003", "Third", t0)
+	if all, err := List(r); err != nil || ids(all) != "MS-0001 MS-0002 MS-0003" {
+		t.Errorf("a conversation added is not seen: %s %v", ids(all), err)
+	}
+	gone, err := Get(r, "MS-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(gone.Path); err != nil {
+		t.Fatal(err)
+	}
+	if all, err := List(r); err != nil || ids(all) != "MS-0001 MS-0003" {
+		t.Errorf("a conversation removed is still seen: %s %v", ids(all), err)
+	}
+	if list, _ := For(r, "S-0002"); ids(list) != "MS-0001" {
+		t.Errorf("For still finds the removed conversation: %s", ids(list))
+	}
+
+	all, _ = List(r)
+	all[0].Title = "changed"
+	all[0].Participants[0] = "changed"
+	again, _ := List(r)
+	if again[0].Title == "changed" || again[0].Participants[0] == "changed" {
+		t.Errorf("changing a conversation read changed the kept one: %+v", again[0])
+	}
+}
+
+// S-0602: two Lists at once return equal conversations.
+func TestListsAtOnceAgree(t *testing.T) {
+	r := project(t)
+	for i := 0; i < 5; i++ {
+		send(t, r, "S-0001", "S-0002", "Message", t0.Add(time.Duration(i)*time.Second))
+	}
+	age(t, r)
+	got := make([][]*Conversation, 8)
+	errs := make([]error, len(got))
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got[i], errs[i] = List(r)
+		}()
+	}
+	wg.Wait()
+	for i := range got {
+		if errs[i] != nil || len(got[i]) != 5 || !reflect.DeepEqual(got[i], got[0]) {
+			t.Errorf("list %d: %s %v, want %s", i, ids(got[i]), errs[i], ids(got[0]))
 		}
 	}
 }

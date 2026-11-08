@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 )
 
 // shareAt is when the shares in these tests were made.
@@ -339,5 +341,96 @@ func TestSharesWith(t *testing.T) {
 	}
 	if got := h.SharesWith("S-0003"); got != nil {
 		t.Errorf("a share that ended: %+v", got)
+	}
+}
+
+// ageConversations moves every conversation's modification time an hour
+// back, out of the racy window, so that what the kept store parsed of it is
+// trusted.
+func ageConversations(t *testing.T, r *Repo) {
+	t.Helper()
+	dir := filepath.Join(r.WipDir(), messagesFolder)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	for _, e := range entries {
+		if err := os.Chtimes(filepath.Join(dir, e.Name()), old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// S-0602: Conversations keeps what it parsed of each conversation, so a
+// second read with nothing changed parses no file, and a share written, a
+// conversation added, and one removed are each seen on the next read.
+func TestConversationsKeepWhatTheyParsed(t *testing.T) {
+	r := newProject(t)
+	share := func(held string) string {
+		return "shares:\n  - holder: S-0001\n    held: " + held + "\n    paths: [flai/cmd]\n    split: s\n    by: agent\n    at: " + shareAt + "\n"
+	}
+	writeConversationBody(t, r, "MS-0001-a.md", "id: MS-0001\nfrom: S-0009\nto: S-0001\nstatus: open\n", askEntry("2026-10-08T10:00:00Z", "S-0009"))
+	writeConversationBody(t, r, "MS-0002-b.md", "id: MS-0002\nfrom: S-0008\nto: S-0001\nstatus: open\n"+share("S-0008"), "")
+	ageConversations(t, r)
+	shares, asks := r.Conversations()
+	if len(shares) != 1 || len(asks) != 1 {
+		t.Fatalf("first read: shares %+v, asks %+v", shares, asks)
+	}
+	before := keptConversations.Parses()
+	if again, againAsks := r.Conversations(); !reflect.DeepEqual(again, shares) || !reflect.DeepEqual(againAsks, asks) {
+		t.Errorf("second read differs: %+v %+v", again, againAsks)
+	}
+	if n := keptConversations.Parses() - before; n != 0 {
+		t.Errorf("a second read with nothing changed parsed %d files", n)
+	}
+
+	writeConversationBody(t, r, "MS-0001-a.md", "id: MS-0001\nfrom: S-0009\nto: S-0001\nstatus: open\n"+share("S-0009"), askEntry("2026-10-08T10:00:00Z", "S-0009"))
+	if shares, _ := r.Conversations(); len(shares) != 2 || shares[0].Conversation != "MS-0001" {
+		t.Errorf("a share written is not seen: %+v", shares)
+	}
+	writeConversationBody(t, r, "MS-0003-c.md", "id: MS-0003\nfrom: S-0007\nto: S-0001\nstatus: open\n"+share("S-0007"), "")
+	if shares, _ := r.Conversations(); len(shares) != 3 || shares[2].Conversation != "MS-0003" {
+		t.Errorf("a conversation added is not seen: %+v", shares)
+	}
+	if err := os.Remove(filepath.Join(r.WipDir(), messagesFolder, "MS-0002-b.md")); err != nil {
+		t.Fatal(err)
+	}
+	shares, _ = r.Conversations()
+	if len(shares) != 2 || shares[0].Conversation != "MS-0001" || shares[1].Conversation != "MS-0003" {
+		t.Errorf("a conversation removed is still seen: %+v", shares)
+	}
+
+	shares[0].Paths[0] = "changed"
+	if again, _ := r.Conversations(); again[0].Paths[0] != "flai/cmd" {
+		t.Errorf("changing a share read changed the kept one: %+v", again)
+	}
+}
+
+// S-0602: two reads of the conversations at once get equal answers.
+func TestConversationsReadAtOnceAgree(t *testing.T) {
+	r := newProject(t)
+	for _, id := range []string{"MS-0001", "MS-0002", "MS-0003"} {
+		writeConversationBody(t, r, id+"-x.md", "id: "+id+"\nfrom: S-0009\nto: S-0001\nstatus: open\nshares:\n  - holder: S-0001\n    held: S-0009\n    paths: [a]\n    split: s\n    by: agent\n    at: "+shareAt+"\n", askEntry("2026-10-08T10:00:00Z", "S-0009"))
+	}
+	ageConversations(t, r)
+	type answer struct {
+		shares []Share
+		asks   []Ask
+	}
+	got := make([]answer, 8)
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got[i].shares, got[i].asks = r.Conversations()
+		}()
+	}
+	wg.Wait()
+	for i := range got {
+		if len(got[i].shares) != 3 || !reflect.DeepEqual(got[i], got[0]) {
+			t.Errorf("read %d: %+v, want %+v", i, got[i], got[0])
+		}
 	}
 }

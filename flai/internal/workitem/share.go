@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -80,45 +80,88 @@ func (r *Repo) Shares() []Share {
 // whose holder is the other. A conversation that cannot be read or parsed is
 // skipped, so that holds never fail on one.
 func (r *Repo) Conversations() ([]Share, []Ask) {
-	files, err := filepath.Glob(filepath.Join(r.WipDir(), messagesFolder, "MS-*.md"))
+	files, err := keptConversations.List(filepath.Join(r.WipDir(), messagesFolder), func(name string) bool {
+		return strings.HasPrefix(name, "MS-") && strings.HasSuffix(name, ".md")
+	})
 	if err != nil {
 		return nil, nil
 	}
-	sort.Strings(files)
 	var shares []Share
 	var asks []Ask
 	for _, f := range files {
-		data, err := os.ReadFile(f)
-		if err != nil {
+		if f.Err != nil {
 			continue
 		}
-		fm, body, err := SplitFrontMatter(string(data))
-		if err != nil {
-			continue
-		}
-		var c conversationFrontMatter
-		if err := yaml.Unmarshal([]byte(fm), &c); err != nil || c.Status != "open" {
-			continue
-		}
-		for _, s := range c.Shares {
-			s.Conversation = c.ID
-			shares = append(shares, s)
-		}
-		from, to := CanonicalID(c.From), CanonicalID(c.To)
-		for _, m := range askHeading.FindAllStringSubmatch(body, -1) {
-			held, holder := CanonicalID(m[2]), ""
-			switch held {
-			case from:
-				holder = to
-			case to:
-				holder = from
-			}
-			if holder != "" && holder != held {
-				asks = append(asks, Ask{Conversation: c.ID, Held: held, Holder: holder, At: m[1]})
-			}
-		}
+		shares = append(shares, f.Value.shares...)
+		asks = append(asks, f.Value.asks...)
 	}
 	return shares, asks
+}
+
+// conversationHolds is what Conversations takes of one conversation: the
+// shares it keeps, each naming it, and the messages by flai asking about a
+// hold, both empty unless it is stored open.
+type conversationHolds struct {
+	shares []Share
+	asks   []Ask
+}
+
+// keptConversations keeps what Conversations takes of each conversation, by
+// file, so that a long-running flai parses again only those that changed
+// (S-0602). Package messages keeps its own, of whole conversations.
+var keptConversations = NewKeptFiles(readConversationHolds, conversationHolds.clone)
+
+// clone is a copy of h that shares nothing a caller could change with it.
+func (h conversationHolds) clone() conversationHolds {
+	out := conversationHolds{asks: slices.Clone(h.asks)}
+	if h.shares != nil {
+		out.shares = make([]Share, len(h.shares))
+		for i, s := range h.shares {
+			s.Paths = slices.Clone(s.Paths)
+			out.shares[i] = s
+		}
+	}
+	return out
+}
+
+// readConversationHolds reads the conversation at path for Conversations. A
+// file that cannot be read or does not parse is an error, which Conversations
+// skips.
+func readConversationHolds(path string) (conversationHolds, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return conversationHolds{}, err
+	}
+	fm, body, err := SplitFrontMatter(string(data))
+	if err != nil {
+		return conversationHolds{}, err
+	}
+	var c conversationFrontMatter
+	if err := yaml.Unmarshal([]byte(fm), &c); err != nil {
+		return conversationHolds{}, err
+	}
+	var h conversationHolds
+	if c.Status != "open" {
+		return h, nil
+	}
+	for _, s := range c.Shares {
+		s.Conversation = c.ID
+		h.shares = append(h.shares, s)
+	}
+	from, to := CanonicalID(c.From), CanonicalID(c.To)
+	for _, m := range askHeading.FindAllStringSubmatch(body, -1) {
+		held, holder := CanonicalID(m[2]), ""
+		switch held {
+		case from:
+			holder = to
+		case to:
+			holder = from
+		}
+		if holder != "" && holder != held {
+			h.asks = append(h.asks, Ask{Conversation: c.ID, Held: held, Holder: holder, At: m[1]})
+		}
+	}
+	return h, nil
 }
 
 // WithShares has h treat an overlap that a share in force clears as no

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -328,20 +329,44 @@ func gone(r *workitem.Repo, story string) string {
 	return ""
 }
 
+// kept keeps the conversations List and Get parse, by file, so that a
+// long-running flai parses again only those that changed (S-0602). The
+// writes replace a conversation's file, so the next read sees them by stat.
+var kept = workitem.NewKeptFiles(Read, (*Conversation).clone)
+
+// clone is a copy of c that shares nothing a caller could change with it.
+func (c *Conversation) clone() *Conversation {
+	out := *c
+	out.About = slices.Clone(c.About)
+	out.Participants = slices.Clone(c.Participants)
+	out.Unknown = slices.Clone(c.Unknown)
+	if c.Shares != nil {
+		out.Shares = make([]workitem.Share, len(c.Shares))
+		for i, s := range c.Shares {
+			s.Paths = slices.Clone(s.Paths)
+			out.Shares[i] = s
+		}
+	}
+	return &out
+}
+
 // List loads every conversation, sorted by ID. A missing folder has none.
 func List(r *workitem.Repo) ([]*Conversation, error) {
-	matches, err := filepath.Glob(filepath.Join(Dir(r), "MS-*.md"))
+	files, err := kept.List(Dir(r), func(name string) bool {
+		return strings.HasPrefix(name, "MS-") && strings.HasSuffix(name, ".md")
+	})
 	if err != nil {
 		return nil, err
 	}
 	var out []*Conversation
-	for _, m := range matches {
-		c, err := Read(m)
-		if err != nil {
-			return nil, err
+	for _, f := range files {
+		if f.Err != nil {
+			return nil, f.Err
 		}
-		workitem.WarnUnknown(m, c.Unknown)
-		out = append(out, c)
+		if f.Parsed {
+			workitem.WarnUnknown(f.Path, f.Value.Unknown)
+		}
+		out = append(out, f.Value)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })
 	return out, nil
@@ -353,7 +378,7 @@ func Get(r *workitem.Repo, id string) (*Conversation, error) {
 	for _, cand := range []string{id, canon} {
 		matches, _ := filepath.Glob(filepath.Join(Dir(r), cand+"-*.md"))
 		if len(matches) > 0 {
-			return Read(matches[0])
+			return kept.Read(matches[0])
 		}
 	}
 	return nil, fmt.Errorf("conversation %s not found in %s: flai message list --all lists them", canon, Dir(r))
