@@ -3,11 +3,14 @@ package hostapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -544,5 +547,112 @@ func TestAStatsGetThatJoinedStopsWaitingOnItsOwnContext(t *testing.T) {
 	close(release)
 	if got := <-a; got.err != nil || got.v == nil {
 		t.Errorf("the request that started the computation: %+v %+v", got.v, got.err)
+	}
+}
+
+// undoneGit answers the git a story's undone read runs: main is the main
+// checkout's branch, and a story's branch still removes main's line from
+// the paths undoes names, and from no other. It counts the diffs it has
+// running at once, holding each a little so that reads that overlap show.
+type undoneGit struct {
+	undoes map[string][]string // story → the paths its branch still undoes
+	mu     sync.Mutex
+	now    int
+	most   int
+}
+
+func (g *undoneGit) Run(_, _ string, args ...string) (string, error) {
+	if args[0] == "rev-parse" {
+		return "main", nil
+	}
+	g.mu.Lock()
+	g.now++
+	g.most = max(g.most, g.now)
+	g.mu.Unlock()
+	time.Sleep(5 * time.Millisecond)
+	defer func() { g.mu.Lock(); g.now--; g.mu.Unlock() }()
+	// diff --no-ext-diff --no-color --no-renames -U0 main story/S-nnnn -- path
+	story, path := strings.TrimPrefix(args[6], "story/"), args[8]
+	if slices.Contains(g.undoes[story], path) {
+		return "@@ -2 +1,0 @@\n-main's", nil
+	}
+	return "", nil
+}
+
+func (g *undoneGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (g *undoneGit) LookPath(name string) (string, error) { return name, nil }
+
+// S-0604: board.get reads the undone paths of the story cards in ready, in
+// progress, and review at once, on at most undoneWorkers reads, and each
+// card carries the paths its own record says its branch still undoes,
+// sorted, as the reads one after another gave them; a story with no record,
+// a task, and a done story are not read.
+func TestBoardUndoneReadsTheStoriesAtOnceInOrder(t *testing.T) {
+	p := harbour(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := &undoneGit{undoes: map[string][]string{}}
+	v := workitem.BoardView{Columns: map[string][]workitem.BoardCard{}}
+	want := map[string][]string{}
+	cols := []string{workitem.Ready, workitem.InProgress, workitem.Review}
+	for i := 1; i <= 24; i++ {
+		id := fmt.Sprintf("S-%04d", 100+i)
+		v.Columns[cols[i%3]] = append(v.Columns[cols[i%3]], workitem.BoardCard{ID: id, Type: workitem.Story})
+		if i%6 == 0 {
+			continue // no record
+		}
+		rec := storygit.UndoneRecord{Story: id}
+		for _, name := range []string{"quay.md", "berth.md", "restored.md"} {
+			rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: name, Lines: []string{"main's"}, OldBase: "b0"}, FoundAt: t0})
+		}
+		g.undoes[id] = []string{"quay.md"}
+		if i%2 == 0 {
+			g.undoes[id] = append(g.undoes[id], "berth.md")
+		}
+		want[id] = slices.Sorted(slices.Values(g.undoes[id]))
+		data, _ := json.Marshal(rec)
+		path := storygit.UndoneRecordPath(repo.CacheDir(), id)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v.Columns[workitem.Review] = append(v.Columns[workitem.Review], workitem.BoardCard{ID: "T-0100", Type: workitem.Task})
+	v.Columns[workitem.Done] = []workitem.BoardCard{{ID: "S-0101", Type: workitem.Story}}
+	order := map[string][]string{}
+	for st, cards := range v.Columns {
+		for _, c := range cards {
+			order[st] = append(order[st], c.ID)
+		}
+	}
+
+	boardUndone(g, repo, &v)
+
+	for st, cards := range v.Columns {
+		var ids []string
+		for _, c := range cards {
+			ids = append(ids, c.ID)
+			switch {
+			case st == workitem.Done || c.Type != workitem.Story:
+				if c.UndoesMain != nil {
+					t.Errorf("%s in %s was read: %v", c.ID, st, c.UndoesMain)
+				}
+			case !slices.Equal(c.UndoesMain, want[c.ID]):
+				t.Errorf("%s undoes %v, want %v", c.ID, c.UndoesMain, want[c.ID])
+			}
+		}
+		if !slices.Equal(ids, order[st]) {
+			t.Errorf("%s's cards %v, want them in the order %v", st, ids, order[st])
+		}
+	}
+	if g.most < 2 || g.most > undoneWorkers {
+		t.Errorf("%d diffs ran at once, want 2 to %d", g.most, undoneWorkers)
 	}
 }

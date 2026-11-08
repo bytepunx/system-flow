@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
@@ -234,6 +235,38 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) []string {
 	}
 	slices.Sort(paths)
 	return paths
+}
+
+// undoneWorkers bounds how many stories boardUndone reads at once, each read
+// being a git process per recorded path.
+const undoneWorkers = 8
+
+// boardUndone sets UndoesMain on each story card in ready, in progress, and
+// review, reading the stories at once on at most undoneWorkers goroutines
+// (S-0604). Each story has its own record file and each card its own slot,
+// so the reads share no write. An accepted or cancelled story's branch may
+// be gone, and it undoes nothing on main any more, so those are not read.
+func boardUndone(r execx.Runner, repo *workitem.Repo, v *workitem.BoardView) {
+	var cards []*workitem.BoardCard
+	for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
+		col := v.Columns[st]
+		for i := range col {
+			if col[i].Type == workitem.Story {
+				cards = append(cards, &col[i])
+			}
+		}
+	}
+	slots := make(chan struct{}, undoneWorkers)
+	var wg sync.WaitGroup
+	for _, c := range cards {
+		wg.Add(1)
+		slots <- struct{}{}
+		go func() {
+			defer func() { <-slots; wg.Done() }()
+			c.UndoesMain = undoesMain(r, repo, c.ID)
+		}()
+	}
+	wg.Wait()
 }
 
 // enabledActions says which host actions the operator enabled for a project,
@@ -464,16 +497,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			v := workitem.NewBoardView(items, board, now(), in.All, pending, repo.Holds(items))
 			done()
 			done = perf.Track(ctx, "undone.read")
-			// an accepted or cancelled story's branch may be gone, and it
-			// undoes nothing on main any more
-			for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
-				cards := v.Columns[st]
-				for i := range cards {
-					if cards[i].Type == workitem.Story {
-						cards[i].UndoesMain = undoesMain(r, repo, cards[i].ID)
-					}
-				}
-			}
+			boardUndone(r, repo, &v)
 			done()
 			return mergequeue.OnBoard(ctx, r, repo, v, slog.Default()), nil
 		},
