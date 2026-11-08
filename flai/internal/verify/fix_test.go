@@ -204,3 +204,117 @@ func TestUnfixedRunsTheCheckOfTheTiersThatFix(t *testing.T) {
 		t.Errorf("with no tier that fixes selected: %+v, %v, ran %v", res, err, proc.ran)
 	}
 }
+
+// remainsProc fakes fix commands for FixRemaining: "mdfix" prints a
+// markdownlint finding and exits with exit; "gone" cannot start.
+type remainsProc struct {
+	exit int
+	ran  []string
+}
+
+func (f *remainsProc) Run(_ context.Context, _ string, argv, _ []string, stdout, _ io.Writer) (int, error) {
+	f.ran = append(f.ran, strings.Join(argv, " "))
+	if argv[0] == "gone" {
+		return 0, errors.New("executable file not found")
+	}
+	if f.exit != 0 {
+		_, _ = io.WriteString(stdout, "lint-md: markdownlint-cli2 0.20.0\ndocs/a.md:3 MD022/blanks-around-headings Headings should be surrounded by blank lines\n")
+	}
+	return f.exit, nil
+}
+
+// S-0609: FixRemaining runs each tier's fix once, and its exit says what
+// remains: 0 passes, non-zero fails with the tier's findings, with no second
+// command run to check.
+func TestFixRemainingAnswersWhatTheFixExitSays(t *testing.T) {
+	root := tree(t, map[string]string{"docs/a.md": "a\n", "main.go": "package main\n"})
+	tiers := []Tier{
+		{Name: "unit", Command: []string{"go", "test"}, Paths: []string{"**/*.go"}},
+		{Name: "markdown", Command: []string{"mdlint", "{files}"}, Paths: []string{"**/*.md"}, FixCommand: []string{"mdfix", "--fix", "{files}"}},
+	}
+
+	proc := &remainsProc{}
+	o := FixRemaining(context.Background(), root, tiers, []string{"docs/a.md", "main.go"}, proc, nil)
+	if !o.Known() || !o.Remains.Passed || len(o.Remains.Tiers) != 1 || o.Remains.Tiers[0].State != Passed {
+		t.Errorf("exit 0: %+v, want known and passed", o)
+	}
+	if want := []string{"mdfix --fix docs/a.md"}; !reflect.DeepEqual(proc.ran, want) {
+		t.Errorf("ran %q, want %q: the fix once and no check", proc.ran, want)
+	}
+	if want := []string{"docs/a.md", "main.go"}; !reflect.DeepEqual(o.Remains.Paths, want) {
+		t.Errorf("paths = %v, want %v", o.Remains.Paths, want)
+	}
+
+	proc = &remainsProc{exit: 1}
+	o = FixRemaining(context.Background(), root, tiers, []string{"docs/a.md"}, proc, nil)
+	if !o.Known() || o.Remains.Passed {
+		t.Fatalf("exit 1: %+v, want known and failed", o)
+	}
+	tr := o.Remains.Tiers[0]
+	if tr.Name != "markdown" || tr.State != Failed || tr.ExitCode == nil || *tr.ExitCode != 1 || len(tr.Findings) != 1 {
+		t.Fatalf("tier %+v", tr)
+	}
+	if msg := tr.Findings[0].Message; !strings.Contains(msg, "docs/a.md:3 MD022") || !strings.Contains(msg, "exit status 1") {
+		t.Errorf("finding %q, want the fix's remaining lint and its exit", msg)
+	}
+	if len(proc.ran) != 1 {
+		t.Errorf("ran %q, want one process", proc.ran)
+	}
+	// the same findings Unfixed gives from the check
+	check, err := Unfixed(context.Background(), root, tiers, []string{"docs/a.md"}, RunOptions{Proc: &remainsProc{exit: 1}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(check.Tiers[0].Findings[0].Message, tr.Findings[0].Message) {
+		t.Errorf("fix finding %q differs from the check's %q", tr.Findings[0].Message, check.Tiers[0].Findings[0].Message)
+	}
+}
+
+// S-0609: a fix command that cannot start, a fix a ctx already ended does not
+// run, and a structured format whose output gives no finding of its own are
+// unknown, never a pass; a tier no path selects leaves nothing.
+func TestFixRemainingUnknownIsNotAPass(t *testing.T) {
+	root := tree(t, map[string]string{"a.md": "a\n"})
+	tiers := []Tier{{Name: "markdown", Paths: []string{"*.md"}, FixCommand: []string{"gone", "{files}"}}}
+	var logs bytes.Buffer
+	o := FixRemaining(context.Background(), root, tiers, []string{"a.md"}, &remainsProc{}, slog.New(slog.NewTextHandler(&logs, nil)))
+	if o.Known() || o.Remains.Passed || !reflect.DeepEqual(o.Unknown, []string{"markdown"}) {
+		t.Errorf("cannot start: %+v, want unknown and not passed", o)
+	}
+	if !strings.Contains(logs.String(), "level=WARN") {
+		t.Errorf("a fix that cannot start is not logged:\n%s", logs.String())
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	proc := &remainsProc{}
+	tiers[0].FixCommand = []string{"mdfix", "{files}"}
+	o = FixRemaining(ctx, root, tiers, []string{"a.md"}, proc, nil)
+	if o.Known() || o.Remains.Passed || proc.ran != nil {
+		t.Errorf("ended ctx: %+v, ran %q; want unknown and nothing run", o, proc.ran)
+	}
+
+	tiers[0].Format = FormatGolangciJSON
+	o = FixRemaining(context.Background(), root, tiers, []string{"a.md"}, &remainsProc{exit: 1}, nil)
+	if o.Known() || o.Remains.Passed {
+		t.Errorf("structured format with no finding of its own: %+v, want unknown", o)
+	}
+
+	proc = &remainsProc{exit: 1}
+	o = FixRemaining(context.Background(), root, tiers, []string{"b.go"}, proc, nil)
+	if !o.Known() || !o.Remains.Passed || len(o.Remains.Tiers) != 0 || proc.ran != nil {
+		t.Errorf("nothing selected: %+v, ran %q; want a pass with nothing run", o, proc.ran)
+	}
+}
+
+// S-0609: CheckoutFixRemaining reads the tiers from the checkout's manifest.
+func TestCheckoutFixRemaining(t *testing.T) {
+	root := checkout(t, "tests:\n  - name: md\n    command: [lint]\n    paths: [\"**/*.md\"]\n    fix_command: [flai-no-such-fixer, \"{files}\"]\n", "a.md")
+	o, err := CheckoutFixRemaining(context.Background(), root, []string{"a.md"}, nil)
+	if err != nil || o.Known() {
+		t.Errorf("CheckoutFixRemaining = %+v, %v; want a fixer that cannot start unknown, no error", o, err)
+	}
+	if _, err := CheckoutFixRemaining(context.Background(), checkout(t, "tests:\n  - name: md\n    command: [lint]\n    paths: [\"**\"]\n    fix_command: [fix, \"{story}\"]\n"), nil, nil); err == nil {
+		t.Error("a bad fix command is not refused")
+	}
+}
