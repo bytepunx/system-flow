@@ -619,6 +619,41 @@ Measured on 2026-11-08 between 00:50 and 00:55 UTC on the operator's host (WSL2,
 
 The serve log's p50 of 825 ms was taken inside flai serve, beside the other requests it was answering. A one-shot process does not have that contention, so `main` measured 336 ms here. The 13 walks are gone. In the 28 runs, 18 answered under 100 ms; the slowest ran during the busiest moments. What is left is in `settings.served`: `readServeStatus` opens every registered project to describe it. `settings.project` is the project's own `workitem.Open`. Neither grows with the import folders.
 
+### Cause 16: the item snapshot and the watcher's slow tier (S-0606)
+
+#### Cause
+
+`item.get` listed every item, the archive included, and each list statted every item file, holding each folder's lock across the loop. flai serve's watcher statted every file under `design`, `docs`, and `wip` every 300 ms, about 3,800 of them under `wip/archive`, which changes only when an item is archived or edited by hand.
+
+#### Fix
+
+- While flai serve serves a project, the item store keeps a snapshot of each item folder (`flai/internal/workitem/store.go`). A list or a get of a fresh folder reads and stats nothing. The watcher's changes, the process's own writes, and the flai subprocesses serve runs mark a folder stale, and so does a look once a minute; a stale folder refreshes through the stat-and-compare path of S-0156. [flai-cli.md](flai-cli.md) says what marks it.
+- The watcher has a slow tier (`flai/internal/watch/watch.go`). flai serve puts `wip/archive` on it: its folders are statted on every poll, which shows a file added, renamed in, or removed, and its files every 10 s, which shows an edit in place.
+
+#### Measured on this repository
+
+On 2026-11-08, between 01:21 and 01:35 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), against the main checkout, read only: 6,478 files under the watched paths, 3,783 of them under `wip/archive`, and 3,347 work items, 3,202 of them archived. Two in-process programs were built at 01:20 UTC from copies of the `flai` folder, one with `main` (e4e6dff2a) and one with `story/S-0606` (52f9dce39), each with a hook exporting the watcher's walk. They ran one after the other, twice each.
+
+- The walk is `Watcher` over the manifest, `design`, `docs`, and `wip`, 20 walks a run after one first walk, with `GOMAXPROCS=1`. CPU is the process's user and system time across each walk. S-0606's fast look is a walk between slow looks; its slow look is one where the archive's files are statted.
+- `item.get` is the host API's method table, `hostapi.MethodsFor`, in one process: 13 calls at once, for `S-0241`, `S-0612`, `S-0615`, `S-0408`, `T-1267`, `T-1695`, `E-0033`, `S-0001`, `S-0100`, `S-0301`, `S-0506`, `T-0800`, and `E-0003`, three warm rounds and then 20 rounds, 260 calls a run. None is a story in ready, in progress, or review, so no call reads the undone paths through git (cause 14). S-0606 turned the snapshot on before the first round.
+
+The host was very busy: the one-minute load average was 110 to 172 on 24 cores throughout. Wall times are inflated several times over; the CPU times are the steadier figure.
+
+| What | `main` | S-0606 |
+|------|--------|--------|
+| Files statted a walk | 6,478 | fast look: 2,695 and 6 archive folders; slow look: 6,478 |
+| Walk, wall, median (p90) | 169 ms (380), 159 ms (228) | fast look 99 ms (403), 111 ms (198) |
+| Walk, CPU, median (p90) | 74 ms (83), 77 ms (85) | fast look 44 ms (51), 45 ms (50); slow look 80 ms (84), 84 ms (93) |
+| `item.get`, 13 at once, wall per call, median (p90) | 1,112 ms (2,062), 1,378 ms (3,249), 811 ms (1,719) | 171 ms (280), 346 ms (726), 218 ms (343) |
+| `item.get`, CPU of a whole run of 299 calls | 18.1 s user, 8.9 s system | 11.1 s user, 1.3 s system |
+
+A walk between slow looks costs about 45 ms of CPU, against about 75 ms. `item.get` with 13 at once is about five times faster per call, and spends a seventh of the system time.
+
+Neither meets S-0606's targets, a walk under 30 ms and `item.get` with 13 at once under 50 ms, on this host under this load:
+
+- The fast look still stats the 2,695 files outside the archive: 908 threads, 526 digest entries, 370 conversations, 297 issues, and 264 ADRs make up most of them. A third program put `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on the slow tier too: a fast look then cost 22 to 23 ms of CPU, p90 27 to 30 ms. That change is not made here: those folders change often, and an edit in place there would reach the dashboard up to 10 s late.
+- With the snapshot on, a call reads no file, but it still copies and sorts the whole list. A CPU profile of S-0606's `item.get` over 23 rounds found `Repo.List` in 67% of the samples: the deep copy of every item 46%, its sort 20%. `workitem.Open`, which loads the manifest again for every call, took 12%. That is about 27 ms of CPU a call, so 13 calls at once queue on a loaded host. Copying only the items an answer returns, and keeping the sorted list with the snapshot, would take most of it.
+
 ### Cause 17 fixed: stats.get runs its reads and its sections at once and shares a computation in flight (S-0607)
 
 `stats.get` ran its reads one after another, then its sections one after another, and two identical requests in a burst each computed in full. All three now overlap, and the answer is the same.
