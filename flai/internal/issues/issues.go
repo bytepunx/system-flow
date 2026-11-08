@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -188,20 +189,42 @@ func (is *Issue) Changed(r *workitem.Repo) ([]string, error) {
 	return out, nil
 }
 
+// kept keeps every issue file parsed between calls, so that a long-running
+// flai (serve, mcp) parses again only the issues that changed (S-0602).
+var kept = workitem.NewKeptFiles(Read, (*Issue).clone)
+
+// clone copies is and everything it refers to, so that a caller's change to
+// it never reaches the kept parse.
+func (is *Issue) clone() *Issue {
+	c := *is
+	c.Usage = is.Usage.Clone()
+	c.Unknown = slices.Clone(is.Unknown)
+	c.written = slices.Clone(is.written)
+	return &c
+}
+
+// listed says whether a file of the issues folder is an issue: every
+// markdown file but the summary and the README.
+func listed(name string) bool {
+	return strings.HasSuffix(name, ".md") && name != SummaryFile && name != "README.md"
+}
+
 // List loads every issue, sorted by ID. A missing folder is an empty list.
+// Each file is parsed again only when it changed since the last call (S-0602).
 func List(r *workitem.Repo) ([]*Issue, error) {
-	matches, _ := filepath.Glob(filepath.Join(Dir(r), "*.md"))
+	files, err := kept.List(Dir(r), listed)
+	if err != nil {
+		return nil, err
+	}
 	var out []*Issue
-	for _, m := range matches {
-		if base := filepath.Base(m); base == SummaryFile || base == "README.md" {
-			continue
+	for _, f := range files {
+		if f.Err != nil {
+			return nil, f.Err
 		}
-		is, err := Read(m)
-		if err != nil {
-			return nil, err
+		if f.Parsed {
+			workitem.WarnUnknown(f.Path, f.Value.Unknown)
 		}
-		workitem.WarnUnknown(m, is.Unknown)
-		out = append(out, is)
+		out = append(out, f.Value)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })
 	return out, nil
@@ -213,7 +236,7 @@ func Get(r *workitem.Repo, id string) (*Issue, error) {
 	for _, cand := range []string{id, canon, fmt.Sprintf("I-%03s", strings.TrimPrefix(canon, "I-"))} {
 		matches, _ := filepath.Glob(filepath.Join(Dir(r), cand+"-*.md"))
 		if len(matches) > 0 {
-			return Read(matches[0])
+			return kept.Read(matches[0])
 		}
 	}
 	return nil, fmt.Errorf("%s not found", id)

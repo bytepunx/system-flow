@@ -1,9 +1,11 @@
 package issues
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -251,5 +253,134 @@ func TestNextIDWithoutStoryBranches(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(Dir(r), "I-0002-uncommitted.md"), []byte("two\n"), 0o644)
 	if id := NextID(r, run); id != "I-0003" {
 		t.Errorf("next id %s, want I-0003", id)
+	}
+}
+
+// past moves every file of the issues folder an hour back, so that what the
+// kept store parses of them is trusted (S-0602).
+func past(t *testing.T, r *workitem.Repo, ago time.Duration) {
+	t.Helper()
+	files, _ := filepath.Glob(filepath.Join(Dir(r), "*.md"))
+	old := time.Now().Add(-ago)
+	for _, f := range files {
+		if err := os.Chtimes(f, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// ids is the IDs and counts of list, in its order.
+func ids(list []*Issue) string {
+	var b strings.Builder
+	for _, is := range list {
+		fmt.Fprintf(&b, "%s:%d:%s ", is.ID, is.Count, is.Status)
+	}
+	return b.String()
+}
+
+// S-0602: List keeps what it parsed and parses again only the issues that
+// changed, were added, or are gone, a bump written in place at the same size
+// included.
+func TestListParsesAgainOnlyTheIssuesThatChanged(t *testing.T) {
+	r := repo(t)
+	one, _ := New(r, NewOptions{Title: "One", Class: "defect", Now: t0})
+	two, _ := New(r, NewOptions{Title: "Two", Class: "defect", Now: t0})
+	if _, err := WriteSummary(r, t0); err != nil {
+		t.Fatal(err)
+	}
+	past(t, r, time.Hour)
+	if list, err := List(r); err != nil || ids(list) != "I-0001:1:open I-0002:1:open " {
+		t.Fatalf("first list: %v %s", err, ids(list))
+	}
+	before := kept.Parses()
+	if list, err := List(r); err != nil || ids(list) != "I-0001:1:open I-0002:1:open " {
+		t.Fatalf("second list: %v %s", err, ids(list))
+	}
+	if n := kept.Parses() - before; n != 0 {
+		t.Errorf("a second list with nothing changed parsed %d files", n)
+	}
+
+	// A bump through Save.
+	got, err := Get(r, "I-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Bump(got, "", "", "again", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	past(t, r, 50*time.Minute)
+	if list, _ := List(r); ids(list) != "I-0001:2:open I-0002:1:open " {
+		t.Errorf("after a bump: %s", ids(list))
+	}
+
+	// A change in place at the same size, with a new modification time.
+	data, _ := os.ReadFile(two.Path)
+	same := strings.Replace(string(data), "count: 1\n", "count: 7\n", 1)
+	if len(same) != len(data) {
+		t.Fatal("the edit changed the size")
+	}
+	if err := os.WriteFile(two.Path, []byte(same), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	newer := time.Now().Add(-40 * time.Minute)
+	if err := os.Chtimes(two.Path, newer, newer); err != nil {
+		t.Fatal(err)
+	}
+	if list, _ := List(r); ids(list) != "I-0001:2:open I-0002:7:open " {
+		t.Errorf("after an edit at the same size: %s", ids(list))
+	}
+
+	// Added and removed.
+	three, _ := New(r, NewOptions{Title: "Three", Class: "defect", Now: t0})
+	if list, _ := List(r); ids(list) != "I-0001:2:open I-0002:7:open I-0003:1:open " {
+		t.Errorf("after an add: %s", ids(list))
+	}
+	if err := os.Remove(one.Path); err != nil {
+		t.Fatal(err)
+	}
+	if list, _ := List(r); ids(list) != "I-0002:7:open I-0003:1:open " {
+		t.Errorf("after a removal: %s", ids(list))
+	}
+	if _, err := Get(r, "I-0001"); err == nil {
+		t.Error("Get found a removed issue")
+	}
+
+	// A caller's change does not reach the kept parse.
+	list, _ := List(r)
+	list[0].Count = 99
+	list[0].Unknown = append(list[0].Unknown, workitem.Field{Name: "x"})
+	if again, _ := List(r); again[0].Count != 7 || len(again[0].Unknown) != 0 {
+		t.Errorf("a caller's change reached the kept issue: %+v", again[0])
+	}
+	if got, _ := Get(r, three.ID); got.Title != "Three" {
+		t.Errorf("Get: %+v", got)
+	}
+}
+
+// S-0602: two lists at once get the same issues.
+func TestTwoListsAtOnceGetTheSameIssues(t *testing.T) {
+	r := repo(t)
+	for _, title := range []string{"One", "Two", "Three"} {
+		if _, err := New(r, NewOptions{Title: title, Class: "defect", Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	past(t, r, time.Hour)
+	var wg sync.WaitGroup
+	got := make([]string, 8)
+	for i := range got {
+		wg.Go(func() {
+			list, err := List(r)
+			if err != nil {
+				t.Error(err)
+			}
+			got[i] = ids(list)
+		})
+	}
+	wg.Wait()
+	for i, g := range got {
+		if g != "I-0001:1:open I-0002:1:open I-0003:1:open " {
+			t.Errorf("list %d: %s", i, g)
+		}
 	}
 }
