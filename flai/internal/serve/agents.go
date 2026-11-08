@@ -1280,6 +1280,76 @@ func awaitingOther(repo *workitem.Repo, story string) []*messages.Conversation {
 	return out
 }
 
+// conversations is one read of a project's conversations, from which one
+// Activity call judges every live run and every held story, rather than
+// reading them all again for each (S-0603). Its methods on a nil one read
+// what they need from the files, as before.
+type conversations struct {
+	all    []*messages.Conversation // each that read and parsed, in ID order
+	err    error                    // the first that did not, on which messages.List fails
+	shares []workitem.Share         // the shares of those stored open, as Repo.Conversations reads them
+	asks   []workitem.Ask           // and their asks about a hold
+}
+
+// conversationsRead, when set, is called once Activity has read the
+// conversations: the tests' proof that nothing reads them again.
+var conversationsRead atomic.Pointer[func(repo *workitem.Repo)]
+
+// readConversations reads repo's conversations once, for the lists
+// messages.List gives and for the shares and asks Repo.Conversations gives,
+// in file order as it reads them.
+func readConversations(repo *workitem.Repo) *conversations {
+	all, err := messages.ReadAll(repo)
+	byFile := slices.Clone(all)
+	slices.SortFunc(byFile, func(a, b *messages.Conversation) int { return strings.Compare(a.Path, b.Path) })
+	docs := make([]workitem.ConversationDoc, 0, len(byFile))
+	for _, c := range byFile {
+		docs = append(docs, workitem.ConversationDoc{ID: c.ID, From: c.From, To: c.To, Status: c.Status, Shares: c.Shares, Body: c.Body})
+	}
+	out := &conversations{all: all, err: err}
+	out.shares, out.asks = workitem.SharesAndAsks(docs)
+	if read := conversationsRead.Load(); read != nil {
+		(*read)(repo)
+	}
+	return out
+}
+
+// awaitingOther is awaitingOther from what c read.
+func (c *conversations) awaitingOther(repo *workitem.Repo, story string) []*messages.Conversation {
+	if c == nil {
+		return awaitingOther(repo, story)
+	}
+	if c.err != nil {
+		return nil
+	}
+	return messages.AwaitingOtherIn(repo, c.all, story)
+}
+
+// get is the conversation id, in any padding, as messages.Get finds it.
+func (c *conversations) get(repo *workitem.Repo, id string) (*messages.Conversation, error) {
+	if c == nil {
+		return messages.Get(repo, id)
+	}
+	canon := messages.CanonicalID(id)
+	for _, conv := range c.all {
+		if messages.CanonicalID(conv.ID) == canon {
+			return conv, nil
+		}
+	}
+	return nil, fmt.Errorf("conversation %s not found in %s: flai message list --all lists them", canon, messages.Dir(repo))
+}
+
+// toSince is messages.ToSince from what c read.
+func (c *conversations) toSince(repo *workitem.Repo, story string, t time.Time) ([]*messages.Conversation, error) {
+	if c == nil {
+		return messages.ToSince(repo, story, t)
+	}
+	if c.err != nil {
+		return nil, c.err
+	}
+	return messages.ToSinceIn(c.all, story, t), nil
+}
+
 // unanswered are story's open conversations that await its reply to a
 // message the other story's agent wrote after started, a run's start; none
 // when that is not known.
@@ -2824,8 +2894,9 @@ func Activity(root string, st AgentState, commandSet bool) map[string]StoryActiv
 		return map[string]StoryActivity{}
 	}
 	withTrial(repo, nil)
-	out := runActivity(repo, st)
-	for id, h := range held(repo, st) {
+	convs := readConversations(repo)
+	out := runActivity(repo, st, convs)
+	for id, h := range held(repo, st, convs) {
 		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, "", commandSet), Hold: h}
 	}
 	for id, e := range elsewhere(repo, st) {
@@ -2875,8 +2946,9 @@ func elsewhere(repo *workitem.Repo, st AgentState) map[string]*Elsewhere {
 	return out
 }
 
-// runActivity is what each story's newest run is doing.
-func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
+// runActivity is what each story's newest run is doing, judged from convs,
+// the conversations read once for the call.
+func runActivity(repo *workitem.Repo, st AgentState, convs *conversations) map[string]StoryActivity {
 	out := map[string]StoryActivity{}
 	if len(st.Stories) == 0 {
 		return out
@@ -2899,7 +2971,7 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 		switch {
 		case run.live():
 			a.State = ActivityWorking
-			th, waits := asked[id], awaitingOther(repo, id)
+			th, waits := asked[id], convs.awaitingOther(repo, id)
 			if th != nil || len(waits) > 0 {
 				a.State, a.Why = ActivityWaiting, waitWhy(th, nil, waits, nil, id)
 				if th != nil {
@@ -2936,13 +3008,14 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 // overlap by a trial merge when repo has a judge, as the launcher does. One
 // whose agent ended asking is left out until the question or its
 // conversation is answered: it waits for the answer, and then for its hold
-// (S-0182, S-0335).
-func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
+// (S-0182, S-0335). The shares, the asks, and the answers come from convs,
+// the conversations read once for the call (S-0603).
+func held(repo *workitem.Repo, st AgentState, convs *conversations) map[string]*workitem.Hold {
 	items, err := repo.List(false)
 	if err != nil {
 		return nil
 	}
-	holds := repo.Holds(items)
+	holds := repo.HoldsFrom(items, convs.shares, convs.asks)
 	var ready []*workitem.Item
 	for _, it := range items {
 		if it.Type != workitem.Story || it.Status != workitem.Ready {
@@ -2951,7 +3024,7 @@ func held(repo *workitem.Repo, st AgentState) map[string]*workitem.Hold {
 		switch run := st.Stories[it.ID]; {
 		case run.live():
 			holds.Open(it, agentStarted)
-		case !asked(run) || answered(repo, run) != "":
+		case !asked(run) || answeredFrom(repo, run, convs) != "":
 			ready = append(ready, it)
 		}
 	}
@@ -3042,6 +3115,13 @@ func askedAnswered(repo *workitem.Repo, run *AgentRun) *threads.Thread {
 // run ended answers nothing: the answer starts the agent, and it answers the
 // notices then (ADR-0252).
 func answered(repo *workitem.Repo, run *AgentRun) string {
+	return answeredFrom(repo, run, nil)
+}
+
+// answeredFrom is answered judged from convs, the conversations read once
+// already, or, when convs is nil, from each conversation read as it is
+// needed.
+func answeredFrom(repo *workitem.Repo, run *AgentRun, convs *conversations) string {
 	asking := false
 	if run.Thread != "" {
 		if threadAnswered(repo, run) {
@@ -3050,7 +3130,7 @@ func answered(repo *workitem.Repo, run *AgentRun) string {
 		asking = true
 	}
 	for _, id := range run.Conversations {
-		c, err := messages.Get(repo, id)
+		c, err := convs.get(repo, id)
 		if err != nil {
 			continue
 		}
@@ -3061,7 +3141,7 @@ func answered(repo *workitem.Repo, run *AgentRun) string {
 			return c.ID
 		}
 	}
-	return messaged(repo, run, asking)
+	return messaged(repo, run, asking, convs)
 }
 
 // messaged is the first conversation of run's story, which ended asking,
@@ -3071,12 +3151,12 @@ func answered(repo *workitem.Repo, run *AgentRun) string {
 // no one, so it is passed over (ADR-0154); so is a conversation that gained
 // only task-done notices since the end while the run is asking, its own
 // question unanswered (ADR-0252).
-func messaged(repo *workitem.Repo, run *AgentRun, asking bool) string {
+func messaged(repo *workitem.Repo, run *AgentRun, asking bool, convs *conversations) string {
 	since, ok := sinceEnd(run)
 	if !ok {
 		return ""
 	}
-	cs, err := messages.ToSince(repo, run.Story, since)
+	cs, err := convs.toSince(repo, run.Story, since)
 	if err != nil {
 		return ""
 	}

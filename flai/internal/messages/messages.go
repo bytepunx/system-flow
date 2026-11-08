@@ -352,6 +352,18 @@ func (c *Conversation) clone() *Conversation {
 
 // List loads every conversation, sorted by ID. A missing folder has none.
 func List(r *workitem.Repo) ([]*Conversation, error) {
+	out, err := ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReadAll reads every conversation once, through what is kept: each that
+// reads and parses, sorted by ID, and the first error met, which List returns
+// in their place. A caller that reads the folder once for several uses keeps
+// both (S-0603).
+func ReadAll(r *workitem.Repo) ([]*Conversation, error) {
 	files, err := kept.List(Dir(r), func(name string) bool {
 		return strings.HasPrefix(name, "MS-") && strings.HasSuffix(name, ".md")
 	})
@@ -359,9 +371,13 @@ func List(r *workitem.Repo) ([]*Conversation, error) {
 		return nil, err
 	}
 	var out []*Conversation
+	var first error
 	for _, f := range files {
 		if f.Err != nil {
-			return nil, f.Err
+			if first == nil {
+				first = f.Err
+			}
+			continue
 		}
 		if f.Parsed {
 			workitem.WarnUnknown(f.Path, f.Value.Unknown)
@@ -369,7 +385,7 @@ func List(r *workitem.Repo) ([]*Conversation, error) {
 		out = append(out, f.Value)
 	}
 	sort.Slice(out, func(i, j int) bool { return num(out[i].ID) < num(out[j].ID) })
-	return out, nil
+	return out, first
 }
 
 // Get finds one conversation by ID in any padding.
@@ -391,13 +407,18 @@ func For(r *workitem.Repo, story string) ([]*Conversation, error) {
 	if err != nil {
 		return nil, err
 	}
+	return forIn(all, story), nil
+}
+
+// forIn are the conversations of all that name story, in their order.
+func forIn(all []*Conversation, story string) []*Conversation {
 	var out []*Conversation
 	for _, c := range all {
 		if c.Names(story) {
 			out = append(out, c)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // Other is the story of the two that is not story, named in any padding.
@@ -414,12 +435,18 @@ func (c *Conversation) Other(story string) string {
 // left out: a ready story, such as one flai asked about a hold for, has no
 // agent to reply until it starts, so a reply to it awaits no one (ADR-0134).
 func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
-	all, err := For(r, story)
+	all, err := List(r)
 	if err != nil {
 		return nil, err
 	}
+	return AwaitingOtherIn(r, all, story), nil
+}
+
+// AwaitingOtherIn is AwaitingOther over all, the conversations already read
+// with List or ReadAll, so that one read serves many stories (S-0603).
+func AwaitingOtherIn(r *workitem.Repo, all []*Conversation, story string) []*Conversation {
 	var out []*Conversation
-	for _, c := range all {
+	for _, c := range forIn(all, story) {
 		if closed, _ := c.Closed(r); closed {
 			continue
 		}
@@ -431,19 +458,25 @@ func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 		}
 		out = append(out, c)
 	}
-	return out, nil
+	return out
 }
 
 // ToSince returns story's conversations with an entry the other story wrote
 // after t, in ID order: those a message to story arrived in since then, a
 // settled reply among them, which owes no reply.
 func ToSince(r *workitem.Repo, story string, t time.Time) ([]*Conversation, error) {
-	all, err := For(r, story)
+	all, err := List(r)
 	if err != nil {
 		return nil, err
 	}
+	return ToSinceIn(all, story, t), nil
+}
+
+// ToSinceIn is ToSince over all, the conversations already read with List
+// or ReadAll (S-0603).
+func ToSinceIn(all []*Conversation, story string, t time.Time) []*Conversation {
 	var out []*Conversation
-	for _, c := range all {
+	for _, c := range forIn(all, story) {
 		other := workitem.CanonicalID(c.Other(story))
 		for _, e := range c.Entries() {
 			at, err := time.Parse(workitem.TimeFormat, e.At)
@@ -453,7 +486,7 @@ func ToSince(r *workitem.Repo, story string, t time.Time) ([]*Conversation, erro
 			}
 		}
 	}
-	return out, nil
+	return out
 }
 
 // NextID allocates the next MS-nnnn: one more than the highest in the folder.

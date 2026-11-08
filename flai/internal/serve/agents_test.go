@@ -1337,7 +1337,7 @@ func TestAMessageInTheSecondARunEndedIsNew(t *testing.T) {
 	if _, err := messages.Reply(lab.repo, answeredThen.ID, id, run.Agent, "Noted.", ended); err != nil {
 		t.Fatal(err)
 	}
-	if got := messaged(lab.repo, &run, true); got != "" {
+	if got := messaged(lab.repo, &run, true, nil); got != "" {
 		t.Fatalf("%s and %s are not new to it, yet %q is", before.ID, answeredThen.ID, got)
 	}
 	then, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "Then.", Now: ended})
@@ -4808,5 +4808,112 @@ func TestAgentRunCloneCoversEveryField(t *testing.T) {
 				t.Errorf("AgentRun.%s points, and AgentRun.clone does not copy it", f.Name)
 			}
 		}
+	}
+}
+
+// S-0603: one Activity call reads the conversations once, whatever the
+// number of live runs, and answers as the functions that read them for each
+// run and for the holds do: a run waiting on a conversation, one on a
+// thread, one at work, a ready story held on overlap, and one whose overlap
+// a share in force clears.
+func TestActivityReadsTheConversationsOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	talker, asker, worker := lab.inProgress("Talks"), lab.inProgress("Asks"), lab.inProgress("Works")
+	peer := lab.inProgress("Peer")
+	holder := lab.readyTouching("Holder", "flai/cmd")
+	lab.move(holder, workitem.InProgress)
+	heldID := lab.readyTouching("Held", "flai/cmd/serve.go")
+	sharedID := lab.readyTouching("Shared", "flai/cmd/flags.go")
+
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: talker, To: peer, Author: "builder-" + talker, Text: "Which port do you bind?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: asker, Author: "builder-" + asker, Text: "Eight or nine?", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// holder shares flai/cmd/flags.go with Shared after flai asked about the hold
+	at := time.Now().UTC().Add(2 * time.Second).Format(workitem.TimeFormat)
+	id := messages.NextID(lab.repo)
+	share := &messages.Conversation{ID: id, Title: "Hold on " + sharedID, From: holder, To: sharedID, Status: "open",
+		Participants: []string{"flai"}, Created: at, Updated: at,
+		Shares: []workitem.Share{{Holder: holder, Held: sharedID, Paths: []string{"flai/cmd/flags.go"}, Split: "Holder keeps the rest.", By: "builder-" + holder, At: at}},
+		Path:   filepath.Join(messages.Dir(lab.repo), id+"-hold.md"),
+		Body:   "\n### " + at + " flai " + sharedID + "\n\nDo you change flai/cmd/flags.go?\n"}
+	if err := share.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	started := time.Now().UTC().Format(time.RFC3339)
+	st := AgentState{Stories: map[string]*AgentRun{}}
+	for _, story := range []string{talker, asker, worker} {
+		st.Stories[story] = &AgentRun{Story: story, Agent: "builder-" + story, PID: os.Getpid(), Started: started}
+	}
+
+	// what the functions that read the conversations for each use answer
+	wantWaits, err := messages.AwaitingOther(lab.repo, talker)
+	if err != nil || len(wantWaits) != 1 {
+		t.Fatalf("awaiting other: %v %+v", err, wantWaits)
+	}
+	ref, err := workitem.Open(lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withTrial(ref, nil)
+	items, err := ref.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	holds := ref.Holds(items)
+	heldItem, _ := ref.Get(heldID)
+	sharedItem, _ := ref.Get(sharedID)
+	wantHold := holds.Of(heldItem)
+	if wantHold == nil || holds.Of(sharedItem) != nil {
+		t.Fatalf("holds: %s held %+v, %s held %+v", heldID, wantHold, sharedID, holds.Of(sharedItem))
+	}
+
+	// once read, the conversations go: a second read would find none
+	dir := messages.Dir(lab.repo)
+	reads := 0
+	read := func(*workitem.Repo) {
+		reads++
+		if err := os.Rename(dir, dir+".gone"); err != nil {
+			t.Error(err)
+		}
+	}
+	conversationsRead.Store(&read)
+	got := Activity(lab.root, st, false)
+	conversationsRead.Store(nil)
+	if reads != 1 {
+		t.Errorf("read the conversations %d times, want once", reads)
+	}
+
+	why := "waiting for " + peer + "'s agent to reply on " + c.ID + ": " + c.Title
+	if a := got[talker]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{peer}) ||
+		!slices.Equal(a.Conversations, conversationIDs(wantWaits)) || a.Why != why {
+		t.Errorf("waiting on a conversation: %+v", a)
+	}
+	if a := got[asker]; a.State != ActivityWaiting || a.Thread != th.ID || len(a.WaitsOn) != 0 {
+		t.Errorf("waiting on a thread: %+v", a)
+	}
+	if a := got[worker]; a.State != ActivityWorking || a.Why != "" {
+		t.Errorf("at work: %+v", a)
+	}
+	if a := got[heldID]; a.State != ActivityWaiting || a.Hold == nil || a.Hold.Reason != wantHold.Reason || a.Why != wantHold.Reason {
+		t.Errorf("held: %+v, want the hold %+v", a, wantHold)
+	}
+	if a, ok := got[sharedID]; ok {
+		t.Errorf("the share in force left %s held: %+v", sharedID, a)
+	}
+
+	// read again with the conversations gone, the answer changes: the first
+	// call took them from its one read
+	again := Activity(lab.root, st, false)
+	if a := again[talker]; a.State != ActivityWorking {
+		t.Errorf("with no conversations, %s still waits: %+v", talker, a)
+	}
+	if _, ok := again[sharedID]; !ok {
+		t.Errorf("with no conversations, %s is not held", sharedID)
 	}
 }

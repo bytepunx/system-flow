@@ -177,6 +177,14 @@ func newHolds(items []*Item, projects []manifest.Project, memo *HoldsMemo) *Hold
 // as Conversations reads them, and finds a story named in after: or in a
 // share in the archive when items do not hold it.
 func (r *Repo) Holds(items []*Item) *Holds {
+	shares, asks := r.Conversations()
+	return r.HoldsFrom(items, shares, asks)
+}
+
+// HoldsFrom is Holds with the shares and asks of conversations the caller
+// has read already, as SharesAndAsks gives them, so that the conversations
+// are not read again (S-0603).
+func (r *Repo) HoldsFrom(items []*Item, shares []Share, asks []Ask) *Holds {
 	h := NewHolds(items, r.Manifest.Projects).WithShared(r.SharedClaims())
 	h.lookup = func(id string) *Item {
 		if it, err := r.Get(id); err == nil && it.Type == Story {
@@ -184,7 +192,6 @@ func (r *Repo) Holds(items []*Item) *Holds {
 		}
 		return nil
 	}
-	shares, asks := r.Conversations()
 	return h.WithShares(shares).WithAsks(asks).WithTrial(r.Trial)
 }
 

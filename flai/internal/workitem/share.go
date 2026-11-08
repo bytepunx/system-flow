@@ -86,82 +86,91 @@ func (r *Repo) Conversations() ([]Share, []Ask) {
 	if err != nil {
 		return nil, nil
 	}
-	var shares []Share
-	var asks []Ask
+	docs := make([]ConversationDoc, 0, len(files))
 	for _, f := range files {
 		if f.Err != nil {
 			continue
 		}
-		shares = append(shares, f.Value.shares...)
-		asks = append(asks, f.Value.asks...)
+		docs = append(docs, f.Value)
+	}
+	return SharesAndAsks(docs)
+}
+
+// ConversationDoc is what the shares and asks of one conversation are read
+// from: its front matter's id, its two stories, its status, and its shares,
+// and its body.
+type ConversationDoc struct {
+	ID, From, To, Status string
+	Shares               []Share
+	Body                 string
+}
+
+// SharesAndAsks are the shares and asks of the conversations of docs that
+// are stored open, in the order of docs, as Conversations reads them from
+// the files: for a caller that has read the conversations already (S-0603).
+func SharesAndAsks(docs []ConversationDoc) ([]Share, []Ask) {
+	var shares []Share
+	var asks []Ask
+	for _, c := range docs {
+		if c.Status != "open" {
+			continue
+		}
+		for _, s := range c.Shares {
+			s.Conversation = c.ID
+			shares = append(shares, s)
+		}
+		from, to := CanonicalID(c.From), CanonicalID(c.To)
+		for _, m := range askHeading.FindAllStringSubmatch(c.Body, -1) {
+			held, holder := CanonicalID(m[2]), ""
+			switch held {
+			case from:
+				holder = to
+			case to:
+				holder = from
+			}
+			if holder != "" && holder != held {
+				asks = append(asks, Ask{Conversation: c.ID, Held: held, Holder: holder, At: m[1]})
+			}
+		}
 	}
 	return shares, asks
 }
 
-// conversationHolds is what Conversations takes of one conversation: the
-// shares it keeps, each naming it, and the messages by flai asking about a
-// hold, both empty unless it is stored open.
-type conversationHolds struct {
-	shares []Share
-	asks   []Ask
-}
-
-// keptConversations keeps what Conversations takes of each conversation, by
+// keptConversations keeps each conversation as Conversations reads it, by
 // file, so that a long-running flai parses again only those that changed
 // (S-0602). Package messages keeps its own, of whole conversations.
-var keptConversations = NewKeptFiles(readConversationHolds, conversationHolds.clone)
+var keptConversations = NewKeptFiles(readConversationDoc, ConversationDoc.clone)
 
-// clone is a copy of h that shares nothing a caller could change with it.
-func (h conversationHolds) clone() conversationHolds {
-	out := conversationHolds{asks: slices.Clone(h.asks)}
-	if h.shares != nil {
-		out.shares = make([]Share, len(h.shares))
-		for i, s := range h.shares {
+// clone is a copy of c that shares nothing a caller could change with it.
+func (c ConversationDoc) clone() ConversationDoc {
+	out := c
+	if c.Shares != nil {
+		out.Shares = make([]Share, len(c.Shares))
+		for i, s := range c.Shares {
 			s.Paths = slices.Clone(s.Paths)
-			out.shares[i] = s
+			out.Shares[i] = s
 		}
 	}
 	return out
 }
 
-// readConversationHolds reads the conversation at path for Conversations. A
+// readConversationDoc reads the conversation at path for Conversations. A
 // file that cannot be read or does not parse is an error, which Conversations
 // skips.
-func readConversationHolds(path string) (conversationHolds, error) {
+func readConversationDoc(path string) (ConversationDoc, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return conversationHolds{}, err
+		return ConversationDoc{}, err
 	}
 	fm, body, err := SplitFrontMatter(string(data))
 	if err != nil {
-		return conversationHolds{}, err
+		return ConversationDoc{}, err
 	}
 	var c conversationFrontMatter
 	if err := yaml.Unmarshal([]byte(fm), &c); err != nil {
-		return conversationHolds{}, err
+		return ConversationDoc{}, err
 	}
-	var h conversationHolds
-	if c.Status != "open" {
-		return h, nil
-	}
-	for _, s := range c.Shares {
-		s.Conversation = c.ID
-		h.shares = append(h.shares, s)
-	}
-	from, to := CanonicalID(c.From), CanonicalID(c.To)
-	for _, m := range askHeading.FindAllStringSubmatch(body, -1) {
-		held, holder := CanonicalID(m[2]), ""
-		switch held {
-		case from:
-			holder = to
-		case to:
-			holder = from
-		}
-		if holder != "" && holder != held {
-			h.asks = append(h.asks, Ask{Conversation: c.ID, Held: held, Holder: holder, At: m[1]})
-		}
-	}
-	return h, nil
+	return ConversationDoc{ID: c.ID, From: c.From, To: c.To, Status: c.Status, Shares: c.Shares, Body: body}, nil
 }
 
 // WithShares has h treat an overlap that a share in force clears as no
