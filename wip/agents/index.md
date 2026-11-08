@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-08T01:13:21Z
+updated: 2026-11-08T01:15:24Z
 ---
 
 # Active streams
@@ -15,7 +15,7 @@ updated: 2026-11-08T01:13:21Z
 | [S-0599](S-0599.md) | flai serve's replanner writes every forecast it moves in one pass with one check, so an acceptance's replan lands in seconds, not 80 s | in-progress | agent-S-0599 | 2026-11-08T01:11:28Z |
 | [S-0600](S-0600.md) | A flai process parses work items on a pool of workers and keeps parses and lint results under .flai-cache, so a cold list takes under 0.3 s, not 1.1 to 1.5 s | in-progress | agent-S-0600 | 2026-11-08T00:52:17Z |
 | [S-0601](S-0601.md) | flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s | in-progress | agent-S-0601 | 2026-11-08T01:12:12Z |
-| [S-0603](S-0603.md) | agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s | in-progress | agent-S-0603 | 2026-11-08T01:12:15Z |
+| [S-0603](S-0603.md) | agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s | in-progress | agent-S-0603 | 2026-11-08T01:14:29Z |
 | [S-0606](S-0606.md) | item.get answers from a kept item list and the file watcher stops statting every archived file every 300 ms | in-progress | agent-S-0606 | 2026-11-08T01:11:53Z |
 
 ## Strategic agents
@@ -23,6 +23,6 @@ updated: 2026-11-08T01:13:21Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 165 | 1088.1764 USD | 141678 | 2026-11-08T00:11:17Z |
-| [orchestrator](orchestrator.md) | 2268 | 2028.2657 USD | 1522896 | 2026-11-08T00:35:12Z |
+| [orchestrator](orchestrator.md) | 2269 | 2028.4808 USD | 1523045 | 2026-11-08T01:13:42Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 96 | 155.8688 USD | 15415 | 2026-11-07T23:40:35Z |
