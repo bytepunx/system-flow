@@ -173,7 +173,8 @@ func Batches(actionOn bool, m manifest.Manifest) bool {
 // acceptance it is off, with no story listed. A story whose own records
 // cannot be read is ineligible for it; the items, the threads, or the state
 // that cannot be read are an error. Its Window is as it stands now, read
-// with the main branch's head; a head git cannot read leaves it nil.
+// with the main branch's head; a head git cannot read leaves it nil. While
+// no story is in review it reads no thread and runs no git (S-0604).
 func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 	return ComputeAt(r, repo, time.Now())
 }
@@ -197,6 +198,17 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 	if err != nil {
 		return q, fmt.Errorf("list the items to find the stories in review for the merge queue: %w; fix the item file it names", err)
 	}
+	var review []*workitem.Item
+	for _, it := range items {
+		if it.Type == workitem.Story && it.Status == workitem.Review {
+			review = append(review, it)
+		}
+	}
+	if len(review) == 0 {
+		// No story in review: no reason to work out, so no thread is read
+		// and no git runs, and with nothing eligible there is no window.
+		return q, nil
+	}
 	all, err := threads.List(repo)
 	if err != nil {
 		return q, fmt.Errorf("read the threads to check the stories in review for the merge queue: %w; fix the thread file it names", err)
@@ -207,10 +219,7 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 		enqueued[workitem.CanonicalID(e.Story)] = true
 	}
 	var entries []Entry
-	for _, it := range items {
-		if it.Type != workitem.Story || it.Status != workitem.Review {
-			continue
-		}
+	for _, it := range review {
 		e := Entry{Story: it.ID, Title: it.Title, EnteredReview: enteredReview(it), Enqueued: enqueued[workitem.CanonicalID(it.ID)]}
 		var verifyReason *Reason
 		e.Head, verifyReason = verified(r, repo, it.ID)

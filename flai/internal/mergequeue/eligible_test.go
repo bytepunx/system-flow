@@ -355,6 +355,59 @@ func TestUnderPullRequestAcceptanceTheQueueIsOff(t *testing.T) {
 	}
 }
 
+// countingGit is scriptedGit that counts every process it is asked for.
+type countingGit struct {
+	scriptedGit
+	calls *[]string
+}
+
+func (g countingGit) Run(dir, name string, args ...string) (string, error) {
+	*g.calls = append(*g.calls, name+" "+strings.Join(args, " "))
+	return g.scriptedGit.Run(dir, name, args...)
+}
+
+func (g countingGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+// S-0604: while no story is in review the queue reads no thread and runs no
+// git, not even the main checkout's git status, and answers as it did: the
+// state, no story listed, and no window. With a story in review it reads the
+// threads, so a thread file that cannot be read is its error again.
+func TestWithNoStoryInReviewTheQueueReadsNoThreadAndRunsNoGit(t *testing.T) {
+	repo := project(t, "")
+	story(t, repo, "Working", []bool{true})
+	writeState(t, repo.CacheDir(), `{"enqueued": [{"story": "S-9", "by": "orchestrator", "at": "2026-10-19T08:00:00Z"}]}`)
+	dir := filepath.Join(repo.WipDir(), threads.Folder)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "TH-0001-broken.md"), []byte("---\nid: [unclosed\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var calls []string
+	g := countingGit{scriptedGit: scriptedGit{}, calls: &calls}
+
+	q, err := ComputeAt(g, repo, t0)
+	if err != nil {
+		t.Fatalf("queue with no story in review read the threads: %v", err)
+	}
+	if len(calls) != 0 {
+		t.Errorf("queue with no story in review ran %q, want no process", calls)
+	}
+	if q.Mode != "local" || q.Off || len(q.Eligible) != 0 || len(q.Ineligible) != 0 || q.Window != nil || q.Batch != nil || len(q.Outcomes) != 0 {
+		t.Errorf("queue %+v, want local with no story listed, no batch, outcome, or window", q)
+	}
+	if len(q.Enqueued) != 1 || q.Enqueued[0].Story != "S-9" {
+		t.Errorf("enqueued %+v, want the state's S-9", q.Enqueued)
+	}
+
+	story(t, repo, "Done building", []bool{true}, t0.Add(time.Hour))
+	if _, err := ComputeAt(g, repo, t0); err == nil || !strings.Contains(err.Error(), "TH-0001-broken.md") {
+		t.Errorf("queue with a story in review gave %v, want the broken thread file's error", err)
+	}
+}
+
 // The queue carries the state's enqueued stories, its batch and step, and
 // its outcomes, and marks each enqueued story; with no state it has no
 // batch and no outcomes.
