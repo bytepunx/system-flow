@@ -131,7 +131,10 @@ func List(ctx context.Context, r Runner, root, project string, include, exclude 
 // ReadProps is comps with their props, read by running the embedded script
 // with node once for each sub-project, in its folder under root, within
 // Timeout, keeping the skeletons it resolves under PropsCacheDir for the
-// next run. A component whose props cannot be read, such as one that does not
+// next run. Where root has a .flai-cache folder and the sub-project's svelte
+// is found, it answers each component whose kept read is still true from
+// KeptPropsPath and starts node only for the rest, if any (S-0601; see
+// propscache.go). A component whose props cannot be read, such as one that does not
 // parse, keeps no props and carries the reason in Error. The error is for
 // what stops every component of a sub-project: node not on PATH
 // (ErrNodeMissing), svelte not installed there (ErrSvelteMissing), a svelte
@@ -163,26 +166,52 @@ func ReadProps(ctx context.Context, r Runner, root string, comps []Component) ([
 
 // answer is what the script prints.
 type answer struct {
-	Components []struct {
-		Path  string `json:"path"`
-		Props []Prop `json:"props"`
-		Error string `json:"error"`
-	} `json:"components"`
-	Error *struct {
+	Components []answered `json:"components"`
+	// Stamps are what the stamped components' skeletons were resolved from,
+	// each [[kind, path], stamp].
+	Stamps []json.RawMessage `json:"stamps"`
+	Error  *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
 }
 
-// readProject reads the props of out's components at idx, all of project.
+// answered is one component of the script's answer.
+type answered struct {
+	Path  string `json:"path"`
+	Props []Prop `json:"props"`
+	Error string `json:"error"`
+	// Stamped is set when its skeletons depend on the answer's Stamps.
+	Stamped bool `json:"stamped"`
+}
+
+// readProject reads the props of out's components at idx, all of project:
+// those its kept read still answers from it, the rest with node, which it
+// then keeps.
 func readProject(ctx context.Context, r Runner, root, project string, out []Component, idx []int) error {
+	kept := openKept(root, project)
+	miss := kept.answer(out, idx)
+	if len(miss) == 0 {
+		return nil
+	}
+	a, err := runNode(ctx, r, root, project, out, miss)
+	if err != nil {
+		return err
+	}
+	kept.keep(out, miss, a)
+	return nil
+}
+
+// runNode reads the props of out's components at idx, all of project, with
+// node, sets them on out, and gives the script's answer.
+func runNode(ctx context.Context, r Runner, root, project string, out []Component, idx []int) (*answer, error) {
 	paths := make([]string, len(idx))
 	for i, n := range idx {
 		paths[i] = out[n].Path
 	}
 	input, err := json.Marshal(paths)
 	if err != nil {
-		return fmt.Errorf("cannot list the components of %s for node: %w", project, err)
+		return nil, fmt.Errorf("cannot list the components of %s for node: %w", project, err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
@@ -190,22 +219,22 @@ func readProject(ctx context.Context, r Runner, root, project string, out []Comp
 	stdout, stderr, err := r.Run(ctx, dir, "node", string(input), "--input-type=module", "-e", script, PropsCacheDir(root, project), scriptHash)
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return fmt.Errorf("node did not finish reading the props of %d components in %s in time; run this again, or narrow the sub-project's components include", len(idx), project)
+		return nil, fmt.Errorf("node did not finish reading the props of %d components in %s in time; run this again, or narrow the sub-project's components include", len(idx), project)
 	case err != nil:
-		return fmt.Errorf("node failed reading the props of the components in %s: %w%s", project, err, detail(stderr))
+		return nil, fmt.Errorf("node failed reading the props of the components in %s: %w%s", project, err, detail(stderr))
 	}
 	var a answer
 	if err := json.Unmarshal(stdout, &a); err != nil {
-		return fmt.Errorf("node's answer for the components in %s is not the JSON flai expects: %w%s", project, err, detail(stderr))
+		return nil, fmt.Errorf("node's answer for the components in %s is not the JSON flai expects: %w%s", project, err, detail(stderr))
 	}
 	if a.Error != nil {
 		switch a.Error.Code {
 		case "svelte-missing":
-			return fmt.Errorf("%w in %s, and flai reads components' props with its own svelte/compiler: run npm install (or its package manager's install) in %s, then run this again", ErrSvelteMissing, project, project)
+			return nil, fmt.Errorf("%w in %s, and flai reads components' props with its own svelte/compiler: run npm install (or its package manager's install) in %s, then run this again", ErrSvelteMissing, project, project)
 		case "svelte-old":
-			return fmt.Errorf("%s has svelte %s, and flai reads props with the parser of Svelte 5 or later: upgrade svelte there, then run this again", project, a.Error.Message)
+			return nil, fmt.Errorf("%s has svelte %s, and flai reads props with the parser of Svelte 5 or later: upgrade svelte there, then run this again", project, a.Error.Message)
 		default:
-			return fmt.Errorf("node could not read the props of the components in %s: %s (%s)", project, a.Error.Message, a.Error.Code)
+			return nil, fmt.Errorf("node could not read the props of the components in %s: %s (%s)", project, a.Error.Message, a.Error.Code)
 		}
 	}
 	got := make(map[string]int, len(a.Components))
@@ -224,7 +253,7 @@ func readProject(ctx context.Context, r Runner, root, project string, out []Comp
 			out[n].Props = []Prop{}
 		}
 	}
-	return nil
+	return &a, nil
 }
 
 // detail is node's standard error as the end of an error message, or

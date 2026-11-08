@@ -5,9 +5,13 @@
 // one JSON object on standard output:
 //
 //   {"components": [{"path", "props": [{"name", "kind", "type", "default",
-//     "required", "literals", "skeleton"}], "error"}]}
+//     "required", "literals", "skeleton"}], "error", "stamped"}],
+//    "stamps": [[[kind, path], stamp]]}
 //
 // or, when the compiler cannot be loaded, {"error": {"code", "message"}}.
+// A component marked stamped took its skeletons from what typescript read,
+// and stamps are those paths as they were when it read them, as stamp says,
+// so that flai can keep the answer until one of them changes (S-0601).
 // A prop of kind array, object, or unknown carries a skeleton, an empty value
 // of its type, resolved with the sub-project's own typescript when it has one
 // (S-0449). It reads each component's source; it never runs one.
@@ -55,8 +59,8 @@ if (compiler.error) {
 } else {
 	const files = JSON.parse(fs.readFileSync(0, 'utf8'));
 	const read = files.map((file) => component(compiler.parse, file));
-	addSkeletons(read);
-	print({ components: read.map((r) => r.entry) });
+	const stamps = addSkeletons(read);
+	print({ components: read.map((r) => r.entry), stamps });
 }
 
 function print(answer) {
@@ -385,10 +389,13 @@ function kindOfValue(node) {
 
 // addSkeletons gives each prop of kind array, object, or unknown its
 // skeleton: an empty value of its type, or its kind's fallback when its type
-// cannot be resolved or the sub-project has no typescript.
+// cannot be resolved or the sub-project has no typescript. It marks each
+// component whose skeletons were resolved stamped, and gives the stamps of
+// what their resolution read.
 function addSkeletons(read) {
 	const typed = read.filter((r) => r.typing !== null && r.entry.props.some(isJSON));
-	const resolved = typed.length > 0 ? cachedSkeletons(typed) : {};
+	const { skeletons: resolved, stamps } = typed.length > 0 ? cachedSkeletons(typed) : { skeletons: {}, stamps: [] };
+	for (const r of typed) r.entry.stamped = true;
 	for (const r of read) {
 		const skeletonOf = Object.hasOwn(resolved, r.entry.path) ? resolved[r.entry.path] : {};
 		for (const p of r.entry.props) {
@@ -396,6 +403,7 @@ function addSkeletons(read) {
 			p.skeleton = Object.hasOwn(skeletonOf, p.name) ? skeletonOf[p.name] : fallbacks[p.kind];
 		}
 	}
+	return stamps;
 }
 
 // isJSON is whether a prop is of a kind that carries a skeleton.
@@ -409,6 +417,9 @@ function isJSON(p) {
 // the typescript it resolves, whether the sub-project is SvelteKit, which
 // its package.json says outside the stamps, and each typed component's typing
 // and json props; the stamps are those of the paths typescript looked at.
+// It answers the skeletons with those stamps; without a typescript to load,
+// no skeletons, with the stamps of where one would be found, so that one
+// installed later is seen.
 function cachedSkeletons(typed) {
 	const tsPath = resolveTypescript();
 	const kit = isSvelteKit();
@@ -419,11 +430,24 @@ function cachedSkeletons(typed) {
 	const hit = readCache(key);
 	if (hit) return hit;
 	const ts = tsPath ? loadTypescript() : null;
-	if (!ts) return {};
+	if (!ts) return { skeletons: {}, stamps: tsPath ? [[['file', tsPath], stamp('file', tsPath)]] : typescriptProbes() };
 	const watched = watch(ts);
 	const resolved = typedSkeletons(ts, typed, kit);
-	writeCache(key, { stamps: [[['file', tsPath], stamp('file', tsPath)], ...watched()], skeletons: resolved });
-	return resolved;
+	const stamps = [[['file', tsPath], stamp('file', tsPath)], ...watched()];
+	writeCache(key, { stamps, skeletons: resolved });
+	return { skeletons: resolved, stamps };
+}
+
+// typescriptProbes are the stamps of where require would find typescript's
+// package.json: in node_modules in the sub-project's folder and each folder
+// above it.
+function typescriptProbes() {
+	const out = [];
+	for (let dir = process.cwd(); ; dir = path.dirname(dir)) {
+		const p = path.join(dir, 'node_modules', 'typescript', 'package.json');
+		out.push([['file', p], stamp('file', p)]);
+		if (path.dirname(dir) === dir) return out;
+	}
 }
 
 // resolveTypescript is where the sub-project's typescript resolves, or empty
@@ -447,9 +471,10 @@ function loadTypescript() {
 	}
 }
 
-// readCache is the skeletons the cache holds for key, or null when it holds
-// none, a stamp is not [[kind, path], stamp], or a stamp has changed. A file
-// it answers from is touched, so that writeCache keeps the files in use.
+// readCache is the skeletons the cache holds for key, with its stamps, or
+// null when it holds none, a stamp is not [[kind, path], stamp], or a stamp
+// has changed. A file it answers from is touched, so that writeCache keeps the
+// files in use.
 function readCache(key) {
 	if (!cacheDir) return null;
 	const file = path.join(cacheDir, key + '.json');
@@ -474,7 +499,7 @@ function readCache(key) {
 	} catch {
 		// Untouched, it is only the first to go when the folder is full.
 	}
-	return cache.skeletons;
+	return { skeletons: cache.skeletons, stamps: cache.stamps };
 }
 
 // isStamp is whether entry is as watch lists a stamp: [[kind, path], stamp],
@@ -518,7 +543,7 @@ function writeCache(key, cache) {
 // watch records each path typescript's system looks at, from now on, with
 // its stamp as it was before typescript looked, and gives the function that
 // lists them, each as [[kind, path], stamp]. A file is stamped by its kind,
-// time, and size, and a file that is missing, as most of module
+// modification time in nanoseconds, and size, and a file that is missing, as most of module
 // resolution's probes are, by its directory's listing instead, which a file
 // made there changes; a directory asked to exist is stamped by its kind
 // alone, and one listed by its time; a real path by what it resolves to.
@@ -552,7 +577,9 @@ function watch(ts) {
 	return () => [...seen.values()];
 }
 
-// stamp is what a path is now, as kind sees it.
+// stamp is what a path is now, as kind sees it, with its modification time
+// in whole nanoseconds, so that flai's stampOf gives the same string
+// (S-0601).
 function stamp(kind, p) {
 	if (kind === 'real') {
 		try {
@@ -561,12 +588,12 @@ function stamp(kind, p) {
 			return '-';
 		}
 	}
-	const st = fs.statSync(p, { throwIfNoEntry: false });
+	const st = fs.statSync(p, { throwIfNoEntry: false, bigint: true });
 	if (!st) return '-';
 	const type = st.isDirectory() ? 'd' : 'f';
 	if (kind === 'dir') return type;
-	if (kind === 'list') return type + ':' + st.mtimeMs;
-	return type + ':' + st.mtimeMs + ':' + st.size;
+	if (kind === 'list') return type + ':' + st.mtimeNs;
+	return type + ':' + st.mtimeNs + ':' + st.size;
 }
 
 // typedSkeletons builds one program over the typed components, each as a
