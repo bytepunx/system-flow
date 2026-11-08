@@ -599,7 +599,26 @@ func Pending(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Re
 // repository's kept history (S-0157): one git process while HEAD and the
 // tags are unchanged. It holds root's own lock, never another root's, so
 // one project's git processes never hold another project's call (S-0604).
+//
+// It always asks git whether HEAD or a tag moved, whatever watches root: a
+// publish tags and pushes from what it answers. PendingBatchWatched may take
+// a watcher's word instead.
 func PendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) (*Batch, error) {
+	return pendingBatch(r, root, m, repo, false)
+}
+
+// PendingBatchWatched is PendingBatch for a read that only shows what is
+// pending, such as the board's or a publish preview's: while a watcher of
+// root's refs (Watch) has seen no move since the history was read, it starts
+// no git process at all (S-0604). A move is seen up to the watcher's
+// debounce late, about two of its ticks, so a publish never takes this word.
+func PendingBatchWatched(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) (*Batch, error) {
+	return pendingBatch(r, root, m, repo, true)
+}
+
+// pendingBatch is PendingBatch, taking a watcher's word for root's refs when
+// watched.
+func pendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo, watched bool) (*Batch, error) {
 	batch := &Batch{}
 	if len(m.Projects) == 0 {
 		return batch, nil // no component, nothing to release, and no git asked
@@ -607,7 +626,7 @@ func PendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workit
 	e := keptFor(root)
 	e.Lock()
 	defer e.Unlock()
-	h, err := readHistory(r, e, root)
+	h, err := readHistory(r, e, root, watched)
 	if err != nil {
 		return nil, err
 	}
@@ -719,9 +738,10 @@ func PendingBatch(r execx.Runner, root string, m manifest.Manifest, repo *workit
 // not the full per-component plan. A history that cannot be read (no git,
 // for instance) is nothing pending rather than an error the caller must
 // handle: whether to show it is a lesser concern than whether to show the
-// board at all.
+// board at all. It only shows, so it takes a watcher's word for root's refs,
+// as PendingBatchWatched does.
 func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) map[string]bool {
-	b, err := PendingBatch(r, root, m, repo)
+	b, err := PendingBatchWatched(r, root, m, repo)
 	if err != nil {
 		return nil
 	}

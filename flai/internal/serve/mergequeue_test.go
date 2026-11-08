@@ -846,6 +846,57 @@ func TestAMoveOfMainsHeadWakesARunningPassWhileHeld(t *testing.T) {
 	}
 }
 
+// S-0604: a running pass tells the release package of every move of the main
+// checkout's refs, a tag's and a branch's, loose or packed, so that the
+// board's pending read takes no git process while none came.
+func TestAPassTellsReleaseOfAMovedTagOrBranch(t *testing.T) {
+	lab := newQueueLab(t)
+	git := filepath.Join(lab.root, ".git")
+	write := func(rel, body string) {
+		t.Helper()
+		path := filepath.Join(git, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("HEAD", "ref: refs/heads/main\n")
+	write("refs/heads/main", "1111111111111111111111111111111111111111\n")
+	var moves atomic.Int64
+	lab.on = false
+	lab.pass.every = time.Hour
+	lab.pass.o.WatchEvery = 5 * time.Millisecond
+	lab.pass.refsMoved = func(root string) {
+		if root == lab.root {
+			moves.Add(1)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		lab.runs.wait()
+	}()
+	lab.pass.start(ctx)
+	waitFor(t, "the watcher's word to count from after its first look", func() bool { return moves.Load() >= 1 })
+	time.Sleep(50 * time.Millisecond) // ticks of the watcher with nothing moved
+	for _, move := range []struct{ what, rel, body string }{
+		{"a new tag", "refs/tags/cli/v1.0.0", "2222222222222222222222222222222222222222\n"},
+		{"main's head", "refs/heads/main", "3333333333333333333333333333333333333333\n"},
+		{"the packed refs", "packed-refs", "4444444444444444444444444444444444444444 refs/tags/cli/v0.9.0\n"},
+	} {
+		n := moves.Load()
+		write(move.rel, move.body)
+		waitFor(t, "release told of "+move.what, func() bool { return moves.Load() > n })
+	}
+	n := moves.Load()
+	time.Sleep(100 * time.Millisecond) // ticks of the watcher with nothing moved
+	if got := moves.Load(); got != n {
+		t.Errorf("moves told with nothing moved = %d, want %d", got-n, 0)
+	}
+}
+
 // fakeProcess stands in for runCommand, keeping what it was asked to run
 // and answering stderr and err.
 type fakeProcess struct {

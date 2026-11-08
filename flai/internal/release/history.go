@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -44,9 +45,21 @@ type history struct {
 // (S-0604). PendingBatch holds the lock throughout, git processes included,
 // which also guards the commits a history shares with the one before it; a
 // call on another root takes another lock and never waits for it.
+//
+// A watcher of the root's refs, such as flai serve's main-refs watcher, may
+// stand in for the history's git show-ref (S-0604): while one watches the
+// root (watchers above zero) and none of its moves came since the history
+// was read (gen still read), a call that takes the watcher's word reads no
+// git at all. gen counts the moves and the watches begun and ended; a call
+// takes it before its show-ref, so a move reported during the read is
+// never lost.
 type keptRoot struct {
 	sync.Mutex
-	h *history
+	h    *history
+	read uint64 // the gen h was last read at; guarded by the mutex
+
+	gen      atomic.Uint64
+	watchers atomic.Int64
 }
 
 // kept holds each repository root's entry. Its own lock is held only to find
@@ -56,8 +69,10 @@ var kept = struct {
 	roots map[string]*keptRoot
 }{roots: map[string]*keptRoot{}}
 
-// keptFor returns root's entry, adding an empty one the first time.
+// keptFor returns root's entry, adding an empty one the first time. A root is
+// one entry however its path is written.
 func keptFor(root string) *keptRoot {
+	root = filepath.Clean(root)
 	kept.Lock()
 	defer kept.Unlock()
 	e := kept.roots[root]
@@ -66,6 +81,30 @@ func keptFor(root string) *keptRoot {
 		kept.roots[root] = e
 	}
 	return e
+}
+
+// Watch says a watcher now covers root's refs, HEAD, packed-refs, and every
+// ref under refs/heads and refs/tags, and will call RefsMoved on each change
+// it sees to them. Nothing read before Watch counts. The watcher's first look
+// at the refs must come after Watch; a caller that cannot order the two calls
+// RefsMoved once that look is taken. Each Watch is ended with one Unwatch.
+func Watch(root string) {
+	e := keptFor(root)
+	e.watchers.Add(1)
+	e.gen.Add(1)
+}
+
+// Unwatch ends one Watch of root: with none left, every call reads git again.
+func Unwatch(root string) {
+	e := keptFor(root)
+	e.gen.Add(1)
+	e.watchers.Add(-1)
+}
+
+// RefsMoved says root's refs may have moved: the next call reads git show-ref
+// again, whatever word it takes.
+func RefsMoved(root string) {
+	keptFor(root).gen.Add(1)
 }
 
 // logFormat separates commits with RS and fields with US; the files
@@ -77,8 +116,23 @@ var bracketedID = regexp.MustCompile(`^[EST]-\d+$`)
 // readHistory returns root's history, reading from git only what changed
 // since the last call: one process when nothing did, two when commits were
 // added, and the whole history when there is none kept or it was rewritten.
-// The caller holds e, root's entry.
-func readHistory(r execx.Runner, e *keptRoot, root string) (*history, error) {
+// The caller holds e, root's entry. With watched, a call that takes a
+// watcher's word, it reads no git while a watcher covers root and has seen no
+// move since the history was read.
+func readHistory(r execx.Runner, e *keptRoot, root string, watched bool) (*history, error) {
+	gen := e.gen.Load()
+	if watched && e.h != nil && e.read == gen && e.watchers.Load() > 0 {
+		return e.h, nil
+	}
+	h, err := readRefs(r, e, root)
+	if err == nil {
+		e.read = gen
+	}
+	return h, err
+}
+
+// readRefs is readHistory past the watcher: git show-ref, then what changed.
+func readRefs(r execx.Runner, e *keptRoot, root string) (*history, error) {
 	key, err := r.Run(root, "git", "show-ref", "--head", "--tags", "-d")
 	if err != nil {
 		return nil, err

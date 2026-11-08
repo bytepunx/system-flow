@@ -422,3 +422,53 @@ func TestPendingOnOneRootAnswersWhileAnotherRootsGitRuns(t *testing.T) {
 		t.Errorf("root A answers its own pending items once let go: %v", ids)
 	}
 }
+
+// S-0604: while a watcher covers a root and has seen no move since the
+// history was read, the board's read (PendingIDs) starts no git process; a
+// move it reports costs one git show-ref again, and a publish's read
+// (PendingBatch) and an unwatched root ask git every time.
+func TestPendingTakesTheWatchersWordWhileNoRefMoved(t *testing.T) {
+	root, sys := gitRepo(t)
+	repo := &workitem.Repo{Root: root, Manifest: m}
+	r := &counting{Runner: sys}
+	writeAcceptedItem(t, root, sys, "S-101", workitem.Story, "remediation", "Fix one", map[string]string{"cli/a.go": "package main\n"})
+	looks := func(what string, want int) map[string]bool {
+		t.Helper()
+		ids := PendingIDs(r, root, m, repo)
+		ran := r.take()
+		if len(ran) != want || (want == 1 && ran[0] != "git show-ref") {
+			t.Errorf("%s: want %d git process(es), ran %v", what, want, ran)
+		}
+		return ids
+	}
+
+	PendingIDs(r, root, m, repo)
+	r.take()
+	looks("unwatched, nothing changed", 1)
+	looks("unwatched again", 1)
+
+	Watch(root)
+	looks("the first look once watched reads what came before Watch again", 1)
+	if ids := looks("watched, no move since", 0); !ids["S-101"] || len(ids) != 1 {
+		t.Errorf("watched, the kept answer: %v", ids)
+	}
+	looks("watched, still no move", 0)
+
+	if _, err := PendingBatch(r, root, m, repo); err != nil {
+		t.Fatal(err)
+	}
+	if ran := r.take(); len(ran) != 1 || ran[0] != "git show-ref" {
+		t.Errorf("a publish's read asks git even while watched: %v", ran)
+	}
+
+	writeAcceptedItem(t, root, sys, "S-102", workitem.Story, "feature", "Add", map[string]string{"cli/b.go": "package main\n"})
+	RefsMoved(root)
+	ids := PendingIDs(r, root, m, repo)
+	if ran := r.take(); len(ran) == 0 || ran[0] != "git show-ref" || !ids["S-101"] || !ids["S-102"] {
+		t.Errorf("after a move: ran %v, pending %v", ran, ids)
+	}
+	looks("watched, no move since the last", 0)
+
+	Unwatch(root)
+	looks("unwatched again, nothing changed", 1)
+}

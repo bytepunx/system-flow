@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/watch"
@@ -82,9 +83,10 @@ const (
 const holdTitle = "The merge queue is held: the main checkout has files a landing would fail on"
 
 // mainRefs are the files of the main checkout's git that say where its
-// branches' heads are, relative to its root: the pass watches them, so that
-// a move of main's head wakes it while held.
-var mainRefs = []string{".git/HEAD", ".git/packed-refs", ".git/refs/heads"}
+// branches' heads and its tags are, relative to its root: the pass watches
+// them, so that a move of main's head wakes it while held, and so that the
+// release package reads no git for the board while none moved (S-0604).
+var mainRefs = []string{".git/HEAD", ".git/packed-refs", ".git/refs/heads", ".git/refs/tags"}
 
 // acceptSaid is how many of a failed landing's last lines on standard error
 // its error carries.
@@ -211,6 +213,9 @@ type queuePass struct {
 	advance  batchAdvancer
 	accepter func(dir string) mergequeue.Accepter
 	woken    chan struct{}
+	// refsMoved tells the release package root's refs may have moved,
+	// release.RefsMoved but in a test.
+	refsMoved func(root string)
 
 	mu sync.Mutex
 	// said is the reason last logged for the queue not running, "" when it
@@ -228,7 +233,7 @@ type queuePass struct {
 // newQueuePass is project e's merge queue pass, one of runs.
 func newQueuePass(o Options, e Entry, runs *queueRuns) *queuePass {
 	return &queuePass{o: o, e: e, runs: runs, every: queueEvery, run: mergequeue.RunBatch, advance: mergequeue.Advance,
-		accepter: flaiAccepter(runCommand, os.Executable), woken: make(chan struct{}, 1), stale: true}
+		accepter: flaiAccepter(runCommand, os.Executable), woken: make(chan struct{}, 1), refsMoved: release.RefsMoved, stale: true}
 }
 
 // start looks now, then every p.every and whenever woken, in the background
@@ -239,7 +244,7 @@ func (p *queuePass) start(ctx context.Context) {
 	p.runs.wg.Add(2)
 	go func() {
 		defer p.runs.wg.Done()
-		(&watch.Watcher{Root: p.e.Root, Paths: mainRefs, Every: p.o.WatchEvery}).Run(ctx, p.changed)
+		p.watchRefs(ctx)
 	}()
 	go func() {
 		defer p.runs.wg.Done()
@@ -253,6 +258,35 @@ func (p *queuePass) start(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// watchRefs watches the main checkout's mainRefs until ctx ends, waking the
+// pass on a change (changed). It also tells the release package of every
+// move, so that the board's pending read starts no git process while none
+// came (S-0604). A root whose .git is not a folder has none of these files to
+// watch, and its board keeps asking git.
+func (p *queuePass) watchRefs(ctx context.Context) {
+	w := &watch.Watcher{Root: p.e.Root, Paths: mainRefs, Every: p.o.WatchEvery}
+	emit := p.changed
+	if info, err := os.Stat(filepath.Join(p.e.Root, ".git")); err == nil && info.IsDir() {
+		root := p.e.Root
+		release.Watch(root)
+		defer release.Unwatch(root)
+		emit = func(rel string) {
+			p.refsMoved(root)
+			p.changed(rel)
+		}
+		// The watcher takes its first look as Run starts. A move between Watch
+		// and that look would go unseen, so its word counts only from a tick
+		// after it.
+		every := w.Every
+		if every <= 0 {
+			every = 300 * time.Millisecond
+		}
+		armed := time.AfterFunc(every, func() { p.refsMoved(root) })
+		defer armed.Stop()
+	}
+	w.Run(ctx, emit)
 }
 
 // wake has the pass look again as soon as it is not running a batch; it
