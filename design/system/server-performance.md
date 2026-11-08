@@ -408,6 +408,41 @@ Each cause from 8 to 21 has a draft story under [E-0033](../../wip/kanban/epics/
 | 20 | [S-0610](../../wip/kanban/stories/S-0610-the-close-out-runs-independent-test-tiers-at-once-and-smoke-skips-what-the.md) The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out |
 | 21 | [S-0611](../../wip/kanban/stories/S-0611-the-dashboard-asks-threads-list-for-open-threads-and-agent-status-for-open-runs.md) The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB |
 
+### Cause 9 fixed: the replanner's forecasts written in one pass (S-0599)
+
+#### Cause
+
+flai serve's replanner wrote each forecast it moved through `itemedit.Apply`, one after another (`flai/internal/serve/replan.go`, `replan`). `Apply` is the checked edit `flai edit` makes. It runs the whole `flai check` before and after each write and lists the items again to write `wip/agents/index.md`. So a replan paid cause 8's two checks once per forecast it moved.
+
+#### Fix
+
+The replanner writes every forecast it moves in one call to `itemedit.ApplyForecasts` (`flai/internal/itemedit/forecasts.go`):
+
+- `Repo.SaveAll` saves the items under one hold of the items lock (`flai/internal/workitem/itemlock.go`). Each item is merged as `Repo.Save` merges it ([ADR-0184](../adrs/0184-every-work-item-write-takes-one-items-lock-and-merges-a-copy-read-before.md)). A part both writers changed refuses that item alone, and the rest are written.
+- `wip/agents/index.md` is written once, from one list.
+- `check.Items` runs once over the written items (`flai/internal/check/items.go`): the per-item rules and the markdown lint of their files. It walks no folder, starts no `node`, and scans no digest. A forecast is a value flai owns, so only an error on an item's own file refuses it, as in `Apply`. That item is put back with `Repo.Restore`.
+- Each written item gets one edit notice, as before.
+
+The replanner passes the items its replay read. Each save therefore merges against what the replay read. A forecast another writer changed since the replay is refused and warned of as `forecast not replanned`. A change to another part of the item is kept. The files are still committed in one commit, `chore: replan forecasts after <triggers>`.
+
+#### Measured on this repository
+
+On 2026-11-08, between 00:48 and 01:10 UTC, on the operator's host (WSL2, 24 cores, Go 1.26). The scratch copy was the main checkout copied to `/tmp` without `.git`, `.flai-cache`, or `node_modules`, so the check's git rules found no repository, in both runs alike.
+
+- One program, built from `story/S-0599` with `go build -overlay`, picked 20 open stories in backlog or ready. Only 10 had a forecast, so 10 without one were added. Their edit set a duration of 1h as well.
+- It wrote a new delivery and basis on each. "Before" made one `itemedit.Apply` per story, one after another, as the old replanner did. `Apply` on this branch is `main`'s. "After" made one `itemedit.ApplyForecasts` call with the list the program had read.
+- It timed the write alone, wall clock and the process's CPU. The commit, which is the same both ways, was not timed.
+- `wip` and `.flai-cache` were restored from a copy before each run, so each run moved the same 20 forecasts. Each way ran three times, and every run wrote all 20.
+
+The host was very busy: the one-minute load average was 54 to 136 during the "before" runs and about 83 during the "after" runs.
+
+| Write of 20 forecasts | Runs, wall (CPU) | Median wall | Median CPU |
+|-----------------------|------------------|-------------|------------|
+| Before: `itemedit.Apply` per forecast | 197 s (157 s), 273 s (163 s), 336 s (176 s) | 273 s | 163 s |
+| After: one `itemedit.ApplyForecasts` | 0.08 s (0.09 s), 0.10 s (0.10 s), 0.09 s (0.10 s) | 0.09 s | 0.10 s |
+
+Before, each forecast cost about 14 s of wall time and 8 s of CPU on this host. That is above S-0596's 5 to 6.4 s, which was measured under a lighter load. After, the whole write of 20 takes under a tenth of a second. A replan's time is now its replay and its commit.
+
 ### Cause 13 fixed: threads, conversations, digest entries, issues, and activity documents kept parsed (S-0602)
 
 Every call read and parsed each of these files again: 884 threads, 351 conversations, 521 digest entries, 295 issues, and the strategic agents' activity documents. Now a long-running flai keeps each kind parsed, as S-0156 keeps items.

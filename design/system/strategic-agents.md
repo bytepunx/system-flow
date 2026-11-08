@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-11-07
+updated: 2026-11-08
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -430,9 +430,11 @@ Edits are read from the edit notices in `.flai-cache/edits.jsonl`, which `flai e
 | `deterministic`, the default | Every ready and backlog story with a forecast duration is played out again, in pull order, with `planning.Replay`: the [forecast](#forecast)'s play-out, keeping the story's own duration. Where the delivery moved, the new delivery and basis are written; the duration stays. No agent runs |
 | `agent` | The same, then the planner is queued for each story written, with the triggers, when its role file names the event under `replan-agent` |
 
-The replay writes each story through `itemedit.Apply`, the path `flai edit` takes, stamped `by: flai`, with no commit per story. The files written, the items and `wip/agents/index.md`, are then committed together in the main checkout as `chore: replan forecasts after <triggers>`, unless `dashboard.autocommit` is false. flai serve logs `forecasts replanned` with the policy, how many moved, and the triggers. A replay or a write that fails is warned of, and the others go on.
+The replay writes every story it moved in one pass through `itemedit.ApplyForecasts` (S-0599), stamped `by: flai`, with no commit per story. The pass makes the same edit `flai edit` makes. It saves the items under one hold of the items lock and writes `wip/agents/index.md` once. It then runs one check over the written items, the per-item rules and the markdown lint of their files. An error on an item's own file puts that item back. The replay passes the items it read, so each save merges against what the replay read ([ADR-0184](../adrs/0184-every-work-item-write-takes-one-items-lock-and-merges-a-copy-read-before.md)). A forecast another writer changed since the replay is refused, and a change to another part of the item is kept.
 
-A known cost: `itemedit.Apply` runs `flai check` before and after each write, as `flai edit` does, so a replan that moves many forecasts takes about a second per story it writes.
+The files written, the items and `wip/agents/index.md`, are then committed together in the main checkout as `chore: replan forecasts after <triggers>`, unless `dashboard.autocommit` is false. flai serve logs `forecasts replanned` with the policy, how many moved, and the triggers. A replay that fails is warned of as `forecast not replayed`, and a write that is refused as `forecast not replanned`. The others go on.
+
+The write costs little. In a scratch copy of this repository on a busy host, writing 20 moved forecasts took a median of 0.09 s. The old write, one checked edit per story, took 273 s ([server-performance.md](server-performance.md#cause-9-fixed-the-replanners-forecasts-written-in-one-pass-s-0599)).
 
 #### The schedule
 
