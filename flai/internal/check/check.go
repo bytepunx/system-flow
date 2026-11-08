@@ -1912,19 +1912,11 @@ func (c *checker) markdown() {
 	if cfg == nil {
 		return
 	}
-	_ = filepath.WalkDir(c.repo.WipDir(), func(path string, e fs.DirEntry, err error) error {
-		if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil //nolint:nilerr // an unreadable entry is skipped, as the other rules skip what they cannot read
+	for _, ff := range cfg.LintFolder(c.repo.WipDir()) {
+		for _, f := range ff.Findings {
+			c.add(Warning, "markdown."+f.Rule, ff.Path, f.Line, "%s", f)
 		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil //nolint:nilerr // as above
-		}
-		for _, f := range cfg.Lint(string(data)) {
-			c.add(Warning, "markdown."+f.Rule, path, f.Line, "%s", f)
-		}
-		return nil
-	})
+	}
 }
 
 // nodeRunner runs node for the components.examples check; tests replace it.
