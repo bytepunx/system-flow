@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,7 +41,7 @@ func (a *app) showHostSettings() error {
 	if err != nil {
 		return err
 	}
-	settings := a.hostSettings(mainRootOf(repo))
+	settings := a.hostSettings(context.Background(), mainRootOf(repo))
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return err

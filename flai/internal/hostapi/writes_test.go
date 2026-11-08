@@ -1771,7 +1771,7 @@ func TestServingAProjectNeedsItsOwnConsent(t *testing.T) {
 func TestSettingsGetSaysWhatMayChange(t *testing.T) {
 	p := withDocs(t)
 	host := Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root },
-		Settings: func(root string) any { return map[string]any{"root": root} }}
+		Settings: func(_ context.Context, root string) any { return map[string]any{"root": root} }}
 	res, e := MethodsFor("test", nil, host)["settings.get"](context.Background(), p, json.RawMessage(`{}`))
 	if e != nil {
 		t.Fatal(e)

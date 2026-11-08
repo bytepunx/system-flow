@@ -334,7 +334,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 		// settings.get: the host's settings as they apply to this project, and
 		// whether the dashboard may change them here and host-wide (S-0105).
 		// Tokens are never in it: a rotation answers with the new one once.
-		"settings.get": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+		"settings.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			if e := params(raw, &struct{}{}); e != nil {
 				return nil, e
 			}
@@ -343,7 +343,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				"enable": EnableCommand(ActionSettings), "enable_everywhere": EnableEverywhere(ActionSettings),
 			}
 			if host.Settings != nil {
-				out["host"] = host.Settings(p.Root)
+				out["host"] = host.Settings(ctx, p.Root)
 			}
 			return out, nil
 		},

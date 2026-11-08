@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -2150,10 +2151,15 @@ func (a *app) hostHarnesses(agent config.AgentStart, from func(name string) stri
 // hostSettings is the host's configuration as it applies to the project at
 // root, for the dashboard's settings page (S-0105) and its Host page
 // (S-0489). The tokens are not in it: a rotation answers with the new one,
-// once.
-func (a *app) hostSettings(root string) any {
+// once. It records three phases on ctx (S-0605): settings.config, the host
+// configuration and what it says of the project; settings.served, the
+// projects flai serve serves; and settings.project, the project's own
+// manifest and MCP server.
+func (a *app) hostSettings(ctx context.Context, root string) any {
+	done := perf.Track(ctx, "settings.config")
 	cfg, _, err := a.loadConfig()
 	if err != nil {
+		done()
 		return map[string]any{"error": err.Error()}
 	}
 	all := hostActions(root) // those the roles the project defines name among them (S-0417)
@@ -2197,6 +2203,10 @@ func (a *app) hostSettings(root string) any {
 	// allowed_hosts is the hosts the dashboard is to accept beside its own
 	// address, as the configuration names them now, which the container's next
 	// start gives it (S-0489); flai dashboard status says what it runs with.
+	done()
+	done = perf.Track(ctx, "settings.served")
+	projects := a.servedView()
+	done()
 	out := map[string]any{
 		"actions": actions,
 		"agent": map[string]any{"name": agent.Name, "command": command,
@@ -2205,8 +2215,9 @@ func (a *app) hostSettings(root string) any {
 		"allowed_hosts": config.NormalizeAllowedHosts(cfg.Dashboard.AllowedHosts),
 		"checks":        map[string]any{"commands": checks, "timeout_minutes": timeout},
 		"import_roots":  roots,
-		"projects":      a.servedView(),
+		"projects":      projects,
 	}
+	defer perf.Track(ctx, "settings.project")()
 	if repo, err := workitem.Open(root); err == nil {
 		out["default_agent"] = repo.Manifest.Agent
 		// the shared paths as the manifest has them now (S-0295, ADR-0096)

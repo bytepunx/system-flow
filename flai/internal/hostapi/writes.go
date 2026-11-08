@@ -569,8 +569,9 @@ type Host struct {
 	// when nothing starts agents here.
 	RoleStream func(root, role string, after int64) (any, error)
 	// Settings reports the host's settings as they apply to a project
-	// (S-0105), for the dashboard's settings page. Nil when there are none.
-	Settings func(root string) any
+	// (S-0105), for the dashboard's settings page, recording its phases on
+	// the context (S-0605). Nil when there are none.
+	Settings func(ctx context.Context, root string) any
 	// Requests keeps the records of detached writes where a restart of flai
 	// serve does not lose them (S-0109). Nil keeps them in memory.
 	Requests Requests

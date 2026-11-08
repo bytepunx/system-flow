@@ -25,6 +25,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -345,7 +346,7 @@ func TestServeMergeQueueAction(t *testing.T) {
 	}
 	listed := func() map[string]any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -405,7 +406,7 @@ func TestServeFormulaAction(t *testing.T) {
 	}
 	listed := func() map[string]any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1481,7 +1482,16 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+	ctx, rec := perf.Start(context.Background())
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(ctx, mainRootOf(repo)))
+	// S-0605: settings.get says where its time goes
+	phases := map[string]int{}
+	for _, ph := range rec.Phases() {
+		phases[ph.Name] = ph.Count
+	}
+	if want := map[string]int{"settings.config": 1, "settings.served": 1, "settings.project": 1}; !reflect.DeepEqual(phases, want) {
+		t.Errorf("phases %v, want %v", phases, want)
+	}
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":[],"ask_capable":false,"deny_protected":false,"guard":"","guard_capable":false,"program":"","set":false}`,
@@ -1514,7 +1524,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 	for _, want := range []string{
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"from":"project","guard":"none","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"from":"project","guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
@@ -1524,7 +1534,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 		}
 	}
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude")
-	got, _ = json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+	got, _ = json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 	if want := `"guard":"none","guard_capable":true,"program":"/opt/claude","set":true}`; !strings.Contains(string(got), want) {
 		t.Errorf("a program beside the guard is set: want %s in\n%s", want, got)
 	}
@@ -1554,7 +1564,7 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+		got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 		if strings.Contains(string(got), key) || strings.Contains(string(got), masterKey) {
 			t.Errorf("a key is in the settings: %s", got)
 		}
@@ -1701,7 +1711,7 @@ func TestSettingsShowThePlanningTriggers(t *testing.T) {
 	a := &app{configPath: configOf(t), errOut: &bytes.Buffer{}, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
 	planning := func() string {
 		t.Helper()
-		got, _ := json.Marshal(a.hostSettings(mainRootOf(repo)).(map[string]any)["planning"])
+		got, _ := json.Marshal(a.hostSettings(context.Background(), mainRootOf(repo)).(map[string]any)["planning"])
 		return string(got)
 	}
 	if got, want := planning(), `{"plan":false,"replan":"deterministic","replan_set":false,"schedule":""}`; got != want {
@@ -1974,7 +1984,7 @@ func TestAutoPublishIsTheShellsAlone(t *testing.T) {
 	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); !cfg.ActionEnabled("auto-publish", mainRootOf(repo)) {
 		t.Error("the refusal left auto-publish as the shell set it")
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-publish") || !strings.Contains(string(got), `"name":"push"`) {
 		t.Errorf("the settings page is told of auto-publish: %s", got)
 	}
@@ -2007,7 +2017,7 @@ func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
 	if code == 0 || !strings.Contains(out, "flai serve disable auto-upgrade") {
 		t.Errorf("settings.action refuses auto-upgrade, naming what to run: %d %s", code, out)
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-upgrade") {
 		t.Errorf("the settings page is told of auto-upgrade: %s", got)
 	}
@@ -2418,7 +2428,7 @@ func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
 	root := tempProject(t)
 	allowed := func() any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2545,7 +2555,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	if !(&app{configPath: configOf(t)}).agentConfig(root).RoleActions["review"] {
 		t.Error("enabled, flai serve is not told")
 	}
-	settings, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(root))
+	settings, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
 	if err != nil || !strings.Contains(string(settings), `"here":true,"means":"start the role reviewer`) || !strings.Contains(string(settings), `"name":"review"`) {
 		t.Errorf("the settings page does not list review on: %s %v", settings, err)
 	}
