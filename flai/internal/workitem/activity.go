@@ -175,11 +175,15 @@ func (r *Repo) Activity(kind string) (*Activity, error) {
 		return nil, err
 	}
 	path := r.ActivityPath(kind)
-	a, err := ReadActivity(path)
+	a, err := keptActivities.Read(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return &Activity{Kind: kind, Path: path}, nil
 	}
-	return a, err
+	if err != nil {
+		return nil, err
+	}
+	a.Path = path // the store keys by absolute path; answer the one asked for
+	return a, nil
 }
 
 // Activities loads the activity documents that exist, in the order of the
@@ -191,16 +195,35 @@ func (r *Repo) Activities() ([]*Activity, error) {
 	}
 	var out []*Activity
 	for _, kind := range kinds {
-		a, err := ReadActivity(r.ActivityPath(kind))
+		path := r.ActivityPath(kind)
+		a, err := keptActivities.Read(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
+		a.Path = path
 		out = append(out, a)
 	}
 	return out, nil
+}
+
+// keptActivities keeps the activity documents Repo.Activity and
+// Repo.Activities read, parsed between calls (S-0602): a document is parsed
+// again only when its stat says it may have changed, as KeptFiles says.
+var keptActivities = NewKeptFiles(ReadActivity, (*Activity).clone)
+
+// clone copies an activity document deeply enough that a caller's change to
+// it, its entries, or its refusals reaches no other caller.
+func (a *Activity) clone() *Activity {
+	c := *a
+	c.Entries = slices.Clone(a.Entries)
+	for i := range c.Entries {
+		c.Entries[i].Items = slices.Clone(c.Entries[i].Items)
+	}
+	c.Refusals = slices.Clone(a.Refusals)
+	return &c
 }
 
 // ReadActivity loads and validates an activity document: its front matter is

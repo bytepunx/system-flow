@@ -557,3 +557,120 @@ func TestAnUnreadableRolesFolderIsAnError(t *testing.T) {
 		t.Error("the index is written without knowing the kinds")
 	}
 }
+
+// agePast sets path's modification time a minute back, past racyWindow, so
+// that a read of it is trusted and kept.
+func agePast(t *testing.T, path string) {
+	t.Helper()
+	old := time.Now().Add(-time.Minute)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0602: Activities parses a document again only when it changed, and sees
+// an entry appended, a document added, and one removed on its next call.
+func TestActivitiesAreKeptBetweenCalls(t *testing.T) {
+	r := newProject(t)
+	if _, err := r.AppendActivity(ActivityPlanner, ActivityEntry{At: activityAt, Summary: "Planned E-0001.", Seconds: 60, Cost: 0.1}); err != nil {
+		t.Fatal(err)
+	}
+	agePast(t, r.ActivityPath(ActivityPlanner))
+	if list, err := r.Activities(); err != nil || len(list) != 1 {
+		t.Fatalf("first read: %v %v", list, err)
+	}
+	before := keptActivities.Parses()
+	if list, err := r.Activities(); err != nil || len(list) != 1 {
+		t.Fatalf("second read: %v %v", list, err)
+	}
+	if n := keptActivities.Parses() - before; n != 0 {
+		t.Errorf("a second Activities with nothing changed parsed %d files, want 0", n)
+	}
+
+	if _, err := r.AppendActivity(ActivityPlanner, ActivityEntry{At: activityAt.Add(time.Minute), Summary: "Planned E-0002.", Seconds: 30, Cost: 0.05}); err != nil {
+		t.Fatal(err)
+	}
+	list, err := r.Activities()
+	if err != nil || len(list) != 1 || len(list[0].Entries) != 2 || list[0].TasksCompleted != 2 {
+		t.Fatalf("after an append: %+v %v", list, err)
+	}
+
+	if _, err := r.AppendActivity(ActivityAnalyzer, ActivityEntry{At: activityAt, Summary: "Read the stats.", Seconds: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if list, err = r.Activities(); err != nil || len(list) != 2 || list[0].Kind != ActivityPlanner || list[1].Kind != ActivityAnalyzer {
+		t.Fatalf("after a document added: %+v %v", list, err)
+	}
+
+	if err := os.Remove(r.ActivityPath(ActivityPlanner)); err != nil {
+		t.Fatal(err)
+	}
+	if list, err = r.Activities(); err != nil || len(list) != 1 || list[0].Kind != ActivityAnalyzer {
+		t.Fatalf("after a document removed: %+v %v", list, err)
+	}
+	a, err := r.Activity(ActivityPlanner)
+	if err != nil || len(a.Entries) != 0 || a.Path != r.ActivityPath(ActivityPlanner) {
+		t.Errorf("a removed document reads as empty: %+v %v", a, err)
+	}
+}
+
+// S-0602: what a caller changes in an activity it was given reaches neither
+// the next read nor another caller.
+func TestActivityReadsAreCopies(t *testing.T) {
+	r := newProject(t)
+	if _, err := r.AppendActivity(ActivityOrchestrator, ActivityEntry{At: activityAt, Summary: "Ordered the ready column.", Items: []string{"S-0001"}, Seconds: 60, Cost: 0.1}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.AppendRefusal(ActivityOrchestrator, ActivityRefusal{At: activityAt.Add(time.Minute), Call: "flai release --pending", Needs: "orchestration.permissions.publish"}); err != nil {
+		t.Fatal(err)
+	}
+	agePast(t, r.ActivityPath(ActivityOrchestrator))
+	first, err := r.Activity(ActivityOrchestrator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := ReadActivity(r.ActivityPath(ActivityOrchestrator))
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.TasksCompleted = 99
+	first.Entries[0].Summary = "changed"
+	first.Entries[0].Items[0] = "S-9999"
+	first.Refusals[0].Call = "changed"
+	first.Entries = append(first.Entries, ActivityEntry{Summary: "added"})
+	again, err := r.Activity(ActivityOrchestrator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(again, want) {
+		t.Errorf("a caller's change reached the next read:\n got %+v\nwant %+v", again, want)
+	}
+}
+
+// S-0602: readers at once get equal answers.
+func TestActivitiesAtOnceAgree(t *testing.T) {
+	r := newProject(t)
+	for _, kind := range []string{ActivityPlanner, ActivityOrchestrator, ActivityCurator} {
+		if _, err := r.AppendActivity(kind, ActivityEntry{At: activityAt, Summary: "Did one thing.", Items: []string{"S-0001"}, Seconds: 90, Cost: 0.25}); err != nil {
+			t.Fatal(err)
+		}
+		agePast(t, r.ActivityPath(kind))
+	}
+	want, err := r.Activities()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const readers = 8
+	got := make([][]*Activity, readers)
+	errs := make([]error, readers)
+	var wg sync.WaitGroup
+	for i := range readers {
+		wg.Go(func() { got[i], errs[i] = r.Activities() })
+	}
+	wg.Wait()
+	for i := range readers {
+		if errs[i] != nil || !reflect.DeepEqual(got[i], want) {
+			t.Errorf("reader %d: %v, %v; want %v", i, got[i], errs[i], want)
+		}
+	}
+}
