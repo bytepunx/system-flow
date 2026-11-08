@@ -185,14 +185,7 @@ func raceRepo(t *testing.T) (repo *workitem.Repo, a, task, b, c *workitem.Item) 
 // check, as another agent does in the main checkout (I-0182).
 func between(t *testing.T, write func(repo *workitem.Repo)) {
 	t.Helper()
-	calls := 0
-	runCheck = func(repo *workitem.Repo, now time.Time) (*check.Result, error) {
-		if calls++; calls == 2 {
-			write(repo)
-		}
-		return check.Run(repo, now)
-	}
-	t.Cleanup(func() { runCheck = check.Run })
+	betweenItemWrite(t, write)
 }
 
 // tick ticks story's first criterion through Apply.
@@ -284,9 +277,11 @@ func TestATickStandsWhenAnotherStoryStartsBetweenTheChecks(t *testing.T) {
 }
 
 // I-0182, ADR-0197: a markdown finding on another story's task, written
-// meanwhile and untracked, is outside the ticked story: the tick stands, and
-// the finding is among its warnings, marked outside.
-func TestATickWarnsOfAFindingOnAnotherStorysTaskWrittenBetweenTheChecks(t *testing.T) {
+// meanwhile and untracked, is outside the ticked story: the tick stands. The
+// item-write rules lint only the files the tick wrote and its story's, so
+// the finding is no warning either, and one that is would be marked outside
+// (S-0598).
+func TestATickStandsOverAFindingOnAnotherStorysTaskWrittenBetweenTheChecks(t *testing.T) {
 	repo, a, _, b, _ := raceRepo(t)
 	var theirs string
 	between(t, func(repo *workitem.Repo) {
@@ -304,17 +299,13 @@ func TestATickWarnsOfAFindingOnAnotherStorysTaskWrittenBetweenTheChecks(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	warned := false
-	for _, f := range res.Warnings {
-		if f.Rule == "markdown.MD012" && filepath.Join(repo.Root, f.Path) == theirs {
-			warned = true
-			if !f.Outside {
-				t.Errorf("the warning is not marked outside the story: %+v", f)
-			}
-		}
+	if len(findings(t, repo, "markdown.MD012", theirs)) == 0 {
+		t.Fatalf("%s has no markdown.MD012 finding: the test reproduces nothing", theirs)
 	}
-	if !warned {
-		t.Errorf("no markdown.MD012 warning on %s: %+v", theirs, res.Warnings)
+	for _, f := range res.Warnings {
+		if f.Rule == "markdown.MD012" && filepath.Join(repo.Root, f.Path) == theirs && !f.Outside {
+			t.Errorf("the warning is not marked outside the story: %+v", f)
+		}
 	}
 	if got := Criteria(mustGet(t, repo, a.ID).Body); len(got) != 1 || !got[0].Ticked {
 		t.Errorf("the criterion is not ticked: %+v", got)
@@ -346,9 +337,10 @@ func TestATickIsRefusedOnANewFindingInsideItsStory(t *testing.T) {
 }
 
 // ADR-0197: an epic has no story, so an edit of one refuses a new finding
-// only on a path it wrote; a finding on a story's task written meanwhile is
-// a warning, marked outside.
-func TestAnEpicEditWarnsOfANewFindingOnAPathItDidNotWrite(t *testing.T) {
+// only on a path it wrote; a finding on a story's task written meanwhile
+// refuses nothing. The item-write rules do not lint that task, so it is no
+// warning either, and one that is would be marked outside (S-0598).
+func TestAnEpicEditStandsOverANewFindingOnAPathItDidNotWrite(t *testing.T) {
 	repo, _, task, _, _ := raceRepo(t)
 	epic := mustGet(t, repo, "E-0001")
 	between(t, func(*workitem.Repo) { blankLines(t, task.Path) })
@@ -357,12 +349,13 @@ func TestAnEpicEditWarnsOfANewFindingOnAPathItDidNotWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a finding on a path the edit did not write refused it: %v", err)
 	}
-	warned := false
-	for _, f := range res.Warnings {
-		warned = warned || (f.Rule == "markdown.MD012" && filepath.Join(repo.Root, f.Path) == task.Path && f.Outside)
+	if len(findings(t, repo, "markdown.MD012", task.Path)) == 0 {
+		t.Fatalf("%s has no markdown.MD012 finding: the test reproduces nothing", task.Path)
 	}
-	if !warned {
-		t.Errorf("no markdown.MD012 warning outside on %s: %+v", task.Path, res.Warnings)
+	for _, f := range res.Warnings {
+		if f.Rule == "markdown.MD012" && filepath.Join(repo.Root, f.Path) == task.Path && !f.Outside {
+			t.Errorf("the warning is not marked outside: %+v", f)
+		}
 	}
 }
 

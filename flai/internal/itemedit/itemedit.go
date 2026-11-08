@@ -356,16 +356,18 @@ func (u *undo) paths(repo *workitem.Repo) []string {
 	return out
 }
 
-// runCheck is the check Apply runs before and after it writes: a variable so
-// that a test can bring another writer's finding between the two runs
-// (I-0182).
-var runCheck = check.Run
+// runCheck is the check Apply runs before and after it writes, the rules a
+// work item write can affect (S-0598): a variable so that a test can bring
+// another writer's finding between the two runs (I-0182).
+var runCheck = check.RunItemWrite
 
-// Apply makes the change. It runs flai check before and after the write and
-// refuses the edit, putting every file back, on a new finding inside the
-// edited item's story, the story itself or a task's parent, or on an error on
-// the item's own file; a new finding outside the story is a warning, and one
-// a check scoped to the story leaves out is neither (ADR-0197, I-0182).
+// Apply makes the change. It runs the rules a work item write can affect
+// before and after the write, over the same items and files
+// (check.RunItemWrite, S-0598), and refuses the edit, putting every file back,
+// on a new finding inside the edited item's story, the story itself or a
+// task's parent, or on an error on the item's own file; a new finding outside
+// the story is a warning, and one a check scoped to the story leaves out is
+// neither (ADR-0197, I-0182).
 func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Options) (*Result, error) {
 	if opt.Now.IsZero() {
 		opt.Now = time.Now()
@@ -566,17 +568,6 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	it.Updated = now
 
 	// ---- write, keeping what was there ----
-	before, err := runCheck(repo, opt.Now)
-	if err != nil {
-		return nil, err
-	}
-	u := &undo{repo: repo, files: map[string]*file{}}
-	fail := func(err error) (*Result, error) {
-		if rerr := u.restore(); rerr != nil {
-			return nil, fmt.Errorf("%w; and putting the files back failed: %w", err, rerr)
-		}
-		return nil, err
-	}
 	retitled := it.Title != oldTitle
 	if retitled {
 		it.Path = filepath.Join(filepath.Dir(oldPath), workitem.FileName(it.ID, it.Title))
@@ -586,6 +577,27 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			}
 			res.Renamed = rel(repo, oldPath)
 		}
+	}
+	var links []string
+	if it.Path != oldPath {
+		if links, err = linking(repo, filepath.Base(oldPath)); err != nil {
+			return nil, err
+		}
+	}
+	// the item-write rules, before and after, over the same items and files,
+	// so that a finding already on a file the edit writes is known before
+	// (ADR-0197, S-0598)
+	write := checkWrite(repo, it, oldPath, newParent, formerParent, retitled, links)
+	before, err := runCheck(repo, opt.Now, write)
+	if err != nil {
+		return nil, err
+	}
+	u := &undo{repo: repo, files: map[string]*file{}}
+	fail := func(err error) (*Result, error) {
+		if rerr := u.restore(); rerr != nil {
+			return nil, fmt.Errorf("%w; and putting the files back failed: %w", err, rerr)
+		}
+		return nil, err
 	}
 	u.note(oldPath)
 	u.note(it.Path)
@@ -633,7 +645,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 			return fail(err)
 		}
 		if it.Path != oldPath {
-			if err := relink(repo, u, filepath.Base(oldPath), filepath.Base(it.Path)); err != nil {
+			if err := relink(u, links, filepath.Base(oldPath), filepath.Base(it.Path)); err != nil {
 				return fail(err)
 			}
 		}
@@ -646,14 +658,15 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		}
 	}
 
-	// ---- the repository's check, with the change in place, scoped to the
+	// ---- the item-write rules, with the change in place, scoped to the
 	// item's story: another writer's finding refuses nothing (ADR-0197,
 	// I-0182) ----
-	after, err := runCheck(repo, opt.Now)
+	files := u.paths(repo)
+	write.Paths = append(write.Paths, files...)
+	after, err := runCheck(repo, opt.Now, write)
 	if err != nil {
 		return fail(err)
 	}
-	files := u.paths(repo)
 	outside, err := check.ScopeToItem(after, repo, it, files)
 	if err != nil {
 		return fail(fmt.Errorf("check the edit of %s: %w", it.ID, err))
@@ -984,18 +997,72 @@ func retitleNarrative(repo *workitem.Repo, u *undo, it *workitem.Item, oldTitle 
 	return atomicfile.WriteFile(path, []byte("---\n"+newFM+"---\n"+newBody), 0o644)
 }
 
-// relink rewrites links to the old file name in the Markdown of the
-// manifest's three folders, the archive excepted: it is not edited.
-func relink(repo *workitem.Repo, u *undo, oldName, newName string) error {
-	archive := repo.ArchiveDir()
+// checkWrite is what an edit's two runs of the check cover (S-0598): the
+// item, its parent, and on a reparent its former and new parent, and the
+// files the edit may write, the item's old and new file, the parents', a
+// retitled story's narrative, the files links names, and the index; with the
+// story's own item files and narrative, as the story's files a check scoped
+// to it holds inside, so that a new finding on them still refuses the edit
+// whoever brought it (ADR-0197). The after run adds the files the edit wrote.
+func checkWrite(repo *workitem.Repo, it *workitem.Item, oldPath string, newParent, formerParent *workitem.Item, retitled bool, links []string) check.Write {
+	w := check.Write{Items: []string{it.ID}, Paths: []string{oldPath, it.Path, filepath.Join(repo.AgentsDir(), "index.md")}}
+	if it.Parent != "" {
+		w.Items = append(w.Items, it.Parent)
+		if p, err := repo.Get(it.Parent); err == nil && !p.Archived {
+			w.Paths = append(w.Paths, p.Path)
+		}
+	}
+	for _, p := range []*workitem.Item{newParent, formerParent} {
+		if p != nil {
+			w.Items = append(w.Items, p.ID)
+			w.Paths = append(w.Paths, p.Path)
+		}
+	}
+	if retitled && it.Type == workitem.Story {
+		w.Paths = append(w.Paths, repo.NarrativePath(it.ID))
+	}
+	w.Paths = append(w.Paths, links...)
+	story := ""
+	switch {
+	case it.Type == workitem.Story:
+		story = it.ID
+	case it.Type == workitem.Task && it.Parent != "":
+		story = it.Parent
+	}
+	if st, err := repo.Get(story); story != "" && err == nil && st.Type == workitem.Story {
+		w.Paths = append(w.Paths, st.Path, repo.NarrativePath(st.ID))
+		if items, err := repo.List(false); err == nil {
+			for _, t := range workitem.Children(items, st.ID) {
+				w.Paths = append(w.Paths, t.Path)
+			}
+		}
+	}
+	return w
+}
+
+// relinkDirs is the folders whose Markdown a retitle keeps in step, the
+// manifest's three folders, or only wip in a story's worktree: design and docs
+// are the worktree's own, on another branch, and one commit cannot span two
+// checkouts.
+func relinkDirs(repo *workitem.Repo) []string {
 	keys := []string{"wip", "design", "docs"}
 	if repo.IsWorktree() {
-		// design and docs are this worktree's own, on another branch; one
-		// commit cannot span two checkouts, so only wip is kept in step here
 		keys = keys[:1]
 	}
+	dirs := make([]string, 0, len(keys))
 	for _, key := range keys {
-		dir := repo.Manifest.Dir(root(repo), key)
+		dirs = append(dirs, repo.Manifest.Dir(root(repo), key))
+	}
+	return dirs
+}
+
+// linking is the Markdown files of relinkDirs, the archive excepted, which is
+// not edited, that name oldName: the files a retitle's relink rewrites, found
+// before the edit writes anything so that its first check covers them.
+func linking(repo *workitem.Repo, oldName string) ([]string, error) {
+	archive := repo.ArchiveDir()
+	var out []string
+	for _, dir := range relinkDirs(repo) {
 		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil //nolint:nilerr // a folder that is not there has no links
@@ -1013,10 +1080,26 @@ func relink(repo *workitem.Repo, u *undo, oldName, newName string) error {
 			if err != nil || !strings.Contains(string(data), oldName) {
 				return nil //nolint:nilerr // unreadable files are the check's to report
 			}
-			u.note(path)
-			return atomicfile.WriteFile(path, []byte(strings.ReplaceAll(string(data), oldName, newName)), 0o644)
+			out = append(out, path)
+			return nil
 		})
 		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// relink rewrites links to the old file name in files, as linking found them,
+// reading each again, so that what was saved to it since is kept.
+func relink(u *undo, files []string, oldName, newName string) error {
+	for _, path := range files {
+		data, err := os.ReadFile(path)
+		if err != nil || !strings.Contains(string(data), oldName) {
+			continue // gone or no longer linking since linking read it
+		}
+		u.note(path)
+		if err := atomicfile.WriteFile(path, []byte(strings.ReplaceAll(string(data), oldName, newName)), 0o644); err != nil {
 			return err
 		}
 	}
