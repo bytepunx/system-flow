@@ -579,6 +579,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if e != nil {
 				return nil, e
 			}
+			// with flai serve's item snapshot on, the get and the list both
+			// answer from it, with no glob and no stat (S-0606)
 			done := perf.Track(ctx, "repo.get")
 			it, err := repo.Get(in.ID)
 			done()

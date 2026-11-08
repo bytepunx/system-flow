@@ -3,6 +3,8 @@ package hostapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -231,6 +233,127 @@ func TestItemsListAndGet(t *testing.T) {
 		if err := call(t, p, "item.get", `{"id":"`+id+`"}`, &got); err == nil || err.Code != channel.CodeInvalidParams {
 			t.Errorf("item.get %q: %+v", id, err)
 		}
+	}
+}
+
+// agedHarbour is harbour with every file's time an hour back, so that the
+// item store trusts what it reads at once rather than inside its racy window,
+// and its snapshot of each folder stays fresh (S-0606).
+func agedHarbour(t *testing.T) channel.Project {
+	t.Helper()
+	p := harbour(t)
+	past := time.Now().Add(-time.Hour)
+	_ = filepath.WalkDir(p.Root, func(path string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() {
+			_ = os.Chtimes(path, past, past)
+		}
+		return nil
+	})
+	return p
+}
+
+// itemFile is the path of id's file under root's kanban or archive.
+func itemFile(t *testing.T, root, id string) string {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return it.Path
+}
+
+// rewriteBehind changes the title of the item in path as another process
+// would, with its time an hour back, so that only being told shows it.
+func rewriteBehind(t *testing.T, path, from, to string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), from) {
+		t.Fatalf("%s has no %q", path, from)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(data), from, to, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-time.Hour)
+	_ = os.Chtimes(path, past, past)
+}
+
+// TestItemGetAnswersFromTheSnapshot: with flai serve's item snapshot on,
+// item.get answers as it did with it off, for a story with its task and plan,
+// a task, an archived story, and an unknown ID, and it lists the snapshot once
+// a call, reading no file: an edit nobody reported is not seen until the
+// store is told of it (S-0606).
+func TestItemGetAnswersFromTheSnapshot(t *testing.T) {
+	p := agedHarbour(t)
+	ids := []string{"S-0001", "s-1", "T-0001", "S-0003", "S-0099"}
+	answer := func(id string) string {
+		var got json.RawMessage
+		err := call(t, p, "item.get", `{"id":"`+id+`"}`, &got)
+		if err != nil {
+			return fmt.Sprintf("error %d %s", err.Code, err.Message)
+		}
+		return string(got)
+	}
+	before := map[string]string{}
+	for _, id := range ids {
+		before[id] = answer(id)
+	}
+	workitem.SnapshotItems(p.Root)
+	t.Cleanup(func() { workitem.StopSnapshotItems(p.Root) })
+	for _, id := range ids {
+		if got := answer(id); got != before[id] {
+			t.Errorf("item.get %s with the snapshot:\n%s\nwithout:\n%s", id, got, before[id])
+		}
+	}
+	if !strings.HasPrefix(before["S-0099"], fmt.Sprintf("error %d", NotFound)) {
+		t.Errorf("an unknown ID: %s", before["S-0099"])
+	}
+
+	story := itemFile(t, p.Root, "S-0001")
+	var got ItemWithChildren
+	_ = call(t, p, "item.get", `{"id":"S-0001"}`, &got)
+	title := got.Item.Title
+	rewriteBehind(t, story, "title: "+title, "title: Renamed behind the store")
+	if e := call(t, p, "item.get", `{"id":"S-0001"}`, &got); e != nil || got.Item.Title != title {
+		t.Errorf("an edit nobody reported was read: %+v %q", e, got.Item.Title)
+	}
+	rel, _ := filepath.Rel(p.Root, story)
+	workitem.ItemChanged(p.Root, filepath.ToSlash(rel))
+	if e := call(t, p, "item.get", `{"id":"S-0001"}`, &got); e != nil || got.Item.Title != "Renamed behind the store" {
+		t.Errorf("a reported edit was not seen: %+v %q", e, got.Item.Title)
+	}
+}
+
+// TestAWriteFlaiRanIsSeenAtOnce: a write the host API runs through flai, in
+// another process, makes the snapshot look again when the run returns, so
+// that the next item.get sees what it wrote without waiting for the watcher
+// (S-0606).
+func TestAWriteFlaiRanIsSeenAtOnce(t *testing.T) {
+	p := agedHarbour(t)
+	workitem.SnapshotItems(p.Root)
+	t.Cleanup(func() { workitem.StopSnapshotItems(p.Root) })
+	var got ItemWithChildren
+	if e := call(t, p, "item.get", `{"id":"S-0001"}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	story := itemFile(t, p.Root, "S-0001")
+	title := got.Item.Title
+	run := func(_ context.Context, r Run) (Ran, error) {
+		rewriteBehind(t, story, "title: "+title, "title: Written by flai")
+		return Ran{Stdout: []byte(`{}`)}, nil
+	}
+	params := `{"id":"S-0001","to":"cancelled","reason":"not needed",` + rid + `}`
+	if _, e := writeMethods(run, time.Now, Host{})["item.move"](context.Background(), p, json.RawMessage(params)); e != nil {
+		t.Fatal(e)
+	}
+	if e := call(t, p, "item.get", `{"id":"S-0001"}`, &got); e != nil || got.Item.Title != "Written by flai" {
+		t.Errorf("a write flai ran was not seen at once: %+v %q", e, got.Item.Title)
 	}
 }
 

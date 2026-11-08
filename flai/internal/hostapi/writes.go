@@ -121,6 +121,18 @@ func runFlai(ctx context.Context, exe string, r Run) (Ran, error) {
 	return ran, err
 }
 
+// itemsChanged tells the item store that a flai run in another process may
+// have written items under root, and under dir when it ran in another folder
+// such as a story's worktree, so that a snapshot flai serve keeps of them is
+// looked at again on its next list rather than when the watcher reports the
+// files 300 to 600 ms later (S-0606).
+func itemsChanged(root, dir string) {
+	workitem.ItemsChanged(root)
+	if dir != "" && dir != root {
+		workitem.ItemsChanged(dir)
+	}
+}
+
 // Written is what a command answered: its JSON, and the warnings it logged.
 type Written struct {
 	Data     json.RawMessage `json:"data"`
@@ -3316,6 +3328,8 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 					writing.Add(1)
 				}
 				ran, err := run(execCtx, r)
+				// flai wrote in another process: this one's item snapshot looks again (S-0606)
+				itemsChanged(p.Root, dir)
 				if key != "" {
 					writing.Add(-1)
 				}
@@ -3429,6 +3443,7 @@ func (pb Publisher) Publish(ctx context.Context, p channel.Project, method, by, 
 	}
 	done := perf.Track(ctx, perf.Exec("flai", publishArgs))
 	ran, err := run(ctx, Run{Dir: p.Root, Args: withJSON(publishArgs)})
+	itemsChanged(p.Root, p.Root)
 	done()
 	res, e := outcome(ran, err, publishExits)
 	entry.Outcome, entry.Detail = describe(res, e)
