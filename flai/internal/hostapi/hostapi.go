@@ -580,7 +580,9 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				return nil, e
 			}
 			// with flai serve's item snapshot on, the get and the list both
-			// answer from it, with no glob and no stat (S-0606)
+			// answer from it, with no glob and no stat; only the item and its
+			// children are copied, and the stories' usage is read in place
+			// (S-0606)
 			done := perf.Track(ctx, "repo.get")
 			it, err := repo.Get(in.ID)
 			done()
@@ -588,13 +590,30 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				return nil, &channel.Error{Code: NotFound, Message: err.Error()}
 			}
 			done = perf.Track(ctx, "repo.list")
-			all, err := repo.List(true)
+			children, err := repo.ChildrenOf(it.ID, true)
+			var stories []*workitem.Item // shared with the store: read, never changed or kept
+			if err == nil {
+				err = repo.Visit(true, func(s *workitem.Item, _ bool) {
+					if s.Type == workitem.Story && s.Usage != nil {
+						stories = append(stories, s)
+					}
+				})
+			}
 			done()
 			if err != nil {
 				return nil, failed(err)
 			}
+			// summed in List's order, so the rate is the same to the last bit
+			slices.SortStableFunc(stories, func(a, b *workitem.Item) int {
+				switch {
+				case workitem.LessID(a.ID, b.ID):
+					return -1
+				case workitem.LessID(b.ID, a.ID):
+					return 1
+				}
+				return 0
+			})
 			one := relative(repo.MainRoot, []*workitem.Item{it}, true)[0]
-			children := workitem.Children(all, it.ID)
 			out := ItemWithChildren{Item: one, Children: relative(repo.MainRoot, children, true)}
 			if it.Type == workitem.Story {
 				out.Plan = workitem.PlanOf(children, it.ID)
@@ -604,7 +623,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				out.UndoesMain = undoesMain(execx.Timed(ctx, execx.System{}), repo, it.ID)
 				done()
 			}
-			out.ExpectedCost = metrics.ExpectedCostOf(it, metrics.CostPerAgentHour(all))
+			out.ExpectedCost = metrics.ExpectedCostOf(it, metrics.CostPerAgentHour(stories))
 			return out, nil
 		},
 
