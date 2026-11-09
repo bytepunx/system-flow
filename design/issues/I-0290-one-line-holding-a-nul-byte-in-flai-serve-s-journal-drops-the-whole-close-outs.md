@@ -2,11 +2,11 @@
 id: I-0290
 title: One line holding a NUL byte in flai serve's journal drops the whole close-outs section of flai stats
 class: defect
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:40:09Z
+updated: 2026-11-09T17:17:43Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ flai 1.84.0 stats --json warns: cannot read flai serve's journal /home/alex/.fla
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0624 remediates this issue, created from it at 2026-11-07T23:40:09Z.
+Closed 2026-11-09T17:17:43Z: S-0624 fixed it (ADR-0268, commit bfeb94e): flai stats reads each serve journal line with its NUL bytes removed, skips a line that is still not an entry with one warning naming the count and the first line, and keeps the close-outs section; TestCloseOutsSkipsADamagedJournalLineAndKeepsTheSection reproduces line 874's NUL-prefixed entry.
