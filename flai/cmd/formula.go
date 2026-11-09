@@ -258,7 +258,8 @@ type formulaRunOptions struct {
 }
 
 // formulaRun makes the instance of the formula name with the inputs given,
-// in epic when it is set: the story, then a task per step, each checked as
+// in epic when it is set: the story, touching its own story file so that no
+// story in progress holds it (I-0282), then a task per step, each checked as
 // it is made, then, when asked, the story's move to ready, and on a refusal
 // removes what it made. It commits them when asked, and prints them.
 func (a *app) formulaRun(name string, given map[string]string, epic string, opt formulaRunOptions) error {
@@ -319,6 +320,13 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 			}
 		}
 		return cause
+	}
+	// The instance claims its own story file (I-0282): a story with no
+	// touches is held by every story in progress (ADR-0046), the one that
+	// started it too, and a claim on its own file overlaps no other story's.
+	story.Item.Touches = []string{story.Path}
+	if err := repo.Save(story.Item); err != nil {
+		return undo(fmt.Errorf("giving the story %s of formula %s its own file as its touch, so it was removed: %w", story.Item.ID, f.Name, err))
 	}
 	taskBody, err := repo.TemplateBody(workitem.Task)
 	if err != nil {

@@ -433,6 +433,69 @@ func TestFormulaRunReady(t *testing.T) {
 	}
 }
 
+// I-0282 (S-0620): the instance claims its own story file, so a story in
+// progress, such as the one whose agent ran the formula, does not hold it as
+// a story that declares no touches.
+func TestFormulaRunInstanceIsNotHeldByAStoryInProgress(t *testing.T) {
+	t.Parallel()
+	root := formulaProject(t, map[string]string{"release-check.md": releaseCheck})
+	if _, errOut, code := runIn(t, root, "story", "new", "Starts the formula", "--touches", "flai/cmd"); code != 0 {
+		t.Fatal(errOut)
+	}
+	matches, _ := filepath.Glob(filepath.Join(root, "wip", "kanban", "stories", "S-0001-*.md"))
+	if len(matches) != 1 {
+		t.Fatalf("S-0001: %v", matches)
+	}
+	body, _ := os.ReadFile(matches[0])
+	if err := os.WriteFile(matches[0], []byte(strings.Replace(string(body), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] done\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{"ready", "in-progress"} {
+		if _, errOut, code := runIn(t, root, "move", "S-0001", to); code != 0 {
+			t.Fatalf("move S-0001 %s: %s", to, errOut)
+		}
+	}
+	js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--ready", "--json")
+	if code != 0 {
+		t.Fatalf("formula run --ready: %d %s %s", code, js, errOut)
+	}
+	var run formulaRunResult
+	if err := json.Unmarshal([]byte(js), &run); err != nil {
+		t.Fatalf("formula run --ready --json: %v %s", err, js)
+	}
+	if run.Story != "S-0002" || run.Status != "ready" {
+		t.Fatalf("formula run --ready --json: %+v", run)
+	}
+	if want := "\ntouches: [" + run.Path + "]\n"; !strings.Contains(itemFile(t, root, "S-0002"), want) {
+		t.Errorf("the instance does not touch its own story file %s alone:\n%s", run.Path, itemFile(t, root, "S-0002"))
+	}
+	out, errOut, code := runIn(t, root, "board", "--json")
+	if code != 0 {
+		t.Fatal(errOut)
+	}
+	var view struct {
+		Columns map[string][]struct {
+			ID   string `json:"id"`
+			Held *struct {
+				Code   string `json:"code"`
+				Reason string `json:"reason"`
+			} `json:"held"`
+		} `json:"columns"`
+	}
+	if err := json.Unmarshal([]byte(out), &view); err != nil {
+		t.Fatal(err)
+	}
+	ready := view.Columns["ready"]
+	if len(ready) != 1 || ready[0].ID != "S-0002" || ready[0].Held != nil {
+		t.Errorf("the instance is held by the story in progress: %+v", ready)
+		for _, r := range ready {
+			if r.Held != nil {
+				t.Logf("%s %s: %s", r.ID, r.Held.Code, r.Held.Reason)
+			}
+		}
+	}
+}
+
 // S-0423, ADR-0240: outside the orchestrator's role, the operator or a
 // story's agent runs any formula, publish among them, whatever
 // orchestration.permissions.publish says; only the orchestrator is held to it
