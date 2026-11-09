@@ -6,7 +6,7 @@ title: "flai stays responsive at 600 stories: checked writes, kept parses, and c
 status: in-progress
 owner: alex
 created: 2026-11-07T22:38:45Z
-updated: 2026-11-07T23:49:17Z
+updated: 2026-11-09T07:36:47Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:08Z
@@ -18,8 +18,9 @@ tags: [cli, dashboard]
 topics: [server-side, back-end]
 usage:
   source: sum
-  seconds: 53941
-  priced_by: harness
+  seconds: 57674
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-07
       ceremony: 1
@@ -31,16 +32,17 @@ usage:
       hand_edits: 27
       work: 939
     - day: 2026-11-09
-      ceremony: 1
-      hand_edits: 1
-      work: 6
+      ceremony: 8
+      test_runs: 6
+      hand_edits: 7
+      work: 196
   models:
     - model: claude-opus-5-5
-      input: 4058
-      output: 1153561
-      cache_read: 622859934
-      cache_write: 18369438
-      cost: 254.1974
+      input: 4526
+      output: 1195382
+      cache_read: 732095905
+      cache_write: 21331517
+      cost: 300.7305
   strategic:
     - kind: planner
       seconds: 1958
@@ -59,21 +61,21 @@ usage:
           cache_write: 2725272
           cost: 52.2198
     - kind: orchestrator
-      seconds: 3209
+      seconds: 3433
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 444
-          output: 3130
-          cache_read: 19935040
-          cache_write: 2103974
-          cost: 5.6361
+          input: 506
+          output: 3559
+          cache_read: 21772284
+          cache_write: 2491897
+          cost: 6.2104
         - model: claude-sonnet-5-5
-          input: 36
-          output: 307
-          cache_read: 208540
-          cache_write: 235559
-          cost: 0.3253
+          input: 44
+          output: 1163
+          cache_read: 295000
+          cache_write: 276798
+          cost: 0.4199
 ---
 # E-0033 flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads
 
@@ -89,7 +91,7 @@ S-0596 measured the causes in [server-performance.md § A second pass at 596 sto
 - S-0600 A flai process parses work items on a pool of workers and keeps parses and lint results under .flai-cache, so a cold list takes under 0.3 s, not 1.1 to 1.5 s
 - S-0601 flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
 - S-0602 flai serve keeps threads, conversations, digest entries, issues, and activity documents parsed between requests, so a thread read takes about 5 ms, not 80 to 110 ms
-- S-0603 agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s
+- S-0603 agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes about 250 ms, not 0.8 to 2.4 s
 - S-0604 board.get takes one release lock per repository, runs show-ref only when a ref moved, and reads no threads with nothing in review, so 13 boards at once stop queueing
 - S-0605 settings.get finds the projects below the import folders once a request, not once a served project, so it answers in under 100 ms, not 825 ms
 - S-0606 item.get answers from a kept item list and the file watcher stops statting every archived file every 300 ms
@@ -98,6 +100,7 @@ S-0596 measured the causes in [server-performance.md § A second pass at 596 sto
 - S-0609 flai accept and flai task done lint markdown once per set with the installed markdownlint, not five times through npx, saving about 4 s an acceptance
 - S-0610 The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out
 - S-0611 The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB
+- S-0636 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606
 
 ## Notes
 

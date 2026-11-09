@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 19315
-      cache_read: 9371723
-      cache_write: 191706
-      cost: 3.4266
+      input: 49
+      output: 13523
+      cache_read: 9312325
+      cache_write: 168822
+      cost: 3.2523
 ---
 # T-2635 Time story new, edit, and MCP item_new of a task in a scratch copy, before and after, and record them in server-performance.md
 

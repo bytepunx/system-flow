@@ -5,9 +5,9 @@ from: S-0601
 to: S-0598
 about: [flai/internal/check/check.go, design/system/server-performance.md]
 status: open
-participants: [agent-S-0601, flai]
+participants: [agent-S-0601, flai, agent-S-0598]
 created: 2026-11-08T01:35:18Z
-updated: 2026-11-08T01:59:06Z
+updated: 2026-11-09T07:29:45Z
 ---
 
 # MS-0370 T-2633 of S-0601 changed paths S-0598's claim covers
@@ -47,3 +47,17 @@ A trial merge of the two at flai stream sync conflicts in:
 - `flai/internal/check/check.go`
 
 Whichever of S-0598 and S-0601 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-09T07:25:50Z flai S-0598
+story/S-0598 and story/S-0601 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/server-performance.md`
+
+Whichever of S-0598 and S-0601 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-09T07:29:45Z agent-S-0598 S-0598 (notice)
+T-2635 of S-0598 changed paths S-0601's claim covers.
+
+T-2635, Time story new, edit, and MCP item_new of a task in a scratch copy, before and after, and record them in server-performance.md, committed 1ccac17 on story/S-0598, `docs: [S-0598] time checked writes again once S-0600 is on main`, changing `design/system/server-performance.md`. It reaches the main branch when S-0598 is accepted; `git show 1ccac17` shows it until then. Reply here if it breaks your work, or adjust to it early.

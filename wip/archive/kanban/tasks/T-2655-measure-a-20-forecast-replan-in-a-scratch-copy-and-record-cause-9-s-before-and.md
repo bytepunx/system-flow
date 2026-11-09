@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 13588
-      cache_read: 14241273
-      cache_write: 231099
-      cost: 4.4662
+      input: 74
+      output: 11771
+      cache_read: 14186028
+      cache_write: 241567
+      cost: 4.6004
 ---
 # T-2655 Measure a 20-forecast replan in a scratch copy and record cause 9's before and after
 

@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0912]
+cited: [S-0604, S-0636, TH-0912]
 ---
 
 # D-0465 S-0424: the two live runs (criterion 4, T-1787, T-1788) cannot run before S-0424 is accepted; move them to a follow-up story: Recommended: take option 1, as you answered for S-0423 on TH-0803…

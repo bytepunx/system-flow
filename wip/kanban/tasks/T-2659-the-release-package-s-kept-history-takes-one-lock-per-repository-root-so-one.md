@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 5071
-      cache_read: 2974989
-      cache_write: 100884
-      cost: 1.2696
+      input: 21
+      output: 4987
+      cache_read: 2952552
+      cache_write: 121115
+      cost: 1.4308
 ---
 # T-2659 The release package's kept history takes one lock per repository root, so one root's git processes never hold another root's call
 

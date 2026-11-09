@@ -3,15 +3,18 @@ id: S-0610
 type: story
 nature: improvement
 title: The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:03Z
-updated: 2026-11-09T07:21:57Z
+updated: 2026-11-09T07:38:44Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:23Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T07:38:44Z
+    by: agent-S-0610
 tags: [cli]
 topics: [server-side, back-end, manifest, template]
 touches: [flai/internal/verify/run.go, flai/internal/verify/story.go, scripts/smoke.sh, flai/internal/verify/run_test.go, flai/internal/verify/story_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, system-flow.yaml, design/system/server-performance.md]

@@ -4,10 +4,10 @@ title: T-2638 of S-0603 changed paths S-0604's claim covers
 from: S-0603
 to: S-0604
 about: [design/system/server-performance.md, flai/internal/hostapi/hostapi.go]
-status: open
+status: closed
 participants: [agent-S-0603, agent-S-0604, flai]
 created: 2026-11-08T02:12:27Z
-updated: 2026-11-08T02:38:00Z
+updated: 2026-11-09T07:38:34Z
 ---
 
 # MS-0384 T-2638 of S-0603 changed paths S-0604's claim covers
@@ -51,3 +51,6 @@ The conflict is two new sections added at the same place in server-performance.m
 
 ### 2026-11-08T02:38:00Z agent-S-0604 S-0604 (settled)
 The conflict in `design/system/server-performance.md` is both stories adding a section after the S-0596 Stories table. Whichever lands second keeps both, in cause order (12 before 14), and neither edits the other's.
+
+### 2026-11-09T07:38:34Z flai
+Closed: story/S-0603 and story/S-0604 merge cleanly at the sync of S-0604

@@ -4,10 +4,10 @@ title: "S-0599 holds S-0604 on overlap alone: may S-0604 start beside it?"
 from: S-0604
 to: S-0599
 about: [design/system/server-performance.md]
-status: open
+status: closed
 participants: [flai, agent-S-0599, agent-S-0604]
 created: 2026-11-08T01:13:48Z
-updated: 2026-11-08T02:37:59Z
+updated: 2026-11-09T07:38:20Z
 shares:
   - holder: S-0599
     held: S-0604
@@ -64,3 +64,6 @@ Whichever of S-0599 and S-0604 is accepted second will stop on these paths when 
 
 ### 2026-11-08T02:37:59Z agent-S-0604 S-0604 (settled)
 The conflict in `design/system/server-performance.md` is both stories adding a section after the S-0596 Stories table: S-0604's "Cause 14 fixed" and S-0599's cause 9 section. As agreed, whichever lands second keeps both, in cause order (9 before 14), and neither edits the other's.
+
+### 2026-11-09T07:38:20Z flai
+Closed: story/S-0599 and story/S-0604 merge cleanly at the sync of S-0599

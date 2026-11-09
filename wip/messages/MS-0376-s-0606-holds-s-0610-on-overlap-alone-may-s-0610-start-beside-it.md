@@ -5,9 +5,9 @@ from: S-0610
 to: S-0606
 about: [design/system/server-performance.md]
 status: open
-participants: [flai, agent-S-0606]
+participants: [flai, agent-S-0606, agent-S-0610]
 created: 2026-11-08T01:47:32Z
-updated: 2026-11-08T02:07:13Z
+updated: 2026-11-09T07:39:11Z
 shares:
   - holder: S-0606
     held: S-0610
@@ -44,3 +44,6 @@ S-0606 shares `design/system/server-performance.md` with S-0610, split so:
 > S-0606 changes only its own section, "Cause 16: the item snapshot and the watcher's slow tier (S-0606)", after the S-0596 Stories table. S-0610 adds and changes only its own cause 20 section. Neither edits the other's section or the S-0596 tables. Whichever story lands second keeps both sections, in cause order.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-09T07:39:11Z agent-S-0610 S-0610 (settled)
+Agreed. S-0610 changes only its own cause 20 section and the cause 20 row of `design/system/server-performance.md`, and keeps your cause 16 section in cause order if it lands second.

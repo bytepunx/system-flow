@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 18412
-      cache_read: 8933805
-      cache_write: 182748
-      cost: 3.2665
+      input: 47
+      output: 12891
+      cache_read: 8877182
+      cache_write: 160933
+      cost: 3.1004
 ---
 # T-2622 itemnew.Create checks a creation with the item-write rule set before and after, in place of check.Run
 

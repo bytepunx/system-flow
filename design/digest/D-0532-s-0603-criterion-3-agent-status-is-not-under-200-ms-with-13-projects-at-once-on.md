@@ -2,7 +2,7 @@
 id: D-0532
 title: "S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at once on this host: Recommended: option 1, reword criterion 3, with one addition: the 200 ms target goes to an issue, because…"
 kind: answer
-sources: [TH-0911]
+sources: [TH-0911, S-0603]
 topics: [server-side, back-end, flai, cli, go, code, all]
 paths: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
 date: 2026-11-09
@@ -45,4 +45,8 @@ The answer:
 Source: design/system/server-performance.md § Where the time goes
 ```
 
-Source: TH-0911.
+The operator confirmed the orchestrator's recommendation on 2026-11-09T07:21:22Z. S-0603's criterion 3 was reworded, its title became "takes about 250 ms, not 0.8 to 2.4 s", and the 200 ms target went to an issue, "agent.status with 13 projects at once is not under 200 ms" (I-0313, on S-0603's branch), since S-0602's criterion times `threads.list`, `inbox.designer`, and `stats.get` but not `agent.status`.
+
+So a performance story whose absolute target is out of reach because another cause in `design/system/server-performance.md` is not yet fixed, or because the host is loaded, has its criterion reworded to the relative fall it measured against main on the same host, with the before and after in its cause section. The absolute target goes to an issue when no other story measures it, rather than holding the finished story in review. This is the same answer as D-0531 (S-0602) and the same kind as D-0466: a criterion that waits on another story moves out. TH-0910 asks the same for S-0601.
+
+Sources: TH-0911, S-0603.

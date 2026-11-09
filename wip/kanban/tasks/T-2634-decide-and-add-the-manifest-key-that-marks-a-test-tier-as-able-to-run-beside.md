@@ -3,12 +3,18 @@ id: T-2634
 type: task
 nature: feature
 title: Decide and add the manifest key that marks a test tier as able to run beside others
-status: backlog
+status: in-progress
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:48:16Z
-updated: 2026-11-07T23:48:16Z
-transitions: []
+updated: 2026-11-09T07:41:46Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:41:45Z
+    by: agent-S-0610
+  - to: in-progress
+    at: 2026-11-09T07:41:46Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md]

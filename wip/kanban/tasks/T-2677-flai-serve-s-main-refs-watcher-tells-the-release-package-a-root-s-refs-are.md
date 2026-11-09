@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 71
-      output: 16789
-      cache_read: 9850586
-      cache_write: 334039
-      cost: 4.2037
+      output: 16511
+      cache_read: 9776293
+      cache_write: 401029
+      cost: 4.7374
 ---
 # T-2677 flai serve's main-refs watcher tells the release package a root's refs are unchanged, so release.pending starts no git process until a ref moves
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2033.4961
-accrued_seconds: 1524969
-tasks_completed: 2313
-last_run: 2026-11-09T07:19:15Z
+accrued_cost: 2035.2150
+accrued_seconds: 1525384
+tasks_completed: 2326
+last_run: 2026-11-09T07:41:16Z
 ---
 
 # Orchestrator activity
@@ -16221,6 +16221,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1903 USD, estimated
+
+### 2026-11-09T07:22:11Z
+
+- Summary: TH-0911: the operator confirmed my recommendation (reword S-0603 criterion 3; 200 ms target to an issue, now I-0313 in S-0603's touches). Nothing left for the orchestrator: S-0603's agent restarted to act on it; I verify and accept or enqueue it once it reaches review under accept_reviews. No reply posted, thread left to its opener.
+- Items: S-0603
+- Seconds: 15
+- Cost: 0.0428 USD, estimated
+
+### 2026-11-09T07:22:26Z
+
+- Summary: TH-0911 needed nothing more from me, so I took no action on it. You confirmed my recommendation for S-0603, and the work that follows belongs to S-0603's agent.
+- Items: none
+- Seconds: 15
+- Cost: 0.1679 USD, estimated
+
+### 2026-11-09T07:23:14Z
+
+- Summary: Release due after S-0591's acceptance: release_evaluate is met under threshold (count 6 ≥ 1; value 117.5 USD < 1000; S-0600 unvalued). I started no new publish instance, because S-0635, made by flai formula run publish on 2026-11-08, is still in ready, unworked, and will publish the whole pending batch: S-0591, S-0600, S-0602, S-0605, S-0607, S-0609. S-0635 is held (no-touches) until S-0603, S-0604, and S-0606 leave in-progress. Draft S-0620 already records that defect.
+- Items: S-0591, S-0635, S-0620
+- Seconds: 16
+- Cost: 0.0674 USD, estimated
+
+### 2026-11-09T07:23:30Z
+
+- Summary: I started no new release. A release is due, but a publish story for it already exists and hasn't been worked yet.
+- Items: none
+- Seconds: 16
+- Cost: 0.1960 USD, estimated
+
+### 2026-11-09T07:25:26Z
+
+- Summary: TH-0914 (S-0598 sent back on a rebase conflict in flai/internal/check/check.go) is flai's notice for S-0598's agent, which flai serve has started again: left it alone, nothing to answer or move. Resolved my TH-0907 on S-0598, since the operator ticked criterion 3 and its blocker is gone.
+- Items: S-0598
+- Seconds: 31
+- Cost: 0.0667 USD, estimated
+
+### 2026-11-09T07:25:44Z
+
+- Summary: TH-0914 needs nothing from you or from me, so I left it alone.
+- Items: none
+- Seconds: 18
+- Cost: 0.1302 USD, estimated
+
+### 2026-11-09T07:27:15Z
+
+- Summary: TH-0915 (S-0599 sent back from the operator's acceptance on rebase conflicts in design/system/server-performance.md): no action. The thread's only entry is flai's notice, which the orchestrator leaves alone; it is for S-0599's agent, which flai serve has started again to settle the conflicts. Nothing to answer, move, or accept.
+- Items: S-0599
+- Seconds: 14
+- Cost: 0.0563 USD, estimated
+
+### 2026-11-09T07:27:44Z
+
+- Summary: I took no action on TH-0915, and there is nothing for you to do about it.
+- Items: none
+- Seconds: 29
+- Cost: 0.1279 USD, estimated
+
+### 2026-11-09T07:33:55Z
+
+- Summary: TH-0908: the operator confirmed my recommendation (option 1: five more folders on the watcher's slow tier, atomic issue and ADR writes, criterion 3 kept). Nothing owed by me: no cost of delay input to set, the thread is agent-S-0606's to resolve, and agent-S-0606 has already restarted on the answer.
+- Items: S-0606
+- Seconds: 34
+- Cost: 0.0868 USD, estimated
+
+### 2026-11-09T07:35:03Z
+
+- Summary: I took no action on TH-0908 because nothing was left for me to do.
+- Items: none
+- Seconds: 68
+- Cost: 0.1567 USD, estimated
+
+### 2026-11-09T07:36:26Z
+
+- Summary: TH-0912 (S-0604): alex confirmed my option-2 recommendation (D-0535). The follow-up is agent-S-0604's: reword and tick criterion 4, write a draft in E-0033 after S-0602 and S-0606, record it in Notes. flai serve already restarted agent-S-0604 for it. Nothing owed by me: no reply, no resolve (not my thread), no cost of delay or other change.
+- Items: S-0604
+- Seconds: 19
+- Cost: 0.0577 USD, estimated
+
+### 2026-11-09T07:36:55Z
+
+- Summary: I made no changes for TH-0912. You confirmed my recommendation on it (option 2, recorded as D-0535), so what's left is agent-S-0604's job, and flai serve has already restarted that agent for it.
+- Items: none
+- Seconds: 29
+- Cost: 0.2039 USD, estimated
+
+### 2026-11-09T07:41:16Z
+
+- Summary: Left S-0603 in review: the verifier matched all 3 criteria at 3aaa99f and the close-out passed, but flai accept --dry-run is blocked by TH-0911 (agent-S-0603's, answered, not resolved). Opened TH-0916 asking the operator to resolve TH-0911.
+- Items: S-0603, TH-0911, TH-0916
+- Seconds: 111
+- Cost: 0.3586 USD, estimated
 
 ## Refusals
 

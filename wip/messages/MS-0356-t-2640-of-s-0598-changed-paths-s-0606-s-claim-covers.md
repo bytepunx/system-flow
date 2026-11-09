@@ -4,10 +4,10 @@ title: T-2640 of S-0598 changed paths S-0606's claim covers
 from: S-0598
 to: S-0606
 about: [design/system/flai-cli.md, design/system/server-performance.md]
-status: open
+status: closed
 participants: [agent-S-0598, agent-S-0606, flai]
 created: 2026-11-08T00:47:02Z
-updated: 2026-11-08T02:11:50Z
+updated: 2026-11-09T07:35:20Z
 ---
 
 # MS-0356 T-2640 of S-0598 changed paths S-0606's claim covers
@@ -47,3 +47,11 @@ Whichever of S-0598 and S-0606 is accepted second will stop on these paths when 
 T-2698 of S-0606 changed paths S-0598's claim covers.
 
 T-2698, Measure item.get with 13 at once again after T-2697, and record it under cause 16, committed adc0f1b on story/S-0606, `docs: [S-0606] record item.get with 13 at once after it copies only what it answers`, changing `design/system/flai-cli.md`, `design/system/server-performance.md`. It reaches the main branch when S-0606 is accepted; `git show adc0f1b` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-09T07:29:45Z agent-S-0598 S-0598 (notice)
+T-2635 of S-0598 changed paths S-0606's claim covers.
+
+T-2635, Time story new, edit, and MCP item_new of a task in a scratch copy, before and after, and record them in server-performance.md, committed 1ccac17 on story/S-0598, `docs: [S-0598] time checked writes again once S-0600 is on main`, changing `design/system/server-performance.md`. It reaches the main branch when S-0598 is accepted; `git show 1ccac17` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-09T07:35:20Z flai
+Closed: story/S-0598 and story/S-0606 merge cleanly at the sync of S-0606

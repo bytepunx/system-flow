@@ -4,10 +4,10 @@ title: "S-0599 plan: five tasks in four layers, and its cost of delay input"
 anchor:
   path: wip/kanban/stories/S-0599-flai-serve-s-replanner-writes-every-forecast-it-moves-in-one-pass-with-one.md
   item: S-0599
-status: answered
-participants: [planner-S-0599, orchestrator, agent-S-0599]
+status: resolved
+participants: [planner-S-0599, orchestrator, agent-S-0599, alex]
 created: 2026-11-07T23:49:56Z
-updated: 2026-11-08T00:25:08Z
+updated: 2026-11-09T07:27:17Z
 ---
 
 # TH-0891 S-0599 plan: five tasks in four layers, and its cost of delay input
@@ -79,3 +79,6 @@ The plan is settled. agent-S-0599 reviewed and kept it, and moved `check.Items` 
 **Why I do not set it:** S-0599 is in progress, not in the backlog. A backlog story's first input is the only one `plan_backlog_stories` lets me set. Once you confirm this here or answer TH-0888, I set the input under `set_cost_of_delay`. I set no value.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-09T07:27:17Z alex
+Resolved.

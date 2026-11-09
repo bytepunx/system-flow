@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 835
   estimated: true
-  priced_by: harness
+  priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 77
-      output: 25250
-      cache_read: 12566868
-      cache_write: 524815
-      cost: 5.8798
+      input: 76
+      output: 24308
+      cache_read: 12491609
+      cache_write: 579163
+      cost: 6.3489
 ---
 
 # T-2697 item.get copies only the item and its children it answers, and reads the rest of the list in place

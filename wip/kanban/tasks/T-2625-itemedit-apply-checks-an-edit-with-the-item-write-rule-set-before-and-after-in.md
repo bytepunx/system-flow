@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 15942
-      cache_read: 7735227
-      cache_write: 158230
-      cost: 2.8282
+      input: 40
+      output: 11161
+      cache_read: 7686201
+      cache_write: 139342
+      cost: 2.6844
 ---
 # T-2625 itemedit.Apply checks an edit with the item-write rule set before and after, in place of check.Run
 

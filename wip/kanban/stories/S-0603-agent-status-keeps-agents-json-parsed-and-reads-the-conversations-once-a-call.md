@@ -2,18 +2,21 @@
 id: S-0603
 type: story
 nature: improvement
-title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s
-status: in-progress
+title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes about 250 ms, not 0.8 to 2.4 s
+status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-09T07:21:23Z
+updated: 2026-11-09T07:39:01Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-08T01:12:15Z
+    by: agent-S-0603
+  - to: review
+    at: 2026-11-09T07:39:01Z
     by: agent-S-0603
 blocked:
   - from: 2026-11-08T02:23:41Z
@@ -40,7 +43,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4786
+  seconds: 5849
   priced_by: harness
   turns:
     - day: 2026-11-08
@@ -48,25 +51,34 @@ usage:
       hand_edits: 3
       work: 97
     - day: 2026-11-09
-      work: 4
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 2
+      work: 58
   models:
     - model: claude-opus-5-5
-      input: 408
-      output: 103511
-      cache_read: 58397743
-      cache_write: 2319718
-      cost: 27.6652
+      input: 528
+      output: 118417
+      cache_read: 84373330
+      cache_write: 2365640
+      cost: 33.5263
   strategic:
     - kind: orchestrator
-      seconds: 139
+      seconds: 265
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 161
-          cache_read: 875190
-          cache_write: 69806
-          cost: 0.2421
+          input: 50
+          output: 347
+          cache_read: 1907366
+          cache_write: 225932
+          cost: 0.5489
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 856
+          cache_read: 86460
+          cache_write: 41239
+          cost: 0.0946
 cost_of_delay:
   inputs:
     penalty_per_week: 100
@@ -85,7 +97,7 @@ finalized:
   by: alex
   at: 2026-11-07T23:49:36Z
 ---
-# S-0603 agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes under 200 ms, not 0.8 to 2.4 s
+# S-0603 agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes about 250 ms, not 0.8 to 2.4 s
 
 ## Goal
 
@@ -95,7 +107,7 @@ Cause 12 in [server-performance.md](../../../design/system/server-performance.md
 
 - [x] `AgentStates` keeps `agents.json` parsed, read again only when its size or modification time changed, and holds `agentsMu` only to read or replace what is kept.
 - [x] The activity a call builds reads the conversations once, whatever the number of live runs, and gives the same answer as before, which a test with three live runs shows.
-- [ ] `agent.status` records its phases, and on this repository, 13 projects asked at once, each answers under 200 ms on the operator's host; server-performance.md records the before and after.
+- [x] `agent.status` records its phases; on this repository, 13 projects asked at once, the `agentsMu` queue is gone and a call's p50 falls by at least a third against main on the same host; server-performance.md records the before and after.
 
 ## Tasks
 - T-2621 AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
@@ -107,6 +119,7 @@ Cause 12 in [server-performance.md](../../../design/system/server-performance.md
 
 - With the story for cause 13, agent.state's CPU falls from about 450 ms to under 60 ms.
 - One agent state file per project instead of the host-wide one would change how flai keeps state, and is out of this epic.
+- Criterion 3 and the title were reworded on TH-0911, as the orchestrator recommended and the operator confirmed on 2026-11-09: they first asked for every call under 200 ms with 13 projects at once. Measured at a load average of 95 to 101 on 24 cores, a call's p50 fell from 369 to 463 ms to 221 to 283 ms, but this repository's call still takes about 1.1 s, most of it the thread and conversation reads of cause 13 (S-0602). The 200 ms target is kept as I-0313, "agent.status with 13 projects at once is not under 200 ms", since no criterion of S-0602 times `agent.status`.
 
 ### Planning
 

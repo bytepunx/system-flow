@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 20943
-      cache_read: 10161758
-      cache_write: 207866
-      cost: 3.7155
+      input: 53
+      output: 14663
+      cache_read: 10097352
+      cache_write: 183054
+      cost: 3.5265
 ---
 # T-2640 Write the ADR that a checked write runs only the rules an item write can affect, and say so in flai-cli.md, strategic-agents.md, and the user guide
 

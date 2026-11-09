@@ -7,7 +7,7 @@ status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:02Z
-updated: 2026-11-09T07:23:58Z
+updated: 2026-11-09T07:41:24Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:08Z
@@ -18,6 +18,12 @@ transitions:
   - to: review
     at: 2026-11-08T01:11:52Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-09T07:24:16Z
+    by: flai
+  - to: review
+    at: 2026-11-09T07:41:24Z
+    by: system-flow
 tags: [cli]
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemedit/itemedit.go, flai/internal/check/check.go, flai/internal/check/itemwrite.go, flai/internal/check/itemwrite_test.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/rules_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md, design/adrs/README.md, flai/internal/itemedit/criteria_test.go]
 agent:
@@ -27,7 +33,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4970
+  seconds: 6005
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -37,24 +43,29 @@ usage:
       ceremony: 2
       hand_edits: 2
       work: 75
+    - day: 2026-11-09
+      ceremony: 3
+      test_runs: 1
+      hand_edits: 1
+      work: 66
   models:
     - model: claude-opus-5-5
-      input: 372
-      output: 128776
-      cache_read: 62482590
-      cache_write: 1278128
-      cost: 22.8456
+      input: 518
+      output: 143375
+      cache_read: 98733594
+      cache_write: 1789930
+      cost: 34.4828
   strategic:
     - kind: orchestrator
-      seconds: 76
+      seconds: 107
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 74
-          cache_read: 475596
-          cache_write: 88963
-          cost: 0.1446
+          input: 22
+          output: 146
+          cache_read: 699967
+          cache_write: 123177
+          cost: 0.2113
 cost_of_delay:
   inputs:
     penalty_per_week: 150
@@ -94,12 +105,9 @@ Cause 8 in [server-performance.md](../../../design/system/server-performance.md#
 - Proposed fix: a rule set for item writes in `check`, used by `itemnew.Create` and `itemedit.Apply`, in place of `check.Run`. The whole check stays in `flai check`, the close-out, and CI.
 - If the scope of what a checked write refuses changes, that refines ADR-0197 and needs an ADR.
 
-- Criterion 3 is left unticked. The host could not show "under 3 s" reliably.
-  - In the scratch clone, the median wall time after the change was 2.7 s for `story new`, 2.4 s for `edit`, and 2.5 s for an MCP `item_new` call. Two of the five runs of each went over 3 s, at load 46 to 131 on 24 cores.
-  - A second set of five runs took 4 to 15 s wall, at 30 to 40% of a core.
-  - CPU per write fell from about 12 s to 2.4 to 2.9 s, median.
-  - About 2 s of what is left is the cold parse of all 3,278 items, cause 10, which S-0600 fixes.
-  - `design/system/server-performance.md` § A checked write runs only the rules it can affect (S-0598) has the figures.
+- Criterion 3 was measured twice in a scratch clone. `design/system/server-performance.md` § A checked write runs only the rules it can affect (S-0598) has the figures.
+  - On 2026-11-08, with every item parsed cold, the median wall time was 2.4 to 2.7 s. Some runs went over 3 s at load 46 to 131.
+  - On 2026-11-09, rebased onto S-0600's kept parses, every run of `story new`, `edit`, and MCP `item_new` of a task took 0.7 to 1.3 s wall. Current `main` took 6.1 to 12.1 s.
 
 ### Planning
 
@@ -123,3 +131,4 @@ No `after`: the story reads no other story's output. S-0601 (check's rules at on
 Forecast: `flai forecast` gave 26m (median 94 s per unit of size over 124 done improvement stories in the large band, times size 16). It is raised to 45m: criterion 2 asks for a refusal test of each kept rule, for both a creation and an edit, and criterion 3 asks for timings in a scratch copy, before and after. Size counts neither. The delivery is 45m after the story started at 23:49Z.
 
 Cost of delay: `flai cod` refuses for now, since neither the story nor E-0033 has inputs. TH-0888 asks the operator for them and recommends `penalty_per_week: 150` for S-0598. The value is written once the operator answers.
+- 2026-11-09T07:24:16Z: moved to in-progress: the rebase of story/S-0598 onto main stopped on conflicts in flai/internal/check/check.go, which the acceptance of S-0598 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0598

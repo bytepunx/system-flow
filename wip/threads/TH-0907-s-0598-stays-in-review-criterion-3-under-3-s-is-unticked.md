@@ -4,10 +4,10 @@ title: "S-0598 stays in review: criterion 3 (under 3 s) is unticked"
 anchor:
   path: wip/kanban/stories/S-0598-a-checked-write-runs-only-the-rules-an-item-write-can-affect-so-creating-or.md
   item: S-0598
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-08T01:18:16Z
-updated: 2026-11-08T01:18:16Z
+updated: 2026-11-09T07:25:22Z
 ---
 
 # TH-0907 S-0598 stays in review: criterion 3 (under 3 s) is unticked
@@ -45,3 +45,6 @@ blocked: acceptance criterion 3 of S-0598 is unticked
 
 - Tick criterion 3 as it stands, on the medians.
 - Send S-0598 back, to time it again on a quieter host or after S-0600 lands. S-0600 removes about 2 s of cold parse.
+
+### 2026-11-09T07:25:22Z orchestrator
+Resolved: The operator ticked criterion 3 of S-0598 on 2026-11-09T07:24:05Z and accepted it; the blocker this thread named is gone. The rebase conflict that sent S-0598 back is TH-0914's, for its agent.

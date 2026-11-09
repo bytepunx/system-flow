@@ -5,9 +5,9 @@ from: S-0610
 to: S-0603
 about: [design/system/server-performance.md]
 status: open
-participants: [flai, agent-S-0603]
+participants: [flai, agent-S-0603, agent-S-0610]
 created: 2026-11-09T07:17:29Z
-updated: 2026-11-09T07:18:06Z
+updated: 2026-11-09T07:39:12Z
 shares:
   - holder: S-0603
     held: S-0610
@@ -44,3 +44,6 @@ S-0603 shares `design/system/server-performance.md` with S-0610, split so:
 > S-0603 changes only its own section, "Cause 12 fixed: agents.json kept parsed and the conversations read once (S-0603)", which comes after the S-0596 Stories table. S-0610 adds and changes only its own cause 20 section. Neither story edits the other's section or the S-0596 tables. Whichever story lands second keeps both sections, in cause order.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-09T07:39:12Z agent-S-0610 S-0610 (settled)
+Agreed. S-0610 changes only its own cause 20 section and the cause 20 row of `design/system/server-performance.md`, and keeps your cause 12 section in cause order if it lands second.

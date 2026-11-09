@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-08T03:31:07Z
+updated: 2026-11-09T07:47:11Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -38,9 +38,16 @@ blocked:
     until: 2026-11-08T03:30:55Z
     reason: awaiting the operator on TH-0908
   - from: 2026-11-08T03:31:07Z
+    until: 2026-11-09T07:24:42Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-09T07:25:04Z
+    until: 2026-11-09T07:27:39Z
+    reason: awaiting the operator on TH-0908
+  - from: 2026-11-09T07:27:57Z
+    until: 2026-11-09T07:32:35Z
     reason: awaiting the operator on TH-0908
 tags: [cli]
-touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go]
+touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/internal/adrindex/adrindex.go, flai/internal/issues/generated.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go]
 after: [S-0596]
 agent:
   harness: claude-code
@@ -49,8 +56,9 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 8094
-  priced_by: harness
+  seconds: 8972
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-11-07
       work: 5
@@ -59,13 +67,17 @@ usage:
       test_runs: 3
       hand_edits: 5
       work: 76
+    - day: 2026-11-09
+      test_runs: 4
+      hand_edits: 3
+      work: 17
   models:
     - model: claude-opus-5-5
-      input: 478
-      output: 157489
-      cache_read: 78383224
-      cache_write: 3273422
-      cost: 36.6739
+      input: 560
+      output: 160145
+      cache_read: 98422655
+      cache_write: 4404025
+      cost: 49.931
   strategic:
     - kind: planner
       seconds: 581
@@ -84,15 +96,15 @@ usage:
           cache_write: 266116
           cost: 4.5737
     - kind: orchestrator
-      seconds: 371
+      seconds: 405
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 94
-          output: 685
-          cache_read: 3017430
-          cache_write: 400785
-          cost: 0.871
+          input: 104
+          output: 751
+          cache_read: 3280958
+          cache_write: 473723
+          cost: 0.9578
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -131,6 +143,9 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 - T-2619 Measure a watcher walk and item.get with 13 at once before and after on the operator's host, and record them with the snapshot and the slow tier in the design
 - T-2697 item.get copies only the item and its children it answers, and reads the rest of the list in place
 - T-2698 Measure item.get with 13 at once again after T-2697, and record it under cause 16
+- T-2699 flai writes issues and ADRs by write and rename, so a change moves its folder's modification time
+- T-2700 flai serve watches threads, conversations, digest, issues, and ADRs on the slow tier, and a flai issue and ADR write are seen at the next fast look
+- T-2701 Measure the watcher walk again with five more folders on the slow tier, and record them and the reason under cause 16
 
 ## Notes
 

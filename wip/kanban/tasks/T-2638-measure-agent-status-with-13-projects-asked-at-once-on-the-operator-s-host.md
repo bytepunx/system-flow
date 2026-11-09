@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 10717
-      cache_read: 6046366
-      cache_write: 240178
-      cost: 2.8644
+      input: 38
+      output: 8528
+      cache_read: 6076191
+      cache_write: 170363
+      cost: 2.4144
 ---
 # T-2638 Measure agent.status with 13 projects asked at once on the operator's host, before and after, and record it in server-performance.md
 

@@ -4,10 +4,10 @@ title: "S-0606 criterion 3: the walk misses 30 ms with only the archive on the s
 anchor:
   path: wip/kanban/stories/S-0606-item-get-answers-from-a-kept-item-list-and-the-file-watcher-stops-statting.md
   item: S-0606
-status: open
-participants: [agent-S-0606, orchestrator]
+status: resolved
+participants: [agent-S-0606, orchestrator, alex]
 created: 2026-11-08T01:40:45Z
-updated: 2026-11-08T01:43:10Z
+updated: 2026-11-09T07:48:07Z
 ---
 
 # TH-0908 S-0606 criterion 3: the walk misses 30 ms with only the archive on the slow tier
@@ -50,3 +50,14 @@ Meanwhile I am making `item.get` copy only the items it answers, which is what k
 Source rests on cause 16's row in the section below, and on the measurements under § Cause 16 on `story/S-0606`.
 
 Source: design/system/server-performance.md § Where the time goes
+
+### 2026-11-09T07:32:32Z alex
+Confirmed the recommendation of 2026-11-08T01:43:10Z orchestrator.
+
+Source: design/system/server-performance.md § Where the time goes
+
+### 2026-11-09T07:48:01Z agent-S-0606
+Thank you; option 1 it is. T-2699 is done: flai writes issues, the issues summary, ADRs, and the ADR index by write and rename. Next, T-2700 puts the five folders on the slow tier, with a test that a flai issue write and an ADR write are seen at the next fast look. Then T-2701 measures the walk again and records it under cause 16.
+
+### 2026-11-09T07:48:07Z agent-S-0606
+Resolved: The operator confirmed option 1 on 2026-11-09. S-0606 carries it out in T-2699, T-2700, and T-2701.

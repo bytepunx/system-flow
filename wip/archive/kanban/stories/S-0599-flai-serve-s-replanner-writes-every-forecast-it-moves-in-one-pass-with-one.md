@@ -3,11 +3,11 @@ id: S-0599
 type: story
 nature: improvement
 title: flai serve's replanner writes every forecast it moves in one pass with one check, so an acceptance's replan lands in seconds, not 80 s
-status: review
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:17Z
-updated: 2026-11-08T02:06:30Z
+updated: 2026-11-09T07:49:30Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:24Z
@@ -18,8 +18,17 @@ transitions:
   - to: review
     at: 2026-11-08T02:06:30Z
     by: agent-S-0599
+  - to: in-progress
+    at: 2026-11-09T07:26:25Z
+    by: flai
+  - to: review
+    at: 2026-11-09T07:38:31Z
+    by: agent-S-0599
+  - to: done
+    at: 2026-11-09T07:49:30Z
+    by: orchestrator
 tags: [cli]
-touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go, design/system/server-performance.md, design/system/strategic-agents.md, flai/internal/check/items.go, flai/internal/workitem/repo.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md]
+touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go, design/system/server-performance.md, design/system/strategic-agents.md, flai/internal/check/items.go, flai/internal/workitem/repo.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,7 +36,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 8245
+  seconds: 8968
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -38,24 +47,27 @@ usage:
       ceremony: 6
       hand_edits: 1
       work: 178
+    - day: 2026-11-09
+      ceremony: 2
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 568
-      output: 99004
-      cache_read: 103766644
-      cache_write: 1683866
-      cost: 32.5425
+      input: 670
+      output: 106467
+      cache_read: 128310233
+      cache_write: 2184937
+      cost: 41.6095
   strategic:
     - kind: orchestrator
-      seconds: 232
+      seconds: 246
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 204
-          cache_read: 1414233
-          cache_write: 98335
-          cost: 0.387
+          input: 33
+          output: 269
+          cache_read: 1580841
+          cache_write: 150109
+          cost: 0.4433
         - model: claude-sonnet-5-5
           input: 4
           output: 41
@@ -120,3 +132,14 @@ No `after`. S-0598 (cause 8) scopes the checked edit, which this story does not 
 Forecast: 2h30m, not the 6m `flai forecast` gives. Its 79 s a unit of size times size 4 counts 3 criteria and 1 touch. The plan has 5 tasks over 4 packages, a measurement in a scratch copy, and a close-out whose `integration` tier means about 238 s (server-performance.md, cause 20). Delivery 2026-11-08T02:30Z assumes the draft is finalized and pulled tonight; the replanner moves it otherwise.
 
 Cost of delay: no value yet. Neither S-0599 nor E-0033 has inputs, so `flai cod` refuses. The input is asked on TH-0888 (recommended `penalty_per_week: 60`; the orchestrator suggests 100 may fit) and on this story's plan thread.
+- 2026-11-09T07:26:25Z: moved to in-progress: the rebase of story/S-0599 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0599 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0599
+
+### Accepted by the orchestrator
+
+- Verified: eef7e793bc07902cba49e1ae2729d72a7026e25a
+- At: 2026-11-09T07:49:30Z
+
+Verdict: pass at eef7e793bc07902cba49e1ae2729d72a7026e25a
+- 1: flai/internal/itemedit/forecasts.go, flai/internal/workitem/itemlock.go, flai/internal/workitem/repo.go, flai/internal/check/items.go, flai/internal/serve/replan.go
+- 2: design/system/server-performance.md
+- 3: flai/internal/itemedit/forecasts_test.go, flai/internal/serve/replan_test.go, flai/internal/workitem/itemlock_test.go, flai/internal/check/items_test.go

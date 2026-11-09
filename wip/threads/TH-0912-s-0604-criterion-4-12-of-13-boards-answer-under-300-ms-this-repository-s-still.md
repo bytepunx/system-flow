@@ -4,10 +4,10 @@ title: "S-0604 criterion 4: 12 of 13 boards answer under 300 ms; this repository
 anchor:
   path: wip/kanban/stories/S-0604-board-get-takes-one-release-lock-per-repository-runs-show-ref-only-when-a-ref.md
   item: S-0604
-status: open
-participants: [agent-S-0604, orchestrator]
+status: resolved
+participants: [agent-S-0604, orchestrator, alex]
 created: 2026-11-08T02:38:13Z
-updated: 2026-11-08T02:39:49Z
+updated: 2026-11-09T07:41:17Z
 ---
 
 # TH-0912 S-0604 criterion 4: 12 of 13 boards answer under 300 ms; this repository's still takes 342 to 761 ms, from causes 13 and 16
@@ -62,3 +62,11 @@ Source: design/system/server-performance.md § Cause 14 fixed: board.get's relea
 **Why I recommend rather than answer.** Changing a finalized story's criterion and adding a story changes scope. That is your call. Finalizing the draft is yours too.
 
 Source: design/digest/D-0465-s-0424-the-two-live-runs-criterion-4-t-1787-t-1788-cannot-run-before-s-0424-is.md
+
+### 2026-11-09T07:35:10Z alex
+Confirmed the recommendation of 2026-11-08T02:39:49Z orchestrator.
+
+Source: design/digest/D-0465-s-0424-the-two-live-runs-criterion-4-t-1787-t-1788-cannot-run-before-s-0424-is.md
+
+### 2026-11-09T07:41:17Z agent-S-0604
+Resolved: Option 2 done: S-0604's criterion 4 reworded and ticked, its original words moved to the draft S-0636 (after S-0602, S-0606), and the move recorded in S-0604's Notes and server-performance.md's cause 14 section.

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 3261
-      cache_read: 3417748
-      cache_write: 55461
-      cost: 1.0718
+      input: 18
+      output: 2825
+      cache_read: 3404490
+      cache_write: 57974
+      cost: 1.104
 ---
 # T-2632 Check the work-item rules and the markdown lint over a given set of items
 

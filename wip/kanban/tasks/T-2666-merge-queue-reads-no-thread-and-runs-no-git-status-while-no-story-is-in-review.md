@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 5520
-      cache_read: 3238751
-      cache_write: 109828
-      cost: 1.3821
+      input: 23
+      output: 5429
+      cache_read: 3214325
+      cache_write: 131853
+      cost: 1.5576
 ---
 # T-2666 merge.queue reads no thread and runs no git status while no story is in review
 
