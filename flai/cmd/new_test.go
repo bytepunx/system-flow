@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,11 +13,9 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
-	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/prompt"
-	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 )
 
@@ -198,7 +197,7 @@ func TestRenderPrototypeTemplate(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if strings.HasSuffix(path, ".tmpl") || strings.Contains(withoutRoleStart(filepath.ToSlash(rel), withoutFormulaInputs(filepath.ToSlash(rel), s)), "{{") {
+		if strings.HasSuffix(path, ".tmpl") || leftTemplateSyntax(proto, filepath.ToSlash(rel), b) {
 			t.Errorf("unrendered template content in %s", path)
 		}
 		if strings.HasSuffix(path, ".md") && strings.HasPrefix(s, "---\n") {
@@ -276,92 +275,53 @@ func storyAgentHarness(t *testing.T, root, id string) string {
 	return fm.Agent.Harness
 }
 
-// withoutFormulaInputs is s, the file rel, slash separated from the project
-// root, with the {{name}} placeholders of the inputs it declares removed when
-// it is a formula file in the design folder's formulas folder (ADR-0238 §4,
-// I-0249), so that a check for template syntax left behind passes over them
-// and still finds any other {{ there, such as {{ .today }}, or anywhere else.
-func withoutFormulaInputs(rel, s string) string {
-	if !strings.HasPrefix(rel, formulas.Dir("design")+"/") || !strings.HasSuffix(rel, ".md") {
-		return s
+// leftTemplateSyntax reports whether content, the file rel of a project
+// rendered from the template at proto, slash separated from the project root,
+// holds template syntax the render left behind: a {{ in a file that has no
+// source of the same path under the template's root, such as one rendered
+// from a .tmpl source, or that differs from that source. The renderer copies
+// every other file byte for byte (render.suffix), so a {{ in a file that
+// matches its source exactly is the file's own content, such as a formula's
+// input placeholder (ADR-0238 §4) or a role file's start prompt (ADR-0250),
+// not syntax left unrendered (I-0249).
+func leftTemplateSyntax(proto, rel string, content []byte) bool {
+	if !bytes.Contains(content, []byte("{{")) {
+		return false
 	}
-	f, problem := formulas.Parse(rel, s)
-	if problem != nil {
-		return s
-	}
-	gone := map[string]string{}
-	for _, in := range f.Inputs {
-		gone[in.Name] = ""
-	}
-	return formulas.Fill(s, gone)
+	src, err := os.ReadFile(filepath.Join(proto, template.RootDir, filepath.FromSlash(rel)))
+	return err != nil || !bytes.Equal(src, content)
 }
 
-func TestWithoutFormulaInputs(t *testing.T) {
+func TestLeftTemplateSyntax(t *testing.T) {
 	t.Parallel()
-	const formula = "---\ntitle: Import {{path}}\nupdated: 2026-11-01\nstatus: active\nname: import\ndescription: d\n" +
-		"inputs:\n  - {name: path, description: d}\n  - {name: focus, description: d, default: all}\n" +
-		"steps: [{id: a, title: A, run: {flai: \"import {{ path }} --focus {{focus}}\"}}]\n---\n\n"
-	for _, tc := range []struct {
-		name, rel, s, want string
-	}{
-		{"a formula's placeholders", "design/workflows/formulas/import.md", formula + "Imports {{path}}.\n",
-			strings.NewReplacer("{{path}}", "", "{{ path }}", "", "{{focus}}", "").Replace(formula) + "Imports .\n"},
-		{"stray template syntax in a formula", "design/workflows/formulas/import.md", formula + "{{ .today }} {{other}} {{- end }}\n",
-			strings.NewReplacer("{{path}}", "", "{{ path }}", "", "{{focus}}", "").Replace(formula) + "{{ .today }} {{other}} {{- end }}\n"},
-		{"a formula file that does not parse", "design/workflows/formulas/import.md", "Imports {{path}}.\n", "Imports {{path}}.\n"},
-		{"a placeholder outside the formulas folder", "design/system/overview.md", formula, formula},
-		{"a formulas folder file that is not markdown", "design/workflows/formulas/import.yaml", formula, formula},
+	proto := t.TempDir()
+	const formula = "---\ntitle: Import {{path}}\n---\n\nImports {{path}}.\n"
+	for rel, s := range map[string]string{
+		"design/workflows/formulas/import.md": formula,
+		"design/system/overview.md":           "# Overview\n",
+		"README.md.tmpl":                      "# {{ .project_name }}\n",
 	} {
-		if got := withoutFormulaInputs(tc.rel, tc.s); got != tc.want {
-			t.Errorf("%s: withoutFormulaInputs(%q, %q) = %q, want %q", tc.name, tc.rel, tc.s, got, tc.want)
+		p := filepath.Join(proto, template.RootDir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
 		}
 	}
-}
-
-// withoutRoleStart is s, a file the template rendered at rel, with a role
-// file's start field left out: its start prompt is a Go text/template flai
-// renders at each run (ADR-0250), not template syntax the template's render
-// left behind. Any other file, and a role file that does not parse, is s.
-func withoutRoleStart(rel, s string) string {
-	if !strings.HasPrefix(rel, roles.Dir("design")+"/") || !strings.HasSuffix(rel, ".md") {
-		return s
-	}
-	if r, problem := roles.Parse(rel, s); problem != nil || r.Start == "" {
-		return s
-	}
-	var out []string
-	in := false
-	for _, l := range strings.Split(s, "\n") {
-		switch {
-		case strings.HasPrefix(l, "start:"):
-			in = true
-			continue
-		case in && (l == "" || strings.HasPrefix(l, " ")):
-			continue
-		}
-		in = false
-		out = append(out, l)
-	}
-	return strings.Join(out, "\n")
-}
-
-func TestWithoutRoleStart(t *testing.T) {
-	t.Parallel()
-	const role = "---\ntitle: R\nupdated: 2026-11-02\nstatus: active\nname: r\nrole: r\n" +
-		"definition: {description: d, tools: [Read]}\naction: r\ntrigger: [asked]\nitem: none\n" +
-		"start: |\n  You are {{.Name}}.\n\n  {{if .Item}}On {{.Item}}.{{end}}\n---\n\n"
-	const without = "---\ntitle: R\nupdated: 2026-11-02\nstatus: active\nname: r\nrole: r\n" +
-		"definition: {description: d, tools: [Read]}\naction: r\ntrigger: [asked]\nitem: none\n---\n\n"
 	for _, tc := range []struct {
-		name, rel, s, want string
+		name, rel, content string
+		want               bool
 	}{
-		{"a role file's start", "design/workflows/roles/r.md", role + "Body.\n", without + "Body.\n"},
-		{"template syntax in a role file's body", "design/workflows/roles/r.md", role + "{{ .today }}\n", without + "{{ .today }}\n"},
-		{"a role file that does not parse", "design/workflows/roles/r.md", "{{.Name}}\n", "{{.Name}}\n"},
-		{"a start outside the roles folder", "design/system/overview.md", role, role},
+		{"a {{ in a file copied byte for byte", "design/workflows/formulas/import.md", formula, false},
+		{"a {{ in a file that differs from its source", "design/workflows/formulas/import.md", formula + "{{ .today }}\n", true},
+		{"a {{ in a file rendered from a .tmpl source", "README.md", "# {{ .project_name }}\n", true},
+		{"a {{ in a file with no source", "system-flow.lock.yaml", "{{ .today }}\n", true},
+		{"a file rendered with no {{ left", "README.md", "# sample\n", false},
+		{"a copied file changed but with no {{", "design/system/overview.md", "# Changed\n", false},
 	} {
-		if got := withoutRoleStart(tc.rel, tc.s); got != tc.want {
-			t.Errorf("%s: withoutRoleStart(%q, %q) = %q, want %q", tc.name, tc.rel, tc.s, got, tc.want)
+		if got := leftTemplateSyntax(proto, tc.rel, []byte(tc.content)); got != tc.want {
+			t.Errorf("%s: leftTemplateSyntax(%q) = %v, want %v", tc.name, tc.rel, got, tc.want)
 		}
 	}
 }
