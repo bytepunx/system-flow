@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -250,10 +251,13 @@ func (b *build) checkout(what string, args ...string) error {
 // there, appended to its notes, and a thread opened on it to its agent by flai
 // serve, saying what failed, the failing tier's findings in full and the
 // folder of its whole output, at which commit, with which stories, and what
-// to do. A story no longer in review is not moved and gets no thread. Either way
-// it leaves the queue with OutcomeFailing as its outcome, and the bisection
-// is marked sent back. It does nothing under pull-request acceptance, with no
-// batch, or with one dropped, not bisected, or sent back already.
+// to do. When the project's markdown lint refuses that thread, it is opened
+// with the findings left out and the folder named, so that a quote never
+// keeps the story in the queue (I-0242). A story no longer in review is not
+// moved and gets no thread. Either way it leaves the queue with
+// OutcomeFailing as its outcome, and the bisection is marked sent back. It
+// does nothing under pull-request acceptance, with no batch, or with one
+// dropped, not bisected, or sent back already.
 func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	d = withDefaults(d)
 	if repo.Manifest.Acceptance.PullRequest() {
@@ -286,7 +290,16 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	moved := err == nil && it.Type == workitem.Story && it.Status == workitem.Review
 	detail := fmt.Sprintf("sent back to in-progress: merge queue batch %s fails with it at %s", batch.ID, tier)
 	if moved {
-		th, err := openFailing(repo, batch, failed, head, now)
+		th, err := openFailing(repo, batch, failed, failingText(batch, failed, head, true), now)
+		var refused *mdlint.Error
+		if errors.As(err, &refused) {
+			// a quote the project's lint still refuses must not keep the
+			// story from being sent back, or the queue retries it at every
+			// look with the batch wedged (I-0242): the thread then names the
+			// log folder in place of the findings
+			d.Log.Warn("merge queue send-back thread refused by the markdown lint; opening it without the findings", "component", "mergequeue", "batch", batch.ID, "story", story, "err", err)
+			th, err = openFailing(repo, batch, failed, failingText(batch, failed, head, false), now)
+		}
 		if err != nil {
 			return false, fmt.Errorf("send %s back to in-progress, as merge queue batch %s fails with it: open its thread: %w; flai serve sends it back at its next look", story, batch.ID, err)
 		}
@@ -363,14 +376,14 @@ func ResolveSentBack(d Deps, repo *workitem.Repo) ([]string, error) {
 }
 
 // openFailing opens the thread on the failing story of batch to its agent,
-// saying what failed, the result failed, or answers the open one flai serve
-// opened on it with the same title, as a send-back before this one opened
-// and could not record.
-func openFailing(repo *workitem.Repo, batch *Batch, failed Result, head Head, now time.Time) (*threads.Thread, error) {
+// with text saying what failed, the result failed, or answers the open one
+// flai serve opened on it with the same title, as a send-back before this one
+// opened and could not record.
+func openFailing(repo *workitem.Repo, batch *Batch, failed Result, text string, now time.Time) (*threads.Thread, error) {
 	story := batch.Bisect.Failing
 	opt := threads.NewOptions{
 		Title: fmt.Sprintf("Merge queue batch %s fails with %s at %s", batch.ID, story, failed.StoppedAt),
-		On:    story, Author: sendBackAuthor, Text: failingText(batch, failed, head), Now: now,
+		On:    story, Author: sendBackAuthor, Text: text, Now: now,
 	}
 	if all, err := threads.For(repo, story); err == nil {
 		title := workitem.CleanTitle(opt.Title)
@@ -383,13 +396,18 @@ func openFailing(repo *workitem.Repo, batch *Batch, failed Result, head Head, no
 	return threads.New(repo, opt)
 }
 
+// quoteFindings puts a failing tier's findings in the thread's code block;
+// a test replaces it to have the thread refused.
+var quoteFindings = mdlint.Fenced
+
 // failingText says what failed of batch's failing story, at which commit,
-// with which stories, and what to do. What failed is the failing tier's
-// findings in full, as flai verify prints them, or the summary when the
-// result has none, as one kept by an older flai or one whose tiers could not
-// run, followed by the folder the tiers' whole output is in, when there is
-// one.
-func failingText(batch *Batch, failed Result, head Head) string {
+// with which stories, and what to do. What failed is, with quote, the failing
+// tier's findings in full, as flai verify prints them, or the summary when
+// the result has none, as one kept by an older flai or one whose tiers could
+// not run; without quote, for a thread the lint refused with them, the
+// summary on one line alone, in a code span. The folder the tiers' whole
+// output is in follows, when there is one.
+func failingText(batch *Batch, failed Result, head Head, quote bool) string {
 	bs := batch.Bisect
 	tier := failed.StoppedAt
 	story := bs.Failing
@@ -401,9 +419,16 @@ func failingText(batch *Batch, failed Result, head Head) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Merge queue batch %s fails with %s at %s. The queue verified %s %s on main at %s, at %s, the copy of its verified head %s rebased in the batch, and %s failed:\n\n",
 		codeSpan(batch.ID), story, codeSpan(tier), story, with, codeSpan(short(batch.Base)), codeSpan(short(bs.Commit)), codeSpan(short(head.Verified)), codeSpan(tier))
-	fmt.Fprintf(&b, "%s\n\n", fenced(orDefault(failed.Findings, failed.Summary)))
-	if failed.Log != "" {
+	if quote {
+		fmt.Fprintf(&b, "%s\n\n", quoteFindings(orDefault(failed.Findings, failed.Summary)))
+	} else {
+		fmt.Fprintf(&b, "%s\n\nThe project's markdown lint refused this thread with the findings of %s quoted, so they are left out. ", codeSpan(oneLine(failed.Summary)), codeSpan(tier))
+	}
+	switch {
+	case failed.Log != "":
 		fmt.Fprintf(&b, "The whole output of each tier it ran is in %s.\n\n", codeSpan(failed.Log))
+	case !quote:
+		b.WriteString("No log of its output was kept: run flai verify " + story + " to see it.\n\n")
 	}
 	if len(before) > 0 {
 		b.WriteString("The stories before it land; those after it stay enqueued. ")
@@ -411,19 +436,6 @@ func failingText(batch *Batch, failed Result, head Head) string {
 	fmt.Fprintf(&b, "flai moved %s back to in-progress and took it out of the merge queue. Fix it on %s, run flai verify %s, move it to review, and enqueue it again with flai queue add %s.",
 		story, codeSpan(storygit.Branch(story)), story, story)
 	return b.String()
-}
-
-// fenced is s in a text code block, its tabs as spaces, whose fence is longer than any run of
-// backticks in s.
-func fenced(s string) string {
-	fence := "```"
-	for strings.Contains(s, fence) {
-		fence += "`"
-	}
-	// a tab in the output, as go test's summary line carries, would fail
-	// the thread the project's markdown lint (MD010), so nothing would be
-	// written and the story never sent back (I-0242)
-	return fence + "text\n" + strings.ReplaceAll(strings.TrimSpace(s), "\t", "    ") + "\n" + fence
 }
 
 // codeSpan is s in a code span whose fence is longer than any run of

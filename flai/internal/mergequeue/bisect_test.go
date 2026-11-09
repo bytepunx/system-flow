@@ -1,9 +1,11 @@
 package mergequeue
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -777,11 +779,134 @@ func TestTheFailingTiersOutputIsQuotedWithoutTabs(t *testing.T) {
 	batch := &Batch{ID: "20261031-110330", Base: "3460ff79e7d40f117d4833274128e638e1e2dcbb", Stories: []string{"S-0546"},
 		Bisect: &Bisect{Failing: "S-0546", Bad: 1, Commit: "ba58b74a6d10fb5377187672909d33706222e1cb"}}
 	failed := Result{StoppedAt: "smoke", Findings: "smoke: --- FAIL: TestGatewayOpenRouter (131.94s)\nFAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s\nexit status 1"}
-	text := failingText(batch, failed, Head{Verified: "ba58b74a6d10fb5377187672909d33706222e1cb"})
+	text := failingText(batch, failed, Head{Verified: "ba58b74a6d10fb5377187672909d33706222e1cb"}, true)
 	if strings.Contains(text, "\t") {
 		t.Errorf("the thread's text carries a tab:\n%s", text)
 	}
 	if !strings.Contains(text, "FAIL    github.com/bytepunx/system-flow/flai/internal/serve    131.960s") {
 		t.Errorf("the summary line is not quoted with its tabs as spaces:\n%s", text)
+	}
+}
+
+// goTestFindings are the findings of a go test tier as I-0242's batch quoted
+// them, go test's summary line with its tabs, with CRLF line ends and the
+// ANSI colours a terminal gives.
+const goTestFindings = "smoke: \x1b[31m--- FAIL: TestGatewayOpenRouter (131.94s)\x1b[0m\r\n" +
+	"FAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s\r\nexit status 1\r\n"
+
+// linted gives repo this repository's markdownlint configuration, which the
+// thread writer lints with; a project without one is not linted.
+func linted(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	config, err := os.ReadFile(filepath.Join("..", "..", "..", ".markdownlint.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo.Root, ".markdownlint.yaml"), config, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// failWith gives the bisection of repo's batch the failing result res.
+func failWith(t *testing.T, repo *workitem.Repo, res Result) {
+	t.Helper()
+	if _, err := Update(repo.CacheDir(), func(s *State) error {
+		s.Batch.Bisect.Result = &res
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// sentBack fails t unless story is in-progress, out of the queue, and the
+// bisection of repo's batch is sent back, with one thread on story by flai
+// serve, whose body it answers.
+func sentBack(t *testing.T, repo *workitem.Repo, story string) string {
+	t.Helper()
+	it, err := repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it.Status != workitem.InProgress {
+		t.Errorf("%s is %s, want in-progress", story, it.Status)
+	}
+	st, err := ReadState(repo.CacheDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := st.EnqueuedAs(story); ok {
+		t.Errorf("%s is still enqueued", story)
+	}
+	if !st.Batch.Bisect.SentBack {
+		t.Errorf("bisection %+v, want it sent back", st.Batch.Bisect)
+	}
+	ths := serveThreads(t, repo, story)
+	if len(ths) != 1 {
+		t.Fatalf("threads by flai serve on %s: %d, want 1", story, len(ths))
+	}
+	return ths[0].Body
+}
+
+// I-0242: a batch bisected to a story whose failing tier printed go test's
+// summary line with its tabs, CRLF line ends, and ANSI escapes sends the
+// story back with its thread written under the project's own markdownlint
+// configuration, the summary line quoted with its tabs as spaces.
+func TestAGoTestFailureIsSentBackUnderTheProjectsLint(t *testing.T) {
+	repo, _, failing := bisected(t)
+	linted(t, repo)
+	failWith(t, repo, Result{StoppedAt: "smoke", Summary: "smoke failed: smoke: --- FAIL: TestGatewayOpenRouter (131.94s)", Findings: goTestFindings,
+		FinishedAt: t2, Log: ".flai-cache/merge-queue/batches/20261019-160000/step-1"})
+
+	if sent, err := SendBack(Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }}, repo); !sent || err != nil {
+		t.Fatalf("sent %v, %v; want %s sent back", sent, err, failing)
+	}
+	body := sentBack(t, repo, failing)
+	if !strings.Contains(body, "FAIL    github.com/bytepunx/system-flow/flai/internal/serve    131.960s") {
+		t.Errorf("the thread does not quote go test's summary line with its tabs as spaces:\n%s", body)
+	}
+	if strings.ContainsAny(body, "\t\r\x1b") {
+		t.Errorf("the thread carries a tab, a carriage return, or an escape:\n%q", body)
+	}
+}
+
+// I-0242: when the project's markdown lint still refuses the thread with the
+// findings quoted, here with the quote I-0242's thread had, tabs and all, the
+// story is sent back all the same, with a thread that leaves the findings
+// out, gives the summary, and names the folder of the tiers' whole output, or
+// says none was kept; the refusal is logged once, at warn.
+func TestARefusedSendBackThreadLeavesTheFindingsOut(t *testing.T) {
+	quoted := quoteFindings
+	t.Cleanup(func() { quoteFindings = quoted })
+	quoteFindings = func(s string) string { return "```text\n" + strings.TrimSpace(s) + "\n```" }
+
+	for _, tc := range []struct{ name, log, says string }{
+		{name: "with a log", log: ".flai-cache/merge-queue/batches/20261019-160000/step-1",
+			says: "The whole output of each tier it ran is in `.flai-cache/merge-queue/batches/20261019-160000/step-1`."},
+		{name: "with none", says: "No log of its output was kept"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, _, failing := bisected(t)
+			linted(t, repo)
+			failWith(t, repo, Result{StoppedAt: "smoke", Summary: "smoke failed: FAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s",
+				Findings: "smoke: --- FAIL: TestGatewayOpenRouter (131.94s)\nFAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s", FinishedAt: t2, Log: tc.log})
+			var logged bytes.Buffer
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Log: slog.New(slog.NewTextHandler(&logged, nil))}
+
+			if sent, err := SendBack(d, repo); !sent || err != nil {
+				t.Fatalf("sent %v, %v; want %s sent back", sent, err, failing)
+			}
+			body := sentBack(t, repo, failing)
+			for _, says := range []string{tc.says, "`smoke failed: FAIL github.com/bytepunx/system-flow/flai/internal/serve 131.960s`", "so they are left out", "flai queue add " + failing} {
+				if !strings.Contains(body, says) {
+					t.Errorf("the thread does not say %q:\n%s", says, body)
+				}
+			}
+			if strings.Contains(body, "TestGatewayOpenRouter") || strings.Contains(body, "\t") {
+				t.Errorf("the thread quotes the findings:\n%s", body)
+			}
+			if n := strings.Count(logged.String(), "level=WARN"); n != 1 || !strings.Contains(logged.String(), "story="+failing) {
+				t.Errorf("logged %d warnings, want the refusal once, naming %s:\n%s", n, failing, logged.String())
+			}
+		})
 	}
 }
