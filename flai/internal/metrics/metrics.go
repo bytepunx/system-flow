@@ -289,7 +289,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	// The sections run at once (S-0607). Each goroutine writes only its own
 	// field of rep, or a local the end copies in, and none changes what
 	// another reads: items, all, opt, perItem, waits, pulls, and replay are
-	// read only once they are built. They run in three stages:
+	// read only once they are built, tl among them. They run in three stages:
 	//   - the sections that need only the inputs start at once and run to
 	//     the end, beside everything else;
 	//   - the per-item loop's inputs are built at once, and claims starts as
@@ -303,9 +303,12 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	var spend UsageReport
 	var cod CostOfDelay
 	var order CostOrder
+	// Each item's transitions are parsed once, for every section laid out by
+	// the day (S-0608).
+	tl := newTimelines(items)
 	sections.Go(func() { throughputs = throughput(items, start, opt.Now) })
-	sections.Go(func() { burnups = burnupsByParent(items, start, opt.Now) })
-	sections.Go(func() { cfds = cfd(items, start, opt.Now) })
+	sections.Go(func() { burnups = burnupsByParent(items, tl, start, opt.Now) })
+	sections.Go(func() { cfds = cfd(items, tl, start, opt.Now) })
 	sections.Go(func() {
 		spend = spendReport(items, start, opt.Now)
 		spend.Bucket = opt.Bucket
@@ -317,7 +320,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		rep.StrategicIssues, onIssues = strategicIssues(opt.Issues, all)
 		rep.Strategic = strategic(opt.Activities, opt.Roles, all, onIssues, start, opt.Now)
 	})
-	sections.Go(func() { cod = costOfDelay(items, start, opt.Now) })
+	sections.Go(func() { cod = costOfDelay(items, tl, start, opt.Now) })
 	sections.Go(func() { order = costOrder(all, opt) })
 	sections.Go(func() { rep.Concurrency = concurrency(items, start, opt.Now, opt.WIPLimit) })
 	sections.Go(func() { rep.Turns = turns(all, start, opt.Now) })
@@ -347,7 +350,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	})
 	inputs.Go(func() { rate = CostPerAgentHour(all) })
 	replay := replayHolds(items, all, start, opt)
-	sections.Go(func() { rep.Claims = claims(items, all, start, opt, replay) })
+	sections.Go(func() { rep.Claims = claims(items, all, tl, start, opt, replay) })
 	inputs.Wait()
 
 	perItem := map[string]ItemMetrics{}
@@ -423,8 +426,8 @@ func groups(items []*workitem.Item, perItem map[string]ItemMetrics, inWindow fun
 
 // burnupsByParent is the burn-up of all the items, under all, and of each
 // parent's, under the parent's ID.
-func burnupsByParent(items []*workitem.Item, start, now time.Time) map[string][]DayPoint {
-	out := map[string][]DayPoint{"all": burnup(items, start, now)}
+func burnupsByParent(items []*workitem.Item, tl timelines, start, now time.Time) map[string][]DayPoint {
+	out := map[string][]DayPoint{"all": burnup(items, tl, start, now)}
 	parents := map[string]bool{}
 	for _, it := range items {
 		if it.Parent == "" || parents[it.Parent] {
@@ -437,7 +440,7 @@ func burnupsByParent(items []*workitem.Item, start, now time.Time) map[string][]
 				sub = append(sub, x)
 			}
 		}
-		out[it.Parent] = burnup(sub, start, now)
+		out[it.Parent] = burnup(sub, tl, start, now)
 	}
 	return out
 }
@@ -652,10 +655,10 @@ func pad2(n int) string {
 // dayRange is the days a series over time covers: from the one that holds the
 // window's start, or the first item's creation if that is later, to today
 // (S-0166).
-func dayRange(items []*workitem.Item, start, now time.Time) (time.Time, time.Time) {
+func dayRange(items []*workitem.Item, tl timelines, start, now time.Time) (time.Time, time.Time) {
 	var first time.Time
 	for _, it := range items {
-		c, _ := time.Parse(workitem.TimeFormat, it.Created)
+		c := tl.of(it).created
 		if first.IsZero() || c.Before(first) {
 			first = c
 		}
@@ -688,17 +691,117 @@ func stateAt(it *workitem.Item, endOfDay time.Time) string {
 	return state
 }
 
-func burnup(items []*workitem.Item, start, now time.Time) []DayPoint {
-	first, last := dayRange(items, start, now)
+// timeline is an item's creation and its transitions' times, parsed once a
+// call (S-0608): a time that does not parse is the zero time, as stateAt
+// reads it.
+type timeline struct {
+	created time.Time
+	at      []time.Time
+	to      []string
+	// first is the earliest time the item records, its creation or a
+	// transition's.
+	first time.Time
+}
+
+// newTimeline parses the item's creation and transitions.
+func newTimeline(it *workitem.Item) *timeline {
+	created, _ := time.Parse(workitem.TimeFormat, it.Created)
+	tl := &timeline{created: created, first: created, at: make([]time.Time, len(it.Transitions)), to: make([]string, len(it.Transitions))}
+	for i, tr := range it.Transitions {
+		tl.at[i], _ = time.Parse(workitem.TimeFormat, tr.At)
+		tl.to[i] = tr.To
+		if tl.at[i].Before(tl.first) {
+			tl.first = tl.at[i]
+		}
+	}
+	return tl
+}
+
+// timelines are the items' timelines, built once a call and only read after,
+// so the sections that run at once may share them.
+type timelines map[*workitem.Item]*timeline
+
+// newTimelines parses the timeline of each of the items.
+func newTimelines(items []*workitem.Item) timelines {
+	tl := make(timelines, len(items))
+	for _, it := range items {
+		if tl[it] == nil {
+			tl[it] = newTimeline(it)
+		}
+	}
+	return tl
+}
+
+// of is the item's timeline, parsed now when it was not among the items the
+// timelines were built from.
+func (tl timelines) of(it *workitem.Item) *timeline {
+	if t := tl[it]; t != nil {
+		return t
+	}
+	return newTimeline(it)
+}
+
+// dayStates is each of a list of items' state at the end of one day after
+// another, the days given in order, so that a section laid out by the day
+// reads each transition once rather than once a day (S-0608). It reads as
+// stateAt does: the state entered by the last of the transitions up to the
+// first one after the day's end, backlog before any, and "" before the item
+// was created.
+type dayStates struct {
+	lines []*timeline
+	next  []int // each item's first transition not yet passed
+	// first is the earliest time any of the items records, zero with none.
+	first time.Time
+}
+
+// newDayStates starts the items' states before their first day.
+func newDayStates(items []*workitem.Item, tl timelines) *dayStates {
+	s := &dayStates{lines: make([]*timeline, len(items)), next: make([]int, len(items))}
+	for i, it := range items {
+		s.lines[i] = tl.of(it)
+		if f := s.lines[i].first; i == 0 || f.Before(s.first) {
+			s.first = f
+		}
+	}
+	return s
+}
+
+// before reports whether every item was created, and every transition made,
+// at or after t, so that a day that ends by t holds no item and no waiting:
+// such a day is answered without reading the items.
+func (s *dayStates) before(t time.Time) bool {
+	return len(s.lines) == 0 || !s.first.Before(t)
+}
+
+// at is item i's state at end, the end of a day no earlier than the last one
+// asked of it.
+func (s *dayStates) at(i int, end time.Time) string {
+	tl, k := s.lines[i], s.next[i]
+	for k < len(tl.at) && !tl.at[k].After(end) {
+		k++
+	}
+	s.next[i] = k
+	switch {
+	case tl.created.After(end):
+		return ""
+	case k == 0:
+		return workitem.Backlog
+	}
+	return tl.to[k-1]
+}
+
+func burnup(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
+	first, last := dayRange(items, tl, start, now)
 	if first.IsZero() {
 		return nil
 	}
+	states := newDayStates(items, tl)
 	var out []DayPoint
 	for d := first; !d.After(last); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := DayPoint{Date: d.Format("2006-01-02")}
-		for _, it := range items {
-			st := stateAt(it, end)
+		for i := range items {
+			st := states.at(i, end)
 			if st == "" || st == workitem.Cancelled {
 				continue
 			}
@@ -712,11 +815,12 @@ func burnup(items []*workitem.Item, start, now time.Time) []DayPoint {
 	return out
 }
 
-func cfd(items []*workitem.Item, start, now time.Time) []DayPoint {
-	first, last := dayRange(items, start, now)
+func cfd(items []*workitem.Item, tl timelines, start, now time.Time) []DayPoint {
+	first, last := dayRange(items, tl, start, now)
 	if first.IsZero() {
 		return nil
 	}
+	states := newDayStates(items, tl)
 	var out []DayPoint
 	for d := first; !d.After(last); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
@@ -724,8 +828,8 @@ func cfd(items []*workitem.Item, start, now time.Time) []DayPoint {
 		for _, st := range workitem.States {
 			p.Counts[st] = 0
 		}
-		for _, it := range items {
-			if st := stateAt(it, end); st != "" {
+		for i := range items {
+			if st := states.at(i, end); st != "" {
 				p.Counts[st]++
 			}
 		}

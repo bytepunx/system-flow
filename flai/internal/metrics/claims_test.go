@@ -425,3 +425,44 @@ func weeksString(ws []ClaimWeek) string {
 	data, _ := json.Marshal(ws)
 	return string(data)
 }
+
+// S-0608: the day sweep counts, on every day, the items stateAt finds in
+// progress at the day's end, at windows from a day to a year, the longest
+// starting long before every item, so that those days count none.
+func TestClaimsDaysSweepAgreesWithStateAt(t *testing.T) {
+	for _, set := range [][]*workitem.Item{costItems(), unvaluedItems(), sweepItems()} {
+		for _, at := range []time.Time{now, time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC)} {
+			for _, days := range []int{1, 3, 7, 30, 365} {
+				var items []*workitem.Item
+				for _, it := range set {
+					if it.Type == workitem.Story {
+						items = append(items, it)
+					}
+				}
+				start := at.Add(-time.Duration(days) * 24 * time.Hour)
+				opt := Options{Now: at}
+				got := claims(items, set, newTimelines(items), start, opt, replayHolds(items, set, start, opt))
+				i := 0
+				for d := firstDay(start); !d.After(at); d = d.AddDate(0, 0, 1) {
+					end := d.Add(24*time.Hour - time.Second)
+					want := 0
+					for _, it := range items {
+						if stateAt(it, end) == workitem.InProgress {
+							want++
+						}
+					}
+					if i >= len(got.Days) {
+						t.Fatalf("%d days to %s: %d days, want more", days, at, len(got.Days))
+					}
+					if g := got.Days[i]; g.Date != d.Format("2006-01-02") || g.InProgress != want {
+						t.Errorf("%d days to %s: day %d = %s with %d in progress, want %s with %d", days, at, i, g.Date, g.InProgress, d.Format("2006-01-02"), want)
+					}
+					i++
+				}
+				if i != len(got.Days) {
+					t.Errorf("%d days to %s: %d days, want %d", days, at, len(got.Days), i)
+				}
+			}
+		}
+	}
+}

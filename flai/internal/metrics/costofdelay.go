@@ -55,8 +55,11 @@ func deriveCostOfDelay(m *ItemMetrics, it *workitem.Item) {
 // costOfDelay lays out the cost of delay of the items with a value, by the day
 // from the one that holds the window's start to today, and by the ISO week
 // from the one that holds the window's start to this one. Each day also counts
-// the items without a value, of a type that carries one, in each column.
-func costOfDelay(items []*workitem.Item, start, now time.Time) CostOfDelay {
+// the items without a value, of a type that carries one, in each column. The
+// days are swept once, each item's state moved on as the days pass its
+// transitions, and a day before every item is answered without reading them
+// (S-0608).
+func costOfDelay(items []*workitem.Item, tl timelines, start, now time.Time) CostOfDelay {
 	var valued, unvalued []*workitem.Item
 	for _, it := range items {
 		switch {
@@ -66,58 +69,93 @@ func costOfDelay(items []*workitem.Item, start, now time.Time) CostOfDelay {
 			unvalued = append(unvalued, it)
 		}
 	}
+	waits := make([]waitedItem, len(valued))
+	for i, it := range valued {
+		waits[i] = waitedItem{value: *costValue(it), spans: waitSpans(it, tl.of(it), now)}
+	}
+	worth, without := newDayStates(valued, tl), newDayStates(unvalued, tl)
 	out := CostOfDelay{Days: []CostDay{}, Weeks: []CostWeek{}}
 	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
-		end := d.Add(24*time.Hour - time.Second)
+		end, next := d.Add(24*time.Hour-time.Second), d.AddDate(0, 0, 1)
 		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}, WithoutValue: map[string]int{}}
 		for _, col := range costColumns {
 			p.Outstanding[col], p.WithoutValue[col] = 0, 0
 		}
-		for _, it := range valued {
-			if st := stateAt(it, end); slices.Contains(costColumns, st) {
-				p.Outstanding[st] += *costValue(it)
+		if !worth.before(next) {
+			for i := range valued {
+				if st := worth.at(i, end); slices.Contains(costColumns, st) {
+					p.Outstanding[st] += waits[i].value
+				}
+			}
+			for col, v := range p.Outstanding {
+				p.Outstanding[col] = round2(v)
+			}
+			p.Incurred = incurred(waits, d, next, now)
+		}
+		if !without.before(next) {
+			for i := range unvalued {
+				if st := without.at(i, end); slices.Contains(costColumns, st) {
+					p.WithoutValue[st]++
+				}
 			}
 		}
-		for _, it := range unvalued {
-			if st := stateAt(it, end); slices.Contains(costColumns, st) {
-				p.WithoutValue[st]++
-			}
-		}
-		for col, v := range p.Outstanding {
-			p.Outstanding[col] = round2(v)
-		}
-		p.Incurred = incurred(valued, d, d.AddDate(0, 0, 1), now)
 		out.Days = append(out.Days, p)
 	}
 	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
 		y, w := m.ISOWeek()
 		out.Weeks = append(out.Weeks, CostWeek{Week: weekKey(y, w), Start: m.Format("2006-01-02"),
-			Incurred: incurred(valued, m, m.AddDate(0, 0, 7), now)})
+			Incurred: incurred(waits, m, m.AddDate(0, 0, 7), now)})
 	}
 	return out
 }
 
+// waitedItem is an item's cost of delay per week and its spans in backlog or
+// ready.
+type waitedItem struct {
+	value float64
+	spans []span
+}
+
 // incurred is what waiting for the items cost from a up to b, not after now.
-func incurred(items []*workitem.Item, a, b, now time.Time) float64 {
+func incurred(items []waitedItem, a, b, now time.Time) float64 {
 	var total float64
 	for _, it := range items {
-		total += *costValue(it) * waited(it, a, b, now)
+		total += it.value * waited(it.spans, a, b, now)
 	}
 	return round2(total / secondsPerWeek)
 }
 
-// waited is the seconds the item spent in backlog or ready from a up to b,
-// not after now: backlog from created, and the last state up to now while it
-// is open.
-func waited(it *workitem.Item, a, b, now time.Time) float64 {
+// waitSpans is the item's spans in backlog or ready, in the order of its
+// transitions: backlog from created, and the last state up to now while it
+// is open. A span may run backwards where the transitions are out of order;
+// waited counts nothing of it.
+func waitSpans(it *workitem.Item, tl *timeline, now time.Time) []span {
+	var out []span
+	add := func(state string, from, to time.Time) {
+		if state == workitem.Backlog || state == workitem.Ready {
+			out = append(out, span{from, to})
+		}
+	}
+	state, at := workitem.Backlog, tl.created
+	for i, next := range tl.at {
+		add(state, at, next)
+		state, at = tl.to[i], next
+	}
+	if !it.Closed() {
+		add(state, at, now)
+	}
+	return out
+}
+
+// waited is the seconds the spans cover from a up to b, not after now, each
+// span's added in turn.
+func waited(spans []span, a, b, now time.Time) float64 {
 	if b.After(now) {
 		b = now
 	}
 	var total float64
-	add := func(state string, from, to time.Time) {
-		if state != workitem.Backlog && state != workitem.Ready {
-			return
-		}
+	for _, s := range spans {
+		from, to := s.from, s.to
 		if from.Before(a) {
 			from = a
 		}
@@ -127,16 +165,6 @@ func waited(it *workitem.Item, a, b, now time.Time) float64 {
 		if to.After(from) {
 			total += to.Sub(from).Seconds()
 		}
-	}
-	created, _ := time.Parse(workitem.TimeFormat, it.Created)
-	state, at := workitem.Backlog, created
-	for _, tr := range it.Transitions {
-		next, _ := time.Parse(workitem.TimeFormat, tr.At)
-		add(state, at, next)
-		state, at = tr.To, next
-	}
-	if !it.Closed() {
-		add(state, at, now)
 	}
 	return total
 }

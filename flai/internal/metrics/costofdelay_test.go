@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -199,6 +200,165 @@ func TestCostOfDelayCountsTheItemsWithoutAValuePerColumn(t *testing.T) {
 		}
 		if string(data) != tc.want {
 			t.Errorf("%s without_value by day =\n%s\nwant\n%s", tc.typ, data, tc.want)
+		}
+	}
+}
+
+// sweepItems are stories whose transitions fall on the edges the day sweep
+// must read as stateAt does: one created mid-day, one moved at a day's last
+// second and at the next day's first, one still waiting at now, one with its
+// transitions out of order, and one whose transition's time does not parse.
+// Every one is created after the 365-day window's start.
+func sweepItems() []*workitem.Item {
+	unordered := costItem("S-0024", workitem.Story, val(140), "2026-08-27T08:00:00Z",
+		workitem.InProgress, "2026-08-30T10:00:00Z", workitem.Ready, "2026-08-28T10:00:00Z")
+	unparsed := costItem("S-0025", workitem.Story, val(35), "2026-08-29T08:00:00Z",
+		workitem.Ready, "not a time", workitem.InProgress, "2026-08-31T00:00:00Z")
+	return []*workitem.Item{
+		costItem("S-0021", workitem.Story, val(700), "2026-08-28T13:27:41Z",
+			workitem.Ready, "2026-08-29T23:59:59Z", workitem.InProgress, "2026-08-30T00:00:00Z", workitem.Done, "2026-08-31T23:59:59Z"),
+		costItem("S-0022", workitem.Story, val(0.07), "2026-08-30T23:59:59Z", workitem.Ready, "2026-09-01T11:00:00Z"),
+		costItem("S-0023", workitem.Story, nil, "2026-08-29T12:00:00Z", workitem.InProgress, "2026-08-29T23:59:59Z"),
+		unordered,
+		unparsed,
+		costItem("E-0021", workitem.Epic, val(7), "2026-08-20T00:00:00Z", workitem.InProgress, "2026-08-31T12:00:00Z"),
+	}
+}
+
+// costOfDelayReference is costOfDelay as it was before S-0608: every item's
+// state asked through stateAt on every day, and its waiting worked out from
+// its transitions again for every day and week. The sweep must give what it
+// gives.
+func costOfDelayReference(items []*workitem.Item, start, now time.Time) CostOfDelay {
+	waitedRef := func(it *workitem.Item, a, b time.Time) float64 {
+		if b.After(now) {
+			b = now
+		}
+		var total float64
+		add := func(state string, from, to time.Time) {
+			if state != workitem.Backlog && state != workitem.Ready {
+				return
+			}
+			if from.Before(a) {
+				from = a
+			}
+			if to.After(b) {
+				to = b
+			}
+			if to.After(from) {
+				total += to.Sub(from).Seconds()
+			}
+		}
+		created, _ := time.Parse(workitem.TimeFormat, it.Created)
+		state, at := workitem.Backlog, created
+		for _, tr := range it.Transitions {
+			next, _ := time.Parse(workitem.TimeFormat, tr.At)
+			add(state, at, next)
+			state, at = tr.To, next
+		}
+		if !it.Closed() {
+			add(state, at, now)
+		}
+		return total
+	}
+	var valued, unvalued []*workitem.Item
+	for _, it := range items {
+		switch {
+		case costValue(it) != nil:
+			valued = append(valued, it)
+		case workitem.Carries(it.Type, "cost_of_delay"):
+			unvalued = append(unvalued, it)
+		}
+	}
+	incurredRef := func(a, b time.Time) float64 {
+		var total float64
+		for _, it := range valued {
+			total += *costValue(it) * waitedRef(it, a, b)
+		}
+		return round2(total / secondsPerWeek)
+	}
+	out := CostOfDelay{Days: []CostDay{}, Weeks: []CostWeek{}}
+	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
+		end := d.Add(24*time.Hour - time.Second)
+		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}, WithoutValue: map[string]int{}}
+		for _, col := range costColumns {
+			p.Outstanding[col], p.WithoutValue[col] = 0, 0
+		}
+		for _, it := range valued {
+			if st := stateAt(it, end); slices.Contains(costColumns, st) {
+				p.Outstanding[st] += *costValue(it)
+			}
+		}
+		for _, it := range unvalued {
+			if st := stateAt(it, end); slices.Contains(costColumns, st) {
+				p.WithoutValue[st]++
+			}
+		}
+		for col, v := range p.Outstanding {
+			p.Outstanding[col] = round2(v)
+		}
+		p.Incurred = incurredRef(d, d.AddDate(0, 0, 1))
+		out.Days = append(out.Days, p)
+	}
+	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
+		y, w := m.ISOWeek()
+		out.Weeks = append(out.Weeks, CostWeek{Week: weekKey(y, w), Start: m.Format("2006-01-02"), Incurred: incurredRef(m, m.AddDate(0, 0, 7))})
+	}
+	return out
+}
+
+// S-0608: the day sweep gives, for every day and week, what asking every
+// item on every day gave, at windows from a day to a year, the longest
+// starting long before every item, and at a now on a day's last second.
+func TestCostOfDelaySweepMatchesTheReference(t *testing.T) {
+	for _, set := range []struct {
+		name  string
+		items []*workitem.Item
+	}{{"cost", costItems()}, {"unvalued", unvaluedItems()}, {"sweep", sweepItems()}} {
+		for _, at := range []time.Time{now, time.Date(2026, 8, 31, 23, 59, 59, 0, time.UTC)} {
+			for _, days := range []int{1, 3, 7, 30, 365} {
+				since := time.Duration(days) * 24 * time.Hour
+				for _, typ := range []string{workitem.Story, workitem.Epic} {
+					var items []*workitem.Item
+					for _, it := range set.items {
+						if it.Type == typ {
+							items = append(items, it)
+						}
+					}
+					start := at.Add(-since)
+					got, err := json.Marshal(costOfDelay(items, newTimelines(items), start, at))
+					if err != nil {
+						t.Fatal(err)
+					}
+					want, err := json.Marshal(costOfDelayReference(items, start, at))
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(got) != string(want) {
+						t.Errorf("%s, %s, %d days to %s: cost_of_delay =\n%s\nwant\n%s", set.name, typ, days, at.Format(workitem.TimeFormat), got, want)
+					}
+				}
+			}
+		}
+	}
+}
+
+// S-0608: a window that starts long before the first item has every day
+// from its start, those before the first story, created on 20 August, at
+// zero.
+func TestCostOfDelayBeforeTheFirstItemIsZero(t *testing.T) {
+	cod := Compute(costItems(), Options{Now: now, Since: 365 * 24 * time.Hour}).CostOfDelay
+	if len(cod.Days) != 366 || cod.Days[0].Date != "2025-09-01" {
+		t.Fatalf("days = %d from %s, want 366 from 2025-09-01", len(cod.Days), cod.Days[0].Date)
+	}
+	for _, d := range cod.Days {
+		if d.Date >= "2026-08-20" {
+			break
+		}
+		for _, col := range costColumns {
+			if d.Outstanding[col] != 0 || d.WithoutValue[col] != 0 || d.Incurred != 0 {
+				t.Fatalf("%s before the first item = %+v, want zero", d.Date, d)
+			}
 		}
 	}
 }

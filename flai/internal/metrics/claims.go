@@ -77,15 +77,20 @@ type TouchDrift struct {
 // the share of stories whose touches were exact by the ISO week, from the one
 // that holds the window's start to this one; and the touches drift of the
 // stories among the items. replay is the hold rules' replay over the same
-// days and weeks.
-func claims(items, all []*workitem.Item, start time.Time, opt Options, replay holdReplay) Claims {
+// days and weeks. The days are swept once, each item's state moved on as the
+// days pass its transitions, and a day before every item is answered without
+// reading them (S-0608).
+func claims(items, all []*workitem.Item, tl timelines, start time.Time, opt Options, replay holdReplay) Claims {
 	out := Claims{Limit: opt.WIPLimit, Days: []ClaimDay{}, Weeks: []ClaimWeek{}}
+	states := newDayStates(items, tl)
 	for i, d := 0, firstDay(start); !d.After(opt.Now); i, d = i+1, d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := ClaimDay{Date: d.Format("2006-01-02"), Held: replay.days[i]}
-		for _, it := range items {
-			if stateAt(it, end) == workitem.InProgress {
-				p.InProgress++
+		if !states.before(d.AddDate(0, 0, 1)) {
+			for k := range items {
+				if states.at(k, end) == workitem.InProgress {
+					p.InProgress++
+				}
 			}
 		}
 		out.Days = append(out.Days, p)
