@@ -309,12 +309,16 @@ var cliReads = map[string][]string{
 // list, show, and definition read the role files, and flai role alone prints
 // its help, but flai role run starts an agent and flai role definition
 // --write writes the definitions into .flai-cache/agents (S-0568, I-0245).
+// flai hostapi alone lists the host API's methods, and with a method on
+// HostAPIReads it answers that read, --timing or not; every other method
+// writes (S-0612, I-0307).
 // A command with no with flags reads in any form without its without flags.
 var flagReads = map[string]struct {
 	with    []string
 	without []string
 	form    func(words []string) bool
 }{
+	"hostapi": {form: readsHostAPI},
 	"order":   {with: []string{"--by"}, without: []string{"--apply"}, form: ordersByPolicy},
 	"plan":    {with: []string{"--candidates"}},
 	"promote": {with: []string{"--candidates", "--drafts"}},
@@ -332,6 +336,55 @@ var roleReads = []string{"", "definition", "list", "show"}
 func readsRoles(words []string) bool {
 	_, sub := subcommands(words, flaiValues)
 	return slices.Contains(roleReads, sub)
+}
+
+// HostAPIReads are the methods of the host API's table (flai hostapi, ADR-0029)
+// that write nothing: no work item, thread, document, file, or commit, no
+// mark of what was seen, no setting, and no process started; at most the
+// caches a flai read such as flai board keeps under .flai-cache (S-0612,
+// I-0307). The guard cannot import flai/internal/hostapi, which imports it,
+// so a test there keeps this list in step with the table.
+var HostAPIReads = []string{
+	"accept.preview", "activity.document", "activity.get", "adrs.list", "agent.status", "agent.stream",
+	"board.get", "components.list", "design.get", "design.proposals", "doc.get", "doc.lint", "doc.show",
+	"docs.tree", "forge.status", "inbox.designer", "issue.list", "item.get", "item.move.preview", "item.show",
+	"items.count", "items.list", "kluster.status", "messages.get", "messages.list", "order.by", "project.info",
+	"promote.candidates", "publish.preview", "release.evaluate", "search.query", "settings.get", "stats.get",
+	"stream.diff", "threads.list", "verify.status",
+}
+
+// readsHostAPI says whether the words of flai hostapi read: they name no
+// method, which lists the methods, or a method on HostAPIReads.
+func readsHostAPI(words []string) bool {
+	m := hostAPIMethod(words)
+	return m == "" || slices.Contains(HostAPIReads, m)
+}
+
+// redirection begins a word that redirects a command's input or output, such
+// as >f, 2>&1, or >, which the shell's parse leaves in a command's words.
+var redirection = regexp.MustCompile(`^[0-9]*&?[<>]`)
+
+// hostAPIMethod is the method the words of flai hostapi name, its first
+// positional word after hostapi that is not a redirection or its target; ""
+// when they name none.
+func hostAPIMethod(words []string) string {
+	args := positionals(words, flaiValues)
+	for i := 1; i < len(args); i++ {
+		w := args[i]
+		if !redirection.MatchString(w) {
+			return w
+		}
+		if strings.TrimLeft(w, "0123456789&<>|") == "" {
+			i++ // the operator stands apart from its target, the next word
+		}
+	}
+	return ""
+}
+
+// writesHostAPI says why a sub-agent does not run a host API method off
+// HostAPIReads, naming it.
+func writesHostAPI(words []string) string {
+	return fmt.Sprintf("a sub-agent runs flai hostapi only with one of the host API's read methods, those on the guard's HostAPIReads, and %s is not one: the host API's write methods are the story's agent's (ADR-0060)", hostAPIMethod(words))
 }
 
 // orderValues are the flags of flai order, flai's own among them, that take
@@ -914,6 +967,8 @@ func subAgent(readOnly bool) rules {
 				return configsManifest, ""
 			case cmd == "subproject":
 				return editsSubprojects, ""
+			case cmd == "hostapi":
+				return writesHostAPI(rest), ""
 			}
 			return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's (ADR-0060)", ""
 		},

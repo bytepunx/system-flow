@@ -38,6 +38,10 @@ func TestGuard(t *testing.T) {
 		// S-0568, I-0245: flai role definition reads; flai role run starts an agent.
 		{`{"tool_name":"Bash","tool_input":{"command":"scripts/flai.sh role definition planner"},"agent_type":"general-purpose","agent_id":"a7"}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai role run reviewer"},"agent_type":"general-purpose","agent_id":"a8"}`, 2, "a sub-agent (general-purpose) cannot run \"flai role run reviewer\""},
+		// S-0612, I-0307: flai hostapi with a read method, --timing included,
+		// reads; a write method is the story's agent's.
+		{`{"tool_name":"Bash","tool_input":{"command":"flai hostapi --timing inbox.designer 2>&1 >/dev/null"},"agent_type":"explorer","agent_id":"a9"}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"flai hostapi item.move '{\"id\":\"S-1\",\"to\":\"review\"}'"},"agent_type":"general-purpose","agent_id":"a10"}`, 2, "item.move is not one"},
 		{`not json`, 0, "hook input is not a tool call"},
 	} {
 		_, errOut, code := runStdin(t, dir, c.in, "guard")
