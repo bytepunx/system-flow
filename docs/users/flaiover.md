@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-07
+updated: 2026-11-09
 status: active
 ---
 
@@ -561,7 +561,7 @@ Under Strategic Cost, a line states the ratio, or why there is none. About this 
 
 ## Docs
 
-Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. The rail's Documentation group opens it at three places: System at `design/system/README.md`, Conventions at `design/conventions/README.md`, and Issues at `design/issues/summary.md`. The analyzer's reports are there, in `design/analysis/`, one per run beside the folder's README, as experiments' results are in `design/experiments/`; a report's front matter names its focus and the window its figures cover, `from` and `to`. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; links between documents open in the explorer, and a link to a heading lands on it. A wide table scrolls sideways inside the document. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
+Docs shows every markdown file under `design/`, `docs/`, and `wip/` in a collapsible tree. The rail's Documentation group opens it at three places: System at `design/system/README.md`, Conventions at `design/conventions/README.md`, and Issues at `design/issues/summary.md`. The analyzer's reports are there, in `design/analysis/`, one per run beside the folder's README, as experiments' results are in `design/experiments/`; a report's front matter names its focus and the window its figures cover, `from` and `to`. A document renders with its Mermaid diagrams, highlighted code, task-list checkboxes, and heading anchors; raw HTML in it, such as a `<div>` or a `<script>`, is shown as text, never run, here and wherever the dashboard shows markdown; links between documents open in the explorer, and a link to a heading lands on it. A wide table scrolls sideways inside the document. The front matter is shown in a panel above the text, and the threads on the document below it. When a story in progress or in review says it touches the document, the page names the story: an edit here may collide with that story's branch. When the dashboard can write, an **Edit** link opens the editor.
 
 The tree sits at the left of the document, in a box that scrolls on its own. Under it, **On this page** lists the open document's headings, each nested under the heading it belongs to: click one to scroll to it. The heading you are reading is highlighted. On a wide window the tree and the headings are a column beside the document, and stay in view as you scroll; on a narrow one they are above it, the headings in a row you can scroll sideways.
 

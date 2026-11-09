@@ -395,6 +395,8 @@ flaiover/
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
 
+Every markdown the dashboard shows, documents, item bodies, thread entries, messages, and editor previews, is rendered by `render()` in `$lib/markdown.ts`, which shows raw HTML as text (S-0627, [markdown.md](../tech/markdown.md)).
+
 ### Times (S-0329)
 
 flai records and returns every time in UTC, `YYYY-MM-DDTHH:MM:SSZ`, and the dashboard shows each in the browser's zone through `src/lib/localtime.ts`: `localTime` to the minute with the zone's short name (`2026-10-07 15:35 EDT`), `localDate` as the date there, and `localTimes` for each time inside a text flai wrote, which `DismissibleNotice.svelte` applies to every notice. No component formats a time of its own. What goes back to the API, and keys and comparisons, stay UTC; a document's text and front matter show as written. The charts keep flai's buckets, per UTC day and per UTC week from Monday ([metrics.md](metrics.md), [ADR-0056](../adrs/0056-time-in-state-is-one-stacked-bar-per-day-of-the-window-the-mean-hours-per-state.md)), and set no `useUTC`: `place` in `charts.ts` draws a day or a week at the local midnight of its own date, so its mark sits on that date's tick in any zone, an hour at its moment, and `bucketLabel` names an hour in local time and a day or a week by its date. The tests run in `America/New_York` (`vite.config.ts`), so a time shown in UTC fails them.
