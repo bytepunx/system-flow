@@ -3,12 +3,15 @@ id: S-0608
 type: story
 nature: improvement
 title: The chart data keeps the hold replay until items or commits change and sweeps the days once, so a 365-day window costs what a 30-day one does
-status: backlog
+status: ready
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:41Z
-updated: 2026-11-09T09:09:14Z
-transitions: []
+updated: 2026-11-09T09:10:29Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:10:19Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/metrics/costorder.go, flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/costorder_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/metrics/coordination.go, flai/internal/storygit/committed_test.go]
 after: [S-0606]
@@ -52,10 +55,10 @@ cost_of_delay:
   at: 2026-11-08T00:05:51Z
 forecast:
   duration: 1h
-  delivery: 2026-11-09T10:32:00Z
-  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0610, S-0612, S-0613, S-0635 and S-0241."
+  delivery: 2026-11-09T10:33:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0610, S-0612 and S-0613."
   by: flai
-  at: 2026-11-09T09:09:14Z
+  at: 2026-11-09T09:10:29Z
 finalized:
   by: orchestrator
   at: 2026-11-08T00:10:06Z
