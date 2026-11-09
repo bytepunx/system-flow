@@ -99,6 +99,41 @@ func TestLogLevelFollowsTheThresholdAndWaitsAreNeverSlow(t *testing.T) {
 	}
 }
 
+// A send the transport timed is send_ms, kept out of duration_ms and counted
+// toward the threshold; without it there is no send_ms (S-0611).
+func TestTheSendIsItsOwnFieldWhenTimed(t *testing.T) {
+	var b bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&b, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	for _, tc := range []struct {
+		name  string
+		sent  bool
+		level string
+		send  any
+	}{
+		{"timed", true, "INFO", float64(450)},
+		{"not timed", false, "DEBUG", nil},
+	} {
+		b.Reset()
+		c := newClock()
+		_, rec := StartAt(context.Background(), c.now)
+		c.step(100 * time.Millisecond) // the answer is ready
+		a := Answered{Transport: "channel", Method: "agent.status"}
+		if tc.sent {
+			c.step(450 * time.Millisecond) // written, behind the write lock
+			a.Sent, a.Send = true, 450*time.Millisecond
+		}
+		rec.Log(logger, a, 500*time.Millisecond)
+		ev := events(t, &b)
+		if len(ev) != 1 {
+			t.Fatalf("%s: %d events", tc.name, len(ev))
+		}
+		e := ev[0]
+		if e["level"] != tc.level || e["duration_ms"] != float64(100) || e["send_ms"] != tc.send {
+			t.Errorf("%s: event %v", tc.name, e)
+		}
+	}
+}
+
 func TestADebugEventIsNotBuiltWhenDebugIsOff(t *testing.T) {
 	var b bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&b, nil))

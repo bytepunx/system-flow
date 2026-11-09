@@ -116,19 +116,20 @@ LOG_FORMAT=json flai check 2>events.jsonl
 
 ### Request timing (S-0152)
 
-`flai serve` and `flai mcp` log one `request answered` event, component `perf`, for every request they answer: a dashboard's method over the channel, or an MCP request, named by its tool for a tool call. It is measured inside flai, from when the request was read to when its answer is ready to write, so a request's duration in the dashboard's own log, less this one, is the transport.
+`flai serve` and `flai mcp` log one `request answered` event, component `perf`, for every request they answer: a dashboard's method over the channel, or an MCP request, named by its tool for a tool call. It is measured inside flai, from when the request was read to when its answer is ready to write. Over the channel, writing the answer is timed apart and the event is logged after the write (S-0611). That time includes encoding the message and waiting for the connection's one write lock, which a large answer to another request may hold. So a request's duration in the dashboard's own log, less `duration_ms` and `send_ms`, is the network.
 
 | Field | Holds |
 |-------|-------|
 | `transport` | `channel` (the dashboard) or `mcp` |
 | `method` | The method, or the MCP tool |
 | `project` | The project's key, over the channel |
-| `duration_ms` | The time flai took to answer |
+| `duration_ms` | The time flai took to answer, until the answer was ready to write |
+| `send_ms` | Over the channel only: the time to write the answer, the wait for the connection's write lock included. MCP answers are written by the MCP library, which flai does not time, so they have none |
 | `bytes` | The answer's size: the JSON result over the channel, a tool's text over MCP |
 | `phases` | Where the time went, longest first, as `name=milliseconds`, with `xN` for a step taken N times; phases nest and overlap, so they need not add up |
 | `err` | The error answered, if any |
 
-A request that takes `FLAI_SLOW_REQUEST` or longer is logged at `INFO`; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
+A request whose `duration_ms` and `send_ms` together come to `FLAI_SLOW_REQUEST` or more is logged at `INFO`, so a small request stuck behind a large answer's write shows; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
 
 Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `undone.read` (the paths each open story's branch undoes of main's change), `merge.queue` (the merge queue beside the board), `release.pending`, `threads.read`, `threads.view`, `narratives.read`, `check.overlap` (the designer's inbox's overlapping touches), `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `item.show`, `cancel.preview`, `accept.preview`, `stream.diff`, `stats.compute`, `order.by`, `promote.candidates`, `release.evaluate`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log`, or `exec.flai.move` for a write, which runs the flai command. Since S-0159 no read starts flai.
 

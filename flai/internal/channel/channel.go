@@ -243,6 +243,9 @@ type Client struct {
 	drainWhy string
 	active   int
 	idle     chan struct{}
+	// writing, when set, is called with each message once the connection's
+	// write lock is held, before the write: a test holds the lock with it.
+	writing func(message)
 }
 
 // Drain refuses every request from now on, saying why, and waits until the
@@ -654,6 +657,9 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 		}
 		wmu.Lock()
 		defer wmu.Unlock()
+		if c.writing != nil {
+			c.writing(m)
+		}
 		wctx, done := context.WithTimeout(ctx, 30*time.Second)
 		defer done()
 		return conn.Write(wctx, websocket.MessageText, b)
@@ -803,8 +809,9 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 			go func(m message) {
 				// counted out once its answer is sent, so that a drain waits for the answer
 				defer func() { stop(); inflight.Delete(string(m.ID)); c.end() }()
-				// timed from here, after the message was read and before it
-				// is written: what the dashboard waits beyond it is the transport
+				// timed from here, after the message was read, until the answer
+				// is ready to write (duration_ms); the write, the wait for the
+				// connection's write lock included, is timed apart (send_ms)
 				tctx, rec := perf.StartAt(rctx, c.Now)
 				out := message{ID: m.ID}
 				res, rerr := c.call(tctx, m)
@@ -824,9 +831,16 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 				if out.Error != nil {
 					answered.Err = out.Error.Message
 				}
+				ready := rec.Elapsed()
+				serr := send(out)
+				answered.Sent, answered.Send = true, rec.Elapsed()-ready
+				if serr != nil {
+					// logged with the answer's own error, if it had one
+					answered.Err = strings.TrimPrefix(answered.Err+"; ", "; ") + "the answer was not sent: " + serr.Error()
+				}
 				rec.Log(c.Logger, answered, c.Slow)
-				if err := send(out); err != nil && out.Error == nil {
-					_ = send(message{ID: m.ID, Error: &Error{Code: CodeInternal, Message: err.Error()}})
+				if serr != nil && out.Error == nil {
+					_ = send(message{ID: m.ID, Error: &Error{Code: CodeInternal, Message: serr.Error()}})
 				}
 			}(m)
 		}

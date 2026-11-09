@@ -398,9 +398,76 @@ func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
 	}
 	phases, _ := ev["phases"].(string)
 	if ev["level"] != "INFO" || ev["transport"] != "channel" || ev["method"] != "board.get" || ev["project"] != "harbour" ||
-		ev["bytes"] != float64(len(`{"board":"ok"}`)) || ev["duration_ms"] == nil ||
+		ev["bytes"] != float64(len(`{"board":"ok"}`)) || ev["duration_ms"] == nil || ev["send_ms"] == nil ||
 		!strings.Contains(phases, "items.list=") || !strings.Contains(phases, "encode=") {
 		t.Errorf("event %v", ev)
+	}
+}
+
+// The answer's send_ms counts its wait for the connection's write lock, which
+// another message holds, and duration_ms does not (S-0611).
+func TestTheSendTimeCountsTheWaitForTheWriteLock(t *testing.T) {
+	const held = 300 * time.Millisecond
+	d := newFakeDashboard(t, "s3cret")
+	var logs lockedBuffer
+	holding := make(chan struct{})
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Version: "test", Slow: time.Hour,
+		Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		Methods: map[string]Method{"board.get": func(ctx context.Context, _ Project, _ json.RawMessage) (any, *Error) {
+			// a progress message takes the write lock and holds it; the
+			// answer, ready at once, waits for it
+			go Progress(ctx, "loading")
+			<-holding
+			return map[string]string{"board": "ok"}, nil
+		}}}
+	c.writing = func(m message) {
+		if m.Method == "$/progress" {
+			close(holding)
+			time.Sleep(held)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	conn := waitProven(t, d)
+	rctx, rdone := context.WithTimeout(context.Background(), 5*time.Second)
+	defer rdone()
+	if err := conn.Write(rctx, websocket.MessageText, []byte(`{"jsonrpc":"2.0","id":1,"method":"board.get","params":{"project":"harbour"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		_, data, err := conn.Read(rctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m message
+		_ = json.Unmarshal(data, &m)
+		if string(m.ID) == "1" {
+			break
+		}
+	}
+	var ev map[string]any
+	deadline := time.Now().Add(3 * time.Second)
+	for ev == nil && time.Now().Before(deadline) {
+		for _, line := range strings.Split(logs.String(), "\n") {
+			if strings.Contains(line, `"request answered"`) {
+				if err := json.Unmarshal([]byte(line), &ev); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		if ev == nil {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	if ev == nil {
+		t.Fatalf("no request answered event in %s", logs.String())
+	}
+	send, _ := ev["send_ms"].(float64)
+	took, _ := ev["duration_ms"].(float64)
+	if send < float64((held/2).Milliseconds()) || took >= float64((held/2).Milliseconds()) {
+		t.Errorf("send_ms %v and duration_ms %v: the wait for the lock belongs in send_ms alone", ev["send_ms"], ev["duration_ms"])
 	}
 }
 

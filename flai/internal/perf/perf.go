@@ -148,17 +148,27 @@ type Answered struct {
 	Bytes     int    // the answer's size, when the transport knows it
 	Err       string // the error answered, if any
 	Wait      bool   // a request that waits by design: never logged as slow
+	// Sent says the transport timed writing the answer, logged after the
+	// write: Send is that time, the encoding, the wait for the connection's
+	// write lock, and the write (S-0611).
+	Sent bool
+	Send time.Duration
 }
 
 // Log writes one "request answered" event: at info when the request took
-// slow or longer and does not wait by design, at debug otherwise.
+// slow or longer, its send included, and does not wait by design, at debug
+// otherwise. duration_ms is the time until the answer was ready to write:
+// with Sent, the time since the start less Send; send_ms is Send.
 func (r *Recorder) Log(logger *slog.Logger, a Answered, slow time.Duration) {
 	if logger == nil {
 		return
 	}
 	took := r.Elapsed()
+	if a.Sent {
+		took -= a.Send
+	}
 	level := slog.LevelDebug
-	if !a.Wait && took >= slow {
+	if !a.Wait && took+a.Send >= slow {
 		level = slog.LevelInfo
 	}
 	ctx := context.Background()
@@ -170,6 +180,9 @@ func (r *Recorder) Log(logger *slog.Logger, a Answered, slow time.Duration) {
 		slog.String("transport", a.Transport),
 		slog.String("method", a.Method),
 		slog.Float64("duration_ms", ms(took)),
+	}
+	if a.Sent {
+		attrs = append(attrs, slog.Float64("send_ms", ms(a.Send)))
 	}
 	if a.Project != "" {
 		attrs = append(attrs, slog.String("project", a.Project))
