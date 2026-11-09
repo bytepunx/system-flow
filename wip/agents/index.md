@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T11:24:55Z
+updated: 2026-11-09T11:26:04Z
 ---
 
 # Active streams
@@ -13,13 +13,14 @@ updated: 2026-11-09T11:24:55Z
 | [S-0610](S-0610.md) | The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out | review | agent-S-0610 | 2026-11-09T10:43:46Z |
 | [S-0615](S-0615.md) | flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes | review | agent-S-0615 | 2026-11-09T10:45:47Z |
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | review | agent-S-0616 | 2026-11-09T10:43:31Z |
-| [S-0635](S-0635.md) | Publish what is accepted and not yet released | review | agent-S-0635 | 2026-11-09T11:24:18Z |
+| [S-0635](S-0635.md) | Publish what is accepted and not yet released | review | agent-S-0635 | 2026-11-09T11:24:56Z |
+| [S-0639](S-0639.md) | Publish what is accepted and not yet released | in-progress | agent-S-0639 | 2026-11-09T11:26:04Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 172 | 1105.9306 USD | 143930 | 2026-11-09T10:49:32Z |
-| [orchestrator](orchestrator.md) | 2445 | 2052.5000 USD | 1530755 | 2026-11-09T11:24:34Z |
+| [orchestrator](orchestrator.md) | 2448 | 2052.7451 USD | 1530813 | 2026-11-09T11:25:32Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 111 | 176.3896 USD | 18314 | 2026-11-09T10:56:22Z |

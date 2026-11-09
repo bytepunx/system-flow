@@ -3,10 +3,10 @@ id: S-0635
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-08T01:14:12Z
-updated: 2026-11-09T11:24:16Z
+updated: 2026-11-09T11:24:53Z
 transitions:
   - to: ready
     at: 2026-11-08T01:15:24Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-09T11:23:00Z
     by: agent-S-0635
+  - to: review
+    at: 2026-11-09T11:24:53Z
+    by: system-flow
 tags: []
 agent:
   harness: claude-code
@@ -22,19 +25,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 74
-  estimated: true
-  priced_by: estimate
+  seconds: 122
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      work: 14
+      ceremony: 3
+      work: 22
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 250
-      cache_read: 1549887
-      cache_write: 142796
-      cost: 0.6172
+      input: 54
+      output: 7113
+      cache_read: 3489563
+      cache_write: 150043
+      cost: 2.0407
   strategic:
     - kind: orchestrator
       seconds: 666
