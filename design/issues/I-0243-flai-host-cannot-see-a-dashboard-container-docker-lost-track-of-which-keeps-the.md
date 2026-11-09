@@ -2,12 +2,12 @@
 id: I-0243
 title: flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes
 class: defect
-status: open
+status: closed
 count: 1
 cost: 144h
 first_reported: 2026-10-31T18:32:12Z
 last_reported: 2026-10-31T18:32:12Z
-updated: 2026-11-07T23:39:11Z
+updated: 2026-11-09T10:16:16Z
 ---
 
 # I-0243 flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes
@@ -23,3 +23,4 @@ Since 2026-10-25T20:50Z flai host has restarted the dashboard every five minutes
 ## Remediation
 
 Story S-0615 remediates this issue, created from it at 2026-11-07T23:39:11Z.
+Closed 2026-11-09T10:16:16Z: S-0615: flai host's watch now finds a dashboard whose container runs with no published port while its recorded host port answers, calls it port held, names the docker-proxy that holds the port from /proc, and does not restart it, logging it once (ADR-0267). TestLookDashboardFindsThePortHeldByAnOrphanedContainersProxy reproduces the cause, and TestHostDoesNotRestartADashboardWhosePortIsHeld shows the watch makes no restart until the holder is gone.
