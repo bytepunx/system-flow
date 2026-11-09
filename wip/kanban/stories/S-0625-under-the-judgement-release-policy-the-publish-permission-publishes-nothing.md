@@ -6,7 +6,7 @@ title: "Under the judgement release policy the publish permission publishes noth
 status: backlog
 owner: alex
 created: 2026-11-07T23:40:15Z
-updated: 2026-11-07T23:40:15Z
+updated: 2026-11-09T21:56:42Z
 transitions: []
 tags: []
 agent:
@@ -35,7 +35,9 @@ usage:
           cache_read: 759050
           cache_write: 13854
           cost: 0.278
-draft: true
+finalized:
+  by: alex
+  at: 2026-11-09T21:56:42Z
 ---
 # S-0625 Under the judgement release policy the publish permission publishes nothing: every release since 2026-11-02 was the operator's by hand
 
