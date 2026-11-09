@@ -15,6 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
@@ -165,7 +166,7 @@ func (is *Issue) Save() error {
 	if err := os.MkdirAll(filepath.Dir(is.Path), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(is.Path, []byte(is.Marshal()), 0o644); err != nil {
+	if err := atomicfile.WriteFile(is.Path, []byte(is.Marshal()), 0o644); err != nil {
 		return err
 	}
 	is.written = []string{is.Path}
@@ -498,7 +499,7 @@ func WriteSummary(r *workitem.Repo, now time.Time) ([]*Issue, error) {
 	if err := os.MkdirAll(Dir(r), 0o755); err != nil {
 		return nil, err
 	}
-	return list, os.WriteFile(filepath.Join(Dir(r), SummaryFile), []byte(Summary(list, now)), 0o644)
+	return list, atomicfile.WriteFile(filepath.Join(Dir(r), SummaryFile), []byte(Summary(list, now)), 0o644)
 }
 
 // SummaryTable returns the table part of the summary for embedding, or ""

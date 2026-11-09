@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/adrindex"
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -209,7 +210,7 @@ func (s *snapshot) undo() error {
 		}
 	}
 	for p, data := range s.was {
-		if err := os.WriteFile(p, data, 0o644); err != nil {
+		if err := atomicfile.WriteFile(p, data, 0o644); err != nil {
 			return err
 		}
 	}
@@ -289,7 +290,7 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		return nil, err
 	}
 	snap.created = append(snap.created, path)
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := atomicfile.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fail(err)
 	}
 	var superseded []string
@@ -311,7 +312,7 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		default:
 			text = bySupRe.ReplaceAllString(text, "superseded_by: ["+strings.TrimSpace(m[1])+", "+adrID(n)+"]")
 		}
-		if err := os.WriteFile(oldPath, []byte(text), 0o644); err != nil {
+		if err := atomicfile.WriteFile(oldPath, []byte(text), 0o644); err != nil {
 			return fail(err)
 		}
 		superseded = append(superseded, oldPath)
@@ -385,7 +386,7 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 	newFM := statusRe.ReplaceAllString(fm, "status: accepted")
 	newFM = dateRe.ReplaceAllString(newFM, "date: "+opt.Now.UTC().Format("2006-01-02"))
 	text := strings.Replace(string(data), fm, newFM, 1)
-	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+	if err := atomicfile.WriteFile(path, []byte(text), 0o644); err != nil {
 		return nil, err
 	}
 	changed := []string{path}
@@ -464,7 +465,7 @@ func SetTopics(repo *workitem.Repo, r execx.Runner, n int, list []string, opt Op
 		return nil, err
 	}
 	snap := &snapshot{was: map[string][]byte{path: data}}
-	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+	if err := atomicfile.WriteFile(path, []byte(text), 0o644); err != nil {
 		return nil, err
 	}
 	res.Changed = []string{res.Path}

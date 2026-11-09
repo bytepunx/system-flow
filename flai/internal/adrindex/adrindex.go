@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -229,7 +230,7 @@ func Write(dir string) (bool, error) {
 	if exists && text == string(current) {
 		return false, nil
 	}
-	return true, os.WriteFile(file, []byte(text), 0o644)
+	return true, atomicfile.WriteFile(file, []byte(text), 0o644) // a rename, which the watcher sees at once (S-0606)
 }
 
 // RenderStopped is the index rendered at a rebase that stopped on it, from

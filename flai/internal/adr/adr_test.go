@@ -156,3 +156,53 @@ func TestNewWritesNoIndexWhereThereIsNone(t *testing.T) {
 		t.Errorf("no index is created: %v", err)
 	}
 }
+
+// New, the supersede it does, Accept, and SetTopics replace each ADR rather
+// than write it in place, so the folder's modification time moves and the
+// watcher's slow tier sees the change at its next fast look (S-0606). The
+// index is adrindex's to write.
+func TestWritesReplaceTheFiles(t *testing.T) {
+	repo, dir := indexRepo(t)
+	now := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
+	stat := func(name string) os.FileInfo {
+		t.Helper()
+		info, err := os.Stat(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return info
+	}
+	replaced := func(name string, before os.FileInfo) {
+		t.Helper()
+		if os.SameFile(before, stat(name)) {
+			t.Errorf("%s was written in place, not replaced", name)
+		}
+	}
+	second := stat("0002-second.md")
+	if _, err := New(repo, noGit{}, Options{Title: "Third", Supersedes: []int{2}, Body: "## Context\n\nc\n\n## Decision\n\nWe decide again.\n", Now: now}); err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	replaced("0002-second.md", second)
+
+	third := stat("0003-third.md")
+	if _, err := Accept(repo, noGit{}, 3, Options{Now: now}); err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	replaced("0003-third.md", third)
+
+	third = stat("0003-third.md")
+	if _, err := SetTopics(repo, noGit{}, 3, []string{"all"}, Options{Now: now}); err != nil {
+		t.Fatalf("SetTopics: %v", err)
+	}
+	replaced("0003-third.md", third)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("a temporary file was left behind: %s", e.Name())
+		}
+	}
+}

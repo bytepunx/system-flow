@@ -384,3 +384,53 @@ func TestTwoListsAtOnceGetTheSameIssues(t *testing.T) {
 		}
 	}
 }
+
+// An issue write and the summary write replace their files rather than write
+// them in place, so the folder's modification time moves and the watcher's
+// slow tier sees the change at its next fast look (S-0606).
+func TestWritesReplaceTheFile(t *testing.T) {
+	r := repo(t)
+	is, err := New(r, NewOptions{Title: "Replaced", Class: "defect", Cost: "5m", Note: "first", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WriteSummary(r, t0); err != nil {
+		t.Fatal(err)
+	}
+	summary := filepath.Join(Dir(r), SummaryFile)
+	issueBefore, err := os.Stat(is.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summaryBefore, err := os.Stat(summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Bump(is, "", "5m", "again", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WriteSummary(r, t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		path   string
+		before os.FileInfo
+	}{{is.Path, issueBefore}, {summary, summaryBefore}} {
+		after, err := os.Stat(c.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if os.SameFile(c.before, after) {
+			t.Errorf("%s was written in place, not replaced", filepath.Base(c.path))
+		}
+	}
+	entries, err := os.ReadDir(Dir(r))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("a temporary file was left behind: %s", e.Name())
+		}
+	}
+}

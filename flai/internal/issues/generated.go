@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/adrindex"
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -75,7 +76,7 @@ func writeIndex(run execx.Runner, wt *workitem.Repo, p string) error {
 	if text == string(data) {
 		return nil
 	}
-	if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
+	if err := atomicfile.WriteFile(file, []byte(text), 0o644); err != nil {
 		return fmt.Errorf("write %s in %s: %w; check that it is writable and sync again", p, wt.Root, err)
 	}
 	return nil
@@ -160,7 +161,7 @@ func mergeStopped(run execx.Runner, wt *workitem.Repo, p string, merge func(base
 	if err != nil {
 		return fmt.Errorf("merge %s: %w", p, err)
 	}
-	if err := os.WriteFile(filepath.Join(wt.Root, filepath.FromSlash(p)), []byte(merged), 0o644); err != nil {
+	if err := atomicfile.WriteFile(filepath.Join(wt.Root, filepath.FromSlash(p)), []byte(merged), 0o644); err != nil {
 		return fmt.Errorf("write %s merged in %s: %w; check that it is writable and sync again", p, wt.Root, err)
 	}
 	return nil
