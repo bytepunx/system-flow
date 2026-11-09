@@ -2,11 +2,11 @@
 id: I-0296
 title: flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again
 class: defect
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:37Z
 last_reported: 2026-11-07T08:17:37Z
-updated: 2026-11-07T23:40:41Z
+updated: 2026-11-09T17:46:52Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ Analysis 2026-11-07: a 429 is not a prompt failure, yet protected-path writes un
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0629 remediates this issue, created from it at 2026-11-07T23:40:41Z.
+Closed 2026-11-09T17:46:52Z: S-0629 fixed it. ADR-0270 refines ADR-0106 § 2: a permission_prompt check whose claude -p ends on the harness's usage limit, read with the ADR-0214 usage reader from the check's stream-json, records no outcome and opens no thread, and flai serve checks the version again after the reset, or an hour later when no reset time is named, on the host and in an agent image (flai/internal/serve/claudecheck.go). TestAClaudeCodeCheckRefusedOnTheUsageLimitIsCheckedAgainAfterTheReset replays the 2026-10-26 weekly-limit refusal; TestAUsageLimitWithNoResetTimeHoldsTheCheckAnHour and TestACheckInAnImageRefusedOnTheUsageLimitIsCheckedAgainAfterTheReset cover the rest. The 2.1.311 failed record already in ~/.flai/serve/claude-checks.json stays until the operator removes its entry.
