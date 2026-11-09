@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T21:51:45Z
+updated: 2026-11-09T21:52:03Z
 ---
 
 # Active streams
@@ -13,7 +13,6 @@ updated: 2026-11-09T21:51:45Z
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | in-progress | agent-S-0616 | 2026-11-09T10:43:31Z |
 | [S-0621](S-0621.md) | A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time | review | agent-S-0621 | 2026-11-09T18:31:01Z |
 | [S-0624](S-0624.md) | One line holding a NUL byte in flai serve's journal drops the whole close-outs section of flai stats | review | agent-S-0624 | 2026-11-09T17:22:49Z |
-| [S-0627](S-0627.md) | The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator | review | agent-S-0627 | 2026-11-09T17:56:43Z |
 
 ## Strategic agents
 
