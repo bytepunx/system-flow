@@ -2,12 +2,12 @@
 id: I-0282
 title: A formula's instance declares no touches, so the story that started it holds it until that story leaves in-progress
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-07T08:04:18Z
 last_reported: 2026-11-07T08:04:18Z
-updated: 2026-11-07T23:39:44Z
+updated: 2026-11-09T17:33:37Z
 ---
 
 # I-0282 A formula's instance declares no touches, so the story that started it holds it until that story leaves in-progress
@@ -24,3 +24,4 @@ S-0564's agent ran flai formula run analysis-cadence --ready --autocommit; the i
 ## Remediation
 
 Story S-0620 remediates this issue, created from it at 2026-11-07T23:39:44Z.
+Closed 2026-11-09T17:33:37Z: S-0620: flai formula run now gives the instance story its own story file as its touch before --ready moves it (formulaRun, flai/cmd/formula.go, commit e1aeff6), so its claim is not empty and no story in progress holds it no-touches. flai import --formula and the orchestrator's publish go through the same path. TestFormulaRunInstanceIsNotHeldByAStoryInProgress reproduces the hold and fails without the fix.
