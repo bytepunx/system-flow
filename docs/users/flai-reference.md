@@ -201,7 +201,7 @@ A story whose branch changes a path Claude Code protects (a .claude folder, .mcp
 
 Markdown flai accept commits passes the project's lint (S-0367): the fix command of each test tier that has one runs over what the main checkout has not committed before anything changes and again before step 3's commit, and step 0's rebase runs it over what the story branch changes. When a tier's check still fails on those files, the acceptance is refused with each file, line, and error, before anything changes or before the merge; correct them and accept again. --dry-run runs neither. With --json that refusal exits 4 and prints {"refused": {"id", "reason", "findings"}}, each finding with its tier, checkout (main, or story with the story's ID), path, line, column, level, rule, alias, and message, as markdownlint-cli2 gives them (S-0378).
 
---by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches and on no path Claude Code protects, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. For a formula's instance, whose branch may change nothing, each item is "- &lt;n&gt;: T-nnnn done" instead, naming the done task of the criterion's step (S-0422, ADR-0239). It commits the shared set and leaves the main checkout's other uncommitted files as every acceptance does (above), never with --yes, and is refused only while the story's change would overwrite one of them; --dry-run lists that as the blocker dirty\_main among its orchestrator\_blockers, naming the files and the command that sets them aside (ADR-0189, ADR-0248). The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional. While the merge-queue host action is on and the queue batches (accept\_reviews on, under local acceptance), --by orchestrator is refused, naming the queue, but as the queue's landing or with --dry-run: the orchestrator enqueues the story instead, with flai queue add &lt;id&gt; --by orchestrator --verified &lt;commit&gt; --evidence &lt;file&gt; or the MCP tool queue\_add, and the queue lands it (S-0403).
+--by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches and on no path Claude Code protects, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. For a formula's instance, whose branch may change nothing, each item is "- &lt;n&gt;: T-nnnn done" instead, naming the done task of the criterion's step (S-0422, ADR-0239), or "- &lt;n&gt;: T-nnnn skipped" for a step a stop skipped, naming its task that flai formula stop cancelled, with the stopping step's task done (ADR-0271). An instance whose branch is gone is accepted when --verified names the commit its close-out passed at and that commit is on the main branch; any other story with no branch is the operator's. It commits the shared set and leaves the main checkout's other uncommitted files as every acceptance does (above), never with --yes, and is refused only while the story's change would overwrite one of them; --dry-run lists that as the blocker dirty\_main among its orchestrator\_blockers, naming the files and the command that sets them aside (ADR-0189, ADR-0248). The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional. While the merge-queue host action is on and the queue batches (accept\_reviews on, under local acceptance), --by orchestrator is refused, naming the queue, but as the queue's landing or with --dry-run: the orchestrator enqueues the story instead, with flai queue add &lt;id&gt; --by orchestrator --verified &lt;commit&gt; --evidence &lt;file&gt; or the MCP tool queue\_add, and the queue lands it (S-0403).
 
 When the acceptance's rebase of the story branch stops on conflicts that the merge of the issue files, the ADR index, the issue summary, and the shared markdown files does not settle, whoever accepts, by hand, from the dashboard, or as the orchestrator, it aborts the rebase, so the branch and the main branch are as they were, moves the story back to in-progress as flai with the paths in the reason, opens one thread on the story naming them and the branch, which flai serve starts the story's agent on, and exits saying the story was sent back: the agent resolves them, never the operator. With --json it exits 4 and prints {"refused": {"id", "reason", "sent\_back", "branch", "base", "conflicts", "thread"}}. The merge queue's landing, --batch, keeps its own send back (ADR-0176, ADR-0248).
 
@@ -2082,6 +2082,7 @@ Subcommands:
 - [list](#flai-formula-list): List the project's formulas with their nature, step count, file, and title
 - [run](#flai-formula-run): Make a story from a formula, with one task per step, in backlog or, with --ready, in ready
 - [show](#flai-formula-show): Print a formula: its inputs, its steps and what each runs, and the steps' layers
+- [stop](#flai-formula-stop): Record that a step of a formula's instance stopped its run cleanly with one of its stop exits, and skip the steps after it (ADR-0271)
 
 #### flai formula list
 
@@ -2137,6 +2138,35 @@ flai formula show <name>
 ```
 
 Print one formula by its name: its nature, file, title, status, updated, and description; its inputs, each required or with its default, and what it is; its steps, each with its title, what it runs, the steps it is after, and in: main when it runs in the project's main checkout; and its layers, the steps grouped by the longest chain of after before each, so that the tasks of a layer can run at once once those of the layers before it are done. The problems flai check would report in it are said on stderr. --json gives the formula, each step's kind among its fields, and its layers.
+
+#### flai formula stop
+
+Record that a step of a formula's instance stopped its run cleanly with one of its stop exits, and skip the steps after it (ADR-0271).
+
+```text
+flai formula stop <S-nnnn> --step <id> --exit <n> [flags]
+```
+
+Record that a step of a formula's instance exited with one of the exits its stop lists, which stop the run cleanly rather than fail the step (ADR-0271). The step's output comes from --output, a file, or standard input.
+
+In one change it moves the step's task to done, unblocking it first when it is blocked, with "Stopped the run with exit &lt;n&gt;:" and the output's last 40 lines in its Notes; moves every other step task of the instance not done to cancelled with the reason "step &lt;id&gt; stopped the run with exit &lt;n&gt;"; ticks the step's acceptance criterion, and ticks each cancelled step's with "(skipped: step &lt;id&gt; stopped the run with exit &lt;n&gt;)" after its text; and writes one line naming the tasks it skipped to the story's Notes and to its narrative's log. It commits nothing: the instance's agent then closes the story out and moves it to review, asking nothing.
+
+It refuses, writing nothing, a story that is no formula's instance or is not in progress; an instance whose formula file is gone or has a problem flai check reports; a step the formula does not have; an exit of 0 or one the step's stop does not list; a step whose task is not in progress, or waits for a task not done; and an instance with a task done in a layer after the step's, since the run went on past it. An agent flai serve started runs it only for the instance it works. --json gives {story, step, exit, done, cancelled, ticked, skipped, logged}.
+
+Examples:
+
+```bash
+flai release --evaluate --require-met > /tmp/evaluate.txt; flai formula stop S-0585 --step evaluate --exit 2 --output /tmp/evaluate.txt
+flai release --evaluate --require-met | flai formula stop S-0585 --step evaluate --exit 2
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--exit` int | the exit the step stopped with, one its stop lists |
+| `--output` string | a file holding the step's output (default: standard input) |
+| `--step` string | the id of the step that stopped the run, as the formula names it |
 
 ### flai guard
 

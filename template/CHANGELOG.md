@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0621 A formula step may stop its instance cleanly (minor, ADR-0271): a `flai` or `script` step may name `stop`, the exits that end the run without failing it. The baseline `publish` formula's evaluate step names `stop: [2]`, so with nothing to release its instance goes to review and acceptance without asking the operator. The instance rule in `work-management.md` says to run `flai formula stop` on such an exit and move the story to review, asking nothing, and the orchestrator's acceptance in `strategic-agents.md` takes `- <n>: T-nnnn skipped` as a skipped step's evidence. The formulas README documents the field.
+
 ## 1.1.28 - 2026-11-09
 
 - S-0610 The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out (patch).

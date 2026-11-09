@@ -797,8 +797,9 @@ steps:
     run: {script: scripts/test.sh}
   - id: evaluate
     title: The release evaluation agrees on {{version}}
-    run: {flai: release --evaluate}
+    run: {flai: release --evaluate --require-met}
     after: [test]
+    stop: [2]
   - id: risk
     title: The analyzer reports the risk of {{version}}
     run: {role: analyzer, prompt: "Report the risk before {{version}} is published."}
@@ -821,7 +822,8 @@ Run before a release is published.
 | `description` | The story's goal |
 | `nature` | The story's nature, `improvement` by default |
 | `inputs` | Each a `name`, a `description`, and optionally a `default`; one without a default is required. Use one as `{{name}}` in the title, a step's title, or a step's run |
-| `steps` | Each an `id`, a `title`, a `run`, and optionally the step ids it is `after` and `in: main`, for a step that runs from the project's main checkout rather than the story's worktree |
+| `steps` | Each an `id`, a `title`, a `run`, and optionally the step ids it is `after`, `in: main`, for a step that runs from the project's main checkout rather than the story's worktree, and `stop`, the exits that stop the run cleanly |
+| `stop` | On a `flai` or `script` step only: a list of exits from 1 to 255, such as `[2]`, each of which stops the run rather than failing the step. The agent then runs `flai formula stop`, which closes the step's task, cancels the steps after it, and ticks their criteria as skipped, and takes the story to review without asking you ([ADR-0271](../../design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md)) |
 | `run` | Exactly one of `flai: <command line after flai>`, `script: <path under scripts/ and its arguments>`, or `role: <name>` with `prompt: <text>` |
 
 ```bash
@@ -830,7 +832,7 @@ flai formula show release-check                    # its inputs, its steps, and 
 flai formula run release-check --input version=1.4.0  # the story and its tasks, in the backlog
 ```
 
-**Understand what a formula means.** A formula file is code you run, as a role file is: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, and only a story's agent, you, and a role whose file names the formula may run `flai formula run`. An input is filled in as text, so a value with shell characters reaches a script's or a flai command line as written: quote it in the formula where it matters. `flai check` does not catch a flai command that does not exist; that step fails when its task is worked. [A story from a formula](../users/flai.md#a-story-from-a-formula) says what the story holds.
+**Understand what a formula means.** A formula file is code you run, as a role file is: review a change to one as you would a script's, and let it reach main only through a story you accept. No role may edit `design/workflows/`, and only a story's agent, you, and a role whose file names the formula may run `flai formula run`. An input is filled in as text, so a value with shell characters reaches a script's or a flai command line as written: quote it in the formula where it matters. `flai check` does not catch a flai command that does not exist; that step fails when its task is worked. Give `stop` only the exits that mean "nothing to do": every other exit still blocks the step and asks you. `publish` stops on exit 2, the release policy not met. To end a run by hand the same way, run `flai formula stop <S-nnnn> --step <id> --exit <n> --output <file>` yourself. [A story from a formula](../users/flai.md#a-story-from-a-formula) says what the story holds.
 
 ### The formula host action: a formula on its schedule (S-0422)
 

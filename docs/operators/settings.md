@@ -424,6 +424,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--evaluate` | [flai release](../users/flai-reference.md#flai-release) |
 | `--evidence` | [flai accept](../users/flai-reference.md#flai-accept), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai move](../users/flai-reference.md#flai-move), [flai queue add](../users/flai-reference.md#flai-queue-add) |
 | `--exclude` | [flai components config](../users/flai-reference.md#flai-components-config) |
+| `--exit` | [flai formula stop](../users/flai-reference.md#flai-formula-stop) |
 | `--fix` | [flai check](../users/flai-reference.md#flai-check) |
 | `--focus` | [flai analyze](../users/flai-reference.md#flai-analyze) |
 | `-f`, `--follow` | [flai dashboard logs](../users/flai-reference.md#flai-dashboard-logs), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
@@ -479,6 +480,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--on` | [flai thread list](../users/flai-reference.md#flai-thread-list), [flai thread new](../users/flai-reference.md#flai-thread-new) |
 | `--open` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--operator-only` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
+| `--output` | [flai formula stop](../users/flai-reference.md#flai-formula-stop) |
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--part` | [flai prime](../users/flai-reference.md#flai-prime) |
@@ -524,6 +526,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--spend-key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai digest list](../users/flai-reference.md#flai-digest-list) |
 | `--stdin` | [flai doc lint](../users/flai-reference.md#flai-doc-lint) |
+| `--step` | [flai formula stop](../users/flai-reference.md#flai-formula-stop) |
 | `--story` | [flai check](../users/flai-reference.md#flai-check), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design show](../users/flai-reference.md#flai-design-show), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai doc show](../users/flai-reference.md#flai-doc-show), [flai file save](../users/flai-reference.md#flai-file-save), [flai file show](../users/flai-reference.md#flai-file-show), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai message list](../users/flai-reference.md#flai-message-list), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |

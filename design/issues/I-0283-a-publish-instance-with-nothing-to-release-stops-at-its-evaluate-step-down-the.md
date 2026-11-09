@@ -2,12 +2,12 @@
 id: I-0283
 title: A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 8m
 first_reported: 2026-11-07T08:16:08Z
 last_reported: 2026-11-07T09:46:15Z
-updated: 2026-11-07T23:39:50Z
+updated: 2026-11-09T18:26:56Z
 ---
 
 # I-0283 A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
@@ -32,3 +32,4 @@ Even after the operator ticked S-0585's criterion 3 at 08:54, the orchestrator s
 ## Remediation
 
 Story S-0621 remediates this issue, created from it at 2026-11-07T23:39:50Z.
+Closed 2026-11-09T18:26:56Z: S-0621: a formula step may name stop exits (ADR-0271); the publish formula's evaluate step stops on exit 2, and flai formula stop closes that step, cancels the steps after it, and ticks their criteria as skipped, so the instance goes to review asking nothing; the orchestrator accepts it on '- <n>: T-nnnn skipped' evidence, and an instance whose branch is gone at a verified commit on main.
