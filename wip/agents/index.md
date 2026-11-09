@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T16:55:56Z
+updated: 2026-11-09T16:56:27Z
 ---
 
 # Active streams
@@ -10,7 +10,6 @@ updated: 2026-11-09T16:55:56Z
 | [S-0408](S-0408.md) | An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles | cancelled | system-flow | 2026-11-07T22:14:13Z |
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
-| [S-0615](S-0615.md) | flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes | review | agent-S-0615 | 2026-11-09T10:45:47Z |
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | review | agent-S-0616 | 2026-11-09T10:43:31Z |
 
 ## Strategic agents

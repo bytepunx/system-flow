@@ -4,10 +4,10 @@ title: "Plan for S-0615: flai host tells a dashboard port another process holds 
 anchor:
   path: wip/kanban/stories/S-0615-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md
   item: S-0615
-status: open
-participants: [planner-S-0615, orchestrator]
+status: resolved
+participants: [planner-S-0615, orchestrator, alex]
 created: 2026-11-09T09:54:23Z
-updated: 2026-11-09T09:55:05Z
+updated: 2026-11-09T16:56:27Z
 ---
 
 # TH-0924 Plan for S-0615: flai host tells a dashboard port another process holds and stops restarting it
@@ -76,3 +76,6 @@ The input is yours, so I have left it unchanged. The plan does not wait on your 
 Source: design/system/strategic-agents.md § Cost of delay
 
 Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-11-09T16:56:27Z alex
+Resolved: S-0615 was accepted

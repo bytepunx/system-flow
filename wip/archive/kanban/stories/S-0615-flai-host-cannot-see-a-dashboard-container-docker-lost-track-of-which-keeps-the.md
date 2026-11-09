@@ -3,10 +3,10 @@ id: S-0615
 type: story
 nature: remediation
 title: flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:39:11Z
-updated: 2026-11-09T10:45:56Z
+updated: 2026-11-09T16:56:27Z
 transitions:
   - to: ready
     at: 2026-11-09T09:55:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T10:45:56Z
     by: agent-S-0615
+  - to: done
+    at: 2026-11-09T16:56:27Z
+    by: alex
 tags: [flai, dashboard, host]
 topics: [dashboard, host]
 touches: [flai/internal/host/watch.go, flai/internal/host/watch_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/system/flaiover-dashboard.md, design/adrs, docs/operators/index.md, docs/users/flai.md, design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md, design/issues/summary.md, flai/cmd/root.go, docs/users/flai-reference.md]
