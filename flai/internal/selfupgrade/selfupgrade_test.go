@@ -131,6 +131,7 @@ type dropping struct {
 	mu    sync.Mutex
 	drops map[string]int // answers still to cut, by path
 	asked map[string]int
+	hold  time.Duration // how long an answer is held before it is cut, as on a loaded host
 }
 
 func dropFirst(t *testing.T, drops map[string]int) (*dropping, func(http.Handler) http.Handler) {
@@ -150,6 +151,7 @@ func (d *dropping) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		d.next.ServeHTTP(w, r)
 		return
 	}
+	time.Sleep(d.hold)
 	conn, buf, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		d.t.Errorf("hijack %s: %v", r.URL.Path, err)
@@ -524,18 +526,37 @@ func TestFailedAnswerIsNotAskedAgain(t *testing.T) {
 	}
 }
 
-func TestCancelStopsTheWaitToAskAgain(t *testing.T) {
+// cancelWhileWaiting runs List against an answer dropped once, held for hold
+// first, and cancels its context as the hour's pause before a second attempt
+// begins: the cancel follows the first attempt's failure, whatever the load,
+// rather than racing it on the clock (I-0317).
+func cancelWhileWaiting(t *testing.T, hold time.Duration) {
+	t.Helper()
 	pauseFor(t, time.Hour)
 	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 1})
+	d.hold = hold
 	srv := fakeGitHubBehind(t, nil, nil, "", front)
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	retryWaiting = cancel
+	t.Cleanup(func() { retryWaiting = nil })
 
 	_, err := List(ctx, Options{Repo: "o/r", APIBase: srv.URL}, TagPrefix)
-	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "unexpected EOF") {
-		t.Errorf("the deadline and the dropped answer: %v", err)
+	if !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "unexpected EOF") {
+		t.Errorf("the cancel and the dropped answer: %v", err)
 	}
 	if got := d.count("/repos/o/r/releases"); got != 1 {
-		t.Errorf("no attempt after the deadline, got %d requests", got)
+		t.Errorf("no attempt after the cancel, got %d requests", got)
 	}
+}
+
+func TestCancelStopsTheWaitToAskAgain(t *testing.T) {
+	cancelWhileWaiting(t, 0)
+}
+
+// I-0317: on a host with a load average of 106 the first attempt took longer
+// than the test's old 100 ms deadline, which then cut it before the drop. A
+// first answer held for 300 ms still fails on the drop and is then cancelled.
+func TestCancelStopsTheWaitAfterASlowFirstAnswer(t *testing.T) {
+	cancelWhileWaiting(t, 300*time.Millisecond)
 }

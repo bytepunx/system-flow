@@ -435,6 +435,10 @@ const defaultAttempts = 3
 // retryPause is the wait between attempts; tests set it to zero.
 var retryPause = time.Second
 
+// retryWaiting is called as the pause between attempts begins; nil in
+// production, tests set it to act once an attempt has failed (I-0317).
+var retryWaiting func()
+
 // statusError is a non-2xx answer, which asking again does not change.
 type statusError struct{ msg string }
 
@@ -454,6 +458,9 @@ func (o Options) get(ctx context.Context, url, accept string) ([]byte, http.Head
 			return nil, nil, fmt.Errorf("%w (gave up after %d attempts; check the connection and run it again)", err, o.Attempts)
 		}
 		pause := time.NewTimer(retryPause)
+		if retryWaiting != nil {
+			retryWaiting()
+		}
 		select {
 		case <-ctx.Done():
 			pause.Stop()
