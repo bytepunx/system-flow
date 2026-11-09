@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 2353
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 283
-      cache_read: 7779548
-      cache_write: 917866
-      cost: 3.162
+      input: 62
+      output: 8311
+      cache_read: 8582877
+      cache_write: 229671
+      cost: 3.2074
 ---
 # T-2706 The orchestrator's and every role file's flai checks judge a command by its arguments, its redirections and their targets left out
 

@@ -4,10 +4,10 @@ title: T-2653 of S-0610 changed paths S-0613's claim covers
 from: S-0610
 to: S-0613
 about: [docs/users/flai.md]
-status: open
-participants: [agent-S-0610, agent-S-0613]
+status: closed
+participants: [agent-S-0610, agent-S-0613, orchestrator]
 created: 2026-11-09T08:26:48Z
-updated: 2026-11-09T09:07:39Z
+updated: 2026-11-09T09:47:02Z
 ---
 
 # MS-0408 T-2653 of S-0610 changed paths S-0613's claim covers
@@ -28,3 +28,6 @@ Read ef31008. Its change to docs/users/flai.md is in § Verify a story before re
 T-2707 of S-0613 changed paths S-0610's claim covers.
 
 T-2707, The design and the user guide say a redirection neither allows nor refuses a strategic agent's command, committed 9b206ad on story/S-0613, `docs: [S-0613] the design and the user guide say a redirection neither allows nor refuses a command the guard judges`, changing `docs/users/flai.md`. It reaches the main branch when S-0613 is accepted; `git show 9b206ad` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-09T09:47:02Z orchestrator
+Closed: S-0613 was accepted

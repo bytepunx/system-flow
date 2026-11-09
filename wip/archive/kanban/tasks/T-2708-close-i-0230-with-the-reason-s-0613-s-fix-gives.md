@@ -24,16 +24,16 @@ touches: [design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-p
 after: [T-2706]
 usage:
   source: log
-  seconds: 13
+  seconds: 18
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 26
-      cache_read: 428468
-      cache_write: 1609
-      cost: 0.1564
+      output: 411
+      cache_read: 424411
+      cache_write: 11357
+      cost: 0.1586
 ---
 # T-2708 Close I-0230 with the reason S-0613's fix gives
 

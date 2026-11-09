@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 170.9995
-accrued_seconds: 17369
-tasks_completed: 106
-last_run: 2026-11-09T09:11:02Z
+accrued_cost: 172.2885
+accrued_seconds: 17511
+tasks_completed: 107
+last_run: 2026-11-09T09:34:52Z
 ---
 
 # Curator activity
@@ -859,3 +859,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 100
 - Cost: 1.2873 USD, estimated
+
+### 2026-11-09T09:34:52Z
+
+- Summary: Wrote D-0538 from S-0612 and I-0307: `guard.HostAPIReads` leaves out the host API methods that mark, pull, or start something, plus `settings.shared_check`, so a task sub-agent is refused them until a story checks one and adds it; merged none (the other four S-0612 candidates were task progress); absorbed none, since the only design change, one sentence in `design/system/flai-cli.md`, does not name those methods; `flai digest compact` compacted none.
+- Trigger: accepted S-0612
+- Items: D-0538
+- Seconds: 142
+- Cost: 1.2890 USD, estimated

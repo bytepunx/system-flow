@@ -3,10 +3,10 @@ id: S-0613
 type: story
 nature: improvement
 title: "flai guard refuses the orchestrator a read or a permitted flai command when the command carries a stderr redirection such as 2>&1 or 2>/dev/null"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:38:58Z
-updated: 2026-11-09T09:28:38Z
+updated: 2026-11-09T09:47:02Z
 transitions:
   - to: ready
     at: 2026-11-09T08:19:39Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:22:35Z
     by: agent-S-0613
+  - to: review
+    at: 2026-11-09T09:44:31Z
+    by: agent-S-0613
+  - to: done
+    at: 2026-11-09T09:47:02Z
+    by: orchestrator
 tags: [flai, guard]
 topics: [guard, orchestration]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md, flai/internal/guard/call.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/shared.go, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md]
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2620
-  estimated: true
-  priced_by: estimate
+  seconds: 4934
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 1
+      ceremony: 3
       hand_edits: 2
-      work: 26
+      work: 124
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 602
-      cache_read: 11378615
-      cache_write: 1175953
-      cost: 4.5643
+      input: 336
+      output: 44946
+      cache_read: 46417540
+      cache_write: 1242097
+      cost: 17.3461
   strategic:
     - kind: planner
       seconds: 383
@@ -136,3 +141,12 @@ Forecast 40m, adjusted from flai's 18m: three comparable guard remediations took
 Cost of delay value 150 USD a week, as `flai cod S-0613` gives it from the operator's input of 1h lost per cycle at 150 USD an hour, one cycle a week. It stands: I-0230's Impact counts 52 refusals of permitted calls over two weeks, and each refused `flai order --by <policy> --apply` leaves the ready column unordered until the next run.
 
 No `after`: the story reads no other story's output.
+
+### Accepted by the orchestrator
+
+- Verified: bdb6cd4aad84e6f67eeae79df78b6d08d70c8fe4
+- At: 2026-11-09T09:47:02Z
+
+Verdict: meets all criteria
+- 1: flai/internal/guard/guard.go, flai/internal/guard/call.go, flai/internal/guard/hostconfig.go, flai/internal/guard/roles.go, flai/internal/guard/shared.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, flai/internal/guard/hostconfig_test.go, design/system/strategic-agents.md, docs/users/flai.md
+- 2: design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md

@@ -24,16 +24,16 @@ touches: [design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-2706]
 usage:
   source: log
-  seconds: 12
+  seconds: 103
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 26
-      cache_read: 428468
-      cache_write: 1609
-      cost: 0.1564
+      input: 31
+      output: 4130
+      cache_read: 4265252
+      cache_write: 114135
+      cost: 1.5939
 ---
 # T-2707 The design and the user guide say a redirection neither allows nor refuses a strategic agent's command
 

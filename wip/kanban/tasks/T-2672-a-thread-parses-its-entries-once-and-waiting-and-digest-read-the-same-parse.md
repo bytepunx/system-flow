@@ -3,12 +3,18 @@ id: T-2672
 type: task
 nature: improvement
 title: A thread parses its entries once, and waiting and digest read the same parse
-status: backlog
+status: in-progress
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:50:11Z
-updated: 2026-11-07T23:50:11Z
-transitions: []
+updated: 2026-11-09T09:43:21Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:43:20Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:43:21Z
+    by: system-flow
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/threads/threads.go, flai/internal/threads/threads_test.go]

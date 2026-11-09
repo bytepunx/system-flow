@@ -3,12 +3,18 @@ id: T-2675
 type: task
 nature: improvement
 title: costOrder builds its forecaster once and plays the three orders out on it
-status: backlog
+status: in-progress
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:50:18Z
-updated: 2026-11-07T23:50:18Z
-transitions: []
+updated: 2026-11-09T09:43:22Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:43:21Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:43:22Z
+    by: system-flow
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go]

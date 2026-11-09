@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2042.7094
-accrued_seconds: 1528298
-tasks_completed: 2379
-last_run: 2026-11-09T09:14:23Z
+accrued_cost: 2044.1326
+accrued_seconds: 1528784
+tasks_completed: 2391
+last_run: 2026-11-09T09:40:50Z
 ---
 
 # Orchestrator activity
@@ -16683,6 +16683,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 36
 - Cost: 0.1317 USD, estimated
+
+### 2026-11-09T09:33:09Z
+
+- Summary: Accepted S-0612 at 8f03c1d (close-out passed every step at the branch head; verifier matched criteria 1 and 2 to changed files; dry run had no blockers). Started the planner for S-0614, first in flai plan --candidates. Skipped E-0033: alex's entry on TH-0916 ("Resolved.") asks for no plan change.
+- Items: S-0612, S-0614
+- Seconds: 118
+- Cost: 0.3412 USD, estimated
+
+### 2026-11-09T09:34:02Z
+
+- Summary: Release due after S-0612: release_evaluate met under threshold (count 3 ≥ 1; 180 USD/week pending: S-0603, S-0606, S-0612). Did not run flai formula run publish: its instance S-0635 is already in ready (held no-touches behind S-0608, S-0610, S-0613) and publishes all pending when worked. Ready-empty: did not promote S-0241, the only candidate (rank 1, 2h throughput), while TH-0790 asks the operator to make it a draft and its Notes forbid ready before forks. Drafts: S-0611 is complete but held for TH-0903/TH-0904. The other 24 drafts lack touches, a forecast, and a value, which flai plan --candidates lists them for. No ready change, so the column was not reordered.
+- Items: S-0635, S-0241, S-0611
+- Seconds: 53
+- Cost: 0.0826 USD, estimated
+
+### 2026-11-09T09:34:30Z
+
+- Summary: I accepted S-0612. The release is due, but I didn't start a new publish, because the publish instance S-0635 is already in ready and blocked from starting. I promoted nothing to ready.
+- Items: none
+- Seconds: 28
+- Cost: 0.0889 USD, estimated
+
+### 2026-11-09T09:35:31Z
+
+- Summary: Release-due S-0612: release_evaluate is met under threshold (count 3 at or over 1; 180 USD/week against 1000; pending S-0603, S-0606, S-0612; nothing held by whole_epics). Ran no second flai formula run publish: its instance S-0635 is already in ready and publishes everything accepted and unreleased when worked; it stays held no-touches behind S-0608, S-0610 and S-0613 (S-0620 is the draft that fixes that hold).
+- Items: S-0612, S-0635
+- Seconds: 31
+- Cost: 0.0741 USD, estimated
+
+### 2026-11-09T09:35:57Z
+
+- Summary: I published nothing for S-0612. The release is due, but its publish run already exists.
+- Items: none
+- Seconds: 26
+- Cost: 0.1349 USD, estimated
+
+### 2026-11-09T09:36:35Z
+
+- Summary: Finalized S-0614 (draft: false): flai promote --drafts lists it complete at position 1 (1h30m, throughput); its two criteria, nine file touches, four planned tasks, 1h30m forecast, and value 750 are consistent
+- Items: S-0614
+- Seconds: 27
+- Cost: 0.1412 USD, estimated
+
+### 2026-11-09T09:37:08Z
+
+- Summary: Promoted S-0614 to ready (flai promote --candidates rank 1, 1h30m, throughput; ready 2 of 10) and applied flai order --by throughput: S-0614 (1h30m), then S-0635 (no forecast). Skipped S-0241 (rank 2) while TH-0790 asks the operator to make it a draft again
+- Items: S-0614, S-0635, S-0241
+- Seconds: 33
+- Cost: 0.0841 USD, estimated
+
+### 2026-11-09T09:37:49Z
+
+- Summary: Answered TH-0923, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0614
+- Seconds: 41
+- Cost: 0.0884 USD, estimated
+
+### 2026-11-09T09:38:17Z
+
+- Summary: Approved and resolved planner-S-0614's plan thread TH-0923 under plan_backlog_stories: four tasks in three layers, nine file touches, 1h30m forecast, value 750 fit S-0614; its two assumptions add no scope
+- Items: S-0614
+- Seconds: 28
+- Cost: 0.0313 USD, estimated
+
+### 2026-11-09T09:39:02Z
+
+- Summary: S-0614 is finalized, in ready at the top of the pull order, and its agent has started.
+- Items: none
+- Seconds: 45
+- Cost: 0.0934 USD, estimated
+
+### 2026-11-09T09:40:24Z
+
+- Summary: Reasons draft:S-0614, planned:S-0614 and thread:TH-0923 were already settled by the previous run: S-0614 finalized, promoted to ready (rank 1, throughput), plan approved and TH-0923 resolved; its agent has started it. Ready column holds only S-0635, so the throughput order is unchanged. Nothing further done.
+- Items: S-0614
+- Seconds: 30
+- Cost: 0.1111 USD, estimated
+
+### 2026-11-09T09:40:50Z
+
+- Summary: I took no new action this run, because the earlier run had already handled all three reasons for S-0614.
+- Items: none
+- Seconds: 26
+- Cost: 0.1520 USD, estimated
 
 ## Refusals
 
