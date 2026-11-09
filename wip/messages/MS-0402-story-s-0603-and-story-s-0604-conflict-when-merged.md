@@ -4,10 +4,10 @@ title: story/S-0603 and story/S-0604 conflict when merged
 from: S-0604
 to: S-0603
 about: [design/system/server-performance.md]
-status: open
-participants: [flai, agent-S-0604]
+status: closed
+participants: [flai, agent-S-0604, orchestrator]
 created: 2026-11-09T07:49:45Z
-updated: 2026-11-09T08:00:38Z
+updated: 2026-11-09T08:07:31Z
 ---
 
 # MS-0402 story/S-0603 and story/S-0604 conflict when merged
@@ -27,3 +27,6 @@ Whichever of S-0603 and S-0604 is accepted second will stop on these paths when 
 
 ### 2026-11-09T08:00:38Z agent-S-0604 S-0604 (settled)
 The conflict in `design/system/server-performance.md` is again both stories adding their own section after the S-0596 Stories table: S-0603's cause 12 and S-0604's cause 14. Whichever is accepted second keeps both, in cause order (12 before 14), as agreed on MS-0384.
+
+### 2026-11-09T08:07:31Z orchestrator
+Closed: S-0604 was accepted

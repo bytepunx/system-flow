@@ -3,11 +3,11 @@ id: S-0601
 type: story
 nature: improvement
 title: flai check runs its rules at once and keeps the component props node read, so a whole check takes about 1.5 s, not 3.3 to 8 s
-status: review
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-09T08:04:45Z
+updated: 2026-11-09T08:07:20Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:15Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-08T02:12:07Z
     by: agent-S-0601
+  - to: in-progress
+    at: 2026-11-09T08:07:20Z
+    by: flai
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/components/props.go, flai/internal/check/concurrent_test.go, flai/internal/components/propscache.go, flai/internal/components/propscache_test.go, flai/internal/components/props.mjs, design/system/server-performance.md, design/system/component-library.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md]
 agent:
@@ -121,3 +124,4 @@ No folder touch, and no `after`: S-0598 and S-0600 change `check.go`'s callers a
 Forecast: `flai forecast` gave 19m, 103 s per unit of size over 25 medium improvement stories, times size 11. Raised to 40m: the rules share state their order hides (`byID`, `vocab`, and the last-finding writes of `advise`), the kept read spans Go and `props.mjs`, and a close-out that runs `integration` takes about 4 min at p50 (server-performance.md cause 20). Delivery moves by the same 21 minutes, to 2026-11-08T00:40Z.
 
 Cost of delay: no value yet. Neither S-0601 nor E-0033 has inputs, so `flai cod` refuses. The operator has not answered TH-0888, which recommends `penalty_per_week: 50` for this story.
+- 2026-11-09T08:07:20Z: moved to in-progress: the rebase of story/S-0601 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0601 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0601

@@ -3,11 +3,11 @@ id: S-0604
 type: story
 nature: improvement
 title: board.get takes one release lock per repository, runs show-ref only when a ref moved, and reads no threads with nothing in review, so 13 boards at once stop queueing
-status: review
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:34Z
-updated: 2026-11-09T08:01:21Z
+updated: 2026-11-09T08:07:31Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:34Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-09T08:01:21Z
     by: agent-S-0604
+  - to: done
+    at: 2026-11-09T08:07:31Z
+    by: orchestrator
 blocked:
   - from: 2026-11-08T02:44:08Z
     until: 2026-11-08T02:44:08Z
@@ -142,3 +145,14 @@ No `after`: the story reads nothing another open story writes. S-0602 keeps thre
 Forecast: 1h, raised from `flai forecast`'s 26m for the reasons its basis gives; delivery 02:32, flai's 01:58 moved by the 34 minutes added.
 
 Cost of delay: 40 USD a week, as `flai cod S-0604` works it out from the story's one input, `penalty_per_week: 40`, which the orchestrator set on TH-0896 from TH-0888's table. No revenue rides on the story, and the value stands as computed.
+
+### Accepted by the orchestrator
+
+- Verified: cf467cbc3912661f277a2d228084955c77ee09ab
+- At: 2026-11-09T08:07:31Z
+
+Verdict: pass at cf467cbc3912661f277a2d228084955c77ee09ab; the close-out passed every step, and each criterion is met by the diff.
+- 1: flai/internal/release/history.go, flai/internal/release/release.go, flai/internal/release/history_test.go
+- 2: flai/internal/release/history.go, flai/internal/release/release.go, flai/internal/serve/mergequeue.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue_test.go
+- 3: flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go
+- 4: design/system/server-performance.md, design/system/flai-cli.md

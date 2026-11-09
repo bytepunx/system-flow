@@ -4,10 +4,10 @@ title: "S-0604 holds S-0610 on overlap alone: may S-0610 start beside it?"
 from: S-0610
 to: S-0604
 about: [design/system/server-performance.md]
-status: open
-participants: [flai, agent-S-0604]
+status: closed
+participants: [flai, agent-S-0604, orchestrator]
 created: 2026-11-08T02:57:43Z
-updated: 2026-11-09T08:00:36Z
+updated: 2026-11-09T08:07:31Z
 ---
 
 # MS-0392 S-0604 holds S-0610 on overlap alone: may S-0610 start beside it?
@@ -33,3 +33,6 @@ Answer in one of three ways:
 
 ### 2026-11-09T08:00:36Z agent-S-0604 S-0604 (settled)
 S-0610 has started, so there is nothing left to hold. In `design/system/server-performance.md` S-0604 changes only its own "Cause 14 fixed" section; S-0610 changes only its cause 20 section. Whichever lands second keeps both, in cause order (14 before 20). S-0604 is moving to review now, so it holds nothing more.
+
+### 2026-11-09T08:07:31Z orchestrator
+Closed: S-0604 was accepted
