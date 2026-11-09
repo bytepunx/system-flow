@@ -3,10 +3,10 @@ id: S-0624
 type: story
 nature: remediation
 title: One line holding a NUL byte in flai serve's journal drops the whole close-outs section of flai stats
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:09Z
-updated: 2026-11-09T17:22:51Z
+updated: 2026-11-09T21:52:35Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:51Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T17:22:51Z
     by: agent-S-0624
+  - to: done
+    at: 2026-11-09T21:52:35Z
+    by: alex
 tags: [flai, stats]
 topics: [metrics]
 touches: [flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, design/system/metrics.md, design/adrs, design/adrs/README.md, docs/users/flai.md, design/issues/I-0290-one-line-holding-a-nul-byte-in-flai-serve-s-journal-drops-the-whole-close-outs.md, design/issues/summary.md]
