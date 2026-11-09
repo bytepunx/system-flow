@@ -3,12 +3,18 @@ id: T-2668
 type: task
 nature: improvement
 title: The item store counts a generation per root, which moves when an item file is added, changed, or removed, in snapshot mode or not
-status: backlog
+status: in-progress
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:49:55Z
-updated: 2026-11-08T00:04:04Z
-transitions: []
+updated: 2026-11-09T09:12:44Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:12:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:12:44Z
+    by: system-flow
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go]

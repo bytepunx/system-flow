@@ -3,10 +3,10 @@ id: S-0612
 type: story
 nature: improvement
 title: flai guard refuses a story's task sub-agent flai hostapi, so a measurement task cannot use the documented hostapi --timing
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:38:52Z
-updated: 2026-11-09T09:07:12Z
+updated: 2026-11-09T09:32:19Z
 transitions:
   - to: ready
     at: 2026-11-09T08:03:43Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:03:52Z
     by: agent-S-0612
+  - to: review
+    at: 2026-11-09T09:29:54Z
+    by: agent-S-0612
+  - to: done
+    at: 2026-11-09T09:32:19Z
+    by: orchestrator
 tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/hostapi_test.go, flai/cmd/guard_test.go, flai/internal/hostapi/guardreads_test.go, docs/users/flai.md, design/system/flai-cli.md, design/issues/I-0307-flai-guard-refuses-a-story-s-task-sub-agent-flai-hostapi-so-a-measurement-task.md, design/issues/summary.md]
 agent:
@@ -23,20 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3775
-  estimated: true
-  priced_by: estimate
+  seconds: 5176
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      hand_edits: 1
-      work: 25
+      ceremony: 1
+      hand_edits: 2
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 186
-      output: 1073
-      cache_read: 21965671
-      cache_write: 949093
-      cost: 8.3308
+      input: 274
+      output: 52629
+      cache_read: 35441106
+      cache_write: 981908
+      cost: 13.9786
   strategic:
     - kind: planner
       seconds: 384
@@ -125,3 +131,12 @@ Figures:
 
 - Forecast 45m, not flai's 18m. flai's figure is 103 s per unit of size over 25 done medium improvement stories, times size 10. S-0568, the same kind of guard-read fix, took 1927 s of agent time, and T-2703 must class every method of the host API's table. Delivery is flai's 08:22 moved by the 27 minutes added.
 - Cost of delay 50 USD a week, as `flai cod` works it out from the operator's input, 20m lost per 168h cycle at 150 USD an hour. It stands as computed.
+
+### Accepted by the orchestrator
+
+- Verified: 8f03c1d62c36c4303e66f541056962c992342f79
+- At: 2026-11-09T09:32:19Z
+
+Verdict: pass at 8f03c1d62c36c4303e66f541056962c992342f79: flai guard lets every agent run flai hostapi alone or with a read method, --timing included, and refuses the write methods by name; I-0307 is closed.
+- 1: flai/internal/guard/guard.go, flai/internal/guard/hostapi_test.go, flai/cmd/guard_test.go, flai/internal/hostapi/guardreads_test.go, docs/users/flai.md, design/system/flai-cli.md
+- 2: design/issues/I-0307-flai-guard-refuses-a-story-s-task-sub-agent-flai-hostapi-so-a-measurement-task.md, design/issues/summary.md

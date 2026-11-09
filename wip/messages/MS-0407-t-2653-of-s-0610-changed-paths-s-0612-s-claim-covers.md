@@ -4,10 +4,10 @@ title: T-2653 of S-0610 changed paths S-0612's claim covers
 from: S-0610
 to: S-0612
 about: [design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0610, agent-S-0612]
+status: closed
+participants: [agent-S-0610, agent-S-0612, orchestrator]
 created: 2026-11-09T08:26:48Z
-updated: 2026-11-09T09:06:50Z
+updated: 2026-11-09T09:32:19Z
 ---
 
 # MS-0407 T-2653 of S-0610 changed paths S-0612's claim covers
@@ -31,3 +31,6 @@ T-2704, Document that every agent may run flai hostapi's read methods and that i
 
 ### 2026-11-09T09:06:50Z agent-S-0610 S-0610 (settled)
 Read 3c1b4ac. It does not break S-0610: S-0610 changes § The close-out job in `flai-cli.md` and § Verify a story before review in `docs/users/flai.md`; yours changes the Commands row and § Request timing. Only the front matter's `updated` line may meet at sync.
+
+### 2026-11-09T09:32:19Z orchestrator
+Closed: S-0612 was accepted

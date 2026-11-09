@@ -3,12 +3,18 @@ id: T-2662
 type: task
 nature: improvement
 title: A golden test pins the report on testdata/good at windows of 1, 7, 30, 90, and 365 days before anything changes
-status: backlog
+status: in-progress
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:49:46Z
-updated: 2026-11-07T23:49:46Z
-transitions: []
+updated: 2026-11-09T09:12:41Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:12:40Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:12:41Z
+    by: system-flow
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json]

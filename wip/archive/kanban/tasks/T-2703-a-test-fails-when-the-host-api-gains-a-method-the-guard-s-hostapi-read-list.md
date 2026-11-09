@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1123
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 310
-      cache_read: 6332222
-      cache_write: 307526
-      cost: 2.4139
+      input: 51
+      output: 9836
+      cache_read: 6623930
+      cache_write: 183518
+      cost: 2.6126
 ---
 # T-2703 A test fails when the host API gains a method the guard's hostapi read list does not class
 

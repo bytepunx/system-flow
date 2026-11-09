@@ -24,16 +24,16 @@ touches: [design/issues/I-0307-flai-guard-refuses-a-story-s-task-sub-agent-flai-
 after: [T-2703, T-2704]
 usage:
   source: log
-  seconds: 7
+  seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 32
-      cache_read: 584370
-      cache_write: 1836
-      cost: 0.2131
+      input: 5
+      output: 868
+      cache_read: 584809
+      cache_write: 16202
+      cost: 0.2307
 ---
 # T-2705 Close I-0307 with the guard's hostapi read rule as its fix
 

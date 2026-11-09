@@ -6,7 +6,7 @@ title: "flai guard refuses the orchestrator a read or a permitted flai command w
 status: in-progress
 owner: alex
 created: 2026-11-07T23:38:58Z
-updated: 2026-11-09T09:06:22Z
+updated: 2026-11-09T09:28:38Z
 transitions:
   - to: ready
     at: 2026-11-09T08:19:39Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0613
 tags: [flai, guard]
 topics: [guard, orchestration]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md, flai/internal/guard/call.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/shared.go, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md, flai/internal/guard/call.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/shared.go, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

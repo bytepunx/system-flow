@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1339
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 367
-      cache_read: 10553458
-      cache_write: 371849
-      cost: 3.9719
+      input: 84
+      output: 16185
+      cache_read: 10899282
+      cache_write: 301968
+      cost: 4.2989
 ---
 # T-2702 flai guard lets every agent run flai hostapi with no method or with a read method, and refuses the write methods
 

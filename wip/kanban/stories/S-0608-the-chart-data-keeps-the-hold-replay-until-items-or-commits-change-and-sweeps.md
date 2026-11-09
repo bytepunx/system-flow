@@ -3,15 +3,18 @@ id: S-0608
 type: story
 nature: improvement
 title: The chart data keeps the hold replay until items or commits change and sweeps the days once, so a 365-day window costs what a 30-day one does
-status: ready
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:41Z
-updated: 2026-11-09T09:10:29Z
+updated: 2026-11-09T09:10:31Z
 transitions:
   - to: ready
     at: 2026-11-09T09:10:19Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T09:10:31Z
+    by: agent-S-0608
 tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/metrics/costorder.go, flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/costorder_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/metrics/coordination.go, flai/internal/storygit/committed_test.go]
 after: [S-0606]

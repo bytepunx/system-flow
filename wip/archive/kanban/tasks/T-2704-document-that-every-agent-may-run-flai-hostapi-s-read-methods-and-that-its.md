@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1162
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 157
-      cache_read: 1946785
-      cache_write: 10804
-      cost: 0.7117
+      input: 15
+      output: 2900
+      cache_read: 1952926
+      cache_write: 54106
+      cost: 0.7703
 ---
 # T-2704 Document that every agent may run flai hostapi's read methods and that its write methods are the story's agent's
 
