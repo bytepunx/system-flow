@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-07
+updated: 2026-11-09
 status: active
 ---
 
@@ -31,7 +31,7 @@ It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and th
 
 ## What the run needs on the host
 
-- Docker. S-0505 ran on Docker Desktop with WSL2 integration; a Docker Engine host should work the same, but was not tried.
+- Docker. S-0505 ran on Docker Desktop with WSL2 integration; a native Docker Engine host was not tried. There the MCP server must listen on the bridge's gateway, `flai serve mcp bind <gateway>`, since the engine routes `host.docker.internal` to it; `flai serve` refuses its own container starts until it does ([ADR-0269](../../../design/adrs/0269-flai-serve-refuses-a-container-start-whose-http-mcp-server-listens-on-loopback.md)), but this script makes no such check.
 - The images, built as above.
 - The story started, so that its worktree exists: `flai story start S-nnnn`.
 - The project's HTTP MCP server running: `flai host` runs one for every project `flai serve` serves, or start it with `flai mcp start` ([MCP over HTTP](../index.md#mcp-over-http)). `flai mcp status` says where it listens.

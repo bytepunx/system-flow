@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-11-07
+updated: 2026-11-09
 status: active
 ---
 
@@ -113,7 +113,7 @@ Only if a story's agent is to run on the `container` harness ([In a container](.
    flai serve agent show     # the image, the network, and the login
    ```
 
-4. On a native Docker engine on Linux, not Docker Desktop, have the MCP servers listen where a container reaches them: `flai serve mcp bind <address>` ([MCP over HTTP](../index.md#mcp-over-http)).
+4. On a native Docker engine on Linux, not Docker Desktop, have the MCP servers listen where a container reaches them: `flai serve mcp bind <address>`, the bridge's gateway, then `flai host restart mcp` ([MCP over HTTP](../index.md#mcp-over-http)). Until you do, `flai serve` refuses each container start and names that address ([ADR-0269](../../../design/adrs/0269-flai-serve-refuses-a-container-start-whose-http-mcp-server-listens-on-loopback.md)).
 5. Give a story the harness: `flai edit S-nnnn --harness container`, or `flai agent set --harness container` for every new story.
 
 The image, the network, and the login are in the [settings index](../settings.md#flai-configuration).
