@@ -6,8 +6,8 @@ sources: [TH-0854, S-0585]
 topics: [all]
 paths: [wip/kanban/stories/S-0585-publish-what-is-accepted-and-not-yet-released.md]
 date: 2026-11-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md#decision"
 asked_again: []
 cited: [S-0621, T-2743, TH-0934]
 ---

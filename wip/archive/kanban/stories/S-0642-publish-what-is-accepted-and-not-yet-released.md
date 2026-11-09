@@ -3,10 +3,10 @@ id: S-0642
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-09T17:28:50Z
-updated: 2026-11-09T21:53:03Z
+updated: 2026-11-09T21:55:02Z
 transitions:
   - to: ready
     at: 2026-11-09T17:28:54Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T21:53:03Z
     by: agent-S-0642
+  - to: review
+    at: 2026-11-09T21:54:50Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T21:55:02Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -22,20 +28,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 58
+  seconds: 89
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-09
       ceremony: 1
-      work: 12
+      work: 17
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 185
-      cache_read: 1505034
-      cache_write: 142856
-      cost: 0.6022
+      input: 38
+      output: 322
+      cache_read: 2301139
+      cache_write: 148731
+      cost: 0.8954
   strategic:
     - kind: orchestrator
       seconds: 102
@@ -57,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2760 Fetch the remote's branch and tags
