@@ -2,11 +2,11 @@
 id: I-0293
 title: Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:40:21Z
+updated: 2026-11-09T17:35:39Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ flaiover-dashboard.md lines 126 and 129 vs flaiover/src/routes (no conventions o
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0626 remediates this issue, created from it at 2026-11-07T23:40:21Z.
+Closed 2026-11-09T17:35:39Z: S-0626 corrected each document to say what is built. flaiover-dashboard.md drops the /conventions and /streams rows and their APIs, and gains rows for the two checks routes (T-2755). telemetry.md says flai emits no traces and that flaiover's /_ready checks flai on the host. code-quality.md says what flai/tests/integration/ holds (T-2756). metrics.md § Data access says the dashboard asks flai for items and stats. dashboard-host-channel.md says the channel is built and S-0082 is done. node.md names flaiover/pnpm-lock.yaml (T-2757). strategic-agents.md names formula run among the analyzer's refused commands, and flai-cli.md lists flai checks and flai serve checks (T-2758). flaiover/src/lib/server/design-routes.test.ts now fails when the dashboard design's page or API table names a route flaiover lacks.
