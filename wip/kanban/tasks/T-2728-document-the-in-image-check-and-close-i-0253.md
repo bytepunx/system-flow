@@ -3,16 +3,37 @@ id: T-2728
 type: task
 nature: remediation
 title: Document the in-image check and close I-0253
-status: backlog
+status: done
 parent: S-0618
 owner: alex
 created: 2026-11-09T10:48:25Z
-updated: 2026-11-09T10:48:25Z
-transitions: []
+updated: 2026-11-09T11:18:39Z
+transitions:
+  - to: ready
+    at: 2026-11-09T11:16:56Z
+    by: agent-S-0618
+  - to: in-progress
+    at: 2026-11-09T11:16:56Z
+    by: agent-S-0618
+  - to: done
+    at: 2026-11-09T11:18:39Z
+    by: agent-S-0618
 stream: S-0618
 tags: [docs, issues]
 touches: [design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md]
 after: [T-2727]
+usage:
+  source: log
+  seconds: 103
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 12456
+      cache_read: 4624504
+      cache_write: 75626
+      cost: 1.7174
 ---
 # T-2728 Document the in-image check and close I-0253
 

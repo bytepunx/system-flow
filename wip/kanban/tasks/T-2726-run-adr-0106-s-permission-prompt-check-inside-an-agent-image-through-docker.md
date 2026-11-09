@@ -3,11 +3,11 @@ id: T-2726
 type: task
 nature: remediation
 title: Run ADR-0106's permission_prompt check inside an agent image through docker
-status: in-progress
+status: done
 parent: S-0618
 owner: alex
 created: 2026-11-09T10:48:07Z
-updated: 2026-11-09T10:53:17Z
+updated: 2026-11-09T11:03:18Z
 transitions:
   - to: ready
     at: 2026-11-09T10:53:17Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T10:53:17Z
     by: agent-S-0618
+  - to: done
+    at: 2026-11-09T11:03:18Z
+    by: agent-S-0618
 stream: S-0618
 tags: [flai, serve, container, claude-code]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go]
+usage:
+  source: log
+  seconds: 601
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 18427
+      cache_read: 6841187
+      cache_write: 111876
+      cost: 2.5407
 ---
 # T-2726 Run ADR-0106's permission_prompt check inside an agent image through docker
 

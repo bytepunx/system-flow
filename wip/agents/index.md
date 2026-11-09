@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T10:55:12Z
+updated: 2026-11-09T11:24:02Z
 ---
 
 # Active streams
@@ -13,13 +13,14 @@ updated: 2026-11-09T10:55:12Z
 | [S-0610](S-0610.md) | The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out | review | agent-S-0610 | 2026-11-09T10:43:46Z |
 | [S-0615](S-0615.md) | flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes | review | agent-S-0615 | 2026-11-09T10:45:47Z |
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | review | agent-S-0616 | 2026-11-09T10:43:31Z |
-| [S-0618](S-0618.md) | flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of | in-progress | agent-S-0618 | 2026-11-09T10:53:26Z |
+| [S-0618](S-0618.md) | flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of | review | agent-S-0618 | 2026-11-09T11:22:55Z |
+| [S-0635](S-0635.md) | Publish what is accepted and not yet released | in-progress | agent-S-0635 | 2026-11-09T11:23:59Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 172 | 1105.9306 USD | 143930 | 2026-11-09T10:49:32Z |
-| [orchestrator](orchestrator.md) | 2439 | 2051.6683 USD | 1530575 | 2026-11-09T10:53:01Z |
+| [orchestrator](orchestrator.md) | 2444 | 2052.2637 USD | 1530693 | 2026-11-09T10:56:37Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 110 | 175.6416 USD | 18248 | 2026-11-09T10:34:51Z |
+| [curator](curator.md) | 111 | 176.3896 USD | 18314 | 2026-11-09T10:56:22Z |

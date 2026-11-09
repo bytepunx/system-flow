@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2051.6683
-accrued_seconds: 1530575
-tasks_completed: 2439
-last_run: 2026-11-09T10:53:01Z
+accrued_cost: 2052.2637
+accrued_seconds: 1530693
+tasks_completed: 2444
+last_run: 2026-11-09T10:56:37Z
 ---
 
 # Orchestrator activity
@@ -17103,6 +17103,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 24
 - Cost: 0.1763 USD, estimated
+
+### 2026-11-09T10:55:21Z
+
+- Summary: Accepted S-0617 at 3aba813 under accept_reviews: verify passed at the branch head, the verifier matched both criteria to changed files, and the dry run named no blocker.
+- Items: S-0617
+- Seconds: 53
+- Cost: 0.1408 USD, estimated
+
+### 2026-11-09T10:55:39Z
+
+- Summary: Release is due under threshold after S-0617's acceptance (7 stories pending, 1112.5 USD/week against 1000 USD/week, count 7 against 1). I did not run flai formula run publish again, because its open instance S-0635 is already in ready. S-0635 is held only for no-touches until S-0618 leaves in-progress, and its agent publishes the whole batch.
+- Items: S-0635, S-0617
+- Seconds: 18
+- Cost: 0.0472 USD, estimated
+
+### 2026-11-09T10:55:55Z
+
+- Summary: I accepted S-0617 at commit `3aba813`, and I did not start a new release because one is already waiting in ready.
+- Items: none
+- Seconds: 16
+- Cost: 0.0897 USD, estimated
+
+### 2026-11-09T10:56:21Z
+
+- Summary: Release-due S-0617 (second start for the same acceptance): release_evaluate met under threshold (7 stories pending, 1112.5 >= 1000 USD/week, count 7 >= 1, none held by whole_epics). Started no second flai formula run publish: its open instance S-0635 is in ready and publishes the whole batch; it is held no-touches until S-0618 leaves in-progress.
+- Items: S-0617, S-0635
+- Seconds: 15
+- Cost: 0.1025 USD, estimated
+
+### 2026-11-09T10:56:37Z
+
+- Summary: I didn't start a new release this run, because a publish story for this batch already exists. S-0635 is in ready and will release all 7 stories once it starts.
+- Items: none
+- Seconds: 16
+- Cost: 0.2152 USD, estimated
 
 ## Refusals
 

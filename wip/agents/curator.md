@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 175.6416
-accrued_seconds: 18248
-tasks_completed: 110
-last_run: 2026-11-09T10:34:51Z
+accrued_cost: 176.3896
+accrued_seconds: 18314
+tasks_completed: 111
+last_run: 2026-11-09T10:56:22Z
 ---
 
 # Curator activity
@@ -891,3 +891,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0526
 - Seconds: 135
 - Cost: 1.4032 USD, estimated
+
+### 2026-11-09T10:56:22Z
+
+- Summary: I merged I-0252, S-0617, T-2723 and T-2724 into D-0491, and S-0617's stress-run decision into D-0492; I wrote no new entries, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0617
+- Items: D-0491, D-0492
+- Seconds: 66
+- Cost: 0.7480 USD, estimated

@@ -3,10 +3,10 @@ id: S-0618
 type: story
 nature: remediation
 title: flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:39:32Z
-updated: 2026-11-09T10:51:23Z
+updated: 2026-11-09T11:22:56Z
 transitions:
   - to: ready
     at: 2026-11-09T10:51:10Z
@@ -14,17 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-09T10:51:23Z
     by: agent-S-0618
+  - to: review
+    at: 2026-11-09T11:22:56Z
+    by: agent-S-0618
 tags: [flai, serve, container, claude-code]
-touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md]
+touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1910
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      hand_edits: 1
+      work: 41
+  models:
+    - model: claude-opus-5-5
+      input: 196
+      output: 70145
+      cache_read: 26042492
+      cache_write: 425880
+      cost: 9.6716
   strategic:
     - kind: planner
       seconds: 249
@@ -71,8 +86,8 @@ finalized:
 This story remediates [I-0253](../../../design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md), "flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0253 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0253 is closed with `flai issue close I-0253 --reason` saying what fixed it
+- [x] The cause I-0253 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0253 is closed with `flai issue close I-0253 --reason` saying what fixed it
 
 ## Tasks
 - T-2726 Run ADR-0106's permission_prompt check inside an agent image through docker

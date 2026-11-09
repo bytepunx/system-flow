@@ -3,16 +3,37 @@ id: T-2727
 type: task
 nature: remediation
 title: Start the in-image check from a container start whose Claude Code version has no record
-status: backlog
+status: done
 parent: S-0618
 owner: alex
 created: 2026-11-09T10:48:17Z
-updated: 2026-11-09T10:48:17Z
-transitions: []
+updated: 2026-11-09T11:15:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T11:06:25Z
+    by: agent-S-0618
+  - to: in-progress
+    at: 2026-11-09T11:06:25Z
+    by: agent-S-0618
+  - to: done
+    at: 2026-11-09T11:15:04Z
+    by: agent-S-0618
 stream: S-0618
 tags: [flai, serve, container, claude-code]
 touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go]
 after: [T-2726]
+usage:
+  source: log
+  seconds: 519
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 23490
+      cache_read: 8721038
+      cache_write: 142618
+      cost: 3.2388
 ---
 # T-2727 Start the in-image check from a container start whose Claude Code version has no record
 
