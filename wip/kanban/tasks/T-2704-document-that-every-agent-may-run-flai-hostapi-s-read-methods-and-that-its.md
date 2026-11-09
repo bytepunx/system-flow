@@ -3,12 +3,18 @@ id: T-2704
 type: task
 nature: improvement
 title: Document that every agent may run flai hostapi's read methods and that its write methods are the story's agent's
-status: backlog
+status: in-progress
 parent: S-0612
 owner: alex
 created: 2026-11-09T07:57:58Z
-updated: 2026-11-09T07:57:58Z
-transitions: []
+updated: 2026-11-09T08:38:47Z
+transitions:
+  - to: ready
+    at: 2026-11-09T08:38:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T08:38:47Z
+    by: system-flow
 stream: S-0612
 tags: [docs, guard]
 touches: [docs/users/flai.md, design/system/flai-cli.md]

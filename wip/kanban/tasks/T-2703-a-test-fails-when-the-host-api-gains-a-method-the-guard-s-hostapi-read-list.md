@@ -3,12 +3,18 @@ id: T-2703
 type: task
 nature: improvement
 title: A test fails when the host API gains a method the guard's hostapi read list does not class
-status: backlog
+status: in-progress
 parent: S-0612
 owner: alex
 created: 2026-11-09T07:57:22Z
-updated: 2026-11-09T07:57:22Z
-transitions: []
+updated: 2026-11-09T08:38:44Z
+transitions:
+  - to: ready
+    at: 2026-11-09T08:38:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T08:38:44Z
+    by: system-flow
 stream: S-0612
 tags: [flai, guard, hostapi]
 touches: [flai/internal/hostapi/guardreads_test.go]

@@ -3,11 +3,11 @@ id: S-0606
 type: story
 nature: improvement
 title: item.get answers from a kept item list and the file watcher stops statting every archived file every 300 ms
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-09T08:25:28Z
+updated: 2026-11-09T08:52:32Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-07T23:59:20Z
     by: agent-S-0606
+  - to: review
+    at: 2026-11-09T08:51:53Z
+    by: agent-S-0606
+  - to: done
+    at: 2026-11-09T08:52:32Z
+    by: alex
 blocked:
   - from: 2026-11-08T02:13:26Z
     until: 2026-11-08T02:13:45Z
