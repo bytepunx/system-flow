@@ -8,31 +8,42 @@ import (
 	"syscall"
 )
 
-// Alive reports whether pid names a process this user can signal.
+// Alive reports whether pid names a process this user can signal and that
+// has not ended: a zombie, which signal 0 still reaches until its parent
+// reaps it, is not alive where the system says so (I-0299).
 func Alive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}
 	p, err := os.FindProcess(pid)
-	return err == nil && p.Signal(syscall.Signal(0)) == nil
+	if err != nil || p.Signal(syscall.Signal(0)) != nil {
+		return false
+	}
+	_, _, ended, err := process(pid)
+	return err != nil || !ended
 }
 
 // Owns reports whether pid is still the process Detach started (S-0170):
-// alive, the leader of its own session, and, when start is known (Started),
-// started then. A PID the system has given to another process since, after
-// a reboot, is not, and is never signalled for the run that had it.
+// alive, not a zombie, the leader of its own session, and, when start is
+// known (Started), started then. A PID the system has given to another
+// process since, after a reboot, is not, and is never signalled for the run
+// that had it.
 func Owns(pid int, start int64) bool {
-	if !Alive(pid) {
+	if pid <= 0 {
 		return false
 	}
-	sid, at, err := process(pid)
-	return err == nil && sid == pid && (start == 0 || at == 0 || at == start)
+	p, err := os.FindProcess(pid)
+	if err != nil || p.Signal(syscall.Signal(0)) != nil {
+		return false
+	}
+	sid, at, ended, err := process(pid)
+	return err == nil && !ended && sid == pid && (start == 0 || at == 0 || at == start)
 }
 
 // Started is when pid started as the system counts it, which no two
 // processes of one boot share with one PID: 0 where it is not known.
 func Started(pid int) int64 {
-	_, at, err := process(pid)
+	_, at, _, err := process(pid)
 	if err != nil {
 		return 0
 	}
