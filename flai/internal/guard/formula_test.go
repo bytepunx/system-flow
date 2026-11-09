@@ -44,3 +44,33 @@ func TestTheStorysAgentRunsAFormula(t *testing.T) {
 		}
 	}
 }
+
+// S-0621 (ADR-0271 §2): flai formula stop writes the instance's tasks and
+// story, so a sub-agent, read-only or not, cannot run it, nor can the
+// orchestrator, while the story's agent and the operator's own session can;
+// flai itself holds a served agent to its own instance.
+func TestOnlyTheStorysAgentAndTheOperatorStopAFormulasRun(t *testing.T) {
+	stop := "flai formula stop S-0001 --step evaluate --exit 2 --output /tmp/out.txt"
+	gd := Guard{Commands: formulaCommands, Story: "S-0001", ReadOnly: func(agentType string) bool { return agentType == "verifier" || agentType == "explorer" }}
+	for _, who := range []string{"explorer", "verifier", "general-purpose"} {
+		if why := gd.Check(bash(who, stop)); !strings.Contains(why, fmt.Sprintf("a sub-agent (%s) cannot run", who)) {
+			t.Errorf("%s: flai formula stop: %q", who, why)
+		}
+	}
+	for name, gd := range map[string]Guard{
+		"story's agent":           {Commands: formulaCommands, Story: "S-0001", Served: true, Agent: "agent-S-0001", Session: "20261109T000000"},
+		"story's agent, unserved": {Commands: formulaCommands, Story: "S-0001"},
+		"operator's own session":  {Commands: formulaCommands},
+	} {
+		for _, c := range []string{stop, "scripts/flai.sh release --evaluate --require-met | scripts/flai.sh formula stop S-0001 --step evaluate --exit 2"} {
+			if why := gd.Check(bash("", c)); why != "" {
+				t.Errorf("%s: %q refused: %s", name, c, why)
+			}
+		}
+	}
+	gr := orchestrating(allOn, projectOrchestrator(t))
+	gr.Commands = formulaCommands
+	if v := Decide(gr, Call{Role: RoleOrchestrate, Kind: Shell, Command: stop}); v.Outcome != Deny {
+		t.Errorf("the orchestrator ran flai formula stop: %+v", v)
+	}
+}

@@ -38,7 +38,7 @@ falls short as formulas.file.
 flai formula run makes from a formula one ordinary story in backlog, with one
 task per step, which a story's agent works as it works any story.`,
 	}
-	c.AddCommand(newFormulaListCmd(a), newFormulaShowCmd(a), newFormulaRunCmd(a))
+	c.AddCommand(newFormulaListCmd(a), newFormulaShowCmd(a), newFormulaRunCmd(a), newFormulaStopCmd(a))
 	return c
 }
 
