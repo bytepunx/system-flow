@@ -2,12 +2,12 @@
 id: I-0317
 title: TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
 class: defect
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-11-09T08:39:50Z
 last_reported: 2026-11-09T08:39:50Z
-updated: 2026-11-09T09:08:54Z
+updated: 2026-11-09T23:00:50Z
 ---
 
 # I-0317 TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
@@ -24,3 +24,4 @@ S-0603's close-out (job S-0603-20261109T082735Z, at a6400dd) stopped at the inte
 ## Remediation
 
 Story S-0638 remediates this issue, created from it at 2026-11-09T09:08:54Z.
+Closed 2026-11-09T23:00:50Z: S-0638 (T-2806): TestCancelStopsTheWaitToAskAgain no longer races a 100 ms wall-clock deadline against its first attempt. get in flai/internal/selfupgrade calls retryWaiting, a test seam nil in production, as the pause between attempts begins, and the test cancels its context from it, so the cancel always follows the dropped answer whatever the host's load. TestCancelStopsTheWaitAfterASlowFirstAnswer holds the dropped answer 300 ms, three times the old deadline, and reproduces the loaded host: it still gets the drop, the cancel, and one request.
