@@ -288,3 +288,28 @@ func TestOrdinal(t *testing.T) {
 		}
 	}
 }
+
+// S-0608: one Puller answers each sequence as PullTimes does, whatever it
+// played out before: playing one sequence out leaves the lanes of the next
+// as they were.
+func TestAPullerAnswersEachSequenceAsPullTimes(t *testing.T) {
+	held := story("S-0011", workitem.InProgress, "feature", "m1", 2, 2, now.Add(-time.Hour))
+	held.Forecast = &workitem.Forecast{Duration: "2h", By: "planner", At: at(now)}
+	a := story("S-0020", workitem.Ready, "feature", "m1", 2, 2, time.Time{})
+	b := story("S-0021", workitem.Ready, "improvement", "m1", 2, 2, time.Time{})
+	b.Forecast = &workitem.Forecast{Duration: "45m"}
+	c := story("S-0022", workitem.Ready, "feature", "m2", 8, 9, time.Time{})
+	c.After = []string{"S-0011"}
+	items := append(past(), held, a, b, c)
+	order := []string{"S-0020", "S-0021", "S-0022"}
+	sequences := [][]*workitem.Item{{a, b, c}, {c, b, a}, {b, a, c}, {a, b, c}, {}}
+	for _, limit := range []int{0, 1, 2} {
+		u := NewPuller(items, order, limit, 90*time.Minute, now)
+		for i, seq := range sequences {
+			got, want := u.PullTimes(seq), PullTimes(items, order, limit, 90*time.Minute, seq, now)
+			if fmt.Sprint(got) != fmt.Sprint(want) {
+				t.Errorf("limit %d, sequence %d: the puller gives %v, PullTimes %v", limit, i, got, want)
+			}
+		}
+	}
+}

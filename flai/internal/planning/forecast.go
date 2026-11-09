@@ -170,16 +170,40 @@ func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 // else the one worked out from items with fallback, times its busy factor
 // (S-0213).
 func PullTimes(items []*workitem.Item, order []string, limit int, fallback time.Duration, stories []*workitem.Item, now time.Time) []time.Time {
-	now = now.UTC()
+	return NewPuller(items, order, limit, fallback, now).PullTimes(stories)
+}
+
+// Puller plays out several sequences of stories over the same items, order,
+// limit, fallback, and now, building the forecaster once (S-0608). It keeps
+// the estimates it works out, so it is not safe for concurrent use.
+type Puller struct {
+	items []*workitem.Item
+	order []string
+	limit int
+	now   time.Time
+	byID  map[string]*workitem.Item
+	f     *forecaster
+}
+
+// NewPuller builds the forecaster for items with fallback once, for PullTimes
+// to play sequences out on.
+func NewPuller(items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *Puller {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
 	}
-	f := newForecaster(items, fallback)
-	p, _ := startPlay(f, byID, items, order, max(limit, 0), now)
+	return &Puller{items: items, order: order, limit: max(limit, 0), now: now.UTC(), byID: byID, f: newForecaster(items, fallback)}
+}
+
+// PullTimes gives when each of stories is pulled, played out in the sequence
+// given as the package's PullTimes plays it. Each call starts from fresh
+// lanes, so one sequence does not change the times of another; the
+// forecaster's estimates, which depend on the item alone, are shared.
+func (u *Puller) PullTimes(stories []*workitem.Item) []time.Time {
+	p, _ := startPlay(u.f, u.byID, u.items, u.order, u.limit, u.now)
 	out := make([]time.Time, len(stories))
 	for i, it := range stories {
-		d, _ := f.durationOf(it)
+		d, _ := u.f.durationOf(it)
 		out[i] = p.pull(it, d)
 	}
 	return out

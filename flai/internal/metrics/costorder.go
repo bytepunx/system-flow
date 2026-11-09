@@ -50,6 +50,10 @@ type OrderPoint struct {
 	Incurred float64 `json:"incurred"`
 }
 
+// newPuller builds the forecaster costOrder plays its three orders out on; a
+// test replaces it to count the builds.
+var newPuller = planning.NewPuller
+
 // costOrder projects the cost of delay of the ready stories in all that have
 // a value and a forecast duration, played out on the board's lanes from the
 // report's now under each order.
@@ -75,9 +79,10 @@ func costOrder(all []*workitem.Item, opt Options) CostOrder {
 		fallback = manifest.DefaultDuration
 	}
 	horizon := at
+	puller := newPuller(all, opt.Order, opt.WIPLimit, fallback, at)
 	for _, by := range []string{OrderCurrent, OrderCOD, OrderWSJF} {
 		seq := orderedBy(placed, by)
-		s, last := projectSeries(by, seq, planning.PullTimes(all, opt.Order, opt.WIPLimit, fallback, seq, at), at)
+		s, last := projectSeries(by, seq, puller.PullTimes(seq), at)
 		if last.After(horizon) {
 			horizon = last
 		}

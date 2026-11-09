@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/planning"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -170,5 +171,24 @@ func TestCostOrderWithoutALimitPullsEveryStoryAtOnce(t *testing.T) {
 				t.Errorf("%s: point %+v, want at T0 for 0", s.By, p)
 			}
 		}
+	}
+}
+
+// S-0608: costOrder builds its forecaster once and plays the three orders
+// out on it, and the answer is what it was.
+func TestCostOrderBuildsItsForecasterOnce(t *testing.T) {
+	builds := 0
+	was := newPuller
+	t.Cleanup(func() { newPuller = was })
+	newPuller = func(items []*workitem.Item, order []string, limit int, fallback time.Duration, now time.Time) *planning.Puller {
+		builds++
+		return planning.NewPuller(items, order, limit, fallback, now)
+	}
+	got := costOrder(orderItems(), orderOptions(2))
+	if builds != 1 {
+		t.Errorf("costOrder built %d forecasters, want 1", builds)
+	}
+	if len(got.Series) != 3 || got.Saving != 23.81 || got.Cheaper != OrderWSJF {
+		t.Errorf("%d series, saving %v, cheaper %s; want 3, 23.81, wsjf", len(got.Series), got.Saving, got.Cheaper)
 	}
 }
