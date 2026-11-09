@@ -3,11 +3,11 @@ id: S-0611
 type: story
 nature: improvement
 title: The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB
-status: review
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:08Z
-updated: 2026-11-09T17:41:48Z
+updated: 2026-11-09T21:50:53Z
 transitions:
   - to: ready
     at: 2026-11-09T16:59:36Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-09T17:41:48Z
     by: agent-S-0611
+  - to: done
+    at: 2026-11-09T21:50:53Z
+    by: alex
 tags: [dashboard, cli]
 topics: [logging]
 touches: [flaiover/src/lib/server/repo.ts, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/perf/perf.go, flai/internal/perf/perf_test.go, docs/users/flai.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flaiover-dashboard.md, flaiover/src/routes/api/threads/+server.ts, flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts, flaiover/src/routes/api/planner/+server.ts, flaiover/src/routes/api/planner/planner.test.ts, flaiover/src/routes/api/orchestrator/+server.ts, flaiover/src/routes/api/orchestrator/orchestrator.test.ts, flaiover/src/routes/api/analyzer/+server.ts, flaiover/src/routes/api/analyzer/analyzer.test.ts, "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/items/[id]/plan/+server.ts", "flaiover/src/routes/api/items/[id]/plan/plan.test.ts", flaiover/src/routes/api/host-agent/host-agent.test.ts, design/system/server-performance.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/routes/api/host-agent/+server.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md]

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2060.8747
-accrued_seconds: 1532501
-tasks_completed: 2509
-last_run: 2026-11-09T18:07:35Z
+accrued_cost: 2061.1955
+accrued_seconds: 1532533
+tasks_completed: 2511
+last_run: 2026-11-09T21:24:09Z
 ---
 
 # Orchestrator activity
@@ -17593,6 +17593,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.2842 USD, estimated
+
+### 2026-11-09T21:23:54Z
+
+- Summary: Release-due S-0626: started no second publish instance. release_evaluate is met under threshold (count 3 >= 1; 87.5 of 1000 USD/week; pending S-0619, S-0620, S-0626). Publish instance S-0642 (made 2026-11-09T17:28:50Z, in ready, held no-touches until S-0616 leaves in-progress) publishes everything accepted and unreleased, S-0626 included; a second instance would race it (S-0643).
+- Items: S-0626, S-0642
+- Seconds: 17
+- Cost: 0.0936 USD, estimated
+
+### 2026-11-09T21:24:09Z
+
+- Summary: I didn't start a new publish run for S-0626, because one already exists: S-0642 is still in ready and will cover S-0626 when it runs.
+- Items: none
+- Seconds: 15
+- Cost: 0.2272 USD, estimated
 
 ## Refusals
 
