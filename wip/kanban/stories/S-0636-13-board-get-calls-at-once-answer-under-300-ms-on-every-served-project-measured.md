@@ -3,12 +3,15 @@ id: S-0636
 type: story
 nature: improvement
 title: 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606
-status: backlog
+status: ready
 parent: E-0033
 owner: alex
 created: 2026-11-09T07:36:47Z
-updated: 2026-11-09T22:21:32Z
-transitions: []
+updated: 2026-11-09T22:33:17Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:33:00Z
+    by: orchestrator
 tags: [cli]
 touches: [design/system/server-performance.md, design/issues/summary.md]
 after: [S-0602, S-0606]
@@ -22,17 +25,32 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 61
+    - kind: planner
+      seconds: 138
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 32
-          cache_read: 172265
-          cache_write: 6445
-          cost: 0.0476
-draft: true
+          input: 20
+          output: 760
+          cache_read: 543470
+          cache_write: 57646
+          cost: 0.2078
+    - kind: orchestrator
+      seconds: 122
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 96
+          cache_read: 807404
+          cache_write: 10260
+          cost: 0.2177
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 11
+          cache_read: 14233
+          cache_write: 8148
+          cost: 0.0166
 cost_of_delay:
   inputs:
     penalty_per_week: 20
@@ -43,10 +61,13 @@ cost_of_delay:
   at: 2026-11-09T22:21:32Z
 forecast:
   duration: 30m
-  delivery: 2026-11-10T00:28:00Z
-  basis: "Its own forecast of 30m; 10th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0640, S-0625, S-0630, S-0628, S-0631 and S-0241."
+  delivery: 2026-11-09T23:38:00Z
+  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644 and S-0638."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T22:30:03Z
 ---
 # S-0636 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606
 

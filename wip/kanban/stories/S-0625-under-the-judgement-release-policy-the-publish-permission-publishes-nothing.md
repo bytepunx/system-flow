@@ -6,7 +6,7 @@ title: "Under the judgement release policy the publish permission publishes noth
 status: ready
 owner: alex
 created: 2026-11-07T23:40:15Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:33:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:44Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-09T22:01:20Z
 forecast:
   duration: 50m
-  delivery: 2026-11-10T00:01:00Z
-  basis: "Its own forecast of 50m; 5th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638 and S-0640."
+  delivery: 2026-11-10T00:14:00Z
+  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0636 and S-0640."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
 finalized:
   by: alex
   at: 2026-11-09T21:56:42Z

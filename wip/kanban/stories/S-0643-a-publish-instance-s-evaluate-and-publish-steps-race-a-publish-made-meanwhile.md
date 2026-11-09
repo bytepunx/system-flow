@@ -6,7 +6,7 @@ title: A publish instance's evaluate and publish steps race a publish made meanw
 status: backlog
 owner: alex
 created: 2026-11-09T21:22:33Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:33:17Z
 transitions: []
 tags: [flai, release, formula]
 topics: [release, formula]
@@ -16,7 +16,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 142
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 24
+          output: 252
+          cache_read: 943474
+          cache_write: 89878
+          cost: 0.2755
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -27,10 +41,13 @@ cost_of_delay:
   at: 2026-11-09T22:14:12Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T01:35:00Z
-  basis: "Its own forecast of 1h; 12th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0640, S-0625, S-0630, S-0628, S-0631, S-0241, S-0636 and S-0637."
+  delivery: 2026-11-10T01:39:00Z
+  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0636, S-0640, S-0625, S-0630, S-0628, S-0631, S-0646, S-0241 and S-0637."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T22:30:00Z
 ---
 # S-0643 A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
 

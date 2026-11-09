@@ -6,7 +6,7 @@ title: The close-out job and the manifest's test commands run the story worktree
 status: ready
 owner: alex
 created: 2026-11-07T23:40:34Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:33:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:53Z
@@ -52,10 +52,10 @@ usage:
           cost: 0.278
 forecast:
   duration: 2h
-  delivery: 2026-11-10T02:01:00Z
-  basis: "Its own forecast of 2h; 7th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0640, S-0625 and S-0630."
+  delivery: 2026-11-10T02:07:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0636, S-0640, S-0625 and S-0630."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
 finalized:
   by: alex
   at: 2026-11-09T22:04:48Z

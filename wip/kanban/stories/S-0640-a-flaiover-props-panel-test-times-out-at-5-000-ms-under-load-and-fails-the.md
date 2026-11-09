@@ -6,7 +6,7 @@ title: A flaiover props-panel test times out at 5,000 ms under load and fails th
 status: ready
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:33:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:01Z
@@ -19,6 +19,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 61
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 64
+          cache_read: 635139
+          cache_write: 3815
+          cost: 0.1701
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 11
+          cache_read: 14233
+          cache_write: 8148
+          cost: 0.0166
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -29,10 +50,10 @@ cost_of_delay:
   at: 2026-11-09T22:07:30Z
 forecast:
   duration: 45m
-  delivery: 2026-11-09T23:48:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644 and S-0638."
+  delivery: 2026-11-09T23:50:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638 and S-0636."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
 finalized:
   by: orchestrator
   at: 2026-11-09T22:19:29Z

@@ -6,7 +6,7 @@ title: TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operato
 status: ready
 owner: alex
 created: 2026-11-09T21:50:55Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:33:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:19:58Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-09T22:11:02Z
 forecast:
   duration: 20m
-  delivery: 2026-11-09T22:57:00Z
+  delivery: 2026-11-09T22:59:00Z
   basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633 and S-0634."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T22:33:17Z
 finalized:
   by: orchestrator
   at: 2026-11-09T22:19:35Z
