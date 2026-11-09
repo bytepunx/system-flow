@@ -1,6 +1,6 @@
 ---
 title: Template repository
-updated: 2026-11-07
+updated: 2026-11-09
 status: active
 topics: [template]
 ---
@@ -101,7 +101,7 @@ Template functions: `initials`, `slug`, `upper`, `lower`, `quote` (YAML-safe dou
 ## Rendering rules
 
 - Files ending in `.tmpl` are rendered with Go `text/template`. Variables are available as `{{ .project_name }}`. Layout folder names are available as `{{ .layout.design }}` and are used inside rendered files so renamed folders stay consistent.
-- Every other file is copied byte for byte.
+- Every other file is copied byte for byte. It may hold `{{` as content of its own, such as a formula's input placeholder (ADR-0238 §4) or a role file's start prompt (ADR-0250), which flai fills later and the render leaves alone. So the template's render test, `TestRenderPrototypeTemplate`, looks for template syntax left behind only in a file rendered from a `.tmpl` source, or one that does not match its source byte for byte (I-0249, S-0616).
 - Paths containing a layout folder name at their first segment are rewritten to the chosen name at render time, so `root/design/README.md` lands in whatever `layout.design` is.
 - Rendering never overwrites an existing file unless `--force`. `flai new` and `flai import` keep an existing file and report how many they kept.
 - Executable bits are preserved.

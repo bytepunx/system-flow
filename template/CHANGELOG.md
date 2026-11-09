@@ -10,6 +10,7 @@
 ## 1.1.28 - 2026-11-09
 
 - S-0610 The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out (patch).
+- S-0616 `design/workflows/formulas/README.md` shows an input placeholder as `{{name}}` again, in place of describing it in words (patch): the template's render test no longer takes a `{{` in a file copied byte for byte for template syntax left unrendered (I-0249).
 
 ## 1.1.27 - 2026-11-07
 
