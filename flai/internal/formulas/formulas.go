@@ -9,6 +9,7 @@ package formulas
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -133,6 +134,13 @@ type Step struct {
 	// In is where the step runs: InWorktree, the instance's worktree, when
 	// empty, or InMain, the project's main checkout (S-0423).
 	In string `yaml:"in" json:"in,omitempty"`
+	// Stop are the exits that stop the instance cleanly rather than fail the
+	// step, each from 1 to 255, on a flai or script step only (S-0621,
+	// ADR-0271 §1); none when it names no stop. UnmarshalYAML reads it.
+	Stop []int `yaml:"-" json:"stop,omitempty"`
+	// stopShape is set when the step's stop is not a list of integers, which
+	// the step checks report.
+	stopShape bool
 	// Line is the entry's file line.
 	Line int `yaml:"-" json:"-"`
 	// Lines are the file lines of the entry's keys; a key not there is
@@ -147,6 +155,17 @@ func (s Step) Kind() string { return s.Run.Kind() }
 // InMain reports whether the step runs in the project's main checkout rather
 // than the instance's worktree (S-0423).
 func (s Step) InMain() bool { return s.In == InMain }
+
+// Stops reports whether exit is one of the step's stop exits, which stop the
+// instance cleanly (ADR-0271 §1).
+func (s Step) Stops(exit int) bool { return exit != 0 && slices.Contains(s.Stop, exit) }
+
+// Stop exits are from MinStop to MaxStop: 0 is the step's success, and an
+// exit status is at most 255.
+const (
+	MinStop = 1
+	MaxStop = 255
+)
 
 // Run is what a step runs: a flai command line without flai, a script's
 // command line, or a role and the prompt it is given.
@@ -333,7 +352,7 @@ func (in *Input) UnmarshalYAML(n ast.Node) error {
 // UnmarshalYAML reads a steps entry, the line it starts on, and its keys'.
 func (s *Step) UnmarshalYAML(n ast.Node) error {
 	if pairs(n) == nil {
-		return shapeError(n, "a steps entry is a mapping: {id: <id>, title: <text>, run: {...}, after: [<id>...], in: worktree or main}")
+		return shapeError(n, "a steps entry is a mapping: {id: <id>, title: <text>, run: {...}, after: [<id>...], in: worktree or main, stop: [<exit>...]}")
 	}
 	type fields Step
 	if err := yaml.NodeToValue(n, (*fields)(s)); err != nil {
@@ -344,8 +363,43 @@ func (s *Step) UnmarshalYAML(n ast.Node) error {
 	for _, kv := range pairs(n) {
 		key := kv.Key.GetToken()
 		s.Lines[key.Value] = key.Position.Line
+		if key.Value == "stop" {
+			s.Stop, s.stopShape = exits(kv.Value)
+		}
 	}
 	return nil
+}
+
+// exits are the integers of a stop's sequence node, and whether the node is
+// not a list of integers, as stop: [2] is (ADR-0271 §1). An integer too large
+// for an int is not one.
+func exits(n ast.Node) ([]int, bool) {
+	seq, ok := n.(*ast.SequenceNode)
+	if !ok {
+		return nil, true
+	}
+	out := make([]int, 0, len(seq.Values))
+	for _, v := range seq.Values {
+		i, ok := v.(*ast.IntegerNode)
+		if !ok {
+			return nil, true
+		}
+		switch n := i.Value.(type) {
+		case int64:
+			if n < math.MinInt32 || n > math.MaxInt32 {
+				return nil, true
+			}
+			out = append(out, int(n))
+		case uint64:
+			if n > math.MaxInt32 {
+				return nil, true
+			}
+			out = append(out, int(n))
+		default:
+			return nil, true
+		}
+	}
+	return out, false
 }
 
 // UnmarshalYAML reads a step's run, a mapping.
@@ -423,6 +477,7 @@ func (f Formula) Filled(values map[string]string) Formula {
 		s.Run.Script = Fill(s.Run.Script, values)
 		s.Run.Prompt = Fill(s.Run.Prompt, values)
 		s.After = slices.Clone(s.After)
+		s.Stop = slices.Clone(s.Stop)
 		out.Steps[i] = s
 	}
 	return out
@@ -734,6 +789,34 @@ func (c *checker) step(f Formula, s Step, ids, declared map[string]bool) {
 	}
 	if s.In != "" && !slices.Contains(Ins, s.In) {
 		at("in", "step %s's in is %q, which is none of %s; give %s, the instance's worktree and the default, or %s, the project's main checkout", name, s.In, strings.Join(Ins, ", "), InWorktree, InMain)
+	}
+	c.stop(f, s, name)
+}
+
+// stop checks a step's stop (ADR-0271 §1): a list of integers, each from
+// MinStop to MaxStop and none twice, on a flai or script step.
+func (c *checker) stop(f Formula, s Step, name string) {
+	if s.Lines["stop"] == 0 {
+		return
+	}
+	at := func(format string, args ...any) { c.add(f, s.line("stop"), format, args...) }
+	if s.stopShape {
+		at("step %s's stop is not a list of exit codes; give the exits that stop the run cleanly, such as stop: [2]", name)
+		return
+	}
+	if s.Kind() == KindRole {
+		at("step %s names stop, but a role step ends worked, asked, or failed with no exit code; give stop to a flai or script step only", name)
+		return
+	}
+	seen := map[int]bool{}
+	for _, e := range s.Stop {
+		switch {
+		case e < MinStop || e > MaxStop:
+			at("step %s's stop lists exit %d; a stop exit is from %d to %d, as 0 is the step's success", name, e, MinStop, MaxStop)
+		case seen[e]:
+			at("step %s's stop lists exit %d twice; keep one", name, e)
+		}
+		seen[e] = true
 	}
 }
 

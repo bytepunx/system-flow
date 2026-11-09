@@ -149,6 +149,10 @@ func TestFormulaProblemsAreErrorsOnTheirLine(t *testing.T) {
 		{"an input a prompt uses undeclared", "for {{version}}.", "for {{release}}.", 17, "uses {{release}}, which the formula's inputs do not declare"},
 		{"an input a title uses undeclared", "title: Tag {{version}}", "title: Tag {{tag}}", 21, "uses {{tag}}, which the formula's inputs do not declare"},
 		{"an in that is neither place", "    after: [check, notes]\n", "    after: [check, notes]\n    in: elsewhere\n", 25, `step tag's in is "elsewhere", which is none of worktree, main`},
+		{"a stop on a role step", "      prompt: Draft the notes for {{version}}.\n", "      prompt: Draft the notes for {{version}}.\n    stop: [2]\n", 20, "step notes names stop, but a role step ends worked, asked, or failed with no exit code"},
+		{"a stop exit out of range", "    after: [check, notes]\n", "    after: [check, notes]\n    stop: [0]\n", 25, "step tag's stop lists exit 0; a stop exit is from 1 to 255"},
+		{"a stop that is no list", "    after: [check, notes]\n", "    after: [check, notes]\n    stop: 2\n", 25, "step tag's stop is not a list of exit codes"},
+		{"a stop exit twice", "    after: [check, notes]\n", "    after: [check, notes]\n    stop: [2, 2]\n", 25, "step tag's stop lists exit 2 twice"},
 		{"a schedule on a formula with inputs", "description: Cuts a release.\n", "description: Cuts a release.\nschedule: daily\n", 7, "schedule starts the formula with no inputs, as nobody is there to give them, but version has no default"},
 	} {
 		if !strings.Contains(formulaFile, tc.old) {

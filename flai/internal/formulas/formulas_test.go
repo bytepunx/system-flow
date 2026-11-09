@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -182,6 +183,15 @@ func TestValidateReportsEachProblem(t *testing.T) {
 		{"role without prompt", step("    run:", "      role: reviewer"), "no prompt", 10},
 		{"after no step", step("    run: {flai: check}", "    after: [b]"), `after "b", which is no step's id`, 11},
 		{"in neither place", step("    run: {flai: check}", "    in: elsewhere"), `step a's in is "elsewhere", which is none of worktree, main`, 11},
+		{"stop on a role step", step("    run: {role: reviewer, prompt: p}", "    stop: [2]"), "step a names stop, but a role step ends worked, asked, or failed with no exit code; give stop to a flai or script step only", 11},
+		{"stop exit 0", step("    run: {flai: check}", "    stop: [0]"), "step a's stop lists exit 0; a stop exit is from 1 to 255, as 0 is the step's success", 11},
+		{"stop exit over 255", step("    run: {script: scripts/check.sh}", "    stop: [256]"), "step a's stop lists exit 256", 11},
+		{"stop exit negative", step("    run: {flai: check}", "    stop: [-1]"), "step a's stop lists exit -1", 11},
+		{"stop exit twice", step("    run: {flai: check}", "    stop: [2, 3, 2]"), "step a's stop lists exit 2 twice; keep one", 11},
+		{"stop a number", step("    run: {flai: check}", "    stop: 2"), "step a's stop is not a list of exit codes; give the exits that stop the run cleanly, such as stop: [2]", 11},
+		{"stop of words", step("    run: {flai: check}", "    stop: [two]"), "step a's stop is not a list of exit codes", 11},
+		{"stop of a huge number", step("    run: {flai: check}", "    stop: [99999999999999999999]"), "step a's stop is not a list of exit codes", 11},
+		{"stop a mapping", step("    run: {flai: check}", "    stop: {exit: 2}"), "step a's stop is not a list of exit codes", 11},
 		{"step id missing", head + "steps:\n  - title: A\n    run: {flai: check}\n---\n", "step needs id", 8},
 		{"step id not kebab", head + "steps:\n  - id: A_1\n    title: A\n    run: {flai: check}\n---\n", "not kebab-case", 8},
 		{"step title missing", head + "steps:\n  - id: a\n    run: {flai: check}\n---\n", "step a needs title", 8},
@@ -244,6 +254,43 @@ func TestStepIn(t *testing.T) {
 	filled := parse(t, "design/workflows/formulas/x.md", head+"    in: main\n---\n").Filled(nil)
 	if !filled.Steps[0].InMain() {
 		t.Errorf("Filled dropped the step's in: %+v", filled.Steps[0])
+	}
+}
+
+// S-0621 (ADR-0271 §1): a flai or script step's stop is the list of exits
+// that stop the instance cleanly, in either YAML list form, with the line of
+// its key kept; Stops says whether an exit is one of them, 0 never; Filled
+// keeps it; and a step with no stop has none.
+func TestStepStop(t *testing.T) {
+	const head = "---\ntitle: X\nupdated: 2026-11-01\nstatus: active\nname: x\ndescription: d\nsteps:\n  - id: a\n    title: A\n    run: {flai: check}\n"
+	for _, tc := range []struct {
+		name, lines string
+		stop        []int
+	}{
+		{"flow", "    stop: [2]\n", []int{2}},
+		{"block", "    stop:\n      - 2\n      - 255\n", []int{2, 255}},
+		{"absent", "", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			content := head + tc.lines + "---\n"
+			s := parse(t, "design/workflows/formulas/x.md", content).Steps[0]
+			if !slices.Equal(s.Stop, tc.stop) {
+				t.Errorf("stop = %v, want %v", s.Stop, tc.stop)
+			}
+			if tc.lines != "" && s.Lines["stop"] != 11 {
+				t.Errorf("the stop key's line = %d, want 11", s.Lines["stop"])
+			}
+			if got := problems(t, content); len(got) != 0 {
+				t.Errorf("Validate: %v", got)
+			}
+		})
+	}
+	s := parse(t, "design/workflows/formulas/x.md", head+"    stop: [2, 3]\n---\n").Filled(nil).Steps[0]
+	if !s.Stops(2) || !s.Stops(3) || s.Stops(0) || s.Stops(1) || !slices.Equal(s.Stop, []int{2, 3}) {
+		t.Errorf("Filled's step: Stop %v, Stops(2) %v, Stops(0) %v", s.Stop, s.Stops(2), s.Stops(0))
+	}
+	if (Step{}).Stops(0) {
+		t.Error("a step with no stop stops on exit 0")
 	}
 }
 

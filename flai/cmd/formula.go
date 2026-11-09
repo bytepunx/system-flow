@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -165,6 +166,10 @@ func (a *app) printFormula(f formulas.Formula, layers [][]string) {
 		// worktree, the default, prints as before.
 		if s.In != "" && s.In != formulas.InWorktree {
 			fmt.Fprintf(a.out, "    in:     %s\n", s.In)
+		}
+		// S-0621: the exits that stop the instance cleanly (ADR-0271 §1).
+		if len(s.Stop) > 0 {
+			fmt.Fprintf(a.out, "    stop:   %s\n", joinExits(s.Stop, ", "))
 		}
 	}
 	fmt.Fprintln(a.out, "layers:")
@@ -341,7 +346,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		}
 		res, err := itemnew.Create(repo, a.runner, itemnew.Options{New: workitem.NewOptions{
 			Type: workitem.Task, Title: s.Title, Nature: f.Nature, Parent: story.Item.ID, Owner: owner, After: after[s.ID], Now: now,
-			Body: fillSections(taskBody, formulaTaskSections(s, formulaMainCheckout(repo))),
+			Body: fillSections(taskBody, formulaTaskSections(s, formulaMainCheckout(repo), story.Item.ID)),
 		}})
 		if err != nil {
 			err = undo(fmt.Errorf("making the task for step %s of formula %s, so the story %s and the tasks made before it were removed: %w", s.ID, f.Name, story.Item.ID, err))
@@ -569,23 +574,25 @@ func formulaStorySections(f formulas.Formula, values map[string]string) [][2]str
 // formulaTaskSections are the sections a step's task takes, filled: Work,
 // what the step runs, and Done when, its exit. A step in main (S-0423) runs
 // from the project's main checkout, main, an absolute path, rather than the
-// instance's worktree, and its Work says so.
-func formulaTaskSections(s formulas.Step, main string) [][2]string {
+// instance's worktree, and its Work says so. A step with stop (S-0621,
+// ADR-0271 §1) says in Done when which exits stop the run of the instance
+// story, and the flai formula stop that records them.
+func formulaTaskSections(s formulas.Step, main, story string) [][2]string {
 	there := " from the project's main checkout, " + codeSpan(main) + ", not from this story's worktree"
 	var work, done string
 	switch s.Kind() {
-	case formulas.KindFlai:
+	case formulas.KindFlai, formulas.KindScript:
 		line := codeSpan("flai " + s.Run.Flai)
-		work, done = "Run "+line+".", line+" exits 0."
-		if s.InMain() {
-			work, done = "Run "+line+there+".", line+" exits 0 in the main checkout."
+		work = "Run " + line + "."
+		if s.Kind() == formulas.KindScript {
+			line = codeSpan(s.Run.Script)
+			work = "Run " + line + " from the repository root."
 		}
-	case formulas.KindScript:
-		line := codeSpan(s.Run.Script)
-		work, done = "Run "+line+" from the repository root.", line+" exits 0."
+		done = line + " exits 0"
 		if s.InMain() {
-			work, done = "Run "+line+there+".", line+" exits 0 in the main checkout."
+			work, done = "Run "+line+there+".", done+" in the main checkout"
 		}
+		done += stopsRun(s, story) + "."
 	case formulas.KindRole:
 		quoted := strings.Split(strings.TrimSpace(s.Run.Prompt), "\n")
 		for i, l := range quoted {
@@ -598,6 +605,34 @@ func formulaTaskSections(s formulas.Step, main string) [][2]string {
 		done = "The role's run ends with its work done."
 	}
 	return [][2]string{{"Work", work}, {"Done when", done}}
+}
+
+// stopsRun is what a step's Done when says of its stop exits (ADR-0271 §1):
+// nothing for a step with none, else that each stops the run, recorded with
+// flai formula stop on story with the step's output, for exit 2:
+// ", or exits 2, which stops the run: record it with `flai formula stop
+// S-nnnn --step <id> --exit 2`, giving it the step's output".
+func stopsRun(s formulas.Step, story string) string {
+	if len(s.Stop) == 0 {
+		return ""
+	}
+	exit := strconv.Itoa(s.Stop[0])
+	stops := "which stops the run"
+	if len(s.Stop) > 1 {
+		exit = "<exit>"
+		stops = "each of which stops the run"
+	}
+	return fmt.Sprintf(", or exits %s, %s: record it with %s, giving it the step's output",
+		joinExits(s.Stop, " or "), stops, codeSpan("flai formula stop "+story+" --step "+s.ID+" --exit "+exit))
+}
+
+// joinExits are exits as decimal numbers joined by sep.
+func joinExits(exits []int, sep string) string {
+	out := make([]string, len(exits))
+	for i, e := range exits {
+		out[i] = strconv.Itoa(e)
+	}
+	return strings.Join(out, sep)
 }
 
 // formulaMainCheckout is the project's main checkout, absolute, where a step

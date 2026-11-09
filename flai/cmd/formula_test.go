@@ -328,6 +328,54 @@ func TestFormulaStepInMain(t *testing.T) {
 	}
 }
 
+// S-0621 (ADR-0271 §1): a flai or script step's stop names the exits that
+// stop the instance cleanly. flai formula show prints it, and --json carries
+// it; flai formula run writes into the step task's Done when that each stop
+// exit stops the run, and the flai formula stop on the instance that records
+// it, while a step with no stop keeps the Done when it had.
+func TestFormulaStepStop(t *testing.T) {
+	t.Parallel()
+	stops := strings.Replace(releaseCheck, "    run: {flai: release --evaluate}\n    after: [test]\n", "    run: {flai: release --evaluate}\n    after: [test]\n    in: main\n    stop: [2]\n", 1)
+	stops = strings.Replace(stops, "    run: {script: scripts/test.sh --short}\n", "    run: {script: scripts/test.sh --short}\n    stop: [3, 4]\n", 1)
+	if stops == releaseCheck {
+		t.Fatal("the fixture did not change")
+	}
+	root := formulaProject(t, map[string]string{"release-check.md": stops})
+	out, errOut, code := runIn(t, root, "formula", "show", "release-check")
+	if code != 0 || strings.Contains(errOut, formulas.CodeFile) ||
+		!strings.Contains(out, "  test: The tests pass\n    script: scripts/test.sh --short\n    stop:   3, 4\n  evaluate:") ||
+		!strings.Contains(out, "    after:  test\n    in:     main\n    stop:   2\n  risk:") {
+		t.Errorf("formula show: %d %s\n%s", code, errOut, out)
+	}
+	js, _, code := runIn(t, root, "formula", "show", "release-check", "--json")
+	var shown struct {
+		Steps []struct {
+			Stop []int `json:"stop"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal([]byte(js), &shown); code != 0 || err != nil || len(shown.Steps) != 3 {
+		t.Fatalf("formula show --json: %d %v %s", code, err, js)
+	}
+	if !slices.Equal(shown.Steps[0].Stop, []int{3, 4}) || !slices.Equal(shown.Steps[1].Stop, []int{2}) || shown.Steps[2].Stop != nil {
+		t.Errorf("formula show --json: the steps' stop: %s", js)
+	}
+	if js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--json"); code != 0 {
+		t.Fatalf("formula run: %d %s %s", code, js, errOut)
+	}
+	for id, want := range map[string]string{
+		"T-0001": "## Done when\n\n`scripts/test.sh --short` exits 0, or exits 3 or 4, each of which stops the run: record it with `flai formula stop S-0001 --step test --exit <exit>`, giving it the step's output.\n",
+		"T-0002": "## Done when\n\n`flai release --evaluate` exits 0 in the main checkout, or exits 2, which stops the run: record it with `flai formula stop S-0001 --step evaluate --exit 2`, giving it the step's output.\n",
+		"T-0003": "## Done when\n\nThe role's run ends with its work done.\n",
+	} {
+		if task := itemFile(t, root, id); !strings.Contains(task, want) {
+			t.Errorf("%s lacks %q:\n%s", id, want, task)
+		}
+	}
+	if out, errOut, code := runIn(t, root, "check", "--strict", "--story", "S-0001"); code != 0 {
+		t.Errorf("check --strict on what formula run made: %d\n%s%s", code, out, errOut)
+	}
+}
+
 // S-0423: a step in main runs in the main checkout of a story worktree, the
 // one its .git file names when it is not mounted here, or the project root.
 func TestFormulaMainCheckout(t *testing.T) {
