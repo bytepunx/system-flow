@@ -13,7 +13,7 @@ The finding of S-0152, for E-0012. The board and other pages pause for long mome
 
 ## How it is measured
 
-`flai serve` and `flai mcp` log one `request answered` event per request, timed inside flai from when the request was read to when its answer is ready to write, with the phases the time went to ([flai-cli.md](flai-cli.md#internal-structure), [Request timing](../../docs/users/flai.md#request-timing-s-0152)). The dashboard logs its own duration for each HTTP request. The difference is the transport: the channel's WebSocket and the dashboard's own handling. `flai hostapi --timing` times one method with no transport at all, and `FLAI_PPROF_ADDR` offers Go's profiles from `flai serve`.
+`flai serve` and `flai mcp` log one `request answered` event per request, timed inside flai from when the request was read to when its answer is ready to write, with the phases the time went to. Since S-0611, over the channel, the event is logged after the answer is written, and `send_ms` gives the write's time apart, the wait for the connection's write lock included ([flai-cli.md](flai-cli.md#internal-structure), [Request timing](../../docs/users/flai.md#request-timing-s-0152)). The dashboard logs its own duration for each HTTP request. The difference is the transport: the channel's WebSocket and the dashboard's own handling. `flai hostapi --timing` times one method with no transport at all, and `FLAI_PPROF_ADDR` offers Go's profiles from `flai serve`.
 
 ## What was measured
 
@@ -366,7 +366,7 @@ Each cause is numbered after causes 1 to 7. Each "fix" below keeps the files und
 | 18 | `replayHolds` replays all history on every call, whatever the window (`flai/internal/metrics/claims.go`). `costOfDelay` and `claims` loop day by day over every item, parse every transition's time again each day (`stateAt`), and start at the window's start even before the first item existed. Thread entries are parsed twice, and `costOrder` builds its forecaster three times. | `replayHolds` 175 to 310 ms; `costOfDelay` 2 ms at 1 day up to 170 to 217 ms at 365 days; `time.Parse` about 9% of the CPU | Keep `replayHolds` and `touchDrift` until the items or the commits change. Parse each item's transitions once and sweep the days once; answer the days before the first item without a loop. Parse entries once and build the forecaster once. Done in S-0608: [measured](#cause-18-fixed-the-hold-replay-kept-and-the-days-swept-once-s-0608). | About 200 to 250 ms warm; at 365 days, about 290 ms down to about 30 ms |
 | 19 | `flai accept` runs `scripts/lint-md.sh` five times, one after another, each through `npx --yes markdownlint-cli2` (`flai/cmd/accept_markdown.go`), and checks again after each `--fix`. `flai task done` runs it through `npx` twice. `accept` starts 58 git processes, `git status --porcelain` six times, and lists all items for `EpicWalk`. | Each lint call 1.0 to 1.2 s, of which markdownlint is 0.27 to 0.36 s. `accept` 8.7 to 16.2 s in the scratch copy; serve log p50 16.6 s. | Run the installed `markdownlint-cli2` directly, once for the uncommitted and branch sets, and drop the check after `--fix`. | About 4 s an acceptance, about 1.5 s a task done |
 | 20 | The close-out runs its tiers one after another (`flai/internal/verify/run.go`). The `flaiover` tier, which is node, waits for `integration`, which is Go, and `smoke` waits for both. `smoke` runs the template test, the check, and the markdown lint again after the close-out's own tiers ran them. | Passed jobs p50 247 s, p90 510 s, max 1,408 s. `integration` mean 238 s; `flaiover` mean 176 s on 12 of 60 jobs; `smoke` mean 44 s. | Run independent tiers at once, and cancel the rest when one fails. Skip the steps of `smoke` the close-out already ran. Built by S-0610, which measured the saving on this host: see [Cause 20: the close-out runs marked tiers at once, and smoke skips what the run passed](#cause-20-the-close-out-runs-marked-tiers-at-once-and-smoke-skips-what-the-run-passed-s-0610). | About 150 s on a story that runs `flaiover`; about 40 s on every story that runs `smoke` |
-| 21 | Two answers are large: `threads.list` with `all: true` is 3.28 MB, since the dashboard asks for resolved threads too (`flaiover/src/lib/server/repo.ts`), and `agent.status` carries every finished run. Each holds its connection's one write lock while it is written (`flai/internal/channel/channel.go`), and that time is not in `duration_ms`, which is logged before the send. | 3.28 MB and 392 KB a call | Ask for open threads, and the resolved ones when the page shows them. Send finished runs only to the pages that show them. Log the send time with the request. | About 3.2 MB down to under 100 KB a thread list |
+| 21 | Two answers are large: `threads.list` with `all: true` is 3.28 MB, since the dashboard asks for resolved threads too (`flaiover/src/lib/server/repo.ts`), and `agent.status` carries every finished run. Each holds its connection's one write lock while it is written (`flai/internal/channel/channel.go`), and that time is not in `duration_ms`, which is logged before the send. | 3.28 MB and 392 KB a call | Ask for open threads, and the resolved ones when the page shows them. Send finished runs only to the pages that show them. Log the send time with the request. Done in S-0611: [measured](#cause-21-fixed-the-dashboard-asks-for-open-threads-and-open-runs-and-the-send-is-timed-s-0611). | About 3.2 MB down to under 100 KB a thread list |
 
 ### Serial I/O that could run in parallel
 
@@ -834,6 +834,42 @@ The cheap tiers are `gofmt`, `vet`, `golangci-lint`, `shellcheck`, `markdown`, a
 - In the after runs `smoke` got `gofmt:all vet:all golangci-lint:all shellcheck:all markdown:all template:all`. It skipped the template test and the markdown lint and ran the repository check, since `--all` has no check step, and the install test. Run alone in round 3 with every step, it took 38.8 s; the lint it skips takes about 9 s, as the `markdown` tier's whole run did, and the template test well under a second. In a close-out the `markdown` tier runs for the changed files, so the lint is skipped only when the branch leaves the markdownlint configuration and `lint-md.sh` alone.
 - Three further runs failed on one vitest test, `components.svelte.test.ts` › the props panel and the event log › "lists the calls of the component's function props, and clears them on another pick", which timed out at 5,000 ms. One was an after run at a load of 125, and two were before runs, serial, at 91 to 102; an untimed after run at 08:31, at a load of 86 to 119, failed on it too. It is a page test that posts about 60 messages to the page and touches no flai, so it fails under load whether or not the tiers run at once. A run that failed was run again; none is in the table.
 - `--all` runs every cheap tier for the whole checkout, and a close-out selects fewer. So the difference between before and after, not the totals, is what carries over to a close-out that selects `flaiover`, `integration`, and `smoke`.
+
+### Cause 21 fixed: the dashboard asks for open threads and open runs, and the send is timed (S-0611)
+
+#### Fix
+
+- The dashboard asks `threads.list` for the unresolved threads alone (`flaiover/src/lib/server/repo.ts`). It asks for every thread only when a page sends `all=1`: the Threads page with its show-resolved box ticked, and an item's page for that item's threads. The two lists are cached apart, and a thread or item change forgets both.
+- `agent.status` takes a parameter, `finished` ([flaiover-dashboard.md § API](flaiover-dashboard.md#api-s-0011)). Without it the answer keeps its keys but holds only these runs:
+  - the live and waiting runs;
+  - the newest run of each open story and each open planned item;
+  - the newest orchestrator, analyzer, and curator runs, and each role's run under way.
+
+  It leaves out the past runs and the runs of finished work. `/api/host-agent`, which the board, the activity page, and a story's agent panel ask every 15 s, asks without it. The planner, orchestrator, analyzer, role, and item-plan routes ask with `finished: true`, and so does a done or cancelled story's agent panel.
+- Over the channel, the `request answered` event is logged after the answer is written, with the write's time as `send_ms`: the encoding, the wait for the connection's one write lock, and the write ([Request timing](../../docs/users/flai.md#request-timing-s-0152)). The slow threshold compares `duration_ms` and `send_ms` together.
+
+#### Measured on this repository
+
+The measurement ran on 2026-11-09 between 17:25 and 17:26 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0).
+
+- Two binaries were built into `/tmp`: one from `main` at 8f934d797 and one from `story/S-0611` at d9f5c6653.
+- Each ran `flai hostapi --timing` in the main checkout with the host's own configuration, so `agent.status` read the host's `~/.flai/serve` state.
+- "Before" asks as the dashboard asked: `threads.list` with `all: true`, and `agent.status` with nothing. "After" asks as the board now does: `threads.list` with nothing, and `agent.status` with nothing.
+- They took turns for three rounds. Each call was a fresh process, so the times are cold.
+- The repository held 940 threads, 15 of them unresolved.
+- The one-minute load average was 58 to 62.
+
+| Call | Before, bytes | After, bytes | Before, `duration_ms` | After, `duration_ms` |
+|------|--------------:|-------------:|----------------------:|---------------------:|
+| `threads.list`, the board's | 3,491,017 | 52,753 | 402 to 749 | 280 to 411 |
+| `agent.status`, `/api/host-agent`'s | 420,952 | 14,163 | 613 to 759 | 566 to 735 |
+| `agent.status` with `finished: true`, the past-runs pages' | — | 420,952 | — | 588 to 727 |
+
+- The board's thread list is 1.5% of its former size and its `agent.status` 3.4%. Both are under the story's targets of 100 KB and 50 KB.
+- With `finished: true` the answer is the same size as before. Only the pages that list past runs ask for it, and none of them polls every 15 s.
+- The filter that leaves out finished work, `agent.unfinished`, took 3.7 to 9.2 ms a call. That is about 1% of `agent.state`, which is still mostly `agent.activity` (cause 13's reads and the holds' trial merges).
+- These one-shot times include the cold reads. What the smaller answers save in flai serve is the encoding, and the time each answer holds the connection's write lock while the next request's answer waits.
+- `send_ms` itself was not measured. flai serve on this host runs the installed flai 1.86.4, which does not log it, and it will be logged once a flai release with S-0611 runs there. The serve log's `send_ms` will then show what is left of the wait on the write lock.
 
 ## Stories
 
