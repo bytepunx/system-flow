@@ -9,6 +9,7 @@ wip_limits:
 order:
   - S-0627
   - S-0621
+  - S-0642
 ---
 
 # Board
