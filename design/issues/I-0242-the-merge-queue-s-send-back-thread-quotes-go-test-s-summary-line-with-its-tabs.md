@@ -2,12 +2,12 @@
 id: I-0242
 title: The merge queue's send-back thread quotes go test's summary line with its tabs, the markdown lint refuses the thread (MD010), and the queue retries forever with the batch wedged
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5h
 first_reported: 2026-10-31T16:43:40Z
 last_reported: 2026-10-31T16:43:40Z
-updated: 2026-11-07T23:39:04Z
+updated: 2026-11-09T10:08:07Z
 ---
 
 # I-0242 The merge queue's send-back thread quotes go test's summary line with its tabs, the markdown lint refuses the thread (MD010), and the queue retries forever with the batch wedged
@@ -23,3 +23,4 @@ Batch 20261031-110330 failed at smoke (the OpenRouter gateway test, a 402 on the
 ## Remediation
 
 Story S-0614 remediates this issue, created from it at 2026-11-07T23:39:04Z.
+Closed 2026-11-09T10:08:07Z: S-0614: send-back threads now quote tool output through mdlint.Fenced, which makes line ends, tabs, ANSI escapes and other control characters, trailing spaces, and blank runs lint-safe; the merge queue's failingText and the pull request send-back's quote both use it. When the lint still refuses the queue's thread, SendBack logs a warning and opens it again with the findings left out and the log folder named, so the story is sent back and the batch goes on instead of being retried at every look. TestARefusedSendBackThreadLeavesTheFindingsOut and TestAGoTestFailureIsSentBackUnderTheProjectsLint reproduce the case.
