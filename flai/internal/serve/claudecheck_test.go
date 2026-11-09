@@ -5,6 +5,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -554,5 +555,249 @@ func TestAProjectWithNoAgentHasTheHostsClaudeChecked(t *testing.T) {
 	}
 	if _, uses := claudeCodeProject(root); !uses {
 		t.Error("a project that names no agent, and so runs the built-in claude-code, does not have the host's claude checked")
+	}
+}
+
+// imageRun is one run of the stand-in for docker that an image's check
+// makes: the folder it ran in, its arguments and environment, and where the
+// check's Claude Code folder linked the login.
+type imageRun struct {
+	dir, link string
+	argv, env []string
+}
+
+const claudeLabImage = "flai-agent-claude-code:local"
+
+// fakeDocker stands in for docker running an image's claude in the check:
+// it keeps each run, and, when write, writes the file asked for in each
+// worktree of the scratch project it runs in, as the image's claude would
+// through permission_prompt; otherwise it prints a refused write and fails.
+func (lab *claudeLab) fakeDocker(write bool) *[]imageRun {
+	var runs []imageRun
+	lab.checker.runImage = func(_ context.Context, dir string, argv, env []string) (string, error) {
+		r := imageRun{dir: dir, argv: argv, env: env}
+		for _, kv := range env {
+			if v, ok := strings.CutPrefix(kv, "CLAUDE_CONFIG_DIR="); ok {
+				r.link, _ = os.Readlink(filepath.Join(v, ".credentials.json"))
+			}
+		}
+		runs = append(runs, r)
+		if !write {
+			return "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"content\":\"" + claudeLabError + "\",\"is_error\":true}]}}\nstand-in: the write was refused\n", errors.New("exit status 1")
+		}
+		worktrees, _ := filepath.Glob(filepath.Join(dir, ".flai-cache", "worktrees", "*"))
+		for _, w := range worktrees {
+			if err := os.MkdirAll(filepath.Join(w, ".claude"), 0o755); err != nil {
+				return "", err
+			}
+			if err := os.WriteFile(filepath.Join(w, filepath.FromSlash(claudeCheckFile)), []byte(claudeCheckContent(claudeLabVersion)+"\n"), 0o644); err != nil {
+				return "", err
+			}
+		}
+		return "", nil
+	}
+	return &runs
+}
+
+// imageConfig is the lab's config with the container harness on docker and
+// login the operator's login.
+func (lab *claudeLab) imageConfig(login string) AgentConfig {
+	cfg := lab.config()
+	cfg.Harnesses[harness.Container] = harness.Host{Program: "docker", Login: login}
+	return cfg
+}
+
+// S-0618, I-0253: a container start's image whose Claude Code version has
+// no record is checked inside the image: the image's claude as the
+// entrypoint of a docker run with the scratch folder mounted at its host
+// path, the login read-only, the image's flai as the MCP server on stdio,
+// and the permission arguments a story's claude gets; it passes, is
+// recorded with the image, and the scratch folder is removed.
+func TestAnImagesUncheckedClaudeCodeIsCheckedInsideIt(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	repo := lab.serveOn("harbour", harness.Container, "", "")
+	runs := lab.fakeDocker(true)
+	login := t.TempDir()
+	lab.checker.considerImage(context.Background(), lab.served[0].Root, lab.imageConfig(login), claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+
+	if len(*runs) != 1 {
+		t.Fatalf("docker ran %d times, want one check in the image; flai serve logged:\n%s", len(*runs), lab.logs.String())
+	}
+	if got := lab.calls(); len(got) != 0 {
+		t.Errorf("the host's claude ran as %v, want it left alone", got)
+	}
+	run := (*runs)[0]
+	scratch := filepath.Dir(run.dir)
+	joined := strings.Join(run.argv, "\n")
+	for _, want := range []string{
+		"docker\nrun\n--rm\n--user\n",
+		"-v\n" + scratch + ":" + scratch + "\n-w\n" + run.dir + "\n",
+		"-v\n" + login + ":" + harness.ContainerLogin + ":ro\n",
+		"-e\nFLAI_AGENT\n", "-e\nCLAUDE_CONFIG_DIR\n",
+		"--entrypoint\n" + harness.ImageClaude + "\n" + claudeLabImage + "\n-p\n",
+		"--model\nhaiku", "--permission-prompt-tool\n" + harness.PermissionPromptTool, "--permission-mode\nacceptEdits", "--strict-mcp-config",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("docker's arguments lack %q:\n%s", want, joined)
+		}
+	}
+	for i, a := range run.argv {
+		if a == "--mcp-config" && i+1 < len(run.argv) {
+			var mcp struct {
+				MCPServers map[string]struct {
+					Command string   `json:"command"`
+					Args    []string `json:"args"`
+				} `json:"mcpServers"`
+			}
+			if err := json.Unmarshal([]byte(run.argv[i+1]), &mcp); err != nil {
+				t.Fatal(err)
+			}
+			server := mcp.MCPServers["flai"]
+			if server.Command != harness.ImageFlai || strings.Join(server.Args, " ") != "--config "+filepath.Join(scratch, "config.json")+" mcp --agent "+claudeCheckAgent {
+				t.Errorf("the MCP server is %+v, want the image's flai on stdio with the scratch configuration", server)
+			}
+		}
+	}
+	env := strings.Join(run.env, "\n") + "\n"
+	for _, want := range []string{"FLAI_AGENT=" + claudeCheckAgent + "\n", "CLAUDE_CONFIG_DIR=" + filepath.Join(scratch, "claude") + "\n"} {
+		if !strings.Contains(env, want) {
+			t.Errorf("docker's environment lacks %q", want)
+		}
+	}
+	if run.link != harness.ContainerLogin+"/.credentials.json" {
+		t.Errorf("the check's Claude Code folder links the login to %q, want the login the container mounts", run.link)
+	}
+	rec, ok := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]
+	if !ok || rec.Outcome != ClaudeCheckPassed || rec.Image != claudeLabImage || rec.Program != harness.ImageClaude || rec.Checked == "" {
+		t.Fatalf("record %+v (found %v), want %s passed in %s through %s", rec, ok, claudeLabVersion, claudeLabImage, ClaudeCheckAnthropic)
+	}
+	if left, _ := os.ReadDir(lab.tmp); len(left) != 0 {
+		t.Errorf("the scratch folder is left behind: %v", left)
+	}
+	if n := len(threadsOf(t, repo)); n != 0 {
+		t.Errorf("a passed check opened %d threads", n)
+	}
+	logs := lab.logs.String()
+	for _, want := range []string{`msg="claude code check started"`, `msg="claude code check ended"`, "image=" + claudeLabImage, "outcome=passed"} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("the log lacks %s:\n%s", want, logs)
+		}
+	}
+}
+
+// S-0618: a check in an image that fails is recorded failed with the image
+// and Claude Code's error, and told on one thread to the project whose
+// container start asked for it, naming the image; another project hears
+// nothing, and it is not checked again.
+func TestAFailedCheckInAnImageIsToldToItsProjectNamingTheImage(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	repo := lab.serveOn("harbour", harness.Container, "", "")
+	other := lab.serve("quay", harness.ClaudeCode)
+	runs := lab.fakeDocker(false)
+	cfg := lab.imageConfig(t.TempDir())
+	lab.checker.considerImage(context.Background(), lab.served[0].Root, cfg, claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+
+	rec := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]
+	if rec.Outcome != ClaudeCheckFailed || rec.Image != claudeLabImage || !strings.Contains(rec.Error, "was not written") || !strings.Contains(rec.Error, claudeLabError) {
+		t.Fatalf("record %+v, want failed in %s with the stand-in's error", rec, claudeLabImage)
+	}
+	all := threadsOf(t, repo)
+	if len(all) != 1 {
+		t.Fatalf("%d threads on the project, want one", len(all))
+	}
+	if th := all[0]; th.Anchor.Path != manifest.File || !th.Open() || !strings.Contains(th.Title, claudeLabImage) || !strings.Contains(th.Body, "in the agent image "+claudeLabImage) || !strings.Contains(th.Body, claudeLabError) {
+		t.Errorf("thread %q, want one open on %s naming the image and quoting the error:\n%s", th.Title, manifest.File, th.Body)
+	}
+	if n := len(threadsOf(t, other)); n != 0 {
+		t.Errorf("%d threads on another project", n)
+	}
+	lab.checker.considerImage(context.Background(), lab.served[0].Root, cfg, claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+	if len(*runs) != 1 {
+		t.Errorf("docker ran %d times, want the failed version not checked again", len(*runs))
+	}
+}
+
+// S-0618, ADR-0106: a version with a record through the provider, from the
+// host's claude or from an image, whatever its outcome, is not checked in
+// an image; nor is one while a check runs.
+func TestARecordedVersionIsNotCheckedInAnImage(t *testing.T) {
+	for name, rec := range map[string]ClaudeCheck{
+		"host passed":  {Checked: "2026-10-01T00:00:00Z", Program: "/usr/bin/claude", Outcome: ClaudeCheckPassed},
+		"host failed":  {Checked: "2026-10-01T00:00:00Z", Program: "/usr/bin/claude", Outcome: ClaudeCheckFailed},
+		"image failed": {Checked: "2026-10-01T00:00:00Z", Program: harness.ImageClaude, Image: "other:local", Outcome: ClaudeCheckFailed},
+	} {
+		t.Run(name, func(t *testing.T) {
+			lab := newClaudeLab(t, false)
+			lab.serveOn("harbour", harness.Container, "", "")
+			runs := lab.fakeDocker(true)
+			if err := lab.o.Dir.recordClaudeCheck(claudeLabVersion, ClaudeCheckAnthropic, rec); err != nil {
+				t.Fatal(err)
+			}
+			lab.checker.considerImage(context.Background(), lab.served[0].Root, lab.imageConfig(t.TempDir()), claudeLabImage, claudeLabVersion, "")
+			lab.checker.wait()
+			if len(*runs) != 0 {
+				t.Errorf("docker ran %d times, want none", len(*runs))
+			}
+			if got := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]; got != rec {
+				t.Errorf("the record became %+v", got)
+			}
+		})
+	}
+	t.Run("while one runs", func(t *testing.T) {
+		lab := newClaudeLab(t, false)
+		lab.serveOn("harbour", harness.Container, "", "")
+		runs := lab.fakeDocker(true)
+		lab.checker.running = true
+		lab.checker.considerImage(context.Background(), lab.served[0].Root, lab.imageConfig(t.TempDir()), claudeLabImage, claudeLabVersion, "")
+		lab.checker.wait()
+		if len(*runs) != 0 {
+			t.Errorf("docker ran %d times while a check ran, want none", len(*runs))
+		}
+	})
+	t.Run("no version read", func(t *testing.T) {
+		lab := newClaudeLab(t, false)
+		lab.serveOn("harbour", harness.Container, "", "")
+		runs := lab.fakeDocker(true)
+		lab.checker.considerImage(context.Background(), lab.served[0].Root, lab.imageConfig(t.TempDir()), claudeLabImage, "", "")
+		lab.checker.wait()
+		if len(*runs) != 0 {
+			t.Errorf("docker ran %d times for an image whose version was not read, want none", len(*runs))
+		}
+	})
+}
+
+// S-0618: a check in an image through the provider the agent names is
+// recorded under it, and gives the container the provider's variables by
+// name alone: their values reach docker's environment, never its arguments.
+func TestAnImageCheckPassesTheProvidersVariablesByName(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	lab.serveOn("harbour", harness.Container, claudeLabGateway, "")
+	t.Setenv(claudeLabKeyEnv, "key-value-never-shown")
+	runs := lab.fakeDocker(true)
+	lab.checker.considerImage(context.Background(), lab.served[0].Root, lab.imageConfig(t.TempDir()), "flai-agent-harbour:local", claudeLabVersion, claudeLabGateway)
+	lab.checker.wait()
+
+	if len(*runs) != 1 {
+		t.Fatalf("docker ran %d times, want one; flai serve logged:\n%s", len(*runs), lab.logs.String())
+	}
+	run := (*runs)[0]
+	joined := strings.Join(run.argv, "\n")
+	if strings.Contains(joined, "key-value-never-shown") || strings.Contains(joined, claudeLabBaseURL) {
+		t.Errorf("a provider's value is in docker's arguments:\n%s", joined)
+	}
+	env := strings.Join(run.env, "\n")
+	for _, want := range []string{"ANTHROPIC_BASE_URL=" + claudeLabBaseURL, "ANTHROPIC_DEFAULT_HAIKU_MODEL=" + claudeLabHaiku, "=key-value-never-shown"} {
+		if !strings.Contains(env, want) {
+			t.Errorf("docker's environment lacks %q", want)
+		}
+	}
+	if !strings.Contains(joined, "-e\nANTHROPIC_BASE_URL\n") {
+		t.Errorf("the container is not given ANTHROPIC_BASE_URL by name:\n%s", joined)
+	}
+	if rec := lab.records()[claudeLabVersion][claudeLabGateway]; rec.Outcome != ClaudeCheckPassed || rec.Image != "flai-agent-harbour:local" {
+		t.Errorf("record %+v, want passed through %s in the project's layer image", rec, claudeLabGateway)
 	}
 }

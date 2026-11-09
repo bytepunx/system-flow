@@ -526,3 +526,64 @@ func TestTheContainersNameAndCacheAreTheStorys(t *testing.T) {
 		t.Errorf("cache %q", got)
 	}
 }
+
+// S-0618: the docker run of a check in an image runs the image's claude as
+// its entrypoint, as the user, on the host's network, with the scratch
+// folder mounted at its host path as the working directory's parent, the
+// login read-only, and the variables by name alone, then the claude
+// arguments, and nothing else.
+func TestClaudeCodeImageCheckRunsTheImagesClaudeOverTheScratchFolder(t *testing.T) {
+	scratch := t.TempDir()
+	workdir := filepath.Join(scratch, "project")
+	login := t.TempDir()
+	argv, err := harness.ClaudeCodeImageCheck(harness.Host{Program: "podman", Network: "none", Login: login}, "img:local", scratch, workdir, []string{"FLAI_AGENT", "GATEWAY_KEY"}, []string{"-p", "write it"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
+	want := []string{"podman", "run", "--rm", "--user", user, "--network", "none", "--add-host", "host.docker.internal:host-gateway",
+		"-v", scratch + ":" + scratch, "-w", workdir, "-v", login + ":" + harness.ContainerLogin + ":ro",
+		"-e", "FLAI_AGENT", "-e", "GATEWAY_KEY", "--entrypoint", harness.ImageClaude, "img:local", "-p", "write it"}
+	if !slices.Equal(argv, want) {
+		t.Errorf("argv\n%q\nwant\n%q", argv, want)
+	}
+	// docker and bridge when the host names neither
+	argv, err = harness.ClaudeCodeImageCheck(harness.Host{Login: login}, "img:local", scratch, scratch, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if argv[0] != "docker" || !slices.Contains(argv, "bridge") {
+		t.Errorf("argv %q, want docker on the bridge network", argv)
+	}
+}
+
+// S-0618: the check's docker run refuses what a story's container refuses,
+// each saying what to do.
+func TestClaudeCodeImageCheckRefusesWhatAContainerCannotRun(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	scratch := t.TempDir()
+	login := t.TempDir()
+	for name, c := range map[string]struct {
+		host             harness.Host
+		image, dir, work string
+		names            []string
+		want             string
+	}{
+		"operator's arguments": {harness.Host{Login: login, Args: []string{"--privileged"}}, "img", scratch, scratch, nil, "takes no arguments"},
+		"no image":             {harness.Host{Login: login}, "", scratch, scratch, nil, "no image is set"},
+		"no login":             {harness.Host{}, "img", scratch, scratch, nil, "--login <path>"},
+		"the home as login":    {harness.Host{Login: home}, "img", scratch, scratch, nil, "which a container never mounts"},
+		"a relative folder":    {harness.Host{Login: login}, "img", "scratch", "scratch", nil, "not an absolute path"},
+		"outside the folder":   {harness.Host{Login: login}, "img", scratch, filepath.Dir(scratch), nil, "is not below its folder"},
+		"a colon":              {harness.Host{Login: login}, "img", scratch + ":x", scratch + ":x", nil, "holds a colon"},
+		"a value for a name":   {harness.Host{Login: login}, "img", scratch, scratch, []string{"KEY=value"}, "is not a variable's name"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := harness.ClaudeCodeImageCheck(c.host, c.image, c.dir, c.work, c.names, nil)
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("err %v, want one saying %q", err, c.want)
+			}
+		})
+	}
+}

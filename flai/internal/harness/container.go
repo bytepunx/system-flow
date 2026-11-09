@@ -326,17 +326,74 @@ func pilotStdin(pr Request) ([]byte, error) {
 // the user, on the host's network, bridge when the host names none, and with
 // the host reachable as host.docker.internal.
 func dockerRun(host Host, name string) []string {
+	program, rest := dockerUser(host)
+	return append([]string{program, "run", "--rm", "-i", "--name", name}, rest...)
+}
+
+// dockerUser is the host's container program, docker when it names none, and
+// the arguments of its run that make the container the user's, on the host's
+// network, bridge when it names none, with the host reachable as
+// host.docker.internal.
+func dockerUser(host Host) (program string, args []string) {
 	network := host.Network
 	if network == "" {
 		network = "bridge"
 	}
-	program := host.Program
+	program = host.Program
 	if program == "" {
 		program = "docker"
 	}
-	return []string{program, "run", "--rm", "-i", "--name", name,
-		"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
+	return program, []string{"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
 		"--network", network, "--add-host", "host.docker.internal:host-gateway"}
+}
+
+// ImageClaude and ImageFlai are the claude and the flai an agent image
+// holds: the claude-code image's claude on its PATH, and the flai the
+// bedrock image every agent image is built over ships (ADR-0212).
+const (
+	ImageClaude = "claude"
+	ImageFlai   = "/usr/local/bin/flai"
+)
+
+// ClaudeCodeImageCheck is the docker run of ADR-0106's check of the Claude
+// Code image holds (S-0618): image's claude as the entrypoint, with args,
+// in a container removed when it ends, as the user, on the host's network,
+// as a story's container is (dockerUser); scratch, the check's temporary
+// folder, mounted read-write at its host path with workdir below it the
+// working directory, and the operator's login read-only at ContainerLogin,
+// and nothing else; and each of names passed by name alone, its value in
+// the docker client's environment. It refuses the operator's arguments, as
+// Start does, an image or a login the host does not name, a login a
+// container never mounts, a path a mount cannot carry, a working directory
+// outside scratch, and a name that is not a variable's.
+func ClaudeCodeImageCheck(host Host, image, scratch, workdir string, names, args []string) ([]string, error) {
+	switch {
+	case len(host.Args) > 0:
+		return nil, fmt.Errorf("the container harness takes no arguments of the operator's, since its mounts and variables are fixed: clear them, and set its image, network, and login with flai serve agent harness container")
+	case image == "":
+		return nil, fmt.Errorf("no image is set for the inner harness %s: set one with flai serve agent harness container --image %s=<image>", ClaudeCode, ClaudeCode)
+	case host.Login == "":
+		return nil, fmt.Errorf("the inner harness %s signs in from the operator's login, and the host names none: set it with flai serve agent harness container --login <path>", ClaudeCode)
+	case !filepath.IsAbs(scratch):
+		return nil, fmt.Errorf("the check's folder %q is not an absolute path, which a mount needs", scratch)
+	}
+	if rel, err := filepath.Rel(scratch, workdir); err != nil || !filepath.IsLocal(rel) {
+		return nil, fmt.Errorf("the check's working directory %s is not below its folder %s, the one the container mounts", workdir, scratch)
+	}
+	if err := mountable(scratch, scratch, workdir, host.Login); err != nil {
+		return nil, err
+	}
+	program, user := dockerUser(host)
+	argv := append([]string{program, "run", "--rm"}, user...)
+	argv = append(argv, "-v", scratch+":"+scratch, "-w", workdir, "-v", host.Login+":"+ContainerLogin+":ro")
+	for _, name := range names {
+		if !envName.MatchString(name) {
+			return nil, fmt.Errorf("%q is not a variable's name, which the check's container is passed by name: name it with letters, digits, and underscores", name)
+		}
+		argv = append(argv, "-e", name)
+	}
+	argv = append(argv, "--entrypoint", ImageClaude, image)
+	return append(argv, args...), nil
 }
 
 // containerStart is the Start of argv, docker's run with its mounts, after

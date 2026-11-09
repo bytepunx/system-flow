@@ -49,6 +49,19 @@ import (
 // key's variable is unset or empty is not checked, and nothing is recorded
 // for it; a failure is told to the projects that name the provider it ran
 // through.
+//
+// A claude-code agent on the container harness runs the Claude Code its
+// image holds, not the host's (S-0618). When a container start reads from
+// the image a version that has no record through the provider the agent
+// names, the same check is made inside the image, beside the start: the
+// image's claude, in a docker run of the image with the scratch folder
+// mounted at its host path, the operator's login, and the network and the
+// provider's variables a story's container gets, with the image's own flai
+// as its MCP server on stdio against the scratch configuration. Stdio,
+// because over HTTP permission_prompt auto-approves only the agent flai
+// serve runs for the story (ADR-0243), which a scratch project has none of.
+// Its record names the image, and a failure is told to the project whose
+// agent's start read the version.
 
 // Outcomes of a check of a Claude Code version.
 const (
@@ -63,7 +76,8 @@ const ClaudeCheckAnthropic = "anthropic"
 // ClaudeCheck is this host's record of checking one Claude Code version.
 type ClaudeCheck struct {
 	Checked string `json:"checked"`         // when, RFC 3339
-	Program string `json:"program"`         // the claude that was run, symbolic links followed
+	Program string `json:"program"`         // the claude that was run, symbolic links followed; the image's, for a check in an image
+	Image   string `json:"image,omitempty"` // the agent image the check ran in, none for the host's claude
 	Outcome string `json:"outcome"`         // ClaudeCheckPassed or ClaudeCheckFailed
 	Error   string `json:"error,omitempty"` // what went wrong and what Claude Code said, on a failure
 }
@@ -144,8 +158,7 @@ func (d Dir) recordClaudeCheck(version, provider string, c ClaudeCheck) error {
 }
 
 // claudePassed says whether this host has a passed check of Claude Code
-// version through any provider: what a container's Claude Code is held to,
-// whose check in its image flai serve does not make (S-0508).
+// version through any provider, on the host or in an image.
 func (d Dir) claudePassed(version string) (bool, error) {
 	all, err := d.claudeChecks()
 	if err != nil {
@@ -178,10 +191,15 @@ type claudeChecker struct {
 	seen    string          // programIdentity of the claude last checked or found checked
 	through map[string]bool // the providers, by the name a default agent gives, the claude seen was checked or found checked through
 	wg      sync.WaitGroup
+
+	// runImage runs the docker client's argv of a check in an image, in dir
+	// with env its whole environment, and returns what it printed:
+	// runClaudeWith, which tests replace with a stand-in for docker.
+	runImage func(ctx context.Context, dir string, argv, env []string) (string, error)
 }
 
 func newClaudeChecker(o Options, served func() []Entry) *claudeChecker {
-	return &claudeChecker{o: o, served: served}
+	return &claudeChecker{o: o, served: served, runImage: runClaudeWith}
 }
 
 // consider starts a check in the background when the project at root may
@@ -283,19 +301,152 @@ func (c *claudeChecker) check(ctx context.Context, host harness.Host, cfg AgentC
 		c.o.Logger.Warn("claude code not checked", "component", "serve", "version", version, "provider", through, "err", err.Error())
 		return
 	}
-	rec := ClaudeCheck{Checked: c.o.Now().UTC().Format(time.RFC3339), Program: program, Outcome: ClaudeCheckPassed}
+	c.conclude(version, program, provider, "", root, why)
+}
+
+// conclude records the outcome of a check of version, run as program in
+// image, none for the host's claude, through provider for the project at
+// root, a pass when why is empty and a failure for why otherwise, logs it,
+// and tells a failure.
+func (c *claudeChecker) conclude(version, program, provider, image, root, why string) {
+	through := checkedThrough(provider)
+	rec := ClaudeCheck{Checked: c.o.Now().UTC().Format(time.RFC3339), Program: program, Image: image, Outcome: ClaudeCheckPassed}
 	if why != "" {
 		rec.Outcome, rec.Error = ClaudeCheckFailed, why
 	}
+	fields := []any{"component", "serve", "version", version, "provider", through}
+	if image != "" {
+		fields = append(fields, "image", image)
+	}
 	if err := c.o.Dir.recordClaudeCheck(version, through, rec); err != nil {
-		c.o.Logger.Warn("claude code check not recorded", "component", "serve", "version", version, "provider", through, "file", c.o.Dir.claudeChecksFile(), "err", err.Error())
+		c.o.Logger.Warn("claude code check not recorded", append(fields, "file", c.o.Dir.claudeChecksFile(), "err", err.Error())...)
 	}
 	if rec.Outcome == ClaudeCheckPassed {
-		c.o.Logger.Info("claude code check ended", "component", "serve", "version", version, "provider", through, "outcome", rec.Outcome)
+		c.o.Logger.Info("claude code check ended", append(fields, "outcome", rec.Outcome)...)
 		return
 	}
-	c.o.Logger.Warn("claude code check ended", "component", "serve", "version", version, "provider", through, "outcome", rec.Outcome, "err", rec.Error)
-	c.tell(version, program, provider, rec.Error)
+	c.o.Logger.Warn("claude code check ended", append(fields, "outcome", rec.Outcome, "err", rec.Error)...)
+	c.tell(version, program, provider, image, root, rec.Error)
+}
+
+// considerImage starts in the background the check of the Claude Code
+// version image holds, as a container start of a claude-code agent of the
+// project at root read it, through provider, the one the agent's start
+// names, "" for none (S-0618). It starts none when version has a record
+// through provider, from the host or from an image, whatever its outcome,
+// or while a check runs, the host's or an image's, and never waits for the
+// one it starts: the next container start considers it again.
+func (c *claudeChecker) considerImage(ctx context.Context, root string, cfg AgentConfig, image, version, provider string) {
+	if image == "" || version == "" {
+		return
+	}
+	through := checkedThrough(provider)
+	checks, err := c.o.Dir.claudeChecks()
+	if err != nil {
+		c.o.Logger.Warn("claude code checks unreadable", "component", "serve", "version", version, "image", image, "err", err.Error())
+		return
+	}
+	if _, done := checks[version][through]; done {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.running {
+		return
+	}
+	c.running = true
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		defer func() {
+			c.mu.Lock()
+			c.running = false
+			c.mu.Unlock()
+		}()
+		c.checkImage(ctx, cfg, root, image, version, provider)
+	}()
+}
+
+// checkImage checks the Claude Code version image holds inside the image,
+// through provider for the project at root, unless a record of it through
+// provider was made meanwhile, records the outcome with the image, and
+// tells a failure to that project.
+func (c *claudeChecker) checkImage(ctx context.Context, cfg AgentConfig, root, image, version, provider string) {
+	through := checkedThrough(provider)
+	checks, err := c.o.Dir.claudeChecks()
+	if err != nil {
+		c.o.Logger.Warn("claude code checks unreadable", "component", "serve", "version", version, "image", image, "err", err.Error())
+		return
+	}
+	if _, done := checks[version][through]; done {
+		return
+	}
+	env, unset, err := providerEnv(cfg, root, provider, os.LookupEnv)
+	if err != nil {
+		c.o.Logger.Warn("claude code not checked", "component", "serve", "version", version, "provider", through, "image", image, "err", err.Error())
+		return
+	}
+	if unset != "" {
+		c.o.Logger.Warn("claude code check skipped", "component", "serve", "version", version, "provider", through, "image", image,
+			"reason", fmt.Sprintf("provider %[1]s's key is read from %[2]s, which is unset or empty in flai serve's environment: set %[2]s in the environment flai host or flai serve runs in, and restart flai serve to check Claude Code %[3]s through %[1]s", provider, unset, version))
+		return
+	}
+	c.o.Logger.Info("claude code check started", "component", "serve", "version", version, "provider", through, "image", image)
+	why, err := c.runInImage(ctx, cfg, image, version, env)
+	if ctx.Err() != nil {
+		c.o.Logger.Info("claude code check stopped", "component", "serve", "version", version, "provider", through, "image", image)
+		return
+	}
+	if err != nil {
+		c.o.Logger.Warn("claude code not checked", "component", "serve", "version", version, "provider", through, "image", image, "err", err.Error())
+		return
+	}
+	c.conclude(version, harness.ImageClaude, provider, image, root, why)
+}
+
+// runInImage makes the check inside image, in a scratch project it removes
+// afterwards: the image's claude, with the permission arguments pilot
+// starts a story's claude with, and the image's flai on stdio as its MCP
+// server, in a docker run of the image the container harness's host says
+// how to make (harness.ClaudeCodeImageCheck), with env, the provider's
+// variables, passed by name. Claude Code keeps its configuration in the
+// scratch folder, with the login linked in as a story's container has it.
+// It says why the check failed, "" when it passed, and errs only when the
+// check could not be made.
+func (c *claudeChecker) runInImage(ctx context.Context, cfg AgentConfig, image, version string, env []string) (string, error) {
+	s, err := newClaudeScratch(gitOf(c.o), c.o.Now(), nil)
+	if err != nil {
+		return "", fmt.Errorf("the scratch project could not be made: %w", err)
+	}
+	defer func() { _ = os.RemoveAll(s.dir) }()
+	claudeDir := filepath.Join(s.dir, "claude")
+	if err := os.MkdirAll(claudeDir, 0o700); err != nil {
+		return "", fmt.Errorf("make the check's Claude Code folder %s: %w", claudeDir, err)
+	}
+	if err := os.Symlink(harness.ContainerLogin+"/.credentials.json", filepath.Join(claudeDir, ".credentials.json")); err != nil {
+		return "", fmt.Errorf("link the check's Claude Code folder %s to the login the container mounts: %w", claudeDir, err)
+	}
+	want := claudeCheckContent(version)
+	inner, err := harness.ClaudeCodeCheck(harness.ClaudeCodeHost(harness.Host{Program: harness.ImageClaude}), harness.ImageFlai,
+		[]string{"--config", s.config, "mcp", "--agent", claudeCheckAgent}, claudeCheckModel, claudeCheckPrompt(s.target, want))
+	if err != nil {
+		return "", err
+	}
+	vars := append([]string{"FLAI_AGENT=" + claudeCheckAgent, "FLAI_STARTED_BY=flai-serve", "CLAUDE_CONFIG_DIR=" + claudeDir}, env...)
+	var names []string
+	for _, kv := range vars {
+		if name, _, _ := strings.Cut(kv, "="); !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	host := cfg.host(harness.Container)
+	host.Program = containerProgram(cfg)
+	argv, err := harness.ClaudeCodeImageCheck(host, image, s.dir, s.root, names, inner[1:])
+	if err != nil {
+		return "", err
+	}
+	out, runErr := c.runImage(ctx, s.root, argv, append(agentEnv(os.Environ()), vars...))
+	return claudeVerdict(s, want, out, runErr), nil
 }
 
 // providerEnv is what the check's claude is given, over an agent's
@@ -374,18 +525,29 @@ func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, versio
 	}
 	defer func() { _ = os.RemoveAll(s.dir) }()
 	want := claudeCheckContent(version)
-	prompt := fmt.Sprintf("This is flai's check that Claude Code's permission prompt tool works. Use the Write tool once to create the file %s with exactly this content, on one line: %s\nUse no other tool, and do not read the file first.", s.target, want)
-	argv, err := harness.ClaudeCodeCheck(host, flai, []string{"--config", s.config, "mcp", "--agent", claudeCheckAgent}, claudeCheckModel, prompt)
+	argv, err := harness.ClaudeCodeCheck(host, flai, []string{"--config", s.config, "mcp", "--agent", claudeCheckAgent}, claudeCheckModel, claudeCheckPrompt(s.target, want))
 	if err != nil {
 		return "", err
 	}
 	out, runErr := runClaude(ctx, s.root, argv, env)
+	return claudeVerdict(s, want, out, runErr), nil
+}
+
+// claudeCheckPrompt asks claude to Write want to target and do nothing else.
+func claudeCheckPrompt(target, want string) string {
+	return fmt.Sprintf("This is flai's check that Claude Code's permission prompt tool works. Use the Write tool once to create the file %s with exactly this content, on one line: %s\nUse no other tool, and do not read the file first.", target, want)
+}
+
+// claudeVerdict says why the check in s failed, from what its target holds
+// against want, and what claude printed, out, and how its run ended, runErr;
+// "" when the target holds want.
+func claudeVerdict(s claudeScratch, want, out string, runErr error) string {
 	rel := filepath.Join(".flai-cache", "worktrees", s.story, filepath.FromSlash(claudeCheckFile))
 	got, readErr := os.ReadFile(s.target)
 	var verdict string
 	switch {
 	case readErr == nil && strings.TrimSpace(string(got)) == want:
-		return "", nil
+		return ""
 	case readErr == nil:
 		verdict = fmt.Sprintf("%s holds %q, not %q", rel, strings.TrimSpace(string(got)), want)
 	default:
@@ -397,7 +559,7 @@ func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, versio
 	if said := claudeSaid(out); said != "" {
 		verdict += "\n" + said
 	}
-	return verdict, nil
+	return verdict
 }
 
 // runClaude runs argv in dir, as an agent's environment has it with env laid
@@ -559,18 +721,28 @@ func newClaudeScratch(git execx.Runner, now time.Time, files map[string]string) 
 // tell opens a thread to the operator on the manifest of every served
 // project whose agents run claude-code and whose default agent names
 // provider, "" for none, the one the check ran through, quoting why it
-// failed: a project on another provider was not what failed.
-func (c *claudeChecker) tell(version, program, provider, why string) {
+// failed: a project on another provider was not what failed. A check in
+// image, which a container start of the project at root asked for, is told
+// to that project alone, naming the image.
+func (c *claudeChecker) tell(version, program, provider, image, root, why string) {
 	through := checkedThrough(provider)
 	fence := "```"
 	for strings.Contains(why, fence) {
 		fence += "`"
 	}
-	text := fmt.Sprintf("flai serve checked Claude Code %[1]s (%[2]s) through %[3]s against permission_prompt (ADR-0106), and it failed. A headless claude -p in a scratch project, with auto-approve on and the permission arguments a story's agent gets, was asked to Write %[4]s in an in-progress story's worktree. What went wrong, and what Claude Code said:\n\n%[5]stext\n%[6]s\n%[5]s\n\n"+
-		"Until this is fixed, writes to the paths Claude Code protects (.claude/, .mcp.json, and the rest ADR-0106 lists) will not go through permission_prompt: an agent's write to one is refused. The agents still run, and a story that writes no protected path is not held up. flai does not check %[1]s through %[3]s again; to check it again, remove the %[3]s entry under %[1]s from %[7]s.",
-		version, program, through, claudeCheckFile, fence, why, c.o.Dir.claudeChecksFile())
+	what, title := fmt.Sprintf("Claude Code %s (%s)", version, program), fmt.Sprintf("Claude Code %s through %s fails flai's permission_prompt check", version, through)
+	if image != "" {
+		what, title = fmt.Sprintf("Claude Code %s in the agent image %s", version, image), fmt.Sprintf("Claude Code %s in %s through %s fails flai's permission_prompt check", version, image, through)
+	}
+	text := fmt.Sprintf("flai serve checked %[1]s through %[3]s against permission_prompt (ADR-0106), and it failed. A headless claude -p in a scratch project, with auto-approve on and the permission arguments a story's agent gets, was asked to Write %[4]s in an in-progress story's worktree. What went wrong, and what Claude Code said:\n\n%[5]stext\n%[6]s\n%[5]s\n\n"+
+		"Until this is fixed, writes to the paths Claude Code protects (.claude/, .mcp.json, and the rest ADR-0106 lists) will not go through permission_prompt: an agent's write to one is refused. The agents still run, and a story that writes no protected path is not held up. flai does not check %[2]s through %[3]s again; to check it again, remove the %[3]s entry under %[2]s from %[7]s.",
+		what, version, through, claudeCheckFile, fence, why, c.o.Dir.claudeChecksFile())
 	for _, e := range c.served() {
-		if named, uses := claudeCodeProject(e.Root); !uses || named != provider {
+		if image != "" {
+			if e.Root != root {
+				continue
+			}
+		} else if named, uses := claudeCodeProject(e.Root); !uses || named != provider {
 			continue
 		}
 		repo, err := workitem.Open(e.Root)
@@ -578,7 +750,7 @@ func (c *claudeChecker) tell(version, program, provider, why string) {
 			c.o.Logger.Warn("claude code check not told", "component", "serve", "project", e.Key, "version", version, "provider", through, "err", err.Error())
 			continue
 		}
-		th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Claude Code %s through %s fails flai's permission_prompt check", version, through), On: manifest.File, Author: claudeCheckAuthor, Text: text, Now: c.o.Now()})
+		th, err := threads.New(repo, threads.NewOptions{Title: title, On: manifest.File, Author: claudeCheckAuthor, Text: text, Now: c.o.Now()})
 		if err != nil {
 			c.o.Logger.Warn("claude code check not told", "component", "serve", "project", e.Key, "version", version, "provider", through, "err", err.Error())
 			continue
