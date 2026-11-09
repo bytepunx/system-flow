@@ -1716,6 +1716,11 @@ type TestTier struct {
 	// when one matches the story's touches or changed paths, rather than
 	// leave it to the batch alone (S-0547). Allowed only beside Queue.
 	When []string `yaml:"when,omitempty" json:"when,omitempty"`
+	// Parallel lets the tier start beside the tiers before it that are marked
+	// Parallel too: it waits only for the unmarked tiers before it in the
+	// list, while an unmarked tier waits for every tier before it (S-0610).
+	// The verdict is a serial run's. It takes no Manual.
+	Parallel bool `yaml:"parallel,omitempty" json:"parallel,omitempty"`
 }
 
 // The placeholders a tier's command may hold, each as an argument of its own.
@@ -1859,6 +1864,9 @@ func (m Manifest) TestErrors() []string {
 		}
 		if t.Manual && len(t.FixCommand) > 0 {
 			errs = append(errs, at("manual")+" is true with fix_command, but a fix runs for the paths a commit changes, which never select a manual tier; remove fix_command, or manual")
+		}
+		if t.Manual && t.Parallel {
+			errs = append(errs, at("manual")+" is true with parallel, but a manual tier runs alone, by its name, with no tier to run beside; remove parallel, or manual")
 		}
 		if len(t.When) > 0 && !t.Queue {
 			errs = append(errs, at("when")+" is set on a tier without queue: true; when only chooses when a queue tier also runs in the close-out, so set queue: true or remove when")

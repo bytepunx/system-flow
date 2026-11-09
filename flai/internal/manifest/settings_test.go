@@ -1058,6 +1058,33 @@ func TestEditSettingsWritesManual(t *testing.T) {
 	}
 }
 
+// S-0610: a tier's parallel is written, read back, and makes two tiers
+// differ.
+func TestEditSettingsWritesParallel(t *testing.T) {
+	value := `[{"name":"integration","command":["scripts/integration.sh"],"all_only":true,"parallel":true}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: integration\n" +
+		"    command: [scripts/integration.sh]\n" +
+		"    all_only: true\n" +
+		"    parallel: true\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 1 || !m.Tests[0].Parallel {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	serial := slices.Clone(m.Tests)
+	serial[0].Parallel = false
+	if sameTiers(m.Tests, serial) {
+		t.Error("tiers that differ in parallel are the same")
+	}
+}
+
 // S-0273: a value that is not a list of tiers, and a tier the manifest's
 // validation refuses, are refused with the field and the reason, and nothing
 // is written.

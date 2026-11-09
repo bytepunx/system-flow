@@ -33,6 +33,7 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
     command: [scripts/integration.sh]
     format: plain
     all_only: true
+    # parallel: true # start beside the other parallel tiers before it once the unmarked tiers before it pass; mark only tiers that write nothing another reads (ADR-0266)
   - name: smoke
     command: [scripts/smoke.sh]
     format: plain

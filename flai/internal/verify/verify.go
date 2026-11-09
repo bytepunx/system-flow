@@ -73,6 +73,9 @@ type Tier struct {
 	// merge queue can batch, have a story's close-out run a Queue tier
 	// rather than leave it to the batch (S-0547).
 	When []string `json:"when,omitempty"`
+	// Parallel lets the tier start once the tiers before it that are not
+	// Parallel have ended, beside the Parallel ones before it (S-0610).
+	Parallel bool `json:"parallel,omitempty"`
 }
 
 // Finding is one failure a tier's output names.

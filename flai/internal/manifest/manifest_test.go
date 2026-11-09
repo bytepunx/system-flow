@@ -1705,7 +1705,7 @@ func TestDesignStylesheet(t *testing.T) {
 }
 
 // S-0273: tests is an ordered list of tiers that loads with every field,
-// queue (S-0405) and manual (S-0548) among them, reads back the same through
+// queue (S-0405), manual (S-0548), and parallel (S-0610) among them, reads back the same through
 // YAML and JSON, and is valid.
 func TestTestsRoundTrip(t *testing.T) {
 	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
@@ -1721,6 +1721,7 @@ func TestTestsRoundTrip(t *testing.T) {
 		"  command: [scripts/smoke.sh]\n" +
 		"  all_only: true\n" +
 		"  queue: true\n" +
+		"  parallel: true\n" +
 		"- name: gateway\n" +
 		"  command: [scripts/gateway-smoke.sh]\n" +
 		"  manual: true\n"
@@ -1729,7 +1730,7 @@ func TestTestsRoundTrip(t *testing.T) {
 		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
 			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."},
 			FixCommand: []string{"gofmt", "-w", PlaceholderFiles}},
-		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true},
+		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true, Parallel: true},
 		{Name: "gateway", Command: []string{"scripts/gateway-smoke.sh"}, Manual: true},
 	}
 	if !reflect.DeepEqual(m.Tests, want) {
@@ -1757,7 +1758,7 @@ func TestTestsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
 		t.Errorf("JSON round trip: %v\n%s", err, js)
 	}
-	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) || !strings.Contains(string(js), `"manual":true`) {
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) || !strings.Contains(string(js), `"manual":true`) || !strings.Contains(string(js), `"parallel":true`) {
 		t.Errorf("JSON keys are not snake_case: %s", js)
 	}
 }
@@ -1837,6 +1838,8 @@ func TestTestErrors(t *testing.T) {
 		// S-0548: the batch never runs a manual tier, so one cannot be queued.
 		{"manual and queued", []TestTier{with(func(x *TestTier) { x.Manual, x.Queue = true, true })}, `tests[0].manual (tier "unit") is true with queue, but the merge queue's batch never runs a manual tier`},
 		{"manual with a fix", []TestTier{with(func(x *TestTier) { x.Manual, x.FixCommand = true, []string{"gofmt", "-w", "{files}"} })}, `tests[0].manual (tier "unit") is true with fix_command`},
+		// S-0610: a manual tier runs alone, so it has nothing to run beside.
+		{"manual and parallel", []TestTier{with(func(x *TestTier) { x.Manual, x.Parallel = true, true })}, `tests[0].manual (tier "unit") is true with parallel, but a manual tier runs alone`},
 		{"no paths names manual", []TestTier{with(func(x *TestTier) { x.Paths = nil })}, "or manual for one that runs only by its name"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -1864,6 +1867,9 @@ func TestTestErrors(t *testing.T) {
 		// S-0548: a manual tier needs no paths, and may have them.
 		with(func(x *TestTier) { x.Paths, x.Manual = nil, true }),
 		with(func(x *TestTier) { x.Manual = true }),
+		// S-0610: parallel is accepted on any tier but a manual one.
+		with(func(x *TestTier) { x.Parallel = true }),
+		with(func(x *TestTier) { x.Parallel, x.Paths, x.AllOnly, x.Queue = true, nil, true, true }),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)

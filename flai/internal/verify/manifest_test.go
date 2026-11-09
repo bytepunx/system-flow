@@ -31,18 +31,18 @@ func checkout(t *testing.T, tests string, files ...string) string {
 }
 
 // S-0273: the manifest's tiers reach a run as declared, the format
-// defaulted to plain, covers (S-0342), queue (S-0405), and when (S-0547)
-// copied; with no tests key the default tier runs scripts/test.sh; tiers
-// that are not valid are refused with what to fix.
+// defaulted to plain, covers (S-0342), queue (S-0405), when (S-0547), and
+// parallel (S-0610) copied; with no tests key the default tier runs
+// scripts/test.sh; tiers that are not valid are refused with what to fix.
 func TestCheckoutTiers(t *testing.T) {
-	root := checkout(t, "tests:\n  - name: unit\n    command: [go, test, \"{packages}\"]\n    dir: flai\n    paths: [\"flai/**\", \"!flai/testdata/**\"]\n    format: go-test-json\n  - name: smoke\n    command: [scripts/smoke.sh]\n    all_only: true\n    covers: [unit]\n    queue: true\n    when: [\"flai/internal/serve/**\"]\n")
+	root := checkout(t, "tests:\n  - name: unit\n    command: [go, test, \"{packages}\"]\n    dir: flai\n    paths: [\"flai/**\", \"!flai/testdata/**\"]\n    format: go-test-json\n  - name: smoke\n    command: [scripts/smoke.sh]\n    all_only: true\n    covers: [unit]\n    queue: true\n    when: [\"flai/internal/serve/**\"]\n    parallel: true\n")
 	got, err := CheckoutTiers(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []Tier{
 		{Name: "unit", Command: []string{"go", "test", "{packages}"}, Dir: "flai", Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON},
-		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, Format: FormatPlain, AllOnly: true, Covers: []string{"unit"}, Queue: true, When: []string{"flai/internal/serve/**"}},
+		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, Format: FormatPlain, AllOnly: true, Covers: []string{"unit"}, Queue: true, When: []string{"flai/internal/serve/**"}, Parallel: true},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("tiers:\n got %+v\nwant %+v", got, want)

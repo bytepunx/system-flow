@@ -28,6 +28,7 @@ func FromManifest(tiers []manifest.TestTier) []Tier {
 			Queue:      t.Queue,
 			Manual:     t.Manual,
 			When:       slices.Clone(t.When),
+			Parallel:   t.Parallel,
 		})
 	}
 	return out
