@@ -3,10 +3,10 @@ id: S-0626
 type: story
 nature: improvement
 title: Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:21Z
-updated: 2026-11-09T17:46:51Z
+updated: 2026-11-09T21:23:03Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:42Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T17:46:51Z
     by: agent-S-0626
+  - to: done
+    at: 2026-11-09T21:23:03Z
+    by: alex
 tags: [design, docs, flaiover]
 topics: [documentation]
 touches: [design/system/flaiover-dashboard.md, flaiover/src/lib/server/design-routes.test.ts, design/conventions/telemetry.md, design/conventions/code-quality.md, design/system/metrics.md, design/system/dashboard-host-channel.md, design/tech/node.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/issues/I-0293-design-documents-describe-a-conventions-page-a-streams-page-a-mounted.md, design/issues/summary.md, design/issues/I-0322-a-change-to-flaiover-dashboard-md-alone-selects-no-vitest-tier-so-design-routes.md]
