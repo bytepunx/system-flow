@@ -6,7 +6,7 @@ title: Publish what is accepted and not yet released
 status: in-progress
 owner: alex
 created: 2026-11-08T01:14:12Z
-updated: 2026-11-09T11:23:00Z
+updated: 2026-11-09T11:24:16Z
 transitions:
   - to: ready
     at: 2026-11-08T01:15:24Z
@@ -22,19 +22,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 55
+  seconds: 74
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-09
-      work: 12
+      work: 14
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 238
-      cache_read: 1241925
-      cache_write: 138492
-      cost: 0.5034
+      input: 30
+      output: 250
+      cache_read: 1549887
+      cache_write: 142796
+      cost: 0.6172
   strategic:
     - kind: orchestrator
       seconds: 666
@@ -62,9 +62,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2694 Fetch the remote's branch and tags

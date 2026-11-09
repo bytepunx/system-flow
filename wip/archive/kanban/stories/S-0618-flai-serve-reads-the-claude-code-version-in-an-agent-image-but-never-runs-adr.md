@@ -3,10 +3,10 @@ id: S-0618
 type: story
 nature: remediation
 title: flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:39:32Z
-updated: 2026-11-09T11:22:56Z
+updated: 2026-11-09T11:24:26Z
 transitions:
   - to: ready
     at: 2026-11-09T10:51:10Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T11:22:56Z
     by: agent-S-0618
+  - to: done
+    at: 2026-11-09T11:24:26Z
+    by: orchestrator
 tags: [flai, serve, container, claude-code]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md, design/issues/summary.md]
 agent:
@@ -129,3 +132,12 @@ Figures:
 - Forecast: flai forecast said 26m, from 104 s per unit over 58 done large remediation stories, size 15. Raised to 2h. The story adds a new docker path, fake-docker tests in two packages, and four documents, and its close-out alone has taken about 8 to 10 minutes today (S-0608, S-0610, S-0616).
 - Cost of delay: 25 USD a week, as flai cod works it out from flai's input, 10m lost per 168h cycle at 150 USD an hour. Left as it is: one occurrence, and no container agent hung on it yet.
 - `after`: none. The story reads no output of another open story. S-0629 (I-0296, a usage-limit refusal recorded as a failed check) may change `claudecheck.go` too; a trial merge judges that overlap, not an `after`.
+
+### Accepted by the orchestrator
+
+- Verified: 2c4fd3f9aeec78b40ba294a00b0b39baf4df94d5
+- At: 2026-11-09T11:24:26Z
+
+Verdict: met — an unrecorded Claude Code version in a container image is now checked inside the image, with a reproducing test, and I-0253 is closed with a reason.
+- 1: flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go
+- 2: design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md, design/issues/summary.md
