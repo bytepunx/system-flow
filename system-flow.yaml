@@ -101,6 +101,11 @@ tests:
     dir: flaiover
     paths: ["flai/internal/hostapi/**/*.go", "flai/cmd/hostapi.go"]
     format: vitest-json
+  - name: design-routes
+    command: ["../scripts/flaiover-unit.sh", run, "--reporter=json", "src/lib/server/design-routes.test.ts"]
+    dir: flaiover
+    paths: ["design/system/flaiover-dashboard.md", "flaiover/src/routes/**"]
+    format: vitest-json
   - name: svelte-check
     command: ["../scripts/flaiover-check.sh"]
     dir: flaiover
@@ -127,7 +132,7 @@ tests:
     paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**", "scripts/flaiover-*.sh", "scripts/env.sh"]
     format: plain
     all_only: true
-    covers: [flaiover-lint, vitest, flaiover-flai, svelte-check]
+    covers: [flaiover-lint, vitest, flaiover-flai, design-routes, svelte-check]
     parallel: true
   - name: integration
     command: ["../scripts/integration.sh", "-json"]

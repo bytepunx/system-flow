@@ -616,6 +616,51 @@ func TestRepositoryManifestChecksTheSettingsIndexWhenItChanges(t *testing.T) {
 	}
 }
 
+// I-0322: this repository's manifest has flai test run design-routes.test.ts
+// when the dashboard's design or a route changes. The test reads
+// design/system/flaiover-dashboard.md and the routes folder from disk and
+// imports neither, so the vitest tier, which runs vitest related on the
+// changed files, never selected it: a change to the design alone selected only
+// the markdown tier, and a row naming a route flaiover lacks first failed
+// under --all or in the merge queue's batch. Under --all the flaiover tier
+// covers it. Not gated under -short, so that make test catches a manifest that
+// drops the tier.
+func TestRepositoryManifestChecksTheDashboardDesignsRoutesWhenEitherChanges(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"../scripts/flaiover-unit.sh", "run", "--reporter=json", "src/lib/server/design-routes.test.ts"}
+	for _, changed := range []string{"design/system/flaiover-dashboard.md", "flaiover/src/routes/+layout.svelte"} {
+		if _, err := os.Stat(filepath.Join(root, changed)); err != nil {
+			t.Fatalf("%s: %v; name another file the tier selects", changed, err)
+		}
+		var got []string
+		ok := false
+		for _, s := range Select(os.DirFS(root), tiers, []string{changed}, false) {
+			if s.Tier.Name == "design-routes" {
+				got, ok = s.Argv, true
+			}
+		}
+		if !ok || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: design-routes runs %q (selected %v), want %q", changed, got, ok, want)
+		}
+	}
+	covered := ""
+	for _, s := range Select(os.DirFS(root), tiers, nil, true) {
+		if s.Tier.Name == "design-routes" {
+			covered = s.CoveredBy
+		}
+	}
+	if covered != "flaiover" {
+		t.Errorf("under --all design-routes is covered by %q, want the flaiover tier, which runs every flaiover test", covered)
+	}
+}
+
 // S-0548: this repository's go-test tier runs the changed packages' tests
 // with -short, reversing I-0201's choice. The tests that skip under -short,
 // those that need real git or the monorepo, are the integration tier's own;
