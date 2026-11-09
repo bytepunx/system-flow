@@ -7,7 +7,7 @@ status: done
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:49:21Z
-updated: 2026-11-09T08:26:55Z
+updated: 2026-11-09T09:06:34Z
 transitions:
   - to: ready
     at: 2026-11-09T08:09:02Z
@@ -20,7 +20,7 @@ transitions:
     by: agent-S-0610
 stream: S-0610
 tags: [cli]
-touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, scripts/smoke.sh, design/system/flai-cli.md, docs/users/flai.md]
+touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, scripts/smoke.sh, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md]
 after: [T-2644]
 usage:
   source: log

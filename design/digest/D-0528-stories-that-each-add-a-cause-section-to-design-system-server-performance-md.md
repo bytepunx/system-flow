@@ -2,9 +2,9 @@
 id: D-0528
 title: Stories that each add a cause section to design/system/server-performance.md change only their own section, after the S-0596 Stories table, and the one that lands second keeps both in cause order
 kind: decision
-sources: [S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919]
+sources: [S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919, S-0606]
 topics: [server-side, back-end]
-paths: [design/system/server-performance.md, flai/internal/check/check.go, flai/internal/check/items.go]
+paths: [design/system/server-performance.md, design/system/flai-cli.md, flai/internal/check/check.go, flai/internal/check/items.go]
 date: 2026-11-08
 status: active
 absorbed_by: ""
@@ -54,4 +54,10 @@ The split keeps a trial merge from holding a story, but not an acceptance's reba
 
 TH-0920 sent S-0603 back on the same file the same day. So the story's agent settles such a stop in its worktree with `flai stream sync`, keeping every section main gained and putting its own in cause order, then closes out and moves the story to review again.
 
-Sources: S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919.
+S-0606, accepted on 2026-11-09, landed under the same split and took it to `design/system/flai-cli.md` too (`wip/archive/agents/S-0606.md`):
+
+```text
+Conflicts with S-0598, S-0599, S-0600, S-0601, S-0603 in `server-performance.md` and `flai-cli.md` are settled section by section: S-0606 changes only its own cause 16 section and its own paragraphs, and whoever rebases second keeps both.
+```
+
+Sources: S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919, S-0606.

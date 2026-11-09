@@ -3,16 +3,37 @@ id: T-2708
 type: task
 nature: remediation
 title: Close I-0230 with the reason S-0613's fix gives
-status: backlog
+status: done
 parent: S-0613
 owner: alex
 created: 2026-11-09T08:12:23Z
-updated: 2026-11-09T08:12:23Z
-transitions: []
+updated: 2026-11-09T09:06:16Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:05:57Z
+    by: agent-S-0613
+  - to: in-progress
+    at: 2026-11-09T09:05:58Z
+    by: agent-S-0613
+  - to: done
+    at: 2026-11-09T09:06:16Z
+    by: agent-S-0613
 stream: S-0613
 tags: [flai, issues]
 touches: [design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md]
 after: [T-2706]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 26
+      cache_read: 428468
+      cache_write: 1609
+      cost: 0.1564
 ---
 # T-2708 Close I-0230 with the reason S-0613's fix gives
 

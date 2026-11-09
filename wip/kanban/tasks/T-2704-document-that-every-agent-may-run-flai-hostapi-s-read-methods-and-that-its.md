@@ -3,11 +3,11 @@ id: T-2704
 type: task
 nature: improvement
 title: Document that every agent may run flai hostapi's read methods and that its write methods are the story's agent's
-status: in-progress
+status: done
 parent: S-0612
 owner: alex
 created: 2026-11-09T07:57:58Z
-updated: 2026-11-09T08:38:47Z
+updated: 2026-11-09T08:58:09Z
 transitions:
   - to: ready
     at: 2026-11-09T08:38:46Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:38:47Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T08:58:09Z
+    by: agent-S-0612
 stream: S-0612
 tags: [docs, guard]
 touches: [docs/users/flai.md, design/system/flai-cli.md]
 after: [T-2702]
+usage:
+  source: log
+  seconds: 1162
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 157
+      cache_read: 1946785
+      cache_write: 10804
+      cost: 0.7117
 ---
 # T-2704 Document that every agent may run flai hostapi's read methods and that its write methods are the story's agent's
 

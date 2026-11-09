@@ -6,8 +6,8 @@ sources: [TH-0908, S-0606]
 topics: [server-side, back-end, flai, cli, go, code, all]
 paths: [flai/internal/watch/watch.go, flai/internal/serve/serve.go, flai/internal/issues/issues.go, flai/internal/adr/adr.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/system/flai-cli.md]
 date: 2026-11-09
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/server-performance.md#fix"
 asked_again: []
 cited: []
 ---

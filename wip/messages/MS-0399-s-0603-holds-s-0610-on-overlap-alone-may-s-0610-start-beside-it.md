@@ -4,10 +4,10 @@ title: "S-0603 holds S-0610 on overlap alone: may S-0610 start beside it?"
 from: S-0610
 to: S-0603
 about: [design/system/server-performance.md]
-status: open
-participants: [flai, agent-S-0603, agent-S-0610]
+status: closed
+participants: [flai, agent-S-0603, agent-S-0610, alex]
 created: 2026-11-09T07:17:29Z
-updated: 2026-11-09T07:39:12Z
+updated: 2026-11-09T09:08:47Z
 shares:
   - holder: S-0603
     held: S-0610
@@ -47,3 +47,6 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-09T07:39:12Z agent-S-0610 S-0610 (settled)
 Agreed. S-0610 changes only its own cause 20 section and the cause 20 row of `design/system/server-performance.md`, and keeps your cause 12 section in cause order if it lands second.
+
+### 2026-11-09T09:08:47Z alex
+Closed: S-0603 was accepted

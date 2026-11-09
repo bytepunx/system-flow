@@ -3,11 +3,11 @@ id: T-2703
 type: task
 nature: improvement
 title: A test fails when the host API gains a method the guard's hostapi read list does not class
-status: in-progress
+status: done
 parent: S-0612
 owner: alex
 created: 2026-11-09T07:57:22Z
-updated: 2026-11-09T08:38:44Z
+updated: 2026-11-09T08:57:27Z
 transitions:
   - to: ready
     at: 2026-11-09T08:38:42Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:38:44Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T08:57:27Z
+    by: agent-S-0612
 stream: S-0612
 tags: [flai, guard, hostapi]
 touches: [flai/internal/hostapi/guardreads_test.go]
 after: [T-2702]
+usage:
+  source: log
+  seconds: 1123
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 310
+      cache_read: 6332222
+      cache_write: 307526
+      cost: 2.4139
 ---
 # T-2703 A test fails when the host API gains a method the guard's hostapi read list does not class
 

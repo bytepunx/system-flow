@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 833
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 346
-      cache_read: 14802411
-      cache_write: 44394
-      cost: 7.1983
+      input: 67
+      output: 16766
+      cache_read: 14786774
+      cache_write: 397778
+      cost: 5.5485
 ---
 
 # T-2700 flai serve watches threads, conversations, digest, issues, and ADRs on the slow tier, and a flai issue and ADR write are seen at the next fast look

@@ -6,7 +6,7 @@ title: "flai guard refuses the orchestrator a read or a permitted flai command w
 status: in-progress
 owner: alex
 created: 2026-11-07T23:38:58Z
-updated: 2026-11-09T08:22:35Z
+updated: 2026-11-09T09:06:22Z
 transitions:
   - to: ready
     at: 2026-11-09T08:19:39Z
@@ -16,16 +16,29 @@ transitions:
     by: agent-S-0613
 tags: [flai, guard]
 topics: [guard, orchestration]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md, design/issues/summary.md, flai/internal/guard/call.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/shared.go, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2620
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      hand_edits: 2
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 602
+      cache_read: 11378615
+      cache_write: 1175953
+      cost: 4.5643
   strategic:
     - kind: planner
       seconds: 383
@@ -88,8 +101,8 @@ finalized:
 This story remediates [I-0230](../../../design/issues/I-0230-flai-guard-refuses-the-orchestrator-a-read-or-a-permitted-flai-command-when-the-command-carries-a-stderr-redirection-such-as-2-1-or-2-dev-null.md), "flai guard refuses the orchestrator a read or a permitted flai command when the command carries a stderr redirection such as 2>&1 or 2>/dev/null", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0230 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0230 is closed with `flai issue close I-0230 --reason` saying what fixed it
+- [x] The cause I-0230 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0230 is closed with `flai issue close I-0230 --reason` saying what fixed it
 
 ## Tasks
 - T-2706 The orchestrator's and every role file's flai checks judge a command by its arguments, its redirections and their targets left out

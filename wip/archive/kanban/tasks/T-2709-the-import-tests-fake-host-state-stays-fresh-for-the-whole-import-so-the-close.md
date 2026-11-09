@@ -23,16 +23,16 @@ tags: []
 touches: [flai/cmd/import_serve_test.go]
 usage:
   source: log
-  seconds: 10
+  seconds: 15
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 10
-      cache_read: 1278644
-      cache_write: 4064
-      cost: 0.6219
+      output: 1448
+      cache_read: 1277523
+      cache_write: 34367
+      cost: 0.4794
 ---
 
 # T-2709 The import tests' fake host state stays fresh for the whole import, so the close-out's integration tier does not fail them under load (I-0309)

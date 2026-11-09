@@ -3,11 +3,11 @@ id: T-2706
 type: task
 nature: remediation
 title: The orchestrator's and every role file's flai checks judge a command by its arguments, its redirections and their targets left out
-status: in-progress
+status: done
 parent: S-0613
 owner: alex
 created: 2026-11-09T08:11:25Z
-updated: 2026-11-09T08:25:13Z
+updated: 2026-11-09T09:04:26Z
 transitions:
   - to: ready
     at: 2026-11-09T08:25:13Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:25:13Z
     by: agent-S-0613
+  - to: done
+    at: 2026-11-09T09:04:26Z
+    by: agent-S-0613
 stream: S-0613
 tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/roles.go, flai/internal/guard/orchestrate_test.go, flai/internal/guard/roles_test.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/shared.go, flai/internal/guard/call.go]
+usage:
+  source: log
+  seconds: 2353
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 283
+      cache_read: 7779548
+      cache_write: 917866
+      cost: 3.162
 ---
 # T-2706 The orchestrator's and every role file's flai checks judge a command by its arguments, its redirections and their targets left out
 

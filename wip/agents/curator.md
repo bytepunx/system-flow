@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 168.0200
-accrued_seconds: 17117
-tasks_completed: 104
-last_run: 2026-11-09T08:27:39Z
+accrued_cost: 169.7122
+accrued_seconds: 17269
+tasks_completed: 105
+last_run: 2026-11-09T08:55:37Z
 ---
 
 # Curator activity
@@ -843,3 +843,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0470, D-0528, D-0532, D-0537
 - Seconds: 125
 - Cost: 1.5944 USD, estimated
+
+### 2026-11-09T08:55:37Z
+
+- Summary: I wrote no new entries, merged S-0606 into D-0528, absorbed D-0534 into `design/system/server-performance.md` § Cause 16 › Fix, and `flai digest compact` compacted nothing; the other nine S-0606 candidates were progress notes, already held by D-0534, or already stated in `design/system/flai-cli.md` and `server-performance.md`.
+- Trigger: accepted S-0606
+- Items: D-0528, D-0534
+- Seconds: 152
+- Cost: 1.6922 USD, estimated

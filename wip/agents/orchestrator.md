@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2041.2112
-accrued_seconds: 1527788
-tasks_completed: 2369
-last_run: 2026-11-09T08:29:24Z
+accrued_cost: 2041.7762
+accrued_seconds: 1527973
+tasks_completed: 2373
+last_run: 2026-11-09T08:56:21Z
 ---
 
 # Orchestrator activity
@@ -16613,6 +16613,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 39
 - Cost: 0.2081 USD, estimated
+
+### 2026-11-09T08:53:57Z
+
+- Summary: review:S-0606 needs nothing: alex accepted S-0606 at 08:52:32Z before this run. release_evaluate is met under threshold (count 1 of 1, 30 USD/week of 1000), but I started no new publish run: S-0635, a publish formula instance made 2026-11-08, is already in ready (held, no-touches) and will publish S-0606 when it is worked.
+- Items: S-0606, S-0635
+- Seconds: 83
+- Cost: 0.0892 USD, estimated
+
+### 2026-11-09T08:54:41Z
+
+- Summary: I had nothing to accept for S-0606: you accepted it yourself at 08:52:32Z, before this run started.
+- Items: none
+- Seconds: 44
+- Cost: 0.2448 USD, estimated
+
+### 2026-11-09T08:55:50Z
+
+- Summary: Release-due S-0606: release_evaluate met under threshold (count 1 at or over 1; value 30 USD/week under 1000; nothing held by whole_epics). Started no second publish instance: S-0635, the publish formula's instance, is already in ready and publishes everything accepted and unreleased when worked; it stays held no-touches while S-0603, S-0610, S-0612 and S-0613 are in progress.
+- Items: S-0606, S-0635
+- Seconds: 27
+- Cost: 0.0755 USD, estimated
+
+### 2026-11-09T08:56:21Z
+
+- Summary: A release is due for S-0606, but I didn't start a new publish run because one is already waiting.
+- Items: none
+- Seconds: 31
+- Cost: 0.1555 USD, estimated
 
 ## Refusals
 

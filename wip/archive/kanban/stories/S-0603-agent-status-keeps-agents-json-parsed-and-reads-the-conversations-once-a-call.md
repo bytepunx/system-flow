@@ -3,11 +3,11 @@ id: S-0603
 type: story
 nature: improvement
 title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes about 250 ms, not 0.8 to 2.4 s
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-09T08:39:51Z
+updated: 2026-11-09T09:08:47Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
@@ -27,6 +27,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:26:44Z
     by: flai
+  - to: review
+    at: 2026-11-09T09:07:41Z
+    by: agent-S-0603
+  - to: done
+    at: 2026-11-09T09:08:47Z
+    by: alex
 blocked:
   - from: 2026-11-08T02:23:41Z
     until: 2026-11-08T02:31:46Z

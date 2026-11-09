@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1980
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 5869
-      cache_read: 3015892
-      cache_write: 139829
-      cost: 1.5328
+      input: 14
+      output: 3458
+      cache_read: 3049392
+      cache_write: 82031
+      cost: 1.1442
   strategic:
     - kind: orchestrator
       seconds: 8

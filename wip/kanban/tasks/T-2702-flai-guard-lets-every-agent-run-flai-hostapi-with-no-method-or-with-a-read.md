@@ -23,7 +23,7 @@ tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/hostapi_test.go, flai/cmd/guard_test.go]
 usage:
   source: log
-  seconds: 1336
+  seconds: 1339
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 367
       cache_read: 10553458
       cache_write: 371849
-      cost: 3.971
+      cost: 3.9719
 ---
 # T-2702 flai guard lets every agent run flai hostapi with no method or with a read method, and refuses the write methods
 

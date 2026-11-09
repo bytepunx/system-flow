@@ -3,16 +3,37 @@ id: T-2707
 type: task
 nature: remediation
 title: The design and the user guide say a redirection neither allows nor refuses a strategic agent's command
-status: backlog
+status: done
 parent: S-0613
 owner: alex
 created: 2026-11-09T08:12:04Z
-updated: 2026-11-09T08:12:04Z
-transitions: []
+updated: 2026-11-09T09:07:42Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:05:58Z
+    by: agent-S-0613
+  - to: in-progress
+    at: 2026-11-09T09:05:59Z
+    by: agent-S-0613
+  - to: done
+    at: 2026-11-09T09:07:42Z
+    by: agent-S-0613
 stream: S-0613
 tags: [flai, guard, docs]
 touches: [design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-2706]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 26
+      cache_read: 428468
+      cache_write: 1609
+      cost: 0.1564
 ---
 # T-2707 The design and the user guide say a redirection neither allows nor refuses a strategic agent's command
 

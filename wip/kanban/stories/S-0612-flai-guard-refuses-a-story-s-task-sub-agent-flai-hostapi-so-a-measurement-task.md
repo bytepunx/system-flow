@@ -6,7 +6,7 @@ title: flai guard refuses a story's task sub-agent flai hostapi, so a measuremen
 status: in-progress
 owner: alex
 created: 2026-11-07T23:38:52Z
-updated: 2026-11-09T08:03:52Z
+updated: 2026-11-09T09:07:12Z
 transitions:
   - to: ready
     at: 2026-11-09T08:03:43Z
@@ -23,20 +23,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1444
+  seconds: 3775
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-09
       hand_edits: 1
-      work: 16
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 537
-      cache_read: 12292554
-      cache_write: 603514
-      cost: 4.6873
+      input: 186
+      output: 1073
+      cache_read: 21965671
+      cache_write: 949093
+      cost: 8.3308
   strategic:
     - kind: planner
       seconds: 384
@@ -89,8 +89,8 @@ finalized:
 This story remediates [I-0307](../../../design/issues/I-0307-flai-guard-refuses-a-story-s-task-sub-agent-flai-hostapi-so-a-measurement-task.md), "flai guard refuses a story's task sub-agent flai hostapi, so a measurement task cannot use the documented hostapi --timing". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0307 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0307 is closed with `flai issue close I-0307 --reason` saying what fixed it
+- [x] The cause I-0307 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0307 is closed with `flai issue close I-0307 --reason` saying what fixed it
 
 ## Tasks
 - T-2702 flai guard lets every agent run flai hostapi with no method or with a read method, and refuses the write methods

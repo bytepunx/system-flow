@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 638
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 264
-      cache_read: 10220458
-      cache_write: 585077
-      cost: 5.239
+      input: 49
+      output: 12202
+      cache_read: 10761847
+      cache_write: 289503
+      cost: 4.0382
 ---
 
 # T-2699 flai writes issues and ADRs by write and rename, so a change moves its folder's modification time

@@ -4,10 +4,10 @@ title: "S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at
 anchor:
   path: wip/kanban/stories/S-0603-agent-status-keeps-agents-json-parsed-and-reads-the-conversations-once-a-call.md
   item: S-0603
-status: answered
+status: resolved
 participants: [agent-S-0603, orchestrator, alex]
 created: 2026-11-08T02:23:21Z
-updated: 2026-11-09T07:21:22Z
+updated: 2026-11-09T09:01:40Z
 ---
 
 # TH-0911 S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at once on this host
@@ -80,3 +80,6 @@ Source: design/system/server-performance.md § Where the time goes
 Confirmed the recommendation of 2026-11-08T02:25:16Z orchestrator.
 
 Source: design/system/server-performance.md § Where the time goes
+
+### 2026-11-09T09:01:40Z alex
+Resolved.

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 436
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 178
-      cache_read: 9160728
-      cache_write: 21875
-      cost: 4.4521
+      input: 41
+      output: 10369
+      cache_read: 9145474
+      cache_write: 246022
+      cost: 3.4317
 ---
 
 # T-2701 Measure the watcher walk again with five more folders on the slow tier, and record them and the reason under cause 16
