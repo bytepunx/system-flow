@@ -101,6 +101,8 @@ describe('/api/planner', () => {
 		expect(asked.find((a) => a.method === 'activity.document')?.params).toEqual({
 			kind: 'planner'
 		});
+		// it lists ended runs, so it asks for them (S-0611)
+		expect(asked.find((a) => a.method === 'agent.status')?.params).toEqual({ finished: true });
 	});
 
 	it('reads as the action off with no runs when flai cannot say, or has no state', async () => {

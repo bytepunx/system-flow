@@ -236,7 +236,7 @@ Errors are `{ error }` with the status. The reader caches by path and mtime and 
 | `roles.<name>.runs` | Empty | Up to 20 ended runs |
 | `running`, `last`, `waiting`, `command`, `budget`, `orchestrator`, `analyzer`, `curator`, and each role's `run`, `running`, and `held` | As with it | As flai serve recorded them |
 
-The pages that list finished runs ask with `finished: true`: `/api/planner`, `/api/orchestrator`, `/api/analyzer`, `/api/roles/[name]`, and `/api/items/[id]/plan`. `/api/host-agent`, which the board, the activity page, and a story's agent panel ask every 15 s, asks without it.
+The pages that list finished runs ask with `finished: true`: `/api/planner`, `/api/orchestrator`, `/api/analyzer`, `/api/roles/[name]`, and `/api/items/[id]/plan`. `/api/host-agent`, which the board, the activity page, and a story's agent panel ask every 15 s, asks without it. It passes `finished=1` on as `finished: true`, which only a done or cancelled story's agent panel sends, since that panel shows the story's last run.
 
 ## Writes (S-0075, ADR-0029)
 

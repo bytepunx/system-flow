@@ -58,7 +58,10 @@
 
 	async function ask() {
 		try {
-			const r = await api('/api/host-agent');
+			// flai leaves a finished story's runs out unless asked for them (S-0611); an archived
+			// story is done or cancelled too
+			const finished = storyStatus === 'done' || storyStatus === 'cancelled';
+			const r = await api(finished ? '/api/host-agent?finished=1' : '/api/host-agent');
 			if (r.ok) status = await r.json();
 		} catch {
 			// keep what we had

@@ -142,6 +142,8 @@ describe('/api/roles/[name]', () => {
 			expect(asked.find((a) => a.method === 'activity.document')?.params).toEqual({
 				kind: 'reviewer'
 			});
+			// the page lists the role's ended runs, so it asks for them (S-0611)
+			expect(asked.find((a) => a.method === 'agent.status')?.params).toEqual({ finished: true });
 		});
 
 		it("reads a role's lists flai answered null as empty", async () => {

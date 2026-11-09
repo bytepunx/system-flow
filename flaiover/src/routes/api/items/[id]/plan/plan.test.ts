@@ -56,6 +56,11 @@ describe('plan route over the channel (S-0208)', () => {
 		expect(body).toMatchObject({ plan_enabled: true, run: { item: 'E-0016', pid: 42 } });
 		body = await (await doGet('S-0208')).json();
 		expect(body).toMatchObject({ plan_enabled: true, run: null });
+		// a done item's newest planner run has ended, so the route asks for ended runs (S-0611)
+		expect(asked.filter((a) => a.method === 'agent.status').map((a) => a.params)).toEqual([
+			{ finished: true },
+			{ finished: true }
+		]);
 
 		script['project.info'] = { answer: { host_actions: { agent: true } } };
 		body = await (await doGet('E-0016')).json();

@@ -11,13 +11,16 @@ import type { HostAgent } from '$lib/activity';
  * is on (project.info's host_actions.plan, `plan_enabled`), for the board's card menu; a flai that
  * cannot say reads as off. Read-only by design: the dashboard cannot stop or configure an agent,
  * and starts one only through the story page's Start agent (S-0115) and Retry (S-0116, S-0118,
- * ../items/[id]/agent), and the planner through Plan (S-0208, ../items/[id]/plan).
+ * ../items/[id]/agent), and the planner through Plan (S-0208, ../items/[id]/plan). flai answers
+ * the open and live runs alone; `finished=1` asks for the runs of finished work too, which only a
+ * done or cancelled story's agent panel shows (S-0611).
  */
-export const GET: RequestHandler = () =>
+export const GET: RequestHandler = ({ url }) =>
 	respond(async () => {
+		const finished = url.searchParams.get('finished') === '1';
 		try {
 			const [status, plan_enabled] = await Promise.all([
-				repo().ask<HostAgent>('agent.status'),
+				repo().ask<HostAgent>('agent.status', finished ? { finished: true } : {}),
 				planEnabled()
 			]);
 			return { ...status, plan_enabled };

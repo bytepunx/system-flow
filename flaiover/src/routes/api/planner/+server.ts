@@ -39,7 +39,8 @@ async function planEnabled(): Promise<boolean> {
 
 async function planRuns(): Promise<PlanRun[]> {
 	try {
-		const status = await repo().ask<HostAgent>('agent.status');
+		// with finished: the page lists every item's newest planner run, ended ones too (S-0611)
+		const status = await repo().ask<HostAgent>('agent.status', { finished: true });
 		return runsNewestFirst(Object.values(status.state?.plans ?? {}));
 	} catch {
 		return [];

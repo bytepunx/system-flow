@@ -116,6 +116,8 @@ describe('/api/orchestrator', () => {
 		expect(asked.find((a) => a.method === 'activity.document')?.params).toEqual({
 			kind: 'orchestrator'
 		});
+		// it lists ended runs, so it asks for them (S-0611)
+		expect(asked.find((a) => a.method === 'agent.status')?.params).toEqual({ finished: true });
 	});
 
 	it('says the orchestrator is held, with no run under way, when the operator stopped it', async () => {

@@ -29,7 +29,8 @@ export const GET: RequestHandler = () =>
 	respond(async (): Promise<OrchestratorView> => {
 		const [info, status, activity] = await Promise.all([
 			orNull(repo().ask<{ host_actions?: Record<string, boolean> }>('project.info')),
-			orNull(repo().ask<StrategicStatus>('agent.status')),
+			// with finished, since this page lists the orchestrator's past runs (S-0611)
+			orNull(repo().ask<StrategicStatus>('agent.status', { finished: true })),
 			repo()
 				.ask<RawActivityDocument<'orchestrator'>>('activity.document', { kind: 'orchestrator' })
 				.then(activityDocument)

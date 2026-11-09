@@ -28,7 +28,8 @@ export const GET: RequestHandler = () =>
 	respond(async (): Promise<AnalyzerView> => {
 		const [info, status, activity] = await Promise.all([
 			orNull(repo().ask<{ host_actions?: Record<string, boolean> }>('project.info')),
-			orNull(repo().ask<StrategicStatus>('agent.status')),
+			// with finished, since this page lists the analyzer's past runs (S-0611)
+			orNull(repo().ask<StrategicStatus>('agent.status', { finished: true })),
 			repo()
 				.ask<RawActivityDocument<'analyzer'>>('activity.document', { kind: 'analyzer' })
 				.then(activityDocument)

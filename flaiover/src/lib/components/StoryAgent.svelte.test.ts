@@ -76,6 +76,24 @@ describe('StoryAgent (S-0104)', () => {
 		expect(section()).toBeNull();
 	});
 
+	it("asks for a finished story's runs only when the story is done or cancelled (S-0611)", async () => {
+		// each read of the state, whatever else the panel asks, such as its agent's stream
+		const urls = () => [
+			...new Set(
+				api.mock.calls.map(([url]) => String(url)).filter((u) => u.startsWith('/api/host-agent'))
+			)
+		];
+		await show({ 'S-0104': { state: 'working', run } }, true, { status: 'in-progress' });
+		expect(urls()).toEqual(['/api/host-agent']);
+		for (const status of ['done', 'cancelled']) {
+			unmount(c!);
+			c = undefined;
+			api.mockReset();
+			await show({ 'S-0104': { state: 'worked', run } }, true, { status });
+			expect(urls()).toEqual(['/api/host-agent?finished=1']);
+		}
+	});
+
 	it('shows the agent at work, and asks again when the project changes', async () => {
 		await show({ 'S-0104': { state: 'working', run } });
 		expect(text()).toContain('agent working (claude-code, claude-haiku-4-5)');

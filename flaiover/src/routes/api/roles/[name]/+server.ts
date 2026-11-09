@@ -29,7 +29,8 @@ function named(name: string): string {
 
 /** The role agent.status reports by the name, or 404 naming the roles it does report. */
 async function reported(name: string): Promise<RoleState> {
-	const status = await repo().ask<StrategicStatus>('agent.status');
+	// with finished, since this page lists the role's ended runs (S-0611)
+	const status = await repo().ask<StrategicStatus>('agent.status', { finished: true });
 	const roles = (status.state?.roles ?? {}) as Record<string, RawRoleState>;
 	const raw = roles[name];
 	if (!raw) {
