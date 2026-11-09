@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-11-08
+updated: 2026-11-09
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -353,7 +353,7 @@ Each cause is numbered after causes 1 to 7. Each "fix" below keeps the files und
 
 | # | Cause | Measured | Proposed fix | Estimated saving |
 |---|-------|----------|--------------|------------------|
-| 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. Done in S-0598: [measured](#a-checked-write-runs-only-the-rules-it-can-affect-s-0598). | 7 to 13 s down to about 1.5 to 2 s a write; measured 12 s down to 2.5 s of CPU a write, most of what is left being cause 10 |
+| 8 | A checked write runs the whole of `flai check` twice, before and after (`flai/internal/itemnew/itemnew.go` `Create`, `flai/internal/itemedit/itemedit.go` `Apply`). Each run lists all 3,233 items cold, lints all 5,068 markdown files under `wip`, starts `node` for the component examples, and scans the digest for secrets. An edit also lists the items again and rewrites `wip/agents/index.md`. | `story new`, `epic new`, `task new`, `edit`, finalize, `criteria tick`, `issue story`: 7 to 18 s wall, 8 to 12.7 s CPU, about 97% of it in the two checks | Run only the rules an item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the lint and conflict markers of the written files. Compute the "before" result for those rules only. Done in S-0598: [measured](#a-checked-write-runs-only-the-rules-it-can-affect-s-0598). | 7 to 13 s down to about 1.5 to 2 s a write; measured 12 s down to 2.5 s of CPU a write, and with cause 10 fixed, 6 to 10 s down to about 1 s wall |
 | 9 | flai serve's replanner writes each forecast it moves through `itemedit.Apply`, one after another (`flai/internal/serve/replan.go`, `replan`), so each moved forecast pays cause 8's two checks. | 5 to 6.4 s a forecast. Over the week, 98 replans moved 1,200 forecasts, about 1.7 to 2 h of serve CPU. An acceptance's replan commit lands p50 80 s and p90 127 s after the acceptance. | Write every moved forecast in one pass, with one scoped check and one index write. | About 80 s down to under 5 s a replan |
 | 10 | Every flai process starts cold. The item cache S-0156 added lives in flai serve's memory, so each `flai` a write starts, each `flai check`, and each `flai move` parses all 3,233 items, one file after another (`flai/internal/workitem/store.go` `list`). `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). | Item parse 1.1 to 1.5 s cold: 1.28 s with one worker, 0.65 s with 8, 0.49 s with 16. `move` 1 to 2.5 s, 80% of it the list. The lint of `wip`: 0.98 s, 0.25 s on 8 workers. | Parse on a bounded pool of workers. Keep parsed items and lint results under `.flai-cache`, keyed by path, size, and modification time, as S-0531 keeps the stories' commits. Remedied by S-0600: see [Parses and lint findings kept between processes](#parses-and-lint-findings-kept-between-processes-s-0600). | About 1 s a `move`; 1.5 to 2 s a check run |
 | 11 | `check.Run` runs its rules one after another (`flai/internal/check/check.go` `Run`), and `componentExamples` starts `node` on every run (`flai/internal/components/props.go`). | Whole check: 3.3 s cold and 1.8 s warm without `node`; 7.4 to 8 s cold and 2.6 s warm with it. `node` alone: 0.6 to 4.2 s. | Run the rules at once; they only read, so the findings need one lock. Keep the props `node` read, keyed by the component files' stat. | Whole check to about 1.2 to 1.5 s; helps `flai verify` and `flai task done` too |
@@ -457,7 +457,17 @@ A CPU profile of one `story new` after the change, 3.3 s of samples:
 | `touchesFolder` | 0.19 s |
 | `unaccepted`, which reads `packed-refs` once per archived done story | 0.13 s |
 
-The cold parse is cause 10. [S-0600](../../wip/kanban/stories/S-0600-a-flai-process-parses-work-items-on-a-pool-of-workers-and-keeps-parses-and-lint.md) parses on a pool of workers and keeps the parses under `.flai-cache`. With it, a checked write should come to well under a second of CPU.
+The cold parse is cause 10. [S-0600](../../wip/kanban/stories/S-0600-a-flai-process-parses-work-items-on-a-pool-of-workers-and-keeps-parses-and-lint.md) parses on a pool of workers and keeps the parses under `.flai-cache`.
+
+I measured again on 2026-11-09, once S-0600 was on `main`. The setup was the same, in a fresh clone of 3,349 items. "Before" is `main` with S-0600's kept parses, which still runs the whole check twice. "After" is `story/S-0598` rebased onto it. The host's load average was 17 to 51.
+
+| Write | Before, wall | Before, CPU | After, wall | After, CPU |
+|-------|-------------:|------------:|------------:|-----------:|
+| `story new` | 9.6 s (6.1 to 12.1) | 6.4 s (5.8 to 16.5) | 1.0 s (0.8 to 1.3) | 1.0 s (1.0 to 1.0) |
+| `edit` | 7.3 s (6.5 to 11.6) | 6.0 s (5.7 to 6.5) | 0.9 s (0.7 to 1.3) | 1.0 s (0.9 to 1.1) |
+| MCP `item_new` of a task, the call | 7.9 s (7.2 to 10.9) | 6.3 s (6.3 to 6.9), the process | 1.0 s (0.7 to 1.1) | 1.3 s (1.1 to 1.3), the process |
+
+Every after-run took under 1.5 s wall.
 
 ### Cause 9 fixed: the replanner's forecasts written in one pass (S-0599)
 
