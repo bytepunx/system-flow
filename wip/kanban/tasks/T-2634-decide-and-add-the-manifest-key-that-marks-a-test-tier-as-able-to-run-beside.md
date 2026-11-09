@@ -32,7 +32,7 @@ usage:
       output: 378
       cache_read: 6015361
       cache_write: 48314
-      cost: 2.203
+      cost: 2.2038
 ---
 # T-2634 Decide and add the manifest key that marks a test tier as able to run beside others
 

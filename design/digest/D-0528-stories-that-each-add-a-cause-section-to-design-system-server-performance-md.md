@@ -2,7 +2,7 @@
 id: D-0528
 title: Stories that each add a cause section to design/system/server-performance.md change only their own section, after the S-0596 Stories table, and the one that lands second keeps both in cause order
 kind: decision
-sources: [S-0607, E-0033, S-0602, S-0599, S-0598, S-0604]
+sources: [S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919]
 topics: [server-side, back-end]
 paths: [design/system/server-performance.md, flai/internal/check/check.go, flai/internal/check/items.go]
 date: 2026-11-08
@@ -46,4 +46,12 @@ MS-0353 with S-0600: both stories change `checker.markdown()`. We agreed that wh
 
 So `check` now has two narrow runs beside `check.Run`: `check.RunItemWrite` for a checked write (S-0598, ADR-0264) and `check.Items` for the forecast batch (S-0599), which a later story may merge. Where a code conflict could not be avoided, on `flai/internal/workitem/repo.go` with S-0606 (MS-0352), S-0599 proposed that whichever story rebases second puts S-0606's `parsed.stale` line in `saveLocked`, which S-0599 made the one write path of `Save` and `SaveAll`.
 
-Sources: S-0607, E-0033, S-0602, S-0599, S-0598, S-0604.
+The split keeps a trial merge from holding a story, but not an acceptance's rebase from stopping. `design/system/server-performance.md` is not one of the manifest's shared paths, so flai does not merge it by sections (ADR-0175), and an acceptance whose rebase meets a sibling's section at the same place is sent back. S-0601's was, on TH-0919 (`wip/archive/agents/S-0601.md`):
+
+```text
+2026-11-09, TH-0919: the acceptance's rebase stopped on `design/system/server-performance.md`, where main gained the sections of S-0598, S-0599, S-0602, and S-0604 at the place S-0601's went. Settled by keeping all of main's sections and putting S-0601's cause 11 section between causes 9 and 13, as agreed on MS-0362 and MS-0370.
+```
+
+TH-0920 sent S-0603 back on the same file the same day. So the story's agent settles such a stop in its worktree with `flai stream sync`, keeping every section main gained and putting its own in cause order, then closes out and moves the story to review again.
+
+Sources: S-0607, E-0033, S-0602, S-0599, S-0598, S-0604, S-0601, TH-0919.

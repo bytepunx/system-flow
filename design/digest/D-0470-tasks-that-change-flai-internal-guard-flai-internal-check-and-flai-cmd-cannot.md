@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602]
+sources: [S-0553, S-0571, S-0602, S-0601]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -38,4 +38,12 @@ Layer 2 ran in five task worktrees (`task/T-nnnn` from `story/S-0602`), not the 
 
 So tasks in one layer that change `workitem`, or `threads` beside `messages`, either run one after the other or each in a task worktree made from the story branch (D-0396), copied back and closed in turn.
 
-Sources: S-0553, S-0571, S-0602.
+S-0601 met the seam between `flai/internal/check` and `flai/internal/components`. Its planner put T-2633 (`check.go`) and T-2643 (`components/props.go`, `propscache.go`) in one layer, as they share no path, and its agent ran T-2643 in a task worktree of its own (`wip/archive/agents/S-0601.md`):
+
+```text
+T-2643 runs in its own task worktree, `task/T-2643`, and its files are copied back into the story's worktree once it is reviewed: `flai/internal/check` imports `flai/internal/components`, so in one worktree T-2633's `flai test` would build T-2643's half-done edit (D-0470).
+```
+
+So a task that changes `components` beside one that changes `check` runs after it is done or in its own task worktree, as for `guard`.
+
+Sources: S-0553, S-0571, S-0602, S-0601.

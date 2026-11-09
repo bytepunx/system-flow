@@ -3,11 +3,11 @@ id: T-2653
 type: task
 nature: feature
 title: Under flai verify, smoke skips the template test, the check, and the markdown lint a step of the same run already passed
-status: in-progress
+status: done
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:49:21Z
-updated: 2026-11-09T08:09:03Z
+updated: 2026-11-09T08:26:55Z
 transitions:
   - to: ready
     at: 2026-11-09T08:09:02Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:09:03Z
     by: agent-S-0610
+  - to: done
+    at: 2026-11-09T08:26:55Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
 touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, scripts/smoke.sh, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2644]
+usage:
+  source: log
+  seconds: 1058
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 398
+      cache_read: 13150830
+      cache_write: 78880
+      cost: 4.808
 ---
 # T-2653 Under flai verify, smoke skips the template test, the check, and the markdown lint a step of the same run already passed
 

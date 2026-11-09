@@ -3,11 +3,11 @@ id: S-0603
 type: story
 nature: improvement
 title: agent.status keeps agents.json parsed and reads the conversations once a call, so it stops queueing on agentsMu and takes about 250 ms, not 0.8 to 2.4 s
-status: review
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-09T08:24:32Z
+updated: 2026-11-09T08:27:30Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-11-09T08:24:32Z
     by: agent-S-0603
+  - to: in-progress
+    at: 2026-11-09T08:26:44Z
+    by: flai
 blocked:
   - from: 2026-11-08T02:23:41Z
     until: 2026-11-08T02:31:46Z
@@ -41,7 +44,7 @@ blocked:
     until: 2026-11-09T07:21:23Z
     reason: awaiting the operator on TH-0911
 tags: [cli]
-touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
+touches: [flai/internal/serve/agents.go, flai/cmd/serve_actions.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/workitem/hold.go, flai/internal/workitem/share.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve_actions_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -70,15 +73,15 @@ usage:
       cost: 40.3548
   strategic:
     - kind: orchestrator
-      seconds: 265
+      seconds: 314
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 347
-          cache_read: 1907366
-          cache_write: 225932
-          cost: 0.5489
+          input: 68
+          output: 457
+          cache_read: 2422358
+          cache_write: 379334
+          cost: 0.7225
         - model: claude-sonnet-5-5
           input: 8
           output: 856
@@ -153,3 +156,4 @@ Forecast: `flai forecast` gave 22m, 94 s per unit of size over 124 done improvem
 
 Cost of delay: 100 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 100`, which the orchestrator set at 2026-11-07T23:51:56Z from TH-0888's table. Kept as given: no revenue rides on the story, and nothing else is lost each cycle.
 - 2026-11-09T08:07:52Z: moved to in-progress: the rebase of story/S-0603 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0603 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0603
+- 2026-11-09T08:26:44Z: moved to in-progress: the rebase of story/S-0603 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0603 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0603

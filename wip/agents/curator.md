@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 166.4256
-accrued_seconds: 16992
-tasks_completed: 103
-last_run: 2026-11-09T08:09:54Z
+accrued_cost: 168.0200
+accrued_seconds: 17117
+tasks_completed: 104
+last_run: 2026-11-09T08:27:39Z
 ---
 
 # Curator activity
@@ -835,3 +835,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0402, D-0528, D-0536
 - Seconds: 123
 - Cost: 1.1765 USD, estimated
+
+### 2026-11-09T08:27:39Z
+
+- Summary: No new entries this run. I merged all five candidates since 2026-11-09T08:09:54Z (TH-0910 and four decisions from S-0601's narrative) into existing entries. Nothing was absorbed or compacted.
+- Trigger: accepted S-0601
+- Items: D-0470, D-0528, D-0532, D-0537
+- Seconds: 125
+- Cost: 1.5944 USD, estimated

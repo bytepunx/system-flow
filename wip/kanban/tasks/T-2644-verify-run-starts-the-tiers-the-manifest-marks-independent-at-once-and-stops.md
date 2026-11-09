@@ -24,7 +24,7 @@ touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/in
 after: [T-2634]
 usage:
   source: log
-  seconds: 952
+  seconds: 955
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 239
       cache_read: 5557979
       cache_write: 363120
-      cost: 2.1511
+      cost: 2.1519
 ---
 # T-2644 verify.Run starts the tiers the manifest marks independent at once and stops the later ones when one fails
 

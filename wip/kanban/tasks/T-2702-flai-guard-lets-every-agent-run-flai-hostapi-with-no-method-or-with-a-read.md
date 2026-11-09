@@ -3,11 +3,11 @@ id: T-2702
 type: task
 nature: improvement
 title: flai guard lets every agent run flai hostapi with no method or with a read method, and refuses the write methods
-status: in-progress
+status: done
 parent: S-0612
 owner: alex
 created: 2026-11-09T07:56:45Z
-updated: 2026-11-09T08:05:36Z
+updated: 2026-11-09T08:27:55Z
 transitions:
   - to: ready
     at: 2026-11-09T08:05:36Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:05:36Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T08:27:55Z
+    by: agent-S-0612
 stream: S-0612
 tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/hostapi_test.go, flai/cmd/guard_test.go]
+usage:
+  source: log
+  seconds: 1336
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 367
+      cache_read: 10553458
+      cache_write: 371849
+      cost: 3.971
 ---
 # T-2702 flai guard lets every agent run flai hostapi with no method or with a read method, and refuses the write methods
 
