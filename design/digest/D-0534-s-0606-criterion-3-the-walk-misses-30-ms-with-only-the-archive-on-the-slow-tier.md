@@ -2,9 +2,9 @@
 id: D-0534
 title: "S-0606 criterion 3: the walk misses 30 ms with only the archive on the slow tier: Recommended: option 1. Put `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on the…"
 kind: answer
-sources: [TH-0908]
+sources: [TH-0908, S-0606]
 topics: [server-side, back-end, flai, cli, go, code, all]
-paths: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go]
+paths: [flai/internal/watch/watch.go, flai/internal/serve/serve.go, flai/internal/issues/issues.go, flai/internal/adr/adr.go, flai/internal/hostapi/hostapi.go, design/system/server-performance.md, design/system/flai-cli.md]
 date: 2026-11-09
 status: active
 absorbed_by: ""
@@ -14,38 +14,18 @@ cited: []
 
 # D-0534 S-0606 criterion 3: the walk misses 30 ms with only the archive on the slow tier: Recommended: option 1. Put `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on the…
 
-The operator, alex, answered TH-0908 at 2026-11-09T07:32:32Z.
+The operator, alex, answered TH-0908 at 2026-11-09T07:32:32Z by confirming the orchestrator's recommendation, option 1.
 
-What was asked:
-
-```text
-S-0606's watcher walk still misses criterion 3's 30 ms target. With `wip/archive` on the slow tier, a walk between slow looks costs about 45 ms of CPU, against about 75 ms on main. The measurement was taken at load 110 to 172 on 24 cores; the figures are in `design/system/server-performance.md` § Cause 16. The fast walk still stats 2,695 files outside the archive, most of them threads (908), digest entries (526), conversations (370), issues (297), and ADRs (264). With those five folders on the slow tier too, a walk measured 22 to 23 ms of CPU (p90 27 to 30 ms).
-```
+What was asked: S-0606's criterion 3 wants a walk of the watched folders under 30 ms. With only `wip/archive` on the watcher's slow tier, a walk still cost about 45 ms of CPU (75 ms on main), because the fast walk statted 2,695 files outside the archive: threads (908), digest entries (526), conversations (370), issues (297), and ADRs (264). With those five folders on the slow tier too, a walk measured 22 to 23 ms of CPU (p90 27 to 30 ms).
 
 The answer:
 
 ```text
 **Recommended:** option 1. Put `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on the slow tier. Make flai's own issue and ADR writes atomic (write and rename). Keep criterion 3 as written.
-
-**Why option 1:**
-
-- Criterion 3's goal is a walk under 30 ms. agent-S-0606's third program measured 22 to 23 ms of CPU a fast look with those five folders on the slow tier, p90 27 to 30 ms, on a host at load 110 to 172. Option 2 accepts about 45 ms, half again the target.
-- The cost is small. Every flai write to those folders reaches the dashboard at the next poll: threads, conversations, and digest entries are written by rename already, and issues and ADRs will be once their writes are atomic. A `git` merge on main replaces files too, so an accepted story's ADRs and issues are seen at once. Only an in-place hand edit in those five folders waits up to 10 s.
-- The extra work is two small write changes, in `flai/internal/issues` and `flai/internal/adr`. No story in progress or review touches either.
-
-**What the story's agent should add, if you confirm:**
-
-- Widen S-0606's touches with the two packages and their tests.
-- Add a test that a flai issue write and an ADR write are each seen at the next fast look.
-- Record the five folders and the reason under cause 16's Fix in `design/system/server-performance.md`, and the watcher's tiers in `design/system/flai-cli.md`.
-
-**Why I recommend rather than answer:** both options change S-0606's scope. Option 1 goes beyond cause 16's proposed fix, which names only `wip/archive`. Option 2 rewrites a criterion. Either way, the call is yours.
-
-**Alternative:** option 2. Keep only the archive on the slow tier, and reword criterion 3 to record about 45 ms of CPU a walk, down from about 75 ms.
-
-Source rests on cause 16's row in the section below, and on the measurements under § Cause 16 on `story/S-0606`.
-
-Source: design/system/server-performance.md § Where the time goes
 ```
 
-Source: TH-0908.
+The reason given: every flai write to those folders still reaches the dashboard at the next fast look, because a file added, removed, or replaced by a rename moves its folder's modification time. Threads, conversations, and digest entries were written by rename already; issues (`flai/internal/issues`) and ADRs (`flai/internal/adr`) were written in place and are now written by rename too. A `git` merge on main replaces files, so an accepted story's ADRs and issues are seen at once. Only an in-place hand edit in those five folders waits up to the slow tier's 10 s.
+
+So flai serve's watcher keeps `wip/archive`, `wip/threads`, `wip/messages`, `design/digest`, `design/issues`, and `design/adrs` on its slow tier, and any flai code that writes a file in one of them writes it by write and rename, never in place, or the dashboard sees the change up to 10 s late. S-0606 applies it in T-2699 (issue and ADR writes by rename), T-2700 (the five folders on the slow tier, with a test that a flai issue and ADR write are seen at the next fast look), and T-2701 (the walk measured again, recorded under cause 16 in `design/system/server-performance.md`, the tiers in `design/system/flai-cli.md`).
+
+Sources: TH-0908, S-0606.

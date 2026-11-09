@@ -23,7 +23,7 @@ tags: []
 touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/internal/adrindex/adrindex.go, flai/internal/issues/generated.go]
 usage:
   source: log
-  seconds: 628
+  seconds: 638
   estimated: true
   priced_by: estimate
   models:

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 8665
-      cache_read: 5967221
-      cache_write: 108179
-      cost: 2.0841
+      input: 29
+      output: 6981
+      cache_read: 5970311
+      cache_write: 84321
+      cost: 1.8946
 ---
 # T-2620 check runs an item write's rule set: the written items and their parent, the graph rules, the board, the story's narrative, and the written files' lint and conflict markers
 

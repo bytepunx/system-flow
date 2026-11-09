@@ -3,12 +3,18 @@ id: T-2701
 type: task
 nature: feature
 title: Measure the watcher walk again with five more folders on the slow tier, and record them and the reason under cause 16
-status: backlog
+status: in-progress
 parent: S-0606
 owner: alex
 created: 2026-11-09T07:36:13Z
-updated: 2026-11-09T07:36:13Z
-transitions: []
+updated: 2026-11-09T08:02:43Z
+transitions:
+  - to: ready
+    at: 2026-11-09T08:02:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T08:02:43Z
+    by: system-flow
 stream: S-0606
 tags: []
 touches: [design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md]

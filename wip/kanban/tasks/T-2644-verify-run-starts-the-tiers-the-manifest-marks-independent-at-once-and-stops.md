@@ -3,12 +3,18 @@ id: T-2644
 type: task
 nature: feature
 title: verify.Run starts the tiers the manifest marks independent at once and stops the later ones when one fails
-status: backlog
+status: in-progress
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:48:50Z
-updated: 2026-11-07T23:48:50Z
-transitions: []
+updated: 2026-11-09T07:52:34Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:52:33Z
+    by: agent-S-0610
+  - to: in-progress
+    at: 2026-11-09T07:52:34Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
 touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]

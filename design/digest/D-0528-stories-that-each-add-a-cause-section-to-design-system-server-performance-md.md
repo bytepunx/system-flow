@@ -2,7 +2,7 @@
 id: D-0528
 title: Stories that each add a cause section to design/system/server-performance.md change only their own section, after the S-0596 Stories table, and the one that lands second keeps both in cause order
 kind: decision
-sources: [S-0607, E-0033, S-0602]
+sources: [S-0607, E-0033, S-0602, S-0599]
 topics: [server-side, back-end]
 paths: [design/system/server-performance.md]
 date: 2026-11-08
@@ -31,4 +31,6 @@ S-0602, accepted on 2026-11-09, landed under this split with S-0598, S-0599, S-0
 
 It also left the S-0596 "Where the time goes" table alone, so its task no longer marked its cause's row there as its planner had written.
 
-Sources: S-0607, E-0033, S-0602.
+S-0599, accepted on 2026-11-09, settled MS-0359 with S-0605 and MS-0355 with S-0598 the same way (`wip/archive/agents/S-0599.md`). It kept a code conflict apart from the design one: T-2632 wrote `check.Items` in a new file, `flai/internal/check/items.go`, rather than in `check.go`, which S-0598 changes too, so the two branches do not conflict there. Where a code conflict could not be avoided, on `flai/internal/workitem/repo.go` with S-0606 (MS-0352), it proposed that whichever story rebases second puts S-0606's `parsed.stale` line in `saveLocked`, which S-0599 made the one write path of `Save` and `SaveAll`.
+
+Sources: S-0607, E-0033, S-0602, S-0599.

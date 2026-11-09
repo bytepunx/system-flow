@@ -3,11 +3,11 @@ id: T-2634
 type: task
 nature: feature
 title: Decide and add the manifest key that marks a test tier as able to run beside others
-status: in-progress
+status: done
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:48:16Z
-updated: 2026-11-09T07:41:46Z
+updated: 2026-11-09T07:52:06Z
 transitions:
   - to: ready
     at: 2026-11-09T07:41:45Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T07:41:46Z
     by: agent-S-0610
+  - to: done
+    at: 2026-11-09T07:52:06Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/adrs/0266-a-test-tier-marked-parallel-starts-once-the-unmarked-tiers-before-it-have-ended.md]
+usage:
+  source: log
+  seconds: 615
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 378
+      cache_read: 6015361
+      cache_write: 48314
+      cost: 2.2036
 ---
 # T-2634 Decide and add the manifest key that marks a test tier as able to run beside others
 

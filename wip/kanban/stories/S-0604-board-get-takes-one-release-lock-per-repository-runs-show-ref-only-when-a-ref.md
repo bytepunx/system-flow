@@ -3,17 +3,20 @@ id: S-0604
 type: story
 nature: improvement
 title: board.get takes one release lock per repository, runs show-ref only when a ref moved, and reads no threads with nothing in review, so 13 boards at once stop queueing
-status: in-progress
+status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:34Z
-updated: 2026-11-09T07:37:07Z
+updated: 2026-11-09T08:01:21Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:34Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-08T02:06:43Z
+    by: agent-S-0604
+  - to: review
+    at: 2026-11-09T08:01:21Z
     by: agent-S-0604
 blocked:
   - from: 2026-11-08T02:44:08Z
@@ -40,7 +43,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2296
+  seconds: 3842
   priced_by: harness
   turns:
     - day: 2026-11-08
@@ -48,14 +51,17 @@ usage:
       hand_edits: 4
       work: 64
     - day: 2026-11-09
-      work: 2
+      ceremony: 1
+      test_runs: 2
+      hand_edits: 2
+      work: 99
   models:
     - model: claude-opus-5-5
-      input: 364
-      output: 84679
-      cache_read: 50138463
-      cache_write: 2056706
-      cost: 24.2963
+      input: 572
+      output: 101652
+      cache_read: 94924574
+      cache_write: 2117905
+      cost: 34.0834
   strategic:
     - kind: orchestrator
       seconds: 816

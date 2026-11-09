@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:03Z
-updated: 2026-11-09T07:38:44Z
+updated: 2026-11-09T07:52:06Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:23Z
@@ -17,16 +17,30 @@ transitions:
     by: agent-S-0610
 tags: [cli]
 topics: [server-side, back-end, manifest, template]
-touches: [flai/internal/verify/run.go, flai/internal/verify/story.go, scripts/smoke.sh, flai/internal/verify/run_test.go, flai/internal/verify/story_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, system-flow.yaml, design/system/server-performance.md]
+touches: [flai/internal/verify/run.go, flai/internal/verify/story.go, scripts/smoke.sh, flai/internal/verify/run_test.go, flai/internal/verify/story_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, system-flow.yaml, design/system/server-performance.md, design/adrs/0266-a-test-tier-marked-parallel-starts-once-the-unmarked-tiers-before-it-have-ended.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 800
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 1
+      work: 20
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 685
+      cache_read: 8941875
+      cache_write: 318571
+      cost: 3.3654
   strategic:
     - kind: orchestrator
       seconds: 89

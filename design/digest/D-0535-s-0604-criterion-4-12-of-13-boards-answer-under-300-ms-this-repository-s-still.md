@@ -2,9 +2,9 @@
 id: D-0535
 title: "S-0604 criterion 4: 12 of 13 boards answer under 300 ms; this repository's still takes 342 to 761 ms, from causes 13 and 16: Recommended: take option 2, and move the full 13-board measure to a…"
 kind: answer
-sources: [TH-0912]
+sources: [TH-0912, S-0604, S-0636]
 topics: [server-side, back-end, flai, cli, go, code, all]
-paths: [flai/internal/release/history.go, flai/internal/mergequeue/eligible.go, flai/internal/hostapi/hostapi.go, flai/internal/release/release.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/reads_test.go, flai/internal/storygit/undone.go, design/system/server-performance.md, design/system/flai-cli.md]
+paths: [design/system/server-performance.md, flai/internal/release/history.go, flai/internal/mergequeue/eligible.go, flai/internal/hostapi/hostapi.go]
 date: 2026-11-09
 status: active
 absorbed_by: ""
@@ -14,30 +14,20 @@ cited: []
 
 # D-0535 S-0604 criterion 4: 12 of 13 boards answer under 300 ms; this repository's still takes 342 to 761 ms, from causes 13 and 16: Recommended: take option 2, and move the full 13-board measure to a…
 
-The operator, alex, answered TH-0912 at 2026-11-09T07:35:10Z.
+The operator, alex, answered TH-0912 at 2026-11-09T07:35:10Z by confirming the orchestrator's recommendation, option 2.
 
-What was asked:
-
-```text
-**Recommendation:** accept criterion 4 as met for what cause 14 owns, and leave it unticked with a note in S-0604's Notes. The rest of this repository's time belongs to S-0602 (cause 13) and S-0606 (cause 16).
-```
+What was asked: S-0604's criterion 4 wanted all 13 `board.get` calls at once under 300 ms. After S-0604, the other 12 projects' boards answered at 10 ms p50, but this repository's still took 342 to 761 ms. None of that time was git or cause 14: about 200 ms was `merge.queue` reading every thread with stories in review (cause 13, S-0602), and 60 to 270 ms the item list and holds (cause 16, S-0606).
 
 The answer:
 
 ```text
 **Recommended:** take option 2, and move the full 13-board measure to a follow-up. This is how you answered for S-0424 on TH-0810 (D-0465): a criterion the story cannot meet comes out, and what is left of it moves to a draft that waits.
-
-- agent-S-0604 rewords criterion 4 to: "13 `board.get` calls at once on the operator's host, one per served project: the other 12 answer under 300 ms, this repository's remaining time is shown to be causes 13 and 16, and server-performance.md records the before and after". Then it ticks the criterion.
-- It writes a draft story in E-0033 with `after: [S-0602, S-0606]`. The draft holds criterion 4's original words: all 13 boards under 300 ms, measured again.
-- S-0604's Notes record the move.
-
-**Why not option 1.** An unticked criterion blocks every acceptance but yours by hand. ADR-0093 § Decision makes "every acceptance criterion is ticked" a blocker for the orchestrator. The merge queue lists `criteria_unticked` as a reason the same way. S-0604 would sit in review until you accept it yourself.
-
-**Why not option 3.** S-0602 is in ready and not started. S-0606 is in progress and blocked. Holding S-0604 keeps an in-progress slot for work it does not own.
-
-**Why I recommend rather than answer.** Changing a finalized story's criterion and adding a story changes scope. That is your call. Finalizing the draft is yours too.
-
-Source: design/digest/D-0465-s-0424-the-two-live-runs-criterion-4-t-1787-t-1788-cannot-run-before-s-0424-is.md
 ```
 
-Source: TH-0912.
+Why not leave the criterion unticked for the operator to accept by hand: an unticked criterion is a blocker for the orchestrator's acceptance (ADR-0093 § Decision) and `criteria_unticked` keeps a story out of the merge queue, so the story would sit in review. Why not hold S-0604 until S-0602 and S-0606 land: it keeps an in-progress slot for work it does not own.
+
+Applied: S-0604's criterion 4 now reads "the other 12 answer under 300 ms, this repository's remaining time is shown to be causes 13 and 16, and server-performance.md records the before and after", and is ticked. Its original words moved to the draft S-0636 in E-0033, `after: [S-0602, S-0606]`, and S-0604's Notes record the move.
+
+So a performance story whose absolute target is missed only because of causes other stories own has its criterion reworded to what its own cause owns, and the absolute target moves to a draft story whose `after` names the stories that own the rest, where it is measured again. D-0532 is the same answer for S-0603, where the target went to an issue because no story would measure it; D-0465 and D-0466 are the same move for a run that cannot happen before acceptance.
+
+Sources: TH-0912, S-0604, S-0636.

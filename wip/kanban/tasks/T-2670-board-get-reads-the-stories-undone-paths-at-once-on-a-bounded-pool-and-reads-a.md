@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 10454
-      cache_read: 6189640
-      cache_write: 253902
-      cost: 2.9994
+      input: 37
+      output: 6655
+      cache_read: 6214849
+      cache_write: 138662
+      cost: 2.2315
 ---
 # T-2670 board.get reads the stories' undone paths at once on a bounded pool, and reads a story in review's once
 

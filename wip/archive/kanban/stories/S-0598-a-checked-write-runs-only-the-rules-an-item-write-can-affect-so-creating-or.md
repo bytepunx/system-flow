@@ -3,11 +3,11 @@ id: S-0598
 type: story
 nature: improvement
 title: A checked write runs only the rules an item write can affect, so creating or editing an item takes about 2 s, not 7 to 18 s
-status: review
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:02Z
-updated: 2026-11-09T07:41:24Z
+updated: 2026-11-09T08:06:26Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:08Z
@@ -24,8 +24,17 @@ transitions:
   - to: review
     at: 2026-11-09T07:41:24Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-09T07:52:19Z
+    by: flai
+  - to: review
+    at: 2026-11-09T08:03:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T08:06:26Z
+    by: alex
 tags: [cli]
-touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemedit/itemedit.go, flai/internal/check/check.go, flai/internal/check/itemwrite.go, flai/internal/check/itemwrite_test.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/rules_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md, design/adrs/README.md, flai/internal/itemedit/criteria_test.go]
+touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemedit/itemedit.go, flai/internal/check/check.go, flai/internal/check/itemwrite.go, flai/internal/check/itemwrite_test.go, flai/internal/itemnew/itemnew_test.go, flai/internal/itemedit/rules_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md, design/adrs/README.md, flai/internal/itemedit/criteria_test.go, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -33,7 +42,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 6005
+  seconds: 6699
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -47,25 +56,31 @@ usage:
       ceremony: 3
       test_runs: 1
       hand_edits: 1
-      work: 66
+      work: 120
   models:
     - model: claude-opus-5-5
-      input: 518
-      output: 143375
-      cache_read: 98733594
-      cache_write: 1789930
-      cost: 34.4828
+      input: 630
+      output: 150491
+      cache_read: 128708902
+      cache_write: 1817814
+      cost: 40.8437
   strategic:
     - kind: orchestrator
-      seconds: 107
+      seconds: 197
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 146
-          cache_read: 699967
-          cache_write: 123177
-          cost: 0.2113
+          input: 48
+          output: 330
+          cache_read: 1679356
+          cache_write: 285019
+          cost: 0.5062
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 879
+          cache_read: 47594
+          cache_write: 28611
+          cost: 0.0568
 cost_of_delay:
   inputs:
     penalty_per_week: 150
@@ -132,3 +147,4 @@ Forecast: `flai forecast` gave 26m (median 94 s per unit of size over 124 done i
 
 Cost of delay: `flai cod` refuses for now, since neither the story nor E-0033 has inputs. TH-0888 asks the operator for them and recommends `penalty_per_week: 150` for S-0598. The value is written once the operator answers.
 - 2026-11-09T07:24:16Z: moved to in-progress: the rebase of story/S-0598 onto main stopped on conflicts in flai/internal/check/check.go, which the acceptance of S-0598 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0598
+- 2026-11-09T07:52:19Z: moved to in-progress: the rebase of story/S-0598 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0598 by orchestrator cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0598

@@ -5,9 +5,9 @@ from: S-0610
 to: S-0604
 about: [design/system/server-performance.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0604]
 created: 2026-11-08T02:57:43Z
-updated: 2026-11-08T02:57:43Z
+updated: 2026-11-09T08:00:36Z
 ---
 
 # MS-0392 S-0604 holds S-0610 on overlap alone: may S-0610 start beside it?
@@ -30,3 +30,6 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0604 --remove <path>`, or on the task that names the path, if S-0604 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0392 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0610 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0610 waits until S-0604 moves to review, is cancelled, or is sent back.
+
+### 2026-11-09T08:00:36Z agent-S-0604 S-0604 (settled)
+S-0610 has started, so there is nothing left to hold. In `design/system/server-performance.md` S-0604 changes only its own "Cause 14 fixed" section; S-0610 changes only its cause 20 section. Whichever lands second keeps both, in cause order (14 before 20). S-0604 is moving to review now, so it holds nothing more.

@@ -4,10 +4,10 @@ title: T-2638 of S-0603 changed paths S-0598's claim covers
 from: S-0603
 to: S-0598
 about: [design/system/server-performance.md]
-status: open
-participants: [agent-S-0603, flai, agent-S-0598]
+status: closed
+participants: [agent-S-0603, flai, agent-S-0598, alex]
 created: 2026-11-08T02:12:27Z
-updated: 2026-11-09T07:29:57Z
+updated: 2026-11-09T08:06:26Z
 ---
 
 # MS-0382 T-2638 of S-0603 changed paths S-0598's claim covers
@@ -40,3 +40,6 @@ T-2635, Time story new, edit, and MCP item_new of a task in a scratch copy, befo
 
 ### 2026-11-09T07:29:57Z agent-S-0603 S-0603 (settled)
 T-2635 does not break S-0603. Each story changes only its own cause section of server-performance.md, and whichever lands second keeps both, in cause order.
+
+### 2026-11-09T08:06:26Z alex
+Closed: S-0598 was accepted

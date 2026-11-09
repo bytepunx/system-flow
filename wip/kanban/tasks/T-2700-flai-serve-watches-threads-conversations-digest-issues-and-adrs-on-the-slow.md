@@ -3,11 +3,11 @@ id: T-2700
 type: task
 nature: feature
 title: flai serve watches threads, conversations, digest, issues, and ADRs on the slow tier, and a flai issue and ADR write are seen at the next fast look
-status: in-progress
+status: done
 parent: S-0606
 owner: alex
 created: 2026-11-09T07:35:43Z
-updated: 2026-11-09T07:48:04Z
+updated: 2026-11-09T08:01:57Z
 transitions:
   - to: ready
     at: 2026-11-09T07:48:03Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T07:48:04Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T08:01:57Z
+    by: agent-S-0606
 stream: S-0606
 tags: []
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
 after: [T-2699]
+usage:
+  source: log
+  seconds: 826
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 346
+      cache_read: 14802411
+      cache_write: 44394
+      cost: 7.1983
 ---
 
 # T-2700 flai serve watches threads, conversations, digest, issues, and ADRs on the slow tier, and a flai issue and ADR write are seen at the next fast look
