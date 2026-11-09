@@ -6,7 +6,7 @@ title: A publish instance with nothing to release stops at its evaluate step dow
 status: ready
 owner: alex
 created: 2026-11-07T23:39:50Z
-updated: 2026-11-09T17:13:10Z
+updated: 2026-11-09T17:18:47Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:53Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 9
+      seconds: 26
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 30
-          cache_read: 264290
-          cache_write: 5760
-          cost: 0.0712
+          input: 5
+          output: 43
+          cache_read: 406351
+          cache_write: 8600
+          cost: 0.1095
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 24m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-09T17:06:05Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-09T19:33:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620, S-0624 and S-0629."
+  delivery: 2026-11-09T19:50:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620, S-0624, S-0629, S-0626 and S-0627."
   by: flai
-  at: 2026-11-09T17:13:10Z
+  at: 2026-11-09T17:18:47Z
 finalized:
   by: orchestrator
   at: 2026-11-09T17:09:29Z

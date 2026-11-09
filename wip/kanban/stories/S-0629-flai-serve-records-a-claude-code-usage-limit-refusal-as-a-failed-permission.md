@@ -6,7 +6,7 @@ title: flai serve records a Claude Code usage-limit refusal as a failed permissi
 status: ready
 owner: alex
 created: 2026-11-07T23:40:41Z
-updated: 2026-11-09T17:13:10Z
+updated: 2026-11-09T17:18:47Z
 transitions:
   - to: ready
     at: 2026-11-09T17:13:07Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 309040
           cost: 5.3977
     - kind: orchestrator
-      seconds: 95
+      seconds: 112
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 255
-          cache_read: 1122783
-          cache_write: 121003
-          cost: 0.3283
+          input: 24
+          output: 268
+          cache_read: 1264844
+          cache_write: 123844
+          cost: 0.3666
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -76,10 +76,10 @@ cost_of_delay:
   at: 2026-11-09T17:10:09Z
 forecast:
   duration: 40m
-  delivery: 2026-11-09T18:03:00Z
+  delivery: 2026-11-09T18:08:00Z
   basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620 and S-0624."
   by: flai
-  at: 2026-11-09T17:13:10Z
+  at: 2026-11-09T17:18:47Z
 finalized:
   by: orchestrator
   at: 2026-11-09T17:12:24Z

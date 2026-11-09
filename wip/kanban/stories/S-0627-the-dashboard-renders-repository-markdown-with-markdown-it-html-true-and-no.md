@@ -3,11 +3,14 @@ id: S-0627
 type: story
 nature: improvement
 title: "The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T23:40:28Z
-updated: 2026-11-09T17:13:10Z
-transitions: []
+updated: 2026-11-09T17:18:47Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:18:43Z
+    by: orchestrator
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, design/tech/markdown.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md, design/issues/summary.md]
@@ -21,6 +24,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 211
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 46
+          output: 316
+          cache_read: 2284079
+          cache_write: 110456
+          cost: 0.6326
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -37,13 +50,23 @@ usage:
           cache_read: 759050
           cache_write: 13854
           cost: 0.278
-draft: true
+cost_of_delay:
+  inputs:
+    penalty_per_week: 100
+    by: orchestrator
+    at: 2026-11-09T17:15:40Z
+  value: 100
+  by: planner-S-0627
+  at: 2026-11-09T17:16:13Z
 forecast:
   duration: 40m
-  delivery: 2026-11-09T18:44:00Z
-  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620, S-0624, S-0629, S-0621, S-0241, S-0622, S-0623, S-0625 and S-0626."
+  delivery: 2026-11-09T18:28:00Z
+  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620, S-0624, S-0629 and S-0626."
   by: flai
-  at: 2026-11-09T17:13:10Z
+  at: 2026-11-09T17:18:47Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T17:18:37Z
 ---
 # S-0627 The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator
 
@@ -68,7 +91,7 @@ Strategic usage carried over from I-0294: analyzer 41s, 0.8156 USD.
 
 ### Planning
 
-Proposed fix: render with markdown-it `html: false`. Every `{@html}` site and `markdownInto` in flaiover take their HTML from `render()` in `flaiover/src/lib/markdown.ts`, so one change covers all 13 sinks. No document under `design/` or `docs/` uses raw HTML outside code spans and fences. The task-list checkboxes and heading permalinks are plugin tokens and keep rendering. A sanitizer such as DOMPurify was weighed and not chosen: it adds a dependency and an allow-list to keep, for HTML no document needs. A Content-Security-Policy is defence in depth, not the cause, and is proposed on the plan thread as a separate story.
+Proposed fix: render with markdown-it `html: false`. Every `{@html}` site and `markdownInto` in flaiover take their HTML from `render()` in `flaiover/src/lib/markdown.ts`, so one change covers all 13 sinks. No document under `design/` or `docs/` uses raw HTML outside code spans and fences. The task-list checkboxes and heading permalinks are plugin tokens and keep rendering. A sanitizer such as DOMPurify was weighed and not chosen: it adds a dependency and an allow-list to keep, for HTML no document needs. A Content-Security-Policy is defence in depth, not the cause, and is proposed on TH-0936 as a separate story.
 
 Touches, each a file, no folder:
 
@@ -86,6 +109,6 @@ Touches, each a file, no folder:
 
 No `after`: the story reads no other story's output.
 
-Forecast: 40m. `flai forecast` gave 16m, 104 s per unit of size over 26 done medium improvement stories on claude-opus-5-5, times size 9 (2 criteria, 7 touches). Raised because the code task and the close-out run the flaiover tiers (vitest, svelte-check, flaiover-lint), which take minutes each and which the size does not count. Delivery 2026-11-09T18:33:00Z: the forecast's start, 7th in the pull order, plus 40m.
+Forecast: 40m. `flai forecast` gave 16m, 104 s per unit of size over 26 done medium improvement stories on claude-opus-5-5, times size 9 (2 criteria, 7 touches). Raised because the code task and the close-out run the flaiover tiers (vitest, svelte-check, flaiover-lint), which take minutes each and which the size does not count. flai's replan keeps the 40m and moves the delivery with the pull order.
 
-Cost of delay: no value yet. The story has no inputs and no epic, so `flai cod` refuses it; the inputs are the operator's and are asked for on the plan thread.
+Cost of delay: 100 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 100`, which the orchestrator set at 2026-11-09T17:15:40Z after the planner recommended it on TH-0936. It stands unadjusted. No revenue rides on the story. The figure was scaled against TH-0888's table: below S-0598's 150, since the harm is a risk with no instance observed, and level with S-0603's 100, since script run in the operator's session could accept, move, or edit any item.
