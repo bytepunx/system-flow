@@ -1,6 +1,6 @@
 ---
 title: Telemetry
-updated: 2026-10-03
+updated: 2026-11-09
 audience: agent
 order: 120
 status: active
@@ -34,6 +34,6 @@ Metrics, traces, and health signals every service emits, and how they are named.
 <!-- system-flow:end-of-baseline -->
 
 ## Project additions
-- flai exposes nothing: it is a short-lived command. It emits no traces unless `OTEL_*` variables are set, and then only one root span per invocation (S-0031, optional).
-- flaiover exposes `/_health`, `/_ready` (checks the mounted repository is readable and the index is built), and `/metrics` with `flaiover_` prefixed golden signals and `flaiover_build_info`. Traces via `@opentelemetry/sdk-node` to the collector named by `OTEL_EXPORTER_OTLP_ENDPOINT`. Implemented in S-0032.
+- flai emits no traces and no metrics, and reads no `OTEL_*` variable: S-0031 built its logging and no spans. `flai serve`, which runs for days, offers Go's profiles at `/debug/pprof/` on the loopback address `FLAI_PPROF_ADDR` names, and only when it is set (`flai/cmd/serve_pprof.go`, [settings](../../docs/operators/settings.md)).
+- flaiover exposes `/_health`, `/_ready`, and `/metrics`. `/_ready` checks, each with a short timeout, that flai on the host is connected (`host_flai`) and answers for the project (`project`). Nothing of the project is mounted in its container ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). `/metrics` with `flaiover_` prefixed golden signals and `flaiover_build_info`. Traces via `@opentelemetry/sdk-node` to the collector named by `OTEL_EXPORTER_OTLP_ENDPOINT`. Implemented in S-0032.
 - Local telemetry stack (collector plus a viewer) is added to the flaiover compose file in S-0032; there is no cluster here.
