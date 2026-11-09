@@ -898,6 +898,10 @@ type launcher struct {
 	// docker asks docker whether the container harness can start a story's
 	// agent, and stops its container (S-0508).
 	docker execx.Runner
+	// imageCheck is Options.imageCheck: what checks a container image's
+	// Claude Code version that has no record, beside the start (S-0618); nil
+	// checks none.
+	imageCheck func(root string, cfg AgentConfig, image, version, provider string)
 }
 
 // told records a run in the host's state and tells changed.
@@ -938,7 +942,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o),
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck,
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},

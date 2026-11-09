@@ -307,6 +307,13 @@ type Options struct {
 	// its namespace once its deploy passed (S-0579, ADR-0254 §8); nil runs
 	// none.
 	Checks func(repo *workitem.Repo) (ChecksConfig, error)
+
+	// imageCheck checks inside image, beside the start, the Claude Code
+	// version a container start of a claude-code agent of the project at root
+	// read from it, through provider, "" for none (S-0618, ADR-0106): Run
+	// sets it to its checker's, which starts none when the version has a
+	// record through provider and never waits. Nil, outside Run, checks none.
+	imageCheck func(root string, cfg AgentConfig, image, version, provider string)
 }
 
 // allowsUnsigned is whether the allowance is in force for the project at
@@ -557,6 +564,13 @@ func Run(ctx context.Context, o Options) error {
 		return out
 	})
 	defer checker.wait()
+	// A container start of a claude-code agent runs the Claude Code its image
+	// holds, so the version it reads there is checked inside the image when
+	// it has no record, through the checker, so that it runs one check at a
+	// time with the host's and ends when flai serve stops (S-0618).
+	o.imageCheck = func(root string, cfg AgentConfig, image, version, provider string) {
+		checker.considerImage(ctx, root, cfg, image, version, provider)
+	}
 	// Each served project's history is looked at for a newer flai release
 	// every minute, and at once when it is first served (ADR-0158).
 	upgrades := newUpgrader(o)

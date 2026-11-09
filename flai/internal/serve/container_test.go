@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -124,9 +125,10 @@ func (lab *agentLab) pilotRequest(story string) harness.Request {
 // pilot's start request on its standard input, closed once written, and the
 // provider's key and the MCP server's token in the docker client's
 // environment alone, the URL's host the container's name for the host. The
-// image's Claude Code version is read and recorded on the run, and a version
-// this host has no passed check of is warned of. The cache folder is made the
-// user's alone, with the link to the login.
+// image's Claude Code version is read and recorded on the run, and, with no
+// image check, as outside flai serve's run, a version this host has no passed
+// check of is warned of. The cache folder is made the user's alone, with the
+// link to the login.
 func TestAStoryOnTheContainerHarnessIsStartedWithItsRequestOnStandardInput(t *testing.T) {
 	const key = "sk-sentinel-S0508-never-in-argv"
 	t.Setenv("S0350_GATEWAY_KEY", key)
@@ -207,6 +209,98 @@ func TestAStoryOnTheContainerHarnessIsStartedWithItsRequestOnStandardInput(t *te
 	}
 	if n := lab.logged("container claude code version unchecked"); n != 1 {
 		t.Errorf("a checked version was warned of:\n%s", lab.logText())
+	}
+}
+
+// I-0253, S-0618, ADR-0106: a container start of a claude-code agent whose
+// image's Claude Code version has no record through the agent's provider has
+// the check made inside the image, once, beside the start, which does not
+// wait for it: before S-0618 the version was only warned of and no check ran.
+// The record names the image. A version recorded through the provider is not
+// checked again, and one whose check failed is warned of.
+func TestAContainerStartChecksItsImagesUnrecordedClaudeCodeInsideIt(t *testing.T) {
+	t.Setenv("S0350_GATEWAY_KEY", "sk-S0618-gateway")
+	lab, _ := containerLab(t)
+	ctx := context.Background()
+	checker := newClaudeChecker(lab.o, func() []Entry { return []Entry{lab.l.entry} })
+	release := make(chan struct{})
+	var mu sync.Mutex
+	var calls [][]string
+	checker.runImage = func(_ context.Context, _ string, argv, _ []string) (string, error) {
+		mu.Lock()
+		calls = append(calls, argv)
+		mu.Unlock()
+		<-release
+		// the image's claude writes what the check asks, through permission_prompt
+		prompt := argv[slices.Index(argv, "-p")+1]
+		_, rest, _ := strings.Cut(prompt, "create the file ")
+		target, rest, _ := strings.Cut(rest, " with exactly this content")
+		_, rest, _ = strings.Cut(rest, "on one line: ")
+		content, _, _ := strings.Cut(rest, "\n")
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return "", err
+		}
+		return "", os.WriteFile(target, []byte(content+"\n"), 0o644)
+	}
+	ran := func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(calls)
+	}
+	lab.l.imageCheck = func(root string, cfg AgentConfig, image, version, provider string) {
+		checker.considerImage(ctx, root, cfg, image, version, provider)
+	}
+	start := func(title string) {
+		t.Helper()
+		id := containerStory(lab, title, &manifest.Agent{Harness: harness.Container, Provider: "gateway"})
+		lab.l.look(ctx, false)
+		waitFor(t, title+" ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+		if r := lab.run(id); r.Error != "" || r.HarnessVersion != "2.1.312" {
+			t.Fatalf("run: %+v", r)
+		}
+	}
+
+	// the agent started and ended while the check was held
+	start("In a container")
+	waitFor(t, "the check ran", func() bool { return ran() == 1 })
+	close(release)
+	checker.wait()
+	checks, err := lab.o.Dir.claudeChecks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := checks["2.1.312"]["gateway"]; rec.Outcome != ClaudeCheckPassed || rec.Image != harness.DefaultImages[harness.ClaudeCode] {
+		t.Errorf("the check's record: %+v in %+v", rec, checks)
+	}
+	argv := strings.Join(calls[0], " ")
+	if !strings.Contains(argv, "--entrypoint claude "+harness.DefaultImages[harness.ClaudeCode]+" ") || !strings.Contains(argv, "--permission-prompt-tool") {
+		t.Errorf("the check's docker run: %s", argv)
+	}
+	if n := lab.logged("claude code check started"); n != 1 || !strings.Contains(lab.logText(), "image="+harness.DefaultImages[harness.ClaudeCode]) {
+		t.Errorf("the check was logged started %d times:\n%s", n, lab.logText())
+	}
+	if n := lab.logged("container claude code version unchecked"); n != 0 {
+		t.Errorf("a version checked in its image was warned of as unchecked:\n%s", lab.logText())
+	}
+
+	// a version recorded passed through the provider is not checked again
+	start("In a container again")
+	checker.wait()
+	if n := ran(); n != 1 {
+		t.Errorf("a version recorded passed was checked again: %d checks", n)
+	}
+
+	// nor one recorded failed, which is warned of
+	if err := lab.o.Dir.recordClaudeCheck("2.1.312", "gateway", ClaudeCheck{Outcome: ClaudeCheckFailed, Image: "flai-agent-claude-code:local"}); err != nil {
+		t.Fatal(err)
+	}
+	start("In a container once more")
+	checker.wait()
+	if n := ran(); n != 1 {
+		t.Errorf("a version recorded failed was checked again: %d checks", n)
+	}
+	if n := lab.logged("container claude code version failed its check"); n != 1 || !strings.Contains(lab.logText(), "provider=gateway") {
+		t.Errorf("a version whose check failed was warned of %d times:\n%s", n, lab.logText())
 	}
 }
 

@@ -26,13 +26,15 @@ import (
 // that cannot succeed, each refusal saying what to do: docker not on PATH,
 // the inner harness's image not on this host, and, through the adapter, a
 // login the inner harness needs and the host has not set. It reads the inner
-// harness's version from the image and records it on the run, warning when
-// this host has no passed check of it (ADR-0106): the host's claude is not
-// probed for it. Since docker would make an empty folder, the root user's,
-// where a missing mount should be, it opens a story's worktree when it has
-// none, and makes the main checkout's .git/hooks for a strategic agent's when
-// it is missing; and it makes the cache folder of the story or the role with
-// the link to the operator's login. The token and the keys reach the docker
+// harness's version from the image and records it on the run; a Claude Code
+// version with no record of ADR-0106's check through the agent's provider is
+// checked inside the image, beside the start (S-0618), and one whose check
+// failed is warned of: the host's claude is not probed for it. Since docker
+// would make an empty folder, the root user's, where a missing mount should
+// be, it opens a story's worktree when it has none, and makes the main
+// checkout's .git/hooks for a strategic agent's when it is missing; and it
+// makes the cache folder of the story or the role with the link to the
+// operator's login. The token and the keys reach the docker
 // client by environment, and pilot's start request its standard input
 // (spawnWith). A stop stops the container by its name.
 
@@ -138,7 +140,7 @@ func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, req harness.Re
 		if err != nil {
 			return err
 		}
-		l.containerVersion(cfg, run, host.Images[inner])
+		l.containerVersion(cfg, run, host.Images[inner], req.ProviderName)
 	}
 	subject := req.Story
 	if subject == "" {
@@ -152,24 +154,45 @@ func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, req harness.Re
 
 // containerVersion records on run the version of Claude Code image holds, as
 // claude --version prints it in a container of its own with no network, and
-// warns when this host has no passed check of that version through any
-// provider: the check in the image (ADR-0106) is not made here. A version
-// that cannot be read is warned of, and the start goes on.
-func (l *launcher) containerVersion(cfg AgentConfig, run *AgentRun, image string) {
+// has it checked against permission_prompt inside image (ADR-0106, S-0618)
+// when this host has no record of that version through provider, the one the
+// agent's start names, "" for none: the check runs beside the start, which
+// never waits for it. A version whose record through provider is a failure
+// is warned of. With no image check, outside flai serve's run, a version this
+// host has no passed check of through any provider is warned of instead. A
+// version that cannot be read is warned of, and the start goes on.
+func (l *launcher) containerVersion(cfg AgentConfig, run *AgentRun, image, provider string) {
 	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "run", "--rm", "--network", "none", "--entrypoint", "claude", image, "--version")
 	fields := strings.Fields(out)
 	if err != nil || len(fields) == 0 {
 		l.warn("container claude code version unreadable", append(run.containerSaid(), "image", image, "err", dockerSaid(out, err))...)
 		return
 	}
-	run.HarnessVersion = fields[0]
-	passed, err := l.dir.claudePassed(run.HarnessVersion)
-	if err != nil {
-		l.warn("claude code checks unreadable", "version", run.HarnessVersion, "image", image, "err", err.Error())
+	version := fields[0]
+	run.HarnessVersion = version
+	if l.imageCheck == nil {
+		passed, err := l.dir.claudePassed(version)
+		if err != nil {
+			l.warn("claude code checks unreadable", "version", version, "image", image, "err", err.Error())
+			return
+		}
+		if !passed {
+			l.warn("container claude code version unchecked", "version", version, "image", image)
+		}
 		return
 	}
-	if !passed {
-		l.warn("container claude code version unchecked", "version", run.HarnessVersion, "image", image)
+	checks, err := l.dir.claudeChecks()
+	if err != nil {
+		l.warn("claude code checks unreadable", "version", version, "image", image, "err", err.Error())
+		return
+	}
+	through := checkedThrough(provider)
+	rec, recorded := checks[version][through]
+	switch {
+	case !recorded:
+		l.imageCheck(l.entry.Root, cfg, image, version, provider)
+	case rec.Outcome != ClaudeCheckPassed:
+		l.warn("container claude code version failed its check", "version", version, "image", image, "provider", through)
 	}
 }
 
