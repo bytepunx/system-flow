@@ -2,12 +2,12 @@
 id: I-0299
 title: A role run the stdio MCP server starts through role_run is never reaped, so flai serve counts its zombie as running and never settles it
 class: defect
-status: open
+status: closed
 count: 1
 cost: 20m
 first_reported: 2026-11-07T08:21:58Z
 last_reported: 2026-11-07T08:21:58Z
-updated: 2026-11-07T23:40:59Z
+updated: 2026-11-09T22:13:18Z
 ---
 
 # I-0299 A role run the stdio MCP server starts through role_run is never reaped, so flai serve counts its zombie as running and never settles it
@@ -24,3 +24,4 @@ S-0584's formula step T-2545 started the analyzer with role_run from the story a
 ## Remediation
 
 Story S-0632 remediates this issue, created from it at 2026-11-07T23:40:59Z.
+Closed 2026-11-09T22:13:18Z: S-0632: a launcher that hands its agent over now reaps it in a goroutine instead of releasing it (flai/internal/serve/agents.go, await), so flai mcp over stdio keeps no zombie of a role run; and Alive and Owns count a process in state Z or X as gone on Linux (proc_linux.go, proc_unix.go), so flai serve settles a zombie of any parent. TestAHandedOverAgentIsReaped and TestAZombieIsNeitherAliveNorOwned reproduce both halves.
