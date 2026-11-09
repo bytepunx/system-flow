@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:08Z
-updated: 2026-11-09T11:27:49Z
+updated: 2026-11-09T16:59:32Z
 transitions: []
 tags: [dashboard, cli]
 topics: [logging]
@@ -48,7 +48,6 @@ usage:
           cache_read: 665292
           cache_write: 27169
           cost: 0.1786
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -63,6 +62,9 @@ forecast:
   basis: "Its own forecast of 3h; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
   by: flai
   at: 2026-11-09T11:27:49Z
+finalized:
+  by: alex
+  at: 2026-11-09T16:59:32Z
 ---
 # S-0611 The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB
 
