@@ -3581,7 +3581,7 @@ flai dashboard --attach        # follow the logs; Ctrl-C leaves the container ru
 flai dashboard --build         # build flaiover:local from this monorepo and run that, allowing unsigned builds
 flai dashboard --allow-unsigned  # this start only: the dashboard serves a flai with no release stamp
 flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
-flai dashboard status          # running, not answering, or gone, from a probe of /_health; the image's digest and release; whether flai serve dials it
+flai dashboard status          # running, not answering, port held, or gone, from a probe of /_health; the image's digest and release; whether flai serve dials it
 flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard restart         # start the image that runs again, never a newer one a check pulled
