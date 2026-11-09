@@ -16,7 +16,9 @@ import (
 // serve would, with this process's PID so that it reads as alive.
 func fakeRunning(t *testing.T, dir string) {
 	t.Helper()
-	now := time.Now().UTC().Format(time.RFC3339)
+	// stamped an hour ahead, so the state stays fresh past host.StaleAfter
+	// however long the import runs on a loaded host (I-0309)
+	now := time.Now().UTC().Add(time.Hour).Format(time.RFC3339)
 	data, _ := json.Marshal(map[string]any{"pid": os.Getpid(), "started": now, "updated": now})
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
