@@ -286,18 +286,39 @@ func replayCounts(items, all []*workitem.Item, now time.Time) (times, built, cha
 }
 
 // BenchmarkReplayHolds replays the hold rules over a history at this
-// repository's scale (I-0155).
+// repository's scale (I-0155): full, as every request did before S-0608 and
+// flai stats still does, and kept, as a request whose keys have not moved
+// does, laying the kept replay out over its 30-day and 365-day windows.
 func BenchmarkReplayHolds(b *testing.B) {
 	all, opt, start := claimsHistory(historyStories)
 	items := storiesOf(all)
 	times, built, changed := replayCounts(items, all, opt.Now)
-	for b.Loop() {
-		replayHolds(items, all, start, opt)
+	report := func(b *testing.B) {
+		b.ReportMetric(float64(len(all)), "items/op")
+		b.ReportMetric(float64(times), "times/op")
+		b.ReportMetric(float64(built), "holds/op")
+		b.ReportMetric(float64(changed), "changes/op")
 	}
-	b.ReportMetric(float64(len(all)), "items/op")
-	b.ReportMetric(float64(times), "times/op")
-	b.ReportMetric(float64(built), "holds/op")
-	b.ReportMetric(float64(changed), "changes/op")
+	b.Run("full", func(b *testing.B) {
+		for b.Loop() {
+			replayHolds(items, all, start, opt)
+		}
+		report(b)
+	})
+	keyed := opt
+	keyed.Root, keyed.ItemsGeneration = "bench:"+b.Name(), 1
+	for _, days := range []int{30, 365} {
+		b.Run(fmt.Sprintf("kept-%dd", days), func(b *testing.B) {
+			o := keyed
+			o.Since = time.Duration(days) * 24 * time.Hour
+			start := o.Now.Add(-o.Since)
+			holdsFor(items, all, start, o)
+			for b.Loop() {
+				holdsFor(items, all, start, o)
+			}
+			report(b)
+		})
+	}
 }
 
 // BenchmarkComputeClaims computes the report, the replay of the holds among

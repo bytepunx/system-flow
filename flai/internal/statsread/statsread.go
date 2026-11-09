@@ -48,6 +48,10 @@ import (
 // cannot be read is left out. Read logs a warning on log for each; any other
 // read that fails stops it.
 //
+// Root, ItemsGeneration, and CommitsKey are set so that Compute keeps the hold
+// replay and the touches drift between calls while the items and the commits
+// stay the same (S-0608).
+//
 // The reads run at once, each in its own goroutine, so Read takes about as
 // long as its slowest read (S-0607). When several fail, the error is the one
 // of the first in the order above, and each warning is logged with its
@@ -63,6 +67,8 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 		issueList                                     []*issues.Issue
 		board                                         *workitem.Board
 		commits                                       map[string][]string
+		commitsKey                                    string
+		generation                                    uint64
 		convs                                         []*messages.Conversation
 		conflicts                                     []storygit.Conflict
 		queue                                         []mergequeue.Event
@@ -73,7 +79,16 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 		errIssues, errBoard, errConflicts             error
 	)
 	cacheDir := repo.CacheDir()
-	wg.Go(func() { items, errItems = repo.List(true) })
+	wg.Go(func() {
+		// The generation read before and after the list says the items listed
+		// are those of that generation; when it moved meanwhile, none is given,
+		// so nothing is kept from them (S-0608).
+		before := repo.Generation()
+		items, errItems = repo.List(true)
+		if after := repo.Generation(); after == before {
+			generation = after
+		}
+	})
 	wg.Go(func() { activities, errActivities = repo.Activities() })
 	wg.Go(func() { roles, errRoles = repo.Roles() })
 	wg.Go(func() { threadList, errThreads = threads.List(repo) })
@@ -81,7 +96,7 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	wg.Go(func() { board, errBoard = repo.LoadBoard() })
 	wg.Go(func() {
 		var err error
-		if commits, err = storygit.Committed(r, repo); err != nil {
+		if commits, commitsKey, err = storygit.CommittedKeyed(r, repo); err != nil {
 			log.Warn("cannot read the stories' commits for touches drift", "component", "stats", "err", err.Error(),
 				"detail", "claims.drift is left out; run flai stats in the project's git checkout, with git installed, to compare touches with commits")
 		}
@@ -135,6 +150,7 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
 	opt.Commits = commits
+	opt.Root, opt.ItemsGeneration, opt.CommitsKey = repo.Root, generation, commitsKey
 	opt.Conversations = convs
 	opt.Conflicts, opt.ConflictsUnreadable = conflicts, errConflicts != nil
 	opt.QueueEvents, opt.QueueLogged = queue, queueLogged

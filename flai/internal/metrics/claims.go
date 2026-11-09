@@ -1,9 +1,11 @@
 package metrics
 
 import (
+	"encoding/json"
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -104,7 +106,7 @@ func claims(items, all []*workitem.Item, tl timelines, start time.Time, opt Opti
 	if opt.Commits == nil {
 		return out
 	}
-	drift := touchDrift(items, all, opt.Projects, opt.Commits)
+	drift := driftFor(items, all, opt)
 	out.Drift = &drift
 	stories, exact := make([]int, len(out.Weeks)), make([]int, len(out.Weeks))
 	byID := map[string]*workitem.Item{}
@@ -205,24 +207,42 @@ type holdReplay struct {
 }
 
 // replayHolds replays the hold rules for each story among items that was ever
-// in ready. They are replayed at each creation and transition of a story or
-// task, over the states of the time and today's touches and after; nothing
-// changes until the next one, and nothing after now counts. A hold counts
-// under the reason it is named by, the code Holds.Of gives it. An overlap
-// inside the manifest's shared paths holds nothing (ADR-0096). The holds are
-// judged anew only after an event that can change one, of a story or of a
-// task of a story in ready or in progress, over only the items they read, and
-// with what did not change remembered (I-0155).
+// in ready, over all, up to the request's now, and lays what they held out
+// over the window from start: holdTimeline replays, and slice lays it out.
+// Nothing is kept; holdsFor keeps the replay between requests (S-0608).
 func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
-	// Held time is whole seconds, as timestamps are: a hold still open runs
-	// to now's last whole second.
 	now := opt.Now.Truncate(time.Second)
+	out := newHoldReplay(items, start, now)
+	if len(out.seconds) == 0 {
+		return out
+	}
+	return replayTimeline(all, now, opt).slice(out, start, now)
+}
+
+// holdsFor is replayHolds, its replay kept for opt.Root between requests while
+// the item generation, the manifest's projects and shared paths, and the
+// replay's horizon hold (S-0608): only the slicing to the window is done
+// again. Without a root or a generation, as in flai stats, nothing is kept.
+func holdsFor(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
+	now := opt.Now.Truncate(time.Second)
+	out := newHoldReplay(items, start, now)
+	if len(out.seconds) == 0 {
+		return out
+	}
+	t, _ := keptTimeline(all, now, opt)
+	return t.slice(out, start, now)
+}
+
+// newHoldReplay is the replay's answer before any hold is counted: a zero for
+// each story among items that was ever in ready, and for each day from the one
+// that holds start to now and each ISO week from the one that holds start to
+// this one.
+func newHoldReplay(items []*workitem.Item, start, now time.Time) holdReplay {
 	out := holdReplay{seconds: map[string]*float64{}}
-	day0, week0 := firstDay(start), monday(start)
-	for d := day0; !d.After(now); d = d.AddDate(0, 0, 1) {
+	for d := firstDay(start); !d.After(now); d = d.AddDate(0, 0, 1) {
 		out.days = append(out.days, 0)
 	}
-	for m := week0; !m.After(now); m = m.AddDate(0, 0, 7) {
+	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
 		out.weeks = append(out.weeks, HeldByCode{})
 	}
 	for _, it := range items {
@@ -230,8 +250,56 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 			out.seconds[it.ID] = new(float64)
 		}
 	}
-	if len(out.seconds) == 0 {
-		return out
+	return out
+}
+
+// holdTimeline is the hold rules' replay over a history, whatever the window
+// and now: the judgement in force from each time it changed, the last open
+// until now (S-0608).
+type holdTimeline struct {
+	segments []holdSegment
+	// judged is how many times the holds were judged anew (I-0155).
+	judged int
+	// applied is the time of the last event the replay applied, zero with
+	// none; pending that of the first it left for being after its horizon,
+	// zero when it applied every event.
+	applied, pending time.Time
+}
+
+// holdSegment is the stories held from at until the next segment, by code.
+type holdSegment struct {
+	at   time.Time
+	held []heldEntry
+}
+
+// heldEntry is a story held, by its ID, and the code of its hold.
+type heldEntry struct {
+	id, code string
+}
+
+// answers says whether the timeline answers for a request at now: every
+// event up to now is applied, and none after it.
+func (t *holdTimeline) answers(now time.Time) bool {
+	return !now.Before(t.applied) && (t.pending.IsZero() || now.Before(t.pending))
+}
+
+// replayTimeline replays the hold rules for every story of all that was ever
+// in ready. They are replayed at each creation and transition of a story or
+// task not after now, over the states of the time and today's touches and
+// after; nothing changes until the next one. A hold counts under the reason it
+// is named by, the code Holds.Of gives it. An overlap inside the manifest's
+// shared paths holds nothing (ADR-0096). The holds are judged anew only after
+// an event that can change one, of a story or of a task of a story in ready or
+// in progress, over only the items they read, and with what did not change
+// remembered (I-0155). Whether a story is held does not depend on which other
+// stories are tracked, so a request's stories are the timeline's filtered.
+func replayTimeline(all []*workitem.Item, now time.Time, opt Options) *holdTimeline {
+	out := &holdTimeline{}
+	tracked := map[string]bool{}
+	for _, it := range all {
+		if it.Type == workitem.Story && !it.FirstAt(workitem.Ready).IsZero() {
+			tracked[it.ID] = true
+		}
 	}
 	type event struct {
 		at time.Time
@@ -256,15 +324,6 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 		}
 	}
 	sort.SliceStable(events, func(a, b int) bool { return events[a].at.Before(events[b].at) })
-	// dayEnd is the moment a day's held stories are counted at: its last
-	// second, today's at now.
-	dayEnd := func(i int) time.Time {
-		end := day0.AddDate(0, 0, i).Add(24*time.Hour - time.Second)
-		if end.After(now) {
-			return now
-		}
-		return end
-	}
 	// What a hold reads, kept as the events apply: the stories created, in
 	// creation order and by ID, the last created of each; the tasks created, by
 	// parent as written, as NewHolds keys them; and how many stories of each ID
@@ -285,18 +344,14 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 		return ""
 	}
 	// held is the judgement in force: each tracked story held, by its code.
-	type heldStory struct {
-		seconds *float64
-		code    string
-	}
-	var held []heldStory
+	var held []heldEntry
 	// memo keeps what the holds work out, claims and how one holds another,
 	// from one judgement to the next. A story's claim is forgotten when a task
 	// of it is created or enters or leaves done or cancelled: all Claim reads
 	// of them.
 	memo := workitem.NewHoldsMemo()
-	day := 0
-	for k := 0; k < len(events) && !events[k].at.After(now); {
+	k := 0
+	for k < len(events) && !events[k].at.After(now) {
 		at := events[k].at
 		judge := false
 		for ; k < len(events) && events[k].at.Equal(at); k++ {
@@ -328,69 +383,116 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 				}
 			}
 		}
-		if judge {
-			held = held[:0]
-			var ready, in []*workitem.Item
+		out.applied = at
+		if !judge {
+			continue
+		}
+		var found []heldEntry
+		var ready, in []*workitem.Item
+		for _, s := range stories {
+			if s.Status == workitem.Ready && tracked[s.ID] {
+				ready = append(ready, s)
+			}
+		}
+		if len(ready) > 0 {
+			// Only the stories in ready or in progress and their tasks, and
+			// the stories the ready ones name in after, are read.
+			withTasks := map[string]bool{}
 			for _, s := range stories {
-				if s.Status == workitem.Ready && out.seconds[s.ID] != nil {
-					ready = append(ready, s)
+				if !isActive(s.Status) {
+					continue
+				}
+				in = append(in, s)
+				if !withTasks[s.ID] {
+					withTasks[s.ID] = true
+					for _, t := range tasks[s.ID] {
+						if t.Status != workitem.Cancelled {
+							in = append(in, t)
+						}
+					}
 				}
 			}
-			if len(ready) > 0 {
-				// Only the stories in ready or in progress and their tasks,
-				// and the stories the ready ones name in after, are read.
-				withTasks := map[string]bool{}
-				for _, s := range stories {
-					if !isActive(s.Status) {
-						continue
-					}
-					in = append(in, s)
-					if !withTasks[s.ID] {
-						withTasks[s.ID] = true
-						for _, t := range tasks[s.ID] {
-							if t.Status != workitem.Cancelled {
-								in = append(in, t)
-							}
-						}
+			for _, s := range ready {
+				for _, e := range s.After {
+					if a := byID[workitem.CanonicalID(e)]; a != nil && !isActive(a.Status) {
+						in = append(in, a)
 					}
 				}
-				for _, s := range ready {
-					for _, e := range s.After {
-						if a := byID[workitem.CanonicalID(e)]; a != nil && !isActive(a.Status) {
-							in = append(in, a)
-						}
-					}
-				}
-				h := memo.NewHolds(in, opt.Projects).WithShared(opt.Shared)
-				out.judged++
-				for _, s := range ready {
-					if hold := h.Of(s); hold != nil {
-						held = append(held, heldStory{seconds: out.seconds[s.ID], code: hold.Code})
-					}
+			}
+			h := memo.NewHolds(in, opt.Projects).WithShared(opt.Shared)
+			out.judged++
+			for _, s := range ready {
+				if hold := h.Of(s); hold != nil {
+					found = append(found, heldEntry{id: s.ID, code: hold.Code})
 				}
 			}
 		}
-		// The states hold from at up to next; until is next, not after now.
+		// A judgement that holds what the one in force holds starts nothing.
+		if !slices.Equal(found, held) {
+			held = found
+			out.segments = append(out.segments, holdSegment{at: at, held: held})
+		}
+	}
+	if k < len(events) {
+		out.pending = events[k].at
+	}
+	return out
+}
+
+// slice counts into out, made by newHoldReplay for the window from start to
+// now, what the timeline held of out's stories: the seconds each was held,
+// the stories held at the end of each day, and the seconds held by code in
+// each ISO week. A judgement holds from its time to the next one's, the last
+// to now; a day's stories are counted at its last second, today's at now.
+func (t *holdTimeline) slice(out holdReplay, start, now time.Time) holdReplay {
+	out.judged = t.judged
+	day0, week0 := firstDay(start), monday(start)
+	dayEnd := func(i int) time.Time {
+		end := day0.AddDate(0, 0, i).Add(24*time.Hour - time.Second)
+		if end.After(now) {
+			return now
+		}
+		return end
+	}
+	const week = 7 * 24 * time.Hour
+	day := 0
+	for i, seg := range t.segments {
+		at := seg.at
+		if at.After(now) {
+			break
+		}
+		// The judgement holds from at up to next; until is next, not after now.
 		until, next := now, now.Add(time.Second)
-		if k < len(events) && !events[k].at.After(now) {
-			until, next = events[k].at, events[k].at
+		if i+1 < len(t.segments) && !t.segments[i+1].at.After(now) {
+			until, next = t.segments[i+1].at, t.segments[i+1].at
 		}
 		byCode := map[string]int{}
-		for _, s := range held {
-			*s.seconds += until.Sub(at).Seconds()
-			byCode[s.code]++
+		for _, h := range seg.held {
+			if s := out.seconds[h.id]; s != nil {
+				*s += until.Sub(at).Seconds()
+				byCode[h.code]++
+			}
+		}
+		// Only the weeks from the one that holds at to the one that holds
+		// until can take any of it.
+		first := 0
+		if at.After(week0) {
+			first = int(at.Sub(week0) / week)
 		}
 		for code, n := range byCode {
-			for i := range out.weeks {
-				wk := week0.AddDate(0, 0, 7*i)
+			for w := first; w < len(out.weeks); w++ {
+				wk := week0.AddDate(0, 0, 7*w)
+				if !wk.Before(until) {
+					break
+				}
 				from, to := laterOf(at, wk), earlierOf(until, wk.AddDate(0, 0, 7))
 				if to.After(from) {
-					out.weeks[i].add(code, float64(n)*to.Sub(from).Seconds())
+					out.weeks[w].add(code, float64(n)*to.Sub(from).Seconds())
 				}
 			}
 		}
 		for day < len(out.days) && dayEnd(day).Before(at) {
-			day++ // counted under earlier states, or before any item was
+			day++ // counted under earlier judgements, or before any
 		}
 		for ; day < len(out.days) && dayEnd(day).Before(next); day++ {
 			for _, n := range byCode {
@@ -399,4 +501,115 @@ func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) hold
 		}
 	}
 	return out
+}
+
+// kept holds, per repository root, the last hold timeline and touches drift
+// Compute worked out, each with the keys it was worked out under, so that a
+// request while they hold works out neither again (S-0608). A root holds one
+// of each, replaced when its keys move.
+var kept = struct {
+	sync.Mutex
+	holds map[string]keptHolds
+	drift map[string]keptDrift
+}{holds: map[string]keptHolds{}, drift: map[string]keptDrift{}}
+
+// keptHolds is a hold timeline and its keys.
+type keptHolds struct {
+	generation uint64
+	config     string
+	timeline   *holdTimeline
+}
+
+// keptDrift is the touches drift of every story with commits and its keys.
+type keptDrift struct {
+	generation uint64
+	commits    string
+	config     string
+	drift      []TouchDrift
+}
+
+// configKey is the manifest's projects and shared paths as the replay and the
+// drift read them, "" when they cannot be written down, which keeps nothing.
+func configKey(opt Options) string {
+	b, err := json.Marshal(struct {
+		Projects []manifest.Project
+		Shared   manifest.Claims
+	}{opt.Projects, opt.Shared})
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+// keptTimeline is the hold timeline of all up to now: the one kept for
+// opt.Root while the generation and the manifest's projects and shared paths
+// are those it was replayed under and it answers for now, else a new replay,
+// kept in its place unless a newer generation's is kept already. replayed
+// says whether it replayed. With no root, generation, or config key, it
+// replays and keeps nothing.
+func keptTimeline(all []*workitem.Item, now time.Time, opt Options) (t *holdTimeline, replayed bool) {
+	config := configKey(opt)
+	if opt.Root == "" || opt.ItemsGeneration == 0 || config == "" {
+		return replayTimeline(all, now, opt), true
+	}
+	kept.Lock()
+	k, ok := kept.holds[opt.Root]
+	kept.Unlock()
+	if ok && k.generation == opt.ItemsGeneration && k.config == config && k.timeline.answers(now) {
+		return k.timeline, false
+	}
+	t = replayTimeline(all, now, opt)
+	kept.Lock()
+	if cur, ok := kept.holds[opt.Root]; !ok || cur.generation <= opt.ItemsGeneration {
+		kept.holds[opt.Root] = keptHolds{generation: opt.ItemsGeneration, config: config, timeline: t}
+	}
+	kept.Unlock()
+	return t, true
+}
+
+// driftFor is the touches drift of the stories among items, in ID order:
+// touchDrift over every story of all, kept for opt.Root while the generation,
+// the commits' key, and the manifest's projects are those it was worked out
+// under, and filtered to the stories among items. The drift is shared with
+// the requests that keep it, which only read it.
+func driftFor(items, all []*workitem.Item, opt Options) []TouchDrift {
+	every, _ := keptTouchDrift(all, opt)
+	ids := map[string]bool{}
+	for _, it := range items {
+		if it.Type == workitem.Story {
+			ids[it.ID] = true
+		}
+	}
+	out := []TouchDrift{}
+	for _, d := range every {
+		if ids[d.ID] {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// keptTouchDrift is the touches drift of every story of all, in ID order: the
+// one kept for opt.Root while its keys hold, else worked out again and kept
+// in its place unless a newer generation's is kept already. worked says
+// whether it was worked out. With no root, generation, commits' key, or
+// config key, it is worked out and nothing is kept.
+func keptTouchDrift(all []*workitem.Item, opt Options) (drift []TouchDrift, worked bool) {
+	config := configKey(opt)
+	if opt.Root == "" || opt.ItemsGeneration == 0 || opt.CommitsKey == "" || config == "" {
+		return touchDrift(all, all, opt.Projects, opt.Commits), true
+	}
+	kept.Lock()
+	k, ok := kept.drift[opt.Root]
+	kept.Unlock()
+	if ok && k.generation == opt.ItemsGeneration && k.commits == opt.CommitsKey && k.config == config {
+		return k.drift, false
+	}
+	drift = touchDrift(all, all, opt.Projects, opt.Commits)
+	kept.Lock()
+	if cur, ok := kept.drift[opt.Root]; !ok || cur.generation <= opt.ItemsGeneration {
+		kept.drift[opt.Root] = keptDrift{generation: opt.ItemsGeneration, commits: opt.CommitsKey, config: config, drift: drift}
+	}
+	kept.Unlock()
+	return drift, true
 }

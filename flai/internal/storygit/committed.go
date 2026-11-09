@@ -47,16 +47,25 @@ var keptCommitted = struct {
 // that read it before. Each call returns a copy of its own. It fails when git or the repository cannot
 // be read.
 func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error) {
+	committed, _, err := CommittedKeyed(r, repo)
+	return committed, err
+}
+
+// CommittedKeyed is Committed and the key it read the commits at: the main
+// branch, the wip folder, and every local branch's tip, which moves whenever
+// what Committed answers can change (S-0608). A caller may keep what it
+// computes from the commits under the key until it moves.
+func CommittedKeyed(r execx.Runner, repo *workitem.Repo) (map[string][]string, string, error) {
 	root := repo.MainRoot
 	if root == "" {
 		root = repo.Root
 	}
 	if _, err := r.LookPath("git"); err != nil {
-		return nil, fmt.Errorf("cannot read the stories' commits: git is not on PATH (%w); install git to compare touches with commits", err)
+		return nil, "", fmt.Errorf("cannot read the stories' commits: git is not on PATH (%w); install git to compare touches with commits", err)
 	}
 	main, err := MainBranch(r, root)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read the stories' commits in %s: %w; run flai in a git checkout with a branch and a commit on it", root, err)
+		return nil, "", fmt.Errorf("cannot read the stories' commits in %s: %w; run flai in a git checkout with a branch and a commit on it", root, err)
 	}
 	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
 	keptCommitted.Lock()
@@ -65,26 +74,26 @@ func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error)
 	// log again, which is never wrong and cheap to tell.
 	tips, err := r.Run(root, "git", "show-ref", "--heads")
 	if err != nil {
-		return nil, fmt.Errorf("cannot read the branch tips in %s to tell whether the stories' commits changed: %w; run flai in a git checkout with a branch and a commit on it", root, err)
+		return nil, "", fmt.Errorf("cannot read the branch tips in %s to tell whether the stories' commits changed: %w; run flai in a git checkout with a branch and a commit on it", root, err)
 	}
 	key := main + "\n" + wip + "\n" + tips
 	if prev, ok := keptCommitted.roots[root]; ok && prev.key == key {
-		return copyCommitted(prev.committed), nil
+		return copyCommitted(prev.committed), key, nil
 	}
 	path := CommittedPath(repo.CacheDir())
 	if committed, ok := readKeptCommitted(path, root, key); ok {
 		keptCommitted.roots[root] = committedRead{key: key, committed: committed}
-		return copyCommitted(committed), nil
+		return copyCommitted(committed), key, nil
 	}
 	committed, err := readCommitted(r, root, main, wip)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	keptCommitted.roots[root] = committedRead{key: key, committed: committed}
 	// A file not written costs the next process a read of the log, never a
 	// wrong answer, so the call answers all the same.
 	_ = writeKeptCommitted(path, keptCommittedFile{Root: root, Key: key, Committed: committed})
-	return copyCommitted(committed), nil
+	return copyCommitted(committed), key, nil
 }
 
 // CommittedPath is where Committed keeps its last read between processes in

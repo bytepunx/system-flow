@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -463,6 +464,194 @@ func TestClaimsDaysSweepAgreesWithStateAt(t *testing.T) {
 					t.Errorf("%d days to %s: %d days, want %d", days, at, len(got.Days), i)
 				}
 			}
+		}
+	}
+}
+
+// sameReplay reports where got differs from want: a story's held seconds,
+// the stories replayed, the days, or the weeks.
+func sameReplay(t *testing.T, name string, got, want holdReplay) {
+	t.Helper()
+	for id, w := range want.seconds {
+		if g, ok := got.seconds[id]; !ok || (g == nil) != (w == nil) || (g != nil && *g != *w) {
+			t.Errorf("%s: %s held = %v, want %v", name, id, deref(g), deref(w))
+		}
+	}
+	if len(got.seconds) != len(want.seconds) {
+		t.Errorf("%s: stories replayed = %d, want %d", name, len(got.seconds), len(want.seconds))
+	}
+	if !reflect.DeepEqual(got.days, want.days) {
+		t.Errorf("%s: days = %v, want %v", name, got.days, want.days)
+	}
+	if !reflect.DeepEqual(got.weeks, want.weeks) {
+		t.Errorf("%s: weeks = %+v, want %+v", name, got.weeks, want.weeks)
+	}
+}
+
+// keyedHistory is a history of 60 stories with Options keyed to a root of
+// the test's own, so that what it keeps is its own.
+func keyedHistory(t *testing.T) ([]*workitem.Item, Options) {
+	all, opt, _ := claimsHistory(60)
+	opt.Root, opt.ItemsGeneration, opt.CommitsKey = "keyed:"+t.Name(), 1, "tips-1"
+	return all, opt
+}
+
+// S-0608: the hold timeline kept for a root is answered again while the item
+// generation and the manifest's projects and shared paths are the same and it
+// answers for the request's now; a moved key, or a now before its last event,
+// replays again. Without a root or a generation nothing is kept.
+func TestTheHoldReplayIsKeptUntilItsKeysMove(t *testing.T) {
+	all, opt := keyedHistory(t)
+	now := opt.Now.Truncate(time.Second)
+	replay := func(opt Options, now time.Time) (*holdTimeline, bool) {
+		t.Helper()
+		return keptTimeline(all, now, opt)
+	}
+	first, replayed := replay(opt, now)
+	if !replayed {
+		t.Fatal("the first request did not replay")
+	}
+	for _, c := range []struct {
+		name   string
+		change func(Options) (Options, time.Time)
+		again  bool
+	}{
+		{"the same keys", func(o Options) (Options, time.Time) { return o, now }, false},
+		{"an hour later", func(o Options) (Options, time.Time) { return o, now.Add(time.Hour) }, false},
+		{"another window", func(o Options) (Options, time.Time) { o.Since = 365 * 24 * time.Hour; return o, now }, false},
+		{"a now before the last event", func(o Options) (Options, time.Time) { return o, now.Add(-30 * 24 * time.Hour) }, true},
+		{"a moved generation", func(o Options) (Options, time.Time) { o.ItemsGeneration = 2; return o, now }, true},
+		{"other projects", func(o Options) (Options, time.Time) { o.ItemsGeneration, o.Projects = 2, o.Projects[:1]; return o, now }, true},
+		{"other shared paths", func(o Options) (Options, time.Time) {
+			o.ItemsGeneration, o.Shared = 2, manifest.Claims{}
+			return o, now
+		}, true},
+	} {
+		o, at := c.change(opt)
+		got, replayed := replay(o, at)
+		if replayed != c.again {
+			t.Errorf("%s: replayed %v, want %v", c.name, replayed, c.again)
+		}
+		if !c.again && got != first {
+			t.Errorf("%s: answered another timeline than the kept one", c.name)
+		}
+	}
+	for _, o := range []Options{{Now: opt.Now, Projects: opt.Projects, ItemsGeneration: 1}, {Now: opt.Now, Projects: opt.Projects, Root: "keyed:none"}} {
+		if _, replayed := replay(o, now); !replayed {
+			t.Errorf("root %q generation %d: answered from a keep, want a replay", o.Root, o.ItemsGeneration)
+		}
+		if _, replayed := replay(o, now); !replayed {
+			t.Errorf("root %q generation %d: kept, want nothing kept", o.Root, o.ItemsGeneration)
+		}
+	}
+}
+
+// S-0608: the touches drift kept for a root is answered again while the item
+// generation, the commits' key, and the projects are the same, and worked out
+// again when any of them moves; the stories among a request's items are the
+// kept drift's, as touchDrift gives them.
+func TestTheTouchesDriftIsKeptUntilItsKeysMove(t *testing.T) {
+	all, opt := keyedHistory(t)
+	opt.Commits = map[string][]string{}
+	for i, it := range storiesOf(all) {
+		if i%3 == 0 && len(it.Touches) > 0 {
+			opt.Commits[workitem.CanonicalID(it.ID)] = []string{it.Touches[0], "elsewhere/" + it.ID + ".go"}
+		}
+	}
+	if _, worked := keptTouchDrift(all, opt); !worked {
+		t.Fatal("the first request did not work the drift out")
+	}
+	if _, worked := keptTouchDrift(all, opt); worked {
+		t.Error("a second request with the same keys worked the drift out again")
+	}
+	for _, c := range []struct {
+		name   string
+		change func(*Options)
+	}{
+		{"a moved commits' key", func(o *Options) { o.CommitsKey = "tips-2" }},
+		{"a moved generation", func(o *Options) { o.ItemsGeneration = 2 }},
+		{"other projects", func(o *Options) { o.Projects = o.Projects[:1] }},
+	} {
+		c.change(&opt)
+		if _, worked := keptTouchDrift(all, opt); !worked {
+			t.Errorf("%s: answered from the keep, want the drift worked out again", c.name)
+		}
+		if _, worked := keptTouchDrift(all, opt); worked {
+			t.Errorf("%s: the request after it worked the drift out again", c.name)
+		}
+	}
+	items := storiesOf(all)
+	half := items[:len(items)/2]
+	for name, its := range map[string][]*workitem.Item{"every story": items, "half the stories": half, "no story": nil} {
+		got, want := driftFor(its, all, opt), touchDrift(its, all, opt.Projects, opt.Commits)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: kept drift = %+v, want %+v", name, got, want)
+		}
+	}
+	if len(touchDrift(items, all, opt.Projects, opt.Commits)) == 0 {
+		t.Error("no story drifted in the history, want some")
+	}
+}
+
+// S-0608: a replay kept at one now and laid out at a later one, an hour,
+// three days, or a new ISO week on, is what a replay at that now gives, at
+// each window T-2662 pins, for every story and for half of them. It is
+// replayed again only when an event came between the two nows.
+func TestAKeptReplayAtALaterNowIsAFreshReplay(t *testing.T) {
+	all, opt := keyedHistory(t)
+	stories := storiesOf(all)
+	if _, replayed := keptTimeline(all, opt.Now.Truncate(time.Second), opt); !replayed {
+		t.Fatal("the first request did not replay")
+	}
+	replays := 0
+	for _, later := range []time.Duration{0, time.Hour, 3 * 24 * time.Hour, 8 * 24 * time.Hour} {
+		for _, days := range []int{1, 7, 30, 90, 365} {
+			for name, items := range map[string][]*workitem.Item{"every story": stories, "half the stories": stories[:len(stories)/2]} {
+				o := opt
+				o.Now, o.Since = opt.Now.Add(later), time.Duration(days)*24*time.Hour
+				start := o.Now.Add(-o.Since)
+				label := fmt.Sprintf("%s later, %d days, %s", later, days, name)
+				// The history has events after its first now: a now past one
+				// of them replays, and one that is not is answered from the
+				// kept replay.
+				kept.Lock()
+				answers := kept.holds[o.Root].timeline.answers(o.Now.Truncate(time.Second))
+				kept.Unlock()
+				if _, replayed := keptTimeline(all, o.Now.Truncate(time.Second), o); replayed == answers {
+					t.Errorf("%s: replayed %v while the kept replay answers %v", label, replayed, answers)
+				}
+				if !answers {
+					replays++
+				}
+				want := replayHoldsReference(items, all, start, o)
+				sameReplay(t, label+", kept", holdsFor(items, all, start, o), want)
+				sameReplay(t, label+", fresh", replayHolds(items, all, start, o), want)
+			}
+		}
+	}
+	if replays == 0 || replays > 3 {
+		t.Errorf("replayed %d times over four nows, want at least one, for the events after the first now, and fewer than one a now", replays)
+	}
+}
+
+// S-0608: Compute keyed to a root gives the report it gives with nothing
+// kept, on the first request and on the next, which is served from the keep.
+func TestComputeKeyedGivesTheReportUnkeyed(t *testing.T) {
+	all, opt := keyedHistory(t)
+	opt.Commits = map[string][]string{"S-0003": {"flai/internal/metrics/state.go", "elsewhere.go"}}
+	plain := opt
+	plain.Root, plain.ItemsGeneration, plain.CommitsKey = "", 0, ""
+	want, err := json.Marshal(Compute(all, plain))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, round := range []string{"first", "kept"} {
+		got, err := json.Marshal(Compute(all, opt))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("%s request: the keyed report differs from the unkeyed one", round)
 		}
 	}
 }

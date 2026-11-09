@@ -87,6 +87,14 @@ type Options struct {
 	// when the host has none or it cannot be read, which leaves the
 	// close-outs section out. Read by the caller (S-0546).
 	CloseOuts *CloseOutJournal
+	// Root is the repository root the items were read from, ItemsGeneration
+	// the item store's generation they were listed at, and CommitsKey the key
+	// Commits was read at: while all three are the same, the hold replay and
+	// the touches drift are kept between calls and only laid out over the
+	// window again. Left empty, as by flai stats, nothing is kept (S-0608).
+	Root            string
+	ItemsGeneration uint64
+	CommitsKey      string
 }
 
 // ItemMetrics are the per-item derived values.
@@ -293,7 +301,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	//   - the sections that need only the inputs start at once and run to
 	//     the end, beside everything else;
 	//   - the per-item loop's inputs are built at once, and claims starts as
-	//     soon as replayHolds, which it reads, is done;
+	//     soon as the hold replay, which it reads, is done;
 	//   - after the per-item loop, the sections that read perItem run at
 	//     once, aging and readyWait after summarise, whose figures they read.
 	var sections sync.WaitGroup
@@ -349,7 +357,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		}
 	})
 	inputs.Go(func() { rate = CostPerAgentHour(all) })
-	replay := replayHolds(items, all, start, opt)
+	replay := holdsFor(items, all, start, opt)
 	sections.Go(func() { rep.Claims = claims(items, all, tl, start, opt, replay) })
 	inputs.Wait()
 

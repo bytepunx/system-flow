@@ -187,6 +187,43 @@ func TestCommittedReadsTheLogAgainWhenABranchMoves(t *testing.T) {
 	seen("a new story branch", "S-0003", []string{"web/d.go"})
 }
 
+// S-0608: CommittedKeyed answers the same key while no branch moves, whether
+// it read the log, the kept read, or the kept file, and another once a branch
+// moves, so that what is computed from the commits can be kept under it.
+func TestCommittedKeyedAnswersAKeyThatMovesWithTheBranches(t *testing.T) {
+	dir, repo := committedRepo(t)
+	key := func() string {
+		t.Helper()
+		_, k, err := CommittedKeyed(execx.System{}, repo)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if k == "" {
+			t.Fatal("CommittedKeyed answered no key")
+		}
+		return k
+	}
+	first := key()
+	if again := key(); again != first {
+		t.Errorf("the key moved with no branch moved: %q, then %q", first, again)
+	}
+	keptCommitted.Lock()
+	delete(keptCommitted.roots, repo.MainRoot)
+	keptCommitted.Unlock()
+	if fromFile := key(); fromFile != first {
+		t.Errorf("the key answered from the kept file is %q, want %q", fromFile, first)
+	}
+	commitFiles(t, dir, "feat: [S-0001] two", "cli/b.go")
+	moved := key()
+	if moved == first {
+		t.Error("the key did not move with a commit on main")
+	}
+	git(t, dir, "branch", "story/S-0002")
+	if branched := key(); branched == moved {
+		t.Error("the key did not move with a new branch")
+	}
+}
+
 // A caller who changes Committed's answer does not change the next one, which
 // is answered from what was kept.
 func TestCommittedAnswersACopy(t *testing.T) {

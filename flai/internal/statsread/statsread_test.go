@@ -176,6 +176,63 @@ func TestReadStartsNoLogWhileNothingChanged(t *testing.T) {
 	}
 }
 
+// S-0608: Read keys its options to the root, the item generation it listed
+// at, and the key it read the commits at: the same while nothing changes, a
+// moved generation once an item is saved, and a moved key once a branch
+// moves, so that Compute keeps the hold replay and the drift only while they
+// hold.
+func TestReadKeysTheOptionsToTheItemsAndTheCommits(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	repo := project(t)
+	r := execx.System{}
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "system-flow.yaml"},
+		{"commit", "-q", "-m", "feat: [S-0001] the story"},
+	} {
+		if out, err := r.Run(repo.Root, "git", args...); err != nil {
+			t.Fatal(out, err)
+		}
+	}
+	read := func() metrics.Options {
+		t.Helper()
+		_, opt, err := Read(r, repo, slog.New(slog.DiscardHandler))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return opt
+	}
+	first := read()
+	if first.Root != repo.Root || first.ItemsGeneration == 0 || first.CommitsKey == "" {
+		t.Fatalf("root %q, generation %d, commits' key %q; want the root, a generation, and a key", first.Root, first.ItemsGeneration, first.CommitsKey)
+	}
+	if again := read(); again.ItemsGeneration != first.ItemsGeneration || again.CommitsKey != first.CommitsKey {
+		t.Errorf("with nothing changed: generation %d then %d, key moved %v", first.ItemsGeneration, again.ItemsGeneration, again.CommitsKey != first.CommitsKey)
+	}
+	story, err := repo.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	story.Title = "One, renamed"
+	if err := repo.Save(story); err != nil {
+		t.Fatal(err)
+	}
+	saved := read()
+	if saved.ItemsGeneration == first.ItemsGeneration || saved.CommitsKey != first.CommitsKey {
+		t.Errorf("after a save: generation %d then %d, key moved %v; want the generation moved and the key not", first.ItemsGeneration, saved.ItemsGeneration, saved.CommitsKey != first.CommitsKey)
+	}
+	if out, err := r.Run(repo.Root, "git", "branch", "story/S-0002"); err != nil {
+		t.Fatal(out, err)
+	}
+	if branched := read(); branched.CommitsKey == saved.CommitsKey {
+		t.Error("after a new branch the commits' key did not move")
+	}
+}
+
 // freshRootEnv names the project TestReadInANewProcess reads.
 const freshRootEnv = "FLAI_STATSREAD_FRESH_ROOT"
 
