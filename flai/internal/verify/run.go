@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +21,20 @@ import (
 // test that runs flai's writes in process is not refused as the
 // orchestrator that ran flai verify (S-0311, TH-0260).
 const roleEnv = "FLAI_ROLE"
+
+// PassedEnv names the variable every tier runs with set to what passed
+// before it in the same run that it may rely on, as space-separated words
+// (ADR-0266, S-0610): the words a PassedEnv entry in RunOptions.Env holds,
+// what passed before the run, such as a close-out's check step and the
+// tiers it reused, then each tier it waited for, all of which passed, as
+// PassedWord names it. It is set, empty when nothing
+// passed, on every tier, so a run inside a tier never sees an outer run's.
+// A tier may skip what a word says passed, as this repository's smoke does.
+const PassedEnv = "FLAI_VERIFY_PASSED"
+
+// PassedStepCheck is the word PassedEnv holds for a close-out's check step,
+// flai check --strict scoped to the story, when it passed.
+const PassedStepCheck = "step:" + StepCheck
 
 // Proc runs a tier's command; OS is the real one.
 type Proc interface {
@@ -133,6 +149,7 @@ type ended struct {
 func schedule(ctx context.Context, root string, selected []Selected, opts RunOptions) ([]output, []bool, int) {
 	n := len(selected)
 	wait := waits(selected)
+	runPassed := passedIn(opts.Env)
 	outs := make([]output, n)
 	ran := make([]bool, n)
 	done := make([]bool, n)
@@ -149,8 +166,9 @@ func schedule(ctx context.Context, root string, selected []Selected, opts RunOpt
 			tctx, cancel := context.WithCancel(ctx)
 			cancels[i] = cancel
 			running++
+			passed := passedBefore(runPassed, selected, wait[i])
 			go func(i int, s Selected) {
-				endc <- ended{i, runTier(tctx, root, s, opts)}
+				endc <- ended{i, runTier(tctx, root, s, passed, opts)}
 			}(i, s)
 		}
 		if running == 0 {
@@ -169,6 +187,41 @@ func schedule(ctx context.Context, root string, selected []Selected, opts RunOpt
 			}
 		}
 	}
+}
+
+// passedBefore is what PassedEnv holds for a tier that waited for the
+// tiers of selected that indexes name, every one of which passed, since a
+// tier starts only when none it waits for failed: the words of the run,
+// then each of those tiers' word, in list order.
+func passedBefore(run []string, selected []Selected, indexes []int) string {
+	words := append([]string{}, run...)
+	for _, j := range indexes {
+		words = append(words, PassedWord(selected[j]))
+	}
+	return strings.Join(words, " ")
+}
+
+// passedIn are the words of the last PassedEnv entry of env, none when it
+// has none: what passed before the run, which holds for every tier of it.
+func passedIn(env []string) []string {
+	var words []string
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, PassedEnv+"="); ok {
+			words = strings.Fields(v)
+		}
+	}
+	return words
+}
+
+// PassedWord is the word PassedEnv holds for a selected tier that passed:
+// its name, with :all when it ran the command a run of every tier runs, its
+// all_command or its command with the placeholders standing for the whole
+// checkout, so it checked the whole checkout and not only some paths.
+func PassedWord(s Selected) string {
+	if len(s.Argv) > 0 && slices.Equal(s.Argv, allArgv(s.Tier)) {
+		return s.Tier.Name + ":all"
+	}
+	return s.Tier.Name
 }
 
 // allDone reports whether every tier of indexes has ended.
@@ -214,7 +267,7 @@ func (o output) failed(format string) bool {
 // runTier runs one selected tier and keeps what it printed, in a log file
 // too when opts.LogDir names a folder. A log that cannot be created or
 // written is not named, and the tier's result stands.
-func runTier(ctx context.Context, root string, s Selected, opts RunOptions) output {
+func runTier(ctx context.Context, root string, s Selected, passed string, opts RunOptions) output {
 	var stdout, stderr bytes.Buffer
 	var combined lockedBuffer
 	logPath, logFile := openLog(root, opts.LogDir, s.Tier.Name)
@@ -225,9 +278,9 @@ func runTier(ctx context.Context, root string, s Selected, opts RunOptions) outp
 	start := opts.Now()
 	var exit int
 	var err error
-	// last of a name wins in exec, so the role beats the inherited one and
-	// any opts.Env sets
-	tierEnv := append(append([]string{}, opts.Env...), roleEnv+"="+conventions.RoleVerify)
+	// last of a name wins in exec, so the role and what passed beat the
+	// inherited ones and any opts.Env sets
+	tierEnv := append(append([]string{}, opts.Env...), roleEnv+"="+conventions.RoleVerify, PassedEnv+"="+passed)
 	if len(s.Argv) == 0 {
 		err = fmt.Errorf("tier %s has no command; give it one in the manifest", s.Tier.Name)
 	} else {

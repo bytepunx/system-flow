@@ -297,13 +297,16 @@ func TestRunGivesEveryTierTheEnvironmentItIsAsked(t *testing.T) {
 	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a"), sel("b", "", "b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}, Env: env}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"CLOSE_OUT_STORY=S-0001", "FLAI_ROLE=verify"}
-	if !reflect.DeepEqual(proc.envs, [][]string{want, want}) || !reflect.DeepEqual(env, []string{"CLOSE_OUT_STORY=S-0001"}) {
+	want := [][]string{
+		{"CLOSE_OUT_STORY=S-0001", "FLAI_ROLE=verify", "FLAI_VERIFY_PASSED="},
+		{"CLOSE_OUT_STORY=S-0001", "FLAI_ROLE=verify", "FLAI_VERIFY_PASSED=a"},
+	}
+	if !reflect.DeepEqual(proc.envs, want) || !reflect.DeepEqual(env, []string{"CLOSE_OUT_STORY=S-0001"}) {
 		t.Errorf("environments %q, asked %q", proc.envs, env)
 	}
 	proc = &fakeProc{steps: map[string]step{}}
 	if _, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a")}, RunOptions{Proc: proc, FS: fstest.MapFS{}}); err != nil ||
-		!reflect.DeepEqual(proc.envs, [][]string{{"FLAI_ROLE=verify"}}) {
+		!reflect.DeepEqual(proc.envs, [][]string{{"FLAI_ROLE=verify", "FLAI_VERIFY_PASSED="}}) {
 		t.Errorf("with no environment asked a tier got %q, %v", proc.envs, err)
 	}
 }
@@ -623,5 +626,77 @@ func TestWaitsFollowTheParallelMarks(t *testing.T) {
 	want := [][]int{nil, {0}, nil, {0}, {0, 1, 3}, {0, 4}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("waits %v, want %v", got, want)
+	}
+}
+
+// envProc keeps the environment each command, by its first argument, ran
+// with, from several goroutines at once, and fails the commands fail names.
+type envProc struct {
+	mu   sync.Mutex
+	envs map[string][]string
+	fail map[string]bool
+}
+
+func (p *envProc) Run(_ context.Context, _ string, argv, env []string, _, _ io.Writer) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.envs == nil {
+		p.envs = map[string][]string{}
+	}
+	p.envs[argv[0]] = env
+	if p.fail[argv[0]] {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+// passed is the FLAI_VERIFY_PASSED the command named name ran with, and
+// whether it ran.
+func (p *envProc) passed(name string) (string, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	env, ok := p.envs[name]
+	if !ok {
+		return "", false
+	}
+	got := ""
+	for _, kv := range env {
+		if v, found := strings.CutPrefix(kv, PassedEnv+"="); found {
+			got = v
+		}
+	}
+	return got, true
+}
+
+// S-0610, ADR-0266: each tier is told, in FLAI_VERIFY_PASSED, what passed
+// before the run, from the PassedEnv entry the caller sets, then the tiers
+// it waited for, in list order, a tier that ran its whole command as
+// <name>:all: never a parallel tier beside it, whatever ended first.
+func TestRunTellsEachTierTheTiersItWaitedForThatPassed(t *testing.T) {
+	whole := Selected{Tier: Tier{Name: "markdown", Command: []string{"lint", "{files}"}, AllCommand: []string{"lint-all"}}, Argv: []string{"lint-all"}}
+	paths := Selected{Tier: Tier{Name: "lint", Command: []string{"lint", "{files}"}}, Argv: []string{"lint", "a.md"}}
+	covered := sel("unit", "", "unit")
+	covered.CoveredBy = "integration"
+	selected := []Selected{paths, whole, covered, psel("flaiover"), psel("integration"), sel("smoke", "", "smoke")}
+	proc := &envProc{}
+	env := []string{"CLOSE_OUT_STORY=S-0001", PassedEnv + "=step:check gofmt"}
+	res, err := Run(context.Background(), "/repo", selected, RunOptions{Proc: proc, FS: fstest.MapFS{}, Env: env})
+	if err != nil || !res.Passed {
+		t.Fatalf("result %+v, %v", res, err)
+	}
+	want := map[string]string{
+		"lint":        "step:check gofmt",
+		"lint-all":    "step:check gofmt lint",
+		"flaiover":    "step:check gofmt lint markdown:all",
+		"integration": "step:check gofmt lint markdown:all",
+		"smoke":       "step:check gofmt lint markdown:all flaiover integration",
+	}
+	for name, w := range want {
+		if got, ok := proc.passed(name); !ok || got != w {
+			t.Errorf("%s was told %q (ran %v), want %q", name, got, ok, w)
+		}
+	}
+	if _, ran := proc.passed("unit"); ran {
+		t.Error("the covered tier ran")
 	}
 }

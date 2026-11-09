@@ -444,7 +444,15 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		}
 		rep.Steps = append(rep.Steps, reused...)
 		ro := v.opts.RunOptions
-		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story)
+		// the check step passed, as every step before the tiers did, and the
+		// reused tiers passed in the run they come from (S-0610)
+		passed := []string{PassedStepCheck}
+		for i, step := range reused {
+			if step.State == Reused {
+				passed = append(passed, PassedWord(selected[i]))
+			}
+		}
+		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story, PassedEnv+"="+strings.Join(passed, " "))
 		var res Result
 		res, runErr = Run(ctx, v.worktree, selected[len(reused):], ro)
 		for i, tr := range res.Tiers {
@@ -669,6 +677,9 @@ func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
 	selected := SelectStory(opts.FS, opts.Tiers, paths)
 	rep.Fingerprint = fingerprint(opts.Tiers, selected)
 	var runErr error
+	// what passed earlier in the batch, which each tier is told as one Run
+	// of every tier tells the tiers after them (S-0610)
+	var passed []string
 	for _, s := range selected {
 		if s.CoveredBy != "" || !rep.Passed || ctx.Err() != nil {
 			rep.Steps = append(rep.Steps, unrunStep(s))
@@ -677,11 +688,16 @@ func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
 		if opts.Started != nil {
 			opts.Started(s.Tier.Name)
 		}
-		res, err := Run(ctx, opts.Dir, []Selected{s}, opts.RunOptions)
+		ro := opts.RunOptions
+		ro.Env = append(append([]string{}, ro.Env...), PassedEnv+"="+strings.Join(passed, " "))
+		res, err := Run(ctx, opts.Dir, []Selected{s}, ro)
 		step := tierStep(res.Tiers[0])
 		rep.Steps = append(rep.Steps, step)
 		if step.State == Failed {
 			rep.Passed, rep.StoppedAt = false, step.Name
+		}
+		if step.State == Passed {
+			passed = append(passed, PassedWord(s))
 		}
 		if opts.Ended != nil {
 			opts.Ended(step)

@@ -1680,3 +1680,73 @@ func TestVerifyLeavesAQueueTierWhoseWhenMatchesNothing(t *testing.T) {
 		t.Errorf("integration ran for %q, want %q", got, want)
 	}
 }
+
+// passedOf is the FLAI_VERIFY_PASSED a command run with env, added to its
+// own, sees: the last one, as exec takes it.
+func passedOf(env []string) string {
+	got := ""
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, PassedEnv+"="); ok {
+			got = v
+		}
+	}
+	return got
+}
+
+// toldPassed are the commands the fake ran, each with the
+// FLAI_VERIFY_PASSED it ran with.
+func toldPassed(p *fakeProc) []string {
+	out := make([]string, 0, len(p.ran))
+	for i, ran := range p.ran {
+		out = append(out, ran+": "+passedOf(p.envs[i]))
+	}
+	return out
+}
+
+// S-0610: a close-out tells its tiers that the check step passed, and the
+// tiers before each, and a run that reuses tiers tells the tiers it runs
+// that the reused ones passed; so does the merge queue's batch, of the
+// tiers that passed earlier in it, with no check step of its own.
+func TestVerifyTellsTheTiersTheCheckAndTheTiersThatPassed(t *testing.T) {
+	f := newVerifyFixture(t)
+	if _, err := Verify(context.Background(), f.opts); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"go test ./internal/x: step:check",
+		"go test ./...: step:check go-test",
+		"smoke.sh: step:check go-test integration:all",
+	}
+	if got := toldPassed(f.proc); !reflect.DeepEqual(got, want) {
+		t.Errorf("told %q\nwant %q", got, want)
+	}
+
+	f = newVerifyFixture(t)
+	f.proc.steps["smoke.sh"] = step{stdout: "network down\n", exit: 1, took: time.Second}
+	if _, err := Verify(context.Background(), f.opts); err != nil {
+		t.Fatal(err)
+	}
+	f.proc.steps["smoke.sh"] = step{took: time.Second}
+	f.proc.ran, f.proc.envs, f.proc.now = nil, nil, f.proc.now.Add(time.Minute)
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil || !rep.Passed {
+		t.Fatalf("second run %+v, %v", rep, err)
+	}
+	if got := toldPassed(f.proc); !reflect.DeepEqual(got, []string{"smoke.sh: step:check go-test integration:all"}) {
+		t.Errorf("after reusing two tiers, told %q", got)
+	}
+
+	f = newVerifyFixture(t)
+	var started, ended []string
+	if _, err := Tiers(context.Background(), f.tierOptions(&started, &ended)); err != nil {
+		t.Fatal(err)
+	}
+	want = []string{
+		"go test ./internal/x: ",
+		"go test ./...: go-test",
+		"smoke.sh: go-test integration:all",
+	}
+	if got := toldPassed(f.proc); !reflect.DeepEqual(got, want) {
+		t.Errorf("the batch told %q\nwant %q", got, want)
+	}
+}
