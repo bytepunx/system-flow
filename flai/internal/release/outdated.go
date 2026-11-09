@@ -38,8 +38,9 @@ var outdatedSeen sync.Map // root and running version → outdatedAnswer
 // FlaiOutdated compares the running flai's version with the newest flai/vX.Y.Z
 // tag reachable from the project's HEAD, and says so when it is older, with
 // that tag's task-done rules number. nil when it is not, when running is not
-// a release (a dev build), or when git cannot say. An answer is kept for a
-// minute.
+// a release (a dev build), or when git cannot say. An answer git gave is kept
+// for a minute; a look whose git failed is not kept, so the next call asks
+// git again rather than serving "not outdated" for a minute (I-0252).
 func FlaiOutdated(r execx.Runner, root, running string) *Outdated {
 	if _, ok := buildinfo.Semver(running); !ok || r == nil {
 		return nil
@@ -48,19 +49,23 @@ func FlaiOutdated(r execx.Runner, root, running string) *Outdated {
 	if a, ok := outdatedSeen.Load(key); ok && time.Since(a.(outdatedAnswer).at) < outdatedFor {
 		return a.(outdatedAnswer).out
 	}
-	out := flaiOutdated(r, root, running)
-	outdatedSeen.Store(key, outdatedAnswer{at: time.Now(), out: out})
+	out, answered := flaiOutdated(r, root, running)
+	if answered {
+		outdatedSeen.Store(key, outdatedAnswer{at: time.Now(), out: out})
+	}
 	return out
 }
 
-func flaiOutdated(r execx.Runner, root, running string) *Outdated {
+// flaiOutdated is FlaiOutdated's look, uncached; answered is false when git
+// could not list the project's flai tags.
+func flaiOutdated(r execx.Runner, root, running string) (out *Outdated, answered bool) {
 	tags, err := r.Run(root, "git", "tag", "--merged", "HEAD", "--list", "flai/v*")
 	if err != nil {
-		return nil
+		return nil, false
 	}
 	newest := highestTag(strings.Split(strings.TrimSpace(tags), "\n"), "flai")
 	if newest == (Version{}) || !buildinfo.Below(running, newest.String()) {
-		return nil
+		return nil, true
 	}
 	return &Outdated{
 		Running:     strings.TrimPrefix(running, "v"),
@@ -69,7 +74,7 @@ func flaiOutdated(r execx.Runner, root, running string) *Outdated {
 		Upgrade:     buildinfo.UpgradeCommand,
 		Message: fmt.Sprintf("this flai is %s, older than flai %s in the project's history, so it may lack rules and fields the project uses: upgrade it with %s",
 			strings.TrimPrefix(running, "v"), newest, buildinfo.UpgradeCommand),
-	}
+	}, true
 }
 
 // tagRules is the task-done rules number at the commit tag tags, read from

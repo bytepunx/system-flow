@@ -1,13 +1,56 @@
 package release
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
+
+// flakyTagRunner fails its first `git tag` call, as a git refused a fork on
+// a loaded host does, and answers tags on every later one. Any other call,
+// such as the git show of the task-done rules file, fails.
+type flakyTagRunner struct {
+	execx.Runner
+	tags  string
+	calls int
+}
+
+func (f *flakyTagRunner) Run(_, name string, args ...string) (string, error) {
+	if name != "git" || len(args) == 0 || args[0] != "tag" {
+		return "", errors.New("not stubbed")
+	}
+	f.calls++
+	if f.calls == 1 {
+		return "", errors.New("fork/exec git: resource temporarily unavailable")
+	}
+	return f.tags, nil
+}
+
+// I-0252: a look whose git failed is not kept, so the next call for the same
+// project and version asks git again and finds the newer release, rather than
+// serving "not outdated" for a minute.
+func TestFlaiOutdatedKeepsNoAnswerFromAGitThatFailed(t *testing.T) {
+	r := &flakyTagRunner{tags: "flai/v1.9.0\nflai/v1.10.0\n"}
+	root := "/flai-outdated-failed-git-" + t.Name()
+	if out := FlaiOutdated(r, root, "1.9.3"); out != nil {
+		t.Fatalf("a failed git look answered %+v", out)
+	}
+	out := FlaiOutdated(r, root, "1.9.3")
+	if out == nil || out.Newest != "1.10.0" || out.Running != "1.9.3" {
+		t.Fatalf("the look after a failed one: %+v, git tag asked %d times", out, r.calls)
+	}
+	if r.calls != 2 {
+		t.Errorf("git tag asked %d times, want 2", r.calls)
+	}
+	if again := FlaiOutdated(r, root, "1.9.3"); again != out || r.calls != 2 {
+		t.Errorf("an answer git gave is not kept: %+v, git tag asked %d times", again, r.calls)
+	}
+}
 
 // S-0181: the running flai is older when a flai/v* tag reachable from HEAD
 // is newer; a tag on a branch HEAD does not include, a dev build, and a flai
