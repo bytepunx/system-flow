@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2053.4315
-accrued_seconds: 1530959
-tasks_completed: 2454
-last_run: 2026-11-09T11:28:21Z
+accrued_cost: 2053.9976
+accrued_seconds: 1531009
+tasks_completed: 2457
+last_run: 2026-11-09T16:57:33Z
 ---
 
 # Orchestrator activity
@@ -17208,6 +17208,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.1897 USD, estimated
+
+### 2026-11-09T16:56:52Z
+
+- Summary: Release due after S-0610 and S-0615 were accepted: release_evaluate met under threshold (2 stories, 21680 USD/week, over 1000 USD/week and count 1), so I ran flai formula run publish --ready --autocommit, which made S-0641 in ready with T-2732 to T-2734, committed b7e8b16d6.
+- Items: S-0641, S-0610, S-0615
+- Seconds: 22
+- Cost: 0.0617 USD, estimated
+
+### 2026-11-09T16:57:12Z
+
+- Summary: I started a release for S-0610 and S-0615. It is a new story, S-0641, and its agent is already working it.
+- Items: none
+- Seconds: 20
+- Cost: 0.4532 USD, estimated
+
+### 2026-11-09T16:57:33Z
+
+- Summary: Release due after S-0615's acceptance (threshold met: 2 stories, 21680 USD/week ≥ 1000; count 2 ≥ 1). Started no new publish run: publish instance S-0641, made at 2026-11-09T16:56:49Z after both acceptances, is in progress and will release S-0610 and S-0615 together.
+- Items: S-0615, S-0610, S-0641
+- Seconds: 8
+- Cost: 0.0512 USD, estimated
 
 ## Refusals
 

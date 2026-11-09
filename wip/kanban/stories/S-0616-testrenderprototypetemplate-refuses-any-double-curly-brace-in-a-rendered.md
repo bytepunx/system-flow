@@ -3,10 +3,10 @@ id: S-0616
 type: story
 nature: remediation
 title: TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-07T23:39:18Z
-updated: 2026-11-09T10:43:49Z
+updated: 2026-11-09T16:57:24Z
 transitions:
   - to: ready
     at: 2026-11-09T10:22:28Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T10:43:49Z
     by: agent-S-0616
+  - to: in-progress
+    at: 2026-11-09T16:57:24Z
+    by: alex
 tags: [flai, template]
 touches: [flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md]
 agent:
@@ -120,3 +123,4 @@ Figures:
 
 - Forecast: `flai forecast` gave 5m, from the median 144 s per size unit over 17 small remediation stories, at size 2 (two criteria, no touches). I raised it to 1h. The story has three tasks over `flai/` and `template/`. Its close-out runs the integration and smoke tiers, and `TestRenderPrototypeTemplate` runs only in integration (it skips under `-short`). Delivery is set to 12:30Z because the story waits behind the stories in progress.
 - Cost of delay: 25 USD a week, as `flai cod` worked it out from the inputs flai set from I-0249: 10m lost per 168h cycle at 150 USD an hour. It stands. The issue's one instance was worked around in S-0421, and S-0424 and S-0554 narrowed the cause. The remaining cost is the next workaround someone has to find.
+- 2026-11-09T16:57:24Z: moved to in-progress: Merge failed, need to rebase

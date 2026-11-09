@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.1.28 - 2026-11-09
+
+- S-0610 The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out (patch).
+
 ## 1.1.27 - 2026-11-07
 
 - S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call (patch).
