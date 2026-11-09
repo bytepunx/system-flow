@@ -899,10 +899,11 @@ the container's list as allowed_hosts, "" for none.`,
 			if err != nil {
 				return err
 			}
-			state, health, err := a.dashboardState(s.Name)
+			look, err := a.dashboardState(s.Name, fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort))
 			if err != nil {
 				return err
 			}
+			state, health := look.State, look.Health
 			running := state != host.DashboardGone
 			image, url := s.ref(), s.url()
 			if running {

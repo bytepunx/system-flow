@@ -1,8 +1,11 @@
 package host
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -83,6 +86,38 @@ func TestWatcherBacksOffBetweenRestarts(t *testing.T) {
 	}
 }
 
+// I-0243, ADR-0267: a port another process holds is never a miss: it is not
+// restarted however long it lasts, it sets the misses back to zero, and it
+// leaves the back-off as it stands.
+func TestWatcherNeverRestartsAPortHeldDashboard(t *testing.T) {
+	w := newWatcher(30*time.Second, 5*time.Minute)
+	now := time.Date(2026, 10, 25, 20, 50, 0, 0, time.UTC)
+	for i := range 2000 { // more looks than I-0243's six days of five-minute restarts
+		if w.look(now.Add(time.Duration(i)*15*time.Second), DashboardPortHeld) {
+			t.Fatalf("look %d restarted a dashboard whose port another process holds", i)
+		}
+	}
+	if w.look(now, DashboardNotAnswering) {
+		t.Error("one miss is not enough")
+	}
+	if w.look(now.Add(15*time.Second), DashboardPortHeld) {
+		t.Error("port held is no restart")
+	}
+	if w.look(now.Add(30*time.Second), DashboardNotAnswering) {
+		t.Error("port held in between sets the misses back to zero")
+	}
+	if !w.look(now.Add(45*time.Second), DashboardNotAnswering) {
+		t.Error("two misses in a row once the holder is gone restart it")
+	}
+	backoff := w.backoff
+	for i := range 10 {
+		w.look(now.Add(time.Duration(60+15*i)*time.Second), DashboardPortHeld)
+	}
+	if w.backoff != backoff {
+		t.Errorf("back-off %v after port held, want it kept at %v", w.backoff, backoff)
+	}
+}
+
 type fakeDashboard struct {
 	mu       sync.Mutex
 	states   []string // what each look finds; the last repeats
@@ -91,12 +126,24 @@ type fakeDashboard struct {
 	err      error
 }
 
-func (f *fakeDashboard) look(context.Context) string {
+// heldBy is the detail a fake port-held look gives.
+const heldBy = "docker-proxy (pid 188220) for 172.17.0.2:3000"
+
+func (f *fakeDashboard) look(context.Context) (string, string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	i := min(f.looks, len(f.states)-1)
 	f.looks++
-	return f.states[i]
+	if f.states[i] == DashboardPortHeld {
+		return f.states[i], heldBy
+	}
+	return f.states[i], ""
+}
+
+func (f *fakeDashboard) lookCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.looks
 }
 
 func (f *fakeDashboard) restart(context.Context) error {
@@ -143,5 +190,56 @@ func TestHostSaysWhyADashboardWasNotRestarted(t *testing.T) {
 	st := r.until("two tries", func(st Status) bool { return st.Dashboard != nil && st.Dashboard.Restarts >= 2 })
 	if st.Dashboard.LastReason != DashboardNotAnswering || st.Dashboard.LastError != "docker: no such image" {
 		t.Errorf("status: %+v", *st.Dashboard)
+	}
+}
+
+// syncBuffer is a bytes.Buffer the host's goroutines may log to while the
+// test reads it.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
+// I-0243, ADR-0267: a running host never restarts a dashboard whose port
+// another process holds, shows the holder in its status, logs it once each
+// time it enters the state, and restarts it once the holder is gone and two
+// looks miss.
+func TestHostDoesNotRestartADashboardWhosePortIsHeld(t *testing.T) {
+	var log syncBuffer
+	states := []string{DashboardPortHeld}
+	for range 20 {
+		states = append(states, DashboardPortHeld)
+	}
+	states = append(states, DashboardRunning, DashboardPortHeld, DashboardPortHeld, DashboardNotAnswering)
+	d := &fakeDashboard{states: states}
+	r := start(t, Options{Dashboard: &Watch{Look: d.look, Restart: d.restart}, WatchEvery: 10 * time.Millisecond, WatchBackoff: time.Hour, Logger: slog.New(slog.NewTextHandler(&log, nil))})
+	st := r.until("port held", func(st Status) bool { return st.Dashboard != nil && st.Dashboard.State == DashboardPortHeld })
+	if st.Dashboard.Detail != heldBy || st.Dashboard.Restarts != 0 {
+		t.Errorf("status: %+v", *st.Dashboard)
+	}
+	r.until("restarted once the holder is gone", func(st Status) bool { return st.Dashboard.Restarts == 1 })
+	if n := d.lookCount(); n < len(states) {
+		t.Errorf("restarted after %d looks, before the last two missed", n)
+	}
+	if st := r.until("status", func(Status) bool { return true }); st.Dashboard.LastReason != DashboardNotAnswering || st.Dashboard.Detail != "" {
+		t.Errorf("status after the restart: %+v", *st.Dashboard)
+	}
+	if n := strings.Count(log.String(), "dashboard port held by another process"); n != 2 {
+		t.Errorf("port held logged %d times, want once for each of its two entries:\n%s", n, log.String())
+	}
+	if !strings.Contains(log.String(), "level=ERROR") || !strings.Contains(log.String(), "holder=\""+heldBy+"\"") {
+		t.Errorf("port held is logged at error with the holder:\n%s", log.String())
 	}
 }

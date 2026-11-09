@@ -148,15 +148,15 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 	}
 	w := a.dashboardWatch()
 	ctx := context.Background()
-	if got := w.Look(ctx); got != host.DashboardRunning {
+	if got, _ := w.Look(ctx); got != host.DashboardRunning {
 		t.Errorf("running: %s", got)
 	}
 	answers = false
-	if got := w.Look(ctx); got != host.DashboardNotAnswering {
+	if got, _ := w.Look(ctx); got != host.DashboardNotAnswering {
 		t.Errorf("not answering: %s", got)
 	}
 	delete(f.running, "flaiover")
-	if got := w.Look(ctx); got != host.DashboardGone {
+	if got, _ := w.Look(ctx); got != host.DashboardGone {
 		t.Errorf("gone: %s", got)
 	}
 
@@ -175,13 +175,73 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 	if _, errOut, code := runWithApp(t, &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f}, "config", "set", "dashboard.no_restart", "true"); code != 0 {
 		t.Fatalf("config set: %s", errOut)
 	}
-	if got := w.Look(ctx); got != host.DashboardOff {
+	if got, _ := w.Look(ctx); got != host.DashboardOff {
 		t.Errorf("dashboard.no_restart: %s", got)
 	}
 
 	forgetDashboard(string(a.serveDir()))
 	if err := w.Restart(ctx); err == nil {
 		t.Error("nothing recorded, nothing to restart")
+	}
+}
+
+// I-0243: a container Docker no longer lists keeps its docker-proxy on the
+// dashboard's port, so docker publishes nothing for every container flai
+// starts after it, while the port answers, from the orphan. The look says
+// port held and names the proxy, rather than not answering, which the host
+// restarted every five minutes; with the port not answering it is not
+// answering as before (ADR-0267).
+func TestLookDashboardFindsThePortHeldByAnOrphanedContainersProxy(t *testing.T) {
+	t.Parallel()
+	root := dashboardProject(t)
+	proc := t.TempDir()
+	writeProc(t, proc, "188220", []string{"/usr/bin/docker-proxy", "-proto", "tcp", "-host-ip", "0.0.0.0", "-host-port", "5555", "-container-ip", "172.17.0.2", "-container-port", "3000", "-use-listen-fd"})
+	writeProc(t, proc, "188237", []string{"node", "server.js"})
+	held := true
+	var probed []string
+	asked := 0
+	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{flaioverRef("0.2.0"): "sha256:v020"}}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, procRoot: proc,
+		healthProbe: func(string) bool { asked++; return true },
+		portProbe:   func(publish string) bool { probed = append(probed, publish); return held }}
+	if _, errOut, code := runWithApp(t, a, "dashboard", "--tag", "0.2.0"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	f.noPort, asked = true, 0 // docker inspect shows an empty port map: the orphan's proxy has the port
+	w := a.dashboardWatch()
+	ctx := context.Background()
+	state, detail := w.Look(ctx)
+	if state != host.DashboardPortHeld || detail != "docker-proxy (pid 188220) for 172.17.0.2:3000" {
+		t.Errorf("look: %s %q, want port-held by the orphan's docker-proxy", state, detail)
+	}
+	if len(probed) != 1 || probed[0] != "0.0.0.0:5555:3000" {
+		t.Errorf("the recorded publish is probed: %v", probed)
+	}
+
+	before := len(f.calls)
+	for range 40 { // ten minutes of looks: the host restarted twice in that time
+		if s, _ := w.Look(ctx); s != host.DashboardPortHeld {
+			t.Fatalf("look: %s", s)
+		}
+	}
+	for _, c := range f.calls[before:] {
+		if strings.HasPrefix(c, "docker rm") || strings.HasPrefix(c, "docker run") {
+			t.Errorf("a look changes nothing: %s", c)
+		}
+	}
+
+	a.procRoot = t.TempDir() // no docker-proxy names the port
+	if state, detail = w.Look(ctx); state != host.DashboardPortHeld || detail != "a process other than its container" {
+		t.Errorf("look with no holder found: %s %q", state, detail)
+	}
+
+	if asked != 0 {
+		t.Errorf("nothing is published, so /_health was asked at no address, yet asked %d times", asked)
+	}
+
+	held = false // the holder is gone: nothing answers, and the host restarts it as before
+	if state, detail = w.Look(ctx); state != host.DashboardNotAnswering || detail != "" {
+		t.Errorf("look with the port free: %s %q", state, detail)
 	}
 }
 

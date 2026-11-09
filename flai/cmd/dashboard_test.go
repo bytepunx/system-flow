@@ -44,6 +44,7 @@ type fakeRunner struct {
 	containerLabel map[string]string // container name -> its dashboardRefLabel; none for a container an older flai started
 	containerImage map[string]string // container name -> the image ID it was started from (a snapshot, not re-derived, so a later change to imageIDs is a real difference a check can find)
 	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
+	noPort         bool              // `docker port` publishes nothing and fails, as for a container whose port map is empty (I-0243)
 	health         map[string]string // container name -> docker's HEALTHCHECK verdict; default none
 	env            map[string]string // container name -> its environment, one VAR=value per line
 
@@ -265,6 +266,9 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		delete(f.lingering, args[len(args)-1])
 		return "", nil
 	case "port":
+		if f.noPort {
+			return "", fmt.Errorf("no public port '%s' published for %s", args[len(args)-1], args[1])
+		}
 		if f.probeAddr != "" {
 			return f.probeAddr, nil
 		}
@@ -299,6 +303,9 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	}
 	if a.healthProbe == nil {
 		a.healthProbe = func(string) bool { return true } // tests never reach the network; a running container answers
+	}
+	if a.portProbe == nil {
+		a.portProbe = func(string) bool { return false } // nor dial a host port; nothing else holds it
 	}
 	if a.releases == nil {
 		a.releases = releasesOf(t) // nor does flai dashboard

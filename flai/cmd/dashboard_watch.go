@@ -14,24 +14,73 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 )
 
+// dashboardLook is how the dashboard container stands at one look: its
+// state, docker's own health verdict from the image's HEALTHCHECK ("" when
+// the image has none), and, for host.DashboardPortHeld, the docker-proxy that
+// holds the port, nil when none was found (ADR-0267).
+type dashboardLook struct {
+	State  string
+	Health string
+	Holder *portHolder
+}
+
+// detail says what holds the port of a port-held look, "" for any other.
+func (l dashboardLook) detail() string {
+	if l.State != host.DashboardPortHeld {
+		return ""
+	}
+	if l.Holder == nil {
+		return "a process other than its container"
+	}
+	return l.Holder.String()
+}
+
 // dashboardState probes the dashboard container: gone when docker does not
-// run it, running when its published port answers /_health, not answering
-// otherwise (S-0184). health is docker's own verdict from the image's
-// HEALTHCHECK, "" when the image has none.
-func (a *app) dashboardState(name string) (state, health string, err error) {
+// run it, running when its published port answers /_health, port held when
+// docker publishes nothing for it while publish, the host port it was started
+// with, answers all the same (I-0243, ADR-0267), and not answering otherwise
+// (S-0184).
+func (a *app) dashboardState(name, publish string) (dashboardLook, error) {
 	running, err := a.containerRunning(name)
 	if err != nil {
-		return "", "", err
+		return dashboardLook{}, err
 	}
 	if !running {
-		return host.DashboardGone, "", nil
+		return dashboardLook{State: host.DashboardGone}, nil
 	}
-	health = a.dockerHealth(name)
+	look := dashboardLook{Health: a.dockerHealth(name)}
 	addr, err := a.probeAddress(name)
-	if err == nil && a.healthProbe("http://"+probeHost(addr)+"/_health") {
-		return host.DashboardRunning, health, nil
+	switch {
+	case err == nil && a.healthProbe("http://"+probeHost(addr)+"/_health"):
+		look.State = host.DashboardRunning
+	case err != nil && publish != "" && a.publishAnswers(publish):
+		look.State = host.DashboardPortHeld
+		if _, port, perr := publishAddress(publish); perr == nil {
+			if h, ok := findPortHolder(a.procDir(), port); ok {
+				look.Holder = &h
+			}
+		}
+	default:
+		look.State = host.DashboardNotAnswering
 	}
-	return host.DashboardNotAnswering, health, nil
+	return look, nil
+}
+
+// publishAnswers says whether the host port of publish accepts a connection,
+// through the app's probe so that tests reach no socket.
+func (a *app) publishAnswers(publish string) bool {
+	if a.portProbe != nil {
+		return a.portProbe(publish)
+	}
+	return publishAnswers(publish)
+}
+
+// procDir is the process table the port's holder is looked up in.
+func (a *app) procDir() string {
+	if a.procRoot != "" {
+		return a.procRoot
+	}
+	return procRoot
 }
 
 // dockerHealth is the container's health as docker's HEALTHCHECK last judged
@@ -160,22 +209,23 @@ func (a *app) dashboardWatch() *host.Watch {
 }
 
 // lookDashboard is off when dashboard.no_restart is set or no dashboard is
-// recorded, and otherwise how it stands. When docker cannot say, it is gone:
-// the restart that follows fails and says why.
-func (a *app) lookDashboard(context.Context) string {
+// recorded, and otherwise how it stands, probed at the publish it was
+// recorded with, with what holds its port when that is port held. When docker
+// cannot say, it is gone: the restart that follows fails and says why.
+func (a *app) lookDashboard(context.Context) (string, string) {
 	cfg, _, err := a.loadConfig()
 	if err != nil || cfg.Dashboard.NoRestart {
-		return host.DashboardOff
+		return host.DashboardOff, ""
 	}
 	r, ok := readDashboardRecord(string(a.serveDir()))
 	if !ok {
-		return host.DashboardOff
+		return host.DashboardOff, ""
 	}
-	state, _, err := a.dashboardState(r.Name)
+	look, err := a.dashboardState(r.Name, r.Publish)
 	if err != nil {
-		return host.DashboardGone
+		return host.DashboardGone, ""
 	}
-	return state
+	return look.State, look.detail()
 }
 
 // restartDashboard removes the recorded container, if anything is left of it,

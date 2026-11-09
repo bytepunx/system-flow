@@ -39,6 +39,8 @@ type app struct {
 	cwd             string                            // tests override the working directory
 	clock           func() time.Time                  // tests override the clock
 	healthProbe     func(url string) bool             // tests fake the dashboard upgrade's health check
+	portProbe       func(publish string) bool         // tests fake whether a recorded publish's host port answers; publishAnswers when nil
+	procRoot        string                            // tests give a fake process table; /proc when ""
 	sleep           func(d time.Duration)             // tests skip a real poll delay (dashboard upgrade, checks cancel)
 	releases        func() selfupgrade.Options        // tests point the dashboard's releases at a stand-in; see dashboardReleases
 	// acceptForge makes the forge's adapter for a merge flai accept makes in

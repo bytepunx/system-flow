@@ -10,6 +10,7 @@ const (
 	DashboardRunning      = "running"       // it answers
 	DashboardNotAnswering = "not-answering" // its container runs and does not answer
 	DashboardGone         = "gone"          // no container runs
+	DashboardPortHeld     = "port-held"     // its container runs, docker publishes nothing for it, and another process holds its recorded port (ADR-0267)
 	DashboardOff          = "off"           // not watched: none was started, it was stopped, or dashboard.no_restart is set
 )
 
@@ -20,15 +21,17 @@ const WatchMisses = 2
 
 // Watch is what the host looks after besides its children: the dashboard
 // container flai dashboard started. Look says how it stands, DashboardOff
-// when it is not watched; Restart starts it again.
+// when it is not watched, and a detail: for DashboardPortHeld what holds the
+// port, "" otherwise. Restart starts it again.
 type Watch struct {
-	Look    func(ctx context.Context) string
+	Look    func(ctx context.Context) (state, detail string)
 	Restart func(ctx context.Context) error
 }
 
 // DashboardWatch is how the watch stands, in the host's status.
 type DashboardWatch struct {
 	State       string `json:"state"`
+	Detail      string `json:"detail,omitempty"` // the last look's detail: for port-held, what holds the port
 	Restarts    int    `json:"restarts"`
 	LastRestart string `json:"last_restart,omitempty"`
 	LastReason  string `json:"last_reason,omitempty"`
@@ -67,6 +70,12 @@ func (w *watcher) look(now time.Time, state string) bool {
 			w.backoff = w.first
 		}
 		return false
+	case DashboardPortHeld:
+		// a restart cannot win the port back from the process that holds it
+		// (ADR-0267): not a miss, and the back-off stands
+		w.misses = 0
+		w.answering = time.Time{}
+		return false
 	}
 	w.answering = time.Time{}
 	w.misses++
@@ -80,20 +89,26 @@ func (w *watcher) look(now time.Time, state string) bool {
 }
 
 // watchDashboard looks at the dashboard every WatchEvery until ctx ends, and
-// restarts it as the watcher decides, logging each restart with why.
+// restarts it as the watcher decides, logging each restart with why, and a
+// port another process holds once each time the watch finds it so.
 func (h *host) watchDashboard(ctx context.Context) {
 	o := h.o
 	w := newWatcher(o.WatchBackoff, o.WatchMaxBackoff)
 	t := time.NewTicker(o.WatchEvery)
 	defer t.Stop()
+	last := ""
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
 		}
-		state := o.Dashboard.Look(ctx)
-		h.setWatch(func(d *DashboardWatch) { d.State = state })
+		state, detail := o.Dashboard.Look(ctx)
+		h.setWatch(func(d *DashboardWatch) { d.State, d.Detail = state, detail })
+		if state == DashboardPortHeld && last != DashboardPortHeld {
+			o.Logger.Error("dashboard port held by another process", "component", "host", "holder", detail)
+		}
+		last = state
 		now := o.Now()
 		if !w.look(now, state) {
 			continue
