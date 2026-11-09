@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2058.2487
-accrued_seconds: 1531975
-tasks_completed: 2491
-last_run: 2026-11-09T17:21:32Z
+accrued_cost: 2058.8413
+accrued_seconds: 1532183
+tasks_completed: 2497
+last_run: 2026-11-09T17:30:56Z
 ---
 
 # Orchestrator activity
@@ -17467,6 +17467,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 35
 - Cost: 0.2349 USD, estimated
+
+### 2026-11-09T17:28:28Z
+
+- Summary: Accepted S-0619 at 799ab41 (verify passed at branch head; verifier: pass, criterion 1 by container.go/agents.go/container_test.go and ADR-0269, criterion 2 by I-0254 closed; dry run showed no blockers). Cost of delay 37.5 USD/week.
+- Items: S-0619
+- Seconds: 76
+- Cost: 0.1925 USD, estimated
+
+### 2026-11-09T17:28:56Z
+
+- Summary: Started publish formula instance S-0642 (flai formula run publish --ready --autocommit, commit 5efde1cc3): release policy threshold met, count 1 of threshold 1 (S-0619, 37.5 USD/week of 1000).
+- Items: S-0642, S-0619
+- Seconds: 28
+- Cost: 0.0241 USD, estimated
+
+### 2026-11-09T17:29:30Z
+
+- Summary: Applied throughput order to ready after S-0642 entered it: S-0627 (40m), S-0621 (1h30m), S-0642 (no forecast duration, last).
+- Items: S-0627, S-0621, S-0642
+- Seconds: 34
+- Cost: 0.0486 USD, estimated
+
+### 2026-11-09T17:30:02Z
+
+- Summary: I accepted S-0619 and started the publish formula, which made story S-0642. The release itself has not been pushed yet.
+- Items: none
+- Seconds: 32
+- Cost: 0.1617 USD, estimated
+
+### 2026-11-09T17:30:39Z
+
+- Summary: Release-due S-0619: started no second publish instance. release_evaluate is met under threshold (count 1 of 1; S-0619, 37.5 of 1000 USD/week). But publish instance S-0642, which an earlier run made at 5efde1cc3 for this same batch, is still in ready and covers it.
+- Items: S-0619, S-0642
+- Seconds: 21
+- Cost: 0.0768 USD, estimated
+
+### 2026-11-09T17:30:56Z
+
+- Summary: A release is already under way for S-0619, so I didn't start a second one.
+- Items: none
+- Seconds: 17
+- Cost: 0.0889 USD, estimated
 
 ## Refusals
 

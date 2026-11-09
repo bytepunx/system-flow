@@ -3,17 +3,20 @@ id: T-2750
 type: task
 nature: remediation
 title: A permission_prompt check that ends on the usage limit records nothing, opens no thread, and is checked again after the reset
-status: in-progress
+status: done
 parent: S-0629
 owner: alex
 created: 2026-11-09T17:09:05Z
-updated: 2026-11-09T17:27:23Z
+updated: 2026-11-09T17:42:10Z
 transitions:
   - to: ready
     at: 2026-11-09T17:27:23Z
     by: agent-S-0629
   - to: in-progress
     at: 2026-11-09T17:27:23Z
+    by: agent-S-0629
+  - to: done
+    at: 2026-11-09T17:42:10Z
     by: agent-S-0629
 stream: S-0629
 tags: [flai, serve, claude-code]

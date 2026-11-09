@@ -3,11 +3,11 @@ id: T-2757
 type: task
 nature: improvement
 title: metrics.md, dashboard-host-channel.md, and node.md say how the dashboard gets its metrics, that the host channel is built, and which lockfile the build installs from
-status: in-progress
+status: done
 parent: S-0626
 owner: alex
 created: 2026-11-09T17:13:16Z
-updated: 2026-11-09T17:27:16Z
+updated: 2026-11-09T17:33:43Z
 transitions:
   - to: ready
     at: 2026-11-09T17:27:15Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:27:16Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T17:33:43Z
+    by: agent-S-0626
 stream: S-0626
 tags: [design, docs]
 touches: [design/system/metrics.md, design/system/dashboard-host-channel.md, design/tech/node.md]
+usage:
+  source: log
+  seconds: 387
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 209
+      cache_read: 2318403
+      cache_write: 26392
+      cost: 0.856
 ---
 # T-2757 metrics.md, dashboard-host-channel.md, and node.md say how the dashboard gets its metrics, that the host channel is built, and which lockfile the build installs from
 

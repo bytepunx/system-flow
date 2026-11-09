@@ -3,11 +3,11 @@ id: T-2740
 type: task
 nature: remediation
 title: flai formula run gives the instance story its own story file as its touch, with a test that the instance is not held by a story in progress
-status: in-progress
+status: done
 parent: S-0620
 owner: alex
 created: 2026-11-09T17:05:59Z
-updated: 2026-11-09T17:11:48Z
+updated: 2026-11-09T17:28:53Z
 transitions:
   - to: ready
     at: 2026-11-09T17:11:47Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:11:48Z
     by: agent-S-0620
+  - to: done
+    at: 2026-11-09T17:28:53Z
+    by: agent-S-0620
 stream: S-0620
 tags: [flai, formulas, holds]
 touches: [flai/cmd/formula.go, flai/cmd/formula_test.go]
+usage:
+  source: log
+  seconds: 1025
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 10459
+      cache_read: 8419054
+      cache_write: 153138
+      cost: 3.0823
 ---
 # T-2740 flai formula run gives the instance story its own story file as its touch, with a test that the instance is not held by a story in progress
 

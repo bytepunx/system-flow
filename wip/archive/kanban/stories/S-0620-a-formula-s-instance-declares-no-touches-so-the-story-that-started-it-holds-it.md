@@ -3,10 +3,10 @@ id: S-0620
 type: story
 nature: remediation
 title: A formula's instance declares no touches, so the story that started it holds it until that story leaves in-progress
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:39:44Z
-updated: 2026-11-09T17:10:27Z
+updated: 2026-11-09T17:42:10Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:52Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:10:27Z
     by: agent-S-0620
+  - to: review
+    at: 2026-11-09T17:40:37Z
+    by: agent-S-0620
+  - to: done
+    at: 2026-11-09T17:42:10Z
+    by: orchestrator
 tags: [flai, formulas, holds]
 topics: [formulas, claims]
 touches: [flai/cmd/formula.go, flai/cmd/formula_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md, design/issues/summary.md]
@@ -23,9 +29,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1821
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      hand_edits: 2
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 146
+      output: 21467
+      cache_read: 17280515
+      cache_write: 314323
+      cost: 6.3267
   strategic:
     - kind: orchestrator
       seconds: 28
@@ -62,8 +79,8 @@ finalized:
 This story remediates [I-0282](../../../design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md), "A formula's instance declares no touches, so the story that started it holds it until that story leaves in-progress". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0282 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0282 is closed with `flai issue close I-0282 --reason` saying what fixed it
+- [x] The cause I-0282 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0282 is closed with `flai issue close I-0282 --reason` saying what fixed it
 
 ## Tasks
 - T-2740 flai formula run gives the instance story its own story file as its touch, with a test that the instance is not held by a story in progress
@@ -91,3 +108,12 @@ Forecast: `flai forecast` gave 5m from size 2 (2 criteria, 0 touches) before the
 Cost of delay: `flai cod` gives 12.50 USD a week, from the 5m `time_lost_per_cycle` input flai set from I-0282 at 150 USD an hour. That value stands. The instance names two stories held the same way, S-0584 and S-0585, and every `publish` instance the orchestrator starts with `--ready` meets it. The input is the operator's, so it was not changed.
 
 No `after`: the story reads nothing that an open story writes.
+
+### Accepted by the orchestrator
+
+- Verified: cfbda4feb0c5b15c72561e4117dae8b1b902a4c4
+- At: 2026-11-09T17:42:10Z
+
+Verdict: pass. Both acceptance criteria are met at cfbda4f, and the close-out passed every step there.
+- 1: flai/cmd/formula.go, flai/cmd/formula_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md
+- 2: design/issues/I-0282-a-formula-s-instance-declares-no-touches-so-the-story-that-started-it-holds-it.md, design/issues/summary.md

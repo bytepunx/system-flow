@@ -3,12 +3,18 @@ id: T-2753
 type: task
 nature: improvement
 title: Say in the design and the user guide that the dashboard shows raw HTML in markdown as text
-status: backlog
+status: in-progress
 parent: S-0627
 owner: alex
 created: 2026-11-09T17:11:18Z
-updated: 2026-11-09T17:11:18Z
-transitions: []
+updated: 2026-11-09T17:41:35Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:41:35Z
+    by: agent-S-0627
+  - to: in-progress
+    at: 2026-11-09T17:41:35Z
+    by: agent-S-0627
 stream: S-0627
 tags: [dashboard]
 touches: [design/tech/markdown.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

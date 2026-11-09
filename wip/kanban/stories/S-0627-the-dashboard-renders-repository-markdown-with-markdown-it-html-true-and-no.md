@@ -3,14 +3,17 @@ id: S-0627
 type: story
 nature: improvement
 title: "The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:28Z
-updated: 2026-11-09T17:18:47Z
+updated: 2026-11-09T17:40:47Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:43Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T17:40:47Z
+    by: agent-S-0627
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, design/tech/markdown.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md, design/issues/summary.md]
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 241
+      seconds: 253
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 56
-          output: 442
-          cache_read: 2851269
-          cache_write: 135526
-          cost: 0.7891
+          input: 58
+          output: 453
+          cache_read: 2912055
+          cache_write: 135921
+          cost: 0.8053
     - kind: analyzer
       seconds: 41
       estimated: true

@@ -3,11 +3,11 @@ id: T-2755
 type: task
 nature: improvement
 title: The dashboard design's page and API tables name only routes flaiover has, and a test fails on a row with no route
-status: in-progress
+status: done
 parent: S-0626
 owner: alex
 created: 2026-11-09T17:13:02Z
-updated: 2026-11-09T17:27:13Z
+updated: 2026-11-09T17:32:49Z
 transitions:
   - to: ready
     at: 2026-11-09T17:27:12Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:27:13Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T17:32:49Z
+    by: agent-S-0626
 stream: S-0626
 tags: [flaiover, design, test]
 touches: [design/system/flaiover-dashboard.md, flaiover/src/lib/server/design-routes.test.ts]
+usage:
+  source: log
+  seconds: 336
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 226
+      cache_read: 3115731
+      cache_write: 38733
+      cost: 1.1515
 ---
 # T-2755 The dashboard design's page and API tables name only routes flaiover has, and a test fails on a row with no route
 

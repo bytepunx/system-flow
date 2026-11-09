@@ -3,11 +3,11 @@ id: T-2756
 type: task
 nature: improvement
 title: telemetry.md and code-quality.md say what flai and flaiover expose and where flai's integration tests live
-status: in-progress
+status: done
 parent: S-0626
 owner: alex
 created: 2026-11-09T17:13:09Z
-updated: 2026-11-09T17:27:15Z
+updated: 2026-11-09T17:33:22Z
 transitions:
   - to: ready
     at: 2026-11-09T17:27:14Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:27:15Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T17:33:22Z
+    by: agent-S-0626
 stream: S-0626
 tags: [conventions, docs]
 touches: [design/conventions/telemetry.md, design/conventions/code-quality.md]
+usage:
+  source: log
+  seconds: 367
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 203
+      cache_read: 2504124
+      cache_write: 22116
+      cost: 0.9222
 ---
 # T-2756 telemetry.md and code-quality.md say what flai and flaiover expose and where flai's integration tests live
 

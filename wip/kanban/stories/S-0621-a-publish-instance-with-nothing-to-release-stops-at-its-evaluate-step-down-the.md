@@ -3,14 +3,17 @@ id: S-0621
 type: story
 nature: improvement
 title: A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:39:50Z
-updated: 2026-11-09T17:18:47Z
+updated: 2026-11-09T17:41:54Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:53Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T17:41:54Z
+    by: agent-S-0621
 tags: [flai, template]
 topics: [formulas, release, acceptance]
 touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md]
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 38
+      seconds: 49
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 65
-          cache_read: 541025
-          cache_write: 25506
-          cost: 0.1495
+          input: 9
+          output: 76
+          cache_read: 601810
+          cache_write: 25901
+          cost: 0.1657
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 24m

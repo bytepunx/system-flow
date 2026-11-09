@@ -6,7 +6,7 @@ title: Design documents describe a /conventions page, a /streams page, a mounted
 status: in-progress
 owner: alex
 created: 2026-11-07T23:40:21Z
-updated: 2026-11-09T17:26:31Z
+updated: 2026-11-09T17:35:44Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:42Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0626
 tags: [design, docs, flaiover]
 topics: [documentation]
-touches: [design/system/flaiover-dashboard.md, flaiover/src/lib/server/design-routes.test.ts, design/conventions/telemetry.md, design/conventions/code-quality.md, design/system/metrics.md, design/system/dashboard-host-channel.md, design/tech/node.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/issues/I-0293-design-documents-describe-a-conventions-page-a-streams-page-a-mounted.md, design/issues/summary.md]
+touches: [design/system/flaiover-dashboard.md, flaiover/src/lib/server/design-routes.test.ts, design/conventions/telemetry.md, design/conventions/code-quality.md, design/system/metrics.md, design/system/dashboard-host-channel.md, design/tech/node.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/issues/I-0293-design-documents-describe-a-conventions-page-a-streams-page-a-mounted.md, design/issues/summary.md, design/issues/I-0322-a-change-to-flaiover-dashboard-md-alone-selects-no-vitest-tier-so-design-routes.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 557
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 156
+      output: 1193
+      cache_read: 14299520
+      cache_write: 338829
+      cost: 5.3437
   strategic:
     - kind: planner
       seconds: 23

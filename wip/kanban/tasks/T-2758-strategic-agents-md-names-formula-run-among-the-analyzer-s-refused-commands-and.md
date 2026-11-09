@@ -3,11 +3,11 @@ id: T-2758
 type: task
 nature: improvement
 title: strategic-agents.md names formula run among the analyzer's refused commands, and flai-cli.md lists flai checks and flai serve checks
-status: in-progress
+status: done
 parent: S-0626
 owner: alex
 created: 2026-11-09T17:13:21Z
-updated: 2026-11-09T17:27:18Z
+updated: 2026-11-09T17:33:57Z
 transitions:
   - to: ready
     at: 2026-11-09T17:27:17Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:27:18Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T17:33:57Z
+    by: agent-S-0626
 stream: S-0626
 tags: [design, docs, flai]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 399
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 330
+      cache_read: 4001374
+      cache_write: 42447
+      cost: 1.4762
 ---
 # T-2758 strategic-agents.md names formula run among the analyzer's refused commands, and flai-cli.md lists flai checks and flai serve checks
 
