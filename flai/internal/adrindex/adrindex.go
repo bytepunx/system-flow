@@ -17,9 +17,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/goccy/go-yaml"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
