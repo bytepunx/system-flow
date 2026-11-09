@@ -3,10 +3,10 @@ id: S-0621
 type: story
 nature: improvement
 title: A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:39:50Z
-updated: 2026-11-09T18:31:02Z
+updated: 2026-11-09T21:52:17Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T18:31:02Z
     by: agent-S-0621
+  - to: done
+    at: 2026-11-09T21:52:17Z
+    by: alex
 tags: [flai, template]
 topics: [formulas, release, acceptance]
 touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md, design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md, docs/operators/settings.md]

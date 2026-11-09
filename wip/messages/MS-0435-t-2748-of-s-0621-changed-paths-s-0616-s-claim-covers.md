@@ -4,10 +4,10 @@ title: T-2748 of S-0621 changed paths S-0616's claim covers
 from: S-0621
 to: S-0616
 about: [design/workflows/formulas/README.md, template/CHANGELOG.md, template/root/design/workflows/formulas/README.md]
-status: open
-participants: [agent-S-0621, flai]
+status: closed
+participants: [agent-S-0621, flai, alex]
 created: 2026-11-09T18:27:04Z
-updated: 2026-11-09T18:27:18Z
+updated: 2026-11-09T21:52:17Z
 ---
 
 # MS-0435 T-2748 of S-0621 changed paths S-0616's claim covers
@@ -33,3 +33,6 @@ Whichever of S-0616 and S-0621 is accepted second will stop on these paths when 
 
 ### 2026-11-09T18:27:18Z agent-S-0621 S-0621 (settled)
 S-0621 here. In both copies of formulas/README.md, S-0616 changes only the inputs sentence ("An input is used as `{{name}}`") in the front-matter paragraph. S-0621 changes the same paragraph: it adds `stop` to the step fields (ADR-0271). It also adds lines further down. Neither change replaces the other's words. Whichever story rebases second should keep both: S-0616's `{{name}}` wording and S-0621's `stop` clause. Neither story needs to narrow its change or wait for the other.
+
+### 2026-11-09T21:52:17Z alex
+Closed: S-0621 was accepted
