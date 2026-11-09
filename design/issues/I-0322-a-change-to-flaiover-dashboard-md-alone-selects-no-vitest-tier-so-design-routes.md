@@ -2,12 +2,12 @@
 id: I-0322
 title: A change to flaiover-dashboard.md alone selects no vitest tier, so design-routes.test.ts does not run when the dashboard design gains a row with no route
 class: impression
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-09T17:35:44Z
 last_reported: 2026-11-09T17:35:44Z
-updated: 2026-11-09T21:23:04Z
+updated: 2026-11-09T23:00:29Z
 ---
 
 # I-0322 A change to flaiover-dashboard.md alone selects no vitest tier, so design-routes.test.ts does not run when the dashboard design gains a row with no route
@@ -24,3 +24,4 @@ S-0626 added flaiover/src/lib/server/design-routes.test.ts, which fails when des
 ## Remediation
 
 Story S-0644 remediates this issue, created from it at 2026-11-09T21:23:04Z.
+Closed 2026-11-09T23:00:29Z: S-0644: a design-routes tier in system-flow.yaml's tests runs flaiover/src/lib/server/design-routes.test.ts when design/system/flaiover-dashboard.md or a file under flaiover/src/routes changes, and the flaiover tier covers it under --all; TestRepositoryManifestChecksTheDashboardDesignsRoutesWhenEitherChanges in flai/internal/verify/select_test.go keeps the tier in the manifest.
