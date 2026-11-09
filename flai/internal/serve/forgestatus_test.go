@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -343,6 +344,30 @@ func TestACommentTheLintRefusesQuotedIsQuotedInACodeBlock(t *testing.T) {
 	}
 	if lab.item().Status != workitem.InProgress {
 		t.Fatalf("the story is %s", lab.item().Status)
+	}
+}
+
+// I-0242: a check's output quoted in a code block as the forge gave it kept
+// go test's tabs, so the project's lint would refuse the send-back thread
+// (MD010) and the story would never be sent back. The fenced quote is
+// mdlint.Fenced's, which the repository's own .markdownlint.yaml passes.
+func TestAFencedCheckOutputQuoteLintsClean(t *testing.T) {
+	// the repository's own .markdownlint.yaml, a file read: the package sits
+	// at flai/internal/serve
+	c, err := mdlint.Load(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary := "FAIL\tgithub.com/bytepunx/system-flow/flai/internal/serve\t131.960s"
+	out := "--- FAIL: TestX (0.01s)\r\n    x_test.go:12: got ```a``` \r\n\r\n\r\n\r\n" + summary + "\r\n"
+	st := forge.Status{Story: "S-0001", PullRequest: 7, URL: "https://github.com/o/r/pull/7", HeadSHA: headA}
+	fresh := []failure{{kind: forge.EventCheck, name: "ci", url: "https://github.com/o/r/actions/runs/1", text: out}}
+	text := sendBackText(st, fresh, true)
+	if f := c.Lint("# Pull request #7 of S-0001: the required check ci failed\n\n" + text + "\n"); len(f) > 0 {
+		t.Fatalf("the send-back text lints with %v:\n%s", f, text)
+	}
+	if !strings.Contains(text, "\n````text\n") || !strings.Contains(text, "FAIL    github.com/bytepunx/system-flow/flai/internal/serve    131.960s") {
+		t.Fatalf("the check's output is not quoted lint-safe:\n%s", text)
 	}
 }
 

@@ -418,18 +418,16 @@ func sendBackReason(pr int, backs []forge.SendBack) string {
 
 // quote is the forge's text s, trimmed to quoteLimit characters: a
 // blockquote of its paragraphs, each on one line with its bare URLs in code
-// spans, or, fenced, a code block that keeps it as it is.
+// spans, or, fenced, a code block of it that the markdown lint passes, as
+// mdlint.Fenced makes it, so that a check's log with go test's tabs in it
+// does not get the send-back thread refused (I-0242).
 func quote(s string, fenced bool) string {
 	s = strings.TrimSpace(strings.ReplaceAll(s, "\r\n", "\n"))
 	if r := []rune(s); len(r) > quoteLimit {
 		s = strings.TrimSpace(string(r[:quoteLimit])) + "…"
 	}
 	if fenced {
-		fence := "```"
-		for strings.Contains(s, fence) {
-			fence += "`"
-		}
-		return fence + "text\n" + s + "\n" + fence
+		return mdlint.Fenced(s)
 	}
 	var paras, lines []string
 	flush := func() {
