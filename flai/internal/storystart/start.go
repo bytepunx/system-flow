@@ -234,12 +234,24 @@ func refuse(repo *workitem.Repo, story *workitem.Item) error {
 	if err != nil {
 		return fmt.Errorf("start %s: read the work items to judge its holds: %w", story.ID, err)
 	}
-	if h := repo.Holds(items).Of(story); h != nil {
+	holds := repo.Holds(items)
+	if h := holds.Of(story); h != nil {
 		r.Hold = h
-		r.Reason = fmt.Sprintf("%s is %s; nothing was changed, so pull the first ready story the inbox lists that is not held", story.ID, h.Reason)
+		r.Reason = fmt.Sprintf("%s is %s; %s", story.ID, h.Reason, heldAdvice(story.ID, h, holds.Claim(story)))
 		return r
 	}
 	return nil
+}
+
+// heldAdvice is what to do about hold on story, whose claim is claim: a story
+// held no-touches by its own empty claim is cleared by declaring its touches,
+// which its own agent does rather than pull another (I-0301); any other hold
+// is waited out by pulling the next story.
+func heldAdvice(id string, hold *workitem.Hold, claim []string) string {
+	if hold.Code == workitem.HoldNoTouches && len(claim) == 0 {
+		return fmt.Sprintf("nothing was changed; declare the paths it changes with flai touches %s --add <path>... (or item_edit with touches) and call story_start again", id)
+	}
+	return "nothing was changed, so pull the first ready story the inbox lists that is not held"
 }
 
 // openStream opens story's narrative, or takes up the one it has when it was

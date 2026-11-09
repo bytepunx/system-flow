@@ -280,6 +280,43 @@ func TestStartRefusesAStoryHeldByAnOverlap(t *testing.T) {
 	}
 }
 
+// A ready story that declares no touches, while another story is in
+// progress, is refused no-touches with advice to declare its touches and call
+// story_start again, not to pull another story: its own agent clears the hold
+// (I-0301).
+func TestStartRefusesAStoryWithNoTouchesNamingFlaiTouches(t *testing.T) {
+	f := newFixture(t, true)
+	f.story(t, "Theirs", workitem.NewOptions{Touches: []string{"docs/shared"}}, workitem.Ready, workitem.InProgress)
+	mine := f.story(t, "Mine", workitem.NewOptions{Touches: []string{}}, workitem.Ready)
+	_, err := Start(context.Background(), f.options(mine.ID, noGit{}))
+	reason := refused(t, f, mine, err, workitem.HoldNoTouches)
+	for _, want := range []string{"flai touches " + mine.ID + " --add", "story_start again"} {
+		if !strings.Contains(reason, want) {
+			t.Errorf("reason does not say %q: %s", want, reason)
+		}
+	}
+	if strings.Contains(reason, "pull the first ready story") {
+		t.Errorf("reason sends its agent to another story: %s", reason)
+	}
+}
+
+// A ready story that declares touches, held no-touches only because a story
+// in progress declares none, keeps the advice to pull another story: its own
+// touches cannot clear that hold.
+func TestStartRefusesAStoryHeldByAnotherWithNoTouches(t *testing.T) {
+	f := newFixture(t, true)
+	f.story(t, "Theirs", workitem.NewOptions{Touches: []string{}}, workitem.Ready, workitem.InProgress)
+	mine := f.story(t, "Mine", workitem.NewOptions{Touches: []string{"docs/shared/page.md"}}, workitem.Ready)
+	_, err := Start(context.Background(), f.options(mine.ID, noGit{}))
+	reason := refused(t, f, mine, err, workitem.HoldNoTouches)
+	if !strings.Contains(reason, "pull the first ready story the inbox lists that is not held") {
+		t.Errorf("reason: %s", reason)
+	}
+	if strings.Contains(reason, "flai touches") {
+		t.Errorf("reason tells its agent to declare touches it has: %s", reason)
+	}
+}
+
 // A ready story that names in after: a story not done is refused with the
 // hold's reason.
 func TestStartRefusesAStoryHeldByAfter(t *testing.T) {
