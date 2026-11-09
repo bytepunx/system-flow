@@ -3,26 +3,41 @@ id: S-0629
 type: story
 nature: remediation
 title: flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:41Z
-updated: 2026-11-09T17:18:47Z
+updated: 2026-11-09T17:27:13Z
 transitions:
   - to: ready
     at: 2026-11-09T17:13:07Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T17:23:00Z
+    by: agent-S-0629
 tags: [flai, serve, claude-code]
 topics: [permissions, usage-limit]
-touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0296-flai-serve-records-a-claude-code-usage-limit-refusal-as-a-failed-permission.md, design/issues/summary.md]
+touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0296-flai-serve-records-a-claude-code-usage-limit-refusal-as-a-failed-permission.md, design/issues/summary.md, design/adrs/0270-a-permission-prompt-check-whose-claude-p-ends-on-the-harness-s-usage-limit.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 266
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      hand_edits: 2
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 567
+      cache_read: 8272402
+      cache_write: 285241
+      cost: 3.1237
   strategic:
     - kind: planner
       seconds: 318
@@ -41,15 +56,15 @@ usage:
           cache_write: 309040
           cost: 5.3977
     - kind: orchestrator
-      seconds: 112
+      seconds: 124
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 24
-          output: 268
-          cache_read: 1264844
-          cache_write: 123844
-          cost: 0.3666
+          input: 27
+          output: 290
+          cache_read: 1399519
+          cache_write: 140751
+          cost: 0.4066
     - kind: analyzer
       seconds: 41
       estimated: true

@@ -3,16 +3,37 @@ id: T-2693
 type: task
 nature: improvement
 title: Measure threads.list and agent.status on this repository before and after, and record cause 21's figures in server-performance.md
-status: backlog
+status: done
 parent: S-0611
 owner: alex
 created: 2026-11-07T23:57:19Z
-updated: 2026-11-07T23:57:19Z
-transitions: []
+updated: 2026-11-09T17:26:21Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:00:56Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:24:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:26:21Z
+    by: agent-S-0611
 stream: S-0611
 tags: [cli, dashboard]
 touches: [design/system/server-performance.md]
 after: [T-2689, T-2690, T-2691, T-2692]
+usage:
+  source: log
+  seconds: 86
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 87
+      cache_read: 3153245
+      cache_write: 10899
+      cost: 1.1549
 ---
 # T-2693 Measure threads.list and agent.status on this repository before and after, and record cause 21's figures in server-performance.md
 

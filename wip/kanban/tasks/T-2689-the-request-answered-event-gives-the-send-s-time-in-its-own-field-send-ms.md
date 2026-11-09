@@ -3,15 +3,36 @@ id: T-2689
 type: task
 nature: improvement
 title: The request answered event gives the send's time in its own field, send_ms, logged after the write
-status: backlog
+status: done
 parent: S-0611
 owner: alex
 created: 2026-11-07T23:55:15Z
-updated: 2026-11-07T23:55:15Z
-transitions: []
+updated: 2026-11-09T17:09:13Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:00:55Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:00:55Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:09:13Z
+    by: agent-S-0611
 stream: S-0611
 tags: [cli]
 touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/perf/perf.go, flai/internal/perf/perf_test.go, docs/users/flai.md]
+usage:
+  source: log
+  seconds: 498
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 355
+      cache_read: 7694512
+      cache_write: 40548
+      cost: 2.8233
 ---
 # T-2689 The request answered event gives the send's time in its own field, send_ms, logged after the write
 

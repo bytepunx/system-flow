@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2053.9976
-accrued_seconds: 1531009
-tasks_completed: 2457
-last_run: 2026-11-09T16:57:33Z
+accrued_cost: 2058.2487
+accrued_seconds: 1531975
+tasks_completed: 2491
+last_run: 2026-11-09T17:21:32Z
 ---
 
 # Orchestrator activity
@@ -17230,6 +17230,244 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 8
 - Cost: 0.0512 USD, estimated
 
+### 2026-11-09T16:57:48Z
+
+- Summary: I started no new publish run, because one is already under way. Publish run S-0641 (made by `flai formula run publish`) is in progress and will release S-0610 and S-0615 together.
+- Items: none
+- Seconds: 15
+- Cost: 0.3267 USD, estimated
+
+### 2026-11-09T17:00:34Z
+
+- Summary: Resolved TH-0904, my hold on S-0611: the operator finalized S-0611 whole and moved it to ready at 2026-11-09T16:59:36Z, so the split on TH-0903 is moot; agent-S-0611 works it as one story. No policy figure involved.
+- Items: S-0611
+- Seconds: 9
+- Cost: 0.0452 USD, estimated
+
+### 2026-11-09T17:00:47Z
+
+- Summary: I resolved TH-0904, and nothing else about S-0611 needs doing.
+- Items: none
+- Seconds: 13
+- Cost: 0.2816 USD, estimated
+
+### 2026-11-09T17:03:47Z
+
+- Summary: S-0619 left as a draft, with no thread opened. flai promote --drafts lists it as incomplete: no forecast duration, no forecast delivery, and no cost of delay value. planner-S-0619 is still planning it. It set topics and touches at 17:02:43Z, and it has no planner log entry and no thread yet. The forecast and value are the planner's to set, so a thread now would be early. The edit that adds them will start me again.
+- Items: S-0619
+- Seconds: 30
+- Cost: 0.1344 USD, estimated
+
+### 2026-11-09T17:04:01Z
+
+- Summary: I left S-0619 as a draft and did not open a thread on it.
+- Items: none
+- Seconds: 14
+- Cost: 0.1068 USD, estimated
+
+### 2026-11-09T17:06:01Z
+
+- Summary: Answered TH-0929, citing design/issues/I-0254-an-agent-container-on-a-native-linux-docker-engine-cannot-reach-flai-s-http-mcp.md
+- Items: S-0619
+- Seconds: 53
+- Cost: 0.2044 USD, estimated
+
+### 2026-11-09T17:06:26Z
+
+- Summary: Approved planner-S-0619's plan on TH-0929 under plan_backlog_stories, and resolved it. The remedy is the one I-0254's instance proposes. Its 2 tasks in 2 layers and 12 file touches fit both criteria, and the figures are flai's (40m, 37.50 USD a week). I also told the story's agent to write an ADR for the refusal.
+- Items: S-0619, TH-0929
+- Seconds: 25
+- Cost: 0.0916 USD, estimated
+
+### 2026-11-09T17:06:40Z
+
+- Summary: Finalized draft S-0619 under finalize_drafts. flai promote --drafts listed it complete at position 1 (40m, throughput). Its criteria, 12 file touches, 40m forecast, and 37.50 USD a week value are consistent.
+- Items: S-0619
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:07:00Z
+
+- Summary: Promoted S-0619 to ready under promote_to_ready. It was rank 1 in flai promote --candidates (throughput, 40m), and the ready column was empty (limit 10). I then applied flai order --by throughput, which leaves S-0619 at 1. I skipped S-0241 (rank 2, 2h): it is blocked, its Notes say not to promote it before forks are offered, and TH-0790 still awaits the operator.
+- Items: S-0619, S-0241
+- Seconds: 20
+- Cost: 0.0966 USD, estimated
+
+### 2026-11-09T17:07:30Z
+
+- Summary: Left draft S-0624 as a draft. flai promote --drafts lists it incomplete: it has no cost of delay value. planner-S-0624 asks for the inputs on TH-0931, so I opened no second thread. TH-0931 will start a run of its own.
+- Items: S-0624
+- Seconds: 30
+- Cost: 0.0994 USD, estimated
+
+### 2026-11-09T17:07:45Z
+
+- Summary: I acted on all three reasons. S-0619 is now in progress, and S-0624 stays a draft until it has a cost of delay value.
+- Items: none
+- Seconds: 15
+- Cost: 0.0867 USD, estimated
+
+### 2026-11-09T17:08:39Z
+
+- Summary: Answered TH-0931, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0624
+- Seconds: 51
+- Cost: 0.2752 USD, estimated
+
+### 2026-11-09T17:08:48Z
+
+- Summary: Answered TH-0930, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0626
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:08:56Z
+
+- Summary: Answered TH-0932, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0629
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:09:04Z
+
+- Summary: Answered TH-0933, citing design/digest/D-0509-a-formula-s-instance-enters-ready-with-no-touches-and-is-held-by-the-story-in.md
+- Items: S-0620
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:09:13Z
+
+- Summary: Answered TH-0934, citing design/digest/D-0498-s-0585-the-evaluate-step-exited-2-nothing-accepted-is-waiting-for-a-release.md
+- Items: S-0621
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:10:00Z
+
+- Summary: Settled four story planners' threads under plan_backlog_stories: set first cost of delay inputs as each planner recommended (S-0624 time_lost_per_cycle 5m on TH-0931, S-0626 15m on TH-0930, S-0629 penalty_per_week 20 on TH-0932; its 0h time lost left absent, which flai refuses), approved the plans of S-0624, S-0620 (TH-0933, D-0509) and S-0621 (TH-0934, D-0498), and resolved all five threads
+- Items: S-0624, S-0626, S-0629, S-0620, S-0621, TH-0930, TH-0931, TH-0932, TH-0933, TH-0934
+- Seconds: 47
+- Cost: 0.3562 USD, estimated
+
+### 2026-11-09T17:10:19Z
+
+- Summary: Finalized S-0624, S-0620 and S-0621, which flai promote --drafts listed complete (20m/12.50, 30m/12.50, 1h30m/60 USD a week), promoted all three under promote_to_ready in candidate rank 1-3, skipping S-0241 (rank 4) while TH-0790 awaits the operator and its block is open, and applied flai order --by throughput: S-0624 20m, S-0620 30m, S-0621 1h30m. S-0619's planned tasks need nothing: it is in progress with its agent.
+- Items: S-0624, S-0620, S-0621, S-0619
+- Seconds: 19
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:10:48Z
+
+- Summary: All nine reasons are handled. Three stories are now in the ready column, and two of them have already been started by their agents.
+- Items: none
+- Seconds: 29
+- Cost: 0.3096 USD, estimated
+
+### 2026-11-09T17:12:08Z
+
+- Summary: Answered TH-0935, citing design/digest/D-0503-claude-code-beefgoof-through-anthropic-fails-flai-s-permission-prompt-check-the.md
+- Items: S-0629
+- Seconds: 55
+- Cost: 0.1837 USD, estimated
+
+### 2026-11-09T17:12:25Z
+
+- Summary: Approved planner-S-0629's plan on TH-0935 and resolved it. The three tasks cover both criteria, the touches name files, and the figures are 40m and 20 USD a week (plan_backlog_stories). Source: D-0503.
+- Items: S-0629
+- Seconds: 17
+- Cost: 0.0366 USD, estimated
+
+### 2026-11-09T17:12:39Z
+
+- Summary: Finalized draft S-0629: flai promote --drafts lists it as complete at position 1 (40m, throughput). Its criteria, file touches, forecast, and 20 USD a week value are consistent (finalize_drafts).
+- Items: S-0629
+- Seconds: 14
+- Cost: 0.0368 USD, estimated
+
+### 2026-11-09T17:13:13Z
+
+- Summary: Promoted S-0629 to ready, rank 1 in flai promote --candidates (40m, throughput); ready now holds 2 of 10. Skipped S-0241 at rank 2: it is still blocked, and its Notes keep it out of ready until a headless session offers forks (TH-0790). Ordered ready by throughput: S-0629 (40m), then S-0621 (1h30m). S-0627's planner is still running, so I left that draft alone.
+- Items: S-0629, S-0621
+- Seconds: 34
+- Cost: 0.0765 USD, estimated
+
+### 2026-11-09T17:15:52Z
+
+- Summary: Answered TH-0936, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0627
+- Seconds: 112
+- Cost: 0.3418 USD, estimated
+
+### 2026-11-09T17:16:59Z
+
+- Summary: Settled planner-S-0627's TH-0936 under plan_backlog_stories: set S-0627's first cost of delay input, penalty_per_week 100 USD as the planner recommended (no reason on the thread or story for the 30 alternative), approved its plan (T-2752, T-2753 in layer 1, T-2754 after both; 40m forecast), and resolved the thread. Asked the operator on TH-0938 whether to draft the CSP story the planner offered (recommend no story now), on the analysis's Finding R1 so it does not hold S-0627.
+- Items: S-0627, TH-0936, TH-0938
+- Seconds: 67
+- Cost: 0.1560 USD, estimated
+
+### 2026-11-09T17:17:12Z
+
+- Summary: finalize_drafts: flai promote --drafts lists S-0626 incomplete (no forecast duration, delivery, or cost of delay value) and S-0627 incomplete (no value; its input is now set, so its planner works the value out). Left both drafts as they are. Opened TH-0939 on S-0626 saying what it lacks, since flai plan --candidates does not list it for a planner run.
+- Items: S-0626, S-0627, TH-0939
+- Seconds: 13
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:17:28Z
+
+- Summary: Applied flai order --by throughput after the ready column changed: S-0629 (40m) then S-0621 (1h30m). promote_candidates lists only S-0241 (rank 1, 2h); skipped it: still blocked, and its Notes keep it out of ready until forks are offered headless (TH-0790 awaits the operator).
+- Items: S-0629, S-0621, S-0241
+- Seconds: 16
+- Cost: 0.0000 USD
+
+### 2026-11-09T17:18:00Z
+
+- Summary: Answered TH-0936, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0627
+- Seconds: 32
+- Cost: 0.1348 USD, estimated
+
+### 2026-11-09T17:18:13Z
+
+- Summary: Answered TH-0937, citing design/conventions/documentation.md § Rules
+- Items: S-0626
+- Seconds: 13
+- Cost: 0.0357 USD, estimated
+
+### 2026-11-09T17:18:49Z
+
+- Summary: Settled planner threads after both planners finished: re-resolved TH-0936 (planner-S-0627 wrote the 100 USD/week value after my first resolve; CSP offer stays on TH-0938), approved and resolved TH-0937 (S-0626: five tasks in two layers, 40m, 37.50 USD/week), and resolved my TH-0939 on S-0626, whose concern was gone (its planner wrote the forecast and value while I wrote it).
+- Items: S-0626, S-0627, TH-0936, TH-0937, TH-0939
+- Seconds: 36
+- Cost: 0.2329 USD, estimated
+
+### 2026-11-09T17:19:18Z
+
+- Summary: Finalized S-0626 and S-0627, which flai promote --drafts listed complete (40m, 37.50 USD/week; 40m, 100 USD/week). Promoted both under promote_to_ready as promote_candidates ranks 1 and 2 (throughput, 40m each), ready going from 2 to 4 of 10, skipping S-0241 (rank 3, 2h: blocked, TH-0790). Applied flai order --by throughput: S-0629 40m, S-0626 40m, S-0627 40m, S-0621 1h30m.
+- Items: S-0626, S-0627, S-0629, S-0621, S-0241
+- Seconds: 29
+- Cost: 0.0401 USD, estimated
+
+### 2026-11-09T17:20:04Z
+
+- Summary: S-0626 and S-0627 are finalized and in ready, and both planner threads are settled. Ready now holds 4 of 10, ordered by throughput.
+- Items: none
+- Seconds: 46
+- Cost: 0.1667 USD, estimated
+
+### 2026-11-09T17:20:57Z
+
+- Summary: Reasons already settled by the previous run: TH-0936 and TH-0937 resolved, S-0626 and S-0627 finalized and in ready. Ready (4 of 10) already in throughput order (S-0629 40m, S-0626 40m, S-0627 40m, S-0621 1h30m), so nothing applied. Skipped S-0241, the only promote candidate (2h): still blocked, TH-0790 awaits the operator. No thread awaiting the operator is mine to answer.
+- Items: S-0626, S-0627, S-0629, S-0621, S-0241
+- Seconds: 29
+- Cost: 0.1602 USD, estimated
+
+### 2026-11-09T17:21:32Z
+
+- Summary: Nothing was left to do on this run's seven reasons: the previous orchestrator run had already handled each one.
+- Items: none
+- Seconds: 35
+- Cost: 0.2349 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -17895,4 +18133,24 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-09T11:26:18Z
 
 - Call: `git tag --list flai/v1.86.3`
+- Needs: none
+
+### 2026-11-09T17:03:38Z
+
+- Call: `flai serve status --json`
+- Needs: none
+
+### 2026-11-09T17:05:35Z
+
+- Call: `flai serve status --json`
+- Needs: none
+
+### 2026-11-09T17:11:56Z
+
+- Call: `flai serve status --json`
+- Needs: none
+
+### 2026-11-09T17:15:30Z
+
+- Call: `flai serve status`
 - Needs: none

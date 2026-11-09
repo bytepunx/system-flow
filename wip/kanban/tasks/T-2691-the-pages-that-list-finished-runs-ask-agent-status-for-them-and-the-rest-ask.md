@@ -3,16 +3,37 @@ id: T-2691
 type: task
 nature: improvement
 title: The pages that list finished runs ask agent.status for them, and the rest ask for the open and live runs
-status: backlog
+status: done
 parent: S-0611
 owner: alex
 created: 2026-11-07T23:56:20Z
-updated: 2026-11-07T23:56:20Z
-transitions: []
+updated: 2026-11-09T17:24:15Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:00:56Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:17:22Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:24:14Z
+    by: agent-S-0611
 stream: S-0611
 tags: [dashboard]
-touches: [flaiover/src/routes/api/planner/+server.ts, flaiover/src/routes/api/planner/planner.test.ts, flaiover/src/routes/api/orchestrator/+server.ts, flaiover/src/routes/api/orchestrator/orchestrator.test.ts, flaiover/src/routes/api/analyzer/+server.ts, flaiover/src/routes/api/analyzer/analyzer.test.ts, "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/items/[id]/plan/+server.ts", "flaiover/src/routes/api/items/[id]/plan/plan.test.ts", flaiover/src/routes/api/host-agent/host-agent.test.ts]
+touches: [flaiover/src/routes/api/planner/+server.ts, flaiover/src/routes/api/planner/planner.test.ts, flaiover/src/routes/api/orchestrator/+server.ts, flaiover/src/routes/api/orchestrator/orchestrator.test.ts, flaiover/src/routes/api/analyzer/+server.ts, flaiover/src/routes/api/analyzer/analyzer.test.ts, "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/items/[id]/plan/+server.ts", "flaiover/src/routes/api/items/[id]/plan/plan.test.ts", flaiover/src/routes/api/host-agent/host-agent.test.ts, design/system/flaiover-dashboard.md, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/routes/api/host-agent/+server.ts]
 after: [T-2690]
+usage:
+  source: log
+  seconds: 412
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 368
+      cache_read: 10249337
+      cache_write: 45317
+      cost: 3.7575
 ---
 # T-2691 The pages that list finished runs ask agent.status for them, and the rest ask for the open and live runs
 

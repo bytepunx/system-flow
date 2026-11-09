@@ -3,14 +3,17 @@ id: S-0626
 type: story
 nature: improvement
 title: Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:21Z
-updated: 2026-11-09T17:18:47Z
+updated: 2026-11-09T17:26:31Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:42Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T17:26:31Z
+    by: agent-S-0626
 tags: [design, docs, flaiover]
 topics: [documentation]
 touches: [design/system/flaiover-dashboard.md, flaiover/src/lib/server/design-routes.test.ts, design/conventions/telemetry.md, design/conventions/code-quality.md, design/system/metrics.md, design/system/dashboard-host-channel.md, design/tech/node.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/issues/I-0293-design-documents-describe-a-conventions-page-a-streams-page-a-mounted.md, design/issues/summary.md]
@@ -35,15 +38,15 @@ usage:
           cache_write: 152963
           cost: 0.7694
     - kind: orchestrator
-      seconds: 23
+      seconds: 53
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 55
-          cache_read: 398838
-          cache_write: 6400
-          cost: 0.1069
+          input: 16
+          output: 181
+          cache_read: 966029
+          cache_write: 31470
+          cost: 0.2634
     - kind: analyzer
       seconds: 42
       estimated: true

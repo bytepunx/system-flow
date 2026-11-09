@@ -3,15 +3,36 @@ id: T-2690
 type: task
 nature: improvement
 title: agent.status takes a finished parameter, and without it sends only the open and live runs
-status: backlog
+status: done
 parent: S-0611
 owner: alex
 created: 2026-11-07T23:55:49Z
-updated: 2026-11-07T23:55:49Z
-transitions: []
+updated: 2026-11-09T17:09:24Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:00:55Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:00:55Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:09:24Z
+    by: agent-S-0611
 stream: S-0611
 tags: [cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flaiover-dashboard.md]
+usage:
+  source: log
+  seconds: 509
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 495
+      cache_read: 13840079
+      cache_write: 90342
+      cost: 5.0846
 ---
 # T-2690 agent.status takes a finished parameter, and without it sends only the open and live runs
 

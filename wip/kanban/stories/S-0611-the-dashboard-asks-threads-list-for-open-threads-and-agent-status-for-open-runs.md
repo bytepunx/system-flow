@@ -3,24 +3,44 @@ id: S-0611
 type: story
 nature: improvement
 title: The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB
-status: backlog
+status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:08Z
-updated: 2026-11-09T16:59:32Z
-transitions: []
+updated: 2026-11-09T17:26:27Z
+transitions:
+  - to: ready
+    at: 2026-11-09T16:59:36Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-09T16:59:41Z
+    by: agent-S-0611
 tags: [dashboard, cli]
 topics: [logging]
-touches: [flaiover/src/lib/server/repo.ts, flai/internal/channel/channel.go, flai/internal/hostapi/people.go, flai/internal/channel/channel_test.go, flai/internal/perf/perf.go, flai/internal/perf/perf_test.go, docs/users/flai.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flaiover-dashboard.md, flaiover/src/routes/api/threads/+server.ts, flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts, flaiover/src/routes/api/planner/+server.ts, flaiover/src/routes/api/planner/planner.test.ts, flaiover/src/routes/api/orchestrator/+server.ts, flaiover/src/routes/api/orchestrator/orchestrator.test.ts, flaiover/src/routes/api/analyzer/+server.ts, flaiover/src/routes/api/analyzer/analyzer.test.ts, "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/items/[id]/plan/+server.ts", "flaiover/src/routes/api/items/[id]/plan/plan.test.ts", flaiover/src/routes/api/host-agent/host-agent.test.ts, design/system/server-performance.md]
+touches: [flaiover/src/lib/server/repo.ts, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/perf/perf.go, flai/internal/perf/perf_test.go, docs/users/flai.md, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/contract_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/system/flaiover-dashboard.md, flaiover/src/routes/api/threads/+server.ts, flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts, flaiover/src/routes/api/planner/+server.ts, flaiover/src/routes/api/planner/planner.test.ts, flaiover/src/routes/api/orchestrator/+server.ts, flaiover/src/routes/api/orchestrator/orchestrator.test.ts, flaiover/src/routes/api/analyzer/+server.ts, flaiover/src/routes/api/analyzer/analyzer.test.ts, "flaiover/src/routes/api/roles/[name]/+server.ts", "flaiover/src/routes/api/roles/[name]/roles.test.ts", "flaiover/src/routes/api/items/[id]/plan/+server.ts", "flaiover/src/routes/api/items/[id]/plan/plan.test.ts", flaiover/src/routes/api/host-agent/host-agent.test.ts, design/system/server-performance.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/routes/api/host-agent/+server.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1597
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      test_runs: 2
+      hand_edits: 1
+      work: 55
+  models:
+    - model: claude-opus-5-5
+      input: 318
+      output: 1962
+      cache_read: 47963061
+      cache_write: 545538
+      cost: 17.7057
   strategic:
     - kind: planner
       seconds: 757
@@ -39,15 +59,15 @@ usage:
           cache_write: 2193579
           cost: 41.0331
     - kind: orchestrator
-      seconds: 91
+      seconds: 100
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 52
-          cache_read: 665292
-          cache_write: 27169
-          cost: 0.1786
+          input: 15
+          output: 90
+          cache_read: 777882
+          cache_write: 86175
+          cost: 0.2238
 cost_of_delay:
   inputs:
     penalty_per_week: 30
@@ -74,10 +94,10 @@ Cause 21 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] The dashboard asks `threads.list` for open threads, and for the resolved ones only on a page that shows them.
-- [ ] `agent.status` sends the open and live runs, and the finished ones only to a page that shows them, through a parameter the host API documents.
-- [ ] The `request answered` event gives the send's time in its own field, and `docs/users/flai.md` § Request timing says so.
-- [ ] On this repository a board's `threads.list` is under 100 KB and `agent.status` under 50 KB, and server-performance.md records the before and after.
+- [x] The dashboard asks `threads.list` for open threads, and for the resolved ones only on a page that shows them.
+- [x] `agent.status` sends the open and live runs, and the finished ones only to a page that shows them, through a parameter the host API documents.
+- [x] The `request answered` event gives the send's time in its own field, and `docs/users/flai.md` § Request timing says so.
+- [x] On this repository a board's `threads.list` is under 100 KB and `agent.status` under 50 KB, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2689 The request answered event gives the send's time in its own field, send_ms, logged after the write

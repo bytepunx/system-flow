@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1105.9306
-accrued_seconds: 143930
-tasks_completed: 172
-last_run: 2026-11-09T10:49:32Z
+accrued_cost: 1112.8927
+accrued_seconds: 144271
+tasks_completed: 177
+last_run: 2026-11-09T17:10:39Z
 ---
 
 # Planner activity
@@ -1374,3 +1374,43 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0618, T-2726, T-2727, T-2728
 - Seconds: 249
 - Cost: 2.7917 USD, estimated
+
+### 2026-11-09T17:04:55Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0619, T-2735, T-2736
+- Seconds: 23
+- Cost: 0.7694 USD, estimated
+
+### 2026-11-09T17:06:44Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0620, T-2740, T-2741, T-2742
+- Seconds: 83
+- Cost: 2.3306 USD, estimated
+
+### 2026-11-09T17:08:14Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0621, T-2743, T-2744, T-2745, T-2746, T-2747, T-2748
+- Seconds: 90
+- Cost: 1.8387 USD, estimated
+
+### 2026-11-09T17:09:58Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0624, T-2737, T-2738, T-2739
+- Seconds: 104
+- Cost: 1.7010 USD, estimated
+
+### 2026-11-09T17:10:39Z
+
+- Summary: Planned S-0629: created T-2749 (ADR and design), T-2750 (code and tests, after T-2749) and T-2751 (docs and I-0296 close, after T-2750) in three layers; revisited none; set 11 touches, a 40m forecast and a 20 USD/week cost of delay (inputs settled on TH-0932); plan summarised on TH-0935.
+- Trigger: asked
+- Items: S-0629, T-2749, T-2750, T-2751
+- Seconds: 41
+- Cost: 0.3224 USD, estimated

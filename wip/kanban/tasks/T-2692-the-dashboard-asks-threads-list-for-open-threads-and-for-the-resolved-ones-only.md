@@ -3,15 +3,36 @@ id: T-2692
 type: task
 nature: improvement
 title: "The dashboard asks threads.list for open threads, and for the resolved ones only when a page asks with all=1"
-status: backlog
+status: done
 parent: S-0611
 owner: alex
 created: 2026-11-07T23:56:42Z
-updated: 2026-11-07T23:56:42Z
-transitions: []
+updated: 2026-11-09T17:09:31Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:00:55Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:00:56Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:09:31Z
+    by: agent-S-0611
 stream: S-0611
 tags: [dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/threads/+server.ts, flaiover/src/routes/api/threads/threads.test.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts]
+usage:
+  source: log
+  seconds: 515
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 312
+      cache_read: 6502291
+      cache_write: 42744
+      cost: 2.389
 ---
 # T-2692 The dashboard asks threads.list for open threads, and for the resolved ones only when a page asks with all=1
 

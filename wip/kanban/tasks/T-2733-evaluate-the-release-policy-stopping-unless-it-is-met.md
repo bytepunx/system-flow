@@ -21,6 +21,18 @@ transitions:
 stream: S-0641
 tags: []
 after: [T-2732]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 797
+      cache_read: 447371
+      cache_write: 12763
+      cost: 0.2075
 ---
 # T-2733 Evaluate the release policy, stopping unless it is met
 
