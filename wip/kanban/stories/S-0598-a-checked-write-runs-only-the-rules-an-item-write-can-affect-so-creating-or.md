@@ -7,7 +7,7 @@ status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:02Z
-updated: 2026-11-08T01:11:52Z
+updated: 2026-11-09T07:23:58Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:08Z
@@ -80,7 +80,7 @@ Cause 8 in [server-performance.md](../../../design/system/server-performance.md#
 
 - [x] A checked creation or edit runs only the rules a work item write can affect: the written items and their parent, the after, overlap, and touches graph, the board, the story's narrative, and the markdown lint and conflict markers of the written files; and it computes the "before" result for those rules alone.
 - [x] It still refuses exactly the findings ADR-0197 and ADR-0213 refuse, which tests show for a creation and an edit that bring a finding of each kept rule.
-- [ ] `flai story new`, `flai edit`, and MCP `item_new` of a task, timed in a scratch copy of this repository, each take under 3 s, and server-performance.md records the before and after.
+- [x] `flai story new`, `flai edit`, and MCP `item_new` of a task, timed in a scratch copy of this repository, each take under 3 s, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2620 check runs an item write's rule set: the written items and their parent, the graph rules, the board, the story's narrative, and the written files' lint and conflict markers
