@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T11:26:04Z
+updated: 2026-11-09T11:26:27Z
 ---
 
 # Active streams
@@ -13,8 +13,7 @@ updated: 2026-11-09T11:26:04Z
 | [S-0610](S-0610.md) | The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out | review | agent-S-0610 | 2026-11-09T10:43:46Z |
 | [S-0615](S-0615.md) | flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes | review | agent-S-0615 | 2026-11-09T10:45:47Z |
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | review | agent-S-0616 | 2026-11-09T10:43:31Z |
-| [S-0635](S-0635.md) | Publish what is accepted and not yet released | review | agent-S-0635 | 2026-11-09T11:24:56Z |
-| [S-0639](S-0639.md) | Publish what is accepted and not yet released | in-progress | agent-S-0639 | 2026-11-09T11:26:04Z |
+| [S-0639](S-0639.md) | Publish what is accepted and not yet released | in-progress | agent-S-0639 | 2026-11-09T11:26:25Z |
 
 ## Strategic agents
 
