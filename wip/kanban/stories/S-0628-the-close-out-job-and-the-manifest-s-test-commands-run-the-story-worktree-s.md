@@ -3,11 +3,14 @@ id: S-0628
 type: story
 nature: improvement
 title: The close-out job and the manifest's test commands run the story worktree's scripts on the host, so a container harness does not keep an agent's code off the host
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T23:40:34Z
-updated: 2026-11-09T22:04:48Z
-transitions: []
+updated: 2026-11-09T22:09:59Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:04:53Z
+    by: alex
 tags: [flai, security]
 topics: [harness, docker, verify]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, design/adrs/0272-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in-that-container.md, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md, design/issues/summary.md]
@@ -21,6 +24,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 36
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 24
+          cache_read: 164537
+          cache_write: 2487
+          cost: 0.0444
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -39,10 +52,10 @@ usage:
           cost: 0.278
 forecast:
   duration: 2h
-  delivery: 2026-11-10T23:00:00Z
-  basis: "flai forecast's 30m (98 s per unit of size over 142 done large-band improvement stories, size 18) raised to 2h: the job reimplements the close-out script's commit and three sync rounds in Go for container stories and its tests fake docker, as S-0618 took 2h; delivered a day out since it is a draft until the operator finalizes it."
-  by: planner-S-0628
-  at: 2026-11-09T21:59:58Z
+  delivery: 2026-11-10T01:31:00Z
+  basis: "Its own forecast of 2h; 4th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633, S-0625 and S-0630."
+  by: flai
+  at: 2026-11-09T22:09:59Z
 finalized:
   by: alex
   at: 2026-11-09T22:04:48Z

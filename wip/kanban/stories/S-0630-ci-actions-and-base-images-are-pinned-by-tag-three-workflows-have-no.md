@@ -3,11 +3,14 @@ id: S-0630
 type: story
 nature: improvement
 title: CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T23:40:47Z
-updated: 2026-11-09T22:04:57Z
-transitions: []
+updated: 2026-11-09T22:09:59Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:05:06Z
+    by: alex
 tags: [flaiover, template, ci, security]
 topics: [ci, security, release]
 touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", ".github/dependabot.yml", template/root/.github/workflows/system-flow-check.yml, flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, flaiover/package-lock.json, package-lock.json, scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md, design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md]
@@ -21,6 +24,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 81
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 48
+          cache_read: 473430
+          cache_write: 12681
+          cost: 0.1293
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -39,10 +52,10 @@ usage:
           cost: 0.278
 forecast:
   duration: 1h
-  delivery: 2026-11-09T23:16:00Z
-  basis: flai forecast's 43m (median 98 s per unit over 142 large-band improvement stories, size 27) raised to 1h for looking up about 14 action commits and 6 image versions, and for the integration and smoke tiers that the template and flai/images paths select at close-out.
-  by: planner-S-0630
-  at: 2026-11-09T21:57:49Z
+  delivery: 2026-11-10T00:03:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633 and S-0625."
+  by: flai
+  at: 2026-11-09T22:09:59Z
 finalized:
   by: alex
   at: 2026-11-09T22:04:57Z

@@ -3,11 +3,14 @@ id: S-0633
 type: story
 nature: improvement
 title: flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T23:41:06Z
-updated: 2026-11-09T22:05:02Z
-transitions: []
+updated: 2026-11-09T22:09:59Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:05:17Z
+    by: alex
 tags: [flai, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md]
 agent:
@@ -15,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 119
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 20
+          output: 120
+          cache_read: 1089370
+          cache_write: 133221
+          cost: 0.3253
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -25,10 +43,10 @@ cost_of_delay:
   at: 2026-11-09T22:02:17Z
 forecast:
   duration: 40m
-  delivery: 2026-11-09T23:48:00Z
-  basis: flai forecast's 18m (104 s per unit over 27 done improvement stories, size 10), raised to 40m because the start path that bypassed the hold is not yet known and S-0568, a three-task remediation of the same size, spent about 31m in progress
-  by: planner-S-0633
-  at: 2026-11-09T22:02:17Z
+  delivery: 2026-11-09T22:58:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632 and S-0634."
+  by: flai
+  at: 2026-11-09T22:09:59Z
 finalized:
   by: alex
   at: 2026-11-09T22:05:02Z
