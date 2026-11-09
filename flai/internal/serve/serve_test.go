@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -15,11 +16,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/adr"
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/watch"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -455,22 +459,134 @@ func toldOf(t *testing.T, conn *channeltest.Conn, rel string) {
 	}
 }
 
-// The archive is on the watcher's slow tier, under the manifest's wip folder,
-// and the other folders on its fast one.
-func TestTheArchiveIsWatchedOnTheSlowTier(t *testing.T) {
+// The archive, the threads, the conversations, the digest, the issues, and
+// the ADRs are on the watcher's slow tier, under the manifest's wip and
+// design folders, and the other folders on its fast one (S-0606, TH-0908).
+func TestTheBigFoldersAreWatchedOnTheSlowTier(t *testing.T) {
 	root, _ := scratchProject(t, "tiers")
-	if got := slowPaths(root); !slices.Equal(got, []string{"wip/archive"}) {
-		t.Errorf("slow paths: %v", got)
+	want := []string{"wip/archive", "wip/threads", "wip/messages", "design/digest", "design/issues", "design/adrs"}
+	if got := slowPaths(root); !slices.Equal(got, want) {
+		t.Errorf("slow paths: %v, want %v", got, want)
 	}
 	if got := watchedPaths(root); !slices.Equal(got, []string{"system-flow.yaml", "design", "docs", "wip"}) {
 		t.Errorf("fast paths: %v", got)
 	}
-	manifest := "version: 1\nname: tiers\nkey: tiers\nlayout:\n  design: design\n  docs: docs\n  wip: work\n"
+	manifest := "version: 1\nname: tiers\nkey: tiers\nlayout:\n  design: plans\n  docs: docs\n  wip: work\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := slowPaths(root); !slices.Equal(got, []string{"work/archive"}) {
-		t.Errorf("slow paths under another wip folder: %v", got)
+	want = []string{"work/archive", "work/threads", "work/messages", "plans/digest", "plans/issues", "plans/adrs"}
+	if got := slowPaths(root); !slices.Equal(got, want) {
+		t.Errorf("slow paths under other wip and design folders: %v, want %v", got, want)
+	}
+}
+
+// noGitRun is a runner with no git, for the writes that ask git for the
+// numbers other branches took.
+type noGitRun struct{}
+
+var errNoGitRun = errors.New("no git in this test")
+
+func (noGitRun) Run(string, string, ...string) (string, error)              { return "", errNoGitRun }
+func (noGitRun) RunInput(string, string, string, ...string) (string, error) { return "", errNoGitRun }
+func (noGitRun) LookPath(string) (string, error)                            { return "", errNoGitRun }
+
+// With the watcher built as flai serve builds it, and a slow interval far
+// longer than the test, a flai write of an issue and of an ADR, each made by
+// a rename, is reported within a few fast looks: it moves its folder's
+// modification time, which the slow tier looks at on every look (TH-0908).
+func TestAFlaiIssueAndADRWriteAreSeenAtTheNextFastLook(t *testing.T) {
+	root, _ := scratchProject(t, "rename")
+	for _, d := range []string{"docs", "design/issues", "design/adrs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "wip/threads"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// a project flai writes in ignores its cache folder (D-0402)
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 9, 8, 0, 0, 0, time.UTC)
+	is, err := issues.New(repo, issues.NewOptions{Title: "A slow tier test", Class: "defect", Cost: "5m", Note: "first", Now: now, Runner: noGitRun{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	made, err := adr.New(repo, noGitRun{}, adr.Options{Title: "The slow tier sees a rename", Now: now,
+		Body: "## Context\n\nA test.\n\n## Decision\n\nThe slow tier sees a rename at the next fast look.\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rel := func(path string) string {
+		t.Helper()
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(root, path)
+		}
+		out, err := filepath.Rel(root, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return filepath.ToSlash(out)
+	}
+	every := 20 * time.Millisecond
+	w := &watch.Watcher{Root: root, Paths: watchedPaths(root), Slow: slowPaths(root), Every: every, SlowEvery: time.Hour}
+	ctx, cancel := context.WithCancel(context.Background())
+	reported := make(chan string, 64)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		w.Run(ctx, func(rel string) { reported <- rel })
+	}()
+	t.Cleanup(func() { cancel(); <-done })
+
+	// the watcher's first look is taken as it starts: a probe written until it
+	// is reported shows the look was taken
+	probe := filepath.Join(root, "docs", "probe.md")
+	for n := 1; ; n++ {
+		if err := os.WriteFile(probe, []byte(strings.Repeat("x", n)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if seen(reported, "docs/probe.md", 10*every) {
+			break
+		}
+		if n > 500 {
+			t.Fatal("the watcher never reported the probe")
+		}
+	}
+
+	// within a few fast looks, never the slow look an hour away: the bound is
+	// generous for a loaded host, and still far below the slow interval
+	within := 5 * time.Second
+	if err := issues.Bump(is, "", "5m", "again", now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if !seen(reported, rel(is.Path), within) {
+		t.Errorf("a flai issue bump of %s was not reported within %s", rel(is.Path), within)
+	}
+	if _, err := adr.Accept(repo, noGitRun{}, made.Number, adr.Options{Now: now.Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if !seen(reported, rel(made.Path), within) {
+		t.Errorf("a flai ADR accept of %s was not reported within %s", rel(made.Path), within)
+	}
+}
+
+// seen reports whether rel comes on reported within d, passing over the
+// other paths reported meanwhile.
+func seen(reported <-chan string, rel string, d time.Duration) bool {
+	deadline := time.After(d)
+	for {
+		select {
+		case got := <-reported:
+			if got == rel {
+				return true
+			}
+		case <-deadline:
+			return false
+		}
 	}
 }
 

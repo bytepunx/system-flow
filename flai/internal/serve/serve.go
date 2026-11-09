@@ -936,17 +936,31 @@ func defaultClient(o Options, e Entry, key []byte) *channel.Client {
 		ReleaseKeys: keys}
 }
 
-// slowPaths are the folders the watcher looks at on its slow tier: the wip
-// folder's archive, thousands of files that change only when an item is
-// archived or edited by hand there (S-0606).
+// slowPaths are the folders the watcher looks at on its slow tier (S-0606):
+// the wip folder's archive, thousands of files that change only when an item
+// is archived or edited by hand there, and the wip folder's threads and
+// conversations and the design folder's digest, issues, and ADRs, the
+// thousands more the fast walk statted every look (TH-0908). flai writes
+// every file in them by a rename, which moves the folder's modification
+// time, so the slow tier's look at the folders sees each write within a fast
+// look; only an edit made in place, by hand, waits for the slow look.
 func slowPaths(root string) []string {
-	wip := "wip"
+	layout := map[string]string{"wip": "wip", "design": "design"}
 	if m, err := manifest.Load(filepath.Join(root, manifest.File)); err == nil {
-		if dir := m.Layout["wip"]; dir != "" && !filepath.IsAbs(dir) && !strings.HasPrefix(filepath.Clean(dir), "..") {
-			wip = dir
+		for k := range layout {
+			if dir := m.Layout[k]; dir != "" && !filepath.IsAbs(dir) && !strings.HasPrefix(filepath.Clean(dir), "..") {
+				layout[k] = dir
+			}
 		}
 	}
-	return []string{filepath.ToSlash(filepath.Join(wip, "archive"))}
+	var out []string
+	for _, p := range []struct{ folder, sub string }{
+		{"wip", "archive"}, {"wip", "threads"}, {"wip", "messages"},
+		{"design", "digest"}, {"design", "issues"}, {"design", "adrs"},
+	} {
+		out = append(out, filepath.ToSlash(filepath.Join(layout[p.folder], p.sub)))
+	}
+	return out
 }
 
 // watchedPaths are the manifest's three folders and the manifest itself:
