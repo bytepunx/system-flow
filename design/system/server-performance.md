@@ -644,9 +644,68 @@ Measured on 2026-11-08 between 02:34 and 02:36 UTC on the operator's host (WSL2,
 
 The board's own git is gone. No call ran `show-ref`, and `git status` ran only for the four projects with a story in review. With nothing in review, a project's `merge.queue` is now a read of the queue's state, and the other 12 projects' p50 fell from 36 to 10 ms. `release.pending` still takes 20 to 76 ms for this repository without starting git: that is working out its plans from every item, the archive included. The after run's maxima on other projects, up to 202 ms in `release.pending` with no git process, came in one round, together, while the host stalled.
 
-The story's target, every call under 300 ms with 13 at once, is not met for this repository. The other 12 answered under 300 ms in every call of both runs. This repository answered in 342 to 761 ms after, as before. Four of its stories were in review, so its `merge.queue` read all its threads, about 200 ms (cause 13, S-0602), and its `repo.list` and `board.view`, the item list and the holds, took 60 to 270 ms (cause 16, S-0606). The serve log's p50 of 800 ms was taken inside flai serve, beside the other requests and the shared lock this story removed. One process making only board calls does not have that contention, so `main` measured 41 ms at p50 here. On TH-0912 the operator moved the target of every board under 300 ms to [S-0636](../../wip/kanban/stories/S-0636-13-board-get-calls-at-once-answer-under-300-ms-on-every-served-project-measured.md), which measures again once S-0602 and S-0606 have landed.
+The story's target, every call under 300 ms with 13 at once, is not met for this repository. The other 12 answered under 300 ms in every call of both runs. This repository answered in 342 to 761 ms after, as before. Four of its stories were in review, so its `merge.queue` read all its threads, about 200 ms (cause 13, S-0602), and its `repo.list` and `board.view`, the item list and the holds, took 60 to 270 ms (cause 16, S-0606). The serve log's p50 of 800 ms was taken inside flai serve, beside the other requests and the shared lock this story removed. One process making only board calls does not have that contention, so `main` measured 41 ms at p50 here. On TH-0912 the operator moved the target of every board under 300 ms to [S-0636](../../wip/kanban/stories/S-0636-13-board-get-calls-at-once-answer-under-300-ms-on-every-served-project-measured.md), which measures again once S-0602 and S-0606 have landed: [13 boards at once, measured again after S-0602 and S-0606 (S-0636)](#13-boards-at-once-measured-again-after-s-0602-and-s-0606-s-0636).
 
 The program wrote nothing of its own. Like every `board.get`, its item lists may have written the rebuildable kept items files under `.flai-cache` that S-0600 added.
+
+### 13 boards at once, measured again after S-0602 and S-0606 (S-0636)
+
+S-0636 measures S-0604's target again: 13 `board.get` calls at once, one per served project, each under 300 ms.
+
+#### How it was measured
+
+On 2026-11-09 between 23:04:36 and 23:05:33 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), as S-0604 measured cause 14.
+
+- Two trees were copied to `/tmp` and built there. Before is `main` at 8b29cf861, the commit before S-0602's acceptance: it has none of S-0602, S-0604, or S-0606. After is `main` at f667efc2d, with all three, and with every story accepted between them.
+- One in-process program, built against each tree, called `board.get` through `hostapi.MethodsFor` with a request timer, for the 13 projects in `~/.flai/serve/projects.json`.
+- Each build ran per project what its flai serve runs:
+  - Before: the file watcher over the manifest and its three folders, and the merge queue's watcher over `mainRefs`.
+  - After: the file watcher with its slow tier, telling the item store of each change, with the item snapshot on (S-0606); and the watcher over `mainRefs`, with `release.Watch`, `release.RefsMoved` on each change, and the word a tick after its first look (S-0604).
+- Each run made a warm-up call and one sequential call per project, then five rounds of 13 calls released together: 65 calls. The builds ran in turn, before, after, before, after: 130 calls a build.
+- The one-minute load average was 123 at the start and 96 at the end, on 24 cores, with other agents running Go tests.
+- This repository had 4 stories in review as the first run started and 5 from its end on.
+
+#### What it found
+
+| 13 at once, a call | Before | After |
+|--------------------|--------|-------|
+| All 13 projects, p50 | 71 ms | 13 ms |
+| All 13 projects, p90 | 283 ms | 136 ms |
+| All 13 projects, max | 657 ms | 404 ms |
+| The other 12, p50 (max) | 66 ms (359) | 9 ms (216) |
+| This repository, p50 (range) | 405 ms (244 to 657) | 297 ms (169 to 404) |
+| Calls under 300 ms | 118 of 130 | 125 of 130 |
+| This repository's calls under 300 ms | 3 of 10 | 5 of 10 |
+| Calls that ran `git show-ref` | 70 of 130 | 0 of 130 |
+| Calls that ran `git status` | 130 of 130 | 30 of 130 |
+
+| Phase, 13 at once, p50 (max) | Before | After |
+|------------------------------|--------|-------|
+| `release.pending`, all | 10.4 ms (296) | 0.0 ms (39) |
+| `merge.queue`, all | 33.6 ms (337) | 0.0 ms (241) |
+| `repo.list`, all | 0.4 ms (219) | 0.0 ms (62) |
+| `board.view`, all | 1.6 ms (83) | 1.3 ms (90) |
+| `undone.read`, all | under 0.1 ms (33) | under 0.1 ms (20) |
+| `repo.open`, this repository | 13.8 ms (31) | 22.9 ms (33) |
+| `repo.list`, this repository | 103 ms (219) | 32 ms (62) |
+| `release.pending`, this repository | 41 ms (240) | 20 ms (28) |
+| `board.view`, this repository | 37 ms (83) | 21 ms (90) |
+| `merge.queue`, this repository | 156 ms (337) | 180 ms (241) |
+| `git status` in `merge.queue`, this repository | 88 ms (244) | 95 ms (148) |
+| five `git rev-parse` together, this repository | 31 ms (55) | 41 ms (81) |
+
+The other 12 projects answered under 300 ms in every call of both after runs, against 115 of 120 before. Their p50 fell from 66 to 9 ms.
+
+This repository did not answer under 300 ms in every call. Its after calls took 169 to 404 ms, and 5 of 10 took 300 ms or more: 373, 318, 304, 350, and 404 ms. S-0602 and S-0606 took out what S-0604 left to them. `repo.list` fell from 103 to 32 ms at the median, and `release.pending` from 41 to 20 ms. The thread read no longer shows in `merge.queue`.
+
+What is left is the merge queue's git, which runs only while stories are in review (`mergequeue.ComputeAt`, `flai/internal/mergequeue/eligible.go`):
+
+- `mainDirt` runs `git status --porcelain` on the main checkout: 52 to 148 ms a call after.
+- `git rev-parse` ran five times a call, one after another, for the heads `verified` and `mainDirt` read: 21 to 81 ms together.
+
+With five stories in review, `merge.queue` took 91 to 241 ms of each call, most of it that git. Its median did not fall: the thread read it lost was a smaller share than the git, whose time swings with the host's load. The rest of a call, `repo.list`, `board.view`, `repo.open`, `release.pending`, and the wait for a core, took 63 to 194 ms. The load average was 96 to 123 on 24 cores throughout, so every figure here is inflated, as in the earlier sections.
+
+The program wrote nothing of its own. No file under this repository's `.flai-cache` changed while it ran, worktrees aside.
 
 ### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
 
