@@ -165,6 +165,7 @@ orchestration:
     plan_backlog_stories: true
     confirm_after: 48h
     set_cost_of_delay: true
+    edit_subprojects: true
   policy: throughput
   release:
     value: 1000
