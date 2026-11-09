@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,11 +26,12 @@ import (
 // projects it serves. The stand-in prints a version for --version; run
 // with -p, it keeps its arguments, its environment, and what the scratch
 // project held, and either writes the file asked for in each worktree, or
-// prints the events and the error of a refused write and fails.
+// prints the events and the error of a refused write and fails; while say
+// holds what to print, it prints that, writes nothing, and fails.
 type claudeLab struct {
 	t       *testing.T
 	stub    string
-	out     string // what the stand-in kept
+	out     string // what the stand-in kept, and say, what it prints in place of a write
 	tmp     string // the temporary folder scratch projects are made in
 	logs    syncBuffer
 	checker *claudeChecker
@@ -76,6 +78,7 @@ func newClaudeLab(t *testing.T, fail bool) *claudeLab {
 		"cp ../config.json \"" + lab.out + "/config.json\"\n" +
 		"cp -r wip/kanban/stories \"" + lab.out + "/stories\"\n" +
 		"pwd > \"" + lab.out + "/pwd\"\n" +
+		"if [ -f \"" + lab.out + "/say\" ]; then cat \"" + lab.out + "/say\"; exit 1; fi\n" +
 		do
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
@@ -799,5 +802,192 @@ func TestAnImageCheckPassesTheProvidersVariablesByName(t *testing.T) {
 	}
 	if rec := lab.records()[claudeLabVersion][claudeLabGateway]; rec.Outcome != ClaudeCheckPassed || rec.Image != "flai-agent-harbour:local" {
 		t.Errorf("record %+v, want passed through %s in the project's layer image", rec, claudeLabGateway)
+	}
+}
+
+// checkLimitedAt is when I-0296's check was refused on the weekly limit;
+// usageLimitResult says it resets at limitReset.
+var checkLimitedAt = time.Date(2026, 10, 26, 16, 3, 54, 0, time.UTC)
+
+// limitNoReset is a refusal on the usage limit that names no reset time.
+const limitNoReset = `{"type":"system","subtype":"init","model":"claude-haiku"}` + "\n" +
+	`{"type":"result","subtype":"success","is_error":true,"api_error_status":429,"api_error":"usage_limit_reached","result":"You've hit your limit"}` + "\n"
+
+// say has the stand-in print out in place of a write, until silenced.
+func (lab *claudeLab) say(out string) {
+	lab.t.Helper()
+	if err := os.WriteFile(filepath.Join(lab.out, "say"), []byte(out), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// silence has the stand-in write the file again.
+func (lab *claudeLab) silence() {
+	lab.t.Helper()
+	if err := os.Remove(filepath.Join(lab.out, "say")); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// clock sets the checker's time to at, and returns a function that moves it.
+func (lab *claudeLab) clock(at time.Time) func(time.Time) {
+	now := at
+	var mu sync.Mutex
+	lab.checker.o.Now = func() time.Time {
+		mu.Lock()
+		defer mu.Unlock()
+		return now
+	}
+	return func(t time.Time) {
+		mu.Lock()
+		defer mu.Unlock()
+		now = t
+	}
+}
+
+// fixture is the content of the file at path.
+func fixture(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// I-0296, ADR-0270: a check whose claude ends on the harness's usage limit,
+// as I-0296's run did, has no outcome: nothing is recorded and no thread is
+// opened, the log says it was refused and when the limit resets, a look
+// before the reset checks nothing, and the first look after it, the claude
+// unchanged, checks the version again and records what it finds.
+func TestAClaudeCodeCheckRefusedOnTheUsageLimitIsCheckedAgainAfterTheReset(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	repo := lab.serve("harbour", harness.ClaudeCode)
+	move := lab.clock(checkLimitedAt)
+	lab.say(fixture(t, usageLimitResult))
+	ctx := context.Background()
+
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p" {
+		t.Fatalf("the stand-in ran as %q, want one check; flai serve logged:\n%s", got, lab.logs.String())
+	}
+	if rec, ok := lab.records()[claudeLabVersion]; ok {
+		t.Errorf("a check refused on the usage limit is recorded: %+v", rec)
+	}
+	if n := len(threadsOf(t, repo)); n != 0 {
+		t.Errorf("a check refused on the usage limit opened %d threads", n)
+	}
+	logs := lab.logs.String()
+	for _, want := range []string{`level=WARN msg="claude code check refused on the usage limit"`, "version=" + claudeLabVersion, "provider=" + ClaudeCheckAnthropic, "resets=2026-10-28T08:00:00Z"} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("the log lacks %s:\n%s", want, logs)
+		}
+	}
+
+	move(limitReset.Add(-time.Minute))
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p" {
+		t.Fatalf("a look before the reset ran the stand-in as %q, want nothing more", got)
+	}
+
+	lab.silence()
+	move(limitReset.Add(time.Minute))
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p version p" {
+		t.Fatalf("the first look after the reset ran the stand-in as %q, want the version checked again; flai serve logged:\n%s", got, lab.logs.String())
+	}
+	if rec := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]; rec.Outcome != ClaudeCheckPassed {
+		t.Errorf("record %+v after the reset, want passed", rec)
+	}
+	if n := len(threadsOf(t, repo)); n != 0 {
+		t.Errorf("%d threads opened", n)
+	}
+}
+
+// ADR-0270: a refusal on the usage limit that names no reset time holds the
+// version an hour.
+func TestAUsageLimitWithNoResetTimeHoldsTheCheckAnHour(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	repo := lab.serve("harbour", harness.ClaudeCode)
+	move := lab.clock(checkLimitedAt)
+	lab.say(limitNoReset)
+	ctx := context.Background()
+
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if len(lab.records()) != 0 || len(threadsOf(t, repo)) != 0 {
+		t.Fatalf("records %+v, threads %d, want neither", lab.records(), len(threadsOf(t, repo)))
+	}
+	if logs := lab.logs.String(); !strings.Contains(logs, `msg="claude code check refused on the usage limit"`) || !strings.Contains(logs, "resets=2026-10-26T17:03:54Z") {
+		t.Errorf("the log does not say the check is held an hour:\n%s", logs)
+	}
+	move(checkLimitedAt.Add(claudeCheckLimitHold - time.Minute))
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p" {
+		t.Fatalf("a look within the hour ran the stand-in as %q, want nothing more", got)
+	}
+	move(checkLimitedAt.Add(claudeCheckLimitHold + time.Minute))
+	lab.checker.consider(ctx, repo.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p version p" {
+		t.Fatalf("a look after the hour ran the stand-in as %q, want the version checked again", got)
+	}
+	// still refused: recorded nothing again, and held again
+	if len(lab.records()) != 0 || len(threadsOf(t, repo)) != 0 {
+		t.Errorf("records %+v, threads %d after a second refusal, want neither", lab.records(), len(threadsOf(t, repo)))
+	}
+}
+
+// I-0296, ADR-0270: a check in an image that ends on the usage limit records
+// nothing and opens no thread; the version is not checked in that image
+// again before the reset, and is checked at the first container start after
+// it.
+func TestACheckInAnImageRefusedOnTheUsageLimitIsCheckedAgainAfterTheReset(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	repo := lab.serveOn("harbour", harness.Container, "", "")
+	move := lab.clock(checkLimitedAt)
+	limited := 0
+	lab.checker.runImage = func(context.Context, string, []string, []string) (string, error) {
+		limited++
+		return fixture(t, usageLimitResult), errors.New("exit status 1")
+	}
+	cfg := lab.imageConfig(t.TempDir())
+	ctx := context.Background()
+
+	lab.checker.considerImage(ctx, repo.Root, cfg, claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+	if limited != 1 {
+		t.Fatalf("docker ran %d times, want one check; flai serve logged:\n%s", limited, lab.logs.String())
+	}
+	if len(lab.records()) != 0 || len(threadsOf(t, repo)) != 0 {
+		t.Fatalf("records %+v, threads %d, want neither", lab.records(), len(threadsOf(t, repo)))
+	}
+	logs := lab.logs.String()
+	for _, want := range []string{`level=WARN msg="claude code check refused on the usage limit"`, "image=" + claudeLabImage, "resets=2026-10-28T08:00:00Z"} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("the log lacks %s:\n%s", want, logs)
+		}
+	}
+
+	move(limitReset.Add(-time.Minute))
+	lab.checker.considerImage(ctx, repo.Root, cfg, claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+	if limited != 1 {
+		t.Fatalf("a start before the reset ran docker %d times, want no second check", limited)
+	}
+
+	move(limitReset.Add(time.Minute))
+	runs := lab.fakeDocker(true)
+	lab.checker.considerImage(ctx, repo.Root, cfg, claudeLabImage, claudeLabVersion, "")
+	lab.checker.wait()
+	if len(*runs) != 1 {
+		t.Fatalf("the first start after the reset ran docker %d times, want the version checked again", len(*runs))
+	}
+	if rec := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]; rec.Outcome != ClaudeCheckPassed || rec.Image != claudeLabImage {
+		t.Errorf("record %+v after the reset, want passed in %s", rec, claudeLabImage)
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -38,7 +39,11 @@ import (
 // else is a failure, recorded with what Claude Code said, and told on a
 // thread to the operator of every served project whose agents run
 // claude-code. A version with a record is not checked again, whatever its
-// outcome.
+// outcome. A check whose claude ends on the harness's usage limit, as the
+// usage reader reads it from the check's stream-json, has no outcome
+// (ADR-0270): nothing is recorded, no thread is opened, and the version is
+// held until the limit resets, or claudeCheckLimitHold when no reset time is
+// named, and then checked again.
 //
 // The check runs through the provider a served project's default agent
 // names (S-0360), as that agent's model calls do: the claude-code adapter's
@@ -98,6 +103,9 @@ const (
 	claudeCheckAuthor = "flai serve"
 	// claudeCheckLines is how many lines of Claude Code's output a failure quotes.
 	claudeCheckLines = 20
+	// claudeCheckLimitHold is how long a check refused on the usage limit
+	// with no reset time named holds its version (ADR-0270).
+	claudeCheckLimitHold = time.Hour
 )
 
 func (d Dir) claudeChecksFile() string { return filepath.Join(string(d), "claude-checks.json") }
@@ -190,7 +198,10 @@ type claudeChecker struct {
 	running bool
 	seen    string          // programIdentity of the claude last checked or found checked
 	through map[string]bool // the providers, by the name a default agent gives, the claude seen was checked or found checked through
-	wg      sync.WaitGroup
+	// held is when a check refused on the usage limit may be made again
+	// (ADR-0270), by holdKey.
+	held map[string]time.Time
+	wg   sync.WaitGroup
 
 	// runImage runs the docker client's argv of a check in an image, in dir
 	// with env its whole environment, and returns what it printed:
@@ -199,7 +210,49 @@ type claudeChecker struct {
 }
 
 func newClaudeChecker(o Options, served func() []Entry) *claudeChecker {
-	return &claudeChecker{o: o, served: served, runImage: runClaudeWith}
+	return &claudeChecker{o: o, served: served, runImage: runClaudeWith, held: map[string]time.Time{}}
+}
+
+// holdKey is what a check refused on the usage limit is held by: the
+// provider it ran through for the host's claude, which a look reads before
+// the version, and the image, the version, and the provider for an image's.
+func holdKey(image, version, through string) string {
+	if image == "" {
+		return through
+	}
+	return image + " " + version + " " + through
+}
+
+// heldBack says whether the check held by key may not be made yet. The
+// caller holds c.mu.
+func (c *claudeChecker) heldBack(key string) bool {
+	until, ok := c.held[key]
+	return ok && c.o.Now().Before(until)
+}
+
+// limited holds the check of version, run in image, none for the host's
+// claude, through provider, until lim resets, or claudeCheckLimitHold from
+// now when it names no reset time or one already past, records nothing,
+// and logs the refusal (ADR-0270). A look at the host's claude after then
+// considers its provider again.
+func (c *claudeChecker) limited(version, provider, image string, lim *usage.Limit) {
+	through := checkedThrough(provider)
+	now := c.o.Now()
+	until := lim.Resets
+	if !until.After(now) {
+		until = now.Add(claudeCheckLimitHold)
+	}
+	c.mu.Lock()
+	c.held[holdKey(image, version, through)] = until
+	if image == "" {
+		delete(c.through, provider)
+	}
+	c.mu.Unlock()
+	fields := []any{"component", "serve", "version", version, "provider", through}
+	if image != "" {
+		fields = append(fields, "image", image)
+	}
+	c.o.Logger.Warn("claude code check refused on the usage limit", append(fields, "resets", until.UTC().Format(time.RFC3339), "why", limitWhy(lim))...)
 }
 
 // consider starts a check in the background when the project at root may
@@ -222,7 +275,7 @@ func (c *claudeChecker) consider(ctx context.Context, root string, cfg AgentConf
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.running || id == c.seen && c.through[provider] {
+	if c.running || id == c.seen && c.through[provider] || c.heldBack(holdKey("", "", checkedThrough(provider))) {
 		return
 	}
 	if id != c.seen {
@@ -291,7 +344,7 @@ func (c *claudeChecker) check(ctx context.Context, host harness.Host, cfg AgentC
 		}
 	}
 	c.o.Logger.Info("claude code check started", "component", "serve", "version", version, "provider", through, "program", program)
-	why, err := c.run(ctx, host, flai, version, env)
+	why, lim, err := c.run(ctx, host, flai, version, env)
 	if ctx.Err() != nil {
 		// flai serve is stopping: that is no outcome, and the next one checks it
 		c.o.Logger.Info("claude code check stopped", "component", "serve", "version", version, "provider", through)
@@ -299,6 +352,10 @@ func (c *claudeChecker) check(ctx context.Context, host harness.Host, cfg AgentC
 	}
 	if err != nil {
 		c.o.Logger.Warn("claude code not checked", "component", "serve", "version", version, "provider", through, "err", err.Error())
+		return
+	}
+	if lim != nil {
+		c.limited(version, provider, "", lim)
 		return
 	}
 	c.conclude(version, program, provider, "", root, why)
@@ -334,8 +391,9 @@ func (c *claudeChecker) conclude(version, program, provider, image, root, why st
 // project at root read it, through provider, the one the agent's start
 // names, "" for none (S-0618). It starts none when version has a record
 // through provider, from the host or from an image, whatever its outcome,
-// or while a check runs, the host's or an image's, and never waits for the
-// one it starts: the next container start considers it again.
+// while a check of it in image refused on the usage limit is held
+// (ADR-0270), or while a check runs, the host's or an image's, and never
+// waits for the one it starts: the next container start considers it again.
 func (c *claudeChecker) considerImage(ctx context.Context, root string, cfg AgentConfig, image, version, provider string) {
 	if image == "" || version == "" {
 		return
@@ -351,7 +409,7 @@ func (c *claudeChecker) considerImage(ctx context.Context, root string, cfg Agen
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.running {
+	if c.running || c.heldBack(holdKey(image, version, through)) {
 		return
 	}
 	c.running = true
@@ -392,13 +450,17 @@ func (c *claudeChecker) checkImage(ctx context.Context, cfg AgentConfig, root, i
 		return
 	}
 	c.o.Logger.Info("claude code check started", "component", "serve", "version", version, "provider", through, "image", image)
-	why, err := c.runInImage(ctx, cfg, image, version, env)
+	why, lim, err := c.runInImage(ctx, cfg, image, version, env)
 	if ctx.Err() != nil {
 		c.o.Logger.Info("claude code check stopped", "component", "serve", "version", version, "provider", through, "image", image)
 		return
 	}
 	if err != nil {
 		c.o.Logger.Warn("claude code not checked", "component", "serve", "version", version, "provider", through, "image", image, "err", err.Error())
+		return
+	}
+	if lim != nil {
+		c.limited(version, provider, image, lim)
 		return
 	}
 	c.conclude(version, harness.ImageClaude, provider, image, root, why)
@@ -411,26 +473,27 @@ func (c *claudeChecker) checkImage(ctx context.Context, cfg AgentConfig, root, i
 // how to make (harness.ClaudeCodeImageCheck), with env, the provider's
 // variables, passed by name. Claude Code keeps its configuration in the
 // scratch folder, with the login linked in as a story's container has it.
-// It says why the check failed, "" when it passed, and errs only when the
-// check could not be made.
-func (c *claudeChecker) runInImage(ctx context.Context, cfg AgentConfig, image, version string, env []string) (string, error) {
+// It says why the check failed, "" when it passed, or the usage limit its
+// claude ended on in place of a failure, and errs only when the check could
+// not be made.
+func (c *claudeChecker) runInImage(ctx context.Context, cfg AgentConfig, image, version string, env []string) (string, *usage.Limit, error) {
 	s, err := newClaudeScratch(gitOf(c.o), c.o.Now(), nil)
 	if err != nil {
-		return "", fmt.Errorf("the scratch project could not be made: %w", err)
+		return "", nil, fmt.Errorf("the scratch project could not be made: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(s.dir) }()
 	claudeDir := filepath.Join(s.dir, "claude")
 	if err := os.MkdirAll(claudeDir, 0o700); err != nil {
-		return "", fmt.Errorf("make the check's Claude Code folder %s: %w", claudeDir, err)
+		return "", nil, fmt.Errorf("make the check's Claude Code folder %s: %w", claudeDir, err)
 	}
 	if err := os.Symlink(harness.ContainerLogin+"/.credentials.json", filepath.Join(claudeDir, ".credentials.json")); err != nil {
-		return "", fmt.Errorf("link the check's Claude Code folder %s to the login the container mounts: %w", claudeDir, err)
+		return "", nil, fmt.Errorf("link the check's Claude Code folder %s to the login the container mounts: %w", claudeDir, err)
 	}
 	want := claudeCheckContent(version)
 	inner, err := harness.ClaudeCodeCheck(harness.ClaudeCodeHost(harness.Host{Program: harness.ImageClaude}), harness.ImageFlai,
 		[]string{"--config", s.config, "mcp", "--agent", claudeCheckAgent}, claudeCheckModel, claudeCheckPrompt(s.target, want))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	vars := append([]string{"FLAI_AGENT=" + claudeCheckAgent, "FLAI_STARTED_BY=flai-serve", "CLAUDE_CONFIG_DIR=" + claudeDir}, env...)
 	var names []string
@@ -443,10 +506,10 @@ func (c *claudeChecker) runInImage(ctx context.Context, cfg AgentConfig, image, 
 	host.Program = containerProgram(cfg)
 	argv, err := harness.ClaudeCodeImageCheck(host, image, s.dir, s.root, names, inner[1:])
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	out, runErr := c.runImage(ctx, s.root, argv, append(agentEnv(os.Environ()), vars...))
-	return claudeVerdict(s, want, out, runErr), nil
+	return claudeOutcome(s, want, out, runErr)
 }
 
 // providerEnv is what the check's claude is given, over an agent's
@@ -517,25 +580,46 @@ func claudeVersion(ctx context.Context, program string) (string, error) {
 
 // run makes the check in a scratch project it removes afterwards, with env
 // laid over an agent's environment. It says why the check failed, "" when it
-// passed, and errs only when the check could not be made.
-func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, version string, env []string) (string, error) {
+// passed, or the usage limit its claude ended on in place of a failure, and
+// errs only when the check could not be made.
+func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, version string, env []string) (string, *usage.Limit, error) {
 	s, err := newClaudeScratch(gitOf(c.o), c.o.Now(), nil)
 	if err != nil {
-		return "", fmt.Errorf("the scratch project could not be made: %w", err)
+		return "", nil, fmt.Errorf("the scratch project could not be made: %w", err)
 	}
 	defer func() { _ = os.RemoveAll(s.dir) }()
 	want := claudeCheckContent(version)
 	argv, err := harness.ClaudeCodeCheck(host, flai, []string{"--config", s.config, "mcp", "--agent", claudeCheckAgent}, claudeCheckModel, claudeCheckPrompt(s.target, want))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	out, runErr := runClaude(ctx, s.root, argv, env)
-	return claudeVerdict(s, want, out, runErr), nil
+	return claudeOutcome(s, want, out, runErr)
 }
 
 // claudeCheckPrompt asks claude to Write want to target and do nothing else.
 func claudeCheckPrompt(target, want string) string {
 	return fmt.Sprintf("This is flai's check that Claude Code's permission prompt tool works. Use the Write tool once to create the file %s with exactly this content, on one line: %s\nUse no other tool, and do not read the file first.", target, want)
+}
+
+// claudeOutcome is the outcome of the check in s, from what its target holds
+// against want and what claude printed, out, and how its run ended, runErr:
+// why it failed, "" when it passed, or, when the target does not hold want
+// and claude's output ends on the harness's usage limit, that limit, as the
+// usage reader reads it, in place of a failure (ADR-0270).
+func claudeOutcome(s claudeScratch, want, out string, runErr error) (string, *usage.Limit, error) {
+	why := claudeVerdict(s, want, out, runErr)
+	if why == "" {
+		return "", nil, nil
+	}
+	rec, err := usage.ReadFrom(harness.Adapters[harness.ClaudeCode].Reader(), "claude -p", strings.NewReader(out))
+	if err != nil {
+		return "", nil, fmt.Errorf("read the check's output for a usage limit: %w", err)
+	}
+	if n := len(rec.Runs); n > 0 && rec.Runs[n-1].Limit != nil {
+		return "", rec.Runs[n-1].Limit, nil
+	}
+	return why, nil, nil
 }
 
 // claudeVerdict says why the check in s failed, from what its target holds

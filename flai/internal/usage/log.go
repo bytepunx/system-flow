@@ -134,18 +134,37 @@ type start struct {
 // oldest run first. A log that is missing is skipped: flai serve may not
 // have written it yet.
 func Read(r Reader, paths ...string) (*Record, error) {
-	rec := &Record{
-		reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{},
-		emptied: map[string]bool{}, turnByID: map[string]int{},
-	}
+	rec := newRecord()
 	byID := map[string]int{} // message id to its index in calls
 	for i, p := range paths {
 		rec.reading = i
-		if err := rec.read(r, p, byID); err != nil {
+		lines := func(read func(line []byte)) error { return eachLine(p, read) }
+		if err := rec.read(r, p, lines, false, byID); err != nil {
 			return nil, err
 		}
 	}
 	return rec, nil
+}
+
+// ReadFrom reads one log from src with r, the reader of the harness that
+// wrote it, as Read reads a log at a path, name being its Run's Path. Its
+// run is kept when it has an End though no event carries a time, as the
+// output of a headless run held in memory may have none.
+func ReadFrom(r Reader, name string, src io.Reader) (*Record, error) {
+	rec := newRecord()
+	lines := func(read func(line []byte)) error { return eachLineOf(src, name, read) }
+	if err := rec.read(r, name, lines, true, map[string]int{}); err != nil {
+		return nil, err
+	}
+	return rec, nil
+}
+
+// newRecord is a Record with nothing read yet.
+func newRecord() *Record {
+	return &Record{
+		reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{},
+		emptied: map[string]bool{}, turnByID: map[string]int{},
+	}
 }
 
 // eachLine hands each line of the log at path to read; a log that is
@@ -159,7 +178,12 @@ func eachLine(path string, read func(line []byte)) error {
 		return fmt.Errorf("reading the agent log %s: %w", path, err)
 	}
 	defer func() { _ = f.Close() }()
-	r := bufio.NewReaderSize(f, 256<<10)
+	return eachLineOf(f, path, read)
+}
+
+// eachLineOf hands each line of src, the agent log name, to read.
+func eachLineOf(src io.Reader, name string, read func(line []byte)) error {
+	r := bufio.NewReaderSize(src, 256<<10)
 	for {
 		raw, err := r.ReadBytes('\n')
 		if len(raw) > 0 {
@@ -169,15 +193,19 @@ func eachLine(path string, read func(line []byte)) error {
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("reading the agent log %s: %w", path, err)
+			return fmt.Errorf("reading the agent log %s: %w", name, err)
 		}
 	}
 }
 
-func (rec *Record) read(r Reader, path string, byID map[string]int) error {
+// read reads one log, named path, whose lines eachLine hands over, as a run
+// of rec's; a run no event gave a time is kept only when untimed is set and
+// it has an End.
+func (rec *Record) read(r Reader, path string, lines func(read func(line []byte)) error, untimed bool, byID map[string]int) error {
 	run := Run{Path: path, log: rec.reading}
 	model := "" // the session's model, for an End that names none
-	err := eachLine(path, func(line []byte) {
+	ended := false
+	err := lines(func(line []byte) {
 		events, _ := r.Read(line)
 		for _, e := range events {
 			if e.Session != "" && !slices.Contains(run.Sessions, e.Session) {
@@ -205,7 +233,7 @@ func (rec *Record) read(r Reader, path string, byID map[string]int) error {
 			case ToolResult:
 				rec.addWake(e)
 			case End:
-				run.Result, run.Limit = e.Result, e.Limit
+				run.Result, run.Limit, ended = e.Result, e.Limit, true
 				rec.addResult(e, model)
 			}
 		}
@@ -213,7 +241,7 @@ func (rec *Record) read(r Reader, path string, byID map[string]int) error {
 	if err != nil {
 		return err
 	}
-	if !run.Start.IsZero() {
+	if !run.Start.IsZero() || untimed && ended {
 		rec.Runs = append(rec.Runs, run)
 	}
 	return nil

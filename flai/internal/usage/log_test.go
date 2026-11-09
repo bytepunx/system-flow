@@ -326,6 +326,49 @@ func TestARunCarriesTheUsageLimitItsLogEndsOn(t *testing.T) {
 	}
 }
 
+// S-0629: a log held in memory reads as one at a path does, and its run is
+// kept by its End when no event gives a time, as a headless claude -p's
+// output may have none; one with no End and no time has no run.
+func TestALogReadFromMemoryCarriesTheLimitItEndsOn(t *testing.T) {
+	path := writeLog(t, "limited.log", limitRun...)
+	fromPath, err := Read(ClaudeCode(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromMemory, err := ReadFrom(ClaudeCode(), "check", strings.NewReader(strings.Join(limitRun, "\n")+"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fromMemory.Runs) != 1 || len(fromPath.Runs) != 1 {
+		t.Fatalf("runs = %+v from memory and %+v from the path, want one each", fromMemory.Runs, fromPath.Runs)
+	}
+	got, want := fromMemory.Runs[0], fromPath.Runs[0]
+	if got.Path != "check" || got.Limit == nil || want.Limit == nil || *got.Limit != *want.Limit || got.Result != want.Result || !got.Start.Equal(want.Start) {
+		t.Errorf("run from memory = %+v (limit %+v), want %+v (limit %+v) named check", got, got.Limit, want, want.Limit)
+	}
+
+	untimed := []string{
+		`{"type":"system","subtype":"init","model":"claude-haiku","session_id":"s"}`,
+		`{"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":1793174400},"session_id":"s"}`,
+		`{"type":"result","subtype":"success","is_error":true,"api_error_status":429,"api_error":"usage_limit_reached","session_id":"s","result":"limited"}`,
+	}
+	rec, err := ReadFrom(ClaudeCode(), "check", strings.NewReader(strings.Join(untimed, "\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantLimit := Limit{Error: "usage_limit_reached", Status: 429, Resets: time.Unix(1793174400, 0).UTC()}
+	if len(rec.Runs) != 1 || rec.Runs[0].Limit == nil || *rec.Runs[0].Limit != wantLimit {
+		t.Fatalf("untimed runs = %+v, want one on %+v", rec.Runs, wantLimit)
+	}
+	rec, err = ReadFrom(ClaudeCode(), "check", strings.NewReader(untimed[0]+"\nstand-in: no result\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Runs) != 0 {
+		t.Errorf("a log with no End and no time has runs %+v, want none", rec.Runs)
+	}
+}
+
 func TestSumAddsModelByModel(t *testing.T) {
 	a := &Usage{Source: SourceLog, Seconds: 10, Models: []Model{{Model: opus, Input: 1, Cost: 0.5}}}
 	b := &Usage{Source: SourceLog, Seconds: 5, Estimated: true, Models: []Model{{Model: haiku, Output: 3, Cost: 0.25}, {Model: opus, Input: 2, Cost: 0.25}}}
