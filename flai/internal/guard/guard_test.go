@@ -783,6 +783,90 @@ func TestThePlannersSubAgentIsHeldAsASubAgent(t *testing.T) {
 	}
 }
 
+// S-0623, I-0289: git tag, git branch, and git worktree write in some forms
+// and only list in others. Every agent the guard holds to git's reads runs
+// the forms that list, and is refused the others as before; the
+// orchestrator's git tag that makes a tag is still refused as publishing.
+// Main's guard judged git by its subcommand alone and refused every form.
+func TestGitTagBranchAndWorktreeListAsReads(t *testing.T) {
+	lists := []string{
+		"git tag --list",
+		"git tag -l 'flai/v*'",
+		"git tag",
+		"git tag --sort=-v:refname",
+		"git tag --sort -creatordate",
+		"git tag --contains HEAD",
+		"git tag --points-at HEAD",
+		"git tag -n",
+		"git tag -ln5 'v*'",
+		"git -C /w tag --list 'flai/v*' --sort=-v:refname 2>/dev/null",
+		"git worktree list",
+		"git worktree list --porcelain",
+		"git -C /x worktree list",
+		"git branch",
+		"git branch -a",
+		"git branch -vv",
+		"git branch --show-current",
+		"git branch --list 'story/*'",
+		"git branch --contains HEAD",
+		"git branch --merged main",
+		"git branch --format '%(refname:short)' --sort -committerdate",
+		"git tag --list && git worktree list && git log -1",
+	}
+	writes := []string{
+		"git tag v1.2.3",
+		"git tag -a v1 -m msg",
+		"git tag -d v1",
+		"git tag -f v1",
+		"git tag -l -d v1",
+		"git tag --sort=-v:refname v1",
+		"git worktree add ../x",
+		"git worktree remove x",
+		"git worktree prune",
+		"git worktree",
+		"git branch new",
+		"git branch -d x",
+		"git branch -D x",
+		"git branch -m a b",
+		"git branch -f x HEAD",
+		"git branch -u origin/main",
+		"git branch --set-upstream-to=origin/main",
+		"git branch -dr origin/x",
+		"git branch --list -D x",
+		"git branch --sort x new",
+		"git tag --list && git push",
+	}
+	analyzer := analyzerIn(t.TempDir())
+	for name, gd := range map[string]Guard{
+		"sub-agent":    g,
+		"planner":      planGuard,
+		"orchestrator": orchestrator(allOn),
+		"analyzer":     analyzer,
+		"curator":      itsCurator,
+	} {
+		agent := ""
+		if name == "sub-agent" {
+			agent = "verifier"
+		}
+		for _, c := range lists {
+			if why := gd.Check(bash(agent, c)); why != "" {
+				t.Errorf("%s: %q refused: %s", name, c, why)
+			}
+		}
+		for _, c := range writes {
+			if why := gd.Check(bash(agent, c)); why == "" {
+				t.Errorf("%s: %q passed", name, c)
+			}
+		}
+	}
+	for _, c := range []string{"git tag v1.2.3", "git tag -a v1 -m msg", "git tag -d v1", "git -C /w tag -l -f v1"} {
+		r := orchestrator(allOn).Decide(bash("", c))
+		if r.Why != fmt.Sprintf("the orchestrator cannot run %q: %s. %s", r.Call, nevers(publishesThrough), askOperator) {
+			t.Errorf("orchestrator %q: %+v", c, r)
+		}
+	}
+}
+
 // orchestrator is a guard in an orchestrator session with permissions p
 // (S-0218).
 func orchestrator(p manifest.Permissions) Guard {

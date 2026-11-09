@@ -70,7 +70,8 @@
 // no permission allows, such as an edit of a file, a commit, or a story
 // placed by hand in the pull order, it never makes. With publish it
 // publishes through release_publish alone, and never with flai release,
-// flai push, git push, or git tag, whatever its permissions (S-0222); no
+// flai push, git push, or git tag that makes a tag, whatever its
+// permissions (S-0222), though git tag that lists is a read (S-0623); no
 // session with no role, nor a story's or a verifier's, calls
 // release_publish. These rules are read from its role file, orchestrator.md,
 // or flai's baseline copy of it, as the planner's are (S-0416), each
@@ -397,6 +398,104 @@ var (
 // gitReads are the git commands a sub-agent may run.
 var gitReads = []string{"blame", "cat-file", "describe", "diff", "grep", "log", "ls-files", "ls-tree", "merge-base", "rev-list", "rev-parse", "shortlog", "show", "status"}
 
+// gitFlags are git's own flags, before its subcommand, that take a value.
+var gitFlags = map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true, "--namespace": true}
+
+// gitListForms are the git commands that write in some forms and only list in
+// others (S-0623, I-0289): git tag and git branch list when they name no tag
+// or branch, or when they are told to list, with -l, --list, or a filter
+// that puts them in list mode, and carry no flag that writes; git worktree
+// lists with list alone. values are the flags that take the next word as
+// their value when not given with = (one whose value is optional and that
+// does not make the command list, such as --column, takes it only with =);
+// writes the flags that write, and in a cluster of short flags the letters
+// of writes' short flags; lists the flags that make them list whatever words
+// follow.
+var gitListForms = map[string]struct {
+	values, writes, lists []string
+	sub                   string
+}{
+	"tag": {
+		values: []string{"--contains", "--no-contains", "--points-at", "--merged", "--no-merged", "--sort", "--format", "-u", "-m", "-F", "--local-user", "--message", "--file", "--cleanup"},
+		writes: []string{"-a", "-s", "-u", "-m", "-F", "-d", "-f", "-e", "--annotate", "--sign", "--no-sign", "--local-user", "--message", "--file", "--delete", "--force", "--edit", "--create-reflog", "--cleanup", "--trailer"},
+		lists:  []string{"-l", "--list", "--contains", "--no-contains", "--points-at", "--merged", "--no-merged"},
+	},
+	"branch": {
+		values: []string{"--contains", "--no-contains", "--points-at", "--merged", "--no-merged", "--sort", "--format", "-u", "--set-upstream-to"},
+		writes: []string{"-d", "-D", "-m", "-M", "-c", "-C", "-f", "-u", "-t", "--delete", "--move", "--copy", "--force", "--set-upstream-to", "--unset-upstream", "--edit-description", "--track", "--no-track", "--create-reflog", "--recurse-submodules"},
+		lists:  []string{"-l", "--list", "--contains", "--no-contains", "--points-at", "--merged", "--no-merged"},
+	},
+	"worktree": {sub: "list"},
+}
+
+// gitSubcommand is git's subcommand among the words after git, past git's
+// own flags, and the words after it.
+func gitSubcommand(words []string) (cmd string, args []string) {
+	for i := 0; i < len(words); i++ {
+		w := words[i]
+		if strings.HasPrefix(w, "-") {
+			if gitFlags[w] {
+				i++
+			}
+			continue
+		}
+		return w, words[i+1:]
+	}
+	return "", nil
+}
+
+// gitListsOnly says whether git cmd, with the words args after it, only
+// lists, as gitListForms says.
+func gitListsOnly(cmd string, args []string) bool {
+	f, ok := gitListForms[cmd]
+	switch {
+	case !ok:
+		return false
+	case f.sub != "":
+		_, sub := subcommands(append([]string{cmd}, args...), nil)
+		return sub == f.sub
+	}
+	var positional, listing bool
+	for i := 0; i < len(args); i++ {
+		w := args[i]
+		if w == "--" {
+			positional = positional || i+1 < len(args)
+			break
+		}
+		if redirection.MatchString(w) {
+			if strings.TrimLeft(w, "0123456789&<>|") == "" {
+				i++ // the operator stands apart from its target, the next word
+			}
+			continue
+		}
+		if !strings.HasPrefix(w, "-") || w == "-" {
+			positional = true
+			continue
+		}
+		name, _, valued := strings.Cut(w, "=")
+		if !strings.HasPrefix(w, "--") && len(w) > 2 {
+			// a cluster of short flags, such as -vv or -dr
+			for _, c := range w[1:] {
+				if slices.Contains(f.writes, "-"+string(c)) {
+					return false
+				}
+				listing = listing || slices.Contains(f.lists, "-"+string(c))
+			}
+			continue
+		}
+		if slices.Contains(f.writes, name) {
+			return false
+		}
+		if slices.Contains(f.lists, name) {
+			listing = true
+		}
+		if !valued && slices.Contains(f.values, name) {
+			i++
+		}
+	}
+	return listing || !positional
+}
+
 // RolePlan is the planner's role, as flai serve sets it in FLAI_ROLE.
 const RolePlan = "plan"
 
@@ -467,7 +566,8 @@ var queueEnqueues = []string{"add"}
 const ReleasePublish = "release_publish"
 
 // gitPublishes are the git commands that reach the remote, which the
-// orchestrator leaves to release_publish.
+// orchestrator leaves to release_publish; git tag in a form that only lists
+// is a read (gitListForms).
 var gitPublishes = []string{"push", "tag"}
 
 // publishesThrough says why the orchestrator never publishes but through
@@ -1723,8 +1823,8 @@ func (g Guard) refuse(words []string, r rules) (why, needs string) {
 				return why, needs
 			}
 		case "git":
-			cmd, _ := subcommands(rest, map[string]bool{"-C": true, "-c": true, "--git-dir": true, "--work-tree": true, "--namespace": true})
-			if r.git == nil || !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) {
+			cmd, args := gitSubcommand(rest)
+			if r.git == nil || !subcommand.MatchString(cmd) || slices.Contains(gitReads, cmd) || gitListsOnly(cmd, args) {
 				continue
 			}
 			return r.git(cmd), ""
