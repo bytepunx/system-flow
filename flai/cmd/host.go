@@ -388,6 +388,8 @@ func (a *app) describeHost(st host.Status) {
 			line = "not watched (none started, stopped with flai dashboard stop, or dashboard.no_restart set)"
 		case host.DashboardNotAnswering:
 			line = "not answering"
+		case host.DashboardPortHeld:
+			line = "port held by another process (" + orDefault(d.Detail, "not its container") + "); not restarted while it holds the port, and flai dashboard status says how to free it"
 		}
 		if d.Restarts > 0 {
 			line += fmt.Sprintf(", %d restart(s), the last at %s because it was %s", d.Restarts, d.LastRestart, d.LastReason)

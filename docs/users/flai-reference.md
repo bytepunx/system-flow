@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-07
+updated: 2026-11-09
 status: active
 ---
 
@@ -1135,7 +1135,7 @@ Subcommands:
 - [check](#flai-dashboard-check): Report whether a newer dashboard image is available, without changing anything
 - [logs](#flai-dashboard-logs): Print the dashboard container's logs
 - [restart](#flai-dashboard-restart): Stop and start the dashboard container again, with whatever image it is already running
-- [status](#flai-dashboard-status): Show whether the dashboard container runs and answers: running, not answering, or gone
+- [status](#flai-dashboard-status): Show whether the dashboard container runs and answers: running, not answering, port held, or gone
 - [stop](#flai-dashboard-stop): Stop this project's dashboard; the shared container stops only when it was the last project served
 - [token](#flai-dashboard-token): Print the dashboard token and login link; --rotate replaces it
 - [upgrade](#flai-dashboard-upgrade): Pull a newer dashboard image, or a chosen release, and swap to it, only once it answers healthy
@@ -1193,13 +1193,13 @@ Flags:
 
 #### flai dashboard status
 
-Show whether the dashboard container runs and answers: running, not answering, or gone.
+Show whether the dashboard container runs and answers: running, not answering, port held, or gone.
 
 ```text
 flai dashboard status
 ```
 
-Asks docker whether the shared dashboard container runs, and its published port whether /\_health answers (S-0184): running when it does, not answering when the container runs and it does not, gone when no container runs. Docker's own verdict from the image's HEALTHCHECK is shown beside it. flai host restarts a dashboard that is gone or not answering unless dashboard.no\_restart is set. For a running container it shows its image's digest and the flaiover release whose signed digest list, kept beside flai serve's state, names it, or that it is unsigned. While flai serve runs, a line beside it says what flai serve did with that image at its last dial (S-0238): dials it, signed; refused it, as the dashboard runs an unsigned image no signed list names; or image not measured, as Docker where flai serve runs cannot say what the dashboard runs, with why, so the release stamp alone is checked. --json gives that verdict as serve\_image. Under dashboard.allow\_unsigned (S-0239) it says "unsigned allowed: started with FLAIOVER\_ALLOW\_UNSIGNED=1" for a container started so, and under the host flai's connection the sides it admitted without a release stamp: "unsigned allowed: flai", "dashboard", or "flai and dashboard"; a signed pair shows neither. --json gives the container's as allow\_unsigned and the connection's sides as host\_flai.unsigned. For a running container it says the hosts it accepts beside its own address, as it was started with them (FLAIOVER\_ALLOWED\_HOSTS), and when dashboard.allowed\_hosts names others now, which flai dashboard restart applies (S-0489); --json gives the container's list as allowed\_hosts, "" for none.
+Asks docker whether the shared dashboard container runs, and its published port whether /\_health answers (S-0184): running when it does, not answering when the container runs and it does not, gone when no container runs. Port held (ADR-0267) is a container docker runs with no published port while the configured host port answers all the same: another process holds it, such as the docker-proxy of a container docker no longer lists. It names that docker-proxy and how to free the port, and --json gives it as port\_holder. Docker's own verdict from the image's HEALTHCHECK is shown beside it. flai host restarts a dashboard that is gone or not answering unless dashboard.no\_restart is set, and never one whose port is held. For a running container it shows its image's digest and the flaiover release whose signed digest list, kept beside flai serve's state, names it, or that it is unsigned. While flai serve runs, a line beside it says what flai serve did with that image at its last dial (S-0238): dials it, signed; refused it, as the dashboard runs an unsigned image no signed list names; or image not measured, as Docker where flai serve runs cannot say what the dashboard runs, with why, so the release stamp alone is checked. --json gives that verdict as serve\_image. Under dashboard.allow\_unsigned (S-0239) it says "unsigned allowed: started with FLAIOVER\_ALLOW\_UNSIGNED=1" for a container started so, and under the host flai's connection the sides it admitted without a release stamp: "unsigned allowed: flai", "dashboard", or "flai and dashboard"; a signed pair shows neither. --json gives the container's as allow\_unsigned and the connection's sides as host\_flai.unsigned. For a running container it says the hosts it accepts beside its own address, as it was started with them (FLAIOVER\_ALLOWED\_HOSTS), and when dashboard.allowed\_hosts names others now, which flai dashboard restart applies (S-0489); --json gives the container's list as allowed\_hosts, "" for none.
 
 #### flai dashboard stop
 

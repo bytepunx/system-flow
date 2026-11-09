@@ -245,6 +245,65 @@ func TestLookDashboardFindsThePortHeldByAnOrphanedContainersProxy(t *testing.T) 
 	}
 }
 
+// I-0243, ADR-0267: flai dashboard status says a dashboard whose port another
+// process holds is port held, names the docker-proxy that holds it and what
+// to do, and gives the holder under port_holder in --json; with no holder
+// found, it names ss to find the process.
+func TestDashboardStatusSaysWhatHoldsThePort(t *testing.T) {
+	t.Parallel()
+	root := dashboardProject(t)
+	proc := t.TempDir()
+	writeProc(t, proc, "188220", []string{"/usr/bin/docker-proxy", "-proto", "tcp", "-host-ip", "0.0.0.0", "-host-port", "5555", "-container-ip", "172.17.0.2", "-container-port", "3000"})
+	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{flaioverRef("0.2.0"): "sha256:v020"}}
+	a := &app{configPath: configOf(t), releases: releasesOf(t), cwd: root, runner: f, procRoot: proc,
+		portProbe: func(string) bool { return true }}
+	if _, errOut, code := runWithApp(t, a, "dashboard", "--tag", "0.2.0"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	f.noPort = true
+
+	out, errOut, code := runWithApp(t, a, "dashboard", "status")
+	if code != 0 {
+		t.Fatalf("status: %d %s", code, errOut)
+	}
+	for _, want := range []string{
+		"flaiover port held at ",
+		"port 5555 is held by docker-proxy (pid 188220) for 172.17.0.2:3000, not by its container",
+		"so flai host does not restart it",
+		"Stop that process (sudo kill 188220) or restart the Docker daemon, and flai host starts the dashboard again on its own",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("status lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "not answering") {
+		t.Errorf("a held port is not said as not answering:\n%s", out)
+	}
+
+	js, errOut, code := runWithApp(t, a, "dashboard", "status", "--json")
+	var st struct {
+		State  string      `json:"state"`
+		Holder *portHolder `json:"port_holder"`
+	}
+	if code != 0 || json.Unmarshal([]byte(js), &st) != nil {
+		t.Fatalf("status --json: %d %s %s", code, js, errOut)
+	}
+	want := portHolder{PID: 188220, HostIP: "0.0.0.0", HostPort: 5555, ContainerIP: "172.17.0.2", ContainerPort: "3000"}
+	if st.State != host.DashboardPortHeld || st.Holder == nil || *st.Holder != want {
+		t.Errorf("--json: state %q, holder %+v, want port-held by %+v", st.State, st.Holder, want)
+	}
+
+	a.procRoot = t.TempDir() // no docker-proxy names the port
+	out, _, _ = runWithApp(t, a, "dashboard", "status")
+	if want := "port 5555 is held by a process other than its container, so flai host does not restart it. Find that process with sudo ss -ltnp 'sport = :5555'"; !strings.Contains(out, want) {
+		t.Errorf("status with no holder lacks %q:\n%s", want, out)
+	}
+	js, _, _ = runWithApp(t, a, "dashboard", "status", "--json")
+	if strings.Contains(js, "port_holder") || !strings.Contains(js, `"state": "port-held"`) {
+		t.Errorf("--json with no holder: %s", js)
+	}
+}
+
 // lastRun is the last docker run among calls, "" when there is none.
 func lastRun(calls []string) string {
 	for i := len(calls) - 1; i >= 0; i-- {

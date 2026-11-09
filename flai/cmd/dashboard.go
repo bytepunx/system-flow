@@ -845,6 +845,17 @@ func (a *app) startedAllowedHosts(name string) string {
 	return r.AllowedHosts
 }
 
+// describePortHeld is what flai dashboard status says of a dashboard whose
+// host port another process holds (ADR-0267): what holds it, that flai host
+// does not restart it, and how to free it, naming ss to find the process when
+// no docker-proxy names the port.
+func describePortHeld(port int, holder *portHolder) string {
+	if holder == nil {
+		return fmt.Sprintf("port %d is held by a process other than its container, so flai host does not restart it. Find that process with sudo ss -ltnp 'sport = :%d', stop it or restart the Docker daemon, and flai host starts the dashboard again on its own", port, port)
+	}
+	return fmt.Sprintf("port %d is held by %s, not by its container, most likely for a container docker no longer lists, so flai host does not restart it. Stop that process (sudo kill %d) or restart the Docker daemon, and flai host starts the dashboard again on its own", port, holder, holder.PID)
+}
+
 // describeAllowedHosts is what flai dashboard status says of the hosts a
 // running container accepts beside its own address (S-0489): the list it was
 // started with, when any, and the configuration's, when that is another,
@@ -863,13 +874,17 @@ func describeAllowedHosts(started, configured string) string {
 func newDashboardStatusCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "Show whether the dashboard container runs and answers: running, not answering, or gone",
+		Short: "Show whether the dashboard container runs and answers: running, not answering, port held, or gone",
 		Long: `Asks docker whether the shared dashboard container runs, and its published
 port whether /_health answers (S-0184): running when it does, not answering
-when the container runs and it does not, gone when no container runs. Docker's
-own verdict from the image's HEALTHCHECK is shown beside it. flai host
-restarts a dashboard that is gone or not answering unless dashboard.no_restart
-is set. For a running container it shows its image's digest and the flaiover
+when the container runs and it does not, gone when no container runs. Port
+held (ADR-0267) is a container docker runs with no published port while the
+configured host port answers all the same: another process holds it, such as
+the docker-proxy of a container docker no longer lists. It names that
+docker-proxy and how to free the port, and --json gives it as port_holder.
+Docker's own verdict from the image's HEALTHCHECK is shown beside it. flai
+host restarts a dashboard that is gone or not answering unless
+dashboard.no_restart is set, and never one whose port is held. For a running container it shows its image's digest and the flaiover
 release whose signed digest list, kept beside flai serve's state, names it, or
 that it is unsigned. While flai serve runs, a line beside it says what flai
 serve did with that image at its last dial (S-0238): dials it, signed;
@@ -939,6 +954,9 @@ the container's list as allowed_hosts, "" for none.`,
 				if health != "" {
 					out["health"] = health
 				}
+				if look.Holder != nil {
+					out["port_holder"] = look.Holder
+				}
 				if len(stale) > 0 {
 					out["stale_mounts"] = stale
 				}
@@ -966,9 +984,12 @@ the container's list as allowed_hosts, "" for none.`,
 				if health != "" {
 					dockerSays = "; docker: " + health
 				}
-				if state == host.DashboardRunning {
+				switch state {
+				case host.DashboardRunning:
 					fmt.Fprintf(a.out, "%s running at %s (%s%s)\n", s.Name, url, image, dockerSays)
-				} else {
+				case host.DashboardPortHeld:
+					fmt.Fprintf(a.out, "%s port held at %s (%s%s): %s\n", s.Name, url, image, dockerSays, describePortHeld(s.Port, look.Holder))
+				default:
 					fmt.Fprintf(a.out, "%s not answering at %s (%s%s): the container runs and /_health does not answer; flai host restarts it unless dashboard.no_restart is set, or run flai dashboard restart\n", s.Name, url, image, dockerSays)
 				}
 				fmt.Fprint(a.out, from.describe())

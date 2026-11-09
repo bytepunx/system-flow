@@ -161,3 +161,43 @@ func TestHostStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
 		t.Errorf("--json carries unsigned for a signed pair:\n%s", js)
 	}
 }
+
+// I-0243, ADR-0267: flai host status says a dashboard whose port another
+// process holds is port held, with what holds it, and --json carries the
+// watch's detail.
+func TestHostStatusSaysTheDashboardsPortIsHeld(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	useConfig(t, cfg)
+	watch := &host.DashboardWatch{State: host.DashboardPortHeld, Detail: "docker-proxy (pid 188220) for 172.17.0.2:3000"}
+	var out bytes.Buffer
+	(&app{configPath: cfg, out: &out}).describeHost(host.Status{Dashboard: watch})
+	want := "  dashboard: port held by another process (docker-proxy (pid 188220) for 172.17.0.2:3000); not restarted while it holds the port, and flai dashboard status says how to free it\n"
+	if got := out.String(); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	hst, err := json.Marshal(host.Status{PID: os.Getpid(), Version: "1.44.0", Started: now, Updated: now, Dashboard: watch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(string(host.DirFor(cfg)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(string(host.DirFor(cfg)), "state.json"), hst, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	js, _, code := runIn(t, home, "host", "status", "--json")
+	var st hostStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil || code != 0 || !st.Running {
+		t.Fatalf("json (exit %d): %v %s", code, err, js)
+	}
+	if st.Status == nil || st.Status.Dashboard == nil || *st.Status.Dashboard != *watch {
+		t.Errorf("--json dashboard: %s", js)
+	}
+	if !strings.Contains(js, `"detail": "docker-proxy (pid 188220) for 172.17.0.2:3000"`) {
+		t.Errorf("--json lacks the detail:\n%s", js)
+	}
+}
