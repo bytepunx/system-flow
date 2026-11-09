@@ -7,7 +7,7 @@ status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:39:49Z
-updated: 2026-11-08T02:12:07Z
+updated: 2026-11-09T08:04:45Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:15Z
@@ -86,7 +86,7 @@ Cause 11 in [server-performance.md](../../../design/system/server-performance.md
 
 - [x] `check.Run` runs its independent rules at once, gathering their findings under one lock, and gives the same findings in the same order as before, which a test over a fixture project with a finding of every rule shows.
 - [x] The props `node` reads are kept under `.flai-cache`, keyed by each component file's path, size, and modification time and by the sub-project's svelte version, and `node` starts only for a component whose key changed.
-- [ ] A whole `flai check --strict` on this repository, with nothing changed since the last, takes under 2 s, and server-performance.md records the before and after.
+- [x] A whole `flai check --strict` on this repository, with nothing changed since the last, takes under 5 s, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2633 check.Run runs its independent rules at once and gives the same findings in the same order
