@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -638,5 +639,54 @@ func TestASkippedRulesFindingRefusesNothing(t *testing.T) {
 		if len(res.Warnings) != 0 {
 			t.Errorf("the new %s comes with no warning: %+v", opt.Type, res.Warnings)
 		}
+	}
+}
+
+// I-0301: a checked creation holds the checked-write lock while the check
+// runs with the new item in place, so that a reader under it never sees an
+// item the check may yet remove, and lets it go once Create returns, whether
+// the check kept the item or refused it.
+func TestTheCheckedWriteLockIsHeldWhileTheCheckRuns(t *testing.T) {
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	free := func(repo *workitem.Repo) bool {
+		t.Helper()
+		unlock, err := filelock.Lock(filepath.Join(repo.CacheDir(), "items-checked.lock"), 20*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		unlock()
+		return true
+	}
+	for _, tc := range []struct {
+		name  string
+		after []string
+		kept  bool
+	}{
+		{"kept", []string{"T-0001"}, true},
+		{"refused", []string{"T-0009"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := planned(t, now)
+			var during []bool
+			orig := runItemWrite
+			runItemWrite = func(r *workitem.Repo, at time.Time, w check.Write) (*check.Result, error) {
+				during = append(during, free(r))
+				return orig(r, at, w)
+			}
+			t.Cleanup(func() { runItemWrite = orig })
+			task := plannedTask(now)
+			task.After = tc.after
+			_, err := Create(repo, nil, Options{New: task})
+			if (err == nil) != tc.kept {
+				t.Fatalf("kept %v, got err %v", tc.kept, err)
+			}
+			// the run before the write is free; the run with the item in place holds it
+			if !slices.Equal(during, []bool{true, false}) {
+				t.Errorf("the lock was free before the write and held during the check, got free %v", during)
+			}
+			if !free(repo) {
+				t.Error("the lock is free once Create returns")
+			}
+		})
 	}
 }

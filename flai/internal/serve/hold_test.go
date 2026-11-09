@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -100,6 +101,56 @@ func TestOneLookStartsNoTwoThatOverlap(t *testing.T) {
 	}
 	lab.release(first)
 	waitFor(t, "the first ends", func() bool { return !lab.run(first).live() })
+}
+
+// I-0301: a checked creation writes a task, checks it, and removes it when
+// the check refuses it. A look that read the task in that window judged the
+// ready story's claim by the task's touches, found no hold, and started an
+// agent that story_start then refused as held no-touches. The look reads the
+// items under the checked-write lock the creation holds, so it waits for the
+// removal and holds the story.
+func TestALookWaitsForACheckedCreationAndStartsNoStoryHeldOnceItIsRemoved(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	lab.hold()
+	open := lab.readyTouching("Open", "flai/cmd")
+	lab.move(open, workitem.InProgress)
+	bare := lab.readyTouching("Bare", []string{}...)
+	// the creation's write, under the lock, of a task the check will refuse
+	unlock, err := lab.repo.LockCheckedWrites()
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Refused", Parent: bare, Owner: "planner-" + bare, Touches: []string{"docs/elsewhere.md"}, Now: lab.now})
+	if err != nil {
+		unlock()
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		lab.l.look(ctx, false)
+	}()
+	time.Sleep(300 * time.Millisecond)
+	// the check refused it: the creation removes it, then lets go
+	if err := os.Remove(task.Path); err != nil {
+		unlock()
+		t.Fatal(err)
+	}
+	unlock()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the look did not end once the lock was free")
+	}
+	if r := lab.run(bare); r != nil {
+		lab.release(bare)
+		t.Fatalf("started %s on a task the check removed: %+v", bare, r)
+	}
+	if w := lab.state().Waiting; !strings.Contains(w, bare+" held (no-touches)") {
+		t.Errorf("waiting: %q", w)
+	}
 }
 
 // S-0550, ADR-0096: an overlap wholly inside claims.shared holds nothing, so

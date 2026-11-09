@@ -58,7 +58,9 @@ type Result struct {
 // inside that story but a wip.overlap, a touches.folder, a wip.after-hub, or
 // a wip.after-reason, which are advisory (ADR-0019, ADR-0188, ADR-0230) and come back in Warnings (I-0169),
 // as does a new finding outside the story (I-0191). A refusal is a
-// *docedit.RefusedError carrying the findings, as for a refused save.
+// *docedit.RefusedError carrying the findings, as for a refused save. It
+// holds the repository's checked-write lock from the write until it keeps or
+// removes the item, before Then runs (I-0301).
 func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if opt.New.Now.IsZero() {
 		opt.New.Now = time.Now()
@@ -83,10 +85,25 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if parentPath != "" {
 		beforeWrite = check.Write{Items: []string{parentID}, Paths: []string{relTo(repo.Root, parentPath)}}
 	}
-	before, err := check.RunItemWrite(repo, opt.New.Now, beforeWrite)
+	before, err := runItemWrite(repo, opt.New.Now, beforeWrite)
 	if err != nil {
 		return nil, err
 	}
+	// From the write until the item is kept or removed, under the lock a
+	// reader that must not see an item the check may yet remove reads under,
+	// such as flai serve's look judging holds (I-0301).
+	unlock, err := repo.LockCheckedWrites()
+	if err != nil {
+		return nil, fmt.Errorf("create the new %s: take the checked-write lock: %w; nothing was created, so try again once the writer holding it is done", opt.New.Type, err)
+	}
+	locked := true
+	release := func() {
+		if locked {
+			locked = false
+			unlock()
+		}
+	}
+	defer release()
 	it, err := repo.Create(opt.New)
 	var lint *mdlint.Error
 	if errors.As(err, &lint) {
@@ -111,7 +128,7 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		written = append(written, relTo(repo.Root, parentPath))
 		items = append(items, parentID)
 	}
-	after, err := check.RunItemWrite(repo, opt.New.Now, check.Write{Items: items, Paths: written})
+	after, err := runItemWrite(repo, opt.New.Now, check.Write{Items: items, Paths: written})
 	if err != nil {
 		_ = undo()
 		return nil, err
@@ -168,6 +185,7 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		}
 		return nil, &docedit.RefusedError{Path: rel, Reason: fmt.Sprintf("flai check has %d finding(s) with this %s; nothing was created", len(blocking), it.Type), Findings: blocking}
 	}
+	release() // the check kept the item: a reader may see it from now on
 	var then []string
 	if opt.Then != nil {
 		if then, err = opt.Then(it); err != nil {
@@ -211,6 +229,10 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	}
 	return res, nil
 }
+
+// runItemWrite is check.RunItemWrite; a test sees through it what holds
+// while the check runs.
+var runItemWrite = check.RunItemWrite
 
 // plannerTouches refuses the planner's new story a folder touch its
 // Planning note does not name (ADR-0188), before anything is written: the

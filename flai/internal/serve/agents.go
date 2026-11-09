@@ -1063,6 +1063,23 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	return ready, holds, free, view.ReviewHold(), byID, nil
 }
 
+// readyChecked is readyStories read under the checked-write lock, so that no
+// claim is judged by an item a checked creation wrote and may yet remove
+// (I-0301). The item folders are looked at again under it, since a snapshot
+// kept before a removal stays fresh until the watcher marks it, which may not
+// have happened yet; the look reuses each unchanged file's parse. A lock it
+// cannot take is warned of and ends the look, as a read that fails does.
+func (l *launcher) readyChecked(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, byID map[string]*workitem.Item, err error) {
+	unlock, err := repo.LockCheckedWrites()
+	if err != nil {
+		l.warn("ready stories not read", "err", err.Error())
+		return nil, nil, 0, "", nil, err
+	}
+	defer unlock()
+	workitem.ItemsChanged(repo.Root)
+	return readyStories(repo)
+}
+
 // agentStarted is how a hold names a story in ready whose agent has been
 // started: it claims its paths from then, not once its agent pulls it.
 const agentStarted = "its agent started"
@@ -1439,13 +1456,13 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		return
 	}
 	withTrial(repo, l.git)
-	stories, holds, free, review, items, err := readyStories(repo)
+	stories, holds, free, review, items, err := l.readyChecked(repo)
 	if err != nil {
 		return
 	}
 	if l.releaseAsked(repo, items) {
 		// a story it unblocked may be ready to start, or no longer held
-		if stories, holds, free, review, items, err = readyStories(repo); err != nil {
+		if stories, holds, free, review, items, err = l.readyChecked(repo); err != nil {
 			return
 		}
 	}
