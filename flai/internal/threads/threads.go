@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/goccy/go-yaml"
@@ -53,7 +54,28 @@ type Thread struct {
 
 	Path string `yaml:"-" json:"path"`
 	Body string `yaml:"-" json:"-"`
+
+	// parse keeps Entries' parse of Body (S-0608). Read and New set it, and a
+	// clone shares it, so the clones List answers of one kept thread parse
+	// its entries once between them; nil, as in a Thread written as a
+	// literal, parses on every call.
+	parse *entriesKept
 }
+
+// entriesKept is the last parse of a thread's body, shared by the thread's
+// clones and safe for concurrent readers.
+type entriesKept struct {
+	last atomic.Pointer[parsedEntries]
+}
+
+// parsedEntries is the entries parsed from body. Neither changes once stored.
+type parsedEntries struct {
+	body    string
+	entries []Entry
+}
+
+// entryParses counts the parses of a body into entries, for tests.
+var entryParses atomic.Int64
 
 // Entry is one dated contribution parsed from the body. Text is the entry as
 // written, its source line included. Recommendation and Source are the marks
@@ -158,6 +180,7 @@ func Parse(doc string) (*Thread, error) {
 	}
 	th.Unknown = workitem.UnknownFields(fm, th)
 	th.Body = body
+	th.parse = &entriesKept{}
 	return &th, nil
 }
 
@@ -237,17 +260,34 @@ func (th *Thread) Save() error {
 	return atomicfile.WriteFile(th.Path, []byte(th.Marshal()), 0o644)
 }
 
-// Entries parses the dated entries from the body, in order.
+// Entries answers the dated entries of the body, in order. The body is
+// parsed once and the parse kept while the body stays the same; a body
+// changed since, as Reply and Resolve change it, is parsed again. Each call
+// answers its own slice, so a caller's change leaves the kept parse alone.
 func (th *Thread) Entries() []Entry {
-	locs := entryHeading.FindAllStringSubmatchIndex(th.Body, -1)
+	if th.parse == nil {
+		return parseEntries(th.Body)
+	}
+	if p := th.parse.last.Load(); p != nil && p.body == th.Body {
+		return slices.Clone(p.entries)
+	}
+	p := &parsedEntries{body: th.Body, entries: parseEntries(th.Body)}
+	th.parse.last.Store(p)
+	return slices.Clone(p.entries)
+}
+
+// parseEntries parses the dated entries from body, in order.
+func parseEntries(body string) []Entry {
+	entryParses.Add(1)
+	locs := entryHeading.FindAllStringSubmatchIndex(body, -1)
 	var out []Entry
 	for i, loc := range locs {
-		end := len(th.Body)
+		end := len(body)
 		if i+1 < len(locs) {
 			end = locs[i+1][0]
 		}
-		e := Entry{At: th.Body[loc[2]:loc[3]], Text: strings.TrimSpace(th.Body[loc[1]:end])}
-		e.Author, e.Recommendation = strings.CutSuffix(th.Body[loc[4]:loc[5]], recommendationMark)
+		e := Entry{At: body[loc[2]:loc[3]], Text: strings.TrimSpace(body[loc[1]:end])}
+		e.Author, e.Recommendation = strings.CutSuffix(body[loc[4]:loc[5]], recommendationMark)
 		e.OperatorOnly = e.Recommendation && hasLine(e.Text, operatorOnlyPrefix)
 		e.Source = sourceOf(e.Text)
 		out = append(out, e)
@@ -391,7 +431,8 @@ func (th *Thread) OrchestratorsOwn() bool {
 var kept = workitem.NewKeptFiles(Read, (*Thread).clone)
 
 // clone copies th, its slices included, so that a caller's change leaves
-// what is kept as it was.
+// what is kept as it was. The copy shares th's kept parse of its entries,
+// which it parses again once its body changes.
 func (th *Thread) clone() *Thread {
 	c := *th
 	c.Participants = slices.Clone(th.Participants)
@@ -496,6 +537,7 @@ func New(r *workitem.Repo, opt NewOptions) (*Thread, error) {
 	th := &Thread{
 		ID: NextID(r), Title: opt.Title, Anchor: anchor, Status: "open",
 		Participants: []string{opt.Author}, Created: now, Updated: now,
+		parse: &entriesKept{},
 	}
 	th.Path = filepath.Join(Dir(r), th.ID+"-"+orSlug(th.Title)+".md")
 	where := anchor.Path

@@ -785,6 +785,103 @@ func TestListKeepsThreadsAndSeesEachChange(t *testing.T) {
 	}
 }
 
+// S-0608: a thread parses its entries once, the clones List answers of one
+// kept thread share that parse, concurrent callers agree, a body changed by
+// Reply is parsed again, and a caller's change to the slice it got leaves the
+// kept parse alone.
+func TestEntriesAreParsedOnceUntilTheBodyChanges(t *testing.T) {
+	r := project(t)
+	th, err := New(r, NewOptions{Title: "Shape?", On: "design/system/plan.md", Author: "alex", Text: "I wonder.", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	age(t, r)
+	listed := func() *Thread {
+		t.Helper()
+		all, err := List(r)
+		if err != nil || len(all) != 1 {
+			t.Fatalf("List = %v, %d threads", err, len(all))
+		}
+		return all[0]
+	}
+	first, second := listed(), listed()
+
+	before := entryParses.Load()
+	const readers = 8
+	got := make([][]Entry, readers)
+	var wg sync.WaitGroup
+	for i := range readers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if i%2 == 0 {
+				got[i] = first.Entries()
+			} else {
+				got[i] = second.Entries()
+			}
+		}()
+	}
+	wg.Wait()
+	for i := range readers {
+		if len(got[i]) != 1 || got[i][0].Author != "alex" || got[i][0].Text != "I wonder." || !reflect.DeepEqual(got[i], got[0]) {
+			t.Fatalf("reader %d: entries %+v", i, got[i])
+		}
+	}
+	// Readers at once may each parse before any stores; once one has, no
+	// later call parses.
+	settled := entryParses.Load()
+	if settled-before < 1 || settled-before > readers {
+		t.Errorf("%d parses for %d readers", settled-before, readers)
+	}
+	first.Entries()
+	second.Entries()
+	listed().Entries()
+	if n := entryParses.Load() - settled; n != 0 {
+		t.Errorf("Entries parsed %d more times with the body unchanged, want 0", n)
+	}
+
+	es := first.Entries()
+	es[0].Author = "someone"
+	if again := second.Entries(); again[0].Author != "alex" {
+		t.Errorf("a caller's change to its entries reached the kept parse: %+v", again)
+	}
+
+	if th, err = Reply(r, th.ID, "claude", "Like this.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	// Reply may read the entries of the body it wrote itself; either way the
+	// changed body is parsed at most once.
+	before = entryParses.Load()
+	for range 2 {
+		if es := th.Entries(); len(es) != 2 || es[1].Author != "claude" || es[1].Text != "Like this." {
+			t.Errorf("after Reply, entries %+v", es)
+		}
+	}
+	if n := entryParses.Load() - before; n > 1 {
+		t.Errorf("a body changed by Reply was parsed %d times, want at most 1", n)
+	}
+	c := th.clone()
+	c.Body = appendEntry(c.Body, t0.Add(2*time.Minute).Format(workitem.TimeFormat), "bob", "More.")
+	before = entryParses.Load()
+	if es := c.Entries(); len(es) != 3 || es[2].Author != "bob" {
+		t.Errorf("a clone whose body changed has entries %+v", es)
+	}
+	if n := entryParses.Load() - before; n != 1 {
+		t.Errorf("a clone whose body changed was parsed %d times, want 1", n)
+	}
+	if es := th.Entries(); len(es) != 2 {
+		t.Errorf("the clone's change reached the thread it was cloned from: %+v", es)
+	}
+	if es := listed().Entries(); len(es) != 2 {
+		t.Errorf("after Reply, List's thread has entries %+v", es)
+	}
+
+	literal := &Thread{Body: th.Body}
+	if es := literal.Entries(); len(es) != 2 {
+		t.Errorf("a thread written as a literal has entries %+v", es)
+	}
+}
+
 // S-0602: two lists at once get equal threads, and a caller's change to a
 // thread it got changes nothing the next list returns.
 func TestListsAtOnceAgreeAndCallersGetCopies(t *testing.T) {
