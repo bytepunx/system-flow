@@ -2,12 +2,12 @@
 id: I-0230
 title: "flai guard refuses the orchestrator a read or a permitted flai command when the command carries a stderr redirection such as 2>&1 or 2>/dev/null"
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 5m
 first_reported: 2026-10-29T07:33:59Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:38:58Z
+updated: 2026-11-09T09:06:09Z
 usage:
   strategic:
     - kind: analyzer
@@ -52,3 +52,4 @@ wip/agents/orchestrator.md Refusals: 105 entries 2026-10-25 to 2026-11-07, 42 th
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0613 remediates this issue, created from it at 2026-11-07T23:38:58Z.
+Closed 2026-11-09T09:06:09Z: S-0613 (T-2706, 89cb155): every flai guard check that judges a shell command, the orchestrator's, a role file's, the planner's, the analyzer's, the curator's, the host-configuration and shared-paths checks, and a sub-agent's, now judges each simple command's arguments, its redirections and their targets left out, so 2>&1 or 2>/dev/null neither allows nor refuses a command; tests in orchestrate_test.go, roles_test.go, and hostconfig_test.go reproduce the instances. The 11 refusals of flai serve status had another cause, the guard's reads not listing it, recorded as I-0318.
