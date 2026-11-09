@@ -3,10 +3,10 @@ id: S-0635
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-08T01:14:12Z
-updated: 2026-11-09T11:24:53Z
+updated: 2026-11-09T11:26:27Z
 transitions:
   - to: ready
     at: 2026-11-08T01:15:24Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T11:24:53Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T11:26:27Z
+    by: orchestrator
 tags: []
 agent:
   harness: claude-code
@@ -77,3 +80,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with no inputs.
+
+### Accepted by the orchestrator
+
+- Verified: a94e3e6ccda8b443d436ebdf3b7f1314017099bc
+- At: 2026-11-09T11:26:27Z
+
+Verdict: pass. Every criterion is ticked and its step's task is done with exit 0 recorded; the branch changes no files, as a publish instance should.
+- 1: T-2694 done
+- 2: T-2695 done
+- 3: T-2696 done

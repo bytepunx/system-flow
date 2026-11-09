@@ -23,7 +23,7 @@ tags: []
 after: [T-2729]
 usage:
   source: log
-  seconds: 8
+  seconds: 9
   estimated: true
   priced_by: estimate
   models:

@@ -17828,3 +17828,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai serve status`
 - Needs: none
+
+### 2026-11-09T11:26:18Z
+
+- Call: `git tag --list flai/v1.86.3`
+- Needs: none
