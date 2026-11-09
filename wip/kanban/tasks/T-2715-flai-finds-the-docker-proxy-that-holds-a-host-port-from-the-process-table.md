@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 488
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 140
-      cache_read: 2715872
-      cache_write: 22961
-      cost: 0.9964
+      input: 19
+      output: 3202
+      cache_read: 2763930
+      cache_write: 38092
+      cost: 0.8614
 ---
 # T-2715 flai finds the docker-proxy that holds a host port from the process table
 

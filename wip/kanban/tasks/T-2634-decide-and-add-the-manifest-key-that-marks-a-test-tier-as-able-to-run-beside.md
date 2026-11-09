@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 620
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 378
-      cache_read: 6015361
-      cache_write: 48314
-      cost: 2.2038
+      input: 36
+      output: 9565
+      cache_read: 5697750
+      cache_write: 509083
+      cost: 4.0607
 ---
 # T-2634 Decide and add the manifest key that marks a test tier as able to run beside others
 

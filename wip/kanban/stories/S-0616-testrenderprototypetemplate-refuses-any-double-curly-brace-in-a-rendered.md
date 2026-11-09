@@ -3,16 +3,19 @@ id: S-0616
 type: story
 nature: remediation
 title: TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:39:18Z
-updated: 2026-11-09T10:22:38Z
+updated: 2026-11-09T10:43:49Z
 transitions:
   - to: ready
     at: 2026-11-09T10:22:28Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-09T10:22:38Z
+    by: agent-S-0616
+  - to: review
+    at: 2026-11-09T10:43:49Z
     by: agent-S-0616
 tags: [flai, template]
 touches: [flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md]
@@ -23,21 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 579
-  estimated: true
-  priced_by: estimate
+  seconds: 1283
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 1
+      ceremony: 4
       hand_edits: 1
-      work: 28
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 560
-      cache_read: 6237891
-      cache_write: 254238
-      cost: 2.3624
+      input: 188
+      output: 18600
+      cache_read: 23291802
+      cache_write: 276981
+      cost: 7.247
   strategic:
     - kind: planner
       seconds: 222
@@ -84,8 +86,8 @@ finalized:
 This story remediates [I-0249](../../../design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md), "TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0249 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0249 is closed with `flai issue close I-0249 --reason` saying what fixed it
+- [x] The cause I-0249 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0249 is closed with `flai issue close I-0249 --reason` saying what fixed it
 
 ## Tasks
 - T-2720 TestRenderPrototypeTemplate looks for template syntax only in files the renderer rendered or changed

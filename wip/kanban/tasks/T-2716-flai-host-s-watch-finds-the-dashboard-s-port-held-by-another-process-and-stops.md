@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 590
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 180
-      cache_read: 5117114
-      cache_write: 349551
-      cost: 1.9888
+      input: 37
+      output: 6391
+      cache_read: 5516755
+      cache_write: 76031
+      cost: 1.7193
 ---
 # T-2716 flai host's watch finds the dashboard's port held by another process and stops restarting it, with a test that reproduces I-0243
 

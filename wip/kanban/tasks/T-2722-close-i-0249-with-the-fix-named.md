@@ -24,16 +24,16 @@ touches: [design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-cu
 after: [T-2721]
 usage:
   source: log
-  seconds: 7
+  seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 48
-      cache_read: 536327
-      cache_write: 949
-      cost: 0.1955
+      output: 424
+      cache_read: 530962
+      cache_write: 6314
+      cost: 0.1652
 ---
 # T-2722 Close I-0249 with the fix named
 

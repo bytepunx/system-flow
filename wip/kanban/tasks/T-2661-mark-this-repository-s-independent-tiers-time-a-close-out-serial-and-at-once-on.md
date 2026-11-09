@@ -3,11 +3,11 @@ id: T-2661
 type: task
 nature: feature
 title: Mark this repository's independent tiers, time a close-out serial and at once on one commit, and record it in server-performance.md
-status: in-progress
+status: done
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:49:41Z
-updated: 2026-11-09T08:28:32Z
+updated: 2026-11-09T10:33:29Z
 transitions:
   - to: ready
     at: 2026-11-09T08:28:31Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:28:32Z
     by: agent-S-0610
+  - to: done
+    at: 2026-11-09T10:33:29Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
 touches: [system-flow.yaml, design/system/server-performance.md, scripts/flai-build.sh]
 after: [T-2653]
+usage:
+  source: log
+  seconds: 7497
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 175
+      output: 46527
+      cache_read: 27715245
+      cache_write: 2476304
+      cost: 19.7521
 ---
 # T-2661 Mark this repository's independent tiers, time a close-out serial and at once on one commit, and record it in server-performance.md
 

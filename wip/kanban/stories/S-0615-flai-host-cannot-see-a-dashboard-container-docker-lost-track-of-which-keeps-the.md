@@ -3,16 +3,19 @@ id: S-0615
 type: story
 nature: remediation
 title: flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:39:11Z
-updated: 2026-11-09T10:22:52Z
+updated: 2026-11-09T10:45:56Z
 transitions:
   - to: ready
     at: 2026-11-09T09:55:53Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-09T09:56:04Z
+    by: agent-S-0615
+  - to: review
+    at: 2026-11-09T10:45:56Z
     by: agent-S-0615
 tags: [flai, dashboard, host]
 topics: [dashboard, host]
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2038
-  estimated: true
-  priced_by: estimate
+  seconds: 3011
+  priced_by: harness
   turns:
     - day: 2026-11-09
+      ceremony: 1
       hand_edits: 1
-      work: 36
+      work: 120
   models:
     - model: claude-opus-5-5
-      input: 174
-      output: 1181
-      cache_read: 21925508
-      cache_write: 689674
-      cost: 8.2276
+      input: 354
+      output: 60816
+      cache_read: 52495951
+      cache_write: 723492
+      cost: 16.3606
   strategic:
     - kind: planner
       seconds: 511
@@ -56,15 +59,21 @@ usage:
           cache_write: 181995
           cost: 3.1352
     - kind: orchestrator
-      seconds: 161
+      seconds: 225
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 317
-          cache_read: 1810667
-          cache_write: 216020
-          cost: 0.529
+          input: 58
+          output: 404
+          cache_read: 2162623
+          cache_write: 282966
+          cost: 0.6389
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 48
+          cache_read: 42239
+          cache_write: 34728
+          cost: 0.0569
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 144h

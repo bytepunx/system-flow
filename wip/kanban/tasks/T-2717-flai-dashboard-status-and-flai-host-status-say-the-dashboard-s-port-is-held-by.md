@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 415
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 369
-      cache_read: 7361093
-      cache_write: 32105
-      cost: 2.6897
+      input: 50
+      output: 8643
+      cache_read: 7460937
+      cache_write: 102826
+      cost: 2.3252
 ---
 # T-2717 flai dashboard status and flai host status say the dashboard's port is held, by what, and how to free it
 

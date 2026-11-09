@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 378
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 14
-      output: 209
-      cache_read: 1751425
-      cache_write: 6647
-      cost: 0.6398
+      output: 1387
+      cache_read: 1737411
+      cache_write: 20661
+      cost: 0.5406
 ---
 # T-2720 TestRenderPrototypeTemplate looks for template syntax only in files the renderer rendered or changed
 

@@ -3,14 +3,17 @@ id: S-0618
 type: story
 nature: remediation
 title: flai serve reads the Claude Code version in an agent image but never runs ADR-0106's permission_prompt check inside it, so a new image's version is only warned of
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:39:32Z
-updated: 2026-11-09T10:51:14Z
+updated: 2026-11-09T10:51:23Z
 transitions:
   - to: ready
     at: 2026-11-09T10:51:10Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T10:51:23Z
+    by: agent-S-0618
 tags: [flai, serve, container, claude-code]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0253-flai-serve-reads-the-claude-code-version-in-an-agent-image-but-never-runs-adr.md]
 agent:
@@ -34,15 +37,15 @@ usage:
           cache_write: 175934
           cost: 2.7917
     - kind: orchestrator
-      seconds: 114
+      seconds: 126
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 305
-          cache_read: 1216456
-          cache_write: 167407
-          cost: 0.3633
+          input: 38
+          output: 343
+          cache_read: 1378724
+          cache_write: 179354
+          cost: 0.4091
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

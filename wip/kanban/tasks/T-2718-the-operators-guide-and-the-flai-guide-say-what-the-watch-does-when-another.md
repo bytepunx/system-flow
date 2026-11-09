@@ -24,16 +24,16 @@ touches: [docs/operators/index.md, docs/users/flai.md]
 after: [T-2714, T-2717]
 usage:
   source: log
-  seconds: 385
+  seconds: 392
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 64
-      cache_read: 1288856
-      cache_write: 5539
-      cost: 0.4709
+      input: 9
+      output: 1513
+      cache_read: 1306254
+      cache_write: 18003
+      cost: 0.4071
 ---
 # T-2718 The operators guide and the flai guide say what the watch does when another process holds the dashboard's port
 

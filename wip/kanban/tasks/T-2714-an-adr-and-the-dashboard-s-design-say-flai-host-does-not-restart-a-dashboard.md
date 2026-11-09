@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 450
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 154
-      cache_read: 2156400
-      cache_write: 13127
-      cost: 0.7893
+      input: 15
+      output: 2536
+      cache_read: 2189407
+      cache_write: 30174
+      cost: 0.6823
 ---
 # T-2714 An ADR and the dashboard's design say flai host does not restart a dashboard whose published port another process holds
 

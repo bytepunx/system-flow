@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 955
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 239
-      cache_read: 5557979
-      cache_write: 363120
-      cost: 2.1519
+      input: 35
+      output: 9340
+      cache_read: 5563775
+      cache_write: 497113
+      cost: 3.9652
 ---
 # T-2644 verify.Run starts the tiers the manifest marks independent at once and stops the later ones when one fails
 

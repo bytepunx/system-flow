@@ -24,16 +24,16 @@ touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/in
 after: [T-2644]
 usage:
   source: log
-  seconds: 1058
+  seconds: 1072
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 398
-      cache_read: 13150830
-      cache_write: 78880
-      cost: 4.808
+      input: 78
+      output: 20869
+      cache_read: 12431320
+      cache_write: 1110715
+      cost: 8.8596
 ---
 # T-2653 Under flai verify, smoke skips the template test, the check, and the markdown lint a step of the same run already passed
 

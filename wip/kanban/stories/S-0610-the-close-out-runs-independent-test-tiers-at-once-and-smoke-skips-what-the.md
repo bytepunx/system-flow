@@ -3,11 +3,11 @@ id: S-0610
 type: story
 nature: improvement
 title: The close-out runs independent test tiers at once and smoke skips what the close-out already ran, saving about 40 to 150 s a close-out
-status: in-progress
+status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:03Z
-updated: 2026-11-09T08:27:28Z
+updated: 2026-11-09T10:43:49Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:23Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T07:38:44Z
     by: agent-S-0610
+  - to: review
+    at: 2026-11-09T10:43:49Z
+    by: agent-S-0610
 tags: [cli]
 topics: [server-side, back-end, manifest, template]
-touches: [flai/internal/verify/run.go, flai/internal/verify/story.go, scripts/smoke.sh, flai/internal/verify/run_test.go, flai/internal/verify/story_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, system-flow.yaml, design/system/server-performance.md, design/adrs/0266-a-test-tier-marked-parallel-starts-once-the-unmarked-tiers-before-it-have-ended.md]
+touches: [flai/internal/verify/run.go, flai/internal/verify/story.go, scripts/smoke.sh, flai/internal/verify/run_test.go, flai/internal/verify/story_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, system-flow.yaml, design/system/server-performance.md, design/adrs/0266-a-test-tier-marked-parallel-starts-once-the-unmarked-tiers-before-it-have-ended.md, scripts/flai-build.sh, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,22 +28,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2881
-  estimated: true
-  priced_by: estimate
+  seconds: 11123
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 1
-      test_runs: 2
-      hand_edits: 1
-      work: 29
+      ceremony: 4
+      test_runs: 4
+      hand_edits: 3
+      work: 88
   models:
     - model: claude-opus-5-5
-      input: 202
-      output: 1333
-      cache_read: 28266164
-      cache_write: 782886
-      cost: 10.5574
+      input: 474
+      output: 126118
+      cache_read: 75126298
+      cache_write: 6712391
+      cost: 53.541
   strategic:
     - kind: orchestrator
       seconds: 89
@@ -90,6 +92,7 @@ Cause 20 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Notes
 
+- Criterion 3 is left unticked: it was not met on this host. Three rounds of `flai test --all` on one commit, serial (installed flai) against parallel (the tree's), saved 364 s, 8 s, and -14 s. At loads of 39 to 70, `flaiover` (vitest) and `integration` (`go test -race`) each fill the 24 cores, so beside each other they share the CPU rather than use idle CPU. Round 1, at the highest load, met it only because the serial run was slowed most. The figures and the reasons are in `design/system/server-performance.md` § Cause 20. The `parallel` marks are kept: they cost nothing on a host with idle cores and saved nothing here. Taking them off `system-flow.yaml` is a three-line edit.
 - How a tier says it may run beside others is a manifest key, which `project-manifest.md` and `docs/operators/settings.md` would gain; that is likely an ADR.
 - Splitting `internal/mcpserver`'s tests, 337 of 1,676 package-seconds in the 2026-11-02 batch, would shorten `integration` itself (I-0234).
 - Turning the `merge-queue` host action on leaves `integration` and `smoke` to the batch; that is the operator's choice and needs no story.

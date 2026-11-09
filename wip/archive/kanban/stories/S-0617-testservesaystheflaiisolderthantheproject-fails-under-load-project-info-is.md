@@ -3,13 +3,22 @@ id: S-0617
 type: story
 nature: remediation
 title: "TestServeSaysTheFlaiIsOlderThanTheProject fails under load: project.info is asked before flai serve has worked out the outdated flai"
-status: ready
+status: done
 owner: alex
 created: 2026-11-07T23:39:25Z
-updated: 2026-11-09T10:38:30Z
+updated: 2026-11-09T10:55:12Z
 transitions:
   - to: ready
     at: 2026-11-09T10:38:24Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T10:38:35Z
+    by: agent-S-0617
+  - to: review
+    at: 2026-11-09T10:53:50Z
+    by: agent-S-0617
+  - to: done
+    at: 2026-11-09T10:55:12Z
     by: orchestrator
 tags: [flai]
 touches: [flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/serve/outdated_test.go, design/issues/I-0252-testservesaystheflaiisolderthantheproject-fails-under-load-project-info-is.md, design/issues/summary.md]
@@ -19,9 +28,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 927
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      hand_edits: 2
+      work: 51
+  models:
+    - model: claude-opus-5-5
+      input: 150
+      output: 21042
+      cache_read: 17159837
+      cache_write: 275724
+      cost: 6.0185
   strategic:
     - kind: planner
       seconds: 205
@@ -34,15 +55,15 @@ usage:
           cache_write: 144249
           cost: 2.0176
     - kind: orchestrator
-      seconds: 70
+      seconds: 92
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 108
-          cache_read: 736488
-          cache_write: 114542
-          cost: 0.2229
+          input: 23
+          output: 132
+          cache_read: 910225
+          cache_write: 118501
+          cost: 0.2694
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -68,8 +89,8 @@ finalized:
 This story remediates [I-0252](../../../design/issues/I-0252-testservesaystheflaiisolderthantheproject-fails-under-load-project-info-is.md), "TestServeSaysTheFlaiIsOlderThanTheProject fails under load: project.info is asked before flai serve has worked out the outdated flai". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0252 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0252 is closed with `flai issue close I-0252 --reason` saying what fixed it
+- [x] The cause I-0252 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0252 is closed with `flai issue close I-0252 --reason` saying what fixed it
 
 ## Tasks
 - T-2723 FlaiOutdated keeps no answer from a git that failed, so one failed look is not served as not outdated for a minute
@@ -97,3 +118,12 @@ Figures:
 
 - Forecast: flai gives 14m, 119 s per unit of size over 43 medium remediation stories, size 7. Raised to 30m for T-2724's stress run under load, which past remediations did not run. Delivery is flai's 10:55Z moved by the 16m added, 11:11Z.
 - Cost of delay: 12.50 USD a week, as `flai cod` works it out from the input flai set from I-0252: 5m lost per 168h cycle at 150 USD an hour. Kept: the issue has one instance, and nothing gives a reason to change it.
+
+### Accepted by the orchestrator
+
+- Verified: 3aba813fedfd6fdda43a64e346aee551d40d4ba0
+- At: 2026-11-09T10:55:12Z
+
+Verdict: accept. Both criteria are met and the close-out passed at 3aba813.
+- 1: flai/internal/release/outdated.go, flai/internal/release/outdated_test.go
+- 2: design/issues/I-0252-testservesaystheflaiisolderthantheproject-fails-under-load-project-info-is.md, design/issues/summary.md
