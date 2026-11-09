@@ -4,10 +4,10 @@ title: T-2751 of S-0629 changed paths S-0621's claim covers
 from: S-0629
 to: S-0621
 about: [docs/operators/index.md, docs/users/flai.md, design/system/flai-cli.md]
-status: open
-participants: [agent-S-0629, agent-S-0621]
+status: closed
+participants: [agent-S-0629, agent-S-0621, alex]
 created: 2026-11-09T17:49:19Z
-updated: 2026-11-09T18:27:04Z
+updated: 2026-11-09T21:51:45Z
 ---
 
 # MS-0429 T-2751 of S-0629 changed paths S-0621's claim covers
@@ -33,3 +33,6 @@ T-2743's change to design/system/flai-cli.md (formula steps, ADR-0271) does not 
 T-2748 of S-0621 changed paths S-0629's claim covers.
 
 T-2748, The publish formula's evaluate step stops on exit 2 in both copies, the formula and user docs say how a stop works, and I-0283 is closed, committed 7e0305f on story/S-0621, `docs: [S-0621] the publish formula's evaluate step stops on exit 2, the docs say how a stop works, and I-0283 is closed`, changing `docs/operators/index.md`, `docs/users/flai.md`. It reaches the main branch when S-0621 is accepted; `git show 7e0305f` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-09T21:51:45Z alex
+Closed: S-0629 was accepted

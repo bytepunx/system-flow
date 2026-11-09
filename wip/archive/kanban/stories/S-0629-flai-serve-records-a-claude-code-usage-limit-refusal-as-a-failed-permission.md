@@ -3,10 +3,10 @@ id: S-0629
 type: story
 nature: remediation
 title: flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:41Z
-updated: 2026-11-09T17:55:53Z
+updated: 2026-11-09T21:51:45Z
 transitions:
   - to: ready
     at: 2026-11-09T17:13:07Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T17:55:53Z
     by: agent-S-0629
+  - to: done
+    at: 2026-11-09T21:51:45Z
+    by: alex
 tags: [flai, serve, claude-code]
 topics: [permissions, usage-limit]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, design/adrs/README.md, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0296-flai-serve-records-a-claude-code-usage-limit-refusal-as-a-failed-permission.md, design/issues/summary.md, design/adrs/0270-a-permission-prompt-check-whose-claude-p-ends-on-the-harness-s-usage-limit.md]
