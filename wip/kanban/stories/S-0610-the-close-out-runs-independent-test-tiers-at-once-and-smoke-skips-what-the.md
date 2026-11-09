@@ -7,7 +7,7 @@ status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:03Z
-updated: 2026-11-09T10:43:49Z
+updated: 2026-11-09T16:55:18Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:23Z
@@ -82,7 +82,7 @@ Cause 20 in [server-performance.md](../../../design/system/server-performance.md
 
 - [x] `flai verify` runs at once the selected tiers the manifest marks as independent of each other, cheapest first as now, and cancels the others when one fails, so the verdict and the step it names are the same as a serial run's.
 - [x] Under `flai verify`, `smoke` skips the steps a tier of the same run already passed.
-- [ ] A close-out of a story that selects `integration`, `flaiover`, and `smoke` takes at least 150 s less than its serial run on the same commit, and server-performance.md records the before and after.
+- [x] A close-out of a story that selects `integration`, `flaiover`, and `smoke` takes at least 150 s less than its serial run on the same commit, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2634 Decide and add the manifest key that marks a test tier as able to run beside others
