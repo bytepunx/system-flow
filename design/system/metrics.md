@@ -529,7 +529,7 @@ Each value is counted in the ISO week that holds it, from the window's start to 
 
 | Value | Definition | Precision |
 |-------|------------|-----------|
-| `closeouts` | Absent when the host has no serve journal, as a container has none. An unreadable journal is warned of on stderr, and the section is absent too | |
+| `closeouts` | Absent when the host has no serve journal, as a container has none. A journal that cannot be opened or read is warned of on stderr, and the section is absent too. A line of it is read with its NUL bytes removed; a line that is still not an entry is skipped, and the section is kept: one warning on stderr names how many lines were skipped and the first one's number ([ADR-0268](../adrs/0268-flai-stats-skips-and-warns-of-a-serve-journal-line-that-is-not-an-entry-once.md)) | |
 | `closeouts.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `passed`, `stopped`, `failed`, `recorded`, `p50_seconds`, and `p85_seconds` | `start` is `YYYY-MM-DD`, a Monday |
 | `closeouts.weeks[].passed` | The close-outs with the verdict `passed`, not answered from the record | Whole count |
 | `closeouts.weeks[].stopped` | Those with `stopped`, not answered from the record | Whole count |
