@@ -3,14 +3,17 @@ id: S-0642
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-09T17:28:50Z
-updated: 2026-11-09T17:28:54Z
+updated: 2026-11-09T21:53:03Z
 transitions:
   - to: ready
     at: 2026-11-09T17:28:54Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-09T21:53:03Z
+    by: agent-S-0642
 tags: []
 agent:
   harness: claude-code
@@ -18,20 +21,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      work: 12
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 185
+      cache_read: 1505034
+      cache_write: 142856
+      cost: 0.6022
   strategic:
     - kind: orchestrator
-      seconds: 87
+      seconds: 102
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 162
-          cache_read: 821865
-          cache_write: 133801
-          cost: 0.2532
+          input: 32
+          output: 198
+          cache_read: 1020838
+          cache_write: 181123
+          cost: 0.3186
 formula: publish
 ---
 # S-0642 Publish what is accepted and not yet released

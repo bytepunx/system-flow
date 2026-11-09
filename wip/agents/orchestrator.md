@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2061.4968
-accrued_seconds: 1532584
-tasks_completed: 2513
-last_run: 2026-11-09T21:52:19Z
+accrued_cost: 2061.8117
+accrued_seconds: 1532657
+tasks_completed: 2517
+last_run: 2026-11-09T21:53:38Z
 ---
 
 # Orchestrator activity
@@ -17621,6 +17621,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.2030 USD, estimated
+
+### 2026-11-09T21:52:54Z
+
+- Summary: Release-due S-0629 and S-0627: started no second publish instance. release_evaluate is met under threshold (count 8 >= 1; 310 of 1000 USD/week; pending S-0611, S-0619, S-0620, S-0621, S-0624, S-0626, S-0627, S-0629). Publish instance S-0642 (made 2026-11-09T17:28:50Z, in ready, held no-touches until S-0616 leaves in-progress) publishes everything accepted and unreleased, S-0627 and S-0629 included; a second instance would race it (S-0643).
+- Items: S-0629, S-0627, S-0642
+- Seconds: 32
+- Cost: 0.0989 USD, estimated
+
+### 2026-11-09T21:53:10Z
+
+- Summary: I didn't start a new publish run for S-0629 or S-0627. Both are already covered by the publish story S-0642, and its agent has just started.
+- Items: none
+- Seconds: 16
+- Cost: 0.1187 USD, estimated
+
+### 2026-11-09T21:53:28Z
+
+- Summary: Release due after S-0621 and S-0624 (threshold policy met: 8 pending, count threshold 1; value 310 of 1000 USD): started no publish formula, because publish instance S-0642 is already in progress and its evaluate step covers the same 8 stories (S-0611, S-0619, S-0620, S-0621, S-0624, S-0626, S-0627, S-0629).
+- Items: S-0642, S-0621, S-0624
+- Seconds: 15
+- Cost: 0.0973 USD, estimated
+
+### 2026-11-09T21:53:38Z
+
+- Summary: S-0616: no acceptance. alex's acceptance sent it back to in-progress (rebase conflicts in design/workflows/formulas/README.md and its template copy); its agent works TH-0942. TH-0942 is flai's notice, so it is not mine to answer under answer_threads; opened no thread, moved nothing.
+- Items: S-0616
+- Seconds: 10
+- Cost: 0.0000 USD
 
 ## Refusals
 

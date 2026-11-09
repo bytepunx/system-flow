@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.29 - 2026-11-09
+
+- S-0621 A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time (patch).
 - S-0621 A formula step may stop its instance cleanly (minor, ADR-0271): a `flai` or `script` step may name `stop`, the exits that end the run without failing it. The baseline `publish` formula's evaluate step names `stop: [2]`, so with nothing to release its instance goes to review and acceptance without asking the operator. The instance rule in `work-management.md` says to run `flai formula stop` on such an exit and move the story to review, asking nothing, and the orchestrator's acceptance in `strategic-agents.md` takes `- <n>: T-nnnn skipped` as a skipped step's evidence. The formulas README documents the field.
 
 ## 1.1.28 - 2026-11-09

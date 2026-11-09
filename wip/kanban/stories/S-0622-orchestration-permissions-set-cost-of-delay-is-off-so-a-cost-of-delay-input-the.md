@@ -3,11 +3,14 @@ id: S-0622
 type: story
 nature: improvement
 title: orchestration.permissions.set_cost_of_delay is off, so a cost of delay input the operator confirmed waits a day for the operator to write it
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-07T23:39:56Z
-updated: 2026-11-09T21:53:34Z
-transitions: []
+updated: 2026-11-09T21:53:37Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:53:37Z
+    by: alex
 tags: [cli]
 topics: [orchestration, planning]
 touches: [flai/internal/serve/orchestrate_confirm_test.go, flai/cmd/orchestrate_permissions_test.go, design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md]
