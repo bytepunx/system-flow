@@ -157,12 +157,20 @@ describe('Repo over the channel', () => {
 		await expect(r.manifest()).resolves.toMatchObject({ name: 'Harbour' });
 	});
 
-	it('asks threads with the resolved ones, and by anchor without a trailing slash', async () => {
+	// S-0611: the resolved threads are most of the list, so they are asked for only when wanted
+	it('asks for the open threads, the resolved ones only when all is given, and by anchor without a trailing slash', async () => {
 		const { ask, calls } = fake({ 'threads.list': [] });
 		const r = new Repo('/nowhere', ask);
 		await r.threads();
 		await r.threadsFor('design/system/');
-		expect(calls.map((c) => c.params)).toEqual([{ all: true }, { on: 'design/system', all: true }]);
+		await r.threads(true);
+		await r.threadsFor('design/system/', true);
+		expect(calls.map((c) => c.params)).toEqual([
+			{},
+			{ on: 'design/system' },
+			{ all: true },
+			{ on: 'design/system', all: true }
+		]);
 	});
 
 	it('lays the board out as flai gave it, counting age from entered_at', async () => {

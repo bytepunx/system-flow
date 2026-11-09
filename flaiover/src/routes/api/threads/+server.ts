@@ -8,8 +8,12 @@ export const GET: RequestHandler = ({ url }) =>
 		const on = url.searchParams.get('on');
 		const all = url.searchParams.get('all') === '1';
 		const r = repo();
-		const [list, operator] = await Promise.all([on ? r.threadsFor(on) : r.threads(), r.operator()]);
-		return (all ? list : list.filter((t) => t.status !== 'resolved')).map((t) => ({
+		// flai answers the unresolved threads alone unless asked for all (S-0611)
+		const [list, operator] = await Promise.all([
+			on ? r.threadsFor(on, all) : r.threads(all),
+			r.operator()
+		]);
+		return list.map((t) => ({
 			...t,
 			entries: (t.entries ?? []).map((e) => ({ ...e, operator: e.author === operator }))
 		}));

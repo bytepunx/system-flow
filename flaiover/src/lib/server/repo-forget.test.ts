@@ -45,7 +45,9 @@ async function held() {
 			r.itemCount(),
 			r.itemById('S-0001'),
 			r.threads(),
+			r.threads(true),
 			r.threadsFor('S-0001'),
+			r.threadsFor('S-0001', true),
 			r.docsTree(),
 			r.docFile('docs/users/guide.md'),
 			inbox(r),
@@ -76,11 +78,14 @@ describe('Repo.changed forgets what the changed file affects (S-0161)', () => {
 		]);
 	});
 
-	it('keeps the board when a thread changes; the threads, the inbox, and the tree are asked again', async () => {
+	// S-0611: the open lists and the whole ones, resolved threads included, are kept apart and both forgotten
+	it('keeps the board when a thread changes; the open and the whole thread lists, the inbox, and the tree are asked again', async () => {
 		const { after } = await held();
 		expect(await after('wip/threads/TH-0001-berths.md')).toEqual([
 			'docs.tree',
 			'inbox.designer',
+			'threads.list',
+			'threads.list',
 			'threads.list',
 			'threads.list'
 		]);
@@ -113,6 +118,8 @@ describe('Repo.changed forgets what the changed file affects (S-0161)', () => {
 			'items.list',
 			'stats.get',
 			'threads.list',
+			'threads.list',
+			'threads.list',
 			'threads.list'
 		]);
 	});
@@ -127,7 +134,9 @@ describe('Repo.changed forgets what the changed file affects (S-0161)', () => {
 
 	it('forgets everything when the manifest or a file outside the three folders changes', async () => {
 		const { after } = await held();
-		const every = Object.keys(answers).concat('threads.list').sort();
+		const every = Object.keys(answers)
+			.concat('threads.list', 'threads.list', 'threads.list')
+			.sort();
 		expect(await after('system-flow.yaml')).toEqual(every);
 		expect(await after('scripts/build.sh')).toEqual(every);
 	});

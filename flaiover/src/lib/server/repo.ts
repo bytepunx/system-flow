@@ -881,15 +881,23 @@ export class Repo extends EventEmitter {
 		return (await this.manifest()).owner || 'designer';
 	}
 
-	/** Every thread, resolved ones included, sorted by ID (ADR-0020), as flai reads them. */
-	async threads(): Promise<Thread[]> {
-		return this.remember<Thread[]>('threads', 'threads.list', { all: true });
+	/**
+	 * The unresolved threads, sorted by ID (ADR-0020), as flai reads them; all adds the resolved ones,
+	 * which only a page that shows them asks for, since they are most of the list (S-0611). The two
+	 * lists are kept apart, and a thread or item change forgets both.
+	 */
+	async threads(all = false): Promise<Thread[]> {
+		return all
+			? this.remember<Thread[]>('threads:all=1', 'threads.list', { all: true })
+			: this.remember<Thread[]>('threads', 'threads.list', {});
 	}
 
-	/** Threads anchored to a repository path or an item ID. */
-	async threadsFor(on: string): Promise<Thread[]> {
+	/** The unresolved threads anchored to a repository path or an item ID; all adds the resolved ones. */
+	async threadsFor(on: string, all = false): Promise<Thread[]> {
 		const want = on.replace(/\/$/, '');
-		return this.remember<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
+		return all
+			? this.remember<Thread[]>(`threads:all=1:${want}`, 'threads.list', { on: want, all: true })
+			: this.remember<Thread[]>(`threads:${want}`, 'threads.list', { on: want });
 	}
 
 	/** Every conversation between stories, closed ones included, sorted by ID, as flai reads them (S-0336). */

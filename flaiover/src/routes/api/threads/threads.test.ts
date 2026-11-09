@@ -16,11 +16,12 @@ const channel = (async (method: string, params: Record<string, unknown> = {}) =>
 	asked.push({ method, params });
 	if (method === 'project.info')
 		return { layout: { design: 'design', docs: 'docs', wip: 'wip' }, owner };
+	// as flai's threads.list: the resolved ones only when asked for all
 	if (method === 'threads.list')
 		return [
 			{ id: 'TH-0001', status: 'open', entries: [entry('agent-S-0001'), entry('dana')] },
 			{ id: 'TH-0002', status: 'resolved', entries: [entry('designer')] }
-		];
+		].filter((t) => params.all || t.status !== 'resolved');
 	if (method === 'thread.confirm') {
 		if (refuse) throw refuse;
 		return { data: { id: params.id, status: 'answered' }, warnings: [] };
@@ -34,7 +35,10 @@ describe('/api/threads marks the operator', () => {
 	beforeAll(async () => {
 		GET = (await import('./+server')).GET as unknown as Handler;
 	});
-	beforeEach(() => useRepo(new Repo('/nowhere', channel)));
+	beforeEach(() => {
+		useRepo(new Repo('/nowhere', channel));
+		asked = [];
+	});
 	afterAll(() => useRepo(null));
 
 	const get = async (query: string) =>
@@ -50,6 +54,21 @@ describe('/api/threads marks the operator', () => {
 		expect(got[0].entries.map((e) => [e.author, e.operator])).toEqual([
 			['agent-S-0001', false],
 			['dana', true]
+		]);
+	});
+
+	// S-0611: the resolved threads are most of the list, so flai is asked for them only with all=1
+	it('asks flai for the resolved threads only with all=1', async () => {
+		owner = undefined;
+		expect((await get('')).map((t) => t.id)).toEqual(['TH-0001']);
+		expect((await get('?on=S-0001')).map((t) => t.id)).toEqual(['TH-0001']);
+		expect((await get('?all=1')).map((t) => t.id)).toEqual(['TH-0001', 'TH-0002']);
+		expect((await get('?on=S-0001&all=1')).map((t) => t.id)).toEqual(['TH-0001', 'TH-0002']);
+		expect(asked.filter((a) => a.method === 'threads.list').map((a) => a.params)).toEqual([
+			{},
+			{ on: 'S-0001' },
+			{ all: true },
+			{ on: 'S-0001', all: true }
 		]);
 	});
 
