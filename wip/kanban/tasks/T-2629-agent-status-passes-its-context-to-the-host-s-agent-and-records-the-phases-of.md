@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 8574
-      cache_read: 6108854
-      cache_write: 171279
-      cost: 2.4274
+      input: 35
+      output: 6621
+      cache_read: 6128816
+      cache_write: 126230
+      cost: 2.1238
 ---
 # T-2629 agent.status passes its context to the host's Agent and records the phases of the state it builds
 

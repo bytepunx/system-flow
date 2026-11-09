@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-09T08:10:23Z
+updated: 2026-11-09T08:25:28Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -47,7 +47,7 @@ blocked:
     until: 2026-11-09T07:32:35Z
     reason: awaiting the operator on TH-0908
 tags: [cli]
-touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/internal/adrindex/adrindex.go, flai/internal/issues/generated.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go]
+touches: [flai/internal/workitem/store.go, flai/internal/hostapi/hostapi.go, flai/internal/watch/watch.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/watch/watch_test.go, flai/internal/hostapi/hostapi_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/tech/go-libraries.md, flai/internal/workitem/archive.go, flai/internal/workitem/itemlock.go, flai/internal/hostapi/writes.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/mergequeue.go, flai/internal/workitem/view.go, flai/internal/workitem/view_test.go, flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, flai/internal/adrindex/adrindex.go, flai/internal/issues/generated.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/summary.md, flai/cmd/import_serve_test.go]
 after: [S-0596]
 agent:
   harness: claude-code
@@ -56,7 +56,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 10341
+  seconds: 11277
   estimated: true
   priced_by: estimate
   turns:
@@ -69,16 +69,16 @@ usage:
       work: 76
     - day: 2026-11-09
       ceremony: 1
-      test_runs: 7
+      test_runs: 8
       hand_edits: 3
-      work: 27
+      work: 81
   models:
     - model: claude-opus-5-5
-      input: 648
-      output: 160723
-      cache_read: 123552937
-      cache_write: 4484289
-      cost: 62.1541
+      input: 760
+      output: 162339
+      cache_read: 158069276
+      cache_write: 4520135
+      cost: 78.9067
   strategic:
     - kind: planner
       seconds: 581
@@ -147,6 +147,7 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 - T-2699 flai writes issues and ADRs by write and rename, so a change moves its folder's modification time
 - T-2700 flai serve watches threads, conversations, digest, issues, and ADRs on the slow tier, and a flai issue and ADR write are seen at the next fast look
 - T-2701 Measure the watcher walk again with five more folders on the slow tier, and record them and the reason under cause 16
+- T-2709 The import tests' fake host state stays fresh for the whole import, so the close-out's integration tier does not fail them under load (I-0309)
 
 ## Notes
 

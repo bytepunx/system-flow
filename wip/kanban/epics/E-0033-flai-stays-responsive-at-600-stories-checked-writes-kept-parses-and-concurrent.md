@@ -18,7 +18,7 @@ tags: [cli, dashboard]
 topics: [server-side, back-end]
 usage:
   source: sum
-  seconds: 63896
+  seconds: 65813
   estimated: true
   priced_by: estimate
   turns:
@@ -33,16 +33,16 @@ usage:
       work: 939
     - day: 2026-11-09
       ceremony: 13
-      test_runs: 12
+      test_runs: 13
       hand_edits: 13
-      work: 444
+      work: 565
   models:
     - model: claude-opus-5-5
-      input: 5202
-      output: 1232816
-      cache_read: 873893026
-      cache_write: 22594313
-      cost: 343.6073
+      input: 5450
+      output: 1241827
+      cache_read: 940492805
+      cache_write: 22663077
+      cost: 367.1884
   strategic:
     - kind: planner
       seconds: 1958
@@ -61,21 +61,21 @@ usage:
           cache_write: 2725272
           cost: 52.2198
     - kind: orchestrator
-      seconds: 4286
+      seconds: 4466
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 580
-          output: 4916
-          cache_read: 25269438
-          cache_write: 2803691
-          cost: 7.362
+          input: 599
+          output: 5055
+          cache_read: 26130818
+          cache_write: 2906057
+          cost: 7.6121
         - model: claude-sonnet-5-5
-          input: 80
-          output: 3073
-          cache_read: 688334
-          cache_write: 421519
-          cost: 0.8181
+          input: 84
+          output: 3113
+          cache_read: 700757
+          cache_write: 450660
+          cost: 0.8488
 ---
 # E-0033 flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads
 

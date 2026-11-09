@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 12106
-      cache_read: 8625435
-      cache_write: 241838
-      cost: 3.4274
+      input: 49
+      output: 9349
+      cache_read: 8653621
+      cache_write: 178231
+      cost: 2.9987
 ---
 # T-2621 AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
 

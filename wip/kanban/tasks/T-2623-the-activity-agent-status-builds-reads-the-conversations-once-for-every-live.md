@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 10540
-      cache_read: 7509661
-      cache_write: 210554
-      cost: 2.984
+      input: 43
+      output: 8139
+      cache_read: 7534200
+      cache_write: 155175
+      cost: 2.6108
 ---
 # T-2623 The activity agent.status builds reads the conversations once, for every live run and for held, with the same answer as before
 

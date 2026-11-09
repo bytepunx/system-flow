@@ -24,7 +24,7 @@ touches: [design/system/server-performance.md, design/system/flai-cli.md, design
 after: [T-2700]
 usage:
   source: log
-  seconds: 424
+  seconds: 436
   estimated: true
   priced_by: estimate
   models:
