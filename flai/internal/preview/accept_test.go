@@ -442,3 +442,45 @@ func TestStepsUndoneNamesEachCriterionWhoseTaskIsNotDone(t *testing.T) {
 		}
 	}
 }
+
+// S-0621 (ADR-0271 §4): a skipped step's criterion is evidenced by its task
+// when the instance's stop cancelled it and the stopping step's task is
+// done; any other skipped item is criterion_unevidenced, saying why.
+func TestStepsUndoneTakesATaskAStopCancelled(t *testing.T) {
+	it := &workitem.Item{ID: "S-0001", Type: workitem.Story, Formula: "publish"}
+	stopped := "## Notes\n\nStopped the run with exit 2:\n\n```text\nnot met\n```\n"
+	cancelled := "## Notes\n\n- 2026-11-09T10:00:00Z: moved to cancelled: step evaluate stopped the run with exit 2\n"
+	tasks := map[string]*workitem.Item{
+		"T-0001": {ID: "T-0001", Type: workitem.Task, Status: workitem.Done, Body: stopped},
+		"T-0002": {ID: "T-0002", Type: workitem.Task, Status: workitem.Cancelled, Body: cancelled},
+		"T-0003": {ID: "T-0003", Type: workitem.Task, Status: workitem.Cancelled, Body: "## Notes\n\n- 2026-11-09T10:00:00Z: moved to cancelled: not needed\n"},
+		"T-0004": {ID: "T-0004", Type: workitem.Task, Status: workitem.InProgress},
+	}
+	ev, err := ParseEvidence("Verdict: pass\n- 1: T-0001 done\n- 2: `T-2` skipped\n- 3: T-0003 skipped\n- 4: T-0004 skipped\n- 5: T-0009 skipped")
+	if err != nil {
+		t.Fatal(err)
+	}
+	criteria := []itemedit.Criterion{{N: 1, Text: "one"}, {N: 2, Text: "two"}, {N: 3, Text: "three"}, {N: 4, Text: "four"}, {N: 5, Text: "five"}}
+	got := stepsUndone(it, criteria, ev, tasks)
+	want := []string{
+		"criterion 3 (three) names T-0003 skipped, but T-0003 was not cancelled by a step's stop",
+		"criterion 4 (four) names T-0004 skipped, but T-0004 is in-progress, not cancelled",
+		"criterion 5 (five) names T-0009 skipped, but T-0009 is not a task of S-0001",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("blockers = %+v, want %d", got, len(want))
+	}
+	for i, says := range want {
+		if got[i].Code != BlockCriterionUnevidenced || !strings.Contains(got[i].Message, says) {
+			t.Errorf("blocker %d = %+v, want %s saying %q", i, got[i], BlockCriterionUnevidenced, says)
+		}
+	}
+
+	// the stopping step's task not done: its stop has not passed
+	tasks["T-0001"] = &workitem.Item{ID: "T-0001", Type: workitem.Task, Status: workitem.InProgress, Body: stopped}
+	ev, _ = ParseEvidence("Verdict: pass\n- 2: T-0002 skipped")
+	got = stepsUndone(it, criteria[1:2], ev, tasks)
+	if len(got) != 1 || !strings.Contains(got[0].Message, "no task of S-0001 is done with the record of step evaluate's stop") {
+		t.Errorf("a skipped step whose stopping step's task is not done is unevidenced: %+v", got)
+	}
+}

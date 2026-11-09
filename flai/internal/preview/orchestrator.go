@@ -96,6 +96,12 @@ var (
 	// stepDone is a formula instance's evidence for a criterion: the task of
 	// its step and its done transition, "T-nnnn done" (S-0422)
 	stepDone = regexp.MustCompile("^`?([Tt]-\\d+)`?\\s+done\\b")
+	// stepSkipped is a formula instance's evidence for a criterion whose step
+	// a stop skipped: its cancelled task, "T-nnnn skipped" (ADR-0271 §4)
+	stepSkipped = regexp.MustCompile("^`?([Tt]-\\d+)`?\\s+skipped\\b")
+	// stopCancel is the line flai formula stop leaves in the Notes of each
+	// step task it cancels (ADR-0271 §2), with the stopping step and the exit
+	stopCancel = regexp.MustCompile(`moved to cancelled: step (\S+) stopped the run with exit (\d+)`)
 )
 
 // ParseEvidence reads an orchestrator's evidence: one "Verdict: <verdict>"
@@ -195,8 +201,11 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 		}
 		verified = rebased
 	} else {
-		verified = verifiedHead(r, repo, it.ID, opts.Verified, add)
+		verified = verifiedHead(r, repo, it.ID, it.Formula != "", opts.Verified, add)
 	}
+	// an instance whose branch is gone changes nothing beyond main: its
+	// close-out's commit is on main, which verifiedHead checked (ADR-0271 §4)
+	branchless := it.Formula != "" && opts.Batch == "" && !storygit.BranchExists(r, repo.MainRoot, branch)
 
 	// 2. every criterion is ticked
 	criteria := itemedit.Criteria(it.Body)
@@ -211,7 +220,13 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	// agent records, an experiment's results) are the story's whatever it
 	// touches
 	var changed []string
-	diff, err := storygit.StoryDiff(r, repo, it.ID)
+	var diff *storygit.Diff
+	var err error
+	if branchless {
+		diff = &storygit.Diff{Story: it.ID, Branch: branch, Files: []storygit.DiffFile{}}
+	} else {
+		diff, err = storygit.StoryDiff(r, repo, it.ID)
+	}
 	if err != nil {
 		add(BlockOutsideTouches, "cannot read what %s changes to check it against its touches: %v", branch, err)
 	} else {
@@ -286,12 +301,16 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 
 // verifiedHead is the commit given, the one the orchestrator's verifier
 // passed, resolved to its full name, or "" when it names none; add takes a
-// blocker when it is not the head of story id's branch.
-func verifiedHead(r execx.Runner, repo *workitem.Repo, id, given string, add func(code, format string, args ...any)) (verified string) {
+// blocker when it is not the head of story id's branch. For a formula's
+// instance, instance, whose branch is gone, the commit its close-out passed
+// at stands for the head when it is on the main branch (ADR-0271 §4).
+func verifiedHead(r execx.Runner, repo *workitem.Repo, id string, instance bool, given string, add func(code, format string, args ...any)) (verified string) {
 	branch := storygit.Branch(id)
 	head, headErr := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
 	head = strings.TrimSpace(head)
 	switch given = strings.TrimSpace(given); {
+	case (headErr != nil || head == "") && instance:
+		return verifiedOnMain(r, repo, id, given, add)
 	case headErr != nil || head == "":
 		add(BlockUnverified, "%s has no branch %s to verify here, so no commit its verifier passed can be its head; the operator accepts it", id, branch)
 	case given == "":
@@ -312,6 +331,32 @@ func verifiedHead(r execx.Runner, repo *workitem.Repo, id, given string, add fun
 		}
 	}
 	return verified
+}
+
+// verifiedOnMain is the commit given resolved to its full name, for id, a
+// formula's instance with no branch (ADR-0271 §4): add takes a blocker when
+// it names no commit, or one not on the main branch, where the instance's
+// close-out must have passed for a branch that carried nothing beyond it.
+func verifiedOnMain(r execx.Runner, repo *workitem.Repo, id, given string, add func(code, format string, args ...any)) string {
+	branch := storygit.Branch(id)
+	if given == "" || strings.HasPrefix(given, "-") {
+		add(BlockUnverified, "%s, a formula's instance, has no branch %s, so the orchestrator's acceptance needs the commit its close-out passed at, on the main branch: give it with --verified, from flai verify %s --last (ADR-0271)", id, branch, id)
+		return ""
+	}
+	full, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", given+"^{commit}")
+	if full = strings.TrimSpace(full); err != nil || full == "" {
+		add(BlockUnverified, "--verified %s names no commit in this repository: give the commit %s's close-out passed at, from flai verify %s --last", given, id, id)
+		return ""
+	}
+	main, err := storygit.MainBranch(r, repo.MainRoot)
+	if err != nil {
+		add(BlockUnverified, "cannot name the main branch to check that %s, %s's verified commit, is on it: %v", short(full), id, err)
+		return full
+	}
+	if _, err := r.Run(repo.MainRoot, "git", "merge-base", "--is-ancestor", full, main); err != nil {
+		add(BlockUnverified, "--verified %s is not on %s, and %s, a formula's instance, has no branch %s that could hold it: give the commit its close-out passed at, on %s, or the operator accepts it (ADR-0271)", short(full), main, id, branch, main)
+	}
+	return full
 }
 
 // unevidenced is a blocker for each criterion the evidence has no item for,
@@ -354,7 +399,9 @@ func unevidenced(criteria []itemedit.Criterion, ev *Evidence, changed []string) 
 // that the evidence has no item for, whose item names no task's done
 // transition, "- <n>: T-nnnn done", or names one that is not a task of it in
 // tasks or is not done: a step's evidence is its task's done transition, not
-// a changed file, since a step may change nothing (S-0422).
+// a changed file, since a step may change nothing (S-0422). A step a stop
+// skipped is evidenced by its task cancelled by that stop, "- <n>: T-nnnn
+// skipped", as stopSkipped checks it (ADR-0271 §4).
 func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence, tasks map[string]*workitem.Item) []Blocker {
 	said := evidenceItems(ev.Text)
 	var out []Blocker
@@ -365,6 +412,12 @@ func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence,
 		text, listed := said[c.N]
 		if !listed {
 			block("the evidence has no item for acceptance criterion %d (%s): %s is an instance of formula %s, so add \"- %d: T-nnnn done\" naming the task of its step", c.N, c.Text, it.ID, it.Formula, c.N)
+			continue
+		}
+		if m := stepSkipped.FindStringSubmatch(text); m != nil {
+			if why := stopSkipped(it, workitem.CanonicalID(m[1]), tasks); why != "" {
+				block("the evidence for acceptance criterion %d (%s) names %s skipped, but %s", c.N, c.Text, workitem.CanonicalID(m[1]), why)
+			}
 			continue
 		}
 		m := stepDone.FindStringSubmatch(text)
@@ -381,6 +434,35 @@ func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence,
 		}
 	}
 	return out
+}
+
+// stopSkipped is why task id is no evidence that a stop skipped its step, or
+// "" when it is (ADR-0271 §4): it is a task of the instance it in tasks, it
+// is cancelled, its Notes hold the cancel flai formula stop writes, "moved to
+// cancelled: step <id> stopped the run with exit <n>", and a task of it is
+// done with that stop's record, "Stopped the run with exit <n>:", in its
+// Notes: the stopping step's task, which flai formula stop moved to done.
+// The record names the stopping step's task, so the formula's file, which
+// may have changed since the run, is not read.
+func stopSkipped(it *workitem.Item, id string, tasks map[string]*workitem.Item) string {
+	task := tasks[id]
+	switch {
+	case task == nil:
+		return fmt.Sprintf("%s is not a task of %s", id, it.ID)
+	case task.Status != workitem.Cancelled:
+		return fmt.Sprintf("%s is %s, not cancelled: a skipped step's task is cancelled by flai formula stop", id, task.Status)
+	}
+	m := stopCancel.FindStringSubmatch(task.Body)
+	if m == nil {
+		return fmt.Sprintf("%s was not cancelled by a step's stop: its Notes hold no \"moved to cancelled: step <id> stopped the run with exit <n>\", which flai formula stop writes", id)
+	}
+	record := "Stopped the run with exit " + m[2] + ":"
+	for _, t := range tasks {
+		if t.Status == workitem.Done && strings.Contains(t.Body, record) {
+			return ""
+		}
+	}
+	return fmt.Sprintf("no task of %s is done with the record of step %s's stop, %q, in its Notes: the step that stopped the run has not passed", it.ID, m[1], record)
 }
 
 // evidenceItems is the text of each criterion's list item in an evidence,

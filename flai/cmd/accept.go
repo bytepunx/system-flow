@@ -164,7 +164,12 @@ path Claude Code protects, no thread on the story or its tasks is open, and
 --evidence, a Verdict: line and one item "- <n>: <files>" per criterion,
 names a changed file for each of them. For a formula's instance, whose
 branch may change nothing, each item is "- <n>: T-nnnn done" instead,
-naming the done task of the criterion's step (S-0422, ADR-0239).
+naming the done task of the criterion's step (S-0422, ADR-0239), or
+"- <n>: T-nnnn skipped" for a step a stop skipped, naming its task that
+flai formula stop cancelled, with the stopping step's task done (ADR-0271).
+An instance whose branch is gone is accepted when --verified names the
+commit its close-out passed at and that commit is on the main branch; any
+other story with no branch is the operator's.
 It commits the shared set and leaves the main checkout's other uncommitted
 files as every acceptance does (above), never with --yes, and is refused only
 while the story's change would overwrite one of them; --dry-run lists that as

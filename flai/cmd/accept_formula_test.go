@@ -226,3 +226,160 @@ func TestAnOrdinaryStorysEvidenceIsStillItsChangedFiles(t *testing.T) {
 	}
 	assertNothingAccepted(t, root, mainBefore)
 }
+
+// stoppedInstanceInReview is a git project, accept_reviews on, with the
+// publish-like formula and its instance S-0001 in review, stopped at its
+// evaluate step with exit 2 by flai formula stop (ADR-0271 §2): T-0001, the
+// check, and T-0002, the evaluation, done, and T-0003 and T-0004 cancelled by
+// the stop, every criterion ticked: the check's by hand, the rest by the
+// stop. head is the head of story/S-0001, which
+// is main's.
+func stoppedInstanceInReview(t *testing.T) (root, head string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root = tempProject(t)
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    accept_reviews: true\n"
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644)
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design/workflows/formulas", "scripts"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
+	}
+	_ = os.WriteFile(filepath.Join(root, "scripts/test.sh"), []byte("#!/bin/sh\n"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "design/workflows/formulas/publish-like.md"), []byte(publishLike), 0o644)
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "config", "user.email", "t@t")
+	gitIn(t, root, "config", "user.name", "t")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	for _, args := range [][]string{
+		{"formula", "run", "publish-like", "--ready"},
+		{"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"},
+		{"move", "T-0001", "ready"}, {"move", "T-0001", "in-progress"}, {"move", "T-0001", "done"},
+		{"criteria", "tick", "S-0001", "1"},
+		{"move", "T-0002", "ready"}, {"move", "T-0002", "in-progress"},
+	} {
+		if out, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("flai %v: %d %s %s", args, code, out, errOut)
+		}
+	}
+	if out, errOut, code := runStdin(t, root, "not met: 0 accepted stories not yet released\n", "formula", "stop", "S-0001", "--step", "evaluate", "--exit", "2"); code != 0 {
+		t.Fatalf("formula stop: %d %s %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "move", "S-0001", "review"); code != 0 {
+		t.Fatalf("the stopped instance goes to review: %d %s %s", code, out, errOut)
+	}
+	head = gitIn(t, root, "rev-parse", "story/S-0001")
+	return root, head
+}
+
+// dropBranch removes story/S-0001 and its worktree, as I-0283's third
+// instance found story/S-0585 gone.
+func dropBranch(t *testing.T, root string) {
+	t.Helper()
+	if wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001"); dirExists(wt) {
+		gitIn(t, root, "worktree", "remove", "--force", wt)
+	}
+	gitIn(t, root, "branch", "-D", "story/S-0001")
+}
+
+// stoppedEvidence is the orchestrator's evidence for the stopped instance:
+// the steps that ran by their done tasks, the skipped ones by their tasks the
+// stop cancelled (ADR-0271 §4).
+const stoppedEvidence = "Verdict: pass, step evaluate stopped the run with exit 2\n- 1: T-0001 done\n- 2: T-0002 done\n- 3: T-0003 skipped\n- 4: `T-0004` skipped"
+
+// acceptStopped runs the orchestrator's acceptance of S-0001 at verified
+// with evidence, and answers its result and exit code.
+func acceptStopped(t *testing.T, root, verified, evidence string, dry bool) (preview.Acceptance, int, string) {
+	t.Helper()
+	args := []string{"accept", "S-0001", "--by", "orchestrator", "--verified", verified, "--evidence", "-", "--json"}
+	if dry {
+		args = append(args, "--dry-run")
+	}
+	out, errOut, code := runStdin(t, root, evidence+"\n", args...)
+	var res preview.Acceptance
+	if code == 0 {
+		if err := json.Unmarshal([]byte(out), &res); err != nil {
+			t.Fatalf("%v: %s", err, out)
+		}
+	}
+	return res, code, errOut
+}
+
+// S-0621 criterion 1 (I-0283's second instance): an instance stopped cleanly
+// at its evaluate step is accepted by the orchestrator with no operator's
+// word, its skipped steps evidenced by their tasks the stop cancelled.
+func TestTheOrchestratorAcceptsAnInstanceAStopEnded(t *testing.T) {
+	t.Parallel()
+	root, head := stoppedInstanceInReview(t)
+	res, code, errOut := acceptStopped(t, root, head, stoppedEvidence, false)
+	if code != 0 {
+		t.Fatalf("the orchestrator's acceptance of a stopped instance: %d %s", code, errOut)
+	}
+	if res.Status != workitem.Done || res.By != "orchestrator" || res.Verified != head || len(res.OrchestratorBlockers) != 0 {
+		t.Errorf("the orchestrator accepts the stopped instance: %+v", res)
+	}
+}
+
+// S-0621 criterion 1 (I-0283's third instance): an instance whose branch is
+// gone is accepted by the orchestrator on the commit its close-out passed
+// at, on main, with nothing to merge; a commit not on main is refused.
+func TestTheOrchestratorAcceptsAStoppedInstanceWhoseBranchIsGone(t *testing.T) {
+	t.Parallel()
+	root, head := stoppedInstanceInReview(t)
+	dropBranch(t, root)
+
+	stray := gitIn(t, root, "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "not on main")
+	res, code, errOut := acceptStopped(t, root, stray, stoppedEvidence, true)
+	if code != 0 {
+		t.Fatalf("a dry run reports blockers rather than failing: %d %s", code, errOut)
+	}
+	if b := res.OrchestratorBlockers; len(b) != 1 || b[0].Code != preview.BlockUnverified || !strings.Contains(b[0].Message, "is not on main, and S-0001, a formula's instance, has no branch story/S-0001") {
+		t.Errorf("a verified commit not on main blocks a branchless instance: %+v", b)
+	}
+
+	res, code, errOut = acceptStopped(t, root, head, stoppedEvidence, false)
+	if code != 0 {
+		t.Fatalf("the orchestrator's acceptance of a branchless instance: %d %s", code, errOut)
+	}
+	if res.Status != workitem.Done || res.Merged || res.Verified != head || len(res.OrchestratorBlockers) != 0 {
+		t.Errorf("the orchestrator accepts the branchless instance, merging nothing: %+v", res)
+	}
+}
+
+// S-0621: evidence that names a skipped step's task the stop did not cancel
+// is refused, naming why; a story that is no instance and has no branch
+// stays the operator's (ADR-0271 §4).
+func TestTheOrchestratorRefusesSkippedEvidenceNoStopWrote(t *testing.T) {
+	t.Parallel()
+	root, head := stoppedInstanceInReview(t)
+	res, code, errOut := acceptStopped(t, root, head, "Verdict: pass\n- 1: T-0001 skipped\n- 2: T-0002 done\n- 3: T-0003 skipped\n- 4: T-0004 skipped", true)
+	if code != 0 {
+		t.Fatalf("a dry run reports blockers rather than failing: %d %s", code, errOut)
+	}
+	if b := res.OrchestratorBlockers; len(b) != 1 || b[0].Code != preview.BlockCriterionUnevidenced || !strings.Contains(b[0].Message, "names T-0001 skipped, but T-0001 is done, not cancelled") {
+		t.Errorf("a done task is no skipped step's evidence: %+v", b)
+	}
+}
+
+// S-0621 (ADR-0271 §4): a story that is no formula's instance and has no
+// branch is still the operator's to accept.
+func TestABranchlessStoryThatIsNoInstanceStaysTheOperators(t *testing.T) {
+	t.Parallel()
+	root, head := formulaStoryInReview(t, "", true)
+	dropBranch(t, root)
+	res, code, errOut := acceptStopped(t, root, head, "Verdict: pass\n- 1: `a.go`\n- 2: `a.go`", true)
+	if code != 0 {
+		t.Fatalf("a dry run reports blockers rather than failing: %d %s", code, errOut)
+	}
+	found := false
+	for _, b := range res.OrchestratorBlockers {
+		found = found || (b.Code == preview.BlockUnverified && strings.Contains(b.Message, "has no branch story/S-0001 to verify here, so no commit its verifier passed can be its head; the operator accepts it"))
+	}
+	if !found {
+		t.Errorf("a branchless story that is no instance is the operator's: %+v", res.OrchestratorBlockers)
+	}
+}
