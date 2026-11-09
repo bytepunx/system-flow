@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:41Z
-updated: 2026-11-08T03:30:35Z
+updated: 2026-11-09T07:17:47Z
 transitions: []
 tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/metrics/costorder.go, flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/costorder_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/metrics/coordination.go, flai/internal/storygit/committed_test.go]
@@ -52,10 +52,10 @@ cost_of_delay:
   at: 2026-11-08T00:05:51Z
 forecast:
   duration: 1h
-  delivery: 2026-11-08T04:50:00Z
-  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0602, S-0603, S-0604, S-0606, S-0610, S-0635 and S-0241."
+  delivery: 2026-11-09T08:37:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0603, S-0604, S-0606, S-0610, S-0635 and S-0241."
   by: flai
-  at: 2026-11-08T03:30:35Z
+  at: 2026-11-09T07:17:47Z
 finalized:
   by: orchestrator
   at: 2026-11-08T00:10:06Z
