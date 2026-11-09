@@ -674,3 +674,127 @@ func TestASnapshotUnderConcurrentListsAndChanges(t *testing.T) {
 		t.Errorf("an edit told after concurrent lists lists as %q", got)
 	}
 }
+
+// saveEdited saves the story with its first criterion ticked, as this
+// process's own write.
+func saveEdited(t *testing.T, r *Repo, id string) {
+	t.Helper()
+	s, err := r.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Body = strings.Replace(s.Body, "- [ ]\n", "- [x] ok\n", 1)
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0608: with no snapshot, the generation stays the same across lists and
+// gets that find no change, a file read again only because it was too recent
+// to trust among them, and moves on an edit, an added file, a removed file,
+// and a save.
+func TestTheGenerationMovesOnlyWhenTheItemsChange(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	s := mustCreate(t, r, Story, "Story one", "E-0001")
+	listed(t, r, true)
+	g := r.Generation()
+	listed(t, r, true) // the files are too recent to trust: read again, the same
+	if _, err := r.Get("S-0001"); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Generation(); got != g {
+		t.Errorf("lists that read again unchanged files moved the generation from %d to %d", g, got)
+	}
+	age(t, r, time.Now().Add(-time.Hour))
+	listed(t, r, true)
+	g = r.Generation()
+	listed(t, r, true)
+	if got := r.Generation(); got != g {
+		t.Errorf("a list with no change moved the generation from %d to %d", g, got)
+	}
+
+	moves := func(what string, change func()) {
+		t.Helper()
+		before := r.Generation()
+		change()
+		listed(t, r, true)
+		after := r.Generation()
+		if after == before {
+			t.Errorf("%s left the generation at %d", what, before)
+		}
+		listed(t, r, true)
+		if got := r.Generation(); got != after {
+			t.Errorf("a list after %s moved the generation again, from %d to %d", what, after, got)
+		}
+	}
+	moves("an edit", func() { sameSizeEdit(t, s.Path, "Story one", "Story One") })
+	handmade := filepath.Join(r.ItemDir(Story, false), "S-0009-story-nine.md")
+	moves("an added file", func() {
+		data, err := os.ReadFile(s.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		other := strings.Replace(string(data), "id: S-0001", "id: S-0009", 1)
+		if err := os.WriteFile(handmade, []byte(other), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	})
+	moves("a removed file", func() {
+		if err := os.Remove(handmade); err != nil {
+			t.Fatal(err)
+		}
+	})
+	before := r.Generation()
+	saveEdited(t, r, "S-0001")
+	if got := r.Generation(); got == before {
+		t.Errorf("a save left the generation at %d", before)
+	}
+}
+
+// S-0608: with the snapshot on, the generation stays the same across lists
+// and gets the snapshot answers, an untold edit among them, and moves as soon
+// as the store is told of a change or this process saves an item.
+func TestTheGenerationOfASnapshotMovesOnToldChangesAndSaves(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Epic, "Epic", "")
+	s := mustCreate(t, r, Story, "Story one", "E-0001")
+	snapshotting(t, r)
+	age(t, r, time.Now().Add(-time.Hour))
+	ItemsChanged(r.Root)
+	listed(t, r, true)
+	g := r.Generation()
+	listed(t, r, true)
+	if _, err := r.Get("S-0001"); err != nil {
+		t.Fatal(err)
+	}
+	sameSizeEdit(t, s.Path, "Story one", "Story One")
+	listed(t, r, true)
+	if got := r.Generation(); got != g {
+		t.Errorf("lists of a fresh snapshot moved the generation from %d to %d", g, got)
+	}
+
+	ItemChanged(r.Root, rel(t, r, s.Path))
+	if got := r.Generation(); got == g {
+		t.Errorf("a told change left the generation at %d", g)
+	}
+	if got := listed(t, r, true)["S-0001"].Title; got != "Story One" {
+		t.Errorf("a told edit lists as %q", got)
+	}
+	g = r.Generation()
+	listed(t, r, true)
+	if got := r.Generation(); got != g {
+		t.Errorf("a list after a told change moved the generation again, from %d to %d", g, got)
+	}
+
+	saveEdited(t, r, "S-0001")
+	if got := r.Generation(); got == g {
+		t.Errorf("a save left the generation at %d", g)
+	}
+	g = r.Generation()
+	listed(t, r, true)
+	listed(t, r, true)
+	if got := r.Generation(); got == g {
+		t.Errorf("the list after a save found no change at %d", g)
+	}
+}

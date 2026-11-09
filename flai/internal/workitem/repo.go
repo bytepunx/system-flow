@@ -171,6 +171,23 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	return items, nil
 }
 
+// Generation counts, in this process, the changes to the items List reads,
+// the archive's among them (S-0608). It moves when a list or get finds an
+// item file added, changed, or removed, when the store is told of a change in
+// an item folder, and when this process saves an item; it stays the same
+// while none of that happens, and never goes back. Read it before and after a
+// List: when the two agree, the items listed are those of that generation, so
+// what is computed from them may be kept under it.
+func (r *Repo) Generation() uint64 {
+	var n uint64
+	for _, archived := range []bool{false, true} {
+		for _, typ := range Types {
+			n += parsed.generation(r.ItemDir(typ, archived))
+		}
+	}
+	return n
+}
+
 // IDWidth is the number of digits flai zero-pads new IDs to. Older items
 // with three digits stay valid; see design/adrs/0017-four-digit-ids.md.
 const IDWidth = 4

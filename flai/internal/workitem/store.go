@@ -57,6 +57,9 @@ type folder struct {
 	looks int // times the folder was read and its files statted, for tests
 
 	marks atomic.Uint64 // changes the store was told of, so a look that one raced stays stale
+	// changes counts the looks and reads that found a file's item added,
+	// changed, or removed; with marks it is the folder's generation (S-0608).
+	changes atomic.Uint64
 
 	smu      sync.Mutex // guards the snapshot below, never held across a look
 	on       bool       // its root keeps a snapshot
@@ -159,6 +162,14 @@ func (s *store) stale(dir string) {
 	if f != nil {
 		f.marks.Add(1)
 	}
+}
+
+// generation is the folder at dir's count of the changes the store was told
+// of, this process's writes among them, and of the items its looks and reads
+// found added, changed, or removed. It never goes back.
+func (s *store) generation(dir string) uint64 {
+	f := s.folder(dir)
+	return f.marks.Load() + f.changes.Load()
 }
 
 func (s *store) folder(dir string) *folder {
@@ -319,7 +330,9 @@ func (f *folder) lookAll(dir, cache string) ([]*Item, bool, error) {
 	}
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
-		clear(f.files)
+		for name := range f.files {
+			f.drop(name)
+		}
 		return nil, true, nil
 	}
 	if err != nil {
@@ -339,7 +352,7 @@ func (f *folder) lookAll(dir, cache string) ([]*Item, bool, error) {
 	trusted := true
 	for _, l := range files {
 		if l.err != nil {
-			delete(f.files, l.name)
+			f.drop(l.name)
 			if os.IsNotExist(l.err) {
 				continue // removed since the folder was read
 			}
@@ -354,7 +367,7 @@ func (f *folder) lookAll(dir, cache string) ([]*Item, bool, error) {
 	}
 	for name := range f.files {
 		if !seen[name] {
-			delete(f.files, name)
+			f.drop(name)
 		}
 	}
 	f.disk = nil // every file now has its entry in memory, or is gone
@@ -433,6 +446,11 @@ func parseAll(dir string, files []*look) {
 // f.mu.
 func (f *folder) keep(dir string, l *look) {
 	WarnUnknown(filepath.Join(dir, l.name), l.item.Unknown)
+	// A file read again only because it was too recent to trust, and read
+	// the same, is no change.
+	if old := f.files[l.name]; old == nil || old.item.readAs != l.item.readAs {
+		f.changes.Add(1)
+	}
 	if l.restored {
 		f.files[l.name] = &kept{info: l.info, item: l.item, trusted: true, raw: l.rec.Item}
 		return
@@ -458,7 +476,7 @@ func (f *folder) read(dir, name string) (*Item, error) {
 	path := filepath.Join(dir, name)
 	info, err := os.Stat(path)
 	if err != nil {
-		delete(f.files, name)
+		f.drop(name)
 		return nil, err
 	}
 	if k := f.files[name]; k != nil && k.trusted && os.SameFile(k.info, info) &&
@@ -467,11 +485,20 @@ func (f *folder) read(dir, name string) (*Item, error) {
 	}
 	l := &look{name: name, info: info, readAt: time.Now()}
 	if l.item, err = readItem(path); err != nil {
-		delete(f.files, name)
+		f.drop(name)
 		return nil, err
 	}
 	f.keep(dir, l)
 	return l.item.clone(), nil
+}
+
+// drop forgets name's kept item, counting a change when there was one. The
+// caller holds f.mu.
+func (f *folder) drop(name string) {
+	if _, ok := f.files[name]; ok {
+		delete(f.files, name)
+		f.changes.Add(1)
+	}
 }
 
 // clone copies the item and everything it refers to, so that a caller that
