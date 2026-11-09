@@ -2,11 +2,11 @@
 id: I-0294
 title: "The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator"
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:40:28Z
+updated: 2026-11-09T17:51:04Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ flaiover/src/lib/markdown.ts:15 new MarkdownIt({ html: true }); no sanitizer in 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0627 remediates this issue, created from it at 2026-11-07T23:40:28Z.
+Closed 2026-11-09T17:51:04Z: S-0627: render() in flaiover/src/lib/markdown.ts builds markdown-it with html: false, so raw HTML in repository markdown, thread entries, and messages shows as text at every {@html} site and in markdownInto, all of which take their HTML from render(). The tests under "raw HTML (I-0294)" in flaiover/src/lib/markdown.test.ts show a script block, an onerror image, and an onclick div render no element or handler, and a javascript: link gets no href; they fail on the html: true renderer. Checkboxes and heading permalinks still render. design/tech/markdown.md records the rule. The Impact's mention of svelte.config.js was wrong: flaiover has none, its config is vite.config.ts. A Content-Security-Policy, defence in depth rather than the cause, is proposed on TH-0936 as a separate story.
