@@ -7,7 +7,7 @@ count: 2
 cost: 35m
 first_reported: 2026-11-09T07:27:44Z
 last_reported: 2026-11-09T07:53:55Z
-updated: 2026-11-09T07:53:55Z
+updated: 2026-11-09T08:06:42Z
 ---
 
 # I-0315 Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
@@ -26,3 +26,5 @@ Story: S-0598.
 S-0598 was sent back from review twice, once on TH-0914 for check.go and once on TH-0917 for design/system/server-performance.md. In both the cause 8 section met the cause 9 to 19 sections at the same spot after the S-0596 Stories table. Each resolution was mechanical: keep both sections in cause order. Each send-back cost a 10 to 13 minute close-out and a review cycle. The trial merge still reports the same conflict with S-0601, which is in review.
 
 ## Remediation
+
+Story S-0637 remediates this issue, created from it at 2026-11-09T08:06:42Z.
