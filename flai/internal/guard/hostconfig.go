@@ -103,7 +103,7 @@ func (g Guard) hostConfig(c Call) Verdict {
 	if c.Kind != Shell || !c.Subagent && !g.served(c) {
 		return Verdict{}
 	}
-	for _, words := range commands(c.Command) {
+	for _, words := range arguments(c.Command) {
 		if why, _ := g.refuse(words, hosting); why == "" {
 			continue
 		}

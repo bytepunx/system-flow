@@ -245,7 +245,7 @@ func (g Guard) asSubAgent(c Call) Verdict {
 		r := subAgent(readOnly)
 		for _, s := range parse(c.Command) {
 			run := strings.Join(s.words, " ")
-			if why, _ := g.refuse(s.words, r); why != "" {
+			if why, _ := g.refuse(s.args, r); why != "" {
 				return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, run, why))
 			}
 			if !readOnly {

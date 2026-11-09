@@ -154,7 +154,7 @@ func (g Guard) asRole(c Call) Verdict {
 			formula = why != "" && cmd == "formula" && sub == "run"
 			return why, needs
 		}
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, needs = g.refuse(words, r); why != "" {
 				call = strings.Join(words, " ")
 				what = fmt.Sprintf("run %q", call)

@@ -564,6 +564,58 @@ func TestThePlannerIsHeldToTheBaselineFile(t *testing.T) {
 	}
 }
 
+// I-0230, S-0613: a redirection neither allows nor refuses a call a role
+// file judges. The planner's, the analyzer's, and the curator's reads and
+// writes their baseline files allow pass with a redirection as without one,
+// and what their files refuse is refused alike with one, wherever it stands.
+func TestARedirectionNeitherAllowsNorRefusesARoleFilesCall(t *testing.T) {
+	curator := Guard{Commands: append(slices.Clone(g.Commands), "digest"), Role: RoleCurate}
+	analyzer := Guard{Commands: g.Commands, Role: RoleAnalyze}
+	redirected := func(line string) []string {
+		program, rest, _ := strings.Cut(line, " ")
+		return []string{line + " 2>&1", line + " 2>/dev/null", program + " 2>/dev/null " + rest, line + " >/dev/null 2>&1 | tail -1"}
+	}
+	for _, c := range []struct {
+		gr    Guard
+		lines []string
+	}{
+		{planGuard, []string{"flai board --json", "flai show S-0001", "flai touches suggest S-0001", "flai touches S-0001 --add flai/x.go", "flai story new x --draft", "flai move S-0001 backlog"}},
+		{analyzer, []string{"flai board --json", "flai stats --json", "flai issue new x --class defect"}},
+		{curator, []string{"flai digest harvest", "flai digest new x", "flai board --json"}},
+	} {
+		for _, line := range c.lines {
+			if v := Decide(c.gr, Call{Role: c.gr.Role, Kind: Shell, Command: line}); v.Outcome != Allow {
+				t.Fatalf("%s: %q refused without a redirection: %s", c.gr.Role, line, v.Reason)
+			}
+			for _, with := range redirected(line) {
+				if v := Decide(c.gr, Call{Role: c.gr.Role, Kind: Shell, Command: with}); v.Outcome != Allow {
+					t.Errorf("%s: %q refused: %s", c.gr.Role, with, v.Reason)
+				}
+			}
+		}
+	}
+	for _, c := range []struct {
+		gr    Guard
+		lines []string
+	}{
+		{planGuard, []string{"flai move S-0001 ready", "flai story new x", "flai edit S-0001 --no-draft"}},
+		{analyzer, []string{"flai issue story I-0001"}},
+		{curator, []string{"flai digest seed"}},
+	} {
+		for _, line := range c.lines {
+			want := Decide(c.gr, Call{Role: c.gr.Role, Kind: Shell, Command: line})
+			if want.Outcome != Deny {
+				t.Fatalf("%s: %q passes without a redirection", c.gr.Role, line)
+			}
+			for _, with := range redirected(line) {
+				if v := Decide(c.gr, Call{Role: c.gr.Role, Kind: Shell, Command: with}); v.Outcome != Deny || v.Reason != want.Reason {
+					t.Errorf("%s: %q: %+v, want it refused as %q is: %+v", c.gr.Role, with, v, line, want)
+				}
+			}
+		}
+	}
+}
+
 // S-0416: the analyzer and the curator are held to their role files too,
 // the analyzer's files entry under the design folder its reports folder
 // lies in when no design folder is given, and their refusals keep the

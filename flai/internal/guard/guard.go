@@ -729,7 +729,7 @@ func (g Guard) operatorsOnly(c Call, found rules, why, ask, subAsk string) Verdi
 	if c.Kind != Shell || !c.Subagent && !g.served(c) {
 		return Verdict{}
 	}
-	for _, words := range commands(c.Command) {
+	for _, words := range arguments(c.Command) {
 		if refused, _ := g.refuse(words, found); refused == "" {
 			continue
 		}
@@ -1527,7 +1527,7 @@ func (g Guard) orchestrate(c Call) Verdict {
 		}
 	case Shell:
 		r := g.orchestration()
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, needs := g.refuse(words, r); why != "" {
 				call := strings.Join(words, " ")
 				return refusedOrchestrator(call, fmt.Sprintf("run %q", call), why, needs)
@@ -1579,7 +1579,7 @@ func (g Guard) plan(c Call) string {
 		}
 		return fmt.Sprintf("the planner cannot call %s: %s", c.Tool, planner)
 	case Shell:
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, _ := g.refuse(words, planning); why != "" {
 				return fmt.Sprintf("the planner cannot run %q: %s; %s", strings.Join(words, " "), why, planner)
 			}
@@ -1611,7 +1611,7 @@ func (g Guard) analyze(c Call) string {
 		}
 		return fmt.Sprintf("the analyzer cannot call %s: %s", c.Tool, analyzer)
 	case Shell:
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, _ := g.refuse(words, analyzing); why != "" {
 				return fmt.Sprintf("the analyzer cannot run %q: %s; %s", strings.Join(words, " "), why, analyzer)
 			}
@@ -1633,7 +1633,7 @@ func (g Guard) curate(c Call) string {
 		}
 		return fmt.Sprintf("the curator cannot call %s: %s", c.Tool, curator)
 	case Shell:
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, _ := g.refuse(words, curating); why != "" {
 				return fmt.Sprintf("the curator cannot run %q: %s; %s", strings.Join(words, " "), why, curator)
 			}
@@ -1735,7 +1735,7 @@ func (g Guard) refuse(words []string, r rules) (why, needs string) {
 
 // script checks each simple command of a script a shell is given against r.
 func (g Guard) script(text string, r rules) (why, needs string) {
-	for _, c := range commands(text) {
+	for _, c := range arguments(text) {
 		if why, needs := g.refuse(c, r); why != "" {
 			return why, needs
 		}
@@ -1806,6 +1806,20 @@ func commands(line string) [][]string {
 	var out [][]string
 	for _, c := range parse(line) {
 		out = append(out, c.words)
+	}
+	return out
+}
+
+// arguments splits a shell command line into simple commands as commands
+// does, each as its arguments: its words without its redirections and their
+// targets, so that a redirection such as 2>&1 or 2>/dev/null, wherever it
+// stands, neither allows nor refuses a command a check judges (I-0230).
+func arguments(line string) [][]string {
+	var out [][]string
+	for _, c := range parse(line) {
+		if len(c.args) > 0 {
+			out = append(out, c.args)
+		}
 	}
 	return out
 }

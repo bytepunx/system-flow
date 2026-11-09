@@ -437,3 +437,75 @@ func TestTheOrchestratorEditsSubprojectsByItsPermission(t *testing.T) {
 		}
 	}
 }
+
+// I-0230, S-0613: a redirection neither allows nor refuses the orchestrator's
+// command line. The reads and the ordering by a policy that I-0230 found
+// refused pass under flai's baseline role file with a redirection as they do
+// without one, and its rules in Go judge each alike with one and without;
+// flai serve status, which no rule counts among its reads, is refused alike
+// with one and without. A call refused without a redirection is refused
+// alike with one, wherever it stands, so that a redirection before the
+// subcommand is not read as the command.
+func TestARedirectionNeitherAllowsNorRefusesTheOrchestratorsCommand(t *testing.T) {
+	served := func(gr Guard) Guard {
+		gr.Commands = append(slices.Clone(gr.Commands), "queue", "serve")
+		return gr
+	}
+	guards := func(p manifest.Permissions) map[string]Guard {
+		return map[string]Guard{"its rules in Go": served(orchestrator(p)), "its baseline file": served(orchestrating(p, nil))}
+	}
+	for _, c := range []struct {
+		without, with string
+		refused       bool // refused without a redirection too
+	}{
+		{"flai order --by throughput --apply", "flai order --by throughput --apply 2>&1", false},
+		{"flai order --by throughput --apply --json | jq .", "flai order --by throughput --apply --json 2>&1 | jq .", false},
+		{"cd /home/alex/git/system-flow && flai order --by throughput --apply", "cd /home/alex/git/system-flow && flai order --by throughput --apply 2>&1", false},
+		{"flai order --by throughput --apply", "flai order --by throughput --apply 2> /dev/null", false},
+		{"flai board --json", "flai board --json 2>/dev/null", false},
+		{"flai board --json", "flai board 2>/dev/null --json", false},
+		{"flai board --json", "flai 2>/dev/null board --json", false},
+		{"flai queue --json", "flai queue --json 2>/dev/null", false},
+		{"flai serve status", "flai serve status 2>&1", true},
+	} {
+		for name, gr := range guards(allOn) {
+			want, got := gr.Decide(bash("", c.without)), gr.Decide(bash("", c.with))
+			if name == "its baseline file" && (want.Why != "") != c.refused {
+				t.Fatalf("%s: %q without a redirection: %+v", name, c.without, want)
+			}
+			if got.Why != want.Why {
+				t.Errorf("%s: %q: %q, want it judged as %q is: %q", name, c.with, got.Why, c.without, want.Why)
+			}
+		}
+	}
+	for _, c := range []struct {
+		p       manifest.Permissions
+		without string
+		with    []string
+	}{
+		{allOn, "flai order S-0001 --top", []string{"flai order S-0001 --top 2>&1", "flai 2>&1 order S-0001 --top", "flai order 2>/dev/null S-0001 --top"}},
+		{except(manifest.PermitOrderReady), "flai order --by throughput --apply", []string{"flai order --by throughput --apply 2>&1", "flai 2>/dev/null order --by throughput --apply"}},
+		{except(manifest.PermitAcceptReviews), "flai accept S-0001 --by orchestrator", []string{"flai accept S-0001 --by orchestrator 2>&1", "flai 2>&1 accept S-0001 --by orchestrator", "flai >/dev/null 2>&1 accept S-0001 --by orchestrator"}},
+		{except(manifest.PermitPromoteToReady), "flai move S-0001 ready", []string{"flai 2>/dev/null move S-0001 ready", "cd /w && flai move S-0001 ready >/dev/null 2>&1"}},
+	} {
+		for name, gr := range guards(c.p) {
+			want := gr.Decide(bash("", c.without))
+			if want.Why == "" {
+				t.Fatalf("%s: %q passes without a redirection", name, c.without)
+			}
+			for _, line := range c.with {
+				if r := gr.Decide(bash("", line)); r.Why != want.Why || r.Needs != want.Needs || r.Call != want.Call {
+					t.Errorf("%s: %q: %+v, want it refused as %q is: %+v", name, line, r, c.without, want)
+				}
+			}
+		}
+	}
+	// a shell's script is judged as the line is, its refusal naming the
+	// shell's command line
+	for name, gr := range guards(except(manifest.PermitPromoteToReady)) {
+		line := "bash -c 'flai 2>&1 move S-0001 ready'"
+		if r := gr.Decide(bash("", line)); !strings.Contains(r.Why, "it needs orchestration.permissions.promote_to_ready, which is off") || r.Needs != "orchestration.permissions."+manifest.PermitPromoteToReady {
+			t.Errorf("%s: %q: %+v", name, line, r)
+		}
+	}
+}

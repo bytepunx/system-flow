@@ -99,6 +99,11 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 		func(w string) string { return "FLAI_CONFIG=x env flai " + w },
 		func(w string) string { return "bash -c 'flai " + w + "'" },
 		func(w string) string { return "flai serve status; flai " + w },
+		// I-0230, S-0613: a redirection, wherever it stands, is no word of
+		// the command, so one before the subcommand is not read as it
+		func(w string) string { return "flai " + w + " 2>&1" },
+		func(w string) string { return "flai 2>/dev/null " + w },
+		func(w string) string { return "scripts/flai.sh >/dev/null 2>&1 " + w },
 	}
 	reads := []string{
 		"flai serve status",

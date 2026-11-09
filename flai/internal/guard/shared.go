@@ -65,7 +65,7 @@ func (g Guard) shared(c Call) Verdict {
 	case c.Kind == FlaiTool && c.Tool == SharedPathsEdit:
 		call, what = SharedPathsEdit, "call "+SharedPathsEdit
 	case c.Kind == Shell:
-		for _, words := range commands(c.Command) {
+		for _, words := range arguments(c.Command) {
 			if why, _ := g.refuse(words, sharing); why != "" {
 				call = strings.Join(words, " ")
 				what = fmt.Sprintf("run %q", call)
