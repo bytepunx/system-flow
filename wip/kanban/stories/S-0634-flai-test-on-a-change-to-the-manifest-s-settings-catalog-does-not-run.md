@@ -3,10 +3,10 @@ id: S-0634
 type: story
 nature: improvement
 title: flai test on a change to the manifest's settings catalog does not run TestReferenceIsCurrent, so a stale flai-reference.md first fails in the close-out's integration tier
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:41:12Z
-updated: 2026-11-09T22:11:55Z
+updated: 2026-11-09T22:49:38Z
 transitions:
   - to: ready
     at: 2026-11-09T22:01:06Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T22:01:11Z
     by: agent-S-0634
+  - to: review
+    at: 2026-11-09T22:49:32Z
+    by: agent-S-0634
 tags: []
 topics: [testing, flai, docs]
-touches: [flai/cmd/reference_test.go, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md]
+touches: [flai/cmd/reference_test.go, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 693
-  estimated: true
-  priced_by: estimate
+  seconds: 2918
+  priced_by: harness
   turns:
     - day: 2026-11-09
+      ceremony: 2
       hand_edits: 1
-      work: 22
+      work: 90
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 434
-      cache_read: 4473074
-      cache_write: 254033
-      cost: 1.7284
+      input: 192
+      output: 20176
+      cache_read: 25806607
+      cache_write: 303629
+      cost: 7.9946
   strategic:
     - kind: planner
       seconds: 292
@@ -80,8 +83,8 @@ finalized:
 This story remediates [I-0308](../../../design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md), "flai test on a change to the manifest's settings catalog does not run TestReferenceIsCurrent, so a stale flai-reference.md first fails in the close-out's integration tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0308 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0308 is closed with `flai issue close I-0308 --reason` saying what fixed it
+- [x] The cause I-0308 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0308 is closed with `flai issue close I-0308 --reason` saying what fixed it
 
 ## Tasks
 - T-2773 Run TestReferenceIsCurrent and TestFlagIndexIsCurrent under -short

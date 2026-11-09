@@ -24,16 +24,16 @@ touches: [system-flow.yaml, flai/internal/verify/select_test.go]
 after: [T-2773]
 usage:
   source: log
-  seconds: 28
+  seconds: 598
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 44
-      cache_read: 1064835
-      cache_write: 4675
-      cost: 0.391
+      input: 10
+      output: 1035
+      cache_read: 1324206
+      cache_write: 15580
+      cost: 0.4102
 ---
 # T-2776 Have the settings-index tier run the reference tests and select docs/users/flai-reference.md
 

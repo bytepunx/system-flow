@@ -18,7 +18,7 @@ tags: [cli, dashboard]
 topics: [server-side, back-end]
 usage:
   source: sum
-  seconds: 86567
+  seconds: 87285
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -31,20 +31,20 @@ usage:
       hand_edits: 27
       work: 939
     - day: 2026-11-09
-      ceremony: 22
+      ceremony: 24
       test_runs: 18
-      hand_edits: 22
-      work: 947
+      hand_edits: 25
+      work: 973
   models:
     - model: claude-opus-5-5
-      input: 6978
-      output: 1676590
-      cache_read: 1195031459
-      cache_write: 31066998
-      cost: 456.1274
+      input: 7104
+      output: 1711272
+      cache_read: 1211294549
+      cache_write: 31413371
+      cost: 462.7151
   strategic:
     - kind: planner
-      seconds: 1958
+      seconds: 2096
       estimated: true
       models:
         - model: claude-haiku-5-5
@@ -54,27 +54,27 @@ usage:
           cache_write: 822422
           cost: 1.048
         - model: claude-opus-5-5
-          input: 2077
-          output: 137305
-          cache_read: 177386605
-          cache_write: 2725272
-          cost: 52.2198
+          input: 2097
+          output: 138065
+          cache_read: 177930075
+          cache_write: 2782918
+          cost: 52.4276
     - kind: orchestrator
-      seconds: 4951
+      seconds: 5248
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 701
-          output: 5713
-          cache_read: 30091439
-          cache_write: 3501472
-          cost: 8.8034
+          input: 730
+          output: 6044
+          cache_read: 31561452
+          cache_write: 3552478
+          cost: 9.2088
         - model: claude-sonnet-5-5
-          input: 106
-          output: 3259
-          cache_read: 961948
-          cache_write: 520728
-          cost: 1.0935
+          input: 107
+          output: 3270
+          cache_read: 976181
+          cache_write: 528876
+          cost: 1.1101
 ---
 # E-0033 flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads
 

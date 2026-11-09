@@ -3,15 +3,36 @@ id: T-2806
 type: task
 nature: remediation
 title: End TestCancelStopsTheWaitToAskAgain's wait by an event, not a 100 ms deadline, and reproduce a slow first answer
-status: backlog
+status: done
 parent: S-0638
 owner: alex
 created: 2026-11-09T22:08:00Z
-updated: 2026-11-09T22:08:00Z
-transitions: []
+updated: 2026-11-09T23:00:14Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:51:01Z
+    by: agent-S-0638
+  - to: in-progress
+    at: 2026-11-09T22:51:01Z
+    by: agent-S-0638
+  - to: done
+    at: 2026-11-09T23:00:14Z
+    by: agent-S-0638
 stream: S-0638
 tags: [flai, testing, flaky-test]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go]
+usage:
+  source: log
+  seconds: 553
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 1440
+      cache_read: 1474357
+      cache_write: 24393
+      cost: 0.5189
 ---
 # T-2806 End TestCancelStopsTheWaitToAskAgain's wait by an event, not a 100 ms deadline, and reproduce a slow first answer
 

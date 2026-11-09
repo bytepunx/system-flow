@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, design/issues/I-0299-a-role-run-the-stdio-m
 after: [T-2769, T-2770]
 usage:
   source: log
-  seconds: 18
+  seconds: 50
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 78
-      cache_read: 625797
-      cache_write: 2930
-      cost: 0.2299
+      input: 8
+      output: 745
+      cache_read: 623442
+      cache_write: 5288
+      cost: 0.1819
 ---
 # T-2771 Describe the reaping and the zombie rule in flai-cli.md and close I-0299
 

@@ -3,16 +3,37 @@ id: T-2789
 type: task
 nature: remediation
 title: workflow.md says an automatic start waits on the hold and story_start names the touches that clear a no-touches hold, and I-0301 is closed
-status: backlog
+status: done
 parent: S-0633
 owner: alex
 created: 2026-11-09T22:01:51Z
-updated: 2026-11-09T22:01:51Z
-transitions: []
+updated: 2026-11-09T23:20:51Z
+transitions:
+  - to: ready
+    at: 2026-11-09T23:19:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T23:19:44Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T23:20:51Z
+    by: agent-S-0633
 stream: S-0633
 tags: [docs, issues]
 touches: [design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md]
 after: [T-2786, T-2787]
+usage:
+  source: log
+  seconds: 62
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 175
+      cache_read: 3333271
+      cache_write: 15455
+      cost: 1.2245
 ---
 # T-2789 workflow.md says an automatic start waits on the hold and story_start names the touches that clear a no-touches hold, and I-0301 is closed
 

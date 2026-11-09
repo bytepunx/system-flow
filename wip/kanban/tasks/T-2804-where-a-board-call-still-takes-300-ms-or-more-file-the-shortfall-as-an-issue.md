@@ -3,16 +3,37 @@ id: T-2804
 type: task
 nature: improvement
 title: Where a board call still takes 300 ms or more, file the shortfall as an issue and ask the operator on a thread how the criterion stands
-status: backlog
+status: done
 parent: S-0636
 owner: alex
 created: 2026-11-09T22:07:26Z
-updated: 2026-11-09T22:07:26Z
-transitions: []
+updated: 2026-11-09T23:10:06Z
+transitions:
+  - to: ready
+    at: 2026-11-09T23:09:29Z
+    by: agent-S-0636
+  - to: in-progress
+    at: 2026-11-09T23:09:30Z
+    by: agent-S-0636
+  - to: done
+    at: 2026-11-09T23:10:06Z
+    by: agent-S-0636
 stream: S-0636
 tags: [cli]
 touches: [design/issues/summary.md]
 after: [T-2803]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2581
+      cache_read: 1210353
+      cache_write: 25778
+      cost: 0.4903
 ---
 # T-2804 Where a board call still takes 300 ms or more, file the shortfall as an issue and ask the operator on a thread how the criterion stands
 

@@ -3,10 +3,10 @@ id: S-0622
 type: story
 nature: improvement
 title: orchestration.permissions.set_cost_of_delay is off, so a cost of delay input the operator confirmed waits a day for the operator to write it
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:39:56Z
-updated: 2026-11-09T21:54:56Z
+updated: 2026-11-09T22:59:13Z
 transitions:
   - to: ready
     at: 2026-11-09T21:53:37Z
@@ -14,18 +14,33 @@ transitions:
   - to: in-progress
     at: 2026-11-09T21:54:56Z
     by: agent-S-0622
+  - to: review
+    at: 2026-11-09T22:59:13Z
+    by: agent-S-0622
 tags: [cli]
 topics: [orchestration, planning]
-touches: [flai/internal/serve/orchestrate_confirm_test.go, flai/cmd/orchestrate_permissions_test.go, design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md]
+touches: [flai/internal/serve/orchestrate_confirm_test.go, flai/cmd/orchestrate_permissions_test.go, design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/I-0325-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3869
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 4
+      hand_edits: 2
+      work: 164
+  models:
+    - model: claude-opus-5-5
+      input: 410
+      output: 41128
+      cache_read: 57329017
+      cache_write: 1169485
+      cost: 19.1134
   strategic:
     - kind: planner
       seconds: 562
@@ -94,8 +109,8 @@ finalized:
 This story remediates [I-0284](../../../design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md), "orchestration.permissions.set_cost_of_delay is off, so a cost of delay input the operator confirmed waits a day for the operator to write it", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0284 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0284 is closed with `flai issue close I-0284 --reason` saying what fixed it
+- [x] The cause I-0284 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0284 is closed with `flai issue close I-0284 --reason` saying what fixed it
 
 ## Tasks
 - T-2763 Test that the operator's confirmation of a cost of delay recommendation on a planner's thread gives the orchestrator a thread reason

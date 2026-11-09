@@ -3,16 +3,37 @@ id: T-2808
 type: task
 nature: remediation
 title: Close I-0317 naming the event-driven cancel that fixed it
-status: backlog
+status: done
 parent: S-0638
 owner: alex
 created: 2026-11-09T22:08:12Z
-updated: 2026-11-09T22:08:12Z
-transitions: []
+updated: 2026-11-09T23:00:59Z
+transitions:
+  - to: ready
+    at: 2026-11-09T23:00:49Z
+    by: agent-S-0638
+  - to: in-progress
+    at: 2026-11-09T23:00:49Z
+    by: agent-S-0638
+  - to: done
+    at: 2026-11-09T23:00:59Z
+    by: agent-S-0638
 stream: S-0638
 tags: [issues]
 touches: [design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md, design/issues/summary.md]
 after: [T-2806]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 252
+      cache_read: 258412
+      cache_write: 4275
+      cost: 0.0909
 ---
 # T-2808 Close I-0317 naming the event-driven cancel that fixed it
 

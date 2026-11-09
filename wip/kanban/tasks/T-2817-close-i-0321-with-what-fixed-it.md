@@ -3,16 +3,37 @@ id: T-2817
 type: task
 nature: remediation
 title: Close I-0321 with what fixed it
-status: backlog
+status: done
 parent: S-0645
 owner: agent
 created: 2026-11-09T22:10:39Z
-updated: 2026-11-09T22:10:39Z
-transitions: []
+updated: 2026-11-09T22:54:56Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:54:41Z
+    by: agent-S-0645
+  - to: in-progress
+    at: 2026-11-09T22:54:41Z
+    by: agent-S-0645
+  - to: done
+    at: 2026-11-09T22:54:56Z
+    by: agent-S-0645
 stream: S-0645
 tags: [flai, testing]
 touches: [design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md]
 after: [T-2816]
+usage:
+  source: log
+  seconds: 15
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 525
+      cache_read: 528527
+      cache_write: 8533
+      cost: 0.1845
 ---
 # T-2817 Close I-0321 with what fixed it
 

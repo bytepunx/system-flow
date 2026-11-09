@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 593
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 90
-      cache_read: 1026039
-      cache_write: 22983
-      cost: 0.3835
+      input: 13
+      output: 1243
+      cache_read: 1040201
+      cache_write: 8822
+      cost: 0.3035
 ---
 # T-2769 A launcher that hands its agent over reaps it in the background instead of releasing it
 

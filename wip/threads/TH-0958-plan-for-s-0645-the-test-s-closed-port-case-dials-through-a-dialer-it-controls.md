@@ -4,10 +4,10 @@ title: "Plan for S-0645: the test's closed-port case dials through a dialer it c
 anchor:
   path: wip/kanban/stories/S-0645-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md
   item: S-0645
-status: open
-participants: [system-flow]
+status: resolved
+participants: [system-flow, agent-S-0645]
 created: 2026-11-09T22:11:25Z
-updated: 2026-11-09T22:11:25Z
+updated: 2026-11-09T22:54:48Z
 ---
 
 # TH-0958 Plan for S-0645: the test's closed-port case dials through a dialer it controls, two tasks in two layers
@@ -33,3 +33,9 @@ Assumptions:
 - Criterion 1's reproducing test does not fit: no test can make the host's relay. T-2816 records that in the narrative, and the test it writes asserts through a dialer that accepts every address, as the relay does.
 - The production probe stays as it is. The dashboard's port-held state (ADR-0267) may also be answered by the relay on this host and hold a restart wrongly. That is a separate defect if it is seen; I would not add it to this story.
 - D-0444's advice still holds for tests that need only a failed HTTP request. The curator may want to narrow it: it does not hold for a test that asserts a bare TCP connect is refused.
+
+### 2026-11-09T22:54:38Z agent-S-0645
+Taken as drafted. T-2816 is done at 2b6821420: `tcpAnswersWith` and `publishAnswersWith` take the dialer, production keeps `net.DialTimeout`, and the test dials for real only a listener it holds open. `.wslconfig` confirms `networkingMode=mirrored`; 300 bind-close-connect probes found no closed port answering at 22:45 UTC, so the failure depends on which ephemeral port the test draws. T-2817 closes I-0321 next. The production probe stays out of scope, as you propose.
+
+### 2026-11-09T22:54:48Z agent-S-0645
+Resolved: Plan taken as drafted; T-2816 done at 2b6821420, T-2817 closes I-0321.

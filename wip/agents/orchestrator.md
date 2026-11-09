@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2065.0113
-accrued_seconds: 1533876
-tasks_completed: 2546
-last_run: 2026-11-09T22:18:10Z
+accrued_cost: 2067.5795
+accrued_seconds: 1535331
+tasks_completed: 2569
+last_run: 2026-11-09T23:20:07Z
 ---
 
 # Orchestrator activity
@@ -17852,6 +17852,167 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0631
 - Seconds: 88
 - Cost: 0.0495 USD, estimated
+
+### 2026-11-09T22:23:16Z
+
+- Summary: Settled planner threads under plan_backlog_stories: approved and resolved TH-0953 (S-0638), TH-0955 (S-0640), TH-0956 (S-0644); set S-0636's first input penalty_per_week 20 (planner's figure) and resolved TH-0954; recommended on TH-0952 (S-0631 plan fits; test-file split as a later story is the operator's scope call). Left TH-0957/TH-0958 alone: their entries are by system-flow, not a planner or story agent.
+- Items: S-0638, S-0640, S-0644, S-0636, S-0631
+- Seconds: 306
+- Cost: 0.9337 USD, estimated
+
+### 2026-11-09T22:24:01Z
+
+- Summary: finalize_drafts: finalized S-0645, S-0644, S-0638, S-0640 (complete in flai promote --drafts; plans fit). Held S-0637, opened TH-0960: its remedy awaits the operator on TH-0957. S-0636 incomplete (no value yet), S-0643 planner still running. Started planner for S-0636 (flai plan --candidates: no cost of delay value). E-0033 not replanned: alex's entry on TH-0916 is a confirmation.
+- Items: S-0645, S-0644, S-0638, S-0640, S-0637, S-0636
+- Seconds: 45
+- Cost: 0.0000 USD
+
+### 2026-11-09T22:24:37Z
+
+- Summary: promote_to_ready: moved S-0645 (rank 1, 20m), S-0644 (2, 25m), S-0638 (3, 30m), S-0640 (4, 45m) to ready under throughput; skipped S-0241 (rank 5) while TH-0790 awaits the operator. order_ready: flai order --by throughput --apply after the promotions and after S-0646 joined ready.
+- Items: S-0645, S-0644, S-0638, S-0640, S-0241
+- Seconds: 36
+- Cost: 0.0000 USD
+
+### 2026-11-09T22:25:23Z
+
+- Summary: accept_reviews: accepted S-0616 at 377709c9aeb8 (close-out passed there, verifier matched both criteria, dry run clean). publish: release_evaluate met under threshold (count 1 at threshold 1, 25 USD/week, no held_by_epic); ran flai formula run publish --ready --autocommit, instance S-0646 (commit c4d71e373).
+- Items: S-0616, S-0646
+- Seconds: 46
+- Cost: 0.0000 USD
+
+### 2026-11-09T22:26:06Z
+
+- Summary: I've handled all the reasons this run was started for. S-0616 is accepted, and a publish run (S-0646) has started for it.
+- Items: none
+- Seconds: 43
+- Cost: 0.2270 USD, estimated
+
+### 2026-11-09T22:29:08Z
+
+- Summary: Answered TH-0959, citing design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md § Decision
+- Items: S-0643
+- Seconds: 81
+- Cost: 0.1870 USD, estimated
+
+### 2026-11-09T22:30:09Z
+
+- Summary: Approved planner-S-0643's plan on TH-0959 (--require-pending with the publish step's stop: [2], per ADR-0271; 4 tasks in 3 layers, 1h, 12.50 USD/week) and resolved it under plan_backlog_stories
+- Items: S-0643
+- Seconds: 61
+- Cost: 0.0885 USD, estimated
+
+### 2026-11-09T22:31:23Z
+
+- Summary: Finalized drafts S-0636 (complete per flai promote --drafts, rank 1 by throughput, 30m, 20 USD/week, after S-0602/S-0606 both done) and S-0643 (complete, rank 2, 1h, 12.50 USD/week) under finalize_drafts; S-0637 left a draft pending TH-0957
+- Items: S-0636, S-0643
+- Seconds: 74
+- Cost: 0.0000 USD
+
+### 2026-11-09T22:33:35Z
+
+- Summary: promote_to_ready: moved S-0636 to ready (rank 1 of flai promote --candidates by throughput, 30m), filling ready to 10/10; S-0643 (rank 2) and S-0241 (rank 3, skipped while TH-0790 awaits the operator) wait for room. order_ready: flai order --by throughput --apply; S-0636 now 4th, S-0646 last (no forecast duration)
+- Items: S-0636
+- Seconds: 132
+- Cost: 0.1239 USD, estimated
+
+### 2026-11-09T22:35:26Z
+
+- Summary: Release-due S-0616: started no second publish instance. release_evaluate is met under threshold (count 1 at threshold 1; 25 of 1000 USD/week; pending S-0616; no held_by_epic). Instance S-0646, made for S-0616's acceptance at 2026-11-09T22:22:55Z and now in ready, publishes it. A second instance would race S-0646, the race S-0643 fixes.
+- Items: S-0616, S-0646
+- Seconds: 111
+- Cost: 0.0000 USD
+
+### 2026-11-09T22:36:28Z
+
+- Summary: I acted on all six reasons, and nothing is left for you to do on them.
+- Items: none
+- Seconds: 62
+- Cost: 0.0907 USD, estimated
+
+### 2026-11-09T22:38:27Z
+
+- Summary: Reason ready (pull order changed): applied flai order --by throughput; the ready column already stood in policy order (S-0645 20m first ... S-0631 3h, S-0646 last with no forecast duration), nothing moved. No promotion: ready is full at 10/10.
+- Items: S-0645, S-0644, S-0638, S-0636, S-0640, S-0625, S-0630, S-0628, S-0631, S-0646
+- Seconds: 52
+- Cost: 0.0886 USD, estimated
+
+### 2026-11-09T22:39:33Z
+
+- Summary: The ready column is in throughput order, and I'm done with this run's only reason (the pull order changed).
+- Items: none
+- Seconds: 66
+- Cost: 0.0714 USD, estimated
+
+### 2026-11-09T22:55:52Z
+
+- Summary: TH-0958 (S-0645 plan): no action; the story's agent took the plan as drafted and resolved the thread at 22:54:48Z, so nothing awaits the operator or the orchestrator.
+- Items: S-0645
+- Seconds: 25
+- Cost: 0.0687 USD, estimated
+
+### 2026-11-09T22:56:58Z
+
+- Summary: I took no action on TH-0958 because the thread is already resolved and nothing awaits the operator or me.
+- Items: none
+- Seconds: 66
+- Cost: 0.0660 USD, estimated
+
+### 2026-11-09T23:12:01Z
+
+- Summary: Recommended an answer on TH-0961, citing design/digest/D-0535-s-0604-criterion-4-12-of-13-boards-answer-under-300-ms-this-repository-s-still.md
+- Items: S-0636
+- Seconds: 62
+- Cost: 0.0855 USD, estimated
+
+### 2026-11-09T23:12:38Z
+
+- Summary: TH-0961 (S-0636 criterion 1, 300 ms board target): recommended (answer_threads autonomous, change of scope so escalated) rewording criterion 1 to the measured fall and leaving the absolute target to I-0326, per D-0535; flagged that I-0326 on story/S-0636 reuses an ID S-0622 used and folded into I-0323 on main.
+- Items: TH-0961, S-0636
+- Seconds: 37
+- Cost: 0.0170 USD, estimated
+
+### 2026-11-09T23:13:07Z
+
+- Summary: I posted a recommendation on TH-0961 for S-0636. Nothing is decided until you confirm it or answer otherwise.
+- Items: none
+- Seconds: 29
+- Cost: 0.0688 USD, estimated
+
+### 2026-11-09T23:17:44Z
+
+- Summary: Answered TH-0962, citing design/digest/D-0462-s-0518-s-close-out-stops-at-integration-on-main-s-own-failure-i-0250-how-should.md
+- Items: S-0638
+- Seconds: 25
+- Cost: 0.0629 USD, estimated
+
+### 2026-11-09T23:18:10Z
+
+- Summary: Answered TH-0962 on S-0638 under answer_threads autonomous: option 1, hold S-0638 in progress until S-0645 (the I-0321 fix) is accepted, then sync and close out again; settled by D-0462 (TH-0804), the operator's earlier answer for S-0518.
+- Items: S-0638, S-0645, TH-0962
+- Seconds: 26
+- Cost: 0.0000 USD
+
+### 2026-11-09T23:18:38Z
+
+- Summary: I answered TH-0962 with option 1: S-0638 stays in progress until S-0645 is accepted. Then its agent syncs and asks for the close-out again.
+- Items: none
+- Seconds: 28
+- Cost: 0.2146 USD, estimated
+
+### 2026-11-09T23:19:36Z
+
+- Summary: TH-0962 needed nothing more. My answer, option 1 per D-0462 (S-0638 waits in progress for S-0645's acceptance, then syncs and closes out), was taken by agent-S-0638, which then resolved the thread.
+- Items: S-0638
+- Seconds: 11
+- Cost: 0.0529 USD, estimated
+
+### 2026-11-09T23:20:07Z
+
+- Summary: Thread TH-0962 is settled, so this run had nothing left to do and is ending.
+- Items: none
+- Seconds: 31
+- Cost: 0.1210 USD, estimated
 
 ## Refusals
 

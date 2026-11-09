@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 560
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 59
-      cache_read: 771354
-      cache_write: 7549
-      cost: 0.2848
+      input: 10
+      output: 923
+      cache_read: 772351
+      cache_write: 6550
+      cost: 0.2254
 ---
 # T-2770 Owns and Alive count a zombie process as gone on Linux
 

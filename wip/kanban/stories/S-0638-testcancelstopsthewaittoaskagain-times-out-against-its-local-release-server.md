@@ -3,37 +3,63 @@ id: S-0638
 type: story
 nature: remediation
 title: TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-09T09:08:54Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T23:17:45Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:00Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T22:49:43Z
+    by: agent-S-0638
+blocked:
+  - from: 2026-11-09T23:17:04Z
+    until: 2026-11-09T23:17:45Z
+    reason: awaiting the operator on TH-0962
 tags: [flai, testing, flaky-test]
 topics: [testing]
-touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md, design/issues/summary.md]
+touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md, design/issues/summary.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1643
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 1
+      work: 62
+  models:
+    - model: claude-opus-5-5
+      input: 136
+      output: 16017
+      cache_read: 16402037
+      cache_write: 271370
+      cost: 5.7723
   strategic:
     - kind: orchestrator
-      seconds: 113
+      seconds: 216
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 138
-          cache_read: 1295331
-          cache_write: 148174
-          cost: 0.3844
+          input: 46
+          output: 342
+          cache_read: 2311489
+          cache_write: 238055
+          cost: 0.6792
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 12
+          cache_read: 14233
+          cache_write: 8148
+          cost: 0.0166
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -59,8 +85,8 @@ finalized:
 This story remediates [I-0317](../../../design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md), "TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0317 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0317 is closed with `flai issue close I-0317 --reason` saying what fixed it
+- [x] The cause I-0317 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0317 is closed with `flai issue close I-0317 --reason` saying what fixed it
 
 ## Tasks
 - T-2806 End TestCancelStopsTheWaitToAskAgain's wait by an event, not a 100 ms deadline, and reproduce a slow first answer

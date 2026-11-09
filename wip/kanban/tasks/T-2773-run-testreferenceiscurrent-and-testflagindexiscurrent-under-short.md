@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 517
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 166
-      cache_read: 1717442
-      cache_write: 8494
-      cost: 0.6311
+      input: 13
+      output: 1334
+      cache_read: 1705869
+      cache_write: 20070
+      cost: 0.5285
 ---
 # T-2773 Run TestReferenceIsCurrent and TestFlagIndexIsCurrent under -short
 

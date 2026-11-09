@@ -22,9 +22,17 @@ stream: S-0622
 tags: [cli]
 touches: [flai/internal/serve/orchestrate_confirm_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 846
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 2892
+      cache_read: 4030948
+      cache_write: 82229
+      cost: 1.3439
   strategic:
     - kind: orchestrator
       seconds: 3

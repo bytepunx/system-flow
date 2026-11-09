@@ -22,9 +22,17 @@ stream: S-0622
 tags: [cli]
 touches: [flai/cmd/orchestrate_permissions_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 876
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 2943
+      cache_read: 4101833
+      cache_write: 83675
+      cost: 1.3675
   strategic:
     - kind: orchestrator
       seconds: 3

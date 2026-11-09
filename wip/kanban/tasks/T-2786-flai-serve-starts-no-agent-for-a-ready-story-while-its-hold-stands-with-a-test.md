@@ -3,11 +3,11 @@ id: T-2786
 type: task
 nature: remediation
 title: flai serve starts no agent for a ready story while its hold stands, with a test that reproduces I-0301
-status: in-progress
+status: done
 parent: S-0633
 owner: alex
 created: 2026-11-09T22:01:24Z
-updated: 2026-11-09T22:21:09Z
+updated: 2026-11-09T23:13:57Z
 transitions:
   - to: ready
     at: 2026-11-09T22:21:08Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T22:21:09Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T23:13:57Z
+    by: agent-S-0633
 stream: S-0633
 tags: [flai, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/workitem/itemlock.go]
+usage:
+  source: log
+  seconds: 3168
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 617
+      cache_read: 10941564
+      cache_write: 1759480
+      cost: 4.6441
 ---
 # T-2786 flai serve starts no agent for a ready story while its hold stands, with a test that reproduces I-0301
 

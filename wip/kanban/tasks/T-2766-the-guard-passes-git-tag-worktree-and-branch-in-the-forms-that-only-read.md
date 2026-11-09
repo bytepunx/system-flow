@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 717
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 46
-      output: 367
-      cache_read: 5393030
-      cache_write: 288938
-      cost: 2.0773
+      output: 7645
+      cache_read: 5593256
+      cache_write: 167801
+      cost: 2.3706
 ---
 # T-2766 The guard passes git tag, worktree, and branch in the forms that only read
 

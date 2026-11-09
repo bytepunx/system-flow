@@ -3,16 +3,19 @@ id: S-0623
 type: story
 nature: improvement
 title: flai guard refuses the orchestrator git tag --list and git worktree list, which only read
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:02Z
-updated: 2026-11-09T22:21:12Z
+updated: 2026-11-09T22:48:12Z
 transitions:
   - to: ready
     at: 2026-11-09T21:56:39Z
     by: alex
   - to: in-progress
     at: 2026-11-09T21:56:48Z
+    by: agent-S-0623
+  - to: review
+    at: 2026-11-09T22:48:12Z
     by: agent-S-0623
 tags: []
 topics: [guard]
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 853
-  estimated: true
-  priced_by: estimate
+  seconds: 3096
+  priced_by: harness
   turns:
     - day: 2026-11-09
+      ceremony: 1
       hand_edits: 1
-      work: 17
+      work: 55
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 502
-      cache_read: 7059834
-      cache_write: 531669
-      cost: 2.7755
+      input: 156
+      output: 26191
+      cache_read: 19160941
+      cache_write: 574841
+      cost: 8.121
   strategic:
     - kind: orchestrator
       seconds: 64
@@ -91,7 +94,7 @@ This story remediates [I-0289](../../../design/issues/I-0289-flai-guard-refuses-
 
 ## Acceptance criteria
 - [x] The cause I-0289 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0289 is closed with `flai issue close I-0289 --reason` saying what fixed it
+- [x] I-0289 is closed with `flai issue close I-0289 --reason` saying what fixed it
 
 ## Tasks
 - T-2766 The guard passes git tag, worktree, and branch in the forms that only read

@@ -3,15 +3,36 @@ id: T-2809
 type: task
 nature: improvement
 title: Add a design-routes tier that runs design-routes.test.ts when the dashboard design or a route changes
-status: backlog
+status: done
 parent: S-0644
 owner: alex
 created: 2026-11-09T22:08:30Z
-updated: 2026-11-09T22:08:30Z
-transitions: []
+updated: 2026-11-09T23:09:32Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:49:55Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T22:49:55Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T22:50:27Z
+    by: agent-S-0644
 stream: S-0644
 tags: [flaiover, testing]
-touches: [system-flow.yaml, flai/internal/verify/select_test.go]
+touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/summary.md]
+usage:
+  source: log
+  seconds: 32
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 763
+      cache_read: 514775
+      cache_write: 5650
+      cost: 0.1635
 ---
 # T-2809 Add a design-routes tier that runs design-routes.test.ts when the dashboard design or a route changes
 

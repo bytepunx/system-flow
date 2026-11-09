@@ -3,15 +3,36 @@ id: T-2816
 type: task
 nature: remediation
 title: Make TestTCPAnswersAListenerAndNotAClosedOne's closed-port case independent of what answers on the host's loopback
-status: backlog
+status: done
 parent: S-0645
 owner: agent
 created: 2026-11-09T22:10:29Z
-updated: 2026-11-09T22:10:29Z
-transitions: []
+updated: 2026-11-09T22:54:14Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:42:55Z
+    by: agent-S-0645
+  - to: in-progress
+    at: 2026-11-09T22:42:56Z
+    by: agent-S-0645
+  - to: done
+    at: 2026-11-09T22:54:14Z
+    by: agent-S-0645
 stream: S-0645
 tags: [flai, testing]
 touches: [flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go]
+usage:
+  source: log
+  seconds: 678
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 2445
+      cache_read: 2463061
+      cache_write: 39768
+      cost: 0.8597
 ---
 # T-2816 Make TestTCPAnswersAListenerAndNotAClosedOne's closed-port case independent of what answers on the host's loopback
 

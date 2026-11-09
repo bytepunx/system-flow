@@ -23,9 +23,17 @@ tags: [cli]
 touches: [design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md]
 after: [T-2763, T-2764]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 18
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 393
+      cache_read: 548106
+      cache_write: 11181
+      cost: 0.1827
   strategic:
     - kind: orchestrator
       seconds: 3

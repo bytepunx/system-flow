@@ -3,15 +3,36 @@ id: T-2803
 type: task
 nature: improvement
 title: Measure 13 board.get calls at once before and after S-0602 and S-0606 on the operator's host, and record them under a new section of server-performance.md
-status: backlog
+status: done
 parent: S-0636
 owner: alex
 created: 2026-11-09T22:07:12Z
-updated: 2026-11-09T22:07:21Z
-transitions: []
+updated: 2026-11-09T23:08:43Z
+transitions:
+  - to: ready
+    at: 2026-11-09T23:00:38Z
+    by: agent-S-0636
+  - to: in-progress
+    at: 2026-11-09T23:00:39Z
+    by: agent-S-0636
+  - to: done
+    at: 2026-11-09T23:08:43Z
+    by: agent-S-0636
 stream: S-0636
 tags: [cli]
 touches: [design/system/server-performance.md]
+usage:
+  source: log
+  seconds: 484
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 22335
+      cache_read: 10473357
+      cache_write: 223063
+      cost: 4.2425
 ---
 # T-2803 Measure 13 board.get calls at once before and after S-0602 and S-0606 on the operator's host, and record them under a new section of server-performance.md
 

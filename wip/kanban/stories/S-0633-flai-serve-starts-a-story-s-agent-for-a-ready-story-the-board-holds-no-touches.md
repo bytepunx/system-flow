@@ -6,7 +6,7 @@ title: flai serve starts a story's agent for a ready story the board holds no-to
 status: in-progress
 owner: alex
 created: 2026-11-07T23:41:06Z
-updated: 2026-11-09T22:12:26Z
+updated: 2026-11-09T23:21:01Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:17Z
@@ -15,16 +15,29 @@ transitions:
     at: 2026-11-09T22:12:26Z
     by: agent-S-0633
 tags: [flai, serve]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/workitem/itemlock.go, design/adrs/0272-a-checked-creation-holds-a-checked-write-lock-from-its-write-until-it-keeps-or.md, design/adrs/README.md, design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4102
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      hand_edits: 2
+      work: 70
+  models:
+    - model: claude-opus-5-5
+      input: 248
+      output: 1747
+      cache_read: 33756538
+      cache_write: 2144377
+      cost: 13.1272
   strategic:
     - kind: orchestrator
       seconds: 119
@@ -61,8 +74,8 @@ finalized:
 This story remediates [I-0301](../../../design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md), "flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0301 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0301 is closed with `flai issue close I-0301 --reason` saying what fixed it
+- [x] The cause I-0301 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0301 is closed with `flai issue close I-0301 --reason` saying what fixed it
 
 ## Tasks
 - T-2786 flai serve starts no agent for a ready story while its hold stands, with a test that reproduces I-0301

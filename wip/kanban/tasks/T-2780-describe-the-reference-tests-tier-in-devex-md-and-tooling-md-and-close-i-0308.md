@@ -3,16 +3,37 @@ id: T-2780
 type: task
 nature: improvement
 title: Describe the reference tests' tier in devex.md and tooling.md and close I-0308
-status: backlog
+status: done
 parent: S-0634
 owner: alex
 created: 2026-11-09T21:58:38Z
-updated: 2026-11-09T21:58:38Z
-transitions: []
+updated: 2026-11-09T22:23:27Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:22:48Z
+    by: agent-S-0634
+  - to: in-progress
+    at: 2026-11-09T22:22:49Z
+    by: agent-S-0634
+  - to: done
+    at: 2026-11-09T22:23:27Z
+    by: agent-S-0634
 stream: S-0634
 tags: [docs, testing]
 touches: [design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md]
 after: [T-2776]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 882
+      cache_read: 1128195
+      cache_write: 13274
+      cost: 0.3495
 ---
 # T-2780 Describe the reference tests' tier in devex.md and tooling.md and close I-0308
 

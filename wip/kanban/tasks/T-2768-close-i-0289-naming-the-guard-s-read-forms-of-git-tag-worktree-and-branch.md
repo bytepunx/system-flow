@@ -3,11 +3,11 @@ id: T-2768
 type: task
 nature: remediation
 title: Close I-0289 naming the guard's read forms of git tag, worktree, and branch
-status: in-progress
+status: done
 parent: S-0623
 owner: alex
 created: 2026-11-09T21:56:08Z
-updated: 2026-11-09T22:21:22Z
+updated: 2026-11-09T22:24:05Z
 transitions:
   - to: ready
     at: 2026-11-09T22:21:21Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T22:21:22Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T22:24:05Z
+    by: agent-S-0623
 stream: S-0623
 tags: [issues]
 touches: [design/issues/I-0289-flai-guard-refuses-the-orchestrator-git-tag-list-and-git-worktree-list-which.md, design/issues/summary.md]
 after: [T-2766]
+usage:
+  source: log
+  seconds: 163
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 1885
+      cache_read: 1379202
+      cache_write: 41377
+      cost: 0.5845
 ---
 # T-2768 Close I-0289 naming the guard's read forms of git tag, worktree, and branch
 

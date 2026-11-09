@@ -3,26 +3,44 @@ id: S-0645
 type: story
 nature: remediation
 title: TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
-status: ready
+status: review
 owner: alex
 created: 2026-11-09T21:50:55Z
-updated: 2026-11-09T22:33:17Z
+updated: 2026-11-09T23:04:38Z
 transitions:
   - to: ready
     at: 2026-11-09T22:19:58Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T22:39:37Z
+    by: agent-S-0645
+  - to: review
+    at: 2026-11-09T23:04:38Z
+    by: agent-S-0645
 tags: [flai, testing]
 topics: [testing, go]
-touches: [flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md]
+touches: [flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1513
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 5
+      hand_edits: 2
+      work: 60
+  models:
+    - model: claude-opus-5-5
+      input: 142
+      output: 16940
+      cache_read: 17064577
+      cache_write: 275518
+      cost: 5.9564
   strategic:
     - kind: planner
       seconds: 327
@@ -40,6 +58,16 @@ usage:
           cache_read: 20281318
           cache_write: 1006042
           cost: 8.1255
+    - kind: orchestrator
+      seconds: 31
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 12
+          output: 86
+          cache_read: 253173
+          cache_write: 37592
+          cost: 0.0776
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -65,8 +93,8 @@ finalized:
 This story remediates [I-0321](../../../design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md), "TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0321 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0321 is closed with `flai issue close I-0321 --reason` saying what fixed it
+- [x] The cause I-0321 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0321 is closed with `flai issue close I-0321 --reason` saying what fixed it
 
 ## Tasks
 - T-2816 Make TestTCPAnswersAListenerAndNotAClosedOne's closed-port case independent of what answers on the host's loopback
@@ -75,6 +103,8 @@ This story remediates [I-0321](../../../design/issues/I-0321-testtcpanswersalist
 ## Notes
 
 Cost of delay inputs set by flai from I-0321. time_lost_per_cycle 12m: 6m per occurrence × 2 occurrences ÷ 1 cycle of 168h (first reported 2026-11-09T17:13:14Z, 0.2 days before this story; under one cycle counts as one).
+
+Criterion 1: no test can make the host's mirrored relay answer a closed port, so no test reproduces I-0321 itself. `TestTCPAnswersWhateverAcceptsThePort` stands in for it with a dialer that accepts every address, and `TestTCPAnswersNotARefusedPort` asserts the closed case through a dialer that refuses (T-2816).
 
 ### Planning
 
