@@ -7,7 +7,7 @@ count: 2
 cost: 6m
 first_reported: 2026-11-09T17:13:14Z
 last_reported: 2026-11-09T17:17:17Z
-updated: 2026-11-09T17:17:17Z
+updated: 2026-11-09T21:50:55Z
 ---
 
 # I-0321 TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
@@ -26,3 +26,5 @@ Story: S-0611.
 Correction to the first instance: it is intermittent, not constant. About ten minutes later, at about 17:25 UTC, S-0611's `flai test` ran `./cmd` again in the same worktree and TestTCPAnswersAListenerAndNotAClosedOne passed. So on this host a closed loopback port answers only some of the time, which is consistent with a relay that is sometimes listening.
 
 ## Remediation
+
+Story S-0645 remediates this issue, created from it at 2026-11-09T21:50:55Z.
