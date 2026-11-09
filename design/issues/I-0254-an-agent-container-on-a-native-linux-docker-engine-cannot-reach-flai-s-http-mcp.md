@@ -2,12 +2,12 @@
 id: I-0254
 title: An agent container on a native Linux Docker engine cannot reach flai's HTTP MCP server on its default 127.0.0.1 bind through host.docker.internal
 class: impression
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-11-02T07:30:21Z
 last_reported: 2026-11-02T07:30:21Z
-updated: 2026-11-07T23:39:38Z
+updated: 2026-11-09T17:21:21Z
 ---
 
 # I-0254 An agent container on a native Linux Docker engine cannot reach flai's HTTP MCP server on its default 127.0.0.1 bind through host.docker.internal
@@ -24,3 +24,4 @@ S-0508: the container harness maps host.docker.internal to Docker's host gateway
 ## Remediation
 
 Story S-0619 remediates this issue, created from it at 2026-11-07T23:39:38Z.
+Closed 2026-11-09T17:21:21Z: S-0619: flai serve now refuses a container start whose HTTP MCP server is on loopback while the container is off the host's network on an engine docker info does not name Docker Desktop, naming flai serve mcp bind with the network's gateway, or --network host (ADR-0269, flai/internal/serve/container.go containerReachable). Tested with a fake docker that answers as a native engine; not measured on a real native engine, since this host runs Docker Desktop.
