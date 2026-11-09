@@ -898,6 +898,11 @@ type launcher struct {
 	// docker asks docker whether the container harness can start a story's
 	// agent, and stops its container (S-0508).
 	docker execx.Runner
+	// engine is the operating system docker info named for the container
+	// harness's engine, read once, when docker answered (containerEngine,
+	// S-0619); engineMu guards it.
+	engineMu sync.Mutex
+	engine   string
 	// imageCheck is Options.imageCheck: what checks a container image's
 	// Claude Code version that has no record, beside the start (S-0618); nil
 	// checks none.
@@ -2488,7 +2493,9 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
-// the adapter is asked, containerReady once it has taken the start.
+// the adapter is asked, containerReachable once the MCP server's URL is
+// known, refusing a loopback bind a native engine's bridge cannot reach
+// (S-0619, I-0254), and containerReady once the adapter has taken the start.
 // The keys and the token go to spawnWith's env and nowhere else, not run, a log
 // line, the journal, or an error, so that a secret flai serve holds reaches
 // the child alone. A refusal is the start's
@@ -2534,6 +2541,11 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 		return harness.Start{}, nil, err
 	}
 	if name == harness.Container {
+		if len(mcp) > 0 {
+			if err := l.containerReachable(cfg, mcp, host.Network); err != nil {
+				return harness.Start{}, nil, err
+			}
+		}
 		mcp = containerMCP(mcp, host.Network)
 		if err := l.containerReady(cfg, run, req); err != nil {
 			return harness.Start{}, nil, err

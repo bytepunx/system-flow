@@ -32,7 +32,11 @@ func containerLab(t *testing.T) (*agentLab, string) {
 // harness's login, and runs the project's HTTP MCP server, as flai host keeps
 // it, at a loopback URL with a token, which it returns. The fake answers
 // image inspect, recording the image in docker-inspected, unless a file
-// no-image is in the lab's output folder; a run with --entrypoint, as claude
+// no-image is in the lab's output folder; info, recording its arguments in
+// docker-info, as Docker Desktop's engine, as a native one when a file
+// native-engine is there, failing when info-fails is; network inspect,
+// recording its arguments in docker-network, naming the gateway 172.17.0.1,
+// failing when network-fails is; a run with --entrypoint, as claude
 // --version in the image, recording its arguments in docker-versioned; and
 // stop, recording
 // the name, failing when a file stop-fails is there. Any other run is the
@@ -50,6 +54,8 @@ func containerOn(lab *agentLab) string {
 		"case \"$1\" in\n" +
 		"image) echo \"$5\" >> \"$out/docker-inspected\"; [ -f \"$out/no-image\" ] && { echo \"Error: No such image: $5\"; exit 1; }; echo sha256:fake; exit 0 ;;\n" +
 		"stop) echo \"$2\" >> \"$out/docker-stopped\"; [ -f \"$out/stop-fails\" ] && { echo \"Error response from daemon: cannot stop\"; exit 1; }; exit 0 ;;\n" +
+		"info) echo \"$*\" >> \"$out/docker-info\"; [ -f \"$out/info-fails\" ] && { echo \"Cannot connect to the Docker daemon\"; exit 1; }; if [ -f \"$out/native-engine\" ]; then echo \"Ubuntu 24.04.1 LTS\"; else echo \"Docker Desktop\"; fi; exit 0 ;;\n" +
+		"network) echo \"$*\" >> \"$out/docker-network\"; [ -f \"$out/network-fails\" ] && { echo \"Error: No such network: $3\"; exit 1; }; echo \"172.17.0.1 \"; exit 0 ;;\n" +
 		"esac\n" +
 		"for a in \"$@\"; do [ \"$a\" = --entrypoint ] && { echo \"$*\" >> \"$out/docker-versioned\"; echo \"2.1.312 (Claude Code)\"; exit 0; }; done\n" +
 		"trap 'touch \"$out/ended-$$\"; exit 143' TERM\n" +
@@ -367,6 +373,121 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 				t.Error("the agent's container was run")
 			}
 		})
+	}
+}
+
+// I-0254, S-0619: on a native Linux engine, which routes host.docker.internal
+// to the bridge's gateway, a container start whose MCP server listens on
+// loopback is refused before the agent's container runs, naming the bind
+// that reaches it and the host's network as the other way; before S-0619 it
+// started and its agent's first MCP call failed. The gateway docker cannot
+// name is named by the command that names it.
+func TestAContainerStartANativeEnginesBridgeCannotReachIsRefused(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name    string
+		network string
+		files   []string
+		says    []string
+	}{
+		{name: "bridge", files: []string{"native-engine"}, says: []string{
+			"listens on 127.0.0.1", "(Ubuntu 24.04.1 LTS)", "host.docker.internal", `network "bridge"`,
+			"flai serve mcp bind 172.17.0.1, then flai host restart mcp", "flai serve agent harness container --network host"}},
+		{name: "a network of its own", network: "agents", files: []string{"native-engine"}, says: []string{`network "agents"`, "flai serve mcp bind 172.17.0.1"}},
+		{name: "gateway unreadable", files: []string{"native-engine", "network-fails"}, says: []string{
+			"flai serve mcp bind the gateway docker network inspect bridge names"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab, _ := containerLab(t)
+			host := lab.cfg.Harnesses[harness.Container]
+			host.Network = c.network
+			lab.cfg.Harnesses[harness.Container] = host
+			for _, f := range c.files {
+				if err := os.WriteFile(filepath.Join(lab.outDir, f), nil, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			id := containerStory(lab, "Refused", &manifest.Agent{Harness: harness.Container})
+			lab.l.look(ctx, false)
+			r := lab.run(id)
+			if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 {
+				t.Fatalf("started: %+v", r)
+			}
+			for _, s := range c.says {
+				if !strings.Contains(r.Why, s) {
+					t.Errorf("the refusal does not say %q: %s", s, r.Why)
+				}
+			}
+			if _, err := os.Stat(filepath.Join(lab.outDir, id+".stdin")); err == nil {
+				t.Error("the agent's container was run")
+			}
+		})
+	}
+}
+
+// S-0619: what the refusal leaves alone starts: a native engine with the
+// container on the host's network, where loopback is the host's, and an
+// engine docker info cannot name, which is warned of at each start rather
+// than refused. Docker Desktop's engine, which every other container test
+// runs on, is asked of once per launcher.
+func TestAContainerStartTheBridgeCheckLeavesAloneStarts(t *testing.T) {
+	ctx := context.Background()
+	start := func(t *testing.T, lab *agentLab, title string) {
+		t.Helper()
+		id := containerStory(lab, title, &manifest.Agent{Harness: harness.Container})
+		lab.l.look(ctx, false)
+		waitFor(t, title+" ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+		// the fake agent ends at once, its story still ready, so the run's
+		// outcome says so; it started, which is what is asked
+		if r := lab.run(id); r.Error != "" || r.PID == 0 || strings.Contains(r.Why, "cannot reach flai's MCP server") {
+			t.Fatalf("run: %+v", r)
+		}
+	}
+	infos := func(lab *agentLab) int {
+		data, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-info"))
+		return strings.Count(string(data), "\n")
+	}
+	t.Run("host network", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		_ = os.WriteFile(filepath.Join(lab.outDir, "native-engine"), nil, 0o644)
+		host := lab.cfg.Harnesses[harness.Container]
+		host.Network = "host"
+		lab.cfg.Harnesses[harness.Container] = host
+		start(t, lab, "On the host's network")
+		if n := infos(lab); n != 0 {
+			t.Errorf("docker info was asked %d times for a container on the host's network", n)
+		}
+	})
+	t.Run("engine unreadable", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		_ = os.WriteFile(filepath.Join(lab.outDir, "info-fails"), nil, 0o644)
+		start(t, lab, "Engine unreadable")
+		start(t, lab, "Engine unreadable again")
+		if n := lab.logged("container engine unreadable"); n != 2 || !strings.Contains(lab.logText(), "Cannot connect to the Docker daemon") {
+			t.Errorf("an unreadable engine was warned of %d times:\n%s", n, lab.logText())
+		}
+	})
+	t.Run("docker desktop", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		start(t, lab, "On Docker Desktop")
+		start(t, lab, "On Docker Desktop again")
+		if n := infos(lab); n != 1 {
+			t.Errorf("docker info was asked %d times, not once per launcher", n)
+		}
+		if _, err := os.Stat(filepath.Join(lab.outDir, "docker-network")); err == nil {
+			t.Error("the network's gateway was asked of on Docker Desktop")
+		}
+	})
+}
+
+// S-0619: a URL's host names loopback when it is localhost or an address in
+// 127.0.0.0/8 or ::1, and nothing else does.
+func TestLoopbackHost(t *testing.T) {
+	for host, want := range map[string]bool{"127.0.0.1": true, "127.1.2.3": true, "::1": true, "localhost": true, "LocalHost": true,
+		"172.17.0.1": false, "0.0.0.0": false, "host.docker.internal": false, "": false, "::": false} {
+		if got := loopbackHost(host); got != want {
+			t.Errorf("loopbackHost(%q) = %v", host, got)
+		}
 	}
 }
 

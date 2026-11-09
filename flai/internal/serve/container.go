@@ -25,7 +25,9 @@ import (
 // startOf, which every start goes through. Before the start it refuses one
 // that cannot succeed, each refusal saying what to do: docker not on PATH,
 // the inner harness's image not on this host, and, through the adapter, a
-// login the inner harness needs and the host has not set. It reads the inner
+// login the inner harness needs and the host has not set, and, once the HTTP
+// MCP server's URL is known, a URL on loopback that a native engine's bridge
+// cannot reach (containerReachable, S-0619, I-0254). It reads the inner
 // harness's version from the image and records it on the run; a Claude Code
 // version with no record of ADR-0106's check through the agent's provider is
 // checked inside the image, beside the start (S-0618), and one whose check
@@ -287,6 +289,81 @@ func containerMCP(mcp []string, network string) []string {
 		out = append(out, kv)
 	}
 	return out
+}
+
+// dockerDesktop is what docker info says of the operating system of Docker
+// Desktop's engine, which forwards the host gateway to the host's loopback.
+const dockerDesktop = "Docker Desktop"
+
+// containerReachable refuses the start of an agent on the container harness
+// whose HTTP MCP server, as mcp, mcpEnv's variables, names it, listens on
+// loopback while the container joins network, a network other than the
+// host's ("" is bridge, as the adapter runs it), on an engine other than
+// Docker Desktop (S-0619, I-0254). Such an engine routes host.docker.internal
+// to the network's gateway, a bridge address the server does not answer, so
+// the agent's first MCP call would fail; Docker Desktop forwards the gateway
+// to the host's loopback, where it answers (S-0505, S-0506). The refusal says
+// to bind the server to the gateway, which it names, or to run the container
+// on the host's network. An engine docker info cannot name is warned of and
+// the start goes on: the check never refuses on a guess.
+func (l *launcher) containerReachable(cfg AgentConfig, mcp []string, network string) error {
+	if network == "host" {
+		return nil
+	}
+	if network == "" {
+		network = "bridge"
+	}
+	bind := ""
+	for _, kv := range mcp {
+		if name, value, _ := strings.Cut(kv, "="); name == MCPURLEnv {
+			if u, err := url.Parse(value); err == nil && loopbackHost(u.Hostname()) {
+				bind = u.Hostname()
+			}
+		}
+	}
+	if bind == "" {
+		return nil
+	}
+	engine, ok := l.containerEngine(cfg)
+	if !ok || engine == dockerDesktop {
+		return nil
+	}
+	gateway := "the gateway docker network inspect " + network + " names"
+	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "network", "inspect", network, "--format", "{{range .IPAM.Config}}{{.Gateway}} {{end}}")
+	if fields := strings.Fields(out); err == nil && len(fields) > 0 {
+		gateway = fields[0]
+	}
+	return fmt.Errorf("the agent's container cannot reach flai's MCP server: the server listens on %[1]s, and this Docker engine (%[2]s) routes %[3]s to the gateway of the network %[4]q, %[5]s, which a server on %[1]s does not answer: bind the server there with flai serve mcp bind %[5]s, then flai host restart mcp, or run the container on the host's network with flai serve agent harness container --network host, and start the agent again", bind, engine, containerHost, network, gateway)
+}
+
+// containerEngine is the operating system docker info names for the engine
+// cfg's docker client reaches, read once per launcher, and whether docker
+// answered; an engine it cannot read is warned of, and asked again at the
+// next start.
+func (l *launcher) containerEngine(cfg AgentConfig) (string, bool) {
+	l.engineMu.Lock()
+	defer l.engineMu.Unlock()
+	if l.engine != "" {
+		return l.engine, true
+	}
+	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "info", "--format", "{{.OperatingSystem}}")
+	engine := strings.TrimSpace(out)
+	if err != nil || engine == "" {
+		l.warn("container engine unreadable", "err", dockerSaid(out, err))
+		return "", false
+	}
+	l.engine = engine
+	return engine, true
+}
+
+// loopbackHost says whether host, a URL's host name without its port, names
+// this machine's loopback: localhost or an address in 127.0.0.0/8 or ::1.
+func loopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // stopContainer stops run's container by the name the adapter gave it, from
