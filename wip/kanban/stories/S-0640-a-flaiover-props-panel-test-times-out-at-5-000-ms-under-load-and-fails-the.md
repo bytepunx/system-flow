@@ -3,11 +3,14 @@ id: S-0640
 type: story
 nature: remediation
 title: A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-09T22:09:59Z
-transitions: []
+updated: 2026-11-09T22:20:09Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:20:01Z
+    by: orchestrator
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
 touches: [flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md]
@@ -16,7 +19,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -27,10 +29,13 @@ cost_of_delay:
   at: 2026-11-09T22:07:30Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T01:23:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633, S-0625, S-0630, S-0628, S-0631, S-0241, S-0636, S-0637 and S-0638."
+  delivery: 2026-11-09T23:48:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644 and S-0638."
   by: flai
-  at: 2026-11-09T22:09:59Z
+  at: 2026-11-09T22:20:09Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T22:19:29Z
 ---
 # S-0640 A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
 

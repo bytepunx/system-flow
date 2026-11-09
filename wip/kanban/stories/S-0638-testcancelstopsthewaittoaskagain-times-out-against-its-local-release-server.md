@@ -3,11 +3,14 @@ id: S-0638
 type: story
 nature: remediation
 title: TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-09T09:08:54Z
-updated: 2026-11-09T22:09:59Z
-transitions: []
+updated: 2026-11-09T22:20:09Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:20:00Z
+    by: orchestrator
 tags: [flai, testing, flaky-test]
 topics: [testing]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md, design/issues/summary.md]
@@ -16,7 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 113
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 22
+          output: 138
+          cache_read: 1295331
+          cache_write: 148174
+          cost: 0.3844
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -27,10 +44,13 @@ cost_of_delay:
   at: 2026-11-09T22:07:40Z
 forecast:
   duration: 30m
-  delivery: 2026-11-10T00:35:00Z
-  basis: "Its own forecast of 30m; 9th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633, S-0625, S-0630, S-0628, S-0631, S-0241, S-0636 and S-0637."
+  delivery: 2026-11-09T23:24:00Z
+  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645 and S-0644."
   by: flai
-  at: 2026-11-09T22:09:59Z
+  at: 2026-11-09T22:20:09Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T22:19:26Z
 ---
 # S-0638 TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
 

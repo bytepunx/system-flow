@@ -3,11 +3,14 @@ id: S-0644
 type: story
 nature: improvement
 title: A change to flaiover-dashboard.md alone selects no vitest tier, so design-routes.test.ts does not run when the dashboard design gains a row with no route
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-09T21:23:04Z
-updated: 2026-11-09T22:09:59Z
-transitions: []
+updated: 2026-11-09T22:20:09Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:19:59Z
+    by: orchestrator
 tags: [flai, flaiover, testing]
 topics: [testing, flaiover, docs]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0322-a-change-to-flaiover-dashboard-md-alone-selects-no-vitest-tier-so-design-routes.md, design/issues/summary.md]
@@ -16,7 +19,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -27,10 +29,13 @@ cost_of_delay:
   at: 2026-11-09T22:08:10Z
 forecast:
   duration: 25m
-  delivery: 2026-11-10T01:20:00Z
-  basis: "Its own forecast of 25m; 12th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633, S-0625, S-0630, S-0628, S-0631, S-0241, S-0636, S-0637, S-0638, S-0640 and S-0643."
+  delivery: 2026-11-09T23:10:00Z
+  basis: "Its own forecast of 25m; 2nd in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634 and S-0645."
   by: flai
-  at: 2026-11-09T22:09:59Z
+  at: 2026-11-09T22:20:09Z
+finalized:
+  by: orchestrator
+  at: 2026-11-09T22:19:32Z
 ---
 # S-0644 A change to flaiover-dashboard.md alone selects no vitest tier, so design-routes.test.ts does not run when the dashboard design gains a row with no route
 

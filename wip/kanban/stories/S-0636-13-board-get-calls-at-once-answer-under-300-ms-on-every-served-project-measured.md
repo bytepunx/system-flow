@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-09T07:36:47Z
-updated: 2026-11-09T22:09:59Z
+updated: 2026-11-09T22:20:09Z
 transitions: []
 tags: [cli]
 touches: [design/system/server-performance.md, design/issues/summary.md]
@@ -17,13 +17,33 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 61
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 32
+          cache_read: 172265
+          cache_write: 6445
+          cost: 0.0476
 draft: true
+cost_of_delay:
+  inputs:
+    penalty_per_week: 20
+    by: orchestrator
+    at: 2026-11-09T22:14:16Z
 forecast:
   duration: 30m
-  delivery: 2026-11-10T00:12:00Z
-  basis: "Its own forecast of 30m; 7th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0634, S-0633, S-0625, S-0630, S-0628, S-0631 and S-0241."
+  delivery: 2026-11-10T00:28:00Z
+  basis: "Its own forecast of 30m; 10th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0640, S-0625, S-0630, S-0628, S-0631 and S-0241."
   by: flai
-  at: 2026-11-09T22:09:59Z
+  at: 2026-11-09T22:20:09Z
 ---
 # S-0636 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606
 
