@@ -2,12 +2,12 @@
 id: I-0301
 title: flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-07T08:44:09Z
 last_reported: 2026-11-07T08:44:09Z
-updated: 2026-11-07T23:41:06Z
+updated: 2026-11-09T23:20:32Z
 ---
 
 # I-0301 flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it
@@ -24,3 +24,4 @@ Story: S-0568. flai serve started agent-S-0568 "because it entered ready", but S
 ## Remediation
 
 Story S-0633 remediates this issue, created from it at 2026-11-07T23:41:06Z.
+Closed 2026-11-09T23:20:32Z: Fixed by S-0633. flai serve's look started agent-S-0568 because it read the planner's task T-2550 in the seconds between itemnew.Create writing it and the check removing it, and so judged S-0568's claim by that task's touches. Now a checked creation holds a checked-write lock from its write until it keeps or removes the item. The look reads its items under that lock, with the folders looked at again (ADR-0272, T-2786; TestALookWaitsForACheckedCreationAndStartsNoStoryHeldOnceItIsRemoved reproduces it). story_start's refusal of a story held no-touches by its own empty claim now tells the agent to declare its touches and call story_start again (T-2787).
