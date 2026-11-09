@@ -3,16 +3,37 @@ id: T-2718
 type: task
 nature: remediation
 title: The operators guide and the flai guide say what the watch does when another process holds the dashboard's port
-status: backlog
+status: done
 parent: S-0615
 owner: alex
 created: 2026-11-09T09:52:25Z
-updated: 2026-11-09T09:52:25Z
-transitions: []
+updated: 2026-11-09T10:30:05Z
+transitions:
+  - to: ready
+    at: 2026-11-09T10:23:33Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T10:23:33Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:30:05Z
+    by: agent-S-0615
 stream: S-0615
 tags: [flai, dashboard, docs]
 touches: [docs/operators/index.md, docs/users/flai.md]
 after: [T-2714, T-2717]
+usage:
+  source: log
+  seconds: 385
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 64
+      cache_read: 1288856
+      cache_write: 5539
+      cost: 0.4709
 ---
 # T-2718 The operators guide and the flai guide say what the watch does when another process holds the dashboard's port
 

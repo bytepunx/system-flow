@@ -3,11 +3,11 @@ id: S-0608
 type: story
 nature: improvement
 title: The chart data keeps the hold replay until items or commits change and sweeps the days once, so a 365-day window costs what a 30-day one does
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:41Z
-updated: 2026-11-09T10:14:31Z
+updated: 2026-11-09T10:32:30Z
 transitions:
   - to: ready
     at: 2026-11-09T09:10:19Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T09:10:31Z
     by: agent-S-0608
+  - to: review
+    at: 2026-11-09T10:30:30Z
+    by: agent-S-0608
+  - to: done
+    at: 2026-11-09T10:32:30Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/metrics/costorder.go, flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/costorder_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/threads/threads.go, flai/internal/threads/threads_test.go, flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/metrics/coordination.go, flai/internal/storygit/committed_test.go]
 after: [S-0606]
@@ -25,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3804
-  estimated: true
-  priced_by: estimate
+  seconds: 4812
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 1
-      hand_edits: 2
-      work: 34
+      ceremony: 2
+      hand_edits: 3
+      work: 65
   models:
     - model: claude-opus-5-5
-      input: 300
-      output: 1892
-      cache_read: 24050369
-      cache_write: 719186
-      cost: 9.0089
+      input: 430
+      output: 150329
+      cache_read: 38100858
+      cache_write: 1138905
+      cost: 17.0112
   strategic:
     - kind: planner
       seconds: 529
@@ -89,7 +94,7 @@ Cause 18 in [server-performance.md](../../../design/system/server-performance.md
 
 - [x] `replayHolds` and `touchDrift` are kept between requests until the work items or the stories' commits change, and only the slicing to the window is done per request.
 - [x] Each item's transition times are parsed once a call, the day-by-day sections sweep the days once, and the days before the first item are answered without a loop; thread entries are parsed once and the forecaster built once.
-- [ ] The report is the same as before for windows of 1, 7, 30, 90, and 365 days, which a test shows, and a warm 365-day `stats.get` on this repository takes under 1.2 times a warm 30-day one; server-performance.md records the before and after.
+- [x] The report is the same as before for windows of 1, 7, 30, 90, and 365 days, which a test shows, and a warm 365-day `stats.get` on this repository takes under 1.2 times a warm 30-day one; server-performance.md records the before and after.
 
 ## Tasks
 - T-2662 A golden test pins the report on testdata/good at windows of 1, 7, 30, 90, and 365 days before anything changes
@@ -147,3 +152,13 @@ Figures:
 - Forecast 1h, adjusted from flai's 43m (94 s per unit of size over 124 done improvement stories, times size 27, its 24 touches counted). The story has seven tasks: a golden test over five windows, a generation on the store, two parse fixes, the day sweep, a cache kept between requests, and a measurement on the operator's host. S-0606's comparable plan of five tasks is forecast at 45m.
 - Delivery 2026-11-08T03:30:00Z: flai's delivery for its 8th place in the pull order, 03:13, moved by the 17 minutes added to the duration. S-0606 is in progress and ahead of it in the pull order, so the `after` moves no delivery.
 - Cost of delay 20 USD a week, as `flai cod` gives it from the input `penalty_per_week: 20`, which the orchestrator set at 2026-11-08T00:04:56Z from TH-0888's table. Kept as flai gives it: no revenue rides on it, and long chart windows are its only cost.
+
+### Accepted by the orchestrator
+
+- Verified: f54809c9b2d0ac2ef09e2c431ddc900667fb91ce
+- At: 2026-11-09T10:32:30Z
+
+Verdict: pass
+- 1: flai/internal/metrics/claims.go, flai/internal/metrics/metrics.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/statsread/statsread.go, flai/internal/storygit/committed.go, flai/internal/metrics/claims_test.go, flai/internal/workitem/store_test.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed_test.go
+- 2: flai/internal/metrics/metrics.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/claims.go, flai/internal/metrics/coordination.go, flai/internal/threads/threads.go, flai/internal/planning/forecast.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/costorder_test.go, flai/internal/threads/threads_test.go, flai/internal/planning/forecast_test.go
+- 3: flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json, design/system/server-performance.md, design/system/flai-cli.md

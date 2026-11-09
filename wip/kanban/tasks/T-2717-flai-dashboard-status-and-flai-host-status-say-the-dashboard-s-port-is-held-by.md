@@ -3,11 +3,11 @@ id: T-2717
 type: task
 nature: remediation
 title: flai dashboard status and flai host status say the dashboard's port is held, by what, and how to free it
-status: in-progress
+status: done
 parent: S-0615
 owner: alex
 created: 2026-11-09T09:52:14Z
-updated: 2026-11-09T10:16:16Z
+updated: 2026-11-09T10:23:11Z
 transitions:
   - to: ready
     at: 2026-11-09T10:16:15Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T10:16:16Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T10:23:11Z
+    by: agent-S-0615
 stream: S-0615
 tags: [flai, dashboard, host]
-touches: [flai/cmd/dashboard.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch_test.go]
+touches: [flai/cmd/dashboard.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md]
 after: [T-2716]
 usage:
   source: log
-  seconds: 3
+  seconds: 415
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 12
-      cache_read: 150044
-      cache_write: 528
-      cost: 0.0548
+      input: 49
+      output: 369
+      cache_read: 7361093
+      cache_write: 32105
+      cost: 2.6897
 ---
 # T-2717 flai dashboard status and flai host status say the dashboard's port is held, by what, and how to free it
 

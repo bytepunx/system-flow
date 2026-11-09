@@ -3,11 +3,11 @@ id: T-2687
 type: task
 nature: improvement
 title: Measure a warm stats.get at 30 and 365 days before and after on this repository, and record them with the kept replay in the design
-status: in-progress
+status: done
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:51:26Z
-updated: 2026-11-09T10:14:37Z
+updated: 2026-11-09T10:22:00Z
 transitions:
   - to: ready
     at: 2026-11-09T10:14:36Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T10:14:37Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T10:22:00Z
+    by: agent-S-0608
 stream: S-0608
 tags: [cli]
 touches: [design/system/server-performance.md, design/system/flai-cli.md]
 after: [T-2672, T-2675, T-2683]
+usage:
+  source: log
+  seconds: 443
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 23663
+      cache_read: 5997358
+      cache_write: 179272
+      cost: 2.6777
 ---
 # T-2687 Measure a warm stats.get at 30 and 365 days before and after on this repository, and record them with the kept replay in the design
 

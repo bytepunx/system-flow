@@ -24,7 +24,7 @@ touches: [design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker
 after: [T-2714, T-2716]
 usage:
   source: log
-  seconds: 3
+  seconds: 7
   estimated: true
   priced_by: estimate
   models:

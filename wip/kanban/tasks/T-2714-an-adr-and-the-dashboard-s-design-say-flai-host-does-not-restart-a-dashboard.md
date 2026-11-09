@@ -32,7 +32,7 @@ usage:
       output: 154
       cache_read: 2156400
       cache_write: 13127
-      cost: 0.7891
+      cost: 0.7893
 ---
 # T-2714 An ADR and the dashboard's design say flai host does not restart a dashboard whose published port another process holds
 

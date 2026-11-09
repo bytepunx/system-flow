@@ -32,7 +32,7 @@ usage:
       output: 140
       cache_read: 2715872
       cache_write: 22961
-      cost: 0.9961
+      cost: 0.9964
 ---
 # T-2715 flai finds the docker-proxy that holds a host port from the process table
 

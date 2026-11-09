@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1415
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 216
-      cache_read: 2505865
-      cache_write: 45354
-      cost: 0.9279
+      input: 29
+      output: 10143
+      cache_read: 2570847
+      cache_write: 76847
+      cost: 1.1478
 ---
 # T-2668 The item store counts a generation per root, which moves when an item file is added, changed, or removed, in snapshot mode or not
 

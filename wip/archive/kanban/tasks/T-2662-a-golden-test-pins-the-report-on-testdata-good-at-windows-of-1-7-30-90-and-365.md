@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1386
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 363
-      cache_read: 3474566
-      cache_write: 326324
-      cost: 1.3824
+      input: 43
+      output: 15112
+      cache_read: 3830132
+      cache_write: 114490
+      cost: 1.7101
 ---
 # T-2662 A golden test pins the report on testdata/good at windows of 1, 7, 30, 90, and 365 days before anything changes
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 706
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 160
-      cache_read: 2677011
-      cache_write: 31965
-      cost: 0.9853
+      input: 31
+      output: 10771
+      cache_read: 2729815
+      cache_write: 81599
+      cost: 1.2188
 ---
 # T-2672 A thread parses its entries once, and waiting and digest read the same parse
 

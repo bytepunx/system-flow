@@ -24,16 +24,16 @@ touches: [flai/internal/metrics/claims.go, flai/internal/metrics/metrics.go, fla
 after: [T-2668, T-2679]
 usage:
   source: log
-  seconds: 1045
+  seconds: 1046
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 437
-      cache_read: 7085653
-      cache_write: 90016
-      cost: 2.6098
+      input: 82
+      output: 28530
+      cache_read: 7230845
+      cache_write: 216143
+      cost: 3.2284
 ---
 # T-2683 The hold replay and the touch drift are kept between requests until the item generation or the commits' key moves, and each request only slices them to its window
 

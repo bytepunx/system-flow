@@ -33,7 +33,7 @@ usage:
       output: 180
       cache_read: 5117114
       cache_write: 349551
-      cost: 1.9882
+      cost: 1.9888
 ---
 # T-2716 flai host's watch finds the dashboard's port held by another process and stops restarting it, with a test that reproduces I-0243
 

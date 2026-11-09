@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 731
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 222
-      cache_read: 3582740
-      cache_write: 62127
-      cost: 1.3256
+      input: 41
+      output: 14492
+      cache_read: 3672902
+      cache_write: 109790
+      cost: 1.6399
 ---
 # T-2679 Each item's transitions are parsed once a call, and costOfDelay and claims sweep the days once from the first item's day
 

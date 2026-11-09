@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2046.3532
-accrued_seconds: 1529327
-tasks_completed: 2404
-last_run: 2026-11-09T09:57:32Z
+accrued_cost: 2048.0998
+accrued_seconds: 1529697
+tasks_completed: 2414
+last_run: 2026-11-09T10:24:51Z
 ---
 
 # Orchestrator activity
@@ -16858,6 +16858,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.3633 USD, estimated
+
+### 2026-11-09T10:17:28Z
+
+- Summary: Accepted S-0614 at 642e5bb2d368 under accept_reviews: flai verify passed at the branch head, the verifier matched both criteria to changed files, and the dry run named no blocker.
+- Items: S-0614
+- Seconds: 53
+- Cost: 0.2026 USD, estimated
+
+### 2026-11-09T10:18:08Z
+
+- Summary: Release threshold met after S-0614 (5 stories, 1080 USD/week >= 1000; count 5 >= 1), but publish instance S-0635 from flai formula run publish is already in ready and covers the whole batch, so no second instance; S-0635 is held no-touches behind S-0608, S-0610, S-0615 (S-0620 drafts the fix). Did not replan E-0033: alex's entry on TH-0916 is a confirmation that changes nothing. Skipped S-0241, the only promote candidate (rank 1, 2h), as it is blocked and TH-0790 awaits the operator. Started planner for S-0616, first story flai plan --candidates lists, to feed the ready column (1 of room 2).
+- Items: S-0614, S-0635, S-0241, S-0616, E-0033
+- Seconds: 40
+- Cost: 0.1408 USD, estimated
+
+### 2026-11-09T10:18:25Z
+
+- Summary: I accepted S-0614 and started the planner on S-0616. The ready column still holds one story, and that story is held. No release ran.
+- Items: none
+- Seconds: 17
+- Cost: 0.2593 USD, estimated
+
+### 2026-11-09T10:19:12Z
+
+- Summary: Release-due S-0614: release_evaluate met under threshold (count 5 >= 1; 1080 >= 1000 USD/week; pending S-0603, S-0606, S-0612, S-0613, S-0614; none held by whole_epics). Started no second flai formula run publish: instance S-0635 is already in ready and publishes the whole batch when worked; it stays held no-touches behind S-0608, S-0610, S-0615 (S-0620 drafts the fix). Same decision an earlier run logged for this reason.
+- Items: S-0614, S-0635
+- Seconds: 28
+- Cost: 0.0898 USD, estimated
+
+### 2026-11-09T10:19:44Z
+
+- Summary: I didn't publish anything this run, because a publish story for this release already exists. The release is due, but S-0635 can't start until three other stories leave in-progress.
+- Items: none
+- Seconds: 32
+- Cost: 0.1263 USD, estimated
+
+### 2026-11-09T10:21:57Z
+
+- Summary: Answered TH-0925, citing no source
+- Items: S-0616
+- Seconds: 42
+- Cost: 0.1151 USD, estimated
+
+### 2026-11-09T10:22:39Z
+
+- Summary: Approved planner-S-0616's plan on TH-0925 and resolved it (plan_backlog_stories). Finalized S-0616, which flai promote --drafts lists as complete: 2 criteria, 7 file touches, a 1h forecast, and a value of 25. Promoted it to ready as candidate rank 1 (1h, throughput) and applied flai order --by throughput: S-0616 then S-0635. Skipped candidate S-0241 (rank 2, 2h): it is blocked, and its Notes say to wait until a headless session offers forks (TH-0790).
+- Items: S-0616, S-0635, S-0241
+- Seconds: 42
+- Cost: 0.1102 USD, estimated
+
+### 2026-11-09T10:23:02Z
+
+- Summary: I finalized S-0616 and moved it to ready. Its agent, agent-S-0616, has already pulled it into in-progress.
+- Items: none
+- Seconds: 23
+- Cost: 0.2744 USD, estimated
+
+### 2026-11-09T10:23:55Z
+
+- Summary: S-0616's draft, plan (TH-0925, T-2720..T-2722) and planned reasons needed nothing more: plan already approved, TH-0925 resolved, S-0616 finalized and now in progress. Ready reason: applied flai order --by throughput (S-0635 rank 1, no forecast, the only ready story). Did not promote S-0241, promote_candidates' only candidate (rank 1, 2h): it is blocked and its Notes say not before headless forks; TH-0790 already asks the operator to make it a draft. No threads to answer under autonomous: every one awaiting the operator ends with my entry, a pending recommendation, or a flai serve notice.
+- Items: S-0616, S-0635, S-0241
+- Seconds: 37
+- Cost: 0.1033 USD, estimated
+
+### 2026-11-09T10:24:51Z
+
+- Summary: I'm done with all four reasons. Only one thing needed doing: I re-applied the ready column's order. Nothing else had to change.
+- Items: none
+- Seconds: 56
+- Cost: 0.3248 USD, estimated
 
 ## Refusals
 

@@ -6,7 +6,7 @@ title: flai host cannot see a dashboard container Docker lost track of, which ke
 status: in-progress
 owner: alex
 created: 2026-11-07T23:39:11Z
-updated: 2026-11-09T10:16:27Z
+updated: 2026-11-09T10:22:52Z
 transitions:
   - to: ready
     at: 2026-11-09T09:55:53Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0615
 tags: [flai, dashboard, host]
 topics: [dashboard, host]
-touches: [flai/internal/host/watch.go, flai/internal/host/watch_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/system/flaiover-dashboard.md, design/adrs, docs/operators/index.md, docs/users/flai.md, design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md, design/issues/summary.md, flai/cmd/root.go]
+touches: [flai/internal/host/watch.go, flai/internal/host/watch_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/system/flaiover-dashboard.md, design/adrs, docs/operators/index.md, docs/users/flai.md, design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md, design/issues/summary.md, flai/cmd/root.go, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1220
+  seconds: 2038
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-09
       hand_edits: 1
-      work: 25
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 752
-      cache_read: 13114253
-      cache_write: 644525
-      cost: 5.0041
+      input: 174
+      output: 1181
+      cache_read: 21925508
+      cache_write: 689674
+      cost: 8.2276
   strategic:
     - kind: planner
       seconds: 511

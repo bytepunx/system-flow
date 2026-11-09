@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 725
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 223
-      cache_read: 2698666
-      cache_write: 33497
-      cost: 0.9937
+      input: 31
+      output: 10863
+      cache_read: 2753180
+      cache_write: 82298
+      cost: 1.2292
 ---
 # T-2675 costOrder builds its forecaster once and plays the three orders out on it
 

@@ -3,14 +3,17 @@ id: S-0616
 type: story
 nature: remediation
 title: TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:39:18Z
-updated: 2026-11-09T10:22:32Z
+updated: 2026-11-09T10:22:38Z
 transitions:
   - to: ready
     at: 2026-11-09T10:22:28Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T10:22:38Z
+    by: agent-S-0616
 tags: [flai, template]
 touches: [flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md]
 agent:
@@ -19,9 +22,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 579
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      ceremony: 1
+      hand_edits: 1
+      work: 28
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 560
+      cache_read: 6237891
+      cache_write: 254238
+      cost: 2.3624
   strategic:
     - kind: planner
       seconds: 222
@@ -34,15 +50,15 @@ usage:
           cache_write: 149480
           cost: 2.1455
     - kind: orchestrator
-      seconds: 50
+      seconds: 77
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 98
-          cache_read: 471519
-          cache_write: 76549
-          cost: 0.1433
+          input: 21
+          output: 145
+          cache_read: 710082
+          cache_write: 110089
+          cost: 0.2144
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
