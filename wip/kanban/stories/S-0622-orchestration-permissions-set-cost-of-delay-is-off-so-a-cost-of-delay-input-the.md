@@ -6,7 +6,7 @@ title: orchestration.permissions.set_cost_of_delay is off, so a cost of delay in
 status: backlog
 owner: alex
 created: 2026-11-07T23:39:56Z
-updated: 2026-11-09T21:52:18Z
+updated: 2026-11-09T21:53:34Z
 transitions: []
 tags: [cli]
 topics: [orchestration, planning]
@@ -63,7 +63,6 @@ usage:
           cache_read: 759050
           cache_write: 13855
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 75h
@@ -78,6 +77,9 @@ forecast:
   basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0616, S-0642 and S-0241."
   by: flai
   at: 2026-11-09T21:52:18Z
+finalized:
+  by: alex
+  at: 2026-11-09T21:53:34Z
 ---
 # S-0622 orchestration.permissions.set_cost_of_delay is off, so a cost of delay input the operator confirmed waits a day for the operator to write it
 
