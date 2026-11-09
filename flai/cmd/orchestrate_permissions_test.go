@@ -70,6 +70,7 @@ func TestAsTheOrchestrator(t *testing.T) {
 		testTheOrchestratorOrdersReadyOnlyWithOrderReady,
 		testTheOrchestratorPlansABacklogStoryOnlyWithPlanBacklogStories,
 		testTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay,
+		testTheOrchestratorSetsAnInProgressStorysCostOfDelayInputsOnlyWithSetCostOfDelay,
 		testTheOrchestratorSettlesAStoryPlannersThreadOnlyWithPlanBacklogStories,
 		testTheOrchestratorRunsThePublishFormulaOnlyWithPublish,
 	)
@@ -875,6 +876,53 @@ func testTheOrchestratorSetsCostOfDelayInputsOnlyWithSetCostOfDelay(t *testing.T
 			}
 			if !reflect.DeepEqual(treeOf(t, o.root), before) {
 				t.Error("flai's refusals changed the board")
+			}
+		})
+	}
+}
+
+// I-0284, S-0622: S-0549 was in progress when the operator confirmed its
+// time_lost_per_cycle on TH-0775, and the orchestrator could not write it
+// because set_cost_of_delay was off. On the fixture board's story in
+// progress, S-0007, the orchestrator with set_cost_of_delay sets the input,
+// by flai edit and item_edit alike, named as who set it, and leaves the
+// value as it was; with it off and plan_backlog_stories on, flai refuses
+// naming set_cost_of_delay, and nothing changes.
+func testTheOrchestratorSetsAnInProgressStorysCostOfDelayInputsOnlyWithSetCostOfDelay(t *testing.T) {
+	// underWay is the fixture with S-0007's narrative open, as a story in
+	// progress has one: without it flai's check refuses every edit of S-0007
+	underWay := func(t *testing.T) *orchestration {
+		o := newOrchestration(t)
+		if _, errOut, code := runIn(t, o.root, "stream", "open", "S-0007", "--no-branch"); code != 0 {
+			t.Fatalf("stream open S-0007: %s", errOut)
+		}
+		return o
+	}
+	for _, v := range []via{viaBash, viaMCP} {
+		t.Run("on by "+string(v), func(t *testing.T) {
+			o := underWay(t)
+			o.permit(manifest.PermitSetCostOfDelay)
+			was := o.item("S-0007")
+			if was.Status != workitem.InProgress || was.CostOfDelay == nil || was.CostOfDelay.Value == nil {
+				t.Fatalf("the fixture's S-0007 is not in progress with a value: %s %+v", was.Status, was.CostOfDelay)
+			}
+			o.passes(costCall(v, "S-0007"))
+			c := o.item("S-0007").CostOfDelay
+			if c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" {
+				t.Fatalf("S-0007's cost of delay inputs: %+v", c)
+			}
+			// the value is not the orchestrator's: it stays as the planner set it
+			if c.Value == nil || *c.Value != *was.CostOfDelay.Value || c.By != was.CostOfDelay.By || c.At != was.CostOfDelay.At {
+				t.Errorf("S-0007's value changed: was %v by %s at %s, now %+v", *was.CostOfDelay.Value, was.CostOfDelay.By, was.CostOfDelay.At, c)
+			}
+		})
+		t.Run("off by "+string(v), func(t *testing.T) {
+			o := underWay(t)
+			o.permit(allBut("")...)
+			before := treeOf(t, o.root)
+			o.flaiRefuses(costCall(v, "S-0007"))("S-0007 is in-progress, not in the backlog: with plan_backlog_stories the orchestrator gives a backlog story its first cost of delay inputs alone; the rest needs orchestration.permissions.set_cost_of_delay, which is off")
+			if !reflect.DeepEqual(treeOf(t, o.root), before) {
+				t.Error("flai's refusal changed the board")
 			}
 		})
 	}
