@@ -3,11 +3,11 @@ id: I-0321
 title: TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
 class: defect
 status: closed
-count: 4
-cost: 6m
+count: 5
+cost: 7m
 first_reported: 2026-11-09T17:13:14Z
-last_reported: 2026-11-09T22:11:54Z
-updated: 2026-11-09T22:54:47Z
+last_reported: 2026-11-09T23:24:57Z
+updated: 2026-11-09T23:24:57Z
 ---
 
 # I-0321 TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
@@ -32,6 +32,10 @@ flai test on S-0632's flai/internal/serve paths ran the go-test tier over ./cmd 
 ### 2026-11-09T22:11:54Z
 Story: S-0634.
 S-0634's flai test on flai/cmd/reference_test.go (T-2773) failed only at go-test, on TestTCPAnswersAListenerAndNotAClosedOne ("a closed listener answers", dashboard_porthold_test.go:145), after 6m1s. The change does not touch the dashboard port-hold code; the two reference tests it un-gated passed in the same run.
+
+### 2026-11-09T23:24:57Z
+Story: S-0633.
+S-0633's close-out job S-0633-20261109T232104Z at b9ad200 stopped at integration on TestTCPAnswersAListenerAndNotAClosedOne ("a closed listener answers"), with every other tier passing. Per D-0462 and TH-0962, S-0633 waits in progress for S-0645's acceptance, then syncs and closes out again.
 
 ## Remediation
 
