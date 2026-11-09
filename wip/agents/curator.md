@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 176.3896
-accrued_seconds: 18314
-tasks_completed: 111
-last_run: 2026-11-09T10:56:22Z
+accrued_cost: 179.3510
+accrued_seconds: 18761
+tasks_completed: 113
+last_run: 2026-11-09T11:32:06Z
 ---
 
 # Curator activity
@@ -899,3 +899,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0491, D-0492
 - Seconds: 66
 - Cost: 0.7480 USD, estimated
+
+### 2026-11-09T11:30:10Z
+
+- Summary: Nothing to take in this run: I wrote, merged, absorbed and compacted no entries.
+- Trigger: accepted S-0618
+- Items: none
+- Seconds: 340
+- Cost: 1.5830 USD, estimated
+
+### 2026-11-09T11:32:06Z
+
+- Summary: I wrote one new entry, D-0541, merged none, absorbed none, and `flai digest compact` compacted none; D-0541 is S-0639's decision that a done task's body can't be edited, so a formula step's note goes in before `task_done` closes the task.
+- Trigger: accepted S-0635, S-0639
+- Items: D-0541
+- Seconds: 107
+- Cost: 1.3784 USD, estimated

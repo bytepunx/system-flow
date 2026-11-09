@@ -1,0 +1,23 @@
+---
+id: D-0541
+title: A done task's body is refused for edit, so a formula step's agent writes the step's note before it closes the task, or logs it in the narrative after
+kind: decision
+sources: [S-0639, T-2729]
+topics: [formula, all]
+paths: [design/workflows/formulas/publish.md]
+date: 2026-11-09
+status: active
+absorbed_by: ""
+asked_again: []
+cited: []
+---
+
+# D-0541 A done task's body is refused for edit, so a formula step's agent writes the step's note before it closes the task, or logs it in the narrative after
+
+S-0639, an instance of the publish formula, ran its three step tasks, T-2729 (fetch), T-2730 (evaluate the release policy), and T-2731 (publish), in the main checkout. Its agent meant to record T-2729's exit in the task's `## Notes` after closing it, and flai refused: a task that is done takes no edit to its body.
+
+The decision in its narrative, `wip/archive/agents/S-0639.md` § Decisions:
+
+> T-2729's exit is recorded in this log, not in its `## Notes`: a done task's body is refused for edit, and the note was written after its close.
+
+So write what a step left, such as its command's exit, in the task's `## Notes` before `task_done` closes it, as S-0639 did for T-2730 and T-2731; once the task is done, the narrative's log is the place.
