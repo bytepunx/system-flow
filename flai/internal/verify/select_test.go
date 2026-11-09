@@ -490,6 +490,7 @@ func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
 	want := []string{
 		"flaiover-lint ../scripts/flaiover-lint.sh package.json src/routes/+page.svelte",
 		"vitest ../scripts/flaiover-unit.sh related --run --reporter=json src/routes/+page.svelte",
+		"design-routes ../scripts/flaiover-unit.sh run --reporter=json src/lib/server/design-routes.test.ts",
 		"svelte-check ../scripts/flaiover-check.sh",
 	}
 	if !reflect.DeepEqual(got, want) {
