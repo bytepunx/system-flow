@@ -1787,9 +1787,13 @@ func TestSettingsGetSaysWhatMayChange(t *testing.T) {
 func TestAgentStatusIsReadOnly(t *testing.T) {
 	p := withDocs(t)
 	state := map[string]any{"command": "claude", "waiting": "an agent is attending"}
+	var asked []bool // finished, as each call gave it (S-0611)
 	host := Host{
 		Enabled: func(action, root string) bool { return action == ActionAgent && root == p.Root },
-		Agent:   func(context.Context, string) any { return state },
+		Agent: func(_ context.Context, _ string, finished bool) any {
+			asked = append(asked, finished)
+			return state
+		},
 	}
 	res, e := MethodsFor("test", nil, host)["agent.status"](context.Background(), p, json.RawMessage(`{}`))
 	if e != nil {
@@ -1798,6 +1802,15 @@ func TestAgentStatusIsReadOnly(t *testing.T) {
 	got, _ := json.Marshal(res)
 	if string(got) != `{"enabled":true,"state":{"command":"claude","waiting":"an agent is attending"}}` {
 		t.Errorf("status: %s", got)
+	}
+	if _, e := MethodsFor("test", nil, host)["agent.status"](context.Background(), p, json.RawMessage(`{"finished":true}`)); e != nil {
+		t.Fatal(e)
+	}
+	if !slices.Equal(asked, []bool{false, true}) {
+		t.Errorf("finished reached the host as %v, want false without it and true with it", asked)
+	}
+	if _, e := MethodsFor("test", nil, host)["agent.status"](context.Background(), p, json.RawMessage(`{"finished":"yes"}`)); e == nil || e.Code != channel.CodeInvalidParams {
+		t.Errorf("finished that is not a boolean: %+v, want it refused", e)
 	}
 	res, _ = Methods("test", nil)["agent.status"](context.Background(), p, json.RawMessage(`{}`))
 	if got, _ := json.Marshal(res); string(got) != `{"enabled":false}` {

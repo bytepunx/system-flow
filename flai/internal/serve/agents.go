@@ -2921,6 +2921,41 @@ func Activity(root string, st AgentState, commandSet bool) map[string]StoryActiv
 	return out
 }
 
+// Unfinished is what agent.status answers of stories and plans without
+// finished (S-0611): each story's activity whose run is live or whose state
+// is working or waiting, and the newest planner run of each item that is
+// live, with the newest run of each other story or planned item kept only
+// while that item is open: listed outside the archive, neither done nor
+// cancelled. So the board's failed dot and a story's agent panel keep their
+// run, and the runs of finished work, which only the pages that list past
+// runs show, are left out. A project whose items cannot be read keeps only
+// the live and waiting ones.
+func Unfinished(root string, stories map[string]StoryActivity, plans map[string]*AgentRun) (map[string]StoryActivity, map[string]*AgentRun) {
+	open := map[string]bool{}
+	if repo, err := workitem.Open(root); err == nil {
+		if items, err := repo.List(false); err == nil {
+			for _, it := range items {
+				if it.Status != workitem.Done && it.Status != workitem.Cancelled {
+					open[it.ID] = true
+				}
+			}
+		}
+	}
+	keptStories := make(map[string]StoryActivity, len(stories))
+	for id, a := range stories {
+		if open[id] || a.Run.live() || a.State == ActivityWorking || a.State == ActivityWaiting {
+			keptStories[id] = a
+		}
+	}
+	keptPlans := make(map[string]*AgentRun, len(plans))
+	for id, run := range plans {
+		if open[id] || run.live() {
+			keptPlans[id] = run
+		}
+	}
+	return keptStories, keptPlans
+}
+
 // standIn is story's newest run, or, when it has none, one that names only
 // the story, the agent given, and the harness and model the story will start
 // with, the project's default's when its own names no harness (ADR-0251),

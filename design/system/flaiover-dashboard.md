@@ -226,6 +226,18 @@ A banner an action leaves on the page until the next action is dismissible (S-01
 
 Errors are `{ error }` with the status. The reader caches by path and mtime and is invalidated by the watcher.
 
+`agent.status` takes one parameter, `finished` (S-0611, cause 21 in [server-performance.md](server-performance.md#where-the-time-goes)). Without it, flai answers the open and live runs alone, in the same shape:
+
+| Key | Without `finished` | With `finished: true` |
+|-----|--------------------|-----------------------|
+| `stories` | Each story whose run is live or whose agent works or waits, held and begun elsewhere included, and the newest run of each other story that is neither done, cancelled, nor archived | Every story's newest run |
+| `plans` | The newest planner run of each item whose run is live or which is open | Every item's newest planner run |
+| `past_orchestrators`, `past_analyzers` | Empty | Up to 20 each |
+| `roles.<name>.runs` | Empty | Up to 20 ended runs |
+| `running`, `last`, `waiting`, `command`, `budget`, `orchestrator`, `analyzer`, `curator`, and each role's `run`, `running`, and `held` | As with it | As flai serve recorded them |
+
+The pages that list finished runs ask with `finished: true`: `/api/planner`, `/api/orchestrator`, `/api/analyzer`, `/api/roles/[name]`, and `/api/items/[id]/plan`. `/api/host-agent`, which the board, the activity page, and a story's agent panel ask every 15 s, asks without it.
+
 ## Writes (S-0075, ADR-0029)
 
 Every write is a named method of flai on the host, asked over the channel; nothing runs in the container, and the image holds no `flai`, no `git`, and no `ssh`. flai validates the arguments as data, builds the command line itself, and runs the same command the CLI has, so its rules are the only rules ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md), [ADR-0023](../adrs/0023-documents-are-saved-through-flai.md)). The previews, the diff, the statistics, and the pending push change nothing and are answered by `flai serve` from the code those commands print with, with the answer the command gave (S-0159). The mount is still given to the container and is no longer used; S-0077 removes it.
@@ -331,7 +343,7 @@ The three built-in pages keep their routes and what they show. Each builds its r
 | Activity | The activity document, `wip/agents/<name>.md`: its totals (accrued cost and time, activities, last run) and its entries newest first, each with its trigger, its items linked, its duration, and its cost |
 | Runs | Every run the page has, those under way and those ended, newest first, with its item for a role whose run takes one, its start, end, outcome in a word (`outcomeWord`: running, could not start, or flai's outcome), cost, and why it failed. A run records no cost of its own, so its cost is the sum of the entries logged from its start to its end, to the second (`runCost`) |
 
-Past runs come from `agent.status`. A `roles` entry carries the role's runs under way, newest first, and up to 20 that ended, newest first, which `serve/agents.json` keeps for every role since S-0420. The Planner page still shows each item's newest run, from `plans`. The Orchestrator and Analyzer pages show the newest run and up to 20 before it, from `orchestrator` and `past_orchestrators`, and `analyzer` and `past_analyzers`.
+Past runs come from `agent.status`, asked with `finished: true` (S-0611). A `roles` entry carries the role's runs under way, newest first, and up to 20 that ended, newest first, which `serve/agents.json` keeps for every role since S-0420. The Planner page still shows each item's newest run, from `plans`. The Orchestrator and Analyzer pages show the newest run and up to 20 before it, from `orchestrator` and `past_orchestrators`, and `analyzer` and `past_analyzers`.
 
 Each page reads its route again when its activity document changes (a narrative to `$lib/changes`) and when flai serve's `agent` event concerns its role (`concernsRole`). The hub names a planner run, and a defined role's run on an item, by its item. It names the orchestrator's, the analyzer's, and the curator's runs, whose notifications carry `role: orchestrate`, `analyze`, or `curate` and no story or item, as `orchestrator`, `analyzer`, and `curator` (`ORCHESTRATOR`, `ANALYZER`, and `CURATOR` in `$lib/server/agent.ts`), and a defined role's run on no item by the role's name. The role page reads again when the path names another role. The Planner page also reads again on a work item change and every 15 s while a run goes. A reload that fails says so above what was last shown. A name `agent.status` does not report shows flai's words, naming the roles it does, in place of the page. Each page reads its settings apart ([Strategic agents' settings](#strategic-agents-settings-s-0229-s-0420)).
 

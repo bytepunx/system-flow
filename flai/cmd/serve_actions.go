@@ -46,8 +46,9 @@ func (a *app) host() hostapi.Host {
 			return err == nil && cfg.ActionEnabled(action, root)
 		},
 		// Agent times each part of the state it builds as a phase of the
-		// request, inside hostapi's agent.state (S-0603).
-		Agent: func(ctx context.Context, root string) any {
+		// request, inside hostapi's agent.state (S-0603). Without finished it
+		// leaves out the runs of finished work and every past run (S-0611).
+		Agent: func(ctx context.Context, root string, finished bool) any {
 			cfg, _, cfgErr := a.loadConfig()
 			done := perf.Track(ctx, "agent.states")
 			st := a.serveDir().AgentStates()[root]
@@ -84,6 +85,19 @@ func (a *app) host() hostapi.Host {
 			done = perf.Track(ctx, "agent.activity")
 			stories := serve.Activity(root, st, command != "")
 			done()
+			if !finished {
+				// the open and live runs alone (S-0611): the board, the activity
+				// page, and a story's agent panel show no more, and the pages
+				// that list past runs ask with finished
+				done = perf.Track(ctx, "agent.unfinished")
+				stories, plans = serve.Unfinished(root, stories, plans)
+				done()
+				pastOrchestrators, pastAnalyzers = []*serve.AgentRun{}, []*serve.AgentRun{}
+				for name, r := range defined {
+					r.Runs = []*serve.AgentRun{}
+					defined[name] = r
+				}
+			}
 			out := map[string]any{"command": command, "running": st.Running, "last": st.Last, "waiting": st.Waiting, "stories": stories, "plans": plans,
 				"orchestrator": st.Orchestrator, "analyzer": st.Analyzer, "curator": st.Curator, "roles": defined,
 				"past_orchestrators": pastOrchestrators, "past_analyzers": pastAnalyzers}

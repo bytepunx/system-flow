@@ -219,7 +219,7 @@ func TestServeOrchestrateAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root, true))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -317,7 +317,7 @@ func TestAgentStatusCarriesTheHostsBudget(t *testing.T) {
 	var warned bytes.Buffer
 	status := func() map[string]any {
 		t.Helper()
-		out, ok := (&app{configPath: configOf(t), errOut: &warned}).host().Agent(context.Background(), root).(map[string]any)
+		out, ok := (&app{configPath: configOf(t), errOut: &warned}).host().Agent(context.Background(), root, true).(map[string]any)
 		if !ok {
 			t.Fatal("agent.status's state is not a map")
 		}
@@ -692,7 +692,7 @@ func TestServeAnalyzeAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root, true))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -745,7 +745,7 @@ func TestServeCurateAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root, true))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2583,7 +2583,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	}
 	status := func() string {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t)}).host().Agent(context.Background(), root, true))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2666,7 +2666,7 @@ func TestAgentStatusCarriesEveryRoleByName(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "agents.json"), []byte(state), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := json.Marshal((&app{configPath: cfgPath}).host().Agent(context.Background(), root))
+	raw, err := json.Marshal((&app{configPath: cfgPath}).host().Agent(context.Background(), root, true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2734,6 +2734,157 @@ func TestAgentStatusCarriesEveryRoleByName(t *testing.T) {
 	}
 	if len(got.Plans) != 2 || got.Orchestrator == nil || got.Orchestrator.PID != 30 || got.Analyzer == nil || !slices.Equal(pids(got.PastOrchestrators), []int{29}) || got.PastAnalyzers == nil {
 		t.Errorf("the fields an older dashboard reads: %s", raw)
+	}
+}
+
+// S-0611: agent.status without finished answers the open and live runs: a
+// live run, a waiting one, and the newest run of each open story or planned
+// item, and leaves out the runs of done, cancelled, or archived work and every
+// past run; with finished true it answers them all, in the same shape.
+func TestAgentStatusAnswersFinishedRunsOnlyWhenAsked(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	root := tempProject(t)
+	for _, args := range [][]string{
+		{"epic", "new", "Open epic"}, {"epic", "new", "Done epic"},
+		{"story", "new", "Live", "--epic", "E-0001"}, {"story", "new", "Failed", "--epic", "E-0001"},
+		{"story", "new", "Worked and done", "--epic", "E-0001"}, {"story", "new", "Asked and cancelled", "--epic", "E-0001"},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %s", args, errOut)
+		}
+	}
+	// S-0003 and E-0002 are done and S-0004 cancelled, as acceptance and a
+	// cancellation leave them before they are archived
+	for id, status := range map[string]string{"S-0003": workitem.Done, "E-0002": workitem.Done, "S-0004": workitem.Cancelled} {
+		folder := "stories"
+		if strings.HasPrefix(id, "E-") {
+			folder = "epics"
+		}
+		paths, _ := filepath.Glob(filepath.Join(root, "wip", "kanban", folder, id+"-*.md"))
+		if len(paths) != 1 {
+			t.Fatalf("%s: %v", id, paths)
+		}
+		data, _ := os.ReadFile(paths[0])
+		if !strings.Contains(string(data), "\nstatus: backlog\n") {
+			t.Fatalf("%s has no backlog status: %s", id, data)
+		}
+		if err := os.WriteFile(paths[0], []byte(strings.Replace(string(data), "\nstatus: backlog\n", "\nstatus: "+status+"\n", 1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ended := func(item, story string, pid int, outcome string) *serve.AgentRun {
+		return &serve.AgentRun{Item: item, Story: story, Agent: "a", PID: pid, Started: "2026-11-09T10:00:00Z", Ended: "2026-11-09T10:30:00Z", Outcome: outcome}
+	}
+	live := &serve.AgentRun{Story: "S-0001", Agent: "agent-S-0001", PID: 11, Started: "2026-11-09T11:00:00Z"}
+	asked := ended("", "S-0004", 14, serve.OutcomeAsked)
+	asked.Thread = "TH-0001"
+	st := serve.AgentState{
+		Stories: map[string]*serve.AgentRun{
+			"S-0001": live,
+			"S-0002": ended("", "S-0002", 12, serve.OutcomeFailed),
+			"S-0003": ended("", "S-0003", 13, serve.OutcomeWorked),
+			"S-0004": asked,
+			"S-0099": ended("", "S-0099", 19, serve.OutcomeWorked), // archived: no file outside the archive
+		},
+		Plans: map[string]*serve.AgentRun{
+			"E-0001": ended("E-0001", "", 21, serve.OutcomeWorked),
+			"E-0002": ended("E-0002", "", 22, serve.OutcomeWorked),
+			"S-0098": {Item: "S-0098", Agent: "planner-S-0098", PID: 23, Started: "2026-11-09T11:00:00Z"}, // live, on an item no list holds
+		},
+		PastPlans:         []*serve.AgentRun{ended("E-0001", "", 24, serve.OutcomeWorked)},
+		Orchestrator:      ended("", "", 31, serve.OutcomeWorked),
+		PastOrchestrators: []*serve.AgentRun{ended("", "", 32, serve.OutcomeWorked)},
+		Analyzer:          ended("", "", 41, serve.OutcomeWorked),
+		PastAnalyzers:     []*serve.AgentRun{ended("", "", 42, serve.OutcomeWorked)},
+	}
+	st.Orchestrator.Started, st.PastOrchestrators[0].Started = "2026-11-09T09:00:00Z", "2026-11-08T09:00:00Z"
+	st.Analyzer.Started, st.PastAnalyzers[0].Started = "2026-11-09T08:00:00Z", "2026-11-08T08:00:00Z"
+	data, err := json.Marshal(map[string]serve.AgentState{root: st})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := string(serve.DirFor(cfgPath))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agents.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	type answer struct {
+		Stories map[string]struct {
+			State string          `json:"state"`
+			Run   *serve.AgentRun `json:"run"`
+		} `json:"stories"`
+		Plans             map[string]*serve.AgentRun `json:"plans"`
+		Orchestrator      *serve.AgentRun            `json:"orchestrator"`
+		Analyzer          *serve.AgentRun            `json:"analyzer"`
+		PastOrchestrators []*serve.AgentRun          `json:"past_orchestrators"`
+		PastAnalyzers     []*serve.AgentRun          `json:"past_analyzers"`
+		Roles             map[string]struct {
+			Run  *serve.AgentRun   `json:"run"`
+			Runs []*serve.AgentRun `json:"runs"`
+		} `json:"roles"`
+	}
+	host := (&app{configPath: cfgPath, errOut: io.Discard}).host()
+	ask := func(params string) answer {
+		t.Helper()
+		res, e := hostapi.MethodsFor("test", nil, host)["agent.status"](context.Background(), channel.Project{Key: "t", Root: root}, json.RawMessage(params))
+		if e != nil {
+			t.Fatal(e)
+		}
+		raw, err := json.Marshal(res.(map[string]any)["state"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got answer
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.PastOrchestrators == nil || got.PastAnalyzers == nil || got.Stories == nil || got.Plans == nil {
+			t.Errorf("%s: a key the dashboard reads is missing or null: %s", params, raw)
+		}
+		for name, r := range got.Roles {
+			if r.Runs == nil {
+				t.Errorf("%s: role %s's runs is null: %s", params, name, raw)
+			}
+		}
+		return got
+	}
+
+	open := ask(`{}`)
+	if ids := slices.Sorted(maps.Keys(open.Stories)); !slices.Equal(ids, []string{"S-0001", "S-0002", "S-0004"}) {
+		t.Errorf("stories without finished: %v, want the live S-0001, the failed S-0002 on an open story, and the waiting S-0004", ids)
+	}
+	if open.Stories["S-0004"].State != serve.ActivityWaiting || open.Stories["S-0002"].State != serve.ActivityFailed {
+		t.Errorf("states: %+v", open.Stories)
+	}
+	if ids := slices.Sorted(maps.Keys(open.Plans)); !slices.Equal(ids, []string{"E-0001", "S-0098"}) {
+		t.Errorf("plans without finished: %v, want E-0001's, on an open epic, and the live S-0098", ids)
+	}
+	if len(open.PastOrchestrators) != 0 || len(open.PastAnalyzers) != 0 {
+		t.Errorf("past runs without finished: %v %v, want none", open.PastOrchestrators, open.PastAnalyzers)
+	}
+	for name, r := range open.Roles {
+		if len(r.Runs) != 0 {
+			t.Errorf("role %s's runs without finished: %d, want none", name, len(r.Runs))
+		}
+	}
+	if open.Orchestrator == nil || open.Orchestrator.PID != 31 || open.Analyzer == nil || open.Analyzer.PID != 41 || open.Roles["planner"].Run == nil || open.Roles["planner"].Run.PID != 23 {
+		t.Errorf("the newest orchestrator and analyzer runs and the planner's run under way are kept: %+v %+v %+v", open.Orchestrator, open.Analyzer, open.Roles["planner"].Run)
+	}
+
+	all := ask(`{"finished":true}`)
+	if ids := slices.Sorted(maps.Keys(all.Stories)); !slices.Equal(ids, []string{"S-0001", "S-0002", "S-0003", "S-0004", "S-0099"}) {
+		t.Errorf("stories with finished: %v, want every one", ids)
+	}
+	if ids := slices.Sorted(maps.Keys(all.Plans)); !slices.Equal(ids, []string{"E-0001", "E-0002", "S-0098"}) {
+		t.Errorf("plans with finished: %v, want every one", ids)
+	}
+	if len(all.PastOrchestrators) != 1 || len(all.PastAnalyzers) != 1 || len(all.Roles["orchestrator"].Runs) != 2 || len(all.Roles["planner"].Runs) != 3 {
+		t.Errorf("past runs with finished: %d orchestrators, %d analyzers, %d orchestrator role runs, %d planner role runs; want 1, 1, 2, 3",
+			len(all.PastOrchestrators), len(all.PastAnalyzers), len(all.Roles["orchestrator"].Runs), len(all.Roles["planner"].Runs))
 	}
 }
 

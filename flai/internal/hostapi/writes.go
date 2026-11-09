@@ -563,9 +563,10 @@ type Host struct {
 	// Agent reports what flai serve knows of agents it starts for a project
 	// (S-0079): what runs, the last start or failure, and why a ready story
 	// waits. ctx is the request's, which carries its recorder, so the phases
-	// of the state it builds are timed (S-0603). Nil when nothing starts
-	// agents here.
-	Agent func(ctx context.Context, root string) any
+	// of the state it builds are timed (S-0603). finished asks for the runs
+	// of finished work and the past runs too; without it the state holds the
+	// open and live runs alone (S-0611). Nil when nothing starts agents here.
+	Agent func(ctx context.Context, root string, finished bool) any
 	// AgentStream reads the stream of the newest agent flai serve started for
 	// a story (S-0142), from a byte offset, or its tail when after is
 	// negative; ErrNoAgent when it started none. Nil when nothing starts

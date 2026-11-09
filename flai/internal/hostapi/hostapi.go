@@ -381,14 +381,28 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return out, nil
 		},
 
+		// finished (S-0611): with it true, the state holds every run flai
+		// serve recorded, as before, for the pages that list past runs: the
+		// planner's, the orchestrator's, the analyzer's, and a role's pages,
+		// and an item's plan. Without it the state keeps the same keys with
+		// fewer entries: in stories, each story whose run is live or whose
+		// agent works or waits, and the newest run of each other story not
+		// done, cancelled, or archived; in plans, the newest planner run of
+		// each item that is live or whose item is open; past_orchestrators,
+		// past_analyzers, and each role's runs empty. running, last, waiting,
+		// command, budget, the newest orchestrator, analyzer, and curator run,
+		// and each role's run under way and held are as with it.
 		"agent.status": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
-			if e := params(raw, &struct{}{}); e != nil {
+			var in struct {
+				Finished bool `json:"finished"`
+			}
+			if e := params(raw, &in); e != nil {
 				return nil, e
 			}
 			out := map[string]any{"enabled": host.enabled(ActionAgent, p.Root)}
 			if host.Agent != nil {
 				done := perf.Track(ctx, "agent.state")
-				out["state"] = host.Agent(ctx, p.Root)
+				out["state"] = host.Agent(ctx, p.Root, in.Finished)
 				done()
 			}
 			return out, nil
