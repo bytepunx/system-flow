@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 498
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 55
-      output: 355
-      cache_read: 7694512
-      cache_write: 40548
-      cost: 2.8233
+      input: 46
+      output: 9058
+      cache_read: 7815802
+      cache_write: 56603
+      cost: 2.1498
 ---
 # T-2689 The request answered event gives the send's time in its own field, send_ms, logged after the write
 

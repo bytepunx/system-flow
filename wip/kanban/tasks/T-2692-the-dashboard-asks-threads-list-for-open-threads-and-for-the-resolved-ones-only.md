@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 515
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 312
-      cache_read: 6502291
-      cache_write: 42744
-      cost: 2.389
+      input: 39
+      output: 7664
+      cache_read: 6613356
+      cache_write: 47895
+      cost: 1.819
 ---
 # T-2692 The dashboard asks threads.list for open threads, and for the resolved ones only when a page asks with all=1
 

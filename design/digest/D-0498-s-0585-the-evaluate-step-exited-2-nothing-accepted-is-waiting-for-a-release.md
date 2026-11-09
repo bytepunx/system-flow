@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0621, T-2743, TH-0934]
 ---
 
 # D-0498 S-0585: the evaluate step exited 2, nothing accepted is waiting for a release: Recommended: do not cancel S-0585

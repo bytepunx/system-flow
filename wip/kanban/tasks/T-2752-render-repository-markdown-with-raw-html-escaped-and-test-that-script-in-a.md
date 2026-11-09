@@ -3,11 +3,11 @@ id: T-2752
 type: task
 nature: remediation
 title: Render repository markdown with raw HTML escaped, and test that script in a document does not run
-status: in-progress
+status: done
 parent: S-0627
 owner: alex
 created: 2026-11-09T17:11:02Z
-updated: 2026-11-09T17:41:34Z
+updated: 2026-11-09T17:48:10Z
 transitions:
   - to: ready
     at: 2026-11-09T17:41:34Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:41:34Z
     by: agent-S-0627
+  - to: done
+    at: 2026-11-09T17:48:10Z
+    by: agent-S-0627
 stream: S-0627
 tags: [dashboard]
 touches: [flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts]
+usage:
+  source: log
+  seconds: 396
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 1755
+      cache_read: 1206179
+      cache_write: 29532
+      cost: 0.5126
 ---
 # T-2752 Render repository markdown with raw HTML escaped, and test that script in a document does not run
 

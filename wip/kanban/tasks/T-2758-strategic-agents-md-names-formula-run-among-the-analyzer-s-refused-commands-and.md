@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 399
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 330
-      cache_read: 4001374
-      cache_write: 42447
-      cost: 1.4762
+      input: 38
+      output: 6664
+      cache_read: 4134485
+      cache_write: 55749
+      cost: 1.3674
 ---
 # T-2758 strategic-agents.md names formula run among the analyzer's refused commands, and flai-cli.md lists flai checks and flai serve checks
 

@@ -3,16 +3,37 @@ id: T-2747
 type: task
 nature: improvement
 title: The instance prompt and the conventions in both copies say a stop exit ends the run with flai formula stop, asking nothing
-status: backlog
+status: done
 parent: S-0621
 owner: alex
 created: 2026-11-09T17:07:09Z
-updated: 2026-11-09T17:07:09Z
-transitions: []
+updated: 2026-11-09T18:25:07Z
+transitions:
+  - to: ready
+    at: 2026-11-09T18:14:49Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T18:14:50Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T18:25:07Z
+    by: agent-S-0621
 stream: S-0621
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]
 after: [T-2745]
+usage:
+  source: log
+  seconds: 617
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 5638
+      cache_read: 1156392
+      cache_write: 21295
+      cost: 0.4671
 ---
 # T-2747 The instance prompt and the conventions in both copies say a stop exit ends the run with flai formula stop, asking nothing
 

@@ -24,16 +24,16 @@ touches: [design/issues/I-0293-design-documents-describe-a-conventions-page-a-st
 after: [T-2755, T-2756, T-2757, T-2758]
 usage:
   source: log
-  seconds: 9
+  seconds: 23
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 539056
-      cache_write: 2261
-      cost: 0.1976
+      input: 5
+      output: 892
+      cache_read: 553453
+      cache_write: 7463
+      cost: 0.183
 ---
 # T-2759 I-0293 is closed, naming the corrected documents and the route-table test
 

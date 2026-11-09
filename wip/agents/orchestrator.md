@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2058.8413
-accrued_seconds: 1532183
-tasks_completed: 2497
-last_run: 2026-11-09T17:30:56Z
+accrued_cost: 2060.8747
+accrued_seconds: 1532501
+tasks_completed: 2509
+last_run: 2026-11-09T18:07:35Z
 ---
 
 # Orchestrator activity
@@ -17509,6 +17509,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.0889 USD, estimated
+
+### 2026-11-09T17:42:16Z
+
+- Summary: Accepted S-0620 at cfbda4f under accept_reviews: close-out passed at the branch head, verifier matched both criteria to changed files, dry run showed no blockers; merged, archived, committed.
+- Items: S-0620
+- Seconds: 64
+- Cost: 0.2890 USD, estimated
+
+### 2026-11-09T17:42:47Z
+
+- Summary: After accepting S-0620, release_evaluate is met (threshold: count 2 ≥ 1; 50 USD/week, S-0619 and S-0620). Did not start another publish instance: S-0642, a publish instance made at 17:28 and ready, publishes everything pending, S-0620 included, once it starts; a second instance would race it (I-0320).
+- Items: S-0620, S-0642
+- Seconds: 31
+- Cost: 0.0562 USD, estimated
+
+### 2026-11-09T17:43:08Z
+
+- Summary: I accepted S-0620 at commit `cfbda4f`. It is merged into main, moved to done, archived and committed.
+- Items: none
+- Seconds: 21
+- Cost: 0.1096 USD, estimated
+
+### 2026-11-09T17:43:30Z
+
+- Summary: Release due after S-0620's acceptance: release_evaluate under threshold is met (count 2 >= 1; value 50 USD < 1000; pending S-0619, S-0620). Did not run flai formula run publish again: publish instance S-0642 (made 17:28:50Z, in ready, held no-touches until the in-progress stories leave) already publishes everything accepted and unreleased, S-0620 included, and a second instance would duplicate it.
+- Items: S-0620, S-0619, S-0642
+- Seconds: 13
+- Cost: 0.0526 USD, estimated
+
+### 2026-11-09T17:43:52Z
+
+- Summary: I didn't start a new publish run: the release is due, but a publish story for it already exists.
+- Items: none
+- Seconds: 22
+- Cost: 0.2540 USD, estimated
+
+### 2026-11-09T17:56:56Z
+
+- Summary: ready-empty (ready holds S-0642, held no-touches; room 2): did not promote S-0241, promote_candidates' only candidate (rank 1, 2h, throughput): blocked, moved back to backlog by the operator, its Notes forbid ready before headless forks, and TH-0790 awaits the operator. No complete draft in flai promote --drafts. Did not replan E-0033: alex's "Resolved." on TH-0916 changes no plan. Started planner-S-0622 under plan_backlog_stories, the first story flai plan --candidates lists (no touches, forecast, value, or tasks), so drafts can become candidates. Ready unchanged, nothing to reorder.
+- Items: S-0622, S-0241, S-0642
+- Seconds: 29
+- Cost: 0.1349 USD, estimated
+
+### 2026-11-09T17:57:13Z
+
+- Summary: I promoted nothing to ready this run, and I started the planner for S-0622 so more backlog stories can become candidates.
+- Items: none
+- Seconds: 17
+- Cost: 0.2408 USD, estimated
+
+### 2026-11-09T18:06:18Z
+
+- Summary: Left S-0622 a draft: flai promote --drafts lists it complete (position 1, 45m, throughput), but its 11,250 USD/week value rests on time_lost_per_cycle 75h from W44, and the planner's Notes say that wait stopped when set_cost_of_delay went on (c76b23a2d). Opened TH-0941 recommending the operator lower the input, or say keep, before I finalize it.
+- Items: S-0622
+- Seconds: 55
+- Cost: 0.2984 USD, estimated
+
+### 2026-11-09T18:06:32Z
+
+- Summary: I didn't finalize S-0622; it stays a draft until you answer TH-0941.
+- Items: none
+- Seconds: 14
+- Cost: 0.1875 USD, estimated
+
+### 2026-11-09T18:07:07Z
+
+- Summary: Answered TH-0940, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0622
+- Seconds: 24
+- Cost: 0.0974 USD, estimated
+
+### 2026-11-09T18:07:20Z
+
+- Summary: Approved planner-S-0622's plan on TH-0940 (T-2763, T-2764 in layer 1, T-2765 in layer 2; 4 file touches; 45m forecast) and resolved it under plan_backlog_stories. Left the 75h time_lost_per_cycle input unchanged: it is not the story's first input, and TH-0941 already asks the operator. S-0622 stays a draft until TH-0941 is answered.
+- Items: S-0622, T-2763, T-2764, T-2765
+- Seconds: 13
+- Cost: 0.0288 USD, estimated
+
+### 2026-11-09T18:07:35Z
+
+- Summary: I approved planner-S-0622's plan on TH-0940 and resolved the thread. S-0622 is still a draft, waiting on your answer to TH-0941 about its cost of delay.
+- Items: none
+- Seconds: 15
+- Cost: 0.2842 USD, estimated
 
 ## Refusals
 

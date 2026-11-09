@@ -3,16 +3,19 @@ id: S-0629
 type: story
 nature: remediation
 title: flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:41Z
-updated: 2026-11-09T17:27:13Z
+updated: 2026-11-09T17:55:53Z
 transitions:
   - to: ready
     at: 2026-11-09T17:13:07Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-09T17:23:00Z
+    by: agent-S-0629
+  - to: review
+    at: 2026-11-09T17:55:53Z
     by: agent-S-0629
 tags: [flai, serve, claude-code]
 topics: [permissions, usage-limit]
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 266
-  estimated: true
-  priced_by: estimate
+  seconds: 1983
+  priced_by: harness
   turns:
     - day: 2026-11-09
+      ceremony: 1
       hand_edits: 2
-      work: 24
+      work: 54
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 567
-      cache_read: 8272402
-      cache_write: 285241
-      cost: 3.1237
+      input: 188
+      output: 45463
+      cache_read: 24862899
+      cache_write: 702102
+      cost: 10.3598
   strategic:
     - kind: planner
       seconds: 318
@@ -106,8 +109,8 @@ finalized:
 This story remediates [I-0296](../../../design/issues/I-0296-flai-serve-records-a-claude-code-usage-limit-refusal-as-a-failed-permission.md), "flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0296 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0296 is closed with `flai issue close I-0296 --reason` saying what fixed it
+- [x] The cause I-0296 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0296 is closed with `flai issue close I-0296 --reason` saying what fixed it
 
 ## Tasks
 - T-2749 An ADR and the design say a permission_prompt check that ends on the harness's usage limit records no outcome and is checked again after the limit resets

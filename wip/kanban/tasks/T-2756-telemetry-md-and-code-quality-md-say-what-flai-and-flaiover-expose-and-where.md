@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 367
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 203
-      cache_read: 2504124
-      cache_write: 22116
-      cost: 0.9222
+      input: 24
+      output: 4163
+      cache_read: 2582881
+      cache_write: 34827
+      cost: 0.8542
 ---
 # T-2756 telemetry.md and code-quality.md say what flai and flaiover expose and where flai's integration tests live
 

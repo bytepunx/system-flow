@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 179.3510
-accrued_seconds: 18761
-tasks_completed: 113
-last_run: 2026-11-09T11:32:06Z
+accrued_cost: 181.3433
+accrued_seconds: 18879
+tasks_completed: 114
+last_run: 2026-11-09T17:44:20Z
 ---
 
 # Curator activity
@@ -915,3 +915,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0541
 - Seconds: 107
 - Cost: 1.3784 USD, estimated
+
+### 2026-11-09T17:44:20Z
+
+- Summary: No new entries this run. I merged S-0620 into D-0509, absorbed D-0509 into `design/system/strategic-agents.md` § Formulas (S-0421), and `flai digest compact` compacted none (it recorded citers on 3 entries); the other 25 candidates were already in the design or not worth keeping (S-0610 is in `server-performance.md` Cause 20 and ADR-0266, S-0619/I-0254 in ADR-0269, S-0615's are plan notes).
+- Trigger: accepted S-0620
+- Items: D-0498, D-0503, D-0509
+- Seconds: 118
+- Cost: 1.9923 USD, estimated

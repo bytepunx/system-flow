@@ -3,16 +3,37 @@ id: T-2748
 type: task
 nature: improvement
 title: The publish formula's evaluate step stops on exit 2 in both copies, the formula and user docs say how a stop works, and I-0283 is closed
-status: backlog
+status: done
 parent: S-0621
 owner: alex
 created: 2026-11-09T17:07:21Z
-updated: 2026-11-09T17:07:21Z
-transitions: []
+updated: 2026-11-09T18:27:08Z
+transitions:
+  - to: ready
+    at: 2026-11-09T18:25:24Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T18:25:25Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T18:27:08Z
+    by: agent-S-0621
 stream: S-0621
 tags: [template, docs]
-touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md]
+touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md, docs/operators/settings.md]
 after: [T-2746, T-2747]
+usage:
+  source: log
+  seconds: 103
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 9014
+      cache_read: 1848691
+      cache_write: 34043
+      cost: 0.7467
 ---
 # T-2748 The publish formula's evaluate step stops on exit 2 in both copies, the formula and user docs say how a stop works, and I-0283 is closed
 

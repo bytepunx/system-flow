@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0935]
 ---
 
 # D-0503 Claude Code BEEFGOOF through anthropic fails flai's permission_prompt check: the entry was removed so we can test this again

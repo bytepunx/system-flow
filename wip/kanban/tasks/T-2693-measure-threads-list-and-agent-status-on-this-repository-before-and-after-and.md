@@ -24,16 +24,16 @@ touches: [design/system/server-performance.md]
 after: [T-2689, T-2690, T-2691, T-2692]
 usage:
   source: log
-  seconds: 86
+  seconds: 90
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 87
-      cache_read: 3153245
-      cache_write: 10899
-      cost: 1.1549
+      input: 19
+      output: 3705
+      cache_read: 3197168
+      cache_write: 23154
+      cost: 0.8794
 ---
 # T-2693 Measure threads.list and agent.status on this repository before and after, and record cause 21's figures in server-performance.md
 

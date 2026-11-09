@@ -3,16 +3,19 @@ id: S-0626
 type: story
 nature: improvement
 title: Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:21Z
-updated: 2026-11-09T17:35:44Z
+updated: 2026-11-09T17:46:51Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:42Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-09T17:26:31Z
+    by: agent-S-0626
+  - to: review
+    at: 2026-11-09T17:46:51Z
     by: agent-S-0626
 tags: [design, docs, flaiover]
 topics: [documentation]
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 557
-  estimated: true
-  priced_by: estimate
+  seconds: 1230
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      hand_edits: 1
-      work: 27
+      ceremony: 1
+      hand_edits: 2
+      work: 65
   models:
     - model: claude-opus-5-5
-      input: 156
-      output: 1193
-      cache_read: 14299520
-      cache_write: 338829
-      cost: 5.3437
+      input: 246
+      output: 43198
+      cache_read: 26802083
+      cache_write: 361396
+      cost: 8.8641
   strategic:
     - kind: planner
       seconds: 23
@@ -100,8 +103,8 @@ finalized:
 This story remediates [I-0293](../../../design/issues/I-0293-design-documents-describe-a-conventions-page-a-streams-page-a-mounted.md), "Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0293 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0293 is closed with `flai issue close I-0293 --reason` saying what fixed it
+- [x] The cause I-0293 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0293 is closed with `flai issue close I-0293 --reason` saying what fixed it
 
 ## Tasks
 - T-2755 The dashboard design's page and API tables name only routes flaiover has, and a test fails on a row with no route

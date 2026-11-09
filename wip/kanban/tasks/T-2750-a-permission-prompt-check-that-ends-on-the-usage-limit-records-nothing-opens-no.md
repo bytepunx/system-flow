@@ -24,10 +24,16 @@ touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_te
 after: [T-2749]
 usage:
   source: log
-  seconds: 1
+  seconds: 887
   estimated: true
-  priced_by: estimate
-  models: []
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 12621
+      cache_read: 6901958
+      cache_write: 194904
+      cost: 2.8759
 ---
 # T-2750 A permission_prompt check that ends on the usage limit records nothing, opens no thread, and is checked again after the reset
 

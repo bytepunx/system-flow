@@ -3,15 +3,36 @@ id: T-2743
 type: task
 nature: improvement
 title: An ADR and the design say a formula step may name the exits that stop its instance cleanly, and how the instance then reaches done
-status: backlog
+status: done
 parent: S-0621
 owner: alex
 created: 2026-11-09T17:06:27Z
-updated: 2026-11-09T17:06:27Z
-transitions: []
+updated: 2026-11-09T17:54:08Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:43:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:43:12Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T17:54:08Z
+    by: agent-S-0621
 stream: S-0621
 tags: [design]
 touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 648
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 146
+      output: 36739
+      cache_read: 8465566
+      cache_write: 205094
+      cost: 3.773
 ---
 # T-2743 An ADR and the design say a formula step may name the exits that stop its instance cleanly, and how the instance then reaches done
 

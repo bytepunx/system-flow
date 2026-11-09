@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 509
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 495
-      cache_read: 13840079
-      cache_write: 90342
-      cost: 5.0846
+      input: 83
+      output: 16313
+      cache_read: 14075825
+      cache_write: 101939
+      cost: 3.8716
 ---
 # T-2690 agent.status takes a finished parameter, and without it sends only the open and live runs
 

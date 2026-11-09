@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 117
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 32
-      output: 289
-      cache_read: 4192324
-      cache_write: 19037
-      cost: 1.5372
+      output: 7676
+      cache_read: 4198081
+      cache_write: 118549
+      cost: 1.7492
 ---
 # T-2749 An ADR and the design say a permission_prompt check that ends on the harness's usage limit records no outcome and is checked again after the limit resets
 

@@ -3,16 +3,37 @@ id: T-2754
 type: task
 nature: remediation
 title: Close I-0294 with what fixed it
-status: backlog
+status: done
 parent: S-0627
 owner: alex
 created: 2026-11-09T17:11:25Z
-updated: 2026-11-09T17:11:25Z
-transitions: []
+updated: 2026-11-09T17:52:18Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:50:56Z
+    by: agent-S-0627
+  - to: in-progress
+    at: 2026-11-09T17:50:56Z
+    by: agent-S-0627
+  - to: done
+    at: 2026-11-09T17:52:18Z
+    by: agent-S-0627
 stream: S-0627
 tags: [dashboard]
 touches: [design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md, design/issues/summary.md]
 after: [T-2752, T-2753]
+usage:
+  source: log
+  seconds: 82
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1048
+      cache_read: 720347
+      cache_write: 17637
+      cost: 0.3062
 ---
 # T-2754 Close I-0294 with what fixed it
 

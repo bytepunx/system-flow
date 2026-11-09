@@ -3,10 +3,10 @@ id: S-0641
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-09T16:56:49Z
-updated: 2026-11-09T16:59:05Z
+updated: 2026-11-09T21:22:31Z
 transitions:
   - to: ready
     at: 2026-11-09T16:56:50Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T16:59:05Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T21:22:31Z
+    by: alex
 tags: []
 touches: [design/issues/I-0320-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md, design/issues/summary.md]
 agent:

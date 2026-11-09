@@ -3,16 +3,19 @@ id: S-0627
 type: story
 nature: improvement
 title: "The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:28Z
-updated: 2026-11-09T17:40:47Z
+updated: 2026-11-09T17:56:40Z
 transitions:
   - to: ready
     at: 2026-11-09T17:18:43Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-09T17:40:47Z
+    by: agent-S-0627
+  - to: review
+    at: 2026-11-09T17:56:40Z
     by: agent-S-0627
 tags: [dashboard]
 topics: [dashboard]
@@ -23,9 +26,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 965
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      hand_edits: 1
+      work: 42
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 14321
+      cache_read: 9840357
+      cache_write: 240927
+      cost: 4.1823
   strategic:
     - kind: orchestrator
       seconds: 253
@@ -78,8 +93,8 @@ finalized:
 This story remediates [I-0294](../../../design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md), "The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0294 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0294 is closed with `flai issue close I-0294 --reason` saying what fixed it
+- [x] The cause I-0294 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0294 is closed with `flai issue close I-0294 --reason` saying what fixed it
 
 ## Tasks
 - T-2752 Render repository markdown with raw HTML escaped, and test that script in a document does not run

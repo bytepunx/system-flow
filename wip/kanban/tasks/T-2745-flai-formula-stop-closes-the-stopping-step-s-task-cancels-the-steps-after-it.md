@@ -3,16 +3,37 @@ id: T-2745
 type: task
 nature: improvement
 title: flai formula stop closes the stopping step's task, cancels the steps after it, and ticks their criteria as skipped, so the instance can go to review
-status: backlog
+status: done
 parent: S-0621
 owner: alex
 created: 2026-11-09T17:06:48Z
-updated: 2026-11-09T17:06:48Z
-transitions: []
+updated: 2026-11-09T18:14:41Z
+transitions:
+  - to: ready
+    at: 2026-11-09T18:03:31Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T18:03:31Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T18:14:41Z
+    by: agent-S-0621
 stream: S-0621
 tags: [flai]
 touches: [flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/cmd/formula.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go]
 after: [T-2744]
+usage:
+  source: log
+  seconds: 670
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 35018
+      cache_read: 7181789
+      cache_write: 132252
+      cost: 2.9007
 ---
 # T-2745 flai formula stop closes the stopping step's task, cancels the steps after it, and ticks their criteria as skipped, so the instance can go to review
 

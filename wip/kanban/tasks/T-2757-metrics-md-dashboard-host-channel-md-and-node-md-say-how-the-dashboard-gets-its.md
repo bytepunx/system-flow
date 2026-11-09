@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 387
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 29
-      output: 209
-      cache_read: 2318403
-      cache_write: 26392
-      cost: 0.856
+      input: 22
+      output: 3864
+      cache_read: 2397367
+      cache_write: 32326
+      cost: 0.7929
 ---
 # T-2757 metrics.md, dashboard-host-channel.md, and node.md say how the dashboard gets its metrics, that the host channel is built, and which lockfile the build installs from
 

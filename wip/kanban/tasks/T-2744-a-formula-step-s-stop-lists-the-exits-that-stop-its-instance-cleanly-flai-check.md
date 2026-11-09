@@ -3,16 +3,37 @@ id: T-2744
 type: task
 nature: improvement
 title: A formula step's stop lists the exits that stop its instance cleanly, flai check validates it, and run and show write it
-status: backlog
+status: done
 parent: S-0621
 owner: alex
 created: 2026-11-09T17:06:37Z
-updated: 2026-11-09T17:06:37Z
-transitions: []
+updated: 2026-11-09T18:03:19Z
+transitions:
+  - to: ready
+    at: 2026-11-09T17:54:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T17:54:28Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T18:03:19Z
+    by: agent-S-0621
 stream: S-0621
 tags: [flai]
 touches: [flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go]
 after: [T-2743]
+usage:
+  source: log
+  seconds: 531
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 13502
+      cache_read: 2769152
+      cache_write: 50994
+      cost: 1.1184
 ---
 # T-2744 A formula step's stop lists the exits that stop its instance cleanly, flai check validates it, and run and show write it
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 412
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 368
-      cache_read: 10249337
-      cache_write: 45317
-      cost: 3.7575
+      input: 61
+      output: 12055
+      cache_read: 10402105
+      cache_write: 75333
+      cost: 2.8611
 ---
 # T-2691 The pages that list finished runs ask agent.status for them, and the rest ask for the open and live runs
 

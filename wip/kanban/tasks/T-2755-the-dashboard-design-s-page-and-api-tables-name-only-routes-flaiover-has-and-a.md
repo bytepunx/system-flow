@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 336
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 226
-      cache_read: 3115731
-      cache_write: 38733
-      cost: 1.1515
+      input: 30
+      output: 5198
+      cache_read: 3225190
+      cache_write: 43488
+      cost: 1.0666
 ---
 # T-2755 The dashboard design's page and API tables name only routes flaiover has, and a test fails on a row with no route
 

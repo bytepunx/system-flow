@@ -3,10 +3,10 @@ id: S-0621
 type: story
 nature: improvement
 title: A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:39:50Z
-updated: 2026-11-09T17:41:54Z
+updated: 2026-11-09T18:31:02Z
 transitions:
   - to: ready
     at: 2026-11-09T17:09:53Z
@@ -14,18 +14,33 @@ transitions:
   - to: in-progress
     at: 2026-11-09T17:41:54Z
     by: agent-S-0621
+  - to: review
+    at: 2026-11-09T18:31:02Z
+    by: agent-S-0621
 tags: [flai, template]
 topics: [formulas, release, acceptance]
-touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/formulas_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/internal/guard/guard.go, flai/internal/guard/formula_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_formula_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md, template/template.yaml, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/summary.md, design/adrs/0271-a-formula-step-may-name-the-exits-that-stop-its-instance-cleanly-flai-formula.md, docs/operators/settings.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2954
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 3
+      hand_edits: 1
+      work: 54
+  models:
+    - model: claude-opus-5-5
+      input: 498
+      output: 132788
+      cache_read: 28878077
+      cache_write: 618734
+      cost: 12.2889
   strategic:
     - kind: orchestrator
       seconds: 49
@@ -62,8 +77,8 @@ finalized:
 This story remediates [I-0283](../../../design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md), "A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0283 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0283 is closed with `flai issue close I-0283 --reason` saying what fixed it
+- [x] The cause I-0283 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0283 is closed with `flai issue close I-0283 --reason` saying what fixed it
 
 ## Tasks
 - T-2743 An ADR and the design say a formula step may name the exits that stop its instance cleanly, and how the instance then reaches done
