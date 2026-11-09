@@ -120,11 +120,22 @@ func publishAddress(publish string) (addr string, port int, err error) {
 	return probeHost(net.JoinHostPort(bind, p)), port, nil
 }
 
+// dialFunc opens a connection as net.DialTimeout does. The probes take one so
+// that a test decides what a port it does not hold answers: on a WSL2 host
+// with mirrored networking a port free in Linux may be a Windows listener's,
+// so a real dial to a closed loopback port can connect (I-0321).
+type dialFunc func(network, addr string, timeout time.Duration) (net.Conn, error)
+
 // publishAnswers says whether the host port of a docker publish accepts a TCP
 // connection within portProbeTimeout, whatever holds it.
 func publishAnswers(publish string) bool {
+	return publishAnswersWith(net.DialTimeout, publish)
+}
+
+// publishAnswersWith is publishAnswers dialling with dial.
+func publishAnswersWith(dial dialFunc, publish string) bool {
 	addr, _, err := publishAddress(publish)
-	return err == nil && tcpAnswers(addr, portProbeTimeout)
+	return err == nil && tcpAnswersWith(dial, addr, portProbeTimeout)
 }
 
 // publishHolder is the docker-proxy in the host's process table, /proc, that
@@ -139,7 +150,12 @@ func publishHolder(publish string) (portHolder, bool) {
 
 // tcpAnswers says whether addr accepts a TCP connection within timeout.
 func tcpAnswers(addr string, timeout time.Duration) bool {
-	c, err := net.DialTimeout("tcp", addr, timeout)
+	return tcpAnswersWith(net.DialTimeout, addr, timeout)
+}
+
+// tcpAnswersWith is tcpAnswers dialling with dial.
+func tcpAnswersWith(dial dialFunc, addr string, timeout time.Duration) bool {
+	c, err := dial("tcp", addr, timeout)
 	if err != nil {
 		return false
 	}

@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -115,7 +118,8 @@ func TestPublishAddressDialsWildcardsAtLoopback(t *testing.T) {
 	}
 }
 
-func TestTCPAnswersAListenerAndNotAClosedOne(t *testing.T) {
+// TestTCPAnswersAListener dials for real only a listener the test holds open.
+func TestTCPAnswersAListener(t *testing.T) {
 	t.Parallel()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -134,26 +138,66 @@ func TestTCPAnswersAListenerAndNotAClosedOne(t *testing.T) {
 	if !tcpAnswers(l.Addr().String(), time.Second) {
 		t.Fatal("an open listener does not answer")
 	}
-
-	closed, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := closed.Addr().String()
-	_ = closed.Close()
-	if tcpAnswers(addr, time.Second) {
-		t.Fatal("a closed listener answers")
-	}
-	_, port, _ := net.SplitHostPort(addr)
-	if publishAnswers("127.0.0.1:" + port + ":3000") {
-		t.Fatal("a closed listener's publish answers")
-	}
 	_, open, _ := net.SplitHostPort(l.Addr().String())
 	if !publishAnswers("0.0.0.0:" + open + ":3000") {
 		t.Fatal("an open listener's wildcard publish does not answer")
 	}
-	if publishAnswers("not-a-publish") {
+}
+
+// fakeDialer records the addresses dialled and answers each as answer says:
+// a connection it closes itself, or a refusal.
+type fakeDialer struct {
+	answer bool
+	dialed []string
+	conns  []net.Conn
+}
+
+func (d *fakeDialer) dial(network, addr string, _ time.Duration) (net.Conn, error) {
+	d.dialed = append(d.dialed, network+" "+addr)
+	if !d.answer {
+		return nil, &net.OpError{Op: "dial", Net: network, Err: syscall.ECONNREFUSED}
+	}
+	ours, theirs := net.Pipe()
+	d.conns = append(d.conns, theirs)
+	return ours, nil
+}
+
+// TestTCPAnswersNotARefusedPort asserts the closed-port case through a dialer
+// that refuses, not a real closed port: on a WSL2 host with mirrored
+// networking a port free in Linux can be a Windows listener's, so a real dial
+// to it may connect (I-0321).
+func TestTCPAnswersNotARefusedPort(t *testing.T) {
+	t.Parallel()
+	refuse := &fakeDialer{}
+	if tcpAnswersWith(refuse.dial, "127.0.0.1:4242", time.Second) {
+		t.Fatal("a refused port answers")
+	}
+	if publishAnswersWith(refuse.dial, "0.0.0.0:4242:3000") {
+		t.Fatal("a refused port's publish answers")
+	}
+	if publishAnswersWith(refuse.dial, "not-a-publish") {
 		t.Fatal("a malformed publish answers")
+	}
+	want := []string{"tcp 127.0.0.1:4242", "tcp 127.0.0.1:4242"}
+	if strings.Join(refuse.dialed, ",") != strings.Join(want, ",") {
+		t.Fatalf("dialled %q, want %q: a malformed publish dials nothing", refuse.dialed, want)
+	}
+}
+
+// TestTCPAnswersWhateverAcceptsThePort shows what a real dial meets on such a
+// host: a port something else accepts answers, and the probe closes the
+// connection it opened.
+func TestTCPAnswersWhateverAcceptsThePort(t *testing.T) {
+	t.Parallel()
+	relay := &fakeDialer{answer: true}
+	if !publishAnswersWith(relay.dial, "127.0.0.1:4242:3000") {
+		t.Fatal("a port something accepts does not answer")
+	}
+	if len(relay.conns) != 1 {
+		t.Fatalf("dialled %d times, want 1", len(relay.conns))
+	}
+	if _, err := relay.conns[0].Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+		t.Fatalf("read on the far end = %v, want io.EOF: the probe left its connection open", err)
 	}
 }
 
