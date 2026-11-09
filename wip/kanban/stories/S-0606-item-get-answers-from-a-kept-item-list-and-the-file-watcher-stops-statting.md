@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:03Z
-updated: 2026-11-09T07:47:11Z
+updated: 2026-11-09T08:10:23Z
 transitions:
   - to: ready
     at: 2026-11-07T23:58:41Z
@@ -56,7 +56,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 9864
+  seconds: 10341
   estimated: true
   priced_by: estimate
   turns:
@@ -68,16 +68,17 @@ usage:
       hand_edits: 5
       work: 76
     - day: 2026-11-09
+      ceremony: 1
       test_runs: 7
       hand_edits: 3
-      work: 25
+      work: 27
   models:
     - model: claude-opus-5-5
-      input: 614
-      output: 160499
-      cache_read: 113792713
-      cache_write: 4458616
-      cost: 57.4095
+      input: 648
+      output: 160723
+      cache_read: 123552937
+      cache_write: 4484289
+      cost: 62.1541
   strategic:
     - kind: planner
       seconds: 581
@@ -133,7 +134,7 @@ Cause 16 in [server-performance.md](../../../design/system/server-performance.md
 
 - [x] flai serve keeps one snapshot of the item list, replaced when the watcher sees a change under the work item folders, and `item.get` and the methods that list every item read it without statting the files again.
 - [x] The watcher notices a change under `wip/archive` without statting every file there on every walk, and a test shows an archived item, and a hand edit of one, are still seen.
-- [ ] A walk of this project's watched folders takes under 30 ms on the operator's host, `item.get` with 13 asked at once under 50 ms, and server-performance.md records the before and after.
+- [x] A walk of this project's watched folders takes under 30 ms on the operator's host, `item.get` with 13 asked at once under 50 ms, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2615 The item store keeps one snapshot of a root's item list, replaced on a change it is told of or on the process's own save, and lists and gets from it without statting

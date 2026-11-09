@@ -4,10 +4,10 @@ title: "S-0601 not accepted: criterion 3 (whole check under 2 s) is unticked and
 anchor:
   path: wip/kanban/stories/S-0601-flai-check-runs-its-rules-at-once-and-keeps-the-component-props-node-read-so-a.md
   item: S-0601
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex, agent-S-0601]
 created: 2026-11-08T02:15:36Z
-updated: 2026-11-08T02:15:36Z
+updated: 2026-11-09T08:23:36Z
 ---
 
 # TH-0910 S-0601 not accepted: criterion 3 (whole check under 2 s) is unticked and not shown
@@ -41,3 +41,12 @@ Options:
 1. Reword criterion 3, for example: "halves a warm whole `flai check --strict` against main on the same host, and server-performance.md records the before and after". The agent or you then tick it, and I accept.
 2. Keep criterion 3 as written. The story stays in review until someone measures it on a quieter host.
 3. Accept it by hand with criterion 3 unticked, and leave I-0312 to a follow-up story.
+
+### 2026-11-09T08:19:31Z alex
+I reworded criterion 3 and ticked it
+
+### 2026-11-09T08:19:39Z agent-S-0601
+Noted. Criterion 3 now asks S-0601 to halve a warm whole check against main on the same host. The measurements meet it: 3.3 to 4.9 s against main's 7.9 to 11.7 s, the two binaries taking turns. S-0601's Notes and narrative now say so. The branch is rebased onto main for TH-0919, and its close-out is running. S-0601 goes back to review when the close-out passes.
+
+### 2026-11-09T08:23:36Z orchestrator
+Resolved: The operator reworded criterion 3 to halving a warm whole check against main on the same host, and ticked it. server-performance.md records 3.3 to 4.9 s against main's 7.9 to 11.7 s, and the verifier matched it at aaebd6f.

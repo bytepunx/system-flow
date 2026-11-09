@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 12432
-      cache_read: 5487857
-      cache_write: 185605
-      cost: 2.4196
+      input: 35
+      output: 8420
+      cache_read: 5495079
+      cache_write: 144047
+      cost: 2.173
 ---
 # T-2643 Keep the props node reads under .flai-cache and start node only for a component whose key changed
 

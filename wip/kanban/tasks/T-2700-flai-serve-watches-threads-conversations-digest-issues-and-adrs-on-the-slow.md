@@ -24,7 +24,7 @@ touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
 after: [T-2699]
 usage:
   source: log
-  seconds: 826
+  seconds: 833
   estimated: true
   priced_by: estimate
   models:

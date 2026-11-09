@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 22695
-      cache_read: 10018401
-      cache_write: 338834
-      cost: 4.4171
+      input: 64
+      output: 15371
+      cache_read: 10031586
+      cache_write: 262966
+      cost: 3.9669
 ---
 # T-2648 Measure a whole flai check --strict before and after and record it in server-performance.md and component-library.md
 

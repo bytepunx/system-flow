@@ -7,7 +7,7 @@ status: review
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:19Z
-updated: 2026-11-09T07:39:01Z
+updated: 2026-11-09T08:24:32Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:17Z
@@ -17,6 +17,12 @@ transitions:
     by: agent-S-0603
   - to: review
     at: 2026-11-09T07:39:01Z
+    by: agent-S-0603
+  - to: in-progress
+    at: 2026-11-09T08:07:52Z
+    by: flai
+  - to: review
+    at: 2026-11-09T08:24:32Z
     by: agent-S-0603
 blocked:
   - from: 2026-11-08T02:23:41Z
@@ -146,3 +152,4 @@ No `after`: the story reads no other story's output. S-0602 (cause 13) also chan
 Forecast: `flai forecast` gave 22m, 94 s per unit of size over 124 done improvement stories on claude-opus-5-5, times size 14. Raised to 1h. The median is mostly smaller changes. This one changes a host-wide lock with concurrency tests across three packages, and measures 13 concurrent calls on the loaded host. Its close-out runs the integration and `flaiover-flai` tiers, since it changes `flai/internal/hostapi/`. The delivery moves the playout's start, 00:23, on by the hour.
 
 Cost of delay: 100 USD a week, as `flai cod` works it out from the one input, `penalty_per_week: 100`, which the orchestrator set at 2026-11-07T23:51:56Z from TH-0888's table. Kept as given: no revenue rides on the story, and nothing else is lost each cycle.
+- 2026-11-09T08:07:52Z: moved to in-progress: the rebase of story/S-0603 onto main stopped on conflicts in design/system/server-performance.md, which the acceptance of S-0603 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0603

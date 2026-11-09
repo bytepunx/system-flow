@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:42:03Z
-updated: 2026-11-09T07:52:06Z
+updated: 2026-11-09T08:08:51Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:23Z
@@ -25,7 +25,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 800
+  seconds: 1785
   estimated: true
   priced_by: estimate
   turns:
@@ -33,14 +33,14 @@ usage:
       ceremony: 1
       test_runs: 1
       hand_edits: 1
-      work: 20
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 685
-      cache_read: 8941875
-      cache_write: 318571
-      cost: 3.3654
+      input: 126
+      output: 927
+      cache_read: 14798330
+      cache_write: 691008
+      cost: 5.6274
   strategic:
     - kind: orchestrator
       seconds: 89
@@ -78,7 +78,7 @@ Cause 20 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `flai verify` runs at once the selected tiers the manifest marks as independent of each other, cheapest first as now, and cancels the others when one fails, so the verdict and the step it names are the same as a serial run's.
+- [x] `flai verify` runs at once the selected tiers the manifest marks as independent of each other, cheapest first as now, and cancels the others when one fails, so the verdict and the step it names are the same as a serial run's.
 - [ ] Under `flai verify`, `smoke` skips the steps a tier of the same run already passed.
 - [ ] A close-out of a story that selects `integration`, `flaiover`, and `smoke` takes at least 150 s less than its serial run on the same commit, and server-performance.md records the before and after.
 

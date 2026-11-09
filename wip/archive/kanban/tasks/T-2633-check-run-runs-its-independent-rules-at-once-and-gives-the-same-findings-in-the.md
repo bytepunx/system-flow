@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 18103
-      cache_read: 7991199
-      cache_write: 270271
-      cost: 3.5233
+      input: 51
+      output: 12261
+      cache_read: 8001716
+      cache_write: 209756
+      cost: 3.1642
 ---
 # T-2633 check.Run runs its independent rules at once and gives the same findings in the same order
 

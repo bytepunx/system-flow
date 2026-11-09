@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md, template/root/system-flow.yaml.tmpl, design/adrs/README.md, design/adrs/0266-a-test-tier-marked-parallel-starts-once-the-unmarked-tiers-before-it-have-ended.md]
 usage:
   source: log
-  seconds: 615
+  seconds: 620
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 378
       cache_read: 6015361
       cache_write: 48314
-      cost: 2.2036
+      cost: 2.203
 ---
 # T-2634 Decide and add the manifest key that marks a test tier as able to run beside others
 

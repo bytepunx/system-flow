@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 165.2491
-accrued_seconds: 16869
-tasks_completed: 102
-last_run: 2026-11-09T08:01:36Z
+accrued_cost: 166.4256
+accrued_seconds: 16992
+tasks_completed: 103
+last_run: 2026-11-09T08:09:54Z
 ---
 
 # Curator activity
@@ -827,3 +827,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0527, D-0528, D-0534, D-0535
 - Seconds: 677
 - Cost: 2.1840 USD, estimated
+
+### 2026-11-09T08:09:54Z
+
+- Summary: Wrote D-0536 (from S-0604: publish.preview keeps reading git, not the watcher's history); merged S-0598 and S-0604 into D-0528 and S-0598 into D-0402 (a checked write no longer warns of layout.gitignore, per ADR-0264); absorbed none (only the entries tied to design changed since the last run were checked: ADR-0264, server-performance.md, flai-cli.md); flai digest compact compacted none; the other 15 candidates were progress or already in ADR-0264, I-0309, or D-0535.
+- Trigger: accepted S-0598, S-0604
+- Items: D-0402, D-0528, D-0536
+- Seconds: 123
+- Cost: 1.1765 USD, estimated

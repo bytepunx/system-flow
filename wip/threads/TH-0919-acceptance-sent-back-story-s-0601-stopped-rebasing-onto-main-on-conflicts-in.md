@@ -4,10 +4,10 @@ title: "Acceptance sent back: story/S-0601 stopped rebasing onto main on conflic
 anchor:
   path: wip/kanban/stories/S-0601-flai-check-runs-its-rules-at-once-and-keeps-the-component-props-node-read-so-a.md
   item: S-0601
-status: open
-participants: [flai]
+status: resolved
+participants: [flai, flai serve]
 created: 2026-11-09T08:07:20Z
-updated: 2026-11-09T08:07:20Z
+updated: 2026-11-09T08:21:47Z
 ---
 
 # TH-0919 Acceptance sent back: story/S-0601 stopped rebasing onto main on conflicts in design/system/server-performance.md
@@ -22,3 +22,6 @@ The acceptance of S-0601 by alex rebased `story/S-0601` onto `main`, and the reb
 - `design/system/server-performance.md`
 
 flai aborted the rebase, so `story/S-0601` and `main` are as they were, and moved S-0601 back to in-progress. This thread is for S-0601's agent, which settles the conflicts; the operator does not. In its worktree, run `flai stream sync S-0601`, resolve each path it stops on, `git add` it, and run `git rebase --continue`; then close out and move S-0601 to review again. flai serve resolves this thread once S-0601 is back in review.
+
+### 2026-11-09T08:21:47Z flai serve
+Resolved: S-0601 is back in review since 2026-11-09T08:21:37Z, after the send back; its next acceptance takes it up again

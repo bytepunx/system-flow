@@ -2,9 +2,9 @@
 id: D-0402
 title: A test fixture project that flai writes items in needs a .gitignore listing .flai-cache/, since the items lock lives there and the write check refuses a project without it
 kind: cause
-sources: [S-0479, S-0484, I-0191, S-0531, I-0221, S-0525, S-0600]
+sources: [S-0479, S-0484, I-0191, S-0531, I-0221, S-0525, S-0600, S-0598]
 topics: [testing, code, flai, flaiover, performance, cli]
-paths: [flaiover/src/lib/server/writes.test.ts, flai/cmd, flai/internal/storygit/committed.go, design/system/server-performance.md, flai/internal/itemnew/itemnew.go, flai/internal/check/scope.go, flai/internal/workitem/kept.go, flai/internal/mdlint/kept.go]
+paths: [flaiover/src/lib/server/writes.test.ts, flai/cmd, flai/internal/storygit/committed.go, design/system/server-performance.md, flai/internal/itemnew/itemnew.go, flai/internal/check/scope.go, flai/internal/workitem/kept.go, flai/internal/mdlint/kept.go, flai/internal/check/itemwrite.go, design/adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md]
 date: 2026-10-28
 status: active
 absorbed_by: ""
@@ -18,10 +18,12 @@ Every work item write takes one items lock under `.flai-cache/` (ADR-0184, S-047
 
 S-0525 fixed I-0191 by [ADR-0213](../adrs/0213-a-checked-creation-of-a-work-item-refuses-only-a-new-finding-inside-the-new.md): a checked creation scopes its second check run to the new item's story, as ADR-0197 scopes a checked edit, so the first item written in a project with no `.gitignore` is kept with `layout.gitignore` among its warnings instead of refusing itself. The ADR keeps the lock where ADR-0184 puts it, and flai writes no `.gitignore` of its own: `flai check` on such a project still reports `layout.gitignore`.
 
-So a new fixture that writes items through flai, or runs `flai check` after one, still writes that `.gitignore`. This is the fixture project's own ignore file, not a fixture of this repository left out of git.
+Since S-0598, a checked write runs only the rules it can affect (`check.RunItemWrite`, [ADR-0264](../adrs/0264-a-checked-write-of-a-work-item-runs-only-the-rules-the-write-can-affect-before.md)), and the layout rules are not among them. So the write neither refuses nor warns of `layout.gitignore` now. From S-0598's `## Decisions` (`wip/archive/agents/S-0598.md`): "ADR-0264 records it, together with `layout.gitignore` no longer being a warning on a creation, which reverses part of ADR-0213's Consequences." The whole `flai check` still reports it.
+
+So a new fixture that runs `flai check`, `flai task done`, or anything else that runs the whole check after writing items through flai still writes that `.gitignore`; one that only writes items no longer needs it. This is the fixture project's own ignore file, not a fixture of this repository left out of git.
 
 The same holds for flai's own code that keeps a file under `.flai-cache`. S-0531's `storygit.Committed` first made the folder to keep `stories-commits.json`, and five `flai/cmd` check tests failed on `layout.gitignore` in `metrics/testdata/good`, a fixture with no `.gitignore`. S-0531 decided: "`Committed` writes the kept file only into a `.flai-cache` folder that already exists", so a project without one keeps nothing and reads `git log` each time (`design/system/server-performance.md`). The close-out's Go tier ran only the changed packages and passed over the failure, recorded as I-0221.
 
 S-0600 followed the same rule for its kept items and lint findings files: "the kept file is written only into a `.flai-cache` that exists, as S-0531 decided (D-0402)" (`wip/archive/agents/S-0600.md` § Decisions). `design/system/server-performance.md` § Parses and lint findings kept between processes (S-0600) records it. So any new file flai keeps under `.flai-cache` writes only into a folder that exists.
 
-Sources: S-0479, S-0484, I-0191, S-0525 (`wip/archive/agents/S-0525.md` § Decisions), S-0531 (`wip/archive/agents/S-0531.md` § Decisions), I-0221, S-0600 (`wip/archive/agents/S-0600.md` § Decisions).
+Sources: S-0479, S-0484, I-0191, S-0525 (`wip/archive/agents/S-0525.md` § Decisions), S-0531 (`wip/archive/agents/S-0531.md` § Decisions), I-0221, S-0600 (`wip/archive/agents/S-0600.md` § Decisions), S-0598 (`wip/archive/agents/S-0598.md` § Decisions).

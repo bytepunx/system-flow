@@ -3,11 +3,11 @@ id: T-2644
 type: task
 nature: feature
 title: verify.Run starts the tiers the manifest marks independent at once and stops the later ones when one fails
-status: in-progress
+status: done
 parent: S-0610
 owner: alex
 created: 2026-11-07T23:48:50Z
-updated: 2026-11-09T07:52:34Z
+updated: 2026-11-09T08:08:29Z
 transitions:
   - to: ready
     at: 2026-11-09T07:52:33Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T07:52:34Z
     by: agent-S-0610
+  - to: done
+    at: 2026-11-09T08:08:29Z
+    by: agent-S-0610
 stream: S-0610
 tags: [cli]
 touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
 after: [T-2634]
+usage:
+  source: log
+  seconds: 952
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 239
+      cache_read: 5557979
+      cache_write: 363120
+      cost: 2.1511
 ---
 # T-2644 verify.Run starts the tiers the manifest marks independent at once and stops the later ones when one fails
 
