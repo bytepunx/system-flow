@@ -3,11 +3,11 @@ id: T-2675
 type: task
 nature: improvement
 title: costOrder builds its forecaster once and plays the three orders out on it
-status: in-progress
+status: done
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:50:18Z
-updated: 2026-11-09T09:43:22Z
+updated: 2026-11-09T09:55:27Z
 transitions:
   - to: ready
     at: 2026-11-09T09:43:21Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T09:43:22Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T09:55:27Z
+    by: agent-S-0608
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/planning/forecast.go, flai/internal/planning/forecast_test.go, flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go]
 after: [T-2662]
+usage:
+  source: log
+  seconds: 725
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 223
+      cache_read: 2698666
+      cache_write: 33497
+      cost: 0.9937
 ---
 # T-2675 costOrder builds its forecaster once and plays the three orders out on it
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2044.1326
-accrued_seconds: 1528784
-tasks_completed: 2391
-last_run: 2026-11-09T09:40:50Z
+accrued_cost: 2046.3532
+accrued_seconds: 1529327
+tasks_completed: 2404
+last_run: 2026-11-09T09:57:32Z
 ---
 
 # Orchestrator activity
@@ -16768,6 +16768,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 26
 - Cost: 0.1520 USD, estimated
 
+### 2026-11-09T09:47:32Z
+
+- Summary: Accepted S-0613 at bdb6cd4 (accept_reviews): close-out passed every step at the branch head; verifier matched criteria 1 and 2 to changed files; dry run had no blockers. The first run stopped after the move to done on a transient .git/index.lock; the second run, with the evidence flai asked for, merged, archived, and committed.
+- Items: S-0613
+- Seconds: 123
+- Cost: 0.4341 USD, estimated
+
+### 2026-11-09T09:48:08Z
+
+- Summary: Release due after S-0613: release_evaluate met under threshold (count 4 ≥ 1; 330 USD/week pending: S-0603, S-0606, S-0612, S-0613). Did not run flai formula run publish: its instance S-0635 is already in ready (held no-touches behind S-0608, S-0610, S-0614), and it publishes all pending when worked. Ready-empty: did not promote S-0241, the only candidate (rank 1, 2h throughput), while it stays blocked and TH-0790 awaits the operator. S-0611 is complete but held for TH-0903/TH-0904. Skipped E-0033's replan: alex's "Resolved." on TH-0916 asks for no plan change. Started the planner for S-0615, first story in flai plan --candidates (no touches, forecast, value, or tasks), under plan_backlog_stories. Ready column S-0635 alone, order unchanged.
+- Items: S-0635, S-0241, S-0611, S-0615, E-0033
+- Seconds: 36
+- Cost: 0.0674 USD, estimated
+
+### 2026-11-09T09:49:05Z
+
+- Summary: I accepted S-0613. Nothing went to ready this run, and I started the planner for S-0615.
+- Items: none
+- Seconds: 57
+- Cost: 0.0989 USD, estimated
+
+### 2026-11-09T09:49:45Z
+
+- Summary: Release due after S-0613's acceptance (threshold policy met: count 4 ≥ 1; value 330 of 1000 USD; S-0603, S-0606, S-0612, S-0613 pending). I started no new publish instance: S-0635, the publish formula's instance from 2026-11-08, is still in ready and publishes everything accepted and unreleased when it runs, S-0613 included. It is held no-touches until S-0608, S-0610 and S-0614 leave in-progress (the gap S-0620 drafts).
+- Items: S-0613, S-0635
+- Seconds: 32
+- Cost: 0.0659 USD, estimated
+
+### 2026-11-09T09:50:15Z
+
+- Summary: The release is due, but I started no new publish run because one is already waiting in ready.
+- Items: none
+- Seconds: 30
+- Cost: 0.2327 USD, estimated
+
+### 2026-11-09T09:52:26Z
+
+- Summary: Left draft S-0615 as it is: flai promote --drafts lists it incomplete (no forecast duration, no forecast delivery, no cost of delay value), and flai plan --candidates says its planner is still running (pid 3116937, started 2026-11-09T09:45:59Z) after editing tags, topics, touches, and notes. No finalize and no thread while the planner can still add the forecast and value; the next edit of the draft starts me again.
+- Items: S-0615
+- Seconds: 60
+- Cost: 0.1621 USD, estimated
+
+### 2026-11-09T09:52:52Z
+
+- Summary: I left S-0615 as a draft. I did not finalize it, and I opened no thread on it.
+- Items: none
+- Seconds: 26
+- Cost: 0.1038 USD, estimated
+
+### 2026-11-09T09:55:05Z
+
+- Summary: Recommended an answer on TH-0924, citing design/system/strategic-agents.md § Cost of delay
+- Items: S-0615
+- Seconds: 46
+- Cost: 0.1726 USD, estimated
+
+### 2026-11-09T09:55:32Z
+
+- Summary: TH-0924: approved planner-S-0615's plan for S-0615 (6 tasks, 4 layers, 2h) and recommended lowering time_lost_per_cycle 144h→4h (value 21600→600 USD/week); left open, since the input exists already and is the operator's. Finalized S-0615: flai promote --drafts lists it complete at position 1 (2h, throughput).
+- Items: S-0615
+- Seconds: 27
+- Cost: 0.1165 USD, estimated
+
+### 2026-11-09T09:55:58Z
+
+- Summary: Promoted S-0615 to ready (promote --candidates rank 2, 2h, throughput; ready 2 of 10) and applied flai order --by throughput: S-0615 first (2h), S-0635 second (no forecast). Skipped S-0241 (rank 1): the operator moved it back to backlog and its block stays open (TH-0790).
+- Items: S-0615, S-0635, S-0241
+- Seconds: 26
+- Cost: 0.0944 USD, estimated
+
+### 2026-11-09T09:56:22Z
+
+- Summary: I settled the S-0615 draft. The story is now finalized, promoted, and already in progress with agent-S-0615. The planner's question about its cost of delay is still waiting for you on TH-0924.
+- Items: none
+- Seconds: 24
+- Cost: 0.2105 USD, estimated
+
+### 2026-11-09T09:57:12Z
+
+- Summary: Ready column ordered by throughput (S-0635 only, 1/10, held no-touches, no forecast). Did not promote S-0241, promote_candidates' only candidate (rank 1, 2h): it stays blocked since 2026-10-08 and its Notes say not before forks are offered headless; TH-0790 awaits the operator on that. TH-0924 and planned:S-0615 need nothing more: my recommendation on the 4h time_lost_per_cycle awaits the operator, and S-0615 was finalized and is in progress.
+- Items: S-0635, S-0241, S-0615
+- Seconds: 36
+- Cost: 0.0984 USD, estimated
+
+### 2026-11-09T09:57:32Z
+
+- Summary: I've handled all three reasons. The only thing I changed was re-applying the ready column's order. The rest is waiting on you, and nothing new came in while I worked.
+- Items: none
+- Seconds: 20
+- Cost: 0.3633 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -17413,4 +17504,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-09T09:31:27Z
 
 - Call: `flai serve status --json 2>/dev/null`
+- Needs: none
+
+### 2026-11-09T09:51:56Z
+
+- Call: `flai serve status`
 - Needs: none

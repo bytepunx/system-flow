@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/metrics/windows_test.go, flai/internal/metrics/testdata/windows.golden.json]
 usage:
   source: log
-  seconds: 1385
+  seconds: 1386
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 363
       cache_read: 3474566
       cache_write: 326324
-      cost: 1.3818
+      cost: 1.3824
 ---
 # T-2662 A golden test pins the report on testdata/good at windows of 1, 7, 30, 90, and 365 days before anything changes
 

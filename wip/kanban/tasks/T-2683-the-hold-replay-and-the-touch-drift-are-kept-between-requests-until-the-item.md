@@ -3,16 +3,37 @@ id: T-2683
 type: task
 nature: improvement
 title: The hold replay and the touch drift are kept between requests until the item generation or the commits' key moves, and each request only slices them to its window
-status: backlog
+status: done
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:50:47Z
-updated: 2026-11-07T23:51:00Z
-transitions: []
+updated: 2026-11-09T10:13:53Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:56:25Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:56:27Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:13:53Z
+    by: agent-S-0608
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/metrics.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/claims_bench_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go]
 after: [T-2668, T-2679]
+usage:
+  source: log
+  seconds: 1045
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 437
+      cache_read: 7085653
+      cache_write: 90016
+      cost: 2.6098
 ---
 # T-2683 The hold replay and the touch drift are kept between requests until the item generation or the commits' key moves, and each request only slices them to its window
 

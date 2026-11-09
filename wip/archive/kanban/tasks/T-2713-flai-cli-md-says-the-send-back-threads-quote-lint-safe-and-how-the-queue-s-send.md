@@ -3,16 +3,37 @@ id: T-2713
 type: task
 nature: remediation
 title: flai-cli.md says the send-back threads quote lint-safe and how the queue's send-back goes on when its thread is refused, and I-0242 is closed
-status: backlog
+status: done
 parent: S-0614
 owner: alex
 created: 2026-11-09T09:36:04Z
-updated: 2026-11-09T09:36:04Z
-transitions: []
+updated: 2026-11-09T10:08:22Z
+transitions:
+  - to: ready
+    at: 2026-11-09T10:07:36Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T10:07:36Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:08:22Z
+    by: agent-S-0614
 stream: S-0614
 tags: [flai, docs, merge-queue]
 touches: [design/system/flai-cli.md, design/issues/I-0242-the-merge-queue-s-send-back-thread-quotes-go-test-s-summary-line-with-its-tabs.md, design/issues/summary.md]
 after: [T-2711, T-2712]
+usage:
+  source: log
+  seconds: 46
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 3431
+      cache_read: 1460145
+      cache_write: 26948
+      cost: 0.563
 ---
 # T-2713 flai-cli.md says the send-back threads quote lint-safe and how the queue's send-back goes on when its thread is refused, and I-0242 is closed
 

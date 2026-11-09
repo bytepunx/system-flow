@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 383
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 20
-      output: 148
-      cache_read: 2252180
-      cache_write: 19899
-      cost: 0.8261
+      output: 5481
+      cache_read: 2332307
+      cache_write: 43044
+      cost: 0.8993
 ---
 # T-2710 mdlint.Fenced quotes tool output in a code block the markdown lint passes
 

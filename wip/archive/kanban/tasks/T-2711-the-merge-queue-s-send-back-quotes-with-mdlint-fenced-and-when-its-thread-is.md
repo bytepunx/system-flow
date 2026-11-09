@@ -3,16 +3,37 @@ id: T-2711
 type: task
 nature: remediation
 title: The merge queue's send-back quotes with mdlint.Fenced and, when its thread is still refused, sends the story back with a thread that leaves the findings out
-status: backlog
+status: done
 parent: S-0614
 owner: alex
 created: 2026-11-09T09:35:51Z
-updated: 2026-11-09T09:35:51Z
-transitions: []
+updated: 2026-11-09T10:01:47Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:52:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:52:28Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:01:47Z
+    by: agent-S-0614
 stream: S-0614
 tags: [flai, merge-queue]
 touches: [flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go]
 after: [T-2710]
+usage:
+  source: log
+  seconds: 559
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 13770
+      cache_read: 5859434
+      cache_write: 108140
+      cost: 2.2592
 ---
 # T-2711 The merge queue's send-back quotes with mdlint.Fenced and, when its thread is still refused, sends the story back with a thread that leaves the findings out
 

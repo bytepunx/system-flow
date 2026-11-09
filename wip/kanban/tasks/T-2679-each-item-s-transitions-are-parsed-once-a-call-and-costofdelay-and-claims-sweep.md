@@ -3,11 +3,11 @@ id: T-2679
 type: task
 nature: improvement
 title: Each item's transitions are parsed once a call, and costOfDelay and claims sweep the days once from the first item's day
-status: in-progress
+status: done
 parent: S-0608
 owner: alex
 created: 2026-11-07T23:50:26Z
-updated: 2026-11-09T09:43:23Z
+updated: 2026-11-09T09:55:34Z
 transitions:
   - to: ready
     at: 2026-11-09T09:43:23Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T09:43:23Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T09:55:34Z
+    by: agent-S-0608
 stream: S-0608
 tags: [cli]
 touches: [flai/internal/metrics/metrics.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/claims.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/claims_test.go]
 after: [T-2662]
+usage:
+  source: log
+  seconds: 731
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 222
+      cache_read: 3582740
+      cache_write: 62127
+      cost: 1.3256
 ---
 # T-2679 Each item's transitions are parsed once a call, and costOfDelay and claims sweep the days once from the first item's day
 

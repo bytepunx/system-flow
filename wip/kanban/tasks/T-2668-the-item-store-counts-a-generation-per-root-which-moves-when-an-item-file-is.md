@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go]
 usage:
   source: log
-  seconds: 1382
+  seconds: 1415
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 192
-      cache_read: 2361866
-      cache_write: 37806
-      cost: 0.8724
+      input: 35
+      output: 216
+      cache_read: 2505865
+      cache_write: 45354
+      cost: 0.9279
 ---
 # T-2668 The item store counts a generation per root, which moves when an item file is added, changed, or removed, in snapshot mode or not
 

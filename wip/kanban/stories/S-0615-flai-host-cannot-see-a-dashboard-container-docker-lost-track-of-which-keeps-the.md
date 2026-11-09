@@ -3,26 +3,41 @@ id: S-0615
 type: story
 nature: remediation
 title: flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:39:11Z
-updated: 2026-11-09T09:55:56Z
+updated: 2026-11-09T10:16:27Z
 transitions:
   - to: ready
     at: 2026-11-09T09:55:53Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-09T09:56:04Z
+    by: agent-S-0615
 tags: [flai, dashboard, host]
 topics: [dashboard, host]
-touches: [flai/internal/host/watch.go, flai/internal/host/watch_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/system/flaiover-dashboard.md, design/adrs, docs/operators/index.md, docs/users/flai.md, design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md, design/issues/summary.md]
+touches: [flai/internal/host/watch.go, flai/internal/host/watch_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/system/flaiover-dashboard.md, design/adrs, docs/operators/index.md, docs/users/flai.md, design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md, design/issues/summary.md, flai/cmd/root.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1220
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 752
+      cache_read: 13114253
+      cache_write: 644525
+      cost: 5.0041
   strategic:
     - kind: planner
       seconds: 511
@@ -41,15 +56,15 @@ usage:
           cache_write: 181995
           cost: 3.1352
     - kind: orchestrator
-      seconds: 140
+      seconds: 161
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 277
-          cache_read: 1593415
-          cache_write: 187116
-          cost: 0.4647
+          input: 46
+          output: 317
+          cache_read: 1810667
+          cache_write: 216020
+          cost: 0.529
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 144h
@@ -75,8 +90,8 @@ finalized:
 This story remediates [I-0243](../../../design/issues/I-0243-flai-host-cannot-see-a-dashboard-container-docker-lost-track-of-which-keeps-the.md), "flai host cannot see a dashboard container Docker lost track of, which keeps the published port, so every container it starts is not answering and it restarts the dashboard every five minutes". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0243 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0243 is closed with `flai issue close I-0243 --reason` saying what fixed it
+- [x] The cause I-0243 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0243 is closed with `flai issue close I-0243 --reason` saying what fixed it
 
 ## Tasks
 - T-2714 An ADR and the dashboard's design say flai host does not restart a dashboard whose published port another process holds

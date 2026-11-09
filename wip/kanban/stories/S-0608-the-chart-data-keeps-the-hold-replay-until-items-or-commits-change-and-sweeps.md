@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:41:41Z
-updated: 2026-11-09T09:10:31Z
+updated: 2026-11-09T10:14:31Z
 transitions:
   - to: ready
     at: 2026-11-09T09:10:19Z
@@ -25,20 +25,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1518
+  seconds: 3804
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-09
-      hand_edits: 1
-      work: 20
+      ceremony: 1
+      hand_edits: 2
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 737
-      cache_read: 7180121
-      cache_write: 484382
-      cost: 2.7864
+      input: 300
+      output: 1892
+      cache_read: 24050369
+      cache_write: 719186
+      cost: 9.0089
   strategic:
     - kind: planner
       seconds: 529
@@ -86,8 +87,8 @@ Cause 18 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] `replayHolds` and `touchDrift` are kept between requests until the work items or the stories' commits change, and only the slicing to the window is done per request.
-- [ ] Each item's transition times are parsed once a call, the day-by-day sections sweep the days once, and the days before the first item are answered without a loop; thread entries are parsed once and the forecaster built once.
+- [x] `replayHolds` and `touchDrift` are kept between requests until the work items or the stories' commits change, and only the slicing to the window is done per request.
+- [x] Each item's transition times are parsed once a call, the day-by-day sections sweep the days once, and the days before the first item are answered without a loop; thread entries are parsed once and the forecaster built once.
 - [ ] The report is the same as before for windows of 1, 7, 30, 90, and 365 days, which a test shows, and a warm 365-day `stats.get` on this repository takes under 1.2 times a warm 30-day one; server-performance.md records the before and after.
 
 ## Tasks

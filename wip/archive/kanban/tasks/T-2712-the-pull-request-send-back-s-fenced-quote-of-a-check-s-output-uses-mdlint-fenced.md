@@ -3,16 +3,37 @@ id: T-2712
 type: task
 nature: remediation
 title: The pull request send-back's fenced quote of a check's output uses mdlint.Fenced
-status: backlog
+status: done
 parent: S-0614
 owner: alex
 created: 2026-11-09T09:35:59Z
-updated: 2026-11-09T09:35:59Z
-transitions: []
+updated: 2026-11-09T10:02:15Z
+transitions:
+  - to: ready
+    at: 2026-11-09T09:52:29Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-09T09:52:29Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:02:15Z
+    by: agent-S-0614
 stream: S-0614
 tags: [flai, forge]
 touches: [flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go]
 after: [T-2710]
+usage:
+  source: log
+  seconds: 586
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 4809
+      cache_read: 2046180
+      cache_write: 37764
+      cost: 0.789
 ---
 # T-2712 The pull request send-back's fenced quote of a check's output uses mdlint.Fenced
 

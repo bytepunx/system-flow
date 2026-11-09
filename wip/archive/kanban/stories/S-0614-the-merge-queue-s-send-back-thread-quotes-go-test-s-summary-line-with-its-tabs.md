@@ -3,10 +3,10 @@ id: S-0614
 type: story
 nature: remediation
 title: The merge queue's send-back thread quotes go test's summary line with its tabs, the markdown lint refuses the thread (MD010), and the queue retries forever with the batch wedged
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:39:04Z
-updated: 2026-11-09T09:37:50Z
+updated: 2026-11-09T10:17:12Z
 transitions:
   - to: ready
     at: 2026-11-09T09:37:02Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T09:37:50Z
     by: agent-S-0614
+  - to: review
+    at: 2026-11-09T10:15:50Z
+    by: system-flow
+  - to: done
+    at: 2026-11-09T10:17:12Z
+    by: orchestrator
 tags: [flai, merge-queue]
 topics: [merge-queue, markdown-lint, forge]
 touches: [flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, design/system/flai-cli.md, design/issues/I-0242-the-merge-queue-s-send-back-thread-quotes-go-test-s-summary-line-with-its-tabs.md, design/issues/summary.md]
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 536
-  estimated: true
-  priced_by: estimate
+  seconds: 2292
+  priced_by: harness
   turns:
     - day: 2026-11-09
       test_runs: 1
       hand_edits: 1
-      work: 15
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 246
-      cache_read: 4084987
-      cache_write: 250103
-      cost: 1.5762
+      input: 158
+      output: 43747
+      cache_read: 18615555
+      cache_write: 343562
+      cost: 7.1776
   strategic:
     - kind: planner
       seconds: 298
@@ -91,8 +96,8 @@ finalized:
 This story remediates [I-0242](../../../design/issues/I-0242-the-merge-queue-s-send-back-thread-quotes-go-test-s-summary-line-with-its-tabs.md), "The merge queue's send-back thread quotes go test's summary line with its tabs, the markdown lint refuses the thread (MD010), and the queue retries forever with the batch wedged". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0242 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0242 is closed with `flai issue close I-0242 --reason` saying what fixed it
+- [x] The cause I-0242 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0242 is closed with `flai issue close I-0242 --reason` saying what fixed it
 
 ## Tasks
 - T-2710 mdlint.Fenced quotes tool output in a code block the markdown lint passes
@@ -131,3 +136,12 @@ Figures:
 
 - Forecast: `flai forecast` gave 22m (119 s per unit of size over 42 done medium remediation stories, size 11). Raised to 1h30m: four tasks of Go with tests, and a close-out that took 17 to 22 minutes on its own on this host today (S-0603, S-0612, S-0613). Delivery 2026-11-09T16:00:00Z, past flai's 10:02, since the story is a draft still to be finalized and promoted, behind six stories in the pull order.
 - Cost of delay: `flai cod` gave 750 USD a week from the operator's input, 5h lost per 168h cycle at 150 USD an hour. It stands: the tab is fixed, but a refused quote still wedges the whole queue and blocks every hand acceptance behind the ADR-0221 gate, as the instance shows.
+
+### Accepted by the orchestrator
+
+- Verified: 642e5bb2d3682c967ae3708bed213930ecbd56df
+- At: 2026-11-09T10:17:12Z
+
+Verdict: pass. Both criteria are met at 642e5bb; flai verify passed every step at that commit.
+- 1: flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, design/system/flai-cli.md
+- 2: design/issues/I-0242-the-merge-queue-s-send-back-thread-quotes-go-test-s-summary-line-with-its-tabs.md, design/issues/summary.md
