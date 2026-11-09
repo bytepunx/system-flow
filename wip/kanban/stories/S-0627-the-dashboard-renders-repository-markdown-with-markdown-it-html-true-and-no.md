@@ -6,9 +6,11 @@ title: "The dashboard renders repository markdown with markdown-it html: true an
 status: backlog
 owner: alex
 created: 2026-11-07T23:40:28Z
-updated: 2026-11-07T23:40:28Z
+updated: 2026-11-09T17:13:10Z
 transitions: []
-tags: []
+tags: [dashboard]
+topics: [dashboard]
+touches: [flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, design/tech/markdown.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -36,6 +38,12 @@ usage:
           cache_write: 13854
           cost: 0.278
 draft: true
+forecast:
+  duration: 40m
+  delivery: 2026-11-09T18:44:00Z
+  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 5, behind S-0611, S-0616, S-0619, S-0620, S-0624, S-0629, S-0621, S-0241, S-0622, S-0623, S-0625 and S-0626."
+  by: flai
+  at: 2026-11-09T17:13:10Z
 ---
 # S-0627 The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator
 
@@ -48,9 +56,36 @@ This story remediates [I-0294](../../../design/issues/I-0294-the-dashboard-rende
 - [ ] I-0294 is closed with `flai issue close I-0294 --reason` saying what fixed it
 
 ## Tasks
+- T-2752 Render repository markdown with raw HTML escaped, and test that script in a document does not run
+- T-2753 Say in the design and the user guide that the dashboard shows raw HTML in markdown as text
+- T-2754 Close I-0294 with what fixed it
 
 ## Notes
 
 The analyzer found I-0294: the analysis the goal links gives its evidence.
 
 Strategic usage carried over from I-0294: analyzer 41s, 0.8156 USD.
+
+### Planning
+
+Proposed fix: render with markdown-it `html: false`. Every `{@html}` site and `markdownInto` in flaiover take their HTML from `render()` in `flaiover/src/lib/markdown.ts`, so one change covers all 13 sinks. No document under `design/` or `docs/` uses raw HTML outside code spans and fences. The task-list checkboxes and heading permalinks are plugin tokens and keep rendering. A sanitizer such as DOMPurify was weighed and not chosen: it adds a dependency and an allow-list to keep, for HTML no document needs. A Content-Security-Policy is defence in depth, not the cause, and is proposed on the plan thread as a separate story.
+
+Touches, each a file, no folder:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flaiover/src/lib/markdown.ts` | design | The issue's Impact names `markdown.ts:15`; the renderer's options |
+| `flaiover/src/lib/markdown.test.ts` | co-change | 2 of 3 commits on `markdown.ts`; the reproducing test |
+| `design/tech/markdown.md` | design | Lists markdown-it and how flaiover renders; gains the rule |
+| `design/system/flaiover-dashboard.md` | co-change | 2 of 3 commits; its Internal structure names the renderer |
+| `docs/users/flaiover.md` | co-change | 2 of 3 commits; its Docs section says what a document renders with |
+| `design/issues/I-0294-the-dashboard-renders-repository-markdown-with-markdown-it-html-true-and-no.md` | layout | Closed by the second criterion |
+| `design/issues/summary.md` | layout | `flai issue close` rewrites it |
+
+`flaiover/src/lib/components/Threads.svelte` co-changes with `markdown.ts` in 2 of 3 commits but is left out: it calls `markdownInto`, which the fix covers without a change there.
+
+No `after`: the story reads no other story's output.
+
+Forecast: 40m. `flai forecast` gave 16m, 104 s per unit of size over 26 done medium improvement stories on claude-opus-5-5, times size 9 (2 criteria, 7 touches). Raised because the code task and the close-out run the flaiover tiers (vitest, svelte-check, flaiover-lint), which take minutes each and which the size does not count. Delivery 2026-11-09T18:33:00Z: the forecast's start, 7th in the pull order, plus 40m.
+
+Cost of delay: no value yet. The story has no inputs and no epic, so `flai cod` refuses it; the inputs are the operator's and are asked for on the plan thread.
