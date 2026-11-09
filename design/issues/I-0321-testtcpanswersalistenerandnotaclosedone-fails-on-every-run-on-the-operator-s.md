@@ -2,12 +2,12 @@
 id: I-0321
 title: TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
 class: defect
-status: open
+status: closed
 count: 3
 cost: 6m
 first_reported: 2026-11-09T17:13:14Z
 last_reported: 2026-11-09T22:11:53Z
-updated: 2026-11-09T22:11:53Z
+updated: 2026-11-09T22:54:47Z
 ---
 
 # I-0321 TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
@@ -32,3 +32,4 @@ flai test on S-0632's flai/internal/serve paths ran the go-test tier over ./cmd 
 ## Remediation
 
 Story S-0645 remediates this issue, created from it at 2026-11-09T21:50:55Z.
+Closed 2026-11-09T22:54:47Z: S-0645 (T-2816, 2b6821420). The host runs WSL2 with networkingMode=mirrored, where a port free in Linux can be a Windows listener's, so a real dial to a closed 127.0.0.1 port connects whenever the test draws such a port. tcpAnswers and publishAnswers gained tcpAnswersWith and publishAnswersWith, which take the dialer; production keeps net.DialTimeout. The test dials for real only a listener it holds open, and checks the refused case and the accepting relay's case through fake dialers, so it no longer depends on what answers on the host's loopback.
