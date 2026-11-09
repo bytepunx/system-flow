@@ -1,6 +1,6 @@
 ---
 title: Go libraries
-updated: 2026-11-08
+updated: 2026-11-09
 status: active
 topics: [go]
 ---
@@ -34,7 +34,7 @@ flai asks few questions: the template's variables and the layout in `new` and `i
 
 Until S-0160 they were `charmbracelet/huh` forms. huh brings in `bubbles/textarea`, and through it `atotto/clipboard`, which looks for clipboard programs on `PATH` when its package loads, whether flai prompts or not. On a host whose `PATH` has 54 entries, 17 of them Windows folders under `/mnt`, that took 145 ms of every flai process ([cause 5](../system/server-performance.md#what-it-says)). The alternatives were huh fields that do not use `textarea`, which does not help because huh imports it whichever fields are used; a `replace` of `atotto/clipboard` with an empty module, which `go install` of flai refuses; and huh behind a build tag or a second binary, which keeps a dependency tree of 25 modules for six questions. Dropping huh took those 25 modules out of `go.mod`. What was lost is arrow-key selection and the form styling. The decision is [ADR-0052](../adrs/0052-flai-asks-its-questions-a-line-at-a-time-with-its-own-prompt-package-not-with.md), which refines [ADR-0006](../adrs/0006-go-for-the-cli.md).
 
-No library watches files. `flai serve` tells a dashboard which files changed (S-0073) by polling: `internal/watch` stats the manifest's three folders and the manifest every 300 ms and reports a file once it has looked the same for one tick. Since S-0606 the wip folder's `archive`, about 3,800 files that change only when an item is archived or edited by hand, is on a slow tier: its folders are statted on every poll, which shows a file added, renamed in, or removed, and its files every 10 s, which shows an edit in place. `fsnotify` was the alternative; inotify, kqueue, and Windows each have limits of their own (watches per user, a descriptor per file, no recursion), and the slow tier keeps a poll's cost to the files that change often. `wait_for_events` in `flai mcp` polls for the same reason.
+No library watches files. `flai serve` tells a dashboard which files changed (S-0073) by polling: `internal/watch` stats the manifest's three folders and the manifest every 300 ms and reports a file once it has looked the same for one tick. Since S-0606, six folders are on a slow tier: the wip folder's `archive`, `threads`, and `messages` and the design folder's `digest`, `issues`, and `adrs`, about 6,300 of this repository's 6,600 watched files. Their folders are statted on every poll, which shows a file added, renamed in, or removed. Their files are statted every 10 s, which shows an edit in place. flai writes all six by rename, which moves the folder's time, so its own writes are seen at the next poll; only a hand edit in place waits up to 10 s (TH-0908). `fsnotify` was the alternative; inotify, kqueue, and Windows each have limits of their own (watches per user, a descriptor per file, no recursion), and the slow tier keeps a poll's cost to the files that change often. `wait_for_events` in `flai mcp` polls for the same reason.
 
 ## MCP revisions served (S-0076)
 
