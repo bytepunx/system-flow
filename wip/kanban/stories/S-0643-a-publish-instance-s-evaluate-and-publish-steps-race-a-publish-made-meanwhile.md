@@ -6,7 +6,7 @@ title: A publish instance's evaluate and publish steps race a publish made meanw
 status: backlog
 owner: alex
 created: 2026-11-09T21:22:33Z
-updated: 2026-11-09T22:33:17Z
+updated: 2026-11-09T23:22:43Z
 transitions: []
 tags: [flai, release, formula]
 topics: [release, formula]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-09T22:14:12Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T01:39:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0636, S-0640, S-0625, S-0630, S-0628, S-0631, S-0646, S-0241 and S-0637."
+  delivery: 2026-11-10T01:45:00Z
+  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 5, behind S-0633, S-0636, S-0638, S-0640, S-0625, S-0630, S-0628, S-0631, S-0646, S-0241 and S-0637."
   by: flai
-  at: 2026-11-09T22:33:17Z
+  at: 2026-11-09T23:22:43Z
 finalized:
   by: orchestrator
   at: 2026-11-09T22:30:00Z

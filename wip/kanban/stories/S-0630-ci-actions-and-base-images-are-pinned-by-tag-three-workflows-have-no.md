@@ -6,7 +6,7 @@ title: CI actions and base images are pinned by tag, three workflows have no per
 status: ready
 owner: alex
 created: 2026-11-07T23:40:47Z
-updated: 2026-11-09T22:33:17Z
+updated: 2026-11-09T23:22:43Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:06Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 81
+      seconds: 86
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 48
-          cache_read: 473430
-          cache_write: 12681
-          cost: 0.1293
+          input: 7
+          output: 62
+          cache_read: 502771
+          cache_write: 16554
+          cost: 0.1382
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -52,10 +52,10 @@ usage:
           cost: 0.278
 forecast:
   duration: 1h
-  delivery: 2026-11-10T00:39:00Z
-  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0636, S-0640 and S-0625."
+  delivery: 2026-11-10T00:45:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0633, S-0636, S-0638, S-0640 and S-0625."
   by: flai
-  at: 2026-11-09T22:33:17Z
+  at: 2026-11-09T23:22:43Z
 finalized:
   by: alex
   at: 2026-11-09T22:04:57Z

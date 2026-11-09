@@ -6,7 +6,7 @@ title: Five source files under flai are over 2,000 lines
 status: ready
 owner: alex
 created: 2026-11-07T23:40:53Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T23:22:43Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:09Z
@@ -25,15 +25,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 175
+      seconds: 241
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 24
-          output: 225
-          cache_read: 1277549
-          cache_write: 122643
-          cost: 0.3723
+          input: 31
+          output: 302
+          cache_read: 1942029
+          cache_write: 130331
+          cost: 0.5513
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 11
+          cache_read: 14232
+          cache_write: 8148
+          cost: 0.0166
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -60,10 +66,10 @@ cost_of_delay:
   at: 2026-11-09T22:03:45Z
 forecast:
   duration: 3h
-  delivery: 2026-11-10T03:34:00Z
-  basis: "Its own forecast of 3h; 8th in the pull order with an in-progress limit of 5, behind S-0622, S-0623, S-0632, S-0633, S-0634, S-0645, S-0644, S-0638, S-0640, S-0625, S-0630 and S-0628."
+  delivery: 2026-11-10T03:36:00Z
+  basis: "Its own forecast of 3h; 5th in the pull order with an in-progress limit of 5, behind S-0633, S-0636, S-0638, S-0640, S-0625, S-0630 and S-0628."
   by: flai
-  at: 2026-11-09T22:20:09Z
+  at: 2026-11-09T23:22:43Z
 finalized:
   by: alex
   at: 2026-11-09T22:05:00Z
