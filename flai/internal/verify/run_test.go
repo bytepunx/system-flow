@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -339,5 +340,288 @@ func TestEveryTierRunsAsTheVerifyRoleWhateverRoleAskedIt(t *testing.T) {
 	opts.FS, opts.Proc, opts.Env = fsys, proc, []string{"FLAI_ROLE=orchestrate"}
 	if _, err := Test(context.Background(), opts); err != nil || len(proc.envs) != 1 || role(proc.envs[0]) != "verify" {
 		t.Errorf("flai test ran with %q, %v", proc.envs, err)
+	}
+}
+
+// liveProc runs each command by its first argument with a function of its
+// own, at once from several goroutines, and keeps the order commands
+// started and ended in, and which saw their context end.
+type liveProc struct {
+	mu      sync.Mutex
+	fns     map[string]func(ctx context.Context, stdout io.Writer) int
+	events  []string
+	stopped []string
+}
+
+func (p *liveProc) Run(ctx context.Context, _ string, argv, _ []string, stdout, _ io.Writer) (int, error) {
+	name := argv[0]
+	p.note("start " + name)
+	exit := 0
+	if fn := p.fns[name]; fn != nil {
+		exit = fn(ctx, stdout)
+	}
+	if ctx.Err() != nil {
+		p.mu.Lock()
+		p.stopped = append(p.stopped, name)
+		p.mu.Unlock()
+	}
+	p.note("end " + name)
+	return exit, nil
+}
+
+func (p *liveProc) note(e string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.events = append(p.events, e)
+}
+
+// at is where event e came in the events, -1 when it did not.
+func (p *liveProc) at(e string) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Index(p.events, e)
+}
+
+// psel is a selected tier marked Parallel.
+func psel(name string) Selected {
+	s := sel(name, "", name)
+	s.Tier.Parallel = true
+	return s
+}
+
+// resultStates are the tiers' states, in order.
+func resultStates(res Result) []State {
+	out := make([]State, 0, len(res.Tiers))
+	for _, tr := range res.Tiers {
+		out = append(out, tr.State)
+	}
+	return out
+}
+
+// awaitClose answers whether ch closed within a few seconds.
+func awaitClose(ch <-chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	case <-time.After(5 * time.Second):
+		return false
+	}
+}
+
+// S-0610, ADR-0266: two tiers marked parallel run at once, each starting
+// only once the unmarked tier before them has ended, and the unmarked tier
+// after them waits for both; a covered tier between them stays skipped.
+func TestRunStartsTheParallelTiersAtOnceAfterTheUnmarkedOnesBeforeThem(t *testing.T) {
+	var started sync.WaitGroup
+	started.Add(2)
+	both := make(chan struct{})
+	go func() { started.Wait(); close(both) }()
+	meet := func(context.Context, io.Writer) int {
+		started.Done()
+		if !awaitClose(both) {
+			return 1 // the other never started beside it
+		}
+		return 0
+	}
+	proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{"a": meet, "b": meet}}
+	covered := psel("c")
+	covered.CoveredBy = "b"
+	res, err := Run(context.Background(), "/repo", []Selected{sel("vet", "", "vet"), psel("a"), covered, psel("b"), sel("smoke", "", "smoke")},
+		RunOptions{Proc: proc, FS: fstest.MapFS{}})
+	if err != nil || !res.Passed || !reflect.DeepEqual(resultStates(res), []State{Passed, Passed, Skipped, Passed, Passed}) {
+		t.Fatalf("run %+v, %v; events %q", res, err, proc.events)
+	}
+	if proc.at("end vet") > proc.at("start a") || proc.at("end vet") > proc.at("start b") {
+		t.Errorf("a parallel tier started before the unmarked tier before it ended: %q", proc.events)
+	}
+	if proc.at("start smoke") < proc.at("end a") || proc.at("start smoke") < proc.at("end b") {
+		t.Errorf("the unmarked tier after the parallel ones started before both ended: %q", proc.events)
+	}
+	if proc.at("start c") != -1 {
+		t.Errorf("a covered tier ran: %q", proc.events)
+	}
+}
+
+// S-0610, ADR-0266: a tier that fails stops nothing before it. The tier
+// before it that was running finishes, and when it fails too it is the
+// failure the run names, with its findings, as a serial run would.
+func TestRunLetsARunningEarlierTierFinishWhenALaterOneFails(t *testing.T) {
+	for _, earlierFails := range []bool{false, true} {
+		bEnded := make(chan struct{})
+		proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{
+			"a": func(_ context.Context, w io.Writer) int {
+				awaitClose(bEnded)
+				time.Sleep(20 * time.Millisecond) // past the run seeing b fail
+				if earlierFails {
+					_, _ = io.WriteString(w, "a broke\n")
+					return 1
+				}
+				return 0
+			},
+			"b": func(_ context.Context, w io.Writer) int {
+				defer close(bEnded)
+				_, _ = io.WriteString(w, "b broke\n")
+				return 1
+			},
+		}}
+		res, err := Run(context.Background(), "/repo", []Selected{psel("a"), psel("b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}})
+		if err != nil || res.Passed {
+			t.Fatalf("earlier fails %v: run %+v, %v", earlierFails, res, err)
+		}
+		if slices.Contains(proc.stopped, "a") {
+			t.Errorf("earlier fails %v: the earlier tier was stopped", earlierFails)
+		}
+		want, named := []State{Passed, Failed}, "b broke"
+		if earlierFails {
+			want, named = []State{Failed, NotReached}, "a broke"
+		}
+		if got := resultStates(res); !reflect.DeepEqual(got, want) {
+			t.Errorf("earlier fails %v: states %v, want %v", earlierFails, got, want)
+		}
+		var findings []Finding
+		for _, tr := range res.Tiers {
+			findings = append(findings, tr.Findings...)
+		}
+		if len(findings) != 1 || !strings.Contains(findings[0].Message, named) {
+			t.Errorf("earlier fails %v: findings %+v, want one naming %q", earlierFails, findings, named)
+		}
+	}
+}
+
+// S-0610, ADR-0266: a failure stops the tier after it that is running,
+// through its context, lists every tier after it not reached, the one that
+// had already passed too, starts none after it, and keeps the log of none
+// of them.
+func TestRunStopsTheTiersAfterAFailureAndListsThemNotReached(t *testing.T) {
+	bEnded, cStarted := make(chan struct{}), make(chan struct{})
+	proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{
+		"a": func(context.Context, io.Writer) int {
+			if !awaitClose(bEnded) || !awaitClose(cStarted) {
+				return 2
+			}
+			time.Sleep(20 * time.Millisecond) // past the run seeing b pass
+			return 1
+		},
+		"b": func(context.Context, io.Writer) int { close(bEnded); return 0 },
+		"c": func(ctx context.Context, _ io.Writer) int {
+			close(cStarted)
+			select {
+			case <-ctx.Done():
+				return -1
+			case <-time.After(5 * time.Second):
+				return 0
+			}
+		},
+	}}
+	root := t.TempDir()
+	res, err := Run(context.Background(), root, []Selected{psel("a"), psel("b"), psel("c"), sel("d", "", "d")},
+		RunOptions{Proc: proc, FS: fstest.MapFS{}, LogDir: "logs"})
+	if err != nil || res.Passed || !reflect.DeepEqual(resultStates(res), []State{Failed, NotReached, NotReached, NotReached}) {
+		t.Fatalf("run %+v, %v; events %q", res, err, proc.events)
+	}
+	if res.Tiers[0].ExitCode == nil || *res.Tiers[0].ExitCode != 1 {
+		t.Errorf("a's exit %v, want 1: it did not see b end and c start", res.Tiers[0].ExitCode)
+	}
+	if !slices.Contains(proc.stopped, "c") {
+		t.Errorf("the running tier after the failure was not stopped: %q", proc.stopped)
+	}
+	if proc.at("start d") != -1 {
+		t.Errorf("a tier after the failure started: %q", proc.events)
+	}
+	for _, tr := range res.Tiers[1:] {
+		if tr.Log != "" || tr.ExitCode != nil || tr.Duration != "" {
+			t.Errorf("a tier not reached carries what it did: %+v", tr)
+		}
+	}
+	logs, _ := os.ReadDir(filepath.Join(root, "logs"))
+	if len(logs) != 1 || logs[0].Name() != "a.log" {
+		t.Errorf("logs %v, want only a.log", logs)
+	}
+}
+
+// S-0610, ADR-0266: over the same outcomes, a run with every tier marked
+// parallel answers what the serial run answers: the verdict, the states,
+// the tier it names, and the findings.
+func TestRunAtOnceAnswersWhatTheSerialRunAnswers(t *testing.T) {
+	steps := map[string]step{
+		"a": {},
+		"b": {stdout: "first\n", exit: 1},
+		"c": {stdout: "second\n", exit: 1},
+		"d": {},
+	}
+	fixed := time.Unix(0, 0)
+	run := func(parallel bool) Result {
+		var mu sync.Mutex
+		proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{}}
+		for name, s := range steps {
+			proc.fns[name] = func(_ context.Context, w io.Writer) int {
+				mu.Lock()
+				defer mu.Unlock()
+				_, _ = io.WriteString(w, s.stdout)
+				return s.exit
+			}
+		}
+		var tiers []Selected
+		for _, name := range []string{"a", "b", "c", "d"} {
+			s := sel(name, "", name)
+			s.Tier.Parallel = parallel
+			tiers = append(tiers, s)
+		}
+		res, err := Run(context.Background(), "/repo", tiers, RunOptions{Proc: proc, FS: fstest.MapFS{}, Now: func() time.Time { return fixed }})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	serial, atOnce := run(false), run(true)
+	if !reflect.DeepEqual(serial, atOnce) {
+		t.Errorf("at once\n%+v\nserial\n%+v", atOnce, serial)
+	}
+	if serial.Passed || !reflect.DeepEqual(resultStates(serial), []State{Passed, Failed, NotReached, NotReached}) {
+		t.Errorf("serial %+v", serial)
+	}
+}
+
+// S-0610, ADR-0266: when the caller's context ends, every tier running is
+// stopped; the first in list order is the failure, and Run returns the
+// context's error.
+func TestRunStopsEveryRunningTierWhenTheContextEnds(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var started sync.WaitGroup
+	started.Add(2)
+	go func() { started.Wait(); cancel() }()
+	block := func(ctx context.Context, _ io.Writer) int {
+		started.Done()
+		select {
+		case <-ctx.Done():
+			return -1
+		case <-time.After(5 * time.Second):
+			return 0
+		}
+	}
+	proc := &liveProc{fns: map[string]func(context.Context, io.Writer) int{"a": block, "b": block}}
+	res, err := Run(ctx, "/repo", []Selected{psel("a"), psel("b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}})
+	if !errors.Is(err, context.Canceled) || res.Passed || !reflect.DeepEqual(resultStates(res), []State{Failed, NotReached}) {
+		t.Fatalf("run %+v, %v", res, err)
+	}
+	if f := res.Tiers[0].Findings; len(f) != 1 || !strings.Contains(f[0].Message, "stopped: context canceled") {
+		t.Errorf("findings %+v", f)
+	}
+	if slices.Sort(proc.stopped); !reflect.DeepEqual(proc.stopped, []string{"a", "b"}) {
+		t.Errorf("stopped %q, want both", proc.stopped)
+	}
+}
+
+// S-0610, ADR-0266: a parallel tier waits for the unmarked tiers before it,
+// an unmarked one for every tier before it, and a covered tier neither
+// waits nor is waited for.
+func TestWaitsFollowTheParallelMarks(t *testing.T) {
+	covered := psel("c")
+	covered.CoveredBy = "x"
+	got := waits([]Selected{sel("u", "", "u"), psel("p"), covered, psel("q"), sel("v", "", "v"), psel("r")})
+	want := [][]int{nil, {0}, nil, {0}, {0, 1, 3}, {0, 4}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("waits %v, want %v", got, want)
 	}
 }
