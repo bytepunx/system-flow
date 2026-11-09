@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 40
-      output: 13404
-      cache_read: 6584956
-      cache_write: 279907
-      cost: 3.1099
+      output: 13232
+      cache_read: 6585637
+      cache_write: 275028
+      cost: 3.0813
   strategic:
     - kind: orchestrator
       seconds: 8

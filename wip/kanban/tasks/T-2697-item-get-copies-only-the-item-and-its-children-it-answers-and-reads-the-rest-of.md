@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 77
-      output: 25579
-      cache_read: 12565569
-      cache_write: 534125
-      cost: 5.9345
+      output: 25250
+      cache_read: 12566868
+      cache_write: 524815
+      cost: 5.8798
 ---
 
 # T-2697 item.get copies only the item and its children it answers, and reads the rest of the list in place

@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 74
-      output: 17719
-      cache_read: 10188224
-      cache_write: 354692
-      cost: 4.4025
+      output: 17363
+      cache_read: 10187042
+      cache_write: 345448
+      cost: 4.3473
 ---
 # T-2681 Measure 13 board.get calls at once before and after on the operator's host, and record them and the per-root history in the design
 

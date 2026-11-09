@@ -3,11 +3,11 @@ id: T-2684
 type: task
 nature: improvement
 title: Measure warm threads.list, inbox.designer, and stats.get before and after, and record them in the design
-status: in-progress
+status: done
 parent: S-0602
 owner: alex
 created: 2026-11-07T23:50:49Z
-updated: 2026-11-08T03:23:39Z
+updated: 2026-11-08T03:30:41Z
 transitions:
   - to: ready
     at: 2026-11-08T03:23:39Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-08T03:23:39Z
     by: agent-S-0602
+  - to: done
+    at: 2026-11-08T03:30:41Z
+    by: agent-S-0602
 stream: S-0602
 tags: [cli]
 touches: [design/system/server-performance.md, design/system/flai-cli.md]
 after: [T-2667, T-2671, T-2673, T-2676, T-2680]
+usage:
+  source: log
+  seconds: 422
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 15207
+      cache_read: 7553150
+      cache_write: 242010
+      cost: 3.4107
 ---
 # T-2684 Measure warm threads.list, inbox.designer, and stats.get before and after, and record them in the design
 

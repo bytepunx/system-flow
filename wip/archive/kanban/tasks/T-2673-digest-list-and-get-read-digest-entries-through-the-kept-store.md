@@ -24,16 +24,16 @@ touches: [flai/internal/digest/digest.go, flai/internal/digest/digest_test.go]
 after: [T-2660]
 usage:
   source: log
-  seconds: 860
+  seconds: 888
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 137
-      cache_read: 2465858
-      cache_write: 31291
-      cost: 0.9037
+      input: 18
+      output: 5217
+      cache_read: 2591349
+      cache_write: 83029
+      cost: 1.1702
 ---
 # T-2673 digest.List and Get read digest entries through the kept store
 

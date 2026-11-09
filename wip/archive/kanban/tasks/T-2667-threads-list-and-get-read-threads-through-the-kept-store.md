@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 864
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 114
-      cache_read: 2401134
-      cache_write: 17444
-      cost: 0.8752
+      input: 17
+      output: 4896
+      cache_read: 2431940
+      cache_write: 77922
+      cost: 1.0982
 ---
 # T-2667 threads.List and Get read threads through the kept store
 

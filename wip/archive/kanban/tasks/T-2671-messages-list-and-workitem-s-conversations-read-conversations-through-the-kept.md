@@ -24,16 +24,16 @@ touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_te
 after: [T-2660]
 usage:
   source: log
-  seconds: 862
+  seconds: 883
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 231
-      cache_read: 4383105
-      cache_write: 336130
-      cost: 1.7078
+      input: 33
+      output: 9716
+      cache_read: 4825708
+      cache_write: 154620
+      cost: 2.1791
 ---
 # T-2671 messages.List and workitem's Conversations read conversations through the kept store
 

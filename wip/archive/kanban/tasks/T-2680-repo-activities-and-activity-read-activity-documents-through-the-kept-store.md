@@ -24,16 +24,16 @@ touches: [flai/internal/workitem/activity.go, flai/internal/workitem/activity_te
 after: [T-2660]
 usage:
   source: log
-  seconds: 855
+  seconds: 895
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 144
-      cache_read: 2476612
-      cache_write: 17324
-      cost: 0.9025
+      input: 21
+      output: 6216
+      cache_read: 3087136
+      cache_write: 98915
+      cost: 1.394
 ---
 # T-2680 Repo.Activities and Activity read activity documents through the kept store
 

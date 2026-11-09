@@ -3,11 +3,11 @@ id: S-0602
 type: story
 nature: improvement
 title: flai serve keeps threads, conversations, digest entries, issues, and activity documents parsed between requests, so a thread read takes about 5 ms, not 80 to 110 ms
-status: in-progress
+status: done
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:05Z
-updated: 2026-11-08T03:01:00Z
+updated: 2026-11-09T07:17:27Z
 transitions:
   - to: ready
     at: 2026-11-08T00:11:21Z
@@ -15,6 +15,16 @@ transitions:
   - to: in-progress
     at: 2026-11-08T02:58:53Z
     by: agent-S-0602
+  - to: review
+    at: 2026-11-09T07:15:48Z
+    by: agent-S-0602
+  - to: done
+    at: 2026-11-09T07:17:27Z
+    by: orchestrator
+blocked:
+  - from: 2026-11-08T03:45:26Z
+    until: 2026-11-09T07:15:00Z
+    reason: awaiting the operator on TH-0913
 tags: [cli]
 touches: [flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/workitem/keptfiles.go, flai/internal/workitem/keptfiles_test.go]
 agent:
@@ -24,32 +34,35 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1422
-  estimated: true
-  priced_by: estimate
+  seconds: 2843
+  priced_by: harness
   turns:
     - day: 2026-11-08
       ceremony: 2
+      hand_edits: 2
+      work: 86
+    - day: 2026-11-09
+      ceremony: 1
       hand_edits: 1
-      work: 32
+      work: 6
   models:
     - model: claude-opus-5-5
-      input: 194
-      output: 1255
-      cache_read: 23115254
-      cache_write: 715688
-      cost: 8.624
+      input: 340
+      output: 99480
+      cache_read: 49409787
+      cache_write: 1583134
+      cost: 22.3116
   strategic:
     - kind: orchestrator
-      seconds: 173
+      seconds: 236
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 57
-          cache_read: 708983
-          cache_write: 28106
-          cost: 0.188
+          input: 27
+          output: 197
+          cache_read: 1250432
+          cache_write: 150720
+          cost: 0.3589
 cost_of_delay:
   inputs:
     penalty_per_week: 50
@@ -76,9 +89,9 @@ Cause 13 in [server-performance.md](../../../design/system/server-performance.md
 
 ## Acceptance criteria
 
-- [ ] flai serve and flai mcp keep each of the five parsed between requests, as S-0156 keeps items: each read stats every file and parses again only those whose size or modification time changed, or that are new, and drops those that are gone.
-- [ ] Tests show a changed, added, and removed file of each kind is seen on the next read, and that two readers at once get the same answer.
-- [ ] A warm `threads.list`, `inbox.designer`, and `stats.get` on this repository, timed with `flai hostapi --timing` in one process or through flai serve, each spend at least 80 ms less in their reads, and server-performance.md records the before and after.
+- [x] flai serve and flai mcp keep each of the five parsed between requests, as S-0156 keeps items: each read stats every file and parses again only those whose size or modification time changed, or that are new, and drops those that are gone.
+- [x] Tests show a changed, added, and removed file of each kind is seen on the next read, and that two readers at once get the same answer.
+- [x] A warm `threads.list`, `inbox.designer`, and `stats.get` on this repository, timed with `flai hostapi --timing` in one process or through flai serve, each spend at least 80 ms less in their reads, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2660 workitem keeps parsed files of any kind by path, stat, and the racy window, for the five readers to share
@@ -93,6 +106,7 @@ Cause 13 in [server-performance.md](../../../design/system/server-performance.md
 
 - Proposed fix: one kept-files store shared by the five packages, on the model of `flai/internal/workitem/store.go`.
 - The stories for causes 12 and 14 gain from this one but do not wait for it.
+- Criterion 3 is met by the operator's confirmation on TH-0913 (2026-11-09) of the orchestrator's recommendation. `stats.get` was judged on its reads' CPU, 389 ms down to 129 ms warm, and on the kept reads taken one at a time, 292 ms down to 18 ms. Its reads' wall time fell only 46 ms, 96 ms to 50 ms, because S-0607 runs them at once and the slowest is a read this story does not keep. `design/system/server-performance.md` § Cause 13 fixed records both.
 
 ### Planning
 
@@ -116,3 +130,13 @@ No `after`. S-0596, which wrote cause 13, is done. S-0603 and S-0604 read these 
 Forecast: 1h30m, against flai's 13m. flai's figure is 103 s a unit of size times size 7, from 3 criteria and 4 touches. S-0156 kept one kind in 703 s. This story builds a shared store, moves five readers onto it, tests each kind, and measures on the host. The delivery moves with the duration, from flai's 00:10 to 01:30.
 
 Cost of delay: no value yet. Neither S-0602 nor E-0033 has inputs, so `flai cod` refuses. TH-0888 asks the operator for `penalty_per_week: 50` on this story. The value is worked out once that input is set.
+
+### Accepted by the orchestrator
+
+- Verified: 8b29cf861eef8a98a2a42170c1b20a907b4b14f7
+- At: 2026-11-09T07:17:27Z
+
+Verdict: pass
+- 1: flai/internal/workitem/keptfiles.go, flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/workitem/activity.go, flai/internal/workitem/share.go
+- 2: flai/internal/workitem/keptfiles_test.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/share_test.go
+- 3: design/system/server-performance.md, design/system/flai-cli.md

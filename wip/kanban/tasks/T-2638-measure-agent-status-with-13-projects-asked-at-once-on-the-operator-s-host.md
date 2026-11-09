@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 42
-      output: 11043
-      cache_read: 6083344
-      cache_write: 210654
-      cost: 2.6148
+      output: 10921
+      cache_read: 6084224
+      cache_write: 206909
+      cost: 2.5931
 ---
 # T-2638 Measure agent.status with 13 projects asked at once on the operator's host, before and after, and record it in server-performance.md
 

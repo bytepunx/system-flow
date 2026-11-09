@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 343
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 207
-      cache_read: 3453586
-      cache_write: 24818
-      cost: 1.2588
+      input: 24
+      output: 7042
+      cache_read: 3497620
+      cache_write: 112067
+      cost: 1.5794
 ---
 # T-2660 workitem keeps parsed files of any kind by path, stat, and the racy window, for the five readers to share
 

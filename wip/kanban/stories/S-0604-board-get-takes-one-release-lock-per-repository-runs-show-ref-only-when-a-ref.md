@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-07T22:40:34Z
-updated: 2026-11-08T02:58:40Z
+updated: 2026-11-08T03:31:12Z
 transitions:
   - to: ready
     at: 2026-11-08T00:23:34Z
@@ -23,6 +23,9 @@ blocked:
     until: 2026-11-08T02:58:16Z
     reason: awaiting the operator on TH-0912
   - from: 2026-11-08T02:58:40Z
+    until: 2026-11-08T03:30:55Z
+    reason: awaiting the operator on TH-0912
+  - from: 2026-11-08T03:31:12Z
     reason: awaiting the operator on TH-0912
 tags: [cli]
 touches: [flai/internal/release/history.go, flai/internal/mergequeue/eligible.go, flai/internal/hostapi/hostapi.go, flai/internal/release/release.go, flai/internal/release/history_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/reads_test.go, flai/internal/storygit/undone.go, design/system/server-performance.md, design/system/flai-cli.md]
@@ -33,20 +36,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2275
+  seconds: 2287
   priced_by: harness
   turns:
     - day: 2026-11-08
       ceremony: 1
       hand_edits: 4
-      work: 61
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 348
-      output: 83100
-      cache_read: 47781959
-      cache_write: 1663478
-      cost: 20.6476
+      input: 358
+      output: 84078
+      cache_read: 49329713
+      cache_write: 1672799
+      cost: 21.0513
   strategic:
     - kind: orchestrator
       seconds: 797

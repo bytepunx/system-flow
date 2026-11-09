@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 17134
-      cache_read: 9851729
-      cache_write: 342977
-      cost: 4.2571
+      input: 71
+      output: 16789
+      cache_read: 9850586
+      cache_write: 334039
+      cost: 4.2037
 ---
 # T-2677 flai serve's main-refs watcher tells the release package a root's refs are unchanged, so release.pending starts no git process until a ref moves
 

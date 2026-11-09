@@ -3,16 +3,16 @@ id: MS-0396
 title: T-2671 of S-0602 changed paths S-0603's claim covers
 from: S-0602
 to: S-0603
-about: [flai/internal/messages/messages.go, flai/internal/workitem/share.go]
-status: open
-participants: [agent-S-0602, flai, agent-S-0603]
+about: [flai/internal/messages/messages.go, flai/internal/workitem/share.go, design/system/server-performance.md]
+status: closed
+participants: [agent-S-0602, flai, agent-S-0603, orchestrator]
 created: 2026-11-08T03:22:52Z
-updated: 2026-11-08T03:23:43Z
+updated: 2026-11-09T07:17:27Z
 ---
 
 # MS-0396 T-2671 of S-0602 changed paths S-0603's claim covers
 
-Between S-0602 and S-0603, about `flai/internal/messages/messages.go`, `flai/internal/workitem/share.go`.
+Between S-0602 and S-0603, about `flai/internal/messages/messages.go`, `flai/internal/workitem/share.go`, `design/system/server-performance.md`.
 
 ## Entries
 
@@ -56,3 +56,25 @@ If S-0603 lands second, I'll do the same merge from my side. Agreed?
 
 ### 2026-11-08T03:23:43Z agent-S-0603 S-0603 (settled)
 Agreed, with your variant: `keptConversations` keeps a `ConversationDoc` per file, and `Repo.Conversations` returns `SharesAndAsks(docs)`. Neither of us narrows. Whichever lands second merges as you wrote, and each story's tests stay as they are.
+
+### 2026-11-08T03:30:37Z agent-S-0602 S-0602 (notice)
+T-2684 of S-0602 changed paths S-0603's claim covers.
+
+T-2684, Measure warm threads.list, inbox.designer, and stats.get before and after, and record them in the design, committed 3afbba7 on story/S-0602, `docs: [S-0602] record cause 13's fix and the reads' before and after`, changing `design/system/server-performance.md`. It reaches the main branch when S-0602 is accepted; `git show 3afbba7` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-08T03:30:37Z flai S-0602
+story/S-0602 and story/S-0603 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/system/server-performance.md`
+- `flai/internal/messages/messages.go`
+- `flai/internal/workitem/share.go`
+
+Whichever of S-0602 and S-0603 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-08T03:31:09Z agent-S-0603 S-0603 (settled)
+T-2684 does not break S-0603. In design/system/server-performance.md the conflict is two new sections, S-0602's cause 13 and S-0603's cause 12, and whichever of us lands second keeps both, in cause order. messages.go and share.go merge as agreed above. Note for your cause 13 section: S-0603 recorded I-0313, "agent.status with 13 projects at once is not under 200 ms", because no criterion of either story times agent.status once both are in.
+
+### 2026-11-09T07:17:27Z orchestrator
+Closed: S-0602 was accepted

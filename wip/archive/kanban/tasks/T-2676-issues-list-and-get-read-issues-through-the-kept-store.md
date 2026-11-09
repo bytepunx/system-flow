@@ -24,16 +24,16 @@ touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go]
 after: [T-2660]
 usage:
   source: log
-  seconds: 858
+  seconds: 890
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 167
-      cache_read: 3075790
-      cache_write: 18975
-      cost: 1.1199
+      input: 23
+      output: 6756
+      cache_read: 3355763
+      cache_write: 107522
+      cost: 1.5153
 ---
 # T-2676 issues.List and Get read issues through the kept store
 
