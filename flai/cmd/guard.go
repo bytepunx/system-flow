@@ -43,7 +43,11 @@ and check, show, stats, stream diff,
 thread list and show, touches suggest, version, or any with --help); and a
 git
 command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files,
-ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A
+ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status, and tag,
+branch, and worktree in the forms that only list: git tag and git branch
+with no tag or branch named, or with -l, --list, --contains, --merged, or
+--points-at, and with no flag that writes, and git worktree list; S-0623).
+A
 refusal prints why on standard error and exits 2, which Claude Code hands
 back to the sub-agent. Every word of a command line is looked at, so a
 command run through env, sudo, timeout, xargs, find -exec, or a shell's -c
@@ -228,8 +232,8 @@ orchestrator, which enqueue a story for the merge queue to land, while flai
 queue remove, hold, and resume and flai accept --batch are refused whatever
 its permissions, so that it never lands, bisects, holds, or dequeues by hand
 (S-0403); publish the MCP tool release_publish alone, while flai
-release other than --evaluate, flai push, git push, and git tag are refused
-whatever its permissions (S-0222, ADR-0094).
+release other than --evaluate, flai push, git push, and git tag that makes
+or deletes a tag are refused whatever its permissions (S-0222, ADR-0094).
 On a thread it opened it follows up and resolves, but never recommends or
 answers; it never resolves another's thread but a story's planner's, never
 confirms a recommendation, and never names another author with --by. A call
