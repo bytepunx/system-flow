@@ -128,6 +128,7 @@ tests:
     format: plain
     all_only: true
     covers: [flaiover-lint, vitest, flaiover-flai, svelte-check]
+    parallel: true
   - name: integration
     command: ["../scripts/integration.sh", "-json"]
     dir: flai
@@ -137,6 +138,7 @@ tests:
     covers: [go-test, settings-index]
     queue: true
     when: ["flai/**", "template/**"]
+    parallel: true
   - name: smoke
     command: [scripts/smoke.sh]
     paths: ["flai/**", "scripts/**/*.sh"]
@@ -144,6 +146,7 @@ tests:
     all_only: true
     queue: true
     when: ["flai/**", "template/**"]
+    parallel: true
   - name: gateway
     command: [scripts/gateway-smoke.sh]
     paths: ["scripts/gateway-smoke.sh"]
