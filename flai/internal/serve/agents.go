@@ -2784,12 +2784,15 @@ func writeStdin(w *os.File, data []byte) error {
 
 // await waits in the background for the process spawnWith started, has end
 // record how it ended from its exit code, and has the launcher look again;
-// a launcher that hands its agents over lets it go instead, for the serving
-// flai to settle once it is gone.
+// a launcher that hands its agents over records nothing and leaves the run
+// for the serving flai to settle once it is gone, but still reaps the
+// process in the background, so that a parent that outlives it, as flai mcp
+// over stdio does, keeps no zombie the serving flai would count as running
+// (I-0299).
 func (l *launcher) await(cmd *exec.Cmd, out *os.File, pid int, end func(code int)) {
 	if l.handOver {
 		_ = out.Close()
-		_ = cmd.Process.Release()
+		go func() { _ = cmd.Wait() }()
 		return
 	}
 	go func() {
