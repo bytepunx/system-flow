@@ -12,7 +12,10 @@ import { editLink, fileRef, type EditLink, type LinkOptions } from './filelinks'
 export const slug = (heading: string): string =>
 	encodeURIComponent(heading.trim().toLowerCase().replace(/\s+/g, '-'));
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: false });
+// Raw HTML in markdown renders as text, never as markup: documents, threads, and messages are
+// written by agents, imported repositories, and forge reviews, and are data (I-0294). The
+// plugins' checkboxes and permalinks are their own tokens and render whatever `html` says.
+const md = new MarkdownIt({ html: false, linkify: true, typographer: false });
 md.use(anchor, {
 	slugify: slug,
 	permalink: anchor.permalink.headerLink({ safariReaderFix: true })
@@ -54,19 +57,20 @@ export function rewriteLink(docPath: string, href: string): string {
 	return `/docs/${resolved}${withHash}`;
 }
 
-/** Render markdown to HTML with links rewritten for docPath. */
+// Links are rewritten for the document being rendered, which render() passes in env.
+const defaultLink =
+	md.renderer.rules.link_open ??
+	((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
+md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+	const href = tokens[idx].attrGet('href');
+	if (href)
+		tokens[idx].attrSet('href', rewriteLink((env as { docPath: string }).docPath, String(href)));
+	return defaultLink(tokens, idx, options, env, self);
+};
+
+/** Render markdown to HTML with links rewritten for docPath and raw HTML shown as text. */
 export function render(markdown: string, docPath: string): string {
-	const env = { docPath };
-	const defaultLink =
-		md.renderer.rules.link_open ??
-		((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options));
-	md.renderer.rules.link_open = (tokens, idx, options, e, self) => {
-		const href = tokens[idx].attrGet('href');
-		if (href)
-			tokens[idx].attrSet('href', rewriteLink((e as { docPath: string }).docPath, String(href)));
-		return defaultLink(tokens, idx, options, e, self);
-	};
-	return md.render(markdown, env);
+	return md.render(markdown, { docPath });
 }
 
 /** The repository path of a rendered link to a markdown file, which render() pointed at the explorer. */

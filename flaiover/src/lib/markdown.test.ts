@@ -48,6 +48,45 @@ describe('render', () => {
 	});
 });
 
+describe('raw HTML (I-0294)', () => {
+	function shown(markdown: string) {
+		const root = document.createElement('div');
+		root.innerHTML = render(markdown, 'design/system/a.md');
+		return root;
+	}
+
+	it('shows a script block and an inline handler as text, not markup', () => {
+		const root = shown(
+			'<script>alert(1)</script>\n\nText <img src=x onerror=alert(1)> here.\n\n<div onclick="alert(1)">x</div>\n'
+		);
+		expect(root.querySelector('script')).toBeNull();
+		expect(root.querySelector('img')).toBeNull();
+		expect(root.querySelector('[onerror], [onclick]')).toBeNull();
+		expect(root.textContent).toContain('<script>alert(1)</script>');
+		expect(root.textContent).toContain('<img src=x onerror=alert(1)>');
+	});
+
+	it('gives a javascript: link no href that runs it', () => {
+		const root = shown('[x](javascript:alert(1)) and <javascript:alert(1)>\n');
+		const hrefs = [...root.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '');
+		expect(hrefs.filter((h) => /^\s*javascript:/i.test(h))).toEqual([]);
+		expect(root.textContent).toContain('[x](javascript:alert(1))');
+	});
+
+	it('still renders criteria checkboxes and heading permalinks', () => {
+		const root = shown('## Acceptance criteria\n\n- [ ] open\n- [x] done\n');
+		expect(root.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+		const heading = root.querySelector('h2')!;
+		expect(heading.id).toBe('acceptance-criteria');
+		expect(heading.querySelector('a')!.getAttribute('href')).toBe('#acceptance-criteria');
+	});
+
+	it('rewrites each link once however many times it renders', () => {
+		for (let i = 0; i < 50; i++) render('[a](b.md)\n', 'design/system/a.md');
+		expect(render('[a](b.md)\n', 'design/x/a.md')).toContain('href="/docs/design/x/b.md"');
+	});
+});
+
 describe('edit controls', () => {
 	beforeEach(() => openEditor.mockClear());
 
