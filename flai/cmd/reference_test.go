@@ -117,12 +117,11 @@ func TestReferenceWriteKeepsDateWhenUnchanged(t *testing.T) {
 }
 
 // The committed reference is what the help says now; make flai-reference
-// regenerates it.
+// regenerates it. Not gated under -short, so that flai test on a change to a
+// command or to the manifest's settings catalog runs it at the task, not first
+// in the close-out's integration tier (I-0308).
 func TestReferenceIsCurrent(t *testing.T) {
 	t.Parallel()
-	if testing.Short() {
-		t.Skip("reads the monorepo's docs")
-	}
 	page, err := os.ReadFile("../../docs/users/flai-reference.md")
 	if err != nil {
 		t.Fatalf("read the reference: %v", err)
@@ -207,12 +206,10 @@ func TestReferenceWritesFlagIndexBetweenMarkers(t *testing.T) {
 }
 
 // The committed flag index is what the help says now; make flai-reference
-// regenerates it with the reference.
+// regenerates it with the reference. Not gated under -short, as
+// TestReferenceIsCurrent is not (I-0308).
 func TestFlagIndexIsCurrent(t *testing.T) {
 	t.Parallel()
-	if testing.Short() {
-		t.Skip("reads the monorepo's docs")
-	}
 	page, err := os.ReadFile(settingsPage)
 	if err != nil {
 		t.Fatalf("read the settings index: %v", err)
