@@ -1,6 +1,6 @@
 ---
 title: Node.js and pnpm
-updated: 2026-11-08
+updated: 2026-11-09
 status: active
 topics: [sveltekit]
 ---
@@ -17,4 +17,4 @@ topics: [sveltekit]
 ## Why
 
 - Node 24 is the active LTS line through 2027. Host machines may run newer (the dev host has 25) but builds and the image use the LTS to keep the container boring.
-- pnpm for a strict `node_modules`, fast installs, and a single lockfile format that the Docker build can cache.
+- pnpm for a strict `node_modules`, fast installs, and one lockfile the Docker build can cache. The Docker build and CI install from `flaiover/pnpm-lock.yaml` alone, with `--frozen-lockfile` (`flaiover/Dockerfile`, `.github/workflows/flaiover.yml`). The `package-lock.json` files still tracked at the root and in `flaiover/` are read by nothing; S-0630 removes them (I-0297).

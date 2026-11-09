@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-11-02
+updated: 2026-11-09
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -602,4 +602,4 @@ So that `flai stats` and the dashboard agree to the second:
 
 ## Data access
 
-The dashboard reads items via its server API, which scans `wip/kanban` and `wip/archive` on request and caches by file modification time. `flai stats` prints the same aggregates as a table or JSON so scripts and CI can use them. Both share the same definitions above; the Go implementation is the reference and `flaiover` has a fixture test that checks its numbers against `flai stats --json` output on the sample repo in the template.
+The dashboard reads no project file. Its server asks flai on the host for the items and for the stats, and keeps each answer until flai says a file changed ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md), [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md)). `flai stats` prints the same aggregates as a table or JSON so scripts and CI can use them. Both share the definitions above. The Go implementation is the reference, and the dashboard computes none of them. `flaiover`'s fixture test, `stats.test.ts`, asks the built flai for the stats of `flai/internal/metrics/testdata/good` and checks the charts it draws from them.
