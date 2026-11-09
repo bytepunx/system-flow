@@ -641,16 +641,67 @@ func TestCloseOutsReadsTheServeJournal(t *testing.T) {
 		t.Errorf("the figures: %s", got)
 	}
 
-	writeFile(t, path, lines[1]+"\n{not json\n")
+	writeFile(t, path, strings.Repeat("x", 2*1024*1024)+"\n"+lines[1]+"\n")
 	logged.Reset()
 	if j := CloseOuts(path, repo, slog.New(slog.NewJSONHandler(&logged, nil))); j != nil {
-		t.Errorf("a bad journal: %+v", j)
+		t.Errorf("a journal that cannot be read: %+v", j)
 	}
 	warned := false
 	for _, ev := range warnings(t, &logged) {
-		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["detail"] != nil && strings.Contains(fmt.Sprint(ev["err"]), "line 2"))
+		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["detail"] != nil && ev["err"] != nil)
 	}
 	if !warned {
-		t.Errorf("no warning of the bad journal naming its line: %s", logged.String())
+		t.Errorf("no warning of the journal that cannot be read: %s", logged.String())
+	}
+}
+
+// I-0290, ADR-0268: a line a host's stop left with NUL bytes before an entry
+// is read as that entry, a line that is still not an entry is skipped, and
+// the close-outs section is kept, with one warning naming how many lines were
+// skipped and the first one's number.
+func TestCloseOutsSkipsADamagedJournalLineAndKeepsTheSection(t *testing.T) {
+	t.Parallel()
+	repo := project(t)
+	path := filepath.Join(t.TempDir(), "serve", "journal.jsonl")
+	root := filepath.Dir(repo.CacheDir())
+	passed := `{"at":"2026-10-01T10:05:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0001","outcome":"done","detail":"S-0001 job","duration_ms":300000,"verdict":"passed"}`
+	stopped := `{"at":"2026-10-01T11:05:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0002","outcome":"done","detail":"S-0002 job","duration_ms":60000,"verdict":"stopped"}`
+	failed := `{"at":"2026-10-01T12:05:00Z","action":"close-out","method":"verify.job","project":"t","root":"` + root + `","by":"agent-S-0003","outcome":"failed","detail":"S-0003 job","duration_ms":120000,"verdict":"failed"}`
+	nul := strings.Repeat("\x00", 37)
+	writeFile(t, path, strings.Join([]string{passed, nul + stopped, `{"at":"2026-10-01T11:30:00Z","act`, nul, failed, `{not json`, ""}, "\n"))
+
+	var logged bytes.Buffer
+	j := CloseOuts(path, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if j == nil || len(j.Entries) != 3 {
+		t.Fatalf("want the section kept with the three entries, got %+v, logged %s", j, logged.String())
+	}
+	if j.Entries[1].Verdict != "stopped" {
+		t.Errorf("the NUL-prefixed line is not read as its entry: %+v", j.Entries[1])
+	}
+	var found []map[string]any
+	for _, ev := range warnings(t, &logged) {
+		if ev["level"] == "WARN" {
+			found = append(found, ev)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("want one warning, got %s", logged.String())
+	}
+	ev := found[0]
+	if ev["component"] != "stats" || ev["skipped"] != 2.0 || ev["first_line"] != 3.0 || ev["path"] != path || ev["err"] == nil || ev["detail"] == nil {
+		t.Errorf("the warning names the wrong count, line, or path: %s", logged.String())
+	}
+
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	opt.CloseOuts, opt.Now, opt.Since = j, time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC), 7*24*time.Hour
+	rep := metrics.Compute(nil, opt)
+	if rep.CloseOuts == nil || len(rep.CloseOuts.Weeks) != 2 {
+		t.Fatalf("want the close-outs section, got %+v", rep.CloseOuts)
+	}
+	if w := rep.CloseOuts.Weeks[1]; w.Passed != 1 || w.Stopped != 1 || w.Failed != 1 {
+		t.Errorf("the week's figures: %+v", w)
 	}
 }

@@ -182,15 +182,17 @@ func queueEvents(cacheDir string, log *slog.Logger) ([]mergequeue.Event, bool) {
 // serve folder beside the configuration flai reads, for the close-outs of
 // repo's project, whose main checkout it names (S-0546, ADR-0229). It is
 // apart from Read because only flai stats on the host reads it. A missing
-// journal is nil with no warning; one that cannot be read is nil and warned
-// of on log, so that flai stats never fails on it. Either leaves the
-// close-outs section out.
+// journal is nil with no warning; one that cannot be opened or read is nil
+// and warned of on log, so that flai stats never fails on it. Either leaves
+// the close-outs section out. A line that is not an entry, once its NUL bytes
+// are removed, is skipped, and one warning names how many were and the first
+// one's number, keeping the section (ADR-0268).
 func CloseOuts(path string, repo *workitem.Repo, log *slog.Logger) *metrics.CloseOutJournal {
 	root := repo.Root
 	if repo.MainRoot != "" {
 		root = repo.MainRoot
 	}
-	entries, err := journalEntries(path)
+	entries, skipped, err := journalEntries(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
@@ -199,35 +201,55 @@ func CloseOuts(path string, repo *workitem.Repo, log *slog.Logger) *metrics.Clos
 			"detail", "the close-outs section is left out; correct or remove the line the error names in "+path)
 		return nil
 	}
+	if skipped.count > 0 {
+		log.Warn("skipped lines of flai serve's journal that are not entries", "component", "stats",
+			"path", path, "skipped", skipped.count, "first_line", skipped.first, "err", skipped.err.Error(),
+			"detail", "the close-outs those lines held are not counted; correct or remove them in "+path)
+	}
 	return &metrics.CloseOutJournal{Root: root, Entries: entries}
 }
 
-// journalEntries decodes every line of the host journal at path; an empty
-// line is skipped, and the first line that is not an entry stops it.
-func journalEntries(path string) ([]metrics.JournalEntry, error) {
+// skippedLines counts the journal lines that are not entries, with the first
+// one's number and decode error.
+type skippedLines struct {
+	count, first int
+	err          error
+}
+
+// journalEntries decodes every line of the host journal at path, each with
+// its NUL bytes removed, as a write a host's stop cut short leaves them
+// (I-0290); an empty line is skipped, and a line that is still not an entry
+// is skipped and counted in skipped. Only a journal that cannot be opened or
+// read is an error.
+func journalEntries(path string) ([]metrics.JournalEntry, skippedLines, error) {
+	var skipped skippedLines
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, skipped, err
 	}
 	defer func() { _ = f.Close() }()
 	entries := []metrics.JournalEntry{}
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for n := 1; sc.Scan(); n++ {
-		line := bytes.TrimSpace(sc.Bytes())
+		line := bytes.TrimSpace(bytes.ReplaceAll(sc.Bytes(), []byte{0}, nil))
 		if len(line) == 0 {
 			continue
 		}
 		var e metrics.JournalEntry
 		if err := json.Unmarshal(line, &e); err != nil {
-			return nil, fmt.Errorf("read flai serve's journal %s, line %d: %w", path, n, err)
+			if skipped.count == 0 {
+				skipped.first, skipped.err = n, err
+			}
+			skipped.count++
+			continue
 		}
 		entries = append(entries, e)
 	}
 	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("read flai serve's journal %s: %w", path, err)
+		return nil, skipped, fmt.Errorf("read flai serve's journal %s: %w", path, err)
 	}
-	return entries, nil
+	return entries, skipped, nil
 }
 
 // forgeEvents reads the events of every story's kept forge state under
