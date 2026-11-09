@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-09T17:42:16Z
+updated: 2026-11-09T21:22:32Z
 ---
 
 # Active streams
@@ -12,18 +12,17 @@ updated: 2026-11-09T17:42:16Z
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
 | [S-0611](S-0611.md) | The dashboard asks threads.list for open threads and agent.status for open runs, and the request timing counts the send, so a thread list is under 100 KB, not 3.3 MB | review | agent-S-0611 | 2026-11-09T17:41:47Z |
 | [S-0616](S-0616.md) | TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input | in-progress | agent-S-0616 | 2026-11-09T10:43:31Z |
-| [S-0621](S-0621.md) | A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time | in-progress | agent-S-0621 | 2026-11-09T17:41:54Z |
+| [S-0621](S-0621.md) | A publish instance with nothing to release stops at its evaluate step down the failure path, blocking and asking the operator every time | review | agent-S-0621 | 2026-11-09T18:31:01Z |
 | [S-0624](S-0624.md) | One line holding a NUL byte in flai serve's journal drops the whole close-outs section of flai stats | review | agent-S-0624 | 2026-11-09T17:22:49Z |
-| [S-0626](S-0626.md) | Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there | in-progress | agent-S-0626 | 2026-11-09T17:36:22Z |
-| [S-0627](S-0627.md) | The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator | in-progress | agent-S-0627 | 2026-11-09T17:40:47Z |
-| [S-0629](S-0629.md) | flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again | in-progress | agent-S-0629 | 2026-11-09T17:42:10Z |
-| [S-0641](S-0641.md) | Publish what is accepted and not yet released | review | agent-S-0641 | 2026-11-09T16:59:08Z |
+| [S-0626](S-0626.md) | Design documents describe a /conventions page, a /streams page, a mounted-repository readiness check, a flai OTEL span, a dashboard scan of wip/kanban, and a single lockfile that are not there | review | agent-S-0626 | 2026-11-09T17:46:49Z |
+| [S-0627](S-0627.md) | The dashboard renders repository markdown with markdown-it html: true and no sanitizer, so a document any agent writes can run script as the operator | review | agent-S-0627 | 2026-11-09T17:56:43Z |
+| [S-0629](S-0629.md) | flai serve records a Claude Code usage-limit refusal as a failed permission_prompt check and never checks the version again | review | agent-S-0629 | 2026-11-09T17:55:52Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 177 | 1112.8927 USD | 144271 | 2026-11-09T17:10:39Z |
-| [orchestrator](orchestrator.md) | 2497 | 2058.8413 USD | 1532183 | 2026-11-09T17:30:56Z |
+| [planner](planner.md) | 178 | 1116.0790 USD | 144833 | 2026-11-09T18:06:20Z |
+| [orchestrator](orchestrator.md) | 2509 | 2060.8747 USD | 1532501 | 2026-11-09T18:07:35Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 113 | 179.3510 USD | 18761 | 2026-11-09T11:32:06Z |
+| [curator](curator.md) | 114 | 181.3433 USD | 18879 | 2026-11-09T17:44:20Z |
