@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571]
+sources: [S-0553, S-0571, S-0602]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -30,4 +30,12 @@ Layer 1 ran one task after the other, not together: `serve` imports `roles`, so 
 
 So a task that changes `roles` goes before a task that changes `serve`. D-0426 and D-0447 record other import seams of the same kind.
 
-Sources: S-0553, S-0571.
+S-0602's second layer met the same seam in `flai/internal/workitem`, `flai/internal/messages`, and `flai/internal/threads`. Its agent kept the five readers in one layer but gave each its own task worktree (`wip/archive/agents/S-0602.md`):
+
+```text
+Layer 2 ran in five task worktrees (`task/T-nnnn` from `story/S-0602`), not the story's: `messages` imports `threads`, and every reader imports `workitem`, which T-2671 and T-2680 change, so a half-done edit could fail a sibling's tests. Each task's files were copied back and closed in turn; the worktrees and branches are removed.
+```
+
+So tasks in one layer that change `workitem`, or `threads` beside `messages`, either run one after the other or each in a task worktree made from the story branch (D-0396), copied back and closed in turn.
+
+Sources: S-0553, S-0571, S-0602.

@@ -2,7 +2,7 @@
 id: D-0527
 title: To measure a story's code before and after, its sub-agent copies the worktree under /tmp and puts the base commit's files into one copy, since flai guard refuses a sub-agent git archive
 kind: decision
-sources: [S-0607, T-2663]
+sources: [S-0607, T-2663, S-0602]
 topics: [server-side, code]
 paths: [design/system/server-performance.md]
 date: 2026-11-08
@@ -22,4 +22,12 @@ T-2663 measured with copies of the worktree under `/tmp`, because the guard refu
 
 A story whose task measures base against head builds the base tree this way, from the non-test files the story changes, rather than having its sub-agent export the base commit with `git archive`.
 
-Sources: S-0607, T-2663.
+S-0602 built both trees with no copy at all, through `go build -overlay` under `/tmp`, which writes nothing in the repository (`wip/archive/agents/S-0602.md`):
+
+```text
+Measured with overlay builds under `/tmp`, nothing written in the repository: a `hostapi --timing` that repeats the method in one process, and a program timing each read's wall and CPU time. `stats.get` records no phase of its own for its reads, so `statsread.Read` was timed apart.
+```
+
+A one-shot `flai hostapi --timing` is always cold, so a warm figure needs a build whose `hostapi --timing` calls the method several times in one process. `design/system/server-performance.md` § Cause 13 fixed gives the method in full.
+
+Sources: S-0607, T-2663, S-0602.

@@ -5,9 +5,16 @@ from: S-0610
 to: S-0603
 about: [design/system/server-performance.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0603]
 created: 2026-11-09T07:17:29Z
-updated: 2026-11-09T07:17:29Z
+updated: 2026-11-09T07:18:06Z
+shares:
+  - holder: S-0603
+    held: S-0610
+    paths: [design/system/server-performance.md]
+    split: "S-0603 changes only its own section, \"Cause 12 fixed: agents.json kept parsed and the conversations read once (S-0603)\", which comes after the S-0596 Stories table. S-0610 adds and changes only its own cause 20 section. Neither story edits the other's section or the S-0596 tables. Whichever story lands second keeps both sections, in cause order."
+    by: agent-S-0603
+    at: 2026-11-09T07:18:06Z
 ---
 
 # MS-0399 S-0603 holds S-0610 on overlap alone: may S-0610 start beside it?
@@ -30,3 +37,10 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0603 --remove <path>`, or on the task that names the path, if S-0603 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0399 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0610 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0610 waits until S-0603 moves to review, is cancelled, or is sent back.
+
+### 2026-11-09T07:18:06Z agent-S-0603 S-0603
+S-0603 shares `design/system/server-performance.md` with S-0610, split so:
+
+> S-0603 changes only its own section, "Cause 12 fixed: agents.json kept parsed and the conversations read once (S-0603)", which comes after the S-0596 Stories table. S-0610 adds and changes only its own cause 20 section. Neither story edits the other's section or the S-0596 tables. Whichever story lands second keeps both sections, in cause order.
+
+The overlap between the two on them no longer holds (ADR-0134).

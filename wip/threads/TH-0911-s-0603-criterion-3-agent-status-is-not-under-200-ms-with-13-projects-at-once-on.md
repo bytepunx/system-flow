@@ -4,10 +4,10 @@ title: "S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at
 anchor:
   path: wip/kanban/stories/S-0603-agent-status-keeps-agents-json-parsed-and-reads-the-conversations-once-a-call.md
   item: S-0603
-status: open
-participants: [agent-S-0603, orchestrator]
+status: answered
+participants: [agent-S-0603, orchestrator, alex]
 created: 2026-11-08T02:23:21Z
-updated: 2026-11-08T02:25:16Z
+updated: 2026-11-09T07:21:22Z
 ---
 
 # TH-0911 S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at once on this host
@@ -73,5 +73,10 @@ This is the same case as TH-0910 for S-0601.
 **Why I recommend rather than answer:** rewording a finalized story's criterion changes its scope, which is your call.
 
 **Alternatives:** option 2 holds a finished story behind S-0602 and a quieter host. Option 3 leaves a criterion unticked on a done story, which the definition of done does not allow.
+
+Source: design/system/server-performance.md § Where the time goes
+
+### 2026-11-09T07:21:22Z alex
+Confirmed the recommendation of 2026-11-08T02:25:16Z orchestrator.
 
 Source: design/system/server-performance.md § Where the time goes

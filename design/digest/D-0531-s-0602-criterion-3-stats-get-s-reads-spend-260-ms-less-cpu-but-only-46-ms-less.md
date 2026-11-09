@@ -2,7 +2,7 @@
 id: D-0531
 title: "S-0602 criterion 3: stats.get's reads spend 260 ms less CPU but only 46 ms less wall time, since S-0607 runs them at once: Recommended: answer \"met\""
 kind: answer
-sources: [TH-0913]
+sources: [TH-0913, S-0602]
 topics: [server-side, back-end, flai, cli, go, code, all]
 paths: [flai/internal/threads/threads.go, flai/internal/messages/messages.go, flai/internal/digest/digest.go, flai/internal/issues/issues.go, flai/internal/threads/threads_test.go, flai/internal/messages/messages_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/digest/digest_test.go, flai/internal/issues/issues_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, design/system/server-performance.md, design/system/flai-cli.md, flai/internal/workitem/keptfiles.go, flai/internal/workitem/keptfiles_test.go]
 date: 2026-11-09
@@ -41,4 +41,12 @@ The answer:
 Source: design/system/server-performance.md § Where the time goes
 ```
 
-Source: TH-0913.
+The operator confirmed the recommendation, and S-0602 recorded how the criterion was judged (`wip/archive/agents/S-0602.md`):
+
+```text
+The operator, alex, answered TH-0913 on 2026-11-09T07:14:59Z by confirming the orchestrator's recommendation: criterion 3 is met. `stats.get` is judged on its reads' CPU and on the kept reads taken one at a time, since its wall time is bounded by reads cause 13 does not cover. Criterion 3 is ticked and the story's Notes say so.
+```
+
+So a criterion that asks a method to spend less time in its reads is met by the reads' CPU and by the story's own reads timed one at a time, when the method runs its reads at once (S-0607) and its wall time is bounded by a read the story does not change. The story records both the CPU and the wall figures in its design section.
+
+Sources: TH-0913, S-0602.

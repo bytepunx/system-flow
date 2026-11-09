@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 60
-      output: 15502
-      cache_read: 8636837
-      cache_write: 293716
-      cost: 3.681
+      output: 15214
+      cache_read: 8583096
+      cache_write: 340944
+      cost: 4.0661
 ---
 # T-2621 AgentStates keeps agents.json parsed, read again only when its size or modification time changed, and holds agentsMu only to read or replace it
 

@@ -59,21 +59,21 @@ usage:
           cache_write: 2725272
           cost: 52.2198
     - kind: orchestrator
-      seconds: 3122
+      seconds: 3209
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 420
-          output: 3027
-          cache_read: 19172530
-          cache_write: 2003231
-          cost: 5.4138
+          input: 444
+          output: 3130
+          cache_read: 19935040
+          cache_write: 2103974
+          cost: 5.6361
         - model: claude-sonnet-5-5
-          input: 30
-          output: 264
-          cache_read: 167187
-          cache_write: 199063
-          cost: 0.2681
+          input: 36
+          output: 307
+          cache_read: 208540
+          cache_write: 235559
+          cost: 0.3253
 ---
 # E-0033 flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads
 

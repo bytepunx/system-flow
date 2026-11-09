@@ -4,10 +4,10 @@ title: "S-0410 holds S-0591 on overlap alone: may S-0591 start beside it?"
 from: S-0591
 to: S-0410
 about: [flai/internal/serve/gateway_test.go]
-status: open
-participants: [flai, agent-S-0410]
+status: closed
+participants: [flai, agent-S-0410, alex]
 created: 2026-11-07T21:49:51Z
-updated: 2026-11-07T21:51:48Z
+updated: 2026-11-09T07:21:55Z
 shares:
   - holder: S-0410
     held: S-0591
@@ -44,3 +44,6 @@ S-0410 shares `flai/internal/serve/gateway_test.go` with S-0591, split so:
 > S-0410 owns TestGatewayOpenCode, openCodeVersionSkip with its test, and the gatewayMissingFor wrapper that gatewayMissing now calls, with opencode's cases in TestGatewayMissingNamesWhatIsMissing. S-0591 owns guardSettings' count and the LiteLLM setup check (TestGatewayLiteLLM, checkGateway's guard count). Neither changes the other's functions. S-0410's work is done and goes back to review now, so S-0591 rebases onto it once it is accepted.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-09T07:21:55Z alex
+Closed: S-0591 was accepted

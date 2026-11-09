@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 52
-      output: 13497
-      cache_read: 7519588
-      cache_write: 255722
-      cost: 3.2048
+      output: 13246
+      cache_read: 7472799
+      cache_write: 296840
+      cost: 3.5401
 ---
 # T-2623 The activity agent.status builds reads the conversations once, for every live run and for held, with the same answer as before
 

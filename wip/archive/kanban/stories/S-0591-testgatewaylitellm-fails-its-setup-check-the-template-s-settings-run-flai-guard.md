@@ -3,10 +3,10 @@ id: S-0591
 type: story
 nature: remediation
 title: "TestGatewayLiteLLM fails its setup check: the template's settings run flai guard 6 times, and it wants 4"
-status: review
+status: done
 owner: alex
 created: 2026-11-07T15:15:23Z
-updated: 2026-11-08T00:00:13Z
+updated: 2026-11-09T07:21:55Z
 transitions:
   - to: ready
     at: 2026-11-07T21:49:23Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-08T00:00:13Z
     by: system-flow
+  - to: done
+    at: 2026-11-09T07:21:55Z
+    by: alex
 tags: [flai, test]
 touches: [flai/internal/serve/gateway_test.go, design/issues/I-0303-testgatewaylitellm-fails-its-setup-check-the-template-s-settings-run-flai-guard.md, design/issues/summary.md]
 agent:
