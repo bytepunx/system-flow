@@ -585,6 +585,13 @@ func TestRepositoryManifestRunsFlaioverTestsOfTheBuiltFlaiForHostAPIChanges(t *t
 // The settings-index tier runs TestSettingsIndexHasEveryKey under -short, and
 // under --all the integration tier covers it, running the whole test. Not
 // gated under -short, so that make test catches a manifest that drops it.
+//
+// I-0308: a change to the manifest's settings catalog passed flai test while
+// docs/users/flai-reference.md went stale, because TestReferenceIsCurrent and
+// TestFlagIndexIsCurrent skipped under -short. They no longer do, so go-test
+// runs them for a change to flai/internal/manifest/settings.go, through its
+// importer flai/cmd, and settings-index runs them for a hand edit of either
+// generated page.
 func TestRepositoryManifestChecksTheSettingsIndexWhenItChanges(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
@@ -594,17 +601,28 @@ func TestRepositoryManifestChecksTheSettingsIndexWhenItChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const changed = "docs/operators/settings.md"
-	var got []string
-	ok := false
-	for _, s := range Select(os.DirFS(root), tiers, []string{changed}, false) {
-		if s.Tier.Name == "settings-index" {
-			got, ok = s.Argv, true
+	want := []string{"go", "test", "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^(TestSettingsIndex|TestReferenceIsCurrent$|TestFlagIndexIsCurrent$)", "./cmd"}
+	for _, changed := range []string{"docs/operators/settings.md", "docs/users/flai-reference.md"} {
+		var got []string
+		ok := false
+		for _, s := range Select(os.DirFS(root), tiers, []string{changed}, false) {
+			if s.Tier.Name == "settings-index" {
+				got, ok = s.Argv, true
+			}
+		}
+		if !ok || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: settings-index runs %q (selected %v), want %q", changed, got, ok, want)
 		}
 	}
-	want := []string{"go", "test", "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^TestSettingsIndex", "./cmd"}
-	if !ok || !reflect.DeepEqual(got, want) {
-		t.Errorf("%s: settings-index runs %q (selected %v), want %q", changed, got, ok, want)
+	const catalog = "flai/internal/manifest/settings.go"
+	var goTest []string
+	for _, s := range Select(os.DirFS(root), tiers, []string{catalog}, false) {
+		if s.Tier.Name == "go-test" {
+			goTest = s.Argv
+		}
+	}
+	if !slices.Contains(goTest, "-short") || !slices.Contains(goTest, "./cmd") {
+		t.Errorf("%s: go-test runs %q, want flai/cmd's tests under -short, which hold TestReferenceIsCurrent", catalog, goTest)
 	}
 	covered := ""
 	for _, s := range Select(os.DirFS(root), tiers, nil, true) {

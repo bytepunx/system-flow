@@ -81,9 +81,9 @@ tests:
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
   - name: settings-index
-    command: [go, test, "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^TestSettingsIndex", "./cmd"]
+    command: [go, test, "-json", "-short", "-count=1", "-timeout", "5m", "-run", "^(TestSettingsIndex|TestReferenceIsCurrent$|TestFlagIndexIsCurrent$)", "./cmd"]
     dir: flai
-    paths: ["docs/operators/settings.md"]
+    paths: ["docs/operators/settings.md", "docs/users/flai-reference.md"]
     format: go-test-json
   - name: flaiover-lint
     command: ["../scripts/flaiover-lint.sh", "{files}"]
