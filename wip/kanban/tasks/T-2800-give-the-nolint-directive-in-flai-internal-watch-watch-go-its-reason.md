@@ -1,0 +1,33 @@
+---
+id: T-2800
+type: task
+nature: improvement
+title: Give the nolint directive in flai/internal/watch/watch.go its reason
+status: backlog
+parent: S-0631
+owner: alex
+created: 2026-11-09T22:05:07Z
+updated: 2026-11-09T22:05:07Z
+transitions: []
+stream: S-0631
+tags: [cli]
+touches: [flai/internal/watch/watch.go]
+---
+# T-2800 Give the nolint directive in flai/internal/watch/watch.go its reason
+
+## Work
+
+I-0298 counts 26 `//nolint` directives in flai and one without a reason, which it places at `flai/internal/watch/watch.go:54`. The directive is now at line 94: `return nil //nolint:nilerr`, inside the `filepath.WalkDir` callback's `err != nil` branch. The reason is in the comment on line 93: "A folder that vanished or cannot be read is skipped, not fatal."
+
+Move the reason onto the directive, as every other nolint in flai has it, for example `//nolint:nilerr // a folder that vanished or cannot be read is skipped, not fatal`. Then drop or shorten the comment above so the reason is said once.
+
+Check with `grep -rn 'nolint' flai --include='*.go'` that no other directive lacks a reason, and give any you find one too.
+
+This task waits for nothing and shares no path with the splits, so it runs with them.
+
+## Done when
+
+- Every `//nolint` directive in `flai/` carries a reason after `//`.
+- `flai test flai/internal/watch/watch.go` passes, golangci-lint included.
+
+## Notes

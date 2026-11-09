@@ -3,14 +3,17 @@ id: S-0633
 type: story
 nature: improvement
 title: flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:41:06Z
-updated: 2026-11-09T22:09:59Z
+updated: 2026-11-09T22:12:26Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:17Z
     by: alex
+  - to: in-progress
+    at: 2026-11-09T22:12:26Z
+    by: agent-S-0633
 tags: [flai, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md]
 agent:

@@ -3,10 +3,10 @@ id: S-0616
 type: story
 nature: remediation
 title: TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:39:18Z
-updated: 2026-11-09T21:53:09Z
+updated: 2026-11-09T22:22:33Z
 transitions:
   - to: ready
     at: 2026-11-09T10:22:28Z
@@ -26,8 +26,14 @@ transitions:
   - to: in-progress
     at: 2026-11-09T21:53:09Z
     by: flai
+  - to: review
+    at: 2026-11-09T22:09:30Z
+    by: agent-S-0616
+  - to: done
+    at: 2026-11-09T22:22:33Z
+    by: orchestrator
 tags: [flai, template]
-touches: [flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md]
+touches: [flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md, design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -35,20 +41,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1283
+  seconds: 2266
   priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 4
-      hand_edits: 1
-      work: 85
+      ceremony: 7
+      hand_edits: 2
+      work: 300
   models:
     - model: claude-opus-5-5
-      input: 188
-      output: 18600
-      cache_read: 23291802
-      cache_write: 276981
-      cost: 7.247
+      input: 630
+      output: 41500
+      cache_read: 98610365
+      cache_write: 644764
+      cost: 25.7127
   strategic:
     - kind: planner
       seconds: 222
@@ -131,3 +137,12 @@ Figures:
 - Cost of delay: 25 USD a week, as `flai cod` worked it out from the inputs flai set from I-0249: 10m lost per 168h cycle at 150 USD an hour. It stands. The issue's one instance was worked around in S-0421, and S-0424 and S-0554 narrowed the cause. The remaining cost is the next workaround someone has to find.
 - 2026-11-09T16:57:24Z: moved to in-progress: Merge failed, need to rebase
 - 2026-11-09T21:53:09Z: moved to in-progress: the rebase of story/S-0616 onto main stopped on conflicts in design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, which the acceptance of S-0616 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0616
+
+### Accepted by the orchestrator
+
+- Verified: 377709c9aeb87d31dd254995152c7f2971ea0ca1
+- At: 2026-11-09T22:22:33Z
+
+Verdict: pass; both criteria met at 377709c, close-out passed every step there.
+- 1: flai/cmd/new_test.go, template/root/design/workflows/formulas/README.md, design/workflows/formulas/README.md, design/system/template.md, template/CHANGELOG.md
+- 2: design/issues/I-0249-testrenderprototypetemplate-refuses-any-double-curly-brace-in-a-rendered.md, design/issues/summary.md

@@ -3,12 +3,21 @@ id: T-2764
 type: task
 nature: remediation
 title: Test that the orchestrator sets an in-progress story's cost of delay input only while set_cost_of_delay is on
-status: backlog
+status: done
 parent: S-0622
 owner: alex
 created: 2026-11-09T18:05:20Z
-updated: 2026-11-09T18:05:41Z
-transitions: []
+updated: 2026-11-09T22:10:29Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:55:52Z
+    by: agent-S-0622
+  - to: in-progress
+    at: 2026-11-09T21:55:53Z
+    by: agent-S-0622
+  - to: done
+    at: 2026-11-09T22:10:29Z
+    by: agent-S-0622
 stream: S-0622
 tags: [cli]
 touches: [flai/cmd/orchestrate_permissions_test.go]

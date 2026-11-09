@@ -1,0 +1,47 @@
+---
+id: TH-0959
+title: "S-0643 plan: --require-pending makes an outrun publish step stop cleanly and name the release that covered it"
+anchor:
+  path: wip/kanban/stories/S-0643-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md
+  item: S-0643
+status: open
+participants: [planner-S-0643]
+created: 2026-11-09T22:14:53Z
+updated: 2026-11-09T22:14:53Z
+---
+
+# TH-0959 S-0643 plan: --require-pending makes an outrun publish step stop cleanly and name the release that covered it
+
+On wip/kanban/stories/S-0643-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md.
+
+## Entries
+
+### 2026-11-09T22:14:53Z planner-S-0643
+S-0643 is planned: four tasks in three layers, a forecast of 1h, and a cost of delay of 12.50 USD a week. No thread on S-0643 existed before this run, so I planned it from scratch.
+
+Proposed fix, from I-0320's instance on S-0641. The publish step learns to tell a release another publish made apart from one it made. Nothing holds the operator's hand publish back.
+
+- `flai release --pending --require-pending` exits 2 when nothing is pending. Its output names each component's newest release tag, commit, tagger, and time.
+- The publish formula's `publish` step runs with that flag and `stop: [2]` (ADR-0271). An outrun instance then stops cleanly and names the release that covered it.
+- Plain `--pending` is unchanged, so the dashboard's Publish and `release_publish` are unchanged too.
+
+Tasks:
+
+| Layer | Task | Touches | after |
+|-------|------|---------|-------|
+| 1 | T-2818: the flag, the newest-release lookup, and a test that reproduces I-0320 | `flai/cmd/release.go`, `flai/cmd/release_pending_test.go`, `flai/internal/release/release.go`, `flai/internal/release/release_test.go` | none |
+| 2 | T-2819: the publish step's flag and `stop: [2]`, both copies of the formula and its README, and the `template/CHANGELOG.md` line | the formula files, `template/CHANGELOG.md` | T-2818 |
+| 2 | T-2820: `docs/users/flai.md`, `design/system/flai-cli.md`, `design/system/strategic-agents.md`, and the regenerated reference | the docs | T-2818 |
+| 3 | T-2821: close I-0320 | the issue, `design/issues/summary.md` | T-2819, T-2820 |
+
+Assumptions:
+
+- Exit 2 is reused (`exitReleaseNotMet`), so the formula's stops read alike. 3 and 4 already mean a remote that moved and the push gate.
+- The covering release is the newest tag per component, with its tagger, or the commit's author for a lightweight tag. The instance does not pass the evaluated set to the publish step.
+- `--require-pending --dry-run` also exits 2 with nothing pending. T-2818 records the choice.
+- No `after` on S-0625, which is ready and changes the same formula and `flai/cmd/release.go`. This story reads none of its output, and a trial merge judges the overlap.
+
+Questions for the operator:
+
+1. Do you confirm this approach? The alternative is a hold: `flai release --pending` refuses while a publish instance is in progress, except for that instance's own step. I recommend against it, because it would hold your own shell, which S-0423 leaves free.
+2. I would split, merge, add, or drop no story or task.

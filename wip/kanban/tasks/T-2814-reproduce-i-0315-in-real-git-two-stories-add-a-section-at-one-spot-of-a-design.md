@@ -1,0 +1,35 @@
+---
+id: T-2814
+type: task
+nature: improvement
+title: "Reproduce I-0315 in real git: two stories add a section at one spot of a design document outside claims.shared, and neither sync nor acceptance stops"
+status: backlog
+parent: S-0637
+owner: alex
+created: 2026-11-09T22:09:37Z
+updated: 2026-11-09T22:09:37Z
+transitions: []
+stream: S-0637
+tags: [flai, go, test]
+touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
+after: [T-2812]
+---
+# T-2814 Reproduce I-0315 in real git: two stories add a section at one spot of a design document outside claims.shared, and neither sync nor acceptance stops
+
+## Work
+
+Add two real-git tests, on the fixtures the files beside them use, that reproduce I-0315's instances:
+
+- In `flai/cmd/accept_conflict_test.go`: two stories each add a section after the same section of `design/system/server-performance.md`, a file not in `claims.shared`. The first is accepted. The second's acceptance lands, with both sections in the file, main's first, and is not sent back to `in-progress`. Beside it, assert that a stop where both stories change the same lines of one section in that file is still sent back, as `TestAnAcceptanceByHandSendsBackAStoryWhoseRebaseItCannotSettle` does today.
+- In `flai/cmd/stream_sync_test.go`: the same two sections, the first story accepted, and `flai stream sync` on the second ends clean, with both sections and no conflict left in its worktree.
+
+Name each test for what it shows and cite I-0315 and the new ADR in its comment. Both skip under `-short`, as the real-git tests do.
+
+Waits for T-2812: these tests fail until its matcher takes the file.
+
+## Done when
+
+- Both tests fail with T-2812's change reverted and pass with it.
+- `flai test flai/cmd/accept_conflict_test.go flai/cmd/stream_sync_test.go` passes, and the integration tier runs the two tests.
+
+## Notes

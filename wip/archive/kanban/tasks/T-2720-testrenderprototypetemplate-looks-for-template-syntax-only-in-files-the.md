@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 1387
-      cache_read: 1737411
-      cache_write: 20661
-      cost: 0.5406
+      input: 11
+      output: 735
+      cache_read: 1746654
+      cache_write: 11421
+      cost: 0.4554
 ---
 # T-2720 TestRenderPrototypeTemplate looks for template syntax only in files the renderer rendered or changed
 

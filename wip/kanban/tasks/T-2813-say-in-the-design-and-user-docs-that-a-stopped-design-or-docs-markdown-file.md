@@ -1,0 +1,37 @@
+---
+id: T-2813
+type: task
+nature: improvement
+title: Say in the design and user docs that a stopped design or docs markdown file merges by sections
+status: backlog
+parent: S-0637
+owner: alex
+created: 2026-11-09T22:09:28Z
+updated: 2026-11-09T22:09:28Z
+transitions: []
+stream: S-0637
+tags: [docs, design]
+touches: [design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md]
+after: [T-2811]
+---
+# T-2813 Say in the design and user docs that a stopped design or docs markdown file merges by sections
+
+## Work
+
+Update each place that says the section merge reaches only the markdown files inside `claims.shared`, linking the new ADR:
+
+- `design/system/workflow.md` § Branches and collisions: the shared paths bullet and the S-0401 paragraph that names ADR-0175.
+- `design/system/agent-coordination.md`: the ADR-0175 paragraph.
+- `design/system/flai-cli.md`: the `flai stream sync` row and the merge queue's build, where they list the merge steps of a stop.
+- `docs/users/flai.md` § Shared documents: which files a stopped rebase now merges by sections, and that a section both stories changed on the same lines still stops it.
+
+Bump each file's `updated`. Say what is, not what changed: S-0637 and I-0315 belong in one sentence at most.
+
+Waits for T-2811, whose ADR these documents link and describe. It runs beside T-2812: no file in common.
+
+## Done when
+
+- No document under `design/` or `docs/` says the section merge is limited to `claims.shared`.
+- `flai check --strict` and the markdown lint pass on the four files.
+
+## Notes

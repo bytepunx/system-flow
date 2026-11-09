@@ -3,12 +3,21 @@ id: T-2765
 type: task
 nature: remediation
 title: Close I-0284 on the manifest change that turned set_cost_of_delay on, naming the two regression tests
-status: backlog
+status: done
 parent: S-0622
 owner: alex
 created: 2026-11-09T18:05:47Z
-updated: 2026-11-09T18:05:47Z
-transitions: []
+updated: 2026-11-09T22:15:01Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:14:42Z
+    by: agent-S-0622
+  - to: in-progress
+    at: 2026-11-09T22:14:43Z
+    by: agent-S-0622
+  - to: done
+    at: 2026-11-09T22:15:01Z
+    by: agent-S-0622
 stream: S-0622
 tags: [cli]
 touches: [design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md]

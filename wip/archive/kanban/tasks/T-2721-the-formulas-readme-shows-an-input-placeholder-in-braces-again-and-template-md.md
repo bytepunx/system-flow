@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 1041
-      cache_read: 1303508
-      cache_write: 15501
-      cost: 0.4056
+      input: 8
+      output: 551
+      cache_read: 1310443
+      cache_write: 8568
+      cost: 0.3417
 ---
 # T-2721 The formulas README shows an input placeholder in braces again, and template.md says copied files may hold them
 

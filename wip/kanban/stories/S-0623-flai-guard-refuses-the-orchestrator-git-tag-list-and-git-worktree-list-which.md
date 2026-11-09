@@ -3,11 +3,17 @@ id: S-0623
 type: story
 nature: improvement
 title: flai guard refuses the orchestrator git tag --list and git worktree list, which only read
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:02Z
-updated: 2026-11-09T21:56:35Z
-transitions: []
+updated: 2026-11-09T22:21:12Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:56:39Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-09T21:56:48Z
+    by: agent-S-0623
 tags: []
 topics: [guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/issues/I-0289-flai-guard-refuses-the-orchestrator-git-tag-list-and-git-worktree-list-which.md, design/issues/summary.md]
@@ -17,10 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 853
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-09
+      hand_edits: 1
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 502
+      cache_read: 7059834
+      cache_write: 531669
+      cost: 2.7755
   strategic:
+    - kind: orchestrator
+      seconds: 64
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 14
+          output: 114
+          cache_read: 478428
+          cache_write: 77038
+          cost: 0.1476
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -62,7 +90,7 @@ finalized:
 This story remediates [I-0289](../../../design/issues/I-0289-flai-guard-refuses-the-orchestrator-git-tag-list-and-git-worktree-list-which.md), "flai guard refuses the orchestrator git tag --list and git worktree list, which only read", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0289 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0289 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0289 is closed with `flai issue close I-0289 --reason` saying what fixed it
 
 ## Tasks

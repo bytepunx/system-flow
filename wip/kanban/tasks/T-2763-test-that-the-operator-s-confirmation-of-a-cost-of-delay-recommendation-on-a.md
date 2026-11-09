@@ -3,12 +3,21 @@ id: T-2763
 type: task
 nature: remediation
 title: Test that the operator's confirmation of a cost of delay recommendation on a planner's thread gives the orchestrator a thread reason
-status: backlog
+status: done
 parent: S-0622
 owner: alex
 created: 2026-11-09T18:05:16Z
-updated: 2026-11-09T18:05:16Z
-transitions: []
+updated: 2026-11-09T22:09:58Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:55:51Z
+    by: agent-S-0622
+  - to: in-progress
+    at: 2026-11-09T21:55:52Z
+    by: agent-S-0622
+  - to: done
+    at: 2026-11-09T22:09:58Z
+    by: agent-S-0622
 stream: S-0622
 tags: [cli]
 touches: [flai/internal/serve/orchestrate_confirm_test.go]

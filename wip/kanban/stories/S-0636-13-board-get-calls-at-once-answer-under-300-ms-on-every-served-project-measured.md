@@ -7,7 +7,7 @@ status: backlog
 parent: E-0033
 owner: alex
 created: 2026-11-09T07:36:47Z
-updated: 2026-11-09T22:20:09Z
+updated: 2026-11-09T22:21:32Z
 transitions: []
 tags: [cli]
 touches: [design/system/server-performance.md, design/issues/summary.md]
@@ -38,6 +38,9 @@ cost_of_delay:
     penalty_per_week: 20
     by: orchestrator
     at: 2026-11-09T22:14:16Z
+  value: 20
+  by: planner-S-0636
+  at: 2026-11-09T22:21:32Z
 forecast:
   duration: 30m
   delivery: 2026-11-10T00:28:00Z
@@ -67,7 +70,7 @@ S-0604's criterion 4 asked that 13 `board.get` calls at once on the operator's h
 
 ### Planning
 
-Planned by planner-S-0636 on 2026-11-09. The run was asked to read a thread named "asked", which does not exist. S-0636 had no thread and no earlier plan, so this is a first plan.
+Planned by planner-S-0636 on 2026-11-09. The plan's thread is TH-0954, where the orchestrator approved it and set the cost of delay input. A second run on 2026-11-09 wrote the cost of delay value and changed nothing else.
 
 Tasks, in two layers:
 
@@ -90,5 +93,5 @@ No folder touch. `flai touches suggest` also ranks `design/system/flai-cli.md` (
 Figures:
 
 - Forecast 30m, against flai's 3m. flai's figure is 74 s a unit of size times size 2, from one criterion and one touch. That size misses the work: two builds in the same hour, a timing program, four runs of 65 calls, and a section of figures. S-0604's T-2681 did the same as part of a larger story.
-- Delivery 2026-11-10T00:08:00Z: flai's 23:41 for 7th in the pull order with an in-progress limit of 5, moved by the 27m between the two durations.
-- Cost of delay: no value yet. Neither S-0636 nor E-0033 has inputs, so `flai cod` refuses. The plan's thread on S-0636 asks the operator for an input.
+- Delivery: flai's replan from the 30m duration, 2026-11-10T00:28:00Z at 10th in the pull order with an in-progress limit of 5. It stands: it already counts the 30m.
+- Cost of delay 20 USD a week, as `flai cod S-0636` works it out from the one input, `penalty_per_week: 20`, which the orchestrator set on TH-0954. It stands: it is the bottom of E-0033's scale (S-0605, S-0607), since the story changes no code and S-0602 and S-0606 have landed.
