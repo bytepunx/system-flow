@@ -2,11 +2,11 @@
 id: I-0289
 title: flai guard refuses the orchestrator git tag --list and git worktree list, which only read
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:40:02Z
+updated: 2026-11-09T22:23:46Z
 usage:
   strategic:
     - kind: analyzer
@@ -48,3 +48,4 @@ wip/agents/orchestrator.md Refusals: git tag --sort=-creatordate refused 18 time
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0623 remediates this issue, created from it at 2026-11-07T23:40:02Z.
+Closed 2026-11-09T22:23:46Z: S-0623 fixed it: flai guard's gitListsOnly passes git tag and git branch in the forms that only list (no tag or branch named, or -l, --list, --contains, --merged, --points-at, and no flag that writes) and git worktree list, to every role held to git's reads, the orchestrator among them; every other form keeps its refusal and the orchestrator's git tag that makes a tag is still refused as publishing. TestGitTagBranchAndWorktreeListAsReads reproduces it.
