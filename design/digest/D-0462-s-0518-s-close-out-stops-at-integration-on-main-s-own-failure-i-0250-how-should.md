@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0804, TH-0805]
+cited: [S-0638, TH-0804, TH-0805, TH-0962]
 ---
 
 # D-0462 S-0518's close-out stops at integration on main's own failure (I-0250): how should it reach review: Recommended: option 1. S-0518's agent runs `flai issue story I-0250`

@@ -9,7 +9,7 @@ date: 2026-10-31
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0833, TH-0884]
+cited: [TH-0833, TH-0884, TH-0944]
 ---
 
 # D-0441 S-0550 plan: eight tasks in four layers; cost of delay inputs needed: Recommendation: set `time_lost_per_cycle: 10m` on S-0550, as the planner recommends

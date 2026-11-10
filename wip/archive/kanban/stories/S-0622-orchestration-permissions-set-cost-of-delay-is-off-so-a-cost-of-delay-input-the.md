@@ -3,10 +3,10 @@ id: S-0622
 type: story
 nature: improvement
 title: orchestration.permissions.set_cost_of_delay is off, so a cost of delay input the operator confirmed waits a day for the operator to write it
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:39:56Z
-updated: 2026-11-09T22:59:13Z
+updated: 2026-11-10T05:12:01Z
 transitions:
   - to: ready
     at: 2026-11-09T21:53:37Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T22:59:13Z
     by: agent-S-0622
+  - to: done
+    at: 2026-11-10T05:12:01Z
+    by: alex
 tags: [cli]
 topics: [orchestration, planning]
 touches: [flai/internal/serve/orchestrate_confirm_test.go, flai/cmd/orchestrate_permissions_test.go, design/issues/I-0284-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md, design/issues/summary.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/I-0325-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md]

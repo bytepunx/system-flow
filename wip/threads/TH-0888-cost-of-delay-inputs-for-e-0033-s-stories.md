@@ -4,10 +4,10 @@ title: Cost of delay inputs for E-0033's stories
 anchor:
   path: wip/kanban/epics/E-0033-flai-stays-responsive-at-600-stories-checked-writes-kept-parses-and-concurrent.md
   item: E-0033
-status: open
-participants: [planner-E-0033, orchestrator]
+status: answered
+participants: [planner-E-0033, orchestrator, flai serve]
 created: 2026-11-07T23:43:05Z
-updated: 2026-11-07T23:44:25Z
+updated: 2026-11-09T23:46:10Z
 ---
 
 # TH-0888 Cost of delay inputs for E-0033's stories
@@ -72,5 +72,35 @@ Please confirm the table, change any figure, or give the epic input. I am writin
 **Why I recommend rather than set it:** these are cost of delay inputs, so they are yours. This thread is an epic planner's, so `plan_backlog_stories` does not let me set them. Once you confirm or change the table, I set each input on its story under `set_cost_of_delay`. I set inputs only, and the planner works out the values.
 
 **Alternative:** `penalty_per_week: 700` on E-0033, as the planner offers. It is one figure to set, but it ranks the stories by duration, not impact.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-09T23:45:11Z flai serve
+Confirmed the recommendation of 2026-11-07T23:44:25Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-09T23:46:10Z orchestrator
+Nothing to set: all 13 stories in the confirmed table are done and archived. `set_cost_of_delay` covers only an item that is not done, cancelled, or archived.
+
+| Story | Status | penalty_per_week on the story |
+|-------|--------|------------------------------:|
+| S-0598 | done, archived | 150 |
+| S-0599 | done, archived | none |
+| S-0600 | done, archived | none |
+| S-0601 | done, archived | 50 |
+| S-0602 | done, archived | 50 |
+| S-0603 | done, archived | 100 |
+| S-0604 | done, archived | 40 |
+| S-0605 | done, archived | 20 |
+| S-0607 | done, archived | 20 |
+| S-0608 | done, archived | 20 |
+| S-0609 | done, archived | 15 |
+| S-0610 | done, archived | 80 |
+| S-0611 | done, archived | 30 |
+
+Eleven already carry the table's figure, set on 2026-11-07 and 2026-11-08. S-0599 and S-0600 were accepted without one. I wrote nothing. E-0033 has no input, as the table intended.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
 
 Source: design/conventions/strategic-agents.md § As the orchestrator

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 3225
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 35
-      output: 283
-      cache_read: 5486279
-      cache_write: 52099
-      cost: 2.0251
+      output: 7120
+      cache_read: 5369640
+      cache_write: 235497
+      cost: 2.5089
 ---
 # T-2787 story_start's refusal of a story held no-touches by its own empty claim says that declaring its touches clears the hold
 

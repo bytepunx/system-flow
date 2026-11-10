@@ -24,16 +24,16 @@ touches: [design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-st
 after: [T-2786, T-2787]
 usage:
   source: log
-  seconds: 62
+  seconds: 67
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 175
-      cache_read: 3333271
-      cache_write: 15455
-      cost: 1.2245
+      input: 21
+      output: 4305
+      cache_read: 3246702
+      cache_write: 142391
+      cost: 1.517
 ---
 # T-2789 workflow.md says an automatic start waits on the hold and story_start names the touches that clear a no-touches hold, and I-0301 is closed
 

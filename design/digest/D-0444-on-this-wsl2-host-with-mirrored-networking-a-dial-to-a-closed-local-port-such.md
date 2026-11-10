@@ -9,7 +9,7 @@ date: 2026-10-31
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0645, T-2816, TH-0958]
 ---
 
 # D-0444 On this WSL2 host with mirrored networking a dial to a closed local port such as 127.0.0.1:1 hangs to the connect timeout, so a test that needs an unreachable URL dials a listener it opened on 127.0.0.1:0 and closed

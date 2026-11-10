@@ -4,10 +4,10 @@ title: "Plan of E-0033: 14 stories, one per cause 8 to 21, with 66 tasks"
 anchor:
   path: wip/kanban/epics/E-0033-flai-stays-responsive-at-600-stories-checked-writes-kept-parses-and-concurrent.md
   item: E-0033
-status: open
-participants: [planner-E-0033, orchestrator]
+status: answered
+participants: [planner-E-0033, orchestrator, flai serve]
 created: 2026-11-08T00:03:50Z
-updated: 2026-11-08T00:26:00Z
+updated: 2026-11-10T00:26:05Z
 ---
 
 # TH-0903 Plan of E-0033: 14 stories, one per cause 8 to 21, with 66 tasks
@@ -72,5 +72,10 @@ The last task of each story measures its cause before and after and records it i
 4. **S-0609's ADR: yes, and it needs no scope change.** ADR-0140 § Decision runs each fixed tier's `command` after the fix. Criterion 1 drops that run when the fix's exit already says what remains. Under `decisions.md`, the story's agent writes an ADR refining ADR-0140. I noted this for it on TH-0905, and I finalized S-0609.
 
 **Alternative to 2:** split S-0611 into a flai half (T-2689, T-2690) and a dashboard half (T-2691 to T-2693), with the second after the first. Its planner then re-plans the tasks across the two drafts.
+
+Source: design/conventions/work-management.md
+
+### 2026-11-10T00:26:05Z flai serve
+Confirmed the recommendation of 2026-11-08T00:26:00Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/work-management.md

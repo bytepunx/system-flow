@@ -6,7 +6,7 @@ title: TestCancelStopsTheWaitToAskAgain times out against its local release serv
 status: in-progress
 owner: alex
 created: 2026-11-09T09:08:54Z
-updated: 2026-11-09T23:17:45Z
+updated: 2026-11-10T01:31:07Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:00Z
@@ -18,6 +18,8 @@ blocked:
   - from: 2026-11-09T23:17:04Z
     until: 2026-11-09T23:17:45Z
     reason: awaiting the operator on TH-0962
+  - from: 2026-11-10T01:31:07Z
+    reason: "waiting for S-0645's acceptance (I-0321, TH-0962 option 1, TH-0964): then flai stream sync S-0638 and close out again"
 tags: [flai, testing, flaky-test]
 topics: [testing]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/issues/I-0317-testcancelstopsthewaittoaskagain-times-out-against-its-local-release-server.md, design/issues/summary.md, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md]
@@ -28,21 +30,26 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1643
+  seconds: 9654
   priced_by: harness
+  empty_wakes: 3
   turns:
     - day: 2026-11-09
       ceremony: 1
       test_runs: 1
-      hand_edits: 1
-      work: 62
+      empty_wakes: 1
+      hand_edits: 3
+      work: 111
+    - day: 2026-11-10
+      empty_wakes: 2
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 136
-      output: 16017
-      cache_read: 16402037
-      cache_write: 271370
-      cost: 5.7723
+      input: 298
+      output: 26294
+      cache_read: 41120200
+      cache_write: 310911
+      cost: 11.2384
   strategic:
     - kind: orchestrator
       seconds: 216

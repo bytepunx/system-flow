@@ -9,7 +9,7 @@ date: 2026-11-07
 status: absorbed
 absorbed_by: "design/system/devex.md#used-by-this-monorepo"
 asked_again: []
-cited: []
+cited: [S-0634, TH-0947]
 ---
 
 # D-0515 flai test on a change to flai/internal/hostapi or the host configuration runs neither flaiover's server tests that drive the real flai nor TestSettingsIndexIsComplete, so such a story runs them itself before its close-out (I-0304)

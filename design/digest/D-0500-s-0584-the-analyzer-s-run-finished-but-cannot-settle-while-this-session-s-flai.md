@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0632]
 ---
 
 # D-0500 S-0584: the analyzer's run finished but cannot settle while this session's flai mcp holds its zombie (I-0299): Recommended: answer this thread once flai serve reports an `agent` change for the…

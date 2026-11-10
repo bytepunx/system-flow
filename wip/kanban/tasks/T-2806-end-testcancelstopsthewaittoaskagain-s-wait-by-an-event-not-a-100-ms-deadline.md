@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 1440
-      cache_read: 1474357
-      cache_write: 24393
-      cost: 0.5189
+      input: 11
+      output: 951
+      cache_read: 1487504
+      cache_write: 11247
+      cost: 0.4065
 ---
 # T-2806 End TestCancelStopsTheWaitToAskAgain's wait by an event, not a 100 ms deadline, and reproduce a slow first answer
 

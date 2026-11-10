@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 3168
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 75
-      output: 617
-      cache_read: 10941564
-      cache_write: 1759480
-      cost: 4.6441
+      input: 80
+      output: 16329
+      cache_read: 12314083
+      cache_write: 540059
+      cost: 5.7537
 ---
 # T-2786 flai serve starts no agent for a ready story while its hold stands, with a test that reproduces I-0301
 

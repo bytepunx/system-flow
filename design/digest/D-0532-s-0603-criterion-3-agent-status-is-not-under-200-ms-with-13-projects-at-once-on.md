@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0636, T-2804, TH-0954, TH-0961]
 ---
 
 # D-0532 S-0603 criterion 3: agent.status is not under 200 ms with 13 projects at once on this host: Recommended: option 1, reword criterion 3, with one addition: the 200 ms target goes to an issue, because…

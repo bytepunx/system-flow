@@ -4,10 +4,10 @@ title: S-0622 is a complete draft, but its 11,250 USD/week value rests on a wait
 anchor:
   path: wip/kanban/stories/S-0622-orchestration-permissions-set-cost-of-delay-is-off-so-a-cost-of-delay-input-the.md
   item: S-0622
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-09T18:06:15Z
-updated: 2026-11-09T18:06:15Z
+updated: 2026-11-10T05:12:02Z
 ---
 
 # TH-0941 S-0622 is a complete draft, but its 11,250 USD/week value rests on a wait that stopped on 2026-11-07
@@ -29,3 +29,6 @@ On wip/kanban/stories/S-0622-orchestration-permissions-set-cost-of-delay-is-off-
 **Why I have not changed it:** the cost of delay inputs are yours. I set an input only when you decide it on a thread (`set_cost_of_delay`).
 
 **Alternative:** keep 75h. Under the `throughput` policy the ready column is ordered by forecast, so the value decides no order today. Say "keep", and I finalize S-0622 as it is.
+
+### 2026-11-10T05:12:02Z alex
+Resolved: S-0622 was accepted

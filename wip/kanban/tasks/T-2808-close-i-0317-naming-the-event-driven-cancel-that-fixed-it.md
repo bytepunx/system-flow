@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 252
-      cache_read: 258412
-      cache_write: 4275
-      cost: 0.0909
+      output: 167
+      cache_read: 260717
+      cache_write: 1971
+      cost: 0.0713
 ---
 # T-2808 Close I-0317 naming the event-driven cancel that fixed it
 
