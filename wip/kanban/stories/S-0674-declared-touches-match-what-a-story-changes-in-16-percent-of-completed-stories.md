@@ -6,7 +6,7 @@ title: Declared touches match what a story changes in 16 percent of completed st
 status: ready
 owner: alex
 created: 2026-11-10T08:34:52Z
-updated: 2026-11-10T10:10:50Z
+updated: 2026-11-10T10:22:09Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:34Z
@@ -70,10 +70,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:36Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-10T14:13:00Z
-  basis: "Its own forecast of 2h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684, S-0665 and S-0667."
+  delivery: 2026-11-10T13:49:00Z
+  basis: "Its own forecast of 2h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0665, S-0668, S-0669, S-0673, S-0684 and S-0667."
   by: flai
-  at: 2026-11-10T10:10:50Z
+  at: 2026-11-10T10:22:09Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:26Z
