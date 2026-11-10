@@ -2,12 +2,12 @@
 id: I-0256
 title: A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-02T19:06:36Z
 last_reported: 2026-11-02T19:06:36Z
-updated: 2026-11-10T08:37:14Z
+updated: 2026-11-10T09:37:34Z
 ---
 
 # I-0256 A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
@@ -24,3 +24,4 @@ S-0509 (ADR-0247) starts the planner, the orchestrator, the analyzer, and the cu
 ## Remediation
 
 Story S-0687 remediates this issue, created from it at 2026-11-10T08:37:14Z.
+Closed 2026-11-10T09:37:34Z: S-0687 (ADR-0278): the orchestrator now accepts through the MCP tool accept, which runs flai accept --by orchestrator on the host with the host's configuration, and verifies through the MCP tool verify, the close-out job on the host. The HTTP MCP server knows the orchestrator from flai serve's running orchestrator record. In a role's container the shell's flai accept and tier-running flai verify refuse, naming those tools. TestTheOrchestratorInARolesContainerRefusesToAcceptByHand reproduces the by-hand landing and fails without the fix.
