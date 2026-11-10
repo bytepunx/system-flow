@@ -3,10 +3,10 @@ id: S-0657
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-10T07:11:22Z
-updated: 2026-11-10T07:56:34Z
+updated: 2026-11-10T08:17:03Z
 transitions:
   - to: ready
     at: 2026-11-10T07:11:28Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T07:56:34Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T08:17:03Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0657-publish-what-is-accepted-and-not-yet-released.md]
 agent:

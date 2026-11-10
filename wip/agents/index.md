@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T08:16:49Z
+updated: 2026-11-10T08:17:03Z
 ---
 
 # Active streams
@@ -15,7 +15,6 @@ updated: 2026-11-10T08:16:49Z
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0648](S-0648.md) | flai check finds `item.duplicate-id` outside the story at close-out | in-progress | agent-S-0648 | 2026-11-10T08:10:16Z |
 | [S-0652](S-0652.md) | TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load | in-progress | agent-S-0652 | 2026-11-10T08:10:23Z |
-| [S-0657](S-0657.md) | Publish what is accepted and not yet released | review | system-flow | 2026-11-10T07:55:57Z |
 
 ## Strategic agents
 
