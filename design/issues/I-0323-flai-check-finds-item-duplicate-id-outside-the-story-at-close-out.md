@@ -86,6 +86,11 @@ Story: S-0643.
 flai check found outside the story:
 `wip/archive/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md`: T-2760 is also defined in /home/alex/git/bytepunx/system-flow/wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md
 
+### 2026-11-10T06:57:41Z
+Story: S-0628.
+flai check found outside the story:
+`wip/archive/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md`: T-2760 is also defined in /home/alex/git/bytepunx/system-flow/wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md
+
 ### 2026-11-10T07:03:06Z
 Story: S-0656.
 flai check found outside the story:
