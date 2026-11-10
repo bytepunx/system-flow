@@ -2,12 +2,12 @@
 id: I-0319
 title: A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
 class: defect
-status: open
+status: closed
 count: 2
 cost: 11m
 first_reported: 2026-11-09T10:34:28Z
 last_reported: 2026-11-09T17:32:35Z
-updated: 2026-11-09T17:32:35Z
+updated: 2026-11-10T05:19:50Z
 ---
 
 # I-0319 A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
@@ -28,3 +28,4 @@ S-0611's first close-out, job S-0611-20261109T172632Z at 6e33bd405, stopped at t
 ## Remediation
 
 Story S-0640 remediates this issue, created from it at 2026-11-09T16:55:57Z.
+Closed 2026-11-10T05:19:50Z: S-0640 (T-2805, 81c24831f): the test settled after each of the 55 harness messages it posted, about 1,240 setTimeout(0) turns in one test, so a loaded host pushed it past 5,000 ms. It now posts the burst without settling and settles once, and checks all 50 entries land whole. It takes 672 to 682 ms, down from 2,174 to 2,447 ms, at a load of 12 to 19.
