@@ -3,11 +3,14 @@ id: S-0677
 type: story
 nature: improvement
 title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:54Z
-updated: 2026-11-10T10:57:45Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:57:48Z
+    by: alex
 tags: [flai, performance, check]
 topics: [cli, server-side]
 touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go, flai/internal/check/check_records.go, flai/internal/check/digest_test.go, flai/internal/check/check_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/kept.go, flai/internal/digest/kept_test.go, flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/operators/runbooks/backup.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md]
@@ -26,10 +29,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:31Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T21:45:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675 and S-0676."
+  delivery: 2026-11-10T15:20:00Z
+  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675 and S-0676."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:45Z

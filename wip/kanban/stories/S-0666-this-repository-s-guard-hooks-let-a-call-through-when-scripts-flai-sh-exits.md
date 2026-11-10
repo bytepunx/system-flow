@@ -3,11 +3,14 @@ id: S-0666
 type: story
 nature: improvement
 title: This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T10:57:18Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:57:24Z
+    by: alex
 tags: [guard, scripts, harness]
 topics: [harness, cli]
 touches: [design/adrs, design/adrs/README.md, scripts/flai.sh, flai/cmd/guard_test.go, ".opencode/plugins/flai-guard.js", flai/tests/integration/opencode_test.go, scripts/README.md, docs/users/flai.md, design/system/agent-adapters.md, docs/operators/index.md, design/system/strategic-agents.md, design/issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md, design/issues/summary.md]
@@ -44,10 +47,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:48Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T19:10:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662 and S-0663."
+  delivery: 2026-11-10T12:56:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674 and S-0704."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:18Z

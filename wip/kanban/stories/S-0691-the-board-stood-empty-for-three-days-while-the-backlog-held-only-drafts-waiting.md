@@ -6,7 +6,7 @@ title: The board stood empty for three days while the backlog held only drafts w
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-10T10:56:15Z
+updated: 2026-11-10T11:01:50Z
 transitions: []
 tags: [flai]
 topics: [ready, threads]
@@ -22,6 +22,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 20
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 32
+          cache_read: 246107
+          cache_write: 4586
+          cost: 0.0685
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -49,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T10:56:15Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T01:12:00Z
-  basis: "Its own forecast of 1h; 22nd in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683, S-0686, S-0688, S-0689 and S-0690."
+  delivery: 2026-11-11T01:27:00Z
+  basis: "Its own forecast of 1h; 21st in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689 and S-0690."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 ---
 # S-0691 The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
 

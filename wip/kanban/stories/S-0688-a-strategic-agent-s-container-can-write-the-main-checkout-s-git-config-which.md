@@ -3,11 +3,14 @@ id: S-0688
 type: story
 nature: improvement
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T11:00:24Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:00:29Z
+    by: alex
 tags: [flai, container, security]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md]
 agent:
@@ -46,10 +49,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:24Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T23:22:00Z
-  basis: "Its own forecast of 45m; 19th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683 and S-0686."
+  delivery: 2026-11-10T16:01:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679 and S-0681."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T11:00:24Z

@@ -3,11 +3,14 @@ id: S-0676
 type: story
 nature: improvement
 title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T10:57:37Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:57:41Z
+    by: alex
 tags: [flai, performance]
 topics: [back-end, cli]
 touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/kept_bench_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, design/system/server-performance.md, docs/operators/runbooks/backup.md, design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md, design/issues/summary.md]
@@ -16,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 16
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 67
+          cache_read: 270231
+          cache_write: 10640
+          cost: 0.0768
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1s
@@ -26,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T21:39:00Z
-  basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666 and S-0675."
+  delivery: 2026-11-10T14:31:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666 and S-0675."
   by: flai
-  at: 2026-11-10T10:55:00Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:37Z

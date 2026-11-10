@@ -6,7 +6,7 @@ title: This repository's board.get takes 300 ms or more in half its calls with 1
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:37Z
-updated: 2026-11-10T10:55:00Z
+updated: 2026-11-10T11:01:50Z
 transitions: []
 tags: [cli]
 topics: [server-side, back-end]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:42Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T02:47:00Z
-  basis: "Its own forecast of 1h; 29th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683, S-0686, S-0688, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696 and S-0697."
+  delivery: 2026-11-11T02:54:00Z
+  basis: "Its own forecast of 1h; 28th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696 and S-0697."
   by: flai
-  at: 2026-11-10T10:55:00Z
+  at: 2026-11-10T11:01:50Z
 ---
 # S-0698 This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
 

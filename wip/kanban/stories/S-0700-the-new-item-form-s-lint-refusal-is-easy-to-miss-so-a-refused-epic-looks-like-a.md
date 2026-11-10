@@ -6,7 +6,7 @@ title: The new item form's lint refusal is easy to miss, so a refused epic looks
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T11:01:50Z
 transitions: []
 tags: [dashboard]
 touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md, design/issues/summary.md]
@@ -36,6 +36,16 @@ usage:
           cache_read: 12479748
           cache_write: 343216
           cost: 4.2776
+    - kind: orchestrator
+      seconds: 27
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 8
+          cache_read: 250693
+          cache_write: 9469
+          cost: 0.0711
 draft: true
 cost_of_delay:
   inputs:
@@ -47,10 +57,10 @@ cost_of_delay:
   at: 2026-11-10T10:27:56Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T03:27:00Z
-  basis: "Its own forecast of 45m; 31st in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683, S-0686, S-0688, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698 and S-0699."
+  delivery: 2026-11-11T03:32:00Z
+  basis: "Its own forecast of 45m; 30th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698 and S-0699."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 ---
 # S-0700 The new item form's lint refusal is easy to miss, so a refused epic looks like a hang
 

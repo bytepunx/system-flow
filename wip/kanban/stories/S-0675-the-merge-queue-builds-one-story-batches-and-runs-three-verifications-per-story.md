@@ -3,11 +3,14 @@ id: S-0675
 type: story
 nature: improvement
 title: The merge queue builds one-story batches and runs three verifications per story landed
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T10:57:29Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:57:32Z
+    by: alex
 tags: [flai, merge-queue]
 topics: [orchestration, metrics]
 touches: [design/adrs, design/adrs/README.md, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/cmd/accept_queue_test.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go, design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md, design/issues/summary.md]
@@ -63,10 +66,10 @@ cost_of_delay:
   at: 2026-11-10T10:35:58Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T20:55:00Z
-  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0666."
+  delivery: 2026-11-10T14:30:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704 and S-0666."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:29Z

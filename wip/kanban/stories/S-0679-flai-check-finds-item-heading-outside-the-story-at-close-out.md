@@ -3,11 +3,14 @@ id: S-0679
 type: story
 nature: improvement
 title: "flai check finds `item.heading` outside the story at close-out"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T10:58:03Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:58:07Z
+    by: alex
 tags: [flai, check, container]
 touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
@@ -22,10 +25,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:49Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T22:42:00Z
-  basis: "Its own forecast of 1h; 15th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677 and S-0678."
+  delivery: 2026-11-10T15:31:00Z
+  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677 and S-0678."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:58:03Z

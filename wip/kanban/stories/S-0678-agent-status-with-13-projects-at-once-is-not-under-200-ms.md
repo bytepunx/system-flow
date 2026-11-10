@@ -3,11 +3,14 @@ id: S-0678
 type: story
 nature: improvement
 title: agent.status with 13 projects at once is not under 200 ms
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-10T10:57:53Z
-transitions: []
+updated: 2026-11-10T11:01:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:57:56Z
+    by: alex
 tags: [cli]
 topics: [server-side]
 touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
@@ -26,10 +29,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T22:39:00Z
-  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676 and S-0677."
+  delivery: 2026-11-10T15:59:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676 and S-0677."
   by: flai
-  at: 2026-11-10T10:55:00Z
+  at: 2026-11-10T11:01:50Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:53Z
