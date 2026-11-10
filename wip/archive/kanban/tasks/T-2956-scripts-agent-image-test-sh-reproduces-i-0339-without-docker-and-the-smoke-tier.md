@@ -24,16 +24,16 @@ touches: [scripts/agent-image-test.sh, scripts/smoke.sh]
 after: [T-2955]
 usage:
   source: log
-  seconds: 77
+  seconds: 78
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 75
-      cache_read: 675841
-      cache_write: 3284
-      cost: 0.25
+      output: 1188
+      cache_read: 667139
+      cache_write: 11983
+      cost: 0.2531
 ---
 # T-2956 scripts/agent-image-test.sh reproduces I-0339 without Docker, and the smoke tier runs it
 

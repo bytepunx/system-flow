@@ -3,11 +3,14 @@ id: S-0681
 type: story
 nature: improvement
 title: A formula step's bare flai command resolves to the installed flai on PATH, which can be older than the flags the formula's steps use
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:37:05Z
-updated: 2026-11-10T10:58:10Z
-transitions: []
+updated: 2026-11-10T10:58:14Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:58:14Z
+    by: alex
 tags: []
 agent:
   harness: claude-code

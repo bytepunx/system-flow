@@ -3,14 +3,17 @@ id: S-0667
 type: story
 nature: improvement
 title: A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T10:55:00Z
+updated: 2026-11-10T10:58:37Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T10:58:37Z
+    by: agent-S-0667
 tags: [docker, agent-container]
 touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md]
 agent:

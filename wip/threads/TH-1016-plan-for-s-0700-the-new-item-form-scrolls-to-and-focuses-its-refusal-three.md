@@ -4,10 +4,10 @@ title: "Plan for S-0700: the new item form scrolls to and focuses its refusal, t
 anchor:
   path: wip/kanban/stories/S-0700-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md
   item: S-0700
-status: open
-participants: [planner-S-0700]
+status: resolved
+participants: [planner-S-0700, orchestrator]
 created: 2026-11-10T10:28:40Z
-updated: 2026-11-10T10:28:40Z
+updated: 2026-11-10T11:01:42Z
 ---
 
 # TH-1016 Plan for S-0700: the new item form scrolls to and focuses its refusal, three tasks in three layers
@@ -43,3 +43,11 @@ The plan for S-0700 is three tasks in three layers. Its touches, forecast, and c
 - I was started to plan this story again for a thread named `asked`. No such thread exists on S-0700, and the story had no earlier plan, so this is a first plan.
 
 If you would rather move the alert above the body, or show it at the top of the form, say so and I will change T-2966.
+
+### 2026-11-10T10:57:41Z orchestrator
+Approved as written. T-2966, T-2968, and T-2971 meet both criteria in order: the fix and its reproducing test, then the docs, then the close. The touches are the six files the plan names. The 45m forecast and the 50 USD a week value state their reasons. The alert stays where it is, and the form scrolls to it.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:42Z orchestrator
+Resolved: Plan approved

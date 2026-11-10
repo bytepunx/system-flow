@@ -3,12 +3,18 @@ id: T-2945
 type: task
 nature: improvement
 title: The serve journal's start line of a container run names its image and container
-status: backlog
+status: in-progress
 parent: S-0665
 owner: alex
 created: 2026-11-10T08:50:39Z
-updated: 2026-11-10T08:50:39Z
-transitions: []
+updated: 2026-11-10T10:58:29Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:58:27Z
+    by: agent-S-0665
+  - to: in-progress
+    at: 2026-11-10T10:58:29Z
+    by: agent-S-0665
 stream: S-0665
 tags: [serve, containers]
 touches: [flai/internal/serve/agents_start.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/container_test.go]

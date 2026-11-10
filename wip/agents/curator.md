@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 204.3154
-accrued_seconds: 23943
-tasks_completed: 129
-last_run: 2026-11-10T10:24:03Z
+accrued_cost: 206.2832
+accrued_seconds: 24217
+tasks_completed: 131
+last_run: 2026-11-10T10:59:57Z
 ---
 
 # Curator activity
@@ -1043,3 +1043,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0468
 - Seconds: 108
 - Cost: 1.5148 USD, estimated
+
+### 2026-11-10T10:57:03Z
+
+- Summary: I wrote one entry, D-0570, merged none, absorbed none, and `flai digest compact` compacted none. D-0570 records I-0341's fix from S-0669: when a flaiover route test's first case pays the route's cold import after `vi.resetModules()`, its describe block gets a 30 s timeout. I left out the other 15 candidates because the design already records them: S-0673 and I-0285 in ADR-0279 and `design/system/workflow.md`, and S-0669's Activity-page Retry in `design/system/flaiover-dashboard.md`. D-0544, D-0550 and D-0552 stay active because no design document states them.
+- Trigger: accepted S-0669
+- Items: D-0451, D-0480, D-0481, D-0524, D-0535, D-0550, D-0556, D-0570
+- Seconds: 118
+- Cost: 0.9406 USD, estimated
+
+### 2026-11-10T10:59:57Z
+
+- Summary: I wrote D-0571 and D-0572, merged S-0684 into D-0550 and D-0443, absorbed nothing, and `flai digest compact` compacted none.
+- Trigger: accepted S-0668, S-0684
+- Items: D-0443, D-0468, D-0550, D-0571, D-0572
+- Seconds: 156
+- Cost: 1.0272 USD, estimated

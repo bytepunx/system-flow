@@ -3,11 +3,11 @@ id: T-2957
 type: task
 nature: remediation
 title: The agent-container runbook and scripts/README.md say what make agent-images does when the credential helper fails
-status: in-progress
+status: done
 parent: S-0713
 owner: alex
 created: 2026-11-10T10:24:03Z
-updated: 2026-11-10T10:54:29Z
+updated: 2026-11-10T10:56:33Z
 transitions:
   - to: ready
     at: 2026-11-10T10:54:28Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:54:29Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T10:56:33Z
+    by: agent-S-0713
 stream: S-0713
 tags: [docs, scripts]
 touches: [docs/operators/runbooks/agent-container.md, scripts/README.md]
 after: [T-2955]
 usage:
   source: log
-  seconds: 75
+  seconds: 124
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 75
-      cache_read: 675841
-      cache_write: 3284
-      cost: 0.25
+      input: 18
+      output: 3014
+      cache_read: 1693145
+      cache_write: 30411
+      cost: 0.6423
 ---
 # T-2957 The agent-container runbook and scripts/README.md say what make agent-images does when the credential helper fails
 

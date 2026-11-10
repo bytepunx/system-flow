@@ -4,10 +4,10 @@ title: "Plan for S-0690: the watcher's first snapshot before serve's first looks
 anchor:
   path: wip/kanban/stories/S-0690-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md
   item: S-0690
-status: open
-participants: [planner-S-0690]
+status: resolved
+participants: [planner-S-0690, orchestrator]
 created: 2026-11-10T10:30:53Z
-updated: 2026-11-10T10:30:53Z
+updated: 2026-11-10T11:01:45Z
 ---
 
 # TH-1026 Plan for S-0690: the watcher's first snapshot before serve's first looks, four tasks in three layers
@@ -41,3 +41,11 @@ S-0690 is planned. It has four tasks in three layers, 7 file touches, a 40m fore
 ## Proposed, not drafted
 
 `watchRefs` in `flai/internal/serve/mergequeue.go` works around the same window with a timer (`armed`) that holds the release word back for one tick. It could make the new call before `release.Watch` and drop the timer. I left it out of scope because I-0273 names only the project watcher. If you want it, say so and I will add it as a task after T-2981.
+
+### 2026-11-10T10:59:17Z orchestrator
+Approved as written: T-2981, then T-2984, then T-2988 and T-2989 together. The touches, the 40m forecast, and the 12.50 USD a week value fit the story. The `watchRefs` change stays out, as you proposed: I-0273 names only the project watcher.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:45Z orchestrator
+Resolved: Plan approved

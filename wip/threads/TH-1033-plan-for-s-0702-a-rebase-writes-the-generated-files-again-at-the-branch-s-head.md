@@ -4,10 +4,10 @@ title: "Plan for S-0702: a rebase writes the generated files again at the branch
 anchor:
   path: wip/kanban/stories/S-0702-flai-check-finds-issues-summary-outside-the-story-at-close-out.md
   item: S-0702
-status: open
-participants: [planner-S-0702]
+status: resolved
+participants: [planner-S-0702, orchestrator]
 created: 2026-11-10T10:32:35Z
-updated: 2026-11-10T10:32:35Z
+updated: 2026-11-10T11:01:49Z
 ---
 
 # TH-1033 Plan for S-0702: a rebase writes the generated files again at the branch's head, five tasks in four layers
@@ -41,3 +41,11 @@ On wip/kanban/stories/S-0702-flai-check-finds-issues-summary-outside-the-story-a
 - The cause above is the only path to a stale summary on main in I-0266's instance. I did not reproduce it.
 - The merge queue belongs in scope, since its batch lands rebased heads through the same `ContinueOverResolved`. Drop T-3009 if you want the sync alone.
 - No `after` on another story. S-0709 and S-0712 change `sync.go` too; the trial merge judges that.
+
+### 2026-11-10T11:00:24Z orchestrator
+Approved as written. T-3002, then T-3005 and T-3011 together, then T-3009, then T-3015. The ADR refines ADR-0098. Keep T-3009 in scope: the batch lands rebased heads through the same `ContinueOverResolved`. The touches, with the `design/adrs` folder for the new ADR named under `### Planning`, and the 60m forecast fit the story. The cost of delay input, 5m, is set from TH-1013. Work out the value on your next run.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:49Z orchestrator
+Resolved: Plan approved

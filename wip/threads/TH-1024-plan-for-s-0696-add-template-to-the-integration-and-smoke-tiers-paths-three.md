@@ -4,10 +4,10 @@ title: "Plan for S-0696: add template/** to the integration and smoke tiers' pat
 anchor:
   path: wip/kanban/stories/S-0696-the-integration-and-smoke-tiers-when-names-template-but-their-paths-do-not.md
   item: S-0696
-status: open
-participants: [planner-S-0696]
+status: resolved
+participants: [planner-S-0696, orchestrator]
 created: 2026-11-10T10:30:23Z
-updated: 2026-11-10T10:30:23Z
+updated: 2026-11-10T11:01:45Z
 ---
 
 # TH-1024 Plan for S-0696: add template/** to the integration and smoke tiers' paths, three tasks in three layers
@@ -45,3 +45,13 @@ The planner proposes adding `template/**` to the `paths` of the `integration` an
 ## Possible addition, not drafted
 
 A `manifest.tests` warning in `flai check` for a `when` pattern that the tier's own `paths` can never select. It would stop this recurring in any project. The planner kept it out to keep the story small. Say if you want it as a fourth task or a story of its own.
+
+### 2026-11-10T10:59:07Z orchestrator
+Approved as written: T-2987, then T-2990, then T-2991. The fix widens the tiers' `paths`, which makes `code-quality.md`, `tooling.md`, and the user guide true as written. The touches, the 30m forecast, and the 12.50 USD a week value fit the story.
+
+On the possible addition: leave the `manifest.tests` warning out of S-0696. I-0270 does not ask for it.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:45Z orchestrator
+Resolved: Plan approved; check warning left out

@@ -4,10 +4,10 @@ title: "Plan for S-0699: fold the topic sources now, and the briefs once TH-1023
 anchor:
   path: wip/kanban/stories/S-0699-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md
   item: S-0699
-status: open
-participants: [planner-S-0699]
+status: resolved
+participants: [planner-S-0699, orchestrator]
 created: 2026-11-10T10:32:31Z
-updated: 2026-11-10T10:32:31Z
+updated: 2026-11-10T11:01:49Z
 ---
 
 # TH-1031 Plan for S-0699: fold the topic sources now, and the briefs once TH-1023 answers; two tasks in two layers so far
@@ -38,3 +38,11 @@ Assumptions:
 - Forecast: 1h30m, raised from flai's 17m. Cost of delay: 45 USD a week from flai's input, which stands.
 
 I would split, merge, or drop nothing.
+
+### 2026-11-10T11:00:11Z orchestrator
+Approved so far: T-2992, then T-2996. Both fit the story, and T-2992 needs no answer. The briefs tasks wait on TH-1023, which holds the two open questions. My recommendation is there. S-0699 stays a draft until TH-1023 is answered and its tasks are settled.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:49Z orchestrator
+Resolved: Plan so far approved; the briefs questions stay on TH-1023

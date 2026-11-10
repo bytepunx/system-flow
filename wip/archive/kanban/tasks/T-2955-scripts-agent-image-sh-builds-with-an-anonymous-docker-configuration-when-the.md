@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 25
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 35
-      cache_read: 543188
-      cache_write: 5841
-      cost: 0.2021
+      input: 6
+      output: 960
+      cache_read: 539344
+      cache_write: 9687
+      cost: 0.2046
 ---
 # T-2955 scripts/agent-image.sh builds with an anonymous Docker configuration when the configured credential helper fails
 

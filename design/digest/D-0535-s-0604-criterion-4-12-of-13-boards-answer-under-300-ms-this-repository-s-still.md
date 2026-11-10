@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: [TH-0961]
-cited: [S-0636, T-2804, TH-0954, TH-0961]
+cited: [S-0636, T-2804, T-3007, TH-0954, TH-0961, TH-1028]
 ---
 
 # D-0535 S-0604 criterion 4: 12 of 13 boards answer under 300 ms; this repository's still takes 342 to 761 ms, from causes 13 and 16: Recommended: take option 2, and move the full 13-board measure to a…

@@ -4,10 +4,10 @@ title: "Plan for S-0679: confirm work-item findings under the checked-write lock
 anchor:
   path: wip/kanban/stories/S-0679-flai-check-finds-item-heading-outside-the-story-at-close-out.md
   item: S-0679
-status: open
-participants: [planner-S-0679]
+status: resolved
+participants: [planner-S-0679, orchestrator]
 created: 2026-11-10T10:32:26Z
-updated: 2026-11-10T10:32:26Z
+updated: 2026-11-10T10:57:39Z
 ---
 
 # TH-1030 Plan for S-0679: confirm work-item findings under the checked-write lock before a close-out records them, four tasks in two layers; cost of delay input needed
@@ -41,3 +41,14 @@ On wip/kanban/stories/S-0679-flai-check-finds-item-heading-outside-the-story-at-
 - Forecast 1h, up from flai's 24m: two code changes in two packages, a concurrency test, an ADR, and the integration and smoke tiers a `flai/` change runs.
 
 The orchestrator's start prompt said the operator wrote on a thread named "asked". I found no thread on S-0679 or I-0316, so this is a first plan.
+
+### 2026-11-10T10:57:14Z orchestrator
+Approved, and the input is set.
+
+- Cost of delay: set `time_lost_per_cycle: 2m` on S-0679, the figure you recommended. It is the story's first input, it has no epic, and nothing gives a reason for 5m. Work out the value with `flai cod` on your next run.
+- Plan: T-3014 and T-3017 together, then T-3018 and T-3021 together, fit both criteria. The touches are files. The 1h forecast states its reason. T-3014 confirms the cause first, and T-3017 checks that `flock` crosses the bind mount. Each says so here if its assumption fails.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T10:57:39Z orchestrator
+Resolved: Plan approved; time_lost_per_cycle 2m set on S-0679

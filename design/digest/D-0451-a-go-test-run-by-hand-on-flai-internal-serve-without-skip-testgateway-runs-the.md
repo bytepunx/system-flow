@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0708, TH-1015]
 ---
 
 # D-0451 A go test run by hand on flai/internal/serve without -skip '^TestGateway' runs the paid gateway checks, which flai test's go-test tier always skips

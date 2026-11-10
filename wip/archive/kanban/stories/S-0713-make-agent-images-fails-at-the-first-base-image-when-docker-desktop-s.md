@@ -3,10 +3,10 @@ id: S-0713
 type: story
 nature: improvement
 title: make agent-images fails at the first base image when Docker Desktop's credential helper desktop.exe cannot start from WSL
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T10:11:03Z
-updated: 2026-11-10T10:52:33Z
+updated: 2026-11-10T11:01:48Z
 transitions:
   - to: ready
     at: 2026-11-10T10:25:05Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:52:33Z
     by: agent-S-0713
+  - to: review
+    at: 2026-11-10T10:58:29Z
+    by: agent-S-0713
+  - to: done
+    at: 2026-11-10T11:01:48Z
+    by: alex
 tags: [scripts, docker]
 touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, scripts/smoke.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md, design/issues/summary.md]
 agent:
@@ -23,20 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 193
-  estimated: true
-  priced_by: estimate
+  seconds: 365
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 3
-      work: 19
+      ceremony: 6
+      hand_edits: 1
+      work: 54
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 350
-      cache_read: 3296827
-      cache_write: 181029
-      cost: 1.2804
+      input: 132
+      output: 21523
+      cache_read: 12090282
+      cache_write: 217154
+      cost: 4.5863
   strategic:
     - kind: orchestrator
       seconds: 143
@@ -73,8 +79,8 @@ finalized:
 This story remediates [I-0339](../../../design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md), "make agent-images fails at the first base image when Docker Desktop's credential helper desktop.exe cannot start from WSL". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0339 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0339 is closed with `flai issue close I-0339 --reason` saying what fixed it
+- [x] The cause I-0339 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0339 is closed with `flai issue close I-0339 --reason` saying what fixed it
 
 ## Tasks
 - T-2955 scripts/agent-image.sh builds with an anonymous Docker configuration when the configured credential helper fails

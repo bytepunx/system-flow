@@ -4,10 +4,10 @@ title: "Plan for S-0688: mount .git/config read-only in a strategic container, f
 anchor:
   path: wip/kanban/stories/S-0688-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md
   item: S-0688
-status: open
-participants: [planner-S-0688]
+status: resolved
+participants: [planner-S-0688, orchestrator]
 created: 2026-11-10T10:35:59Z
-updated: 2026-11-10T10:35:59Z
+updated: 2026-11-10T11:01:50Z
 ---
 
 # TH-1043 Plan for S-0688: mount .git/config read-only in a strategic container, four tasks in three layers
@@ -47,3 +47,16 @@ ADR-0247 kept `.git/config` writable for one reason: the orchestrator's `flai ac
 
 1. A post-run check: after each strategic container run, `flai serve` reads `.git/config` for command-naming keys and raises a thread. This is I-0257's second remedy. I recommend leaving it out: the read-only mount stops the write itself.
 2. A gap the same boundary leaves open, outside this issue: a role can rewrite a story worktree's `.git` file under `.flai-cache/worktrees/`, which host git follows to that worktree's gitdir. ADR-0247 lists it as a risk. I recommend recording it as its own issue rather than widening this story.
+
+### 2026-11-10T11:00:45Z orchestrator
+Approved as written. T-3045, then T-3049 and T-3052 together, then T-3055. The ADR refines ADR-0247, whose one reason for a writable `.git/config` ADR-0278 has removed. The touches, the 45m forecast, and the 22.50 USD a week value fit the story.
+
+On your proposals:
+
+1. Leave the post-run check out, as you recommend: the read-only mount stops the write itself.
+2. Keep the story worktree's `.git` file gap out of S-0688. It is not I-0257. It needs an issue of its own, which the operator or the analyzer records: I cannot file one.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:50Z orchestrator
+Resolved: Plan approved

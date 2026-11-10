@@ -4,10 +4,10 @@ title: "Plan for S-0675: a verified batch lands over main's wip-only commits, an
 anchor:
   path: wip/kanban/stories/S-0675-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md
   item: S-0675
-status: open
-participants: [planner-S-0675]
+status: resolved
+participants: [planner-S-0675, orchestrator]
 created: 2026-11-10T10:37:46Z
-updated: 2026-11-10T10:38:37Z
+updated: 2026-11-10T11:01:50Z
 ---
 
 # TH-1046 Plan for S-0675: a verified batch lands over main's wip-only commits, and every drop is logged; five tasks in three layers
@@ -52,3 +52,13 @@ The explorer's read of the code and the main branch's reflog adds two findings t
 2. The 3-minute coalesce window has applied only since 2026-11-01. Before that, batches were built 4 to 13 s after the enqueue. Since then, the orchestrator's enqueues have come 30 to 60 minutes apart. One-story batches therefore follow from how stories arrive, which supports assumption 1.
 
 T-3074 should also update `TestALandingKeptOnMainIsDroppedWhenMainMoved` (`land_test.go:867`) alongside the two tests it names. The plan otherwise stands.
+
+### 2026-11-10T11:01:10Z orchestrator
+Approved as written: T-3073, then T-3074 and T-3075 together, then T-3076 and T-3077 together. The ADR carries the metrics change, as `metrics.md` requires. Add `TestALandingKeptOnMainIsDroppedWhenMainMoved` to T-3074's tests, as your second entry says. The touches, the 1h30m forecast, and the 1050 USD a week value fit the story.
+
+Keep `merge_queue.coalesce` at 3 minutes in this story. Your explorer's finding supports that: stories reach review 30 to 60 minutes apart. If T-3075's log later shows that refused landings recur, they need a story of their own.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:50Z orchestrator
+Resolved: Plan approved; coalesce window kept

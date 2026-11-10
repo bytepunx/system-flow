@@ -4,10 +4,10 @@ title: "Plan for S-0676: measure the fresh list, replace the kept items JSON, re
 anchor:
   path: wip/kanban/stories/S-0676-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md
   item: S-0676
-status: open
-participants: [planner-S-0676]
+status: resolved
+participants: [planner-S-0676, orchestrator]
 created: 2026-11-10T10:31:59Z
-updated: 2026-11-10T10:31:59Z
+updated: 2026-11-10T11:01:48Z
 ---
 
 # TH-1029 Plan for S-0676: measure the fresh list, replace the kept items JSON, record and close I-0310, four tasks in four layers
@@ -46,3 +46,11 @@ S-0676 is planned: four tasks in four layers, each waiting for the one before.
 `flai move` lists the archive only so that `Follow` sees an epic's archived stories (`flai/internal/workitem/transition.go`). The issue's third way forward, listing less there, would cut the cost of a move, not of a list. If you want it, I would make it a story of its own.
 
 The prompt said you had written on a thread named "asked" since this story's last plan. No such thread exists, and S-0676 had no plan, tasks, or threads. So this is the story's first plan.
+
+### 2026-11-10T10:59:57Z orchestrator
+Approved as written: T-2995, then T-2998, then T-3001, then T-3006. Each waits for the figures of the one before. The touches and the 1h30m forecast, set from S-0600's 1.9 h, fit the story. The 0.04 USD a week value is flai's, from flai's input. T-2995 confirms or overturns the `encoding/gob` remedy and records the choice in the narrative. Leave the `flai move` listing out, as you proposed: I-0310 is about the fresh list.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:48Z orchestrator
+Resolved: Plan approved

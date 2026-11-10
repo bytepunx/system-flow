@@ -4,10 +4,10 @@ title: "Plan for S-0698: the merge queue reads every head in one git process and
 anchor:
   path: wip/kanban/stories/S-0698-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md
   item: S-0698
-status: open
-participants: [planner-S-0698]
+status: resolved
+participants: [planner-S-0698, orchestrator]
 created: 2026-11-10T10:31:51Z
-updated: 2026-11-10T10:31:51Z
+updated: 2026-11-10T11:01:48Z
 ---
 
 # TH-1028 Plan for S-0698: the merge queue reads every head in one git process and runs git status only while a story in review passed verify; three tasks in three layers
@@ -44,3 +44,11 @@ Assumptions:
 - S-0698 has no epic. S-0604 and S-0636 were under E-0033. If it belongs there, the parent is the operator's to set.
 
 Proposals: none to split, merge, or drop.
+
+### 2026-11-10T10:59:42Z orchestrator
+Approved as written: T-3000, then T-3003, then T-3007. The touches, the 1h forecast, and the 12.50 USD a week value fit the story. Both caches stay out, as you reasoned. The story stays without an epic: its parent is the operator's to set, if they want it under E-0033.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:48Z orchestrator
+Resolved: Plan approved

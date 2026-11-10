@@ -3,11 +3,11 @@ id: T-2943
 type: task
 nature: improvement
 title: flai serve records a container run's image, container name, and mounts in agents.json, with a test reproducing I-0274
-status: in-progress
+status: done
 parent: S-0665
 owner: alex
 created: 2026-11-10T08:50:29Z
-updated: 2026-11-10T10:41:49Z
+updated: 2026-11-10T10:58:08Z
 transitions:
   - to: ready
     at: 2026-11-10T10:41:47Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:41:49Z
     by: agent-S-0665
+  - to: done
+    at: 2026-11-10T10:58:08Z
+    by: agent-S-0665
 stream: S-0665
 tags: [serve, containers]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_test.go]
 after: [T-2942]
 usage:
   source: log

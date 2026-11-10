@@ -7,9 +7,16 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0667
   - S-0674
   - S-0704
+  - S-0666
+  - S-0675
+  - S-0676
+  - S-0677
+  - S-0678
+  - S-0679
+  - S-0681
+  - S-0688
 ---
 
 # Board

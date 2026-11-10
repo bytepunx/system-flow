@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [T-3007, TH-1028]
 ---
 
 # D-0556 S-0636 criterion 1: 12 of 13 boards answer under 300 ms; this repository's takes 169 to 404 ms, 5 of 10 calls at 300 ms or more: Recommended: take the agent's option

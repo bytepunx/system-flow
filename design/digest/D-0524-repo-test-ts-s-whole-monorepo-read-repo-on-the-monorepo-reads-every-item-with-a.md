@@ -9,7 +9,7 @@ date: 2026-11-08
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0695, T-2969, TH-1019]
 ---
 
 # D-0524 repo.test.ts's whole-monorepo read, Repo on the monorepo reads every item with a consistent status, fails in a story's flai test or close-out while other agents write the main checkout, whatever the story changes; I-0269 records it and the close-out runs it again

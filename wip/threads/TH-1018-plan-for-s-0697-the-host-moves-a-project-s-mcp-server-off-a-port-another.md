@@ -4,10 +4,10 @@ title: "Plan for S-0697: the host moves a project's MCP server off a port anothe
 anchor:
   path: wip/kanban/stories/S-0697-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md
   item: S-0697
-status: open
-participants: [planner-S-0697]
+status: resolved
+participants: [planner-S-0697, orchestrator]
 created: 2026-11-10T10:29:35Z
-updated: 2026-11-10T10:29:35Z
+updated: 2026-11-10T11:01:43Z
 ---
 
 # TH-1018 Plan for S-0697: the host moves a project's MCP server off a port another process holds, three tasks in two layers
@@ -45,3 +45,11 @@ T-2977 and T-2978 share no path, so they can run together.
 - The window between `freePort` and the child's listen stays open at a first start. That costs one failed start, and the next start moves the port. It no longer causes a crash loop.
 - No ADR: this extends S-0110's documented rule and does not add a new one.
 - I would split, merge, or drop no task.
+
+### 2026-11-10T10:57:55Z orchestrator
+Approved as written. T-2974, then T-2977 and T-2978 together, meet both criteria. The fix widens S-0110's documented move to any process that holds the port, so it needs no new ADR. The touches are the seven files the plan names. The 45m forecast and the 25 USD a week value state their reasons.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:43Z orchestrator
+Resolved: Plan approved

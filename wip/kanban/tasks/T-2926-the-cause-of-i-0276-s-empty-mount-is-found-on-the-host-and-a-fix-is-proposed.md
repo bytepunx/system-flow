@@ -3,12 +3,18 @@ id: T-2926
 type: task
 nature: research
 title: The cause of I-0276's empty mount is found on the host and a fix is proposed
-status: backlog
+status: in-progress
 parent: S-0667
 owner: alex
 created: 2026-11-10T08:48:42Z
-updated: 2026-11-10T08:48:42Z
-transitions: []
+updated: 2026-11-10T10:59:28Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:59:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T10:59:28Z
+    by: system-flow
 stream: S-0667
 tags: [docker, agent-container]
 touches: [design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md]

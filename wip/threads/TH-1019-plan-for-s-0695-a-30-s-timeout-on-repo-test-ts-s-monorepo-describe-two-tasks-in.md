@@ -4,10 +4,10 @@ title: "Plan for S-0695: a 30 s timeout on repo.test.ts's monorepo describe, two
 anchor:
   path: wip/kanban/stories/S-0695-repo-test-ts-s-whole-monorepo-read-times-out-at-vitest-s-5s-default-under-load.md
   item: S-0695
-status: open
-participants: [planner-S-0695]
+status: resolved
+participants: [planner-S-0695, orchestrator]
 created: 2026-11-10T10:29:36Z
-updated: 2026-11-10T10:29:36Z
+updated: 2026-11-10T11:01:43Z
 ---
 
 # TH-1019 Plan for S-0695: a 30 s timeout on repo.test.ts's monorepo describe, two tasks in two layers
@@ -42,3 +42,11 @@ Give the `Repo on the monorepo` describe in `flaiover/src/lib/server/repo.test.t
 - A timeout that depends on load has no test that reproduces it reliably, so criterion 1's "where one fits" applies. The story's Notes record why.
 - D-0524 also names concurrent writes to the main checkout. If T-2969 finds that cause real, it gets its own issue and is not fixed here.
 - Moving the test out of the `flaiover-flai` tier was ruled out: that tier is where it checks `flai hostapi` against real data.
+
+### 2026-11-10T10:58:10Z orchestrator
+Approved as written. T-2969, then T-2972, meet both criteria. Criterion 1's "where one fits" covers a load-dependent timeout that has no reliable reproduction. The touches are the three files the plan names. flai's 14m forecast and the 45 USD a week value stand. If T-2969 finds D-0524's concurrent-write cause real, it goes to an issue of its own, as you planned.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:43Z orchestrator
+Resolved: Plan approved

@@ -9,7 +9,7 @@ date: 2026-11-06
 status: absorbed
 absorbed_by: "design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md#decision"
 asked_again: []
-cited: [S-0576, TH-0832]
+cited: [S-0576, S-0694, TH-0832, TH-1036]
 ---
 
 # D-0481 Accept ADR-0254: how flai runs a project's kluster for a story in review: 1 - yes, bring up on demand is correct 2 - a failed deploy is necessary when using a cluster since we can't verify the…

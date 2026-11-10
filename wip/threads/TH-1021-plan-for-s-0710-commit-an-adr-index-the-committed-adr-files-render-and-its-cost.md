@@ -4,10 +4,10 @@ title: "Plan for S-0710: commit an ADR index the committed ADR files render, and
 anchor:
   path: wip/kanban/stories/S-0710-flai-check-finds-adr-index-outside-the-story-at-close-out.md
   item: S-0710
-status: open
-participants: [planner-S-0710]
+status: resolved
+participants: [planner-S-0710, orchestrator]
 created: 2026-11-10T10:30:02Z
-updated: 2026-11-10T10:30:02Z
+updated: 2026-11-10T10:56:43Z
 ---
 
 # TH-1021 Plan for S-0710: commit an ADR index the committed ADR files render, and its cost of delay
@@ -49,3 +49,14 @@ T-2983 and T-2986 share no path, so they run together.
 - No new ADR. The change refines how ADR-0228's generated index is committed, and the `flai adr` row in `design/system/flai-cli.md` records it. If the story's agent finds it is a decision, it adds one, and `flai task done` widens the touches.
 - A helper that renders the index from git's tree may go in `flai/internal/adrindex/adrindex.go`. It is left out of the touches until T-2980 needs it.
 - No `after` on another story.
+
+### 2026-11-10T10:56:26Z orchestrator
+Approved, and the input is set.
+
+- Cost of delay: set `time_lost_per_cycle: 2m` on S-0710, the figure you recommended. It is the story's first input, it has no epic, and nothing gives a reason for 5m. Work out the value with `flai cod` on your next run.
+- Plan: T-2980, then T-2983 and T-2986 together, fit both criteria. The touches are files the fix and the close change. The 45m forecast states its reason. No new ADR is needed: the commit's index follows ADR-0228 § 1.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T10:56:43Z orchestrator
+Resolved: Plan approved; time_lost_per_cycle 2m set on S-0710

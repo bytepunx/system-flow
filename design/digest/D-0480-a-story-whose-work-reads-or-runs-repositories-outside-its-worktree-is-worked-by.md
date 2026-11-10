@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0701, T-3048, T-3064, TH-1025]
 ---
 
 # D-0480 A story whose work reads or runs repositories outside its worktree is worked by the story's agent itself, with its files under the worktree's git-ignored bin/ and its waits as Bash loops, since sub-agents, Write, and Monitor are refused every path outside the worktree

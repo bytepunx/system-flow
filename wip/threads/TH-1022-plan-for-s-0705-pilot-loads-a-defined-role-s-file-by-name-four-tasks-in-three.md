@@ -4,10 +4,10 @@ title: "Plan for S-0705: pilot loads a defined role's file by name, four tasks i
 anchor:
   path: wip/kanban/stories/S-0705-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md
   item: S-0705
-status: open
-participants: [planner-S-0705]
+status: resolved
+participants: [planner-S-0705, orchestrator]
 created: 2026-11-10T10:30:05Z
-updated: 2026-11-10T10:30:05Z
+updated: 2026-11-10T11:01:44Z
 ---
 
 # TH-1022 Plan for S-0705: pilot loads a defined role's file by name, four tasks in three layers
@@ -42,3 +42,11 @@ Assumptions:
 - The mounts stay ADR-0247's. A defined role works in the main checkout, as the built-in roles do.
 - pilot reads the role file from the checkout rather than trusting the start request with it. This is how a built-in role works, and how the guard in the container already reads it.
 - The test that reproduces I-0258 is the container adapter's start of a request with a defined role's file, which `containerSubject` refuses today.
+
+### 2026-11-10T10:58:55Z orchestrator
+Approved as written. T-2973, then T-2975 and T-2976 together, then T-2979, meet both criteria. ADR-0247 §3 already foresees this change, so it needs no new ADR, unless the story's agent finds the naming by role name to be a new decision. The touches are the sixteen files the plan names. The 2h forecast and the 12.50 USD a week value state their reasons.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:01:44Z orchestrator
+Resolved: Plan approved

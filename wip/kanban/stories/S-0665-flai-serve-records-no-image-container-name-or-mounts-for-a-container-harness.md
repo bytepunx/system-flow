@@ -6,7 +6,7 @@ title: flai serve records no image, container name, or mounts for a container ha
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:37Z
-updated: 2026-11-10T10:21:09Z
+updated: 2026-11-10T10:58:26Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0665
 tags: [serve, containers]
 topics: [docker, code]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md, flai/internal/serve/agents_state.go, flai/internal/serve/agents_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -91,7 +91,7 @@ finalized:
 This story remediates [I-0274](../../../design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md), "flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0274 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0274 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0274 is closed with `flai issue close I-0274 --reason` saying what fixed it
 
 ## Tasks
