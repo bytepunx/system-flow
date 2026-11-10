@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -1128,6 +1129,58 @@ func TestConflictMarkersAreErrors(t *testing.T) {
 	}
 	if res.Errors != len(want) || res.OK(false) {
 		t.Errorf("the markers are the fixture's only errors and fail the check without --strict: %+v", res)
+	}
+}
+
+// S-0677: a whole check keeps each file's marker lines in the cache folder by
+// its size and modification time. A warm check reports what a cold one does,
+// and a marker added to a kept file is still reported.
+func TestAMarkerAddedToAKeptFileIsReported(t *testing.T) {
+	ours, theirs := "<<<<<<"+"<", ">>>>>>"+">"
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{".flai-cache", "design/system", "docs/users", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	w := func(rel, body string, age time.Duration) {
+		p := filepath.Join(root, rel)
+		_ = os.WriteFile(p, []byte(body), 0o644)
+		old := time.Now().Add(-age)
+		_ = os.Chtimes(p, old, old)
+	}
+	w("design/system/a.md", "---\ntitle: A\nupdated: 2026-09-01\ntopics: [all]\n---\n\n"+ours+" HEAD\nmine\n"+theirs+" topic\n", time.Hour)
+	w("docs/users/guide.md", "---\ntitle: Guide\nupdated: 2026-09-01\n---\n\nGuide\n", time.Hour)
+	markers := func() []string {
+		t.Helper()
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, f := range res.Findings {
+			if f.Rule == "markdown.conflict-marker" {
+				got = append(got, fmt.Sprintf("%s:%d", filepath.ToSlash(f.Path), f.Line))
+			}
+		}
+		return got
+	}
+	cold := markers()
+	if want := []string{"design/system/a.md:7", "design/system/a.md:9"}; !slices.Equal(cold, want) {
+		t.Fatalf("cold check: %v, want %v", cold, want)
+	}
+	if _, err := os.Stat(conflictmark.KeptPath(filepath.Join(root, ".flai-cache"), root)); err != nil {
+		t.Fatalf("the check keeps the marker lines: %v", err)
+	}
+	if warm := markers(); !slices.Equal(warm, cold) {
+		t.Errorf("warm check: %v, want the cold check's %v", warm, cold)
+	}
+	w("docs/users/guide.md", "---\ntitle: Guide\nupdated: 2026-09-01\n---\n\nGuide\n"+theirs+" main\n", 30*time.Minute)
+	if got, want := markers(), []string{"design/system/a.md:7", "design/system/a.md:9", "docs/users/guide.md:7"}; !slices.Equal(got, want) {
+		t.Errorf("after a marker is added to a kept file: %v, want %v", got, want)
 	}
 }
 

@@ -559,18 +559,30 @@ func (c *checker) exampleProps(project manifest.Project, files []exampleFile, fo
 // the markdown under the design, docs, and wip folders and at the root: a
 // conflict git-added unresolved reached main in a design document and nothing
 // caught it (S-0253, I-0066). Errors, so CI's check fails without --strict.
+// A whole run keeps each file's marker lines between checks in the cache
+// folder by the file's size and modification time, so an unchanged file is
+// not read again (S-0677); a write's run reads the files it wrote.
 func (c *checker) conflictMarkers() {
 	seen := map[string]bool{}
+	// lines reads a file's marker lines; a whole run takes them from what
+	// the last run kept, by the file's size and modification time (S-0677).
+	lines := func(path string) ([]int, error) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return conflictmark.Lines(string(data)), nil
+	}
 	scan := func(path string) {
 		if seen[path] {
 			return
 		}
 		seen[path] = true
-		data, err := os.ReadFile(path)
+		marks, err := lines(path)
 		if err != nil {
 			return // unreadable files are skipped, as the other rules skip them
 		}
-		for _, line := range conflictmark.Lines(string(data)) {
+		for _, line := range marks {
 			c.add(Error, "markdown.conflict-marker", path, line, "a merge conflict marker: resolve the conflict, keeping what both sides meant, and remove the markers")
 		}
 	}
@@ -591,6 +603,9 @@ func (c *checker) conflictMarkers() {
 		}
 		return
 	}
+	kept := conflictmark.OpenKept(c.repo.CacheDir(), root)
+	defer kept.Save()
+	lines = kept.Lines
 	for _, dir := range dirs {
 		_ = filepath.WalkDir(dir, func(path string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() || !strings.HasSuffix(path, ".md") {

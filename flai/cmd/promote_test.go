@@ -14,10 +14,16 @@ import (
 // .flai-cache: an OS file lock's file stays once it is freed (S-0377), and is
 // not the board.
 // keptParse says whether a file in the cache folder is one of the parses or
-// lint results a flai process keeps there (S-0600), which any list or check
-// rewrites and which are rebuilt from wip.
+// lint results a flai process keeps there (S-0600), or the digest problems
+// and conflict markers a check keeps (S-0677), which any list or check
+// rewrites and which are rebuilt from the files.
 func keptParse(name string) bool {
-	return strings.HasPrefix(name, "items-") || strings.HasPrefix(name, "lint-findings-")
+	for _, prefix := range []string{"items-", "lint-findings-", "digest-problems-", "conflict-markers-"} {
+		if strings.HasPrefix(name, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func treeOf(t *testing.T, root string) map[string]string {
