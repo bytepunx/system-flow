@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_shell.go]
 usage:
   source: log
-  seconds: 1279
+  seconds: 1324
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 68
-      cache_read: 2741452
-      cache_write: 18883
-      cost: 1.0151
+      input: 20
+      output: 3998
+      cache_read: 2847602
+      cache_write: 85257
+      cost: 1.1348
 ---
 # T-2799 Split flai/internal/guard/guard.go into its decision, its rule tables, and its shell parsing
 

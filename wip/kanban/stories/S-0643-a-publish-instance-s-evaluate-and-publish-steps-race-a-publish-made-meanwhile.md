@@ -3,16 +3,19 @@ id: S-0643
 type: story
 nature: improvement
 title: A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-09T21:22:33Z
-updated: 2026-11-10T06:20:08Z
+updated: 2026-11-10T06:57:23Z
 transitions:
   - to: ready
     at: 2026-11-10T06:19:55Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T06:20:08Z
+    by: agent-S-0643
+  - to: review
+    at: 2026-11-10T06:57:23Z
     by: agent-S-0643
 tags: [flai, release, formula]
 topics: [release, formula]
@@ -24,21 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1135
-  estimated: true
-  priced_by: estimate
+  seconds: 2252
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 1
+      ceremony: 4
       hand_edits: 1
-      work: 16
+      work: 65
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 468
-      cache_read: 8103028
-      cache_write: 299819
-      cost: 3.0903
+      input: 224
+      output: 45188
+      cache_read: 30275759
+      cache_write: 696735
+      cost: 11.4677
   strategic:
     - kind: orchestrator
       seconds: 166
@@ -75,8 +77,8 @@ finalized:
 This story remediates [I-0320](../../../design/issues/I-0320-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md), "A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0320 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0320 is closed with `flai issue close I-0320 --reason` saying what fixed it
+- [x] The cause I-0320 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0320 is closed with `flai issue close I-0320 --reason` saying what fixed it
 
 ## Tasks
 - T-2818 flai release --pending --require-pending exits 2 when nothing is pending, naming the release that covered it

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1287
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 246
-      cache_read: 5961669
-      cache_write: 27822
-      cost: 2.2027
+      input: 42
+      output: 8483
+      cache_read: 6041413
+      cache_write: 180879
+      cost: 2.4075
 ---
 # T-2794 Split flai/internal/hostapi/writes.go by responsibility, cutting itemSpecs in three
 

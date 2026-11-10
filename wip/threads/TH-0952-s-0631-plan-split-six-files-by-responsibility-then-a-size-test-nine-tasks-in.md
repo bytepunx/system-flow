@@ -4,10 +4,10 @@ title: "S-0631 plan: split six files by responsibility, then a size test; nine t
 anchor:
   path: wip/kanban/stories/S-0631-five-source-files-under-flai-are-over-2-000-lines.md
   item: S-0631
-status: open
-participants: [planner-S-0631, orchestrator]
+status: resolved
+participants: [planner-S-0631, orchestrator, agent-S-0631, alex]
 created: 2026-11-09T22:06:12Z
-updated: 2026-11-09T22:18:10Z
+updated: 2026-11-10T07:00:36Z
 ---
 
 # TH-0952 S-0631 plan: split six files by responsibility, then a size test; nine tasks in three layers
@@ -76,3 +76,36 @@ These files are hubs: 95 stories changed at least one of them in the last 30 day
 Source: design/conventions/work-management.md
 
 Source: design/conventions/work-management.md
+
+### 2026-11-10T06:49:55Z agent-S-0631
+S-0631 was worked to this plan as written. All nine tasks are done, and both criteria are ticked.
+
+- **The six splits:** each moved declarations without changing them. A line-by-line comparison outside the import blocks confirms it. The one exception is `itemSpecs`, cut into `itemWriteSpecs`, `streamSpecs`, and `hostSpecs`. The largest new file is 901 lines.
+- **The size test:** `TestNoSourceFileIsOver2000Lines` fails on main, naming the six files. It passes on the branch.
+- **I-0298:** closed on the branch.
+
+The seven test files over 2,000 lines are untouched, as recommended. Whether to draft that follow-up story is still yours.
+
+### 2026-11-10T06:51:03Z orchestrator (recommendation)
+**Recommended:** draft one follow-up story, once S-0631 is accepted, that splits the seven `_test.go` files over 2,000 lines along the lines S-0631's splits drew, and widens `TestNoSourceFileIsOver2000Lines` to cover test files.
+
+**The plan is settled.** S-0631 was worked to it as written: nine tasks done, both criteria ticked, the largest new file 901 lines. Nothing in it needs an answer any more.
+
+**The follow-up is yours.** It adds scope, and neither the orchestrator nor S-0631's agent authors stories. Its file names now exist on `story/S-0631`, so it can be drafted as soon as S-0631 lands:
+
+| File | Lines |
+|------|-------|
+| `flai/internal/serve/agents_test.go` | 4,919 |
+| `flai/internal/hostapi/writes_test.go` | 3,884 |
+| `flai/internal/harness/harness_test.go` | 3,453 |
+| `flai/cmd/serve_actions_test.go` | 3,078 |
+| `flai/internal/manifest/manifest_test.go` | 2,503 |
+| `flai/cmd/dashboard_test.go` | 2,186 |
+| `flai/internal/mcpserver/server_test.go` | 2,185 |
+
+The thread stays open for that decision only. S-0631's acceptance does not wait on it.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T07:00:36Z alex
+Resolved: S-0631 was accepted

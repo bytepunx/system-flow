@@ -3,10 +3,10 @@ id: S-0631
 type: story
 nature: improvement
 title: Five source files under flai are over 2,000 lines
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:40:53Z
-updated: 2026-11-10T06:14:57Z
+updated: 2026-11-10T07:00:36Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:09Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T06:14:57Z
     by: agent-S-0631
+  - to: review
+    at: 2026-11-10T06:58:02Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T07:00:36Z
+    by: alex
 tags: [cli]
 topics: [cli, testing, docs]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_spec.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/settings.go, flai/internal/serve/agents.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_activity.go, flai/internal/mcpserver/server.go, flai/cmd/serve_actions.go, flai/cmd/serve_agent.go, flai/cmd/serve_checks.go, flai/cmd/serve_components.go, flai/cmd/serve_harness.go, flai/cmd/serve_provider.go, flai/cmd/serve_notify.go, flai/cmd/serve_mcp.go, flai/cmd/serve_view.go, flai/cmd/serve_agent_run.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_strategic.go, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/manifest_accept.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_tests.go, flai/internal/check/check.go, flai/internal/check/check_layout.go, flai/internal/check/check_items.go, flai/internal/check/check_docs.go, flai/internal/check/check_roles.go, flai/internal/check/check_records.go, flai/internal/check/sourcesize_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_shell.go, flai/internal/watch/watch.go, design/system/flai-cli.md, design/system/server-performance.md, design/system/design-system-tool.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/agent-coordination.md, design/system/flaiover-dashboard.md, design/system/agent-prose.md, design/system/release-signing.md, design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md, design/issues/summary.md]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_spec.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/settings.go, flai/internal/serve/agents.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_activity.go, flai/internal/mcpserver/server.go, flai/cmd/serve_actions.go, flai/cmd/serve_agent.go, flai/cmd/serve_checks.go, flai/cmd/serve_components.go, flai/cmd/serve_harness.go, flai/cmd/serve_provider.go, flai/cmd/serve_notify.go, flai/cmd/serve_mcp.go, flai/cmd/serve_view.go, flai/cmd/serve_agent_run.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_strategic.go, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/manifest_accept.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_tests.go, flai/internal/check/check.go, flai/internal/check/check_layout.go, flai/internal/check/check_items.go, flai/internal/check/check_docs.go, flai/internal/check/check_roles.go, flai/internal/check/check_records.go, flai/internal/check/sourcesize_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_shell.go, flai/internal/watch/watch.go, design/system/flai-cli.md, design/system/server-performance.md, design/system/design-system-tool.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/agent-coordination.md, design/system/flaiover-dashboard.md, design/system/agent-prose.md, design/system/release-signing.md, design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md, design/issues/summary.md, docs/users/flai.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,33 +30,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1394
-  estimated: true
-  priced_by: estimate
+  seconds: 2597
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 1
-      test_runs: 2
-      hand_edits: 1
-      work: 22
+      ceremony: 6
+      test_runs: 3
+      hand_edits: 2
+      work: 83
   models:
     - model: claude-opus-5-5
-      input: 194
-      output: 1121
-      cache_read: 22127150
-      cache_write: 678948
-      cost: 8.3871
+      input: 386
+      output: 78024
+      cache_read: 55569042
+      cache_write: 1663733
+      cost: 22.1443
   strategic:
     - kind: orchestrator
-      seconds: 241
+      seconds: 271
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 31
-          output: 302
-          cache_read: 1942029
-          cache_write: 130331
-          cost: 0.5513
+          input: 41
+          output: 375
+          cache_read: 2171925
+          cache_write: 169548
+          cost: 0.6236
         - model: claude-sonnet-5-5
           input: 1
           output: 11
@@ -98,8 +103,8 @@ finalized:
 This story remediates [I-0298](../../../design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md), "Five source files under flai are over 2,000 lines", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0298 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0298 is closed with `flai issue close I-0298 --reason` saying what fixed it
+- [x] The cause I-0298 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0298 is closed with `flai issue close I-0298 --reason` saying what fixed it
 
 ## Tasks
 - T-2794 Split flai/internal/hostapi/writes.go by responsibility, cutting itemSpecs in three

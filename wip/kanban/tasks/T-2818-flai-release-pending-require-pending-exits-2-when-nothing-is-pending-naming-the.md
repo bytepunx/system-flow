@@ -23,16 +23,16 @@ tags: [flai, release]
 touches: [flai/cmd/release.go, flai/cmd/release_pending_test.go, flai/internal/release/release.go, flai/internal/release/release_test.go]
 usage:
   source: log
-  seconds: 1031
+  seconds: 1032
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 301
-      cache_read: 5746569
-      cache_write: 46075
-      cost: 2.1304
+      input: 43
+      output: 8712
+      cache_read: 5837046
+      cache_write: 134328
+      cost: 2.2109
 ---
 # T-2818 flai release --pending --require-pending exits 2 when nothing is pending, naming the release that covered it
 

@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/cmd/serve_actions.go, flai/cmd/serve_agent.go, flai/cmd/serve_checks.go, flai/cmd/serve_components.go, flai/cmd/serve_harness.go, flai/cmd/serve_provider.go, flai/cmd/serve_notify.go, flai/cmd/serve_mcp.go, flai/cmd/serve_view.go, flai/cmd/serve_agent_run.go]
 usage:
   source: log
-  seconds: 1283
+  seconds: 1318
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 193
-      cache_read: 3020434
-      cache_write: 16607
-      cost: 1.1169
+      input: 22
+      output: 4390
+      cache_read: 3126706
+      cache_write: 93613
+      cost: 1.246
 ---
 # T-2796 Split flai/cmd/serve_actions.go into one file per flai serve subcommand family
 

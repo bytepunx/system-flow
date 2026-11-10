@@ -3,12 +3,18 @@ id: T-2825
 type: task
 nature: remediation
 title: The dev server tests check the pid flai started, and a slow-starting fake vite reproduces the missing pid
-status: backlog
+status: in-progress
 parent: S-0647
 owner: alex
 created: 2026-11-10T06:24:06Z
-updated: 2026-11-10T06:24:06Z
-transitions: []
+updated: 2026-11-10T06:59:32Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:59:31Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T06:59:32Z
+    by: system-flow
 stream: S-0647
 tags: [flai, test]
 touches: [flai/internal/components/devserver_test.go, flai/internal/components/devserver.go]

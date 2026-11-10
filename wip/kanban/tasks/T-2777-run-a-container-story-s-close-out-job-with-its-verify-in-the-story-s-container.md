@@ -24,7 +24,7 @@ touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.g
 after: [T-2775]
 usage:
   source: log
-  seconds: 1587
+  seconds: 1591
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 445
       cache_read: 12333326
       cache_write: 502022
-      cost: 4.7206
+      cost: 4.7208
 ---
 # T-2777 Run a container story's close-out job with its verify in the story's container and its commit and sync on the host through flai alone
 

@@ -3,16 +3,37 @@ id: T-2802
 type: task
 nature: improvement
 title: Point the design documents at the files the split code moved to, and close I-0298
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:05:33Z
-updated: 2026-11-09T22:05:33Z
-transitions: []
+updated: 2026-11-10T06:49:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:45:59Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:46:00Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:49:30Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli, docs]
-touches: [design/system/flai-cli.md, design/system/server-performance.md, design/system/design-system-tool.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/agent-coordination.md, design/system/flaiover-dashboard.md, design/system/agent-prose.md, design/system/release-signing.md, design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md, design/issues/summary.md]
+touches: [design/system/flai-cli.md, design/system/server-performance.md, design/system/design-system-tool.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/agent-coordination.md, design/system/flaiover-dashboard.md, design/system/agent-prose.md, design/system/release-signing.md, design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md, design/issues/summary.md, docs/users/flai.md]
 after: [T-2801]
+usage:
+  source: log
+  seconds: 210
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 12529
+      cache_read: 8923015
+      cache_write: 267154
+      cost: 3.5558
 ---
 # T-2802 Point the design documents at the files the split code moved to, and close I-0298
 

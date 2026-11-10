@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/watch/watch.go]
 usage:
   source: log
-  seconds: 1277
+  seconds: 1326
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 14
-      cache_read: 487372
-      cache_write: 4460
-      cost: 0.1809
+      input: 4
+      output: 785
+      cache_read: 559433
+      cache_write: 16749
+      cost: 0.2229
 ---
 # T-2800 Give the nolint directive in flai/internal/watch/watch.go its reason
 

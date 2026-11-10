@@ -3,14 +3,17 @@ id: S-0647
 type: story
 nature: remediation
 title: "TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T05:12:04Z
-updated: 2026-11-10T06:27:20Z
+updated: 2026-11-10T06:57:30Z
 transitions:
   - to: ready
     at: 2026-11-10T06:27:20Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T06:57:30Z
+    by: agent-S-0647
 tags: []
 topics: [testing]
 touches: [flai/internal/components/devserver_test.go, flai/internal/components/devserver.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md]
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 239
+      seconds: 247
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 225
-          cache_read: 1159864
-          cache_write: 131948
-          cost: 0.3462
+          input: 30
+          output: 241
+          cache_read: 1228968
+          cache_write: 132394
+          cost: 0.3649
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 51m

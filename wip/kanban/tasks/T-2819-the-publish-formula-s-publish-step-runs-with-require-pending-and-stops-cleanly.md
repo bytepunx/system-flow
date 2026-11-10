@@ -3,11 +3,11 @@ id: T-2819
 type: task
 nature: improvement
 title: The publish formula's publish step runs with --require-pending and stops cleanly on exit 2
-status: in-progress
+status: done
 parent: S-0643
 owner: agent
 created: 2026-11-09T22:12:46Z
-updated: 2026-11-10T06:44:29Z
+updated: 2026-11-10T06:45:51Z
 transitions:
   - to: ready
     at: 2026-11-10T06:44:28Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T06:44:29Z
     by: agent-S-0643
+  - to: done
+    at: 2026-11-10T06:45:51Z
+    by: agent-S-0643
 stream: S-0643
 tags: [formula, template]
 touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, template/CHANGELOG.md]
 after: [T-2818]
+usage:
+  source: log
+  seconds: 82
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 3421
+      cache_read: 2291913
+      cache_write: 52744
+      cost: 0.8681
 ---
 # T-2819 The publish formula's publish step runs with --require-pending and stops cleanly on exit 2
 

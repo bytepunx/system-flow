@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2073.0488
-accrued_seconds: 1537144
-tasks_completed: 2617
-last_run: 2026-11-10T06:40:58Z
+accrued_cost: 2073.7120
+accrued_seconds: 1537292
+tasks_completed: 2625
+last_run: 2026-11-10T06:58:22Z
 ---
 
 # Orchestrator activity
@@ -18352,6 +18352,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 43
 - Cost: 0.2964 USD, estimated
 
+### 2026-11-10T06:45:14Z
+
+- Summary: Started the publish formula: instance S-0656 (ready, committed bc181238d) to release S-0625 and S-0630; policy threshold met, count 2 at or over count threshold 1 (value 25 USD of 1000; S-0630 unvalued).
+- Items: S-0656, S-0625, S-0630
+- Seconds: 25
+- Cost: 0.0604 USD, estimated
+
+### 2026-11-10T06:45:29Z
+
+- Summary: Ordered the ready column by throughput after S-0656 joined it: S-0647 first (forecast 40m), S-0656 second (no forecast duration).
+- Items: S-0647, S-0656
+- Seconds: 15
+- Cost: 0.0374 USD, estimated
+
+### 2026-11-10T06:45:45Z
+
+- Summary: I started a release of S-0625 and S-0630, but nothing is published yet. The publish formula made story S-0656, which is now in ready waiting for a story's agent to work it.
+- Items: none
+- Seconds: 16
+- Cost: 0.1522 USD, estimated
+
+### 2026-11-10T06:51:03Z
+
+- Summary: Recommended an answer on TH-0952, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0631
+- Seconds: 30
+- Cost: 0.0723 USD, estimated
+
+### 2026-11-10T06:51:15Z
+
+- Summary: TH-0952 (S-0631): plan settled, worked as written; recommended to the operator a follow-up story, drafted after S-0631 is accepted, splitting the seven _test.go files over 2,000 lines (scope change, so a recommendation, thread left open)
+- Items: S-0631
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-10T06:51:31Z
+
+- Summary: TH-0952 now waits on you for one decision: whether to draft a follow-up story. The plan question on it is settled.
+- Items: none
+- Seconds: 16
+- Cost: 0.1682 USD, estimated
+
+### 2026-11-10T06:58:04Z
+
+- Summary: Left TH-0970 (host flai 1.86.6 behind 1.86.8) to the operator: its only entry is flai serve's notice, which answer_threads (autonomous) excludes, and a host upgrade is the operator's alone (safety.md, D-0314). Its own text says flai 1.86.8 is not yet published, so the upgrade waits on that release.
+- Items: TH-0970
+- Seconds: 16
+- Cost: 0.0616 USD, estimated
+
+### 2026-11-10T06:58:22Z
+
+- Summary: I took no action on TH-0970. It needs you, because it asks for an upgrade to the host, and only you can do that.
+- Items: none
+- Seconds: 18
+- Cost: 0.1111 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -19042,4 +19098,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-10T05:55:42Z
 
 - Call: `git for-each-ref --sort=-creatordate --format=%(refname:short) %(creatordate:iso-strict) refs/tags`
+- Needs: none
+
+### 2026-11-10T07:00:20Z
+
+- Call: `flai issue show I-0324`
 - Needs: none

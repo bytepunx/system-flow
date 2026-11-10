@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_layout.go, flai/internal/check/check_items.go, flai/internal/check/check_docs.go, flai/internal/check/check_roles.go, flai/internal/check/check_records.go]
 usage:
   source: log
-  seconds: 1280
+  seconds: 1322
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 15
-      output: 131
-      cache_read: 2154206
-      cache_write: 25951
-      cost: 0.8018
+      input: 16
+      output: 3177
+      cache_read: 2262394
+      cache_write: 67736
+      cost: 0.9016
 ---
 # T-2798 Split flai/internal/check/check.go into its runner and one file per family of rules
 

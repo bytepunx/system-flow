@@ -46,15 +46,15 @@ usage:
       cost: 19.1589
   strategic:
     - kind: orchestrator
-      seconds: 69
+      seconds: 77
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 104
-          cache_read: 613670
-          cache_write: 15815
-          cost: 0.1674
+          input: 14
+          output: 120
+          cache_read: 672208
+          cache_write: 32258
+          cost: 0.1875
     - kind: analyzer
       seconds: 42
       estimated: true

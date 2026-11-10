@@ -3,11 +3,11 @@ id: T-2782
 type: task
 nature: improvement
 title: Run the operator's checks for a container story in the story's container
-status: in-progress
+status: done
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:59:00Z
-updated: 2026-11-10T06:42:05Z
+updated: 2026-11-10T06:50:06Z
 transitions:
   - to: ready
     at: 2026-11-10T06:42:04Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T06:42:05Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T06:50:05Z
+    by: agent-S-0628
 stream: S-0628
 tags: [flai, serve, security]
-touches: [flai/internal/serve/checks.go, flai/internal/serve/checks_test.go]
+touches: [flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/cmd/checks.go, flai/internal/serve/kluster.go]
 after: [T-2775, T-2777]
+usage:
+  source: log
+  seconds: 480
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 307
+      cache_read: 8647912
+      cache_write: 58792
+      cost: 3.2023
 ---
 # T-2782 Run the operator's checks for a container story in the story's container
 

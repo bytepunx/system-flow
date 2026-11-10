@@ -3,16 +3,37 @@ id: T-2821
 type: task
 nature: improvement
 title: Close I-0320 with what fixed it
-status: backlog
+status: done
 parent: S-0643
 owner: agent
 created: 2026-11-09T22:13:30Z
-updated: 2026-11-09T22:13:30Z
-transitions: []
+updated: 2026-11-10T06:51:41Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:51:28Z
+    by: agent-S-0643
+  - to: in-progress
+    at: 2026-11-10T06:51:29Z
+    by: agent-S-0643
+  - to: done
+    at: 2026-11-10T06:51:41Z
+    by: agent-S-0643
 stream: S-0643
 tags: [issues]
 touches: [design/issues/I-0320-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md, design/issues/summary.md]
 after: [T-2819, T-2820]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1018
+      cache_read: 682232
+      cache_write: 15700
+      cost: 0.2584
 ---
 # T-2821 Close I-0320 with what fixed it
 

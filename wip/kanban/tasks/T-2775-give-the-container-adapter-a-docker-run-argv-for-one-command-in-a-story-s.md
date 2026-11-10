@@ -32,7 +32,7 @@ usage:
       output: 158
       cache_read: 3108857
       cache_write: 86755
-      cost: 1.1753
+      cost: 1.1754
 ---
 # T-2775 Give the container adapter a docker run argv for one command in a story's container with its mounts
 

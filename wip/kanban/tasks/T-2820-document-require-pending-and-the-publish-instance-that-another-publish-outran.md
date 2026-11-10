@@ -3,11 +3,11 @@ id: T-2820
 type: task
 nature: improvement
 title: Document --require-pending and the publish instance that another publish outran
-status: in-progress
+status: done
 parent: S-0643
 owner: agent
 created: 2026-11-09T22:13:08Z
-updated: 2026-11-10T06:44:30Z
+updated: 2026-11-10T06:47:04Z
 transitions:
   - to: ready
     at: 2026-11-10T06:44:29Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T06:44:30Z
     by: agent-S-0643
+  - to: done
+    at: 2026-11-10T06:47:04Z
+    by: agent-S-0643
 stream: S-0643
 tags: [docs, release]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/strategic-agents.md]
 after: [T-2818]
+usage:
+  source: log
+  seconds: 154
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 9739
+      cache_read: 6525048
+      cache_write: 150161
+      cost: 2.4715
 ---
 # T-2820 Document --require-pending and the publish instance that another publish outran
 

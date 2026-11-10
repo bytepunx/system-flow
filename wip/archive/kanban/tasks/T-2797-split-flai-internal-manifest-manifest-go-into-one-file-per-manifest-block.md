@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_strategic.go, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/manifest_accept.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_tests.go]
 usage:
   source: log
-  seconds: 1281
+  seconds: 1319
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 154
-      cache_read: 2728664
-      cache_write: 30935
-      cost: 1.0149
+      input: 20
+      output: 3997
+      cache_read: 2846859
+      cache_write: 85235
+      cost: 1.1345
 ---
 # T-2797 Split flai/internal/manifest/manifest.go into one file per manifest block
 

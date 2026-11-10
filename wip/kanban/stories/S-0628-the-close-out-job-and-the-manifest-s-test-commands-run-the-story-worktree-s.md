@@ -6,7 +6,7 @@ title: The close-out job and the manifest's test commands run the story worktree
 status: in-progress
 owner: alex
 created: 2026-11-07T23:40:34Z
-updated: 2026-11-10T06:41:42Z
+updated: 2026-11-10T06:55:26Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:53Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0628
 tags: [flai, security]
 topics: [harness, docker, verify]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, design/adrs/0272-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in-that-container.md, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md, design/issues/summary.md, design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md, flai/internal/serve/verifyjob_container.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, design/adrs/0272-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in-that-container.md, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md, design/issues/summary.md, design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md, flai/internal/serve/verifyjob_container.go, flai/cmd/checks.go, flai/internal/serve/kluster.go, design/tech/docker.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2973
+  seconds: 3825
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
       hand_edits: 1
-      work: 23
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 152
-      output: 948
-      cache_read: 19153871
-      cache_write: 869817
-      cost: 7.3644
+      input: 288
+      output: 1693
+      cache_read: 42404090
+      cache_write: 1018820
+      cost: 15.9708
   strategic:
     - kind: orchestrator
       seconds: 41

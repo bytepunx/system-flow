@@ -3,16 +3,37 @@ id: T-2784
 type: task
 nature: improvement
 title: Say in the design and the operators' and users' guides what a container story runs inside and what still runs on the host
-status: backlog
+status: done
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:59:18Z
-updated: 2026-11-09T21:59:18Z
-transitions: []
+updated: 2026-11-10T06:55:26Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:50:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T06:50:43Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T06:55:26Z
+    by: agent-S-0628
 stream: S-0628
 tags: [docs, security]
-touches: [design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md]
+touches: [design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/tech/docker.md]
 after: [T-2772, T-2777, T-2782]
+usage:
+  source: log
+  seconds: 283
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 387
+      cache_read: 12868630
+      cache_write: 59601
+      cost: 4.7549
 ---
 # T-2784 Say in the design and the operators' and users' guides what a container story runs inside and what still runs on the host
 

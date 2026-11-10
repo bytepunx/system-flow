@@ -6,20 +6,46 @@ title: "A flaiover design-page test, \"takes up the draft another tab writes\", 
 status: backlog
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T05:54:35Z
+updated: 2026-11-10T06:59:13Z
 transitions: []
-tags: []
+tags: [flaiover, testing, flaky-test]
+topics: [testing]
+touches: [flaiover/src/routes/design/design.svelte.test.ts, design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 131
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 229
+          output: 20601
+          cache_read: 12507832
+          cache_write: 756927
+          cost: 5.2781
 draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
     by: flai
     at: 2026-11-10T05:54:35Z
+  value: 40
+  by: planner-S-0655
+  at: 2026-11-10T06:59:13Z
+forecast:
+  duration: 45m
+  delivery: 2026-11-10T09:05:00Z
+  basis: "Raised from flai forecast's 5m to 45m on S-0640, the same shape of fix, which took 40m with its vitest runs and flaiover close-out; delivery 40m past flai forecast's 08:25."
+  by: planner-S-0655
+  at: 2026-11-10T06:59:13Z
 ---
 # S-0655 A flaiover design-page test, "takes up the draft another tab writes", times out at 5,000 ms under load and stops the flaiover tier
 
@@ -36,3 +62,23 @@ This story remediates [I-0330](../../../design/issues/I-0330-a-flaiover-design-p
 ## Notes
 
 Cost of delay inputs set by flai from I-0330. time_lost_per_cycle 16m: 16m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-11-10T05:37:30Z, 0 days before this story; under one cycle counts as one).
+
+### Planning
+
+The cause is not known yet, and the first task finds it. The failing test is `flaiover/src/routes/design/design.svelte.test.ts` › "editing the design system on the design page (S-0383)" › "takes up the draft another tab writes, and drops its edits when another tab drops it". It calls `open()` once, which mounts the whole Design page, and then `settle()` three times. Each `settle()` waits out 20 `setTimeout(0)` turns and flushes, so the test runs about 60 timer turns, against the 1,240 that caused I-0319 (fixed by S-0640). The issue puts the time in mounting and rendering the page at a load of about 110 on 24 cores. Every other test in the same `describe` mounts the page too, so the fix the first task finds may apply to the whole block. Raising the timeout alone would only hide the cost, so the plan prefers cutting it, as S-0640 did. If the time is the page's own work, which the test cannot cut, the first task may give the slow tests a stated timeout and record why.
+
+Touches:
+
+| Path | Source | Why |
+|------|--------|-----|
+| `flaiover/src/routes/design/design.svelte.test.ts` | design (I-0330's instance) | the test that times out, changed by the first task |
+| `design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md` | design (criterion 2) | `flai issue close` writes it, in the second task |
+| `design/issues/summary.md` | co-change (S-0640's close of I-0319) | `flai issue close` regenerates it, in the second task |
+
+`flai touches suggest` from the test and the issue also listed `flaiover/src/routes/design/+page.svelte`, in 5 of 8 commits. It is left out because it changed alongside the test while the Design page was being built (S-0382 to S-0384), and the plan changes no page code. The story's agent adds it only if the measurement shows the page's mount doing work it should not. `flai task done` would widen the touches then.
+
+Forecast: `flai forecast` gave 5m, from the median of 17 small remediation stories at size 2. It is raised to 45m. S-0640 has the same shape: one test timing out under load, measured, fixed in the test, then the issue closed. It took 40m from start to review, because the close-out alone runs the flaiover tier and the change needs vitest runs before and after to show the time saved. The delivery moves 40m past `flai forecast`'s 08:25 for the same reason.
+
+Cost of delay: `flai cod` gives 40.00 USD a week, from the 16m `time_lost_per_cycle` that flai set from I-0330, at 150 USD an hour. It is written as it stands. The inputs are the operator's.
+
+No `after`: the story reads no other story's output. S-0640's fix of I-0319 is already on main, and the first task reads it as a pattern only.

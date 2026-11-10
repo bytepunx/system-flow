@@ -32,7 +32,7 @@ usage:
       output: 130
       cache_read: 1929923
       cache_write: 22642
-      cost: 0.7181
+      cost: 0.7182
 ---
 # T-2772 Record in an ADR that a container story's close-out runs its verify in that container, and what still runs on the host
 

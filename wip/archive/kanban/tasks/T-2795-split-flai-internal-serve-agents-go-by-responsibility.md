@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_activity.go, flai/internal/mcpserver/server.go]
 usage:
   source: log
-  seconds: 1285
+  seconds: 1316
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 171
-      cache_read: 3046885
-      cache_write: 298545
-      cost: 1.2303
+      input: 23
+      output: 4738
+      cache_read: 3374433
+      cache_write: 101030
+      cost: 1.3447
 ---
 # T-2795 Split flai/internal/serve/agents.go by responsibility
 
