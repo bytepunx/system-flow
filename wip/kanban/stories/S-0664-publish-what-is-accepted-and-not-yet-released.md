@@ -3,14 +3,17 @@ id: S-0664
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:33:20Z
-updated: 2026-11-10T08:33:22Z
+updated: 2026-11-10T08:33:28Z
 transitions:
   - to: ready
     at: 2026-11-10T08:33:22Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:33:28Z
+    by: agent-S-0664
 tags: []
 touches: [wip/kanban/stories/S-0664-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -18,6 +21,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 58
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      hand_edits: 1
+      work: 11
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 172
+      cache_read: 1561205
+      cache_write: 146322
+      cost: 0.6281
+  strategic:
+    - kind: orchestrator
+      seconds: 10
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 4
+          cache_read: 76674
+          cache_write: 1019
+          cost: 0.021
 formula: publish
 ---
 # S-0664 Publish what is accepted and not yet released

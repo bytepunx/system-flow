@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2080.5335
-accrued_seconds: 1539455
-tasks_completed: 2689
-last_run: 2026-11-10T08:32:12Z
+accrued_cost: 2080.9020
+accrued_seconds: 1539562
+tasks_completed: 2694
+last_run: 2026-11-10T08:33:59Z
 ---
 
 # Orchestrator activity
@@ -18855,6 +18855,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0662
 - Seconds: 24
 - Cost: 0.0000 USD
+
+### 2026-11-10T08:32:44Z
+
+- Summary: Accepted S-0652 at a7a8b0e (verify passed at head, recorded; verifier matched both criteria to changed files; dry run had no blocker). Value 27.5 USD/week.
+- Items: S-0652
+- Seconds: 32
+- Cost: 0.0903 USD, estimated
+
+### 2026-11-10T08:33:00Z
+
+- Summary: Approved and resolved the planners' plans for S-0660 (TH-0987: 6 tasks, 3 layers, 1h30m) and S-0662 (TH-0988: 9 tasks, 4 layers, 2h30m); kept the sub-agent kluster status defect out of S-0660's scope. No cost of delay set: both wait on recommendations TH-0979 and TH-0983 awaiting the operator.
+- Items: S-0660, S-0662
+- Seconds: 16
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:33:29Z
+
+- Summary: Release threshold met after S-0652's acceptance (count 1 of 1, 27.5 USD/week): ran flai formula run publish --ready --autocommit, instance S-0664 in ready (commit 81528a8c2); applied flai order --by throughput (S-0664 alone, no forecast). Did not promote S-0241, the only promote candidate (rank 1, 2h): blocked since 2026-10-08 and its Notes say not before headless forks, as TH-0790 awaits the operator.
+- Items: S-0664, S-0652, S-0241
+- Seconds: 29
+- Cost: 0.0630 USD, estimated
+
+### 2026-11-10T08:33:39Z
+
+- Summary: Left draft S-0662 a draft: flai promote --drafts lists it incomplete, no cost of delay value. Opened no new thread: my TH-0983 already asks the missing input and awaits the operator.
+- Items: S-0662
+- Seconds: 10
+- Cost: 0.0317 USD, estimated
+
+### 2026-11-10T08:33:59Z
+
+- Summary: I acted on all five reasons and the run is ending: I accepted S-0652, started a publish, and approved both planner plans.
+- Items: none
+- Seconds: 20
+- Cost: 0.1835 USD, estimated
 
 ## Refusals
 

@@ -3,10 +3,10 @@ id: S-0637
 type: story
 nature: improvement
 title: Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
-status: review
+status: done
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T08:26:41Z
+updated: 2026-11-10T08:34:33Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:15Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T08:26:41Z
     by: agent-S-0637
+  - to: done
+    at: 2026-11-10T08:34:33Z
+    by: alex
 tags: [flai, sync, acceptance]
 topics: [cli, go, code]
 touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0276-a-rebase-that-stops-on-a-markdown-file-under-the-manifest-s-design-or-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
