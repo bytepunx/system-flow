@@ -3,11 +3,11 @@ id: I-0324
 title: TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
 class: defect
 status: open
-count: 4
+count: 5
 cost: 11m
 first_reported: 2026-11-09T22:00:56Z
-last_reported: 2026-11-10T05:24:22Z
-updated: 2026-11-10T05:24:22Z
+last_reported: 2026-11-10T05:35:23Z
+updated: 2026-11-10T05:35:23Z
 ---
 
 # I-0324 TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
@@ -32,6 +32,10 @@ S-0644's close-out (job S-0644-20261109T230952Z, at d88d346) stopped at integrat
 ### 2026-11-10T05:24:22Z
 Story: S-0633.
 S-0633's close-out job S-0633-20261110T051519Z stopped at integration after 7m26s on TestEachRequestIsTimedBeneathTheTransport (channel_test.go:397, no request answered event in the log), at 524a1bea5. S-0633 changes nothing under flai/internal/channel. Asked for the close-out again.
+
+### 2026-11-10T05:35:23Z
+Story: S-0633.
+S-0633's second close-out, job S-0633-20261110T052429Z, stopped at integration again after 10m29s at 141140d6f on TestEachRequestIsTimedBeneathTheTransport (channel_test.go:397, no request answered event), with six stories in progress on the host. S-0649, which remediates this issue, is still in backlog. Asked for the close-out a third time.
 
 ## Remediation
 
