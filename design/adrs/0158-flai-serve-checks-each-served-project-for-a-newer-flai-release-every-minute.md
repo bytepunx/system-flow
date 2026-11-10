@@ -1,8 +1,8 @@
 ---
 id: ADR-0158
 title: "flai serve checks each served project for a newer flai release every minute, upgrades the host to it behind the shell-only auto-upgrade host action, and otherwise asks the operator on one thread per project and release"
-status: proposed
-date: 2026-10-15
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0040, ADR-0142]
