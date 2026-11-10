@@ -4,7 +4,9 @@
 // dashboard's own version, beside the connected flai's.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('GET /api/agent', () => {
+// I-0341: the first test pays the cold import of ./+server and $lib/server/agent after
+// vi.resetModules(), which outlasts vitest's 5 s default on a loaded host.
+describe('GET /api/agent', { timeout: 30000 }, () => {
 	afterEach(() => {
 		vi.resetModules();
 		vi.doUnmock('$lib/server/agent');
