@@ -1,8 +1,8 @@
 ---
 id: ADR-0193
 title: "The dashboard accepts a browser Origin naming one of the hosts in dashboard.allowed_hosts, which flai keeps in the host configuration and passes to the container as FLAIOVER_ALLOWED_HOSTS on each start"
-status: proposed
-date: 2026-10-23
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 ---
