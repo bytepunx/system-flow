@@ -1,8 +1,8 @@
 ---
 id: ADR-0264
 title: "A checked write of a work item runs only the rules the write can affect, before and after, in place of the whole flai check"
-status: proposed
-date: 2026-11-08
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0197, ADR-0213]
