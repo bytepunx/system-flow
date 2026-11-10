@@ -159,14 +159,18 @@ describe('the components page (S-0439)', () => {
 			return w;
 		});
 	}
-	/** The harness in a frame answers, from the dev server's origin. */
-	const harness = async (from: Fake, m: Record<string, unknown>) => {
+	/** The harness in a frame posts a message, from the dev server's origin, without settling. */
+	const post = (from: Fake, m: Record<string, unknown>) => {
 		const e = new MessageEvent('message', {
 			data: { source: 'flai-components', version: 1, ...m },
 			origin: DEV
 		});
 		Object.defineProperty(e, 'source', { value: from });
 		window.dispatchEvent(e);
+	};
+	/** The harness in a frame answers, and the page settles. */
+	const harness = async (from: Fake, m: Record<string, unknown>) => {
+		post(from, m);
 		await settle();
 	};
 	const posted = (w: Fake) => w.postMessage.mock.calls.map(([m]) => m as Posted);
@@ -585,10 +589,15 @@ describe('the components page (S-0439)', () => {
 			]);
 			expect(entries()[0].textContent).toContain('onpick');
 			expect(entries()[0].querySelector('time')).not.toBeNull();
+			// a burst of calls, posted with no settling between them (I-0319), lands whole
 			for (let i = 0; i < 55; i++)
-				await harness(w, { type: 'event', component: SWATCH, name: 'onpick', args: [i] });
+				post(w, { type: 'event', component: SWATCH, name: 'onpick', args: [i] });
+			await settle();
 			expect(entries()).toHaveLength(50);
-			expect(entries()[0].querySelector('code')!.textContent).toBe('[54]');
+			// the newest first, the oldest dropped past the cap of 50
+			expect(entries().map((e) => e.querySelector('code')!.textContent)).toEqual(
+				Array.from({ length: 50 }, (_, k) => `[${54 - k}]`)
+			);
 
 			await click(q(`component-${BUTTON}`));
 			expect(entries()).toHaveLength(0);
