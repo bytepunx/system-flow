@@ -2180,6 +2180,10 @@ func TestTheOrchestratorsPromptSaysHowItPublishes(t *testing.T) {
 		// the publish formula, and release_publish where there is none
 		"To publish where the project has a publish formula (flai formula list shows publish), run flai formula run publish --ready --autocommit",
 		"Where it has none, call the flai MCP tool release_publish with the reason",
+		// under judgement, the reasoning as the formula's judgement input (ADR-0273)
+		"Under judgement, give your reasoning as the formula's judgement input, which its evaluate step passes to flai release --evaluate --judged",
+		`run flai formula run publish --ready --autocommit --input judgement="<your reasoning>", the reasoning one sentence with no double quote, backtick, or dollar sign`,
+		"Under threshold or theme, give no input",
 		// whole_epics
 		"Under any policy, never publish a batch the evaluation holds back under whole_epics, the stories it names in held_by_epic",
 		// the log of a release and of a decision not to publish
@@ -2423,6 +2427,10 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			// the publish formula, and release_publish where there is none (ADR-0240)
 			"When it is met and the project has a publish formula (`flai formula list` shows `publish`), run `flai formula run publish --ready --autocommit`",
 			"When the project has no publish formula, call `release_publish` instead, with the figure that was met, or your reasoning, as its reason",
+			// under judgement, the reasoning as the formula's judgement input (ADR-0273)
+			"Under `judgement`, give your reasoning as the formula's `judgement` input, which its evaluate step passes to `flai release --evaluate --judged`",
+			"`flai formula run publish --ready --autocommit --input judgement=\"<your reasoning>\"`",
+			"Under `threshold` or `theme`, give no input.",
 			"Under `judgement`, it is met only when you judge the unreleased work coherent and complete",
 			"it is never met for a batch the evaluation holds back under `whole_epics` (its `held_by_epic`)",
 			"log the release with `activity_log`: the policy, its figures, the versions and tags, and the items bundled, as `release_publish` returned them",

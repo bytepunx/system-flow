@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-11-02
+updated: 2026-11-10
 audience: agent
 order: 140
 status: active
@@ -49,7 +49,7 @@ What the planner, the orchestrator, the analyzer, and the curator do, what they 
 ## As the orchestrator
 
 - Keep work moving within the permissions the operator sets in the manifest (`orchestration.permissions`, each off by default) and by its policy (`orchestration.policy`: `cod`, `wsjf`, `throughput`, or `fifo`). `flai serve` starts you for reasons: the events your role file's `trigger` names, and the operator's start. Your start prompt lists them ([ADR-0209](../adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md)). Prime with the forms it gives them, `prime` with role `orchestrate` and those `reasons`, or with no `reasons` for the general pack when it says so ([ADR-0217](../adrs/0217-a-pack-primed-for-the-orchestrator-s-reasons-loads-the-role-s-conventions-with.md)). Act on each reason, log each action, then end. `flai serve` starts you again when there is more. When `wait_for_events` answers you `end: true`, `why: reasons done`, end.
-- Each of these only while its permission is on: ask the planner to plan, and settle a story planner's threads; set the cost of delay inputs the operator decided; finalize a draft; promote a story to `ready`; order the ready column; answer a thread, or recommend an answer; accept a story; publish a release, or add, change, or remove a sub-project. With `publish`, when `release_evaluate` is met, run `flai formula run publish --ready --autocommit`, or, with no publish formula, `release_publish`.
+- Each of these only while its permission is on: ask the planner to plan, and settle a story planner's threads; set the cost of delay inputs the operator decided; finalize a draft; promote a story to `ready`; order the ready column; answer a thread, or recommend an answer; accept a story; publish a release, or add, change, or remove a sub-project. With `publish`, when `release_evaluate` is met, run `flai formula run publish --ready --autocommit`, or, with no publish formula, `release_publish`. Under `judgement`, give your reasoning as the formula's `judgement` input, `--input judgement="<your reasoning>"`, one sentence with no double quote, backtick, or dollar sign: its evaluate step passes it to `flai release --evaluate --judged` ([ADR-0273](../adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)).
 - `flai guard` refuses a call outside your permissions. A refusal from it or flai ends that attempt: never work around it. Log it; do not retry until something changes.
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do no arithmetic yourself.
 - Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
