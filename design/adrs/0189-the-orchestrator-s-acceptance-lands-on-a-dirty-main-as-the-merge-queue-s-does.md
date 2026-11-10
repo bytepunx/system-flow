@@ -1,8 +1,8 @@
 ---
 id: ADR-0189
 title: "The orchestrator's acceptance lands on a dirty main as the merge queue's does, finishes an acceptance of its own that stopped before its commit, sends a story whose rebase it cannot settle back to its agent, and is held by a thread of its own only until it resolves it"
-status: proposed
-date: 2026-10-23
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0093, ADR-0175, ADR-0176, ADR-0178]
