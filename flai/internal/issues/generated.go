@@ -91,9 +91,10 @@ func conflicted(text string) bool {
 // SyncFiles is what a rebase of story's branch resolves itself in its
 // worktree, run reading git there: the generated files, the summary and the
 // ADR index, the issue files it merges by their instances, the other
-// markdown files inside the manifest's claims.shared it merges by sections,
-// and the fold of the issues the branch added into the base branch's open
-// issues of the same title (ADR-0098, ADR-0126, ADR-0175, ADR-0228).
+// markdown files inside the manifest's claims.shared or under its design or
+// docs folder it merges by sections, and the fold of the issues the branch
+// added into the base branch's open issues of the same title (ADR-0098,
+// ADR-0126, ADR-0175, ADR-0228, ADR-0276).
 func SyncFiles(r *workitem.Repo, story string, run execx.Runner, now func() time.Time) storygit.Files {
 	return FilesIn(r, RepoFor(r, story).Root, run, now)
 }
@@ -101,9 +102,10 @@ func SyncFiles(r *workitem.Repo, story string, run execx.Runner, now func() time
 // FilesIn is what a rebase stopped in the worktree at root, any checkout of
 // r's repository, resolves itself there, as SyncFiles is for a story's
 // worktree: the merge queue's batch worktree among them. A markdown file
-// inside r's claims.shared that is not a generated file or an issue file is
-// merged by sections with storygit.MergeMarkdown; one it does not settle
-// leaves the stop waiting (ADR-0175).
+// inside r's claims.shared, or under its design or docs folder, that is not a
+// generated file or an issue file is merged by sections with
+// storygit.MergeMarkdown; one it does not settle leaves the stop waiting
+// (ADR-0175, ADR-0276).
 func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Time) storygit.Files {
 	copied := *r
 	copied.Root = root
@@ -119,7 +121,7 @@ func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Ti
 			Merge: func(p string) error { return mergeStopped(run, wt, p, Merge) },
 		},
 		Shared: storygit.MergedFiles{
-			Match: sharedMarkdown(r.SharedClaims(), func(p string) bool { return isIssuePath(r, p) || isGenerated(p) }),
+			Match: sharedMarkdown(r.SharedClaims(), sectionFolders(r.Manifest), func(p string) bool { return isIssuePath(r, p) || isGenerated(p) }),
 			Merge: func(p string) error { return mergeStopped(run, wt, p, storygit.MergeMarkdown) },
 		},
 		Fold: func(base string) ([]storygit.Folded, []string, error) { return foldOnto(run, wt, base, now()) },
@@ -127,16 +129,33 @@ func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Ti
 }
 
 // sharedMarkdown says whether a path, as git names it, is a markdown file
-// inside claims that the other merge steps, covered, do not settle: the one
-// a stop merges by sections (ADR-0175).
-func sharedMarkdown(claims manifest.Claims, covered func(string) bool) func(string) bool {
+// inside claims or under one of folders that the other merge steps, covered,
+// do not settle: the one a stop merges by sections (ADR-0175, ADR-0276).
+func sharedMarkdown(claims manifest.Claims, folders []string, covered func(string) bool) func(string) bool {
 	return func(p string) bool {
 		if !strings.HasSuffix(p, ".md") || covered(p) {
 			return false
 		}
+		if slices.ContainsFunc(folders, func(f string) bool { return strings.HasPrefix(p, f+"/") }) {
+			return true
+		}
 		_, ok := claims.Match(p)
 		return ok
 	}
+}
+
+// sectionFolders is the manifest's design and docs folders, as git names
+// them, under which every markdown file a stop leaves merges by sections
+// (ADR-0276). A layout folder that is the repository root names none, so
+// that the wip folder and the sub-projects stay out.
+func sectionFolders(m manifest.Manifest) []string {
+	var out []string
+	for _, k := range []string{"design", "docs"} {
+		if d := strings.Trim(path.Clean(filepath.ToSlash(m.Layout[k])), "/"); d != "" && d != "." {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 // isIssuePath reports whether p, relative to the repository root and

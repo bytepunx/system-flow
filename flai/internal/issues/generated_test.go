@@ -15,13 +15,15 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// ADR-0175: a rebase merges by sections each markdown file inside the
-// manifest's claims.shared that the generated files, the summary and the ADR
-// index, and the issue files do not already cover; any other path, and a shared path that is not
-// markdown, is not merged by sections.
+// ADR-0175, ADR-0276: a rebase merges by sections each markdown file inside
+// the manifest's claims.shared or under its design or docs folder that the
+// generated files, the summary and the ADR index, and the issue files do not
+// already cover; any other path, a markdown file under wip, in a sub-project,
+// or at the root among them, and a shared path that is not markdown, is not
+// merged by sections.
 func TestFilesInMergesTheSharedMarkdownFilesBySections(t *testing.T) {
 	root := t.TempDir()
-	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" +
+	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs/\n  wip: wip\n" +
 		"claims:\n  shared:\n    - design/system/flai-cli.md\n    - design/adrs\n    - design/issues\n    - docs/users/**\n    - template/CHANGELOG.md\n"
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
 		t.Fatal(err)
@@ -43,7 +45,14 @@ func TestFilesInMergesTheSharedMarkdownFilesBySections(t *testing.T) {
 		"design/issues/I-0001-a-friction.md":  false, // an issue file, merged by its instances
 		"design/issues/summary.md":            false, // generated
 		"docs/users/notes.txt":                false, // shared, not markdown
-		"design/system/flaiover-dashboard.md": false, // not shared
+		"design/system/server-performance.md": true,  // not shared, under the design folder (I-0315)
+		"design/digest/D-0001-a-fact.md":      true,  // under the design folder
+		"docs/operators/index.md":             true,  // not shared, under the docs folder
+		"design/system/tokens.json":           false, // under the design folder, not markdown
+		"wip/agents/S-0001.md":                false, // wip is flai's
+		"wip/kanban/stories/S-0001-a.md":      false,
+		"flai/README.md":                      false, // a sub-project's
+		"designs/notes.md":                    false, // a folder that only starts with design
 		"README.md":                           false,
 	} {
 		if got := files.Shared.Match(p); got != want {
