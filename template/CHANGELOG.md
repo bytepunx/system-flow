@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.32 - 2026-11-10
+
+- S-0643 A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make (patch).
 - S-0643 The baseline `publish` formula's publish step runs `flai release --pending --require-pending --json` with `stop: [2]` (patch): when another publish released what was pending after the evaluate step ran, the step stops the run cleanly and its output's `covered_by` names that release, rather than closing on a release it did not make (I-0320).
 
 ## 1.1.31 - 2026-11-10

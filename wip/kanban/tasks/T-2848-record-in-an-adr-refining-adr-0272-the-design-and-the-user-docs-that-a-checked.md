@@ -3,14 +3,17 @@ id: T-2848
 type: task
 nature: improvement
 title: Record in an ADR refining ADR-0272, the design, and the user docs that a checked edit holds the checked-write lock
-status: ready
+status: in-progress
 parent: S-0654
 owner: alex
 created: 2026-11-10T07:01:24Z
-updated: 2026-11-10T07:44:38Z
+updated: 2026-11-10T07:44:43Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:38Z
+    by: agent-S-0654
+  - to: in-progress
+    at: 2026-11-10T07:44:43Z
     by: agent-S-0654
 stream: S-0654
 tags: [flai, docs, adr]

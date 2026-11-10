@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:44:39Z
+updated: 2026-11-10T07:44:46Z
 ---
 
 # Active streams
@@ -14,13 +14,13 @@ updated: 2026-11-10T07:44:39Z
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0651](S-0651.md) | flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200 | in-progress | agent-S-0651 | 2026-11-10T07:24:01Z |
 | [S-0653](S-0653.md) | TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports | in-progress | agent-S-0653 | 2026-11-10T07:38:06Z |
-| [S-0654](S-0654.md) | A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses | in-progress | agent-S-0654 | 2026-11-10T07:44:20Z |
+| [S-0654](S-0654.md) | A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses | in-progress | agent-S-0654 | 2026-11-10T07:44:46Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 192 | 1145.9750 USD | 146455 | 2026-11-10T07:01:28Z |
-| [orchestrator](orchestrator.md) | 2653 | 2076.9740 USD | 1538379 | 2026-11-10T07:44:08Z |
+| [orchestrator](orchestrator.md) | 2654 | 2077.1767 USD | 1538399 | 2026-11-10T07:44:28Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 119 | 189.3079 USD | 20829 | 2026-11-10T07:23:56Z |
