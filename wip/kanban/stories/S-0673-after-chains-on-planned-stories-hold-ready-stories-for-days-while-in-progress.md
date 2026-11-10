@@ -3,11 +3,14 @@ id: S-0673
 type: story
 nature: improvement
 title: after chains on planned stories hold ready stories for days while in-progress stays under two of five
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:51Z
-updated: 2026-11-10T08:50:30Z
-transitions: []
+updated: 2026-11-10T08:54:23Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:50:36Z
+    by: alex
 tags: [flai]
 topics: [ready]
 touches: [design/adrs, design/adrs/README.md, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents_launch.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/inbox/events.go, flai/internal/mcpserver/server.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, design/issues/I-0285-after-chains-on-planned-stories-hold-ready-stories-for-days-while-in-progress.md, design/issues/summary.md]
@@ -47,10 +50,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:47Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T15:25:00Z
-  basis: flai forecast's 37m for size 22 (2 criteria, 20 touches), raised to 1h for an ADR and four tasks in three layers
-  by: planner-S-0673
-  at: 2026-11-10T08:49:59Z
+  delivery: 2026-11-10T10:57:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687 and S-0674."
+  by: flai
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:30Z

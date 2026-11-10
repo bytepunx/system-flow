@@ -6,7 +6,7 @@ title: A docker run from a story's agent's shell mounts the main checkout as an 
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T08:51:21Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [docker, agent-container]
 touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md]
@@ -25,10 +25,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:30:00Z
-  basis: flai forecast's 13m (size 7 at 107 s a unit) raised to 1h30m for live docker runs on the host across shells before the fix, as S-0567's live run took 1h
-  by: planner-S-0667
-  at: 2026-11-10T08:49:29Z
+  delivery: 2026-11-10T16:00:00Z
+  basis: "Its own forecast of 1h30m; 13th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665 and S-0666."
+  by: flai
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:21Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-10T08:49:28Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -42,10 +42,10 @@ usage:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:51:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0685, S-0241 and S-0659."
+  delivery: 2026-11-10T14:52:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241 and S-0659."
   by: flai
-  at: 2026-11-10T08:49:28Z
+  at: 2026-11-10T08:54:23Z
 ---
 # S-0660 A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled
 

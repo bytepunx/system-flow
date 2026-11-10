@@ -3,11 +3,14 @@ id: S-0674
 type: story
 nature: improvement
 title: Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:52Z
-updated: 2026-11-10T08:50:26Z
-transitions: []
+updated: 2026-11-10T08:54:23Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:50:34Z
+    by: alex
 tags: [flai]
 topics: [metrics, claims]
 touches: [design/adrs, flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, design/system/metrics.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, docs/users/flai.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md]
@@ -21,6 +24,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 67
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 73
+          output: 14114
+          cache_read: 4735506
+          cache_write: 105255
+          cost: 1.9583
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -47,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:36Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-10T16:30:00Z
-  basis: "flai forecast's 36m (101 s per unit times size 21) raised to 2h30m for five tasks: an ADR, two tested Go changes in storygit/metrics and taskdone/itemedit, docs across seven files, a measured issue close, and close-out tiers; start as flai places it, 16th in the pull order"
-  by: planner-S-0674
-  at: 2026-11-10T08:49:36Z
+  delivery: 2026-11-10T12:59:00Z
+  basis: "Its own forecast of 2h30m; 1st in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685 and S-0687."
+  by: flai
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:26Z
@@ -102,6 +115,17 @@ The `outside` half is attribution, not missed claims. `storygit.Committed` (`fla
 
 An ADR refining ADR-0144 and the S-0205 definition in `design/system/metrics.md` § Claims and touches records both. The metrics contract changes only with an ADR.
 
+#### Tasks and layers
+
+| Layer | Task | Waits for |
+|-------|------|-----------|
+| 1 | T-2936 the ADR | none |
+| 2 | T-2939 the drift leaves out flai's folders, with the reproducing test | T-2936, whose decision it builds |
+| 2 | T-2940 task done narrows | T-2936, whose decision it builds |
+| 3 | T-2941 measure and close I-0286 | T-2939 and T-2940, whose effect it measures |
+
+T-2939 and T-2940 share no path and run together.
+
 #### Touches
 
 | Touch | Source | Why |
@@ -120,8 +144,8 @@ An ADR refining ADR-0144 and the S-0205 definition in `design/system/metrics.md`
 
 #### Figures
 
-- **Forecast.** `flai forecast` gave 2m from size 2 (2 criteria, 0 touches), with no touches declared. See the forecast's basis for the figure set.
-- **Cost of delay.** `flai cod` gives 600 USD a week: 4h lost per 168h cycle at 150 USD an hour, from the operator's `time_lost_per_cycle`. The value stands as flai works it out. The instances suggest that the issue's 4h, the send-backs at acceptance, comes less from wrong claims than the issue assumed. The `outside` files were never missed claims. The plan's thread raises this for the operator, who owns the input.
+- **Forecast: 2h30m, delivery 2026-11-10T16:30Z.** `flai forecast` gave 36m once the 19 touches were written (101 s per unit times size 21, over 151 large improvement stories). Raised because size counts touches but not the work behind them: an ADR, two Go changes with tests, docs across seven files, a measured issue close, and close-out tiers that run integration and smoke for a story touching `flai/` and `template/`. The delivery keeps flai's start, 16th in the pull order, and adds the longer duration.
+- **Cost of delay: 600 USD a week.** `flai cod` gives this: 4h lost per 168h cycle at 150 USD an hour, from the operator's `time_lost_per_cycle`. The value stands as flai works it out. The instances suggest that the issue's 4h, the send-backs at acceptance, comes less from wrong claims than the issue assumed. The `outside` files were never missed claims. The plan's thread raises this for the operator, who owns the input.
 
 #### after
 

@@ -6,7 +6,7 @@ title: After a stop from the dashboard, the story's agent page shows the agent s
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T08:51:13Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [flaiover, agent]
 topics: [dashboard, agents]
@@ -16,6 +16,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 120
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 34
+          output: 169
+          cache_read: 3181303
+          cache_write: 230669
+          cost: 0.9248
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 53
+          cache_read: 70112
+          cache_write: 35435
+          cost: 0.0787
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -26,10 +47,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:12Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:38:00Z
-  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667 and S-0668."
+  delivery: 2026-11-10T16:18:00Z
+  basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667 and S-0668."
   by: flai
-  at: 2026-11-10T08:49:28Z
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:13Z

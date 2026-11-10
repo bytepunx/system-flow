@@ -6,7 +6,7 @@ title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and 
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:46Z
-updated: 2026-11-10T08:51:03Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [scripts, docker]
 topics: [docker, code]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:24Z
 forecast:
   duration: 40m
-  delivery: 2026-11-10T13:14:00Z
-  basis: "Its own forecast of 40m; 12th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668 and S-0669."
+  delivery: 2026-11-10T16:26:00Z
+  basis: "Its own forecast of 40m; 16th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668 and S-0669."
   by: flai
-  at: 2026-11-10T08:49:28Z
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:03Z

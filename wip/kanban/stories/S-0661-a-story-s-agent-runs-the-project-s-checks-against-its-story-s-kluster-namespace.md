@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-10T08:49:28Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-11-10T14:18:00Z
-  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659 and S-0660."
+  delivery: 2026-11-10T16:19:00Z
+  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659 and S-0660."
   by: flai
-  at: 2026-11-10T08:49:28Z
+  at: 2026-11-10T08:54:23Z
 ---
 # S-0661 A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
 

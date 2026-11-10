@@ -6,7 +6,7 @@ title: A story's agent in a container cannot write its narrative's Decisions, Co
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T08:51:18Z
+updated: 2026-11-10T08:54:23Z
 transitions: []
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-11-10T08:50:21Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:02:00Z
-  basis: flai forecast's 34m (106 s per unit over 63 large remediation stories, size 19), raised to 45m since S-0271, which built stream state across the same CLI, MCP, and host channel, took 41m of agent time, and this one adds the threads-block care in Open questions.
-  by: planner-S-0668
-  at: 2026-11-10T08:50:21Z
+  delivery: 2026-11-10T15:33:00Z
+  basis: "Its own forecast of 45m; 14th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666 and S-0667."
+  by: flai
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:18Z

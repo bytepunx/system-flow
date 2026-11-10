@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T08:51:21Z
+updated: 2026-11-10T08:54:23Z
 ---
 
 # Active streams
@@ -10,7 +10,6 @@ updated: 2026-11-10T08:51:21Z
 | [S-0408](S-0408.md) | An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles | cancelled | system-flow | 2026-11-07T22:14:13Z |
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
-| [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | review | agent-S-0638 | 2026-11-10T08:47:44Z |
 | [S-0648](S-0648.md) | flai check finds `item.duplicate-id` outside the story at close-out | review | agent-S-0648 | 2026-11-10T08:43:34Z |
 | [S-0664](S-0664.md) | Publish what is accepted and not yet released | review | agent-S-0664 | 2026-11-10T08:35:53Z |
 | [S-0680](S-0680.md) | flai guard refuses the orchestrator flai serve status, a read, because its reads do not list serve status | in-progress | agent-S-0680 | 2026-11-10T08:50:37Z |
@@ -23,7 +22,7 @@ updated: 2026-11-10T08:51:21Z
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 207 | 1161.9352 USD | 146734 | 2026-11-10T08:50:46Z |
-| [orchestrator](orchestrator.md) | 2708 | 2082.4145 USD | 1539855 | 2026-11-10T08:49:56Z |
+| [planner](planner.md) | 209 | 1164.1047 USD | 146822 | 2026-11-10T08:52:14Z |
+| [orchestrator](orchestrator.md) | 2714 | 2083.4180 USD | 1540066 | 2026-11-10T08:53:39Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 120 | 192.1806 USD | 21470 | 2026-11-10T08:06:37Z |

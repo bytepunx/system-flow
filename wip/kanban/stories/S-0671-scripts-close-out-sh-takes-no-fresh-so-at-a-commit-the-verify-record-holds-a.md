@@ -3,11 +3,14 @@ id: S-0671
 type: story
 nature: improvement
 title: scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T08:50:50Z
-transitions: []
+updated: 2026-11-10T08:54:23Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:50:54Z
+    by: alex
 tags: [flai, template, close-out, verify, scripts]
 topics: [code, review]
 touches: [scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, template/CHANGELOG.md, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/devex.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/summary.md]
@@ -26,10 +29,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:59Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T13:39:00Z
-  basis: "Its own forecast of 45m; 13th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669 and S-0670."
+  delivery: 2026-11-10T11:37:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673 and S-0672."
   by: flai
-  at: 2026-11-10T08:49:28Z
+  at: 2026-11-10T08:54:23Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:50Z
