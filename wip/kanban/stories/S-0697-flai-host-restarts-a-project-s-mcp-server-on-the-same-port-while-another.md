@@ -6,7 +6,7 @@ title: flai host restarts a project's MCP server on the same port while another 
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:33Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T11:05:34Z
 transitions: []
 tags: [flai, host, mcp]
 topics: [mcp, host]
@@ -37,7 +37,16 @@ usage:
           cache_read: 9188806
           cache_write: 175332
           cost: 3.193
-draft: true
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 2
+          cache_read: 102139
+          cache_write: 491
+          cost: 0.0281
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -48,10 +57,13 @@ cost_of_delay:
   at: 2026-11-10T10:28:31Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T02:13:00Z
-  basis: "Its own forecast of 45m; 28th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683, S-0686, S-0688, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695 and S-0696."
+  delivery: 2026-11-11T01:34:00Z
+  basis: "Its own forecast of 45m; 27th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695 and S-0696."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T11:05:34Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:04:41Z
 ---
 # S-0697 flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
 

@@ -6,7 +6,7 @@ title: A strategic agent's container can write the main checkout's .git/config, 
 status: ready
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions:
   - to: ready
     at: 2026-11-10T11:00:29Z
@@ -49,10 +49,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:24Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T16:01:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679 and S-0681."
+  delivery: 2026-11-10T12:52:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708 and S-0666."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 finalized:
   by: alex
   at: 2026-11-10T11:00:24Z

@@ -6,7 +6,7 @@ title: A story worktree's flaiover/node_modules installed inside the Alpine agen
 status: backlog
 owner: alex
 created: 2026-11-10T09:11:37Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions: []
 tags: [flaiover, scripts, agent-container]
 touches: [flaiover/package.json, scripts/flaiover-install.sh, scripts/flaiover-install-test.sh, scripts/README.md, design/tech/node.md, docs/operators/runbooks/agent-container.md, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md, design/issues/summary.md]
@@ -15,7 +15,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 2
+          cache_read: 102139
+          cache_write: 491
+          cost: 0.0281
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -26,10 +40,13 @@ cost_of_delay:
   at: 2026-11-10T10:31:25Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T05:17:00Z
-  basis: "Its own forecast of 45m; 35th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700, S-0701, S-0702, S-0703 and S-0705."
+  delivery: 2026-11-11T04:38:00Z
+  basis: "Its own forecast of 45m; 35th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700, S-0701, S-0702, S-0703 and S-0705."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:04:46Z
 ---
 # S-0706 A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse
 

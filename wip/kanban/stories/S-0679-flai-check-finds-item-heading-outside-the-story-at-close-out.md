@@ -6,7 +6,7 @@ title: "flai check finds `item.heading` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:07Z
@@ -18,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 2
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 0
+          cache_read: 52492
+          cache_write: 3880
+          cost: 0.0154
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -25,10 +40,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:49Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T15:31:00Z
-  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677 and S-0678."
+  delivery: 2026-11-10T13:50:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688 and S-0677."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 finalized:
   by: alex
   at: 2026-11-10T10:58:03Z

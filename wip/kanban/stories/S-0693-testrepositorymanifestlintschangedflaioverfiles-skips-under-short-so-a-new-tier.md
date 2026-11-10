@@ -6,7 +6,7 @@ title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a 
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions: []
 tags: [flai, tests]
 topics: [code]
@@ -38,16 +38,15 @@ usage:
           cache_write: 163919
           cost: 3.0848
     - kind: orchestrator
-      seconds: 17
+      seconds: 23
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 2
-          cache_read: 260162
-          cache_write: 10069
-          cost: 0.0739
-draft: true
+          input: 3
+          output: 4
+          cache_read: 362301
+          cache_write: 10560
+          cost: 0.102
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -58,10 +57,13 @@ cost_of_delay:
   at: 2026-11-10T10:29:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T01:41:00Z
-  basis: "Its own forecast of 45m; 23rd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691 and S-0692."
+  delivery: 2026-11-11T01:02:00Z
+  basis: "Its own forecast of 45m; 23rd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691 and S-0692."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:04:43Z
 ---
 # S-0693 TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
 

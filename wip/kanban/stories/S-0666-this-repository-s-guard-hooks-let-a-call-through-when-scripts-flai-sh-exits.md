@@ -6,7 +6,7 @@ title: This repository's guard hooks let a call through when scripts/flai.sh exi
 status: ready
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:24Z
@@ -40,6 +40,16 @@ usage:
           cache_read: 68935829
           cache_write: 1044206
           cost: 23.6176
+    - kind: orchestrator
+      seconds: 2
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 0
+          cache_read: 52492
+          cache_write: 3880
+          cost: 0.0154
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -47,10 +57,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:48Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:56:00Z
-  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674 and S-0704."
+  delivery: 2026-11-10T12:39:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 3, behind S-0665, S-0667 and S-0708."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:18Z

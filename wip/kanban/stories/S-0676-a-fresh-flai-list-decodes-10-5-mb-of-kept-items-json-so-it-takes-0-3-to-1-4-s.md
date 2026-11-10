@@ -6,7 +6,7 @@ title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 
 status: ready
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:41Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T14:31:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666 and S-0675."
+  delivery: 2026-11-10T15:14:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679 and S-0675."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:37Z

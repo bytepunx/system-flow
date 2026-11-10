@@ -6,7 +6,7 @@ title: No analysis.schedule or analysis.formula is set, so the analyzer ran once
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions: []
 tags: [flai, analyzer, manifest]
 topics: [analysis, cli]
@@ -21,6 +21,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 3
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 0
+          cache_read: 52492
+          cache_write: 3880
+          cost: 0.0154
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -45,10 +55,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:48Z
 forecast:
   duration: 38m
-  delivery: 2026-11-11T01:08:00Z
-  basis: "Its own forecast of 38m; 22nd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0688, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690 and S-0691."
+  delivery: 2026-11-11T00:29:00Z
+  basis: "Its own forecast of 38m; 22nd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690 and S-0691."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 ---
 # S-0692 No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
 

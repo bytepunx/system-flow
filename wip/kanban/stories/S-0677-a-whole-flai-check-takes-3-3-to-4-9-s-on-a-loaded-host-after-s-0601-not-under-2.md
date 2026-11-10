@@ -6,7 +6,7 @@ title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not
 status: ready
 owner: alex
 created: 2026-11-10T08:34:54Z
-updated: 2026-11-10T11:01:50Z
+updated: 2026-11-10T11:05:34Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:48Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:31Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T15:20:00Z
-  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0674, S-0704, S-0666, S-0675 and S-0676."
+  delivery: 2026-11-10T13:44:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666 and S-0688."
   by: flai
-  at: 2026-11-10T11:01:50Z
+  at: 2026-11-10T11:05:34Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:45Z
