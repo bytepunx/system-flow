@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 ---
 
@@ -69,6 +69,22 @@ Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is gi
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
 
+### The close-out's and the checks' containers
+
+Under `flai serve`, a story whose agent runs on `harness: container` is closed out, and checked, in containers of their own from the same image, so nothing from its worktree runs on the host ([ADR-0274](../../../design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md)). This script does not start them; `flai serve` does. Their mounts beside the agent's:
+
+| Mount | The agent's container | The close-out's and the checks' |
+|-------|-----------------------|---------------------------------|
+| the story's worktree, the working directory | read-write | read-write |
+| `.git` of the main checkout | read-only | read-only |
+| the story's registration, `.git/worktrees/S-nnnn` | read-write | read-write |
+| `wip/` and `system-flow.yaml` of the main checkout | read-only | read-only |
+| `.flai-cache/verify` of the main checkout | read-write | read-write |
+| `.flai-cache/agents/S-nnnn` | read-write | not mounted |
+| the login | read-only | not mounted |
+
+The close-out's container is `flai-closeout-S-nnnn-<stamp>`, with `-r2` and `-r3` when main moved and it ran again, and runs `flai verify S-nnnn --record-issues`. Each check's is `flai-check-S-nnnn-<stamp>-<n>`. Neither gets the MCP server's URL or token, a provider's key, or `host.docker.internal`. The close-out's commit, its sync check, and its sync run on the host through git and `flai serve`'s own flai, with the main checkout's hooks only. `docker ps --filter name=flai-closeout-` and `--filter name=flai-check-` list them while they run.
+
 The script sets two variables in the container so that its flai writes nothing under the container's home, `/home/agent`:
 
 | Variable | Points at | For |
@@ -121,4 +137,4 @@ If a token in an `mcp.json` may have been copied elsewhere, rotate it with `flai
 
 ## Limitations
 
-S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. The close-out runs inside the container past `flai verify`'s own steps, since the main checkout's `wip/`, `system-flow.yaml`, and `.flai-cache/verify` are mounted (ADR-0253, I-0218). Its tiers need the project's layer image, `flai-agent-sf-claude-code:local` here (S-0510), which this script does not run: in `flai-agent-claude-code:local` the close-out stops at the first tier that needs `go`. Its commit step stops inside the container whenever anything is uncommitted, such as an issue `--record-issues` recorded, since commits are the host's: commit through `task_done` and ask for the close-out from the host. Read S-0505's results before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).
+S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. The close-out runs inside the container past `flai verify`'s own steps, since the main checkout's `wip/`, `system-flow.yaml`, and `.flai-cache/verify` are mounted (ADR-0253, I-0218). Its tiers need the project's layer image, `flai-agent-sf-claude-code:local` here (S-0510), which this script does not run: in `flai-agent-claude-code:local` the close-out stops at the first tier that needs `go`. Its commit step stops inside the container whenever anything is uncommitted, such as an issue `--record-issues` recorded, since commits are the host's: commit through `task_done` and ask for the close-out from the host, whose job verifies in a container and commits on the host ([above](#the-close-outs-and-the-checks-containers)). Read S-0505's results before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).

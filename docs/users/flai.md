@@ -561,10 +561,30 @@ A check scoped to a story, as a close-out's is, leaves out the last two unless t
 What it does not do yet:
 
 - Git does not commit in the container, as above. Use the MCP tools `task_done`, `stream_sync`, and `verify`, which run on the host ([Story branches](#story-branches)).
-- The close-out cannot run in the container, since it commits and only the host does (S-0520). A layer such as this repository's gives the image the tiers' tools, so `flai test` runs there (S-0510).
+- The close-out does not commit in the agent's container. The agent asks `flai serve` for it with the MCP tool `verify`, and the job runs the verify in a container of its own and commits on the host ([below](#a-container-storys-close-out-and-checks)). A layer such as this repository's gives the image the tiers' tools, so `flai test` runs there (S-0510).
 - Claude Code's version in the image is not checked against `permission_prompt`, as above.
 
 [Run a story's agent in a container](../operators/runbooks/agent-container.md) runs one by hand with `scripts/agent-container.sh`.
+
+##### A container story's close-out and checks
+
+The story's worktree is its container's to write, so `flai serve` runs nothing from it on the host for a story whose agent runs on `container` (S-0628, [ADR-0274](../../design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md)). The close-out job and the operator's checks of such a story run in containers of their own, from the image the agent's start would use, with the first six mounts of the table above, in a container named for what it runs:
+
+| What | Container | Runs |
+|------|-----------|------|
+| The close-out's verify | `flai-closeout-<story>-<stamp>`, then `-r2` and `-r3` when main moved | `flai verify <story> --record-issues`, with `--all` and `--fresh` as asked, and `FLAI_AGENT` passed by name |
+| Each of the operator's checks ([The checks host action](../operators/index.md#the-checks-host-action-s-0082)) | `flai-check-<story>-<stamp>-<n>` | the check's argument list, its first word the entrypoint, with the run's variables passed by name |
+
+Neither mounts the login or the cache folder, nor gets the MCP server's URL or token or a provider's key. The close-out's other steps run on the host, through git and `flai serve`'s own flai, as `scripts/close-out.sh` runs them, at most three rounds: the commit with the message you gave, `flai verify <story> --sync-only`, and `flai stream sync <story>` when main moved. Each git and flai there runs with the main checkout's `.git/hooks` as `core.hooksPath` and no `core.fsmonitor`, and git takes the git dir and the common dir from the main checkout, not from the worktree's files. A hook or a setting the container wrote runs nothing on the host.
+
+| When | What happens |
+|------|--------------|
+| `docker` is not on `PATH`, or the image is not on this host | The close-out ends `failed`, and each check fails, naming the fix the start's refusal names; nothing runs on the host instead |
+| The worktree's `.git` file, or its registration's `commondir`, no longer points at the main checkout | The close-out is refused, naming `git worktree repair` |
+| The check is cancelled or runs out of time | `docker stop` on its container's name, then the run ends |
+| A kluster check | It gets the `FLAI_KLUSTER_*` variables and `KUBECONFIG`, but not the kubeconfig or the state under the main checkout's `.flai-cache`, which is not mounted, so it cannot reach the cluster through them |
+
+What still runs a container story's code on the host, by design: the merge queue's batch tiers and an acceptance's `fix_command`, in the main checkout after an acceptance decision, and `flai test` and `flai verify` when you run them by hand, the dashboard's test and verify runs among them. A story on any other harness keeps `scripts/close-out.sh` and its checks on the host.
 
 ##### The strategic agents in a container
 
@@ -2144,7 +2164,7 @@ flai verify S-0037 --job -m "feat: [S-0037] what it did"   # prints the job's id
 flai verify S-0037 --last                                    # the result, once the job ended
 ```
 
-The MCP tool `verify`, with `story` and `message`, asks the same way. `-m`/`--message` is the commit message the close-out commits with; `--all` and `--fresh` go to the job. flai serve runs `scripts/close-out.sh S-0037 -m "<message>"` in the story's worktree, or `flai verify S-0037 --record-issues` where the worktree has no close-out script, with no model, for at most two hours. The request answers the job's id as soon as flai serve takes it. A job already running for the story is answered with its id, and a commit the record holds a passing verdict for is answered from the record at once, starting no job.
+The MCP tool `verify`, with `story` and `message`, asks the same way. `-m`/`--message` is the commit message the close-out commits with; `--all` and `--fresh` go to the job. flai serve runs `scripts/close-out.sh S-0037 -m "<message>"` in the story's worktree, or `flai verify S-0037 --record-issues` where the worktree has no close-out script, with no model, for at most two hours. For a story whose agent runs on `container`, it runs the verify in a container from the story's image and the commit and the sync on the host, and runs nothing from the worktree there ([A container story's close-out and checks](#a-container-storys-close-out-and-checks), ADR-0274). The request answers the job's id as soon as flai serve takes it. A job already running for the story is answered with its id, and a commit the record holds a passing verdict for is answered from the record at once, starting no job.
 
 When the job ends, flai serve adds a `verified` event for the story, with the job, the commit, the verdict (`passed`, `stopped` with `stopped_at`, `failed`, or `interrupted` when flai serve stopped while it ran), the duration, and `recorded` when it came from the record. The story's agent holds `wait_for_events` until it comes, then reads the result with `flai verify S-0037 --last`. `flai serve journal` shows each job's start and end, with the end's verdict and duration ([Close-out jobs](../operators/index.md#close-out-jobs-s-0546)).
 
