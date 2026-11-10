@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-07T08:17:35Z
+updated: 2026-11-10T08:34:51Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,5 @@ claims.weeks[].held_seconds.after: W44 704,200 s, W45 203,155 s; S-0425 held 326
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0673 remediates this issue, created from it at 2026-11-10T08:34:51Z.
