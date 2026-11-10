@@ -4,10 +4,10 @@ title: "S-0645 not accepted: its close-out at e8da740 stops at sync, 8 commits b
 anchor:
   path: wip/kanban/stories/S-0645-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md
   item: S-0645
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T01:00:02Z
-updated: 2026-11-10T01:00:02Z
+updated: 2026-11-10T05:13:38Z
 ---
 
 # TH-0964 S-0645 not accepted: its close-out at e8da740 stops at sync, 8 commits behind main
@@ -33,3 +33,6 @@ No tier ran, so the tests T-2816 added have not passed at the head.
 - 2: `design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md`, `design/issues/summary.md`
 
 Only the passing close-out is missing. S-0633 and S-0638 wait in progress on S-0645's acceptance (TH-0963, TH-0962).
+
+### 2026-11-10T05:13:38Z alex
+Resolved: S-0645 was accepted

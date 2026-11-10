@@ -3,10 +3,10 @@ id: S-0645
 type: story
 nature: remediation
 title: TestTCPAnswersAListenerAndNotAClosedOne fails on every run on the operator's WSL2 host, on main as well, because a closed 127.0.0.1 port still accepts a connection there
-status: review
+status: done
 owner: alex
 created: 2026-11-09T21:50:55Z
-updated: 2026-11-09T23:04:38Z
+updated: 2026-11-10T05:13:38Z
 transitions:
   - to: ready
     at: 2026-11-09T22:19:58Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T23:04:38Z
     by: agent-S-0645
+  - to: done
+    at: 2026-11-10T05:13:38Z
+    by: alex
 tags: [flai, testing]
 topics: [testing, go]
 touches: [flai/cmd/dashboard_porthold.go, flai/cmd/dashboard_porthold_test.go, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]

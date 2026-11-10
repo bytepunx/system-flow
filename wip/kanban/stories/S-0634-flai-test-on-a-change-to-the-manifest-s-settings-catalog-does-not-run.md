@@ -3,10 +3,10 @@ id: S-0634
 type: story
 nature: improvement
 title: flai test on a change to the manifest's settings catalog does not run TestReferenceIsCurrent, so a stale flai-reference.md first fails in the close-out's integration tier
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-07T23:41:12Z
-updated: 2026-11-09T22:49:38Z
+updated: 2026-11-10T05:13:22Z
 transitions:
   - to: ready
     at: 2026-11-09T22:01:06Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T22:49:32Z
     by: agent-S-0634
+  - to: in-progress
+    at: 2026-11-10T05:13:22Z
+    by: flai
 tags: []
 topics: [testing, flai, docs]
 touches: [flai/cmd/reference_test.go, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
@@ -117,3 +120,4 @@ Figures:
 
 - Forecast 30m, raised from flai's 16m (size 9 from 2 criteria and 7 touches). The three tasks run one after another, each with its `flai test` run, and the close-out runs the integration tier, which took 6m26s in S-0595, and smoke, since the story touches `flai/` and `system-flow.yaml`.
 - Cost of delay 25 USD a week, as `flai cod` gives it: 10m lost per 168h cycle at 150 USD an hour. It stands, since I-0308 has one instance.
+- 2026-11-10T05:13:22Z: moved to in-progress: the rebase of story/S-0634 onto main stopped on conflicts in design/conventions/tooling.md, design/system/devex.md, which the acceptance of S-0634 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0634
