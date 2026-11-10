@@ -6,9 +6,9 @@ on:
     branches: [main]
     paths: ["flaiover/**", "flai/**", ".github/workflows/release-flaiover.yml"]
 
+# Each job names the writes its steps need; nothing writes by default.
 permissions:
   contents: read
-  packages: write
 
 # A push to main builds and pushes latest and sha-* and nothing else, with no
 # release stamp: release-key and release run only on a flaiover/v* tag. On a
@@ -48,13 +48,13 @@ jobs:
             fi
           done
           exit "$missing"
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       # Pinned: the sign flags below are cosign v3's, and v4 removes two of
       # them (design/system/release-signing.md). The installer has no moving
       # v4 tag.
-      - uses: sigstore/cosign-installer@v4.1.2
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: v3.1.3
       # The statement has no trailing newline, as the dashboard verifies it
@@ -92,19 +92,19 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
       version: ${{ steps.flai.outputs.flaiover }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ghcr.io/bytepunx/flaiover
           tags: |
@@ -139,7 +139,7 @@ jobs:
       # name. On main the stamp's outputs are empty, and the image has no stamp.
       - name: Build and push
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: flaiover/Dockerfile
@@ -176,20 +176,20 @@ jobs:
       DIGEST: ${{ needs.image.outputs.digest }}
       VERSION: ${{ needs.image.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Pinned: the sign flags below are cosign v3's, and v4 removes two of
       # them (design/system/release-signing.md). The installer has no moving
       # v4 tag.
-      - uses: sigstore/cosign-installer@v4.1.2
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
           cosign-release: v3.1.3
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # For docker buildx imagetools, which reads the index's manifests.
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       # The list names the image by the tag the version gives it, so the
       # version image read from git must be the one this tag carries.
       - name: Digest list
@@ -231,7 +231,7 @@ jobs:
       # --owner bytepunx. Artifact attestations are available only to public
       # repositories on the Team plan (design/system/release-signing.md), so the
       # step is skipped while bytepunx/system-flow is private.
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         if: ${{ !github.event.repository.private }}
         with:
           subject-name: ${{ env.IMAGE }}

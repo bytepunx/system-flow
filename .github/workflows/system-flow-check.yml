@@ -5,13 +5,16 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Lint markdown
-        uses: DavidAnson/markdownlint-cli2-action@v24
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: |
             **/*.md
@@ -20,7 +23,7 @@ jobs:
             !bin/**
             !flaiover/build/**
             !**/.svelte-kit/**
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: flai/go.mod
       - name: Build flai
@@ -30,7 +33,7 @@ jobs:
       # GoReleaser and serves them on 127.0.0.1, so it needs no token. The
       # version is the one scripts/install-tools.sh pins.
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v7
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
           version: v2.18.1
