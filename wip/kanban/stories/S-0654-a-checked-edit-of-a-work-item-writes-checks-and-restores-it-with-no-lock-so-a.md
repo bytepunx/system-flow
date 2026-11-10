@@ -6,7 +6,7 @@ title: A checked edit of a work item writes, checks, and restores it with no loc
 status: backlog
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:01:30Z
+updated: 2026-11-10T07:02:19Z
 transitions: []
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
@@ -19,10 +19,10 @@ agent:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T10:35:00Z
+  delivery: 2026-11-10T10:36:00Z
   basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652 and S-0653."
   by: flai
-  at: 2026-11-10T07:00:52Z
+  at: 2026-11-10T07:02:19Z
 ---
 # S-0654 A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
 

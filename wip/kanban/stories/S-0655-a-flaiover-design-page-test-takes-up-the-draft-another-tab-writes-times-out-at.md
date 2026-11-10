@@ -6,7 +6,7 @@ title: "A flaiover design-page test, \"takes up the draft another tab writes\", 
 status: backlog
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T07:01:14Z
+updated: 2026-11-10T07:02:19Z
 transitions: []
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
@@ -22,15 +22,15 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 131
+      seconds: 254
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 229
-          output: 20601
-          cache_read: 12507832
-          cache_write: 756927
-          cost: 5.2781
+          input: 284
+          output: 29347
+          cache_read: 16087933
+          cache_write: 867284
+          cost: 6.9457
 draft: true
 cost_of_delay:
   inputs:
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-11-10T06:59:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T09:29:00Z
+  delivery: 2026-11-10T09:54:00Z
   basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652, S-0653 and S-0654."
   by: flai
-  at: 2026-11-10T07:00:52Z
+  at: 2026-11-10T07:02:19Z
 ---
 # S-0655 A flaiover design-page test, "takes up the draft another tab writes", times out at 5,000 ms under load and stops the flaiover tier
 

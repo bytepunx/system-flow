@@ -6,7 +6,7 @@ title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing und
 status: backlog
 owner: alex
 created: 2026-11-10T05:45:21Z
-updated: 2026-11-10T07:01:30Z
+updated: 2026-11-10T07:02:19Z
 transitions: []
 tags: []
 topics: [testing]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T07:01:00Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T09:05:00Z
-  basis: "flai forecast's 5m (median of 17 small remediation stories at size 2, no touches) raised to 1h: the fix changes how serve measures a run's activity for four callers, adds a test that reproduces it, and each go-test run of serve takes 3 to 7 minutes under load, with the integration tier at close-out"
-  by: planner-S-0653
-  at: 2026-11-10T07:01:00Z
+  delivery: 2026-11-10T09:37:00Z
+  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651 and S-0652."
+  by: flai
+  at: 2026-11-10T07:02:19Z
 ---
 # S-0653 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
 
@@ -45,6 +45,7 @@ This story remediates [I-0314](../../../design/issues/I-0314-testaformularoleste
 ## Tasks
 - T-2849 A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started
 - T-2851 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
+- T-2852 Close I-0314 with what fixed it
 
 ## Notes
 
