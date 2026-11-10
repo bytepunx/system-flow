@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-07T08:17:35Z
+updated: 2026-11-10T08:34:53Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,5 @@ queue.weeks[] W44: landed 19, sent_back 6, batches 59, batch_size_mean 1.0, batc
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0675 remediates this issue, created from it at 2026-11-10T08:34:53Z.
