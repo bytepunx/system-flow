@@ -24,16 +24,16 @@ touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test
 after: [T-2932]
 usage:
   source: log
-  seconds: 1646
+  seconds: 1654
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 135
-      output: 700
-      cache_read: 24061959
-      cache_write: 543073
-      cost: 9.0558
+      input: 142
+      output: 32194
+      cache_read: 24515021
+      cache_write: 540691
+      cost: 8.5592
 ---
 # T-2934 The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
 

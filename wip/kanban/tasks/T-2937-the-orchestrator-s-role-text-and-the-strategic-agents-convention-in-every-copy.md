@@ -3,11 +3,11 @@ id: T-2937
 type: task
 nature: remediation
 title: The orchestrator's role text and the strategic-agents convention, in every copy, accept through the MCP tool accept and verify through the MCP tool verify
-status: in-progress
+status: done
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:53Z
-updated: 2026-11-10T09:25:50Z
+updated: 2026-11-10T09:36:36Z
 transitions:
   - to: ready
     at: 2026-11-10T09:25:48Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:25:50Z
     by: agent-S-0687
+  - to: done
+    at: 2026-11-10T09:36:36Z
+    by: agent-S-0687
 stream: S-0687
 tags: [roles, conventions, template]
-touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
+touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go]
 after: [T-2934]
+usage:
+  source: log
+  seconds: 646
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 9423
+      cache_read: 7175399
+      cache_write: 158257
+      cost: 2.5052
 ---
 # T-2937 The orchestrator's role text and the strategic-agents convention, in every copy, accept through the MCP tool accept and verify through the MCP tool verify
 

@@ -2,7 +2,7 @@
 id: D-0562
 title: "Plan for S-0680: one guard task, then the docs and the issue's close in one layer: Recommended: keep S-0680's scope as built"
 kind: answer
-sources: [TH-0991]
+sources: [TH-0991, S-0680]
 topics: [guard, orchestration, flai, cli, go, code, all]
 paths: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md]
 date: 2026-11-10
@@ -43,3 +43,13 @@ Source: design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-fl
 ```
 
 Source: TH-0991.
+
+What S-0680 did with it, from its narrative (`wip/archive/agents/S-0680.md`, § Decisions):
+
+- "Opened the read forms ADR-0220 lists to every agent held to its reads, sub-agents included, as the planner and the orchestrator recommended on TH-0991."
+- "`readsServe` reuses `writesHost`, so a form that writes is never a read." Both live in `flai/internal/guard/guard_tables.go`.
+- "`writesHost` missed the container harness's `--image`, `--network`, and `--login`, so a story's agent could change those host settings. They are now writes. `hostValues` gains those flags, `--project`, and journal's `-n` and `--last`."
+
+So a new read form of `flai serve` goes in the guard's `readsServe`, and a new host setting flag goes in `writesHost`, which keeps it out of the reads. `design/system/strategic-agents.md` § Its permissions and the guard and `docs/users/flai.md` now say which forms are reads.
+
+Sources: TH-0991; S-0680's narrative.

@@ -24,16 +24,16 @@ touches: [flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_t
 after: [T-2932]
 usage:
   source: log
-  seconds: 1641
+  seconds: 1715
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 210
-      cache_read: 5999289
-      cache_write: 383747
-      cost: 2.3493
+      input: 43
+      output: 9673
+      cache_read: 7365756
+      cache_write: 162456
+      cost: 2.5717
 ---
 # T-2935 The orchestrator's shell flai accept and tier-running flai verify refuse inside a role's container, naming the MCP tools, with a test that reproduces I-0256
 

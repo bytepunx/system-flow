@@ -3,16 +3,19 @@ id: S-0682
 type: story
 nature: improvement
 title: scripts/agent-container.sh can run only a story's own agent, under the story's own name, so a trial run of the image acts on the live story
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:37:06Z
-updated: 2026-11-10T09:25:23Z
+updated: 2026-11-10T09:41:35Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:30Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T08:49:35Z
+    by: agent-S-0682
+  - to: review
+    at: 2026-11-10T09:41:35Z
     by: agent-S-0682
 tags: [containers, pilot, scripts]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md, design/issues/I-0338-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md, design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md]
@@ -23,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1317
-  estimated: true
-  priced_by: estimate
+  seconds: 3132
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      hand_edits: 2
-      work: 34
+      ceremony: 1
+      hand_edits: 5
+      work: 107
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 1178
-      cache_read: 10456841
-      cache_write: 483494
-      cost: 4.0266
+      input: 348
+      output: 65860
+      cache_read: 39712700
+      cache_write: 706878
+      cost: 14.0168
   strategic:
     - kind: orchestrator
       seconds: 21

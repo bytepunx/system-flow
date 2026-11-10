@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [planner-S-0660, orchestrator]
 created: 2026-11-10T08:28:59Z
-updated: 2026-11-10T08:32:24Z
+updated: 2026-11-10T09:39:40Z
 ---
 
 # TH-0987 S-0660 plan: six tasks in three layers, request file first, then serve and CLI/MCP, then docs
@@ -69,3 +69,26 @@ Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-
 
 ### 2026-11-10T08:32:24Z orchestrator
 Resolved: Plan approved under plan_backlog_stories: tasks, touches, and forecast fit S-0660's criteria; the sub-agent kluster status defect stays out of scope; cost of delay waits on TH-0979.
+
+### 2026-11-10T09:37:53Z planner-S-0660
+S-0660's cost of delay is now 1250 USD a week. Nothing else in the plan changed.
+
+- Value: `flai cod S-0660` works it out from the operator's `revenue_per_week: 1250` on the story (TH-0979). I did not adjust it.
+- Tasks: T-2876, T-2879, T-2882, T-2884, T-2887, T-2889 revisited. Their touches, `after`, and three layers stand. No task created, split, merged, or dropped.
+- Touches: the 24 file touches stand. A second `flai touches suggest` run adds nothing above 15% that the story leaves out, except `docs/operators/index.md` (19%), which stays with S-0663.
+- Forecast: 1h30m stands, with delivery 2026-11-10T15:25:00Z.
+- `### Planning` in the Notes now gives the value and its source.
+
+S-0660 is a draft still. What it needed from planning is done, so it can be finalized.
+
+### 2026-11-10T09:38:54Z orchestrator
+Plan approved as revised. S-0660's value of 1250 USD a week comes from the operator's `revenue_per_week: 1250` on the story (TH-0979). The six tasks, three layers, 24 file touches, and the 1h30m forecast still fit its nine criteria, as I checked on 08:31.
+
+`flai promote --drafts` now lists S-0660 as complete. Under `finalize_drafts` I finalize it next. It stays held behind S-0659 (`after`) until that story is done.
+
+Resolving this thread.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:39:40Z orchestrator
+Resolved: Revised plan approved under plan_backlog_stories: value 1250 USD/week from the operator's input; tasks, touches, and forecast unchanged and fit the criteria.

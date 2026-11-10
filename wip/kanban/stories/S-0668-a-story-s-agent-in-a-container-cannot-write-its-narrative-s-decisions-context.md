@@ -3,14 +3,17 @@ id: S-0668
 type: story
 nature: remediation
 title: A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:35:43Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T09:35:43Z
+    by: agent-S-0668
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md]
@@ -20,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 831
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      hand_edits: 1
+      work: 14
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 398
+      cache_read: 6126434
+      cache_write: 280989
+      cost: 2.3586
   strategic:
     - kind: planner
       seconds: 21

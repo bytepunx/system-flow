@@ -24,16 +24,16 @@ touches: [docs/operators/runbooks/agent-container.md, design/system/flai-cli.md,
 after: [T-2897, T-2898]
 usage:
   source: log
-  seconds: 167
+  seconds: 188
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 263
-      cache_read: 1517606
-      cache_write: 58034
-      cost: 0.58
+      input: 14
+      output: 2580
+      cache_read: 1555480
+      cache_write: 27687
+      cost: 0.549
 ---
 # T-2899 The runbook, flai-cli.md, and docker.md say how to probe an agent image without acting on its story
 

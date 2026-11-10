@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0829, TH-0979, TH-0980, TH-0981, TH-0982, TH-0983]
+cited: [S-0660, S-0661, TH-0829, TH-0979, TH-0980, TH-0981, TH-0982, TH-0983]
 ---
 
 # D-0479 E-0032 cost of delay inputs, so its stories can be valued: I entered my own change since holding up confident releases of signet and authstar is preventing me from shipping commercial software with…

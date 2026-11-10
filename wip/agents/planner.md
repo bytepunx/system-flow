@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1164.1047
-accrued_seconds: 146822
-tasks_completed: 209
-last_run: 2026-11-10T08:52:14Z
+accrued_cost: 1167.7065
+accrued_seconds: 147209
+tasks_completed: 213
+last_run: 2026-11-10T09:47:17Z
 ---
 
 # Planner activity
@@ -1669,3 +1669,35 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0684, T-2904
 - Seconds: 21
 - Cost: 0.2112 USD, estimated
+
+### 2026-11-10T09:38:04Z
+
+- Summary: I gave S-0660 a cost of delay of 1250 USD/week, from your revenue input on TH-0979, and wrote why in its Notes under `### Planning`. I revisited tasks T-2876, T-2879, T-2882, T-2884, T-2887 and T-2889 and left them as they were, with no tasks created. The 24 touches and the 1h30m forecast stand. I posted this on TH-0987, which reopened that plan thread; S-0660 is still a draft and only needs finalizing.
+- Trigger: orchestrator
+- Items: S-0660
+- Seconds: 150
+- Cost: 1.2020 USD, estimated
+
+### 2026-11-10T09:41:42Z
+
+- Summary: S-0663 now has its cost of delay value, 5.00 USD a week. Its seven tasks still fit the story, and none was created or changed.
+- Trigger: orchestrator
+- Items: S-0663
+- Seconds: 83
+- Cost: 0.9966 USD, estimated
+
+### 2026-11-10T09:42:02Z
+
+- Summary: S-0661: set its cost of delay to 986.84 USD a week (`flai cod`'s share of E-0035's 1250 USD/week revenue input, TH-0980), kept its 1h15m forecast with delivery moved to 2026-11-10T16:49Z, and rewrote `### Planning` in its Notes. No tasks created; T-2863 to T-2867 stay as approved on TH-0985. Plan summary on TH-1006; the draft is the operator's to finalize.
+- Trigger: orchestrator
+- Items: S-0661
+- Seconds: 20
+- Cost: 0.3513 USD, estimated
+
+### 2026-11-10T09:47:17Z
+
+- Summary: S-0662 re-planned: cost of delay 30 USD/week from the operator's penalty input, forecast kept at 2h30m with delivery moved to 2026-11-10T19:37Z, Planning notes rewritten, plan on TH-1008; no tasks created, and I revisited T-2875, T-2877, T-2878, T-2880, T-2881, T-2883, T-2885, T-2886 and T-2888, leaving all nine unchanged.
+- Trigger: orchestrator
+- Items: S-0662
+- Seconds: 134
+- Cost: 1.0519 USD, estimated

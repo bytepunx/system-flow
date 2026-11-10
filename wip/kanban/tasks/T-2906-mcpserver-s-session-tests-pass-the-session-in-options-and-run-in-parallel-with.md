@@ -24,7 +24,7 @@ touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_t
 after: [T-2904]
 usage:
   source: log
-  seconds: 1367
+  seconds: 1370
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 459
       cache_read: 17864671
       cache_write: 504186
-      cost: 6.7598
+      cost: 6.7616
 ---
 # T-2906 mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
 

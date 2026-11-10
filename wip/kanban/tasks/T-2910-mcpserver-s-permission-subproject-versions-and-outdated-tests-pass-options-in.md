@@ -3,11 +3,11 @@ id: T-2910
 type: task
 nature: improvement
 title: mcpserver's permission, subproject, versions, and outdated tests pass Options in place of package variables and run in parallel, and together goes
-status: in-progress
+status: done
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:46Z
-updated: 2026-11-10T09:32:24Z
+updated: 2026-11-10T09:42:22Z
 transitions:
   - to: ready
     at: 2026-11-10T09:32:23Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:32:24Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T09:42:22Z
+    by: agent-S-0684
 stream: S-0684
 tags: [flai, go, mcp, testing]
-touches: [flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/issues.go]
+touches: [flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go]
 after: [T-2905, T-2906]
+usage:
+  source: log
+  seconds: 598
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 509
+      cache_read: 11830639
+      cache_write: 438462
+      cost: 4.5164
 ---
 # T-2910 mcpserver's permission, subproject, versions, and outdated tests pass Options in place of package variables and run in parallel, and together goes
 

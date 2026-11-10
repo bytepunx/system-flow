@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 253
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 380
-      cache_read: 9219403
-      cache_write: 74341
-      cost: 3.4206
+      input: 54
+      output: 12160
+      cache_read: 9259761
+      cache_write: 204229
+      cost: 3.233
 ---
 # T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
 

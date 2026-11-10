@@ -3,10 +3,10 @@ id: S-0670
 type: story
 nature: remediation
 title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:46Z
-updated: 2026-11-10T09:26:51Z
+updated: 2026-11-10T09:53:49Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:32Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:26:51Z
     by: agent-S-0670
+  - to: review
+    at: 2026-11-10T09:35:35Z
+    by: agent-S-0670
+  - to: done
+    at: 2026-11-10T09:53:49Z
+    by: alex
 tags: [scripts, docker]
 topics: [docker, code]
-touches: [scripts/agent-image.sh, scripts/agent-container.sh, scripts/agent-container-test.sh, scripts/smoke.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/summary.md]
+touches: [scripts/agent-image.sh, scripts/agent-container.sh, scripts/agent-container-test.sh, scripts/smoke.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/summary.md, design/tech/docker.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,32 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 307
-  estimated: true
-  priced_by: estimate
+  seconds: 532
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 2
+      ceremony: 3
       hand_edits: 1
-      work: 22
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 450
-      cache_read: 4782898
-      cache_write: 207883
-      cost: 1.8368
+      input: 120
+      output: 30505
+      cache_read: 11294358
+      cache_write: 271228
+      cost: 4.9716
   strategic:
     - kind: orchestrator
-      seconds: 22
+      seconds: 54
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 22
-          cache_read: 676496
-          cache_write: 8725
-          cost: 0.1857
+          input: 9
+          output: 105
+          cache_read: 940543
+          cache_write: 24230
+          cost: 0.2618
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -75,8 +80,8 @@ finalized:
 This story remediates [I-0279](../../../design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md), "scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0279 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0279 is closed with `flai issue close I-0279 --reason` saying what fixed it
+- [x] The cause I-0279 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0279 is closed with `flai issue close I-0279 --reason` saying what fixed it
 
 ## Tasks
 - T-2908 scripts/agent-container.sh runs the manifest's layer image, or FLAI_AGENT_IMAGE, and refuses an image not built

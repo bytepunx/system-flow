@@ -3,15 +3,36 @@ id: T-2944
 type: task
 nature: remediation
 title: SetStreamState replaces Context and appends Decisions and Open questions bullets, keeping the threads block
-status: backlog
+status: done
 parent: S-0668
 owner: alex
 created: 2026-11-10T08:50:37Z
-updated: 2026-11-10T08:50:37Z
-transitions: []
+updated: 2026-11-10T09:49:33Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:36:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T09:36:42Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T09:49:33Z
+    by: agent-S-0668
 stream: S-0668
 tags: [flai, narrative]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go]
+usage:
+  source: log
+  seconds: 770
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 285
+      cache_read: 5226273
+      cache_write: 52417
+      cost: 1.9431
 ---
 # T-2944 SetStreamState replaces Context and appends Decisions and Open questions bullets, keeping the threads block
 

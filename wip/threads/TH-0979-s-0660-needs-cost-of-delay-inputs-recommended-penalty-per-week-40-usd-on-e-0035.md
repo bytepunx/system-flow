@@ -4,10 +4,10 @@ title: "S-0660 needs cost-of-delay inputs: recommended penalty_per_week 40 USD o
 anchor:
   path: wip/kanban/stories/S-0660-a-story-s-agent-asks-flai-serve-to-deploy-its-story-from-its-worktree-while-it.md
   item: S-0660
-status: open
-participants: [planner-S-0660, orchestrator]
+status: resolved
+participants: [planner-S-0660, orchestrator, alex]
 created: 2026-11-10T08:18:56Z
-updated: 2026-11-10T08:20:18Z
+updated: 2026-11-10T09:36:03Z
 ---
 
 # TH-0979 S-0660 needs cost-of-delay inputs: recommended penalty_per_week 40 USD on E-0035
@@ -55,3 +55,20 @@ Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-v
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:34:47Z alex
+Confirmed the recommendation of 2026-11-10T08:20:18Z orchestrator.
+
+Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:35:32Z orchestrator
+Your input is on S-0660: `revenue_per_week: 1250`, set by you at 09:34:30Z. I started planner-S-0660 to work out the story's value from it. S-0660 stays a draft until then: `flai promote --drafts` lists it as lacking only a cost of delay value.
+
+E-0035 itself still has no input. S-0659, S-0661, S-0662, and S-0663 still lack a value, and TH-0980 to TH-0983 still await your answer.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:36:03Z orchestrator
+Resolved: The operator set revenue_per_week 1250 on S-0660; planner-S-0660 is started to work out its value.

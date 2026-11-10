@@ -3,26 +3,42 @@ id: S-0669
 type: story
 nature: improvement
 title: After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:44:38Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:34Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T09:41:43Z
+    by: agent-S-0669
 tags: [flaiover, agent]
 topics: [dashboard, agents]
-touches: [flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]
+touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 430
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      hand_edits: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 617
+      cache_read: 8098527
+      cache_write: 272187
+      cost: 3.0819
   strategic:
     - kind: orchestrator
       seconds: 142
@@ -69,8 +85,8 @@ This story remediates [I-0278](../../../design/issues/I-0278-after-a-stop-from-t
 - [ ] I-0278 is closed with `flai issue close I-0278 --reason` saying what fixed it
 
 ## Tasks
-- T-2907 A test reproduces the story page's missing Retry after a stop, and the narrative names its cause and the fix proposed
-- T-2909 The story page offers Retry for a stopped agent whenever the card's menu does
+- T-2907 A test reproduces the Activity page's missing Retry after a stop, and the narrative names its cause and the fix proposed
+- T-2909 The Activity page offers Retry for a stopped or failed agent whenever the card's menu does
 - T-2912 I-0278 is closed with the cause and the fix
 
 ## Notes

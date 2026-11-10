@@ -3,11 +3,11 @@ id: T-2914
 type: task
 nature: remediation
 title: The agent-container runbook and scripts/README.md say the script runs the manifest's layer image
-status: in-progress
+status: done
 parent: S-0670
 owner: alex
 created: 2026-11-10T08:47:57Z
-updated: 2026-11-10T09:32:10Z
+updated: 2026-11-10T09:34:03Z
 transitions:
   - to: ready
     at: 2026-11-10T09:32:09Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:32:10Z
     by: agent-S-0670
+  - to: done
+    at: 2026-11-10T09:34:02Z
+    by: agent-S-0670
 stream: S-0670
 tags: [docs, scripts]
-touches: [docs/operators/runbooks/agent-container.md, scripts/README.md]
+touches: [docs/operators/runbooks/agent-container.md, scripts/README.md, design/tech/docker.md]
 after: [T-2908]
+usage:
+  source: log
+  seconds: 112
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 6389
+      cache_read: 2365622
+      cache_write: 56809
+      cost: 1.0413
 ---
 # T-2914 The agent-container runbook and scripts/README.md say the script runs the manifest's layer image
 

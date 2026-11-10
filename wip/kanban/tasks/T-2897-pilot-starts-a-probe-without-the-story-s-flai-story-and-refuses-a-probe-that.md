@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 488
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 244
-      cache_read: 1191557
-      cache_write: 66043
-      cost: 0.4629
+      input: 11
+      output: 2059
+      cache_read: 1241514
+      cache_write: 22099
+      cost: 0.4382
 ---
 # T-2897 pilot starts a probe without the story's FLAI_STORY and refuses a probe that names a role
 

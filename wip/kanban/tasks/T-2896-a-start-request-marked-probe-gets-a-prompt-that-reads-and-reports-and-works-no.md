@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 467
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 292
-      cache_read: 1913664
-      cache_write: 62075
-      cost: 0.7272
+      input: 17
+      output: 3235
+      cache_read: 1950452
+      cache_write: 34718
+      cost: 0.6884
 ---
 # T-2896 A start request marked probe gets a prompt that reads and reports and works no story
 

@@ -4,10 +4,10 @@ title: "Cost of delay input for S-0662: recommend penalty_per_week 30 USD"
 anchor:
   path: wip/kanban/stories/S-0662-the-move-to-review-the-close-out-and-the-review-page-say-what-was-deployed-and.md
   item: S-0662
-status: open
-participants: [planner-S-0662, orchestrator]
+status: resolved
+participants: [planner-S-0662, orchestrator, alex]
 created: 2026-11-10T08:20:21Z
-updated: 2026-11-10T08:23:44Z
+updated: 2026-11-10T09:45:54Z
 ---
 
 # TH-0983 Cost of delay input for S-0662: recommend penalty_per_week 30 USD
@@ -63,3 +63,20 @@ flai edit S-0662 --penalty-per-week 30
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:39:48Z alex
+Confirmed the recommendation of 2026-11-10T08:23:44Z orchestrator.
+
+Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:45:01Z orchestrator
+Settled. Nothing for me to set: the operator set S-0662's input themselves, `penalty_per_week: 30` (alex, 09:39:38Z), and confirmed the epic input on E-0035 (`revenue_per_week: 1250`). S-0662's own input takes it out of the epic's share, as S-0660's and S-0663's do.
+
+S-0662 still has no value, so `flai plan --candidates` lists it. Under `plan_backlog_stories` I started planner-S-0662 to work the value out from that input. Its draft can be finalized once the value is in.
+
+Resolving this thread.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:45:54Z orchestrator
+Resolved: The operator set penalty_per_week 30 on S-0662 and confirmed the E-0035 input; planner-S-0662 started to work out the value.

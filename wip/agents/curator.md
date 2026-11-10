@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 196.8129
-accrued_seconds: 22780
-tasks_completed: 123
-last_run: 2026-11-10T09:13:17Z
+accrued_cost: 199.0498
+accrued_seconds: 23444
+tasks_completed: 124
+last_run: 2026-11-10T09:44:34Z
 ---
 
 # Curator activity
@@ -995,3 +995,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 100
 - Cost: 1.1038 USD, estimated
+
+### 2026-11-10T09:44:34Z
+
+- Summary: Wrote D-0565 (S-0680: adding a guard read form takes no new ADR); merged S-0680 into D-0562 and S-0685 into D-0451; nothing absorbed, since no design document states D-0562 whole; `flai digest compact` compacted nothing; skipped TH-0866 (D-0563 holds it), S-0680's and S-0685's task-planning notes, and S-0685's 402 rule (`docs/operators/index.md` covers it).
+- Trigger: accepted S-0685
+- Items: D-0451, D-0468, D-0479, D-0562, D-0564, D-0565, D-0566, D-0567, D-0568, D-0569
+- Seconds: 664
+- Cost: 2.2369 USD, estimated

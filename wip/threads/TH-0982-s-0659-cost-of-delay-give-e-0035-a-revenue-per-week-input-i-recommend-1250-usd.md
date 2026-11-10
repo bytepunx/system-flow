@@ -4,10 +4,10 @@ title: "S-0659 cost of delay: give E-0035 a revenue_per_week input; I recommend 
 anchor:
   path: wip/kanban/stories/S-0659-an-adr-settles-how-a-story-in-progress-is-deployed-into-its-kluster-namespace.md
   item: S-0659
-status: open
-participants: [planner-S-0659, orchestrator]
+status: resolved
+participants: [planner-S-0659, orchestrator, alex]
 created: 2026-11-10T08:19:47Z
-updated: 2026-11-10T08:22:45Z
+updated: 2026-11-10T09:38:41Z
 ---
 
 # TH-0982 S-0659 cost of delay: give E-0035 a revenue_per_week input; I recommend 1250 USD/week, as E-0032's
@@ -49,3 +49,11 @@ S-0659 stays a draft until then: `flai promote --drafts` lists it as lacking onl
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:38:37Z alex
+Confirmed the recommendation of 2026-11-10T08:22:45Z orchestrator.
+
+Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:38:41Z alex
+Resolved.

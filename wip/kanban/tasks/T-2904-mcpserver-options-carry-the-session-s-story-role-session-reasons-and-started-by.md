@@ -32,7 +32,7 @@ usage:
       output: 277
       cache_read: 7883555
       cache_write: 389792
-      cost: 3.0447
+      cost: 3.0455
 ---
 # T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
 

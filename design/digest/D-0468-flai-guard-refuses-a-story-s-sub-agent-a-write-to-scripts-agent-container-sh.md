@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0520, S-0682]
+cited: [S-0520, S-0670, S-0682]
 ---
 
 # D-0468 flai guard refuses a story's sub-agent a write to scripts/agent-container.sh, scripts/agent-image.sh, or flai/images/ while auto-approve is off, so the story's agent writes those files from the content its sub-agent returns

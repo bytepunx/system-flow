@@ -3,15 +3,36 @@ id: T-2920
 type: task
 nature: improvement
 title: flai serve's close-out job sets CLOSE_OUT_FRESH and CLOSE_OUT_ALL for the worktree's script when the request asks for fresh or all
-status: backlog
+status: done
 parent: S-0671
 owner: alex
 created: 2026-11-10T08:48:14Z
-updated: 2026-11-10T08:48:14Z
-transitions: []
+updated: 2026-11-10T09:39:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:38:04Z
+    by: agent-S-0671
+  - to: in-progress
+    at: 2026-11-10T09:38:07Z
+    by: agent-S-0671
+  - to: done
+    at: 2026-11-10T09:39:30Z
+    by: agent-S-0671
 stream: S-0671
 tags: [flai, close-out, verify]
 touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go]
+usage:
+  source: log
+  seconds: 83
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 621
+      cache_read: 704061
+      cache_write: 6390
+      cost: 0.2044
 ---
 # T-2920 flai serve's close-out job sets CLOSE_OUT_FRESH and CLOSE_OUT_ALL for the worktree's script when the request asks for fresh or all
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 64
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 84
-      cache_read: 775497
-      cache_write: 4629
-      cost: 0.2871
+      output: 2142
+      cache_read: 793247
+      cache_write: 19049
+      cost: 0.3492
 ---
 # T-2908 scripts/agent-container.sh runs the manifest's layer image, or FLAI_AGENT_IMAGE, and refuses an image not built
 

@@ -3,16 +3,37 @@ id: T-2925
 type: task
 nature: improvement
 title: Close I-0280 with the reason that the close-out takes --fresh and the job passes it on
-status: backlog
+status: done
 parent: S-0671
 owner: alex
 created: 2026-11-10T08:48:36Z
-updated: 2026-11-10T08:48:36Z
-transitions: []
+updated: 2026-11-10T09:42:18Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:42:07Z
+    by: agent-S-0671
+  - to: in-progress
+    at: 2026-11-10T09:42:08Z
+    by: agent-S-0671
+  - to: done
+    at: 2026-11-10T09:42:18Z
+    by: agent-S-0671
 stream: S-0671
 tags: [issues, close-out]
 touches: [design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/summary.md]
 after: [T-2918, T-2920, T-2921, T-2923]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 864
+      cache_read: 979906
+      cache_write: 8893
+      cost: 0.2844
 ---
 # T-2925 Close I-0280 with the reason that the close-out takes --fresh and the job passes it on
 

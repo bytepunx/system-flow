@@ -24,16 +24,16 @@ touches: [scripts/agent-container-test.sh, scripts/smoke.sh]
 after: [T-2908]
 usage:
   source: log
-  seconds: 61
+  seconds: 63
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 14
-      output: 71
-      cache_read: 1279539
-      cache_write: 13074
-      cost: 0.4757
+      output: 3550
+      cache_read: 1314355
+      cache_write: 31564
+      cost: 0.5786
 ---
 # T-2911 scripts/agent-container-test.sh reproduces I-0279 without Docker, and the smoke tier runs it
 

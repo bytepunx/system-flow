@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 510
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 59
-      cache_read: 1050412
-      cache_write: 15705
-      cost: 0.3924
+      input: 9
+      output: 1745
+      cache_read: 1052456
+      cache_write: 18733
+      cost: 0.3715
 ---
 # T-2898 scripts/agent-container.sh --probe runs the image as probe-S-nnnn with a probe start request
 

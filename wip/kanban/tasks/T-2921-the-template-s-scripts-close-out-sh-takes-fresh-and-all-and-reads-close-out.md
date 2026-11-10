@@ -3,16 +3,37 @@ id: T-2921
 type: task
 nature: improvement
 title: The template's scripts/close-out.sh takes --fresh and --all and reads CLOSE_OUT_FRESH and CLOSE_OUT_ALL as this repository's does
-status: backlog
+status: done
 parent: S-0671
 owner: alex
 created: 2026-11-10T08:48:22Z
-updated: 2026-11-10T08:48:22Z
-transitions: []
+updated: 2026-11-10T09:41:41Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:41:32Z
+    by: agent-S-0671
+  - to: in-progress
+    at: 2026-11-10T09:41:34Z
+    by: agent-S-0671
+  - to: done
+    at: 2026-11-10T09:41:41Z
+    by: agent-S-0671
 stream: S-0671
 tags: [template, close-out, scripts]
 touches: [template/root/scripts/close-out.sh, template/root/scripts/README.md, template/CHANGELOG.md]
 after: [T-2918]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 415
+      cache_read: 470809
+      cache_write: 4273
+      cost: 0.1367
 ---
 # T-2921 The template's scripts/close-out.sh takes --fresh and --all and reads CLOSE_OUT_FRESH and CLOSE_OUT_ALL as this repository's does
 

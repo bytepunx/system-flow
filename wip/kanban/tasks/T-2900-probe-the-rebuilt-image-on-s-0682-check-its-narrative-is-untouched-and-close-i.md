@@ -24,16 +24,16 @@ touches: [design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s
 after: [T-2897, T-2898]
 usage:
   source: log
-  seconds: 166
+  seconds: 1020
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 60
-      cache_read: 809162
-      cache_write: 5175
-      cost: 0.2997
+      input: 76
+      output: 14448
+      cache_read: 8711941
+      cache_write: 155071
+      cost: 3.0749
 ---
 # T-2900 Probe the rebuilt image on S-0682, check its narrative is untouched, and close I-0224
 

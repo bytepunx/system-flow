@@ -24,16 +24,16 @@ touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/permission.
 after: [T-2904]
 usage:
   source: log
-  seconds: 1369
+  seconds: 1460
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 223
-      cache_read: 4431147
-      cache_write: 355991
-      cost: 1.7617
+      input: 50
+      output: 259
+      cache_read: 6374719
+      cache_write: 386559
+      cost: 2.4889
 ---
 # T-2905 mcpserver takes what its tests now set in package variables and the environment, the permission poll, the flai it runs, its version, the releases API and token, and a child's config, through Options
 

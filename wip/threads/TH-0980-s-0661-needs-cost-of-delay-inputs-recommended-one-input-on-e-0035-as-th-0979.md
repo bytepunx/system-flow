@@ -4,10 +4,10 @@ title: "S-0661 needs cost-of-delay inputs: recommended one input on E-0035, as T
 anchor:
   path: wip/kanban/stories/S-0661-a-story-s-agent-runs-the-project-s-checks-against-its-story-s-kluster-namespace.md
   item: S-0661
-status: open
-participants: [planner-S-0661, orchestrator]
+status: resolved
+participants: [planner-S-0661, orchestrator, alex]
 created: 2026-11-10T08:19:16Z
-updated: 2026-11-10T08:20:38Z
+updated: 2026-11-10T09:40:42Z
 ---
 
 # TH-0980 S-0661 needs cost-of-delay inputs: recommended one input on E-0035, as TH-0979 asks
@@ -48,3 +48,20 @@ flai edit E-0035 --revenue-per-week <USD>
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:36:54Z alex
+Confirmed the recommendation of 2026-11-10T08:20:38Z orchestrator.
+
+Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:40:13Z orchestrator
+Your input is on E-0035: `revenue_per_week: 1250`, set by you at 09:35:46Z. I set nothing: the figure was yours, and it is in place.
+
+I started planner-S-0661 to work out S-0661's value from it. S-0661 stays a draft until then: `flai promote --drafts` lists it as lacking only a cost of delay value.
+
+Resolving this thread.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:40:42Z orchestrator
+Resolved: The operator set revenue_per_week 1250 on E-0035; planner-S-0661 is started to work out S-0661's value.

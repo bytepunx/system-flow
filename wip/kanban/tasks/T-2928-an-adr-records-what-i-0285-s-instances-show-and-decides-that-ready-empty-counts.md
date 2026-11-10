@@ -3,15 +3,36 @@ id: T-2928
 type: task
 nature: improvement
 title: An ADR records what I-0285's instances show and decides that ready-empty counts only ready stories not held on after and that a move to ready warns of an after hold
-status: backlog
+status: done
 parent: S-0673
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-10T08:49:04Z
-transitions: []
+updated: 2026-11-10T09:52:41Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:52:14Z
+    by: agent-S-0673
+  - to: in-progress
+    at: 2026-11-10T09:52:15Z
+    by: agent-S-0673
+  - to: done
+    at: 2026-11-10T09:52:41Z
+    by: agent-S-0673
 stream: S-0673
 tags: [flai, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0279-ready-empty-counts-only-the-ready-stories-not-held-on-after-and-a-move-of-a.md]
+usage:
+  source: log
+  seconds: 21
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 10
+      cache_read: 541984
+      cache_write: 2392
+      cost: 0.2003
 ---
 # T-2928 An ADR records what I-0285's instances show and decides that ready-empty counts only ready stories not held on after and that a move to ready warns of an after hold
 

@@ -3,11 +3,11 @@ id: T-2938
 type: task
 nature: remediation
 title: The design and the user guide describe the orchestrator's acceptance through the host in a container, and I-0256 is closed
-status: in-progress
+status: done
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:59Z
-updated: 2026-11-10T09:25:52Z
+updated: 2026-11-10T09:37:56Z
 transitions:
   - to: ready
     at: 2026-11-10T09:25:51Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:25:52Z
     by: agent-S-0687
+  - to: done
+    at: 2026-11-10T09:37:56Z
+    by: agent-S-0687
 stream: S-0687
 tags: [docs, design, issues]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md]
 after: [T-2934, T-2935]
+usage:
+  source: log
+  seconds: 724
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 13244
+      cache_read: 10085346
+      cache_write: 222438
+      cost: 3.5212
 ---
 # T-2938 The design and the user guide describe the orchestrator's acceptance through the host in a container, and I-0256 is closed
 

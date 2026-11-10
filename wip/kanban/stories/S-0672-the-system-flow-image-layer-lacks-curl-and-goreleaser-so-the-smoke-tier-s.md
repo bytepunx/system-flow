@@ -3,14 +3,17 @@ id: S-0672
 type: story
 nature: remediation
 title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:52:41Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:47Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T09:52:41Z
+    by: agent-S-0672
 tags: [docker, scripts]
 topics: [harness, docker, testing]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh, scripts/README.md, design/tech/docker.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md, design/issues/summary.md]

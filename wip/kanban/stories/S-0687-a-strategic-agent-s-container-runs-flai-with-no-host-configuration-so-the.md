@@ -3,10 +3,10 @@ id: S-0687
 type: story
 nature: remediation
 title: A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:37:14Z
-updated: 2026-11-10T09:24:02Z
+updated: 2026-11-10T09:49:33Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:53Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:50:09Z
     by: agent-S-0687
+  - to: review
+    at: 2026-11-10T09:49:33Z
+    by: agent-S-0687
 tags: [flai]
 topics: [orchestration, review]
-touches: [design/adrs/README.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go, flai/internal/roles/conditions.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/mcp_http_test.go]
+touches: [design/adrs/README.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go, flai/internal/roles/conditions.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/mcp_http_test.go, flai/internal/harness/harness_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +27,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2038
-  estimated: true
-  priced_by: estimate
+  seconds: 3577
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 3
-      hand_edits: 2
-      work: 24
+      ceremony: 5
+      hand_edits: 3
+      work: 132
   models:
     - model: claude-opus-5-5
-      input: 278
-      output: 1446
-      cache_read: 42088616
-      cache_write: 1269073
-      cost: 15.9577
+      input: 586
+      output: 132682
+      cache_read: 101035678
+      cache_write: 2228394
+      cost: 35.2759
+  strategic:
+    - kind: orchestrator
+      seconds: 128
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 30
+          output: 261
+          cache_read: 1022854
+          cache_write: 68753
+          cost: 0.2976
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 64
+          cache_read: 137139
+          cache_write: 50413
+          cost: 0.1404
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -64,8 +83,8 @@ finalized:
 This story remediates [I-0256](../../../design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md), "A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0256 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0256 is closed with `flai issue close I-0256 --reason` saying what fixed it
+- [x] The cause I-0256 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0256 is closed with `flai issue close I-0256 --reason` saying what fixed it
 
 ## Tasks
 - T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container

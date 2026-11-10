@@ -4,10 +4,10 @@ title: "Cost of delay input for S-0663: recommend time_lost_per_cycle 2m"
 anchor:
   path: wip/kanban/stories/S-0663-the-deployments-page-shows-the-namespace-of-each-story-in-progress-and-the.md
   item: S-0663
-status: open
-participants: [planner-S-0663, orchestrator]
+status: resolved
+participants: [planner-S-0663, orchestrator, alex]
 created: 2026-11-10T08:19:45Z
-updated: 2026-11-10T08:23:05Z
+updated: 2026-11-10T09:38:16Z
 ---
 
 # TH-0981 Cost of delay input for S-0663: recommend time_lost_per_cycle 2m
@@ -60,3 +60,11 @@ flai edit S-0663 --time-lost-per-cycle 2m
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:38:00Z alex
+Confirmed the recommendation of 2026-11-10T08:23:05Z orchestrator.
+
+Source: design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+
+### 2026-11-10T09:38:16Z alex
+Resolved.

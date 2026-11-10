@@ -3,16 +3,19 @@ id: S-0671
 type: story
 nature: improvement
 title: scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T09:28:30Z
+updated: 2026-11-10T09:52:35Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:54Z
     by: alex
   - to: in-progress
     at: 2026-11-10T09:28:30Z
+    by: agent-S-0671
+  - to: review
+    at: 2026-11-10T09:52:35Z
     by: agent-S-0671
 tags: [flai, template, close-out, verify, scripts]
 topics: [code, review]
@@ -23,9 +26,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1456
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 9
+      hand_edits: 1
+      work: 112
+  models:
+    - model: claude-opus-5-5
+      input: 252
+      output: 33355
+      cache_read: 37823801
+      cache_write: 343265
+      cost: 10.979
   strategic:
     - kind: orchestrator
       seconds: 14
@@ -62,8 +77,8 @@ finalized:
 This story remediates [I-0280](../../../design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md), "scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0280 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0280 is closed with `flai issue close I-0280 --reason` saying what fixed it
+- [x] The cause I-0280 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0280 is closed with `flai issue close I-0280 --reason` saying what fixed it
 
 ## Tasks
 - T-2918 scripts/close-out.sh takes --fresh and --all before the story, or CLOSE_OUT_FRESH and CLOSE_OUT_ALL, and passes them to each round's flai verify

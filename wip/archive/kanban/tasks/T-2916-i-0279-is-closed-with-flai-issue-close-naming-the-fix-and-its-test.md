@@ -3,16 +3,37 @@ id: T-2916
 type: task
 nature: remediation
 title: I-0279 is closed with flai issue close, naming the fix and its test
-status: backlog
+status: done
 parent: S-0670
 owner: alex
 created: 2026-11-10T08:48:03Z
-updated: 2026-11-10T08:48:03Z
-transitions: []
+updated: 2026-11-10T09:34:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:34:23Z
+    by: agent-S-0670
+  - to: in-progress
+    at: 2026-11-10T09:34:23Z
+    by: agent-S-0670
+  - to: done
+    at: 2026-11-10T09:34:30Z
+    by: agent-S-0670
 stream: S-0670
 tags: [issues]
 touches: [design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/summary.md]
 after: [T-2911, T-2914]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1371
+      cache_read: 507484
+      cache_write: 12187
+      cost: 0.2234
 ---
 # T-2916 I-0279 is closed with flai issue close, naming the fix and its test
 

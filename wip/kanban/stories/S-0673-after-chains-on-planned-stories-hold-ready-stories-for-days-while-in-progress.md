@@ -3,14 +3,17 @@ id: S-0673
 type: story
 nature: improvement
 title: after chains on planned stories hold ready stories for days while in-progress stays under two of five
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:51Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:50:18Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:36Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T09:50:18Z
+    by: agent-S-0673
 tags: [flai]
 topics: [ready]
 touches: [design/adrs, design/adrs/README.md, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents_launch.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/inbox/events.go, flai/internal/mcpserver/server.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/system/workflow.md, design/issues/I-0285-after-chains-on-planned-stories-hold-ready-stories-for-days-while-in-progress.md, design/issues/summary.md]
@@ -20,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 140
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 161
+      cache_read: 3190491
+      cache_write: 258327
+      cost: 1.2693
   strategic:
     - kind: orchestrator
       seconds: 103

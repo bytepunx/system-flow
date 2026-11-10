@@ -3,12 +3,18 @@ id: T-2931
 type: task
 nature: improvement
 title: A move of a story to ready warns when a story it names in after is not done
-status: backlog
+status: in-progress
 parent: S-0673
 owner: alex
 created: 2026-11-10T08:49:18Z
-updated: 2026-11-10T08:49:27Z
-transitions: []
+updated: 2026-11-10T09:53:43Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:53:41Z
+    by: agent-S-0673
+  - to: in-progress
+    at: 2026-11-10T09:53:43Z
+    by: agent-S-0673
 stream: S-0673
 tags: [flai, workitem]
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, docs/users/flai-reference.md, design/system/workflow.md]
