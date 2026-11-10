@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
@@ -346,8 +345,9 @@ func TestIssueNewAndBumpRefuseAndWriteNothing(t *testing.T) {
 // S-0224: the story an occurrence is recorded for defaults to FLAI_STORY, as
 // flai issue new's does, and the issue is written in that story's worktree.
 func TestIssueNewRecordsForTheSessionsStoryInItsWorktree(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, asStory(f.story.ID))
 	wt := *f.repo
 	wt.Root = f.repo.WorktreePath(f.story.ID)
 	if err := os.MkdirAll(wt.Root, 0o755); err != nil {
@@ -373,23 +373,10 @@ func TestIssueNewRecordsForTheSessionsStoryInItsWorktree(t *testing.T) {
 	}
 }
 
-// TestWithAGitIdentity runs the tests that commit with real git on a
-// story's branch, as together runs them, with git isolated and given an
-// identity: set once here, so that they run in parallel with each other
-// (S-0548).
-func TestWithAGitIdentity(t *testing.T) {
-	gittest.Identity(t, "t", "t@t")
-	together(t,
-		testAdrNewCommitsOnTheStorysBranch,
-		testIssueToolsCommitOnTheStorysBranch,
-		testCommitIsRefusedOffTheStorysBranch,
-	)
-}
-
 // storyGit makes f's project a git repository whose main branch holds it,
 // with ADR 0001 and an ADR index, and checks the story's branch out in its
 // worktree, which it returns as the project there. Integration: it runs real
-// git, in TestWithAGitIdentity.
+// git, with the identity TestMain gives git.
 func storyGit(t *testing.T, f *fixture) *workitem.Repo {
 	t.Helper()
 	if testing.Short() {
@@ -398,9 +385,7 @@ func storyGit(t *testing.T, f *fixture) *workitem.Repo {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	if os.Getenv("GIT_CONFIG_GLOBAL") == "" {
-		t.Fatal("git is not isolated: run this test from TestWithAGitIdentity")
-	}
+	inGitSession(t)
 	root := f.repo.Root
 	writeIn(t, root, ".gitignore", ".flai-cache/\n")
 	writeIn(t, root, "design/adrs/0001-first.md", adrDoc("0001", "First"))
@@ -449,7 +434,8 @@ func strs(v any) []string {
 // the story's worktree, commit the issue and summary.md, and only those, on
 // the story's branch with the story's prefix and the trailers, and widen the
 // story's touches; an occurrence already recorded commits nothing.
-func testIssueToolsCommitOnTheStorysBranch(t *testing.T) {
+func TestIssueToolsCommitOnTheStorysBranch(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	wt := storyGit(t, f)
 	writeIn(t, wt.Root, "design/system/plan.md", "---\ntitle: Plan\n---\n\n# Plan\n\nhalf done\n")
@@ -538,7 +524,8 @@ func testIssueToolsCommitOnTheStorysBranch(t *testing.T) {
 
 // S-0275: commit is refused, and nothing is written, when the story's
 // worktree does not have the story's branch checked out.
-func testCommitIsRefusedOffTheStorysBranch(t *testing.T) {
+func TestCommitIsRefusedOffTheStorysBranch(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	wt := storyGit(t, f)
 	gitIn(t, wt.Root, "checkout", "-q", "-b", "elsewhere")

@@ -104,10 +104,8 @@ const (
 func answeringFixture(t *testing.T, mode string) *answering {
 	t.Helper()
 	clock := &syncedClock{at: askedAt}
-	t.Setenv("FLAI_ROLE", "")
 	// neither session has a story of its own: the asker takes part in the
 	// thread it opens, and the orchestrator in none until it replies
-	t.Setenv("FLAI_STORY", "")
 	asker := setupWith(t, func(o *Options) { o.Now = clock.now; holdLong(o) })
 	root := projectRoot(asker.repo)
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    answer_threads: " + mode + "\n"
@@ -122,10 +120,9 @@ func answeringFixture(t *testing.T, mode string) *answering {
 		t.Fatalf("answer_threads: %q, want %q", got, mode)
 	}
 	// flai serve sets the orchestrator's role in its session, and flai mcp
-	// inherits it
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	// passes it on
 	logs := serve.Dir(t.TempDir())
-	opt := Options{Repo: repo, Agent: workitem.ActivityOrchestrator, Version: "test", Now: clock.now, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second,
+	opt := Options{Repo: repo, Agent: workitem.ActivityOrchestrator, Role: guard.RoleOrchestrate, Version: "test", Now: clock.now, Poll: 20 * time.Millisecond, MaxWait: 3 * time.Second,
 		Activities: func(_ context.Context, root, kind, summary string, items []string, _ string) (ActivityLogged, error) {
 			logged, err := serve.LogActivity(logs, root, repo.Manifest.Key, kind, summary, items, clock.now())
 			if err != nil {
@@ -368,6 +365,7 @@ var inProgressWait = idleAt.Sub(askedAt).Seconds()
 // may not give, makes it the answer and wakes the agent, and flai stats
 // counts the wait as ended by a confirmation.
 func TestTheOrchestratorRecommendsAndTheOperatorConfirms(t *testing.T) {
+	t.Parallel()
 	a := answeringFixture(t, manifest.AnswerRecommend)
 	done := a.asker.heldWork(t, heldSeconds)
 	a.clock.set(repliedAt)
@@ -418,6 +416,7 @@ func TestTheOrchestratorRecommendsAndTheOperatorConfirms(t *testing.T) {
 // decision log names the source, and flai stats counts the wait as ended by
 // the orchestrator.
 func TestTheOrchestratorAnswersCitingItsSource(t *testing.T) {
+	t.Parallel()
 	a := answeringFixture(t, manifest.AnswerAutonomous)
 	done := a.asker.heldWork(t, heldSeconds)
 	a.clock.set(repliedAt)
@@ -448,6 +447,7 @@ func TestTheOrchestratorAnswersCitingItsSource(t *testing.T) {
 // is logged. flai stats counts no wait ended, by the orchestrator or by a
 // confirmation.
 func TestTheOrchestratorEscalatesWhatItCannotSource(t *testing.T) {
+	t.Parallel()
 	a := answeringFixture(t, manifest.AnswerAutonomous)
 	// it times out: no answer comes that wakes it
 	done := a.asker.heldWork(t, 1)

@@ -654,8 +654,7 @@ func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
 // (S-0328).
 func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned bool, touches ...string) string) {
 	t.Helper()
-	inEnv(t, "FLAI_ROLE", "orchestrate")
-	f := setupWith(t, func(o *Options) { o.Agent = "orchestrator" })
+	f := setupWith(t, func(o *Options) { o.Agent, o.Role = "orchestrator", "orchestrate" })
 	story := func(title string, draft, planned bool, touches ...string) string {
 		t.Helper()
 		args := map[string]any{"type": "story", "title": title, "parent": f.story.Parent, "draft": draft, "body": "## Goal\n\nx\n\n## Acceptance criteria\n- [ ] it works\n\n## Tasks\n\n## Notes\n"}
@@ -687,7 +686,8 @@ func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned boo
 // S-0219: the orchestrator finalizes a draft with item_edit's draft false and
 // nothing else, and only a complete one, which then names it as who
 // finalized it; an incomplete one is refused naming what it lacks.
-func testTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
+func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
+	t.Parallel()
 	f, story := orchestrated(t)
 	complete := story("Complete", true, true, "docs")
 	incomplete := story("Incomplete", true, false)
@@ -725,7 +725,8 @@ func testTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 // its epic's already. Without either, and under either a value, a removal,
 // another field, a task, an archived item, and an item done or cancelled,
 // each is refused, saying why, and changes nothing.
-func testTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
+func TestTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
+	t.Parallel()
 	f, story := orchestrated(t)
 	at := func(title, status string) string {
 		t.Helper()
@@ -858,7 +859,8 @@ func testTheOrchestratorSetsCostOfDelayInputsByItsPermissions(t *testing.T) {
 // S-0219: the orchestrator moves to ready only a story flai promote
 // --candidates lists, and only while ready is under its WIP limit; a held
 // story, a draft, and any other item are refused with the reason.
-func testTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
+func TestTheOrchestratorPromotesACandidateWhileReadyHasRoom(t *testing.T) {
+	t.Parallel()
 	f, story := orchestrated(t)
 	candidate := story("Candidate", false, true, "docs/a")
 	next := story("Next", false, true, "docs/b")

@@ -332,9 +332,10 @@ func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
 // A thread written to while it waits is work too; one that was already
 // awaiting the agent before does not wake it again and again.
 func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
+	t.Parallel()
 	f := setupWith(t, holdLong)
 	// the threads are on the agent's own story, so they await it (ADR-0181)
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, asStory(f.story.ID))
 	f.toReview(t)
 	if _, err := threads.New(f.repo, threads.NewOptions{Title: "Old", On: f.story.ID, Author: "alex", Text: "Long ago.", Now: t0}); err != nil {
 		t.Fatal(err)
@@ -434,8 +435,9 @@ func TestAnAnswerWithASourceIsAnAnswerToTheAgentThatAsked(t *testing.T) {
 // task of the agent's own story whose last entry is the operator's wakes it,
 // and awaits it.
 func TestTheOperatorsThreadsAwaitTheOperatorNotTheAgent(t *testing.T) {
+	t.Parallel()
 	f := setupWith(t, func(o *Options) { o.Repo.Manifest.Owner = "alex"; holdLong(o) })
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, asStory(f.story.ID))
 	f.toReview(t)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Parent: f.story.Parent, Owner: "alex", Now: t0})
 	if err != nil {

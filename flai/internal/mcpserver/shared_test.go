@@ -21,11 +21,8 @@ const sharedManifest = "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n
 // tools must read the list as it is now.
 func sharedFixture(t *testing.T, served string) *fixture {
 	t.Helper()
-	if served != "" {
-		// TestMain cleared it, and the rest of sessionEnv, for the others
-		t.Setenv(guard.StartedByEnv, served)
-	}
-	f := setup(t)
+	// flai mcp passes FLAI_STARTED_BY in Options
+	f := setupWith(t, func(o *Options) { o.StartedBy = served })
 	if err := os.WriteFile(f.manifest(), []byte(sharedManifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -189,6 +186,7 @@ func TestSharedPathsEditRefusesWhatIsNotValid(t *testing.T) {
 // In a session flai serve started, shared_paths_edit refuses itself, should
 // flai guard not run, and says to ask the operator; shared_paths still reads.
 func TestSharedPathsEditIsTheOperatorsOnly(t *testing.T) {
+	t.Parallel()
 	f := sharedFixture(t, guard.StartedByServe)
 	_, failed := f.call(t, "shared_paths_edit", map[string]any{"add": []string{"template"}})
 	if !strings.Contains(failed, "operator's (ADR-0096)") || !strings.Contains(failed, "thread_open") {

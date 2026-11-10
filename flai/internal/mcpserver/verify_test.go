@@ -228,7 +228,8 @@ func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
 // told to end while a close-out job of its story runs, nor when the job's
 // state cannot be read, since it waits for the job's verified event; once
 // the job ended, it is.
-func testWaitForEventsHoldsAStorysAgentWhileItsCloseOutJobRuns(t *testing.T) {
+func TestWaitForEventsHoldsAStorysAgentWhileItsCloseOutJobRuns(t *testing.T) {
+	t.Parallel()
 	f, d := storysAgent(t)
 	f.ask(t, f.story.ID)
 	dir := closeout.Dir(f.repo.CacheDir())

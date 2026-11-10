@@ -12,7 +12,8 @@ import (
 // superseded ADR's superseded_by in the story's worktree, commits those and
 // only those on the story's branch as <ADR-nnnn> <decision> with the
 // story's prefix and the trailers, and widens the story's touches.
-func testAdrNewCommitsOnTheStorysBranch(t *testing.T) {
+func TestAdrNewCommitsOnTheStorysBranch(t *testing.T) {
+	t.Parallel()
 	f := setup(t)
 	wt := storyGit(t, f)
 	writeIn(t, wt.Root, "design/system/plan.md", "---\ntitle: Plan\n---\n\n# Plan\n\nhalf done\n")

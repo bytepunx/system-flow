@@ -7,16 +7,15 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
-	"github.com/bytepunx/system-flow/flai/internal/harness"
 )
 
 // orchestratorWith is the server of the orchestrator flai serve started with
-// reasons in FLAI_REASONS, none when reasons is blank, its cursor set by a
-// first inbox so that a wait starts with nothing behind it.
+// reasons in FLAI_REASONS, which flai mcp passes in Options, none when
+// reasons is blank, its cursor set by a first inbox so that a wait starts
+// with nothing behind it.
 func orchestratorWith(t *testing.T, reasons string) (*fixture, *deadlines) {
 	t.Helper()
-	t.Setenv(harness.ReasonsEnv, reasons)
-	f, d := endFixture(t, "", guard.RoleOrchestrate)
+	f, d := endSetup(t, func(o *Options) { o.Role, o.Reasons = guard.RoleOrchestrate, reasons })
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
@@ -27,6 +26,7 @@ func orchestratorWith(t *testing.T, reasons string) (*fixture, *deadlines) {
 // orchestrator flai serve started for reasons is told to end, with why
 // reasons done, at once rather than held.
 func TestWaitForEventsEndsTheOrchestratorWhoseReasonsAreDone(t *testing.T) {
+	t.Parallel()
 	f, d := orchestratorWith(t, "thread TH-0001 awaits the orchestrator\nS-0002 moved to review")
 	out := f.endsAtOnce(t, d)
 	if out["why"] != "reasons done" {
@@ -53,6 +53,7 @@ func TestWaitForEventsEndsTheOrchestratorWhoseReasonsAreDone(t *testing.T) {
 // Events already behind the orchestrator's cursor come with end, so none is
 // lost.
 func TestWaitForEventsReportsWhatIsBehindTheOrchestratorsCursorWithEnd(t *testing.T) {
+	t.Parallel()
 	f, d := orchestratorWith(t, "ready-empty")
 	*f.clock = t0.Add(10 * time.Minute)
 	s := f.readyStory(t, "While it ran", t0.Add(5*time.Minute))
@@ -68,8 +69,10 @@ func TestWaitForEventsReportsWhatIsBehindTheOrchestratorsCursorWithEnd(t *testin
 // An orchestrator with no reasons, as one run by hand, or with only blank
 // ones, holds as before.
 func TestWaitForEventsHoldsAnOrchestratorWithNoReasons(t *testing.T) {
+	t.Parallel()
 	for name, reasons := range map[string]string{"empty": "", "blank": " \n\t"} {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			f, d := orchestratorWith(t, reasons)
 			f.holds(t, d)
 		})
@@ -77,20 +80,22 @@ func TestWaitForEventsHoldsAnOrchestratorWithNoReasons(t *testing.T) {
 }
 
 // FLAI_REASONS is the orchestrator's: a story's agent with reasons in its
-// environment and nothing pending holds, and with its question pending is
-// told why in its own terms.
+// session and nothing pending holds, and with its question pending is told
+// why in its own terms.
 func TestWaitForEventsReasonsLeaveAStorysAgentAlone(t *testing.T) {
+	t.Parallel()
+	withReasons := func(o *Options) { o.Story, o.Reasons = storysAgentStory, "ready-empty" }
 	t.Run("holds", func(t *testing.T) {
-		t.Setenv(harness.ReasonsEnv, "ready-empty")
-		f, d := endFixture(t, storysAgentStory, "")
+		t.Parallel()
+		f, d := endSetup(t, withReasons)
 		if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 			t.Fatal(failed)
 		}
 		f.holds(t, d)
 	})
 	t.Run("ends on its question", func(t *testing.T) {
-		t.Setenv(harness.ReasonsEnv, "ready-empty")
-		f, d := endFixture(t, storysAgentStory, "")
+		t.Parallel()
+		f, d := endSetup(t, withReasons)
 		th := f.ask(t, f.story.ID)
 		why, _ := f.endsAtOnce(t, d)["why"].(string)
 		if why == "reasons done" || !strings.Contains(why, th.ID) {

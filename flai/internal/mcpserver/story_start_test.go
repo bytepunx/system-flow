@@ -97,7 +97,8 @@ func starter(t *testing.T, repo *workitem.Repo, runner execx.Runner, with func(*
 // opened in its worktree, linked as the server's RelativePaths says, and
 // the answer holds every key flai story start --json gives, the pack whole
 // when it fits as part 1 of 1. Integration: it runs real git.
-func testStoryStartStartsAReadyStory(t *testing.T) {
+func TestStoryStartStartsAReadyStory(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("integration: runs real git")
 	}
@@ -114,6 +115,7 @@ func testStoryStartStartsAReadyStory(t *testing.T) {
 	gitIn(t, dir, "commit", "-q", "-m", "project")
 	var asked atomic.Bool
 	f := starter(t, repo, execx.System{}, func(o *Options) {
+		o.Session = gitSession
 		o.RelativePaths = func() bool { asked.Store(true); return false }
 	})
 

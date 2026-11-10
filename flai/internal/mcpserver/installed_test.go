@@ -86,7 +86,7 @@ func outdatedProject(t *testing.T, installed string, rules int) (*fixture, strin
 	}
 	gitIn(t, repo.Root, "tag", "flai/v1.10.0")
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
-	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "1.9.3", Installed: installed, Now: func() time.Time { return closeClock }})
+	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Session: gitSession, Version: "1.9.3", Installed: installed, Now: func() time.Time { return closeClock }})
 	return &fixture{repo: repo, cs: cs}, wt
 }
 
@@ -94,7 +94,8 @@ func outdatedProject(t *testing.T, installed string, rules int) (*fixture, strin
 // whose installed flai has caught up, closes the task with the installed
 // flai: run in the main checkout as the server's agent and session, with the
 // message and the log, and answered with closed_by naming it.
-func testTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp(t *testing.T) {
+func TestTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp(t *testing.T) {
+	t.Parallel()
 	fake := newFakeFlai(t, `{"version":"1.10.0","commit":"c","date":"d","go":"go"}`, 0, closedResult, 0)
 	f, _ := outdatedProject(t, fake.path, 0)
 
@@ -122,7 +123,8 @@ func testTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp(t *testing.T) {
 
 // ADR-0160: a close the installed flai stops at a step exits non-zero and
 // prints its result, which is the answer, not a tool error.
-func testTaskDoneAnswersTheInstalledFlaisStop(t *testing.T) {
+func TestTaskDoneAnswersTheInstalledFlaisStop(t *testing.T) {
+	t.Parallel()
 	fake := newFakeFlai(t, `{"version":"1.10.1"}`, 0, stoppedResult, 3)
 	f, _ := outdatedProject(t, fake.path, 0)
 
@@ -139,7 +141,8 @@ func testTaskDoneAnswersTheInstalledFlaisStop(t *testing.T) {
 // read, does not close the task: task_done refuses as ADR-0142 does, adds
 // the installed flai's version or why it could not be read and to call
 // again once the host is upgraded, and changes nothing.
-func testTaskDoneRefusesWhenTheInstalledFlaiHasNotCaughtUp(t *testing.T) {
+func TestTaskDoneRefusesWhenTheInstalledFlaiHasNotCaughtUp(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, version string
 		exit          int
@@ -176,7 +179,8 @@ func testTaskDoneRefusesWhenTheInstalledFlaiHasNotCaughtUp(t *testing.T) {
 // I-0157, ADR-0180: a server a minor version behind a release that kept its
 // task-done rules number is not refused, so it closes the task itself and
 // the installed flai, behind too, is not asked.
-func testTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules(t *testing.T) {
+func TestTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules(t *testing.T) {
+	t.Parallel()
 	fake := newFakeFlai(t, `{"version":"1.9.3"}`, 0, closedResult, 0)
 	f, _ := outdatedProject(t, fake.path, buildinfo.TaskDoneRules)
 
@@ -197,7 +201,8 @@ func testTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules(t *testing.T)
 // number or a higher one has caught up and closes the task though it is a
 // minor version behind; one that prints no number keeps ADR-0142's minor
 // rule, so it closes within a patch of the release.
-func testTaskDoneClosesWithAnInstalledFlaiThatCarriesTheNewestRules(t *testing.T) {
+func TestTaskDoneClosesWithAnInstalledFlaiThatCarriesTheNewestRules(t *testing.T) {
+	t.Parallel()
 	newest := buildinfo.TaskDoneRules + 1
 	for _, tc := range []struct {
 		name, version, closedBy string
@@ -229,7 +234,8 @@ func testTaskDoneClosesWithAnInstalledFlaiThatCarriesTheNewestRules(t *testing.T
 // version, and one that prints no number is behind a minor version; the
 // refusal names the server's rules and the installed flai's version and
 // number, and nothing changes.
-func testTaskDoneRefusesAnInstalledFlaiBelowTheNewestRules(t *testing.T) {
+func TestTaskDoneRefusesAnInstalledFlaiBelowTheNewestRules(t *testing.T) {
+	t.Parallel()
 	newest := buildinfo.TaskDoneRules + 1
 	for _, tc := range []struct {
 		name, version, says string

@@ -18,8 +18,7 @@ import (
 // its head, which head is: a story the merge queue finds eligible.
 func queueFixture(t *testing.T, permit bool) (f *fixture, head string) {
 	t.Helper()
-	inEnv(t, "FLAI_ROLE", guard.RoleOrchestrate)
-	f, _, git := verifyFixtureWith(t, func(o *Options) { o.Agent = workitem.ActivityOrchestrator })
+	f, _, git := verifyFixtureWith(t, func(o *Options) { o.Agent, o.Role = workitem.ActivityOrchestrator, guard.RoleOrchestrate })
 	f.repo.Manifest.Orchestration.Permissions.AcceptReviews = permit
 	wt := f.repo.WorktreePath(f.story.ID)
 	file := filepath.Join(wt, "flai", "internal", "mcpserver", "x.go")
@@ -53,7 +52,8 @@ func queueFixture(t *testing.T, permit bool) (f *fixture, head string) {
 // S-0403 criterion 1: queue_add enqueues a story in review as the
 // orchestrator, recording the commit its verifier checked and its evidence
 // as given, and answers the change.
-func testQueueAddEnqueuesWithTheOrchestratorsEvidence(t *testing.T) {
+func TestQueueAddEnqueuesWithTheOrchestratorsEvidence(t *testing.T) {
+	t.Parallel()
 	f, head := queueFixture(t, true)
 	evidence := "Verdict: pass\n- 1: `flai/internal/mcpserver/x.go`"
 	out, failed := f.call(t, "queue_add", map[string]any{"story": f.story.ID, "verified": head, "evidence": evidence})
@@ -78,7 +78,8 @@ func testQueueAddEnqueuesWithTheOrchestratorsEvidence(t *testing.T) {
 // S-0403 criterion 1: queue_add is refused, and nothing written, while
 // accept_reviews is off, for evidence that leaves a criterion out or names
 // no changed file for it, and for a verified commit that is not the head.
-func testQueueAddRefusesAsTheOrchestratorsAcceptanceWould(t *testing.T) {
+func TestQueueAddRefusesAsTheOrchestratorsAcceptanceWould(t *testing.T) {
+	t.Parallel()
 	off, head := queueFixture(t, false)
 	good := "Verdict: pass\n- 1: `flai/internal/mcpserver/x.go`"
 	if _, failed := off.call(t, "queue_add", map[string]any{"story": off.story.ID, "verified": head, "evidence": good}); !strings.Contains(failed, "only with orchestration.permissions.accept_reviews, which is off") {

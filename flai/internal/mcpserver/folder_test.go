@@ -404,15 +404,16 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 // the project it happened in, with its fields, and in no other project: an
 // agent event of each to among them (S-0532).
 func TestTheNewEventKindsReachWaitForEventsAndInboxAcrossAFolder(t *testing.T) {
+	t.Parallel()
 	for _, c := range eventKindCases {
 		t.Run(c.name, func(t *testing.T) {
-			c.runAs(t)
+			t.Parallel()
 			root := t.TempDir()
 			makeProject(t, filepath.Join(root, "alpha"), "alpha")
 			beta := makeProject(t, filepath.Join(root, "beta"), "beta")
 			story := backlogStoryIn(t, beta, "Beta work", t0)
 			clock := t0.Add(time.Minute)
-			f := folderSetupWith(t, root, func(o *Options) { o.Now = func() time.Time { return clock } })
+			f := folderSetupWith(t, root, func(o *Options) { o.Now, o.Role = func() time.Time { return clock }, c.role })
 			if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 				t.Fatal(failed)
 			}

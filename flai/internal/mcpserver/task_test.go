@@ -17,7 +17,6 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
-	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -38,46 +37,22 @@ func closeFixture(t *testing.T) string {
 	return dir
 }
 
-// TestInAGitSession runs the tests that run real git in session s1, git
-// isolated with an identity and FLAI_SESSION s1, as together runs them:
-// set once here, so that they run in parallel with each other (S-0548).
-func TestInAGitSession(t *testing.T) {
-	gittest.Identity(t, "t", "t@t")
-	t.Setenv("FLAI_SESSION", "s1")
-	together(t,
-		testTaskDoneClosesATaskInOneCall,
-		testTaskDoneLeavesAnotherOpenTasksPaths,
-		testTaskDoneLeavesASiblingsConventionTemplateAndChangelog,
-		testTaskDoneClosesWithNothingToCommitAndNoMessage,
-		testTaskDoneAnswersARefusedSync,
-		testTaskDoneAnswersAFailedCheck,
-		testTaskDoneRefusesAFlaiAMinorVersionBehind,
-		testTaskDoneAnswersWhatTheCommandPrints,
-		testTaskDoneFitsTheAnswerWithManyThreadsElsewhere,
-		testTaskDoneCarriesNoneOfTheOperatorsThreads,
-		testTaskDoneCarriesTheStorysThreadsAwaitingItsAgent,
-		testTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp,
-		testTaskDoneAnswersTheInstalledFlaisStop,
-		testTaskDoneRefusesWhenTheInstalledFlaiHasNotCaughtUp,
-		testTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules,
-		testTaskDoneClosesWithAnInstalledFlaiThatCarriesTheNewestRules,
-		testTaskDoneRefusesAnInstalledFlaiBelowTheNewestRules,
-		testStoryStartStartsAReadyStory,
-	)
-}
+// gitSession is the session the tests that close a task with real git run
+// as, which flai mcp passes in Options from FLAI_SESSION.
+const gitSession = "s1"
 
-// inGitSession fails t unless TestInAGitSession runs it.
+// inGitSession fails t unless git is isolated and given an identity, as
+// TestMain does for the package.
 func inGitSession(t *testing.T) {
 	t.Helper()
-	inEnv(t, "FLAI_SESSION", "s1")
-	if os.Getenv("GIT_CONFIG_GLOBAL") == "" {
-		t.Fatal("git is not isolated: run this test from TestInAGitSession")
+	if os.Getenv("GIT_CONFIG_GLOBAL") == "" || os.Getenv("GIT_AUTHOR_NAME") != gitIdentity {
+		t.Fatal("git is not isolated with the package's identity: TestMain sets it")
 	}
 }
 
 // closeProject is the good fixture in a git repository whose main branch
 // holds it, with S-004's branch checked out in its worktree, which it
-// returns. Integration: it runs real git, in TestInAGitSession.
+// returns. Integration: it runs real git.
 func closeProject(t *testing.T) (*workitem.Repo, string) {
 	t.Helper()
 	if testing.Short() {
@@ -101,10 +76,11 @@ func closeProject(t *testing.T) (*workitem.Repo, string) {
 	return repo, wt
 }
 
-// closer is an MCP server on repo as S-004's agent, at closeClock.
+// closer is an MCP server on repo as S-004's agent in gitSession, at
+// closeClock.
 func closer(t *testing.T, repo *workitem.Repo) *fixture {
 	t.Helper()
-	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "test", Now: func() time.Time { return closeClock }})
+	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Session: gitSession, Version: "test", Now: func() time.Time { return closeClock }})
 	return &fixture{repo: repo, cs: cs}
 }
 
@@ -145,7 +121,8 @@ func field(out map[string]any, path string) any {
 // ADR-0107: task_done commits, tells the other open stories whose claim
 // covers the commit (S-0333), syncs, moves the task to done, logs, widens the
 // touches, checks, and answers the inbox in one call.
-func testTaskDoneClosesATaskInOneCall(t *testing.T) {
+func TestTaskDoneClosesATaskInOneCall(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	writeIn(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\ntouches: [README.md]\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
@@ -201,7 +178,8 @@ func sibling(t *testing.T, repo *workitem.Repo, mine, touches []string) string {
 // I-0108, ADR-0128: with two open tasks' files in the worktree, task_done
 // on one commits its own file alone, answers the other's in left, leaves it
 // uncommitted, and goes on past the sync it refuses.
-func testTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
+func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	sibling(t, repo, []string{"README.md"}, []string{"src/two.go"})
 	writeIn(t, wt, "README.md", "# good\n\nT-003's.\n")
@@ -234,7 +212,8 @@ func testTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
 // the code task commits its code alone; the convention task's three paths
 // stay changed in the worktree, are answered in left, and widen neither the
 // closing task's touches nor the story's.
-func testTaskDoneLeavesASiblingsConventionTemplateAndChangelog(t *testing.T) {
+func TestTaskDoneLeavesASiblingsConventionTemplateAndChangelog(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	conventions := []string{"design/conventions/git.md", "template/CHANGELOG.md", "template/root/design/conventions/git.md"}
 	second := sibling(t, repo, []string{"src/one"}, conventions)
@@ -285,7 +264,8 @@ func testTaskDoneLeavesASiblingsConventionTemplateAndChangelog(t *testing.T) {
 // ADR-0128: task_done with nothing to commit needs no message: it runs to
 // the end, answers no commit and left empty, and logs that the task was
 // closed.
-func testTaskDoneClosesWithNothingToCommitAndNoMessage(t *testing.T) {
+func TestTaskDoneClosesWithNothingToCommitAndNoMessage(t *testing.T) {
+	t.Parallel()
 	repo, _ := closeProject(t)
 
 	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003"})
@@ -306,7 +286,8 @@ func testTaskDoneClosesWithNothingToCommitAndNoMessage(t *testing.T) {
 // A sync that stops on a conflict is the answer, not a tool error: stopped
 // names the sync, which lists the conflicting path, and the task is not
 // moved.
-func testTaskDoneAnswersARefusedSync(t *testing.T) {
+func TestTaskDoneAnswersARefusedSync(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	writeIn(t, repo.Root, "README.md", "# good\n\nChanged on main.\n")
 	gitIn(t, repo.Root, "commit", "-q", "-am", "docs: main's readme")
@@ -332,7 +313,8 @@ func testTaskDoneAnswersARefusedSync(t *testing.T) {
 
 // A check that fails in the story is the answer too, after the move: the
 // findings are in it, and the task is done.
-func testTaskDoneAnswersAFailedCheck(t *testing.T) {
+func TestTaskDoneAnswersAFailedCheck(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	writeIn(t, wt, "docs/notes.md", "# Notes\n\nNo front matter.\n")
 
@@ -362,12 +344,13 @@ func testTaskDoneAnswersAFailedCheck(t *testing.T) {
 // behind the newest flai release in the project's history, with no installed
 // flai known to close it instead (ADR-0160), is a tool error naming the
 // upgrade, and leaves the task open and its changes uncommitted.
-func testTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
+func TestTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
+	t.Parallel()
 	repo, wt := closeProject(t)
 	gitIn(t, repo.Root, "tag", "flai/v1.10.0")
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
 	head := gitIn(t, wt, "rev-parse", "HEAD")
-	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "1.9.3", Now: func() time.Time { return closeClock }})
+	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Session: gitSession, Version: "1.9.3", Now: func() time.Time { return closeClock }})
 
 	out, failed := (&fixture{repo: repo, cs: cs}).call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
 	if !strings.Contains(failed, "this flai is 1.9.3, a minor version behind flai 1.10.0") || !strings.Contains(failed, buildinfo.UpgradeCommand) || !strings.Contains(failed, "no installed flai is known") {
@@ -386,7 +369,8 @@ func testTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
 // Two copies of the project close the same task, one through the tool and
 // one through taskdone.Run, and answer the same JSON but for the commit's
 // hash and the project's folder.
-func testTaskDoneAnswersWhatTheCommandPrints(t *testing.T) {
+func TestTaskDoneAnswersWhatTheCommandPrints(t *testing.T) {
+	t.Parallel()
 	if reflect.TypeFor[TaskDoneOut]() != reflect.TypeFor[taskdone.Result]() {
 		t.Fatal("TaskDoneOut is a type of its own, not taskdone.Result")
 	}
@@ -401,7 +385,7 @@ func testTaskDoneAnswersWhatTheCommandPrints(t *testing.T) {
 
 	direct, wt := closeProject(t)
 	writeIn(t, wt, "docs/notes.md", "# Notes\n\nNo front matter.\n")
-	res, err := taskdone.Run(context.Background(), taskdone.Options{Repo: direct, Runner: execx.System{}, Task: "T-003", Message: message, Agent: "agent-S-004", Session: "s1", Now: func() time.Time { return closeClock }, Version: "test"})
+	res, err := taskdone.Run(context.Background(), taskdone.Options{Repo: direct, Runner: execx.System{}, Task: "T-003", Message: message, Agent: "agent-S-004", Session: gitSession, Now: func() time.Time { return closeClock }, Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,7 +436,8 @@ func manyThreadsElsewhere(t *testing.T) *workitem.Repo {
 // ctxpack.PartLimit bytes, with stopped, error, and left as before, no thread
 // of another item listed and the 33 counted in threads_omitted, and the same
 // result as taskdone.Run, which flai task done --json prints, gives for it.
-func testTaskDoneFitsTheAnswerWithManyThreadsElsewhere(t *testing.T) {
+func TestTaskDoneFitsTheAnswerWithManyThreadsElsewhere(t *testing.T) {
+	t.Parallel()
 	const message = "docs: [S-004] T-003 the readme"
 	viaTool := manyThreadsElsewhere(t)
 	out, text, failed := closer(t, viaTool).callText(t, "task_done", map[string]any{"task": "T-003", "message": message})
@@ -476,7 +461,7 @@ func testTaskDoneFitsTheAnswerWithManyThreadsElsewhere(t *testing.T) {
 	}
 
 	direct := manyThreadsElsewhere(t)
-	res, err := taskdone.Run(context.Background(), taskdone.Options{Repo: direct, Runner: execx.System{}, Task: "T-003", Message: message, Agent: "agent-S-004", Session: "s1", Now: func() time.Time { return closeClock }, Version: "test"})
+	res, err := taskdone.Run(context.Background(), taskdone.Options{Repo: direct, Runner: execx.System{}, Task: "T-003", Message: message, Agent: "agent-S-004", Session: gitSession, Now: func() time.Time { return closeClock }, Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -509,7 +494,8 @@ func operatorsClose(t *testing.T) *workitem.Repo {
 
 // I-0154, ADR-0181: with the operator's threads open and none on the story,
 // task_done's inbox lists no thread, awaiting_you 0, and no threads_omitted.
-func testTaskDoneCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+func TestTaskDoneCarriesNoneOfTheOperatorsThreads(t *testing.T) {
+	t.Parallel()
 	repo := operatorsClose(t)
 
 	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003"})
@@ -527,7 +513,8 @@ func testTaskDoneCarriesNoneOfTheOperatorsThreads(t *testing.T) {
 // ADR-0181: beside the operator's threads, a thread on the story and one on
 // its task, each with the operator's last entry, await the story's agent:
 // task_done's inbox lists the two alone, awaiting "you".
-func testTaskDoneCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+func TestTaskDoneCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
+	t.Parallel()
 	repo := operatorsClose(t)
 	onStory := threadBy(t, repo, "Which way here?", "S-004", "A or B?", "alex")
 	onTask := threadBy(t, repo, "And on the task?", "T-003", "Split it?", "planner-S-004", "alex")

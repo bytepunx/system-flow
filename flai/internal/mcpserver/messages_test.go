@@ -42,6 +42,14 @@ func sessionAs(t *testing.T, f *fixture, agent string) *fixture {
 	return &fixture{repo: f.repo, cs: cs, story: f.story, task: f.task, clock: &clock}
 }
 
+// handRunAgentOf makes the server's agent story's, named agent-S-nnnn, in a
+// session flai serve did not start: its story is the one its name gives,
+// and wait_for_events holds it rather than tell it to end while it awaits
+// another story's reply (S-0272).
+func handRunAgentOf(story string) func(*Options) {
+	return func(o *Options) { o.Agent = "agent-" + story }
+}
+
 // conversation decodes a message tool's answer.
 func conversation(t *testing.T, out map[string]any) ConversationOut {
 	t.Helper()
@@ -70,8 +78,9 @@ func conversationFiles(t *testing.T, repo *workitem.Repo) []string {
 // story's agent, named agent-S-nnnn, answers it with message_reply, and
 // message_get reads it as flai message show --json prints it.
 func TestMessageToolsWorkAConversationBetweenTwoStories(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, asStory(f.story.ID))
 
 	out, failed := f.call(t, "message_send", map[string]any{"to": other.ID, "text": "I am changing plan.md.\nWill you leave it to me?", "about": []string{"design/system/plan.md"}})
 	if failed != "" {
@@ -88,7 +97,6 @@ func TestMessageToolsWorkAConversationBetweenTwoStories(t *testing.T) {
 		t.Errorf("the first entry should be the agent's, for its story: %+v", sent.Entries)
 	}
 
-	t.Setenv("FLAI_STORY", "")
 	theirs := sessionAs(t, f, "agent-"+other.ID)
 	out, failed = theirs.call(t, "message_reply", map[string]any{"id": "ms-1", "text": "Yes, it is yours until you push."})
 	if failed != "" {
@@ -163,33 +171,31 @@ func TestAMessageNeedsASessionWithAStory(t *testing.T) {
 // package holds it, and so must the addressee; a reply comes only from one of
 // the conversation's two stories.
 func TestAMessageGoesOnlyBetweenOpenStories(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
 	epic, err := f.repo.Get(f.story.Parent)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ready := storyOfEpic(t, f.repo, epic, "Waiting", nil, workitem.Ready)
-	t.Setenv("FLAI_STORY", f.story.ID)
-	if _, failed := f.call(t, "message_send", map[string]any{"to": ready.ID, "text": "Hello"}); !strings.Contains(failed, ready.ID+" is ready; a message goes only between stories in progress or in review") {
+	mine, readys, others := f.as(t, asStory(f.story.ID)), f.as(t, asStory(ready.ID)), f.as(t, asStory(other.ID))
+	if _, failed := mine.call(t, "message_send", map[string]any{"to": ready.ID, "text": "Hello"}); !strings.Contains(failed, ready.ID+" is ready; a message goes only between stories in progress or in review") {
 		t.Errorf("a send to a story not in progress should be refused with its state: %q", failed)
 	}
-	if _, failed := f.call(t, "message_send", map[string]any{"to": f.story.ID, "text": "Hello"}); !strings.Contains(failed, "cannot message itself") {
+	if _, failed := mine.call(t, "message_send", map[string]any{"to": f.story.ID, "text": "Hello"}); !strings.Contains(failed, "cannot message itself") {
 		t.Errorf("a send to the session's own story should be refused: %q", failed)
 	}
-	t.Setenv("FLAI_STORY", ready.ID)
-	if _, failed := f.call(t, "message_send", map[string]any{"to": other.ID, "text": "Hello"}); !strings.Contains(failed, ready.ID+" is ready") {
+	if _, failed := readys.call(t, "message_send", map[string]any{"to": other.ID, "text": "Hello"}); !strings.Contains(failed, ready.ID+" is ready") {
 		t.Errorf("a send from a story not in progress should be refused with its state: %q", failed)
 	}
 	if files := conversationFiles(t, f.repo); len(files) != 0 {
 		t.Fatalf("a refused send should write nothing: %v", files)
 	}
 
-	t.Setenv("FLAI_STORY", other.ID)
-	if _, failed := f.call(t, "message_send", map[string]any{"to": f.story.ID, "text": "Hello"}); failed != "" {
+	if _, failed := others.call(t, "message_send", map[string]any{"to": f.story.ID, "text": "Hello"}); failed != "" {
 		t.Fatal(failed)
 	}
-	t.Setenv("FLAI_STORY", ready.ID)
-	if _, failed := f.call(t, "message_reply", map[string]any{"id": "MS-0001", "text": "Me too"}); !strings.Contains(failed, ready.ID+" is not in MS-0001") {
+	if _, failed := readys.call(t, "message_reply", map[string]any{"id": "MS-0001", "text": "Me too"}); !strings.Contains(failed, ready.ID+" is not in MS-0001") {
 		t.Errorf("a reply from a story not in the conversation should be refused: %q", failed)
 	}
 }
@@ -284,6 +290,7 @@ func TestTheMessageToolsRouteByProject(t *testing.T) {
 // under messages, which awaiting_you does not count, and a session with no
 // story of its own has none.
 func TestTheInboxToolListsTheStorysConversations(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
 	if _, err := messages.Send(f.repo, messages.SendOptions{From: other.ID, To: f.story.ID, Author: "agent-" + other.ID, Text: "Will you leave plan.md to me?", About: []string{"design/system/plan.md"}, Now: t0}); err != nil {
 		t.Fatal(err)
@@ -297,8 +304,7 @@ func TestTheInboxToolListsTheStorysConversations(t *testing.T) {
 		t.Errorf("a session with no story of its own has no messages: %v", none["messages"])
 	}
 
-	t.Setenv("FLAI_STORY", f.story.ID)
-	out, failed := f.call(t, "inbox", map[string]any{})
+	out, failed := f.as(t, asStory(f.story.ID)).call(t, "inbox", map[string]any{})
 	if failed != "" {
 		t.Fatal(failed)
 	}
@@ -332,8 +338,9 @@ func messageEvents(out map[string]any) []map[string]any {
 // session's story, as an event of kind message naming the conversation and
 // the sender's story, told once; the story's own reply is not told back.
 func TestAMessageWakesAWaitingAgent(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixtureWith(t, holdLong)
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, handRunAgentOf(f.story.ID))
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
@@ -388,6 +395,7 @@ func inboxConversations(t *testing.T, fx *fixture) []map[string]any {
 // story's inbox, until the next message awaits the other story again; the
 // tools and the instructions say what settled is for.
 func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
 	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "I changed plan.md.", About: []string{"design/system/plan.md"}, Now: t0})
 	if err != nil {
@@ -405,7 +413,7 @@ func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
 	if got := inboxConversations(t, theirs); len(got) != 1 || got[0]["awaiting"] != "" {
 		t.Errorf("the replying story's inbox: awaiting neither story: %v", got)
 	}
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, asStory(f.story.ID))
 	got := inboxConversations(t, f)
 	if len(got) != 1 || got[0]["awaiting"] != "" {
 		t.Errorf("the other story's inbox: awaiting neither story: %v", got)
@@ -454,12 +462,13 @@ func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
 // the session's story, as an event of kind message whose summary says no
 // reply is owed, not that the agent answer it.
 func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixtureWith(t, holdLong)
 	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "I changed plan.md.", About: []string{"design/system/plan.md"}, Now: t0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("FLAI_STORY", f.story.ID)
+	f = f.as(t, handRunAgentOf(f.story.ID))
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
@@ -487,7 +496,8 @@ func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
 // by the other story, which had asked it something, is not told it owes a
 // reply: its inbox has the conversation awaiting neither story, and the
 // event of the settled entry says no reply is owed.
-func testAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
+func TestAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
+	t.Parallel()
 	f, _ := storysAgent(t)
 	other := f.otherInProgress(t)
 	c := f.send(t, other.ID, f.story.ID)
@@ -517,14 +527,14 @@ func testAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
 // conversation, which then awaits the other story; a third story, an empty
 // reason, and a closed conversation are refused, and nothing is written.
 func TestMessageEscalateAsksTheOperator(t *testing.T) {
+	t.Parallel()
 	f, other := messagesFixture(t)
 	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "May I take plan.md?", About: []string{"design/system/plan.md"}, Now: t0})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Setenv("FLAI_STORY", other.ID)
-	out, failed := f.call(t, "message_escalate", map[string]any{"id": "ms-1", "reason": "We both need plan.md this week."})
+	out, failed := f.as(t, asStory(other.ID)).call(t, "message_escalate", map[string]any{"id": "ms-1", "reason": "We both need plan.md this week."})
 	if failed != "" {
 		t.Fatal(failed)
 	}
@@ -548,8 +558,7 @@ func TestMessageEscalateAsksTheOperator(t *testing.T) {
 		t.Errorf("the conversation should record the thread and await %s: %+v", f.story.ID, conv)
 	}
 
-	t.Setenv("FLAI_STORY", f.story.ID)
-	if out, failed = f.call(t, "message_escalate", map[string]any{"id": c.ID, "reason": "And the docs."}); failed != "" {
+	if out, failed = f.as(t, asStory(f.story.ID)).call(t, "message_escalate", map[string]any{"id": c.ID, "reason": "And the docs."}); failed != "" {
 		t.Fatal(failed)
 	}
 	data, _ = json.Marshal(out)
@@ -577,8 +586,7 @@ func TestMessageEscalateAsksTheOperator(t *testing.T) {
 		{f.story.ID, "No.", "MS-0001 is closed (settled) and cannot be escalated"},
 		{"", "No.", "message_escalate writes as this session's own story, and it has none"},
 	} {
-		t.Setenv("FLAI_STORY", tc.story)
-		if _, failed := f.call(t, "message_escalate", map[string]any{"id": c.ID, "reason": tc.reason}); !strings.Contains(failed, tc.want) {
+		if _, failed := f.as(t, asStory(tc.story)).call(t, "message_escalate", map[string]any{"id": c.ID, "reason": tc.reason}); !strings.Contains(failed, tc.want) {
 			t.Errorf("an escalation from %q with %q should be refused with %q: %q", tc.story, tc.reason, tc.want, failed)
 		}
 	}

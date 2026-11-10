@@ -155,8 +155,8 @@ func TestReleaseEvaluateWeighsWhatIsPending(t *testing.T) {
 // --by orchestrator, while accept_reviews is on (ADR-0093). An epic's
 // refusal, and the story's agent's, are as before.
 func TestItemMoveToDoneNamesTheOrchestratorsWay(t *testing.T) {
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
-	f := setupWith(t, func(o *Options) { o.Agent = workitem.ActivityOrchestrator })
+	t.Parallel()
+	f := setupWith(t, func(o *Options) { o.Agent, o.Role = workitem.ActivityOrchestrator, guard.RoleOrchestrate })
 	_, failed := f.call(t, "item_move", map[string]any{"id": f.story.ID, "to": workitem.Done})
 	want := "flai accept " + f.story.ID + " --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)"
 	if !strings.Contains(failed, want) || !strings.Contains(failed, "item_move never makes") {
@@ -168,27 +168,10 @@ func TestItemMoveToDoneNamesTheOrchestratorsWay(t *testing.T) {
 	if _, failed := f.call(t, "item_move", map[string]any{"id": f.story.Parent, "to": workitem.Done}); !strings.Contains(failed, "only the operator") {
 		t.Errorf("orchestrator, epic: %q", failed)
 	}
-	t.Setenv("FLAI_ROLE", "")
 	agent := setup(t)
 	if _, failed := agent.call(t, "item_move", map[string]any{"id": agent.story.ID, "to": workitem.Done}); !strings.Contains(failed, "only the operator") || strings.Contains(failed, "flai accept "+agent.story.ID) {
 		t.Errorf("story's agent: %q", failed)
 	}
-}
-
-// TestAsTheOrchestrator runs the tests of the orchestrator's server, as
-// together runs them, with FLAI_ROLE orchestrate, as flai serve sets it in
-// its session: set once here, so that they run in parallel with each other
-// (S-0548).
-func TestAsTheOrchestrator(t *testing.T) {
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
-	together(t,
-		testTheOrchestratorFinalizesACompleteDraft,
-		testTheOrchestratorSetsCostOfDelayInputsByItsPermissions,
-		testTheOrchestratorPromotesACandidateWhileReadyHasRoom,
-		testQueueAddEnqueuesWithTheOrchestratorsEvidence,
-		testQueueAddRefusesAsTheOrchestratorsAcceptanceWould,
-		testTheOrchestratorsThreadRepliesAreLoggedWithTheirSource,
-	)
 }
 
 // publishing is a project whose cli component was released at 1.0.0 and
@@ -249,14 +232,12 @@ func publishProject(t *testing.T, accepted bool) *publishing {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// flai serve sets the orchestrator's role in its session (S-0219), as
-	// the test that runs this one sets it for every publishProject
-	inEnv(t, "FLAI_ROLE", guard.RoleOrchestrate)
 	pb := &hostapi.Publisher{Run: pf.flaiPending(repo), Now: func() time.Time { return t0 }, Host: hostapi.Host{
 		Enabled: func(action, root string) bool { return pf.push && action == hostapi.ActionPush && root == pf.root },
 		Record:  func(e hostapi.Entry) { pf.journal = append(pf.journal, e) },
 	}}
-	srv := New(Options{Repo: repo, Agent: "claude", Version: "test", Now: func() time.Time { return t0 }, Runner: execx.System{}, Publish: pb})
+	// flai serve sets the orchestrator's role in its session (S-0219)
+	srv := New(Options{Repo: repo, Agent: "claude", Role: guard.RoleOrchestrate, Version: "test", Now: func() time.Time { return t0 }, Runner: execx.System{}, Publish: pb})
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	ct, st := mcp.NewInMemoryTransports()
@@ -327,9 +308,7 @@ func (pf *publishing) policy(rel manifest.Release) { pf.repo.Manifest.Orchestrat
 // and returns the policy and its figures, the versions and tags, and the
 // items bundled; the host's journal names the orchestrator and its reason.
 func TestReleasePublishPublishesWhenThePolicyIsMet(t *testing.T) {
-	// flai serve sets the orchestrator's role in its session (S-0219), once
-	// for every publishProject, so that the cases run in parallel (S-0548)
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	t.Parallel()
 	value := 300.0
 	for _, c := range []struct {
 		name, reason, want string
@@ -380,9 +359,7 @@ func TestReleasePublishPublishesWhenThePolicyIsMet(t *testing.T) {
 // off, and nothing accepted and unreleased; and to anyone but the
 // orchestrator, and while publish is off.
 func TestReleasePublishRefusesWhenThePolicyIsNotMet(t *testing.T) {
-	// flai serve sets the orchestrator's role in its session (S-0219), once
-	// for every publishProject, so that the cases run in parallel (S-0548)
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	t.Parallel()
 	value, count := 300.0, 3
 	for _, c := range []struct {
 		name     string
@@ -432,15 +409,14 @@ func TestReleasePublishRefusesWhenThePolicyIsNotMet(t *testing.T) {
 			t.Errorf("nothing to publish: %q, ran %d", failed, pf.ran)
 		}
 	})
-	// serial: it clears FLAI_ROLE for a story's agent's server
 	t.Run("publish off and not the orchestrator", func(t *testing.T) {
+		t.Parallel()
 		pf := publishProject(t, true)
 		pf.policy(manifest.Release{Policy: manifest.ReleaseThreshold, Value: &value})
 		pf.repo.Manifest.Orchestration.Permissions.Publish = false
 		if _, failed := pf.call(t, "release_publish", map[string]any{}); !strings.Contains(failed, "orchestration.permissions.publish, which is off") || pf.ran != 0 {
 			t.Errorf("publish off: %q, ran %d", failed, pf.ran)
 		}
-		t.Setenv("FLAI_ROLE", "")
 		if _, failed := setup(t).call(t, "release_publish", map[string]any{}); !strings.Contains(failed, "release_publish is the orchestrator's") || !strings.Contains(failed, "ADR-0067") {
 			t.Errorf("a story's agent: %q", failed)
 		}
@@ -480,9 +456,7 @@ steps:
 // another formula, or a formula file that does not parse, leaves it
 // publishing.
 func TestReleasePublishRefusesWhileTheProjectDefinesAPublishFormula(t *testing.T) {
-	// flai serve sets the orchestrator's role in its session (S-0219), once
-	// for every publishProject, so that the cases run in parallel (S-0548)
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
+	t.Parallel()
 	value := 300.0
 	formula := func(t *testing.T, pf *publishing, name, body string) {
 		t.Helper()
@@ -528,12 +502,9 @@ func TestReleasePublishRefusesWhileTheProjectDefinesAPublishFormula(t *testing.T
 // release_publish returns flai's message unchanged as a conflict, and
 // nothing changes.
 func TestReleasePublishReturnsTheRemotesRefusalAsAConflict(t *testing.T) {
-	// flai serve sets the orchestrator's role in its session (S-0219), once
-	// for every publishProject, so that the cases run in parallel (S-0548)
-	t.Setenv("FLAI_ROLE", guard.RoleOrchestrate)
-	was := release.RemoteTTL
-	t.Cleanup(func() { release.RemoteTTL = was })
-	release.RemoteTTL = 0
+	t.Parallel()
+	// each case asks its own remote afresh, with CheckRemoteAfresh, after
+	// moving it, so the answer kept for RemoteTTL is never one from before
 	value := 300.0
 	for _, c := range []struct {
 		name  string
