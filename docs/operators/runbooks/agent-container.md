@@ -89,6 +89,10 @@ The script and pilot write these to `.flai-cache/agents/S-nnnn/`, which is git-i
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
 
+#### A mount you type by hand in zsh
+
+A `docker run` you type in zsh can mount the main checkout as an empty folder. zsh reads `$ROOT:r` as a modifier, even inside double quotes, so `-v "$ROOT:$ROOT:ro"` reaches docker as `<ROOT>:<ROOT>o`. Docker then mounts the checkout read-write at `<ROOT>o`, mounts nothing at `<ROOT>`, and `-w "$ROOT"` makes it an empty working directory. `docker inspect --format '{{json .HostConfig.Binds}}' <container>` shows the mangled target. Brace the name before the colon, `-v "${ROOT}:${ROOT}:ro"`, or use `--mount type=bind,src="${ROOT}",dst="${ROOT}",readonly`. This script and `flai serve` build docker's arguments in `sh` and in Go, so they are not affected ([I-0276](../../../design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md), S-0667).
+
 ### The close-out's and the checks' containers
 
 Under `flai serve`, a story whose agent runs on `harness: container` is closed out, and checked, in containers of their own from the same image, so nothing from its worktree runs on the host ([ADR-0274](../../../design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md)). This script does not start them; `flai serve` does. Their mounts beside the agent's:
