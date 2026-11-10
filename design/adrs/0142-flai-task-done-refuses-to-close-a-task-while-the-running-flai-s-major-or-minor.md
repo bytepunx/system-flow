@@ -1,8 +1,8 @@
 ---
 id: ADR-0142
 title: "flai task done refuses to close a task while the running flai's major or minor version is behind the newest flai release in the project's history"
-status: proposed
-date: 2026-10-12
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0107, ADR-0128]
