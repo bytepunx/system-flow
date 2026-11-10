@@ -1,8 +1,8 @@
 ---
 id: ADR-0230
 title: "A ready story whose claim overlaps a story in progress is held only when a trial merge of that story's branch at its base conflicts, and after names a story whose output it reads, with the reason in its Notes"
-status: proposed
-date: 2026-10-31
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0046, ADR-0134]
