@@ -6,7 +6,7 @@ title: A formula step's bare flai command resolves to the installed flai on PATH
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:05Z
-updated: 2026-11-10T08:37:05Z
+updated: 2026-11-10T10:58:10Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
     by: flai
     at: 2026-11-10T08:37:05Z
+finalized:
+  by: alex
+  at: 2026-11-10T10:58:10Z
 ---
 # S-0681 A formula step's bare flai command resolves to the installed flai on PATH, which can be older than the flags the formula's steps use
 
