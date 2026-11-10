@@ -2,12 +2,12 @@
 id: I-0311
 title: "TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid"
 class: defect
-status: open
+status: closed
 count: 3
 cost: 17m
 first_reported: 2026-11-08T01:43:19Z
 last_reported: 2026-11-09T22:25:39Z
-updated: 2026-11-10T05:12:04Z
+updated: 2026-11-10T07:07:24Z
 ---
 
 # I-0311 TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid
@@ -32,3 +32,4 @@ S-0622's close-out job S-0622-20261109T221518Z stopped at integration after 9m45
 ## Remediation
 
 Story S-0647 remediates this issue, created from it at 2026-11-10T05:12:04Z.
+Closed 2026-11-10T07:07:24Z: S-0647 (T-2825, 8ceb994): the dev server tests no longer read the pid file the fake vite writes once running. A seam in flai/internal/components/devserver.go, launched, tells them the pid of each vite StartDevServer starts, which the fake's exec keeps, so a vite stopped before it ran is still waited on. TestStartDevServerStopsAViteStillStartingWhenItsContextEnds reproduces the case on every run with a start delay longer than its context.
