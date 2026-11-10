@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -723,7 +723,7 @@ Under `acceptance.mode: pull-request`, the preview also lists the forge blockers
 
 With `orchestration.permissions.publish` on, the orchestrator publishes what is accepted and not yet released, through the MCP tool `release_publish` alone, by the project's release policy ([ADR-0094](../adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md), refining [ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md) and [ADR-0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md)). The permission is the operator's asking that ADR-0067 requires. While it is off, the orchestrator neither evaluates nor publishes.
 
-Since S-0423, where the project defines a `publish` formula, the orchestrator publishes by starting it, not through `release_publish` ([ADR-0240](../adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). When `release_evaluate` is met, it runs `flai formula run publish --ready --autocommit` in the main checkout and logs the instance's story ID with the policy and its figures. The instance is a story: a story's agent works the formula's steps, [publish.md](../workflows/formulas/publish.md), from the main checkout ([Working an instance](#working-an-instance-s-0422)), and the operator or `accept_reviews` accepts it. So each publish is worked, measured, and archived as any story. The rest of this section is `release_publish`, which stays for a project with no `publish` formula.
+Since S-0423, where the project defines a `publish` formula, the orchestrator publishes by starting it, not through `release_publish` ([ADR-0240](../adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). When `release_evaluate` is met, it runs `flai formula run publish --ready --autocommit` in the main checkout and logs the instance's story ID with the policy and its figures. The instance is a story: a story's agent works the formula's steps, [publish.md](../workflows/formulas/publish.md), from the main checkout ([Working an instance](#working-an-instance-s-0422)), and the operator or `accept_reviews` accepts it. So each publish is worked, measured, and archived as any story. Under `judgement`, once it judges the unreleased work coherent and complete, it gives that reasoning as the formula's input `judgement`: `flai formula run publish --ready --autocommit --input judgement="<its reasoning>"`, one sentence with no double quote, backtick, or dollar sign, since the input is filled into step 2's command line as text. Step 2 passes it to `flai release --evaluate --require-met --judged`, which meets the policy with that reason when something is accepted and not yet released and `whole_epics` holds nothing back; with no input it stops the run, as before ([ADR-0273](../adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)). Under `threshold` and `theme` it gives no input, and `--judged` would change nothing. The rest of this section is `release_publish`, which stays for a project with no `publish` formula.
 
 - `release_publish` refuses, changing nothing, while the project defines a `publish` formula, naming `flai formula run publish --ready` (`noPublishFormula` in `internal/mcpserver/orchestrate.go`).
 - `flai release --pending` refuses, with exit 4, an agent `flai serve` started (`FLAI_STARTED_BY=flai-serve` or `FLAI_STORY` set) while the project's `push` host action is off, naming `flai serve enable push`. So the `push` action gates the instance as it gates `release_publish`. The operator's own shell and `--dry-run` are not held.
@@ -735,7 +735,7 @@ After each acceptance, its own or one `wait_for_events` reports as a story moved
 |--------|-------------------|------------|
 | `threshold` | The evaluation is met: the unreleased stories' summed cost of delay is at or over `value`, or their count at or over `count` | The figure that was met |
 | `theme` | The evaluation is met: every story of the epic or tag is accepted, and one at least is not yet released | The figure that was met |
-| `judgement` | It judges the unreleased work coherent and complete | Its reasoning, which the tool requires |
+| `judgement` | It judges the unreleased work coherent and complete | Its reasoning, which the tool requires, or, with a `publish` formula, the formula's `judgement` input, which step 2 passes as `--judged` |
 
 Under every policy, with `orchestration.release.whole_epics` set, a batch with a story whose epic is in neither review nor done is not published: the evaluation names those stories in `held_by_epic`, and is not met while one is there. Each release publishes everything accepted and not yet released, as `flai release --pending` does.
 
