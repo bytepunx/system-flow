@@ -1,8 +1,8 @@
 ---
 id: ADR-0127
 title: "flai guard lets a story's sub-agent write an ADR with flai adr new, topics, and accept, or adr_new, and refuses it the commit, which stays the story's agent's"
-status: proposed
-date: 2026-10-08
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0060]
