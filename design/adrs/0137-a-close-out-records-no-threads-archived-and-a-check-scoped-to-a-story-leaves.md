@@ -1,8 +1,8 @@
 ---
 id: ADR-0137
 title: "A close-out records no threads.archived, and a check scoped to a story leaves out every threads.archived outside it"
-status: proposed
-date: 2026-10-12
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0122, ADR-0133, ADR-0136]
