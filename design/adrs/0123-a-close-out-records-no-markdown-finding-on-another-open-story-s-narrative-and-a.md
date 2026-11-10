@@ -1,8 +1,8 @@
 ---
 id: ADR-0123
 title: "A close-out records no markdown finding on another open story's narrative, and a check scoped to a story leaves every such finding out"
-status: proposed
-date: 2026-10-08
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0122]
