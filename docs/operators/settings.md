@@ -410,9 +410,11 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--command` | [flai serve notify set](../users/flai-reference.md#flai-serve-notify-set) |
 | `--commit` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai import](../users/flai-reference.md#flai-import), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--config` | every command ([global flags](../users/flai-reference.md#flai)), [flai agent set](../users/flai-reference.md#flai-agent-set) |
+| `--context` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--cost` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--cost-of-delay-value` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--current` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
+| `--decision` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--defaults` | [flai new](../users/flai-reference.md#flai-new) |
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
 | `--deny-protected` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
@@ -498,6 +500,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
+| `--question` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--ready` | [flai formula run](../users/flai-reference.md#flai-formula-run) |
 | `--reason` | [flai accept](../users/flai-reference.md#flai-accept), [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai prime](../users/flai-reference.md#flai-prime), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |

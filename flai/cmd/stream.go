@@ -329,20 +329,30 @@ func newStreamLogCmd(a *app) *cobra.Command {
 }
 
 func newStreamStateCmd(a *app) *cobra.Command {
-	var current, next string
+	var current, next, context string
+	var decisions, questions []string
 	c := &cobra.Command{
-		Use:   "state <story-id> [--current \"<text>\"] [--next \"<text>\"]",
-		Short: "Replace a story's narrative's Current state and Next steps",
+		Use:   "state <story-id> [--current \"<text>\"] [--next \"<text>\"] [--context \"<text>\"] [--decision \"<text>\"]... [--question \"<text>\"]...",
+		Short: "Write a story's narrative's Current state, Next steps, Context, Decisions, and Open questions",
 		Long: `Replaces what is under the story's narrative's ## Current state with the
---current text and what is under ## Next steps with the --next text. Either
-may be left out, and its section is left as it was; giving neither is an
-error. A value of - reads that text from standard input, so text of several
-lines needs no quoting; only one of the two may be -.
+--current text, what is under ## Next steps with the --next text, and what is
+under ## Context with the --context text. Each --decision appends one bullet
+under ## Decisions, and each --question one bullet dated today under ## Open
+questions, above the block that mirrors threads, which stays as it is; both may
+be given more than once, and append again whatever the section holds. A
+question so written holds the move to review until it is answered, as a
+hand-written one does: answer it with flai stream answer. Any flag may be left
+out, and its section is left as it was; giving none of the five is an error.
+A value of - reads --current, --next, or --context from standard input, so
+text of several lines needs no quoting; only one of them may be -.
 
+This is how an agent whose wip/ is read-only, in a container, records its
+narrative's sections, through the same write as the MCP tool stream_state.
 Every other section of the narrative is left as it was, and nothing is
 appended to its log: write the log with flai stream log. The narrative's
 updated stamp, agent, and session are written as flai stream log writes them,
-and wip/agents/index.md is written again. The same text again writes nothing.
+and wip/agents/index.md is written again. The same --current, --next, or
+--context text again writes nothing.
 
 A story not in progress or in review is refused, as is one with no narrative,
 and text the project's markdown lint rejects; each refusal exits 4 and writes
@@ -350,17 +360,29 @@ nothing, and with --json prints {"refused": {...}}. A text holding a # or ##
 heading, which would end its section, is an error.`,
 		Example: `  flai stream state S-0271 --current "T-1055 is done; T-1056 is next."
   flai stream state S-0271 --next - < next-steps.md
-  flai stream state S-0271 --current "Reviewing." --next "1. Answer the review." --json`,
+  flai stream state S-0271 --current "Reviewing." --next "1. Answer the review." --json
+  flai stream state S-0271 --context - < context.md
+  flai stream state S-0271 --decision "Kept the old flag: two callers use it." --decision "T-3 waits for T-2."
+  flai stream state S-0271 --question "Should the port be configurable?"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			given := cmd.Flags().Changed("current") || cmd.Flags().Changed("next")
+			given := false
+			for _, name := range []string{"current", "next", "context", "decision", "question"} {
+				given = given || cmd.Flags().Changed(name)
+			}
 			if !given {
-				return fmt.Errorf("give --current, --next, or both: the text to write under ## Current state and ## Next steps")
+				return fmt.Errorf("give --current, --next, --context, --decision, or --question: the text to write under ## Current state, ## Next steps, or ## Context, or a bullet to append under ## Decisions or ## Open questions")
 			}
-			if current == "-" && next == "-" {
-				return fmt.Errorf("only one of --current and --next can be read from standard input; give the other as text")
+			stdin := 0
+			for _, text := range []string{current, next, context} {
+				if text == "-" {
+					stdin++
+				}
 			}
-			for _, text := range []*string{&current, &next} {
+			if stdin > 1 {
+				return fmt.Errorf("only one of --current, --next, and --context can be read from standard input; give the others as text")
+			}
+			for _, text := range []*string{&current, &next, &context} {
 				if *text == "-" {
 					data, err := io.ReadAll(cmd.InOrStdin())
 					if err != nil {
@@ -374,7 +396,8 @@ heading, which would end its section, is an error.`,
 				return err
 			}
 			agent, session := agentIdentity()
-			res, err := repo.SetStreamState(args[0], current, next, workitem.StreamOptions{Agent: agent, Session: session, Now: a.now()})
+			text := workitem.StreamText{Current: current, Next: next, Context: context, Decisions: decisions, Questions: questions}
+			res, err := repo.WriteStreamState(args[0], text, workitem.StreamOptions{Agent: agent, Session: session, Now: a.now()})
 			if refused := streamRefusal(repo.MainRoot, err); refused != nil {
 				if a.jsonOut {
 					_ = a.printJSON(map[string]any{"refused": refused})
@@ -388,7 +411,7 @@ heading, which would end its section, is an error.`,
 			if a.jsonOut {
 				return a.printJSON(res)
 			}
-			sections := strings.Join(res.Written, " and ")
+			sections := joinAnd(res.Written)
 			if !res.Changed {
 				fmt.Fprintf(a.out, "%s: unchanged; %s already holds the %s given\n", res.Stream, res.Path, sections)
 				return nil
@@ -399,7 +422,23 @@ heading, which would end its section, is an error.`,
 	}
 	c.Flags().StringVar(&current, "current", "", "the text for ## Current state, or - to read it from standard input")
 	c.Flags().StringVar(&next, "next", "", "the text for ## Next steps, or - to read it from standard input")
+	c.Flags().StringVar(&context, "context", "", "the text for ## Context, or - to read it from standard input")
+	c.Flags().StringArrayVar(&decisions, "decision", nil, "a bullet to append under ## Decisions; may be given more than once")
+	c.Flags().StringArrayVar(&questions, "question", nil, "a bullet, dated today, to append under ## Open questions, above the threads block; may be given more than once")
 	return c
+}
+
+// joinAnd joins names as a sentence lists them: "a", "a and b", "a, b, and c".
+func joinAnd(names []string) string {
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " and " + names[1]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + ", and " + names[len(names)-1]
 }
 
 // streamRefusal is what flai stream state prints under "refused" when err is

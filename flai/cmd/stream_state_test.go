@@ -106,7 +106,7 @@ func TestStreamStateEachFlagAloneAndJSON(t *testing.T) {
 	}
 }
 
-// A value of - reads that text from standard input; both cannot be.
+// A value of - reads that text from standard input; only one flag can be.
 func TestStreamStateReadsStandardInput(t *testing.T) {
 	root, path := streamStateProject(t)
 	out, errOut, code := runStdin(t, root, "1. First.\n2. Second.\n\nThen review.\n", "stream", "state", "S-0001", "--current", "Working.", "--next", "-")
@@ -117,21 +117,30 @@ func TestStreamStateReadsStandardInput(t *testing.T) {
 		t.Errorf("standard input:\n%s", s)
 	}
 	before := read(t, path)
-	if _, errOut, code := runStdin(t, root, "x\n", "stream", "state", "S-0001", "--current", "-", "--next", "-"); code != 1 || !strings.Contains(errOut, "only one of --current and --next") {
+	if _, errOut, code := runStdin(t, root, "x\n", "stream", "state", "S-0001", "--current", "-", "--next", "-"); code != 1 || !strings.Contains(errOut, "only one of --current, --next, and --context") {
 		t.Errorf("both -: %d %s", code, errOut)
+	}
+	if _, errOut, code := runStdin(t, root, "x\n", "stream", "state", "S-0001", "--context", "-", "--next", "-"); code != 1 || !strings.Contains(errOut, "only one of --current, --next, and --context") {
+		t.Errorf("--context - and --next -: %d %s", code, errOut)
 	}
 	if read(t, path) != before {
 		t.Error("a refused write changed the narrative")
 	}
+	if _, errOut, code := runStdin(t, root, "Why this story.\n\nWhat it builds on.\n", "stream", "state", "S-0001", "--context", "-"); code != 0 {
+		t.Fatalf("--context -: %d %s", code, errOut)
+	}
+	if s := read(t, path); section(s, "Context") != "Why this story.\n\nWhat it builds on." {
+		t.Errorf("--context from standard input:\n%s", s)
+	}
 }
 
-// Neither flag is a usage error; a story not in progress or review, one with
+// None of the five flags is a usage error; a story not in progress or review, one with
 // no narrative, and text the lint rejects are refused with exit 4 and write
 // nothing.
 func TestStreamStateRefuses(t *testing.T) {
 	root, path := streamStateProject(t)
 	before := read(t, path)
-	if _, errOut, code := runIn(t, root, "stream", "state", "S-0001"); code != 1 || !strings.Contains(errOut, "give --current, --next, or both") {
+	if _, errOut, code := runIn(t, root, "stream", "state", "S-0001"); code != 1 || !strings.Contains(errOut, "give --current, --next, --context, --decision, or --question") {
 		t.Errorf("neither flag: %d %s", code, errOut)
 	}
 	type refusal struct {
@@ -168,5 +177,78 @@ func TestStreamStateRefuses(t *testing.T) {
 	}
 	if read(t, path) != before {
 		t.Error("a refused write changed the narrative")
+	}
+}
+
+// S-0668: --context replaces ## Context, each --decision appends a bullet
+// under ## Decisions, and each --question a dated bullet under ## Open
+// questions, above the threads block; each alone leaves every other section
+// as it was, and --json's written names the sections in template order.
+func TestStreamStateContextDecisionsAndQuestions(t *testing.T) {
+	root, path := streamStateProject(t)
+	n := read(t, path)
+	n = strings.Replace(n, "## Open questions\n", "## Open questions\n\n<!-- threads:start -->\n- TH-0001 Which port? (open)\n<!-- threads:end -->\n", 1)
+	if err := os.WriteFile(path, []byte(n), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	block := "<!-- threads:start -->\n- TH-0001 Which port? (open)\n<!-- threads:end -->"
+	others := func(before, after string, except string) {
+		t.Helper()
+		for _, name := range []string{"Context", "Current state", "Next steps", "Decisions", "Open questions", "Log"} {
+			if name != except && section(after, name) != section(before, name) {
+				t.Errorf("## %s changed:\n%s", name, after)
+			}
+		}
+	}
+
+	before := read(t, path)
+	out, errOut, code := runIn(t, root, "stream", "state", "S-0001", "--context", "Built on S-0271.")
+	if code != 0 || out != "S-0001: wrote Context in wip/agents/S-0001.md at 2026-09-15T21:00:00Z\n" {
+		t.Fatalf("--context alone: %d %q %s", code, out, errOut)
+	}
+	after := read(t, path)
+	if section(after, "Context") != "Built on S-0271." {
+		t.Errorf("--context:\n%s", after)
+	}
+	others(before, after, "Context")
+
+	before = after
+	if _, errOut, code := runIn(t, root, "stream", "state", "S-0001", "--decision", "Kept the flag, as two callers use it.", "--decision", "T-3 waits for T-2."); code != 0 {
+		t.Fatalf("--decision twice: %d %s", code, errOut)
+	}
+	after = read(t, path)
+	if got := section(after, "Decisions"); got != "- Kept the flag, as two callers use it.\n- T-3 waits for T-2." {
+		t.Errorf("--decision twice: %q", got)
+	}
+	others(before, after, "Decisions")
+	if _, errOut, code := runIn(t, root, "stream", "state", "S-0001", "--decision", "T-3 waits for T-2."); code != 0 {
+		t.Fatalf("--decision again: %d %s", code, errOut)
+	}
+	if got := section(read(t, path), "Decisions"); strings.Count(got, "- T-3 waits for T-2.") != 2 {
+		t.Errorf("the same decision again is appended again: %q", got)
+	}
+
+	before = read(t, path)
+	out, errOut, code = runIn(t, root, "stream", "state", "S-0001", "--question", "Should the port be configurable, or fixed?", "--json")
+	var v workitem.StreamState
+	if code != 0 || json.Unmarshal([]byte(out), &v) != nil {
+		t.Fatalf("--question --json: %d %s %s", code, out, errOut)
+	}
+	if strings.Join(v.Written, "|") != "Open questions" || !v.Changed {
+		t.Errorf("--question --json: %+v", v)
+	}
+	after = read(t, path)
+	if got, want := section(after, "Open questions"), "- 2026-09-15: Should the port be configurable, or fixed?\n\n"+block; got != want {
+		t.Errorf("--question:\n got %q\nwant %q", got, want)
+	}
+	others(before, after, "Open questions")
+
+	out, errOut, code = runIn(t, root, "stream", "state", "S-0001", "--context", "Built on S-0271.", "--next", "1. Ask.", "--decision", "One more.", "--question", "Another?", "--json")
+	v = workitem.StreamState{}
+	if code != 0 || json.Unmarshal([]byte(out), &v) != nil {
+		t.Fatalf("every flag --json: %d %s %s", code, out, errOut)
+	}
+	if got := strings.Join(v.Written, "|"); got != "Context|Next steps|Decisions|Open questions" {
+		t.Errorf("written in template order: %q", got)
 	}
 }

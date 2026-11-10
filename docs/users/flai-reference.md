@@ -4941,7 +4941,7 @@ Subcommands:
 - [log](#flai-stream-log): Append a timestamped entry to a story's narrative log
 - [open](#flai-stream-open): Create the narrative for a story and check out its branch in a worktree
 - [restore](#flai-stream-restore): Commit main's version of a path the rebased story branch undoes onto the branch
-- [state](#flai-stream-state): Replace a story's narrative's Current state and Next steps
+- [state](#flai-stream-state): Write a story's narrative's Current state, Next steps, Context, Decisions, and Open questions
 - [sync](#flai-stream-sync): Rebase the story branch onto the main branch in its worktree
 
 #### flai stream answer
@@ -5035,15 +5035,15 @@ Flags:
 
 #### flai stream state
 
-Replace a story's narrative's Current state and Next steps.
+Write a story's narrative's Current state, Next steps, Context, Decisions, and Open questions.
 
 ```text
-flai stream state <story-id> [--current "<text>"] [--next "<text>"] [flags]
+flai stream state <story-id> [--current "<text>"] [--next "<text>"] [--context "<text>"] [--decision "<text>"]... [--question "<text>"]... [flags]
 ```
 
-Replaces what is under the story's narrative's ## Current state with the --current text and what is under ## Next steps with the --next text. Either may be left out, and its section is left as it was; giving neither is an error. A value of - reads that text from standard input, so text of several lines needs no quoting; only one of the two may be -.
+Replaces what is under the story's narrative's ## Current state with the --current text, what is under ## Next steps with the --next text, and what is under ## Context with the --context text. Each --decision appends one bullet under ## Decisions, and each --question one bullet dated today under ## Open questions, above the block that mirrors threads, which stays as it is; both may be given more than once, and append again whatever the section holds. A question so written holds the move to review until it is answered, as a hand-written one does: answer it with flai stream answer. Any flag may be left out, and its section is left as it was; giving none of the five is an error. A value of - reads --current, --next, or --context from standard input, so text of several lines needs no quoting; only one of them may be -.
 
-Every other section of the narrative is left as it was, and nothing is appended to its log: write the log with flai stream log. The narrative's updated stamp, agent, and session are written as flai stream log writes them, and wip/agents/index.md is written again. The same text again writes nothing.
+This is how an agent whose wip/ is read-only, in a container, records its narrative's sections, through the same write as the MCP tool stream\_state. Every other section of the narrative is left as it was, and nothing is appended to its log: write the log with flai stream log. The narrative's updated stamp, agent, and session are written as flai stream log writes them, and wip/agents/index.md is written again. The same --current, --next, or --context text again writes nothing.
 
 A story not in progress or in review is refused, as is one with no narrative, and text the project's markdown lint rejects; each refusal exits 4 and writes nothing, and with --json prints {"refused": {...}}. A text holding a # or ## heading, which would end its section, is an error.
 
@@ -5053,14 +5053,20 @@ Examples:
 flai stream state S-0271 --current "T-1055 is done; T-1056 is next."
 flai stream state S-0271 --next - < next-steps.md
 flai stream state S-0271 --current "Reviewing." --next "1. Answer the review." --json
+flai stream state S-0271 --context - < context.md
+flai stream state S-0271 --decision "Kept the old flag: two callers use it." --decision "T-3 waits for T-2."
+flai stream state S-0271 --question "Should the port be configurable?"
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--context` string | the text for ## Context, or - to read it from standard input |
 | `--current` string | the text for ## Current state, or - to read it from standard input |
+| `--decision` stringArray | a bullet to append under ## Decisions; may be given more than once |
 | `--next` string | the text for ## Next steps, or - to read it from standard input |
+| `--question` stringArray | a bullet, dated today, to append under ## Open questions, above the threads block; may be given more than once |
 
 #### flai stream sync
 
