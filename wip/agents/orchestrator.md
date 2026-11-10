@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2091.2204
-accrued_seconds: 1542895
-tasks_completed: 2776
-last_run: 2026-11-10T10:10:20Z
+accrued_cost: 2091.4365
+accrued_seconds: 1542965
+tasks_completed: 2778
+last_run: 2026-11-10T10:12:43Z
 ---
 
 # Orchestrator activity
@@ -19464,6 +19464,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 37
 - Cost: 0.1901 USD, estimated
+
+### 2026-11-10T10:12:00Z
+
+- Summary: Release-due S-0682: release_evaluate met under threshold (7 accepted stories not yet released, count 7 >= 1; 117.5 USD/week vs 1000), nothing held by epic. Started no new publish formula run: its open instance S-0704 is in ready, unworked (in-progress limit 5 of 5), and publishes everything accepted and unreleased when worked, S-0682 included; a second instance would duplicate it.
+- Items: S-0682, S-0704
+- Seconds: 27
+- Cost: 0.0611 USD, estimated
+
+### 2026-11-10T10:12:43Z
+
+- Summary: A release is due, but I started no new publish run: one is already waiting in ready.
+- Items: none
+- Seconds: 43
+- Cost: 0.1550 USD, estimated
 
 ## Refusals
 

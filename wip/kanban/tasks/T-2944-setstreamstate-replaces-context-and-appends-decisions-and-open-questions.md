@@ -32,7 +32,7 @@ usage:
       output: 285
       cache_read: 5226273
       cache_write: 52417
-      cost: 1.9432
+      cost: 1.943
 ---
 # T-2944 SetStreamState replaces Context and appends Decisions and Open questions bullets, keeping the threads block
 

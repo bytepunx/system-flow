@@ -3,14 +3,17 @@ id: S-0665
 type: story
 nature: improvement
 title: flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:37Z
-updated: 2026-11-10T09:55:06Z
+updated: 2026-11-10T10:21:09Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T10:21:09Z
+    by: agent-S-0665
 tags: [serve, containers]
 topics: [docker, code]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md]

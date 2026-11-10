@@ -24,20 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 140
+  seconds: 1738
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
-      ceremony: 1
-      work: 17
+      ceremony: 2
+      hand_edits: 1
+      work: 27
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 161
-      cache_read: 3190491
-      cache_write: 258327
-      cost: 1.2693
+      input: 122
+      output: 734
+      cache_read: 13606058
+      cache_write: 902903
+      cost: 5.3407
   strategic:
     - kind: orchestrator
       seconds: 103

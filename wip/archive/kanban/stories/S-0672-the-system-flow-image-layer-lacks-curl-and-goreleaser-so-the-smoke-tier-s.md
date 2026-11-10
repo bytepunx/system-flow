@@ -3,10 +3,10 @@ id: S-0672
 type: story
 nature: remediation
 title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T10:10:43Z
+updated: 2026-11-10T10:22:07Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:47Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:52:41Z
     by: agent-S-0672
+  - to: review
+    at: 2026-11-10T10:21:02Z
+    by: agent-S-0672
+  - to: done
+    at: 2026-11-10T10:22:07Z
+    by: alex
 tags: [docker, scripts]
 topics: [harness, docker, testing]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh, scripts/README.md, design/tech/docker.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md, design/issues/summary.md]
@@ -24,20 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1063
-  estimated: true
-  priced_by: estimate
+  seconds: 1713
+  priced_by: harness
   turns:
     - day: 2026-11-10
+      ceremony: 2
       test_runs: 1
-      work: 46
+      hand_edits: 1
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 100
-      output: 686
-      cache_read: 12361016
-      cache_write: 323059
-      cost: 4.6688
+      input: 170
+      output: 36751
+      cache_read: 24387019
+      cache_write: 349737
+      cost: 8.411
   strategic:
     - kind: orchestrator
       seconds: 13

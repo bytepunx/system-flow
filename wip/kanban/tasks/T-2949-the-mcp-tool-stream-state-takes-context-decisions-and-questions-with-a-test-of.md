@@ -24,16 +24,16 @@ touches: [flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test
 after: [T-2944]
 usage:
   source: log
-  seconds: 595
+  seconds: 640
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 145
-      cache_read: 2423260
-      cache_write: 24692
-      cost: 0.9011
+      input: 23
+      output: 167
+      cache_read: 2712781
+      cache_write: 37763
+      cost: 1.0124
 ---
 # T-2949 The MCP tool stream_state takes context, decisions, and questions, with a test of a container's session writing them
 

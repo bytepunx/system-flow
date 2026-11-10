@@ -23,7 +23,7 @@ tags: [flai, adr]
 touches: [design/adrs/README.md, design/adrs/0279-ready-empty-counts-only-the-ready-stories-not-held-on-after-and-a-move-of-a.md]
 usage:
   source: log
-  seconds: 21
+  seconds: 26
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 10
       cache_read: 541984
       cache_write: 2392
-      cost: 0.2003
+      cost: 0.2004
 ---
 # T-2928 An ADR records what I-0285's instances show and decides that ready-empty counts only ready stories not held on after and that a move to ready warns of an after hold
 

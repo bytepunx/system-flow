@@ -3,11 +3,11 @@ id: T-2930
 type: task
 nature: improvement
 title: ready-empty counts only the ready stories not held on after, so held stories in ready no longer keep the orchestrator from promoting
-status: in-progress
+status: done
 parent: S-0673
 owner: alex
 created: 2026-11-10T08:49:13Z
-updated: 2026-11-10T09:53:43Z
+updated: 2026-11-10T10:19:25Z
 transitions:
   - to: ready
     at: 2026-11-10T09:53:41Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:53:43Z
     by: agent-S-0673
+  - to: done
+    at: 2026-11-10T10:19:25Z
+    by: agent-S-0673
 stream: S-0673
 tags: [flai, serve]
 touches: [flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/agents_launch.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/inbox/events.go, flai/internal/mcpserver/server.go, design/system/agent-narrative.md, design/system/flai-cli.md, design/system/strategic-agents.md]
 after: [T-2928]
+usage:
+  source: log
+  seconds: 1530
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 204
+      cache_read: 4365777
+      cache_write: 30710
+      cost: 1.6183
 ---
 # T-2930 ready-empty counts only the ready stories not held on after, so held stories in ready no longer keep the orchestrator from promoting
 

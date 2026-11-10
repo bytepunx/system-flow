@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 54
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 80
-      cache_read: 1952899
-      cache_write: 8093
-      cost: 0.7218
+      input: 13
+      output: 2913
+      cache_read: 1933265
+      cache_write: 27725
+      cost: 0.6668
 ---
 # T-2922 The docs that list the system-flow layer's tools name curl, openssl, GoReleaser, and scripts/agent-image.sh --check
 

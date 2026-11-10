@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 257
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 45
-      cache_read: 1412762
-      cache_write: 6580
-      cost: 0.5224
+      output: 2109
+      cache_read: 1399275
+      cache_write: 20067
+      cost: 0.4826
 ---
 # T-2917 The system-flow layer carries curl, openssl, and GoReleaser at the version scripts/install-tools.sh pins
 

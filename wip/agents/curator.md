@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 202.3707
-accrued_seconds: 23764
-tasks_completed: 127
-last_run: 2026-11-10T09:59:37Z
+accrued_cost: 202.8006
+accrued_seconds: 23835
+tasks_completed: 128
+last_run: 2026-11-10T10:12:08Z
 ---
 
 # Curator activity
@@ -1027,3 +1027,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 115
 - Cost: 0.6421 USD, estimated
+
+### 2026-11-10T10:12:08Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. All seven candidates were S-0682's decisions, which D-0561 already covers (TH-1000's login and spend) or which only planned its tasks. D-0468, D-0494, and D-0561 stay active because no design document states them.
+- Trigger: accepted S-0682
+- Items: none
+- Seconds: 71
+- Cost: 0.4299 USD, estimated

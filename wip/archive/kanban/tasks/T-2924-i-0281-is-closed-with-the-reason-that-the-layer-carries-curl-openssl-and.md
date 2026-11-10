@@ -24,16 +24,16 @@ touches: [design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-gorele
 after: [T-2919]
 usage:
   source: log
-  seconds: 7
+  seconds: 12
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 673013
-      cache_write: 2086
-      cost: 0.2485
+      input: 5
+      output: 1003
+      cache_read: 665554
+      cache_write: 9545
+      cost: 0.2295
 ---
 # T-2924 I-0281 is closed with the reason that the layer carries curl, openssl, and GoReleaser and scripts/agent-image.sh --check passes
 

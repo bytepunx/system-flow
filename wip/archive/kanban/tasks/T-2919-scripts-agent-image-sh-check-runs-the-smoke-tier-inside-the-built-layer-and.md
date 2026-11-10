@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 493
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 178
-      cache_read: 4032572
-      cache_write: 14682
-      cost: 1.4897
+      input: 28
+      output: 6013
+      cache_read: 3990031
+      cache_write: 57221
+      cost: 1.3761
 ---
 # T-2919 scripts/agent-image.sh --check runs the smoke tier inside the built layer and fails on an image that lacks a tool it runs
 

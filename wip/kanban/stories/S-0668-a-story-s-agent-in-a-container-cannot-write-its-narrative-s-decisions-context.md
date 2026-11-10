@@ -6,7 +6,7 @@ title: A story's agent in a container cannot write its narrative's Decisions, Co
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T09:55:08Z
+updated: 2026-11-10T10:13:02Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1764
+  seconds: 2744
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
       hand_edits: 2
-      work: 20
+      work: 26
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 750
-      cache_read: 11492893
-      cache_write: 349438
-      cost: 4.3595
+      input: 158
+      output: 1168
+      cache_read: 18053797
+      cache_write: 405783
+      cost: 6.7946
   strategic:
     - kind: planner
       seconds: 21
@@ -90,7 +90,7 @@ finalized:
 This story remediates [I-0277](../../../design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md), "A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0277 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0277 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0277 is closed with `flai issue close I-0277 --reason` saying what fixed it
 
 ## Tasks

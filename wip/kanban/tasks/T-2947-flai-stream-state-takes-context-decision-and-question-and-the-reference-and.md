@@ -24,7 +24,7 @@ touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, docs/users/flai-ref
 after: [T-2944]
 usage:
   source: log
-  seconds: 596
+  seconds: 604
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 192
       cache_read: 2420939
       cache_write: 24421
-      cost: 0.9002
+      cost: 0.9001
 ---
 # T-2947 flai stream state takes --context, --decision, and --question, and the reference and flag index list them
 
