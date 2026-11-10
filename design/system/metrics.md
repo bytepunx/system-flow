@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -426,7 +426,7 @@ Not counted: a narrowed claim and agreement in free text. Nothing records either
 
 ## Merge queue (S-0404)
 
-How long stories wait in the merge queue, how large its batches are, and how often a red batch is bisected ([ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)): per week, the stories the queue landed and sent back with their queue wait, the batches it built with their size, its bisections, and its verification runs per story landed (S-0552) ([ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md), [ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)). Every value comes from one source.
+How long stories wait in the merge queue, how large its batches are, and how often a red batch is bisected ([ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)): per week, the stories the queue landed and sent back with their queue wait, the batches it built with their size, its bisections, its verification runs per story landed (S-0552), and the batches it dropped ([ADR-0282](../adrs/0282-a-verified-merge-queue-batch-lands-over-main-s-commits-that-change-only-wip.md)) ([ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md), [ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)). Every value comes from one source.
 
 | Source | What is read |
 |--------|--------------|
@@ -436,15 +436,15 @@ A line of the event log:
 
 | Field | Definition |
 |-------|------------|
-| `at` | When, `YYYY-MM-DDTHH:MM:SSZ`. An `enqueued` line takes the enqueueing's time, a `landed` or `sent_back` line its outcome's time, a `verified` or `step_verified` line the result's finish time; the rest the time of the write |
-| `event` | `enqueued`: a story entered the queue. `batch_built`: a batch left the building and rebasing steps, so its stories are the ones it verifies; a batch whose every story was left out writes none. `verified`: the batch's verification finished. `bisected`: a failed batch's bisection began. `step_verified`: a bisection step's verification finished, once a step, a step stopped and verified again in place counting once (S-0552); a kind of its own, so that `verified` stays one a batch. `landed`: the queue landed a story, outcome `landed`. `sent_back`: the story a red batch was bisected to was sent back, outcome `failing`. `dequeued`: a story left the queue other than by landing or being sent back. Since S-0549 ([ADR-0237](../adrs/0237-the-merge-queue-s-event-log-gains-preflight-held-preflight-cleared-and-landing.md)), `preflight_held`: the landing's preflight began to hold the queue on what it found on the main checkout, or the findings of its hold changed ([ADR-0234](../adrs/0234-before-it-builds-a-batch-the-merge-queue-runs-the-landing-s-preflight-on-the.md)); `preflight_cleared`: a look found main clean and cleared the hold; `landing_resumed`: a batch whose landing waited on main went on from the commits it verified, with no new verification. No metric counts these three |
-| `batch` | The batch's ID, on `batch_built`, `verified`, `bisected`, `step_verified`, `landing_resumed`, `landed`, and `sent_back` |
-| `stories` | On `enqueued`, `dequeued`, `landed`, and `sent_back`, the one story; on `batch_built`, `verified`, and `bisected`, the batch's stories in the order rebased; on `step_verified`, the stories the step verified, the batch's first ones; on `landing_resumed`, the story the landing went on at; on `preflight_held` and `preflight_cleared`, none |
-| `by` | On `enqueued`, who enqueued it |
+| `at` | When, `YYYY-MM-DDTHH:MM:SSZ`. An `enqueued` line takes the enqueueing's time, a `landed` or `sent_back` line its outcome's time, a `verified` or `step_verified` line the result's finish time, a `dropped` line the drop's time; the rest the time of the write |
+| `event` | `enqueued`: a story entered the queue. `batch_built`: a batch left the building and rebasing steps, so its stories are the ones it verifies; a batch whose every story was left out writes none. `verified`: the batch's verification finished. `bisected`: a failed batch's bisection began. `step_verified`: a bisection step's verification finished, once a step, a step stopped and verified again in place counting once (S-0552); a kind of its own, so that `verified` stays one a batch. `landed`: the queue landed a story, outcome `landed`. `sent_back`: the story a red batch was bisected to was sent back, outcome `failing`. `dequeued`: a story left the queue other than by landing or being sent back. Since S-0549 ([ADR-0237](../adrs/0237-the-merge-queue-s-event-log-gains-preflight-held-preflight-cleared-and-landing.md)), `preflight_held`: the landing's preflight began to hold the queue on what it found on the main checkout, or the findings of its hold changed ([ADR-0234](../adrs/0234-before-it-builds-a-batch-the-merge-queue-runs-the-landing-s-preflight-on-the.md)); `preflight_cleared`: a look found main clean and cleared the hold; `landing_resumed`: a batch whose landing waited on main went on from the commits it verified, with no new verification. No metric counts these three. Since S-0675 ([ADR-0282](../adrs/0282-a-verified-merge-queue-batch-lands-over-main-s-commits-that-change-only-wip.md)), `dropped`: a batch was dropped, whatever dropped it: main moving other than by its landing and by commits it may land over, a landing that failed, a bisection that could not run, or a story taken out of the queue; once a batch |
+| `batch` | The batch's ID, on `batch_built`, `verified`, `bisected`, `step_verified`, `landing_resumed`, `dropped`, `landed`, and `sent_back` |
+| `stories` | On `enqueued`, `dequeued`, `landed`, and `sent_back`, the one story; on `batch_built`, `verified`, `bisected`, and `dropped`, the batch's stories in the order rebased; on `step_verified`, the stories the step verified, the batch's first ones; on `landing_resumed`, the story the landing went on at; on `preflight_held` and `preflight_cleared`, none |
+| `by` | On `enqueued`, who enqueued it; on `dropped`, who dropped the batch |
 | `passed` | On `verified`, whether the batch passed; on `step_verified`, whether the step passed |
 | `step` | On `step_verified` only, the step's number in the bisection, from 1 |
 | `left_out` | On `batch_built`, the stories selected for the batch whose rebase onto it stopped, when there are any |
-| `reason` | On `dequeued`, `removed` when no outcome came with it (`flai queue remove`, the host API), else the outcome recorded with it, such as `accepted_by_hand` or `left_out` |
+| `reason` | On `dequeued`, `removed` when no outcome came with it (`flai queue remove`, the host API), else the outcome recorded with it, such as `accepted_by_hand` or `left_out`; on `dropped`, the drop's reason, a sentence |
 | `files` | On `preflight_held`, the files the hold's findings name, sorted |
 | `rules` | On `preflight_held`, the rules the hold's findings name, sorted |
 | `held_seconds` | On `preflight_cleared`, how long the preflight held the queue, in seconds |
@@ -457,7 +457,7 @@ Each value is counted in the ISO week that holds its event, from the window's st
 | Value | Definition | Precision |
 |-------|------------|-----------|
 | `queue` | Absent when there is no log. An unreadable log is warned of on stderr, and the section is absent too | |
-| `queue.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `landed`, `sent_back`, `wait_mean_seconds`, `wait_max_seconds`, `batches`, `batch_size_mean`, `batch_size_max`, `bisections`, `verifications`, and `verifications_per_landed` | `start` is `YYYY-MM-DD`, a Monday |
+| `queue.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `landed`, `sent_back`, `wait_mean_seconds`, `wait_max_seconds`, `batches`, `batch_size_mean`, `batch_size_max`, `bisections`, `verifications`, `verifications_per_landed`, and `dropped` | `start` is `YYYY-MM-DD`, a Monday |
 | `queue.weeks[].landed` | The `landed` lines | Whole count |
 | `queue.weeks[].sent_back` | The `sent_back` lines | Whole count |
 | `queue.weeks[].wait_mean_seconds` | The mean of the week's queue waits, those of its `landed` and `sent_back` lines; 0 with none | Not rounded |
@@ -468,9 +468,10 @@ Each value is counted in the ISO week that holds its event, from the window's st
 | `queue.weeks[].bisections` | The `bisected` lines | Whole count |
 | `queue.weeks[].verifications` | The queue's verification runs: the `verified` lines, one a batch, and the `step_verified` lines, one a bisection step (S-0552). A story that lands from a failed batch's clean half has no run of its own | Whole count |
 | `queue.weeks[].verifications_per_landed` | `verifications` over `landed`; 0 when nothing landed | Not rounded |
+| `queue.weeks[].dropped` | The `dropped` lines, one a batch dropped ([ADR-0282](../adrs/0282-a-verified-merge-queue-batch-lands-over-main-s-commits-that-change-only-wip.md)). A dropped batch counts in `batches` too, since it was built | Whole count |
 | `items[].queue_wait_seconds` | The sum of the item's queue waits that end in the window. Absent when it has none | Whole seconds |
 
-Not counted: hold and resume of the queue, and a dropped batch. A dropped batch's stories stay enqueued, so their wait goes on, and the next batch counts again. Before the release that writes the log, weeks show nothing, which is no evidence either way; before the release that writes `step_verified` lines, a week's `verifications` count its batches' verifications only.
+Not counted: hold and resume of the queue. A dropped batch counts in `dropped`, and in `batches` as it was built; its stories stay enqueued, so their wait goes on, and the next batch counts again. Before the release that writes the log, weeks show nothing, which is no evidence either way; before the release that writes `step_verified` lines, a week's `verifications` count its batches' verifications only; before the release that writes `dropped` lines, a week's `dropped` is 0.
 
 ## Digest (S-0434)
 
