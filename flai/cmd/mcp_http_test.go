@@ -301,9 +301,12 @@ func testMCPOverHTTPRefusesAnUnansweredWriteBeforeClaudeCodeGivesUp(t *testing.T
 // I-0228: over HTTP, wait_for_events and wait_for_work held a call for the
 // timeout_seconds asked, so Claude Code dropped it after 60 seconds and the
 // agent saw an error instead of timed_out. The server an agent reaches over
-// HTTP now holds one at most HTTPLongestWait (ADR-0244): with that bound and
-// Claude Code's scaled down alike, both asked for 600 seconds answer
-// timed_out before a client that gives up when Claude Code does.
+// HTTP now holds one at most HTTPLongestWait (ADR-0244), which is checked to
+// be under Claude Code's 60 seconds. With that bound scaled down, both asked
+// for 600 seconds answer timed_out before a client whose deadline is far
+// above the bound and far below the 600 seconds asked, so that only a wait
+// held for what was asked fails, never a bound met late on a loaded host
+// (I-0309).
 func TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp(t *testing.T) {
 	t.Parallel()
 	root := tempProject(t)
@@ -327,7 +330,14 @@ func TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = cs.Close() }()
-	ctx, cancel := context.WithTimeout(context.Background(), claudeCodeHTTPTimeout/scale)
+	// clientDeadline is over five times the scaled bound and a fiftieth of
+	// the 600 seconds asked: a wait held for what was asked outlives it, and
+	// one held to the bound answers within it on a loaded host (I-0309).
+	const clientDeadline = 12 * time.Second
+	if bound := opt.MaxWait; clientDeadline < 4*bound {
+		t.Fatalf("the client's deadline %s is not far above the scaled bound %s", clientDeadline, bound)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), clientDeadline)
 	defer cancel()
 	waits := []string{"wait_for_events", "wait_for_work"}
 	answers := make(chan string, len(waits))
@@ -339,7 +349,7 @@ func TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp(t *testing.T) {
 			}
 			switch {
 			case err != nil:
-				answers <- fmt.Sprintf("%s outlives the client's %s, as it outlived Claude Code's %s: %v", tool, claudeCodeHTTPTimeout/scale, claudeCodeHTTPTimeout, err)
+				answers <- fmt.Sprintf("%s outlives the client's %s, held past its bound of %s, as it outlived Claude Code's %s: %v", tool, clientDeadline, opt.MaxWait, claudeCodeHTTPTimeout, err)
 			case res.IsError || len(res.Content) == 0:
 				answers <- fmt.Sprintf("%s answers an error: %+v", tool, res.Content)
 			default:
