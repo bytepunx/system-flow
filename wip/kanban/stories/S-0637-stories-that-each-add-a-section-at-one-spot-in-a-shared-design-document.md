@@ -3,11 +3,14 @@ id: S-0637
 type: story
 nature: improvement
 title: Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T07:44:10Z
-transitions: []
+updated: 2026-11-10T07:44:15Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:44:15Z
+    by: alex
 tags: [flai, sync, acceptance]
 topics: [cli, go, code]
 touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0273-a-rebase-merges-by-sections-every-markdown-document-under-the-design-and-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md]

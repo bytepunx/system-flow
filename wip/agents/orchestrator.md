@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2076.6725
-accrued_seconds: 1538343
-tasks_completed: 2651
-last_run: 2026-11-10T07:43:24Z
+accrued_cost: 2077.1767
+accrued_seconds: 1538399
+tasks_completed: 2654
+last_run: 2026-11-10T07:44:28Z
 ---
 
 # Orchestrator activity
@@ -18589,6 +18589,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0628, S-0643, S-0647, S-0657
 - Seconds: 18
 - Cost: 0.0463 USD, estimated
+
+### 2026-11-10T07:43:46Z
+
+- Summary: I didn't start a new publish run. The release is due, but publish run S-0657 is already waiting in ready and will release S-0628 along with everything else accepted.
+- Items: none
+- Seconds: 22
+- Cost: 0.2003 USD, estimated
+
+### 2026-11-10T07:44:08Z
+
+- Summary: Release due after S-0649 and S-0650 (threshold met: 5 pending, count threshold 1, 250 USD/week): ran no new publish formula, since publish instance S-0657 is already in ready and its publish step releases everything accepted and unreleased, S-0649 and S-0650 included; a second instance would race it.
+- Items: S-0649, S-0650, S-0657
+- Seconds: 14
+- Cost: 0.1012 USD, estimated
+
+### 2026-11-10T07:44:28Z
+
+- Summary: I started no new publish run for S-0649 and S-0650. A publish run already exists: story S-0657, sitting in ready. When it runs, it releases everything accepted and not yet released, and that includes S-0649 and S-0650.
+- Items: none
+- Seconds: 20
+- Cost: 0.2027 USD, estimated
 
 ## Refusals
 

@@ -3,11 +3,14 @@ id: S-0652
 type: story
 nature: remediation
 title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T07:12:18Z
-transitions: []
+updated: 2026-11-10T07:44:19Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:44:19Z
+    by: alex
 tags: []
 topics: [testing]
 touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md]

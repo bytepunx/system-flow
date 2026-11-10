@@ -6,7 +6,7 @@ title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing und
 status: in-progress
 owner: alex
 created: 2026-11-10T05:45:21Z
-updated: 2026-11-10T07:38:04Z
+updated: 2026-11-10T07:44:06Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:50Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0653
 tags: []
 topics: [testing]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role_test.go, design/system/strategic-agents.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md, flai/internal/serve/analyze.go]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role_test.go, design/system/strategic-agents.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md, flai/internal/serve/analyze.go, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
