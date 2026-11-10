@@ -6,7 +6,7 @@ title: After a stop from the dashboard, the story's agent page shows the agent s
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T08:48:12Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [flaiover, agent]
 topics: [dashboard, agents]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:12Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T11:49:00Z
-  basis: flai forecast's 18m (107 s a unit over 30 medium improvement stories, size 10), raised to 45m because I-0278 was never reproduced and T-2907 must find the cause before T-2909 fixes it
-  by: planner-S-0669
-  at: 2026-11-10T08:48:12Z
+  delivery: 2026-11-10T12:38:00Z
+  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667 and S-0668."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0669 After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
 

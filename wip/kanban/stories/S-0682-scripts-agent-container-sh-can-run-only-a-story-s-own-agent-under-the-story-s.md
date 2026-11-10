@@ -6,7 +6,7 @@ title: scripts/agent-container.sh can run only a story's own agent, under the st
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:06Z
-updated: 2026-11-10T08:48:59Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [containers, pilot, scripts]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-11-10T08:45:44Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:26:00Z
-  basis: flai forecast's 24m (101 s a unit over 151 large-band improvements, size 14) raised to 45m, near S-0517, S-0520, and S-0521 (39m, 49m, 43m), container remediations of this script and pilot with an image rebuild and an integration close-out.
-  by: planner-S-0682
-  at: 2026-11-10T08:45:44Z
+  delivery: 2026-11-10T15:47:00Z
+  basis: "Its own forecast of 45m; 24th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678, S-0679, S-0680 and S-0681."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 finalized:
   by: orchestrator
   at: 2026-11-10T08:48:59Z

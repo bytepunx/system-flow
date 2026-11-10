@@ -6,7 +6,7 @@ title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, sinc
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T08:48:56Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:35Z
 forecast:
   duration: 2h
-  delivery: 2026-11-10T15:00:00Z
-  basis: "flai forecast's 56m (101 s a unit over 151 large improvement stories, size 33) raised to 2h: about 95 tests to convert, and each -race run of the package takes 2 to 3 minutes, with at least six in the tasks and the close-out's integration tier on top; delivery moved by the same hour."
-  by: planner-S-0684
-  at: 2026-11-10T08:48:35Z
+  delivery: 2026-11-10T17:42:00Z
+  basis: "Its own forecast of 2h; 26th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678, S-0679, S-0680, S-0681, S-0682 and S-0683."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0684 flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
 
@@ -57,11 +57,14 @@ Cost of delay inputs set by flai from I-0234. time_lost_per_cycle 43s: 1m per oc
 
 The proposed solution is the first of the two remedies the issue's instance names. It also follows D-0443. The session goes into `mcpserver.Options`, which `flai mcp` fills from the environment, so the package's tests stop setting the process and the serial phase goes. The package's time then becomes that of the parallel prime-on-this-repository tests. The second remedy, priming faster under race, is left out: T-2420 measured no gain from a search change and was cancelled.
 
+What is serial today, as counted by the explorer on main at planning: 36 top-level tests, each serial for a variable of its own, plus 6 serial parents that run 54 subtests through `together`. `t.Setenv` is called 50 times in 12 test files. Of those calls, 40 set a session variable. The other 10 set the releases API and its tokens, `FLAI_CONFIG`, and `FLAI_SLOW_REQUEST`. Besides those, git's identity and three package variables are set on the process.
+
 Touches, all files, none a folder:
 
 | Touch | Source |
 |-------|--------|
 | `flai/internal/mcpserver/server.go`, `shared.go`, `issues.go` | Declared by the issue: its environment reads at `server.go:203-209`, `shared.go:180`, and `issues.go:196` |
+| `flai/internal/mcpserver/task.go` | Layout: it builds the environment of the child flai that `task_done` runs, which may need the session from the server's fields |
 | `flai/cmd/mcp.go`, `flai/cmd/mcp_http.go` | Co-change (`flai touches suggest`: 16 and 18 of 99 commits), and the layout: they build `mcpserver.Options` |
 | `flai/internal/mcpserver/permission.go`, `subproject.go`, `versions.go` | Layout: they hold `permissionPoll`, `flaiExecutable`, and the `FLAI_RELEASES_API` read that the serial tests swap |
 | `flai/internal/mcpserver/server_test.go` | Co-change (45 of 99) and the layout: it holds `TestMain`, `together`, and `TestAsTheStorysAgent` |
@@ -70,9 +73,9 @@ Touches, all files, none a folder:
 | `flai/cmd/orchestrate_permissions_test.go`, `flai/cmd/role_test.go`, `flai/internal/serve/restart_test.go` | Layout: they set the session variables before `mcpserver.New`, so they must pass `Options` once the server stops reading the environment |
 | The `design/issues/I-0234-…` file and `design/issues/summary.md` | The goal: `flai issue close` writes both |
 
-`folder.go` (63 percent co-change) is left out: it reads no session variable. `docs/users/flai.md` and `design/system/flai-cli.md` are left out too, since what `flai mcp` does does not change.
+`folder.go` (63 percent co-change) is left out: it passes its `opt` to `newServer` already and reads no session variable. `docs/users/flai.md` and `design/system/flai-cli.md` are left out too, since what `flai mcp` does does not change.
 
-Forecast: `flai forecast` gave 56m from size 33. It is raised to 2h. The work converts about 95 tests across 16 files, and each `-race` run of the package takes 2 to 3 minutes: at least two runs in each of T-2906, T-2910, and T-2915, plus the close-out's integration tier. The delivery moves by the same hour, to 15:00Z.
+Forecast: `flai forecast` gave 56m from size 33. It is raised to 2h. The work converts about 90 tests across 16 files, and each `-race` run of the package takes 2 to 3 minutes: at least two runs in each of T-2906, T-2910, and T-2915, plus the close-out's integration tier. The delivery moves by the same hour, to 15:00Z.
 
 Cost of delay: the value of 1.79 USD a week is `flai cod`'s, from the operator's input of 43 s lost per cycle at 150 USD an hour. It stands as computed. The input is the operator's, set by flai from I-0234's one occurrence of 1m, and this plan changes no input.
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-10T08:29:27Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 2h30m
-  delivery: 2026-11-13T17:00:00Z
-  basis: "Nine tasks in four layers over five Go packages, the review page, two conventions and a role file in several copies, and five documents, reading three stories' records; raised from flai forecast's 1h27m."
-  by: planner-S-0662
-  at: 2026-11-10T08:29:27Z
+  delivery: 2026-11-10T17:12:00Z
+  basis: "Its own forecast of 2h30m; 5th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660 and S-0661."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
 

@@ -6,7 +6,7 @@ title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and 
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:46Z
-updated: 2026-11-10T08:48:24Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [scripts, docker]
 topics: [docker, code]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:24Z
 forecast:
   duration: 40m
-  delivery: 2026-11-10T12:01:00Z
-  basis: "flai forecast's 22m (131 s per unit over 50 done remediation stories on claude-opus-5-5, size 10) raised to 40m for the smoke tier the script changes select at close-out and the permission prompts on two protected scripts; delivery is flai's 11:43 plus the 18m added."
-  by: planner-S-0670
-  at: 2026-11-10T08:48:24Z
+  delivery: 2026-11-10T13:14:00Z
+  basis: "Its own forecast of 40m; 12th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668 and S-0669."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0670 scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools
 

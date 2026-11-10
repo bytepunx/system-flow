@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-10T08:28:36Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -42,10 +42,10 @@ usage:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:30:00Z
-  basis: flai forecast's 1h for size 33 (109 s per unit over 118 large feature stories), raised by half because S-0577 to S-0580, the kluster stories before it, took 39m to 61m each for 6 or 7 criteria, and this one has 9 across serve, the CLI, MCP, the guard, the manifest, and the docs.
-  by: planner-S-0660
-  at: 2026-11-10T08:25:51Z
+  delivery: 2026-11-10T12:51:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0685, S-0241 and S-0659."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0660 A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled
 

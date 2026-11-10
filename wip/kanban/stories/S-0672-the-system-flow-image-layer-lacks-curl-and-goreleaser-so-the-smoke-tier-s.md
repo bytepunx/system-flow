@@ -6,7 +6,7 @@ title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier'
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T08:48:30Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [docker, scripts]
 topics: [harness, docker, testing]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:48Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T12:45:00Z
-  basis: flai forecast's 22m (131 s per unit over 50 medium remediation stories, size 10) raised to 1h for a layer rebuild and smoke runs inside the container, before and after the fix, as S-0630's image change took 30m of agent time
-  by: planner-S-0672
-  at: 2026-11-10T08:47:48Z
+  delivery: 2026-11-10T14:18:00Z
+  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670 and S-0671."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0672 The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there
 

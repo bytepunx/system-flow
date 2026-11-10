@@ -6,7 +6,7 @@ title: after chains on planned stories hold ready stories for days while in-prog
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:51Z
-updated: 2026-11-10T08:48:47Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [flai]
 topics: [ready]
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:47Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T17:00:00Z
-  basis: "Four tasks in three layers: an ADR, two small flai changes with a test each, and five documents; flai forecast's 2m counted no touches"
-  by: planner-S-0673
-  at: 2026-11-10T08:48:47Z
+  delivery: 2026-11-10T15:25:00Z
+  basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671 and S-0672."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0673 after chains on planned stories hold ready stories for days while in-progress stays under two of five
 
@@ -64,6 +64,9 @@ This story remediates [I-0285](../../../design/issues/I-0285-after-chains-on-pla
 - [ ] I-0285 is closed with `flai issue close I-0285 --reason` saying what fixed it
 
 ## Tasks
+- T-2928 An ADR records what I-0285's instances show and decides that ready-empty counts only ready stories not held on after and that a move to ready warns of an after hold
+- T-2930 ready-empty counts only the ready stories not held on after, so held stories in ready no longer keep the orchestrator from promoting
+- T-2931 A move of a story to ready warns when a story it names in after is not done
 
 ## Notes
 

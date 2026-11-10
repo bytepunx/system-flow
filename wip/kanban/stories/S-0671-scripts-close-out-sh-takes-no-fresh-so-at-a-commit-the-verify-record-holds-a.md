@@ -6,7 +6,7 @@ title: scripts/close-out.sh takes no --fresh, so at a commit the verify record h
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T08:48:36Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [flai, template, close-out, verify, scripts]
 topics: [code, review]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:59Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:34:00Z
-  basis: "flai forecast's 24m (101 s per unit of size over 151 done improvement stories, size 14), raised to 45m for five tasks across a shell script, a Go function and its serve test, the template copy, and four documents, and a close-out that runs the template, integration, and smoke tiers; delivery moved by the same 21m."
-  by: planner-S-0671
-  at: 2026-11-10T08:47:59Z
+  delivery: 2026-11-10T13:39:00Z
+  basis: "Its own forecast of 45m; 13th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669 and S-0670."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0671 scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
 

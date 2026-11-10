@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-10T08:26:32Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-11-10T14:11:00Z
-  basis: flai forecast's 48m (109 s per unit over 118 large feature stories, size 26) raised to 1h15m, since S-0578 and S-0579, the nearest kluster stories, took 61m and 51m of agent time with fewer parts than these five tasks.
-  by: planner-S-0661
-  at: 2026-11-10T08:24:53Z
+  delivery: 2026-11-10T14:18:00Z
+  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659 and S-0660."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0661 A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
 

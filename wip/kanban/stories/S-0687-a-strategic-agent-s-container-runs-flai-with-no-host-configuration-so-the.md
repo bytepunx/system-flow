@@ -6,9 +6,11 @@ title: A strategic agent's container runs flai with no host configuration, so th
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:14Z
-updated: 2026-11-10T08:37:14Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
-tags: []
+tags: [flai]
+topics: [orchestration, review]
+touches: [design/adrs/README.md, design/adrs/0277-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,6 +22,15 @@ cost_of_delay:
     time_lost_per_cycle: 9m
     by: flai
     at: 2026-11-10T08:37:14Z
+  value: 22.5
+  by: planner-S-0687
+  at: 2026-11-10T08:49:05Z
+forecast:
+  duration: 2h30m
+  delivery: 2026-11-10T18:17:00Z
+  basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678, S-0679, S-0680, S-0681, S-0682, S-0683, S-0684 and S-0686."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0687 A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
 
@@ -32,7 +43,27 @@ This story remediates [I-0256](../../../design/issues/I-0256-a-strategic-agent-s
 - [ ] I-0256 is closed with `flai issue close I-0256 --reason` saying what fixed it
 
 ## Tasks
+- T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0256. time_lost_per_cycle 9m: 10m per occurrence × 1 occurrence ÷ 1.1 cycles of 168h (first reported 2026-11-02T19:06:36Z, 7.6 days before this story).
+
+### Planning
+
+The remedy proposed, which the first task records as an ADR before any code: the orchestrator accepts through a new orchestrator-only MCP tool, `accept`, whose handler runs `flai accept --by orchestrator` on the host, where the MCP server runs with the host's configuration, as the host API's `accept.run` already does (`flai/internal/hostapi/writes_items.go`); it verifies through the MCP tool `verify`, the close-out job `flai serve` runs on the host (ADR-0229), and reads the result with `flai verify --last`, which only reads. Its shell's `flai accept` and tier-running `flai verify` then fail closed: run as the orchestrator with a `FLAI_CONFIG` in the role's cache folder (`.flai-cache/agents/<role>`), they refuse and name the MCP tools, instead of seeing every host action off and landing a story by hand while the merge queue batches (`flai/cmd/accept.go`, `acceptance`; `flai/cmd/verify.go`, `hostActionOn`). Copying the host actions into the role's cache was weighed and left: the cache is mounted read-write, so a shell write could turn the copy's actions on or off unseen by the guard, against ADR-0220.
+
+Touches, each from the code layout an explorer read, since the story declared none and `flai touches suggest` had nothing to start from:
+
+- Design: `design/adrs/README.md` and the new ADR (its file name predicted from the planned title; the story's agent renames the touch if the number or slug differs); `design/system/strategic-agents.md` (§ In a container, § Accepting a story), `design/system/flai-cli.md` (the strategic container section that states the `FLAI_CONFIG` gap).
+- Layout: `flai/internal/mcpserver/accept.go` and `accept_test.go` (new), `flai/internal/mcpserver/folder.go` (registers the tools), `flai/internal/guard/guard_rules.go` and `guard.go` (the orchestrator's MCP tools and `accept_reviews`), `flai/internal/guard/orchestrate_test.go`; `flai/cmd/accept.go`, `flai/cmd/verify.go`, `flai/cmd/accept_orchestrator_test.go`, `flai/cmd/verify_test.go`.
+- Layout: the orchestrator's role text in its three copies, `design/workflows/roles/orchestrator.md`, `template/root/design/workflows/roles/orchestrator.md`, `flai/internal/roles/baseline/orchestrator.md`; the convention in both copies, `design/conventions/strategic-agents.md` and `template/root/design/conventions/strategic-agents.md`; `template/CHANGELOG.md` for the template's change.
+- Design: `docs/users/flai.md` (the MCP tools table, § When the orchestrator accepts, the container harness section).
+- Criteria: `design/issues/I-0256-…md` and `design/issues/summary.md`, which `flai issue close` writes.
+
+No folder touch is kept. No `after`: the story reads nothing another open story writes.
+
+Figures:
+
+- Forecast: adjusted from flai's 6m to 2h30m. flai sized the story by two criteria and no touches; the plan's five tasks over 23 files, three copies of the role text among them, are the shape of past orchestrator stories that took two to three hours. Delivery 2026-11-11T18:00:00Z allows for its 29th place in the pull order with an in-progress limit of 5.
+- Cost of delay: 22.50 USD a week stands as `flai cod` gives it, from flai's input of 9m lost per 168h cycle at 150 USD an hour. One occurrence, seen in the design rather than a live run, gives no reason to move it.

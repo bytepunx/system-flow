@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-10T08:27:51Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [dashboard]
 topics: [kluster, deployment]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T15:25:00Z
-  basis: "flai forecast's 1h (109 s per unit over 118 done large feature stories, size 33), raised to 1h30m because S-0595 and S-0586, which changed the same page, host methods, and docs, took 64m and 2h32m; delivery is flai's 14:55 plus the 30m added."
-  by: planner-S-0663
-  at: 2026-11-10T08:24:19Z
+  delivery: 2026-11-10T16:02:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661 and S-0662."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0663 The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
 

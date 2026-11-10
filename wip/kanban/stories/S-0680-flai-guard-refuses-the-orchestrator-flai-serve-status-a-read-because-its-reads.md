@@ -6,7 +6,7 @@ title: flai guard refuses the orchestrator flai serve status, a read, because it
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:57Z
-updated: 2026-11-10T08:47:25Z
+updated: 2026-11-10T08:49:28Z
 transitions: []
 tags: [flai, guard]
 topics: [guard, orchestration]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:25Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T12:19:00Z
-  basis: "flai forecast's 22m (107 s per unit of size over 30 done improvement stories, size 12) raised to 45m for the guard's exhaustive read and write table test and the integration and smoke tiers a close-out runs for a story touching flai/; delivery moved by the same 23m."
-  by: planner-S-0680
-  at: 2026-11-10T08:47:25Z
+  delivery: 2026-11-10T15:18:00Z
+  basis: "Its own forecast of 45m; 22nd in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678 and S-0679."
+  by: flai
+  at: 2026-11-10T08:49:28Z
 ---
 # S-0680 flai guard refuses the orchestrator flai serve status, a read, because its reads do not list serve status
 
