@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -97,7 +98,9 @@ func runFakeVite(mode string) {
 
 // newFakeVite is the options for a sub-project whose node_modules/.bin/vite
 // runs the test binary as TestHelperVite in mode, and the folder the fake
-// writes what it was given into.
+// writes what it was given into. With FLAI_FAKE_VITE_DELAY set, the script
+// sleeps that many seconds before it runs the test binary, as a loaded host
+// is slow to start it.
 func newFakeVite(t *testing.T, mode string) (DevServerOptions, string) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -112,7 +115,7 @@ func newFakeVite(t *testing.T, mode string) (DevServerOptions, string) {
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	script := fmt.Sprintf("#!/bin/sh\nexec '%s' '-test.run=^TestHelperVite$' -- \"$@\"\n", exe)
+	script := fmt.Sprintf("#!/bin/sh\n[ -z \"$FLAI_FAKE_VITE_DELAY\" ] || sleep \"$FLAI_FAKE_VITE_DELAY\"\nexec '%s' '-test.run=^TestHelperVite$' -- \"$@\"\n", exe)
 	if err := os.WriteFile(filepath.Join(bin, "vite"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -139,6 +142,41 @@ func readPID(t *testing.T, state, name string) int {
 		t.Fatal(err)
 	}
 	return pid
+}
+
+// launchedPIDs records, for the test, the pid of each vite StartDevServer
+// starts, and returns the pids recorded so far when called. It is the pid
+// flai started, which the script's exec keeps for the fake, so it is known
+// even when StartDevServer stops the fake before it ran far enough to write
+// its own (I-0311).
+func launchedPIDs(t *testing.T) func() []int {
+	t.Helper()
+	var mu sync.Mutex
+	var pids []int
+	saved := launched
+	t.Cleanup(func() { launched = saved })
+	launched = func(pid int) {
+		mu.Lock()
+		defer mu.Unlock()
+		pids = append(pids, pid)
+	}
+	return func() []int {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(pids)
+	}
+}
+
+// waitAllGone fails the test unless StartDevServer started want vites, and
+// waits for each to be gone as waitGone does.
+func waitAllGone(t *testing.T, pids []int, want int) {
+	t.Helper()
+	if len(pids) != want {
+		t.Fatalf("StartDevServer started %d vites (%v), want %d", len(pids), pids, want)
+	}
+	for _, pid := range pids {
+		waitGone(t, pid)
+	}
 }
 
 // waitGone fails the test when pid is still running after a few seconds,
@@ -355,8 +393,9 @@ func TestStartDevServerStartsViteAgainOnAnotherPortWhenItsPortWasTaken(t *testin
 }
 
 func TestStartDevServerGivesUpAfterThreePortsAllTaken(t *testing.T) {
-	opts, state := newFakeVite(t, "serve")
+	opts, _ := newFakeVite(t, "serve")
 	_, picks := holdPorts(t, portTries)
+	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
 		t.Fatal("a vite whose every port was taken started")
@@ -369,12 +408,13 @@ func TestStartDevServerGivesUpAfterThreePortsAllTaken(t *testing.T) {
 			t.Errorf("error lacks %q:\n%v", w, err)
 		}
 	}
-	waitGone(t, readPID(t, state, "pid"))
+	waitAllGone(t, pids(), portTries)
 }
 
 func TestStartDevServerReturnsTheLastLinesOfAViteThatExitsEarly(t *testing.T) {
-	opts, state := newFakeVite(t, "exit-early")
+	opts, _ := newFakeVite(t, "exit-early")
 	_, picks := holdPorts(t, 0)
+	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
 		t.Fatal("a vite that exited started")
@@ -391,12 +431,13 @@ func TestStartDevServerReturnsTheLastLinesOfAViteThatExitsEarly(t *testing.T) {
 	if strings.Contains(msg, "line 6") {
 		t.Errorf("error keeps more than the last %d lines:\n%s", tailLines, msg)
 	}
-	waitGone(t, readPID(t, state, "pid"))
+	waitAllGone(t, pids(), 1)
 }
 
 func TestStartDevServerStopsAViteThatDoesNotAnswerInTime(t *testing.T) {
-	opts, state := newFakeVite(t, "never-answer")
+	opts, _ := newFakeVite(t, "never-answer")
 	opts.Timeout = 500 * time.Millisecond
+	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
 		t.Fatal("a vite that never answered started")
@@ -406,7 +447,7 @@ func TestStartDevServerStopsAViteThatDoesNotAnswerInTime(t *testing.T) {
 			t.Errorf("error lacks %q:\n%v", w, err)
 		}
 	}
-	waitGone(t, readPID(t, state, "pid"))
+	waitAllGone(t, pids(), 1)
 }
 
 func TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered(t *testing.T) {
@@ -420,14 +461,34 @@ func TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered(t *testing.T) {
 }
 
 func TestStartDevServerStopsViteWhenItsContextEnds(t *testing.T) {
-	opts, state := newFakeVite(t, "never-answer")
+	opts, _ := newFakeVite(t, "never-answer")
+	pids := launchedPIDs(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 	_, err := StartDevServer(ctx, opts)
 	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "stopped the Vite dev server") {
 		t.Errorf("error %v, want the context's", err)
 	}
-	waitGone(t, readPID(t, state, "pid"))
+	waitAllGone(t, pids(), 1)
+}
+
+// I-0311: on a loaded host the fake vite was not yet running when the
+// context ended, so it never wrote its pid, and the test lost the process it
+// checks. A start delay longer than the context makes that happen every time.
+func TestStartDevServerStopsAViteStillStartingWhenItsContextEnds(t *testing.T) {
+	opts, state := newFakeVite(t, "never-answer")
+	t.Setenv("FLAI_FAKE_VITE_DELAY", "10")
+	pids := launchedPIDs(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	_, err := StartDevServer(ctx, opts)
+	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "stopped the Vite dev server") {
+		t.Errorf("error %v, want the context's", err)
+	}
+	if _, err := os.Stat(filepath.Join(state, "pid")); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("the fake vite wrote its pid within its start delay (%v); the test needs it still starting", err)
+	}
+	waitAllGone(t, pids(), 1)
 }
 
 func TestErrSaysWhyAServerExitedOnItsOwn(t *testing.T) {

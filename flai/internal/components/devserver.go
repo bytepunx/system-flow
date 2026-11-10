@@ -58,6 +58,11 @@ var stopGrace = 5 * time.Second
 // test can hand it a port that is taken.
 var pickPort = freePort
 
+// launched is told the pid of each vite StartDevServer starts. A variable so
+// that a test can learn the pid of a vite stopped before StartDevServer
+// returned it, which may never have run far enough to say its own.
+var launched = func(int) {}
+
 // ErrViteMissing is wrapped by the error StartDevServer returns when the
 // sub-project has no vite in its node_modules.
 var ErrViteMissing = errors.New("vite is not installed")
@@ -166,6 +171,7 @@ func launch(vite string, port int, opts DevServerOptions) (*DevServer, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("cannot start %s in %s: %w; check that it is executable, or install the sub-project's dependencies again", vite, opts.Dir, err)
 	}
+	launched(cmd.Process.Pid)
 	s := &DevServer{
 		dir:     opts.Dir,
 		url:     "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port)) + opts.Path,
