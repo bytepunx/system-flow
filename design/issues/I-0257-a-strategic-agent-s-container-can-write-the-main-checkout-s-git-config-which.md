@@ -7,7 +7,7 @@ count: 2
 cost: 5m
 first_reported: 2026-11-02T19:06:40Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-10T08:37:15Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,5 @@ flai/internal/harness/container.go:276-277 mounts the main checkout read-write w
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0688 remediates this issue, created from it at 2026-11-10T08:37:15Z.
