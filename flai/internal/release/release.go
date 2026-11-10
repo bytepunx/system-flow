@@ -180,6 +180,123 @@ func CurrentVersion(r execx.Runner, root string, p manifest.Project) (Version, e
 	return highestTag(strings.Split(strings.TrimSpace(out), "\n"), p.Name), nil
 }
 
+// LastRelease is a component's newest release, as this clone's git has it:
+// for a code component its highest <name>/vX.Y.Z tag and the commit it tags,
+// for the template its version and the commit that last changed its
+// template.yaml (S-0643). By and At are the tag's tagger and date, or the
+// commit's author and date for a lightweight tag or the template. Version is
+// empty for a component with no release yet.
+type LastRelease struct {
+	Component string `json:"component"`
+	Version   string `json:"version,omitempty"`
+	Tag       string `json:"tag,omitempty"`
+	File      string `json:"file,omitempty"`
+	Commit    string `json:"commit,omitempty"`
+	By        string `json:"by,omitempty"`
+	At        string `json:"at,omitempty"`
+}
+
+// String names the release in one line, such as cli/v1.2.0 at 1a2b3c4d
+// by Alex on 2026-11-09T16:57:57Z.
+func (l LastRelease) String() string {
+	if l.Version == "" {
+		return l.Component + ": no release yet"
+	}
+	name := l.Tag
+	if name == "" {
+		name = l.Component + " " + l.Version
+		if l.File != "" {
+			name += " (" + l.File + ")"
+		}
+	}
+	commit := l.Commit
+	if len(commit) > 12 {
+		commit = commit[:12]
+	}
+	s := name
+	if commit != "" {
+		s += " at " + commit
+	}
+	if l.By != "" {
+		s += " by " + l.By
+	}
+	if l.At != "" {
+		s += " on " + l.At
+	}
+	return s
+}
+
+// LastReleases is each component's newest release, in the manifest's order:
+// what a publish that found nothing pending was covered by (S-0643).
+func LastReleases(r execx.Runner, root string, m manifest.Manifest) ([]LastRelease, error) {
+	out := make([]LastRelease, 0, len(m.Projects))
+	for _, p := range m.Projects {
+		l, err := lastRelease(r, root, p)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, nil
+}
+
+// lastRelease is one component's LastRelease.
+func lastRelease(r execx.Runner, root string, p manifest.Project) (LastRelease, error) {
+	l := LastRelease{Component: p.Name}
+	if p.Kind == "template" {
+		v, err := templateVersion(root, p)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return l, nil
+			}
+			return l, err
+		}
+		file := filepath.ToSlash(filepath.Join(p.Path, "template.yaml"))
+		l.Version, l.File = v.String(), file
+		log, err := r.Run(root, "git", "log", "-1", "--format=%H%x00%an%x00%aI", "--", file)
+		if err != nil {
+			return l, fmt.Errorf("reading the commit that last set %s's version in %s: %w", p.Name, file, err)
+		}
+		if f := strings.Split(strings.TrimSpace(log), "\x00"); len(f) == 3 {
+			l.Commit, l.By, l.At = f[0], f[1], utcStamp(f[2])
+		}
+		return l, nil
+	}
+	v, err := CurrentVersion(r, root, p)
+	if err != nil {
+		return l, fmt.Errorf("listing %s's release tags: %w", p.Name, err)
+	}
+	if v == (Version{}) {
+		return l, nil
+	}
+	tag := p.Name + "/v" + v.String()
+	ref, err := r.Run(root, "git", "for-each-ref", "--format=%(objectname)%00%(*objectname)%00%(taggername)%00%(taggerdate:iso-strict)%00%(authorname)%00%(authordate:iso-strict)", "refs/tags/"+tag)
+	if err != nil {
+		return l, fmt.Errorf("reading the release tag %s: %w", tag, err)
+	}
+	f := strings.Split(strings.TrimSpace(ref), "\x00")
+	if len(f) != 6 {
+		return l, nil // the highest version is not a tag of that exact name, such as cli/1.2.0
+	}
+	l.Version, l.Tag = v.String(), tag
+	if f[1] != "" { // annotated: the tag object peels to the commit and has a tagger
+		l.Commit, l.By, l.At = f[1], f[2], utcStamp(f[3])
+	} else {
+		l.Commit, l.By, l.At = f[0], f[4], utcStamp(f[5])
+	}
+	return l, nil
+}
+
+// utcStamp writes git's strict ISO 8601 date as RFC 3339 in UTC, and gives
+// back what it cannot parse as it is.
+func utcStamp(s string) string {
+	t, err := time.Parse(time.RFC3339, strings.TrimSpace(s))
+	if err != nil {
+		return strings.TrimSpace(s)
+	}
+	return t.UTC().Format(time.RFC3339)
+}
+
 // templateVersion reads the version: line of a template's template.yaml.
 func templateVersion(root string, p manifest.Project) (Version, error) {
 	data, err := os.ReadFile(filepath.Join(root, p.Path, "template.yaml"))

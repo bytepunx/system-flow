@@ -398,6 +398,49 @@ func TestComputeAndApply(t *testing.T) {
 	}
 }
 
+// S-0643: each component's newest release names its tag or version, the
+// commit, who made it, and when: an annotated tag its tagger, a lightweight
+// tag and the template the commit's author, and a component with none says so.
+func TestLastReleases(t *testing.T) {
+	root, r := gitRepo(t)
+	head, _ := r.Run(root, "git", "rev-parse", "HEAD")
+	head = strings.TrimSpace(head)
+	first, _ := r.Run(root, "git", "rev-list", "--max-parents=0", "HEAD")
+	first = strings.TrimSpace(first)
+
+	got, err := LastReleases(r, root, m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("one per component: %+v", got)
+	}
+	cli := got[0]
+	if cli.Component != "cli" || cli.Version != "0.10.0" || cli.Tag != "cli/v0.10.0" || cli.Commit != first || cli.By != "t" || !strings.HasSuffix(cli.At, "Z") {
+		t.Errorf("annotated tag: %+v", cli)
+	}
+	if web := got[1]; web.Component != "web" || web.Version != "" || web.Commit != "" || web.String() != "web: no release yet" {
+		t.Errorf("no release: %+v %q", web, web.String())
+	}
+	if tpl := got[2]; tpl.Version != "1.0.0" || tpl.File != "tpl/template.yaml" || tpl.Commit != first || tpl.By != "t" || tpl.Tag != "" {
+		t.Errorf("template: %+v", tpl)
+	}
+
+	if out, err := r.Run(root, "git", "tag", "cli/v0.11.0"); err != nil { // lightweight
+		t.Fatal(out, err)
+	}
+	got, err = LastReleases(r, root, m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cli := got[0]; cli.Tag != "cli/v0.11.0" || cli.Commit != head || cli.By != "t" || cli.At == "" {
+		t.Errorf("lightweight tag: %+v", cli)
+	}
+	if s := got[0].String(); !strings.HasPrefix(s, "cli/v0.11.0 at "+head[:12]+" by t on ") {
+		t.Errorf("one line: %q", s)
+	}
+}
+
 // I-0016, S-0047: a tag delivers only to a component the commits touched.
 func TestDeliveryGoesToATouchedComponent(t *testing.T) {
 	root, r := gitRepo(t)

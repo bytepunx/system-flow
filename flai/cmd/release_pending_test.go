@@ -149,6 +149,91 @@ func TestReleasePendingNothingPending(t *testing.T) {
 	}
 }
 
+// I-0320, S-0643: a publish instance's evaluate step saw something pending,
+// then the operator published by hand before the instance's publish step ran.
+// With --require-pending that step exits 2, naming the release that covered
+// what was pending, rather than 0 as though it had published; plain --pending
+// still exits 0 with nothing pending, for every other caller.
+func TestReleasePendingRequirePendingNamesTheReleaseThatOutranIt(t *testing.T) {
+	t.Parallel()
+	root, _ := pendingProject(t)
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	if out, errOut, code := runIn(t, root, "release", "--evaluate", "--json"); code != 0 || !strings.Contains(out, "S-0001") {
+		t.Fatalf("the instance's evaluate step sees S-0001 pending: %d %s %s", code, out, errOut)
+	}
+	// the operator's own publish lands meanwhile
+	if out, errOut, code := runIn(t, root, "release", "--pending"); code != 0 || !strings.Contains(out, "cli 1.0.1") {
+		t.Fatalf("hand publish: %d %s %s", code, out, errOut)
+	}
+	commit := gitIn(t, root, "rev-parse", "cli/v1.0.1^{commit}")
+
+	// the instance's publish step
+	out, errOut, code := runIn(t, root, "release", "--pending", "--require-pending", "--json")
+	if code != exitNothingPending {
+		t.Fatalf("nothing pending exits %d: %d %s %s", exitNothingPending, code, out, errOut)
+	}
+	var got struct {
+		Reason    string                `json:"reason"`
+		Pushed    bool                  `json:"pushed"`
+		CoveredBy []release.LastRelease `json:"covered_by"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("stdout is the JSON answer alone: %v %s", err, out)
+	}
+	if got.Reason != "nothing pending" || got.Pushed || len(got.CoveredBy) != 1 {
+		t.Fatalf("answer: %+v", got)
+	}
+	if c := got.CoveredBy[0]; c.Component != "cli" || c.Tag != "cli/v1.0.1" || c.Commit != strings.TrimSpace(commit) || c.By == "" || c.At == "" {
+		t.Errorf("covered by the hand publish's tag and commit: %+v", c)
+	}
+	if !strings.Contains(errOut, "another publish released it, cli/v1.0.1 at ") {
+		t.Errorf("the refusal names the release: %s", errOut)
+	}
+
+	text, _, code := runIn(t, root, "release", "--pending", "--require-pending")
+	if code != exitNothingPending || !strings.Contains(text, "nothing pending") || !strings.Contains(text, "covered by cli/v1.0.1 at ") {
+		t.Errorf("text names the release too: %d %s", code, text)
+	}
+	dry, _, code := runIn(t, root, "release", "--pending", "--dry-run", "--require-pending", "--json")
+	if code != exitNothingPending || !strings.Contains(dry, `"covered_by"`) || !strings.Contains(dry, `"dry_run": true`) {
+		t.Errorf("a dry run matches the step: %d %s", code, dry)
+	}
+
+	plain, _, code := runIn(t, root, "release", "--pending", "--json")
+	if code != 0 || !strings.Contains(plain, `"reason": "nothing pending"`) || strings.Contains(plain, "covered_by") {
+		t.Errorf("plain --pending is as before: %d %s", code, plain)
+	}
+	if dry, _, code := runIn(t, root, "release", "--pending", "--dry-run"); code != 0 || !strings.Contains(dry, "nothing pending") {
+		t.Errorf("plain dry run is as before: %d %s", code, dry)
+	}
+}
+
+// --require-pending says how --pending exits, so it is refused without it,
+// and --evaluate takes it no more than any other publishing flag.
+func TestReleaseRequirePendingTakesPending(t *testing.T) {
+	t.Parallel()
+	root, _ := researchProject(t, "remediation", true)
+	for _, args := range [][]string{
+		{"release", "--require-pending"},
+		{"release", "S-0001", "--require-pending"},
+		{"release", "--evaluate", "--require-pending"},
+	} {
+		_, errOut, code := runIn(t, root, args...)
+		if code == 0 || !strings.Contains(errOut, "--pending") {
+			t.Errorf("flai %v: %d %s", args, code, errOut)
+		}
+	}
+	// with something pending, it publishes as plain --pending does
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %s", errOut)
+	}
+	if out, errOut, code := runIn(t, root, "release", "--pending", "--require-pending"); code != 0 || !strings.Contains(out, "pushed to origin") {
+		t.Errorf("a publish that releases exits 0: %d %s %s", code, out, errOut)
+	}
+}
+
 // S-0174: a clone whose tags lag the remote's, as after publishing from
 // another clone, offers no plan built on its stale tag and refuses to
 // publish, changing nothing, until the tags are fetched.

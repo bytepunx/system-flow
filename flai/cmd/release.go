@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/release"
@@ -70,10 +71,10 @@ func (a *app) printPlan(plan *release.Plan) {
 
 func newReleaseCmd(a *app) *cobra.Command {
 	var deliver string
-	var dryRun, onlyPending, evaluate, requireMet bool
+	var dryRun, onlyPending, evaluate, requireMet, requirePending bool
 	var judged string
 	c := &cobra.Command{
-		Use:   "release <id> | --pending | --evaluate",
+		Use:   "release <id> | --pending [--require-pending] | --evaluate [--require-met]",
 		Short: "Compute a release for one item, publish everything accepted since the last release, or say whether a release is due",
 		Long: `Per design/conventions/git.md: the component the item delivers to gets the
 delivery-type bump (feature story minor, remediation or improvement patch;
@@ -145,16 +146,29 @@ commits, and pushes nothing, and so takes no item and none of --apply,
 With --require-met, --evaluate prints the same and then exits 2 with the
 evaluation's reason when the policy is not met, so a script or a formula
 step stops there (ADR-0240); met, it exits 0. It and --judged are refused
-without --evaluate.`,
+without --evaluate.
+
+With --require-pending, --pending that finds nothing pending prints the same
+and then exits 2, naming each component's newest release: its tag (or, for
+the template, its version and version file), the commit, who made it, and
+when, so that a formula step whose publish another publish outran stops
+there and says which release covered what was pending (S-0643); with --json
+they are in covered_by. A publish that releases something, or pushes what an
+earlier run left, exits as without it. With --dry-run it exits 2 the same
+way, so the preview matches the step. It is refused without --pending.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
   flai release --pending
+  flai release --pending --require-pending --json
   flai release --evaluate --json
   flai release --evaluate --require-met
   flai release --evaluate --require-met --judged "the editor epic is whole and tested"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if requirePending && !onlyPending {
+				return fmt.Errorf("--require-pending says how --pending exits when nothing is pending, so it takes --pending: flai release --pending --require-pending")
+			}
 			if evaluate {
 				return a.evaluateRelease(cmd, args, requireMet, judged)
 			}
@@ -168,7 +182,7 @@ without --evaluate.`,
 				if len(args) > 0 {
 					return fmt.Errorf("--pending publishes everything accumulated, not one item; drop the id")
 				}
-				return a.publishPending(dryRun)
+				return a.publishPending(dryRun, requirePending)
 			}
 			if len(args) != 1 {
 				return fmt.Errorf("an item ID is required, or --pending to publish everything accumulated")
@@ -219,6 +233,7 @@ without --evaluate.`,
 	c.Flags().BoolVar(&evaluate, "evaluate", false, "say whether orchestration.release is met, with its figures; changes nothing")
 	c.Flags().BoolVar(&requireMet, "require-met", false, "with --evaluate, exit 2 with the reason when the policy is not met")
 	c.Flags().StringVar(&judged, "judged", "", "with --evaluate, the judgement to release: under judgement a reason makes the policy met while a story is accepted and not yet released (ADR-0273)")
+	c.Flags().BoolVar(&requirePending, "require-pending", false, "with --pending, exit 2 naming the release that covered it when nothing is pending")
 	return c
 }
 
@@ -226,6 +241,51 @@ without --evaluate.`,
 // when the release policy is not met (S-0423): the evaluation is printed as
 // without the flag, and the exit stops a formula's step there (ADR-0240).
 const exitReleaseNotMet = 2
+
+// exitNothingPending is flai release --pending --require-pending's exit
+// status when nothing is pending (S-0643): 2, as for a policy not met, so
+// that the publish formula's publish step stops the run cleanly (ADR-0271)
+// when another publish outran it, apart from 3, a remote that moved, and 4,
+// the push host action off.
+const exitNothingPending = 2
+
+// nothingPending prints what flai release --pending says when it finds
+// nothing pending, and with requirePending exits exitNothingPending naming
+// each component's newest release, the one that covered what was pending
+// (S-0643, I-0320). answer gives the --json answer, given the releases, which
+// it names as covered_by, nil without requirePending.
+func (a *app) nothingPending(root string, m manifest.Manifest, requirePending bool, answer func(covered []release.LastRelease) any) error {
+	var covered []release.LastRelease
+	if requirePending {
+		var err error
+		if covered, err = release.LastReleases(a.runner, root, m); err != nil {
+			return err
+		}
+	}
+	if a.jsonOut {
+		if err := a.printJSON(answer(covered)); err != nil {
+			return err
+		}
+	} else {
+		fmt.Fprintln(a.out, "nothing pending")
+		for _, l := range covered {
+			fmt.Fprintf(a.out, "covered by %s\n", l)
+		}
+	}
+	if !requirePending {
+		return nil
+	}
+	names := make([]string, 0, len(covered))
+	for _, l := range covered {
+		if l.Version != "" {
+			names = append(names, l.String())
+		}
+	}
+	if len(names) == 0 {
+		return &exitError{code: exitNothingPending, msg: "nothing pending, and no component has a release yet"}
+	}
+	return &exitError{code: exitNothingPending, msg: "nothing pending: another publish released it, " + strings.Join(names, "; ")}
+}
 
 // evaluateRelease is flai release --evaluate (S-0217): whether the release
 // policy is met, and its figures. It refuses everything that would release.
@@ -464,8 +524,9 @@ func (a *app) servedPublishHeld(root string) error {
 // publishPending is flai release --pending (S-0087): everything
 // computeApplyAndTagPending finds, applied and tagged, pushed together,
 // resumable on partial failure. An agent flai serve started is held while
-// the push host action is off (S-0423), its dry run aside.
-func (a *app) publishPending(dryRun bool) error {
+// the push host action is off (S-0423), its dry run aside. With
+// requirePending, finding nothing pending exits exitNothingPending (S-0643).
+func (a *app) publishPending(dryRun, requirePending bool) error {
 	if err := execx.Require(a.runner, "git", "Releases are git tags; install git."); err != nil {
 		return err
 	}
@@ -479,6 +540,14 @@ func (a *app) publishPending(dryRun bool) error {
 			return err
 		}
 		if a.jsonOut {
+			if requirePending && len(pub.Plans) == 0 && !pub.Remote.Lagging() {
+				return a.nothingPending(repo.Root, repo.Manifest, true, func(covered []release.LastRelease) any {
+					return struct {
+						*preview.Publishing
+						CoveredBy []release.LastRelease `json:"covered_by"`
+					}{pub, covered}
+				})
+			}
 			return a.printJSON(pub)
 		}
 		if pub.Remote.Lagging() {
@@ -492,8 +561,7 @@ func (a *app) publishPending(dryRun bool) error {
 			fmt.Fprintf(a.out, "left out: %s %s: %s\n", u.ID, u.Title, u.Reason)
 		}
 		if len(pub.Plans) == 0 {
-			fmt.Fprintln(a.out, "nothing pending")
-			return nil
+			return a.nothingPending(repo.Root, repo.Manifest, requirePending, nil)
 		}
 		for _, p := range pub.Plans {
 			a.printPendingPlan(p)
@@ -516,11 +584,12 @@ func (a *app) publishPending(dryRun bool) error {
 	if u == nil {
 		if len(plans) == 0 {
 			result["reason"] = "nothing pending"
-			if a.jsonOut {
-				return a.printJSON(result)
-			}
-			fmt.Fprintln(a.out, "nothing pending")
-			return nil
+			return a.nothingPending(repo.Root, repo.Manifest, requirePending, func(covered []release.LastRelease) any {
+				if requirePending {
+					result["covered_by"] = covered
+				}
+				return result
+			})
 		}
 		// tagged and committed locally, but nothing ahead of a remote to push
 		// to (no upstream configured): report what was done, not an error.
