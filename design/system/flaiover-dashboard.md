@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 topics: [dashboard]
 ---
@@ -391,7 +391,7 @@ flaiover/
 │       ├── api/          # +server.ts endpoints
 │       └── ...           # views above
 ├── static/
-├── Dockerfile            # multi-stage, node:24-alpine runtime
+├── Dockerfile            # multi-stage, node:24.22.2-alpine3.24 runtime by digest
 └── tests/                # vitest unit, playwright e2e against the template sample repo
 ```
 

@@ -1,6 +1,6 @@
 ---
 title: Signing releases and verifying the peer
-updated: 2026-10-13
+updated: 2026-11-10
 status: active
 topics: [cli, dashboard, release, security]
 ---
@@ -15,13 +15,13 @@ Every statement about this repository comes from its files, read on 2026-10-02. 
 
 ### How flai is released
 
-- `release-flai.yml` runs GoReleaser on a tag `flai/v*` with `--clean --skip=validate`, under `permissions: contents: write`, and publishes to the GitHub release of `bytepunx/system-flow` named `flai vX.Y.Z`.
+- `release-flai.yml` runs GoReleaser on a tag `flai/v*` with `--clean --skip=validate`, under `permissions: contents: write` (since S-0630 granted on its `goreleaser` job, with `id-token` and `attestations`, over a top-level `contents: read`), and publishes to the GitHub release of `bytepunx/system-flow` named `flai vX.Y.Z`.
 - `flai/.goreleaser.yaml` builds `flai` for linux, darwin, and windows on amd64 and arm64 with `CGO_ENABLED=0`, `-trimpath`, and `-s -w`, and sets `buildinfo.Version`, `Commit`, and `Date` by `ldflags`. It archives each build as `flai_<version>_<os>_<arch>.tar.gz` (`.zip` on windows) and writes `checksums.txt`, SHA-256 of every archive. When this was written it had no `signs`, no `sboms`, and no `docker_signs` section, and nothing was signed. Since S-0232 its `signs` section signs `checksums.txt` into `checksums.txt.sig`, and the release publishes the key's public half as `cosign.pub`.
 - `flai version` prints the three build values and the Go version; a build without `ldflags` falls back to `debug.ReadBuildInfo` for the commit (`flai/internal/buildinfo/buildinfo.go`). A build from this tree by `scripts/flai.sh` has no version.
 
 ### How flaiover is released
 
-- `release-flaiover.yml` runs on a tag `flaiover/v*` and on every push to `main` that touches `flaiover/`, `flai/`, or itself, under `permissions: contents: read, packages: write`. It builds `flaiover/Dockerfile` with buildx for linux/amd64 and linux/arm64 and pushes to `ghcr.io/bytepunx/flaiover` with the tags `docker/metadata-action` gives it: `latest` on `main`, the version and its major on a tag, and `sha-<short>` always. It uses `docker/build-push-action` with its default `provenance`, so the registry holds a buildx provenance attestation it never asks anyone to check; there is no cosign step and no `actions/attest-build-provenance`.
+- `release-flaiover.yml` runs on a tag `flaiover/v*` and on every push to `main` that touches `flaiover/`, `flai/`, or itself, under `permissions: contents: read, packages: write` (since S-0630 the top level grants only `contents: read`: the `image` job holds `packages: write`, `release-key` reads, and `release` holds the contents, packages, id-token, attestations, and artifact-metadata writes). It builds `flaiover/Dockerfile` with buildx for linux/amd64 and linux/arm64 and pushes to `ghcr.io/bytepunx/flaiover` with the tags `docker/metadata-action` gives it: `latest` on `main`, the version and its major on a tag, and `sha-<short>` always. It uses `docker/build-push-action` with its default `provenance`, so the registry holds a buildx provenance attestation it never asks anyone to check; there is no cosign step and no `actions/attest-build-provenance`.
 - The image gets `FLAIOVER_VERSION` and `FLAIOVER_COMMIT` as build arguments from the newest `flaiover/v*` tag and the commit, kept as environment variables of the running container, and reports them as `flaiover_build_info` on `/metrics` (`flaiover/src/lib/server/metrics.ts`). The image carries no flai, no git, and nothing of any project ([ADR-0031](../adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)).
 - An image built on this host with `flai dashboard --build` or `make flaiover-image` is `flaiover:local`, with the same build arguments taken from the newest tags (`flai/cmd/dashboard.go`).
 

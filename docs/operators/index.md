@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 ---
 
@@ -1122,7 +1122,7 @@ Making the package public on GHCR removes the need for a token entirely; that is
 
 ## The image
 
-`ghcr.io/bytepunx/flaiover` is built from `flaiover/Dockerfile` at the repository root: the SvelteKit build on `node:24-alpine` and nothing else (no `flai`, no `git`, no `ssh`; the label `dev.system-flow.flai` names the flai of the commit it was built and tested with), listening on `3000`, running as an unprivileged user by default and working under any `--user`. Tags: `latest` (main), `X.Y.Z` and `X` from `flaiover/vX.Y.Z` release tags, and `sha-<commit>`. While the repository is private the package is too: `docker login ghcr.io` with a token that has `read:packages` before `flai dashboard` can pull it. The container writes nothing that outlives it: it has no volume, and its only home is `/tmp`.
+`ghcr.io/bytepunx/flaiover` is built from `flaiover/Dockerfile` at the repository root: the SvelteKit build on `node:24.22.2-alpine3.24`, named by its digest, and nothing else (no `flai`, no `git`, no `ssh`; the label `dev.system-flow.flai` names the flai of the commit it was built and tested with), listening on `3000`, running as an unprivileged user by default and working under any `--user`. Tags: `latest` (main), `X.Y.Z` and `X` from `flaiover/vX.Y.Z` release tags, and `sha-<commit>`. While the repository is private the package is too: `docker login ghcr.io` with a token that has `read:packages` before `flai dashboard` can pull it. The container writes nothing that outlives it: it has no volume, and its only home is `/tmp`.
 
 Build locally with `make flaiover-image` (tag `flaiover:local`) and run it with `flai dashboard --image flaiover --tag local`. A local build is on no signed list and has no release stamp, so `flai serve` dials it only with `dashboard.allow_unsigned` on ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)).
 

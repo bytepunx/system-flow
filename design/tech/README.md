@@ -27,7 +27,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | markdown-it, shiki, mermaid | 15.0, 4.4, 12.0 | flaiover | [markdown.md](markdown.md) |
 | Search (no library) | | flai | [search.md](search.md) |
 | Vitest, jsdom, Playwright | 4.1, 30.1, 1.60 | flaiover | [sveltekit.md](sveltekit.md) |
-| Docker | 29 (host), image on node:24-alpine | flaiover, flai | [docker.md](docker.md) |
+| Docker | 29 (host), image on node:24.22.2-alpine3.24 | flaiover, flai | [docker.md](docker.md) |
 | Git | 2.47 (host), 2.54 (image); 2.38 or newer for the trial merge at sync, 2.48 or newer only for the opt-in relative worktree links | flai, flaiover image | [git.md](git.md) |
 | GitHub Actions, GHCR | n/a | monorepo | [ci.md](ci.md) |
 | kluster (bytepunx/kluster) | v1.3.1 tested; the host's, on `PATH` | flai, for a project with a `kluster:` block | [kluster.md](kluster.md) |

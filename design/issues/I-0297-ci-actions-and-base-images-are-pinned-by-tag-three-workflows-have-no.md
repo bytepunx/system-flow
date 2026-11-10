@@ -2,11 +2,11 @@
 id: I-0297
 title: CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:37Z
 last_reported: 2026-11-07T08:17:37Z
-updated: 2026-11-07T23:40:47Z
+updated: 2026-11-10T05:57:08Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ every uses: in .github/workflows names a tag (actions/checkout@v7, goreleaser/go
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0630 remediates this issue, created from it at 2026-11-07T23:40:47Z.
+Closed 2026-11-10T05:57:08Z: S-0630 fixed it. Every workflow action is pinned to its commit SHA with its version in a comment, and GoReleaser is v2.18.1 in release-flai.yml (T-2774). Every workflow grants contents: read at the top level, and the release workflows grant their writes only on the jobs that use them. Every base and local-stack image names an exact version: node:24.22.2-alpine3.24, by digest in flaiover/Dockerfile, golang:1.26.0-alpine3.23, alpine:3.24.4, grafana/otel-lgtm:0.40.0, litellm v1.108.4. Dependabot watches the agent image folders (T-2778). Both package-lock.json files are removed, so flaiover/pnpm-lock.yaml is the one lockfile (T-2779). scripts/ci-pins.sh, run by smoke.sh, fails any of these again, and on the story's base it reports all 51 instances (T-2781).

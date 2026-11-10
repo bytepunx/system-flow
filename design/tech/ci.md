@@ -1,6 +1,6 @@
 ---
 title: CI and repository automation
-updated: 2026-11-08
+updated: 2026-11-10
 status: active
 topics: [code]
 ---
@@ -16,9 +16,17 @@ topics: [code]
 | `docker/build-push-action` with `docker/metadata-action` | Build and push `flaiover` on tags `flaiover/v*` and on `main`. The action's digest output, the image index's, is what the digest list, the cosign signature, and the attestation of a tag's build name |
 | GHCR | Image registry, public |
 | cosign v3.1.3, installed by `sigstore/cosign-installer` v4.1.2 | Used by both release workflows. Signs flai's `checksums.txt`, flaiover's digest list, and the flaiover image with the release key, an ECDSA P-256 pair whose private half is the secrets `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD` of the environment `release` ([runbook](../../docs/operators/runbooks/release-key.md)), through GoReleaser's `signs` in `release-flai.yml` and `cosign sign-blob` and `cosign sign --key` in `release-flaiover.yml`, with no Rekor entry, so flai and `install.sh` verify with the standard library and `openssl` and nothing else ([ADR-0070](../adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)). Pinned: its `--output-signature` and `--tlog-upload` flags are deprecated in v3 and go in v4, and the installer has no moving `v4` tag. Chosen over minisign, which `install.sh` could rarely verify, and over keyless signing, which needs Sigstore at verification ([release-signing.md](../system/release-signing.md)). |
-| `actions/attest-build-provenance` v4 | A keyless SLSA provenance statement for flai's archives and `checksums.txt`, and for the flaiover image by its index digest, pushed to GHCR beside it, for anyone with `gh attestation verify`, beside the key signature. Skipped while `bytepunx/system-flow` is private: on the Team plan artifact attestations are for public repositories only. |
+| `actions/attest-build-provenance` v4.2.2 | A keyless SLSA provenance statement for flai's archives and `checksums.txt`, and for the flaiover image by its index digest, pushed to GHCR beside it, for anyone with `gh attestation verify`, beside the key signature. Skipped while `bytepunx/system-flow` is private: on the Team plan artifact attestations are for public repositories only. |
 | Releases | Automatic on acceptance, public or private, per `design/conventions/git.md`: for the component the item delivers to, feature story minor (an epic none of its own since S-0200, ADR-0078), remediation, improvement, docs-only, or non-breaking dependency update patch; components touched incidentally with additive changes get a patch. Research and experiment stay on branches. Tags are per sub-project (`flai/v*`, `flaiover/v*`); `flai release` (S-0029) will compute and push them. Remotes are created with `gh` after asking the operator for organization and visibility. |
-| Dependabot | Weekly for Go modules, npm, GitHub Actions, Docker base images |
+| Dependabot | Weekly for Go modules, npm, GitHub Actions (it moves each SHA pin and its version comment), and Docker base images in `flaiover/`, `flai/images/bedrock/`, and `flai/images/system-flow/` |
+
+How CI's inputs are pinned (S-0630, I-0297):
+
+- Every `uses:` in `.github/workflows/` names the full commit SHA its version tag named, with the version in a trailing comment, `actions/checkout@<sha> # v7.0.1`, so a moved tag cannot change what a workflow runs. GoReleaser is `v2.18.1` in both workflows that install it, the version `scripts/install-tools.sh` pins.
+- Every workflow grants `contents: read` at the top level and nothing else. A write is granted on the job whose steps use it: `release-flai.yml`'s `goreleaser` job holds `contents`, `id-token`, and `attestations`; `release-flaiover.yml`'s `image` job holds `packages`, and its `release` job `contents`, `packages`, `id-token`, `attestations`, and `artifact-metadata`.
+- Each base and local-stack image names an exact version ([docker.md](docker.md)), and flaiover's base also its digest. `flaiover/pnpm-lock.yaml` is the one lockfile ([node.md](node.md)).
+- `scripts/ci-pins.sh`, which `scripts/smoke.sh` runs, so CI and the close-out do, fails a tag-pinned action, a top-level write grant or a missing top-level `permissions:`, an image with no exact version, and a second lockfile.
+- The template's `system-flow-check.yml` gets the read-only `permissions:` block and keeps version tags: a project made from it has no dependabot to move a SHA, and its pins are its own.
 
 Workflows in this monorepo:
 
@@ -28,5 +36,5 @@ Workflows in this monorepo:
 | `install-published.yml` | push to main, daily at 06:17 UTC, by hand | build flai, then `scripts/install-published-test.sh`: install the latest published release from GitHub with `install.sh` and `flai self-upgrade`, with the workflow's `GITHUB_TOKEN`. No story's close-out runs this check; a failure fails the run, which is the record, and opens no issue |
 | `flai.yml` | changes under `flai/` | lint, test with race detector on Linux and macOS (S-0180: macOS's temp dir is a symlink, its `/bin/sh` is bash, and its git works out an identity from the hostname, which broke tests only a Mac ran), build |
 | `flaiover.yml` | changes under `flaiover/` | lint, unit tests, build, e2e |
-| `release-flai.yml` | tag `flai/v*` | In the environment `release`: fails when the release key is missing, installs cosign, GoReleaser (builds, archives, `checksums.txt` and its signature `checksums.txt.sig`), then the provenance attestation when the repository is public |
+| `release-flai.yml` | tag `flai/v*` | In the environment `release`, its one job granting the writes: fails when the release key is missing, installs cosign, GoReleaser v2.18.1 (builds, archives, `checksums.txt` and its signature `checksums.txt.sig`), then the provenance attestation when the repository is public |
 | `release-flaiover.yml` | tag `flaiover/v*`, push to main touching flaiover or flai | Three jobs. `image`: buildx build of `flaiover/Dockerfile` from the repo root for linux/amd64 and linux/arm64, push to GHCR with latest (main), semver and major (tag), and sha tags, flai version from the latest `flai/v*` tag. On a push to main it is the only job, and its images are unsigned. On a tag, `release-key` runs first, in the environment `release`, and fails the run before anything is pushed when the release key is missing; after `image`, `release`, in the same environment, writes the digest list `flaiover_<version>.digests` with `scripts/flaiover-digests.sh`, signs it into `flaiover_<version>.digests.sig`, signs the image with `cosign sign --key` by its index digest (no Rekor entry), adds the provenance attestation when the repository is public, and publishes the release `flaiover vX.Y.Z`, not marked latest, with the list, its signature, and `cosign.pub` ([release-signing.md](../system/release-signing.md#the-digest-list)) |
