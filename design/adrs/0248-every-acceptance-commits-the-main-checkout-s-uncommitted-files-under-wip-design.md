@@ -1,8 +1,8 @@
 ---
 id: ADR-0248
 title: "Every acceptance commits the main checkout's uncommitted files under wip, design, and the shared paths, in a commit of their own before the merge when the story's change would overwrite one, leaves the rest as they are, and sends a story whose rebase it cannot settle back to its agent, whoever accepts"
-status: proposed
-date: 2026-11-02
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0175, ADR-0178, ADR-0189]
