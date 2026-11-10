@@ -1038,7 +1038,7 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 // no task of the story is in progress, and no close-out job of the story
 // runs, whose verified event the agent waits for (ADR-0229 §4). It is
 // serve's rule for an agent it starts again on the answer or the reply
-// (internal/serve/agents.go), so an agent told to end is one serve restarts.
+// (internal/serve/agents_restart.go), so an agent told to end is one serve restarts.
 // Anything it cannot read keeps the hold. The orchestrator flai serve
 // started for reasons (FLAI_REASONS) is told "reasons done": reasons that arrive during its run start the next run,
 // so once it holds, its own are done (ADR-0209 §4); one with no reasons, as a
