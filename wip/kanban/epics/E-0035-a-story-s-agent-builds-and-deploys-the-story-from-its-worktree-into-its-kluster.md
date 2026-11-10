@@ -6,7 +6,7 @@ title: A story's agent builds and deploys the story from its worktree into its k
 status: backlog
 owner: alex
 created: 2026-11-10T08:09:06Z
-updated: 2026-11-10T08:09:11Z
+updated: 2026-11-10T09:35:46Z
 transitions: []
 tags: [cli, dashboard]
 usage:
@@ -30,6 +30,11 @@ usage:
           cache_read: 78547
           cache_write: 41156
           cost: 0.0898
+cost_of_delay:
+  inputs:
+    revenue_per_week: 1250
+    by: alex
+    at: 2026-11-10T09:35:46Z
 ---
 # E-0035 A story's agent builds and deploys the story from its worktree into its kluster namespace and checks it there, so criteria that need the running system are ticked before review
 
