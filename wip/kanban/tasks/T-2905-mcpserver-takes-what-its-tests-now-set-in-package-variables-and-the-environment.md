@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1460
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 259
-      cache_read: 6374719
-      cache_write: 386559
-      cost: 2.4889
+      input: 42
+      output: 11949
+      cache_read: 6740378
+      cache_write: 181247
+      cost: 2.6019
 ---
 # T-2905 mcpserver takes what its tests now set in package variables and the environment, the permission poll, the flai it runs, its version, the releases API and token, and a child's config, through Options
 

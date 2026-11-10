@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2091.4365
-accrued_seconds: 1542965
-tasks_completed: 2778
-last_run: 2026-11-10T10:12:43Z
+accrued_cost: 2092.7585
+accrued_seconds: 1543488
+tasks_completed: 2789
+last_run: 2026-11-10T10:31:01Z
 ---
 
 # Orchestrator activity
@@ -19478,6 +19478,83 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 43
 - Cost: 0.1550 USD, estimated
+
+### 2026-11-10T10:23:01Z
+
+- Summary: S-0672: the operator (alex) already accepted it at 10:22:07Z (commit 9d1d897f9, archived in 97bf89a67). There was nothing to accept; the verifier found both criteria met at 9d1d897f9. release_evaluate under threshold is met: 8 pending stories against a count threshold of 1, worth 192.5 USD a week. I did not start a second publish instance, because S-0704 is already one and sits in ready. Its flai release --pending step will bundle S-0672 with the other seven.
+- Items: S-0672, S-0704
+- Seconds: 76
+- Cost: 0.2899 USD, estimated
+
+### 2026-11-10T10:23:44Z
+
+- Summary: I didn't accept S-0672 because you had already accepted it, and I didn't start a new release because one is already waiting in ready.
+- Items: none
+- Seconds: 43
+- Cost: 0.1719 USD, estimated
+
+### 2026-11-10T10:24:26Z
+
+- Summary: Finalized draft S-0713 (finalize_drafts): flai promote --drafts lists it complete; its 2 criteria, 7 touches (each covered by a task T-2955..T-2958), 30m forecast, and 12.50 USD/week value are consistent.
+- Items: S-0713
+- Seconds: 31
+- Cost: 0.1011 USD, estimated
+
+### 2026-11-10T10:25:11Z
+
+- Summary: Promoted S-0713 to ready (promote_to_ready): sole candidate of flai promote --candidates, rank 1, forecast 30m; ready had room (3 of 10). Applied flai order --by throughput: S-0713 (30m), S-0667 (1h30m), S-0674 (2h30m), S-0704 (no forecast).
+- Items: S-0713, S-0667, S-0674, S-0704
+- Seconds: 45
+- Cost: 0.0958 USD, estimated
+
+### 2026-11-10T10:25:49Z
+
+- Summary: Release due after S-0672's acceptance: release_evaluate under threshold is met (count 8 >= 1; value 192.5 USD < 1000), no held_by_epic. Did not run flai formula run publish again: publish instance S-0704 (made 2026-11-10T08:56Z) is still in ready, unstarted, and publishes all 8 pending stories (S-0638, S-0648, S-0671, S-0672, S-0680, S-0682, S-0685, S-0687) when its agent works it; a second instance would duplicate it.
+- Items: S-0704, S-0672
+- Seconds: 38
+- Cost: 0.0509 USD, estimated
+
+### 2026-11-10T10:26:39Z
+
+- Summary: I finalized and promoted S-0713, and decided against starting a second publish run because S-0704 is already waiting to publish everything pending.
+- Items: none
+- Seconds: 50
+- Cost: 0.0854 USD, estimated
+
+### 2026-11-10T10:27:42Z
+
+- Summary: Answered TH-1012, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0713
+- Seconds: 41
+- Cost: 0.0672 USD, estimated
+
+### 2026-11-10T10:28:46Z
+
+- Summary: Answered TH-1015, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0708
+- Seconds: 64
+- Cost: 0.0775 USD, estimated
+
+### 2026-11-10T10:29:45Z
+
+- Summary: Approved and resolved planner-S-0713's plan on TH-1012 (T-2955 to T-2958, three layers; forecast 30m, value 12.50 USD a week); S-0713 was already finalized and in ready.
+- Items: S-0713
+- Seconds: 59
+- Cost: 0.1523 USD, estimated
+
+### 2026-11-10T10:30:22Z
+
+- Summary: Finalized draft S-0708 (flai promote --drafts: complete, 45m); approved and resolved its plan on TH-1015 (T-2961, T-2962, then T-2964; 25 USD a week); promoted it to ready as promote --candidates' only candidate, rank 1 (0.75 h), ready 4 of 10; applied flai order --by throughput: S-0713 30m, S-0708 45m, S-0667 1h30m, S-0674 2h30m, S-0704.
+- Items: S-0708
+- Seconds: 37
+- Cost: 0.0318 USD, estimated
+
+### 2026-11-10T10:31:01Z
+
+- Summary: I settled all three reasons. The ready column is now 5 of 10, ordered by the `throughput` policy.
+- Items: none
+- Seconds: 39
+- Cost: 0.1982 USD, estimated
 
 ## Refusals
 

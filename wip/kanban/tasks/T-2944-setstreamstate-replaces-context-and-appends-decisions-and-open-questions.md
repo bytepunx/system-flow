@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 771
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 285
-      cache_read: 5226273
-      cache_write: 52417
-      cost: 1.943
+      input: 32
+      output: 4571
+      cache_read: 5303094
+      cache_write: 69605
+      cost: 1.5756
 ---
 # T-2944 SetStreamState replaces Context and appends Decisions and Open questions bullets, keeping the threads block
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 640
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 167
-      cache_read: 2712781
-      cache_write: 37763
-      cost: 1.0124
+      input: 17
+      output: 2382
+      cache_read: 2763258
+      cache_write: 36269
+      cost: 0.821
 ---
 # T-2949 The MCP tool stream_state takes context, decisions, and questions, with a test of a container's session writing them
 

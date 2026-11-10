@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 203
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 184
-      cache_read: 2119711
-      cache_write: 12366
-      cost: 0.7847
+      input: 12
+      output: 910
+      cache_read: 2133720
+      cache_write: 6492
+      cost: 0.496
 ---
 # T-2907 A test reproduces the Activity page's missing Retry after a stop, and the narrative names its cause and the fix proposed
 

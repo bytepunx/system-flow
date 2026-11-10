@@ -6,7 +6,7 @@ title: Declared touches match what a story changes in 16 percent of completed st
 status: ready
 owner: alex
 created: 2026-11-10T08:34:52Z
-updated: 2026-11-10T10:22:09Z
+updated: 2026-11-10T10:54:40Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:34Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 105255
           cost: 1.9583
     - kind: orchestrator
-      seconds: 47
+      seconds: 58
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 51
-          cache_read: 206028
-          cache_write: 10194
-          cost: 0.0587
+          input: 4
+          output: 75
+          cache_read: 289596
+          cache_write: 14309
+          cost: 0.0827
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -70,10 +70,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:36Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-10T13:49:00Z
-  basis: "Its own forecast of 2h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0665, S-0668, S-0669, S-0673, S-0684 and S-0667."
+  delivery: 2026-11-10T15:00:00Z
+  basis: "Its own forecast of 2h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713 and S-0667."
   by: flai
-  at: 2026-11-10T10:22:09Z
+  at: 2026-11-10T10:54:40Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:26Z

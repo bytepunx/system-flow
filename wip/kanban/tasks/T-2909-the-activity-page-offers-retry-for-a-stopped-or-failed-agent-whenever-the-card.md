@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 290
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 249
-      cache_read: 3954011
-      cache_write: 26146
-      cost: 1.4649
+      input: 23
+      output: 1699
+      cache_read: 3983221
+      cache_write: 12120
+      cost: 0.9259
 ---
 # T-2909 The Activity page offers Retry for a stopped or failed agent whenever the card's menu does
 

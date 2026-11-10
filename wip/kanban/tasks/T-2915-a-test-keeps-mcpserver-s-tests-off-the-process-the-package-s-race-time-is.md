@@ -3,11 +3,11 @@ id: T-2915
 type: task
 nature: improvement
 title: A test keeps mcpserver's tests off the process, the package's -race time is measured against I-0234's, and I-0234 is closed
-status: in-progress
+status: done
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:57Z
-updated: 2026-11-10T09:43:00Z
+updated: 2026-11-10T10:37:56Z
 transitions:
   - to: ready
     at: 2026-11-10T09:42:59Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:43:00Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T10:37:56Z
+    by: agent-S-0684
 stream: S-0684
 tags: [flai, go, mcp, testing]
 touches: [flai/internal/mcpserver/process_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md]
 after: [T-2906, T-2910]
 usage:
   source: log
-  seconds: 20
+  seconds: 3296
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 19
-      cache_read: 728610
-      cache_write: 2965
-      cost: 0.2693
+      input: 79
+      output: 22634
+      cache_read: 12768229
+      cache_write: 343333
+      cost: 4.9287
 ---
 # T-2915 A test keeps mcpserver's tests off the process, the package's -race time is measured against I-0234's, and I-0234 is closed
 
@@ -50,3 +53,18 @@ This task waits for the third and fourth tasks, which leave the package's tests 
 - [ ] `flai test` passes on `flai/internal/mcpserver`.
 
 ## Notes
+
+Measured by the story's agent on 2026-11-10 on a 24-core host. Each run is `go test -race -count=1 ./internal/mcpserver` from `flai/`. The time is what `go test` reports for the package; the load is the 1-minute average from `uptime` before and after the run.
+
+The host's load was 53 to 156 throughout, against I-0234's 40 to 57. So main's package, at `d8b005efe`, was run alternately with the story's branch in a scratch worktree, as a baseline under the same load.
+
+| Run | Story branch | Its load | main | Its load |
+|-----|--------------|----------|------|----------|
+| 1 | 317.7 s | 121.6 to 148.8 | 354.0 s | 146.3 to 64.7 |
+| 2 | 200.0 s | 60.9 to 85.7 | 352.7 s | 81.7 to 94.7 |
+| 3 | 155.5 s | 93.9 to 53.3 | 414.6 s | 62.4 to 90.0 |
+| `-short` | 57.2 s | 53.3 to 62.3 | 177.6 s | 90.0 to 156.5 |
+
+Every run passed, the real-git tests included, which skip under `-short`. Under the same load the branch took 155 to 318 s against main's 353 to 415 s, and 57 s against 178 s with `-short`. With no serial phase left, what remains is the two prime-on-this-repository tests. The figures are too noisy at this load to put a number on the gain.
+
+`process_test.go` reproduces the cause. With a planted `t.Setenv`, `os.Setenv`, a package-variable assignment, and a test without `t.Parallel()` in `outdated_test.go`, it failed naming all four (`outdated_test.go:119` to `125`). It passed once they were reverted.

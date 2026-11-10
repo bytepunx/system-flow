@@ -3,10 +3,10 @@ id: S-0668
 type: story
 nature: remediation
 title: A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T10:13:02Z
+updated: 2026-11-10T10:50:47Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:35:43Z
     by: agent-S-0668
+  - to: review
+    at: 2026-11-10T10:50:47Z
+    by: agent-S-0668
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md, flai/internal/mcpserver/stream_sections_test.go]
+touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md, flai/internal/mcpserver/stream_sections_test.go, design/issues/I-0343-testarestartstartswhatisreadyandnothingtwice-fails-its-temp-folder-s-cleanup.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2744
-  estimated: true
-  priced_by: estimate
+  seconds: 4520
+  priced_by: harness
   turns:
     - day: 2026-11-10
+      ceremony: 1
       hand_edits: 2
-      work: 26
+      work: 198
   models:
     - model: claude-opus-5-5
-      input: 158
-      output: 1168
-      cache_read: 18053797
-      cache_write: 405783
-      cost: 6.7946
+      input: 520
+      output: 74428
+      cache_read: 86345550
+      cache_write: 1133319
+      cost: 25.6537
   strategic:
     - kind: planner
       seconds: 21
@@ -91,7 +94,7 @@ This story remediates [I-0277](../../../design/issues/I-0277-a-story-s-agent-in-
 
 ## Acceptance criteria
 - [x] The cause I-0277 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0277 is closed with `flai issue close I-0277 --reason` saying what fixed it
+- [x] I-0277 is closed with `flai issue close I-0277 --reason` saying what fixed it
 
 ## Tasks
 - T-2944 SetStreamState replaces Context and appends Decisions and Open questions bullets, keeping the threads block

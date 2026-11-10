@@ -24,16 +24,16 @@ touches: [design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent
 after: [T-2909]
 usage:
   source: log
-  seconds: 7
+  seconds: 13
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 33
-      cache_read: 593736
-      cache_write: 2658
-      cost: 0.2195
+      input: 3
+      output: 255
+      cache_read: 596853
+      cache_write: 1816
+      cost: 0.1387
 ---
 # T-2912 I-0278 is closed with the cause and the fix
 

@@ -3,10 +3,10 @@ id: S-0669
 type: story
 nature: improvement
 title: After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T10:16:25Z
+updated: 2026-11-10T10:50:18Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:34Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:41:43Z
     by: agent-S-0669
+  - to: review
+    at: 2026-11-10T10:50:18Z
+    by: agent-S-0669
 tags: [flaiover, agent]
 topics: [dashboard, agents]
-touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/summary.md, design/issues/I-0341-agent-test-ts-s-does-not-ask-a-candidate-for-project-info-times-out-at-vitest-s.md]
+touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/summary.md, design/issues/I-0341-agent-test-ts-s-does-not-ask-a-candidate-for-project-info-times-out-at-vitest-s.md, flaiover/src/routes/api/agent/agent.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 783
-  estimated: true
-  priced_by: estimate
+  seconds: 4125
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 2
-      hand_edits: 1
-      work: 35
+      ceremony: 4
+      hand_edits: 2
+      work: 397
   models:
     - model: claude-opus-5-5
-      input: 114
-      output: 872
-      cache_read: 12397980
-      cache_write: 304753
-      cost: 4.6754
+      input: 850
+      output: 63067
+      cache_read: 147814700
+      cache_write: 449758
+      cost: 34.3584
   strategic:
     - kind: orchestrator
       seconds: 142
@@ -88,6 +90,7 @@ This story remediates [I-0278](../../../design/issues/I-0278-after-a-stop-from-t
 - T-2907 A test reproduces the Activity page's missing Retry after a stop, and the narrative names its cause and the fix proposed
 - T-2909 The Activity page offers Retry for a stopped or failed agent whenever the card's menu does
 - T-2912 I-0278 is closed with the cause and the fix
+- T-3072 agent.test.ts's GET /api/agent describe gets a 30 s timeout, as search.test.ts's monorepo describe has, and I-0341 is closed
 
 ## Notes
 

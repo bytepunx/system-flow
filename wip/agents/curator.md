@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 202.8006
-accrued_seconds: 23835
-tasks_completed: 128
-last_run: 2026-11-10T10:12:08Z
+accrued_cost: 204.3154
+accrued_seconds: 23943
+tasks_completed: 129
+last_run: 2026-11-10T10:24:03Z
 ---
 
 # Curator activity
@@ -1035,3 +1035,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 71
 - Cost: 0.4299 USD, estimated
+
+### 2026-11-10T10:24:03Z
+
+- Summary: I merged S-0672 into D-0468, wrote no new entries, absorbed none, and `flai digest compact` compacted none. I left out S-0672's other five decisions: `design/tech/docker.md` and `scripts/README.md` already state the GoReleaser build, procps-ng, `MERGE_QUEUE_STORIES` and `CHECK_IMAGE`, and the MS-0468 note was only about two stories conflicting on one row. D-0468 stays active because no design document states it.
+- Trigger: accepted S-0672
+- Items: D-0468
+- Seconds: 108
+- Cost: 1.5148 USD, estimated

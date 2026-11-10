@@ -6,9 +6,10 @@ title: A strategic agent's container can write the main checkout's .git/config, 
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T08:37:15Z
+updated: 2026-11-10T10:54:40Z
 transitions: []
-tags: []
+tags: [flai, container, security]
+touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -41,6 +42,15 @@ cost_of_delay:
     time_lost_per_cycle: 9m
     by: flai
     at: 2026-11-10T08:37:15Z
+  value: 22.5
+  by: planner-S-0688
+  at: 2026-11-10T10:34:24Z
+forecast:
+  duration: 45m
+  delivery: 2026-11-10T23:22:00Z
+  basis: "Its own forecast of 45m; 19th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683 and S-0686."
+  by: flai
+  at: 2026-11-10T10:54:40Z
 ---
 # S-0688 A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
 
@@ -53,6 +63,10 @@ This story remediates [I-0257](../../../design/issues/I-0257-a-strategic-agent-s
 - [ ] I-0257 is closed with `flai issue close I-0257 --reason` saying what fixed it
 
 ## Tasks
+- T-3045 Record in an ADR refining ADR-0247 that a strategic agent's container mounts .git/config read-only
+- T-3049 roleStart mounts the main checkout's .git/config read-only, with tests that a strategic container's config is not writable
+- T-3052 The design and the guides say a strategic container mounts .git/config read-only
+- T-3055 Close I-0257 with the read-only .git/config mount as its fix
 
 ## Notes
 
@@ -61,3 +75,30 @@ The analyzer found I-0257: the analysis the goal links gives its evidence.
 Cost of delay inputs set by flai from I-0257. time_lost_per_cycle 9m: 5m per occurrence × 2 occurrences ÷ 1.1 cycles of 168h (first reported 2026-11-02T19:06:40Z, 7.6 days before this story).
 
 Strategic usage carried over from I-0257: analyzer 42s, 0.8156 USD.
+
+### Planning
+
+Proposed remedy, the first of the two I-0257's first instance weighs: a strategic agent's container mounts the main checkout's `.git/config` read-only over the read-write checkout, as it mounts `.git/hooks`, recorded in a new ADR that refines ADR-0247. ADR-0247 kept `.git/config` writable only because the orchestrator's `flai accept` deletes a merged branch's section from it. ADR-0278 now runs that acceptance on the host through the MCP tool `accept`, and the shell's `flai accept` refuses in a role's container (`flai/cmd/accept.go`, `orchestratorInRoleContainer` in `flai/cmd/verify.go`). Nothing else a role runs there writes `.git/config`: `flai subproject --autocommit` and `flai formula run --autocommit` only add and commit, and the other `git branch -D` sites (`flai/cmd/branch.go`, `flai/cmd/accept_remote.go`, `flai/internal/mergequeue/batch.go`) run on the host. The second remedy, a check of `.git/config` after each strategic run, is proposed on the plan's thread as an addition, not planned.
+
+Touches, and where each came from:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `design/adrs` | design | The new ADR refining ADR-0247; its file name and number are not known until `flai adr new` writes it. Kept as a folder touch for that one file; the tasks name `design/adrs/README.md`, which narrows the claim (ADR-0096). |
+| `design/adrs/README.md` | design | The ADR index `flai adr new` regenerates. |
+| `flai/internal/harness/container.go` | layout | `roleStart` builds the strategic container's mounts. |
+| `flai/internal/harness/container_test.go` | layout | `TestAStrategicAgentsContainerMountsTheCheckout` asserts those mounts. |
+| `flai/internal/serve/container_test.go` | layout | `roleContainerStarted`, the helper the four roles' container start tests share, checks the hooks mount. |
+| `design/system/strategic-agents.md` | design | § In a container (S-0509): its mount table, the write-gap paragraph, and the I-0257 line. |
+| `design/system/flai-cli.md` | design | The `roleStart` section's mount table. |
+| `docs/operators/index.md` | design | The strategic container section's mount table and `.git/config` note. |
+| `docs/users/flai.md` | design | The strategic container mount table. |
+| `design/issues/I-0257-…md`, `design/issues/summary.md` | declared by criterion 2 | `flai issue close` writes both. |
+
+`flai touches suggest` listed nothing, since the story declared no touches.
+
+No `after`: S-0665, in progress, changes `container.go`, its test, `flai-cli.md`, `docs/users/flai.md`, and `strategic-agents.md` too, to record a run's mounts, but this story reads nothing it writes. The trial merge judges the overlap.
+
+Forecast: with the touches written, `flai forecast` gives 23m (103 s per unit of size over 155 large-band improvement stories, size 13). Raised to 45m from comparable container mount stories: S-0517 took 39m and S-0520 49m, and this one adds an ADR and four documents to a one-line mount change. Delivery is flai's 17:14 plus the 22m added, 17:36.
+
+Cost of delay value: 22.50 USD a week, as `flai cod` works it out from the input flai set from I-0257 (9m lost per 168h cycle at 150 USD an hour). It stands: the time lost is the issue's own measured cost, and no revenue or penalty input exists.

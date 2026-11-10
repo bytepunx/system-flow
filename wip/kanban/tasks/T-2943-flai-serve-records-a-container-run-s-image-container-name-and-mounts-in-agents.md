@@ -3,16 +3,34 @@ id: T-2943
 type: task
 nature: improvement
 title: flai serve records a container run's image, container name, and mounts in agents.json, with a test reproducing I-0274
-status: backlog
+status: in-progress
 parent: S-0665
 owner: alex
 created: 2026-11-10T08:50:29Z
-updated: 2026-11-10T08:50:29Z
-transitions: []
+updated: 2026-11-10T10:41:49Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:41:47Z
+    by: agent-S-0665
+  - to: in-progress
+    at: 2026-11-10T10:41:49Z
+    by: agent-S-0665
 stream: S-0665
 tags: [serve, containers]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
 after: [T-2942]
+usage:
+  source: log
+  seconds: 0
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 170
+      cache_read: 4506836
+      cache_write: 29139
+      cost: 1.6722
 ---
 # T-2943 flai serve records a container run's image, container name, and mounts in agents.json, with a test reproducing I-0274
 

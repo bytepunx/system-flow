@@ -3,16 +3,19 @@ id: S-0684
 type: story
 nature: improvement
 title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T09:42:23Z
+updated: 2026-11-10T10:52:51Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:05Z
     by: alex
   - to: in-progress
     at: 2026-11-10T08:50:12Z
+    by: agent-S-0684
+  - to: review
+    at: 2026-11-10T10:52:51Z
     by: agent-S-0684
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
@@ -24,21 +27,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3191
-  estimated: true
-  priced_by: estimate
+  seconds: 7372
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 3
-      hand_edits: 1
-      work: 34
+      ceremony: 4
+      test_runs: 9
+      hand_edits: 3
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 330
-      output: 1703
-      cache_read: 47379347
-      cache_write: 2003115
-      cost: 18.178
+      input: 484
+      output: 138479
+      cache_read: 78118339
+      cache_write: 2100576
+      cost: 30.1545
   strategic:
     - kind: planner
       seconds: 83
@@ -85,8 +88,8 @@ finalized:
 This story remediates [I-0234](../../../design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md), "flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0234 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0234 is closed with `flai issue close I-0234 --reason` saying what fixed it
+- [x] The cause I-0234 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0234 is closed with `flai issue close I-0234 --reason` saying what fixed it
 
 ## Tasks
 - T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment

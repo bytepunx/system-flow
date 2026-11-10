@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 604
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 192
-      cache_read: 2420939
-      cache_write: 24421
-      cost: 0.9001
+      input: 15
+      output: 2118
+      cache_read: 2456664
+      cache_write: 32245
+      cost: 0.7299
 ---
 # T-2947 flai stream state takes --context, --decision, and --question, and the reference and flag index list them
 

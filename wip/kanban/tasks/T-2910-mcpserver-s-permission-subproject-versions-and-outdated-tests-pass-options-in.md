@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 598
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 509
-      cache_read: 11830639
-      cache_write: 438462
-      cost: 4.5164
+      input: 76
+      output: 21682
+      cache_read: 12231158
+      cache_write: 328892
+      cost: 4.7214
 ---
 # T-2910 mcpserver's permission, subproject, versions, and outdated tests pass Options in place of package variables and run in parallel, and together goes
 

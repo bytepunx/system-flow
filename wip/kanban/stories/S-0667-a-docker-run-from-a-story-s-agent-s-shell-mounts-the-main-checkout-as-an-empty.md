@@ -6,7 +6,7 @@ title: A docker run from a story's agent's shell mounts the main checkout as an 
 status: ready
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T10:22:09Z
+updated: 2026-11-10T10:54:40Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 32
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 21
-          cache_read: 676495
-          cache_write: 8724
-          cost: 0.1857
+          input: 6
+          output: 45
+          cache_read: 760063
+          cache_write: 12839
+          cost: 0.2097
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:13:00Z
-  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 5, behind S-0665, S-0668, S-0669, S-0673 and S-0684."
+  delivery: 2026-11-10T13:14:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0665, S-0708 and S-0713."
   by: flai
-  at: 2026-11-10T10:22:09Z
+  at: 2026-11-10T10:54:40Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:21Z

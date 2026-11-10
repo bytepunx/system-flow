@@ -24,16 +24,16 @@ touches: [design/system/agent-narrative.md, design/system/flai-cli.md, docs/user
 after: [T-2947, T-2949]
 usage:
   source: log
-  seconds: 496
+  seconds: 533
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 208
-      cache_read: 2671449
-      cache_write: 18415
-      cost: 0.9901
+      input: 20
+      output: 2895
+      cache_read: 3358448
+      cache_write: 44081
+      cost: 0.9978
 ---
 # T-2951 The design, the user guide, and tooling.md in both copies say stream state writes Context, Decisions, and Open questions, and I-0277 is closed
 

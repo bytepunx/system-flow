@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1370
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 459
-      cache_read: 17864671
-      cache_write: 504186
-      cost: 6.7616
+      input: 113
+      output: 32461
+      cache_read: 18312055
+      cache_write: 492405
+      cost: 7.0687
 ---
 # T-2906 mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
 

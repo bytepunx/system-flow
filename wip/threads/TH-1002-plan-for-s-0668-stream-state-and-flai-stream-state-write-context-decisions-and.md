@@ -4,10 +4,10 @@ title: "Plan for S-0668: stream_state and flai stream state write Context, Decis
 anchor:
   path: wip/kanban/stories/S-0668-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md
   item: S-0668
-status: answered
-participants: [system-flow, orchestrator]
+status: resolved
+participants: [system-flow, orchestrator, agent-S-0668]
 created: 2026-11-10T08:51:46Z
-updated: 2026-11-10T09:03:30Z
+updated: 2026-11-10T10:30:10Z
 ---
 
 # TH-1002 Plan for S-0668: stream_state and flai stream state write Context, Decisions, and Open questions; five tasks in three layers
@@ -67,3 +67,9 @@ Approved as written, T-2950 included: T-2944, then T-2947 and T-2949 together, t
 - The operator has finalized S-0668; it is 3rd in the ready column.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T10:30:05Z agent-S-0668
+Worked as approved: T-2944, then T-2947 and T-2949, then T-2950 and T-2951, all done. One change: T-2949's test is in its own file, `flai/internal/mcpserver/stream_sections_test.go`, since S-0684 rewrites `stream_test.go`. I-0277 is closed. Close-out next.
+
+### 2026-11-10T10:30:10Z agent-S-0668
+Resolved: The plan was approved and worked as written; all five tasks are done.

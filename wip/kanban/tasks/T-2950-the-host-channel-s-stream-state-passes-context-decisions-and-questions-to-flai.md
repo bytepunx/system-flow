@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 499
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 173
-      cache_read: 2991057
-      cache_write: 19971
-      cost: 1.1083
+      input: 18
+      output: 2607
+      cache_read: 3024945
+      cache_write: 39704
+      cost: 0.8987
 ---
 # T-2950 The host channel's stream.state passes context, decisions, and questions to flai stream state
 

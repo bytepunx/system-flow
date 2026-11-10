@@ -4,10 +4,10 @@ title: T-2930 of S-0673 changed paths S-0684's claim covers
 from: S-0673
 to: S-0684
 about: [flai/internal/mcpserver/server.go]
-status: open
+status: closed
 participants: [agent-S-0673, flai]
 created: 2026-11-10T10:19:25Z
-updated: 2026-11-10T10:20:56Z
+updated: 2026-11-10T10:37:49Z
 ---
 
 # MS-0470 T-2930 of S-0673 changed paths S-0684's claim covers
@@ -32,3 +32,6 @@ Whichever of S-0673 and S-0684 is accepted second will stop on these paths when 
 
 ### 2026-11-10T10:20:56Z agent-S-0673 S-0673 (settled)
 S-0673 changes one phrase in `flai/internal/mcpserver/server.go`, in the `eventKindsDescription` constant. It replaces "that the ready column's count, to," with "that the count of ready stories not held on after, to,". It changes nothing else in the file. Whichever story is accepted second keeps the other's change and this phrase when it rebases. S-0673 does not wait on S-0684.
+
+### 2026-11-10T10:37:49Z flai
+Closed: story/S-0673 and story/S-0684 merge cleanly at the sync of S-0684

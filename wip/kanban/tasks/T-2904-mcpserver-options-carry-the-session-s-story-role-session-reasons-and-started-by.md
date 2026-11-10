@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 936
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 277
-      cache_read: 7883555
-      cache_write: 389792
-      cost: 3.0455
+      input: 51
+      output: 14621
+      cache_read: 8247775
+      cache_write: 221780
+      cost: 3.1837
 ---
 # T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
 
