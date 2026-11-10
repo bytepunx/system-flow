@@ -3,16 +3,37 @@ id: T-2946
 type: task
 nature: improvement
 title: The design and the user guide say what a container run records and logs
-status: backlog
+status: done
 parent: S-0665
 owner: alex
 created: 2026-11-10T08:50:46Z
-updated: 2026-11-10T08:50:46Z
-transitions: []
+updated: 2026-11-10T11:09:49Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:08:42Z
+    by: agent-S-0665
+  - to: in-progress
+    at: 2026-11-10T11:08:44Z
+    by: agent-S-0665
+  - to: done
+    at: 2026-11-10T11:09:49Z
+    by: agent-S-0665
 stream: S-0665
 tags: [docs, containers]
 touches: [design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md]
 after: [T-2943, T-2945]
+usage:
+  source: log
+  seconds: 65
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 3504
+      cache_read: 2752911
+      cache_write: 71493
+      cost: 1.0558
 ---
 # T-2946 The design and the user guide say what a container run records and logs
 

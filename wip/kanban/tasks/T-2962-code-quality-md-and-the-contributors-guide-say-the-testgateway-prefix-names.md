@@ -3,11 +3,11 @@ id: T-2962
 type: task
 nature: remediation
 title: code-quality.md and the contributors guide say the TestGateway prefix names only the paid checks the gateway tier runs
-status: in-progress
+status: done
 parent: S-0708
 owner: alex
 created: 2026-11-10T10:27:42Z
-updated: 2026-11-10T10:54:02Z
+updated: 2026-11-10T11:03:19Z
 transitions:
   - to: ready
     at: 2026-11-10T10:54:01Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:54:02Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T11:03:19Z
+    by: agent-S-0708
 stream: S-0708
 tags: [docs, testing]
 touches: [design/conventions/code-quality.md, docs/contributors/index.md]
+usage:
+  source: log
+  seconds: 557
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1066
+      cache_read: 907908
+      cache_write: 11759
+      cost: 0.293
 ---
 # T-2962 code-quality.md and the contributors guide say the TestGateway prefix names only the paid checks the gateway tier runs
 

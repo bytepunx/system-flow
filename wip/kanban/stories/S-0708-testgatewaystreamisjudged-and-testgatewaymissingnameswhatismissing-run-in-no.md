@@ -6,7 +6,7 @@ title: "TestGatewayStreamIsJudged and TestGatewayMissingNamesWhatIsMissing run i
 status: in-progress
 owner: alex
 created: 2026-11-10T09:55:53Z
-updated: 2026-11-10T10:52:56Z
+updated: 2026-11-10T11:14:57Z
 transitions:
   - to: ready
     at: 2026-11-10T10:29:38Z
@@ -14,29 +14,47 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:52:56Z
     by: agent-S-0708
+blocked:
+  - from: 2026-11-10T11:10:53Z
+    until: 2026-11-10T11:14:20Z
+    reason: awaiting the operator on TH-1049
+  - from: 2026-11-10T11:14:57Z
+    reason: awaiting the operator on TH-1049
 tags: [flai, go, testing]
 topics: [testing, code]
-touches: [flai/internal/serve/gateway_test.go, design/conventions/code-quality.md, docs/contributors/index.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md, design/issues/summary.md]
+touches: [flai/internal/serve/gateway_test.go, design/conventions/code-quality.md, docs/contributors/index.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md, design/issues/summary.md, design/issues/I-0229-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s-condition-and-s-0416-s-testadefinedroleisheldtoitsfile-still-expects-the-old-words.md, design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1111
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      hand_edits: 4
+      work: 94
+  models:
+    - model: claude-opus-5-5
+      input: 236
+      output: 34591
+      cache_read: 29462076
+      cache_write: 381574
+      cost: 9.5085
   strategic:
     - kind: orchestrator
-      seconds: 101
+      seconds: 142
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 45
-          cache_read: 384714
-          cache_write: 15541
-          cost: 0.1093
+          input: 17
+          output: 74
+          cache_read: 861688
+          cache_write: 34814
+          cost: 0.2453
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -62,8 +80,8 @@ finalized:
 This story remediates [I-0334](../../../design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md), "TestGatewayStreamIsJudged and TestGatewayMissingNamesWhatIsMissing run in no tier, because go-test and integration skip ^TestGateway and the gateway tier runs only the two paid checks by name". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0334 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0334 is closed with `flai issue close I-0334 --reason` saying what fixed it
+- [x] The cause I-0334 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0334 is closed with `flai issue close I-0334 --reason` saying what fixed it
 
 ## Tasks
 - T-2961 The two no-network gateway tests leave the TestGateway prefix, and a test fails on a TestGateway function gateway-smoke.sh does not run

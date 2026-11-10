@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1123
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 181
-      cache_read: 3958205
-      cache_write: 44737
-      cost: 1.4757
+      input: 28
+      output: 5129
+      cache_read: 4029834
+      cache_write: 104655
+      cost: 1.5455
 ---
 # T-2942 The container adapter's Start names the container's image, name, and mounts
 

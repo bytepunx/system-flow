@@ -6,7 +6,7 @@ title: go build's VCS stamping fails with git exit status 128 inside the agent c
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [docker, agent-container, go]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-container-test.sh, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
@@ -15,7 +15,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 3
+          cache_read: 92744
+          cache_write: 4930
+          cost: 0.0267
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 14m
@@ -26,10 +40,13 @@ cost_of_delay:
   at: 2026-11-10T10:34:53Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T23:42:00Z
-  basis: "Its own forecast of 1h30m; 18th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-11T06:43:00Z
+  basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:10:11Z
 ---
 # S-0686 go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand
 

@@ -3,26 +3,46 @@ id: S-0666
 type: story
 nature: improvement
 title: This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T11:30:23Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:24Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T11:14:16Z
+    by: agent-S-0666
+blocked:
+  - from: 2026-11-10T11:29:23Z
+    until: 2026-11-10T11:30:01Z
+    reason: awaiting the operator on TH-1051
+  - from: 2026-11-10T11:30:23Z
+    reason: awaiting the operator on TH-1051
 tags: [guard, scripts, harness]
 topics: [harness, cli]
-touches: [design/adrs, design/adrs/README.md, scripts/flai.sh, flai/cmd/guard_test.go, ".opencode/plugins/flai-guard.js", flai/tests/integration/opencode_test.go, scripts/README.md, docs/users/flai.md, design/system/agent-adapters.md, docs/operators/index.md, design/system/strategic-agents.md, design/issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, scripts/flai.sh, flai/cmd/guard_test.go, ".opencode/plugins/flai-guard.js", flai/tests/integration/opencode_test.go, scripts/README.md, docs/users/flai.md, design/system/agent-adapters.md, docs/operators/index.md, design/system/strategic-agents.md, design/issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md, design/issues/summary.md, design/issues/I-0229-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s-condition-and-s-0416-s-testadefinedroleisheldtoitsfile-still-expects-the-old-words.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 926
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      work: 44
+  models:
+    - model: claude-opus-5-5
+      input: 210
+      output: 57341
+      cache_read: 14503681
+      cache_write: 478396
+      cost: 7.398
   strategic:
     - kind: planner
       seconds: 292
@@ -41,15 +61,15 @@ usage:
           cache_write: 1044206
           cost: 23.6176
     - kind: orchestrator
-      seconds: 2
+      seconds: 66
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 0
-          cache_read: 52492
-          cache_write: 3880
-          cost: 0.0154
+          input: 30
+          output: 209
+          cache_read: 1255404
+          cache_write: 131023
+          cost: 0.3799
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -72,8 +92,8 @@ finalized:
 This story remediates [I-0275](../../../design/issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md), "This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0275 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0275 is closed with `flai issue close I-0275 --reason` saying what fixed it
+- [x] The cause I-0275 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0275 is closed with `flai issue close I-0275 --reason` saying what fixed it
 
 ## Tasks
 - T-3061 Write the ADR refining ADR-0235: scripts/flai.sh guard runs an older bin/flai or the installed flai when the build fails, and exits 127 with neither

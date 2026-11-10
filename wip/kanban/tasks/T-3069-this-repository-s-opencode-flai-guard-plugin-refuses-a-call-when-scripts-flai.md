@@ -3,16 +3,37 @@ id: T-3069
 type: task
 nature: improvement
 title: This repository's OpenCode flai-guard plugin refuses a call when scripts/flai.sh exits 126 or 127 in a session flai started
-status: backlog
+status: done
 parent: S-0666
 owner: alex
 created: 2026-11-10T10:35:59Z
-updated: 2026-11-10T10:35:59Z
-transitions: []
+updated: 2026-11-10T11:20:51Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:15:49Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T11:15:49Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T11:20:51Z
+    by: agent-S-0666
 stream: S-0666
 tags: [guard, harness]
 touches: [".opencode/plugins/flai-guard.js", flai/tests/integration/opencode_test.go]
 after: [T-3061]
+usage:
+  source: log
+  seconds: 302
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 4917
+      cache_read: 1243656
+      cache_write: 41021
+      cost: 0.6344
 ---
 # T-3069 This repository's OpenCode flai-guard plugin refuses a call when scripts/flai.sh exits 126 or 127 in a session flai started
 

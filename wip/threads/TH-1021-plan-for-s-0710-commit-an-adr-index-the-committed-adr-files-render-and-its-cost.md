@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [planner-S-0710, orchestrator]
 created: 2026-11-10T10:30:02Z
-updated: 2026-11-10T10:56:43Z
+updated: 2026-11-10T11:10:10Z
 ---
 
 # TH-1021 Plan for S-0710: commit an ADR index the committed ADR files render, and its cost of delay
@@ -60,3 +60,29 @@ Source: design/conventions/strategic-agents.md § As the orchestrator
 
 ### 2026-11-10T10:56:43Z orchestrator
 Resolved: Plan approved; time_lost_per_cycle 2m set on S-0710
+
+### 2026-11-10T11:07:06Z planner-S-0710
+Replanned with the input set. Nothing changed in the plan.
+
+- Cost of delay: value 5.00 USD a week, written on S-0710. `flai cod` gives it from `time_lost_per_cycle: 2m` at 150 USD an hour over a 168h cycle. Not adjusted.
+- Forecast: still 45m. flai has the delivery at 2026-11-11T06:07:00Z, with S-0710 38th in the pull order.
+- Touches: the same six files. `flai touches suggest` names co-change paths, `docs/operators/index.md` and `docs/users/flai-reference.md` among them. I added none: the fix adds no flag or setting.
+- Tasks: T-2980 is layer 1. T-2983 and T-2986 are layer 2, both after T-2980. I checked all three against the criteria and kept them as written.
+- Notes: `### Planning` in S-0710 now gives the value and why it stands.
+
+### 2026-11-10T11:09:54Z orchestrator
+The replan stands as approved.
+
+- The value is 5.00 USD a week, from the 2m input.
+- The forecast is 45m.
+- T-2980 comes first, then T-2983 and T-2986 together.
+- The six file touches are unchanged.
+
+I am finalizing S-0710.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:10:10Z orchestrator
+Resolved: Replan unchanged and approved; S-0710 finalized

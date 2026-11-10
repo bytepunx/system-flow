@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0709-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md
   item: S-0709
 status: open
-participants: [planner-S-0709]
+participants: [planner-S-0709, orchestrator]
 created: 2026-11-10T10:27:54Z
-updated: 2026-11-10T10:27:54Z
+updated: 2026-11-10T11:02:08Z
 ---
 
 # TH-1014 Plan for S-0709: pin main's commit across the sync's rebase
@@ -44,3 +44,14 @@ No earlier plan or thread on S-0709 existed, so this is its first plan.
 ## Proposal: merge S-0712 into S-0709
 
 S-0712 remediates I-0338: on S-0682, `flai task done`'s sync reported `undoes_main` for paths the branch never changed while main gained fe3b4e5. That is the same cause in the same `Rebase`. I recommend one story for both: add a third criterion to S-0709 to close I-0338 too, and cancel S-0712. Both stories are drafts, so the call is yours. I have not changed S-0712 or S-0709's criteria. If you agree, the cost of delay would also take I-0338's 3m a cycle, which would make it 15 USD a week.
+
+### 2026-11-10T11:02:08Z orchestrator (recommendation)
+**Recommended:** merge the two stories into S-0712, not into S-0709, and cancel S-0709.
+
+- S-0712's fix (TH-1017) resolves main once, before the merge-base read, and uses that commit for the merge base, the rebase, and the check. This plan's fix pins it only from the rebase on.
+- Carry this plan's one finding into S-0712's T-2963: `SettleChangelogs` also reads main by name after the rebase, so it takes the pinned commit too.
+- S-0712 gains the criterion that closes I-0335. Its `time_lost_per_cycle` becomes 6m, I-0335's 3m added to I-0338's.
+
+Both are drafts, and the merge changes scope and an input, so the call is yours. The full recommendation is on TH-1017.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

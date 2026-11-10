@@ -6,7 +6,7 @@ title: "Two stories accepted apart leave main red: S-0535 reworded to-backlog's 
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:08Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [flai, acceptance]
 topics: [review, code]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:43Z
 forecast:
   duration: 2h
-  delivery: 2026-11-10T22:42:00Z
-  basis: "Its own forecast of 2h; 17th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662 and S-0663."
+  delivery: 2026-11-11T05:43:00Z
+  basis: "Its own forecast of 2h; 16th in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662 and S-0663."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
 ---
 # S-0683 Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words
 

@@ -3,11 +3,11 @@ id: T-2945
 type: task
 nature: improvement
 title: The serve journal's start line of a container run names its image and container
-status: in-progress
+status: done
 parent: S-0665
 owner: alex
 created: 2026-11-10T08:50:39Z
-updated: 2026-11-10T10:58:29Z
+updated: 2026-11-10T11:03:36Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:27Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:58:29Z
     by: agent-S-0665
+  - to: done
+    at: 2026-11-10T11:03:36Z
+    by: agent-S-0665
 stream: S-0665
 tags: [serve, containers]
-touches: [flai/internal/serve/agents_start.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/serve/agents_start.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/container_test.go, flai/internal/serve/role.go]
 after: [T-2943]
+usage:
+  source: log
+  seconds: 307
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 6511
+      cache_read: 5115658
+      cache_write: 132854
+      cost: 1.962
 ---
 # T-2945 The serve journal's start line of a container run names its image and container
 

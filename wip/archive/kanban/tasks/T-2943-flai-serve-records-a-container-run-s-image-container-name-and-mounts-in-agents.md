@@ -24,16 +24,16 @@ touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, fl
 after: [T-2942]
 usage:
   source: log
-  seconds: 0
+  seconds: 979
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 170
-      cache_read: 4506836
-      cache_write: 29139
-      cost: 1.6722
+      input: 54
+      output: 9909
+      cache_read: 7786011
+      cache_write: 202204
+      cost: 2.9861
 ---
 # T-2943 flai serve records a container run's image, container name, and mounts in agents.json, with a test reproducing I-0274
 

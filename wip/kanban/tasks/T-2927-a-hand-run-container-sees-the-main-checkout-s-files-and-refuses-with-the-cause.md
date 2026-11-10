@@ -3,12 +3,15 @@ id: T-2927
 type: task
 nature: remediation
 title: A hand-run container sees the main checkout's files, and refuses with the cause when a mount comes up empty
-status: backlog
+status: cancelled
 parent: S-0667
 owner: alex
 created: 2026-11-10T08:48:52Z
-updated: 2026-11-10T08:48:52Z
-transitions: []
+updated: 2026-11-10T11:02:24Z
+transitions:
+  - to: cancelled
+    at: 2026-11-10T11:02:24Z
+    by: system-flow
 stream: S-0667
 tags: [docker, agent-container]
 touches: [scripts/agent-container.sh]
@@ -33,3 +36,4 @@ Reproduce the cause as T-2926 recorded it, run the script, and record in the Not
 - `flai test scripts/agent-container.sh` passes.
 
 ## Notes
+- 2026-11-10T11:02:24Z: moved to cancelled: T-2926 found the cause in zsh's $name:r modifier on a hand-typed -v spec; scripts/agent-container.sh builds its arguments in POSIX sh, which zsh never reads, so a check there guards nothing. T-3078 carries the fix.

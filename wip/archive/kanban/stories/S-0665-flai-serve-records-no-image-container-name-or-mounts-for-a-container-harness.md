@@ -3,10 +3,10 @@ id: S-0665
 type: story
 nature: improvement
 title: flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:37Z
-updated: 2026-11-10T10:58:26Z
+updated: 2026-11-10T19:26:04Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:21:09Z
     by: agent-S-0665
+  - to: review
+    at: 2026-11-10T11:14:11Z
+    by: agent-S-0665
+  - to: done
+    at: 2026-11-10T19:26:04Z
+    by: alex
 tags: [serve, containers]
 topics: [docker, code]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md, flai/internal/serve/agents_state.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md, flai/internal/serve/agents_state.go, flai/internal/serve/agents_test.go, flai/internal/serve/role.go, flai/internal/mcpserver/stream_sections_test.go, design/issues/I-0229-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s-condition-and-s-0416-s-testadefinedroleisheldtoitsfile-still-expects-the-old-words.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1383
-  estimated: true
-  priced_by: estimate
+  seconds: 3194
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 2
-      hand_edits: 1
-      work: 21
+      ceremony: 4
+      hand_edits: 4
+      work: 77
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 641
-      cache_read: 12019328
-      cache_write: 334412
-      cost: 4.5544
+      input: 274
+      output: 50175
+      cache_read: 39423123
+      cache_write: 1023824
+      cost: 15.1198
   strategic:
     - kind: planner
       seconds: 196
@@ -57,15 +62,21 @@ usage:
           cache_write: 641675
           cost: 11.7787
     - kind: orchestrator
-      seconds: 20
+      seconds: 99
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 11
-          cache_read: 348080
-          cache_write: 5867
-          cost: 0.0959
+          input: 25
+          output: 139
+          cache_read: 1103883
+          cache_write: 108698
+          cost: 0.3314
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 52
+          cache_read: 41625
+          cache_write: 42310
+          cost: 0.063
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -92,7 +103,7 @@ This story remediates [I-0274](../../../design/issues/I-0274-flai-serve-records-
 
 ## Acceptance criteria
 - [x] The cause I-0274 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0274 is closed with `flai issue close I-0274 --reason` saying what fixed it
+- [x] I-0274 is closed with `flai issue close I-0274 --reason` saying what fixed it
 
 ## Tasks
 - T-2942 The container adapter's Start names the container's image, name, and mounts
@@ -100,6 +111,7 @@ This story remediates [I-0274](../../../design/issues/I-0274-flai-serve-records-
 - T-2945 The serve journal's start line of a container run names its image and container
 - T-2946 The design and the user guide say what a container run records and logs
 - T-2948 I-0274 is closed with what fixed it
+- T-3079 TestStreamStateWritesContextDecisionsAndQuestions runs in parallel without setting the process, as TestNoTestSetsTheProcess requires
 
 ## Notes
 

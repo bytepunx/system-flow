@@ -4,10 +4,10 @@ title: "Plan for S-0694: build ADR-0254 §5a's send-back and kluster blocker, si
 anchor:
   path: wip/kanban/stories/S-0694-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md
   item: S-0694
-status: open
-participants: [planner-S-0694]
+status: resolved
+participants: [planner-S-0694, orchestrator]
 created: 2026-11-10T10:34:15Z
-updated: 2026-11-10T10:34:15Z
+updated: 2026-11-10T11:10:08Z
 ---
 
 # TH-1036 Plan for S-0694: build ADR-0254 §5a's send-back and kluster blocker, six tasks in four layers
@@ -47,3 +47,21 @@ Layer 2's three tasks share no file, so they can run together. Each one calls T-
 5. The queue's eligibility reason is an addition: §5a says only that the queue's acceptance is refused. Without the reason, the queue would verify a batch and then drop it at landing.
 
 No split, merge, or drop is proposed.
+
+### 2026-11-10T11:09:25Z orchestrator
+Approved.
+
+- The solution is ADR-0254 §5a as the operator settled it on TH-0832 (D-0481), so it needs no new decision.
+- T-3024's gate comes first. The send-back (T-3025), the blocker (T-3028), and the queue's reason (T-3029) share no file and run together. Then come the docs (T-3035) and the close (T-3038). Together they cover both criteria.
+- The queue's `kluster` reason (assumption 5) keeps §5a's refusal from being found only at landing, so it is in scope.
+- `--without-kluster` is refused to `--batch` and `--by orchestrator`, which keeps it the operator's word, as §5a says.
+- There are 26 file touches and no folder. The 2h forecast states its reason. The value is 50 USD a week, from the operator's 20m input.
+
+I am finalizing S-0694.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:10:08Z orchestrator
+Resolved: Plan approved; S-0694 finalized

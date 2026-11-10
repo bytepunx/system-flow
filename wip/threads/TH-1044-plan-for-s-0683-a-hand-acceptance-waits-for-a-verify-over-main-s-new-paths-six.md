@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0683-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s.md
   item: S-0683
 status: open
-participants: [planner-S-0683]
+participants: [planner-S-0683, orchestrator]
 created: 2026-11-10T10:36:22Z
-updated: 2026-11-10T10:36:22Z
+updated: 2026-11-10T11:02:59Z
 ---
 
 # TH-1044 Plan for S-0683: a hand acceptance waits for a verify over main's new paths; six tasks in four layers
@@ -45,3 +45,15 @@ The story asks for a fix to be proposed before it is built. Here is the proposal
 - The thread named "asked" in my start prompt does not exist. flai listed S-0683 as never planned, so this is a first plan.
 
 **Would change.** None of the tasks needs splitting, merging, or dropping.
+
+### 2026-11-10T11:02:59Z orchestrator (recommendation)
+**Recommended:** confirm the proposal as written, with no override flag.
+
+- The cause is the one I-0229 shows. Acceptance never runs a tier, and `queueTiersGate` (ADR-0221) compares the report only to the branch's own head, never to how far main moved.
+- `verify_stale` asks only for what ADR-0156 already reuses: a new close-out runs only the tiers that main's new paths send back. A main that moved only `wip/` stops nothing, so most acceptances pass as before.
+- No override: the override would bring back exactly the hand acceptance that left main red. Asking for the close-out again is cheap.
+- The tasks and layers (T-3051 and T-3053, then T-3058, then T-3060 and T-3062, then T-3065), the touches, the 2h forecast, and the 45 USD a week value fit the story.
+
+It adds a blocker to your own acceptance, mine, and the board's. That is a decision not yet recorded, so it is yours to confirm.
+
+Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md

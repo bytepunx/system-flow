@@ -3,16 +3,37 @@ id: T-3066
 type: task
 nature: improvement
 title: scripts/flai.sh guard falls back to an older bin/flai or the installed flai when go build fails, and exits 127 with neither, with a test that makes the build fail
-status: backlog
+status: done
 parent: S-0666
 owner: alex
 created: 2026-11-10T10:35:46Z
-updated: 2026-11-10T10:35:46Z
-transitions: []
+updated: 2026-11-10T11:20:45Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:15:48Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T11:15:48Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T11:20:45Z
+    by: agent-S-0666
 stream: S-0666
 tags: [guard, scripts]
 touches: [scripts/flai.sh, flai/cmd/guard_test.go]
 after: [T-3061]
+usage:
+  source: log
+  seconds: 297
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 3996
+      cache_read: 1010751
+      cache_write: 33339
+      cost: 0.5156
 ---
 # T-3066 scripts/flai.sh guard falls back to an older bin/flai or the installed flai when go build fails, and exits 127 with neither, with a test that makes the build fail
 

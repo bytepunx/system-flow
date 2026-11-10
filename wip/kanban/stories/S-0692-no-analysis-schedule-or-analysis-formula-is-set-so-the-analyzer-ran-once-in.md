@@ -6,7 +6,7 @@ title: No analysis.schedule or analysis.formula is set, so the analyzer ran once
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [flai, analyzer, manifest]
 topics: [analysis, cli]
@@ -21,16 +21,26 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 3
+    - kind: planner
+      seconds: 24
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 0
-          cache_read: 52492
-          cache_write: 3880
-          cost: 0.0154
+          input: 7
+          output: 2625
+          cache_read: 238288
+          cache_write: 17184
+          cost: 0.2377
+    - kind: orchestrator
+      seconds: 87
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 133
+          cache_read: 1403701
+          cache_write: 80096
+          cost: 0.4063
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -47,18 +57,23 @@ usage:
           cache_read: 759050
           cache_write: 13854
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
     by: orchestrator
     at: 2026-11-10T10:55:48Z
+  value: 300
+  by: planner-S-0692
+  at: 2026-11-10T11:08:12Z
 forecast:
   duration: 38m
-  delivery: 2026-11-11T00:29:00Z
-  basis: "Its own forecast of 38m; 22nd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690 and S-0691."
+  delivery: 2026-11-11T07:30:00Z
+  basis: "Its own forecast of 38m; 21st in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690 and S-0691."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:13:45Z
 ---
 # S-0692 No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
 
@@ -90,13 +105,14 @@ Touches, all files, no folder:
 
 - Layout, from the explorer's read of the code: `flai/internal/manifest/settings.go` and `settings_test.go` (the settings catalog), `flai/internal/formulas/formulas.go` and `formulas_test.go` (the shared check), `flai/internal/check/check_roles.go` (`manifest.analysis` today), `flai/cmd/manifest.go` and `manifest_test.go`, and `flai/cmd/serve_actions_test.go`, which lists the analysis keys.
 - Design and docs that say the formula is set by hand or list the keys: `design/system/strategic-agents.md`, `design/system/project-manifest.md`, `docs/operators/settings.md`, `docs/operators/index.md`, `docs/users/flai.md`, and `docs/users/flai-reference.md`, generated from the command's help.
-- Co-change (`flai touches suggest`): `design/system/flai-cli.md` (23 percent, its `flai manifest set` row lists the keys) and `design/system/flaiover-dashboard.md` (7 percent, the Analyzer page's settings panel names its keys). The rest it listed, such as `flai/internal/hostapi/writes.go`, change with these files for other reasons: the host API takes the catalog through `manifest.SettingFor`, with no list of its own.
+- Co-change (`flai touches suggest`): `design/system/flai-cli.md` (23 percent, its `flai manifest set` row lists the keys) and `design/system/flaiover-dashboard.md` (7 percent, the Analyzer page's settings panel names its keys). The rest it listed, such as `flai/internal/hostapi/writes.go` and `docs/users/flaiover.md`, change with these files for other reasons and name neither analysis key: the host API takes the catalog through `manifest.SettingFor`, with no list of its own.
+- Not touched: `flaiover/src/routes/workflow/analyzer/analyzer.svelte.test.ts` expects the rows `analysis.agent` and `analysis.schedule`, but from a mocked catalog, so a new key in the real catalog does not break it.
 - Goal and criteria: `system-flow.yaml`, written by `flai manifest set`; the issue file and `design/issues/summary.md`, for the close; `template/CHANGELOG.md`, for the flai change.
 
 No `after`: the story reads no other story's output.
 
 Forecast: 38m, flai's figure, kept. Its size counts 20 touches. Nine of them are one-line document edits, but T-3031 moves a check into a shared function and T-3034 regenerates the command reference, so the figure is not lowered.
 
-Cost of delay: no value yet. The story has no inputs and no epic, and I-0292's Impact gives no figure flai parses. TH-1038 asks the operator. The recommendation there is `time_lost_per_cycle: 2h`. The value is worked out with `flai cod` once the inputs are set.
+Cost of delay: 300 USD a week, flai's figure from `flai cod`, kept. The orchestrator set the one input, `time_lost_per_cycle: 2h`, on TH-1038, the figure recommended there; at the project's 150 USD an hour and a 168h cycle that is 300 USD a week. The story has no epic to inherit from, and no revenue or penalty applies.
 
-The cadence is money, and the operator's. TH-1038 recommends weekly, `0 6 * * 1`, about 3.5 USD a month at the last run's 0.82 USD. T-3037 sets what the operator chooses.
+The cadence is money, and the operator's. TH-1038 recommends weekly, `0 6 * * 1`, about 3.5 USD a month at the last run's 0.82 USD; it awaits the operator. T-3037 sets what the operator chooses, so only T-3037 waits on the answer.

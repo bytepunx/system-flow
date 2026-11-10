@@ -6,7 +6,7 @@ title: "flai check finds `issues.summary` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [flai, issues, git]
 topics: [git]
@@ -21,28 +21,43 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 205
+    - kind: planner
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 341
-          cache_read: 2540234
-          cache_write: 225662
-          cost: 0.756
-draft: true
+          input: 24
+          output: 5841
+          cache_read: 790028
+          cache_write: 63601
+          cost: 0.7013
+    - kind: orchestrator
+      seconds: 224
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 40
+          output: 371
+          cache_read: 3216816
+          cache_write: 232329
+          cost: 0.9428
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: orchestrator
     at: 2026-11-10T10:55:38Z
+  value: 12.5
+  by: planner-S-0702
+  at: 2026-11-10T11:07:46Z
 forecast:
   duration: 60m
-  delivery: 2026-11-11T04:06:00Z
-  basis: "Its own forecast of 1h; 32nd in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700 and S-0701."
+  delivery: 2026-11-11T11:08:00Z
+  basis: "Its own forecast of 1h; 31st in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700 and S-0701."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:10:11Z
 ---
 # S-0702 flai check finds `issues.summary` outside the story at close-out
 
@@ -101,14 +116,14 @@ Touches, and where each came from:
 | `docs/users/flai.md` | design: "The issue summary" bullet says when the summary is written again |
 | `design/issues/I-0266-…md`, `design/issues/summary.md` | declared by criterion 2 |
 
-`flai touches suggest S-0702` listed nothing at first, since the story declared no touches. Run again with the touches above, it listed only co-changes at 10% or less, such as `docs/operators/index.md` and `docs/users/flai-reference.md`. The fix changes no flag, setting, or convention, so none of them is added. The folder touch `design/adrs` stays because the ADR's number and slug are not known until it is written. T-3002 names the predicted file, and `flai task done` widens the touches with the file it writes.
+`flai touches suggest S-0702` listed nothing at first, since the story declared no touches. Run again on 2026-11-10 with the touches above, it listed only co-changes at 10% or less, such as `docs/operators/index.md` and `docs/users/flai-reference.md`. The fix changes no flag, setting, or convention, so none of them is added. The folder touch `design/adrs` stays because the ADR's number and slug are not known until it is written. ADR-0279 was taken by S-0673 after the first plan, so T-3002 now names `0280-…` as its guess, and `flai task done` widens the touches with the file it writes.
 
 Figures:
 
-- Forecast: 60m, delivery 2026-11-10T18:55:00Z. `flai forecast` gave 26m: 103 s per unit of size times size 15, over 155 done large improvement stories. Raised because the fix needs real-git tests in both `storygit` and the merge queue, plus an ADR, and a change under `flai/` runs the integration and smoke tiers at close-out. S-0582, a smaller fix of the same kind with an ADR, took 47m.
-- Cost of delay: not set. `flai cod` cannot work out a value, since the story has no inputs and no epic. The input is asked for on TH-1013.
+- Forecast: 60m. `flai forecast` gives 28m: 103 s per unit of size times size 16, over 157 done large improvement stories. Raised because the fix needs real-git tests in both `storygit` and the merge queue, plus an ADR, and a change under `flai/` runs the integration and smoke tiers at close-out. S-0582, a smaller fix of the same kind with an ADR, took 47m. The orchestrator approved 60m on TH-1033.
+- Cost of delay: 12.50 USD a week, as `flai cod` works it out from the operator's input set on TH-1013: 5m of time lost per 168h cycle at 150 USD an hour, one cycle a week. It stands unadjusted: the input already weighs that each stale summary costs one round of close-outs.
 
-Layers:
+Layers, approved on TH-1033:
 
 1. T-3002 (the ADR).
 2. T-3005 (the sync) and T-3011 (the docs), together, with no file in common.

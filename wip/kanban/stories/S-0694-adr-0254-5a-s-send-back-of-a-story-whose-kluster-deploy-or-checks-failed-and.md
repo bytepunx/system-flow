@@ -6,7 +6,7 @@ title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks fail
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [flai, serve, kluster, accept]
 topics: [kluster, deployment, review]
@@ -21,6 +21,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: orchestrator
+      seconds: 5
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 3
+          cache_read: 92744
+          cache_write: 4930
+          cost: 0.0267
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -37,7 +47,6 @@ usage:
           cache_read: 759050
           cache_write: 13855
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -48,10 +57,13 @@ cost_of_delay:
   at: 2026-11-10T10:32:23Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T02:56:00Z
-  basis: "Its own forecast of 2h; 24th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692 and S-0693."
+  delivery: 2026-11-11T09:58:00Z
+  basis: "Its own forecast of 2h; 23rd in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692 and S-0693."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T11:10:10Z
 ---
 # S-0694 ADR-0254 §5a's send-back of a story whose kluster deploy or checks failed, and its kluster acceptance blocker, are not built
 

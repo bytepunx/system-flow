@@ -7,11 +7,11 @@ status: backlog
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:10Z
-updated: 2026-11-10T10:31:10Z
+updated: 2026-11-10T11:07:00Z
 transitions: []
 stream: S-0702
 tags: [adr, git]
-touches: [design/adrs/0279-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-it-again-at-the.md, design/adrs/README.md]
+touches: [design/adrs/0280-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-it-again-at-the.md, design/adrs/README.md]
 ---
 # T-3002 Decide in an ADR that a rebase which wrote a generated file again at a stop writes it again at the branch's head and commits it
 

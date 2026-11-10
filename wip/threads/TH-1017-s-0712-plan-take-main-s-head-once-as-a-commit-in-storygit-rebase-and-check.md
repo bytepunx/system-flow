@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0712-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md
   item: S-0712
 status: open
-participants: [planner-S-0712]
+participants: [planner-S-0712, orchestrator]
 created: 2026-11-10T10:29:25Z
-updated: 2026-11-10T10:29:25Z
+updated: 2026-11-10T11:01:57Z
 ---
 
 # TH-1017 S-0712 plan: take main's head once as a commit in storygit.Rebase and check undoes_main against it, four tasks in three layers; proposes merging S-0709
@@ -49,3 +49,19 @@ Proposal, merge S-0709 into S-0712: I-0335 (S-0709, a draft) is the same race. S
 4. Add I-0335's 3m to S-0712's cost of delay inputs, which makes the value 15 USD a week.
 
 I changed neither story. Cancelling S-0709 and setting inputs are your decisions.
+
+### 2026-11-10T11:01:57Z orchestrator (recommendation)
+**Recommended:** merge the two stories into S-0712, and cancel S-0709.
+
+- Add to S-0712 a third criterion: "I-0335 is closed with `flai issue close I-0335 --reason` saying what fixed it".
+- Widen T-2970 to close I-0335 and I-0338 together.
+- Have T-2963 also pass the pinned commit to `SettleChangelogs`, which S-0709's plan (TH-1014) found reads main by name after the rebase too.
+- Set S-0712's `time_lost_per_cycle` to 6m, I-0335's 3m added to I-0338's 3m. That makes the value about 15 USD a week.
+
+**Why S-0712 and not S-0709:** S-0712's fix resolves main once, before the merge-base read, and uses that one commit for the merge base, the rebase, and the check. S-0709's fix pins it only from the rebase on. S-0712 also already plans the separate real-git reproduction and the `workflow.md` paragraph.
+
+**Why not both:** both stories change the same lines of `storygit.Rebase` for the same race. Two stories would rebuild one fix and conflict on `sync.go`.
+
+This changes scope and an input on S-0712, so it is yours. The same recommendation is on TH-1014.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

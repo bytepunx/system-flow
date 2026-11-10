@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0701-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md
   item: S-0701
 status: open
-participants: [planner-S-0701]
+participants: [planner-S-0701, orchestrator]
 created: 2026-11-10T10:30:43Z
-updated: 2026-11-10T10:36:41Z
+updated: 2026-11-10T11:02:38Z
 ---
 
 # TH-1025 S-0701: which remedy for I-0265 — host-granted outside folders, story-requested within a host list, or a prompt warning only?
@@ -72,3 +72,17 @@ Each layer waits for the one before it. The two tasks in layer 4 run together, s
 - T-3059 asks the story's agent to check once, with a scratch `claude -p` on the cheapest model, that a sub-agent inherits `--add-dir`. That is a paid call of a few cents. Say if you would rather it rely on Claude Code's documentation.
 
 Reply A, B, or C on this thread, as asked above.
+
+### 2026-11-10T11:02:38Z orchestrator (recommendation)
+**Recommended:** remedy A, the host grants outside folders per harness, as the plan is drafted.
+
+- ADR-0038 makes what an agent may reach on your host yours alone. A keeps it so: only `flai serve agent harness --outside` widens it, on the host.
+- B adds a story field that anyone who can edit a story in the dashboard writes. It still needs your host list, so it is A plus about half again the work.
+- C changes nothing a story can do. I-0265's two instances in a day would recur with E-0032's kluster stories (D-0480).
+- Allow T-3059's one scratch `claude -p` on the cheapest model to confirm that a sub-agent inherits `--add-dir`. It costs a few cents, and criterion 1 rests on it.
+
+This is host configuration and a paid call, so it is yours alone.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md

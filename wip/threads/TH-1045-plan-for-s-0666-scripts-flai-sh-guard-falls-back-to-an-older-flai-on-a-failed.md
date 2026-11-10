@@ -4,10 +4,10 @@ title: "Plan for S-0666: scripts/flai.sh guard falls back to an older flai on a 
 anchor:
   path: wip/kanban/stories/S-0666-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md
   item: S-0666
-status: open
-participants: [planner-S-0666]
+status: resolved
+participants: [planner-S-0666, orchestrator, alex]
 created: 2026-11-10T10:36:50Z
-updated: 2026-11-10T10:36:50Z
+updated: 2026-11-10T19:24:12Z
 ---
 
 # TH-1045 Plan for S-0666: scripts/flai.sh guard falls back to an older flai on a failed build and exits 127 with none, five tasks in three layers
@@ -53,3 +53,23 @@ When `scripts/flai.sh guard` fails to build, it runs the existing `bin/flai`, ol
 ## Proposals
 
 - T-3069, the OpenCode plugin, goes slightly beyond I-0275's wording. Its claude-code agents never run that plugin. I kept it so both guards in this repository judge exit 127 the same way. It can be dropped, or split into its own story, if you would rather keep S-0666 to the Claude Code hooks.
+
+### 2026-11-10T11:03:09Z orchestrator (recommendation)
+**Recommended:** confirm the plan as written, T-3069 included.
+
+- ADR-0235 decided that a failed build of this tree fails open. The new ADR reverses that for `guard` alone, so a guarded session never passes a call unguarded. Every other command still fails on a failed build, so the agent working on flai still sees it.
+- The fallback runs an older `bin/flai` or the installed flai. ADR-0235 already accepts an older flai as the guard where `go` is absent.
+- Keep T-3069: this repository's OpenCode plugin passes an exit 127 today. Both guards should judge 126 and 127 the same way.
+- The tasks in three layers, the touches, and the 45m forecast fit the story. The input is set: `time_lost_per_cycle: 5m` from TH-1039. The planner works out the value on its next run.
+
+It reverses a recorded decision, so it is yours to confirm.
+
+Source: design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md
+
+### 2026-11-10T19:24:09Z alex
+Confirmed the recommendation of 2026-11-10T11:03:09Z orchestrator.
+
+Source: design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-start-exit-126-or-127-and.md
+
+### 2026-11-10T19:24:12Z alex
+Resolved.

@@ -6,7 +6,7 @@ title: A docker run from a story's agent's shell mounts the main checkout as an 
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T10:58:37Z
+updated: 2026-11-10T11:05:54Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -14,28 +14,43 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:58:37Z
     by: agent-S-0667
+blocked:
+  - from: 2026-11-10T11:05:54Z
+    reason: awaiting the operator on TH-1047
 tags: [docker, agent-container]
-touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md]
+touches: [docs/operators/runbooks/agent-container.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md, design/conventions/tooling.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 438
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 3
+      hand_edits: 2
+      work: 65
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 30550
+      cache_read: 14154776
+      cache_write: 242114
+      cost: 5.3795
   strategic:
     - kind: orchestrator
-      seconds: 32
+      seconds: 135
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 45
-          cache_read: 760063
-          cache_write: 12839
-          cost: 0.2097
+          input: 28
+          output: 204
+          cache_read: 2326623
+          cache_write: 213216
+          cost: 0.6935
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -61,13 +76,14 @@ finalized:
 This story remediates [I-0276](../../../design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md), "A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0276 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0276 is closed with `flai issue close I-0276 --reason` saying what fixed it
+- [x] The cause I-0276 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0276 is closed with `flai issue close I-0276 --reason` saying what fixed it
 
 ## Tasks
 - T-2926 The cause of I-0276's empty mount is found on the host and a fix is proposed
 - T-2927 A hand-run container sees the main checkout's files, and refuses with the cause when a mount comes up empty
-- T-2929 The runbook and docker.md say why a hand docker run can mount an empty folder, and I-0276 is closed
+- T-2929 The runbook says why a hand docker run typed in zsh can mount an empty folder, and I-0276 is closed
+- T-3078 The tooling convention says to brace a shell variable before a colon, since zsh reads $name:r as a modifier
 
 ## Notes
 
@@ -94,3 +110,40 @@ Figures:
 - Forecast: `flai forecast` gave 13m: 107 s a unit over 30 done improvement stories, times size 7 (2 criteria, 5 touches). Raised to 1h30m, since T-2926 runs docker live on the host from several shells before T-2927 can start. S-0567's live run was forecast at 1h. Delivery is moved from flai's 11:09Z by the extra 77 minutes.
 - Cost of delay: `flai cod` gave 50.00 USD a week from flai's input: 20m lost per 168h cycle at 150 USD an hour. Kept as given: I-0276 has one occurrence, and the cost of a hand container that cannot read the project is about that.
 - No `after`. No other story writes output this one reads. S-0670 and S-0682 change `scripts/agent-container.sh` too, which a trial merge judges.
+
+### Cause
+
+Found by T-2926 on 2026-11-10, from agent-S-0667's shell on the host. Docker is not the cause. The agent's shell is zsh. In zsh, `$name:r` is a history modifier, even inside double quotes: it gives the name's value with its extension taken off. So `-v "$ROOT:$ROOT:ro"` hands docker `<ROOT>:<ROOT>o`. The `:r` of `:ro` is eaten, and an `o` is left on the target. bash and `sh` keep the spec as written.
+
+```text
+$ echo "$0 $ZSH_VERSION"
+/usr/bin/zsh 5.9
+$ ROOT=/home/alex/git/bytepunx/system-flow
+$ echo "$ROOT:$ROOT:ro"
+/home/alex/git/bytepunx/system-flow:/home/alex/git/bytepunx/system-flowo
+$ echo "${ROOT}:${ROOT}:ro"
+/home/alex/git/bytepunx/system-flow:/home/alex/git/bytepunx/system-flow:ro
+$ bash -c 'ROOT=…; echo "$ROOT:$ROOT:ro"'
+/home/alex/git/bytepunx/system-flow:/home/alex/git/bytepunx/system-flow:ro
+```
+
+Docker then mounts the checkout read-write at `<ROOT>o`, and nothing at `<ROOT>`. `docker inspect` of the container shows it:
+
+```text
+HostConfig.Binds: ["/home/alex/git/bytepunx/system-flow:/home/alex/git/bytepunx/system-flowo"]
+Mounts: Source /home/alex/git/bytepunx/system-flow -> Destination /home/alex/git/bytepunx/system-flowo, RW true
+```
+
+With `-w "$ROOT"`, docker makes `<ROOT>` as an empty working directory, which is the empty folder I-0276 saw. Without it, `ls "$ROOT"` says `No such file or directory`. The braced form lists the checkout:
+
+```text
+$ docker run --rm --entrypoint ls -w "$ROOT" -v "$ROOT:$ROOT:ro" flai-agent-sf-claude-code:local -la "$ROOT"
+total 8
+drwxr-xr-x    2 root     root          4096 Nov 10 11:01 .
+$ docker run --rm --entrypoint ls -w "$ROOT" -v "${ROOT}:${ROOT}:ro" flai-agent-sf-claude-code:local -la "$ROOT"
+total 160   (CLAUDE.md, LICENSE.md, Makefile, … owned by 1000)
+```
+
+The docker context (`default`), the daemon (`docker-desktop`, Docker Desktop 29.7.2, client 29.2.1), and `DOCKER_HOST` and `DOCKER_CONTEXT` (both unset) change nothing. So does `--mount type=bind,src=…,dst=…,readonly`, which has no `:r` to eat. Only an unbraced name right before `:r`, `:h`, `:t`, `:e`, or another zsh modifier letter is changed: `$ROOT:/x:ro`, `$ROOT:$ROOT/.git:ro`, and `/tmp:/tmp:ro` come through whole. That is why the sandbox made no difference, and why `flai serve`'s containers have the files: `flai serve` and `scripts/agent-container.sh` build docker's arguments in Go and in POSIX `sh`, which zsh never reads.
+
+Fix: write `${name}` before a colon in a hand-written shell command. The fix goes in this repository's tooling convention, as a project addition below its marker, beside the zsh rule (T-3078). It also goes in the runbook, for an operator who types a `docker run` by hand (T-2929). No script or Go code holds the cause, so a test in the repository does not fit. The commands above reproduce it, and this note records them. Nothing outside the repository needs changing, so no thread was asked.

@@ -3,16 +3,37 @@ id: T-3070
 type: task
 nature: improvement
 title: Document scripts/flai.sh's guard fallback on a failed build and the OpenCode plugin's 126 and 127 refusal
-status: backlog
+status: done
 parent: S-0666
 owner: alex
 created: 2026-11-10T10:36:07Z
-updated: 2026-11-10T10:36:07Z
-transitions: []
+updated: 2026-11-10T11:24:18Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:22:09Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T11:22:09Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T11:24:18Z
+    by: agent-S-0666
 stream: S-0666
 tags: [guard, docs]
 touches: [scripts/README.md, docs/users/flai.md, design/system/agent-adapters.md, docs/operators/index.md, design/system/strategic-agents.md]
 after: [T-3066, T-3069]
+usage:
+  source: log
+  seconds: 129
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 6171
+      cache_read: 1560816
+      cache_write: 51483
+      cost: 0.7961
 ---
 # T-3070 Document scripts/flai.sh's guard fallback on a failed build and the OpenCode plugin's 126 and 127 refusal
 

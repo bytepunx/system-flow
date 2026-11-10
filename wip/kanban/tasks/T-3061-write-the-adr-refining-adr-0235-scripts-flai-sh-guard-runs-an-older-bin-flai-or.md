@@ -3,15 +3,36 @@ id: T-3061
 type: task
 nature: improvement
 title: "Write the ADR refining ADR-0235: scripts/flai.sh guard runs an older bin/flai or the installed flai when the build fails, and exits 127 with neither"
-status: backlog
+status: done
 parent: S-0666
 owner: alex
 created: 2026-11-10T10:35:32Z
-updated: 2026-11-10T10:35:32Z
-transitions: []
+updated: 2026-11-10T11:15:41Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:15:14Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T11:15:14Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T11:15:41Z
+    by: agent-S-0666
 stream: S-0666
 tags: [guard, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0280-scripts-flai-sh-guard-runs-an-older-bin-flai-or-else-the-installed-flai-when.md]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2967
+      cache_read: 750499
+      cache_write: 24755
+      cost: 0.3828
 ---
 # T-3061 Write the ADR refining ADR-0235: scripts/flai.sh guard runs an older bin/flai or the installed flai when the build fails, and exits 127 with neither
 

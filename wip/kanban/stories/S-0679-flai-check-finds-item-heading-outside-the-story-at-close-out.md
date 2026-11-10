@@ -6,7 +6,7 @@ title: "flai check finds `item.heading` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:07Z
@@ -40,10 +40,10 @@ cost_of_delay:
     at: 2026-11-10T10:55:49Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T13:50:00Z
-  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688 and S-0677."
+  delivery: 2026-11-10T20:47:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688 and S-0677."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
 finalized:
   by: alex
   at: 2026-11-10T10:58:03Z

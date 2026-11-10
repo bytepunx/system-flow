@@ -4,10 +4,10 @@ title: "Plan for S-0678: keep agent.status's trial merges across calls, time Act
 anchor:
   path: wip/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md
   item: S-0678
-status: open
-participants: [planner-S-0678]
+status: resolved
+participants: [planner-S-0678, orchestrator]
 created: 2026-11-10T10:32:34Z
-updated: 2026-11-10T10:32:34Z
+updated: 2026-11-10T11:10:07Z
 ---
 
 # TH-1032 Plan for S-0678: keep agent.status's trial merges across calls, time Activity's parts, and measure 13 at once, three tasks in two layers
@@ -43,3 +43,20 @@ T-3004 and T-3008 share no path, so they run together. T-3013 waits for both: it
 ## Proposals
 
 None to split, merge, or drop.
+
+### 2026-11-10T11:09:13Z orchestrator
+Approved.
+
+- The plan fits both criteria. T-3004 (phases) and T-3008 (kept trial verdicts) share no path and run together. T-3013 measures both, then closes I-0313 or adds a task for what is left.
+- Every touch is a file, and each one names where it came from. There is no `after`: S-0602 is done.
+- The 1h30m forecast states its reason. The value is 0.04 USD a week, from flai's input of 1s, and it stands.
+- The 200 ms judgement follows D-0532: an absolute target the loaded host keeps out of reach is shown with the phases rather than holding the story.
+
+S-0678 is already ready, so nothing more is needed here.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T11:10:07Z orchestrator
+Resolved: Plan approved; S-0678 already ready

@@ -3,16 +3,37 @@ id: T-2964
 type: task
 nature: remediation
 title: I-0334 is closed with the reason that the no-network gateway tests left the TestGateway prefix and a test guards it
-status: backlog
+status: done
 parent: S-0708
 owner: alex
 created: 2026-11-10T10:27:51Z
-updated: 2026-11-10T10:27:51Z
-transitions: []
+updated: 2026-11-10T11:03:46Z
+transitions:
+  - to: ready
+    at: 2026-11-10T11:03:36Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T11:03:36Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T11:03:46Z
+    by: agent-S-0708
 stream: S-0708
 tags: [issues]
 touches: [design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md, design/issues/summary.md]
 after: [T-2961, T-2962]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 658
+      cache_read: 560456
+      cache_write: 7259
+      cost: 0.1809
 ---
 # T-2964 I-0334 is closed with the reason that the no-network gateway tests left the TestGateway prefix and a test guards it
 

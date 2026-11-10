@@ -6,7 +6,7 @@ title: A role a project defines in a role file of its own cannot run on the cont
 status: backlog
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions: []
 tags: [flai]
 topics: [harness, docker, code]
@@ -57,10 +57,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:53Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T06:26:00Z
-  basis: "Its own forecast of 2h; 34th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700, S-0701, S-0702 and S-0703."
+  delivery: 2026-11-11T13:28:00Z
+  basis: "Its own forecast of 2h; 33rd in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700, S-0701, S-0702 and S-0703."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:44Z

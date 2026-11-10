@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0699-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md
   item: S-0699
 status: open
-participants: [planner-S-0699]
+participants: [planner-S-0699, orchestrator]
 created: 2026-11-10T10:30:08Z
-updated: 2026-11-10T10:30:08Z
+updated: 2026-11-10T11:02:24Z
 ---
 
 # TH-1023 S-0699: may a pack over its budget list its link-step ADR briefs in the catalog, reversing TH-0032's "briefs are never cut"?
@@ -38,3 +38,14 @@ Questions:
 - **Q2. May a brief's JSON carry the count of its other reasons in place of the `also` list?** Loaded items would keep their list. This changes the line "the JSON keeps every reason" in `design/system/agent-context.md`. It saves about 130 KB a pack. Alternative: keep the list, capped at three reasons.
 
 Fix 3 needs no answer: I am planning it now. One claim source per item and sub-project, with a count of its paths, takes the topics from 12 KB to under 2 KB.
+
+### 2026-11-10T11:02:24Z orchestrator (recommendation)
+**Recommended:** Q1 no, Q2 yes.
+
+**Q1, link-step ADR briefs to the catalog: no.** You chose "briefs are never cut" twice: on TH-0032, and again on TH-0805, recorded in ADR-0241 as option 1. Nothing in I-0261 shows a cost that you did not have before you then. Keep every brief. S-0699 then has no ADR task for it.
+
+**Q2, a count of a brief's other reasons in place of `also`: yes.** It saves about 130 KB a pack, which is 39% of the brief bytes. It cuts no brief and no document. A loaded item keeps its full list. It changes one line of `design/system/agent-context.md`, not a decision you recorded. The alternative, keeping the list capped at three reasons, saves less and still repeats.
+
+With Q1 no and Q2 yes, S-0699 has three tasks: T-2992, the `also` count task, and T-2996.
+
+Source: design/adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md

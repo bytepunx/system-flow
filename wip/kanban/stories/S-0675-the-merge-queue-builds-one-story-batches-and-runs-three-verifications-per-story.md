@@ -6,7 +6,7 @@ title: The merge queue builds one-story batches and runs three verifications per
 status: ready
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T11:05:34Z
+updated: 2026-11-10T19:26:06Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:32Z
@@ -66,10 +66,10 @@ cost_of_delay:
   at: 2026-11-10T10:35:58Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T14:37:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0665, S-0667, S-0708, S-0666, S-0688, S-0677 and S-0679."
+  delivery: 2026-11-10T22:13:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677 and S-0679."
   by: flai
-  at: 2026-11-10T11:05:34Z
+  at: 2026-11-10T19:26:06Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:29Z
