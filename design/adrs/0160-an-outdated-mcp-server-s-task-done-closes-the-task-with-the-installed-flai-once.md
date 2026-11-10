@@ -1,8 +1,8 @@
 ---
 id: ADR-0160
 title: "An outdated MCP server's task_done closes the task with the installed flai once it has caught up"
-status: proposed
-date: 2026-10-15
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0142, ADR-0158]
