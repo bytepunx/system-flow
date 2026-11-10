@@ -77,6 +77,9 @@ MANIFEST="$CACHE_ROOT/system-flow.yaml"
 WIP_NAME="$(sed -n '/^layout:/,/^[^ ]/s/^  wip: *//p' "$MANIFEST" | head -n 1)"
 WIP="$CACHE_ROOT/${WIP_NAME:-wip}"
 VERIFY="$CACHE_ROOT/.flai-cache/verify"
+# The checked-write lock a checked write of a work item on the host holds, so flai check's and flai
+# verify's record step in the container waits for it (S-0679).
+LOCK="$CACHE_ROOT/.flai-cache/items-checked.lock"
 [ -d "$WIP" ] || { echo "no wip folder at $WIP: flai verify in the container reads the main checkout's" >&2; exit 1; }
 [ -f "$LOGIN/.credentials.json" ] || { echo "no Claude login at $LOGIN/.credentials.json: sign in with claude on the host, or set FLAI_CLAUDE_LOGIN" >&2; exit 1; }
 [ -x "${FLAI_BIN:-/nonexistent}" ] || { echo "no flai to ask for the MCP server: install it, or set FLAI_BIN" >&2; exit 1; }
@@ -117,6 +120,8 @@ case "$WORKTREE$AGENT_DIR" in
   *[\\\"]*) echo "the worktree or cache path holds a quote or a backslash, which the start request cannot carry" >&2; exit 2 ;;
 esac
 mkdir -p "$AGENT_DIR/flai" "$AGENT_DIR/claude" "$VERIFY"
+# A file, not a folder: Docker would make a missing bind-mount source a folder owned by root.
+[ -e "$LOCK" ] || { : > "$LOCK" && chmod 600 "$LOCK"; }
 chmod 700 "$AGENT_DIR"
 # Claude Code finds its login in CLAUDE_CONFIG_DIR, the cache's claude folder: a link to the
 # read-only mount, not a copy.
@@ -151,6 +156,7 @@ run() {
     -v "$WIP:$WIP:ro" \
     -v "$MANIFEST:$MANIFEST:ro" \
     -v "$VERIFY:$VERIFY" \
+    -v "$LOCK:$LOCK" \
     -v "$AGENT_DIR:$AGENT_DIR" \
     -v "$LOGIN:$LOGIN_IN:ro" \
     -e FLAI_MCP_URL -e FLAI_MCP_TOKEN -e FLAI_MCP_HOST \

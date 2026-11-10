@@ -131,7 +131,10 @@ func ContainerCache(root, subject string) string {
 // checkout storygit.MainMounts gives it, its wip and system-flow.yaml
 // read-only and its .flai-cache/verify read-write, which Start makes on the
 // host when it is absent, so flai verify runs in the container (ADR-0253);
-// its cache folder; and the operator's login read-only, mounted in that
+// the main checkout's .flai-cache/items-checked.lock read-write, made on the
+// host when absent, so the record step's confirmation under the checked-write
+// lock excludes a checked write on the host (withCheckedLock); its cache
+// folder; and the operator's login read-only, mounted in that
 // order and nothing else; the variables of
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
@@ -189,6 +192,7 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, fmt.Errorf("the story's worktree %s has no main checkout for the container, so flai verify could not run in it: %w", worktree, err)
 	}
+	mainMounts = withCheckedLock(mainMounts)
 	mainArgs, err := mountArgs(mainMounts)
 	if err != nil {
 		return Start{}, err
@@ -243,17 +247,69 @@ func mountArgs(ms []storygit.Mount) ([]string, error) {
 
 // createMounts makes on the host each folder of ms that carries Create and is
 // absent, as the operator's, since Docker would make it as root and the
-// container's user could not write to it (ADR-0253 §1).
+// container's user could not write to it (ADR-0253 §1), and the main
+// checkout's checked-write lock file when it is absent (checkedLockMount).
 func createMounts(ms []storygit.Mount) error {
+	lock := checkedLockPath(ms)
 	for _, m := range ms {
-		if !m.Create {
-			continue
-		}
-		if err := os.MkdirAll(m.Path, 0o755); err != nil {
-			return fmt.Errorf("making %s on the host, which the container mounts read-write: %w; make it, owned by the user flai serve runs as", m.Path, err)
+		switch {
+		case m.Path == lock:
+			if err := createLockFile(m.Path); err != nil {
+				return err
+			}
+		case m.Create:
+			if err := os.MkdirAll(m.Path, 0o755); err != nil {
+				return fmt.Errorf("making %s on the host, which the container mounts read-write: %w; make it, owned by the user flai serve runs as", m.Path, err)
+			}
 		}
 	}
 	return nil
+}
+
+// checkedLockName is the file under the main checkout's .flai-cache that
+// (*workitem.Repo).LockCheckedWrites locks (ADR-0272, ADR-0275).
+const checkedLockName = "items-checked.lock"
+
+// withCheckedLock is ms, the main checkout's mounts storygit.MainMounts
+// gives, with the main checkout's .flai-cache/items-checked.lock after them,
+// read-write at its host path, so that flai check's and flai verify's
+// record step in the container takes the lock a checked write of a work item
+// on the host holds, rather than one of its own that excludes nothing
+// (S-0679, I-0316). ms is as it is when it names no main checkout.
+func withCheckedLock(ms []storygit.Mount) []storygit.Mount {
+	for _, m := range ms {
+		if filepath.Base(m.Path) == "system-flow.yaml" {
+			lock := filepath.Join(filepath.Dir(m.Path), ".flai-cache", checkedLockName)
+			return append(slices.Clone(ms), storygit.Mount{Path: lock})
+		}
+	}
+	return ms
+}
+
+// checkedLockPath is the checked-write lock file withCheckedLock added to ms,
+// or "" when it added none.
+func checkedLockPath(ms []storygit.Mount) string {
+	for _, m := range ms {
+		if filepath.Base(m.Path) == checkedLockName && filepath.Base(filepath.Dir(m.Path)) == ".flai-cache" {
+			return m.Path
+		}
+	}
+	return ""
+}
+
+// createLockFile makes the lock file at path on the host when it is absent,
+// empty and the operator's, 0600 as filelock.Lock makes it, since Docker
+// would make a missing bind-mount source a folder, owned by root, that no
+// lock could be taken on. A file already there is left as it is.
+func createLockFile(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("making %s on the host, which holds the lock file the container mounts read-write: %w; make it, owned by the user flai serve runs as", filepath.Dir(path), err)
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return fmt.Errorf("making %s on the host, which the container mounts read-write: %w; make it, owned by the user flai serve runs as", path, err)
+	}
+	return f.Close()
 }
 
 // roleStart is Start for a strategic agent, the planner, the orchestrator,
@@ -380,10 +436,11 @@ type CommandContainer struct {
 // removed when it ends, named flai-<purpose>-<story>-<id>, as the user, on
 // the host's network: the story's worktree read-write as the working
 // directory, the main checkout's .git read-only and the story's registration
-// read-write over it (ADR-0246), and its wip and system-flow.yaml read-only
-// and its .flai-cache/verify read-write, made on the host when absent
-// (ADR-0253), in that order and nothing else; git's safe.directory for the
-// main checkout and each of c.Env passed by name alone; and c.Argv's program
+// read-write over it (ADR-0246), its wip and system-flow.yaml read-only and
+// its .flai-cache/verify read-write, made on the host when absent
+// (ADR-0253), and its .flai-cache/items-checked.lock read-write, made on the
+// host when absent (withCheckedLock), in that order and nothing else; git's
+// safe.directory for the main checkout and each of c.Env passed by name alone; and c.Argv's program
 // as the entrypoint of c.Image. It mounts no login, no cache folder, and no
 // Docker socket, and passes no MCP variable and no provider's key. It refuses
 // what Start refuses of the story's mounts, a registration or a main checkout
@@ -426,6 +483,7 @@ func ContainerCommand(c CommandRun, host Host) (CommandContainer, error) {
 	if err != nil {
 		return CommandContainer{}, fmt.Errorf("the story's worktree %s has no main checkout for the container, so flai verify could not run in it: %w", worktree, err)
 	}
+	mainMounts = withCheckedLock(mainMounts)
 	mainArgs, err := mountArgs(mainMounts)
 	if err != nil {
 		return CommandContainer{}, err
@@ -581,9 +639,10 @@ func pilotRequest(r Request, inner, root, cache string) Request {
 // home, ~/.flai, the main checkout, or the Docker socket; and a path that a
 // mount's colon-separated form cannot carry. A story's agent's start mounts
 // of the main checkout only its .git, read-only, with the story's
-// registration under it read-write (ADR-0246), and its wip and
+// registration under it read-write (ADR-0246), its wip and
 // system-flow.yaml read-only and its .flai-cache/verify read-write
-// (ADR-0253), beside the story's worktree and cache folder. A strategic
+// (ADR-0253), and its .flai-cache/items-checked.lock read-write, beside the
+// story's worktree and cache folder. A strategic
 // agent's mounts the main checkout itself (ADR-0247).
 func mountable(root, worktree, cache, login string) error {
 	for _, p := range []string{worktree, cache, login} {

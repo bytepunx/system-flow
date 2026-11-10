@@ -93,18 +93,21 @@ func TestForRefusesAnInnerHarnessAContainerCannotRun(t *testing.T) {
 	}
 }
 
-// The container mounts eight paths: the worktree; the main checkout's .git
+// The container mounts nine paths: the worktree; the main checkout's .git
 // read-only and the story's registration under it read-write, after it, so
 // git works in the worktree and can write nothing of the repository's but
 // the story's own index, HEAD, and logs (ADR-0246, I-0215); the main
 // checkout's wip and system-flow.yaml read-only and its .flai-cache/verify
 // read-write, made on the host when absent, so flai verify runs in the
 // container against the main checkout's state and records its report where
-// the host reads it (ADR-0253, I-0218); the cache; and the login read-only.
+// the host reads it (ADR-0253, I-0218); the main checkout's
+// .flai-cache/items-checked.lock read-write, made on the host when absent,
+// so a record step in the container confirms under the lock a checked write
+// on the host holds (S-0679, I-0316); the cache; and the login read-only.
 // The mounts are an allow-list: nothing else of the main checkout, nothing
-// under .flai-cache but the story's worktree, its agent folder, and verify,
-// and no Docker socket.
-func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariablesByName(t *testing.T) {
+// under .flai-cache but the story's worktree, its agent folder, verify, and
+// the checked-write lock file, and no Docker socket.
+func TestTheContainerRunsDockerWithNineMountsSixOfTheMainCheckoutsAndVariablesByName(t *testing.T) {
 	a := &manifest.Agent{Harness: harness.Container, Model: "claude-opus-5-5", Provider: "gateway", Config: map[string]string{"inner": harness.ClaudeCode, "effort": "high"}}
 	r, host := containerReq(t, a)
 	r.ProviderName, r.Provider = "gateway", &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: "https://gw.example", KeyEnv: "GATEWAY_KEY"}
@@ -113,8 +116,11 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 		t.Fatal(err)
 	}
 	verify := filepath.Join(r.Root, ".flai-cache", "verify")
-	if _, err := os.Stat(verify); !os.IsNotExist(err) {
-		t.Fatalf("the verify folder should be absent before the start: %v", err)
+	lock := filepath.Join(r.Root, ".flai-cache", "items-checked.lock")
+	for _, p := range []string{verify, lock} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Fatalf("%s should be absent before the start: %v", p, err)
+		}
 	}
 	st, err := ad.Start(r, host)
 	if err != nil {
@@ -122,6 +128,9 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 	}
 	if info, err := os.Stat(verify); err != nil || !info.IsDir() || info.Mode().Perm() != 0o755 {
 		t.Errorf("the start should make the verify folder on the host, 0755, before docker makes it as root: %v %v", info, err)
+	}
+	if info, err := os.Stat(lock); err != nil || !info.Mode().IsRegular() || info.Size() != 0 || info.Mode().Perm() != 0o600 {
+		t.Errorf("the start should make the checked-write lock an empty file on the host, 0600, before docker makes a folder there as root: %v %v", info, err)
 	}
 	worktree := filepath.Join(r.Root, ".flai-cache", "worktrees", "S-0508")
 	cache := filepath.Join(r.Root, ".flai-cache", "agents", "S-0508")
@@ -131,7 +140,7 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 	want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-S-0508-3f2a-b1", "--user", user,
 		"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
 		"-v", worktree + ":" + worktree, "-w", worktree, "-v", common + ":" + common + ":ro", "-v", reg + ":" + reg,
-		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify,
+		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify, "-v", lock + ":" + lock,
 		"-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_STORY", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
 		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GIT_CONFIG_COUNT", "-e", "GIT_CONFIG_KEY_0", "-e", "GIT_CONFIG_VALUE_0",
@@ -146,6 +155,7 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 		wip:        wip + ":" + wip + ":ro",
 		flow:       flow + ":" + flow + ":ro",
 		verify:     verify + ":" + verify,
+		lock:       lock + ":" + lock,
 		cache:      cache + ":" + cache,
 		host.Login: host.Login + ":/run/claude-login:ro",
 	}
@@ -158,7 +168,7 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 			mounts++
 			src, _, _ := strings.Cut(arg, ":")
 			if allowed[src] != arg {
-				t.Errorf("mounts %s, which is not one of the eight the container's mounts allow, in its mode", arg)
+				t.Errorf("mounts %s, which is not one of the nine the container's mounts allow, in its mode", arg)
 			}
 		}
 		if strings.Contains(arg, "docker.sock") {
@@ -166,7 +176,7 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 		}
 	}
 	if mounts != len(allowed) {
-		t.Errorf("%d mounts, want %d: the worktree, its two git mounts, the main checkout's wip, system-flow.yaml, and verify folder, the cache, and the login", mounts, len(allowed))
+		t.Errorf("%d mounts, want %d: the worktree, its two git mounts, the main checkout's wip, system-flow.yaml, verify folder, and checked-write lock, the cache, and the login", mounts, len(allowed))
 	}
 	whole := strings.Join(st.Argv, " ") + strings.Join(st.Env, " ") + string(st.Stdin) + strings.Join(slices.Collect(maps.Values(st.EnvFrom)), " ")
 	for _, secret := range []string{"token-value-never-shown", "key-value-never-shown"} {
@@ -214,10 +224,10 @@ func TestTheContainersStartNamesItsImageNameAndMounts(t *testing.T) {
 	}{
 		{"story, layer image", sr, host, harness.ContainerRun{Image: layer, Name: "flai-agent-S-0508-3f2a-b1", Mounts: []harness.ContainerMount{
 			rw(worktree), ro(common), rw(reg), ro(filepath.Join(sr.Root, "wip")), ro(filepath.Join(sr.Root, "system-flow.yaml")),
-			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(scache), login}}},
+			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(filepath.Join(sr.Root, ".flai-cache", "items-checked.lock")), rw(scache), login}}},
 		{"story, default image", sr, harness.Host{Login: host.Login}, harness.ContainerRun{Image: "flai-agent-claude-code:local", Name: "flai-agent-S-0508-3f2a-b1", Mounts: []harness.ContainerMount{
 			rw(worktree), ro(common), rw(reg), ro(filepath.Join(sr.Root, "wip")), ro(filepath.Join(sr.Root, "system-flow.yaml")),
-			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(scache), login}}},
+			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(filepath.Join(sr.Root, ".flai-cache", "items-checked.lock")), rw(scache), login}}},
 		{"planner, layer image", rr, host, harness.ContainerRun{Image: layer, Name: "flai-agent-plan-3f2a-b1", Mounts: []harness.ContainerMount{
 			rw(rr.Root), ro(filepath.Join(rr.Root, ".git", "hooks")), rw(rcache), login}}},
 	} {
@@ -671,19 +681,30 @@ func commandRun(t *testing.T) (harness.CommandRun, harness.Host) {
 }
 
 // I-0295: a command flai runs for a story whose agent runs in a container
-// runs in a container of its own with the story's six mounts, the worktree
+// runs in a container of its own with the story's seven mounts, the worktree
 // the working directory, and its program the entrypoint, and with no login,
-// cache folder, home, ~/.flai, Docker socket, MCP variable, or key.
-func TestContainerCommandRunsTheCommandWithTheStorysSixMounts(t *testing.T) {
+// cache folder, home, ~/.flai, Docker socket, MCP variable, or key. The
+// seventh is the main checkout's checked-write lock, made on the host as an
+// empty file when absent, so the close-out's record step confirms its
+// findings on work items under the lock a checked write on the host holds
+// (S-0679, I-0316).
+func TestContainerCommandRunsTheCommandWithTheStorysSevenMounts(t *testing.T) {
 	c, host := commandRun(t)
 	c.Env = []string{"CLOSE_OUT_STORY"}
 	verify := filepath.Join(c.Root, ".flai-cache", "verify")
+	lock := filepath.Join(c.Root, ".flai-cache", "items-checked.lock")
+	if _, err := os.Stat(lock); !os.IsNotExist(err) {
+		t.Fatalf("the lock file should be absent before the run: %v", err)
+	}
 	got, err := harness.ContainerCommand(c, host)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Stat(verify); err != nil || !info.IsDir() {
 		t.Errorf("the run should make the verify folder on the host before docker makes it as root: %v", err)
+	}
+	if info, err := os.Stat(lock); err != nil || !info.Mode().IsRegular() || info.Size() != 0 {
+		t.Errorf("the run should make the checked-write lock an empty file on the host before docker makes a folder there as root: %v %v", info, err)
 	}
 	worktree := filepath.Join(c.Root, ".flai-cache", "worktrees", "S-0508")
 	common, reg := filepath.Join(c.Root, ".git"), filepath.Join(c.Root, ".git", "worktrees", "S-0508")
@@ -692,7 +713,7 @@ func TestContainerCommandRunsTheCommandWithTheStorysSixMounts(t *testing.T) {
 	name := "flai-closeout-S-0508-20261110T060000Z"
 	want := []string{"docker", "run", "--rm", "--name", name, "--user", user, "--network", "bridge",
 		"-v", worktree + ":" + worktree, "-w", worktree, "-v", common + ":" + common + ":ro", "-v", reg + ":" + reg,
-		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify,
+		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify, "-v", lock + ":" + lock,
 		"-e", "GIT_CONFIG_COUNT", "-e", "GIT_CONFIG_KEY_0", "-e", "GIT_CONFIG_VALUE_0", "-e", "CLOSE_OUT_STORY",
 		"--entrypoint", "/usr/local/bin/flai", "flai-agent-sf-claude-code:local", "verify", "S-0508", "--record-issues"}
 	if !slices.Equal(got.Argv, want) {
@@ -776,5 +797,35 @@ func TestContainerCommandRefusesWhatStartRefuses(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(run.Root, ".flai-cache", "verify")); err == nil {
 			t.Errorf("%s: a refused run made the verify folder", c.name)
 		}
+		if _, err := os.Stat(filepath.Join(run.Root, ".flai-cache", "items-checked.lock")); err == nil {
+			t.Errorf("%s: a refused run made the checked-write lock file", c.name)
+		}
+	}
+}
+
+// S-0679: a checked-write lock file the host already has, held by a checked
+// write on the host, is mounted as it is: the run neither truncates it nor
+// makes it again, since a lock on a file made again at the path would exclude
+// nothing the host holds.
+func TestContainerCommandMountsTheLockFileTheHostHasAsItIs(t *testing.T) {
+	c, host := commandRun(t)
+	lock := filepath.Join(c.Root, ".flai-cache", "items-checked.lock")
+	if err := os.MkdirAll(filepath.Dir(lock), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(lock, []byte("held\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := harness.ContainerCommand(c, host)
+	if err != nil || !slices.Contains(got.Argv, lock+":"+lock) {
+		t.Fatalf("run %q %v, want the lock file mounted read-write", got.Argv, err)
+	}
+	after, err := os.Stat(lock)
+	if err != nil || !os.SameFile(before, after) || after.Size() != before.Size() {
+		t.Errorf("the run replaced or truncated the lock file the host has: %v %v", after, err)
 	}
 }
