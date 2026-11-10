@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-07T08:17:35Z
+updated: 2026-11-10T08:49:02Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ cfd[] 2026-11-03 to 2026-11-05: backlog 26, ready 0, in-progress 0, review 0; tu
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0691 remediates this issue, created from it at 2026-11-10T08:49:02Z.
