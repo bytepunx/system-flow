@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:55:51Z
+updated: 2026-11-10T07:56:58Z
 ---
 
 # Active streams
@@ -11,10 +11,11 @@ updated: 2026-11-10T07:55:51Z
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
 | [S-0636](S-0636.md) | 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606 | in-progress | agent-S-0636 | 2026-11-09T23:11:12Z |
+| [S-0637](S-0637.md) | Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back | in-progress | agent-S-0637 | 2026-11-10T07:56:45Z |
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0651](S-0651.md) | flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200 | in-progress | agent-S-0651 | 2026-11-10T07:51:35Z |
 | [S-0654](S-0654.md) | A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses | in-progress | agent-S-0654 | 2026-11-10T07:52:23Z |
-| [S-0657](S-0657.md) | Publish what is accepted and not yet released | in-progress | system-flow | 2026-11-10T07:55:30Z |
+| [S-0657](S-0657.md) | Publish what is accepted and not yet released | review | system-flow | 2026-11-10T07:55:57Z |
 
 ## Strategic agents
 
