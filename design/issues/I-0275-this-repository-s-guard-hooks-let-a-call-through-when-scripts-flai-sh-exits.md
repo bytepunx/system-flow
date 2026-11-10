@@ -2,11 +2,11 @@
 id: I-0275
 title: This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T05:43:56Z
 last_reported: 2026-11-07T05:43:56Z
-updated: 2026-11-10T08:34:38Z
+updated: 2026-11-10T11:24:32Z
 ---
 
 # I-0275 This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
@@ -23,3 +23,4 @@ S-0567's live planner run: inside the container, this repository's PreToolUse ho
 ## Remediation
 
 Story S-0666 remediates this issue, created from it at 2026-11-10T08:34:38Z.
+Closed 2026-11-10T11:24:32Z: S-0666 (ADR-0280): when the build of bin/flai fails, scripts/flai.sh guard runs the older bin/flai, else the installed flai, and exits 127 with neither, so the guard hooks in .claude/settings.json refuse rather than pass the call; every other command still exits with the build's status. This repository's OpenCode plugin treats exit 126 or 127 as a guard that did not run. TestTheGuardHooksRefuseACallWhenTheBuildFails reproduces the failed build with a fake go, and TestRepoFlaiGuardPluginJudgesGuardExit covers the plugin.
