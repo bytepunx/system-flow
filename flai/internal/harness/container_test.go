@@ -189,6 +189,78 @@ func TestTheContainerRunsDockerWithEightMountsFiveOfTheMainCheckoutsAndVariables
 	}
 }
 
+// I-0274: a container start names the container it runs, its image, its
+// name, and every mount its argv gives -v, in order, with its read-only mark,
+// for a story's agent and a strategic agent's, so that flai serve can record
+// them after --rm removes the container. Another adapter names none.
+func TestTheContainersStartNamesItsImageNameAndMounts(t *testing.T) {
+	const layer = "flai-agent-flow-claude-code:local"
+	sr, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	host.Images = map[string]string{harness.ClaudeCode: layer}
+	worktree := filepath.Join(sr.Root, ".flai-cache", "worktrees", "S-0508")
+	common, reg := filepath.Join(sr.Root, ".git"), filepath.Join(sr.Root, ".git", "worktrees", "S-0508")
+	scache := filepath.Join(sr.Root, ".flai-cache", "agents", "S-0508")
+	rw := func(p string) harness.ContainerMount { return harness.ContainerMount{Host: p, Path: p} }
+	ro := func(p string) harness.ContainerMount { return harness.ContainerMount{Host: p, Path: p, ReadOnly: true} }
+	login := harness.ContainerMount{Host: host.Login, Path: "/run/claude-login", ReadOnly: true}
+	rr, _ := roleReq(t, "plan")
+	rr.Item = "E-0029"
+	rcache := filepath.Join(rr.Root, ".flai-cache", "agents", "plan")
+	for _, c := range []struct {
+		name string
+		r    harness.Request
+		host harness.Host
+		want harness.ContainerRun
+	}{
+		{"story, layer image", sr, host, harness.ContainerRun{Image: layer, Name: "flai-agent-S-0508-3f2a-b1", Mounts: []harness.ContainerMount{
+			rw(worktree), ro(common), rw(reg), ro(filepath.Join(sr.Root, "wip")), ro(filepath.Join(sr.Root, "system-flow.yaml")),
+			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(scache), login}}},
+		{"story, default image", sr, harness.Host{Login: host.Login}, harness.ContainerRun{Image: "flai-agent-claude-code:local", Name: "flai-agent-S-0508-3f2a-b1", Mounts: []harness.ContainerMount{
+			rw(worktree), ro(common), rw(reg), ro(filepath.Join(sr.Root, "wip")), ro(filepath.Join(sr.Root, "system-flow.yaml")),
+			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(scache), login}}},
+		{"planner, layer image", rr, host, harness.ContainerRun{Image: layer, Name: "flai-agent-plan-3f2a-b1", Mounts: []harness.ContainerMount{
+			rw(rr.Root), ro(filepath.Join(rr.Root, ".git", "hooks")), rw(rcache), login}}},
+	} {
+		st, err := harness.Adapters[harness.Container].Start(c.r, c.host)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if st.Container == nil {
+			t.Fatalf("%s: the start names no container", c.name)
+		}
+		if got := *st.Container; got.Image != c.want.Image || got.Name != c.want.Name || !slices.Equal(got.Mounts, c.want.Mounts) {
+			t.Errorf("%s: container\n%+v\nwant\n%+v", c.name, got, c.want)
+		}
+		// The record is the argv's: its last word, its --name, and its -v
+		// values, each written back as docker takes it.
+		var vs []string
+		for i, arg := range st.Argv {
+			if i > 0 && st.Argv[i-1] == "-v" {
+				vs = append(vs, arg)
+			}
+		}
+		var back []string
+		for _, m := range st.Container.Mounts {
+			v := m.Host + ":" + m.Path
+			if m.ReadOnly {
+				v += ":ro"
+			}
+			back = append(back, v)
+		}
+		if !slices.Equal(back, vs) || st.Argv[len(st.Argv)-1] != st.Container.Image || !slices.Contains(st.Argv, st.Container.Name) {
+			t.Errorf("%s: the record %+v disagrees with the argv %q", c.name, *st.Container, st.Argv)
+		}
+	}
+	cr, _ := containerReq(t, &manifest.Agent{Harness: harness.ClaudeCode})
+	st, err := harness.Adapters[harness.ClaudeCode].Start(cr, harness.Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Container != nil {
+		t.Errorf("claude-code's start names a container: %+v", *st.Container)
+	}
+}
+
 func TestTheContainersStandardInputIsARequestPilotRuns(t *testing.T) {
 	a := &manifest.Agent{Harness: harness.Container, Model: "claude-opus-5-5", Config: map[string]string{"inner": harness.ClaudeCode, "max_budget_usd": "5"}}
 	r, host := containerReq(t, a)

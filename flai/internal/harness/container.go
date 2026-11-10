@@ -529,7 +529,30 @@ func containerStart(argv, names, extra []string, r Request, host Host, image, ca
 	}
 	argv = append(argv, image)
 	env := append([]string{containerConfig + "=" + filepath.Join(cache, "flai", "config.json"), containerCacheDir + "=" + filepath.Join(cache, "flai", "cache")}, extra...)
-	return Start{Harness: Container, Argv: argv, Env: env, EnvFrom: from, Stdin: stdin}, nil
+	return Start{Harness: Container, Argv: argv, Env: env, EnvFrom: from, Stdin: stdin, Container: containerRun(argv)}, nil
+}
+
+// containerRun is the container argv runs, read from argv itself so that the
+// record and the run cannot disagree: the value of its --name, each -v value
+// split into the host's path, the container's, and its :ro mark, and its last
+// word, the image. No path of a mount holds a colon (mountable, mountArgs).
+func containerRun(argv []string) *ContainerRun {
+	run := &ContainerRun{Image: argv[len(argv)-1]}
+	for i := 1; i < len(argv)-1; i++ {
+		switch argv[i] {
+		case "--name":
+			run.Name = argv[i+1]
+		case "-v":
+			parts := strings.SplitN(argv[i+1], ":", 3)
+			m := ContainerMount{Host: parts[0], Path: parts[0]}
+			if len(parts) > 1 {
+				m.Path = parts[1]
+			}
+			m.ReadOnly = len(parts) == 3 && parts[2] == "ro"
+			run.Mounts = append(run.Mounts, m)
+		}
+	}
+	return run
 }
 
 // pilotRequest is the start request pilot reads for r: r in the container's

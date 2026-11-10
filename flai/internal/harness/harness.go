@@ -348,6 +348,27 @@ type Start struct {
 	// closes: pilot's start request, for the container harness. Empty for
 	// every other adapter.
 	Stdin []byte
+	// Container is the container a container harness's start runs: its
+	// image, its name, and its mounts, as its Argv gives them; nil for every
+	// other adapter (I-0274).
+	Container *ContainerRun
+}
+
+// ContainerRun is the container a start runs, read from its docker run: the
+// image, the container's name, and each -v mount in the order the argv gives
+// them. It carries no secret: the login mount names its path alone.
+type ContainerRun struct {
+	Image  string           `json:"image"`
+	Name   string           `json:"name"`
+	Mounts []ContainerMount `json:"mounts,omitempty"`
+}
+
+// ContainerMount is one -v mount of a container: the host's path, the path
+// in the container, and whether it is read-only.
+type ContainerMount struct {
+	Host     string `json:"host"`
+	Path     string `json:"path"`
+	ReadOnly bool   `json:"read_only,omitempty"`
 }
 
 // File is a file a Start needs written before its child is spawned: where,
