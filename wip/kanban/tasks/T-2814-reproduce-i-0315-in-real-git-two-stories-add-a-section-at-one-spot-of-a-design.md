@@ -3,16 +3,37 @@ id: T-2814
 type: task
 nature: improvement
 title: "Reproduce I-0315 in real git: two stories add a section at one spot of a design document outside claims.shared, and neither sync nor acceptance stops"
-status: backlog
+status: done
 parent: S-0637
 owner: alex
 created: 2026-11-09T22:09:37Z
-updated: 2026-11-09T22:09:37Z
-transitions: []
+updated: 2026-11-10T08:12:57Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:06:39Z
+    by: agent-S-0637
+  - to: in-progress
+    at: 2026-11-10T08:06:40Z
+    by: agent-S-0637
+  - to: done
+    at: 2026-11-10T08:12:57Z
+    by: agent-S-0637
 stream: S-0637
 tags: [flai, go, test]
 touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
 after: [T-2812]
+usage:
+  source: log
+  seconds: 377
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 343
+      cache_read: 8736708
+      cache_write: 68406
+      cost: 3.2398
 ---
 # T-2814 Reproduce I-0315 in real git: two stories add a section at one spot of a design document outside claims.shared, and neither sync nor acceptance stops
 

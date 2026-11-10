@@ -2,7 +2,7 @@
 id: D-0544
 title: A flaiover component test that times out under load is fixed by settling once after a burst of harness messages, not after each, and not by raising its timeout (I-0319)
 kind: cause
-sources: [I-0319, S-0640]
+sources: [I-0319, S-0640, I-0330, S-0655]
 topics: [testing, flaiover, sveltekit]
 paths: [flaiover/src/routes/design/components/components.svelte.test.ts]
 date: 2026-11-10
@@ -22,6 +22,6 @@ The fix, from S-0640's Decisions (`wip/archive/agents/S-0640.md`): "The fix post
 
 The effect: "Before: 2,247, 2,447, and 2,174 ms at a load of 15 to 17 on 24 cores. After: 674, 672, and 682 ms at a load of 12 to 19." No deterministic test reproduces the timeout, since it needs a load of 50 or more, so the before-and-after timings were the evidence.
 
-A later flaiover test that times out under load is looked at for per-step settles or waits it can batch before its timeout is touched. A sibling, `design.svelte.test.ts`, timing out while mounting the design page, is a different cause, I-0330 (S-0655).
+A later flaiover test that times out under load is looked at for per-step settles or waits it can batch before its timeout is touched. Where timing it phase by phase shows the time is the component's own mount and re-renders, as S-0655 found for I-0330's design-page test, fewer settles save almost nothing, and S-0655 raised the block's timeout to 15 s instead (D-0552).
 
-Sources: I-0319, S-0640.
+Sources: I-0319, S-0640; I-0330, S-0655.

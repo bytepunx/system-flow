@@ -24,16 +24,16 @@ touches: [design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-r
 after: [T-2848]
 usage:
   source: log
-  seconds: 6
+  seconds: 13
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 72
-      cache_read: 873289
-      cache_write: 1135
-      cost: 0.3217
+      input: 7
+      output: 1014
+      cache_read: 878871
+      cache_write: 16867
+      cost: 0.3028
 ---
 # T-2850 Close I-0328 naming the lock the checked edit now holds
 

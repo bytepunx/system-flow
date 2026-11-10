@@ -3,15 +3,36 @@ id: T-2843
 type: task
 nature: remediation
 title: "The owners' MCP test server sets a slow threshold no call reaches, and FLAI_SLOW_REQUEST=1ns reproduces the slow log"
-status: backlog
+status: done
 parent: S-0652
 owner: alex
 created: 2026-11-10T07:01:03Z
-updated: 2026-11-10T07:01:03Z
-transitions: []
+updated: 2026-11-10T08:10:01Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:05:41Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:05:41Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T08:10:01Z
+    by: agent-S-0652
 stream: S-0652
 tags: [testing]
 touches: [flai/internal/mcpserver/server_test.go]
+usage:
+  source: log
+  seconds: 260
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 112
+      cache_read: 1260457
+      cache_write: 9717
+      cost: 0.4674
 ---
 # T-2843 The owners' MCP test server sets a slow threshold no call reaches, and FLAI_SLOW_REQUEST=1ns reproduces the slow log
 

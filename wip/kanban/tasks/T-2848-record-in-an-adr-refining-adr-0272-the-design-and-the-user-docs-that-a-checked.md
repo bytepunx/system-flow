@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 426
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 28
-      output: 168
-      cache_read: 3641030
-      cache_write: 29360
-      cost: 1.3504
+      output: 4255
+      cache_read: 3689057
+      cache_write: 70798
+      cost: 1.2709
 ---
 # T-2848 Record in an ADR refining ADR-0272, the design, and the user docs that a checked edit holds the checked-write lock
 

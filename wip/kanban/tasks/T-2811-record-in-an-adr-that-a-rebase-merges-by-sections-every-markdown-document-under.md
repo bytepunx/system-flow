@@ -3,15 +3,36 @@ id: T-2811
 type: task
 nature: improvement
 title: Record in an ADR that a rebase merges by sections every markdown document under the design and docs folders
-status: backlog
+status: done
 parent: S-0637
 owner: alex
 created: 2026-11-09T22:09:09Z
-updated: 2026-11-09T22:09:09Z
-transitions: []
+updated: 2026-11-10T07:58:59Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:58:06Z
+    by: agent-S-0637
+  - to: in-progress
+    at: 2026-11-10T07:58:06Z
+    by: agent-S-0637
+  - to: done
+    at: 2026-11-10T07:58:59Z
+    by: agent-S-0637
 stream: S-0637
 tags: [adr, design]
-touches: [design/adrs/0273-a-rebase-merges-by-sections-every-markdown-document-under-the-design-and-docs.md, design/adrs/README.md]
+touches: [design/adrs/0276-a-rebase-that-stops-on-a-markdown-file-under-the-manifest-s-design-or-docs.md, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 53
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 56
+      cache_read: 1381622
+      cache_write: 9232
+      cost: 0.5118
 ---
 # T-2811 Record in an ADR that a rebase merges by sections every markdown document under the design and docs folders
 

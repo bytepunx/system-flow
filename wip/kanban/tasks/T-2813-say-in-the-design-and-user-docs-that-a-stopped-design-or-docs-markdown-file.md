@@ -3,16 +3,37 @@ id: T-2813
 type: task
 nature: improvement
 title: Say in the design and user docs that a stopped design or docs markdown file merges by sections
-status: backlog
+status: done
 parent: S-0637
 owner: alex
 created: 2026-11-09T22:09:28Z
-updated: 2026-11-09T22:09:28Z
-transitions: []
+updated: 2026-11-10T08:12:38Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:06:39Z
+    by: agent-S-0637
+  - to: in-progress
+    at: 2026-11-10T08:06:39Z
+    by: agent-S-0637
+  - to: done
+    at: 2026-11-10T08:12:38Z
+    by: agent-S-0637
 stream: S-0637
 tags: [docs, design]
 touches: [design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2811]
+usage:
+  source: log
+  seconds: 359
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 221
+      cache_read: 3226090
+      cache_write: 22135
+      cost: 1.1952
 ---
 # T-2813 Say in the design and user docs that a stopped design or docs markdown file merges by sections
 

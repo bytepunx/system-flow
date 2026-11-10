@@ -3,10 +3,10 @@ id: S-0651
 type: story
 nature: improvement
 title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T05:44:44Z
-updated: 2026-11-10T07:22:14Z
+updated: 2026-11-10T08:16:22Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:50Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:22:14Z
     by: agent-S-0651
+  - to: review
+    at: 2026-11-10T08:08:25Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T08:16:22Z
+    by: alex
 tags: [cli]
 topics: [testing]
 touches: [flai/cmd/mcp_http_test.go, flai/internal/channel/channel_test.go, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/summary.md]
@@ -75,8 +81,8 @@ finalized:
 This story remediates [I-0309](../../../design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md), "flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0309 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0309 is closed with `flai issue close I-0309 --reason` saying what fixed it
+- [x] The cause I-0309 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0309 is closed with `flai issue close I-0309 --reason` saying what fixed it
 
 ## Tasks
 - T-2839 TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a deadline far above the server's bound

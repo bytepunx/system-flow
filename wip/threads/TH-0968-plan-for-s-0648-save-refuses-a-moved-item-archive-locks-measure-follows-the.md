@@ -4,10 +4,10 @@ title: "Plan for S-0648: Save refuses a moved item, Archive locks, Measure follo
 anchor:
   path: wip/kanban/stories/S-0648-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md
   item: S-0648
-status: open
-participants: [planner-S-0648, orchestrator]
+status: resolved
+participants: [planner-S-0648, orchestrator, agent-S-0648]
 created: 2026-11-10T06:37:54Z
-updated: 2026-11-10T06:39:40Z
+updated: 2026-11-10T08:10:58Z
 ---
 
 # TH-0968 Plan for S-0648: Save refuses a moved item, Archive locks, Measure follows the item, the stray T-2760 copy goes
@@ -67,3 +67,16 @@ Nothing to split, merge, or drop.
 This is the same change TH-0969 asks for before I finalize the draft. Confirming this recommendation settles both.
 
 Source: design/adrs/0184-every-work-item-write-takes-one-items-lock-and-merges-a-copy-read-before.md § Decision
+
+### 2026-11-10T08:09:45Z agent-S-0648
+S-0648 is in progress with the plan as written and the one change you recommend. T-2827 records its rule in a new ADR that refines ADR-0184, written with `flai adr new` and committed with the task, and `flai task done` widens the touches to it. `design/conventions/decisions.md` asks for an ADR when a tool-enforced rule changes, so I am following it without waiting for a confirmation. If the operator would rather have no ADR, say so here and I will drop it before review.
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-11-10T08:10:34Z orchestrator
+Approved. The operator finalized S-0648, and its agent works the plan with the one change I recommended: T-2827 records the new rule in an ADR refining ADR-0184, and `flai task done` widens the touches to it. That meets `design/conventions/decisions.md` for a change to a tool-enforced rule. Nothing more is owed on this plan, so I resolve this thread.
+
+Source: design/conventions/decisions.md § Rules
+
+### 2026-11-10T08:10:58Z orchestrator
+Resolved: Plan approved: the operator finalized S-0648 and its agent works it with T-2827 adding an ADR refining ADR-0184.

@@ -3,17 +3,20 @@ id: S-0652
 type: story
 nature: remediation
 title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T07:57:16Z
+updated: 2026-11-10T08:15:17Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:19Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T08:03:55Z
+    by: agent-S-0652
 tags: []
 topics: [testing]
-touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md]
+touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md]
 after: [S-0647]
 agent:
   harness: claude-code
@@ -21,20 +24,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 390
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      test_runs: 1
+      hand_edits: 1
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 499
+      cache_read: 5168774
+      cache_write: 252669
+      cost: 1.9949
   strategic:
     - kind: orchestrator
-      seconds: 61
+      seconds: 71
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 53
-          cache_read: 441123
-          cache_write: 8025
-          cost: 0.1208
+          input: 11
+          output: 82
+          cache_read: 585853
+          cache_write: 23740
+          cost: 0.1641
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 11m
@@ -60,13 +76,14 @@ finalized:
 This story remediates [I-0329](../../../design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md), "TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0329 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0329 is closed with `flai issue close I-0329 --reason` saying what fixed it
+- [x] The cause I-0329 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0329 is closed with `flai issue close I-0329 --reason` saying what fixed it
 
 ## Tasks
 - T-2841 The dev server's 404 test allows the fake vite time to start, and a start delay reproduces the missing 404
 - T-2843 The owners' MCP test server sets a slow threshold no call reaches, and FLAI_SLOW_REQUEST=1ns reproduces the slow log
 - T-2845 Close I-0329 with what fixed it
+- T-2859 The crash-later fake vites crash only after they have answered, and I-0331 is closed
 
 ## Notes
 

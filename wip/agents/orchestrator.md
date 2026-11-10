@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2077.3899
-accrued_seconds: 1538447
-tasks_completed: 2656
-last_run: 2026-11-10T07:46:02Z
+accrued_cost: 2078.3914
+accrued_seconds: 1538685
+tasks_completed: 2666
+last_run: 2026-11-10T08:11:33Z
 ---
 
 # Orchestrator activity
@@ -18624,6 +18624,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 29
 - Cost: 0.1131 USD, estimated
+
+### 2026-11-10T07:57:00Z
+
+- Summary: Started the publish formula (S-0658, commit 0c35a14be) after S-0653's acceptance: threshold policy met, count 1 at or over threshold 1, value 30 USD under 1000; pending S-0653. Earlier instance S-0657 had stopped at evaluate before S-0653 was accepted.
+- Items: S-0658, S-0653, S-0657
+- Seconds: 33
+- Cost: 0.0628 USD, estimated
+
+### 2026-11-10T07:57:17Z
+
+- Summary: Ordered ready by throughput after S-0658 joined it: S-0652 (45m), S-0648 (1h), S-0658 (no forecast duration).
+- Items: S-0652, S-0648, S-0658
+- Seconds: 17
+- Cost: 0.0546 USD, estimated
+
+### 2026-11-10T07:57:34Z
+
+- Summary: I started a new publish run, S-0658, because the release policy is met. Nothing is published yet: a story's agent still has to work S-0658.
+- Items: none
+- Seconds: 17
+- Cost: 0.0698 USD, estimated
+
+### 2026-11-10T07:58:08Z
+
+- Summary: Pull order changed: applied flai order --by throughput; ready stays S-0652 (45m), S-0648 (1h), S-0658 (no forecast). Did not promote S-0241, promote_candidates rank 1 (2h): it is blocked since 2026-10-08 and its Notes say not to move it to ready until headless forks exist; TH-0790 awaits the operator on it.
+- Items: S-0652, S-0648, S-0658, S-0241
+- Seconds: 15
+- Cost: 0.1003 USD, estimated
+
+### 2026-11-10T07:58:46Z
+
+- Summary: The pull order is applied, and the ready column did not change. Nothing else was owed on this run.
+- Items: none
+- Seconds: 38
+- Cost: 0.1984 USD, estimated
+
+### 2026-11-10T07:59:03Z
+
+- Summary: TH-0957 and TH-0960: nothing to do. Both were resolved by agent-S-0637 at 2026-11-10T07:57:56Z after the operator finalized S-0637 and moved it to ready at 07:44:15Z with the planner's remedy unchanged; S-0637 is now in progress building it.
+- Items: S-0637, TH-0957, TH-0960
+- Seconds: 10
+- Cost: 0.0621 USD, estimated
+
+### 2026-11-10T07:59:38Z
+
+- Summary: I took no action on either reason: both threads were already resolved when I started.
+- Items: none
+- Seconds: 35
+- Cost: 0.1538 USD, estimated
+
+### 2026-11-10T08:10:34Z
+
+- Summary: Answered TH-0968, citing design/conventions/decisions.md § Rules
+- Items: S-0648
+- Seconds: 14
+- Cost: 0.0604 USD, estimated
+
+### 2026-11-10T08:11:01Z
+
+- Summary: Settled S-0648's planner thread TH-0968 (plan approved: operator finalized S-0648, agent adds an ADR refining ADR-0184 in T-2827) and resolved my own TH-0969, whose concern is gone; under plan_backlog_stories, no policy figure involved.
+- Items: S-0648, TH-0968, TH-0969
+- Seconds: 27
+- Cost: 0.0449 USD, estimated
+
+### 2026-11-10T08:11:33Z
+
+- Summary: I've resolved both threads on S-0648 (TH-0968 and TH-0969), and flai says my reasons are done, so I'm ending this run.
+- Items: none
+- Seconds: 32
+- Cost: 0.1944 USD, estimated
 
 ## Refusals
 

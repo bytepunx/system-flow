@@ -3,16 +3,19 @@ id: S-0654
 type: story
 nature: improvement
 title: A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:52:21Z
+updated: 2026-11-10T08:03:46Z
 transitions:
   - to: ready
     at: 2026-11-10T07:12:12Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T07:34:29Z
+    by: agent-S-0654
+  - to: review
+    at: 2026-11-10T08:03:46Z
     by: agent-S-0654
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
@@ -24,21 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1060
-  estimated: true
-  priced_by: estimate
+  seconds: 1771
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 3
+      ceremony: 6
       hand_edits: 2
-      work: 24
+      work: 86
   models:
     - model: claude-opus-5-5
-      input: 132
-      output: 909
-      cache_read: 14588940
-      cache_write: 626286
-      cost: 5.598
+      input: 270
+      output: 40914
+      cache_read: 35473053
+      cache_write: 680775
+      cost: 12.2206
   strategic:
     - kind: orchestrator
       seconds: 143

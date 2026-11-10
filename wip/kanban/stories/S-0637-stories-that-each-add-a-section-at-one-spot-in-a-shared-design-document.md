@@ -3,37 +3,53 @@ id: S-0637
 type: story
 nature: improvement
 title: Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T07:55:51Z
+updated: 2026-11-10T07:58:49Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:15Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T07:56:45Z
+    by: agent-S-0637
 tags: [flai, sync, acceptance]
 topics: [cli, go, code]
-touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0273-a-rebase-merges-by-sections-every-markdown-document-under-the-design-and-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md]
+touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0276-a-rebase-that-stops-on-a-markdown-file-under-the-manifest-s-design-or-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 987
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      test_runs: 1
+      hand_edits: 1
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 154
+      output: 1083
+      cache_read: 19674796
+      cache_write: 377814
+      cost: 7.3785
   strategic:
     - kind: orchestrator
-      seconds: 23
+      seconds: 33
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 8
-          cache_read: 83530
-          cache_write: 3604
-          cost: 0.0233
+          input: 10
+          output: 70
+          cache_read: 253007
+          cache_write: 64429
+          cost: 0.0854
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h10m

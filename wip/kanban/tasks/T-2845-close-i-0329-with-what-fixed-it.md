@@ -3,16 +3,37 @@ id: T-2845
 type: task
 nature: remediation
 title: Close I-0329 with what fixed it
-status: backlog
+status: done
 parent: S-0652
 owner: alex
 created: 2026-11-10T07:01:10Z
-updated: 2026-11-10T07:01:10Z
-transitions: []
+updated: 2026-11-10T08:10:17Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:10:07Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:10:07Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T08:10:17Z
+    by: agent-S-0652
 stream: S-0652
 tags: [issues]
 touches: [design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md]
 after: [T-2841, T-2843]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 40
+      cache_read: 527204
+      cache_write: 1878
+      cost: 0.1947
 ---
 # T-2845 Close I-0329 with what fixed it
 

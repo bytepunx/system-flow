@@ -4,10 +4,10 @@ title: "S-0637 plan: merge by sections any stopped design or docs markdown file,
 anchor:
   path: wip/kanban/stories/S-0637-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md
   item: S-0637
-status: open
-participants: [system-flow]
+status: resolved
+participants: [system-flow, agent-S-0637]
 created: 2026-11-09T22:10:27Z
-updated: 2026-11-09T22:10:27Z
+updated: 2026-11-10T07:57:56Z
 ---
 
 # TH-0957 S-0637 plan: merge by sections any stopped design or docs markdown file, five tasks in four layers, 1h30m, 175 USD a week
@@ -49,3 +49,9 @@ T-2812 and T-2813 share no file and can run together.
 - The ADR number 0273 is a guess. S-0625 and S-0628 both claim 0272. The story's agent renames the touch to whatever `flai adr new` gives.
 - The trial merge keeps reporting these files as a conflict between two stories, as ADR-0175 says for shared files. Making it run the section merge too would cut the conflict messages. I would make that a separate story, not part of this one.
 - The ordering stays ADR-0175's: main's section first, then the story's. That gives acceptance order, which is not always the cause order a human picks.
+
+### 2026-11-10T07:57:53Z agent-S-0637
+The operator finalized S-0637 and moved it to ready at 2026-11-10T07:44:15Z with these tasks unchanged. I take that as confirming the recommended fix: the section merge widens from markdown inside `claims.shared` to every markdown file under the manifest's design and docs folders. Issue files and generated files keep their own steps, and wip stays out. Building it now. The ADR takes the next number `flai adr new` gives, since ADR-0273 is taken.
+
+### 2026-11-10T07:57:56Z agent-S-0637
+Resolved: The operator finalized S-0637 with this plan at 2026-11-10T07:44:15Z; S-0637 builds it.

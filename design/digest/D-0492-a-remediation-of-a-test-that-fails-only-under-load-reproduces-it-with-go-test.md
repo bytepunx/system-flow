@@ -2,14 +2,14 @@
 id: D-0492
 title: "A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags"
 kind: decision
-sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252]
+sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314]
 topics: [testing, go, flai]
 paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release]
 date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0617]
+cited: [S-0617, S-0653]
 ---
 
 # D-0492 A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags
@@ -24,6 +24,8 @@ S-0543, which remediated I-0233, made the exception a third time: "The stress ru
 
 S-0617, which remediated I-0252, made it a fourth time, citing this entry: "T-2724's stress runs call `go test` by hand with `GOMAXPROCS=2 -race -count=N -run`, beside a CPU load pinned with `taskset`, and `-skip '^TestGateway'` ... Pass or fail of each change is still judged with `flai test`." (wip/archive/agents/S-0617.md, Decisions)
 
+S-0653, which remediated I-0314, made it a fifth time, citing this entry, to show its new tests fail without the fix: "The reproducing tests were run with `go test -race -run` directly, as D-0492 records, to show them failing with `ofLog` swapped back to `newest`; pass or fail of the change is judged with `flai test`." (wip/archive/agents/S-0653.md, Decisions; D-0553). S-0649 did the same for I-0324, putting the old read back and running `go test -run` on the one test by hand (D-0543).
+
 A later story that fixes a flaky test can do the same, and record the exception in its Decisions. A hand `go test` of `flai/internal/serve` must pass `-skip '^TestGateway'`, or it runs the paid gateway checks (D-0451). Reproduce before lengthening a wait (D-0413).
 
-Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252.
+Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314.

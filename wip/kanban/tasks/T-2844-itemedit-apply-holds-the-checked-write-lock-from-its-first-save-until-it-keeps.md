@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 540
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 269
-      cache_read: 4723374
-      cache_write: 316593
-      cost: 1.8543
+      input: 39
+      output: 5843
+      cache_read: 5065599
+      cache_write: 97216
+      cost: 1.7451
 ---
 # T-2844 itemedit.Apply holds the checked-write lock from its first save until it keeps or restores the edit
 

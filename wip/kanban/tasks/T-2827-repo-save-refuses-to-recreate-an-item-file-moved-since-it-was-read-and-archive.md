@@ -3,15 +3,33 @@ id: T-2827
 type: task
 nature: remediation
 title: Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock
-status: backlog
+status: in-progress
 parent: S-0648
 owner: alex
 created: 2026-11-10T06:37:17Z
-updated: 2026-11-10T06:37:17Z
-transitions: []
+updated: 2026-11-10T08:09:49Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:09:47Z
+    by: agent-S-0648
+  - to: in-progress
+    at: 2026-11-10T08:09:49Z
+    by: agent-S-0648
 stream: S-0648
 tags: [flai, workitem]
 touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/work-hierarchy.md]
+usage:
+  source: log
+  seconds: 26
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 87
+      cache_read: 1331630
+      cache_write: 5514
+      cost: 0.492
 ---
 # T-2827 Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock
 

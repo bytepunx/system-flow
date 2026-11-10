@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 189.3079
-accrued_seconds: 20829
-tasks_completed: 119
-last_run: 2026-11-10T07:23:56Z
+accrued_cost: 192.1806
+accrued_seconds: 21470
+tasks_completed: 120
+last_run: 2026-11-10T08:06:37Z
 ---
 
 # Curator activity
@@ -963,3 +963,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0500, D-0549, D-0550
 - Seconds: 637
 - Cost: 2.0511 USD, estimated
+
+### 2026-11-10T08:06:37Z
+
+- Summary: Wrote D-0551, D-0552, D-0554 and D-0555; wrote D-0553 and absorbed it into `design/system/strategic-agents.md` § The planner › The run and how it ended; merged S-0649, S-0650, S-0653 and S-0655 into D-0543, D-0544, D-0545, D-0550 and D-0492; `flai digest compact` compacted none and recorded citers on one entry; the rest of the 31 candidates were left out as progress or already in ADR-0274.
+- Trigger: accepted S-0653
+- Items: D-0492, D-0543, D-0544, D-0545, D-0550, D-0551, D-0552, D-0553, D-0554, D-0555
+- Seconds: 641
+- Cost: 2.8727 USD, estimated

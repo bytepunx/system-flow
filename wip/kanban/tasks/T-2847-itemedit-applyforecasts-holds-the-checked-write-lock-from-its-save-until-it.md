@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 556
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 192
-      cache_read: 3023572
-      cache_write: 32922
-      cost: 1.1245
+      input: 23
+      output: 3543
+      cache_read: 3072040
+      cache_write: 58957
+      cost: 1.0583
 ---
 # T-2847 itemedit.ApplyForecasts holds the checked-write lock from its save until it keeps or restores the forecasts
 

@@ -3,15 +3,36 @@ id: T-2841
 type: task
 nature: remediation
 title: The dev server's 404 test allows the fake vite time to start, and a start delay reproduces the missing 404
-status: backlog
+status: done
 parent: S-0652
 owner: alex
 created: 2026-11-10T07:00:59Z
-updated: 2026-11-10T07:00:59Z
-transitions: []
+updated: 2026-11-10T08:09:54Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:05:40Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:05:41Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T08:09:54Z
+    by: agent-S-0652
 stream: S-0652
 tags: [testing]
 touches: [flai/internal/components/devserver_test.go]
+usage:
+  source: log
+  seconds: 253
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 88
+      cache_read: 1004984
+      cache_write: 4090
+      cost: 0.3713
 ---
 # T-2841 The dev server's 404 test allows the fake vite time to start, and a start delay reproduces the missing 404
 

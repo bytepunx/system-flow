@@ -3,16 +3,37 @@ id: T-2812
 type: task
 nature: improvement
 title: Merge by sections a stopped markdown file under the design or docs folder, not only one in claims.shared
-status: backlog
+status: done
 parent: S-0637
 owner: alex
 created: 2026-11-09T22:09:19Z
-updated: 2026-11-09T22:09:19Z
-transitions: []
+updated: 2026-11-10T08:06:22Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:59:51Z
+    by: agent-S-0637
+  - to: in-progress
+    at: 2026-11-10T07:59:52Z
+    by: agent-S-0637
+  - to: done
+    at: 2026-11-10T08:06:22Z
+    by: agent-S-0637
 stream: S-0637
 tags: [flai, go, sync]
 touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go]
 after: [T-2811]
+usage:
+  source: log
+  seconds: 390
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 128
+      cache_read: 2327948
+      cache_write: 8674
+      cost: 0.8598
 ---
 # T-2812 Merge by sections a stopped markdown file under the design or docs folder, not only one in claims.shared
 

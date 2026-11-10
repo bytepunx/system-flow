@@ -21,6 +21,18 @@ transitions:
 stream: S-0657
 tags: []
 after: [T-2853]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 604
+      cache_read: 303247
+      cache_write: 13000
+      cost: 0.1768
 ---
 # T-2854 Evaluate the release policy, stopping unless it is met
 
