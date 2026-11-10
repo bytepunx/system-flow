@@ -49,8 +49,10 @@ LABEL dev.system-flow.go="${GO_VERSION}" \
       org.opencontainers.image.description="flai-agent-sf-claude-code: system-flow's test tools on flai-agent-claude-code"
 USER root
 # gcc and musl-dev for go test -race, which needs cgo; curl and openssl for install.sh, which the
-# smoke tier's install test runs and which refuses without them (I-0281); the rest is the base's.
-RUN apk add --no-cache build-base curl openssl && \
+# smoke tier's install test runs and which refuses without them (I-0281); procps-ng's ps for
+# scripts/release-server.sh, whose ps -o stat= -p BusyBox's ps refuses, so that it read its server
+# as exited before it listened; the rest is the base's.
+RUN apk add --no-cache build-base curl openssl procps-ng && \
     npm install -g "pnpm@${PNPM_VERSION}" && \
     npm cache clean --force && rm -rf /root/.npm /tmp/node-compile-cache
 COPY --from=go /usr/local/go /usr/local/go
