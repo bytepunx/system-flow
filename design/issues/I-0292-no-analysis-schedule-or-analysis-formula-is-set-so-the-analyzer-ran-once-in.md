@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-10T08:49:03Z
 usage:
   strategic:
     - kind: analyzer
@@ -44,3 +44,5 @@ flai stats strategic[] analyzer: activities 1, last_run 2026-10-15T22:49:08Z; sy
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0692 remediates this issue, created from it at 2026-11-10T08:49:03Z.
