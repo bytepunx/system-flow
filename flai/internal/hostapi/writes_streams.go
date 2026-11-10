@@ -51,17 +51,22 @@ func streamSpecs() map[string]spec {
 			return []string{"stream", "answer", in.ID, "--by=" + owner(p), "--", strings.TrimSpace(in.Question), strings.TrimSpace(in.Answer)}, "", nil
 		}),
 
-		// stream.state writes a narrative's Current state and Next steps, or
-		// one of them (S-0271): flai stream state, each text trimmed as flai
-		// trims it, lines and all, and a blank one left out as flai leaves it.
-		// A text of only "-" is refused, since flai would read it from standard
-		// input. A story not in progress or in review, or with no narrative,
-		// and a text the markdown lint rejects, are flai's refusals (exit 4).
+		// stream.state writes a narrative's Current state, Next steps, and
+		// Context, and appends decisions and open questions to it (S-0271,
+		// S-0668): flai stream state, one --decision or --question per entry,
+		// each text trimmed as flai trims it, lines and all, and a blank one
+		// left out as flai leaves it. A text of only "-" is refused, since flai
+		// would read it from standard input. A story not in progress or in
+		// review, or with no narrative, and a text the markdown lint rejects,
+		// are flai's refusals (exit 4).
 		"stream.state": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
-				ID      string `json:"id"`
-				Current string `json:"current"`
-				Next    string `json:"next"`
+				ID        string   `json:"id"`
+				Current   string   `json:"current"`
+				Next      string   `json:"next"`
+				Context   string   `json:"context"`
+				Decisions []string `json:"decisions"`
+				Questions []string `json:"questions"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -69,19 +74,27 @@ func streamSpecs() map[string]spec {
 			if e := needStory(in.ID); e != nil {
 				return nil, "", e
 			}
+			type field struct{ name, flag, text string }
+			fields := []field{{"current", "current", in.Current}, {"next", "next", in.Next}, {"context", "context", in.Context}}
+			for _, d := range in.Decisions {
+				fields = append(fields, field{"decisions", "decision", d})
+			}
+			for _, q := range in.Questions {
+				fields = append(fields, field{"questions", "question", q})
+			}
 			var texts []string
-			for _, f := range []struct{ flag, text string }{{"current", in.Current}, {"next", in.Next}} {
+			for _, f := range fields {
 				t := strings.TrimSpace(f.text)
 				switch t {
 				case "":
 					continue
 				case "-":
-					return nil, "", bad("%s is the text itself: - is not text to write", f.flag)
+					return nil, "", bad("%s is the text itself: - is not text to write", f.name)
 				}
 				texts = append(texts, "--"+f.flag+"="+t)
 			}
 			if len(texts) == 0 {
-				return nil, "", bad("current, next, or both are required: the text to write under ## Current state and ## Next steps")
+				return nil, "", bad("current, next, context, decisions, or questions are required: the text to write under ## Current state, ## Next steps, or ## Context, or the bullets to append under ## Decisions or ## Open questions")
 			}
 			return append([]string{"stream", "state", in.ID}, texts...), "", nil
 		}},

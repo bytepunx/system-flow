@@ -181,6 +181,9 @@ var refused = map[string][]string{
 		`{"id":"S-0001 --next=x","current":"c",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"S-0001","current":" \n ","next":"",` + rid + `}`,
 		`{"id":"S-0001","current":"-",` + rid + `}`, `{"id":"S-0001","current":"c","next":" -\n",` + rid + `}`,
 		`{"id":"S-0001","current":["c"],` + rid + `}`, `{"id":"S-0001","current":"c"}`,
+		// S-0668: context, decisions, and questions, each never standard input
+		`{"id":"S-0001","context":"-",` + rid + `}`, `{"id":"S-0001","decisions":["x"," - "],` + rid + `}`, `{"id":"S-0001","questions":["-"],` + rid + `}`,
+		`{"id":"S-0001","decisions":[" ",""],"questions":["\n"],` + rid + `}`, `{"id":"S-0001","decisions":"x",` + rid + `}`, `{"id":"S-0001","questions":[1],` + rid + `}`,
 	},
 	// S-0371, ADR-0155: a story's ID and at least one path, each inside the checkout, with no .., never a flag
 	"stream.restore": {
@@ -3249,8 +3252,38 @@ func TestStreamStateWritesTheTextsGiven(t *testing.T) {
 		t.Errorf("current state alone, next blank: %+v %s", e, args)
 	}
 	for _, params := range []string{`{"id":"S-0007","current":"","next":"\n",` + rid + `}`, `{"id":"S-0007",` + rid + `}`} {
-		if _, e, args := state(done, params); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "current, next, or both are required") || args != "" {
+		if _, e, args := state(done, params); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "current, next, context, decisions, or questions are required") || args != "" {
 			t.Errorf("no text, %s: %+v %s", params, e, args)
+		}
+	}
+	// S-0668: context replaces ## Context, and each decision and question is
+	// one flag of its own, in the order given, so flai appends a bullet for
+	// each; a blank entry is left out.
+	if _, e, args := state(done, `{"id":"S-0007","context":" Why. ",`+rid+`}`); e != nil || args != "stream state S-0007 --context=Why. --json" {
+		t.Errorf("context alone: %+v %s", e, args)
+	}
+	if _, e, args := state(done, `{"id":"S-0007","decisions":["x"," ","y"],`+rid+`}`); e != nil || args != "stream state S-0007 --decision=x --decision=y --json" {
+		t.Errorf("two decisions: %+v %s", e, args)
+	}
+	if _, e, args := state(done, `{"id":"S-0007","questions":["Which port?"],`+rid+`}`); e != nil || args != "stream state S-0007 --question=Which port? --json" {
+		t.Errorf("a question: %+v %s", e, args)
+	}
+	all := `{"id":"S-0007","current":"c","next":"n","context":"k","decisions":["d1","d2"],"questions":["q1","q2"],` + rid + `}`
+	if _, e, args := state(done, all); e != nil || args != "stream state S-0007 --current=c --next=n --context=k --decision=d1 --decision=d2 --question=q1 --question=q2 --json" {
+		t.Errorf("every text: %+v %s", e, args)
+	}
+	for _, params := range []string{`{"id":"S-0007","decisions":[" ",""],"questions":["\n"],` + rid + `}`, `{"id":"S-0007","decisions":[],` + rid + `}`} {
+		if _, e, args := state(done, params); e == nil || e.Code != channel.CodeInvalidParams || args != "" {
+			t.Errorf("only blank entries, %s: %+v %s", params, e, args)
+		}
+	}
+	for name, params := range map[string]string{
+		"context":   `{"id":"S-0007","context":"-",` + rid + `}`,
+		"decisions": `{"id":"S-0007","decisions":["d"," -"],` + rid + `}`,
+		"questions": `{"id":"S-0007","questions":["- "],` + rid + `}`,
+	} {
+		if _, e, args := state(done, params); e == nil || e.Code != channel.CodeInvalidParams || e.Message != name+" is the text itself: - is not text to write" || args != "" {
+			t.Errorf("- in %s: %+v %s", name, e, args)
 		}
 	}
 	if _, e, args := state(done, `{"id":"S-0007","current":"c","next":" - ",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != "next is the text itself: - is not text to write" || args != "" {
