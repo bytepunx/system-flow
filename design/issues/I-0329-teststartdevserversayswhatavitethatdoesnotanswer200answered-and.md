@@ -2,12 +2,12 @@
 id: I-0329
 title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
 class: defect
-status: open
+status: closed
 count: 2
 cost: 15m
 first_reported: 2026-11-10T05:34:34Z
 last_reported: 2026-11-10T06:11:13Z
-updated: 2026-11-10T06:11:13Z
+updated: 2026-11-10T08:10:13Z
 ---
 
 # I-0329 TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
@@ -28,3 +28,4 @@ S-0625's close-out (job S-0625-20261110T055311Z, head e3c14c6) stopped at integr
 ## Remediation
 
 Story S-0652 remediates this issue, created from it at 2026-11-10T05:44:45Z.
+Closed 2026-11-10T08:10:13Z: Fixed by S-0652: both causes were in the tests. T-2841: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered allows 5s, not 600ms, for the fake vite to start and answer 404, and runs the fake with a 1s start delay, which reproduced the missing 404 on every run before the fix. T-2843: ownersServer sets Options.Slow to an hour, so a thread_reply slowed by load logs no slow request event; TestTheOwnersServerLogsNoSlowCall runs with FLAI_SLOW_REQUEST=1ns, which reproduced the log on every run before the fix.
