@@ -1,8 +1,8 @@
 ---
 id: ADR-0112
 title: "flai stats counts the open items without a cost of delay value per column, and projects the ready column's cost of delay until each story is pulled under the pull order, by cost of delay, and by WSJF"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0081]
