@@ -2,12 +2,12 @@
 id: I-0324
 title: TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
 class: defect
-status: open
+status: closed
 count: 5
 cost: 11m
 first_reported: 2026-11-09T22:00:56Z
 last_reported: 2026-11-10T05:35:23Z
-updated: 2026-11-10T05:35:23Z
+updated: 2026-11-10T07:11:39Z
 ---
 
 # I-0324 TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
@@ -40,3 +40,4 @@ S-0633's second close-out, job S-0633-20261110T052429Z, stopped at integration a
 ## Remediation
 
 Story S-0649 remediates this issue, created from it at 2026-11-10T05:12:08Z.
+Closed 2026-11-10T07:11:39Z: S-0649 (T-2834, 5247d5b): TestEachRequestIsTimedBeneathTheTransport and TestTheSendTimeCountsTheWaitForTheWriteLock in flai/internal/channel/channel_test.go now wait for the "request answered" event with answeredEvent, which polls the log with a 5 s deadline. The client logs that event after the answer's write (S-0611), so a single read made as soon as the dashboard had the answer could come too early. The test's log destination now holds back the event's line for 200 ms (lockedBuffer.holdAnswered), so the race reproduces on every run: the old single read failed on 3 of 3 runs, and the polled read passes. No product code changed.
