@@ -533,7 +533,43 @@ S-0601 halves the wall time and takes about 1.2 s of CPU off a check. It does no
 | `markdown`, from S-0600's kept findings | 0.13 to 0.29 s |
 | `check.Run` in all, the list included | 2.7 to 3.3 s |
 
-What is left is that critical path: the list, `workItems` alone, and the digest rule, which reads and scans every digest entry. It is recorded as [I-0312](../issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md).
+What is left is that critical path: the list, `workItems` alone, and the digest rule, which reads and scans every digest entry. It is recorded as [I-0312](../issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md). S-0677 took `workItems` and the digest rule off that path ([below](#cause-11-again-the-per-item-rules-on-the-pool-and-the-digest-and-conflict-marker-results-kept-s-0677)).
+
+### Cause 11 again: the per-item rules on the pool, and the digest and conflict-marker results kept (S-0677)
+
+#### Cause
+
+After S-0601 three steps still ran on every check, whatever had changed. `workItems` ran first and alone, because it fills the index of items by ID. It also ran each item's rules, and each item scanned every item for its children. The digest rule read and validated every digest entry. The conflict-marker rule read every markdown file under the design, docs, and wip folders.
+
+#### Fix
+
+- `check.Run` runs only `indexItems` first and alone. It fills `byID` and a children index, each parent's children in item order. The per-item rules then run on the pool beside the other rules, in chunks of 128 items. Each chunk has a Result of its own, merged in item order where `workItems` stood, so the findings, their order, and the counts do not change. `TestRunAtOnceMatchesTheRulesOneAfterAnother` checks that at chunk sizes of 1, 2, and 128.
+- The digest rule keeps what each entry's file alone decides in `.flai-cache/digest-problems-<hash>.json`, keyed by the entry's size and modification time and a hash of the rules (`flai/internal/digest/kept.go`). Whether a source ID or an `absorbed_by` path names something follows other files, so it is asked on every check.
+- The conflict-marker rule keeps each file's marker lines in `.flai-cache/conflict-markers-<hash>.json`, keyed by the file's size and modification time (`flai/internal/conflictmark/kept.go`). A warm run stats each file and reads none that is unchanged.
+
+Both files follow the rules of the kept items and lint findings ([flai-cli.md](flai-cli.md)): written atomically and only into a `.flai-cache` that exists, nothing kept for a file changed within two seconds, and a damaged or foreign file a miss.
+
+#### Measured on this repository
+
+Measured on 2026-11-10 at about 20:08 UTC on the operator's host (WSL2, 24 cores), in the main checkout, which held 3,811 work items. Two binaries were built to `/tmp`: the story's branch at 010fa0f3d, and `main` at 9c2b2392c, the story's base, built from the same tree with the story's files under `flai/` taken from `main`. Nothing else under `flai/` differs between them. Each ran `flai check --strict` as a fresh process, timed by the shell's `time`, five times each, taking turns, after a first run of each that wrote the kept files. Both gave the same output and exited 1 on the same one warning. The one-minute load average was 47 to 56, against 84 to 103 when Cause 11 was measured.
+
+| Warm `flai check --strict` | Wall | CPU (user and system) |
+|----------------------------|-----:|----------------------:|
+| `main` | 0.97 to 1.15 s | 2.9 to 3.1 s |
+| S-0677 | 0.57 to 0.71 s | 2.2 to 2.4 s |
+
+At this load `main` itself is under 2 s, so the fall measured against it is the figure that holds: about 0.4 s of wall time and 0.7 s of CPU off a check. A throwaway test in the `check` package timed each step in one process, six rounds, at a load of 37 to 42. The list's first round in each process is the one a fresh `flai check` pays; the list's code is the same in both.
+
+| Step | `main` | S-0677 |
+|------|-------:|-------:|
+| `Repo.List(true)`, first in the process | 206 ms | 427 ms |
+| The step alone: `workItems`, then `indexItems` | 122 to 167 ms | 2 to 7 ms |
+| The per-item rules, run serially to time them | in `workItems` | 52 to 91 ms |
+| `digest` | 412 to 513 ms | 30 to 78 ms |
+| `conflictMarkers` | 116 to 145 ms | 74 to 134 ms |
+| `check.Run` in all, after the first round | 600 to 719 ms | 258 to 544 ms |
+
+What is left on the path is the list, whose decode of the kept items is S-0676's to fix ([I-0310](../issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md)), and the conflict-marker rule's walk and stat of every markdown file. At this load the conflict-marker rule reads from the page cache, so keeping its results saves less here than on the loaded host I-0312 measured, where it took 0.45 to 1.10 s.
 
 ### Cause 12 fixed: agents.json kept parsed and the conversations read once (S-0603)
 

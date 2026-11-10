@@ -1,6 +1,6 @@
 ---
 title: "Runbook: back up"
-updated: 2026-11-08
+updated: 2026-11-10
 status: active
 ---
 
@@ -28,6 +28,7 @@ What there is to keep, and how. A project's work is in git; flai keeps a little 
 | `~/.flai/cache`, `~/.flai/bin` | Template clones, the release lists' signature verdicts (`releases/verdicts.json`), and the binary | No: fetched again |
 | A project's `.flai-cache/merge-queue/batches/` | Each merge queue batch's and bisection step's tier output, a `<tier>.log` per tier (S-0457) | No: diagnostic, and the queue keeps only the newest 20 batches |
 | A project's `.flai-cache/items-<folder>.json` and `lint-findings-<hash>.json` | The work items each flai process parsed, one file per item folder, and each `wip` file's markdown findings, keyed by each file's size and modification time (S-0600) | No: a cache, rebuilt from `wip` on the next run; deleting them costs one cold run |
+| A project's `.flai-cache/digest-problems-<hash>.json` and `conflict-markers-<hash>.json` | The digest rule's per-entry problems and the conflict-marker rule's per-file marker lines, each kept by the file's size and modification time (S-0677) | No: a cache, rebuilt on the next `flai check`; deleting them costs one cold run |
 | A project's `.flai-cache/stories-commits.json` | Each story's committed files as `flai stats` last read them from `git log`, with the branch tips they were read at (S-0531) | No: a cache, read from git again when missing |
 | A project's `.flai-cache/` apart from worktrees | The MCP server's token, address, state, and log, agents' read markers, edit notices, the components' resolved prop skeletons (`component-props/`, S-0478) | No: made again; agents over HTTP are given a new token |
 | The flaiover container and image | Nothing of yours: no volume, no project file | No |

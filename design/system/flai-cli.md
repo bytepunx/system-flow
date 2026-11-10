@@ -657,7 +657,9 @@ Since S-0600 a process also starts warm. The files a list must parse are parsed 
 
 The markdown lint of `wip` that `flai check` runs works the same way (`flai/internal/mdlint/folder.go`, `kept.go`). It lints the folder's files on the same bounded pool. It keeps each file's findings in `.flai-cache/lint-findings-<hash of the folder>.json`, keyed by the file's path, size, and modification time. The whole file is also keyed by the lint configuration's hash, taken over the configuration file's bytes, its rules, `mdlint.RulesVersion`, and the file's format version. A changed configuration, or a flai whose rules changed, so lints every file again. Raise `RulesVersion` with any change to what a rule reports.
 
-Both files follow S-0531's rules for `stories-commits.json`:
+Since S-0677 two more of `flai check`'s rules keep what each file alone decides the same way. The digest rule keeps each entry's problems in `.flai-cache/digest-problems-<hash of the folder>.json` (`flai/internal/digest/kept.go`), keyed by the entry's size and modification time and by a hash of the rules (`digest.RulesVersion`, the kinds, the statuses, and the secret shapes). Whether a source ID or an `absorbed_by` path names something follows other files, so it is asked on every check. The conflict-marker rule keeps each markdown file's marker lines in `.flai-cache/conflict-markers-<hash of the root>.json` (`flai/internal/conflictmark/kept.go`), keyed by the file's path, size, and modification time; a write's run (`RunItemWrite`) reads the files it wrote and keeps nothing. `check.Run` also runs only the index of items, `byID` and each item's children, first and alone; the per-item rules then run on the pool beside the other rules, in chunks of 128 items, merged in item order.
+
+These files follow S-0531's rules for `stories-commits.json`:
 
 - They are written atomically, and only into a `.flai-cache` that exists, so a project without one keeps nothing ([D-0402](../digest/D-0402-a-test-fixture-project-that-flai-writes-items-in-needs-a-gitignore-listing-flai.md)).
 - A file read within two seconds of its modification time is not kept.
