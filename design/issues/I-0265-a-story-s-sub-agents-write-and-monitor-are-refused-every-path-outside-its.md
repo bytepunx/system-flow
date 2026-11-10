@@ -7,7 +7,7 @@ count: 2
 cost: 13m
 first_reported: 2026-11-06T23:16:17Z
 last_reported: 2026-11-07T09:46:30Z
-updated: 2026-11-07T09:46:30Z
+updated: 2026-11-10T08:55:34Z
 ---
 
 # I-0265 A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
@@ -26,3 +26,5 @@ Story: S-0586.
 S-0586's explorer was refused every read of /home/alex/git/bytepunx/kluster, the repository of the tool the story drives, so it could not settle kluster's config schema; the story's agent read the source itself through Bash. The agent's own Read was also refused a file under /tmp.
 
 ## Remediation
+
+Story S-0701 remediates this issue, created from it at 2026-11-10T08:55:34Z.
