@@ -175,6 +175,7 @@ type gatewayLine struct {
 // gatewayBlock is one block of a message's content.
 type gatewayBlock struct {
 	Type      string          `json:"type"`
+	Text      string          `json:"text"`
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
 	Input     json.RawMessage `json:"input"`
@@ -208,6 +209,7 @@ type gatewayRun struct {
 	Init     *gatewayLine
 	Messages []gatewayMessage // in the order first seen, one per message ID
 	Calls    []*gatewayCall   // in the order made
+	Texts    []string         // the text blocks of the assistant's messages, in order
 	Result   *gatewayLine
 	Other    []string // lines that are not stream-json
 }
@@ -251,6 +253,10 @@ func parseGatewayStream(out string) gatewayRun {
 			}
 			for _, b := range blocks {
 				switch b.Type {
+				case "text":
+					if l.Type == "assistant" {
+						run.Texts = append(run.Texts, b.Text)
+					}
 				case "tool_use":
 					c := &gatewayCall{ID: b.ID, Name: b.Name, Input: b.Input, Parent: l.ParentToolUseID}
 					calls[b.ID] = c
@@ -313,6 +319,41 @@ func (r gatewayRun) resolvedTo(slug string) bool {
 	return false
 }
 
+// creditRefusal is the gateway's refusal of the run for want of credit, as
+// Claude Code reports it (I-0237): the "API Error: 402" text in the result,
+// in an assistant message, or on a line that is not stream-json; "" when
+// there is none.
+func (r gatewayRun) creditRefusal() string {
+	var said []string
+	if r.Result != nil {
+		said = append(said, r.Result.Result)
+	}
+	said = append(append(said, r.Texts...), r.Other...)
+	for _, s := range said {
+		if i := strings.Index(s, creditRefused); i >= 0 {
+			return cut(oneLine(s[i:]), 300)
+		}
+	}
+	return ""
+}
+
+// creditRefused is how Claude Code reports a gateway's 402, which OpenRouter
+// answers when the key has too little credit left for the request.
+const creditRefused = "API Error: 402"
+
+// outOfCredit says whether the key's read shows no credit left under its
+// limit; a key with no limit is never out.
+func outOfCredit(info openRouterKeyInfo) bool {
+	return info.LimitRemaining != nil && *info.LimitRemaining <= 0
+}
+
+// creditFailure is the check's one failure when the gateway, route, refused
+// the run, or would refuse it, for want of credit: what it said, and what
+// clears it.
+func creditFailure(route, said string) string {
+	return fmt.Sprintf("%s refused the run for want of credit: %s. The key needs credit added or its limit raised, which is the operator's; unset its variable to skip this check instead (I-0237)", route, said)
+}
+
 // totalCost is the run's total_cost_usd, or -1 when it ended with no result.
 func (r gatewayRun) totalCost() float64 {
 	if r.Result == nil {
@@ -364,6 +405,56 @@ func TestGatewayStreamIsJudged(t *testing.T) {
 	passed := strings.ReplaceAll(stream, `"is_error":true,`, ``)
 	if c := parseGatewayStream(passed).guardRefused(); c != nil {
 		t.Errorf("a call that passed counts as refused: %+v", c)
+	}
+}
+
+// TestCreditRefusalIsFoundInAGatewayRun reproduces I-0237 with no network: the
+// 402 OpenRouter answered on 2026-10-31, wherever Claude Code reports it, is
+// found and named by the check's one failure; a passing run has none; and a
+// key read with nothing left under its limit is out of credit.
+func TestCreditRefusalIsFoundInAGatewayRun(t *testing.T) {
+	const said = "API Error: 402 This request requires more credits, or fewer max_tokens. You requested up to 32000 tokens, but can only afford 6139"
+	quoted, _ := json.Marshal(said)
+	head := `{"type":"system","subtype":"init","model":"anthropic/claude-haiku-4.5","tools":["Write","Agent"]}`
+	for _, c := range []struct {
+		name, stream string
+	}{
+		{"in the result", head + "\n" + `{"type":"result","subtype":"success","is_error":true,"num_turns":1,"result":` + string(quoted) + `}`},
+		{"in a message", head + "\n" + `{"type":"assistant","parent_tool_use_id":null,"message":{"id":"m1","model":"<synthetic>","content":[{"type":"text","text":` + string(quoted) + `}]}}`},
+		{"on a line that is not stream-json", head + "\n" + said},
+	} {
+		got := parseGatewayStream(c.stream).creditRefusal()
+		if got != said {
+			t.Errorf("%s: creditRefusal() = %q, want %q", c.name, got, said)
+		}
+	}
+
+	passing := head + "\n" +
+		`{"type":"assistant","parent_tool_use_id":null,"message":{"id":"m1","model":"anthropic/claude-haiku-4.5","content":[{"type":"text","text":"The Write returned File created; the sub-agent reported a refusal."}]}}` + "\n" +
+		`{"type":"result","subtype":"success","is_error":false,"num_turns":3,"result":"done"}`
+	if got := parseGatewayStream(passing).creditRefusal(); got != "" {
+		t.Errorf("a passing run's creditRefusal() = %q, want none", got)
+	}
+
+	msg := creditFailure("OpenRouter", said)
+	for _, part := range []string{"OpenRouter refused the run for want of credit", said, "operator's", "unset its variable"} {
+		if !strings.Contains(msg, part) {
+			t.Errorf("creditFailure = %q, want it to hold %q", msg, part)
+		}
+	}
+
+	zero, some, limit := 0.0, 0.5, 5.0
+	for _, c := range []struct {
+		info openRouterKeyInfo
+		want bool
+	}{
+		{openRouterKeyInfo{Limit: &limit, LimitRemaining: &zero}, true},
+		{openRouterKeyInfo{Limit: &limit, LimitRemaining: &some}, false},
+		{openRouterKeyInfo{}, false},
+	} {
+		if got := outOfCredit(c.info); got != c.want {
+			t.Errorf("outOfCredit(remaining %s) = %v, want %v", dollars(c.info.LimitRemaining), got, c.want)
+		}
 	}
 }
 
@@ -421,6 +512,10 @@ func TestGatewayOpenRouter(t *testing.T) {
 			before, beforeErr = keyNow(ctx, key)
 			if beforeErr != nil {
 				t.Logf("key before: unread: %v", beforeErr)
+			}
+			// a key with nothing left under its limit gets a 402, so claude is not started
+			if beforeErr == nil && outOfCredit(before) {
+				t.Fatal(creditFailure("OpenRouter", fmt.Sprintf("the key's limit is %s and %s of it remains", dollars(before.Limit), dollars(before.LimitRemaining))))
 			}
 		},
 		after: func(run gatewayRun, _ time.Time) {
@@ -583,6 +678,10 @@ func checkGateway(t *testing.T, claude string, route gatewayRoute) {
 	logGatewayRun(t, run)
 	route.after(run, started)
 
+	// a refusal for credit, alone: what follows from it is no finding of the check
+	if said := run.creditRefusal(); said != "" {
+		t.Fatal(creditFailure(route.name, said))
+	}
 	// the protected Write, through permission_prompt
 	if got, err := os.ReadFile(s.target); err != nil || strings.TrimSpace(string(got)) != want {
 		t.Errorf("%s holds %q (%v), want %q; Claude Code said:\n%s", s.target, got, err, want, claudeSaid(out))
