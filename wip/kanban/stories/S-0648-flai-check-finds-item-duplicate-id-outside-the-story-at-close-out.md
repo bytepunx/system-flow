@@ -6,7 +6,7 @@ title: "flai check finds `item.duplicate-id` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-11-10T05:12:06Z
-updated: 2026-11-10T07:55:51Z
+updated: 2026-11-10T07:57:16Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:17Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T06:36:35Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T09:10:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0636, S-0638, S-0651, S-0654, S-0657 and S-0637."
+  delivery: 2026-11-10T09:12:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0636, S-0637, S-0638, S-0651, S-0654 and S-0652."
   by: flai
-  at: 2026-11-10T07:55:51Z
+  at: 2026-11-10T07:57:16Z
 finalized:
   by: alex
   at: 2026-11-10T07:44:12Z
