@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -184,6 +185,50 @@ func TestApplyForecastsMergesOrRefusesAnotherWritersSave(t *testing.T) {
 	}
 	if s2.Forecast.Delivery != "2026-10-07T11:00:00Z" || !slices.Equal(s2.Tags, []string{"cli"}) {
 		t.Errorf("S-0002: forecast %+v and tags %v, want the batch's forecast and the other writer's tags", s2.Forecast, s2.Tags)
+	}
+}
+
+// forecastsLockHeld reports whether another holder has the checked-write
+// lock, by trying to take it with almost no wait and letting go at once.
+func forecastsLockHeld(t *testing.T, repo *workitem.Repo) bool {
+	t.Helper()
+	unlock, err := filelock.Lock(filepath.Join(repo.CacheDir(), "items-checked.lock"), 20*time.Millisecond)
+	if err != nil {
+		return true
+	}
+	unlock()
+	return false
+}
+
+// I-0328: the replan saved forecasts, checked them, and put back a refused
+// one with no lock, so flai serve's look could read a forecast the check then
+// took out. ApplyForecasts holds the checked-write lock from its save until it
+// has put the refused item back, and lets go when it returns.
+func TestApplyForecastsHoldsTheCheckedWriteLockUntilItPutsARefusedItemBack(t *testing.T) {
+	repo := forecastRepo(t)
+	refusedBefore := itemFile(t, repo, "S-0002")
+	var heldAtCheck bool
+	runItems = func(repo *workitem.Repo, all, items []*workitem.Item, now time.Time) *check.Result {
+		heldAtCheck = forecastsLockHeld(t, repo)
+		return &check.Result{Findings: []check.Finding{{Level: check.Error, Rule: "test.refused", Path: "wip/kanban/stories/S-0002-story-two.md", Message: "refused by the test"}}, Errors: 1}
+	}
+	t.Cleanup(func() { runItems = check.Items })
+	at := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	res, err := ApplyForecasts(repo, nil, moves(), Options{By: "flai", NoCommit: true, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !heldAtCheck {
+		t.Error("the check after the save ran with the checked-write lock free")
+	}
+	if res.Refused["S-0002"] == nil || !slices.Equal(res.Written, []string{"S-0001", "S-0003"}) {
+		t.Fatalf("written %v, refused %v; want S-0002 refused alone", res.Written, res.Refused)
+	}
+	if got := itemFile(t, repo, "S-0002"); string(got) != string(refusedBefore) {
+		t.Errorf("the refused S-0002 was not put back:\n%s\nwant\n%s", got, refusedBefore)
+	}
+	if forecastsLockHeld(t, repo) {
+		t.Error("the checked-write lock is still held after ApplyForecasts returned")
 	}
 }
 

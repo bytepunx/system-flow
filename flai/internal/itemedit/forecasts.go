@@ -51,7 +51,9 @@ var (
 // others written, when its item is missing, archived, or closed, when the
 // edit leaves a valid item not valid, when another writer changed its
 // forecast since the read (ADR-0184), or when the check finds an error on
-// its own file, which puts that item back. It commits nothing.
+// its own file, which puts that item back. It holds the checked-write lock
+// from its save until it keeps or puts back what it saved, and refuses the
+// batch, writing nothing, when it cannot take it. It commits nothing.
 //
 // all is the project's item list, the archive included, as the caller read
 // it and decided the changes from, or nil to read it here. Each edit is made
@@ -121,6 +123,16 @@ func ApplyForecasts(repo *workitem.Repo, all []*workitem.Item, changes []Forecas
 	}
 
 	beforeSave()
+	// From the save until the check keeps the forecasts or the refused ones
+	// are put back, under the lock a reader that must not see a write the
+	// check may yet take out reads under, such as flai serve's look judging
+	// holds (I-0328, ADR-0272). It is taken before the items lock SaveAll and
+	// Restore take inside it.
+	unlock, err := repo.LockCheckedWrites()
+	if err != nil {
+		return nil, fmt.Errorf("replan %d forecasts: take the checked-write lock: %w; nothing was written, so try again once the writer holding it is done", len(edited), err)
+	}
+	defer unlock()
 	saved, errs := repo.SaveAll(edited)
 	for id, err := range errs {
 		res.Refused[id] = err
