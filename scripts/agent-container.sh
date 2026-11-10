@@ -2,6 +2,11 @@
 # Run a story's agent headless in the agent image, started by hand (S-0505, S-0507, S-0670).
 #   scripts/agent-container.sh S-nnnn                  pilot, the image's entrypoint, starts claude
 #   scripts/agent-container.sh S-nnnn -- cmd [arg]...  cmd instead of pilot, in the same mounts
+#   scripts/agent-container.sh --probe S-nnnn [-- cmd [arg]...]  a trial of the image (I-0224)
+# Without --probe the run is the story's agent, agent-S-nnnn, working the live story. With --probe
+# it is probe-S-nnnn in a new session: the start request carries "probe":true, so pilot asks it
+# only to read and report, and starts it without FLAI_STORY; the -- form passes no FLAI_STORY
+# either. The mounts stay the story's, so a probe sees what the story's agent would.
 # Feeds pilot a start request on standard input (ADR-0212): the story, its worktree, the agent's
 # name and session, inner claude-code, the cache folder, and the names of the variables holding the
 # project's HTTP MCP server's URL, token, and Host. pilot writes the MCP file, which names those
@@ -28,7 +33,8 @@
 # FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host
 # FLAI_AGENT_MODEL    the agent's model, such as haiku (default: claude's own)
 # FLAI_AGENT_MAX_BUDGET_USD  the agent's max_budget_usd, such as 0.05, for a trial run
-# FLAI_AGENT_SESSION  the session; a second run with the same one resumes it (default: a new one)
+# FLAI_AGENT_SESSION  the session; a second run with the same one resumes it (default: a new one);
+#                     ignored with --probe, which always starts a new one
 set -eu
 # The installed flai, before env.sh puts this tree's bin/ first on PATH.
 FLAI_BIN="${FLAI_BIN:-$(command -v flai || true)}"
@@ -36,16 +42,22 @@ FLAI_BIN="${FLAI_BIN:-$(command -v flai || true)}"
 IMAGE="${FLAI_AGENT_IMAGE:-$("$ROOT/scripts/agent-image.sh" --tag)}"
 [ "${1:-}" != "--image" ] || { printf '%s\n' "$IMAGE"; exit 0; }
 LOGIN_IN="/run/claude-login"
+USAGE="usage: $0 [--probe] S-nnnn [-- cmd [arg]...]"
+PROBE=""
+if [ "${1:-}" = "--probe" ]; then
+  PROBE=1
+  shift
+fi
 STORY="${1:-}"
 case "$STORY" in
   S-[0-9][0-9][0-9][0-9]) shift ;;
-  *) echo "usage: $0 S-nnnn [-- cmd [arg]...]" >&2; exit 2 ;;
+  *) echo "$USAGE" >&2; exit 2 ;;
 esac
 if [ "${1:-}" = "--" ]; then
   shift
   [ "$#" -gt 0 ] || { echo "nothing to run after --" >&2; exit 2; }
 elif [ "$#" -gt 0 ]; then
-  echo "usage: $0 S-nnnn [-- cmd [arg]...]" >&2; exit 2
+  echo "$USAGE" >&2; exit 2
 fi
 
 # A run in an image not built would make docker pull it, and fail on a local tag (I-0279).
@@ -88,8 +100,19 @@ case "$NETWORK" in
   host) NET_ARGS="--network host" ;;
   *) echo "FLAI_AGENT_NETWORK is bridge or host, not $NETWORK" >&2; exit 2 ;;
 esac
-AGENT="agent-$STORY"
-SESSION="${FLAI_AGENT_SESSION:-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)}"
+NEW_SESSION="$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s)"
+if [ -n "$PROBE" ]; then
+  # A probe never resumes the story's session, and works under a name of its own (I-0224).
+  AGENT="probe-$STORY"
+  SESSION="$NEW_SESSION"
+  PROBE_JSON=',"probe":true'
+  STORY_ENV=""
+else
+  AGENT="agent-$STORY"
+  SESSION="${FLAI_AGENT_SESSION:-$NEW_SESSION}"
+  PROBE_JSON=""
+  STORY_ENV="FLAI_STORY=$STORY"
+fi
 case "$WORKTREE$AGENT_DIR" in
   *[\\\"]*) echo "the worktree or cache path holds a quote or a backslash, which the start request cannot carry" >&2; exit 2 ;;
 esac
@@ -108,8 +131,8 @@ case "$AGENT_JSON" in
   *[\\]*) echo "FLAI_AGENT_MODEL or FLAI_AGENT_MAX_BUDGET_USD holds a backslash" >&2; exit 2 ;;
 esac
 PROJECT="$(sed -n 's/^key: *//p' "$ROOT/system-flow.yaml" | head -n 1)"
-REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session":"%s","Agent":{%s},"inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","mcp_host_env":"FLAI_MCP_HOST","cache":"%s"}' \
-  "$STORY" "$WORKTREE" "$PROJECT" "$AGENT" "$SESSION" "$AGENT_JSON" "$AGENT_DIR")"
+REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session":"%s","Agent":{%s},"inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","mcp_host_env":"FLAI_MCP_HOST","cache":"%s"%s}' \
+  "$STORY" "$WORKTREE" "$PROJECT" "$AGENT" "$SESSION" "$AGENT_JSON" "$AGENT_DIR" "$PROBE_JSON")"
 # docker run -e NAME, with no value, copies NAME from this environment: the token stays out of
 # every argument.
 FLAI_MCP_URL="$URL" FLAI_MCP_TOKEN="$TOKEN" FLAI_MCP_HOST="$HOST_HEADER"
@@ -135,10 +158,12 @@ run() {
     -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e "GIT_CONFIG_VALUE_0=$CACHE_ROOT" \
     "$@"
 }
+[ -z "$PROBE" ] || echo "a probe of $IMAGE as $AGENT, in $STORY's mounts: it works no item and has no FLAI_STORY" >&2
 if [ "$#" -gt 0 ]; then
   echo "running $STORY in $IMAGE on the $NETWORK network: $1" >&2
+  # FLAI_STORY only for the story's agent: with --probe, STORY_ENV is empty and no -e is passed.
   run -e "CLAUDE_CONFIG_DIR=$AGENT_DIR/claude" -e "FLAI_AGENT=$AGENT" -e "FLAI_SESSION=$SESSION" \
-    -e "FLAI_STORY=$STORY" --entrypoint /sbin/tini "$IMAGE" -- "$@"
+    ${STORY_ENV:+-e "$STORY_ENV"} --entrypoint /sbin/tini "$IMAGE" -- "$@"
 else
   echo "running $STORY in $IMAGE on the $NETWORK network: pilot, session $SESSION" >&2
   printf '%s\n' "$REQUEST" | run "$IMAGE"
