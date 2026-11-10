@@ -7,11 +7,11 @@ status: backlog
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:37Z
-updated: 2026-11-10T08:49:37Z
+updated: 2026-11-10T08:55:00Z
 transitions: []
 stream: S-0687
 tags: [flai, mcp, guard]
-touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go]
+touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go]
 after: [T-2932]
 ---
 # T-2934 The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers

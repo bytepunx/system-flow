@@ -3,10 +3,10 @@ id: S-0648
 type: story
 nature: improvement
 title: "flai check finds `item.duplicate-id` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T05:12:06Z
-updated: 2026-11-10T08:43:34Z
+updated: 2026-11-10T08:55:24Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:17Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T08:43:34Z
     by: agent-S-0648
+  - to: done
+    at: 2026-11-10T08:55:24Z
+    by: alex
 tags: [flai, workitem]
 topics: [code, archive, usage]
 touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md, design/system/work-hierarchy.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/summary.md, design/adrs/0277-repo-save-refuses-to-write-an-active-work-item-whose-file-was-archived-since-it.md, design/adrs/README.md]

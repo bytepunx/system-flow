@@ -3,11 +3,11 @@ id: T-2932
 type: task
 nature: remediation
 title: An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
-status: in-progress
+status: done
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:27Z
-updated: 2026-11-10T08:51:02Z
+updated: 2026-11-10T08:55:15Z
 transitions:
   - to: ready
     at: 2026-11-10T08:51:02Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:51:02Z
     by: agent-S-0687
+  - to: done
+    at: 2026-11-10T08:55:15Z
+    by: agent-S-0687
 stream: S-0687
 tags: [flai, adr]
-touches: [design/adrs/0277-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md]
 ---
 # T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
 
