@@ -351,12 +351,18 @@ func TestACancelledRequestStops(t *testing.T) {
 }
 
 // lockedBuffer is a log destination a test reads while the client writes.
+// holdAnswered, when set, holds back each "request answered" line that long
+// before it is written, as a loaded host's scheduler may (I-0324).
 type lockedBuffer struct {
-	mu sync.Mutex
-	b  strings.Builder
+	mu           sync.Mutex
+	b            strings.Builder
+	holdAnswered time.Duration
 }
 
 func (l *lockedBuffer) Write(p []byte) (int, error) {
+	if l.holdAnswered > 0 && strings.Contains(string(p), `"request answered"`) {
+		time.Sleep(l.holdAnswered)
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.b.Write(p)
@@ -368,9 +374,35 @@ func (l *lockedBuffer) String() string {
 	return l.b.String()
 }
 
+// answeredEvent waits for the "request answered" event in logs and returns it.
+// The client logs it after the answer's write (S-0611), so a test that has
+// the answer may look before the line is written.
+func answeredEvent(t *testing.T, logs *lockedBuffer) map[string]any {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		for _, line := range strings.Split(logs.String(), "\n") {
+			if strings.Contains(line, `"request answered"`) {
+				var ev map[string]any
+				if err := json.Unmarshal([]byte(line), &ev); err != nil {
+					t.Fatal(err)
+				}
+				return ev
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no request answered event in %s", logs.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// The answer's event is logged after the answer is sent, so it is read by
+// waiting for it: the log line held back here comes after the dashboard
+// has the answer, as it does under load (I-0324).
 func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
-	var logs lockedBuffer
+	logs := lockedBuffer{holdAnswered: 200 * time.Millisecond}
 	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Version: "test", Slow: time.Nanosecond,
 		Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
 		Methods: map[string]Method{"board.get": func(ctx context.Context, _ Project, _ json.RawMessage) (any, *Error) {
@@ -385,17 +417,7 @@ func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
 	if got := d.ask(conn, "1", "board.get", `{"project":"harbour"}`); got.Error != nil {
 		t.Fatalf("board.get: %+v", got.Error)
 	}
-	var ev map[string]any
-	for _, line := range strings.Split(logs.String(), "\n") {
-		if strings.Contains(line, `"request answered"`) {
-			if err := json.Unmarshal([]byte(line), &ev); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	if ev == nil {
-		t.Fatalf("no request answered event in %s", logs.String())
-	}
+	ev := answeredEvent(t, &logs)
 	phases, _ := ev["phases"].(string)
 	if ev["level"] != "INFO" || ev["transport"] != "channel" || ev["method"] != "board.get" || ev["project"] != "harbour" ||
 		ev["bytes"] != float64(len(`{"board":"ok"}`)) || ev["duration_ms"] == nil || ev["send_ms"] == nil ||
@@ -447,23 +469,7 @@ func TestTheSendTimeCountsTheWaitForTheWriteLock(t *testing.T) {
 			break
 		}
 	}
-	var ev map[string]any
-	deadline := time.Now().Add(3 * time.Second)
-	for ev == nil && time.Now().Before(deadline) {
-		for _, line := range strings.Split(logs.String(), "\n") {
-			if strings.Contains(line, `"request answered"`) {
-				if err := json.Unmarshal([]byte(line), &ev); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-		if ev == nil {
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-	if ev == nil {
-		t.Fatalf("no request answered event in %s", logs.String())
-	}
+	ev := answeredEvent(t, &logs)
 	send, _ := ev["send_ms"].(float64)
 	took, _ := ev["duration_ms"].(float64)
 	if send < float64((held/2).Milliseconds()) || took >= float64((held/2).Milliseconds()) {
