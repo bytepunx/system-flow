@@ -453,43 +453,14 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 	// Every file this test executes is written before t.Parallel: a write
 	// made while a parallel test forks can leave the file's descriptor open in
 	// that child, and executing the file then fails with "text file busy".
-	// The tools scripts/flai.sh and scripts/env.sh need, without go.
-	tools := t.TempDir()
-	for _, name := range []string{"sh", "dirname", "mkdir", "find", "head", "sed"} {
-		p, err := exec.LookPath(name)
-		if err != nil {
-			t.Skipf("%s not found: %v", name, err)
-		}
-		if err := os.Symlink(p, filepath.Join(tools, name)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	// A project with this tree's scripts, an empty flai/, and no bin/.
-	project := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(project, "scripts"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Mkdir(filepath.Join(project, "flai"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range []string{"flai.sh", "env.sh", "flai-build.sh"} {
-		data, err := os.ReadFile(filepath.Join("..", "..", "scripts", name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(project, "scripts", name), data, 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
+	tools := guardTools(t)
+	project := scriptsProject(t)
 	// fake is a folder holding a flai that prints out and exits code, or an
 	// empty folder when code is negative: no flai on PATH.
 	fake := func(code int, out string) string {
 		dir := t.TempDir()
 		if code >= 0 {
-			script := "#!/bin/sh\necho '" + out + "'\nexit " + strconv.Itoa(code) + "\n"
-			if err := os.WriteFile(filepath.Join(dir, "flai"), []byte(script), 0o755); err != nil {
-				t.Fatal(err)
-			}
+			writeFakeFlai(t, filepath.Join(dir, "flai"), code, out)
 		}
 		return dir
 	}
@@ -511,57 +482,197 @@ func TestTheGuardHooksRefuseACallWhenTheGuardCannotStart(t *testing.T) {
 	}
 	none := fake(-1, "")
 	t.Parallel()
-	run := func(command, flaiDir string) (int, string) {
-		t.Helper()
-		sh := exec.Command(filepath.Join(tools, "sh"), "-c", command)
-		sh.Env = []string{
-			"PATH=" + tools + string(os.PathListSeparator) + flaiDir,
-			"HOME=" + t.TempDir(),
-			"CLAUDE_PROJECT_DIR=" + project,
-			"FLAI_STORY=S-0518",
-		}
-		sh.Stdin = strings.NewReader(`{"tool_name":"Bash","tool_input":{"command":"ls"}}`)
-		var errOut strings.Builder
-		sh.Stderr = &errOut
-		code := 0
-		var exit *exec.ExitError
-		if err := sh.Run(); errors.As(err, &exit) {
-			code = exit.ExitCode()
-		} else if err != nil {
-			t.Fatal(err)
-		}
-		return code, errOut.String()
-	}
 	for _, path := range []string{filepath.Join("..", "..", ".claude", "settings.json"), filepath.Join("..", "..", "template", "root", ".claude", "settings.json")} {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var settings struct {
-			Hooks map[string][]struct {
-				Matcher string `json:"matcher"`
-				Hooks   []struct {
-					Command string `json:"command"`
-				} `json:"hooks"`
-			} `json:"hooks"`
-		}
-		if err := json.Unmarshal(data, &settings); err != nil {
-			t.Fatalf("%s: %v", path, err)
-		}
-		for _, h := range settings.Hooks["PreToolUse"] {
+		for _, h := range guardHooks(t, path) {
 			for i, c := range cases {
-				code, errOut := run(h.Hooks[0].Command, fakes[i])
+				code, errOut := runHook(t, tools, fakes[i], project, h.command)
 				if code != c.want || !strings.Contains(errOut, c.err) || (c.want == 2 && c.err == "") {
-					t.Errorf("%s %s: with a guard that exits %d the hook exits %d, stderr %q; want %d and %q", path, h.Matcher, c.guard, code, errOut, c.want, c.err)
+					t.Errorf("%s %s: with a guard that exits %d the hook exits %d, stderr %q; want %d and %q", path, h.matcher, c.guard, code, errOut, c.want, c.err)
 				}
 			}
 		}
 	}
 	// The hook I-0216 found: with no guard to run, it let the call through.
 	old := `out=$("$CLAUDE_PROJECT_DIR"/scripts/flai.sh guard 2>&1); [ $? -eq 2 ] || exit 0; echo "$out" >&2; exit 2`
-	if code, _ := run(old, none); code != 0 {
+	if code, _ := runHook(t, tools, none, project, old); code != 0 {
 		t.Errorf("the old hook exits %d with no guard, want 0, the cause I-0216 records", code)
 	}
+}
+
+// I-0275, ADR-0280: where go is present and the build of bin/flai fails,
+// scripts/flai.sh guard runs the older bin/flai, else the installed flai, and
+// exits 127 with neither, so this repository's guard hooks never pass a call
+// for a failed build, where flai.sh exited 1 with the build and the hooks let
+// the call through. Every other command still fails with the build.
+func TestTheGuardHooksRefuseACallWhenTheBuildFails(t *testing.T) {
+	// Every file this test executes is written before t.Parallel, as in
+	// TestTheGuardHooksRefuseACallWhenTheGuardCannotStart.
+	tools := guardTools(t)
+	writeExecutable(t, filepath.Join(tools, "go"), "#!/bin/sh\necho 'go: the fake build failed' >&2\nexit 1\n")
+	// project has a source newer than bin/flai, so flai.sh builds, and, when
+	// older is set, a bin/flai older than it that refuses every call.
+	project := func(older bool) string {
+		dir := scriptsProject(t)
+		if older {
+			bin := filepath.Join(dir, "bin", "flai")
+			if err := os.Mkdir(filepath.Dir(bin), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			writeFakeFlai(t, bin, 2, "refused by the older bin/flai")
+			hourAgo := time.Now().Add(-time.Hour)
+			if err := os.Chtimes(bin, hourAgo, hourAgo); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.WriteFile(filepath.Join(dir, "flai", "main.go"), []byte("package main\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+	installed := func(code int, out string) string {
+		dir := t.TempDir()
+		writeFakeFlai(t, filepath.Join(dir, "flai"), code, out)
+		return dir
+	}
+	cases := []struct {
+		what    string
+		project string
+		flai    string
+		want    []string
+	}{
+		// I-0275: with no flai to fall back on, the hook let the call through.
+		{"no bin/flai and no installed flai", project(false), t.TempDir(), []string{"flai guard did not run (exit 127)", "go: the fake build failed", "flai.sh: building bin/flai failed and no flai on PATH"}},
+		{"no bin/flai and an installed flai", project(false), installed(2, "refused by the installed flai"), []string{"refused by the installed flai", "go: the fake build failed", "flai.sh: building bin/flai failed; running the installed flai, "}},
+		{"an older bin/flai and an installed flai", project(true), installed(0, "allowed by the installed flai"), []string{"refused by the older bin/flai", "go: the fake build failed", "flai.sh: building bin/flai failed; running bin/flai, older than the sources"}},
+	}
+	other := project(true)
+	otherFlai := installed(0, "the installed flai ran")
+	t.Parallel()
+	for _, h := range guardHooks(t, filepath.Join("..", "..", ".claude", "settings.json")) {
+		for _, c := range cases {
+			code, errOut := runHook(t, tools, c.flai, c.project, h.command)
+			if code != 2 {
+				t.Errorf("%s with %s and a failed build: the hook exits %d, stderr %q; want 2", h.matcher, c.what, code, errOut)
+			}
+			for _, w := range c.want {
+				if !strings.Contains(errOut, w) {
+					t.Errorf("%s with %s and a failed build: stderr %q, want %q", h.matcher, c.what, errOut, w)
+				}
+			}
+		}
+	}
+	code, errOut := runHook(t, tools, otherFlai, other, `"$CLAUDE_PROJECT_DIR"/scripts/flai.sh check`)
+	if code != 1 || !strings.Contains(errOut, "go: the fake build failed") || strings.Contains(errOut, "flai.sh:") || strings.Contains(errOut, "refused by the older bin/flai") || strings.Contains(errOut, "the installed flai ran") {
+		t.Errorf("flai.sh check with a failed build exits %d, stderr %q; want the build's 1 and its output alone", code, errOut)
+	}
+}
+
+// guardTools is a folder of links to the tools scripts/flai.sh, env.sh, and
+// flai-build.sh need, without go.
+func guardTools(t *testing.T) string {
+	t.Helper()
+	tools := t.TempDir()
+	for _, name := range []string{"sh", "dirname", "mkdir", "find", "head", "sed", "mv", "rm"} {
+		p, err := exec.LookPath(name)
+		if err != nil {
+			t.Skipf("%s not found: %v", name, err)
+		}
+		if err := os.Symlink(p, filepath.Join(tools, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return tools
+}
+
+// scriptsProject is a project with this tree's scripts/flai.sh, env.sh, and
+// flai-build.sh, a flai config, so env.sh runs no flai, an empty flai/, and
+// no bin/.
+func scriptsProject(t *testing.T) string {
+	t.Helper()
+	project := t.TempDir()
+	for _, dir := range []string{"scripts", "flai", ".flai-cache"} {
+		if err := os.Mkdir(filepath.Join(project, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(project, ".flai-cache", "config.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"flai.sh", "env.sh", "flai-build.sh"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "scripts", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		writeExecutable(t, filepath.Join(project, "scripts", name), string(data))
+	}
+	return project
+}
+
+// writeFakeFlai writes, at path, a flai that prints out on standard error and
+// exits code.
+func writeFakeFlai(t *testing.T, path string, code int, out string) {
+	t.Helper()
+	writeExecutable(t, path, "#!/bin/sh\necho '"+out+"' >&2\nexit "+strconv.Itoa(code)+"\n")
+}
+
+func writeExecutable(t *testing.T, path, text string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(text), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// guardHook is a PreToolUse hook of a settings file.
+type guardHook struct{ matcher, command string }
+
+// guardHooks reads the PreToolUse hooks of the settings file at path.
+func guardHooks(t *testing.T, path string) []guardHook {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var settings struct {
+		Hooks map[string][]struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	var hooks []guardHook
+	for _, h := range settings.Hooks["PreToolUse"] {
+		hooks = append(hooks, guardHook{h.Matcher, h.Hooks[0].Command})
+	}
+	return hooks
+}
+
+// runHook runs command with sh in a story's agent's session in project, with
+// tools and then flaiDir on PATH and a Bash call on standard input, and
+// returns its exit code and standard error.
+func runHook(t *testing.T, tools, flaiDir, project, command string) (int, string) {
+	t.Helper()
+	sh := exec.Command(filepath.Join(tools, "sh"), "-c", command)
+	sh.Env = []string{
+		"PATH=" + tools + string(os.PathListSeparator) + flaiDir,
+		"HOME=" + t.TempDir(),
+		"CLAUDE_PROJECT_DIR=" + project,
+		"FLAI_STORY=S-0518",
+	}
+	sh.Stdin = strings.NewReader(`{"tool_name":"Bash","tool_input":{"command":"ls"}}`)
+	var errOut strings.Builder
+	sh.Stderr = &errOut
+	code := 0
+	var exit *exec.ExitError
+	if err := sh.Run(); errors.As(err, &exit) {
+		code = exit.ExitCode()
+	} else if err != nil {
+		t.Fatal(err)
+	}
+	return code, errOut.String()
 }
 
 // subAgentHook is a SubagentStart's or SubagentStop's input, as Claude Code
