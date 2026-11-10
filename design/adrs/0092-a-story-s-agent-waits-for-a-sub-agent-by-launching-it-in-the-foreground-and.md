@@ -1,8 +1,8 @@
 ---
 id: ADR-0092
 title: "A story's agent waits for a sub-agent by launching it in the foreground, and flai guard refuses it wait_for_events while a sub-agent of its session runs and no thread on its story is open"
-status: proposed
-date: 2026-10-06
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0060]
