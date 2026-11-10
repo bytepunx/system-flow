@@ -126,6 +126,15 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 			warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, h.Reason))
 		}
 	}
+	// A story moved to ready while a story it names in after: is not done
+	// waits there until that one is accepted; the move is the operator's, so
+	// it warns rather than refuses (ADR-0279). An overlap alone does not warn:
+	// a trial merge may clear it at the next look.
+	if to == Ready && it.Type == Story {
+		if h := r.Holds(opt.Items).Of(it); h != nil && h.Code == HoldAfter {
+			warnings = append(warnings, fmt.Sprintf("%s goes to ready %s; flai serve starts no agent for it until then", it.ID, h.Reason))
+		}
+	}
 	// A task's after: is the story's agent's plan, so it warns too (S-0176).
 	if to == InProgress && it.Type == Task {
 		if p := PlanOf(opt.Items, it.Parent); p != nil {

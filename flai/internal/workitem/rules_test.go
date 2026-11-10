@@ -98,3 +98,76 @@ func TestUncheckedCount(t *testing.T) {
 		}
 	}
 }
+
+// afterWarning is the warning a move to ready gives of an after: hold.
+func afterWarning(warnings []string) string {
+	for _, w := range warnings {
+		if strings.Contains(w, "goes to ready held (after)") {
+			return w
+		}
+	}
+	return ""
+}
+
+// readyCandidate makes S-0002 under E-0001 with after and touches, and moves
+// it to ready with the items as they are, returning the move's warnings.
+func readyCandidate(t *testing.T, r *Repo, after, touches []string) []string {
+	t.Helper()
+	s := mustCreate(t, r, Story, "Waits", "E-0001")
+	s.After, s.Touches = after, touches
+	s.Body = strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] one\n", 1)
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := r.List(false)
+	warnings, err := r.Move(s, Ready, MoveOptions{Now: t0, Items: items})
+	if err != nil {
+		t.Fatalf("a story with after: must not be refused ready: %v", err)
+	}
+	return warnings
+}
+
+// I-0285: a story moved to ready by hand while a story it names in after: was
+// not done sat there for days, and the move said nothing (ADR-0279).
+func TestMoveToReadyWarnsOfAfterHold(t *testing.T) {
+	r := newProject(t)
+	s := storyInProgress(t, r, "- [ ] one\n")
+	s.Touches = []string{"a.go"}
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	got := afterWarning(readyCandidate(t, r, []string{"S-0001"}, []string{"b.go"}))
+	want := "S-0002 goes to ready held (after): waits for S-0001 (in progress); starts when S-0001 is done; flai serve starts no agent for it until then"
+	if got != want {
+		t.Errorf("warning:\n got %q\nwant %q", got, want)
+	}
+}
+
+func TestMoveToReadyAfterADoneStoryDoesNotWarn(t *testing.T) {
+	r := newProject(t)
+	s := storyInProgress(t, r, "- [x] one\n")
+	s.Status = Done
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if w := afterWarning(readyCandidate(t, r, []string{"S-0001"}, []string{"b.go"})); w != "" {
+		t.Errorf("S-0001 is done, yet: %q", w)
+	}
+}
+
+// An overlap alone does not warn on the move to ready: a trial merge may
+// clear it at the next look (ADR-0230), and only the move to in-progress says
+// so.
+func TestMoveToReadyOnOverlapAloneDoesNotWarn(t *testing.T) {
+	r := newProject(t)
+	s := storyInProgress(t, r, "- [ ] one\n")
+	s.Touches = []string{"a.go"}
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	for _, w := range readyCandidate(t, r, nil, []string{"a.go"}) {
+		if strings.Contains(w, "goes to ready") {
+			t.Errorf("an overlap alone warned: %q", w)
+		}
+	}
+}

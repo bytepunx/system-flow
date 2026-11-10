@@ -23,7 +23,9 @@ func newMoveCmd(a *app) *cobra.Command {
 Rules from design/system/workflow.md are enforced: a story needs acceptance
 criteria before ready, and at least one task and no open question in its
 narrative before review; children must be closed before done; cancelling or
-sending review back needs --reason. WIP limit breaches warn.
+sending review back needs --reason. WIP limit breaches warn, and so does a
+story moved to ready while a story it names in after: is not done: it waits
+there until that one is (ADR-0279).
 
 A draft story, one an agent wrote (S-0199), is refused to ready until it is
 finalized: flai edit --no-draft finalizes it, and so does this move with
