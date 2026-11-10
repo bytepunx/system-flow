@@ -6,7 +6,7 @@ title: TestEachRequestIsTimedBeneathTheTransport reads the request answered even
 status: backlog
 owner: alex
 created: 2026-11-10T05:12:08Z
-updated: 2026-11-10T07:00:52Z
+updated: 2026-11-10T07:01:31Z
 transitions: []
 tags: [flai, test]
 topics: [testing]
@@ -31,7 +31,6 @@ usage:
           cache_read: 448083
           cache_write: 68876
           cost: 0.1389
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 36m
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 35m; 4th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637 and S-0648."
   by: flai
   at: 2026-11-10T07:00:52Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:01:31Z
 ---
 # S-0649 TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
 

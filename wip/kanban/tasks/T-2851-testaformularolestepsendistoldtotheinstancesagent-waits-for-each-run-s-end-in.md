@@ -1,19 +1,19 @@
 ---
-id: T-2848
+id: T-2851
 type: task
 nature: remediation
 title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
 status: backlog
 parent: S-0653
 owner: alex
-created: 2026-11-10T07:01:18Z
-updated: 2026-11-10T07:01:18Z
+created: 2026-11-10T07:01:30Z
+updated: 2026-11-10T07:01:30Z
 transitions: []
 stream: S-0653
 tags: [flai, test]
 touches: [flai/internal/serve/role_test.go]
 ---
-# T-2848 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
+# T-2851 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
 
 ## Work
 
@@ -28,3 +28,5 @@ First layer: it waits for no task, and shares no path with the task that fixes t
 - No test in `role_test.go` reads an end event or the activity once after `Ended` without waiting for it.
 - `go test ./internal/serve -run 'Role' -count 10` passes in `flai/`.
 - `flai test flai/internal/serve/role_test.go` passes.
+
+## Notes

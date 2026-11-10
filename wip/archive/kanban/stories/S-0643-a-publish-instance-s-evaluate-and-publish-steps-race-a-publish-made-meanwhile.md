@@ -3,10 +3,10 @@ id: S-0643
 type: story
 nature: improvement
 title: A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
-status: review
+status: done
 owner: alex
 created: 2026-11-09T21:22:33Z
-updated: 2026-11-10T06:57:23Z
+updated: 2026-11-10T07:01:37Z
 transitions:
   - to: ready
     at: 2026-11-10T06:19:55Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T06:57:23Z
     by: agent-S-0643
+  - to: done
+    at: 2026-11-10T07:01:37Z
+    by: alex
 tags: [flai, release, formula]
 topics: [release, formula]
 touches: [flai/cmd/release.go, flai/cmd/release_pending_test.go, flai/internal/release/release.go, flai/internal/release/release_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/issues/I-0320-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md, design/issues/summary.md]

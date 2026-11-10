@@ -6,7 +6,7 @@ title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of 
 status: backlog
 owner: alex
 created: 2026-11-10T05:44:44Z
-updated: 2026-11-10T07:01:10Z
+updated: 2026-11-10T07:01:29Z
 transitions: []
 tags: [cli]
 topics: [testing]
@@ -59,6 +59,8 @@ What is left of I-0309 on main, read from its four instances and the code:
 - `TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp` (`flai/cmd/mcp_http_test.go`) scales both the server's bound and the client's deadline down by 20: the server holds at most 2.25 s and the client gives up at 3 s, a 0.75 s margin that a loaded host eats. Proposed fix: keep the static check that `HTTPLongestWait` is under Claude Code's 60 s, and test the behaviour with a short server bound and a client deadline far above it but far below the 600 s asked, so that only a wait held for the 600 s fails.
 - `TestBacksOffWhenTheDashboardSaysTheProjectIsHeld` (`flai/internal/channel/channel_test.go`), from the fourth instance, tells an ordinary close's retry, at most 40 ms, from the held back-off, at least 300 ms, by a 250 ms bound; under load an ordinary close waited 252 ms. Proposed fix: widen the gap, a longer `HeldBackoff` and a bound on the ordinary close well under its lower half. It is outside flai/cmd, but I-0309 records it, and closing the issue without it would lose the instance.
 
+Tasks, in two layers: T-2839 and T-2842 first, together, since they change one file each and share none; then T-2846, which runs all four tests under load and closes the issue with a reason naming both fixes.
+
 Touches, file by file:
 
 | Touch | Source | Why |
@@ -70,7 +72,7 @@ Touches, file by file:
 
 Left out from `flai touches suggest`: `flai/internal/channel/channel.go` (48%) and `flai/cmd/mcp_http.go` (28%), since both fixes are in the tests and the code's timing is right; the rest are under 20% and not reached. No folder touch.
 
-Forecast: `flai forecast` gave 3m from size 2 with no touches, which is below one close-out run. Set to 1h: two test edits of about 15 minutes, a reproduction under load of about 15 minutes, and a close-out whose integration tier ran 12 to 14 minutes in each instance.
+Forecast: `flai forecast` gave 3m from size 2 with no touches, and 8m from size 6 once the touches were set, at 72 s per unit over 25 done improvement stories. Both are below one close-out run. Set to 1h: two test edits of about 15 minutes, a reproduction under load of about 15 minutes, and a close-out whose integration tier ran 12 to 14 minutes in each instance. flai's delivery follows from that duration and the pull order.
 
 Cost of delay: `flai cod` gives 140 USD a week from 56m per cycle at 150 USD an hour. Set to 70 USD a week: two of the four occurrences (2026-11-08T01:32:32Z and 2026-11-09T08:25:21Z) failed only on the import tests S-0606 has since fixed, so the time still lost is half the inputs'. The inputs stay as flai set them.
 

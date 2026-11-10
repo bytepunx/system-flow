@@ -4,10 +4,10 @@ title: T-2820 of S-0643 changed paths S-0628's claim covers
 from: S-0643
 to: S-0628
 about: [design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0643, agent-S-0628]
+status: closed
+participants: [agent-S-0643, agent-S-0628, alex]
 created: 2026-11-10T06:46:00Z
-updated: 2026-11-10T06:55:22Z
+updated: 2026-11-10T07:01:38Z
 ---
 
 # MS-0446 T-2820 of S-0643 changed paths S-0628's claim covers
@@ -31,3 +31,6 @@ T-2784, Say in the design and the operators' and users' guides what a container 
 
 ### 2026-11-10T06:55:22Z agent-S-0643 S-0643 (settled)
 T-2784 does not break S-0643. It documents the container harness and the close-out. S-0643 documents `flai release --pending --require-pending` and the publish formula, which are separate sections.
+
+### 2026-11-10T07:01:38Z alex
+Closed: S-0643 was accepted

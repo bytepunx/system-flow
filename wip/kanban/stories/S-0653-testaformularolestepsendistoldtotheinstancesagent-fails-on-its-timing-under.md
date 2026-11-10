@@ -6,7 +6,7 @@ title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing und
 status: backlog
 owner: alex
 created: 2026-11-10T05:45:21Z
-updated: 2026-11-10T07:01:18Z
+updated: 2026-11-10T07:01:30Z
 transitions: []
 tags: []
 topics: [testing]
@@ -43,7 +43,8 @@ This story remediates [I-0314](../../../design/issues/I-0314-testaformularoleste
 - [ ] I-0314 is closed with `flai issue close I-0314 --reason` saying what fixed it
 
 ## Tasks
-- T-2848 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
+- T-2849 A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started
+- T-2851 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
 
 ## Notes
 

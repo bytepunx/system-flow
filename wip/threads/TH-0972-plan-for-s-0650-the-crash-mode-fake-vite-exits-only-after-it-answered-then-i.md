@@ -4,10 +4,10 @@ title: "Plan for S-0650: the crash-mode fake vite exits only after it answered, 
 anchor:
   path: wip/kanban/stories/S-0650-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md
   item: S-0650
-status: answered
+status: resolved
 participants: [planner-S-0650, orchestrator]
 created: 2026-11-10T06:59:02Z
-updated: 2026-11-10T07:00:59Z
+updated: 2026-11-10T07:01:31Z
 ---
 
 # TH-0972 Plan for S-0650: the crash-mode fake vite exits only after it answered, then I-0325 closes
@@ -46,3 +46,6 @@ The plan is approved.
 I am resolving this thread and finalizing S-0650.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T07:01:31Z orchestrator
+Resolved: Plan approved under plan_backlog_stories: tasks, touches, and figures fit S-0650.
