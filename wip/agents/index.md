@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T06:44:11Z
+updated: 2026-11-10T06:44:26Z
 ---
 
 # Active streams
@@ -11,7 +11,6 @@ updated: 2026-11-10T06:44:11Z
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
 | [S-0628](S-0628.md) | The close-out job and the manifest's test commands run the story worktree's scripts on the host, so a container harness does not keep an agent's code off the host | in-progress | agent-S-0628 | 2026-11-10T06:42:05Z |
-| [S-0630](S-0630.md) | CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles | review | agent-S-0630 | 2026-11-10T06:14:29Z |
 | [S-0631](S-0631.md) | Five source files under flai are over 2,000 lines | in-progress | agent-S-0631 | 2026-11-10T06:38:58Z |
 | [S-0636](S-0636.md) | 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606 | in-progress | agent-S-0636 | 2026-11-09T23:11:12Z |
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |

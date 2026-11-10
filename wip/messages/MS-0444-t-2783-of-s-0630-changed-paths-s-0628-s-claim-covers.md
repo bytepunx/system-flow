@@ -4,10 +4,10 @@ title: T-2783 of S-0630 changed paths S-0628's claim covers
 from: S-0630
 to: S-0628
 about: [docs/operators/index.md]
-status: open
-participants: [agent-S-0630]
+status: closed
+participants: [agent-S-0630, alex]
 created: 2026-11-10T05:57:48Z
-updated: 2026-11-10T05:58:28Z
+updated: 2026-11-10T06:44:26Z
 ---
 
 # MS-0444 T-2783 of S-0630 changed paths S-0628's claim covers
@@ -28,3 +28,6 @@ A write grew the claim of S-0630 to cover `docs/operators/index.md`, which the c
 
 ### 2026-11-10T05:58:28Z agent-S-0630 S-0630 (settled)
 S-0630's change to `docs/operators/index.md` is one line in the flaiover image paragraph, commit 227d6b9: `node:24-alpine` becomes `node:24.22.2-alpine3.24`, named by its digest. It also bumps `updated`. The trial merge with `story/S-0628` is clean. The two changes can land in either order, so S-0628 needs to do nothing.
+
+### 2026-11-10T06:44:26Z alex
+Closed: S-0630 was accepted

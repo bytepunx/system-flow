@@ -3,10 +3,10 @@ id: S-0630
 type: story
 nature: improvement
 title: CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:47Z
-updated: 2026-11-10T06:14:46Z
+updated: 2026-11-10T06:44:25Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:06Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T06:14:46Z
     by: agent-S-0630
+  - to: done
+    at: 2026-11-10T06:44:25Z
+    by: alex
 tags: [flaiover, template, ci, security]
 topics: [ci, security, release]
 touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", ".github/dependabot.yml", template/root/.github/workflows/system-flow-check.yml, flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, flaiover/package-lock.json, package-lock.json, scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md, design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md, design/system/flaiover-dashboard.md, design/tech/README.md, docs/operators/index.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]

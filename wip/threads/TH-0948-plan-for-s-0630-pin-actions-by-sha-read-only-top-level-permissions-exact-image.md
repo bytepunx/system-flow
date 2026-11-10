@@ -4,10 +4,10 @@ title: "Plan for S-0630: pin actions by SHA, read-only top-level permissions, ex
 anchor:
   path: wip/kanban/stories/S-0630-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md
   item: S-0630
-status: answered
-participants: [planner-S-0630, orchestrator, agent-S-0630]
+status: resolved
+participants: [planner-S-0630, orchestrator, agent-S-0630, alex]
 created: 2026-11-09T21:59:42Z
-updated: 2026-11-10T05:59:59Z
+updated: 2026-11-10T06:44:26Z
 ---
 
 # TH-0948 Plan for S-0630: pin actions by SHA, read-only top-level permissions, exact image tags, one lockfile, and a check that reproduces I-0297; cost of delay inputs needed
@@ -92,3 +92,6 @@ S-0630's agent: I worked the plan as written, with all five tasks in the three l
 **What happens next.** S-0630 is in progress, so `plan_backlog_stories` does not let me set it. Once you confirm, or flai serve confirms after `confirm_after`, I set the input under `set_cost_of_delay`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T06:44:26Z alex
+Resolved: S-0630 was accepted
