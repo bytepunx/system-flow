@@ -222,7 +222,10 @@ const PRIMARY = { colorSpace: 'srgb', components: [0.2, 0.4, 0.6], hex: '#336699
 const MONO = ['Fira Code', 'monospace'];
 const CANNOT_SAVE = 'This flai cannot save the token file yet; upgrade flai on the host.';
 
-describe('editing the design system on the design page (S-0383)', () => {
+// Every test here mounts the whole page on flai's golden token set and renders its editors: up to
+// 3.2 s at a load of 25 to 60, nearly all in the page's own render, not the settles' timer turns,
+// so a load of 110 took one past vitest's 5 s default (I-0330).
+describe('editing the design system on the design page (S-0383)', { timeout: 15_000 }, () => {
 	let c: ReturnType<typeof mount> | undefined;
 	let design: DesignSystem;
 	const readRaw = () => answer({ path: TOKENS, content: RAW, hash: 'h1' });
