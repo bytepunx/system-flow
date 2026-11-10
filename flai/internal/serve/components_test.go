@@ -45,17 +45,27 @@ func TestHelperComponentsVite(t *testing.T) {
 	if i := slices.Index(args, "--port"); i >= 0 && i+1 < len(args) {
 		port = args[i+1]
 	}
-	if mode == "crash-later" {
-		go func() {
-			time.Sleep(300 * time.Millisecond)
-			fmt.Fprintln(os.Stderr, "crashed")
-			os.Exit(2)
-		}()
-	}
+	// crash-later crashes 300ms after it first answers, so that flai's probe
+	// has seen it answer however slowly a loaded host starts it (I-0331).
+	var crash sync.Once
 	mux := http.NewServeMux()
 	mux.HandleFunc("/__flai/components/", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, "harness")
+		if mode == "crash-later" {
+			crash.Do(func() {
+				go func() {
+					time.Sleep(300 * time.Millisecond)
+					fmt.Fprintln(os.Stderr, "crashed")
+					os.Exit(2)
+				}()
+			})
+		}
 	})
+	// FLAI_SERVE_FAKE_VITE_DELAY holds the fake back from listening, as a
+	// loaded host is slow to start it.
+	if d, err := time.ParseDuration(os.Getenv("FLAI_SERVE_FAKE_VITE_DELAY")); err == nil {
+		time.Sleep(d)
+	}
 	err := http.ListenAndServe("127.0.0.1:"+port, mux)
 	fmt.Fprintln(os.Stderr, "cannot serve:", err)
 	os.Exit(1)
@@ -285,8 +295,12 @@ func TestRunStopsIdleServersAndEveryServerWhenFlaiServeStops(t *testing.T) {
 	}
 }
 
+// I-0331: under host load the fake crashed before flai's probe saw it
+// answer, and Start failed. A listen delay longer than the old crash's 300ms
+// makes that happen every time.
 func TestADevServerThatExitsOnItsOwnIsForgottenWithItsError(t *testing.T) {
 	root, subs, _ := fakeSubProject(t, "crash-later", "ui")
+	t.Setenv("FLAI_SERVE_FAKE_VITE_DELAY", "500ms")
 	c := supervisor(t, &clock{at: time.Now()}, time.Hour)
 	s, err := c.Start(context.Background(), root, "Shipyard", subs[0], "", "")
 	if err != nil {

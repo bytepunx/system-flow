@@ -76,19 +76,25 @@ func runFakeVite(mode string) {
 		_ = os.WriteFile(filepath.Join(os.Getenv("FLAI_FAKE_VITE_DIR"), "child"), []byte(strconv.Itoa(child.Process.Pid)), 0o600)
 	case "ignore-term":
 		signal.Ignore(syscall.SIGTERM)
-	case "crash-later":
-		go func() {
-			time.Sleep(300 * time.Millisecond)
-			fmt.Fprintln(os.Stderr, "crashed")
-			os.Exit(2)
-		}()
 	case "not-found":
 		status = http.StatusNotFound
 	}
+	// crash-later crashes 300ms after it first answers, so that flai's probe
+	// has seen it answer however slowly a loaded host starts it (I-0331).
+	var crash sync.Once
 	mux := http.NewServeMux()
 	mux.HandleFunc("/__flai/components/", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(status)
 		_, _ = io.WriteString(w, "harness")
+		if mode == "crash-later" {
+			crash.Do(func() {
+				go func() {
+					time.Sleep(300 * time.Millisecond)
+					fmt.Fprintln(os.Stderr, "crashed")
+					os.Exit(2)
+				}()
+			})
+		}
 	})
 	fmt.Println("VITE ready")
 	err := http.ListenAndServe("127.0.0.1:"+port, mux)

@@ -3,10 +3,10 @@ id: I-0323
 title: "flai check finds `item.duplicate-id` outside the story at close-out"
 class: efficiency
 status: open
-count: 24
+count: 25
 first_reported: 2026-11-09T21:55:10Z
-last_reported: 2026-11-10T07:58:02Z
-updated: 2026-11-10T07:58:02Z
+last_reported: 2026-11-10T08:10:33Z
+updated: 2026-11-10T08:10:33Z
 ---
 
 # I-0323 flai check finds `item.duplicate-id` outside the story at close-out
@@ -148,6 +148,11 @@ flai check found outside the story:
 
 ### 2026-11-10T07:58:02Z
 Story: S-0651.
+flai check found outside the story:
+`wip/archive/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md`: T-2760 is also defined in /home/alex/git/bytepunx/system-flow/wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md
+
+### 2026-11-10T08:10:33Z
+Story: S-0652.
 flai check found outside the story:
 `wip/archive/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md`: T-2760 is also defined in /home/alex/git/bytepunx/system-flow/wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md
 
