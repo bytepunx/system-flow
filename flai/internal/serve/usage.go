@@ -192,24 +192,18 @@ func Measure(d Dir, root, key, story string, providers map[string]manifest.Provi
 		return out, nil
 	}
 	put := func(id string, u *usage.Usage) error {
-		// read again just before writing: an agent may have changed it
-		fresh, err := repo.Get(id)
+		wrote, err := saveUsage(repo, id, u)
+		if errors.Is(err, workitem.ErrItemMoved) {
+			// archived since it was read, as flai accept does: write it
+			// where it now is, rather than lose what it spent (I-0323)
+			wrote, err = saveUsage(repo, id, u)
+		}
 		if err != nil {
 			return err
 		}
-		if u == nil {
-			return nil
+		if wrote {
+			out.Changed = append(out.Changed, id)
 		}
-		// what strategic agents spent on it is no agent's: keep it (ADR-0083)
-		u = usage.WithStrategic(u, fresh.Usage)
-		if fresh.Usage != nil && usage.Same(fresh.Usage, u) {
-			return nil
-		}
-		fresh.Usage = u
-		if err := repo.Save(fresh); err != nil {
-			return err
-		}
-		out.Changed = append(out.Changed, id)
 		return nil
 	}
 	ids := make([]string, 0, len(out.Tasks))
@@ -232,6 +226,37 @@ func Measure(d Dir, root, key, story string, providers map[string]manifest.Provi
 	up, err := repo.RollUp(it)
 	out.Changed = append(out.Changed, up...)
 	return out, err
+}
+
+// beforeUsageSave is called by saveUsage between its read of an item and its
+// save; nil but in tests, which archive the item there.
+var beforeUsageSave func(id string)
+
+// saveUsage writes u as the usage of item id in repo, read again just before
+// writing, since an agent may have changed it, and says whether it wrote:
+// not for no usage, nor for the usage the item has. What strategic agents
+// spent on the item is no agent's, and is kept (ADR-0083). An item archived
+// since it was read is refused with workitem.ErrItemMoved.
+func saveUsage(repo *workitem.Repo, id string, u *usage.Usage) (bool, error) {
+	fresh, err := repo.Get(id)
+	if err != nil {
+		return false, err
+	}
+	if u == nil {
+		return false, nil
+	}
+	u = usage.WithStrategic(u, fresh.Usage)
+	if fresh.Usage != nil && usage.Same(fresh.Usage, u) {
+		return false, nil
+	}
+	fresh.Usage = u
+	if beforeUsageSave != nil {
+		beforeUsageSave(id)
+	}
+	if err := repo.Save(fresh); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // inProgress are the intervals an item was in progress, the last open when

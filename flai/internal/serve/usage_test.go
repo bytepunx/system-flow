@@ -161,6 +161,64 @@ func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
 	}
 }
 
+// I-0323: a task archived, as flai accept archives it, between Measure's read
+// of it and its save gets what it spent written into its archived file, and
+// no copy of it is made again where it was.
+func TestMeasureWritesATaskArchivedSinceItWasReadWhereItNowIs(t *testing.T) {
+	lab := newAgentLab(t)
+	story := lab.backlog("Accepted", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	task := lab.taskWorked(story, "worked", t0.Add(time.Minute), t0.Add(5*time.Minute))
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	_ = os.MkdirAll(logs, 0o700)
+	if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(streamCall("s", "m0", t0.Add(2*time.Minute), 1000)+"\n"+streamResult("s", 1000, 1.0)+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	archived := false
+	beforeUsageSave = func(id string) {
+		if id != task || archived {
+			return
+		}
+		archived = true
+		it, err := lab.repo.Get(task)
+		if err != nil {
+			t.Fatal(err)
+		}
+		plan, err := lab.repo.PlanArchive([]*workitem.Item{it}, []string{task})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := lab.repo.Archive(plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { beforeUsageSave = nil })
+
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
+	if err != nil {
+		t.Fatalf("measure: %v", err)
+	}
+	if !archived {
+		t.Fatal("the task was never about to be saved, so it was not archived in between")
+	}
+	if !slices.Contains(m.Changed, task) {
+		t.Errorf("changed = %v, want %s among them", m.Changed, task)
+	}
+	for dir, want := range map[string]int{lab.repo.ItemDir(workitem.Task, false): 0, lab.repo.ItemDir(workitem.Task, true): 1} {
+		files, _ := filepath.Glob(filepath.Join(dir, task+"-*.md"))
+		if len(files) != want {
+			t.Errorf("%s holds %v, want %d file of %s", dir, files, want, task)
+		}
+	}
+	it, err := lab.repo.Get(task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !it.Archived || it.Usage == nil || it.Usage.Empty() || it.Usage.Source != usage.SourceLog {
+		t.Errorf("%s is archived %v with usage %+v, want archived with what the log measured", task, it.Archived, it.Usage)
+	}
+}
+
 // ADR-0130: the logs of a story whose agent ran the operator's command are
 // read by the command's reader, which reads nothing, whatever they hold: the
 // story whose agent names no harness, the one that names it, and the one
