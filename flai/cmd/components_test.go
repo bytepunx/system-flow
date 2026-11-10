@@ -468,9 +468,12 @@ func TestComponentsConfigRefuses(t *testing.T) {
 // TestHelperComponentsVite is the fake vite flai components serve's tests
 // start: the test binary run again by the script fakeComponentsVite writes,
 // with FLAI_FAKE_COMPONENTS_VITE naming what it does: serve answers 200 at
-// the harness's path on the --port it is given, and crash does so and exits
-// soon after. It writes its pid and its arguments, one per line, into
-// FLAI_FAKE_COMPONENTS_VITE_DIR first. Run as a test, it does nothing.
+// the harness's path on the --port it is given, and crash does so once and
+// then exits 2, so that it crashes only after flai has seen it answer
+// (I-0325). It writes its pid and its arguments, one per line, into
+// FLAI_FAKE_COMPONENTS_VITE_DIR first, and sleeps
+// FLAI_FAKE_COMPONENTS_VITE_DELAY, a Go duration, before it listens, as a
+// vite slow to start under load would. Run as a test, it does nothing.
 func TestHelperComponentsVite(t *testing.T) {
 	t.Parallel()
 	mode := os.Getenv("FLAI_FAKE_COMPONENTS_VITE")
@@ -488,16 +491,24 @@ func TestHelperComponentsVite(t *testing.T) {
 	if i := slices.Index(args, "--port"); i >= 0 && i+1 < len(args) {
 		port = args[i+1]
 	}
+	answered := make(chan struct{})
+	var once sync.Once
 	if mode == "crash" {
 		go func() {
-			time.Sleep(300 * time.Millisecond)
+			<-answered
+			// Long enough for the answer to reach flai before the exit.
+			time.Sleep(100 * time.Millisecond)
 			fmt.Fprintln(os.Stderr, "the fake vite crashed")
 			os.Exit(2)
 		}()
 	}
+	if d, err := time.ParseDuration(os.Getenv("FLAI_FAKE_COMPONENTS_VITE_DELAY")); err == nil {
+		time.Sleep(d)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(components.HarnessPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, "harness")
+		once.Do(func() { close(answered) })
 	})
 	fmt.Println("VITE ready")
 	err := http.ListenAndServe("127.0.0.1:"+port, mux)
@@ -740,6 +751,23 @@ func TestComponentsServeProjectJSON(t *testing.T) {
 func TestComponentsServeEndsWhenViteExits(t *testing.T) {
 	root := oneSvelteFixture(t)
 	fakeComponentsVite(t, root, "ui", "crash")
+	assertServeEndsWithVitesExit(t, root)
+}
+
+// I-0325: a vite slow to start, as under load, still ends the command with
+// its exit after it answered, not with an exit before it answered. With the
+// fake's old 300 ms crash timer, a start this slow failed on every run.
+func TestComponentsServeEndsWhenASlowViteExits(t *testing.T) {
+	root := oneSvelteFixture(t)
+	fakeComponentsVite(t, root, "ui", "crash")
+	t.Setenv("FLAI_FAKE_COMPONENTS_VITE_DELAY", "600ms")
+	assertServeEndsWithVitesExit(t, root)
+}
+
+// assertServeEndsWithVitesExit runs flai components serve in root, whose
+// fake vite crashes, and checks it ends with vite's exit and its last lines.
+func assertServeEndsWithVitesExit(t *testing.T, root string) {
+	t.Helper()
 	s := serveComponentsIn(t, root, "components", "serve")
 	select {
 	case err := <-s.done:
