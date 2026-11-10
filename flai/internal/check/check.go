@@ -82,15 +82,21 @@ type checker struct {
 	now   time.Time
 	items []*workitem.Item
 	byID  map[string]*workitem.Item
-	res   *Result
-	vocab map[string]bool // topics a story can have (ADR-0047)
+	// children are each item's children by parent ID, in items' order, as
+	// workitem.Children gives them; indexItems fills it, and with it nil
+	// childrenOf scans items (S-0677).
+	children map[string][]*workitem.Item
+	res      *Result
+	vocab    map[string]bool // topics a story can have (ADR-0047)
 	// write narrows the rules that read files to what a work item write
 	// touches (RunItemWrite); nil runs them over the whole repository.
 	write *writeScope
 }
 
-// rule is one of the rules Run runs; first marks workItems, which fills the
-// checker's byID that the rules after it read, so it runs before them, alone.
+// rule is one of the rules Run runs; first marks indexItems, which fills the
+// checker's byID and children that the rules after it read, so it runs before
+// them, alone. The per-item rules of workItems, oneItem, then run on the pool
+// in chunks of items, merged at first's place (S-0677).
 type rule struct {
 	run   func(*checker)
 	first bool
@@ -102,7 +108,7 @@ type rule struct {
 var sequence = []rule{
 	{run: (*checker).layout},
 	{run: (*checker).instructions},
-	{run: (*checker).workItems, first: true},
+	{run: (*checker).indexItems, first: true},
 	{run: (*checker).narratives},
 	{run: (*checker).activities},
 	{run: (*checker).overlap},
@@ -131,52 +137,87 @@ var sequence = []rule{
 	{run: (*checker).conflictMarkers},
 }
 
-// Run executes every rule against the repo: workItems first, then the rest
-// at once on at most GOMAXPROCS workers, each into a Result of its own, merged
-// in sequence's order (S-0601). The rules only read, but for what each adds
-// to its own Result; the topic vocabulary they share is worked out before.
+// Run executes every rule against the repo: indexItems first and alone, then
+// the rest at once on at most GOMAXPROCS workers, each into a Result of its
+// own, merged in sequence's order (S-0601). workItems' per-item rules run on
+// the same workers in chunks of itemChunk items, merged in item order at
+// indexItems' place, so the findings and counts are those of workItems run
+// whole (S-0677). The rules only read, but for what each adds to its own
+// Result; the topic vocabulary they share is worked out before.
 func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
-	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, res: &Result{Items: len(items)}}
+	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, children: map[string][]*workitem.Item{}, res: &Result{Items: len(items)}}
 	c.vocab = Vocabulary(repo, items)
-	results := make([]*Result, len(sequence))
+	// slots holds each rule's Results in merge order: one for a rule, and for
+	// the first the index's then one per chunk of items.
+	type job struct {
+		slot, part int
+		run        func(*checker)
+	}
+	slots := make([][]*Result, len(sequence))
+	var jobs []job
 	for i, r := range sequence {
-		if r.first {
-			results[i] = c.runRule(r.run)
+		if !r.first {
+			slots[i] = make([]*Result, 1)
+			jobs = append(jobs, job{slot: i, run: r.run})
+			continue
+		}
+		slots[i] = []*Result{c.runRule(r.run)}
+		for _, chunk := range chunks(c.items, itemChunk) {
+			slots[i] = append(slots[i], nil)
+			jobs = append(jobs, job{slot: i, part: len(slots[i]) - 1, run: func(c *checker) { c.oneItems(chunk) }})
 		}
 	}
-	next := make(chan int)
+	next := make(chan job)
 	var wg sync.WaitGroup
-	for range min(runtime.GOMAXPROCS(0), len(sequence)) {
+	for range min(runtime.GOMAXPROCS(0), len(jobs)) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := range next {
-				results[i] = c.runRule(sequence[i].run)
+			for j := range next {
+				slots[j.slot][j.part] = c.runRule(j.run)
 			}
 		}()
 	}
-	for i, r := range sequence {
-		if !r.first {
-			next <- i
-		}
+	for _, j := range jobs {
+		next <- j
 	}
 	close(next)
 	wg.Wait()
-	for _, r := range results {
-		c.res.absorb(r)
+	for _, rs := range slots {
+		for _, r := range rs {
+			c.res.absorb(r)
+		}
 	}
 	sortFindings(c.res.Findings)
 	return c.res, nil
 }
 
+// itemChunk is how many items one job of Run's per-item rules checks: small
+// enough that the chunks spread over the workers beside the slower rules.
+var itemChunk = 128
+
+// chunks cuts items into runs of at most n, in order.
+func chunks(items []*workitem.Item, n int) [][]*workitem.Item {
+	var out [][]*workitem.Item
+	for len(items) > n {
+		out = append(out, items[:n:n])
+		items = items[n:]
+	}
+	if len(items) > 0 {
+		out = append(out, items)
+	}
+	return out
+}
+
 // runRule runs one rule on a copy of c with a Result of its own, so that what
 // add, advise, and the rules that set Stories write by the last finding's
 // index stays in that rule's findings, and returns that Result. The copy
-// shares c's items, byID, and vocab, which no rule writes.
+// shares c's items, byID, children, and vocab, which no rule but indexItems
+// writes.
 func (c *checker) runRule(run func(*checker)) *Result {
 	rc := *c
 	rc.res = &Result{}

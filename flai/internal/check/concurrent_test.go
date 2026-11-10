@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -155,17 +156,102 @@ func TestRunAtOnceMatchesTheRulesOneAfterAnother(t *testing.T) {
 		t.Fatalf("Run runs %d rules, the old order %d", len(sequence), len(oldOrder))
 	}
 	for i := range sequence {
-		if reflect.ValueOf(sequence[i].run).Pointer() != reflect.ValueOf(oldOrder[i].run).Pointer() {
-			t.Errorf("rule %d of Run is not %s", i, oldOrder[i].name)
+		name, run := oldOrder[i].name, oldOrder[i].run
+		if name == "workItems" {
+			// Run runs workItems as indexItems alone, then oneItem in chunks (S-0677)
+			run = (*checker).indexItems
+			if !sequence[i].first {
+				t.Errorf("rule %d of Run, indexItems, is not marked first", i)
+			}
+		}
+		if reflect.ValueOf(sequence[i].run).Pointer() != reflect.ValueOf(run).Pointer() {
+			t.Errorf("rule %d of Run is not %s", i, name)
 		}
 	}
-	for range 5 {
-		got, err := Run(repo, now)
-		if err != nil {
-			t.Fatal(err)
+	// S-0677: chunks of one item each, so that the per-item findings come from
+	// more than one chunk and merge in item order.
+	itemsWithFindings := map[string]bool{}
+	for _, f := range want.Findings {
+		if strings.HasPrefix(f.Rule, "item.") || strings.HasPrefix(f.Rule, "story.") {
+			itemsWithFindings[f.Path] = true
 		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("Run differs from the rules one after another:\n got %+v\nwant %+v", got, want)
+	}
+	if len(itemsWithFindings) < 2 {
+		t.Fatalf("the fixture gives per-item findings on %d files; the chunks need two or more", len(itemsWithFindings))
+	}
+	for _, size := range []int{1, 2, itemChunk} {
+		setItemChunk(t, size)
+		for range 5 {
+			got, err := Run(repo, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("Run with chunks of %d items differs from the rules one after another:\n got %+v\nwant %+v", size, got, want)
+			}
 		}
+	}
+}
+
+// setItemChunk sets itemChunk to n for the test.
+func setItemChunk(t *testing.T, n int) {
+	t.Helper()
+	old := itemChunk
+	itemChunk = n
+	t.Cleanup(func() { itemChunk = old })
+}
+
+// S-0677: indexItems' children index gives each item's children as
+// workitem.Children does, in the same order, over a project with stories,
+// tasks, and a duplicate ID.
+func TestChildrenIndexMatchesChildren(t *testing.T) {
+	repo := everyRuleProject(t)
+	items, err := repo.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, res: &Result{}}
+	c.indexItems()
+	parents := 0
+	for _, it := range items {
+		want := workitem.Children(items, it.ID)
+		if len(want) > 0 {
+			parents++
+		}
+		if got := c.childrenOf(it.ID); !slices.Equal(got, want) {
+			t.Errorf("children of %s: got %d items, want %d, in workitem.Children's order", it.ID, len(got), len(want))
+		}
+	}
+	if parents < 2 {
+		t.Errorf("the fixture has %d items with children; the test needs two or more", parents)
+	}
+	if got, want := (&checker{items: items}).childrenOf("E-001"), workitem.Children(items, "E-001"); !slices.Equal(got, want) {
+		t.Errorf("childrenOf with no index differs from workitem.Children")
+	}
+}
+
+func TestChunksCutItemsInOrder(t *testing.T) {
+	var items []*workitem.Item
+	for i := range 5 {
+		items = append(items, &workitem.Item{ID: string(rune('a' + i))})
+	}
+	for _, n := range []int{1, 2, 5, 9} {
+		var joined []*workitem.Item
+		cs := chunks(items, n)
+		for _, ch := range cs {
+			if len(ch) == 0 || len(ch) > n {
+				t.Errorf("chunks of %d: a chunk of %d", n, len(ch))
+			}
+			joined = append(joined, ch...)
+		}
+		if !slices.Equal(joined, items) {
+			t.Errorf("chunks of %d do not join back to the items in order", n)
+		}
+		if want := (len(items) + n - 1) / n; len(cs) != want {
+			t.Errorf("chunks of %d: %d chunks, want %d", n, len(cs), want)
+		}
+	}
+	if len(chunks(nil, 3)) != 0 {
+		t.Error("chunks of no items should be none")
 	}
 }

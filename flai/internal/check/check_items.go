@@ -14,8 +14,20 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
+// workItems runs the work-item rules: indexItems, then oneItem on each item,
+// or on a write's items. Run runs the two apart, oneItem on its pool (S-0677).
 func (c *checker) workItems() {
+	c.indexItems()
+	c.oneItems(c.items)
+}
+
+// indexItems reports duplicate IDs, fills byID and the children index, and
+// picks a write's items: what the rules after it read.
+func (c *checker) indexItems() {
 	seen := map[string]string{}
+	if c.children == nil {
+		c.children = map[string][]*workitem.Item{}
+	}
 	for _, it := range c.items {
 		if prev, dup := seen[it.ID]; dup {
 			c.add(Error, "item.duplicate-id", it.Path, keyLine(it.Path, "id"), "%s is also defined in %s", it.ID, prev)
@@ -23,15 +35,30 @@ func (c *checker) workItems() {
 			seen[it.ID] = it.Path
 			c.byID[it.ID] = it
 		}
+		c.children[it.Parent] = append(c.children[it.Parent], it)
 	}
 	if c.write != nil {
 		c.write.pick(c)
 	}
-	for _, it := range c.items {
+}
+
+// oneItems runs oneItem on each of items a write checks: every one in a
+// whole run.
+func (c *checker) oneItems(items []*workitem.Item) {
+	for _, it := range items {
 		if c.write == nil || c.write.items[it.ID] {
 			c.oneItem(it)
 		}
 	}
+}
+
+// childrenOf is workitem.Children(c.items, id), from the index once
+// indexItems has built it.
+func (c *checker) childrenOf(id string) []*workitem.Item {
+	if c.children == nil {
+		return workitem.Children(c.items, id)
+	}
+	return c.children[id]
 }
 
 func (c *checker) oneItem(it *workitem.Item) {
@@ -78,7 +105,7 @@ func (c *checker) oneItem(it *workitem.Item) {
 		c.add(Warning, "item.archive", p, keyLine(p, "status"), "%s is %s; run flai archive", it.ID, it.Status)
 	}
 	c.history(it)
-	children := workitem.Children(c.items, it.ID)
+	children := c.childrenOf(it.ID)
 	// Tasks are written by the agent that pulls the story, once it is in
 	// progress, and are required from review onwards (ADR-0021).
 	if it.Type == workitem.Story && (it.Status == workitem.Review || it.Status == workitem.Done) && len(children) == 0 {
