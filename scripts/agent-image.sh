@@ -49,10 +49,12 @@ build_layer() {
   golangci="$(pinned GOLANGCI_LINT_VERSION)"
   shellcheck="$(pinned SHELLCHECK_VERSION)"
   pnpm="$(pinned PNPM_VERSION)"
+  goreleaser="$(pinned GORELEASER_VERSION)"
   echo "building $tag from $layer over $HARNESS"
   docker build -f "$layer" -t "$tag" --build-arg "BASE=$HARNESS" \
     --build-arg "GO_VERSION=$go_version" --build-arg "GOLANGCI_LINT_VERSION=$golangci" \
-    --build-arg "SHELLCHECK_VERSION=$shellcheck" --build-arg "PNPM_VERSION=$pnpm" .
+    --build-arg "SHELLCHECK_VERSION=$shellcheck" --build-arg "PNPM_VERSION=$pnpm" \
+    --build-arg "GORELEASER_VERSION=$goreleaser" .
   echo "built $tag"
 }
 
