@@ -6,7 +6,7 @@ title: Stories that each add a section at one spot in a shared design document c
 status: ready
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T07:44:15Z
+updated: 2026-11-10T07:55:51Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:15Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-09T22:08:49Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T10:01:00Z
-  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0649, S-0650, S-0655, S-0651, S-0653, S-0654, S-0657 and S-0241."
+  delivery: 2026-11-10T10:00:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 5, behind S-0636, S-0638, S-0651, S-0654 and S-0657."
   by: flai
-  at: 2026-11-10T07:12:18Z
+  at: 2026-11-10T07:55:51Z
 finalized:
   by: alex
   at: 2026-11-10T07:44:10Z

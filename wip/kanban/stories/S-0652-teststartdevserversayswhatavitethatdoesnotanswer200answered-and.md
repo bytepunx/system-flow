@@ -6,7 +6,7 @@ title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOpe
 status: ready
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T07:44:19Z
+updated: 2026-11-10T07:55:51Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:19Z
@@ -45,10 +45,10 @@ cost_of_delay:
   at: 2026-11-10T07:00:40Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T09:35:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0649, S-0650, S-0655, S-0651, S-0653, S-0654, S-0657, S-0241, S-0637 and S-0648."
+  delivery: 2026-11-10T08:59:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0636, S-0638, S-0651, S-0654, S-0657, S-0637 and S-0648."
   by: flai
-  at: 2026-11-10T07:12:18Z
+  at: 2026-11-10T07:55:51Z
 finalized:
   by: orchestrator
   at: 2026-11-10T07:08:12Z
