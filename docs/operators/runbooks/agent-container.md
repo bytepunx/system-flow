@@ -52,7 +52,7 @@ The script takes no prompt. pilot, the image's entrypoint, builds it from the st
 | Form | Agent name | Session | `FLAI_STORY` | Prompt |
 |------|------------|---------|--------------|--------|
 | `S-nnnn` | `agent-S-nnnn` | `FLAI_AGENT_SESSION`, or a new one | `S-nnnn` | the story's agent's: it works the live story |
-| `--probe S-nnnn` | `probe-S-nnnn` | always a new one | none | read and report: it calls flai's read tools, runs `flai --version`, `git status`, and `git log -1`, reports one line per check, and ends |
+| `--probe S-nnnn` | `probe-S-nnnn` | always a new one | none | read and report: it calls flai's read tools, runs `flai version`, `git status`, and `git log -1`, reports one line per check, and ends |
 
 A run without `--probe` is the story's agent. It moves the story's tasks, commits through `task_done`, and writes the narrative, as `flai serve` would. Use `--probe` to try an image: its agent works no item and never calls a writing tool, so the live story is left as it was ([I-0224](../../../design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md), S-0682). The script says on standard error that the run is a probe. The mounts are the story's in both forms, so a probe sees what the story's agent would.
 

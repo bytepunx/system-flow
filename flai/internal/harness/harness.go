@@ -620,7 +620,7 @@ func probe(r Request) string {
 	}
 	return fmt.Sprintf(`You are %[1]s, started by hand as a trial of the agent image, not as any story's agent.%[2]s Do no work on any item: start, move, create, or edit none, and write to no thread, narrative, or file.
 
-Check only this. Call the flai MCP tools that read, each once: inbox, board, item_get on an item the board lists, doc_get on design/conventions/README.md, and doc_search for a word in it. Then run flai --version, git status, and git log -1 in your working directory. Never call the flai MCP tools that write: story_start, stream_state, task_done, item_new, item_edit, item_move, thread_open, thread_reply, or verify.
+Check only this. Call the flai MCP tools that read, each once: inbox, board, item_get on an item the board lists, doc_get on design/conventions/README.md, and doc_search for a word in it. Then run flai version, git status, and git log -1 in your working directory. Never call the flai MCP tools that write: story_start, stream_state, task_done, item_new, item_edit, item_move, thread_open, thread_reply, or verify.
 
 Report one line per check: what you called or ran, and what you saw, or the error it gave. Then end.`, r.Name, story)
 }

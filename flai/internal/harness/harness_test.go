@@ -270,7 +270,7 @@ func TestAProbeOnlyReadsAndReports(t *testing.T) {
 		"You run in the mounts of story S-0104, but S-0104 is not yours to work",
 		"Do no work on any item",
 		"inbox", "board", "item_get", "doc_get", "doc_search",
-		"flai --version", "git status", "git log -1",
+		"flai version", "git status", "git log -1",
 		"Report one line per check", "Then end.",
 	} {
 		if !strings.Contains(p, want) {
