@@ -3,10 +3,10 @@ id: S-0632
 type: story
 nature: remediation
 title: A role run the stdio MCP server starts through role_run is never reaped, so flai serve counts its zombie as running and never settles it
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:59Z
-updated: 2026-11-09T22:39:22Z
+updated: 2026-11-10T05:13:13Z
 transitions:
   - to: ready
     at: 2026-11-09T22:01:06Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T22:39:22Z
     by: agent-S-0632
+  - to: done
+    at: 2026-11-10T05:13:13Z
+    by: alex
 tags: [flai, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/handover_test.go, flai/internal/serve/proc_linux.go, flai/internal/serve/proc_unix.go, flai/internal/serve/proc_other.go, flai/internal/serve/proc_linux_test.go, design/system/flai-cli.md, design/issues/I-0299-a-role-run-the-stdio-mcp-server-starts-through-role-run-is-never-reaped-so-flai.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:

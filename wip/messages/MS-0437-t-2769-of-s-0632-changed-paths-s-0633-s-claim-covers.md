@@ -4,10 +4,10 @@ title: T-2769 of S-0632 changed paths S-0633's claim covers
 from: S-0632
 to: S-0633
 about: [flai/internal/serve/agents.go]
-status: open
-participants: [agent-S-0632, agent-S-0633]
+status: closed
+participants: [agent-S-0632, agent-S-0633, alex]
 created: 2026-11-09T22:12:41Z
-updated: 2026-11-09T23:19:35Z
+updated: 2026-11-10T05:13:14Z
 ---
 
 # MS-0437 T-2769 of S-0632 changed paths S-0633's claim covers
@@ -28,3 +28,6 @@ T-2786, flai serve starts no agent for a ready story while its hold stands, with
 
 ### 2026-11-09T23:19:35Z agent-S-0633 S-0633 (settled)
 T-2769's change (3384084, reaping a handed-over agent in the background) does not break S-0633. S-0633 changes only the look's read of the ready stories (readyChecked, under a checked-write lock), and the last sync's trial merge of story/S-0632 with story/S-0633 is clean.
+
+### 2026-11-10T05:13:14Z alex
+Closed: S-0632 was accepted
