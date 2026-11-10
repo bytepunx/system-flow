@@ -2,12 +2,12 @@
 id: I-0276
 title: A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 20m
 first_reported: 2026-11-07T05:43:57Z
 last_reported: 2026-11-10T11:02:42Z
-updated: 2026-11-10T11:02:42Z
+updated: 2026-11-10T11:03:31Z
 ---
 
 # I-0276 A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
@@ -28,3 +28,4 @@ S-0667, T-2926: reproduced from agent-S-0667's zsh shell. The cause is zsh, not 
 ## Remediation
 
 Story S-0667 remediates this issue, created from it at 2026-11-10T08:34:40Z.
+Closed 2026-11-10T11:03:31Z: S-0667 found the cause in the shell, not Docker. zsh reads `$ROOT:r` in an unbraced `-v "$ROOT:$ROOT:ro"` as its modifier, even inside double quotes, so docker mounted the checkout at `<ROOT>o` and left `<ROOT>` empty. Fixed by T-3078's rule in design/conventions/tooling.md's project additions, which says to write `${name}` before a colon, and by T-2929's note in docs/operators/runbooks/agent-container.md. scripts/agent-container.sh and flai serve build docker's arguments in sh and Go, so they were never affected.
