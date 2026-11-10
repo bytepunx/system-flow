@@ -2,11 +2,11 @@
 id: I-0328
 title: A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-09T23:20:38Z
 last_reported: 2026-11-09T23:20:38Z
-updated: 2026-11-10T05:45:23Z
+updated: 2026-11-10T07:52:05Z
 ---
 
 # I-0328 A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
@@ -23,3 +23,4 @@ Found while fixing I-0301 in S-0633. A checked edit (item_edit, flai touches, fl
 ## Remediation
 
 Story S-0654 remediates this issue, created from it at 2026-11-10T05:45:23Z.
+Closed 2026-11-10T07:52:05Z: S-0654: itemedit.Apply (flai edit, flai criteria, item_edit, criteria_tick) and itemedit.ApplyForecasts (flai serve's replan) now hold the checked-write lock, .flai-cache/items-checked.lock, from their first save until the check keeps the edit or the restore puts the files back, as a checked creation does, so flai serve's look, which reads under that lock, never judges a claim by an edit the check refuses (ADR-0275, refining ADR-0272). TestTheCheckedWriteLockIsHeldWhileTheEditIsChecked and TestApplyForecastsHoldsTheCheckedWriteLockUntilItPutsARefusedItemBack in flai/internal/itemedit probe the lock from the check after the write and assert it is held there and free once the edit returns.
