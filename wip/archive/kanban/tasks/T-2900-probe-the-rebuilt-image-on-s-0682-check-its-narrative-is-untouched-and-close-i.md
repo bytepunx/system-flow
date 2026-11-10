@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 14448
-      cache_read: 8711941
-      cache_write: 155071
-      cost: 3.0749
+      input: 70
+      output: 12918
+      cache_read: 8728550
+      cache_write: 130401
+      cost: 2.8881
 ---
 # T-2900 Probe the rebuilt image on S-0682, check its narrative is untouched, and close I-0224
 

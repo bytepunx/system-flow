@@ -3,11 +3,11 @@ id: T-2947
 type: task
 nature: remediation
 title: flai stream state takes --context, --decision, and --question, and the reference and flag index list them
-status: in-progress
+status: done
 parent: S-0668
 owner: alex
 created: 2026-11-10T08:50:47Z
-updated: 2026-11-10T09:55:09Z
+updated: 2026-11-10T10:05:13Z
 transitions:
   - to: ready
     at: 2026-11-10T09:55:08Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:55:09Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T10:05:13Z
+    by: agent-S-0668
 stream: S-0668
 tags: [flai, narrative, cli]
 touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-2944]
+usage:
+  source: log
+  seconds: 596
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 192
+      cache_read: 2420939
+      cache_write: 24421
+      cost: 0.9002
 ---
 # T-2947 flai stream state takes --context, --decision, and --question, and the reference and flag index list them
 

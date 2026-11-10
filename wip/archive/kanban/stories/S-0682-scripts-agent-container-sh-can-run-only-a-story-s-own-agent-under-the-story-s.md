@@ -3,10 +3,10 @@ id: S-0682
 type: story
 nature: improvement
 title: scripts/agent-container.sh can run only a story's own agent, under the story's own name, so a trial run of the image acts on the live story
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:37:06Z
-updated: 2026-11-10T09:54:27Z
+updated: 2026-11-10T10:10:48Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:30Z
@@ -20,6 +20,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:54:27Z
     by: flai
+  - to: review
+    at: 2026-11-10T10:08:14Z
+    by: agent-S-0682
+  - to: done
+    at: 2026-11-10T10:10:48Z
+    by: alex
 tags: [containers, pilot, scripts]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md, design/issues/I-0338-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md, design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md]
 agent:
@@ -29,31 +35,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3132
+  seconds: 3958
   priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 1
+      ceremony: 2
       hand_edits: 5
-      work: 107
+      work: 127
   models:
     - model: claude-opus-5-5
-      input: 348
-      output: 65860
-      cache_read: 39712700
-      cache_write: 706878
-      cost: 14.0168
+      input: 394
+      output: 72877
+      cache_read: 49243052
+      cache_write: 735669
+      cost: 16.2937
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 103
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 19
+          output: 139
+          cache_read: 690120
+          cache_write: 74409
+          cost: 0.2082
+        - model: claude-sonnet-5-5
           input: 4
-          output: 36
-          cache_read: 230748
-          cache_write: 4306
-          cost: 0.0637
+          output: 53
+          cache_read: 12769
+          cache_write: 30314
+          cost: 0.0323
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

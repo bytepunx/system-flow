@@ -3,16 +3,37 @@ id: T-2919
 type: task
 nature: remediation
 title: scripts/agent-image.sh --check runs the smoke tier inside the built layer and fails on an image that lacks a tool it runs
-status: backlog
+status: done
 parent: S-0672
 owner: alex
 created: 2026-11-10T08:48:14Z
-updated: 2026-11-10T08:48:14Z
-transitions: []
+updated: 2026-11-10T10:08:53Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:00:39Z
+    by: agent-S-0672
+  - to: in-progress
+    at: 2026-11-10T10:00:40Z
+    by: agent-S-0672
+  - to: done
+    at: 2026-11-10T10:08:53Z
+    by: agent-S-0672
 stream: S-0672
 tags: [docker, scripts]
-touches: [scripts/agent-image.sh]
+touches: [scripts/agent-image.sh, flai/images/system-flow/Dockerfile]
 after: [T-2917]
+usage:
+  source: log
+  seconds: 493
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 178
+      cache_read: 4032572
+      cache_write: 14682
+      cost: 1.4897
 ---
 # T-2919 scripts/agent-image.sh --check runs the smoke tier inside the built layer and fails on an image that lacks a tool it runs
 

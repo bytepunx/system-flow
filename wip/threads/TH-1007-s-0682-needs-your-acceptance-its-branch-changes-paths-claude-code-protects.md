@@ -4,10 +4,10 @@ title: "S-0682 needs your acceptance: its branch changes paths Claude Code prote
 anchor:
   path: wip/kanban/stories/S-0682-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s.md
   item: S-0682
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-10T09:44:43Z
-updated: 2026-11-10T09:44:43Z
+updated: 2026-11-10T09:56:32Z
 ---
 
 # TH-1007 S-0682 needs your acceptance: its branch changes paths Claude Code protects
@@ -38,3 +38,6 @@ To accept:
 ```bash
 flai accept S-0682 --by alex
 ```
+
+### 2026-11-10T09:56:32Z orchestrator
+Resolved: S-0682 is no longer in review. flai sent it back to in-progress on TH-1010 after its rebase hit conflicts in design/tech/docker.md and docs/operators/runbooks/agent-container.md, so accepting it at edb044e no longer applies. It will be verified again when it returns to review.

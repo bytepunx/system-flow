@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 1745
-      cache_read: 1052456
-      cache_write: 18733
-      cost: 0.3715
+      input: 8
+      output: 1561
+      cache_read: 1054462
+      cache_write: 15753
+      cost: 0.3489
 ---
 # T-2898 scripts/agent-container.sh --probe runs the image as probe-S-nnnn with a probe start request
 

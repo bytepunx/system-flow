@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 3235
-      cache_read: 1950452
-      cache_write: 34718
-      cost: 0.6884
+      input: 16
+      output: 2892
+      cache_read: 1954170
+      cache_write: 29194
+      cost: 0.6466
 ---
 # T-2896 A start request marked probe gets a prompt that reads and reports and works no story
 

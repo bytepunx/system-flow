@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 2580
-      cache_read: 1555480
-      cache_write: 27687
-      cost: 0.549
+      input: 12
+      output: 2306
+      cache_read: 1558446
+      cache_write: 23282
+      cost: 0.5157
 ---
 # T-2899 The runbook, flai-cli.md, and docker.md say how to probe an agent image without acting on its story
 

@@ -3,16 +3,37 @@ id: T-2922
 type: task
 nature: remediation
 title: The docs that list the system-flow layer's tools name curl, openssl, GoReleaser, and scripts/agent-image.sh --check
-status: backlog
+status: done
 parent: S-0672
 owner: alex
 created: 2026-11-10T08:48:23Z
-updated: 2026-11-10T08:48:23Z
-transitions: []
+updated: 2026-11-10T10:10:00Z
+transitions:
+  - to: ready
+    at: 2026-11-10T10:09:05Z
+    by: agent-S-0672
+  - to: in-progress
+    at: 2026-11-10T10:09:06Z
+    by: agent-S-0672
+  - to: done
+    at: 2026-11-10T10:10:00Z
+    by: agent-S-0672
 stream: S-0672
 tags: [docs, docker]
 touches: [design/tech/docker.md, docs/operators/index.md, docs/users/flai.md, scripts/README.md]
 after: [T-2919]
+usage:
+  source: log
+  seconds: 54
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 80
+      cache_read: 1952899
+      cache_write: 8093
+      cost: 0.7218
 ---
 # T-2922 The docs that list the system-flow layer's tools name curl, openssl, GoReleaser, and scripts/agent-image.sh --check
 

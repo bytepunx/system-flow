@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2090.3752
-accrued_seconds: 1542617
-tasks_completed: 2769
-last_run: 2026-11-10T09:55:09Z
+accrued_cost: 2091.2204
+accrued_seconds: 1542895
+tasks_completed: 2776
+last_run: 2026-11-10T10:10:20Z
 ---
 
 # Orchestrator activity
@@ -19415,6 +19415,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0671
 - Seconds: 70
 - Cost: 0.1422 USD, estimated
+
+### 2026-11-10T09:55:33Z
+
+- Summary: Release evaluated after S-0671's acceptance: threshold met (count 5 of threshold 1; 87.5 USD/week of 1000). Started no new publish formula run: instance S-0704, already in ready, publishes everything accepted and unreleased (S-0638, S-0648, S-0671, S-0680, S-0685) when it is worked.
+- Items: S-0671, S-0704
+- Seconds: 24
+- Cost: 0.0486 USD, estimated
+
+### 2026-11-10T09:56:35Z
+
+- Summary: Resolved my threads TH-1009 (S-0687 accepted by alex) and TH-1007 (S-0682 sent back to in-progress on TH-1010, so the acceptance request at edb044e is stale). S-0687's acceptance takes the release threshold to 6 stories at 110 USD/week, still met; open publish instance S-0704 covers it, so no new formula run.
+- Items: S-0687, S-0682, S-0704
+- Seconds: 62
+- Cost: 0.0507 USD, estimated
+
+### 2026-11-10T09:56:59Z
+
+- Summary: I accepted S-0671 at `c44618c42538`. It is merged into main, archived and committed.
+- Items: none
+- Seconds: 24
+- Cost: 0.1786 USD, estimated
+
+### 2026-11-10T09:57:48Z
+
+- Summary: Release due after S-0671 and S-0687: release_evaluate threshold met (count 6 of threshold 1; value 110 of 1000 USD; pending S-0638, S-0648, S-0671, S-0680, S-0685, S-0687; none held by epic). Started no new publish formula run: its open instance S-0704 is in ready with no step run and publishes everything accepted and unreleased when its agent works it. TH-1010 left alone: its last entry is flai's notice, for S-0682's agent, not the operator's.
+- Items: S-0671, S-0687, S-0704, S-0682
+- Seconds: 38
+- Cost: 0.0770 USD, estimated
+
+### 2026-11-10T09:58:29Z
+
+- Summary: I started no new release and changed no thread or story. Both reasons are handled, and this run is ending.
+- Items: none
+- Seconds: 41
+- Cost: 0.1596 USD, estimated
+
+### 2026-11-10T10:09:43Z
+
+- Summary: S-0682 in review: close-out passed at the branch head 07be82e and the verifier passed criteria 1 and 2, but this session has no MCP accept tool (No such tool available: mcp__flai__accept), so S-0682 stays in review and TH-1011 asks the operator to accept it or fix the tool list
+- Items: S-0682
+- Seconds: 52
+- Cost: 0.1406 USD, estimated
+
+### 2026-11-10T10:10:20Z
+
+- Summary: I couldn't accept S-0682, so it is still in review, even though nothing I checked blocks it. This session was started without the MCP tool `accept`, and my role forbids running `flai accept` in my shell.
+- Items: none
+- Seconds: 37
+- Cost: 0.1901 USD, estimated
 
 ## Refusals
 

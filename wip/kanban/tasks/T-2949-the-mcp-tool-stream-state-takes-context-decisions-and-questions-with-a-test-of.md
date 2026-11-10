@@ -3,11 +3,11 @@ id: T-2949
 type: task
 nature: remediation
 title: The MCP tool stream_state takes context, decisions, and questions, with a test of a container's session writing them
-status: in-progress
+status: done
 parent: S-0668
 owner: alex
 created: 2026-11-10T08:50:54Z
-updated: 2026-11-10T09:55:10Z
+updated: 2026-11-10T10:05:50Z
 transitions:
   - to: ready
     at: 2026-11-10T09:55:09Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:55:10Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T10:05:50Z
+    by: agent-S-0668
 stream: S-0668
 tags: [flai, mcp, narrative]
 touches: [flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/stream_sections_test.go]
 after: [T-2944]
+usage:
+  source: log
+  seconds: 595
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 145
+      cache_read: 2423260
+      cache_write: 24692
+      cost: 0.9011
 ---
 # T-2949 The MCP tool stream_state takes context, decisions, and questions, with a test of a container's session writing them
 

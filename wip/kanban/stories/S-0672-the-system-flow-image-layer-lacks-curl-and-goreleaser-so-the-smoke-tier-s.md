@@ -6,7 +6,7 @@ title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier'
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T09:52:41Z
+updated: 2026-11-10T10:10:43Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:47Z
@@ -23,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1063
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      test_runs: 1
+      work: 46
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 686
+      cache_read: 12361016
+      cache_write: 323059
+      cost: 4.6688
   strategic:
     - kind: orchestrator
       seconds: 13
@@ -62,8 +74,8 @@ finalized:
 This story remediates [I-0281](../../../design/issues/I-0281-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md), "The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0281 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0281 is closed with `flai issue close I-0281 --reason` saying what fixed it
+- [x] The cause I-0281 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0281 is closed with `flai issue close I-0281 --reason` saying what fixed it
 
 ## Tasks
 - T-2917 The system-flow layer carries curl, openssl, and GoReleaser at the version scripts/install-tools.sh pins

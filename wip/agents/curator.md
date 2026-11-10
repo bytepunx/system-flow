@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 200.4258
-accrued_seconds: 23529
-tasks_completed: 125
-last_run: 2026-11-10T09:55:19Z
+accrued_cost: 202.3707
+accrued_seconds: 23764
+tasks_completed: 127
+last_run: 2026-11-10T09:59:37Z
 ---
 
 # Curator activity
@@ -1011,3 +1011,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0468, D-0569
 - Seconds: 85
 - Cost: 1.3760 USD, estimated
+
+### 2026-11-10T09:57:23Z
+
+- Summary: I merged S-0671 into D-0554. I wrote no entries, absorbed none, and `flai digest compact` compacted none. I skipped S-0671's `--fresh` and `CLOSE_OUT_*` decisions because `design/system/flai-cli.md` and `devex.md` already state them, and S-0670 because the 09:55 run had taken it in.
+- Trigger: accepted S-0671
+- Items: D-0554
+- Seconds: 120
+- Cost: 1.3028 USD, estimated
+
+### 2026-11-10T09:59:37Z
+
+- Summary: I found nothing to take in. No entries were written, merged, or absorbed, and `flai digest compact` compacted none. The one candidate, S-0687's decisions, is already recorded in ADR-0278, `design/system/flai-cli.md`, and `design/conventions/strategic-agents.md`. D-0471 stays active because the convention's and `design/workflows/roles/orchestrator.md`'s acceptance step still contradict ADR-0248.
+- Trigger: accepted S-0687
+- Items: none
+- Seconds: 115
+- Cost: 0.6421 USD, estimated
