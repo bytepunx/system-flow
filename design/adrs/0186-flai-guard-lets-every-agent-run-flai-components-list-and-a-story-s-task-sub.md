@@ -1,8 +1,8 @@
 ---
 id: ADR-0186
 title: "flai guard lets every agent run flai components list, and a story's task sub-agent, but no read-only sub-agent and no strategic agent's own call, run flai components serve"
-status: proposed
-date: 2026-10-22
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0060, ADR-0141]
