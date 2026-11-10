@@ -1,8 +1,8 @@
 ---
 id: ADR-0265
 title: "flai accept takes a tier's fix command's exit as what the fix left: exit 0 passes its files, a non-zero exit refuses with the findings its output gives, and the check runs after the fix only when the fix cannot say"
-status: proposed
-date: 2026-11-08
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0139, ADR-0140]
