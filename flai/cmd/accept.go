@@ -1152,6 +1152,11 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // --evidence, it is also that enqueue, whose evidence the acceptance takes.
 func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, mergequeue.Enqueued, error) {
 	none := mergequeue.Enqueued{}
+	// the orchestrator's container reads no host action, so it cannot tell
+	// whether the merge queue lands the story (I-0256, ADR-0278)
+	if cfg, ok := a.orchestratorInRoleContainer(repo); ok {
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the host's actions cannot be read in a role's container (its configuration is %s), so flai accept cannot tell whether the merge queue lands %s: verify it with the MCP tool verify, read the verdict with flai verify %s --last, and accept it with the MCP tool accept, which runs flai accept on the host (ADR-0278)", cfg, it.ID, it.ID)
+	}
 	keep, err := keptRemovals(it.ID, o)
 	if err != nil {
 		return preview.AcceptOptions{}, none, err

@@ -416,3 +416,58 @@ func TestTheQueuesLandingWritesTheEvidenceTheOrchestratorEnqueuedWith(t *testing
 	}
 	assertLanded(t, root, "orchestrator")
 }
+
+// roleCacheConfig makes the configuration a role's container gives its flai,
+// <root>/.flai-cache/agents/<role>/flai/config.json, holding no host action,
+// the configuration of t's commands (I-0256).
+func roleCacheConfig(t *testing.T, root, role string) {
+	t.Helper()
+	path := filepath.Join(root, ".flai-cache", "agents", role, "flai", "config.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	useConfig(t, path)
+}
+
+// I-0256, ADR-0278 §5: the orchestrator's flai in its container reads its
+// configuration from the role's cache folder, where no host action is on,
+// so it would land a story by hand while the merge queue batches on the
+// host. Run so, flai accept, its dry run, and flai move to done refuse before
+// anything changes, naming the MCP tools accept and verify. On the host,
+// with its configuration outside the role's cache, it accepts as before.
+func TestTheOrchestratorInARolesContainerRefusesToAcceptByHand(t *testing.T) {
+	root, head := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root) // on the host, the merge queue batches for the project
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	roleCacheConfig(t, root, "orchestrate")
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
+	for _, args := range [][]string{
+		{"accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev},
+		{"accept", "S-0001", "--by", "orchestrator", "--verified", head, "--dry-run"},
+		{"move", "S-0001", "done", "--by", "orchestrator", "--verified", head, "--evidence", ev},
+	} {
+		_, errOut, code := runIn(t, root, args...)
+		if code == 0 {
+			t.Errorf("flai %v in the orchestrator's container must be refused, not run with no host action on", args)
+		}
+		for _, want := range []string{"the host's actions cannot be read in a role's container", "the MCP tool accept", "the MCP tool verify", "ADR-0278"} {
+			if !strings.Contains(errOut, want) {
+				t.Errorf("flai %v: the refusal must say %q:\n%s", args, want, errOut)
+			}
+		}
+	}
+	assertNothingAccepted(t, root, mainBefore)
+
+	// on the host, with the queue off for the project, it accepts
+	useConfig(t, filepath.Join(t.TempDir(), "host.json"))
+	if out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev); code != 0 {
+		t.Fatalf("the orchestrator on the host accepts: %d %s\n%s", code, errOut, out)
+	}
+	if last := acceptedS0001(t, root).Transitions; last[len(last)-1].To != workitem.Done {
+		t.Errorf("the story is done: %+v", last)
+	}
+}

@@ -1217,3 +1217,68 @@ func TestVerifyRefusesJobFlagsThatDoNotGoTogether(t *testing.T) {
 		t.Errorf("a refusal asked flai serve: %v", err)
 	}
 }
+
+// I-0256, ADR-0278 §5: run as the orchestrator with its configuration in a
+// role's cache folder, as its container runs it, flai verify refuses to run
+// the story's tiers, before it runs any, naming the MCP tools verify and
+// accept and flai verify --last; --last still reads the record and --job
+// still asks flai serve. A story's agent with the same configuration runs
+// its tiers as before.
+func TestVerifyRefusesTheOrchestratorsTiersInARolesContainer(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 0")
+	roleCacheConfig(t, root, "orchestrate")
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	for _, args := range [][]string{{"verify", "S-004"}, {"verify", "S-004", "--all"}, {"verify", "S-004", "--fresh", "--json"}} {
+		_, errOut, code := runVerify(t, root, verifyGit{}, args...)
+		if code != exitVerifyUnusable {
+			t.Errorf("flai %v in the orchestrator's container: exit %d, want %d\n%s", args, code, exitVerifyUnusable, errOut)
+		}
+		for _, want := range []string{"the host's actions cannot be read in a role's container", "the MCP tool verify", "flai verify S-004 --last", "the MCP tool accept", "ADR-0278"} {
+			if !strings.Contains(errOut, want) {
+				t.Errorf("flai %v: the refusal must say %q:\n%s", args, want, errOut)
+			}
+		}
+	}
+	if _, ok, err := verify.LastReport(openProject(t, root), "S-004"); ok || err != nil {
+		t.Errorf("a refused verify ran: %v %v", ok, err)
+	}
+
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--last")
+	if code != 0 || out != "verify: S-004 has no stored result; run flai verify S-004\n" {
+		t.Errorf("--last reads the record in the container: exit %d %q %s", code, out, errOut)
+	}
+	cache := openProject(t, root).CacheDir()
+	takeCloseOut(t, cache, func(r closeout.Request) closeout.Answer {
+		return closeout.Answer{Job: r.Story + "-20261110T090000Z", Story: r.Story, Started: true, Log: closeout.LogPath(cache, r.Story)}
+	})
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--job")
+	if code != 0 || !strings.HasPrefix(out, "close-out job S-004-20261110T090000Z started for S-004") {
+		t.Errorf("--job asks flai serve from the container: exit %d %q %s", code, out, errOut)
+	}
+
+	t.Setenv("FLAI_ROLE", "")
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("a story's agent with that configuration runs its tiers: exit %d\n%s%s", code, out, errOut)
+	}
+}
+
+// pathWithin counts only a path below the folder, not the folder itself, a
+// sibling sharing its prefix, or a path that climbs out of it.
+func TestPathWithinTheRolesCacheFolders(t *testing.T) {
+	t.Parallel()
+	dir := filepath.Join(t.TempDir(), ".flai-cache", "agents")
+	for path, want := range map[string]bool{
+		filepath.Join(dir, "orchestrate", "flai", "config.json"): true,
+		filepath.Join(dir, "plan", "config.json"):                true,
+		dir:                                     false,
+		dir + "-other/orchestrate/config.json":  false,
+		filepath.Join(dir, "..", "config.json"): false,
+		filepath.Join(dir, "orchestrate", "..", "..", "x", "config.json"): false,
+		filepath.Join(t.TempDir(), "config.json"):                         false,
+	} {
+		if got := pathWithin(dir, path); got != want {
+			t.Errorf("pathWithin(%s, %s) = %v, want %v", dir, path, got, want)
+		}
+	}
+}

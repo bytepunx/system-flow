@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -18,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -198,6 +200,13 @@ it finished.`,
 			}
 			if job {
 				return a.askCloseOut(cmd, repo, args[0], closeout.Request{Message: message, All: all, Fresh: fresh})
+			}
+			// the orchestrator's container reads no host action and lacks
+			// the tiers' tools, so it asks flai serve (I-0256, ADR-0278)
+			if !syncOnly {
+				if cfg, ok := a.orchestratorInRoleContainer(repo); ok {
+					return &exitError{code: exitVerifyUnusable, msg: roleContainerVerifyRefusal(cfg, args[0])}
+				}
 			}
 			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, all: all, max: maxFindings})
 		},
@@ -496,6 +505,46 @@ func (a *app) queueOff(root string) string {
 		return "orchestration.permissions.accept_reviews is off in the main checkout's system-flow.yaml"
 	}
 	return ""
+}
+
+// orchestratorInRoleContainer reports whether this flai runs as the
+// orchestrator with the configuration it reads, --config or FLAI_CONFIG,
+// inside the project's role cache folders, <main checkout>/.flai-cache/agents,
+// as a role's container gives it (ADR-0247), and that configuration's path.
+// No host action can be read there: hostActionOn would find every one off,
+// so the orchestrator's acceptance and a verify that runs tiers refuse in
+// place of acting on that (I-0256, ADR-0278).
+func (a *app) orchestratorInRoleContainer(repo *workitem.Repo) (string, bool) {
+	if os.Getenv("FLAI_ROLE") != guard.RoleOrchestrate {
+		return "", false
+	}
+	path := config.ResolvePath(a.configPath)
+	return path, pathWithin(filepath.Join(repo.CacheDir(), "agents"), path)
+}
+
+// pathWithin reports whether path lies below dir, both made absolute and
+// clean, so that neither a sibling sharing dir's prefix nor a path that
+// climbs out with .. counts.
+func pathWithin(dir, path string) bool {
+	d, err := filepath.Abs(dir)
+	if err != nil {
+		return false
+	}
+	p, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(d, p)
+	if err != nil {
+		return false
+	}
+	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
+}
+
+// roleContainerVerifyRefusal is flai verify's refusal to run story's tiers
+// as the orchestrator in a role's container, whose configuration is cfg.
+func roleContainerVerifyRefusal(cfg, story string) string {
+	return fmt.Sprintf("the host's actions cannot be read in a role's container (its configuration is %s), so flai verify %s cannot tell which tiers the merge queue runs, and the container lacks the tiers' tools: ask flai serve for the close-out with the MCP tool verify, or flai verify %s --job, read the verdict with flai verify %s --last, and accept with the MCP tool accept, which runs on the host (ADR-0278)", cfg, story, story, story)
 }
 
 // hostActionOn reports whether a host action is on for the project at root
