@@ -1,8 +1,8 @@
 ---
 id: ADR-0140
 title: "flai accept refuses an acceptance whose files a tier with a fix_command still fails on after the fix, naming each file, line, and error"
-status: proposed
-date: 2026-10-12
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0139]
