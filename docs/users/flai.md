@@ -601,6 +601,7 @@ flai manifest set planning.agent='{"harness":"container","config":{"inner":"clau
 |-----------|------------------|------|-----|
 | the main checkout | the same path, the working directory | read-write | the work items, reports, and digest entries the role writes, as on the host |
 | `.git/hooks` of the main checkout | the same path, over the checkout | read-only | a hook written there would run on your host |
+| `.git/config` of the main checkout | the same path, over the checkout | read-only | a command named there would run on your host ([ADR-0281](../../design/adrs/0281-a-strategic-agent-s-container-mounts-the-main-checkout-s-git-config-read-only.md)) |
 | `.flai-cache/agents/<role>`, `<role>` one of `plan`, `orchestrate`, `analyze`, `curate` | the same path | read-write | as a story's cache folder |
 | the folder `--login` names | `/run/claude-login` | read-only | your Claude login |
 
