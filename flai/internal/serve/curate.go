@@ -215,7 +215,7 @@ func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to curate, %s, as %s (pid %d), %s; log %s", run.Command, run.Harness, sinceSaid(since), run.Agent, run.PID, by, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s to curate, %s, as %s (pid %d), %s; log %s", run.startedSaid(), sinceSaid(since), run.Agent, run.PID, by, run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}

@@ -245,7 +245,7 @@ func (l *launcher) analyzeOn(ctx context.Context, cfg AgentConfig, agent *manife
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to analyze, focus %s%s, as %s (pid %d); log %s", run.Command, run.Harness, run.Focus, on, run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s to analyze, focus %s%s, as %s (pid %d); log %s", run.startedSaid(), run.Focus, on, run.Agent, run.PID, run.Log)
 	if instance != "" {
 		entry.Detail += ", started by " + run.Trigger
 	}

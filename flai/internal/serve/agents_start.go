@@ -238,35 +238,35 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	}
 	l.keepSpend(run, spend)
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s for %s as %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
 		what := run.Answered + " answered"
 		if strings.HasPrefix(run.Answered, "MS-") {
 			what = "a message on " + run.Answered
 		}
-		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, what, run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s, %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, what, run.PID, run.Log)
 	}
 	if run.SentBack != "" {
 		how := "in a new session"
 		if story.Resume != nil {
 			how = "in its session"
 		}
-		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s %s, flai having sent it back from review on %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, how, run.SentBack, run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s %s, flai having sent it back from review on %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, how, run.SentBack, run.PID, run.Log)
 	}
 	if story.Commit != "" {
-		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s to commit what its worktree holds (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s for %s as %s to commit what its worktree holds (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, run.PID, run.Log)
 	}
 	if story.Started && len(story.Past) > 0 {
-		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, past %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, strings.Join(story.Past, "; "), run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s for %s as %s on the operator's word, past %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, strings.Join(story.Past, "; "), run.PID, run.Log)
 	}
 	if story.Begun != nil {
-		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, begun %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.Begun.Said(), run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s for %s as %s on the operator's word, begun %s (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, story.Begun.Said(), run.PID, run.Log)
 	}
 	switch {
 	case story.AfterLimit:
-		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, its last agent having ended on the usage limit, which no longer holds %s; no automatic restart spent (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, budgetKey(run.Provider, run.Harness), run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s on its own, its last agent having ended on the usage limit, which no longer holds %s; no automatic restart spent (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, budgetKey(run.Provider, run.Harness), run.PID, run.Log)
 	case story.AutoRestarts > 0:
-		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
 	}
 	if probe {
 		entry.Detail += "; the probe of the budget state of " + budgetKey(run.Provider, run.Harness)
@@ -358,6 +358,20 @@ func startWhy(story readyStory, run *AgentRun, limit int) string {
 		return "the operator started it"
 	}
 	return "it entered ready"
+}
+
+// startedSaid is what a run's journal start entry says it started: its
+// program and harness, such as claude (claude-code), and on the container
+// harness the image and the container it recorded too, such as docker
+// (container, image flai-agent-sf-claude-code:local, container
+// flai-agent-S-0001-<session>), so the journal names the image a run used
+// once --rm has removed its container (I-0274). The mounts stay in
+// agents.json alone.
+func (r *AgentRun) startedSaid() string {
+	if r.Image == "" && r.Container == "" {
+		return fmt.Sprintf("%s (%s)", r.Command, r.Harness)
+	}
+	return fmt.Sprintf("%s (%s, image %s, container %s)", r.Command, r.Harness, r.Image, r.Container)
 }
 
 // startOf is what adapter starts for req, the run of the harness name, with

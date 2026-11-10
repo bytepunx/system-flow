@@ -509,7 +509,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		return "", nil
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) as %s (pid %d) for %s; log %s", run.Command, run.Harness, run.Agent, run.PID, reasonsSaid(reasons), run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s as %s (pid %d) for %s; log %s", run.startedSaid(), run.Agent, run.PID, reasonsSaid(reasons), run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}

@@ -213,7 +213,7 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to plan %s as %s (pid %d); log %s", run.Command, run.Harness, item, run.Agent, run.PID, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s to plan %s as %s (pid %d); log %s", run.startedSaid(), item, run.Agent, run.PID, run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}

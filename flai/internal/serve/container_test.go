@@ -595,11 +595,26 @@ func (lab *agentLab) recordedContainer(subject string, run *AgentRun, image stri
 	}
 }
 
+// journaled checks that the journal holds a start entry that begins with
+// start: what the run started, its harness, and on the container harness its
+// image and container, then what it was started for.
+func (lab *agentLab) journaled(start string) {
+	lab.t.Helper()
+	for _, e := range lab.entries() {
+		if strings.HasPrefix(e.Detail, start) {
+			return
+		}
+	}
+	lab.t.Errorf("the journal has no start entry beginning %q: %+v", start, lab.entries())
+}
+
 // I-0274: a run on the container harness records the image it ran, the
 // container's name, and its mounts in agents.json, for a story's agent and a
 // strategic agent's, so that a run that used the project's layer image can be
-// shown to have done so once --rm has removed its container. Before S-0665
-// the record named only docker. A run on another harness records none of them.
+// shown to have done so once --rm has removed its container, and its journal
+// start entry names the image and the container. Before S-0665 the record and
+// the entry named only docker. A run on another harness records none of them
+// and logs its start as before.
 func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 	const layer = "flai-agent-t-claude-code:local"
 	ctx := context.Background()
@@ -614,6 +629,7 @@ func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 		t.Fatalf("run: %+v", run)
 	}
 	lab.recordedContainer(id, run, layer)
+	lab.journaled("started docker (container, image " + layer + ", container " + harness.ContainerName(id, run.Session) + ") for " + id + " as ")
 
 	epic := lab.epic.ID
 	if !lab.planInContainer(epic) {
@@ -625,13 +641,16 @@ func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 		return strings.Contains(string(data), "config: ")
 	})
 	lab.recordedContainer(conventions.RolePlan, plan, layer)
+	lab.journaled("started docker (container, image " + layer + ", container " + harness.ContainerName(conventions.RolePlan, plan.Session) + ") to plan " + epic + " as ")
 
 	host := lab.ready("On the host")
 	lab.l.look(ctx, false)
 	waitFor(t, "it ended", func() bool { r := lab.run(host); return r != nil && !r.live() })
-	if r := lab.run(host); r.Harness == harness.Container || r.Image != "" || r.Container != "" || r.Mounts != nil {
+	r := lab.run(host)
+	if r.Harness == harness.Container || r.Image != "" || r.Container != "" || r.Mounts != nil {
 		t.Errorf("a run on another harness records a container: %+v", r)
 	}
+	lab.journaled("started " + r.Command + " (" + r.Harness + ") for " + host + " as ")
 }
 
 // S-0510: containerImageHost decides the container's image: the project's layer

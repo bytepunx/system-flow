@@ -304,7 +304,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 		return fail(err)
 	}
 	l.told(run)
-	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) to run the role %s %s as %s (pid %d), started by %s; log %s", run.Command, run.Harness, f.Name, onItem(item), run.Agent, run.PID, run.Trigger, run.Log)
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s to run the role %s %s as %s (pid %d), started by %s; log %s", run.startedSaid(), f.Name, onItem(item), run.Agent, run.PID, run.Trigger, run.Log)
 	if l.record != nil {
 		l.record(entry)
 	}
