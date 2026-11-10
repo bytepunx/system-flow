@@ -587,3 +587,122 @@ func TestClaudeCodeImageCheckRefusesWhatAContainerCannotRun(t *testing.T) {
 		})
 	}
 }
+
+// commandRun is the close-out's flai verify of S-0508 in its container
+// (I-0295), in the project containerReq makes, with the token and the key set
+// where a leak would show.
+func commandRun(t *testing.T) (harness.CommandRun, harness.Host) {
+	t.Helper()
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	return harness.CommandRun{Root: r.Root, Story: "S-0508", Purpose: "closeout", ID: "20261110T060000Z", Image: "flai-agent-sf-claude-code:local",
+		Argv: []string{harness.ImageFlai, "verify", "S-0508", "--record-issues"}}, host
+}
+
+// I-0295: a command flai runs for a story whose agent runs in a container
+// runs in a container of its own with the story's six mounts, the worktree
+// the working directory, and its program the entrypoint, and with no login,
+// cache folder, home, ~/.flai, Docker socket, MCP variable, or key.
+func TestContainerCommandRunsTheCommandWithTheStorysSixMounts(t *testing.T) {
+	c, host := commandRun(t)
+	c.Env = []string{"CLOSE_OUT_STORY"}
+	verify := filepath.Join(c.Root, ".flai-cache", "verify")
+	got, err := harness.ContainerCommand(c, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(verify); err != nil || !info.IsDir() {
+		t.Errorf("the run should make the verify folder on the host before docker makes it as root: %v", err)
+	}
+	worktree := filepath.Join(c.Root, ".flai-cache", "worktrees", "S-0508")
+	common, reg := filepath.Join(c.Root, ".git"), filepath.Join(c.Root, ".git", "worktrees", "S-0508")
+	wip, flow := filepath.Join(c.Root, "wip"), filepath.Join(c.Root, "system-flow.yaml")
+	user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
+	name := "flai-closeout-S-0508-20261110T060000Z"
+	want := []string{"docker", "run", "--rm", "--name", name, "--user", user, "--network", "bridge",
+		"-v", worktree + ":" + worktree, "-w", worktree, "-v", common + ":" + common + ":ro", "-v", reg + ":" + reg,
+		"-v", wip + ":" + wip + ":ro", "-v", flow + ":" + flow + ":ro", "-v", verify + ":" + verify,
+		"-e", "GIT_CONFIG_COUNT", "-e", "GIT_CONFIG_KEY_0", "-e", "GIT_CONFIG_VALUE_0", "-e", "CLOSE_OUT_STORY",
+		"--entrypoint", "/usr/local/bin/flai", "flai-agent-sf-claude-code:local", "verify", "S-0508", "--record-issues"}
+	if !slices.Equal(got.Argv, want) {
+		t.Fatalf("argv\n%q\nwant\n%q", got.Argv, want)
+	}
+	if got.Name != name {
+		t.Errorf("name %q, want %q", got.Name, name)
+	}
+	if wantEnv := []string{"GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=safe.directory", "GIT_CONFIG_VALUE_0=" + c.Root}; !slices.Equal(got.Env, wantEnv) {
+		t.Errorf("env %q, want %q", got.Env, wantEnv)
+	}
+	home, _ := os.UserHomeDir()
+	whole := strings.Join(got.Argv, " ")
+	for _, never := range []string{host.Login, "/run/claude-login", filepath.Join(c.Root, ".flai-cache", "agents"), filepath.Join(home, ".flai"), "docker.sock",
+		"FLAI_MCP_URL", "FLAI_MCP_TOKEN", "GATEWAY_KEY", "token-value-never-shown", "key-value-never-shown", "host.docker.internal", " -i "} {
+		if strings.Contains(whole, never) {
+			t.Errorf("the run carries %q: %s", never, whole)
+		}
+	}
+	for i, arg := range got.Argv {
+		if i > 0 && got.Argv[i-1] == "-e" && strings.Contains(arg, "=") {
+			t.Errorf("-e %s carries a value", arg)
+		}
+		if i > 0 && got.Argv[i-1] == "-v" && (arg == home+":"+home || strings.HasPrefix(arg, home+":")) {
+			t.Errorf("mounts the home: %s", arg)
+		}
+	}
+	host.Program, host.Network = "/usr/bin/podman", "none"
+	if got, err := harness.ContainerCommand(c, host); err != nil || got.Argv[0] != "/usr/bin/podman" || !slices.Contains(got.Argv, "none") {
+		t.Errorf("the host's program and network: %q %v", got.Argv, err)
+	}
+}
+
+// A command run is refused what Start refuses of the story's mounts, and what
+// names no container, image, command, or variable, and makes nothing then.
+func TestContainerCommandRefusesWhatStartRefuses(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		change func(*harness.CommandRun, *harness.Host)
+		says   string
+	}{
+		{"no registration", func(c *harness.CommandRun, _ *harness.Host) {
+			if err := os.RemoveAll(filepath.Join(c.Root, ".git", "worktrees", "S-0508")); err != nil {
+				t.Fatal(err)
+			}
+		}, "has no git for the container"},
+		{"no main checkout's manifest", func(c *harness.CommandRun, _ *harness.Host) {
+			if err := os.Remove(filepath.Join(c.Root, "system-flow.yaml")); err != nil {
+				t.Fatal(err)
+			}
+		}, "has no main checkout for the container"},
+		{"no main checkout's wip", func(c *harness.CommandRun, _ *harness.Host) {
+			if err := os.RemoveAll(filepath.Join(c.Root, "wip")); err != nil {
+				t.Fatal(err)
+			}
+		}, "has no main checkout for the container"},
+		{"a registration under a colon", func(c *harness.CommandRun, _ *harness.Host) {
+			colon := linkedWorktree(t, filepath.Join(t.TempDir(), "a:b"), "S-0508")
+			if err := os.WriteFile(filepath.Join(c.Root, ".flai-cache", "worktrees", "S-0508", ".git"), []byte("gitdir: "+colon+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, "holds a colon"},
+		{"the operator's arguments", func(_ *harness.CommandRun, h *harness.Host) { h.Args = []string{"-v", "/:/host"} }, "takes no arguments of the operator's"},
+		{"a relative root", func(c *harness.CommandRun, _ *harness.Host) { c.Root = "flow" }, "not an absolute path"},
+		{"no story", func(c *harness.CommandRun, _ *harness.Host) { c.Story = "" }, "is not a story's ID"},
+		{"a story that is a path", func(c *harness.CommandRun, _ *harness.Host) { c.Story = "../S-0508" }, "is not a story's ID"},
+		{"an id that names no container", func(c *harness.CommandRun, _ *harness.Host) { c.ID = "a b" }, "name no container"},
+		{"no image", func(c *harness.CommandRun, _ *harness.Host) { c.Image = "" }, "no image is given"},
+		{"no command", func(c *harness.CommandRun, _ *harness.Host) { c.Argv = nil }, "no command is given"},
+		{"a variable that is no name", func(c *harness.CommandRun, _ *harness.Host) { c.Env = []string{"K=v"} }, "is not a variable's name"},
+	} {
+		run, host := commandRun(t)
+		c.change(&run, &host)
+		got, err := harness.ContainerCommand(run, host)
+		if err == nil || !strings.Contains(err.Error(), c.says) {
+			t.Errorf("%s: %v, want %q", c.name, err, c.says)
+		}
+		if got.Argv != nil || got.Name != "" {
+			t.Errorf("%s: %+v, want none", c.name, got)
+		}
+		if _, err := os.Stat(filepath.Join(run.Root, ".flai-cache", "verify")); err == nil {
+			t.Errorf("%s: a refused run made the verify folder", c.name)
+		}
+	}
+}

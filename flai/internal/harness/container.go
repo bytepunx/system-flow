@@ -335,6 +335,14 @@ func dockerRun(host Host, name string) []string {
 // network, bridge when it names none, with the host reachable as
 // host.docker.internal.
 func dockerUser(host Host) (program string, args []string) {
+	program, args = dockerAs(host)
+	return program, append(args, "--add-host", "host.docker.internal:host-gateway")
+}
+
+// dockerAs is dockerUser without the host's name: the host's container
+// program and the arguments that make its container the user's, on the
+// host's network, bridge when it names none.
+func dockerAs(host Host) (program string, args []string) {
 	network := host.Network
 	if network == "" {
 		network = "bridge"
@@ -343,8 +351,105 @@ func dockerUser(host Host) (program string, args []string) {
 	if program == "" {
 		program = "docker"
 	}
-	return program, []string{"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()),
-		"--network", network, "--add-host", "host.docker.internal:host-gateway"}
+	return program, []string{"--user", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), "--network", network}
+}
+
+// CommandRun is one command flai runs in a story's container rather than on
+// the host: the close-out job's flai verify, or one of the operator's checks
+// (ADR-0253, I-0295).
+type CommandRun struct {
+	Root    string   // the project's main checkout, an absolute path
+	Story   string   // the story whose worktree the command runs in
+	Purpose string   // what the run is for, such as closeout or check, in the container's name
+	ID      string   // tells this run's container from the story's others, such as the job's time
+	Image   string   // the image the command runs in, the story's agent's
+	Env     []string // variables passed by name alone, their values in the docker client's environment
+	Argv    []string // the command: its program, the image's entrypoint, then its arguments
+}
+
+// CommandContainer is a CommandRun as docker runs it: its argv, the name of
+// its container, by which a cancel stops it, and the variables, NAME=value,
+// the docker client's environment must hold beside the run's own Env.
+type CommandContainer struct {
+	Name string
+	Argv []string
+	Env  []string
+}
+
+// ContainerCommand is the docker run of c's command in a story's container,
+// removed when it ends, named flai-<purpose>-<story>-<id>, as the user, on
+// the host's network: the story's worktree read-write as the working
+// directory, the main checkout's .git read-only and the story's registration
+// read-write over it (ADR-0246), and its wip and system-flow.yaml read-only
+// and its .flai-cache/verify read-write, made on the host when absent
+// (ADR-0253), in that order and nothing else; git's safe.directory for the
+// main checkout and each of c.Env passed by name alone; and c.Argv's program
+// as the entrypoint of c.Image. It mounts no login, no cache folder, and no
+// Docker socket, and passes no MCP variable and no provider's key. It refuses
+// what Start refuses of the story's mounts, a registration or a main checkout
+// it cannot mount and a path holding a colon, and the operator's arguments,
+// an image it is not given, an empty command, and a name that is not a
+// variable's.
+func ContainerCommand(c CommandRun, host Host) (CommandContainer, error) {
+	switch {
+	case len(host.Args) > 0:
+		return CommandContainer{}, fmt.Errorf("the container harness takes no arguments of the operator's, since its mounts and variables are fixed: clear them, and set its image, network, and login with flai serve agent harness container")
+	case !filepath.IsAbs(c.Root):
+		return CommandContainer{}, fmt.Errorf("the project's directory %q is not an absolute path, which a mount needs", c.Root)
+	case c.Story == "" || filepath.Base(c.Story) != c.Story || c.Story == "." || c.Story == "..":
+		return CommandContainer{}, fmt.Errorf("the story %q is not a story's ID", c.Story)
+	case !containerSession.MatchString(c.Purpose) || !containerSession.MatchString(c.ID):
+		return CommandContainer{}, fmt.Errorf("the purpose %q and the id %q name no container; name them with letters, digits, '.', '_', and '-' alone", c.Purpose, c.ID)
+	case c.Image == "":
+		return CommandContainer{}, fmt.Errorf("no image is given for %s's %s container: set the story's agent's image, the project's agent.image.layer or flai serve agent harness container --image", c.Story, c.Purpose)
+	case len(c.Argv) == 0 || c.Argv[0] == "":
+		return CommandContainer{}, fmt.Errorf("no command is given to run in %s's container", c.Story)
+	}
+	for _, name := range c.Env {
+		if !envName.MatchString(name) {
+			return CommandContainer{}, fmt.Errorf("%q is not a variable's name, which %s's container is passed by name: name it with letters, digits, and underscores", name, c.Story)
+		}
+	}
+	worktree := filepath.Join(c.Root, ".flai-cache", "worktrees", c.Story)
+	if err := mountable(c.Root, worktree, worktree, ""); err != nil {
+		return CommandContainer{}, err
+	}
+	gitMounts, err := storygit.GitMounts(worktree)
+	if err != nil {
+		return CommandContainer{}, fmt.Errorf("the story's worktree %s has no git for the container: %w", worktree, err)
+	}
+	gitArgs, err := mountArgs(gitMounts)
+	if err != nil {
+		return CommandContainer{}, err
+	}
+	mainMounts, err := storygit.MainMounts(worktree)
+	if err != nil {
+		return CommandContainer{}, fmt.Errorf("the story's worktree %s has no main checkout for the container, so flai verify could not run in it: %w", worktree, err)
+	}
+	mainArgs, err := mountArgs(mainMounts)
+	if err != nil {
+		return CommandContainer{}, err
+	}
+	if err := createMounts(mainMounts); err != nil {
+		return CommandContainer{}, err
+	}
+	name := "flai-" + c.Purpose + "-" + c.Story + "-" + c.ID
+	program, user := dockerAs(host)
+	argv := append([]string{program, "run", "--rm", "--name", name}, user...)
+	argv = append(argv, "-v", worktree+":"+worktree, "-w", worktree)
+	argv = append(argv, gitArgs...)
+	argv = append(argv, mainArgs...)
+	env := safeMain(mainMounts)
+	for _, kv := range env {
+		n, _, _ := strings.Cut(kv, "=")
+		argv = append(argv, "-e", n)
+	}
+	for _, n := range c.Env {
+		argv = append(argv, "-e", n)
+	}
+	argv = append(argv, "--entrypoint", c.Argv[0], c.Image)
+	argv = append(argv, c.Argv[1:]...)
+	return CommandContainer{Name: name, Argv: argv, Env: env}, nil
 }
 
 // ImageClaude and ImageFlai are the claude and the flai an agent image
