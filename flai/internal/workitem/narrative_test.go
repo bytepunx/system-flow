@@ -300,6 +300,143 @@ func TestSetStreamStateReplacesBothSections(t *testing.T) {
 	}
 }
 
+// S-0668, I-0277: Context is replaced, each decision is appended as a bullet
+// under Decisions, each question as a dated bullet under Open questions, and
+// every other section stays as it was. Written lists them in template order.
+func TestWriteStreamStateWritesContextDecisionsAndQuestions(t *testing.T) {
+	r := inProgressStream(t)
+	later := t0.Add(time.Hour)
+	res, err := r.WriteStreamState("S-0001", StreamText{
+		Context:   "Why, now.",
+		Decisions: []string{"Two, since one was not enough.", "- Three.\nWith a second line."},
+		Questions: []string{"Which port?", "  "},
+	}, StreamOptions{Agent: "b", Now: later})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Changed || strings.Join(res.Written, "|") != "Context|Decisions|Open questions" || res.Updated != later.Format(TimeFormat) {
+		t.Errorf("result: %+v", res)
+	}
+	n, err := ReadNarrative(r.NarrativePath("S-0001"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.NewReplacer(
+		"## Context\n\nWhy.\n", "## Context\n\nWhy, now.\n",
+		"- One.\n", "- One.\n- Two, since one was not enough.\n- Three.\n  With a second line.\n",
+		"- Which?\n", "- Which?\n- 2026-09-15: Which port?\n",
+	).Replace(stateBody)
+	if n.Body != want {
+		t.Errorf("body:\n%s\nwant:\n%s", n.Body, want)
+	}
+	if got := OpenQuestions(n.Body); strings.Join(got, "|") != "Which?|2026-09-15: Which port?" {
+		t.Errorf("open questions: %q", got)
+	}
+
+	// The same context again writes nothing; a decision always appends.
+	res, err = r.WriteStreamState("S-0001", StreamText{Context: "Why, now."}, StreamOptions{Now: later.Add(time.Hour)})
+	if err != nil || res.Changed || strings.Join(res.Written, "|") != "Context" {
+		t.Errorf("the same context again: %+v, %v", res, err)
+	}
+	res, err = r.WriteStreamState("S-0001", StreamText{Decisions: []string{"Two, since one was not enough."}}, StreamOptions{Now: later})
+	if err != nil || !res.Changed {
+		t.Errorf("the same decision again: %+v, %v", res, err)
+	}
+	if s, _ := NarrativeSection(readFile(t, n.Path), DecisionsSection); strings.Count(s.Text, "Two, since") != 2 {
+		t.Errorf("a decision given again must be appended again:\n%s", s.Text)
+	}
+
+	// Only blank entries is giving nothing, which is refused naming all five.
+	if _, err := r.WriteStreamState("S-0001", StreamText{Decisions: []string{" "}, Questions: []string{""}}, StreamOptions{Now: t0}); err == nil ||
+		!strings.Contains(err.Error(), "give the current state, the next steps, the context, a decision, or a question") {
+		t.Errorf("only blank entries: %v", err)
+	}
+	// A second-level heading in a decision is refused as in the state.
+	if _, err := r.WriteStreamState("S-0001", StreamText{Decisions: []string{"x\n## Log"}}, StreamOptions{Now: t0}); err == nil || !strings.Contains(err.Error(), "use ### or deeper") {
+		t.Errorf("a heading in a decision: %v", err)
+	}
+}
+
+// A question is written above the block that mirrors threads, which stays
+// byte for byte as it was; OpenQuestions lists it and AnswerOpenQuestion
+// moves it to Decisions. Writing it by replacing the whole section would
+// lose the block, and this test fails.
+func TestWriteStreamStateKeepsTheThreadsBlock(t *testing.T) {
+	r := inProgressStream(t)
+	block := "<!-- threads:start -->\n- [TH-0007](../threads/TH-0007-x.md) Which way? (awaiting operator)\n<!-- threads:end -->\n"
+	n, _ := ReadNarrative(r.NarrativePath("S-0001"))
+	n.Body = strings.Replace(n.Body, "- Which?\n", "- Which?\n\n"+block, 1)
+	if err := n.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.WriteStreamState("S-0001", StreamText{Questions: []string{"Which port?"}}, StreamOptions{Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	n, _ = ReadNarrative(r.NarrativePath("S-0001"))
+	if !strings.Contains(n.Body, "## Open questions\n\n- Which?\n- 2026-09-15: Which port?\n\n"+block+"\n## Log") {
+		t.Errorf("want the question above the threads block, the block unchanged:\n%s", n.Body)
+	}
+	if got := OpenQuestions(n.Body); strings.Join(got, "|") != "Which?|2026-09-15: Which port?" {
+		t.Errorf("open questions: %q", got)
+	}
+	n, err := r.AnswerOpenQuestion("S-0001", "2026-09-15: Which port?", "Nine.", "alex", t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := OpenQuestions(n.Body); strings.Join(got, "|") != "Which?" {
+		t.Errorf("answered question still open: %q", got)
+	}
+	if s, _ := NarrativeSection(n.Body, DecisionsSection); !strings.Contains(s.Text, "Which port? — Nine.") {
+		t.Errorf("answer not in Decisions:\n%s", s.Text)
+	}
+	if !strings.Contains(n.Body, block) {
+		t.Errorf("the threads block changed:\n%s", n.Body)
+	}
+
+	// A section holding only the block gets the question above it too.
+	n.Body = strings.Replace(n.Body, "- Which?\n\n", "", 1)
+	if err := n.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.WriteStreamState("S-0001", StreamText{Questions: []string{"Only one?"}}, StreamOptions{Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	n, _ = ReadNarrative(r.NarrativePath("S-0001"))
+	if !strings.Contains(n.Body, "## Open questions\n\n- 2026-09-15: Only one?\n\n"+block) {
+		t.Errorf("want the question above the block:\n%s", n.Body)
+	}
+}
+
+// Empty sections, and missing ones, get their bullets with one blank line on
+// each side, where the template puts the section.
+func TestWriteStreamStateAppendsToEmptyAndMissingSections(t *testing.T) {
+	r := inProgressStream(t)
+	n, _ := ReadNarrative(r.NarrativePath("S-0001"))
+	n.Body = "\n# S-0001 S\n\n## Context\n\n## Current state\n\nNow.\n\n## Decisions\n\n## Open questions\n\n## Log\n"
+	if err := n.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.WriteStreamState("S-0001", StreamText{Context: "Why.", Decisions: []string{"D."}, Questions: []string{"Q?"}}, StreamOptions{Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	n, _ = ReadNarrative(r.NarrativePath("S-0001"))
+	if want := "\n# S-0001 S\n\n## Context\n\nWhy.\n\n## Current state\n\nNow.\n\n## Decisions\n\n- D.\n\n## Open questions\n\n- 2026-09-15: Q?\n\n## Log\n"; n.Body != want {
+		t.Errorf("empty sections:\n%q\nwant:\n%q", n.Body, want)
+	}
+
+	n.Body = "\n# S-0001 S\n\n## Current state\n\nNow.\n\n## Log\n"
+	if err := n.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.WriteStreamState("S-0001", StreamText{Decisions: []string{"D."}, Questions: []string{"Q?"}}, StreamOptions{Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	n, _ = ReadNarrative(r.NarrativePath("S-0001"))
+	if want := "\n# S-0001 S\n\n## Current state\n\nNow.\n\n## Decisions\n\n- D.\n\n## Open questions\n\n- 2026-09-15: Q?\n\n## Log\n"; n.Body != want {
+		t.Errorf("missing sections:\n%q\nwant:\n%q", n.Body, want)
+	}
+}
+
 // Text left out leaves its section as it was; giving neither is refused; the
 // same text again writes nothing.
 func TestSetStreamStateLeavesASectionLeftOut(t *testing.T) {
@@ -331,7 +468,7 @@ func TestSetStreamStateLeavesASectionLeftOut(t *testing.T) {
 		t.Errorf("current state: %q", s.Text)
 	}
 
-	if _, err := r.SetStreamState("S-0001", " ", "", StreamOptions{Now: t0}); err == nil || !strings.Contains(err.Error(), "give the current state, the next steps, or both") {
+	if _, err := r.SetStreamState("S-0001", " ", "", StreamOptions{Now: t0}); err == nil || !strings.Contains(err.Error(), "give the current state, the next steps, the context, a decision, or a question") {
 		t.Errorf("neither text: %v", err)
 	}
 	res, err = r.SetStreamState("S-0001", "Only the state.", "", StreamOptions{Now: t0.Add(time.Hour)})

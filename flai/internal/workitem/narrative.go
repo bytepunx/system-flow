@@ -242,15 +242,31 @@ func (r *Repo) LogStream(storyID, entry string, opt StreamOptions) (*Narrative, 
 	return n, nil
 }
 
-// The sections SetStreamState writes.
+// The sections SetStreamState and WriteStreamState write.
 const (
-	CurrentState = "Current state"
-	NextSteps    = "Next steps"
+	ContextSection       = "Context"
+	CurrentState         = "Current state"
+	NextSteps            = "Next steps"
+	DecisionsSection     = "Decisions"
+	OpenQuestionsSection = "Open questions"
 )
 
 // NarrativeSections are a narrative's second-level headings, without "## ",
 // in the order the narrative template gives them.
-var NarrativeSections = []string{"Context", CurrentState, NextSteps, "Decisions", "Open questions", "Log"}
+var NarrativeSections = []string{ContextSection, CurrentState, NextSteps, DecisionsSection, OpenQuestionsSection, "Log"}
+
+// StreamText is what WriteStreamState writes to a story's narrative. Current,
+// Next, and Context each replace their section's text; an empty one leaves
+// its section alone. Each entry of Decisions is appended as a bullet under
+// ## Decisions, and each entry of Questions as a dated bullet under ## Open
+// questions, above the block that mirrors threads; a blank entry is dropped.
+type StreamText struct {
+	Current   string
+	Next      string
+	Context   string
+	Decisions []string
+	Questions []string
+}
 
 // StreamRefusedError is SetStreamState's refusal of a story whose narrative
 // state it may not write: one not in progress or in review, or one with no
@@ -270,8 +286,9 @@ type StreamState struct {
 	// Updated is the narrative's updated stamp after the write, or as it was
 	// when nothing changed.
 	Updated string `json:"updated"`
-	// Written are the sections given text, CurrentState and NextSteps, in
-	// that order.
+	// Written are the sections given text, in the order the narrative
+	// template gives them: Context, Current state, Next steps, Decisions, and
+	// Open questions.
 	Written []string `json:"written"`
 	// Changed is false when the narrative already held the text given, and
 	// nothing was written.
@@ -283,20 +300,38 @@ type StreamState struct {
 var stateHeading = regexp.MustCompile(`^ {0,3}#{1,2}(\s|$)`)
 
 // SetStreamState replaces what is under a story's narrative's ## Current
-// state with current and under ## Next steps with next, leaves every other
+// state with current and under ## Next steps with next, as WriteStreamState
+// does given those two alone.
+func (r *Repo) SetStreamState(storyID, current, next string, opt StreamOptions) (*StreamState, error) {
+	return r.WriteStreamState(storyID, StreamText{Current: current, Next: next}, opt)
+}
+
+// WriteStreamState writes text to a story's narrative: it replaces what is
+// under ## Context, ## Current state, and ## Next steps with the texts given
+// for them, appends each decision as a bullet under ## Decisions and each
+// question as a bullet dated today under ## Open questions, above the block
+// that mirrors threads, which it keeps byte for byte; it leaves every other
 // section as it was, and writes wip/agents/index.md again. An empty text
 // leaves its section alone; a missing section is inserted where the template
 // puts it. It stamps updated, and records the agent and session given, as
 // LogStream does, and appends nothing to the log. It refuses, with a
 // *StreamRefusedError, a story not in progress or in review and one with no
 // narrative, and, with an *mdlint.Error, text the project's lint rejects.
-func (r *Repo) SetStreamState(storyID, current, next string, opt StreamOptions) (*StreamState, error) {
-	current, next = strings.TrimSpace(current), strings.TrimSpace(next)
-	if current == "" && next == "" {
-		return nil, fmt.Errorf("nothing to write to %s's narrative: give the current state, the next steps, or both", storyID)
+func (r *Repo) WriteStreamState(storyID string, text StreamText, opt StreamOptions) (*StreamState, error) {
+	current, next, context := strings.TrimSpace(text.Current), strings.TrimSpace(text.Next), strings.TrimSpace(text.Context)
+	decisions, questions := entries(text.Decisions), entries(text.Questions)
+	if current == "" && next == "" && context == "" && len(decisions) == 0 && len(questions) == 0 {
+		return nil, fmt.Errorf("nothing to write to %s's narrative: give the current state, the next steps, the context, a decision, or a question", storyID)
 	}
-	texts := []struct{ name, text string }{{CurrentState, current}, {NextSteps, next}}
-	for _, t := range texts {
+	texts := []struct{ name, text string }{{ContextSection, context}, {CurrentState, current}, {NextSteps, next}}
+	checked := slices.Clone(texts)
+	for _, d := range decisions {
+		checked = append(checked, struct{ name, text string }{"decision", d})
+	}
+	for _, q := range questions {
+		checked = append(checked, struct{ name, text string }{"question", q})
+	}
+	for _, t := range checked {
 		for _, l := range strings.Split(t.text, "\n") {
 			if stateHeading.MatchString(l) {
 				return nil, fmt.Errorf("the %s text for %s holds the heading %q, which would end the section: use ### or deeper for a heading inside it", strings.ToLower(t.name), storyID, l)
@@ -332,6 +367,19 @@ func (r *Repo) SetStreamState(storyID, current, next string, opt StreamOptions) 
 			body = replaceSection(body, t.name, t.text)
 			res.Written = append(res.Written, t.name)
 		}
+	}
+	if len(decisions) > 0 {
+		body = appendBullets(body, DecisionsSection, decisions)
+		res.Written = append(res.Written, DecisionsSection)
+	}
+	if len(questions) > 0 {
+		day := opt.Now.UTC().Format("2006-01-02")
+		dated := make([]string, len(questions))
+		for i, q := range questions {
+			dated[i] = day + ": " + q
+		}
+		body = appendBullets(body, OpenQuestionsSection, dated)
+		res.Written = append(res.Written, OpenQuestionsSection)
 	}
 	if body == n.Body {
 		res.Updated = n.Updated
@@ -460,6 +508,70 @@ func replaceSection(body, name, text string) string {
 	}
 	out := slices.Concat(lines[:start+1], []string{""}, strings.Split(text, "\n"), []string{""}, lines[end:])
 	return strings.Join(out, "\n")
+}
+
+// entries are the texts given, each trimmed, with one leading list marker
+// dropped, since each is written as a bullet of its own, and the blank ones
+// left out.
+func entries(texts []string) []string {
+	var out []string
+	for _, t := range texts {
+		t = strings.TrimSpace(t)
+		if m := leadingMarker.FindStringIndex(t); m != nil {
+			t = strings.TrimSpace(t[m[1]:])
+		}
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// leadingMarker is a bullet's marker opening a text: a dash, star, or plus
+// and the space after it.
+var leadingMarker = regexp.MustCompile(`^[-*+][ \t]+`)
+
+// appendBullets adds each entry as a bullet at the end of body's "## <name>",
+// its later lines indented under it, with blank lines around the list where
+// the section has other text. Under ## Open questions the bullets go above
+// the block that mirrors threads, which is left byte for byte as it was.
+// Without such a heading it inserts the section where the template puts it.
+func appendBullets(body, name string, entries []string) string {
+	var list []string
+	for _, e := range entries {
+		for i, l := range strings.Split(e, "\n") {
+			switch {
+			case i == 0:
+				list = append(list, "- "+l)
+			case strings.TrimSpace(l) == "":
+				list = append(list, "")
+			default:
+				list = append(list, "  "+l)
+			}
+		}
+	}
+	lines := strings.Split(body, "\n")
+	start, end := sectionSpan(lines, name)
+	if start < 0 {
+		return replaceSection(body, name, strings.Join(list, "\n"))
+	}
+	at := end
+	for i := start + 1; i < end; i++ {
+		if strings.Contains(lines[i], "<!-- threads:start -->") {
+			at = i
+			break
+		}
+	}
+	for at > start+1 && strings.TrimSpace(lines[at-1]) == "" {
+		at--
+	}
+	if prev := lines[at-1]; at == start+1 || !narrativeBullet.MatchString(prev) && !narrativeContinuation.MatchString(prev) {
+		list = append([]string{""}, list...)
+	}
+	if at < len(lines) && strings.TrimSpace(lines[at]) != "" {
+		list = append(list, "")
+	}
+	return strings.Join(slices.Concat(lines[:at], list, lines[at:]), "\n")
 }
 
 var narrativeSectionHeading = regexp.MustCompile(`^##\s`)
