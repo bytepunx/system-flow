@@ -84,6 +84,7 @@ The script and pilot write these to `.flai-cache/agents/S-nnnn/`, which is git-i
 | `wip/` of the main checkout, as the manifest's `layout.wip` names it | the same path | read-only | the narrative, the board, the items, the threads, and the messages that `flai verify` checks ([ADR-0253](../../../design/adrs/0253-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-wip-and-system.md)) |
 | `system-flow.yaml` of the main checkout | the same path | read-only | by it flai knows the main checkout is there, so `flai verify` runs rather than refusing |
 | `.flai-cache/verify` of the main checkout, made first so it is yours | the same path | read-write | the report `flai verify` writes, which `flai verify --last` reads on the host |
+| `.flai-cache/items-checked.lock` of the main checkout, made first as an empty 0600 file so Docker does not make it a folder | the same path | read-write | the checked-write lock, so `--record-issues` in the container waits for a checked write of a work item on the host ([ADR-0283](../../../design/adrs/0283-a-close-out-s-record-step-confirms-each-finding-outside-the-story-on-a-work.md)) |
 | `.flai-cache/agents/S-nnnn` | the same path | read-write | in `claude/`, the `CLAUDE_CONFIG_DIR`, Claude Code's state: settings, transcript, caches; in `flai/`, the container's flai config and cache |
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
 
@@ -104,6 +105,7 @@ Under `flai serve`, a story whose agent runs on `harness: container` is closed o
 | the story's registration, `.git/worktrees/S-nnnn` | read-write | read-write |
 | `wip/` and `system-flow.yaml` of the main checkout | read-only | read-only |
 | `.flai-cache/verify` of the main checkout | read-write | read-write |
+| `.flai-cache/items-checked.lock` of the main checkout | read-write | read-write |
 | `.flai-cache/agents/S-nnnn` | read-write | not mounted |
 | the login | read-only | not mounted |
 
