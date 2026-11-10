@@ -2,12 +2,12 @@
 id: I-0279
 title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-07T06:58:47Z
 last_reported: 2026-11-07T06:58:47Z
-updated: 2026-11-10T08:34:46Z
+updated: 2026-11-10T09:34:27Z
 ---
 
 # I-0279 scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools
@@ -24,3 +24,4 @@ Met on S-0565's T-2452, 2026-11-07. TH-0821's option (a) runs S-0556's close-out
 ## Remediation
 
 Story S-0670 remediates this issue, created from it at 2026-11-10T08:34:46Z.
+Closed 2026-11-10T09:34:27Z: S-0670: scripts/agent-container.sh runs FLAI_AGENT_IMAGE, else the image scripts/agent-image.sh --tag prints, the project's layer image (flai-agent-sf-claude-code:local here) when system-flow.yaml names agent.image.layer, as flai serve's container harness picks it, and refuses an image not built (T-2908, 972b90a). scripts/agent-container-test.sh reproduces the case without Docker and the smoke tier runs it (T-2911).
