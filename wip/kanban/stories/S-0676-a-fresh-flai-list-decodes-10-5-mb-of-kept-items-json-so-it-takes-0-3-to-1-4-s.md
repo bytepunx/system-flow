@@ -6,7 +6,7 @@ title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:00Z
 transitions: []
 tags: [flai, performance]
 topics: [back-end, cli]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:42Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T21:42:00Z
+  delivery: 2026-11-10T21:39:00Z
   basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666 and S-0675."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T10:55:00Z
 ---
 # S-0676 A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names
 
