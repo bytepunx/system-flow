@@ -2,12 +2,12 @@
 id: I-0312
 title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path"
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 2s
 first_reported: 2026-11-08T01:58:32Z
 last_reported: 2026-11-08T01:58:32Z
-updated: 2026-11-10T08:34:54Z
+updated: 2026-11-10T20:10:20Z
 ---
 
 # I-0312 A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path
@@ -24,3 +24,4 @@ S-0601 ran check.Run's rules at once and kept the props node read. A warm `flai 
 ## Remediation
 
 Story S-0677 remediates this issue, created from it at 2026-11-10T08:34:54Z.
+Closed 2026-11-10T20:10:20Z: S-0677 runs workItems' per-item rules on check.Run's pool with a children index. It also keeps the digest rule's and the conflict-marker scan's per-file results under .flai-cache, by size and modification time. On the same host at a load of 47 to 56, a warm whole flai check --strict took 0.57 to 0.71 s against main's 0.97 to 1.15 s. The step run alone fell from 122–167 ms to 2–7 ms, and the digest rule from 412–513 ms to 30–78 ms. The list's decode remains on the path and is S-0676's (I-0310). See design/system/server-performance.md § Cause 11 again.
