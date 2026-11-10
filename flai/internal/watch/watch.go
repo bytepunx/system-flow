@@ -90,8 +90,7 @@ func (w *Watcher) snapshot() map[string]sig {
 		}
 		_ = filepath.WalkDir(full, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				// A folder that vanished or cannot be read is skipped, not fatal: the next look tries again.
-				return nil //nolint:nilerr
+				return nil //nolint:nilerr // a folder that vanished or cannot be read is skipped, not fatal: the next look tries again
 			}
 			if d.IsDir() {
 				if path != full && (strings.HasPrefix(d.Name(), ".") || slow[path]) {
