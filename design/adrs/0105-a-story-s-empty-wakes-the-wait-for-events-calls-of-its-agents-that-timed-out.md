@@ -1,8 +1,8 @@
 ---
 id: ADR-0105
 title: "A story's empty wakes, the wait_for_events calls of its agents that timed out with nothing to report, are counted from their logs into its usage, and flai stats reports them"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 ---
