@@ -3,16 +3,37 @@ id: T-2902
 type: task
 nature: remediation
 title: The design and the user guide say the read forms of flai serve are open to every agent
-status: backlog
+status: done
 parent: S-0680
 owner: alex
 created: 2026-11-10T08:46:51Z
-updated: 2026-11-10T08:46:51Z
-transitions: []
+updated: 2026-11-10T09:02:33Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:02:20Z
+    by: agent-S-0680
+  - to: in-progress
+    at: 2026-11-10T09:02:21Z
+    by: agent-S-0680
+  - to: done
+    at: 2026-11-10T09:02:33Z
+    by: agent-S-0680
 stream: S-0680
 tags: [docs, guard]
 touches: [design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-2901]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 1
+      output: 11
+      cache_read: 158392
+      cache_write: 225
+      cost: 0.0584
 ---
 # T-2902 The design and the user guide say the read forms of flai serve are open to every agent
 

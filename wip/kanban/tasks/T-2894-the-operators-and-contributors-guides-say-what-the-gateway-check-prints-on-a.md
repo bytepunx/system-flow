@@ -3,14 +3,20 @@ id: T-2894
 type: task
 nature: remediation
 title: The operators and contributors guides say what the gateway check prints on a 402 and what to do about it
-status: ready
+status: done
 parent: S-0685
 owner: alex
 created: 2026-11-10T08:44:31Z
-updated: 2026-11-10T08:49:22Z
+updated: 2026-11-10T09:09:55Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
+  - to: in-progress
+    at: 2026-11-10T09:02:32Z
+    by: agent-S-0685
+  - to: done
+    at: 2026-11-10T09:09:55Z
     by: agent-S-0685
 stream: S-0685
 tags: [gateway, docs]

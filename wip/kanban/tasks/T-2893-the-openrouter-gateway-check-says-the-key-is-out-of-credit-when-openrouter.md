@@ -3,17 +3,20 @@ id: T-2893
 type: task
 nature: remediation
 title: The OpenRouter gateway check says the key is out of credit when OpenRouter answers 402, before the checks that follow from it
-status: in-progress
+status: done
 parent: S-0685
 owner: alex
 created: 2026-11-10T08:44:21Z
-updated: 2026-11-10T08:49:22Z
+updated: 2026-11-10T09:02:05Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:22Z
     by: agent-S-0685
   - to: in-progress
     at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
+  - to: done
+    at: 2026-11-10T09:02:05Z
     by: agent-S-0685
 stream: S-0685
 tags: [gateway, tests]

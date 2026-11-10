@@ -3,11 +3,11 @@ id: T-2901
 type: task
 nature: remediation
 title: The guard counts the read forms of flai serve among the reads
-status: in-progress
+status: done
 parent: S-0680
 owner: alex
 created: 2026-11-10T08:46:44Z
-updated: 2026-11-10T08:52:29Z
+updated: 2026-11-10T09:01:30Z
 transitions:
   - to: ready
     at: 2026-11-10T08:52:28Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:52:29Z
     by: agent-S-0680
+  - to: done
+    at: 2026-11-10T09:01:30Z
+    by: agent-S-0680
 stream: S-0680
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go]
+usage:
+  source: log
+  seconds: 541
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 142
+      cache_read: 3088711
+      cache_write: 19188
+      cost: 1.1436
 ---
 # T-2901 The guard counts the read forms of flai serve among the reads
 

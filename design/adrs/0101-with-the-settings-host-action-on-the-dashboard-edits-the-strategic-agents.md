@@ -1,8 +1,8 @@
 ---
 id: ADR-0101
 title: "With the settings host action on, the dashboard edits the strategic agents' settings in the manifest through flai manifest set"
-status: proposed
-date: 2026-10-06
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0039]

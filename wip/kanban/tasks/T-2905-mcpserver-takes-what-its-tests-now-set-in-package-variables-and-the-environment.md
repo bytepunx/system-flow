@@ -3,12 +3,18 @@ id: T-2905
 type: task
 nature: improvement
 title: mcpserver takes what its tests now set in package variables and the environment, the permission poll, the flai it runs, its version, the releases API and token, and a child's config, through Options
-status: backlog
+status: in-progress
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:16Z
-updated: 2026-11-10T08:47:16Z
-transitions: []
+updated: 2026-11-10T09:07:31Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:07:30Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T09:07:31Z
+    by: system-flow
 stream: S-0684
 tags: [flai, go, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go]

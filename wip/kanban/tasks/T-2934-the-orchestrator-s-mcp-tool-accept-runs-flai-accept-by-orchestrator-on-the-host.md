@@ -3,12 +3,18 @@ id: T-2934
 type: task
 nature: remediation
 title: The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
-status: backlog
+status: in-progress
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:37Z
-updated: 2026-11-10T08:55:00Z
-transitions: []
+updated: 2026-11-10T08:56:39Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:56:37Z
+    by: agent-S-0687
+  - to: in-progress
+    at: 2026-11-10T08:56:39Z
+    by: agent-S-0687
 stream: S-0687
 tags: [flai, mcp, guard]
 touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go]

@@ -3,11 +3,11 @@ id: T-2904
 type: task
 nature: improvement
 title: mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
-status: in-progress
+status: done
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:46:58Z
-updated: 2026-11-10T08:51:12Z
+updated: 2026-11-10T09:06:48Z
 transitions:
   - to: ready
     at: 2026-11-10T08:51:12Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:51:12Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T09:06:48Z
+    by: agent-S-0684
 stream: S-0684
 tags: [flai, go, mcp]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/session_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/session_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/serve/restart_test.go, flai/internal/mcpserver/server_test.go]
+usage:
+  source: log
+  seconds: 934
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 277
+      cache_read: 7883555
+      cache_write: 389792
+      cost: 3.0445
 ---
 # T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
 

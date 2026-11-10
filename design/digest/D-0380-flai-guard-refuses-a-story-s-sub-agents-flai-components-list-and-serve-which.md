@@ -9,7 +9,7 @@ date: 2026-10-23
 status: absorbed
 absorbed_by: "design/system/flai-cli.md#commands"
 asked_again: []
-cited: []
+cited: [TH-0991]
 ---
 
 # D-0380 flai guard refuses a story's sub-agents flai components list and serve, which only read or run the project's own dev server

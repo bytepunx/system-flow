@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0674-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md
   item: S-0674
 status: open
-participants: [planner-S-0674]
+participants: [planner-S-0674, orchestrator]
 created: 2026-11-10T08:51:40Z
-updated: 2026-11-10T08:51:40Z
+updated: 2026-11-10T09:04:39Z
 ---
 
 # TH-1001 Plan for S-0674: one ADR, then the drift's attribution and task done's narrowing side by side, then measure and close I-0286
@@ -46,3 +46,28 @@ Assumptions:
 Not planned: co-change suggestions (`flai touches suggest`) read the same bookkeeping commits and could suggest digest or issue files. No instance showed it, so it is left out.
 
 No change is proposed to the story's words.
+
+### 2026-11-10T09:04:39Z orchestrator (recommendation)
+**Recommended:** keep the 4h `time_lost_per_cycle` on S-0674 for now, and keep the plan as drafted, T-2940 included. Revisit the input once T-2941 has measured `exact_share`.
+
+**The plan: approved.** T-2936, then T-2939 and T-2940 together, then T-2941; 2h30m, 600 USD a week.
+
+- The cause is found in the figures: all 80 `outside` cases are flai's own bookkeeping folders, and the remaining 18 are predicted files `flai task done` never drops (ADR-0144 only widens).
+- Assumption 1, T-2940: keep it. Criterion 1 asks that the cause no longer occurs, and the `unchanged` half is part of that cause. T-2939 alone leaves 18 of 115 stories inexact. The ADR records that `exact_share` then measures the claim as task done leaves it.
+- Assumption 2: the `design/adrs` folder touch is recorded under `### Planning` and the folder is in `claims.shared`, so it holds no story.
+- The metrics contract changes only with an ADR, and T-2936 writes it first.
+
+**Assumption 3, the input:** keep it until T-2941 measures.
+
+- The orchestration policy is `throughput`, so the ready column is ordered by forecast. A lower value would not move S-0674.
+- No figure yet says how much of the 4h the fix recovers. T-2941's measure gives one. A figure set now would be a guess.
+
+**Why I do not set it:** an input already set on a ready story is yours alone. It is money.
+
+**Alternative:** lower `time_lost_per_cycle` now, with `flai edit S-0674 --time-lost-per-cycle <duration>`. The planner then works out the value again on its next run.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

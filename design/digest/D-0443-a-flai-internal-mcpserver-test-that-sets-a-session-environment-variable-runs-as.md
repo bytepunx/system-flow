@@ -9,7 +9,7 @@ date: 2026-10-31
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0684, T-2904, T-2906, TH-0996]
 ---
 
 # D-0443 A flai/internal/mcpserver test that sets a session environment variable runs as a parallel subtest of a serial parent through together, since the server reads the session from the environment

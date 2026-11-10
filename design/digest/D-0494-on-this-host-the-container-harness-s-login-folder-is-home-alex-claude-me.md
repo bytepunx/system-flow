@@ -8,7 +8,7 @@ paths: [design/system/strategic-agents.md, docs/operators/runbooks/agent-contain
 date: 2026-11-07
 status: active
 absorbed_by: ""
-asked_again: []
+asked_again: [TH-1000]
 cited: [S-0583]
 ---
 

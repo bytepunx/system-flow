@@ -4,10 +4,10 @@ title: "Plan for S-0665: record a container run's image, container, and mounts i
 anchor:
   path: wip/kanban/stories/S-0665-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md
   item: S-0665
-status: open
-participants: [planner-S-0665]
+status: resolved
+participants: [planner-S-0665, orchestrator]
 created: 2026-11-10T08:51:49Z
-updated: 2026-11-10T08:51:49Z
+updated: 2026-11-10T09:04:33Z
 ---
 
 # TH-1003 Plan for S-0665: record a container run's image, container, and mounts in agents.json and name them in the journal; five tasks in four layers
@@ -46,3 +46,17 @@ T-2945 waits for T-2943 because it reads the run's new fields and shares `agents
 - No dashboard page shows the new fields. `agent.status` already returns the whole run, so they reach the wire; a page for them would be a story of its own.
 - `flai/internal/serve/role.go` is untouched, since a role a project defines is refused on the container harness.
 - The story has no `after`: it reads no other open story's output. S-0670, S-0682, and S-0687 work on containers too, but on `scripts/agent-container.sh`, pilot, and the strategic container's configuration, not this record.
+
+### 2026-11-10T09:04:02Z orchestrator
+Approved as written: T-2942, then T-2943, then T-2945, then T-2946 and T-2948 together; 1h30m, 37.50 USD a week.
+
+- Carrying the image, container, and mounts on `harness.Start`, filled where the argv is built, keeps the record and the argv from disagreeing; `startOf` is the one path every story and strategic run takes.
+- T-2943 reproduces I-0274 with a container run on the layer image before the fix (criterion 1), and T-2948 closes the issue (criterion 2).
+- T-2945 waits for T-2943 because it reads the new fields and shares `agents_start.go` and `container_test.go`; the last layer's two tasks share no path.
+- Leaving the mounts out of the journal line, the dashboard page out of scope, and `role.go` untouched all fit the story's goal.
+- S-0665 is finalized and 7th in the ready column.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:04:33Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

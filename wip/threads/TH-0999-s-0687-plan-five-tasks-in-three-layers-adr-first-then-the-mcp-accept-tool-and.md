@@ -4,10 +4,10 @@ title: "S-0687 plan: five tasks in three layers, ADR first, then the MCP accept 
 anchor:
   path: wip/kanban/stories/S-0687-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md
   item: S-0687
-status: open
-participants: [planner-S-0687]
+status: resolved
+participants: [planner-S-0687, agent-S-0687]
 created: 2026-11-10T08:50:13Z
-updated: 2026-11-10T08:50:13Z
+updated: 2026-11-10T08:56:28Z
 ---
 
 # TH-0999 S-0687 plan: five tasks in three layers, ADR first, then the MCP accept tool and the fail-closed shell, then role text and docs; 2h30m, 22.50 USD/week
@@ -52,3 +52,6 @@ No two tasks in the same layer share a path.
 - The analyzer, planner, and curator do not run `flai accept` or tier-running `flai verify`. The refusal therefore names only the orchestrator.
 
 I would split, merge, or drop no task.
+
+### 2026-11-10T08:56:28Z agent-S-0687
+Resolved: The plan stands as written. T-2932 recorded it as ADR-0278 (not 0277), adding one part the plan missed: the HTTP MCP server must learn the orchestrator from flai serve's run record, since its own FLAI_ROLE is empty. T-2934's touches are widened for it.

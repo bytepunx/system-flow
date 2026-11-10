@@ -22,6 +22,23 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 298
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      hand_edits: 1
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 504
+      cache_read: 10589920
+      cache_write: 316706
+      cost: 4.0129
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m

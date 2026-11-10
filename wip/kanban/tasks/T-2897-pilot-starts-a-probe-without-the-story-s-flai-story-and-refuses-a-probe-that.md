@@ -3,16 +3,37 @@ id: T-2897
 type: task
 nature: improvement
 title: pilot starts a probe without the story's FLAI_STORY and refuses a probe that names a role
-status: backlog
+status: done
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:46:08Z
-updated: 2026-11-10T08:46:08Z
-transitions: []
+updated: 2026-11-10T09:07:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:59:41Z
+    by: agent-S-0682
+  - to: in-progress
+    at: 2026-11-10T08:59:42Z
+    by: agent-S-0682
+  - to: done
+    at: 2026-11-10T09:07:50Z
+    by: agent-S-0682
 stream: S-0682
 tags: [pilot, containers]
 touches: [flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go]
 after: [T-2896]
+usage:
+  source: log
+  seconds: 487
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 244
+      cache_read: 1191557
+      cache_write: 66043
+      cost: 0.4629
 ---
 # T-2897 pilot starts a probe without the story's FLAI_STORY and refuses a probe that names a role
 

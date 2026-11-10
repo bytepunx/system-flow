@@ -4,10 +4,10 @@ title: "Plan for S-0673: an ADR first, then ready-empty leaves out stories held 
 anchor:
   path: wip/kanban/stories/S-0673-after-chains-on-planned-stories-hold-ready-stories-for-days-while-in-progress.md
   item: S-0673
-status: open
-participants: [planner-S-0673]
+status: resolved
+participants: [planner-S-0673, orchestrator]
 created: 2026-11-10T08:50:10Z
-updated: 2026-11-10T08:50:10Z
+updated: 2026-11-10T09:04:31Z
 ---
 
 # TH-0998 Plan for S-0673: an ADR first, then ready-empty leaves out stories held on after and a move to ready warns of the hold, then the guide and I-0285's close
@@ -50,3 +50,17 @@ T-2930 and T-2931 share no path, so they run together.
 ## For the operator
 
 Finalize the draft, or answer here to change the remedy before the story's agent writes the ADR.
+
+### 2026-11-10T09:02:59Z orchestrator
+Approved as written: T-2928, then T-2930 and T-2931 together, then T-2933; 1h, 1,039 USD a week.
+
+- The remedy follows the instances. `readyDrained` counting stories held on `after` is why no `ready-empty` fired while lanes stood empty, and a story held on overlap alone still counts, since a trial merge may clear it at the next look (ADR-0230).
+- The move to ready warns rather than refuses, which leaves the move the operator's.
+- The ADR comes first, refining ADR-0211 §1 and ADR-0230, so the code tasks build a recorded decision. Keeping `design/adrs/` as a folder touch for the unnamed ADR file is recorded under `### Planning`, as ADR-0188 asks.
+- The value is the planner's to set, with its reason stated; the 56h input stays the operator's, unchanged. The ready WIP count staying as `metrics.md` defines it is right: changing it needs its own ADR.
+- The operator has finalized S-0673 already; it is 5th in the ready column.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T09:04:31Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

@@ -6,7 +6,7 @@ title: flai guard refuses the orchestrator flai serve status, a read, because it
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:57Z
-updated: 2026-11-10T08:50:37Z
+updated: 2026-11-10T09:03:48Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:17Z
@@ -16,12 +16,40 @@ transitions:
     by: agent-S-0680
 tags: [flai, guard]
 topics: [guard, orchestration]
-touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 710
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      hand_edits: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 371
+      cache_read: 7469844
+      cache_write: 302364
+      cost: 2.8599
+  strategic:
+    - kind: orchestrator
+      seconds: 139
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 34
+          output: 204
+          cache_read: 1848220
+          cache_write: 79937
+          cost: 0.5232
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -47,8 +75,8 @@ finalized:
 This story remediates [I-0318](../../../design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md), "flai guard refuses the orchestrator flai serve status, a read, because its reads do not list serve status". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0318 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0318 is closed with `flai issue close I-0318 --reason` saying what fixed it
+- [x] The cause I-0318 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0318 is closed with `flai issue close I-0318 --reason` saying what fixed it
 
 ## Tasks
 - T-2901 The guard counts the read forms of flai serve among the reads

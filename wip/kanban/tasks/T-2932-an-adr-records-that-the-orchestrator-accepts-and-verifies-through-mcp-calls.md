@@ -21,6 +21,18 @@ transitions:
 stream: S-0687
 tags: [flai, adr]
 touches: [design/adrs/README.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md]
+usage:
+  source: log
+  seconds: 243
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 380
+      cache_read: 9219403
+      cache_write: 74341
+      cost: 3.4195
 ---
 # T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
 

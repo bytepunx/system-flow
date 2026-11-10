@@ -9,7 +9,7 @@ date: 2026-09-16
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0429, S-0432]
+cited: [S-0429, S-0432, T-2939]
 ---
 
 # D-0001 Path-filtered flai workflow did not run on the initial push to main

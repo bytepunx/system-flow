@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2083.4180
-accrued_seconds: 1540066
-tasks_completed: 2714
-last_run: 2026-11-10T08:53:39Z
+accrued_cost: 2086.5212
+accrued_seconds: 1540949
+tasks_completed: 2736
+last_run: 2026-11-10T09:10:15Z
 ---
 
 # Orchestrator activity
@@ -19031,6 +19031,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 11
 - Cost: 0.0000 USD
 
+### 2026-11-10T08:55:00Z
+
+- Summary: Settled six story planners' plan threads under plan_backlog_stories: approved and resolved TH-0992 (S-0669), TH-0993 (S-0670), TH-0994 (S-0671), TH-0995 (S-0672), TH-0996 (S-0684), TH-0997 (S-0667); each plan's tasks, file touches, forecast, and flai cod value fit its story's two criteria.
+- Items: S-0669, S-0670, S-0671, S-0672, S-0684, S-0667
+- Seconds: 81
+- Cost: 0.6120 USD, estimated
+
+### 2026-11-10T08:55:57Z
+
+- Summary: S-0638 in review: last verify passed at 28a1b99, the verifier matched both criteria (selfupgrade.go and its test; I-0317 closed), dry run had no blocker; flai accept --by orchestrator was refused because the branch head had moved to 1ebd2e7, and the operator (alex) accepted S-0638 at 08:54:20Z, so nothing more is owed.
+- Items: S-0638
+- Seconds: 33
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:57:01Z
+
+- Summary: Release due after S-0638's acceptance: threshold policy met on count 1 of threshold 1 (value 37.5 of 1000 USD/week); started the publish formula, instance S-0704 (T-2952 fetch, T-2953 evaluate, T-2954 publish), moved to ready, committed 273068bcd.
+- Items: S-0704, S-0638
+- Seconds: 64
+- Cost: 0.2341 USD, estimated
+
+### 2026-11-10T08:58:04Z
+
+- Summary: Recommended an answer on TH-0991, citing design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md
+- Items: S-0680
+- Seconds: 63
+- Cost: 0.3170 USD, estimated
+
+### 2026-11-10T08:58:45Z
+
+- Summary: Finalized draft S-0665 (complete per flai promote --drafts; 2 criteria, 16 file touches all named by its 5 tasks, forecast 1h30m, value 37.5 USD/week). Promoted to ready in flai promote --candidates' throughput order: S-0670 (rank 1, 40m), S-0668 (2, 45m), S-0669 (3, 45m), S-0665 (4, 1h30m), S-0667 (5, 1h30m); skipped S-0241 (rank 6), blocked and awaiting the operator on TH-0790. Applied flai order --by throughput: ready is S-0670, S-0671, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704 (10 of 10).
+- Items: S-0665, S-0670, S-0668, S-0669, S-0667
+- Seconds: 41
+- Cost: 0.4186 USD, estimated
+
+### 2026-11-10T08:59:21Z
+
+- Summary: TH-0991 (S-0680's plan): recommended, not approved, the planner's scope of opening flai serve's ADR-0220 read forms to every read-held agent and sub-agent, since I-0318 calls that scope the operator's choice; plan otherwise fits (3 tasks, 10 file touches, 45m, 5 USD/week); thread left open.
+- Items: S-0680
+- Seconds: 36
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:59:47Z
+
+- Summary: No action on S-0659 to S-0663 (E-0035): their plans stand and each lacks only a cost of delay value, awaiting the operator's E-0035 input on TH-0979 to TH-0983, where my operator-only recommendations already stand. S-0680, S-0682, S-0684, S-0687, S-0673, S-0674, S-0671 were finalized by the operator or me before this run reached them; TH-0990 (S-0682) was resolved already.
+- Items: S-0659, S-0660, S-0661, S-0662, S-0663
+- Seconds: 26
+- Cost: 0.0852 USD, estimated
+
+### 2026-11-10T09:00:25Z
+
+- Summary: ## Orchestrator run: all listed reasons handled
+- Items: none
+- Seconds: 38
+- Cost: 0.1566 USD, estimated
+
+### 2026-11-10T09:02:59Z
+
+- Summary: Answered TH-0998, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0673
+- Seconds: 92
+- Cost: 0.4172 USD, estimated
+
+### 2026-11-10T09:03:30Z
+
+- Summary: Answered TH-1002, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0668
+- Seconds: 31
+- Cost: 0.0000 USD
+
+### 2026-11-10T09:04:02Z
+
+- Summary: Answered TH-1003, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0665
+- Seconds: 32
+- Cost: 0.0000 USD
+
+### 2026-11-10T09:04:39Z
+
+- Summary: Recommended an answer on TH-1001, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0674
+- Seconds: 37
+- Cost: 0.0465 USD, estimated
+
+### 2026-11-10T09:05:21Z
+
+- Summary: Settled story planners' threads under plan_backlog_stories: approved and resolved TH-0998 (S-0673, 1h, 1,039 USD/wk) and TH-1003 (S-0665, 1h30m, 37.50 USD/wk); approved TH-1002 (S-0668, 45m, 12.50 USD/wk, T-2950 kept) but flai guard refused its resolve, since its opener is system-flow, not planner-S-0668: left answered for the operator; on TH-1001 (S-0674) approved the plan and recommended, operator_only, keeping the 4h input until T-2941 measures, thread left open
+- Items: S-0673, S-0665, S-0668, S-0674
+- Seconds: 42
+- Cost: 0.0489 USD, estimated
+
+### 2026-11-10T09:06:02Z
+
+- Summary: Ready column: flai order --by throughput --apply after the reorder; order unchanged (S-0670 40m first, S-0704 last with no forecast). No promotion: ready is full at 10 of 10. Planned S-0684 and S-0687, drafts S-0668 and S-0665, and TH-0996, TH-0999, TH-1000 needed nothing: plans already settled, drafts already finalized and in ready, TH-1000 answered by the operator to S-0682's agent
+- Items: S-0670, S-0684, S-0687, S-0668, S-0665, S-0682
+- Seconds: 41
+- Cost: 0.0000 USD
+
+### 2026-11-10T09:06:28Z
+
+- Summary: Release due after S-0638 and S-0648 (threshold policy met: count 2 at or over 1, value 42.5 USD/wk): ran no new publish formula, since its instance S-0704 for this batch is already in ready (3rd layer publishes everything accepted and unreleased)
+- Items: S-0704, S-0638, S-0648
+- Seconds: 26
+- Cost: 0.0000 USD
+
+### 2026-11-10T09:06:59Z
+
+- Summary: I settled the planners' threads and checked the release and the ready column. One resolve was refused, and that thread is left for you.
+- Items: none
+- Seconds: 31
+- Cost: 0.3188 USD, estimated
+
+### 2026-11-10T09:07:39Z
+
+- Summary: Recommended an answer on TH-0991, citing design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md § Decision
+- Items: S-0680
+- Seconds: 33
+- Cost: 0.0907 USD, estimated
+
+### 2026-11-10T09:08:14Z
+
+- Summary: TH-0991 (planner-S-0680): re-posted the recommendation, since agent-S-0680's entry had cleared the earlier one. It keeps S-0680's scope as built: the serve read forms ADR-0220 lists stay open to every guarded agent, and the container harness's --image, --network, and --login count as host writes. Left open for the operator because I-0318 makes the scope the operator's choice. confirm_after is 48h; S-0680's forecast is 45m and its value is 5 USD a week.
+- Items: S-0680
+- Seconds: 35
+- Cost: 0.0000 USD
+
+### 2026-11-10T09:08:47Z
+
+- Summary: TH-0991: resolved planner-S-0680's thread under plan_backlog_stories after the operator confirmed my 09:07:39Z recommendation. S-0680 keeps its scope as built: the serve read forms are open to every guarded agent, and the container harness flags count as host writes. Its 45m forecast and 5 USD a week value are unchanged. No open thread is left on S-0680 to hold its review.
+- Items: S-0680
+- Seconds: 33
+- Cost: 0.0601 USD, estimated
+
+### 2026-11-10T09:09:08Z
+
+- Summary: TH-0991 is resolved. You confirmed my recommendation, so S-0680 keeps its scope as built.
+- Items: none
+- Seconds: 21
+- Cost: 0.1482 USD, estimated
+
+### 2026-11-10T09:09:38Z
+
+- Summary: Started for TH-0991, which was already resolved: the operator confirmed the 09:07:39Z recommendation and the thread was closed at 09:08:45Z, so S-0680 keeps its scope as built. Nothing more to do.
+- Items: S-0680
+- Seconds: 10
+- Cost: 0.0554 USD, estimated
+
+### 2026-11-10T09:10:15Z
+
+- Summary: I took no action: TH-0991 had already been resolved before this run started.
+- Items: none
+- Seconds: 37
+- Cost: 0.0939 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -19731,4 +19885,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-10T08:51:24Z
 
 - Call: `flai serve status`
+- Needs: none
+
+### 2026-11-10T09:04:32Z
+
+- Call: `thread_resolve TH-1002`
 - Needs: none

@@ -3,14 +3,20 @@ id: T-2895
 type: task
 nature: remediation
 title: Close I-0237 naming S-0548's manual gateway tier and T-2893's credit message as what fixed it
-status: ready
+status: done
 parent: S-0685
 owner: alex
 created: 2026-11-10T08:44:36Z
-updated: 2026-11-10T08:49:22Z
+updated: 2026-11-10T09:10:31Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
+  - to: in-progress
+    at: 2026-11-10T09:02:32Z
+    by: agent-S-0685
+  - to: done
+    at: 2026-11-10T09:10:31Z
     by: agent-S-0685
 stream: S-0685
 tags: [gateway, issues]

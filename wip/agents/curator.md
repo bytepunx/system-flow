@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 192.1806
-accrued_seconds: 21470
-tasks_completed: 120
-last_run: 2026-11-10T08:06:37Z
+accrued_cost: 195.7091
+accrued_seconds: 22680
+tasks_completed: 122
+last_run: 2026-11-10T09:10:20Z
 ---
 
 # Curator activity
@@ -971,3 +971,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0492, D-0543, D-0544, D-0545, D-0550, D-0551, D-0552, D-0553, D-0554, D-0555
 - Seconds: 641
 - Cost: 2.8727 USD, estimated
+
+### 2026-11-10T09:08:51Z
+
+- Summary: I wrote D-0557, D-0558, D-0559 and D-0560 (from I-0309, I-0329, I-0332 and S-0636). I merged S-0651, S-0652, S-0654, S-0636, I-0329 and I-0331 into D-0551, D-0492, D-0554, D-0470, D-0413, D-0550 and D-0556, and filled in D-0561's body; TH-0961 is recorded as asked again on D-0535 and TH-1000 on D-0494. I absorbed nothing, `flai digest compact` compacted nothing and recorded citers on 6 entries, and ADR-0275, ADR-0276 and the design already cover S-0654's and S-0637's other decisions.
+- Trigger: accepted S-0636
+- Items: D-0001, D-0380, D-0413, D-0443, D-0448, D-0468, D-0470, D-0479, D-0492, D-0494, D-0535, D-0550, D-0551, D-0554, D-0556, D-0557, D-0558, D-0559, D-0560, D-0561, D-0562
+- Seconds: 1159
+- Cost: 3.1403 USD, estimated
+
+### 2026-11-10T09:10:20Z
+
+- Summary: I found nothing to take in: `flai digest harvest --since 2026-11-10T09:08:51Z` returned no candidates, I absorbed nothing (nothing in `design/` or `docs/` changed since the last run, and D-0559 and D-0560 are not stated by any design document), and `flai digest compact` compacted no entries.
+- Trigger: accepted S-0638, S-0648
+- Items: none
+- Seconds: 51
+- Cost: 0.3882 USD, estimated

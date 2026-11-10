@@ -3,16 +3,37 @@ id: T-2898
 type: task
 nature: improvement
 title: scripts/agent-container.sh --probe runs the image as probe-S-nnnn with a probe start request
-status: backlog
+status: done
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:46:14Z
-updated: 2026-11-10T08:46:14Z
-transitions: []
+updated: 2026-11-10T09:08:14Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:59:43Z
+    by: agent-S-0682
+  - to: in-progress
+    at: 2026-11-10T08:59:44Z
+    by: agent-S-0682
+  - to: done
+    at: 2026-11-10T09:08:14Z
+    by: agent-S-0682
 stream: S-0682
 tags: [scripts, containers]
 touches: [scripts/agent-container.sh]
 after: [T-2896]
+usage:
+  source: log
+  seconds: 485
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 27
+      cache_read: 439656
+      cache_write: 5721
+      cost: 0.1639
 ---
 # T-2898 scripts/agent-container.sh --probe runs the image as probe-S-nnnn with a probe start request
 

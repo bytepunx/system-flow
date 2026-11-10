@@ -3,12 +3,18 @@ id: T-2935
 type: task
 nature: remediation
 title: The orchestrator's shell flai accept and tier-running flai verify refuse inside a role's container, naming the MCP tools, with a test that reproduces I-0256
-status: backlog
+status: in-progress
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:43Z
-updated: 2026-11-10T08:49:43Z
-transitions: []
+updated: 2026-11-10T08:56:44Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:56:41Z
+    by: agent-S-0687
+  - to: in-progress
+    at: 2026-11-10T08:56:44Z
+    by: agent-S-0687
 stream: S-0687
 tags: [flai, accept, verify]
 touches: [flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go]

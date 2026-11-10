@@ -9,7 +9,7 @@ date: 2026-11-01
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0685, TH-0989]
 ---
 
 # D-0448 S-0547's close-out fails only at smoke's OpenRouter gateway check: the key is out of credits (I-0237): choice 2 - I have removed the OpenRouter key from my environment for now

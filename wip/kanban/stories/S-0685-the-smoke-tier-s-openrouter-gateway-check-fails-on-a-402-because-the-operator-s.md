@@ -6,7 +6,7 @@ title: The smoke tier's OpenRouter gateway check fails on a 402 because the oper
 status: in-progress
 owner: alex
 created: 2026-11-10T08:37:11Z
-updated: 2026-11-10T08:48:20Z
+updated: 2026-11-10T09:10:21Z
 transitions:
   - to: ready
     at: 2026-11-10T08:47:51Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-11-10T08:48:20Z
     by: agent-S-0685
 tags: [gateway, tests]
-touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md]
+touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -61,8 +61,8 @@ finalized:
 This story remediates [I-0237](../../../design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md), "The smoke tier's OpenRouter gateway check fails on a 402 because the operator's OpenRouter key is out of credits, so every close-out and batch that runs smoke fails". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0237 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0237 is closed with `flai issue close I-0237 --reason` saying what fixed it
+- [x] The cause I-0237 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0237 is closed with `flai issue close I-0237 --reason` saying what fixed it
 
 ## Tasks
 - T-2893 The OpenRouter gateway check says the key is out of credit when OpenRouter answers 402, before the checks that follow from it

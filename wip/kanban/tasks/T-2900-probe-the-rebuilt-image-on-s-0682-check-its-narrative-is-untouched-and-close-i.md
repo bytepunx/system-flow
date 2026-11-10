@@ -3,12 +3,18 @@ id: T-2900
 type: task
 nature: remediation
 title: Probe the rebuilt image on S-0682, check its narrative is untouched, and close I-0224
-status: backlog
+status: in-progress
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:46:31Z
-updated: 2026-11-10T08:46:31Z
-transitions: []
+updated: 2026-11-10T09:08:44Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:08:43Z
+    by: agent-S-0682
+  - to: in-progress
+    at: 2026-11-10T09:08:44Z
+    by: agent-S-0682
 stream: S-0682
 tags: [containers, issues]
 touches: [design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]

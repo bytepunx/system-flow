@@ -3,12 +3,18 @@ id: T-2906
 type: task
 nature: improvement
 title: mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
-status: backlog
+status: in-progress
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:33Z
-updated: 2026-11-10T08:47:33Z
-transitions: []
+updated: 2026-11-10T09:07:33Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:07:32Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T09:07:33Z
+    by: system-flow
 stream: S-0684
 tags: [flai, go, mcp, testing]
 touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go]

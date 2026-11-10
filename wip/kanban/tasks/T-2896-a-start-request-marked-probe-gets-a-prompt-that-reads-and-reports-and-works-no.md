@@ -3,11 +3,11 @@ id: T-2896
 type: task
 nature: improvement
 title: A start request marked probe gets a prompt that reads and reports and works no story
-status: in-progress
+status: done
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:45:58Z
-updated: 2026-11-10T08:51:05Z
+updated: 2026-11-10T08:58:52Z
 transitions:
   - to: ready
     at: 2026-11-10T08:51:04Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:51:05Z
     by: agent-S-0682
+  - to: done
+    at: 2026-11-10T08:58:52Z
+    by: agent-S-0682
 stream: S-0682
 tags: [harness, containers]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 467
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 292
+      cache_read: 1913664
+      cache_write: 62075
+      cost: 0.7271
 ---
 # T-2896 A start request marked probe gets a prompt that reads and reports and works no story
 

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:46Z
-updated: 2026-11-10T08:47:46Z
+updated: 2026-11-10T09:06:38Z
 transitions: []
 stream: S-0684
 tags: [flai, go, mcp, testing]
-touches: [flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/issues.go]
 after: [T-2905, T-2906]
 ---
 # T-2910 mcpserver's permission, subproject, versions, and outdated tests pass Options in place of package variables and run in parallel, and together goes
