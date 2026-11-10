@@ -6,7 +6,7 @@ title: A checked edit of a work item writes, checks, and restores it with no loc
 status: backlog
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:00:52Z
+updated: 2026-11-10T07:01:15Z
 transitions: []
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
@@ -35,6 +35,8 @@ This story remediates [I-0328](../../../design/issues/I-0328-a-checked-edit-of-a
 - [ ] I-0328 is closed with `flai issue close I-0328 --reason` saying what fixed it
 
 ## Tasks
+- T-2844 itemedit.Apply holds the checked-write lock from its first save until it keeps or restores the edit
+- T-2847 itemedit.ApplyForecasts holds the checked-write lock from its save until it keeps or restores the forecasts
 
 ## Notes
 

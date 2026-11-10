@@ -20,6 +20,18 @@ transitions:
     by: agent-S-0656
 stream: S-0656
 tags: []
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 87
+      cache_read: 457565
+      cache_write: 1065
+      cost: 0.1687
 ---
 # T-2831 Fetch the remote's branch and tags
 

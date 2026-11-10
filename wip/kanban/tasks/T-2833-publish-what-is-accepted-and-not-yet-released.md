@@ -3,12 +3,18 @@ id: T-2833
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0656
 owner: alex
 created: 2026-11-10T06:45:10Z
-updated: 2026-11-10T06:45:10Z
-transitions: []
+updated: 2026-11-10T07:01:15Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:01:14Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T07:01:15Z
+    by: system-flow
 stream: S-0656
 tags: []
 after: [T-2832]

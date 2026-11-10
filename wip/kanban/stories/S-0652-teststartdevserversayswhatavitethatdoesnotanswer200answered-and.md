@@ -6,7 +6,7 @@ title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOpe
 status: backlog
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T07:00:52Z
+updated: 2026-11-10T07:01:10Z
 transitions: []
 tags: []
 topics: [testing]
@@ -44,6 +44,9 @@ This story remediates [I-0329](../../../design/issues/I-0329-teststartdevservers
 - [ ] I-0329 is closed with `flai issue close I-0329 --reason` saying what fixed it
 
 ## Tasks
+- T-2841 The dev server's 404 test allows the fake vite time to start, and a start delay reproduces the missing 404
+- T-2843 The owners' MCP test server sets a slow threshold no call reaches, and FLAI_SLOW_REQUEST=1ns reproduces the slow log
+- T-2845 Close I-0329 with what fixed it
 
 ## Notes
 

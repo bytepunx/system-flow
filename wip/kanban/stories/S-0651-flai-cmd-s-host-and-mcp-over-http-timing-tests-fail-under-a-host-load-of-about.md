@@ -6,7 +6,7 @@ title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of 
 status: backlog
 owner: alex
 created: 2026-11-10T05:44:44Z
-updated: 2026-11-10T07:00:52Z
+updated: 2026-11-10T07:01:10Z
 transitions: []
 tags: [cli]
 topics: [testing]
@@ -43,6 +43,9 @@ This story remediates [I-0309](../../../design/issues/I-0309-flai-cmd-s-host-and
 - [ ] I-0309 is closed with `flai issue close I-0309 --reason` saying what fixed it
 
 ## Tasks
+- T-2839 TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a deadline far above the server's bound
+- T-2842 TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
+- T-2846 Confirm I-0309's tests under load and close I-0309
 
 ## Notes
 

@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:00:52Z
+updated: 2026-11-10T07:01:15Z
 ---
 
 # Active streams
@@ -15,13 +15,13 @@ updated: 2026-11-10T07:00:52Z
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0643](S-0643.md) | A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make | review | agent-S-0643 | 2026-11-10T06:57:22Z |
 | [S-0647](S-0647.md) | TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid | in-progress | agent-S-0647 | 2026-11-10T06:57:30Z |
-| [S-0656](S-0656.md) | Publish what is accepted and not yet released | in-progress | agent-S-0656 | 2026-11-10T07:00:49Z |
+| [S-0656](S-0656.md) | Publish what is accepted and not yet released | in-progress | agent-S-0656 | 2026-11-10T07:01:10Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 191 | 1144.3074 USD | 146332 | 2026-11-10T06:59:25Z |
-| [orchestrator](orchestrator.md) | 2625 | 2073.7120 USD | 1537292 | 2026-11-10T06:58:22Z |
+| [orchestrator](orchestrator.md) | 2626 | 2073.8509 USD | 1537393 | 2026-11-10T07:00:43Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 117 | 185.3235 USD | 19460 | 2026-11-09T23:24:51Z |
