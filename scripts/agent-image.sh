@@ -12,6 +12,10 @@
 # with the mounts the close-out's container has (ADR-0274), scoped to the story and recording no
 # issue (I-0281). With no story it checks in the worktree it is run from. CHECK_IMAGE names another
 # image to check in place of the layer's, such as an older build kept under another tag.
+# Before it builds, it asks the credential helper the Docker configuration names in credsStore; when
+# that helper is missing, fails, or does not answer within ten seconds, as Docker Desktop's
+# desktop.exe does from WSL when Windows interop is down, it builds with no login, from a scratch
+# configuration, since the base images are public, and says so; the operator's is unchanged (I-0339).
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
@@ -42,6 +46,48 @@ layer_tag() {
   key="$(sed -n 's/^key:[ ]*//p' system-flow.yaml | tr -d "\"'" | tr '[:upper:]' '[:lower:]')"
   [ -n "$key" ] || { echo "agent-image: system-flow.yaml names no key, which the layer's tag needs" >&2; exit 1; }
   echo "flai-agent-$key-$INNER:local"
+}
+
+# credentials_or_anonymous points DOCKER_CONFIG at a scratch configuration with no login when the
+# credential helper the Docker configuration names in credsStore is not on PATH, fails, or does not
+# answer within ten seconds, so docker build pulls the public base images anonymously (I-0339). The
+# scratch configuration keeps the original's current context and links every other entry of its
+# folder, such as cli-plugins, contexts, and buildx, so the build runs on the same engine with the
+# same builder; the original's config.json is not changed. A working helper, or none named, leaves
+# the configuration as it is.
+credentials_or_anonymous() {
+  config_dir="${DOCKER_CONFIG:-$HOME/.docker}"
+  config="$config_dir/config.json"
+  [ -f "$config" ] || return 0
+  store="$(sed -n 's/.*"credsStore"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | head -n 1)"
+  [ -n "$store" ] || return 0
+  helper="docker-credential-$store"
+  if command -v "$helper" >/dev/null 2>&1; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 "$helper" list </dev/null >/dev/null 2>&1 && return 0
+    else
+      "$helper" list </dev/null >/dev/null 2>&1 && return 0
+    fi
+    why="failed or did not answer within ten seconds"
+  else
+    why="is not on PATH"
+  fi
+  scratch="$(mktemp -d)"
+  trap 'rm -rf "$scratch"' EXIT
+  for entry in "$config_dir"/* "$config_dir"/.[!.]*; do
+    [ -e "$entry" ] || continue
+    name="$(basename "$entry")"
+    [ "$name" = config.json ] || ln -s "$entry" "$scratch/$name"
+  done
+  context="$(sed -n 's/.*"currentContext"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$config" | head -n 1)"
+  if [ -n "$context" ]; then
+    printf '{"currentContext": "%s"}\n' "$context" >"$scratch/config.json"
+  else
+    printf '{}\n' >"$scratch/config.json"
+  fi
+  DOCKER_CONFIG="$scratch"
+  export DOCKER_CONFIG
+  echo "agent-image: the credential helper $helper, which $config names in credsStore, $why; building with no login, from a scratch Docker configuration, since the base images are public. $config is unchanged" >&2
 }
 
 # build_layer builds the manifest's layer over the harness image, with Go at flai/go.mod's version
@@ -142,6 +188,7 @@ if [ "${1:-}" = "--tag" ]; then
 fi
 if [ "${1:-}" = "--layer" ]; then
   [ -n "$layer" ] || { echo "agent-image: system-flow.yaml names no agent.image.layer, so there is no layer to build" >&2; exit 1; }
+  credentials_or_anonymous
   build_layer "$layer"
   exit 0
 fi
@@ -150,6 +197,7 @@ COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 VERSION="$(git describe --tags --match 'flai/v*' --abbrev=0 2>/dev/null | sed 's|flai/v||' || echo dev)"
 # The commit's date, not the clock's, so an unchanged tree rebuilds from the cache.
 DATE="$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo)"
+credentials_or_anonymous
 echo "building $BEDROCK"
 docker build -f flai/images/bedrock/Dockerfile -t "$BEDROCK" \
   --build-arg "FLAI_VERSION=${VERSION:-dev}" --build-arg "FLAI_COMMIT=$COMMIT" \
