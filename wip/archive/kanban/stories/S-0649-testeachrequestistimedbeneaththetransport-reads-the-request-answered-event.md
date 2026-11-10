@@ -3,10 +3,10 @@ id: S-0649
 type: story
 nature: remediation
 title: TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
-status: review
+status: done
 owner: alex
 created: 2026-11-10T05:12:08Z
-updated: 2026-11-10T07:19:49Z
+updated: 2026-11-10T07:43:17Z
 transitions:
   - to: ready
     at: 2026-11-10T07:02:50Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T07:19:49Z
     by: agent-S-0649
+  - to: done
+    at: 2026-11-10T07:43:17Z
+    by: alex
 tags: [flai, test]
 topics: [testing]
 touches: [flai/internal/channel/channel_test.go, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/summary.md]

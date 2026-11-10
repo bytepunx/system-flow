@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:42:27Z
+updated: 2026-11-10T07:43:18Z
 ---
 
 # Active streams
@@ -12,7 +12,6 @@ updated: 2026-11-10T07:42:27Z
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
 | [S-0636](S-0636.md) | 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606 | in-progress | agent-S-0636 | 2026-11-09T23:11:12Z |
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
-| [S-0649](S-0649.md) | TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611 | review | agent-S-0649 | 2026-11-10T07:19:48Z |
 | [S-0650](S-0650.md) | TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers | review | agent-S-0650 | 2026-11-10T07:30:28Z |
 | [S-0651](S-0651.md) | flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200 | in-progress | agent-S-0651 | 2026-11-10T07:24:01Z |
 | [S-0653](S-0653.md) | TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports | in-progress | agent-S-0653 | 2026-11-10T07:38:06Z |
