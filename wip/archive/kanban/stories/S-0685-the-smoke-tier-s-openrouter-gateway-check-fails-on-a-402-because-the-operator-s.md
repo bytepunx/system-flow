@@ -3,10 +3,10 @@ id: S-0685
 type: story
 nature: remediation
 title: The smoke tier's OpenRouter gateway check fails on a 402 because the operator's OpenRouter key is out of credits, so every close-out and batch that runs smoke fails
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:37:11Z
-updated: 2026-11-10T09:28:20Z
+updated: 2026-11-10T09:33:15Z
 transitions:
   - to: ready
     at: 2026-11-10T08:47:51Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T09:28:20Z
     by: agent-S-0685
+  - to: done
+    at: 2026-11-10T09:33:15Z
+    by: orchestrator
 tags: [gateway, tests]
 touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md, design/issues/I-0337-flai-check-finds-adr-index-outside-the-story-at-close-out.md]
 agent:
@@ -109,3 +112,12 @@ Forecast: `flai forecast` gave 16m from 131 s per unit over 50 done remediation 
 Cost of delay: 27.50 USD a week, from `flai cod`, kept as computed from the operator's input, 11m lost per 168h cycle at 150 USD an hour. The input counts the one occurrence on 2026-10-31. No occurrence has followed since S-0548, so the real figure going forward is likely lower. The input is the operator's, so I left it as it is.
 
 No `after`: the story reads S-0548's tier, which is already on main.
+
+### Accepted by the orchestrator
+
+- Verified: 9441bbbed91a631b585fa7f8477fbf80df720f6e
+- At: 2026-11-10T09:33:15Z
+
+Verdict: pass
+- 1: flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md
+- 2: design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md

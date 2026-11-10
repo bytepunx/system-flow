@@ -3,16 +3,37 @@ id: T-2911
 type: task
 nature: remediation
 title: scripts/agent-container-test.sh reproduces I-0279 without Docker, and the smoke tier runs it
-status: backlog
+status: done
 parent: S-0670
 owner: alex
 created: 2026-11-10T08:47:47Z
-updated: 2026-11-10T08:47:47Z
-transitions: []
+updated: 2026-11-10T09:31:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:30:55Z
+    by: agent-S-0670
+  - to: in-progress
+    at: 2026-11-10T09:30:55Z
+    by: agent-S-0670
+  - to: done
+    at: 2026-11-10T09:31:58Z
+    by: agent-S-0670
 stream: S-0670
 tags: [scripts, test]
 touches: [scripts/agent-container-test.sh, scripts/smoke.sh]
 after: [T-2908]
+usage:
+  source: log
+  seconds: 61
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 71
+      cache_read: 1279539
+      cache_write: 13074
+      cost: 0.4757
 ---
 # T-2911 scripts/agent-container-test.sh reproduces I-0279 without Docker, and the smoke tier runs it
 

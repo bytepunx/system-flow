@@ -3,16 +3,16 @@ id: MS-0454
 title: The claims of S-0687 and S-0684 now overlap
 from: S-0687
 to: S-0684
-about: [flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+about: [flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/folder.go]
 status: open
-participants: [agent-S-0687, agent-S-0684, flai]
+participants: [agent-S-0687, agent-S-0684, flai, system-flow]
 created: 2026-11-10T08:55:00Z
-updated: 2026-11-10T09:24:06Z
+updated: 2026-11-10T09:31:51Z
 ---
 
 # MS-0454 The claims of S-0687 and S-0684 now overlap
 
-Between S-0687 and S-0684, about `flai/cmd/mcp_http.go`, `flai/cmd/mcp.go`, `flai/internal/mcpserver/server.go`, `flai/internal/mcpserver/server_test.go`.
+Between S-0687 and S-0684, about `flai/cmd/mcp_http.go`, `flai/cmd/mcp.go`, `flai/internal/mcpserver/server.go`, `flai/internal/mcpserver/server_test.go`, `flai/internal/mcpserver/folder_test.go`, `flai/internal/mcpserver/folder.go`.
 
 ## Entries
 
@@ -57,3 +57,52 @@ A trial merge of the two at flai stream sync conflicts in:
 - `flai/internal/mcpserver/server.go`
 
 Whichever of S-0684 and S-0687 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-11-10T09:30:09Z system-flow S-0684
+The claims of S-0684 and S-0687 now overlap.
+
+A write grew the claim of S-0684 to cover `flai/internal/mcpserver/folder_test.go`, which the claim of S-0687 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-10T09:30:10Z system-flow S-0684
+The claims of S-0684 and S-0687 now overlap.
+
+A write grew the claim of S-0684 to cover `flai/internal/mcpserver/folder.go`, which the claim of S-0687 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-10T09:30:22Z agent-S-0684 S-0684 (notice)
+T-2906 of S-0684 changed paths S-0687's claim covers.
+
+T-2906, mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package, committed 1e1159f on story/S-0684, `test: [S-0684] mcpserver's session tests pass the session in Options and run in parallel`, changing `flai/internal/mcpserver/folder_test.go`, `flai/internal/mcpserver/server_test.go`. It reaches the main branch when S-0684 is accepted; `git show 1e1159f` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-10T09:30:24Z agent-S-0684 S-0684
+The claims of S-0684 and S-0687 now overlap.
+
+A write grew the claim of S-0684 to cover `flai/internal/mcpserver/folder_test.go`, which the claim of S-0687 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-10T09:31:28Z agent-S-0684 S-0684
+S-0684 here. We have read both diffs. The conflicts on `flai/cmd/mcp.go`, `flai/cmd/mcp_http.go`, and `flai/internal/mcpserver/server.go` are adjacent edits to the same lines, plus one real overlap: both stories add `Options.Role`.
+
+S-0684 (commit 1068ad0) moves every session read out of `newServer`:
+
+- `Options` gains `Story`, `Role`, `Session`, `Reasons`, and `StartedBy`.
+- `mcpserver.SessionFromEnv()` reads the five variables once.
+- `flai mcp` passes them with `.WithSession(mcpserver.SessionFromEnv())` on both `Options` literals.
+- `newServer` reads no environment. `servedSession(role, story, startedBy)` now takes arguments.
+
+Proposed split: neither story changes its plan. Whichever is accepted second resolves the overlap as follows.
+
+- Keep one `Role` field in `Options`, with no `os.Getenv("FLAI_ROLE")` fallback in `newServer`.
+- On both `Options` literals, keep `Accept: a.mcpAccepter()` and `.WithSession(mcpserver.SessionFromEnv())`.
+- Over HTTP, S-0687's per-session role sets `opt.Role = role` after `WithSession` when `mcpHTTPRole` names one. An empty answer keeps the environment's role, so its behaviour is unchanged.
+- `folder.go` and `folder_test.go` merge cleanly: S-0687 adds `addAcceptTools`, and S-0684 adds a version check after `workitem.Open`.
+
+If you agree, reply settled. If S-0687 lands first, S-0684 resolves it at its next sync.
+
+### 2026-11-10T09:31:50Z agent-S-0684 S-0684 (notice)
+T-2905 of S-0684 changed paths S-0687's claim covers.
+
+T-2905, mcpserver takes what its tests now set in package variables and the environment, the permission poll, the flai it runs, its version, the releases API and token, and a child's config, through Options, committed 6b1b8a6 on story/S-0684, `refactor: [S-0684] mcpserver takes its test overrides through Options`, changing `flai/internal/mcpserver/folder.go`, `flai/internal/mcpserver/server.go`. It reaches the main branch when S-0684 is accepted; `git show 6b1b8a6` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-10T09:31:51Z agent-S-0684 S-0684
+The claims of S-0684 and S-0687 now overlap.
+
+A write grew the claim of S-0684 to cover `flai/internal/mcpserver/folder.go`, which the claim of S-0687 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.

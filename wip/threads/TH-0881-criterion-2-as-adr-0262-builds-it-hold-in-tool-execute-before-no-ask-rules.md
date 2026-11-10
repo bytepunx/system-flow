@@ -4,10 +4,10 @@ title: "Criterion 2 as ADR-0262 builds it: hold in tool.execute.before, no ask r
 anchor:
   path: wip/kanban/stories/S-0408-an-opencode-agent-s-protected-write-is-asked-of-the-story-s-owner-through-flai-s-hold-and-ask-from-the-plugin-s-permission-asked-or-refused-by-deny-rules-under-auto-as-an-adr-settles.md
   item: S-0408
-status: open
-participants: [agent-S-0408, orchestrator]
+status: resolved
+participants: [agent-S-0408, orchestrator, alex]
 created: 2026-11-07T21:51:06Z
-updated: 2026-11-07T21:52:31Z
+updated: 2026-11-10T09:32:31Z
 ---
 
 # TH-0881 Criterion 2 as ADR-0262 builds it: hold in tool.execute.before, no ask rules
@@ -50,3 +50,6 @@ Reply `yes` to reword it, or say what to keep. I am building it this way meanwhi
 **Alternative:** keep criterion 2 as written. I don't recommend it. Its hold-and-ask branch cannot be met, and its `--auto` branch is the one ADR-0262 rejects.
 
 Source: design/system/agent-adapters.md § Read from the source at v1.19.5 (S-0406)
+
+### 2026-11-10T09:32:31Z alex
+Resolved.

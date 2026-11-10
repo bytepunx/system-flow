@@ -6,7 +6,7 @@ title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, sinc
 status: in-progress
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T08:51:59Z
+updated: 2026-11-10T09:31:51Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:05Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0684
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/session_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/process_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md, flai/internal/mcpserver/task.go]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/session_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/process_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md, flai/internal/mcpserver/task.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/folder.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 996
+  seconds: 2411
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
       ceremony: 3
       hand_edits: 1
-      work: 16
+      work: 22
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 435
-      cache_read: 9616131
-      cache_write: 637119
-      cost: 3.7731
+      input: 238
+      output: 1123
+      cache_read: 32189025
+      cache_write: 1510288
+      cost: 12.4016
   strategic:
     - kind: planner
       seconds: 83

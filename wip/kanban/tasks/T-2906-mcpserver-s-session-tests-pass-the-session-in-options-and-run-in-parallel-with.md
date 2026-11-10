@@ -3,11 +3,11 @@ id: T-2906
 type: task
 nature: improvement
 title: mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
-status: in-progress
+status: done
 parent: S-0684
 owner: alex
 created: 2026-11-10T08:47:33Z
-updated: 2026-11-10T09:07:33Z
+updated: 2026-11-10T09:30:23Z
 transitions:
   - to: ready
     at: 2026-11-10T09:07:32Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:07:33Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T09:30:23Z
+    by: agent-S-0684
 stream: S-0684
 tags: [flai, go, mcp, testing]
-touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go]
+touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/folder_test.go]
 after: [T-2904]
+usage:
+  source: log
+  seconds: 1367
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 459
+      cache_read: 17864671
+      cache_write: 504186
+      cost: 6.7598
 ---
 # T-2906 mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
 

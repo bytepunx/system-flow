@@ -4,10 +4,10 @@ title: "E-0023 re-planned for fixtures only (TH-0533, TH-0532): S-0406 and S-041
 anchor:
   path: wip/kanban/epics/E-0023-an-opencode-adapter-runs-a-story-s-agent-on-opencode-with-the-guard-the-permission-prompt-the-roles-and-usage-measured-through-its-plugin-hooks-and-its-server-s-events-so-a-non-claude-model-works-a-story-end-to-end.md
   item: E-0023
-status: open
-participants: [planner-E-0023, orchestrator]
+status: resolved
+participants: [planner-E-0023, orchestrator, alex]
 created: 2026-11-07T09:38:00Z
-updated: 2026-11-07T09:39:45Z
+updated: 2026-11-10T09:31:56Z
 ---
 
 # TH-0866 E-0023 re-planned for fixtures only (TH-0533, TH-0532): S-0406 and S-0412 rewritten; proposals to bring S-0407 to S-0411 and the epic's last two criteria in line
@@ -67,3 +67,11 @@ Your answer on TH-0533 (D-0507) is "OpenRouter fixtures only, no direct integrat
 What I did not do: change any criterion. That is scope, so it is yours. S-0406 and S-0412 are already finalized and fit the fixtures-only answer. S-0406 is in progress.
 
 Source: design/digest/D-0507-s-0412-is-a-complete-draft-but-finalizing-it-is-yours-choose-its-non-claude.md
+
+### 2026-11-10T09:31:38Z alex
+Confirmed the recommendation of 2026-11-07T09:39:45Z orchestrator.
+
+Source: design/digest/D-0507-s-0412-is-a-complete-draft-but-finalizing-it-is-yours-choose-its-non-claude.md
+
+### 2026-11-10T09:31:56Z alex
+Resolved.

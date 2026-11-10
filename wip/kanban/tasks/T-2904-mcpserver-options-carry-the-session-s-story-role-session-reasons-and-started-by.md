@@ -23,7 +23,7 @@ tags: [flai, go, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/session_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/internal/serve/restart_test.go, flai/internal/mcpserver/server_test.go]
 usage:
   source: log
-  seconds: 934
+  seconds: 936
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 277
       cache_read: 7883555
       cache_write: 389792
-      cost: 3.0445
+      cost: 3.0447
 ---
 # T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
 

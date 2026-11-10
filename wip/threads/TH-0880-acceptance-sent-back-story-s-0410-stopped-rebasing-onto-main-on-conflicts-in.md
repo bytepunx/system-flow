@@ -4,10 +4,10 @@ title: "Acceptance sent back: story/S-0410 stopped rebasing onto main on conflic
 anchor:
   path: wip/kanban/stories/S-0410-a-story-on-opencode-has-its-usage-read-from-opencode-s-json-events-priced-by-the-harness-or-its-gateway-s-spend-log-and-reaches-its-provider-through-an-entry-derived-from-the-host-s.md
   item: S-0410
-status: answered
-participants: [flai, agent-S-0410, orchestrator]
+status: resolved
+participants: [flai, agent-S-0410, orchestrator, alex]
 created: 2026-11-07T21:49:25Z
-updated: 2026-11-07T22:01:31Z
+updated: 2026-11-10T09:32:14Z
 ---
 
 # TH-0880 Acceptance sent back: story/S-0410 stopped rebasing onto main on conflicts in flai/internal/harness/harness_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go
@@ -48,3 +48,6 @@ git branch -D story/S-0410
 I have not changed S-0410, its branch, or its worktree.
 
 Source: design/system/workflow.md § Transitions and who makes them
+
+### 2026-11-10T09:32:14Z alex
+Resolved.

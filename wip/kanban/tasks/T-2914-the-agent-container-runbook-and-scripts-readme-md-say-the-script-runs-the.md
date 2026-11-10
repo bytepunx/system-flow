@@ -3,12 +3,18 @@ id: T-2914
 type: task
 nature: remediation
 title: The agent-container runbook and scripts/README.md say the script runs the manifest's layer image
-status: backlog
+status: in-progress
 parent: S-0670
 owner: alex
 created: 2026-11-10T08:47:57Z
-updated: 2026-11-10T08:47:57Z
-transitions: []
+updated: 2026-11-10T09:32:10Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:32:09Z
+    by: agent-S-0670
+  - to: in-progress
+    at: 2026-11-10T09:32:10Z
+    by: agent-S-0670
 stream: S-0670
 tags: [docs, scripts]
 touches: [docs/operators/runbooks/agent-container.md, scripts/README.md]
