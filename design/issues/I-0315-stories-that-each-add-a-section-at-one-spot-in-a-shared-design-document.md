@@ -2,12 +2,12 @@
 id: I-0315
 title: Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 33m
 first_reported: 2026-11-09T07:27:44Z
 last_reported: 2026-11-09T08:27:30Z
-updated: 2026-11-09T08:27:30Z
+updated: 2026-11-10T08:13:09Z
 ---
 
 # I-0315 Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
@@ -32,3 +32,4 @@ S-0603 was sent back from review twice for design/system/server-performance.md a
 ## Remediation
 
 Story S-0637 remediates this issue, created from it at 2026-11-09T08:06:42Z.
+Closed 2026-11-10T08:13:09Z: S-0637 (ADR-0276): a rebase that stops on a markdown file under the manifest's design or docs folder now merges it by sections, as one inside claims.shared does. This covers flai stream sync, task done's sync, flai accept, and the merge queue's batch, so two stories that each add a section at one spot no longer stop or get sent back. testSyncMergesBySectionsADesignDocumentOutsideTheSharedPaths and testAcceptMergesBySectionsADesignDocumentOutsideTheSharedPaths in flai/cmd reproduce it.
