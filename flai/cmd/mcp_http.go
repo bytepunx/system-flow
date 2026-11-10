@@ -141,7 +141,7 @@ func mcpURL(addr net.Addr) string {
 // allows a protected write without asking only under the auto-approve host
 // action and only for the agent flai serve runs for the story (ADR-0243).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}.WithSession(mcpserver.SessionFromEnv())
 }
 
 // mcpServedAgent reports whether agent is the name of the run flai serve
@@ -167,8 +167,8 @@ func (a *app) mcpServedOrchestrator(root, agent string) bool {
 
 // mcpHTTPRole is the role of the caller named agent of the server over HTTP
 // for the project at root, read when its session starts: the orchestrator's
-// for the orchestrator's run flai serve records, else none, which leaves the
-// server to read FLAI_ROLE as before (ADR-0278).
+// for the orchestrator's run flai serve records, else none, which keeps the
+// role SessionFromEnv read from FLAI_ROLE (ADR-0278).
 func (a *app) mcpHTTPRole(root, agent string) string {
 	if a.mcpServedOrchestrator(root, agent) {
 		return guard.RoleOrchestrate
@@ -200,7 +200,9 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
 			opt := a.mcpHTTPOptions(repo, agent, closing, installed)
-			opt.Role = a.mcpHTTPRole(mainRootOf(repo), agent)
+			if role := a.mcpHTTPRole(mainRootOf(repo), agent); role != "" {
+				opt.Role = role
+			}
 			return mcpserver.New(opt)
 		},
 	})

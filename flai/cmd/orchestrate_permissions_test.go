@@ -262,7 +262,7 @@ func (o *orchestration) mcp(tool string, input map[string]any) string {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ct, st := mcp.NewInMemoryTransports()
-	if _, err := mcpserver.New(mcpserver.Options{Repo: repo, Agent: "orchestrator", Version: "test", Now: clock, Plans: a.mcpPlan}).Connect(ctx, st, nil); err != nil {
+	if _, err := mcpserver.New(mcpserver.Options{Repo: repo, Agent: "orchestrator", Version: "test", Now: clock, Plans: a.mcpPlan, Role: "orchestrate"}).Connect(ctx, st, nil); err != nil {
 		o.t.Fatal(err)
 	}
 	cs, err := mcp.NewClient(&mcp.Implementation{Name: "orchestrator", Version: "0"}, nil).Connect(ctx, ct, nil)

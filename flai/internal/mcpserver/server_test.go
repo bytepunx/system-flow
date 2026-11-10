@@ -49,6 +49,9 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
+	// the tests that still set the session in the environment have their
+	// servers read it from there (I-0234)
+	envSession = SessionFromEnv
 	os.Exit(m.Run())
 }
 

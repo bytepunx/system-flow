@@ -173,11 +173,11 @@ func (s *server) sharedPathsEdit(_ context.Context, _ *mcp.CallToolRequest, in S
 }
 
 // servedSession says whether flai serve started the session this server
-// runs in, whose environment it inherits: flai serve marks it with
-// FLAI_STARTED_BY, and only flai serve sets a role or FLAI_STORY, as flai
-// guard reads them.
-func servedSession(role string) bool {
-	return role != "" || os.Getenv("FLAI_STORY") != "" || os.Getenv(guard.StartedByEnv) == guard.StartedByServe
+// runs in, from the session's role, story, and started-by: flai serve marks
+// it with FLAI_STARTED_BY, and only flai serve sets a role or FLAI_STORY, as
+// flai guard reads them.
+func servedSession(role, story, startedBy string) bool {
+	return role != "" || story != "" || startedBy == guard.StartedByServe
 }
 
 // addSharedTools registers the tools that list, check, and change the

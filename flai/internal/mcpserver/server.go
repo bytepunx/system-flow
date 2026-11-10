@@ -110,11 +110,6 @@ type Options struct {
 	// configuration, for the orchestrator's tool accept (ADR-0278); without
 	// it the tool says it cannot.
 	Accept *hostapi.Accepter
-	// Role is the caller's role, such as guard.RoleOrchestrate. Empty reads
-	// FLAI_ROLE, which flai serve sets in a session whose flai mcp runs over
-	// stdio; the server over HTTP, a child of flai host, sets it for the
-	// orchestrator's run flai serve records (ADR-0278).
-	Role string
 	// RelativePaths reports whether story_start links a new worktree with
 	// relative paths, as flai stream open does (S-0274); nil links an
 	// ordinary one.
@@ -133,6 +128,51 @@ type Options struct {
 	// every inbox (S-0534); nil, as a test or a server with no host has it,
 	// reads none.
 	Budgets BudgetRead
+	// Story is the story a story's agent's session works, as flai serve sets
+	// FLAI_STORY; "" outside one (S-0272).
+	Story string
+	// Role is the caller's role, such as guard.RoleOrchestrate, as flai serve
+	// sets FLAI_ROLE (S-0219); the server over HTTP, a child of flai host, is
+	// given it for the orchestrator's run flai serve records (ADR-0278).
+	Role string
+	// Session is the caller's session, as FLAI_SESSION says it.
+	Session string
+	// Reasons are the reasons flai serve started the caller's run for, as
+	// FLAI_REASONS says them (ADR-0209 §4); "" for none.
+	Reasons string
+	// StartedBy is who started the caller's session, as FLAI_STARTED_BY says
+	// it: guard.StartedByServe when flai serve did.
+	StartedBy string
+}
+
+// SessionEnv is the session flai serve sets in an agent's environment, which
+// flai mcp gives the server through Options (I-0234).
+type SessionEnv struct {
+	Story, Role, Session, Reasons, StartedBy string
+}
+
+// SessionFromEnv reads the session from the process environment: FLAI_STORY,
+// FLAI_ROLE, FLAI_SESSION, FLAI_REASONS, and FLAI_STARTED_BY.
+func SessionFromEnv() SessionEnv {
+	return SessionEnv{
+		Story:     strings.TrimSpace(os.Getenv("FLAI_STORY")),
+		Role:      os.Getenv("FLAI_ROLE"),
+		Session:   os.Getenv("FLAI_SESSION"),
+		Reasons:   os.Getenv(harness.ReasonsEnv),
+		StartedBy: os.Getenv(guard.StartedByEnv),
+	}
+}
+
+// envSession, when set, gives newServer the session of an Options that
+// names none. Only the package's TestMain sets it, to SessionFromEnv, for
+// the tests that still set the session in the environment; nil, as flai
+// mcp leaves it, gives none (I-0234).
+var envSession func() SessionEnv
+
+// WithSession is opt with the session's fields set from e.
+func (opt Options) WithSession(e SessionEnv) Options {
+	opt.Story, opt.Role, opt.Session, opt.Reasons, opt.StartedBy = e.Story, e.Role, e.Session, e.Reasons, e.StartedBy
+	return opt
 }
 
 // BudgetRead is the host's budget state, one entry per provider whose state
@@ -148,15 +188,18 @@ type server struct {
 	repo   *workitem.Repo
 	key    string // the manifest's key, else the folder's name
 	agent  string
-	role   string // the caller's role, as FLAI_ROLE says it (S-0219)
+	role   string // the caller's role, as Options.Role says it (S-0219)
 	served bool   // flai serve started the caller's session, which never changes the shared paths (ADR-0096)
-	// flai serve started the caller's run for reasons, as FLAI_REASONS says,
+	// flai serve started the caller's run for reasons, as Options.Reasons says,
 	// which are done once it holds wait_for_events (ADR-0209 §4)
 	reasons bool
-	// the story a story's agent's session works, as FLAI_STORY says it; ""
+	// the story a story's agent's session works, as Options.Story says it; ""
 	// outside one, and then wait_for_events never tells the agent to end (S-0272)
 	story string
-	// the caller's session, as FLAI_SESSION says it, which task_done's log
+	// storyFromEnv reads the story from envSession at each call, as the
+	// package's tests that set FLAI_STORY after the server is made need
+	storyFromEnv bool
+	// the caller's session, as Options.Session says it, which task_done's log
 	// entry carries as flai task done's does
 	session string
 	now     func() time.Time
@@ -203,6 +246,10 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
+	fromEnv := envSession != nil && opt.Story == "" && opt.Role == "" && opt.Session == "" && opt.Reasons == "" && opt.StartedBy == ""
+	if fromEnv {
+		opt = opt.WithSession(envSession())
+	}
 	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
@@ -213,19 +260,17 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	if s.agent == "" {
 		s.agent = "agent"
 	}
-	// flai serve sets the orchestrator's role in its session, whose flai mcp
-	// inherits it: the orchestrator's writes are held to its criteria (S-0219).
-	// Over HTTP the server is told it, since its process has none (ADR-0278).
+	// flai serve sets the orchestrator's role in its session, which flai mcp
+	// passes on: the orchestrator's writes are held to its criteria (S-0219).
+	// Over HTTP the server is told it for the orchestrator's run (ADR-0278).
 	s.role = opt.Role
-	if s.role == "" {
-		s.role = os.Getenv("FLAI_ROLE")
-	}
-	s.served = servedSession(s.role)
-	s.reasons = strings.TrimSpace(os.Getenv(harness.ReasonsEnv)) != ""
 	// flai serve starts a story's agent with FLAI_STORY, and starts it again
 	// when the question it ended on is answered (S-0272)
-	s.story = strings.TrimSpace(os.Getenv("FLAI_STORY"))
-	s.session = os.Getenv("FLAI_SESSION")
+	s.story = strings.TrimSpace(opt.Story)
+	s.served = servedSession(s.role, s.story, opt.StartedBy)
+	s.reasons = strings.TrimSpace(opt.Reasons) != ""
+	s.session = opt.Session
+	s.storyFromEnv = fromEnv
 	if s.now == nil {
 		s.now = time.Now
 	}

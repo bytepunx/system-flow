@@ -139,16 +139,17 @@ type agentSession struct {
 	armed *atomic.Bool
 }
 
-// session starts agent's flai mcp on the lab's project. Its deadline fires
-// as soon as it is armed, so a wait that holds times out at once.
-func (lab *agentLab) session(agent string) *agentSession {
+// session starts agent's flai mcp on the lab's project, in the session of
+// story's agent as flai serve starts it. Its deadline fires as soon as it
+// is armed, so a wait that holds times out at once.
+func (lab *agentLab) session(agent, story string) *agentSession {
 	lab.t.Helper()
 	repo, err := workitem.Open(lab.root)
 	if err != nil {
 		lab.t.Fatal(err)
 	}
 	armed := &atomic.Bool{}
-	srv := mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: "test", Poll: 20 * time.Millisecond, MaxWait: time.Minute,
+	srv := mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Story: story, Version: "test", Poll: 20 * time.Millisecond, MaxWait: time.Minute,
 		After: func(time.Duration) <-chan time.Time {
 			armed.Store(true)
 			c := make(chan time.Time, 1)
@@ -208,9 +209,7 @@ func TestAnAgentThatWaitForEventsEndsOnAQuestionIsStartedAgainOnTheAnswerWithItI
 	}
 
 	// the agent, as serve starts it, holds wait_for_events: it is told to end
-	t.Setenv("FLAI_STORY", id)
-	t.Setenv("FLAI_AGENT", first.Agent)
-	asking := lab.session(first.Agent)
+	asking := lab.session(first.Agent, id)
 	var told mcpserver.WaitOut
 	began := time.Now()
 	asking.call(t, "wait_for_events", map[string]any{"timeout_seconds": 60}, &told)
@@ -245,7 +244,7 @@ func TestAnAgentThatWaitForEventsEndsOnAQuestionIsStartedAgainOnTheAnswerWithItI
 	}
 
 	// its first inbox, in a session of its own, holds the answer
-	answered := lab.session(again.Agent)
+	answered := lab.session(again.Agent, id)
 	var in mcpserver.InboxOut
 	answered.call(t, "inbox", map[string]any{}, &in)
 	var got *mcpserver.ThreadSummary

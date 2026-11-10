@@ -3,7 +3,6 @@ package mcpserver
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -186,15 +185,20 @@ var (
 )
 
 // recordingStory is the story an occurrence is recorded for, as flai issue
-// new and bump resolve it: the one given, else FLAI_STORY, else the S-nnnn
+// new and bump resolve it: the one given, else the session's story
+// (FLAI_STORY, which flai mcp passes in Options.Story), else the S-nnnn
 // in this agent's name of the form agent-S-nnnn, else the story whose
 // branch is checked out where the server runs. Empty is none.
 func (s *server) recordingStory(given string) string {
 	if v := strings.TrimSpace(given); v != "" {
 		return v
 	}
-	if v := strings.TrimSpace(os.Getenv("FLAI_STORY")); v != "" {
-		return v
+	story := s.story
+	if s.storyFromEnv {
+		story = envSession().Story
+	}
+	if story != "" {
+		return story
 	}
 	if m := agentStoryRe.FindStringSubmatch(strings.TrimSpace(s.agent)); m != nil {
 		return m[1]
