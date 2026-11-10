@@ -6,7 +6,7 @@ title: A strategic agent's container can write the main checkout's .git/config, 
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T11:00:24Z
 transitions: []
 tags: [flai, container, security]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md]
@@ -36,7 +36,6 @@ usage:
           cache_read: 759050
           cache_write: 13855
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -51,6 +50,9 @@ forecast:
   basis: "Its own forecast of 45m; 19th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683 and S-0686."
   by: flai
   at: 2026-11-10T10:54:40Z
+finalized:
+  by: alex
+  at: 2026-11-10T11:00:24Z
 ---
 # S-0688 A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
 
