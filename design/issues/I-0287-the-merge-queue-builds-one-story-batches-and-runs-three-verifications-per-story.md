@@ -2,11 +2,11 @@
 id: I-0287
 title: The merge queue builds one-story batches and runs three verifications per story landed
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-10T08:34:53Z
+updated: 2026-11-10T20:15:50Z
 usage:
   strategic:
     - kind: analyzer
@@ -48,3 +48,4 @@ queue.weeks[] W44: landed 19, sent_back 6, batches 59, batch_size_mean 1.0, batc
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0675 remediates this issue, created from it at 2026-11-10T08:34:53Z.
+Closed 2026-11-10T20:15:50Z: S-0675 (ADR-0282): the merge queue no longer drops a verified batch when main moved only by commits that change only wip paths none of its stories change, such as flai's replans, which dropped 37 of 94 passing batches from 2026-10-21 to 2026-11-02 and drove most of the 2.95 verifications per landed story. Every drop that remains is logged as a dropped event, and flai stats counts drops per week in queue.weeks[].dropped, so the next analysis can tell drops from bisections. One-story batches are left to merge_queue.coalesce (ADR-0226).
