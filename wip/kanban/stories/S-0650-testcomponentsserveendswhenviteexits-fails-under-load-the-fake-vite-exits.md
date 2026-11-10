@@ -3,16 +3,19 @@ id: S-0650
 type: story
 nature: remediation
 title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T05:12:13Z
-updated: 2026-11-10T07:19:43Z
+updated: 2026-11-10T07:30:29Z
 transitions:
   - to: ready
     at: 2026-11-10T07:02:50Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T07:19:43Z
+    by: agent-S-0650
+  - to: review
+    at: 2026-11-10T07:30:29Z
     by: agent-S-0650
 tags: []
 topics: [testing]
@@ -23,9 +26,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 655
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 4
+      test_runs: 1
+      hand_edits: 1
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 10931
+      cache_read: 7032970
+      cache_write: 251812
+      cost: 3.64
   strategic:
     - kind: orchestrator
       seconds: 50
@@ -62,8 +78,8 @@ finalized:
 This story remediates [I-0325](../../../design/issues/I-0325-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md), "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0325 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0325 is closed with `flai issue close I-0325 --reason` saying what fixed it
+- [x] The cause I-0325 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0325 is closed with `flai issue close I-0325 --reason` saying what fixed it
 
 ## Tasks
 - T-2836 The crash-mode fake vite exits only after it has answered, and a slow-starting fake reproduces the early exit

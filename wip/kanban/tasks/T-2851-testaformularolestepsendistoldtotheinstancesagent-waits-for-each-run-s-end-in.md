@@ -3,15 +3,36 @@ id: T-2851
 type: task
 nature: remediation
 title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
-status: backlog
+status: done
 parent: S-0653
 owner: alex
 created: 2026-11-10T07:01:30Z
-updated: 2026-11-10T07:01:30Z
-transitions: []
+updated: 2026-11-10T07:35:01Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:34:25Z
+    by: agent-S-0653
+  - to: in-progress
+    at: 2026-11-10T07:34:26Z
+    by: agent-S-0653
+  - to: done
+    at: 2026-11-10T07:35:01Z
+    by: agent-S-0653
 stream: S-0653
 tags: [flai, test]
 touches: [flai/internal/serve/role_test.go]
+usage:
+  source: log
+  seconds: 35
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 52
+      cache_read: 855037
+      cache_write: 5701
+      cost: 0.3167
 ---
 # T-2851 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
 

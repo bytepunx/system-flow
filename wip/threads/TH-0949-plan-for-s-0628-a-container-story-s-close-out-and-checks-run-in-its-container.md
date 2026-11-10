@@ -4,10 +4,10 @@ title: "Plan for S-0628: a container story's close-out and checks run in its con
 anchor:
   path: wip/kanban/stories/S-0628-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md
   item: S-0628
-status: open
-participants: [planner-S-0628, orchestrator]
+status: resolved
+participants: [planner-S-0628, orchestrator, alex]
 created: 2026-11-09T22:00:27Z
-updated: 2026-11-09T22:08:43Z
+updated: 2026-11-10T07:42:27Z
 ---
 
 # TH-0949 Plan for S-0628: a container story's close-out and checks run in its container; needs a cost of delay input (recommend penalty 40 USD a week) and the remedy confirmed
@@ -80,3 +80,6 @@ I hold here until question 1 is answered. If you choose B in question 2, I will 
 **The symlink check in `flai/internal/docedit/file.go`.** Draft it as a story of its own, outside S-0628. It is a different cause, and S-0628 is large already at 2h.
 
 Source: design/adrs/0253-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-wip-and-system.md § Decision
+
+### 2026-11-10T07:42:27Z alex
+Resolved: S-0628 was accepted

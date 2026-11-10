@@ -3,16 +3,37 @@ id: T-2852
 type: task
 nature: remediation
 title: Close I-0314 with what fixed it
-status: backlog
+status: done
 parent: S-0653
 owner: alex
 created: 2026-11-10T07:02:00Z
-updated: 2026-11-10T07:02:00Z
-transitions: []
+updated: 2026-11-10T07:37:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:37:50Z
+    by: agent-S-0653
+  - to: in-progress
+    at: 2026-11-10T07:37:52Z
+    by: agent-S-0653
+  - to: done
+    at: 2026-11-10T07:37:58Z
+    by: agent-S-0653
 stream: S-0653
 tags: [issues]
 touches: [design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md]
 after: [T-2849, T-2851]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 48
+      cache_read: 589878
+      cache_write: 2255
+      cost: 0.2178
 ---
 # T-2852 Close I-0314 with what fixed it
 

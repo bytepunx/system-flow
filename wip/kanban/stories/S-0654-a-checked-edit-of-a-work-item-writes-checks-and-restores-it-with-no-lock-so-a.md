@@ -3,14 +3,17 @@ id: S-0654
 type: story
 nature: improvement
 title: A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:12:18Z
+updated: 2026-11-10T07:34:29Z
 transitions:
   - to: ready
     at: 2026-11-10T07:12:12Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T07:34:29Z
+    by: agent-S-0654
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
 touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/summary.md]

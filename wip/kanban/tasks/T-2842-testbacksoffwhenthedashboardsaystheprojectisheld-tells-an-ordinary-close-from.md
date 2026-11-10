@@ -3,11 +3,11 @@ id: T-2842
 type: task
 nature: remediation
 title: TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
-status: in-progress
+status: done
 parent: S-0651
 owner: alex
 created: 2026-11-10T07:01:00Z
-updated: 2026-11-10T07:22:58Z
+updated: 2026-11-10T07:23:48Z
 transitions:
   - to: ready
     at: 2026-11-10T07:22:58Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:22:58Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T07:23:48Z
+    by: agent-S-0651
 stream: S-0651
 tags: [cli, testing]
 touches: [flai/internal/channel/channel_test.go]

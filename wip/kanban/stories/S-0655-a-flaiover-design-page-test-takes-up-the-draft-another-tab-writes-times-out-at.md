@@ -3,16 +3,19 @@ id: S-0655
 type: story
 nature: remediation
 title: "A flaiover design-page test, \"takes up the draft another tab writes\", times out at 5,000 ms under load and stops the flaiover tier"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T07:19:56Z
+updated: 2026-11-10T07:34:23Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:49Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T07:19:56Z
+    by: agent-S-0655
+  - to: review
+    at: 2026-11-10T07:34:23Z
     by: agent-S-0655
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
@@ -23,9 +26,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 877
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      hand_edits: 2
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 21200
+      cache_read: 11095118
+      cache_write: 242825
+      cost: 4.524
   strategic:
     - kind: planner
       seconds: 254
@@ -72,8 +87,8 @@ finalized:
 This story remediates [I-0330](../../../design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md), "A flaiover design-page test, "takes up the draft another tab writes", times out at 5,000 ms under load and stops the flaiover tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0330 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0330 is closed with `flai issue close I-0330 --reason` saying what fixed it
+- [x] The cause I-0330 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0330 is closed with `flai issue close I-0330 --reason` saying what fixed it
 
 ## Tasks
 - T-2838 Measure where the design page's draft-from-another-tab test spends its time, and cut it below vitest's 5,000 ms under load

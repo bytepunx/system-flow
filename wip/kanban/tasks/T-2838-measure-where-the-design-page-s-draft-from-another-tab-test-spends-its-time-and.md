@@ -3,11 +3,11 @@ id: T-2838
 type: task
 nature: remediation
 title: Measure where the design page's draft-from-another-tab test spends its time, and cut it below vitest's 5,000 ms under load
-status: in-progress
+status: done
 parent: S-0655
 owner: alex
 created: 2026-11-10T07:00:48Z
-updated: 2026-11-10T07:21:13Z
+updated: 2026-11-10T07:30:32Z
 transitions:
   - to: ready
     at: 2026-11-10T07:21:13Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:21:13Z
     by: agent-S-0655
+  - to: done
+    at: 2026-11-10T07:30:32Z
+    by: agent-S-0655
 stream: S-0655
 tags: [flaiover, testing, flaky-test]
 touches: [flaiover/src/routes/design/design.svelte.test.ts]
+usage:
+  source: log
+  seconds: 559
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 12473
+      cache_read: 6527697
+      cache_write: 142864
+      cost: 2.6617
 ---
 # T-2838 Measure where the design page's draft-from-another-tab test spends its time, and cut it below vitest's 5,000 ms under load
 

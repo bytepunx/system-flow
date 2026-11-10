@@ -3,16 +3,37 @@ id: T-2840
 type: task
 nature: remediation
 title: Close I-0330 with what fixed it
-status: backlog
+status: done
 parent: S-0655
 owner: alex
 created: 2026-11-10T07:00:55Z
-updated: 2026-11-10T07:00:55Z
-transitions: []
+updated: 2026-11-10T07:31:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:31:23Z
+    by: agent-S-0655
+  - to: in-progress
+    at: 2026-11-10T07:31:23Z
+    by: agent-S-0655
+  - to: done
+    at: 2026-11-10T07:31:30Z
+    by: agent-S-0655
 stream: S-0655
 tags: [flaiover, testing, flaky-test]
 touches: [design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/summary.md]
 after: [T-2838]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 880
+      cache_read: 460648
+      cache_write: 10082
+      cost: 0.1878
 ---
 # T-2840 Close I-0330 with what fixed it
 

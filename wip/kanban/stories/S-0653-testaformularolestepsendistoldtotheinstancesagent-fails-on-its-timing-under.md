@@ -3,26 +3,43 @@ id: S-0653
 type: story
 nature: remediation
 title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T05:45:21Z
-updated: 2026-11-10T07:12:18Z
+updated: 2026-11-10T07:38:04Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:50Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T07:30:34Z
+    by: agent-S-0653
 tags: []
 topics: [testing]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role_test.go, design/system/strategic-agents.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role_test.go, design/system/strategic-agents.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md, flai/internal/serve/analyze.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 444
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      test_runs: 4
+      hand_edits: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 562
+      cache_read: 8441168
+      cache_write: 281668
+      cost: 3.2091
   strategic:
     - kind: orchestrator
       seconds: 31
@@ -59,8 +76,8 @@ finalized:
 This story remediates [I-0314](../../../design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md), "TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0314 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0314 is closed with `flai issue close I-0314 --reason` saying what fixed it
+- [x] The cause I-0314 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0314 is closed with `flai issue close I-0314 --reason` saying what fixed it
 
 ## Tasks
 - T-2849 A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started

@@ -3,12 +3,18 @@ id: T-2847
 type: task
 nature: improvement
 title: itemedit.ApplyForecasts holds the checked-write lock from its save until it keeps or restores the forecasts
-status: backlog
+status: in-progress
 parent: S-0654
 owner: alex
 created: 2026-11-10T07:01:15Z
-updated: 2026-11-10T07:01:15Z
-transitions: []
+updated: 2026-11-10T07:35:04Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:35:02Z
+    by: agent-S-0654
+  - to: in-progress
+    at: 2026-11-10T07:35:04Z
+    by: agent-S-0654
 stream: S-0654
 tags: [flai, itemedit, locking]
 touches: [flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go]

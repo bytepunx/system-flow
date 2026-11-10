@@ -3,15 +3,36 @@ id: T-2849
 type: task
 nature: remediation
 title: A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started
-status: backlog
+status: done
 parent: S-0653
 owner: alex
 created: 2026-11-10T07:01:26Z
-updated: 2026-11-10T07:01:26Z
-transitions: []
+updated: 2026-11-10T07:34:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:34:24Z
+    by: agent-S-0653
+  - to: in-progress
+    at: 2026-11-10T07:34:26Z
+    by: agent-S-0653
+  - to: done
+    at: 2026-11-10T07:34:42Z
+    by: agent-S-0653
 stream: S-0653
 tags: [flai, serve]
-touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, design/system/strategic-agents.md]
+touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, design/system/strategic-agents.md, flai/internal/serve/analyze.go]
+usage:
+  source: log
+  seconds: 16
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 47
+      cache_read: 569380
+      cache_write: 795
+      cost: 0.2098
 ---
 # T-2849 A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started
 

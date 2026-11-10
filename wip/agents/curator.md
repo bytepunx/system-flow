@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 187.2568
-accrued_seconds: 20192
-tasks_completed: 118
-last_run: 2026-11-10T07:13:09Z
+accrued_cost: 189.3079
+accrued_seconds: 20829
+tasks_completed: 119
+last_run: 2026-11-10T07:23:56Z
 ---
 
 # Curator activity
@@ -955,3 +955,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0375, D-0444, D-0462, D-0504, D-0544, D-0545, D-0546, D-0547, D-0548
 - Seconds: 732
 - Cost: 1.9333 USD, estimated
+
+### 2026-11-10T07:23:56Z
+
+- Summary: I wrote D-0549 and D-0550, merged S-0632's fix of I-0299 into D-0500, absorbed nothing, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0643
+- Items: D-0500, D-0549, D-0550
+- Seconds: 637
+- Cost: 2.0511 USD, estimated

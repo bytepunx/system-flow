@@ -3,12 +3,18 @@ id: T-2844
 type: task
 nature: improvement
 title: itemedit.Apply holds the checked-write lock from its first save until it keeps or restores the edit
-status: backlog
+status: in-progress
 parent: S-0654
 owner: alex
 created: 2026-11-10T07:01:09Z
-updated: 2026-11-10T07:01:09Z
-transitions: []
+updated: 2026-11-10T07:35:03Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:35:02Z
+    by: agent-S-0654
+  - to: in-progress
+    at: 2026-11-10T07:35:03Z
+    by: agent-S-0654
 stream: S-0654
 tags: [flai, itemedit, locking]
 touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, flai/internal/workitem/itemlock.go]

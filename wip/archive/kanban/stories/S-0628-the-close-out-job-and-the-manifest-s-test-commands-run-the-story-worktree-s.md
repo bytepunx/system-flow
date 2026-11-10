@@ -3,10 +3,10 @@ id: S-0628
 type: story
 nature: improvement
 title: The close-out job and the manifest's test commands run the story worktree's scripts on the host, so a container harness does not keep an agent's code off the host
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:34Z
-updated: 2026-11-10T07:19:35Z
+updated: 2026-11-10T07:42:27Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T07:19:35Z
     by: agent-S-0628
+  - to: done
+    at: 2026-11-10T07:42:27Z
+    by: alex
 tags: [flai, security]
 topics: [harness, docker, verify]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, design/adrs/0272-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in-that-container.md, design/adrs/README.md, design/system/flai-cli.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md, design/issues/summary.md, design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md, flai/internal/serve/verifyjob_container.go, flai/cmd/checks.go, flai/internal/serve/kluster.go, design/tech/docker.md]
