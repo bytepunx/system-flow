@@ -2094,17 +2094,18 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 		"While accept_reviews is on, take each story in review in turn",
 		// flai verify at the branch's head
 		"Verify it at the head of its branch, story/<S-nnnn>: read its last result with flai verify <S-nnnn> --last --json",
-		"when it did not pass or its commit is not the branch's head (git rev-parse story/<S-nnnn>), run flai verify <S-nnnn> --json, or the flai MCP tool verify",
+		"when it did not pass or its commit is not the branch's head (git rev-parse story/<S-nnnn>), ask flai serve for its close-out with the flai MCP tool verify",
+		"When it starts a job instead, the verdict is not there yet: log that and leave the story in review for a later run",
 		"A run that did not pass is a blocker",
 		// the verifier
 		"Then hand its worktree, /p/flow/.flai-cache/worktrees/<S-nnnn>, and that result to the verifier with the Agent tool",
 		"it reads the result with flai verify <S-nnnn> --last rather than running the suite, checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified",
 		// the preview
-		"Run flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run with that commit, and read the blockers",
+		"Call the flai MCP tool accept with the story, that commit as verified, and dry_run, and read the blockers in the preview it answers",
 		// the acceptance and its evidence
 		"With no blocker and every criterion matched to changed files, write the evidence, a Verdict: line from the verifier's report and one list item per criterion, - <n>: <files>",
-		"run flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -, passing the evidence on standard input with a heredoc in the shell, since you cannot write a file",
-		"then log the acceptance with activity_log, naming the story and the commit",
+		"call accept with the story, the commit as verified, and the evidence: it runs flai accept --by orchestrator on the host, with the host's configuration, wherever you run (ADR-0278)",
+		"Then log the acceptance with activity_log, naming the story and the commit",
 		// what is missing
 		"Otherwise leave the story in review, open a thread on it with the flai MCP tool thread_open saying what is missing, each blocker and each criterion you could not check against the diff, unless a thread of yours on it says so already, and log that decision",
 		"A commit added after the verifier's run makes flai refuse: verify again",
@@ -2113,9 +2114,9 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 		"Files the main checkout has not committed stop nothing: flai commits those under wip, design, and the shared paths with the acceptance and leaves the rest out of it (ADR-0248), and the blocker dirty_main appears only while the story's change would overwrite one of the rest",
 		"A thread you opened on the story or one of its tasks that nobody else wrote on is the blocker own_thread_open, apart from thread_open: once its concern is gone, resolve it with the flai MCP tool thread_resolve and a reason, then accept",
 		"You accept on flai's blockers and the story's criteria: open a thread on a story in review only for a reason not to accept it, and resolve it with thread_resolve and a reason once that reason is gone",
-		"When flai accept says it sent the story back, its rebase stopped on conflicts flai cannot settle: flai aborted the rebase, moved the story back to in-progress, and opened a thread on which flai serve starts the story's agent",
+		"When accept says it sent the story back, its rebase stopped on conflicts flai cannot settle: flai aborted the rebase, moved the story back to in-progress, and opened a thread on which flai serve starts the story's agent",
 		"Log that with activity_log and do nothing more for the story: open no thread and move nothing",
-		"When an acceptance of yours stops after its move to done, before its archive or its commit, run flai accept <S-nnnn> --by orchestrator again, with no --verified and no evidence",
+		"When an acceptance of yours stops after its move to done, before its archive or its commit, call accept again with the story alone, no verified and no evidence",
 		"one whose move to done anyone else made is the operator's to finish, and flai's refusal names who made it",
 		"Never move a story to done with item_move, and never accept a story while accept_reviews is off",
 	} {
@@ -2135,7 +2136,7 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 
 // S-0403, ADR-0173: while the merge queue runs for the project, the
 // orchestrator is told, after how it accepts a story, to enqueue each story
-// it has verified with queue_add instead of running flai accept, to log each
+// it has verified with queue_add instead of calling accept, to log each
 // enqueue, and to leave the queue's own work and blockers to it. Without the
 // queue it is told none of it.
 func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
@@ -2143,7 +2144,7 @@ func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
 	r.Queue = true
 	p := mustPrompt(t, r)
 	for _, w := range []string{
-		"The merge queue runs for this project: enqueue each story you have verified with the flai MCP tool queue_add, with the commit and the evidence, instead of running flai accept",
+		"The merge queue runs for this project: enqueue each story you have verified with the flai MCP tool queue_add, with the commit and the evidence, instead of calling accept",
 		"log each enqueue with activity_log naming the story, its place in the queue, and the policy figure",
 		"Never land, bisect, hold, resume, or dequeue by hand",
 		"open no thread for a blocker the queue settles: a verify not at the branch's head, a dirty main checkout, or a rebase that stops inside the shared paths",
@@ -2410,18 +2411,19 @@ func TestTheOrchestratorsDefinitionSaysWhatEachPermissionDoes(t *testing.T) {
 			"With `order_ready`, run `flai order --by <policy> --apply`",
 			"Never place a story by hand yourself.",
 			"With `accept_reviews`, take each story in review in turn.",
-			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run`",
-			"`flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`",
+			"Call the MCP tool `accept` with the story, the commit as `verified`, and `dry_run`",
+			"call `accept` with the story, the commit as `verified`, and the evidence",
 			"open a thread on it with `thread_open` saying what is missing",
 			// a dirty main, a thread of its own, a send back, a stopped
 			// acceptance of its own (ADR-0189)
 			"lists the blocker `dirty_main` only while the story's change would overwrite one of them",
 			"that nobody else wrote on is the blocker `own_thread_open`, apart from `thread_open`: once its concern is gone, resolve it with `thread_resolve` and a reason, then accept.",
 			"open a thread on a story in review only for a reason not to accept it, and resolve it with `thread_resolve` and a reason once that reason is gone.",
-			"When `flai accept` says it sent the story back",
+			"When `accept` says it sent the story back",
 			"do nothing more for the story: open no thread and move nothing.",
-			"run `flai accept <S-nnnn> --by orchestrator` again once what stopped it is cleared, with no `--verified` and no evidence, to finish it",
+			"call `accept` again with the story alone once what stopped it is cleared, with no `verified` and no evidence, to finish it",
 			"Never move a story to done with `item_move`.",
+			"mcp__flai__queue_add, mcp__flai__accept",
 			"With `publish`, after each acceptance",
 			"call `release_evaluate`",
 			// the publish formula, and release_publish where there is none (ADR-0240)
