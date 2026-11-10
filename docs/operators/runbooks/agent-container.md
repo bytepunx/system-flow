@@ -10,14 +10,15 @@ Building the agent images and running one story's Claude Code agent in a contain
 
 ## The images
 
-Two images, built on this machine from this repository's tree:
+Two images, and a third when the project names a layer, built on this machine from this repository's tree:
 
 | Image | What it holds |
 |-------|---------------|
 | `flai-agent-bedrock:local` | Alpine, `git`, `ca-certificates`, `tini`, and `flai` built from the tree. The base of every agent image. Dockerfile: `flai/images/bedrock/Dockerfile`. |
 | `flai-agent-claude-code:local` | Claude Code from npm, at the version the Dockerfile pins, with Node and ripgrep, on the bedrock image. Auto-update is off: a new Claude Code is a rebuild. Dockerfile: `flai/images/claude-code/Dockerfile`. |
+| `flai-agent-<key>-claude-code:local` | The project's layer, on the claude-code image, when `system-flow.yaml` names its Dockerfile under `agent.image.layer`. This repository's is `flai-agent-sf-claude-code:local`, from `flai/images/system-flow/Dockerfile`: Go, golangci-lint, ShellCheck, and pnpm, the tools the close-out's tiers need ([docker.md](../../../design/tech/docker.md)). |
 
-They are local: nothing pushes them, and no registry publishes them. They are not stamped and not signed, unlike flai's releases ([release-key.md](release-key.md)). Neither holds a login, a key, or a token: the agent's credentials reach the container when it runs. Neither holds Go, golangci-lint, pnpm, or markdownlint, so an agent in the container cannot run this repository's close-out tiers that need them.
+They are local: nothing pushes them, and no registry publishes them. They are not stamped and not signed, unlike flai's releases ([release-key.md](release-key.md)). None holds a login, a key, or a token: the agent's credentials reach the container when it runs. The first two hold no Go, golangci-lint, pnpm, or markdownlint, so an agent in them cannot run this repository's close-out tiers that need them; the layer image holds the tiers' tools.
 
 ## Build
 
@@ -27,7 +28,7 @@ From the repository root, with Docker running:
 make agent-images
 ```
 
-It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
+It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. When the manifest names a layer, it then builds the layer image over them and prints `built flai-agent-<key>-claude-code:local`; `scripts/agent-image.sh --layer` builds the layer alone. `scripts/agent-image.sh --tag` prints the image a story's agent runs in and builds nothing. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
 
 ## What the run needs on the host
 
@@ -46,7 +47,7 @@ scripts/agent-container.sh S-nnnn < prompt.md        # or on standard input
 scripts/agent-container.sh S-nnnn -- git status      # a command in place of claude, same mounts
 ```
 
-It runs `claude -p` headless in `flai-agent-claude-code:local` with the arguments `flai serve` gives a story's agent, as the operator's uid, and removes the container when it ends (`--rm`). The output is Claude Code's stream JSON on standard output. The agent's name on the MCP server is `agent-S-nnnn`.
+It runs `claude -p` headless in the agent image ([Settings](#settings)) with the arguments `flai serve` gives a story's agent, as the operator's uid, and removes the container when it ends (`--rm`). The output is Claude Code's stream JSON on standard output. The agent's name on the MCP server is `agent-S-nnnn`.
 
 Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is git-ignored:
 
@@ -101,6 +102,7 @@ Environment variables the script reads:
 | Variable | Default | Effect |
 |----------|---------|--------|
 | `FLAI_BIN` | the `flai` on `PATH` | the flai that answers `flai mcp status` and `flai mcp token` |
+| `FLAI_AGENT_IMAGE` | what `scripts/agent-image.sh --tag` prints: the layer image when the manifest names `agent.image.layer`, else `flai-agent-claude-code:local` | the image the run uses. The default is the one `flai serve`'s container harness runs (S-0670). The script refuses an image not built, naming `scripts/agent-image.sh`; `scripts/agent-container.sh --image` prints its choice and runs nothing |
 | `FLAI_CLAUDE_LOGIN` | `~/.claude` | the folder holding the login, mounted read-only |
 | `FLAI_AGENT_MODEL` | Claude Code's own | `claude --model`, such as `haiku` |
 | `FLAI_AGENT_NETWORK` | `bridge` | `bridge` reaches the host as `host.docker.internal`; `host` uses Docker's host network |
@@ -130,11 +132,11 @@ rm -rf .flai-cache/agents/S-nnnn
 Remove the images when you no longer run agents in containers:
 
 ```bash
-docker image rm flai-agent-claude-code:local flai-agent-bedrock:local
+docker image rm flai-agent-sf-claude-code:local flai-agent-claude-code:local flai-agent-bedrock:local
 ```
 
 If a token in an `mcp.json` may have been copied elsewhere, rotate it with `flai mcp token --rotate`; every agent connected over HTTP then needs the new one.
 
 ## Limitations
 
-S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. The close-out runs inside the container past `flai verify`'s own steps, since the main checkout's `wip/`, `system-flow.yaml`, and `.flai-cache/verify` are mounted (ADR-0253, I-0218). Its tiers need the project's layer image, `flai-agent-sf-claude-code:local` here (S-0510), which this script does not run: in `flai-agent-claude-code:local` the close-out stops at the first tier that needs `go`. Its commit step stops inside the container whenever anything is uncommitted, such as an issue `--record-issues` recorded, since commits are the host's: commit through `task_done` and ask for the close-out from the host, whose job verifies in a container and commits on the host ([above](#the-close-outs-and-the-checks-containers)). Read S-0505's results before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).
+S-0505's results document records what was tried, what worked, and what is still open, among them the network attempts, the login's OAuth refresh, which was not exercised, and git inside the container, which ADR-0246's two git mounts have since settled. The close-out runs inside the container past `flai verify`'s own steps, since the main checkout's `wip/`, `system-flow.yaml`, and `.flai-cache/verify` are mounted (ADR-0253, I-0218). Its tiers need the project's layer image, `flai-agent-sf-claude-code:local` here (S-0510), which this script runs since S-0670: in `flai-agent-claude-code:local` the close-out stops at the first tier that needs `go`. Its commit step stops inside the container whenever anything is uncommitted, such as an issue `--record-issues` recorded, since commits are the host's: commit through `task_done` and ask for the close-out from the host, whose job verifies in a container and commits on the host ([above](#the-close-outs-and-the-checks-containers)). Read S-0505's results before relying on this runbook for long runs: [S-0505's results](../../../design/experiments/S-0505-claude-code-works-one-story-of-this-repository-inside-a-hand-built-container-from-a-bedrock-image-and-a-claude-code-layer-and-the-results-settle-what-adr-0203-leaves-open.md).
