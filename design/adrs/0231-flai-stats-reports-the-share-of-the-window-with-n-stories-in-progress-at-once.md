@@ -1,8 +1,8 @@
 ---
 id: ADR-0231
 title: "flai stats reports the share of the window with n stories in progress at once, and the ready wait, the queue time, at p50 and p85"
-status: proposed
-date: 2026-10-31
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0113, ADR-0190]
