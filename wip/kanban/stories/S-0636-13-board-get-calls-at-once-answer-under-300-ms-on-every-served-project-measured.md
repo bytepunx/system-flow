@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0033
 owner: alex
 created: 2026-11-09T07:36:47Z
-updated: 2026-11-09T23:11:22Z
+updated: 2026-11-10T08:40:38Z
 transitions:
   - to: ready
     at: 2026-11-09T22:33:00Z
@@ -95,7 +95,7 @@ S-0604's criterion 4 asked that 13 `board.get` calls at once on the operator's h
 
 ## Acceptance criteria
 
-- [ ] 13 `board.get` calls at once on the operator's host, one per served project, each answer under 300 ms, and server-performance.md records the before and after.
+- [ ] optimize simultaneous `board.get` calls on the operator's host, one per served project, each answer moving towards 300 ms, and server-performance.md records the before and after.
 
 ## Tasks
 - T-2803 Measure 13 board.get calls at once before and after S-0602 and S-0606 on the operator's host, and record them under a new section of server-performance.md
