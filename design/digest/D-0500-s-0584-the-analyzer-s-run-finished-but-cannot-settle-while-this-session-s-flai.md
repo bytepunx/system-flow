@@ -2,7 +2,7 @@
 id: D-0500
 title: "S-0584: the analyzer's run finished but cannot settle while this session's flai mcp holds its zombie (I-0299): Recommended: answer this thread once flai serve reports an `agent` change for the…"
 kind: answer
-sources: [TH-0859]
+sources: [TH-0859, S-0632, I-0299]
 topics: [all]
 paths: [wip/kanban/stories/S-0584-analyze-the-project-and-list-the-issues-the-report-names.md, design/issues/I-0299-a-role-run-the-stdio-mcp-server-starts-through-role-run-is-never-reaped-so-flai.md, design/issues/summary.md]
 date: 2026-11-07
@@ -42,3 +42,19 @@ Source: design/workflows/formulas/analysis-cadence.md
 ```
 
 Source: TH-0859.
+
+## I-0299 is fixed (S-0632)
+
+S-0632 fixed I-0299, the cause the answer names, so a run's zombie no longer keeps it from settling. From S-0632's Decisions (`wip/archive/agents/S-0632.md`):
+
+```text
+`process` now answers whether the process has ended (`/proc/<pid>/stat` state `Z` or `X`). `Alive` and `Owns` count such a process as gone. `Alive` keeps its old answer when the stat cannot be read, so off Linux and on a read error nothing changes.
+```
+
+```text
+A handed-over launcher waits for its child in a goroutine and records nothing: the serving flai still settles the run in `settleOrphans`.
+```
+
+So with a flai that has S-0632, a step whose role run finished settles on flai serve's next orphan check, and its agent need not wait on a zombie being reaped. The answer's rule still holds: answer such a thread only once flai serve reports the run's `agent` change.
+
+Sources: TH-0859; S-0632 (`wip/archive/agents/S-0632.md`, Decisions); I-0299.

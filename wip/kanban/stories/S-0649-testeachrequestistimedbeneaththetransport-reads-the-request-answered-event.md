@@ -3,16 +3,19 @@ id: S-0649
 type: story
 nature: remediation
 title: TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T05:12:08Z
-updated: 2026-11-10T07:03:53Z
+updated: 2026-11-10T07:19:49Z
 transitions:
   - to: ready
     at: 2026-11-10T07:02:50Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-10T07:03:53Z
+    by: agent-S-0649
+  - to: review
+    at: 2026-11-10T07:19:49Z
     by: agent-S-0649
 tags: [flai, test]
 topics: [testing]
@@ -23,9 +26,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 967
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 1
+      work: 41
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 11773
+      cache_read: 8439948
+      cache_write: 198253
+      cost: 3.5099
   strategic:
     - kind: orchestrator
       seconds: 143
@@ -62,8 +78,8 @@ finalized:
 This story remediates [I-0324](../../../design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md), "TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0324 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0324 is closed with `flai issue close I-0324 --reason` saying what fixed it
+- [x] The cause I-0324 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0324 is closed with `flai issue close I-0324 --reason` saying what fixed it
 
 ## Tasks
 - T-2834 The request answered tests poll the log for the event, and a held-back log line reproduces the race

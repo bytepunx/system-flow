@@ -9,7 +9,7 @@ date: 2026-10-23
 status: absorbed
 absorbed_by: "design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md#decision"
 asked_again: []
-cited: []
+cited: [TH-0969]
 ---
 
 # D-0375 Plan for S-0468: the remedy proposed from I-0152's instances, six tasks in five layers: Recommended for the operator: take the planner's four remedies, with the refusal for a task's folder touch…

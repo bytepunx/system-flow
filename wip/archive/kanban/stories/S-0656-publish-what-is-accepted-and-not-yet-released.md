@@ -44,15 +44,21 @@ usage:
       cost: 2.3185
   strategic:
     - kind: orchestrator
-      seconds: 16
+      seconds: 116
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 33
-          cache_read: 127642
-          cache_write: 16888
-          cost: 0.0388
+          input: 11
+          output: 79
+          cache_read: 661323
+          cache_write: 21265
+          cost: 0.1834
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 27
+          cache_read: 12572
+          cache_write: 30008
+          cost: 0.0317
 formula: publish
 ---
 # S-0656 Publish what is accepted and not yet released

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1591
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 445
-      cache_read: 12333326
-      cache_write: 502022
-      cost: 4.7208
+      input: 74
+      output: 16255
+      cache_read: 12911339
+      cache_write: 130936
+      cost: 3.7074
 ---
 # T-2777 Run a container story's close-out job with its verify in the story's container and its commit and sync on the host through flai alone
 

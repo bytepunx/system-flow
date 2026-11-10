@@ -6,8 +6,8 @@ sources: [TH-0811, TH-0256, I-0291, S-0625]
 topics: [orchestration, cli, planning, template, conventions, release, all]
 paths: [wip/kanban/stories/S-0562-the-publish-formula-is-run-once-in-this-repository-its-instance-worked-to.md, design/issues, design/issues/summary.md, design/issues/I-0283-a-publish-instance-with-nothing-to-release-stops-at-its-evaluate-step-down-the.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, flai/internal/release/evaluate.go]
 date: 2026-11-07
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md#context"
 asked_again: []
 cited: [S-0625, TH-0839, TH-0943]
 ---

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1213
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 130
-      cache_read: 1929923
-      cache_write: 22642
-      cost: 0.7182
+      input: 11
+      output: 2473
+      cache_read: 1964129
+      cache_write: 19919
+      cost: 0.564
 ---
 # T-2772 Record in an ADR that a container story's close-out runs its verify in that container, and what still runs on the host
 

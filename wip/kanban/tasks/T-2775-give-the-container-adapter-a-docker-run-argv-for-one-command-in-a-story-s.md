@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1245
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 158
-      cache_read: 3108857
-      cache_write: 86755
-      cost: 1.1754
+      input: 18
+      output: 4047
+      cache_read: 3214536
+      cache_write: 32599
+      cost: 0.923
 ---
 # T-2775 Give the container adapter a docker run argv for one command in a story's container with its mounts
 

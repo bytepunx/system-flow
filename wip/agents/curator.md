@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 185.3235
-accrued_seconds: 19460
-tasks_completed: 117
-last_run: 2026-11-09T23:24:51Z
+accrued_cost: 187.2568
+accrued_seconds: 20192
+tasks_completed: 118
+last_run: 2026-11-10T07:13:09Z
 ---
 
 # Curator activity
@@ -947,3 +947,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0441, D-0444, D-0449, D-0462, D-0500, D-0504, D-0515, D-0532, D-0535, D-0537, D-0543
 - Seconds: 121
 - Cost: 1.7082 USD, estimated
+
+### 2026-11-10T07:13:09Z
+
+- Summary: I wrote D-0544, D-0545, D-0546, D-0547 and D-0548; merged into D-0444 (I-0321, S-0645), D-0462 (asked again on TH-0962 and TH-0963) and D-0504 (I-0291, S-0625); absorbed D-0504 into ADR-0273 § Context; and `flai digest compact` compacted no entry.
+- Trigger: accepted S-0631
+- Items: D-0375, D-0444, D-0462, D-0504, D-0544, D-0545, D-0546, D-0547, D-0548
+- Seconds: 732
+- Cost: 1.9333 USD, estimated

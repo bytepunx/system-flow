@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 421
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 140
-      cache_read: 1733221
-      cache_write: 8708
-      cost: 0.6411
+      input: 19
+      output: 1985
+      cache_read: 1722356
+      cache_write: 19574
+      cost: 0.5408
 ---
 # T-2825 The dev server tests check the pid flai started, and a slow-starting fake vite reproduces the missing pid
 

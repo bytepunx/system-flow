@@ -3,12 +3,18 @@ id: T-2836
 type: task
 nature: remediation
 title: The crash-mode fake vite exits only after it has answered, and a slow-starting fake reproduces the early exit
-status: backlog
+status: in-progress
 parent: S-0650
 owner: alex
 created: 2026-11-10T06:58:43Z
-updated: 2026-11-10T06:58:43Z
-transitions: []
+updated: 2026-11-10T07:21:01Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:21:00Z
+    by: agent-S-0650
+  - to: in-progress
+    at: 2026-11-10T07:21:01Z
+    by: agent-S-0650
 stream: S-0650
 tags: [flai, test]
 touches: [flai/cmd/components_test.go]

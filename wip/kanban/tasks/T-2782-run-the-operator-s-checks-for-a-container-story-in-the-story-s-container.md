@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 480
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 307
-      cache_read: 8647912
-      cache_write: 58792
-      cost: 3.2023
+      input: 50
+      output: 11027
+      cache_read: 8758254
+      cache_write: 88819
+      cost: 2.5149
 ---
 # T-2782 Run the operator's checks for a container story in the story's container
 

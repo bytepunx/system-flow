@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 283
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 387
-      cache_read: 12868630
-      cache_write: 59601
-      cost: 4.7549
+      input: 74
+      output: 16373
+      cache_read: 13004765
+      cache_write: 131883
+      cost: 3.7342
 ---
 # T-2784 Say in the design and the operators' and users' guides what a container story runs inside and what still runs on the host
 

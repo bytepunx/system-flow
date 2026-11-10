@@ -3,16 +3,19 @@ id: S-0628
 type: story
 nature: improvement
 title: The close-out job and the manifest's test commands run the story worktree's scripts on the host, so a container harness does not keep an agent's code off the host
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:34Z
-updated: 2026-11-10T06:55:26Z
+updated: 2026-11-10T07:19:35Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:53Z
     by: alex
   - to: in-progress
     at: 2026-11-10T05:52:09Z
+    by: agent-S-0628
+  - to: review
+    at: 2026-11-10T07:19:35Z
     by: agent-S-0628
 tags: [flai, security]
 topics: [harness, docker, verify]
@@ -24,20 +27,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3825
-  estimated: true
-  priced_by: estimate
+  seconds: 5261
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      hand_edits: 1
-      work: 38
+      ceremony: 1
+      hand_edits: 2
+      work: 202
   models:
     - model: claude-opus-5-5
-      input: 288
-      output: 1693
-      cache_read: 42404090
-      cache_write: 1018820
-      cost: 15.9708
+      input: 634
+      output: 139451
+      cache_read: 110762579
+      cache_write: 1123261
+      cost: 31.8046
   strategic:
     - kind: orchestrator
       seconds: 41
@@ -82,8 +85,8 @@ finalized:
 This story remediates [I-0295](../../../design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-commands-run-the-story-worktree-s.md), "The close-out job and the manifest's test commands run the story worktree's scripts on the host, so a container harness does not keep an agent's code off the host", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0295 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0295 is closed with `flai issue close I-0295 --reason` saying what fixed it
+- [x] The cause I-0295 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0295 is closed with `flai issue close I-0295 --reason` saying what fixed it
 
 ## Tasks
 - T-2772 Record in an ADR that a container story's close-out runs its verify in that container, and what still runs on the host

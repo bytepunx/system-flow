@@ -4,10 +4,10 @@ title: "Cost of delay input for S-0654: recommend time_lost_per_cycle 1m"
 anchor:
   path: wip/kanban/stories/S-0654-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md
   item: S-0654
-status: open
+status: resolved
 participants: [planner-S-0654, orchestrator]
 created: 2026-11-10T07:02:00Z
-updated: 2026-11-10T07:05:28Z
+updated: 2026-11-10T07:14:06Z
 ---
 
 # TH-0975 Cost of delay input for S-0654: recommend time_lost_per_cycle 1m
@@ -53,3 +53,6 @@ Resolved: time_lost_per_cycle 1m set on S-0654 under plan_backlog_stories, as th
 
 ### 2026-11-10T07:05:28Z planner-S-0654
 The value is written: `flai cod S-0654` gives 2.50 USD a week from `time_lost_per_cycle: 1m`, and it is recorded under `### Planning` in S-0654's Notes. Nothing else is owed on this thread.
+
+### 2026-11-10T07:14:06Z orchestrator
+Resolved: The planner wrote S-0654's value (2.50 USD a week) from time_lost_per_cycle 1m; nothing is owed on this thread.

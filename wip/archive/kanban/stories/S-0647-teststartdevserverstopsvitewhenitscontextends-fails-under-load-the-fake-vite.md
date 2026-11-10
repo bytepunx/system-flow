@@ -3,10 +3,10 @@ id: S-0647
 type: story
 nature: remediation
 title: "TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T05:12:04Z
-updated: 2026-11-10T07:07:34Z
+updated: 2026-11-10T07:23:37Z
 transitions:
   - to: ready
     at: 2026-11-10T06:27:20Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T06:57:30Z
     by: agent-S-0647
+  - to: review
+    at: 2026-11-10T07:22:09Z
+    by: agent-S-0647
+  - to: done
+    at: 2026-11-10T07:23:37Z
+    by: orchestrator
 tags: []
 topics: [testing]
 touches: [flai/internal/components/devserver_test.go, flai/internal/components/devserver.go, design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md]
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 597
-  estimated: true
-  priced_by: estimate
+  seconds: 1492
+  priced_by: harness
   turns:
     - day: 2026-11-10
+      ceremony: 1
       hand_edits: 1
-      work: 25
+      work: 92
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 336
-      cache_read: 3768623
-      cache_write: 178380
-      cost: 1.4526
+      input: 194
+      output: 20646
+      cache_read: 17917844
+      cache_write: 203634
+      cost: 5.6263
   strategic:
     - kind: orchestrator
       seconds: 247
@@ -105,3 +111,12 @@ Forecast: `flai forecast` gave 5m from the median of 17 small remediation storie
 Cost of delay: `flai cod` gives 127.50 USD a week from the 51m time_lost_per_cycle flai set from I-0311, at 150 USD an hour. It is written as it stands.
 
 No `after`: the story reads no other story's output.
+
+### Accepted by the orchestrator
+
+- Verified: 410971b965d7b58b7511814dbfc032a6fb7ff111
+- At: 2026-11-10T07:23:37Z
+
+Verdict: S-0647 meets both criteria and is ready for acceptance; the only change outside its touches is the automatically recorded I-0323 occurrence.
+- 1: flai/internal/components/devserver.go, flai/internal/components/devserver_test.go
+- 2: design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md, design/issues/summary.md

@@ -7,10 +7,8 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0650
-  - S-0655
-  - S-0651
   - S-0653
+  - S-0654
   - S-0657
 ---
 

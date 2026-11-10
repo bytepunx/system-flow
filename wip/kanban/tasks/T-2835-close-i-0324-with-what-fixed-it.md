@@ -3,19 +3,37 @@ id: T-2835
 type: task
 nature: remediation
 title: Close I-0324 with what fixed it
-status: ready
+status: done
 parent: S-0649
 owner: alex
 created: 2026-11-10T06:58:39Z
-updated: 2026-11-10T07:04:34Z
+updated: 2026-11-10T07:11:44Z
 transitions:
   - to: ready
     at: 2026-11-10T07:04:34Z
+    by: agent-S-0649
+  - to: in-progress
+    at: 2026-11-10T07:11:33Z
+    by: agent-S-0649
+  - to: done
+    at: 2026-11-10T07:11:44Z
     by: agent-S-0649
 stream: S-0649
 tags: [issues]
 touches: [design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/summary.md]
 after: [T-2834]
+usage:
+  source: log
+  seconds: 11
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 812
+      cache_read: 582136
+      cache_write: 13674
+      cost: 0.2421
 ---
 # T-2835 Close I-0324 with what fixed it
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2074.8502
-accrued_seconds: 1537830
-tasks_completed: 2639
-last_run: 2026-11-10T07:08:59Z
+accrued_cost: 2075.9420
+accrued_seconds: 1538195
+tasks_completed: 2645
+last_run: 2026-11-10T07:15:20Z
 ---
 
 # Orchestrator activity
@@ -18505,6 +18505,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0655, S-0651, S-0653, S-0650
 - Seconds: 41
 - Cost: 0.1418 USD, estimated
+
+### 2026-11-10T07:10:39Z
+
+- Summary: Accepted S-0656, the publish formula instance, under accept_reviews at ea79e17: flai verify passed at the branch head, the verifier matched criteria 1-3 to T-2831, T-2832, T-2833 done, and the dry run showed no blocker. Its run released S-0625, S-0630, S-0631 (flai/v1.86.9, flaiover/v0.58.3, template v1.1.31).
+- Items: S-0656
+- Seconds: 100
+- Cost: 0.1763 USD, estimated
+
+### 2026-11-10T07:11:31Z
+
+- Summary: Started the publish formula under publish after accepting S-0656: release_evaluate met under threshold (count 1 of 1; value 12.5 of 1000 USD; pending S-0643, none held by epic). Instance S-0657 made ready with steps T-2853, T-2854, T-2855, committed f14724da7.
+- Items: S-0657, S-0643
+- Seconds: 52
+- Cost: 0.0488 USD, estimated
+
+### 2026-11-10T07:12:16Z
+
+- Summary: Finalized S-0654 under finalize_drafts once its planner wrote the value (2.5 USD a week from time_lost_per_cycle 1m; flai promote --drafts complete, 1h30m), promoted it to ready under promote_to_ready (rank 1, 1h30m), and ordered ready by throughput. S-0241 left in backlog: blocked, and TH-0790 asks to make it a draft.
+- Items: S-0654
+- Seconds: 45
+- Cost: 0.3454 USD, estimated
+
+### 2026-11-10T07:13:21Z
+
+- Summary: I've acted on every reason in this run. S-0656 is accepted, five drafts are finalized and in ready, and a new publish instance, S-0657, is in ready to release S-0643.
+- Items: none
+- Seconds: 65
+- Cost: 0.1995 USD, estimated
+
+### 2026-11-10T07:14:25Z
+
+- Summary: Resolved TH-0975 (planner wrote S-0654's value, 2.50 USD/week, from time_lost_per_cycle 1m; nothing owed). S-0654's draft and plan need nothing: already finalized and ready (pos 5, 1h30m). Ready column already in throughput order (S-0650 35m, S-0655 45m, S-0651 1h, S-0653 1h, S-0654 1h30m, S-0657 no forecast), so no apply. Did not promote S-0241 (sole candidate, rank 1, 2h): its Notes say not before headless forks and TH-0790 awaits the operator on making it a draft.
+- Items: S-0654, S-0241
+- Seconds: 48
+- Cost: 0.1360 USD, estimated
+
+### 2026-11-10T07:15:20Z
+
+- Summary: I've handled all four reasons, and nothing on S-0654 or the ready column needed a change.
+- Items: none
+- Seconds: 55
+- Cost: 0.1858 USD, estimated
 
 ## Refusals
 

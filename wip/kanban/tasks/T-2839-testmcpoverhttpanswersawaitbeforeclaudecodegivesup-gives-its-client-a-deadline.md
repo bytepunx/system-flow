@@ -3,15 +3,36 @@ id: T-2839
 type: task
 nature: remediation
 title: TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a deadline far above the server's bound
-status: backlog
+status: done
 parent: S-0651
 owner: alex
 created: 2026-11-10T07:00:52Z
-updated: 2026-11-10T07:00:52Z
-transitions: []
+updated: 2026-11-10T07:23:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:22:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T07:22:58Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T07:23:30Z
+    by: agent-S-0651
 stream: S-0651
 tags: [cli, testing]
 touches: [flai/cmd/mcp_http_test.go]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 37
+      cache_read: 262808
+      cache_write: 4535
+      cost: 0.0983
 ---
 # T-2839 TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a deadline far above the server's bound
 

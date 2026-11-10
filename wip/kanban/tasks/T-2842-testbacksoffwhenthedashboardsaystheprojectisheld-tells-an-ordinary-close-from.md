@@ -3,15 +3,33 @@ id: T-2842
 type: task
 nature: remediation
 title: TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
-status: backlog
+status: in-progress
 parent: S-0651
 owner: alex
 created: 2026-11-10T07:01:00Z
-updated: 2026-11-10T07:01:00Z
-transitions: []
+updated: 2026-11-10T07:22:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:22:58Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T07:22:58Z
+    by: system-flow
 stream: S-0651
 tags: [cli, testing]
 touches: [flai/internal/channel/channel_test.go]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 37
+      cache_read: 262808
+      cache_write: 4535
+      cost: 0.0983
 ---
 # T-2842 TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
 

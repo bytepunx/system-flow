@@ -3,14 +3,17 @@ id: S-0655
 type: story
 nature: remediation
 title: "A flaiover design-page test, \"takes up the draft another tab writes\", times out at 5,000 ms under load and stops the flaiover tier"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T07:12:18Z
+updated: 2026-11-10T07:19:56Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:49Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T07:19:56Z
+    by: agent-S-0655
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
 touches: [flaiover/src/routes/design/design.svelte.test.ts, design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/summary.md]

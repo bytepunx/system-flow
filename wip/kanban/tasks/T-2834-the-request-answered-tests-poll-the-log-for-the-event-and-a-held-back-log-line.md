@@ -3,11 +3,11 @@ id: T-2834
 type: task
 nature: remediation
 title: The request answered tests poll the log for the event, and a held-back log line reproduces the race
-status: in-progress
+status: done
 parent: S-0649
 owner: alex
 created: 2026-11-10T06:58:34Z
-updated: 2026-11-10T07:04:36Z
+updated: 2026-11-10T07:10:38Z
 transitions:
   - to: ready
     at: 2026-11-10T07:04:34Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:04:36Z
     by: agent-S-0649
+  - to: done
+    at: 2026-11-10T07:10:38Z
+    by: agent-S-0649
 stream: S-0649
 tags: [flai, test]
 touches: [flai/internal/channel/channel_test.go]
+usage:
+  source: log
+  seconds: 362
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 1542
+      cache_read: 1105471
+      cache_write: 25967
+      cost: 0.4597
 ---
 # T-2834 The request answered tests poll the log for the event, and a held-back log line reproduces the race
 

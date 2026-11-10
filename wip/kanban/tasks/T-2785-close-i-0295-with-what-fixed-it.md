@@ -24,16 +24,16 @@ touches: [design/issues/I-0295-the-close-out-job-and-the-manifest-s-test-command
 after: [T-2772, T-2777, T-2782, T-2784]
 usage:
   source: log
-  seconds: 9
+  seconds: 26
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 27
-      cache_read: 725751
-      cache_write: 2577
-      cost: 0.2679
+      input: 4
+      output: 922
+      cache_read: 732642
+      cache_write: 7430
+      cost: 0.2104
 ---
 # T-2785 Close I-0295 with what fixed it
 
