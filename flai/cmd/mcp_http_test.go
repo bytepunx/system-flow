@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,8 +20,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/ask"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -575,4 +578,66 @@ func mcpAnswer(ctx context.Context, t *testing.T, cs *mcp.ClientSession, call mc
 		answer = "error: " + answer
 	}
 	return answer
+}
+
+// ADR-0278 §3: the server over HTTP, a child of flai host with no FLAI_ROLE
+// of its callers, gives a caller the orchestrator's role only when its name
+// is the orchestrator's run flai serve records for the project and still
+// runs; any other name, a run that ended, or another project's gets none.
+func TestMCPOverHTTPKnowsTheOrchestratorByFlaiServesRun(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("the run is a process sleep stands in for")
+	}
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	a := &app{configPath: cfg, out: &bytes.Buffer{}, errOut: &bytes.Buffer{}}
+	if a.mcpHTTPRole("/p", "orchestrator") != "" {
+		t.Error("with no state flai serve wrote, no caller is the orchestrator")
+	}
+	run := exec.Command("sleep", "30")
+	serve.Detach(run) // the leader of its own session, as flai serve starts an agent
+	if err := run.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waited := make(chan struct{})
+	go func() { _ = run.Wait(); close(waited) }()
+	t.Cleanup(func() { _ = run.Process.Kill(); <-waited })
+	now := time.Now().UTC().Format(time.RFC3339)
+	write := func(state map[string]serve.AgentState) {
+		t.Helper()
+		dir := serve.DirFor(cfg)
+		if err := os.MkdirAll(string(dir), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		data, _ := json.Marshal(state)
+		if err := os.WriteFile(filepath.Join(string(dir), "agents.json"), data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(map[string]serve.AgentState{
+		"/p": {Orchestrator: &serve.AgentRun{Agent: "orchestrator", PID: run.Process.Pid, Started: now},
+			Stories: map[string]*serve.AgentRun{"S-0001": {Story: "S-0001", Agent: "agent-S-0001", PID: run.Process.Pid, Started: now}}},
+		"/q": {Orchestrator: &serve.AgentRun{Agent: "orchestrator", PID: run.Process.Pid, Started: now, Ended: now}},
+	})
+	for _, c := range []struct {
+		why         string
+		root, agent string
+		want        string
+	}{
+		{"the orchestrator's run", "/p", "orchestrator", guard.RoleOrchestrate},
+		{"a story's agent", "/p", "agent-S-0001", ""},
+		{"a name any holder of the token can claim", "/p", "claude", ""},
+		{"no name", "/p", "", ""},
+		{"an orchestrator's run that ended", "/q", "orchestrator", ""},
+		{"another project", "/r", "orchestrator", ""},
+	} {
+		if got := a.mcpHTTPRole(c.root, c.agent); got != c.want {
+			t.Errorf("%s: role %q, want %q", c.why, got, c.want)
+		}
+	}
+	_ = run.Process.Kill()
+	<-waited
+	if a.mcpHTTPRole("/p", "orchestrator") != "" {
+		t.Error("once the process flai serve started has gone, its name is no longer the orchestrator")
+	}
 }

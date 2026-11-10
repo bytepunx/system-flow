@@ -147,6 +147,9 @@ func Decide(g Guard, c Call) Verdict {
 	if c.Kind == FlaiTool && c.Tool == ReleasePublish {
 		return deny("only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes)
 	}
+	if c.Kind == FlaiTool && c.Tool == Accept {
+		return deny("only the orchestrator calls " + Accept + ": " + orchestratorAccepts)
+	}
 	var why string
 	if c.Role == "" {
 		why = g.wait(c)

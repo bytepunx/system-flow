@@ -109,6 +109,9 @@ func (g Guard) orchestrate(c Call) Verdict {
 		case tool == QueueAdd:
 			call = strings.TrimSpace(tool + " " + in.Story)
 			what, needs = strings.TrimSpace("enqueue "+in.Story), manifest.PermitAcceptReviews
+		case tool == Accept:
+			call = strings.TrimSpace(tool + " " + in.Story)
+			what, needs = strings.TrimSpace("accept "+in.Story), manifest.PermitAcceptReviews
 		case tool == SubprojectEdit:
 			// it uses flai subproject --autocommit instead, which commits
 			// the change on main; the tool is held to the same permission

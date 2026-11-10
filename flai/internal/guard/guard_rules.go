@@ -68,6 +68,16 @@ var cliOrchestrates = map[string][]string{
 // orchestration.permissions.accept_reviews is on (S-0403).
 const QueueAdd = "queue_add"
 
+// Accept is the MCP tool through which the orchestrator accepts a story it
+// has verified, running flai accept --by orchestrator on the host with the
+// host's configuration, while orchestration.permissions.accept_reviews is
+// on (ADR-0278).
+const Accept = "accept"
+
+// orchestratorAccepts says why no session but the orchestrator calls Accept
+// (ADR-0278).
+const orchestratorAccepts = "it is the orchestrator's alone, while orchestration.permissions.accept_reviews is on; the operator accepts a story with flai accept <id> --by <name> on the host, or from the board (ADR-0093)"
+
 // queueEnqueues are the subcommands of flai queue the orchestrator runs while
 // accept_reviews is on, as itself; it runs no other that writes (S-0403).
 var queueEnqueues = []string{"add"}
@@ -248,7 +258,7 @@ const acceptsAsSelf = "it accepts a story only as itself, so give --by orchestra
 
 // acceptsWithFlai says why the orchestrator never moves an item to done with
 // item_move (S-0221).
-const acceptsWithFlai = "item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093), or, while the merge queue runs, enqueues it with queue_add for the queue to land (S-0403)"
+const acceptsWithFlai = "item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093), run on the host by the MCP tool accept with story, verified, and evidence (ADR-0278), or, while the merge queue runs, enqueues it with queue_add for the queue to land (S-0403)"
 
 // enqueuesAsSelf says why the orchestrator enqueues a story only as itself,
 // whatever accept_reviews lets it do (S-0403).

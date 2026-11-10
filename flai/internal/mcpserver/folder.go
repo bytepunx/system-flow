@@ -105,6 +105,7 @@ func addProjectTools(srv *mcp.Server, p projects) {
 	mcp.AddTool(srv, &mcp.Tool{Name: "versions", Description: versionsDescription}, route(p, (*server).versions))
 	addOrchestrateTools(srv, p)
 	addQueueTools(srv, p)
+	addAcceptTools(srv, p)
 	addSharedTools(srv, p)
 	addSubprojectTools(srv, p)
 }

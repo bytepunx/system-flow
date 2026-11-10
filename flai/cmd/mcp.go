@@ -55,7 +55,7 @@ FLAI_MCP_URL and FLAI_MCP_TOKEN, never in its arguments (S-0506).`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled(), Budgets: a.mcpBudgets()}
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled(), Budgets: a.mcpBudgets()}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {
@@ -103,6 +103,14 @@ func (a *app) mcpInstalled() string {
 // configuration at each call and journalled beside flai serve's (S-0222).
 func (a *app) mcpPublisher() *hostapi.Publisher {
 	return &hostapi.Publisher{Host: a.host()}
+}
+
+// mcpAccepter runs the orchestrator's acceptance for its MCP tool accept as
+// the dashboard's accept.run does, with this host's configuration, on the
+// host whichever harness the orchestrator runs in, and journalled beside
+// flai serve's (ADR-0278).
+func (a *app) mcpAccepter() *hostapi.Accepter {
+	return &hostapi.Accepter{Host: a.host()}
 }
 
 // mcpAutoApprove reports whether the operator enabled auto-approve for the

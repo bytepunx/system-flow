@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // writing counts the dashboard writes running in this process now, each a
@@ -88,6 +89,101 @@ func (pb Publisher) Publish(ctx context.Context, p channel.Project, method, by, 
 		entry.Detail = why + ": " + entry.Detail
 	}
 	pb.Host.record(entry)
+	if e != nil {
+		return Written{}, e
+	}
+	return res.(Written), nil
+}
+
+// Accepter accepts as accept.run accepts for the orchestrator, for a caller
+// that is not a dashboard: the orchestrator's MCP tool accept (ADR-0278). It
+// runs this host's flai accept --by orchestrator, so that the acceptance
+// reads the host's configuration, its merge-queue and forge host actions
+// among them, wherever the orchestrator runs. It builds the command line as
+// accept.run builds the orchestrator's, refuses it as accept.run does while
+// accept_reviews or, under pull-request acceptance, the forge host action is
+// off, and journals each acceptance with who asked as its By. A dry run only
+// reads, so it is not journaled.
+type Accepter struct {
+	// Run runs flai; nil runs this executable (ExecRunner).
+	Run Runner
+	// Now is the journal's clock; nil is time.Now.
+	Now  func() time.Time
+	Host Host
+}
+
+// AcceptArgs is the command line and standard input of the orchestrator's
+// acceptance of id in p, before --json: with dryRun, flai accept id --by
+// orchestrator --dry-run, with verified and evidence when given, which only
+// previews; otherwise accept.run's for by orchestrator, verified, and
+// evidence. It refuses, before flai runs, an ID that is not an item's, a
+// verified that is not a commit's name, and an acceptance while p's
+// accept_reviews is off.
+func AcceptArgs(p channel.Project, id, verified, evidence string, dryRun bool) ([]string, string, *channel.Error) {
+	if !dryRun {
+		raw, err := json.Marshal(map[string]string{"id": id, "by": workitem.ActivityOrchestrator, "verified": verified, "evidence": evidence})
+		if err != nil {
+			return nil, "", failed(err)
+		}
+		return itemWriteSpecs()["accept.run"].build(p, raw)
+	}
+	if e := needID(id); e != nil {
+		return nil, "", e
+	}
+	args, stdin := []string{"accept", id, "--by=" + workitem.ActivityOrchestrator, "--dry-run"}, ""
+	if verified != "" {
+		if !commitName.MatchString(verified) {
+			return nil, "", bad("verified is the commit the orchestrator's verifier passed, in hex: %q is not one", verified)
+		}
+		args = append(args, "--verified="+verified)
+	}
+	if strings.TrimSpace(evidence) != "" {
+		args, stdin = append(args, "--evidence=-"), evidence
+	}
+	return args, stdin, nil
+}
+
+// Accept runs the orchestrator's acceptance of id in p's folder, or with
+// dryRun its preview, on by's word, and journals an acceptance under method.
+// Under pull-request acceptance, while the forge host action is off, it runs
+// nothing and refuses with Disabled, as accept.run does. flai's refusal for
+// lint the fix left or a path still undone (exit 4) is Refused with its
+// data; any other refusal is flai's message.
+func (ac Accepter) Accept(ctx context.Context, p channel.Project, method, by, id, verified, evidence string, dryRun bool) (Written, *channel.Error) {
+	run, now := ac.Run, ac.Now
+	if run == nil {
+		run = ExecRunner
+	}
+	if now == nil {
+		now = time.Now
+	}
+	args, stdin, e := AcceptArgs(p, id, verified, evidence, dryRun)
+	if e != nil {
+		return Written{}, e
+	}
+	entry := Entry{At: now().UTC().Format(time.RFC3339), Action: ActionOrchestrate, Method: method, Project: p.Key, Root: p.Root, By: by}
+	if action := forgeAcceptance(p); action != "" && !dryRun {
+		entry.Action = action
+		if !ac.Host.enabled(action, p.Root) {
+			entry.Outcome, entry.Detail = "disabled", "accept "+id
+			ac.Host.record(entry)
+			return Written{}, notEnabled(action, "this project")
+		}
+	}
+	done := perf.Track(ctx, perf.Exec("flai", args))
+	ran, err := run(ctx, Run{Dir: p.Root, Args: withJSON(args), Stdin: stdin})
+	if !dryRun {
+		itemsChanged(p.Root, p.Root)
+	}
+	done()
+	res, e := outcome(ran, err, map[int]int{4: Refused})
+	if !dryRun {
+		entry.Outcome, entry.Detail = "done", "accepted "+id
+		if e != nil {
+			entry.Outcome, entry.Detail = "failed", e.Message
+		}
+		ac.Host.record(entry)
+	}
 	if e != nil {
 		return Written{}, e
 	}

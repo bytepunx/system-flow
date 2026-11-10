@@ -106,6 +106,15 @@ type Options struct {
 	// the orchestrator's tool release_publish (S-0222); without it the tool
 	// says it cannot.
 	Publish *hostapi.Publisher
+	// Accept runs flai accept --by orchestrator on the host, with the host's
+	// configuration, for the orchestrator's tool accept (ADR-0278); without
+	// it the tool says it cannot.
+	Accept *hostapi.Accepter
+	// Role is the caller's role, such as guard.RoleOrchestrate. Empty reads
+	// FLAI_ROLE, which flai serve sets in a session whose flai mcp runs over
+	// stdio; the server over HTTP, a child of flai host, sets it for the
+	// orchestrator's run flai serve records (ADR-0278).
+	Role string
 	// RelativePaths reports whether story_start links a new worktree with
 	// relative paths, as flai stream open does (S-0274); nil links an
 	// ordinary one.
@@ -174,6 +183,7 @@ type server struct {
 	// (ADR-0243); nil narrows nothing
 	servedAgent ServedAgent
 	publish     *hostapi.Publisher // publishes for release_publish (S-0222)
+	accepter    *hostapi.Accepter  // accepts for the orchestrator's accept (ADR-0278)
 	// relativePaths says whether story_start links a new worktree with
 	// relative paths (S-0274)
 	relativePaths func() bool
@@ -193,7 +203,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -204,8 +214,12 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 		s.agent = "agent"
 	}
 	// flai serve sets the orchestrator's role in its session, whose flai mcp
-	// inherits it: the orchestrator's writes are held to its criteria (S-0219)
-	s.role = os.Getenv("FLAI_ROLE")
+	// inherits it: the orchestrator's writes are held to its criteria (S-0219).
+	// Over HTTP the server is told it, since its process has none (ADR-0278).
+	s.role = opt.Role
+	if s.role == "" {
+		s.role = os.Getenv("FLAI_ROLE")
+	}
 	s.served = servedSession(s.role)
 	s.reasons = strings.TrimSpace(os.Getenv(harness.ReasonsEnv)) != ""
 	// flai serve starts a story's agent with FLAI_STORY, and starts it again
@@ -654,9 +668,9 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 		return nil, ItemMoveOut{}, err
 	}
 	if in.To == workitem.Done && it.Type == workitem.Story && s.orchestrator() {
-		// the orchestrator accepts through flai, which checks what an
-		// acceptance needs and records its evidence (ADR-0093)
-		return nil, ItemMoveOut{}, fmt.Errorf("%s is a story: moving it to done is acceptance, which item_move never makes; the orchestrator accepts a story with flai accept %s --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)", it.ID, it.ID)
+		// the orchestrator accepts through flai on the host, which checks what
+		// an acceptance needs and records its evidence (ADR-0093, ADR-0278)
+		return nil, ItemMoveOut{}, fmt.Errorf("%s is a story: moving it to done is acceptance, which item_move never makes; the orchestrator accepts a story with flai accept %s --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093), run on the host by the MCP tool accept with story, verified, and evidence (ADR-0278)", it.ID, it.ID)
 	}
 	if in.To == workitem.Done && it.Type != workitem.Task {
 		return nil, ItemMoveOut{}, fmt.Errorf("%s is %s: moving it to done is acceptance, which only the operator does (flai accept, or the dashboard); move it to review and say what is ready", it.ID, articled(it.Type))

@@ -511,3 +511,68 @@ func TestARedirectionNeitherAllowsNorRefusesTheOrchestratorsCommand(t *testing.T
 		}
 	}
 }
+
+// acceptingFile is the orchestrator's baseline role file with the MCP tool
+// accept granted under accept_reviews (ADR-0278), as the baseline grants it
+// once its copies name the tool.
+func acceptingFile(t *testing.T) *roles.Role {
+	t.Helper()
+	file := builtInFile(t, "orchestrator")
+	if slices.ContainsFunc(file.Permissions, func(p roles.Permission) bool {
+		return slices.ContainsFunc(p.Tools, func(c roles.Call) bool { return c.Call == Accept })
+	}) {
+		return file
+	}
+	return builtInFile(t, "orchestrator", "    tools: [queue_add]\n", "    tools: [queue_add, accept]\n")
+}
+
+// refusingFile is the orchestrator's baseline role file with accept taken
+// out of what accept_reviews grants.
+func refusingFile(t *testing.T) *roles.Role {
+	t.Helper()
+	file := builtInFile(t, "orchestrator")
+	if slices.ContainsFunc(file.Permissions, func(p roles.Permission) bool {
+		return slices.ContainsFunc(p.Tools, func(c roles.Call) bool { return c.Call == Accept })
+	}) {
+		return builtInFile(t, "orchestrator", "    tools: [queue_add, accept]\n", "    tools: [queue_add]\n")
+	}
+	return file
+}
+
+// ADR-0278 §2: the orchestrator calls the MCP tool accept only while
+// accept_reviews is on, and the refusal names the story and the permission;
+// no other session calls it, nor any sub-agent, whatever its permissions.
+func TestOnlyTheOrchestratorCallsAcceptWhileAcceptReviewsIsOn(t *testing.T) {
+	file := acceptingFile(t)
+	needs := "orchestration.permissions." + manifest.PermitAcceptReviews
+	accept := call(t, Accept, `{"story":"S-0001","verified":"abc1234","evidence":"Verdict: pass\n- 1: x"}`)
+	for name, gr := range map[string]Guard{
+		"accept_reviews on":   orchestrating(manifest.Permissions{AcceptReviews: true}, file),
+		"every permission on": orchestrating(allOn, file),
+	} {
+		if r := gr.Decide(accept); r.Why != "" {
+			t.Errorf("%s: accept refused: %+v", name, r)
+		}
+	}
+	off := orchestrating(except(manifest.PermitAcceptReviews), file)
+	if r := off.Decide(accept); r.Why != "the orchestrator cannot accept S-0001: it needs "+needs+", which is off. "+askOperator || r.Needs != needs || r.Call != "accept S-0001" {
+		t.Errorf("off: accept: %+v", r)
+	}
+	if r := orchestrating(allOn, refusingFile(t)).Decide(accept); r.Why == "" {
+		t.Error("a role file whose accept_reviews grants no accept lets the orchestrator call it")
+	}
+	story := Guard{Commands: g.Commands}
+	if r := story.Decide(accept); r.Why != "only the orchestrator calls "+Accept+": "+orchestratorAccepts {
+		t.Errorf("a story's agent: %+v", r)
+	}
+	if why := planGuard.Check(accept); !strings.HasPrefix(why, "the planner cannot call accept") {
+		t.Errorf("the planner: %q", why)
+	}
+	sub := accept
+	sub.AgentID, sub.AgentType = "a1", "verifier"
+	for name, gr := range map[string]Guard{"a story's sub-agent": story, "the orchestrator's sub-agent": orchestrating(allOn, file)} {
+		if r := gr.Decide(sub); r.Why == "" {
+			t.Errorf("%s calls accept", name)
+		}
+	}
+}

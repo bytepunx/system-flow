@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -140,7 +141,7 @@ func mcpURL(addr net.Addr) string {
 // allows a protected write without asking only under the auto-approve host
 // action and only for the agent flai serve runs for the story (ADR-0243).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}
 }
 
 // mcpServedAgent reports whether agent is the name of the run flai serve
@@ -150,6 +151,29 @@ func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan s
 func (a *app) mcpServedAgent(root, agent, story string) bool {
 	run := a.serveDir().AgentStates()[root].Stories[story]
 	return run != nil && run.Agent == agent && run.Ended == "" && run.Error == "" && run.PID > 0 && serve.Owns(run.PID, run.Start)
+}
+
+// mcpServedOrchestrator reports whether agent is the name of the
+// orchestrator's run flai serve records for the project at root and that is
+// still running: the process it started is alive and is the one it started.
+// The server over HTTP is a child of flai host, whose FLAI_ROLE says nothing
+// of its callers, so it knows the orchestrator by this alone (ADR-0278): a
+// name is only a claim, which every holder of the token can make. A state
+// it cannot read names no run.
+func (a *app) mcpServedOrchestrator(root, agent string) bool {
+	run := a.serveDir().AgentStates()[root].Orchestrator
+	return agent != "" && run != nil && run.Agent == agent && run.Ended == "" && run.Error == "" && run.PID > 0 && serve.Owns(run.PID, run.Start)
+}
+
+// mcpHTTPRole is the role of the caller named agent of the server over HTTP
+// for the project at root, read when its session starts: the orchestrator's
+// for the orchestrator's run flai serve records, else none, which leaves the
+// server to read FLAI_ROLE as before (ADR-0278).
+func (a *app) mcpHTTPRole(root, agent string) string {
+	if a.mcpServedOrchestrator(root, agent) {
+		return guard.RoleOrchestrate
+	}
+	return ""
 }
 
 // serveMCPHTTP runs the server until ctx ends.
@@ -175,7 +199,9 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		Token: token, ProjectKey: repo.Manifest.Key, ProjectName: repo.Manifest.Name,
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
-			return mcpserver.New(a.mcpHTTPOptions(repo, agent, closing, installed))
+			opt := a.mcpHTTPOptions(repo, agent, closing, installed)
+			opt.Role = a.mcpHTTPRole(mainRootOf(repo), agent)
+			return mcpserver.New(opt)
 		},
 	})
 	mux := http.NewServeMux()

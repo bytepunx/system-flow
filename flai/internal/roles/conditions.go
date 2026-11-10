@@ -322,6 +322,7 @@ var Gated = []Gate{
 	{"flai accept", AcceptReviews, "accept-as-self"},
 	{"flai move", AcceptReviews, "accept-as-self"},
 	{"queue_add", AcceptReviews, ""},
+	{"accept", AcceptReviews, ""},
 	{"flai queue add", AcceptReviews, "enqueue-as-self"},
 	{"release_publish", Publish, ""},
 	{"subproject_edit", EditSubprojects, ""},
@@ -336,7 +337,7 @@ var Gated = []Gate{
 // threads plainly (ADR-0207 §5).
 var PlainGated = []string{
 	"item_edit", "flai edit", "item_move", "flai move", "item_new", "flai story new",
-	"plan", "flai plan", "flai order", "flai accept", "release_publish", "queue_add", "flai queue add",
+	"plan", "flai plan", "flai order", "flai accept", "release_publish", "queue_add", "accept", "flai queue add",
 	"subproject_edit", "flai subproject add", "flai subproject set", "flai subproject remove",
 }
 
