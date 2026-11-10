@@ -258,11 +258,15 @@ func TestReconnectsAfterTheDashboardGoesAway(t *testing.T) {
 }
 
 // S-0184: a dashboard that refuses this flai because another holds the
-// project is not dialled again at once, and the state says why.
+// project is not dialled again at once, and the state says why. The held
+// back-off, at least held/2, and an ordinary close's retry, at most 40 ms,
+// are told apart by held/4, which leaves an ordinary close a second on a
+// loaded host, where one took 252 ms (I-0309).
 func TestBacksOffWhenTheDashboardSaysTheProjectIsHeld(t *testing.T) {
+	const held = 4 * time.Second
 	d := newFakeDashboard(t, "s3cret")
 	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Methods: testMethods(), Version: "test",
-		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 600 * time.Millisecond}
+		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: held}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { c.Run(ctx); close(done) }()
@@ -275,16 +279,16 @@ func TestBacksOffWhenTheDashboardSaysTheProjectIsHeld(t *testing.T) {
 	for time.Now().Before(deadline) && !strings.Contains(c.State().LastError, "another flai") {
 		time.Sleep(5 * time.Millisecond)
 	}
-	if st := c.State(); st.Connected || !strings.Contains(st.LastError, "another flai serves the project") || !strings.Contains(st.LastError, "trying again in 600ms") {
+	if st := c.State(); st.Connected || !strings.Contains(st.LastError, "another flai serves the project") || !strings.Contains(st.LastError, "trying again in "+held.String()) {
 		t.Errorf("state: %+v", st)
 	}
 	select {
 	case <-d.proven:
 		// jitter spreads the wait over [HeldBackoff/2, HeldBackoff)
-		if waited := time.Since(refused); waited < 250*time.Millisecond {
+		if waited := time.Since(refused); waited < held/2 {
 			t.Errorf("dialled again after %v, not after the held back-off", waited)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(3 * held):
 		t.Fatal("never dialled again")
 	}
 
@@ -293,7 +297,7 @@ func TestBacksOffWhenTheDashboardSaysTheProjectIsHeld(t *testing.T) {
 	again := time.Now()
 	_ = second.Close(websocket.StatusGoingAway, "restart")
 	waitProven(t, d)
-	if waited := time.Since(again); waited > 250*time.Millisecond {
+	if waited := time.Since(again); waited > held/4 {
 		t.Errorf("an ordinary close waited %v", waited)
 	}
 }
