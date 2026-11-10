@@ -2,12 +2,12 @@
 id: I-0325
 title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 8m
 first_reported: 2026-11-09T22:51:04Z
 last_reported: 2026-11-09T22:51:04Z
-updated: 2026-11-10T05:12:13Z
+updated: 2026-11-10T07:25:06Z
 ---
 
 # I-0325 TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers
@@ -24,3 +24,4 @@ S-0622's third close-out, job S-0622-20261109T224304Z, stopped at integration af
 ## Remediation
 
 Story S-0650 remediates this issue, created from it at 2026-11-10T05:12:13Z.
+Closed 2026-11-10T07:25:06Z: S-0650 (T-2836): the crash-mode fake vite in flai/cmd/components_test.go exits 2 only after it has answered the harness's path once, instead of on a 300 ms timer that raced StartDevServer's 150 ms poll. FLAI_FAKE_COMPONENTS_VITE_DELAY delays the fake's listen, and TestComponentsServeEndsWhenASlowViteExits uses it (600 ms) to reproduce the early exit without load: it failed with "exited before it answered" under the old timer and passes with the fix.
