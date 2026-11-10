@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2077.1767
-accrued_seconds: 1538399
-tasks_completed: 2654
-last_run: 2026-11-10T07:44:28Z
+accrued_cost: 2077.3899
+accrued_seconds: 1538447
+tasks_completed: 2656
+last_run: 2026-11-10T07:46:02Z
 ---
 
 # Orchestrator activity
@@ -18610,6 +18610,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2027 USD, estimated
+
+### 2026-11-10T07:45:33Z
+
+- Summary: release-due S-0655: did not publish. a50319c09 (operator, 07:44:49Z) already released flai 1.86.10, flaiover 0.58.4, template 1.1.32 with S-0655. release_evaluate under threshold now gives count 0 of 1 and value 0 of 1000 USD/week, so it is not met. The publish instance S-0657, in ready, will stop at its evaluate step while nothing is pending.
+- Items: S-0655, S-0657
+- Seconds: 19
+- Cost: 0.1001 USD, estimated
+
+### 2026-11-10T07:46:02Z
+
+- Summary: I didn't publish a release for S-0655, because it has already been released. You published right after accepting it, in commit `a50319c09` at 07:44:49Z, which released:
+- Items: none
+- Seconds: 29
+- Cost: 0.1131 USD, estimated
 
 ## Refusals
 

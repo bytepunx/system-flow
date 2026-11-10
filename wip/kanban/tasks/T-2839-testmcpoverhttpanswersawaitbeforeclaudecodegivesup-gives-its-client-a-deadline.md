@@ -23,7 +23,7 @@ tags: [cli, testing]
 touches: [flai/cmd/mcp_http_test.go]
 usage:
   source: log
-  seconds: 31
+  seconds: 32
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 37
       cache_read: 262808
       cache_write: 4535
-      cost: 0.0983
+      cost: 0.0984
 ---
 # T-2839 TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a deadline far above the server's bound
 

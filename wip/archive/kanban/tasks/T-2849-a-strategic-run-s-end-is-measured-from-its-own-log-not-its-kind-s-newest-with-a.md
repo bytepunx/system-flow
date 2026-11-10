@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 16
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 47
-      cache_read: 569380
-      cache_write: 795
-      cost: 0.2098
+      output: 617
+      cache_read: 562839
+      cache_write: 7334
+      cost: 0.1836
 ---
 # T-2849 A strategic run's end is measured from its own log, not its kind's newest, with a test that ends an older run after a newer one started
 

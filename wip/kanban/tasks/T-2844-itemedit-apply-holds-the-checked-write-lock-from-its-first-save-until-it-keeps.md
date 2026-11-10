@@ -32,7 +32,7 @@ usage:
       output: 269
       cache_read: 4723374
       cache_write: 316593
-      cost: 1.8542
+      cost: 1.8543
 ---
 # T-2844 itemedit.Apply holds the checked-write lock from its first save until it keeps or restores the edit
 

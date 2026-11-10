@@ -3,12 +3,15 @@ id: T-2855
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: cancelled
 parent: S-0657
 owner: alex
 created: 2026-11-10T07:11:22Z
-updated: 2026-11-10T07:11:22Z
-transitions: []
+updated: 2026-11-10T07:55:30Z
+transitions:
+  - to: cancelled
+    at: 2026-11-10T07:55:30Z
+    by: system-flow
 stream: S-0657
 tags: []
 after: [T-2854]
@@ -24,3 +27,4 @@ Run `flai release --pending --require-pending --json` from the project's main ch
 `flai release --pending --require-pending --json` exits 0 in the main checkout, or exits 2, which stops the run: record it with `flai formula stop S-0657 --step publish --exit 2`, giving it the step's output.
 
 ## Notes
+- 2026-11-10T07:55:30Z: moved to cancelled: step evaluate stopped the run with exit 2

@@ -6,7 +6,7 @@ title: A checked edit of a work item writes, checks, and restores it with no loc
 status: in-progress
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:34:29Z
+updated: 2026-11-10T07:52:21Z
 transitions:
   - to: ready
     at: 2026-11-10T07:12:12Z
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 576
+  seconds: 1060
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
-      ceremony: 1
+      ceremony: 3
       hand_edits: 2
-      work: 14
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 628
-      cache_read: 8983687
-      cache_write: 581545
-      cost: 3.5191
+      input: 132
+      output: 909
+      cache_read: 14588940
+      cache_write: 626286
+      cost: 5.598
   strategic:
     - kind: orchestrator
       seconds: 143
@@ -75,8 +75,8 @@ finalized:
 This story remediates [I-0328](../../../design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md), "A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0328 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0328 is closed with `flai issue close I-0328 --reason` saying what fixed it
+- [x] The cause I-0328 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0328 is closed with `flai issue close I-0328 --reason` saying what fixed it
 
 ## Tasks
 - T-2844 itemedit.Apply holds the checked-write lock from its first save until it keeps or restores the edit

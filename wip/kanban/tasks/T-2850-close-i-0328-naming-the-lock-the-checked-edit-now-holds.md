@@ -3,16 +3,37 @@ id: T-2850
 type: task
 nature: improvement
 title: Close I-0328 naming the lock the checked edit now holds
-status: backlog
+status: done
 parent: S-0654
 owner: alex
 created: 2026-11-10T07:01:30Z
-updated: 2026-11-10T07:01:30Z
-transitions: []
+updated: 2026-11-10T07:52:14Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:52:00Z
+    by: agent-S-0654
+  - to: in-progress
+    at: 2026-11-10T07:52:01Z
+    by: agent-S-0654
+  - to: done
+    at: 2026-11-10T07:52:14Z
+    by: agent-S-0654
 stream: S-0654
 tags: [flai, issues]
 touches: [design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/summary.md]
 after: [T-2848]
+usage:
+  source: log
+  seconds: 6
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 72
+      cache_read: 873289
+      cache_write: 1135
+      cost: 0.3217
 ---
 # T-2850 Close I-0328 naming the lock the checked edit now holds
 

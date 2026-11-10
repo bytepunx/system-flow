@@ -24,16 +24,16 @@ touches: [design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent
 after: [T-2849, T-2851]
 usage:
   source: log
-  seconds: 4
+  seconds: 6
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 48
-      cache_read: 589878
-      cache_write: 2255
-      cost: 0.2178
+      input: 4
+      output: 641
+      cache_read: 584518
+      cache_write: 7616
+      cost: 0.1907
 ---
 # T-2852 Close I-0314 with what fixed it
 

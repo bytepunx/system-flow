@@ -23,7 +23,7 @@ tags: [cli, testing]
 touches: [flai/internal/channel/channel_test.go]
 usage:
   source: log
-  seconds: 31
+  seconds: 50
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 37
       cache_read: 262808
       cache_write: 4535
-      cost: 0.0983
+      cost: 0.0984
 ---
 # T-2842 TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
 

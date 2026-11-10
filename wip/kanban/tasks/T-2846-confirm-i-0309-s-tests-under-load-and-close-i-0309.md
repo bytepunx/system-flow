@@ -3,11 +3,11 @@ id: T-2846
 type: task
 nature: remediation
 title: Confirm I-0309's tests under load and close I-0309
-status: in-progress
+status: done
 parent: S-0651
 owner: alex
 created: 2026-11-10T07:01:10Z
-updated: 2026-11-10T07:28:08Z
+updated: 2026-11-10T07:51:34Z
 transitions:
   - to: ready
     at: 2026-11-10T07:28:07Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:28:08Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T07:51:34Z
+    by: agent-S-0651
 stream: S-0651
 tags: [cli, testing]
 touches: [design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/summary.md]
 after: [T-2839, T-2842]
+usage:
+  source: log
+  seconds: 1401
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 222
+      cache_read: 1744445
+      cache_write: 12404
+      cost: 0.6464
 ---
 # T-2846 Confirm I-0309's tests under load and close I-0309
 

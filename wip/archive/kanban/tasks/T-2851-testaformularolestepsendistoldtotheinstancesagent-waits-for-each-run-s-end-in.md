@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 35
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 52
-      cache_read: 855037
-      cache_write: 5701
-      cost: 0.3167
+      output: 932
+      cache_read: 849664
+      cache_write: 11071
+      cost: 0.2772
 ---
 # T-2851 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's end in the inbox instead of reading it once
 

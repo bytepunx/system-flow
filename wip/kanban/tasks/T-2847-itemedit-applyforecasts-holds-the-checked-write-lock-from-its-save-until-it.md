@@ -23,7 +23,7 @@ tags: [flai, itemedit, locking]
 touches: [flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go]
 usage:
   source: log
-  seconds: 539
+  seconds: 556
   estimated: true
   priced_by: estimate
   models:

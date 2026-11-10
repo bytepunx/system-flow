@@ -3,11 +3,11 @@ id: T-2848
 type: task
 nature: improvement
 title: Record in an ADR refining ADR-0272, the design, and the user docs that a checked edit holds the checked-write lock
-status: in-progress
+status: done
 parent: S-0654
 owner: alex
 created: 2026-11-10T07:01:24Z
-updated: 2026-11-10T07:44:43Z
+updated: 2026-11-10T07:51:49Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:38Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:44:43Z
     by: agent-S-0654
+  - to: done
+    at: 2026-11-10T07:51:49Z
+    by: agent-S-0654
 stream: S-0654
 tags: [flai, docs, adr]
-touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/adrs/0275-a-checked-edit-of-a-work-item-holds-the-checked-write-lock-from-its-first-save.md]
 after: [T-2844, T-2847]
+usage:
+  source: log
+  seconds: 426
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 168
+      cache_read: 3641030
+      cache_write: 29360
+      cost: 1.3504
 ---
 # T-2848 Record in an ADR refining ADR-0272, the design, and the user docs that a checked edit holds the checked-write lock
 
