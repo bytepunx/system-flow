@@ -3,12 +3,15 @@ id: T-2835
 type: task
 nature: remediation
 title: Close I-0324 with what fixed it
-status: backlog
+status: ready
 parent: S-0649
 owner: alex
 created: 2026-11-10T06:58:39Z
-updated: 2026-11-10T06:58:39Z
-transitions: []
+updated: 2026-11-10T07:04:34Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:04:34Z
+    by: agent-S-0649
 stream: S-0649
 tags: [issues]
 touches: [design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md, design/issues/summary.md]

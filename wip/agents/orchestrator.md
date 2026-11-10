@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2073.8509
-accrued_seconds: 1537409
-tasks_completed: 2627
-last_run: 2026-11-10T07:00:59Z
+accrued_cost: 2074.8502
+accrued_seconds: 1537830
+tasks_completed: 2639
+last_run: 2026-11-10T07:08:59Z
 ---
 
 # Orchestrator activity
@@ -18421,6 +18421,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0650
 - Seconds: 16
 - Cost: 0.0000 USD
+
+### 2026-11-10T07:02:13Z
+
+- Summary: Approved and resolved the planner threads TH-0971 (S-0649) and TH-0972 (S-0650) under plan_backlog_stories, since the tasks, touches, and figures fit. Finalized both drafts under finalize_drafts: flai promote --drafts lists each as complete, forecast 35m. S-0649's 36m time_lost_per_cycle input was left for the operator.
+- Items: S-0649, S-0650
+- Seconds: 39
+- Cost: 0.0541 USD, estimated
+
+### 2026-11-10T07:02:56Z
+
+- Summary: Promoted S-0649 and S-0650 to ready under promote_to_ready. They are candidates 1 and 2 of flai promote --candidates, forecast 35m each, and the ready column was empty with a limit of 10. Ordered the ready column with flai order --by throughput --apply: S-0649 first, then S-0650. Candidate 3, S-0241, was not promoted because it is blocked.
+- Items: S-0649, S-0650
+- Seconds: 43
+- Cost: 0.0562 USD, estimated
+
+### 2026-11-10T07:03:26Z
+
+- Summary: I approved both planner threads, finalized both drafts, and moved both stories to ready. All three reasons I was started for are done.
+- Items: none
+- Seconds: 30
+- Cost: 0.2063 USD, estimated
+
+### 2026-11-10T07:04:56Z
+
+- Summary: Answered TH-0975, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0654
+- Seconds: 66
+- Cost: 0.2786 USD, estimated
+
+### 2026-11-10T07:05:36Z
+
+- Summary: Answered TH-0973, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0652
+- Seconds: 40
+- Cost: 0.0796 USD, estimated
+
+### 2026-11-10T07:05:56Z
+
+- Summary: Answered TH-0974, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0655
+- Seconds: 20
+- Cost: 0.0000 USD
+
+### 2026-11-10T07:06:10Z
+
+- Summary: Answered TH-0976, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0651
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-10T07:06:22Z
+
+- Summary: Answered TH-0977, citing design/adrs/0272-a-checked-creation-holds-a-checked-write-lock-from-its-write-until-it-keeps-or.md § Consequences
+- Items: S-0654
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-11-10T07:06:47Z
+
+- Summary: Answered TH-0978, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0653
+- Seconds: 25
+- Cost: 0.0000 USD
+
+### 2026-11-10T07:07:27Z
+
+- Summary: Settled six story planners' threads under plan_backlog_stories: approved and resolved the plans of S-0652 (TH-0973), S-0655 (TH-0974), S-0651 (TH-0976), S-0654 (TH-0977), S-0653 (TH-0978); set S-0654's first cost of delay input time_lost_per_cycle 1m as its planner recommended and resolved TH-0975.
+- Items: S-0651, S-0652, S-0653, S-0654, S-0655
+- Seconds: 40
+- Cost: 0.0896 USD, estimated
+
+### 2026-11-10T07:08:18Z
+
+- Summary: Finalized four complete drafts under finalize_drafts, their criteria, touches, forecast, and value consistent and plans approved: S-0652 (rank 1 in flai promote --drafts, 45m), S-0655 (rank 2, 45m), S-0651 (rank 4, 1h), S-0653 (rank 5, 1h). S-0654 left a draft: it lacks a cost of delay value until its planner writes it from the input set on TH-0975.
+- Items: S-0651, S-0652, S-0653, S-0655
+- Seconds: 51
+- Cost: 0.0931 USD, estimated
+
+### 2026-11-10T07:08:59Z
+
+- Summary: Promoted to ready under promote_to_ready, in flai promote --candidates order: S-0655 (rank 1, 45m), S-0651 (rank 2, 1h), S-0653 (rank 3, 1h). Left S-0241 (rank 4) in backlog: it is blocked, and TH-0790 asks the operator to make it a draft. S-0652 is held after S-0647. Then ordered ready by throughput: S-0650 35m, S-0655 45m, S-0651 1h, S-0653 1h.
+- Items: S-0655, S-0651, S-0653, S-0650
+- Seconds: 41
+- Cost: 0.1418 USD, estimated
 
 ## Refusals
 

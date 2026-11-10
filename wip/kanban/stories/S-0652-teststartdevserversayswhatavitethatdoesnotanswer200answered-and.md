@@ -6,7 +6,7 @@ title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOpe
 status: backlog
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T07:01:10Z
+updated: 2026-11-10T07:08:12Z
 transitions: []
 tags: []
 topics: [testing]
@@ -17,7 +17,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 61
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 53
+          cache_read: 441123
+          cache_write: 8025
+          cost: 0.1208
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 11m
@@ -32,6 +46,9 @@ forecast:
   basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650 and S-0651."
   by: flai
   at: 2026-11-10T07:00:52Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:08:12Z
 ---
 # S-0652 TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
 

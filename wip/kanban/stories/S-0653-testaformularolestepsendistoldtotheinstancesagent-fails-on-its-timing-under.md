@@ -3,11 +3,14 @@ id: S-0653
 type: story
 nature: remediation
 title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:45:21Z
-updated: 2026-11-10T07:02:19Z
-transitions: []
+updated: 2026-11-10T07:08:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:08:50Z
+    by: orchestrator
 tags: []
 topics: [testing]
 touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, flai/internal/serve/role.go, flai/internal/serve/plan.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/role_test.go, design/system/strategic-agents.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/summary.md]
@@ -16,7 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 31
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 40
+          cache_read: 279468
+          cache_write: 5646
+          cost: 0.0767
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -31,6 +48,9 @@ forecast:
   basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651 and S-0652."
   by: flai
   at: 2026-11-10T07:02:19Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:08:14Z
 ---
 # S-0653 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
 

@@ -3,11 +3,14 @@ id: S-0650
 type: story
 nature: remediation
 title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:12:13Z
-updated: 2026-11-10T07:01:33Z
-transitions: []
+updated: 2026-11-10T07:02:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:02:50Z
+    by: orchestrator
 tags: []
 topics: [testing]
 touches: [flai/cmd/components_test.go, design/issues/I-0325-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md, design/issues/summary.md]
@@ -16,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 50
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 59
+          cache_read: 330611
+          cache_write: 6510
+          cost: 0.0907
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 8m

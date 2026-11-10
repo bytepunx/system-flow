@@ -6,7 +6,7 @@ title: "TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake
 status: in-progress
 owner: alex
 created: 2026-11-10T05:12:04Z
-updated: 2026-11-10T06:57:30Z
+updated: 2026-11-10T07:07:34Z
 transitions:
   - to: ready
     at: 2026-11-10T06:27:20Z
@@ -23,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 597
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 336
+      cache_read: 3768623
+      cache_write: 178380
+      cost: 1.4526
   strategic:
     - kind: orchestrator
       seconds: 247
@@ -62,8 +74,8 @@ finalized:
 This story remediates [I-0311](../../../design/issues/I-0311-teststartdevserverstopsvitewhenitscontextends-fails-under-load-the-fake-vite.md), "TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0311 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0311 is closed with `flai issue close I-0311 --reason` saying what fixed it
+- [x] The cause I-0311 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0311 is closed with `flai issue close I-0311 --reason` saying what fixed it
 
 ## Tasks
 - T-2825 The dev server tests check the pid flai started, and a slow-starting fake vite reproduces the missing pid

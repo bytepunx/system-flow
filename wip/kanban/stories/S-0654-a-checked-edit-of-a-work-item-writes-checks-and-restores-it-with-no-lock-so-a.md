@@ -6,7 +6,7 @@ title: A checked edit of a work item writes, checks, and restores it with no loc
 status: backlog
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:02:19Z
+updated: 2026-11-10T07:05:18Z
 transitions: []
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
@@ -16,7 +16,30 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 74
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 19
+          output: 110
+          cache_read: 976302
+          cache_write: 126506
+          cost: 0.2965
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 1m
+    by: orchestrator
+    at: 2026-11-10T07:04:53Z
+  value: 2.5
+  by: planner-S-0654
+  at: 2026-11-10T07:05:18Z
 forecast:
   duration: 1h30m
   delivery: 2026-11-10T10:36:00Z
@@ -70,3 +93,7 @@ Touches, and where each came from:
 `flai touches suggest S-0654` listed nothing: the story declared no touches.
 
 No `after`: the story reads nothing another open story writes. ADR-0272's lock is on main since S-0633.
+
+Forecast: 1h30m, adjusted from `flai forecast`'s 24m (a median of 99 s per unit of size over 146 done improvement stories, times size 14). S-0633 added the same lock for a creation. It was forecast at 40m and took 3h48m of agent time. This story has two writers to lock, a lock order to keep, and a new ADR. flai's replan keeps the duration and sets the delivery by the pull order.
+
+Cost of delay: 2.50 USD a week, as `flai cod` works it out from the operator's input on TH-0975, `time_lost_per_cycle: 1m`, at 150 USD an hour over one cycle a week. It stands unadjusted: I-0328 has no instance yet.

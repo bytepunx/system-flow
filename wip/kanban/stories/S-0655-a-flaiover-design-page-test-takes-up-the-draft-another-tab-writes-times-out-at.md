@@ -3,11 +3,14 @@ id: S-0655
 type: story
 nature: remediation
 title: "A flaiover design-page test, \"takes up the draft another tab writes\", times out at 5,000 ms under load and stops the flaiover tier"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T07:02:19Z
-transitions: []
+updated: 2026-11-10T07:08:49Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:08:49Z
+    by: orchestrator
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
 touches: [flaiover/src/routes/design/design.svelte.test.ts, design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/summary.md]
@@ -31,7 +34,16 @@ usage:
           cache_read: 16087933
           cache_write: 867284
           cost: 6.9457
-draft: true
+    - kind: orchestrator
+      seconds: 31
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 40
+          cache_read: 279468
+          cache_write: 5646
+          cost: 0.0767
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 16m
@@ -46,6 +58,9 @@ forecast:
   basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652, S-0653 and S-0654."
   by: flai
   at: 2026-11-10T07:02:19Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:08:13Z
 ---
 # S-0655 A flaiover design-page test, "takes up the draft another tab writes", times out at 5,000 ms under load and stops the flaiover tier
 

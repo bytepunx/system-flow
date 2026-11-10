@@ -3,11 +3,14 @@ id: S-0651
 type: story
 nature: improvement
 title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:44:44Z
-updated: 2026-11-10T07:01:29Z
-transitions: []
+updated: 2026-11-10T07:08:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:08:50Z
+    by: orchestrator
 tags: [cli]
 topics: [testing]
 touches: [flai/cmd/mcp_http_test.go, flai/internal/channel/channel_test.go, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/summary.md]
@@ -16,7 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 31
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 4
+          output: 41
+          cache_read: 279469
+          cache_write: 5647
+          cost: 0.0767
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 56m
@@ -31,6 +48,9 @@ forecast:
   basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649 and S-0650."
   by: flai
   at: 2026-11-10T07:00:52Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:08:13Z
 ---
 # S-0651 flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
 

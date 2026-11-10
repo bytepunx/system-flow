@@ -3,12 +3,18 @@ id: T-2834
 type: task
 nature: remediation
 title: The request answered tests poll the log for the event, and a held-back log line reproduces the race
-status: backlog
+status: in-progress
 parent: S-0649
 owner: alex
 created: 2026-11-10T06:58:34Z
-updated: 2026-11-10T06:58:34Z
-transitions: []
+updated: 2026-11-10T07:04:36Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:04:34Z
+    by: agent-S-0649
+  - to: in-progress
+    at: 2026-11-10T07:04:36Z
+    by: agent-S-0649
 stream: S-0649
 tags: [flai, test]
 touches: [flai/internal/channel/channel_test.go]
