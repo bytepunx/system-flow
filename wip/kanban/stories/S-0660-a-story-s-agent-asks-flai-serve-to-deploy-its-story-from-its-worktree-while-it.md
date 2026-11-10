@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-10T09:34:30Z
+updated: 2026-11-10T09:53:50Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -23,34 +23,49 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 121
+    - kind: planner
+      seconds: 150
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 138
-          cache_read: 986498
-          cache_write: 143965
-          cost: 0.3056
+          input: 40
+          output: 13759
+          cache_read: 1250556
+          cache_write: 84563
+          cost: 1.202
+    - kind: orchestrator
+      seconds: 258
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 57
+          output: 425
+          cache_read: 1932204
+          cache_write: 312121
+          cost: 0.6087
         - model: claude-sonnet-5-5
-          input: 8
-          output: 846
+          input: 10
+          output: 870
           cache_read: 78547
-          cache_write: 41156
-          cost: 0.0898
-draft: true
+          cache_write: 53641
+          cost: 0.0991
 cost_of_delay:
   inputs:
     revenue_per_week: 1250
     by: alex
     at: 2026-11-10T09:34:30Z
+  value: 1250
+  by: planner-S-0660
+  at: 2026-11-10T09:36:53Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T15:25:00Z
-  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684, S-0687, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241 and S-0659."
+  delivery: 2026-11-10T14:56:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684, S-0665, S-0667, S-0674, S-0704, S-0241 and S-0659."
   by: flai
-  at: 2026-11-10T09:29:05Z
+  at: 2026-11-10T09:53:50Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T09:39:54Z
 ---
 # S-0660 A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled
 
@@ -101,6 +116,8 @@ Touches, all files, no folder:
 | `flai/internal/mcpserver/kluster.go`, `kluster_test.go`, `folder.go`, `server_test.go` | layout | The new MCP tool, registered in `folder.go`, and `TestToolsAreAdvertised`'s list |
 | `flai/internal/guard/kluster_test.go` | layout | `TestFlaiKlusterWritesAreTheOperators` gains the request |
 
-Left out on purpose: `flai/internal/hostapi/kluster.go`, since the request goes through files under `.flai-cache` as the close-out's does, not the host API; and `flai/internal/guard/guard_tables.go`, since a sub-agent is refused a tool and a subcommand that no read table lists. `docs/operators/index.md` (29% co-change) is left to S-0663's operator side.
+Left out on purpose: `flai/internal/hostapi/kluster.go`, since the request goes through files under `.flai-cache` as the close-out's does, not the host API; and `flai/internal/guard/guard_tables.go`, since a sub-agent is refused a tool and a subcommand that no read table lists. `docs/operators/index.md` (19% co-change on the second run) is left to S-0663's operator side; nothing else `flai touches suggest` lists reaches 15%.
 
-Forecast: 1h30m, raised by half from the 1h `flai forecast` gives for size 33, because S-0577 to S-0580, the kluster stories before it, each took 39m to 61m with 6 or 7 criteria, and this one has 9 across six parts of flai. Cost of delay: no value yet. Neither S-0660 nor E-0035 has inputs, which are the operator's, asked on TH-0979.
+Forecast: 1h30m, raised by half from the 1h `flai forecast` gives for size 33, because S-0577 to S-0580, the kluster stories before it, each took 39m to 61m with 6 or 7 criteria, and this one has 9 across six parts of flai. The delivery, 2026-11-10T15:25:00Z, is flai's from that duration and the pull order.
+
+Cost of delay: 1250 USD a week, as `flai cod S-0660` works it out from the operator's `revenue_per_week: 1250` on this story (TH-0979, after the orchestrator's recommendation there, from D-0479). Not adjusted: the operator set the figure on this story directly, and this story is the one that lets a kluster story's agent deploy before review, which is what holds up the signet and authstar releases that revenue waits on.

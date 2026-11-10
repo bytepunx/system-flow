@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:53:50Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -23,23 +23,45 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 65
+    - kind: planner
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 39
-          cache_read: 326906
-          cache_write: 9218
-          cost: 0.0909
-draft: true
+          input: 10
+          output: 3472
+          cache_read: 354925
+          cache_write: 26353
+          cost: 0.3513
+    - kind: orchestrator
+      seconds: 245
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 27
+          output: 193
+          cache_read: 1328586
+          cache_write: 116878
+          cost: 0.393
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 851
+          cache_read: 77831
+          cache_write: 27685
+          cost: 0.0795
+cost_of_delay:
+  value: 986.84
+  by: planner-S-0661
+  at: 2026-11-10T09:41:33Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-10T16:52:00Z
-  basis: "Its own forecast of 1h15m; 12th in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684, S-0687, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659 and S-0660."
+  delivery: 2026-11-10T16:23:00Z
+  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659 and S-0660."
   by: flai
-  at: 2026-11-10T09:29:05Z
+  at: 2026-11-10T09:53:50Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T09:44:44Z
 ---
 # S-0661 A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
 
@@ -92,6 +114,6 @@ No folder touch.
 - S-0660 (declared): T-2863 and T-2866 build on its deploy request in `flai/internal/kluster/request.go` and its MCP tool in `flai/internal/mcpserver/kluster.go`: the hand-off to flai serve, its refusals, and its answer. They refuse with the deploy command it builds.
 - S-0659: criteria 3 and 4 build "in the way the ADR decides". T-2864 reads the ADR's guard rule, and T-2865 reads how the agent gets the variables.
 
-Forecast: `flai forecast` gave 48m from size 26 (8 criteria, 18 touches). Raised to 1h15m: S-0578 and S-0579, the nearest kluster stories, took 61m and 51m of agent time, and this one adds a guard rule and an MCP tool to a serve pass.
+Forecast: `flai forecast` gives 53m from size 29 (8 criteria, 21 touches). Raised to 1h15m: S-0578 and S-0579, the nearest kluster stories, took 61m and 51m of agent time, and this one adds a guard rule and an MCP tool to a serve pass. The delivery, 2026-11-10T16:49:00Z, is the start flai's play-out of the pull order gives (11th, in-progress limit 5) plus 1h15m.
 
-Cost of delay: no value yet. Neither S-0661 nor E-0035 has inputs, and the operator is asked on TH-0980.
+Cost of delay: 986.84 USD a week, as `flai cod S-0661` works it out: S-0661's share of the operator's `revenue_per_week: 1250` on E-0035 (TH-0980, after the orchestrator's recommendation from D-0479), split by forecast duration between the epic's two open stories without inputs of their own, S-0661 (1h15m) and S-0659. Not adjusted: the split follows the operator's input and flai's rule, and S-0660 and S-0662, which carry their own inputs, take no share of it.

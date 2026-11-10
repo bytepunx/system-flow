@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-10T09:39:38Z
+updated: 2026-11-10T09:53:50Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
@@ -23,28 +23,43 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 36
+    - kind: planner
+      seconds: 134
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 33
-          cache_read: 247687
-          cache_write: 4735
-          cost: 0.0682
-draft: true
+          input: 26
+          output: 13399
+          cache_read: 889246
+          cache_write: 75747
+          cost: 1.0519
+    - kind: orchestrator
+      seconds: 166
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 189
+          cache_read: 1044801
+          cache_write: 85611
+          cost: 0.3074
 cost_of_delay:
   inputs:
     penalty_per_week: 30
     by: alex
     at: 2026-11-10T09:39:38Z
+  value: 30
+  by: planner-S-0662
+  at: 2026-11-10T09:46:48Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-10T19:46:00Z
-  basis: "Its own forecast of 2h30m; 13th in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684, S-0687, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660 and S-0661."
+  delivery: 2026-11-10T19:17:00Z
+  basis: "Its own forecast of 2h30m; 9th in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660 and S-0661."
   by: flai
-  at: 2026-11-10T09:29:05Z
+  at: 2026-11-10T09:53:50Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T09:50:14Z
 ---
 # S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
 
@@ -80,11 +95,11 @@ The move to review, the close-out, and the review page say what was deployed and
 
 ### Planning
 
-Written by the planner, 2026-11-10.
+Written by the planner, 2026-11-10; revised the same day once the operator's input was in.
 
 **After.** S-0661 stays in `after`. S-0662 reads its checks run record, with its commit, outcome, and who asked (S-0661's criterion 7), and names its checks command in the warning and the pack. It also reads S-0660's deploy command and deploy record, and S-0659's ADR on what is recorded before review and where the move, the close-out, and an acceptance read it. S-0661's own `after` names both, so they are not repeated here. Naming S-0659 again would make it a hub of three (`wip.after-hub`) and add no wait.
 
-**Touches.** `flai touches suggest` had nothing to start from: the story declared no touches. Every touch is a file; no folder is kept.
+**Touches.** `flai touches suggest` had nothing to start from on the first run: the story declared no touches. On the second run, from the 40 touches below, nothing it lists that the story lacks reaches 18%. Every touch is a file; no folder is kept.
 
 | Touch | Source |
 |-------|--------|
@@ -99,8 +114,11 @@ Written by the planner, 2026-11-10.
 | `flai/internal/context/story.go`, `context.go`, `context_test.go` | criterion 7: `ForStory` builds the pack and `Pack.Header` prints it; nothing in it reads the manifest yet |
 | `design/system/kluster.md`, `flai-cli.md`, `flaiover-dashboard.md`; `docs/users/flai.md`, `flaiover.md` | criterion 8, and E-0035's design; `kluster.md` says today that the close-out does not use the cluster |
 
-`docs/users/flai-reference.md` is left out: no flag is planned. The story's agent adds it with `flai touches` if a flag comes.
+Left out on purpose:
 
-**Forecast.** `flai forecast` gave 1h27m once the touches were in: 109 s a unit over 118 large feature stories, size 48 (8 criteria, 40 touches). Raised to 2h30m: nine tasks in four layers, and three of them read record shapes that S-0659, S-0660, and S-0661 have not written yet. S-0628, of a like spread, was planned at 2h with six tasks. Delivery 2026-11-13T17:00:00Z, since S-0659, S-0660, and S-0661 are accepted first.
+- `docs/users/flai-reference.md` (co-change, 17%): no flag is planned. The story's agent adds it with `flai touches` if a flag comes.
+- `docs/operators/index.md` (co-change, 16%): the operator's side of the namespace is S-0663's Deployments page.
 
-**Cost of delay.** No value yet: neither S-0662 nor E-0035 has inputs, so `flai cod` refuses. Asked on TH-0983, which points to the epic input asked on TH-0979.
+**Forecast.** `flai forecast` gives 1h27m: 109 s a unit over 118 large feature stories, size 48 (8 criteria, 40 touches). Raised to 2h30m: nine tasks in four layers, and three of them read record shapes that S-0659, S-0660, and S-0661 have not written yet. S-0628, of a like spread, was planned at 2h with six tasks. The delivery, 2026-11-10T19:37:00Z, is flai's play-out of the pull order (11th, in-progress limit 5), 18:34, plus the 1h03m added.
+
+**Cost of delay.** 30 USD a week, as `flai cod S-0662` works it out from the operator's `penalty_per_week: 30` on this story (alex, 2026-11-10T09:39:38Z; TH-0983). Not adjusted: the operator set the input on this story directly, which takes S-0662 out of the share of E-0035's `revenue_per_week: 1250`, and a penalty fits a story that saves review time and earns no revenue of its own.

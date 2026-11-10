@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-10T09:37:49Z
+updated: 2026-11-10T09:53:50Z
 transitions: []
 tags: [dashboard]
 topics: [kluster, deployment]
@@ -23,28 +23,49 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 87
+    - kind: planner
+      seconds: 83
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 150
-          cache_read: 839621
-          cache_write: 71431
-          cost: 0.2464
-draft: true
+          input: 38
+          output: 6930
+          cache_read: 1331725
+          cache_write: 106206
+          cost: 0.9966
+    - kind: orchestrator
+      seconds: 146
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 182
+          cache_read: 1038369
+          cache_write: 74139
+          cost: 0.3013
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 822
+          cache_read: 76393
+          cache_write: 29498
+          cost: 0.0798
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
     by: alex
     at: 2026-11-10T09:37:49Z
+  value: 5
+  by: planner-S-0663
+  at: 2026-11-10T09:41:12Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T18:37:00Z
-  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661 and S-0662."
+  delivery: 2026-11-10T18:07:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661 and S-0662."
   by: flai
-  at: 2026-11-10T09:11:30Z
+  at: 2026-11-10T09:53:50Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T09:44:45Z
 ---
 # S-0663 The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
 
@@ -77,7 +98,7 @@ The dashboard's Deployments page shows the namespace of each story in progress b
 
 ### Planning
 
-Planned by planner-S-0663 on 2026-11-10. No earlier plan of S-0663 and no thread on it existed, so this is its first plan. The plan's thread is TH-0986.
+Planned by planner-S-0663 on 2026-11-10, in two runs. The first wrote the touches, the forecast, and the tasks; the orchestrator approved them on TH-0986. The second wrote the cost of delay value once the operator gave the input on TH-0981, and changed nothing else: the seven tasks still fit the story's outcome.
 
 Touches, file by file, with no folder touch. Each came from the design (`design/system/kluster.md`), co-change (`flai touches suggest` from the page, the host methods, the records, the command, and `kluster.md`: 24 commits), the criteria, or the code layout:
 
@@ -105,5 +126,5 @@ Touches, file by file, with no folder touch. Each came from the design (`design/
 
 Figures:
 
-- Forecast 1h30m, adjusted. `flai forecast` gave 1h: 109 s per unit of size over 118 done large feature stories on claude-opus-5-5, times size 33 (7 criteria, 26 touches). The stories that last changed this page, its host methods, and their docs took longer than that rate gives: S-0581 38m, S-0595 64m, S-0586 2h32m. This story spans all three layers, as S-0595 and S-0586 did, so 1h30m. The delivery is flai's 14:55Z plus the 30 minutes added.
-- Cost of delay: no value yet. TH-0981 asks the operator for the input, on S-0663 or on E-0035 as TH-0979 recommends.
+- Forecast 1h30m, adjusted, and it stands. `flai forecast` gives 1h: 109 s per unit of size over 118 done large feature stories on claude-opus-5-5, times size 33 (7 criteria, 26 touches). The stories that last changed this page, its host methods, and their docs took longer than that rate gives: S-0581 38m, S-0595 64m, S-0586 2h32m. This story spans all three layers, as S-0595 and S-0586 did, so 1h30m. flai keeps the delivery from the pull order.
+- Cost of delay 5.00 USD a week, as `flai cod` gives it: the operator's own input on S-0663, `time_lost_per_cycle: 2m`, at 150 USD an hour over one 168h cycle a week. The operator set it on 2026-11-10 after confirming on TH-0981 the epic's input, `revenue_per_week: 1250` on E-0035. A story's own input takes it out of the epic's share, so S-0663 is valued apart from its siblings, which take their shares of the epic (S-0659 263.16, S-0661 986.84) or their own inputs (S-0660 1250, S-0662 30). Not adjusted: the input is the operator's, and the figure follows from it with no judgement of mine.

@@ -6,7 +6,7 @@ title: A docker run from a story's agent's shell mounts the main checkout as an 
 status: ready
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:53:50Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:43:00Z
-  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684, S-0687, S-0668, S-0669, S-0673, S-0672 and S-0665."
+  delivery: 2026-11-10T12:18:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0684 and S-0665."
   by: flai
-  at: 2026-11-10T09:29:05Z
+  at: 2026-11-10T09:53:50Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:21Z
