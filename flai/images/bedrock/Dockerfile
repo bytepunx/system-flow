@@ -8,11 +8,14 @@
 # (@anthropic-ai/claude-code-linux-*-musl), which runs with libgcc, libstdc++, and the system
 # ripgrep, and Alpine's own nodejs package is Node 24, so the claude-code layer needs no other source.
 
-ARG GO_VERSION=1.26
-ARG ALPINE_VERSION=3.24
+# Exact versions (S-0630, I-0297). GO_VERSION is flai/go.mod's; golang publishes 1.26.0 on Alpine
+# 3.23 at the newest, which only builds the binaries, so the runtime's Alpine is its own.
+ARG GO_VERSION=1.26.0
+ARG GO_ALPINE_VERSION=3.23
+ARG ALPINE_VERSION=3.24.4
 
 # ---- flai build ------------------------------------------------------------
-FROM golang:${GO_VERSION}-alpine AS build
+FROM golang:${GO_VERSION}-alpine${GO_ALPINE_VERSION} AS build
 ARG FLAI_VERSION=dev
 ARG FLAI_COMMIT=unknown
 ARG FLAI_DATE=

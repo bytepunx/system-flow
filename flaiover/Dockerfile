@@ -6,13 +6,15 @@
 # the /agent endpoint. It needs no writable home, and nothing of the project is
 # mounted into it (S-0077, ADR-0031).
 
-ARG NODE_VERSION=24
+# Both stages name Node 24's exact Alpine tag and its index digest (S-0630, I-0297): a signed
+# flaiover/v* release builds from this file, so its base cannot move under a tag. Dependabot's docker
+# entry moves the tag and the digest together; change both stages at once.
 
 # ---- flaiover build --------------------------------------------------------
 # Runs on the build platform for every target (S-0119): the build output and the
 # production node_modules are plain JavaScript, so only the runtime stage runs
 # emulated when CI builds linux/arm64 on an amd64 runner.
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-alpine AS build
+FROM --platform=$BUILDPLATFORM node:24.22.2-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS build
 ARG FLAI_COMMIT=unknown
 WORKDIR /src/flaiover
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -23,7 +25,7 @@ COPY flaiover/ ./
 RUN pnpm build && pnpm prune --prod
 
 # ---- runtime ---------------------------------------------------------------
-FROM node:${NODE_VERSION}-alpine
+FROM node:24.22.2-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8
 ARG FLAI_COMMIT=unknown
 ARG FLAIOVER_VERSION=0.0.0
 # The flai of the commit this image was built from: the one it was tested against, not one it holds.

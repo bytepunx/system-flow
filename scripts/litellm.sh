@@ -34,7 +34,8 @@
 #   ANTHROPIC_API_KEY     the upstream key for Anthropic's models and the
 #                         /anthropic pass-through; one of the two is required
 #   LITELLM_PORT          host port, default 4000
-#   LITELLM_IMAGE         default ghcr.io/berriai/litellm:main-stable; pin a tag
+#   LITELLM_IMAGE         the proxy image; overrides the pinned default,
+#                         ghcr.io/berriai/litellm:v1.108.4, a release tag (S-0630)
 #   LITELLM_MAX_BUDGET    the virtual key's budget in USD per 30 days, default 5
 #   LITELLM_HAIKU_MODEL   the gateway check's model, default HAIKU_DEFAULT below;
 #                         kept in admin.env only when set, so that a newer
@@ -84,7 +85,7 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 LITELLM_PORT=${LITELLM_PORT:-4000}
-LITELLM_IMAGE=${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
+LITELLM_IMAGE=${LITELLM_IMAGE:-ghcr.io/berriai/litellm:v1.108.4}
 LITELLM_MAX_BUDGET=${LITELLM_MAX_BUDGET:-5}
 EOT
       if [ -n "${LITELLM_HAIKU_MODEL:-}" ]; then echo "LITELLM_HAIKU_MODEL=$LITELLM_HAIKU_MODEL" >> "$ADMIN"; fi
@@ -160,7 +161,7 @@ EOT
 # Written by scripts/litellm.sh; edit the script, not this file.
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine3.24
     environment:
       POSTGRES_DB: litellm
       POSTGRES_USER: litellm

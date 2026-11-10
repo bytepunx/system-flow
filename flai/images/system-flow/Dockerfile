@@ -9,9 +9,11 @@
 
 ARG BASE=flai-agent-claude-code:local
 ARG GO_VERSION=1.26.0
+# The Alpine release of the golang image, exact (S-0630): golang publishes 1.26.0 on 3.23 at the newest.
+ARG GO_ALPINE_VERSION=3.23
 ARG SHELLCHECK_VERSION=v0.10.0
 
-FROM golang:${GO_VERSION}-alpine AS go
+FROM golang:${GO_VERSION}-alpine${GO_ALPINE_VERSION} AS go
 ARG GOLANGCI_LINT_VERSION=v2.5.0
 # golangci-lint built with the module's own Go, as scripts/install-tools.sh builds it, since a
 # release binary built with an older Go refuses to lint a module that targets a newer one.
