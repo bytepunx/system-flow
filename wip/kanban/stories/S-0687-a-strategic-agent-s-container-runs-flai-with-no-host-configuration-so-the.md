@@ -6,7 +6,7 @@ title: A strategic agent's container runs flai with no host configuration, so th
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:14Z
-updated: 2026-11-10T08:49:28Z
+updated: 2026-11-10T08:49:49Z
 transitions: []
 tags: [flai]
 topics: [orchestration, review]
@@ -16,7 +16,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -31,6 +30,9 @@ forecast:
   basis: "Its own forecast of 2h30m; 28th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678, S-0679, S-0680, S-0681, S-0682, S-0683, S-0684 and S-0686."
   by: flai
   at: 2026-11-10T08:49:28Z
+finalized:
+  by: alex
+  at: 2026-11-10T08:49:49Z
 ---
 # S-0687 A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
 
@@ -44,6 +46,8 @@ This story remediates [I-0256](../../../design/issues/I-0256-a-strategic-agent-s
 
 ## Tasks
 - T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
+- T-2934 The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
+- T-2935 The orchestrator's shell flai accept and tier-running flai verify refuse inside a role's container, naming the MCP tools, with a test that reproduces I-0256
 
 ## Notes
 
