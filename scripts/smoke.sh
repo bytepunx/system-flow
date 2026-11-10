@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
-# Smoke tests: end-to-end. Render the template and check it; check this repository.
+# Smoke tests: end-to-end. Render the template and check it; check this repository
+# and its CI pins (scripts/ci-pins.sh, S-0630).
 # Under flai verify, in a close-out or a merge queue batch, the repository check
 # and the markdown lint run here: TestMonorepoIsClean, in the integration tier,
 # skips there, and so does TestRepositoryLintsClean unless the stories change
@@ -80,6 +81,9 @@ else
   echo "smoke: repository check"
   "$ROOT/scripts/check.sh"
 fi
+
+echo "smoke: CI pins: actions by commit SHA, read-only top-level permissions, exact images, one lockfile"
+"$ROOT/scripts/ci-pins.sh"
 
 if has markdown:all; then
   echo "smoke: markdown lint: skipped, the markdown tier linted every file in this run"
