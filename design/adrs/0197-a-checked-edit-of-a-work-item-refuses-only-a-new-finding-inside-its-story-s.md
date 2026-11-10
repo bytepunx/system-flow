@@ -1,8 +1,8 @@
 ---
 id: ADR-0197
 title: "A checked edit of a work item refuses only a new finding inside its story's scope, and leaves out what a check scoped to that story leaves out"
-status: proposed
-date: 2026-10-23
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0089]
