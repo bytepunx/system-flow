@@ -28,6 +28,7 @@ func queueEvents() []mergequeue.Event {
 	enq, built, verified, bisected := mergequeue.EventEnqueued, mergequeue.EventBatchBuilt, mergequeue.EventVerified, mergequeue.EventBisected
 	step := mergequeue.EventStepVerified
 	landed, sentBack, dequeued := mergequeue.EventLanded, mergequeue.EventSentBack, mergequeue.EventDequeued
+	dropped := mergequeue.EventDropped
 	return []mergequeue.Event{
 		// before the window: S-0001 enqueued, its wait starting
 		queueEvent("2026-08-20T10:00:00Z", enq, "", "S-0001"),
@@ -35,6 +36,7 @@ func queueEvents() []mergequeue.Event {
 		// left out, its wait with them
 		queueEvent("2026-08-26T09:00:00Z", enq, "", "S-0009"),
 		queueEvent("2026-08-26T09:30:00Z", built, "B0", "S-0009"),
+		queueEvent("2026-08-26T09:45:00Z", dropped, "B0", "S-0009"),
 		queueEvent("2026-08-26T10:00:00Z", landed, "B0", "S-0009"),
 		// week 35: S-0001 lands, 7 days and 2 hours after its enqueueing
 		queueEvent("2026-08-27T10:00:00Z", built, "B1", "S-0001"),
@@ -59,11 +61,12 @@ func queueEvents() []mergequeue.Event {
 		queueEvent("2026-09-08T10:00:00Z", landed, "B4", "S-0004"),
 		queueEvent("2026-09-08T12:00:00Z", landed, "B4", "S-0002"),
 		// week 38: S-0005 enqueued and removed, S-0006's batch verified with
-		// nothing landed in the week, then a landing after now
+		// nothing landed in the week and dropped, then a landing after now
 		queueEvent("2026-09-14T09:00:00Z", enq, "", "S-0005"),
 		queueEvent("2026-09-14T09:10:00Z", dequeued, "", "S-0005"),
 		queueEvent("2026-09-15T10:00:00Z", built, "B6", "S-0006"),
 		queueEvent("2026-09-15T11:00:00Z", verified, "B6", "S-0006"),
+		queueEvent("2026-09-15T11:10:00Z", dropped, "B6", "S-0006"),
 		queueEvent("2026-09-17T00:00:00Z", landed, "B5", "S-0005"),
 	}
 }
@@ -71,7 +74,9 @@ func queueEvents() []mergequeue.Event {
 // S-0404: each value of queue, per ISO week of the window, from the merge
 // queue's event log, and each story's queue waits that end in the window.
 // S-0552: the verifications count the verified and step_verified lines, and
-// per landed story they are 0 in a week that landed nothing.
+// per landed story they are 0 in a week that landed nothing. ADR-0282: the
+// dropped lines count in the week that holds them, the batch they drop
+// counted as built too.
 func TestQueueCountsEachValuePerWeek(t *testing.T) {
 	got, perStory := mergeQueue(queueEvents(), coordStart, coordNow)
 	want := &Queue{Weeks: []QueueWeek{
@@ -80,7 +85,7 @@ func TestQueueCountsEachValuePerWeek(t *testing.T) {
 		{Week: "2026-W36", Start: "2026-08-31", Landed: 1, SentBack: 1, WaitMean: 3.5 * 3600, WaitMax: 4 * 3600, Batches: 2, BatchSizeMean: 1.5, BatchSizeMax: 2, Bisections: 1,
 			Verifications: 3, VerificationsPerLanded: 3},
 		{Week: "2026-W37", Start: "2026-09-07", Landed: 2, WaitMean: 2 * 3600, WaitMax: 2 * 3600},
-		{Week: "2026-W38", Start: "2026-09-14", Batches: 1, BatchSizeMean: 1, BatchSizeMax: 1, Verifications: 1},
+		{Week: "2026-W38", Start: "2026-09-14", Batches: 1, BatchSizeMean: 1, BatchSizeMax: 1, Verifications: 1, Dropped: 1},
 	}}
 	if !reflect.DeepEqual(got, want) {
 		gotJSON, _ := json.Marshal(got)
@@ -103,7 +108,7 @@ func TestQueueJSONNames(t *testing.T) {
 	}
 	want := `{"weeks":[{"week":"2026-W38","start":"2026-09-14","landed":0,"sent_back":0,` +
 		`"wait_mean_seconds":0,"wait_max_seconds":0,"batches":0,"batch_size_mean":0,"batch_size_max":0,"bisections":0,` +
-		`"verifications":0,"verifications_per_landed":0}]}`
+		`"verifications":0,"verifications_per_landed":0,"dropped":0}]}`
 	if string(got) != want {
 		t.Errorf("queue JSON =\n%s\nwant\n%s", got, want)
 	}

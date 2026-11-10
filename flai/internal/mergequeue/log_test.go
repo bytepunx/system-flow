@@ -214,7 +214,10 @@ func TestEventsOfAWrite(t *testing.T) {
 				s.Dequeue("S-0001")
 				s.DropBatchHolding("S-0001", "S-0001 was removed from the queue by alex", "alex", t1)
 			},
-			want: []Event{{At: now, Event: EventDequeued, Stories: []string{"S-0001"}, Reason: ReasonRemoved}},
+			want: []Event{
+				{At: t1, Event: EventDropped, Batch: "B-1", Stories: []string{"S-0001"}, By: "alex", Reason: "S-0001 was removed from the queue by alex"},
+				{At: now, Event: EventDequeued, Stories: []string{"S-0001"}, Reason: ReasonRemoved},
+			},
 		},
 		{
 			name:   "a story accepted by hand",
@@ -508,5 +511,78 @@ func TestLandingResumedEventsOfAWrite(t *testing.T) {
 				t.Errorf("events %+v, want %+v", got, tc.want)
 			}
 		})
+	}
+}
+
+// ADR-0282: a write that drops a batch logs one dropped line, at the drop's
+// time, on the batch's stories, with who dropped it and why; a later write on
+// the batch already dropped, and the batch that replaces it, log none.
+func TestDroppedEventsOfAWrite(t *testing.T) {
+	droppedAt, now := t0.Add(10*time.Minute), t0.Add(time.Hour)
+	batch := func(id string) *Batch {
+		return &Batch{ID: id, Stories: []string{"S-0001", "S-0002"}, Step: StepVerified, Result: &Result{Passed: true, FinishedAt: t0}}
+	}
+	drop := func(b *Batch, at time.Time) *Batch {
+		b.Dropped = &Dropped{Reason: "the main branch moved from aaaaaaa to bbbbbbb", By: "flai serve", At: at}
+		return b
+	}
+	cases := []struct {
+		name          string
+		before, after *Batch
+		want          []Event
+	}{
+		{name: "dropped", before: batch("B-1"), after: drop(batch("B-1"), droppedAt),
+			want: []Event{{At: droppedAt, Event: EventDropped, Batch: "B-1", Stories: []string{"S-0001", "S-0002"}, By: "flai serve", Reason: "the main branch moved from aaaaaaa to bbbbbbb"}}},
+		{name: "dropped with no time", before: batch("B-1"), after: drop(batch("B-1"), time.Time{}),
+			want: []Event{{At: now, Event: EventDropped, Batch: "B-1", Stories: []string{"S-0001", "S-0002"}, By: "flai serve", Reason: "the main branch moved from aaaaaaa to bbbbbbb"}}},
+		{name: "dropped already", before: drop(batch("B-1"), droppedAt), after: drop(batch("B-1"), droppedAt)},
+		{name: "replaced", before: drop(batch("B-1"), droppedAt), after: &Batch{ID: "B-2", Stories: []string{"S-0001"}, Step: StepBuilding}},
+		{name: "not dropped", before: batch("B-1"), after: batch("B-1")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got []Event
+			for _, e := range Events(State{Batch: tc.before}, State{Batch: tc.after}, now) {
+				if e.Event == EventDropped {
+					got = append(got, e)
+				}
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("events %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+// ADR-0282: a drop through Update, here a story taken out of the queue, is
+// appended once to the event log and read back with its batch, stories, who
+// dropped it, and why; writing the dropped batch again appends no second line.
+func TestADroppedBatchIsLoggedOnceAndReadBack(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), ".flai-cache")
+	at := time.Date(2026, 11, 2, 5, 14, 31, 0, time.UTC)
+	if _, err := Update(dir, func(s *State) error {
+		s.Enqueue("S-0001", "alex", t0)
+		s.Batch = &Batch{ID: "B-1", Stories: []string{"S-0001"}, Step: StepVerified, Result: &Result{Passed: true, FinishedAt: t0}}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := Update(dir, func(s *State) error {
+			s.DropBatchHolding("S-0001", "the main branch moved from aaaaaaa to bbbbbbb", "flai serve", at)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got []Event
+	for _, e := range eventLog(t, dir) {
+		if e.Event == EventDropped {
+			got = append(got, e)
+		}
+	}
+	want := []Event{{At: at, Event: EventDropped, Batch: "B-1", Stories: []string{"S-0001"}, By: "flai serve", Reason: "the main branch moved from aaaaaaa to bbbbbbb"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("dropped lines %+v, want %+v", got, want)
 	}
 }

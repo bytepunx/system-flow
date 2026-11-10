@@ -50,6 +50,11 @@ const (
 	// verification (ADR-0234): on the story it resumes at, with how long it
 	// waited.
 	EventLandingResumed = "landing_resumed"
+	// EventDropped is a batch dropped (ADR-0282): by whom, and why, in the
+	// drop's own sentence, whatever dropped it: main moving other than by
+	// its landing, a landing that failed, a bisection that could not run, or
+	// a story taken out of the queue.
+	EventDropped = "dropped"
 	// EventLanded is a story landed by the queue.
 	EventLanded = "landed"
 	// EventSentBack is the story a failed batch was bisected to, sent back.
@@ -60,7 +65,7 @@ const (
 )
 
 // eventKinds are the events of the log, in the order a write's lines are.
-var eventKinds = []string{EventEnqueued, EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLandingResumed, EventLanded, EventSentBack, EventDequeued}
+var eventKinds = []string{EventEnqueued, EventPreflightHeld, EventPreflightCleared, EventBatchBuilt, EventVerified, EventBisected, EventStepVerified, EventLandingResumed, EventDropped, EventLanded, EventSentBack, EventDequeued}
 
 // ReasonRemoved is the reason of a story dequeued with no outcome recorded
 // for it, as one taken out with flai queue remove.
@@ -72,11 +77,11 @@ type Event struct {
 	Event   string    `json:"event"`                    // one of the Event constants
 	Batch   string    `json:"batch,omitempty"`          // the batch it is of, when one is
 	Stories []string  `json:"stories"`                  // the stories it is on
-	By      string    `json:"by,omitempty"`             // who enqueued the story, on an enqueued line
+	By      string    `json:"by,omitempty"`             // who enqueued the story, on an enqueued line; who dropped the batch, on a dropped line
 	Passed  *bool     `json:"passed,omitempty"`         // whether the batch or the step passed, on a verified or step_verified line
 	Step    int       `json:"step,omitempty"`           // the bisection step's number, from 1, on a step_verified line
 	LeftOut []string  `json:"left_out,omitempty"`       // the stories left out, on a batch_built line
-	Reason  string    `json:"reason,omitempty"`         // why the story left, on a dequeued line
+	Reason  string    `json:"reason,omitempty"`         // why the story left, on a dequeued line; why the batch was dropped, on a dropped line
 	Files   []string  `json:"files,omitempty"`          // the files the findings name, sorted, on a preflight_held line
 	Rules   []string  `json:"rules,omitempty"`          // the rules the findings name, sorted, on a preflight_held line
 	HeldFor int64     `json:"held_seconds,omitempty"`   // how long the preflight held the queue, in seconds, on a preflight_cleared line
@@ -154,8 +159,9 @@ func preflightEvents(prev, hold *PreflightHold, now time.Time) []Event {
 // before the write when it is the same batch: built once it leaves building
 // and rebasing, verified once it has a result, bisected once its bisection
 // begins, a step verified once each step of its bisection has a result, on
-// the step's stories, and its landing resumed once the landing that waited
-// on main goes on, on the story it lands then.
+// the step's stories, its landing resumed once the landing that waited on
+// main goes on, on the story it lands then, and dropped once it is dropped,
+// at the drop's time, with who dropped it and why (ADR-0282).
 func batchEvents(prev, b *Batch, now time.Time) []Event {
 	if b == nil {
 		return nil
@@ -200,6 +206,13 @@ func batchEvents(prev, b *Batch, now time.Time) []Event {
 			story = prev.Stalled.Story
 		}
 		out = append(out, Event{At: now, Event: EventLandingResumed, Batch: b.ID, Stories: []string{story}, Waited: int64(max(0, now.Sub(prev.Stalled.At).Round(time.Second).Seconds()))})
+	}
+	if b.Dropped != nil && (prev == nil || prev.Dropped == nil) {
+		at := b.Dropped.At
+		if at.IsZero() {
+			at = now
+		}
+		out = append(out, Event{At: at, Event: EventDropped, Batch: b.ID, Stories: stories(), By: b.Dropped.By, Reason: b.Dropped.Reason})
 	}
 	return out
 }

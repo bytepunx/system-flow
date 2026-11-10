@@ -236,6 +236,7 @@ func printQueueStats(a *app, q *metrics.Queue) {
 		total.BatchSizeMax = max(total.BatchSizeMax, w.BatchSizeMax)
 		total.Bisections += w.Bisections
 		total.Verifications += w.Verifications
+		total.Dropped += w.Dropped
 	}
 	if len(busy) == 0 {
 		return
@@ -258,11 +259,15 @@ func printQueueStats(a *app, q *metrics.Queue) {
 
 // queueBatchesText is how many batches the queue built, their mean and
 // largest size, its bisections, and its verification runs, with them per
-// story landed when any landed.
+// story landed when any landed, and the batches it dropped when it dropped
+// any (ADR-0282).
 func queueBatchesText(w metrics.QueueWeek) string {
 	text := fmt.Sprintf("built %d · mean size %.1f · largest %d · bisections %d · verifications %d", w.Batches, w.BatchSizeMean, w.BatchSizeMax, w.Bisections, w.Verifications)
 	if w.Landed > 0 {
 		text += fmt.Sprintf(" · %.1f per story landed", w.VerificationsPerLanded)
+	}
+	if w.Dropped > 0 {
+		text += fmt.Sprintf(" · dropped %d", w.Dropped)
 	}
 	return text
 }

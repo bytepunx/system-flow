@@ -11,8 +11,8 @@ import (
 
 // Queue is, per ISO week of the window, the stories the merge queue landed
 // and sent back with their queue wait, the batches it built with their size,
-// its bisections, and its verification runs per story landed, from its event
-// log (S-0404, ADR-0177, S-0552).
+// its bisections, its verification runs per story landed, and the batches it
+// dropped, from its event log (S-0404, ADR-0177, S-0552, ADR-0282).
 type Queue struct {
 	Weeks []QueueWeek `json:"weeks"`
 }
@@ -22,6 +22,8 @@ type Queue struct {
 // Verifications are its verification runs, its verified lines, one a batch,
 // and its step_verified lines, one a bisection step (S-0552), and
 // VerificationsPerLanded is them over Landed, 0 when nothing landed.
+// Dropped are its dropped lines, one a batch dropped (ADR-0282); a dropped
+// batch counts in Batches too, as it was built.
 type QueueWeek struct {
 	Week                   string  `json:"week"`
 	Start                  string  `json:"start"`
@@ -35,6 +37,7 @@ type QueueWeek struct {
 	Bisections             int     `json:"bisections"`
 	Verifications          int     `json:"verifications"`
 	VerificationsPerLanded float64 `json:"verifications_per_landed"`
+	Dropped                int     `json:"dropped"`
 }
 
 // queueWait is the wait of one landed or sent_back line: its story's
@@ -97,6 +100,8 @@ func mergeQueue(events []mergequeue.Event, start, now time.Time) (*Queue, map[st
 			wk.Bisections++
 		case mergequeue.EventVerified, mergequeue.EventStepVerified:
 			wk.Verifications++
+		case mergequeue.EventDropped:
+			wk.Dropped++
 		}
 	}
 	for i := range out.Weeks {

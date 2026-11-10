@@ -152,7 +152,8 @@ func TestPrintQueueStatsComesAfterTheWaitingAndSkipsAnEmptyQueue(t *testing.T) {
 }
 
 // S-0552: the batches' text names the verification runs, and them per story
-// landed only when a story landed.
+// landed only when a story landed; ADR-0282: and the batches dropped only
+// when one was.
 func TestQueueBatchesTextNamesTheVerificationsPerStoryLanded(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -163,6 +164,8 @@ func TestQueueBatchesTextNamesTheVerificationsPerStoryLanded(t *testing.T) {
 			"built 1 · mean size 3.0 · largest 3 · bisections 1 · verifications 3 · 1.5 per story landed"},
 		{metrics.QueueWeek{Batches: 1, BatchSizeMean: 1, BatchSizeMax: 1, Verifications: 1},
 			"built 1 · mean size 1.0 · largest 1 · bisections 0 · verifications 1"},
+		{metrics.QueueWeek{Batches: 3, BatchSizeMean: 1, BatchSizeMax: 1, Verifications: 3, Landed: 1, VerificationsPerLanded: 3, Dropped: 2},
+			"built 3 · mean size 1.0 · largest 1 · bisections 0 · verifications 3 · 3.0 per story landed · dropped 2"},
 	} {
 		if got := queueBatchesText(tc.w); got != tc.want {
 			t.Errorf("queueBatchesText(%+v) = %q, want %q", tc.w, got, tc.want)
