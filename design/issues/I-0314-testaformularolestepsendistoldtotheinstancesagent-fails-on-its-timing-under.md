@@ -2,12 +2,12 @@
 id: I-0314
 title: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
 class: defect
-status: open
+status: closed
 count: 2
 cost: 6m
 first_reported: 2026-11-08T02:50:07Z
 last_reported: 2026-11-09T23:20:40Z
-updated: 2026-11-10T05:45:21Z
+updated: 2026-11-10T07:37:55Z
 ---
 
 # I-0314 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
@@ -28,3 +28,4 @@ On 2026-11-09, T-2786's flai test runs for flai/internal/itemnew and flai/intern
 ## Remediation
 
 Story S-0653 remediates this issue, created from it at 2026-11-10T05:45:21Z.
+Closed 2026-11-10T07:37:55Z: S-0653 fixed both causes. T-2849: logRunEnd and logRunEndSaying measure the log of the run that ended, AgentRun.Log, in roleEnded, planEnded, orchestrateEnded, curateEnded, and analyzeEnded, not the kind's newest run log, so a run's end logged once a newer run of its kind has started is measured and charged from its own log; TestARunEndedAfterANewerRunStartedIsMeasuredFromItsOwnLog reproduces it without load. T-2851: TestAFormulaRoleStepsEndIsToldToTheInstancesAgent waits for each run's agent event in the inbox with waitFor instead of reading it once, since roleEnded appends the event after it records the run as ended.
