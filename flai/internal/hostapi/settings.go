@@ -612,7 +612,7 @@ func settingsSpecs() map[string]spec {
 		// flai serve agent clear does). attended_minutes is retired (S-0116,
 		// ADR-0043): a dashboard that still sends it is not refused, and it
 		// changes nothing. Built as host-wide here, its gate is set in specs()
-		// (writes.go) to the settings action on for this project, and on for
+		// (writes_spec.go) to the settings action on for this project, and on for
 		// every project only for a write with everywhere true (ADR-0261); so
 		// is settings.harness's.
 		"settings.agent": hostwide("the agent's name or command changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
