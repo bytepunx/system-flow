@@ -216,7 +216,7 @@ S-0509 proved these start paths with docker faked. S-0567 ran them once on this 
 
 What the run could not show is recorded as issues:
 
-- [I-0274](../issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md): no record names the run's image, container, or mounts, and the container is removed when it ends.
+- [I-0274](../issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md) is closed: no record named the run's image, container, or mounts, and the container is removed when it ends. S-0665 records them on the run in `agents.json` as `image`, `container`, and `mounts`, and the journal's start entry names the image and the container ([The container harness](flai-cli.md#the-container-harness-s-0508)).
 - [I-0275](../issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md): inside the container this repository's hooks run `scripts/flai.sh guard`, which builds flai with the layer's Go, and they let a call through on any exit but 2, 126, and 127.
 - [I-0276](../issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md): a container started by hand from a story's agent's shell sees the checkout as an empty folder, so those hooks could not be replayed in it.
 - [I-0256](../issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md) is closed: S-0687 moved the orchestrator's acceptance and verification to the host through the MCP tools `accept` and `verify`, and its shell's refuse in the container ([ADR-0278](../adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md), [In a container](#in-a-container-s-0509)).
