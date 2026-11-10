@@ -2,12 +2,12 @@
 id: I-0274
 title: flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-11-07T05:41:15Z
 last_reported: 2026-11-07T05:41:15Z
-updated: 2026-11-10T08:34:37Z
+updated: 2026-11-10T11:08:46Z
 ---
 
 # I-0274 flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
@@ -24,3 +24,4 @@ S-0567's live planner run on harness container (planner-S-0559, 2026-11-07T05:05
 ## Remediation
 
 Story S-0665 remediates this issue, created from it at 2026-11-10T08:34:37Z.
+Closed 2026-11-10T11:08:46Z: S-0665: flai serve now records a container run's image, container name, and mounts in agents.json (`image`, `container`, `mounts`), copied in startOf from the container adapter's Start, which reads them from the docker run argv; the serve journal's start line names the image and container, such as `started docker (container, image flai-agent-sf-claude-code:local, container flai-agent-S-nnnn-<session>)`. TestAContainerRunRecordsItsImageContainerAndMounts in flai/internal/serve/container_test.go reproduces the issue for a story's run and a planner's on the layer image, and checks a host run records none.
