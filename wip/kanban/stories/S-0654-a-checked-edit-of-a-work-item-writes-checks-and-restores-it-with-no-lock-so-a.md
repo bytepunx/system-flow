@@ -3,11 +3,14 @@ id: S-0654
 type: story
 nature: improvement
 title: A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T05:45:23Z
-updated: 2026-11-10T07:05:18Z
-transitions: []
+updated: 2026-11-10T07:12:18Z
+transitions:
+  - to: ready
+    at: 2026-11-10T07:12:12Z
+    by: orchestrator
 tags: [flai, itemedit, locking]
 topics: [work-items, claims]
 touches: [flai/internal/itemedit/itemedit.go, flai/internal/itemedit/lock_test.go, flai/internal/itemedit/forecasts.go, flai/internal/itemedit/forecasts_test.go, flai/internal/workitem/itemlock.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/summary.md]
@@ -31,7 +34,6 @@ usage:
           cache_read: 976302
           cache_write: 126506
           cost: 0.2965
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
@@ -42,10 +44,13 @@ cost_of_delay:
   at: 2026-11-10T07:05:18Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T10:36:00Z
-  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652 and S-0653."
+  delivery: 2026-11-10T09:51:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0649, S-0650, S-0655, S-0651 and S-0653."
   by: flai
-  at: 2026-11-10T07:02:19Z
+  at: 2026-11-10T07:12:18Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T07:12:08Z
 ---
 # S-0654 A checked edit of a work item writes, checks, and restores it with no lock, so a reader in between sees an edit the check refuses
 

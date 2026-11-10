@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:11:28Z
+updated: 2026-11-10T07:12:18Z
 ---
 
 # Active streams
@@ -14,13 +14,13 @@ updated: 2026-11-10T07:11:28Z
 | [S-0636](S-0636.md) | 13 board.get calls at once answer under 300 ms on every served project, measured again after S-0602 and S-0606 | in-progress | agent-S-0636 | 2026-11-09T23:11:12Z |
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0647](S-0647.md) | TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid | in-progress | agent-S-0647 | 2026-11-10T07:07:36Z |
-| [S-0649](S-0649.md) | TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611 | in-progress | agent-S-0649 | 2026-11-10T07:10:38Z |
+| [S-0649](S-0649.md) | TestEachRequestIsTimedBeneathTheTransport reads the request answered event before the channel client has logged it, so it fails under load since S-0611 | in-progress | agent-S-0649 | 2026-11-10T07:11:56Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 192 | 1145.9750 USD | 146455 | 2026-11-10T07:01:28Z |
-| [orchestrator](orchestrator.md) | 2640 | 2075.0265 USD | 1537930 | 2026-11-10T07:10:39Z |
+| [orchestrator](orchestrator.md) | 2641 | 2075.0753 USD | 1537982 | 2026-11-10T07:11:31Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 117 | 185.3235 USD | 19460 | 2026-11-09T23:24:51Z |

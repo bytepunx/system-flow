@@ -6,7 +6,7 @@ title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exi
 status: ready
 owner: alex
 created: 2026-11-10T05:12:13Z
-updated: 2026-11-10T07:02:50Z
+updated: 2026-11-10T07:12:18Z
 transitions:
   - to: ready
     at: 2026-11-10T07:02:50Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T06:58:35Z
 forecast:
   duration: 35m
-  delivery: 2026-11-10T08:36:00Z
-  basis: "Its own forecast of 35m; 5th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648 and S-0649."
+  delivery: 2026-11-10T07:56:00Z
+  basis: "Its own forecast of 35m; 1st in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647 and S-0649."
   by: flai
-  at: 2026-11-10T07:00:52Z
+  at: 2026-11-10T07:12:18Z
 finalized:
   by: orchestrator
   at: 2026-11-10T07:01:33Z

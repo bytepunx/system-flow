@@ -6,7 +6,7 @@ title: "A flaiover design-page test, \"takes up the draft another tab writes\", 
 status: ready
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T07:08:49Z
+updated: 2026-11-10T07:12:18Z
 transitions:
   - to: ready
     at: 2026-11-10T07:08:49Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-10T06:59:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T09:54:00Z
-  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652, S-0653 and S-0654."
+  delivery: 2026-11-10T08:09:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0649 and S-0650."
   by: flai
-  at: 2026-11-10T07:02:19Z
+  at: 2026-11-10T07:12:18Z
 finalized:
   by: orchestrator
   at: 2026-11-10T07:08:13Z
