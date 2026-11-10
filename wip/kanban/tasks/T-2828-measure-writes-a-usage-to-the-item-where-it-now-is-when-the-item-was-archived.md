@@ -24,16 +24,16 @@ touches: [flai/internal/serve/usage.go, flai/internal/serve/usage_test.go]
 after: [T-2827]
 usage:
   source: log
-  seconds: 450
+  seconds: 452
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 284
-      cache_read: 1785591
-      cache_write: 60046
-      cost: 0.679
+      input: 20
+      output: 4916
+      cache_read: 1812489
+      cache_write: 46353
+      cost: 0.7696
 ---
 # T-2828 Measure writes a usage to the item where it now is when the item was archived since it was read
 

@@ -3,11 +3,17 @@ id: S-0685
 type: story
 nature: remediation
 title: The smoke tier's OpenRouter gateway check fails on a 402 because the operator's OpenRouter key is out of credits, so every close-out and batch that runs smoke fails
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:11Z
-updated: 2026-11-10T08:47:48Z
-transitions: []
+updated: 2026-11-10T08:48:20Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:47:51Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-10T08:48:20Z
+    by: agent-S-0685
 tags: [gateway, tests]
 touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md]
 agent:
@@ -21,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 26
+      seconds: 63
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 75
-          cache_read: 333385
-          cache_write: 58091
-          cost: 0.106
+          input: 26
+          output: 152
+          cache_read: 814564
+          cache_write: 141124
+          cost: 0.2589
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 11m

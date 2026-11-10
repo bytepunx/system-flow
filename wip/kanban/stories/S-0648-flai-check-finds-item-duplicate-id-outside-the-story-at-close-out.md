@@ -3,16 +3,19 @@ id: S-0648
 type: story
 nature: improvement
 title: "flai check finds `item.duplicate-id` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T05:12:06Z
-updated: 2026-11-10T08:27:10Z
+updated: 2026-11-10T08:43:34Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:17Z
     by: alex
   - to: in-progress
     at: 2026-11-10T08:08:31Z
+    by: agent-S-0648
+  - to: review
+    at: 2026-11-10T08:43:34Z
     by: agent-S-0648
 tags: [flai, workitem]
 topics: [code, archive, usage]
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1625
-  estimated: true
-  priced_by: estimate
+  seconds: 2114
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      hand_edits: 2
-      work: 34
+      hand_edits: 3
+      work: 67
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 1148
-      cache_read: 11049166
-      cache_write: 553896
-      cost: 4.2685
+      input: 252
+      output: 61610
+      cache_read: 22716962
+      cache_write: 580966
+      cost: 9.6459
   strategic:
     - kind: planner
       seconds: 419
@@ -90,8 +92,8 @@ finalized:
 This story remediates [I-0323](../../../design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md), "flai check finds `item.duplicate-id` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0323 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0323 is closed with `flai issue close I-0323 --reason` saying what fixed it
+- [x] The cause I-0323 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0323 is closed with `flai issue close I-0323 --reason` saying what fixed it
 
 ## Tasks
 - T-2827 Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock

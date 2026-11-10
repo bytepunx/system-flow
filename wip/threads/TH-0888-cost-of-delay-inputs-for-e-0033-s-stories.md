@@ -4,10 +4,10 @@ title: Cost of delay inputs for E-0033's stories
 anchor:
   path: wip/kanban/epics/E-0033-flai-stays-responsive-at-600-stories-checked-writes-kept-parses-and-concurrent.md
   item: E-0033
-status: answered
-participants: [planner-E-0033, orchestrator, flai serve]
+status: resolved
+participants: [planner-E-0033, orchestrator, flai serve, alex]
 created: 2026-11-07T23:43:05Z
-updated: 2026-11-09T23:46:10Z
+updated: 2026-11-10T08:48:59Z
 ---
 
 # TH-0888 Cost of delay inputs for E-0033's stories
@@ -104,3 +104,6 @@ Eleven already carry the table's figure, set on 2026-11-07 and 2026-11-08. S-059
 Source: design/conventions/strategic-agents.md § As the orchestrator
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T08:48:59Z alex
+Resolved: S-0636 was accepted

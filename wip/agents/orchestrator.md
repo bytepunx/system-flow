@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2081.4574
-accrued_seconds: 1539636
-tasks_completed: 2698
-last_run: 2026-11-10T08:35:40Z
+accrued_cost: 2082.0022
+accrued_seconds: 1539781
+tasks_completed: 2704
+last_run: 2026-11-10T08:48:42Z
 ---
 
 # Orchestrator activity
@@ -18918,6 +18918,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.2467 USD, estimated
+
+### 2026-11-10T08:41:52Z
+
+- Summary: TH-0961: the operator confirmed my recommendation (reword S-0636 criterion 1, 300 ms target to I-0326, D-0556); nothing owed by the orchestrator. S-0636 is in progress with criterion 1 reworded and ticked; its agent moves it to review, and accept_reviews takes it from there.
+- Items: S-0636
+- Seconds: 25
+- Cost: 0.0714 USD, estimated
+
+### 2026-11-10T08:42:18Z
+
+- Summary: I didn't need to do anything for TH-0961, so this run is finished.
+- Items: none
+- Seconds: 26
+- Cost: 0.0768 USD, estimated
+
+### 2026-11-10T08:45:02Z
+
+- Summary: Left draft S-0685 as it is: flai promote --drafts lists it incomplete (no forecast duration, no forecast delivery, no cost of delay value), and planner-S-0685, started 08:42:35 at the operator's request, is still running and has only set tags and touches so far. Opened no thread while the planner is still filling these in. Its next edit or the end of its run brings the draft back for finalize_drafts.
+- Items: S-0685
+- Seconds: 26
+- Cost: 0.1060 USD, estimated
+
+### 2026-11-10T08:45:22Z
+
+- Summary: I left draft S-0685 as it is. It isn't ready to finalize yet, and its planner is still filling it in.
+- Items: none
+- Seconds: 20
+- Cost: 0.1085 USD, estimated
+
+### 2026-11-10T08:48:31Z
+
+- Summary: Answered TH-0989, citing design/digest/D-0448-s-0547-s-close-out-fails-only-at-smoke-s-openrouter-gateway-check-the-key-is.md
+- Items: S-0685
+- Seconds: 37
+- Cost: 0.1529 USD, estimated
+
+### 2026-11-10T08:48:42Z
+
+- Summary: Answered TH-0990, citing no source
+- Items: S-0682
+- Seconds: 11
+- Cost: 0.0292 USD, estimated
 
 ## Refusals
 

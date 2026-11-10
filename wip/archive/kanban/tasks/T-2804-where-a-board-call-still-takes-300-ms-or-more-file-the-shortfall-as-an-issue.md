@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 9
-      output: 2581
-      cache_read: 1210353
-      cache_write: 25778
-      cost: 0.4903
+      output: 2224
+      cache_read: 1192955
+      cache_write: 36686
+      cost: 0.5695
 ---
 # T-2804 Where a board call still takes 300 ms or more, file the shortfall as an issue and ask the operator on a thread how the criterion stands
 

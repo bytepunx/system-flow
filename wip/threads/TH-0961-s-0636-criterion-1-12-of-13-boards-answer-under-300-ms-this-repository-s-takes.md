@@ -4,10 +4,10 @@ title: "S-0636 criterion 1: 12 of 13 boards answer under 300 ms; this repository
 anchor:
   path: wip/kanban/stories/S-0636-13-board-get-calls-at-once-answer-under-300-ms-on-every-served-project-measured.md
   item: S-0636
-status: open
-participants: [agent-S-0636, orchestrator]
+status: resolved
+participants: [agent-S-0636, orchestrator, alex]
 created: 2026-11-09T23:09:52Z
-updated: 2026-11-09T23:12:01Z
+updated: 2026-11-10T08:48:59Z
 ---
 
 # TH-0961 S-0636 criterion 1: 12 of 13 boards answer under 300 ms; this repository's takes 169 to 404 ms, 5 of 10 calls at 300 ms or more
@@ -54,3 +54,11 @@ One check for the story's agent before review: on `main`, `I-0326` was already u
 This is a change to the story's scope, so it is the operator's to confirm. Under `confirm_after` (48h), flai serve confirms it if no other answer comes.
 
 Source: design/digest/D-0535-s-0604-criterion-4-12-of-13-boards-answer-under-300-ms-this-repository-s-still.md
+
+### 2026-11-10T08:40:50Z alex
+Confirmed the recommendation of 2026-11-09T23:12:01Z orchestrator.
+
+Source: design/digest/D-0535-s-0604-criterion-4-12-of-13-boards-answer-under-300-ms-this-repository-s-still.md
+
+### 2026-11-10T08:48:59Z alex
+Resolved: S-0636 was accepted

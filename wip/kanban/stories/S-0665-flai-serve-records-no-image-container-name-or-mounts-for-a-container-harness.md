@@ -14,6 +14,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 158
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 164
+          output: 722
+          cache_read: 8824297
+          cache_write: 305380
+          cost: 0.6119
+        - model: claude-opus-5-5
+          input: 490
+          output: 11726
+          cache_read: 37621017
+          cache_write: 558134
+          cost: 10.2617
 draft: true
 cost_of_delay:
   inputs:

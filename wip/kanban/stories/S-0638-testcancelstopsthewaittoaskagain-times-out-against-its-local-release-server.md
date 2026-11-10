@@ -3,10 +3,10 @@ id: S-0638
 type: story
 nature: remediation
 title: TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-09T09:08:54Z
-updated: 2026-11-10T01:31:07Z
+updated: 2026-11-10T08:47:50Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:00Z
@@ -14,11 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-09T22:49:43Z
     by: agent-S-0638
+  - to: review
+    at: 2026-11-10T08:47:50Z
+    by: system-flow
 blocked:
   - from: 2026-11-09T23:17:04Z
     until: 2026-11-09T23:17:45Z
     reason: awaiting the operator on TH-0962
   - from: 2026-11-10T01:31:07Z
+    until: 2026-11-10T08:41:22Z
     reason: "waiting for S-0645's acceptance (I-0321, TH-0962 option 1, TH-0964): then flai stream sync S-0638 and close out again"
 tags: [flai, testing, flaky-test]
 topics: [testing]
@@ -30,7 +34,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 9654
+  seconds: 10042
   priced_by: harness
   empty_wakes: 3
   turns:
@@ -41,15 +45,16 @@ usage:
       hand_edits: 3
       work: 111
     - day: 2026-11-10
+      ceremony: 1
       empty_wakes: 2
-      work: 24
+      work: 95
   models:
     - model: claude-opus-5-5
-      input: 298
-      output: 26294
-      cache_read: 41120200
-      cache_write: 310911
-      cost: 11.2384
+      input: 446
+      output: 35080
+      cache_read: 45933153
+      cache_write: 383459
+      cost: 12.9577
   strategic:
     - kind: orchestrator
       seconds: 216

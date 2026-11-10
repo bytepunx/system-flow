@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 81
-      output: 22335
-      cache_read: 10473357
-      cache_write: 223063
-      cost: 4.2425
+      input: 77
+      output: 19247
+      cache_read: 10322809
+      cache_write: 317452
+      cost: 4.9282
 ---
 # T-2803 Measure 13 board.get calls at once before and after S-0602 and S-0606 on the operator's host, and record them under a new section of server-performance.md
 

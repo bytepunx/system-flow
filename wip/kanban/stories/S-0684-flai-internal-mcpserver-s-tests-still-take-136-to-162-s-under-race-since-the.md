@@ -6,9 +6,11 @@ title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, sinc
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T08:37:09Z
+updated: 2026-11-10T08:48:56Z
 transitions: []
-tags: []
+tags: [flai, go, mcp, testing]
+topics: [testing, mcp]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/session_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/process_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md, flai/internal/mcpserver/task.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,6 +22,15 @@ cost_of_delay:
     time_lost_per_cycle: 43s
     by: flai
     at: 2026-11-10T08:37:09Z
+  value: 1.79
+  by: planner-S-0684
+  at: 2026-11-10T08:48:35Z
+forecast:
+  duration: 2h
+  delivery: 2026-11-10T15:00:00Z
+  basis: "flai forecast's 56m (101 s a unit over 151 large improvement stories, size 33) raised to 2h: about 95 tests to convert, and each -race run of the package takes 2 to 3 minutes, with at least six in the tasks and the close-out's integration tier on top; delivery moved by the same hour."
+  by: planner-S-0684
+  at: 2026-11-10T08:48:35Z
 ---
 # S-0684 flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
 
@@ -32,7 +43,37 @@ This story remediates [I-0234](../../../design/issues/I-0234-flai-internal-mcpse
 - [ ] I-0234 is closed with `flai issue close I-0234 --reason` saying what fixed it
 
 ## Tasks
+- T-2904 mcpserver.Options carry the session's story, role, session, reasons, and started-by, which flai mcp fills from the environment
+- T-2905 mcpserver takes what its tests now set in package variables and the environment, the permission poll, the flai it runs, its version, the releases API and token, and a child's config, through Options
+- T-2906 mcpserver's session tests pass the session in Options and run in parallel, with no serial parent and git's identity set once for the package
+- T-2910 mcpserver's permission, subproject, versions, and outdated tests pass Options in place of package variables and run in parallel, and together goes
+- T-2915 A test keeps mcpserver's tests off the process, the package's -race time is measured against I-0234's, and I-0234 is closed
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0234. time_lost_per_cycle 43s: 1m per occurrence × 1 occurrence ÷ 1.4 cycles of 168h (first reported 2026-10-31T09:50:04Z, 9.9 days before this story).
+
+### Planning
+
+The proposed solution is the first of the two remedies the issue's instance names. It also follows D-0443. The session goes into `mcpserver.Options`, which `flai mcp` fills from the environment, so the package's tests stop setting the process and the serial phase goes. The package's time then becomes that of the parallel prime-on-this-repository tests. The second remedy, priming faster under race, is left out: T-2420 measured no gain from a search change and was cancelled.
+
+Touches, all files, none a folder:
+
+| Touch | Source |
+|-------|--------|
+| `flai/internal/mcpserver/server.go`, `shared.go`, `issues.go` | Declared by the issue: its environment reads at `server.go:203-209`, `shared.go:180`, and `issues.go:196` |
+| `flai/cmd/mcp.go`, `flai/cmd/mcp_http.go` | Co-change (`flai touches suggest`: 16 and 18 of 99 commits), and the layout: they build `mcpserver.Options` |
+| `flai/internal/mcpserver/permission.go`, `subproject.go`, `versions.go` | Layout: they hold `permissionPoll`, `flaiExecutable`, and the `FLAI_RELEASES_API` read that the serial tests swap |
+| `flai/internal/mcpserver/server_test.go` | Co-change (45 of 99) and the layout: it holds `TestMain`, `together`, and `TestAsTheStorysAgent` |
+| The other `flai/internal/mcpserver/*_test.go` files named | Layout: each calls `t.Setenv` or `together`, or assigns a package variable |
+| `session_test.go`, `process_test.go` | New test files that T-2904 and T-2915 add |
+| `flai/cmd/orchestrate_permissions_test.go`, `flai/cmd/role_test.go`, `flai/internal/serve/restart_test.go` | Layout: they set the session variables before `mcpserver.New`, so they must pass `Options` once the server stops reading the environment |
+| The `design/issues/I-0234-…` file and `design/issues/summary.md` | The goal: `flai issue close` writes both |
+
+`folder.go` (63 percent co-change) is left out: it reads no session variable. `docs/users/flai.md` and `design/system/flai-cli.md` are left out too, since what `flai mcp` does does not change.
+
+Forecast: `flai forecast` gave 56m from size 33. It is raised to 2h. The work converts about 95 tests across 16 files, and each `-race` run of the package takes 2 to 3 minutes: at least two runs in each of T-2906, T-2910, and T-2915, plus the close-out's integration tier. The delivery moves by the same hour, to 15:00Z.
+
+Cost of delay: the value of 1.79 USD a week is `flai cod`'s, from the operator's input of 43 s lost per cycle at 150 USD an hour. It stands as computed. The input is the operator's, set by flai from I-0234's one occurrence of 1m, and this plan changes no input.
+
+`after`: none. The story reads no other story's output.

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1041
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 608
-      cache_read: 4816223
-      cache_write: 227809
-      cost: 1.8556
+      input: 55
+      output: 13434
+      cache_read: 4953445
+      cache_write: 126680
+      cost: 2.1033
 ---
 # T-2827 Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock
 

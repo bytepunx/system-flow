@@ -3,10 +3,10 @@ id: E-0033
 type: epic
 nature: improvement
 title: "flai stays responsive at 600 stories: checked writes, kept parses, and concurrent reads"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T22:38:45Z
-updated: 2026-11-09T07:36:47Z
+updated: 2026-11-10T08:48:59Z
 transitions:
   - to: ready
     at: 2026-11-07T23:49:08Z
@@ -14,11 +14,17 @@ transitions:
   - to: in-progress
     at: 2026-11-07T23:49:17Z
     by: agent-S-0598
+  - to: review
+    at: 2026-11-10T08:42:43Z
+    by: agent-S-0636
+  - to: done
+    at: 2026-11-10T08:48:59Z
+    by: alex
 tags: [cli, dashboard]
 topics: [server-side, back-end]
 usage:
   source: sum
-  seconds: 87285
+  seconds: 87398
   priced_by: harness
   turns:
     - day: 2026-11-07
@@ -35,13 +41,16 @@ usage:
       test_runs: 18
       hand_edits: 25
       work: 973
+    - day: 2026-11-10
+      hand_edits: 1
+      work: 16
   models:
     - model: claude-opus-5-5
-      input: 7104
-      output: 1711272
-      cache_read: 1211294549
-      cache_write: 31413371
-      cost: 462.7151
+      input: 7142
+      output: 1717439
+      cache_read: 1216939590
+      cache_write: 31740727
+      cost: 466.5865
   strategic:
     - kind: planner
       seconds: 2096
@@ -60,15 +69,15 @@ usage:
           cache_write: 2782918
           cost: 52.4276
     - kind: orchestrator
-      seconds: 5295
+      seconds: 5320
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 740
-          output: 6113
-          cache_read: 31812747
-          cache_write: 3595126
-          cost: 9.2874
+          input: 750
+          output: 6182
+          cache_read: 32039105
+          cache_write: 3632340
+          cost: 9.3588
         - model: claude-sonnet-5-5
           input: 107
           output: 3270
@@ -107,3 +116,5 @@ S-0596 measured the causes in [server-performance.md § A second pass at 596 sto
 - Each story remeasures its cause on the same host and repository, as E-0012's did, and records it in server-performance.md.
 - 2026-11-07T23:49:08Z: moved to ready: follows S-0598, which moved to ready
 - 2026-11-07T23:49:17Z: moved to in-progress: follows S-0598, which moved to in-progress
+- 2026-11-10T08:42:43Z: moved to review: follows S-0636, which moved to review
+- 2026-11-10T08:48:59Z: moved to done: follows S-0636, which moved to done

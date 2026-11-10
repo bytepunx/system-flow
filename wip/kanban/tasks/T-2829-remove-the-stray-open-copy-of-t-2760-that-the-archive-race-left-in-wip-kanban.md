@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 26
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 63
-      cache_read: 1062823
-      cache_write: 5009
-      cost: 0.3928
+      input: 12
+      output: 2844
+      cache_read: 1048643
+      cache_write: 26818
+      cost: 0.4453
 ---
 # T-2829 Remove the stray open copy of T-2760 that the archive race left in wip/kanban/tasks
 

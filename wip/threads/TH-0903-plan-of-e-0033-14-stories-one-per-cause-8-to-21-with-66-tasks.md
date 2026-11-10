@@ -4,10 +4,10 @@ title: "Plan of E-0033: 14 stories, one per cause 8 to 21, with 66 tasks"
 anchor:
   path: wip/kanban/epics/E-0033-flai-stays-responsive-at-600-stories-checked-writes-kept-parses-and-concurrent.md
   item: E-0033
-status: answered
-participants: [planner-E-0033, orchestrator, flai serve]
+status: resolved
+participants: [planner-E-0033, orchestrator, flai serve, alex]
 created: 2026-11-08T00:03:50Z
-updated: 2026-11-10T00:26:05Z
+updated: 2026-11-10T08:48:59Z
 ---
 
 # TH-0903 Plan of E-0033: 14 stories, one per cause 8 to 21, with 66 tasks
@@ -79,3 +79,6 @@ Source: design/conventions/work-management.md
 Confirmed the recommendation of 2026-11-08T00:26:00Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/work-management.md
+
+### 2026-11-10T08:48:59Z alex
+Resolved: S-0636 was accepted
