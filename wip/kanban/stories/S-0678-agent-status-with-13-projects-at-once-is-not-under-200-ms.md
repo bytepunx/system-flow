@@ -6,7 +6,7 @@ title: agent.status with 13 projects at once is not under 200 ms
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-10T10:55:00Z
+updated: 2026-11-10T10:57:53Z
 transitions: []
 tags: [cli]
 topics: [server-side]
@@ -16,7 +16,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1s
@@ -31,6 +30,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676 and S-0677."
   by: flai
   at: 2026-11-10T10:55:00Z
+finalized:
+  by: alex
+  at: 2026-11-10T10:57:53Z
 ---
 # S-0678 agent.status with 13 projects at once is not under 200 ms
 
