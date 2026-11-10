@@ -1,8 +1,8 @@
 ---
 id: ADR-0180
 title: "flai task done refuses an older flai only when the newest flai release raised the task-done rules number its source carries, and keeps the minor-version rule for a release without one"
-status: proposed
-date: 2026-10-20
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0142, ADR-0160]
