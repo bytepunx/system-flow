@@ -319,7 +319,7 @@ func (l *launcher) analyzeEnded(run *AgentRun, exit *int) {
 		}
 	}
 	say := func(final string) string { return reportSaid(final, report, dir) }
-	if _, err := logRunEndSaying(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityAnalyzer, run.Trigger, say, named); err != nil {
+	if _, err := logRunEndSaying(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityAnalyzer, run.Log, run.Trigger, say, named); err != nil {
 		l.warn("analyzer activity not logged", "err", err)
 	}
 }

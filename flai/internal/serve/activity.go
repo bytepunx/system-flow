@@ -24,8 +24,9 @@ import (
 // and each role the project defines (ADR-0207) as it does a story's agent's,
 // named for the project's key, the kind, and the time it started. An
 // activity ends when the agent reports it or when its run ends; its span
-// runs from the later of the newest run's start and the document's last
-// entry to its end, and its cost is what the kind's logs say was spent,
+// runs from the later of its run's start and the document's last entry to
+// its end, the run being the newest when the agent reports it and the one
+// that ended, by its own log, when a run ends (I-0314), and its cost is what the kind's logs say was spent,
 // apportioned to that span as a task's is to its intervals (ADR-0051), so a
 // session resumed in a later run is charged only its share. That same share
 // is charged under usage.strategic, under the kind's name, by the rule the
@@ -145,14 +146,16 @@ func LogActivity(d Dir, root, key, kind, summary string, items []string, end tim
 // the items it names (S-0209), and is charged as LogActivity's is. It logs
 // nothing, and returns nil, when nothing was spent in that time.
 func LogRunEnd(d Dir, root, key, kind string, items []string) (*Logged, error) {
-	return logRunEnd(d, root, key, kind, "", "", items)
+	return logRunEnd(d, root, key, kind, "", "", "", items)
 }
 
-// logRunEnd is LogRunEnd with the entry's trigger, what started the run
-// (ADR-0084), empty for none, and its summary in place of the run's final
-// text, such as why it was stopped (S-0218), empty for that text.
-func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) (*Logged, error) {
-	return logRunEndSaying(d, root, key, kind, trigger, func(final string) string {
+// logRunEnd is LogRunEnd for the run that kept its log at log, the run that
+// ended, as its AgentRun records it, or for the kind's newest run when log is
+// empty; with the entry's trigger, what started the run (ADR-0084), empty for
+// none, and its summary in place of the run's final text, such as why it was
+// stopped (S-0218), empty for that text.
+func logRunEnd(d Dir, root, key, kind, log, trigger, summary string, items []string) (*Logged, error) {
+	return logRunEndSaying(d, root, key, kind, log, trigger, func(final string) string {
 		if summary != "" {
 			return summary
 		}
@@ -165,12 +168,15 @@ func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) 
 // analyzer's names the report the run wrote, or says it wrote none (S-0223).
 // A bare URL in the summary is put in a code span, since no agent checked
 // that text against the lint, which would refuse the entry (I-0118).
-func logRunEndSaying(d Dir, root, key, kind, trigger string, say func(final string) string, items []string) (*Logged, error) {
+// The run measured is the one whose log is log, so that a run's end logged
+// once a newer run of its kind has started is measured from its own log,
+// not the newer run's (I-0314); it logs nothing when that log holds no run.
+func logRunEndSaying(d Dir, root, key, kind, log, trigger string, say func(final string) string, items []string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
 		return nil, err
 	}
-	run, ok := m.newest()
+	run, ok := m.ofLog(log)
 	if !ok {
 		return nil, nil
 	}
@@ -265,6 +271,27 @@ func (m *activityMeasure) newest() (usage.Run, bool) {
 		}
 	}
 	return run, true
+}
+
+// ofLog is the newest run kept in the log at log, told by its name as
+// startedFor tells it, or the kind's newest run when log is empty; false
+// when there is none.
+func (m *activityMeasure) ofLog(log string) (usage.Run, bool) {
+	if log == "" {
+		return m.newest()
+	}
+	if m.rec == nil {
+		return usage.Run{}, false
+	}
+	name := filepath.Base(log)
+	var run usage.Run
+	found := false
+	for _, r := range m.rec.Runs {
+		if filepath.Base(r.Path) == name && (!found || r.Start.After(run.Start)) {
+			run, found = r, true
+		}
+	}
+	return run, found
 }
 
 // activitySpan is the span of an activity in run that ended at end: from the

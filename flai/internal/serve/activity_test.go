@@ -434,6 +434,57 @@ func TestEachPlannerActivityChargesItsShare(t *testing.T) {
 	}
 }
 
+// I-0314: a run whose end is logged once a newer run of its kind has started
+// is measured from its own log, not the newer run's: its activity is its own
+// run's summary, seconds, and cost, charged to its own item, and the newer
+// run's end is then measured from the newer run's log.
+func TestARunEndedAfterANewerRunStartedIsMeasuredFromItsOwnLog(t *testing.T) {
+	lab := newActivityLab(t)
+	epic, story := lab.planned()
+	older, newer := "t-planner-20261003T100000Z.log", "t-planner-20261003T110000Z.log"
+	lab.log(older,
+		streamCall("s", "m1", runStart, 999),
+		streamFinal("Planned the epic.", 1000, 0.5))
+	lab.planRun(epic, older)
+	later := runStart.Add(time.Hour)
+	// the newer run has started and spent, and has not ended
+	lab.log(newer, streamCall("s2", "m2", later, 1999))
+	lab.planRun(story, newer)
+	path := func(name string) string { return filepath.Join(string(lab.dir), "agents", name) }
+	got, err := logRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, path(older), "", "", []string{epic})
+	if err != nil || got == nil {
+		t.Fatalf("older run end = %+v (%v), want logged", got, err)
+	}
+	if e := got.Entry; e.Summary != "Planned the epic." || e.Cost != 0.5 || e.Seconds != 1 || !e.At.Equal(runStart.Add(time.Second)) || got.Planned != epic {
+		t.Errorf("older run's entry = %+v, planned %q, want its own summary, 1 s, and 0.5 USD charged to %s", e, got.Planned, epic)
+	}
+	if s := lab.strategic(story); s != nil {
+		t.Errorf("story's planner usage = %+v, want nothing of the older run's", s)
+	}
+	lab.log(newer, streamCall("s2", "m2", later, 1999), streamResult("s2", 2000, 1.5))
+	got, err = logRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, path(newer), "", "", []string{story})
+	if err != nil || got == nil || got.Entry.Summary != "run ended" || got.Entry.Cost != 1.5 || got.Planned != story {
+		t.Fatalf("newer run end = %+v (%v), want its own 1.5 USD charged to %s", got, err, story)
+	}
+	if s := lab.strategic(story); s == nil || s.Cost() != 1.5 {
+		t.Errorf("story's planner usage = %+v, want the newer run's 1.5 USD alone", s)
+	}
+	if s := lab.strategic(epic); s == nil || s.Cost() != 2.0 {
+		t.Errorf("epic's planner usage = %+v, want its own 0.5 USD and its story's 1.5", s)
+	}
+}
+
+// A run's end whose log holds no run, such as one that wrote nothing, logs
+// nothing, even while another run of its kind has spent.
+func TestARunEndWhoseLogHoldsNoRunLogsNothing(t *testing.T) {
+	lab := newActivityLab(t)
+	lab.log("t-planner-20261003T100000Z.log", streamCall("s", "m1", runStart, 999), streamFinal("Planned.", 1000, 0.5))
+	empty := filepath.Join(string(lab.dir), "agents", "t-planner-20261003T110000Z.log")
+	if got, err := logRunEnd(lab.dir, lab.root, "t", workitem.ActivityPlanner, empty, "", "", nil); err != nil || got != nil {
+		t.Errorf("run end = %+v (%v), want nothing logged", got, err)
+	}
+}
+
 // ADR-0083: a session resumed in a later run reports cumulative totals; the
 // item is charged the later run's share alone, not the first run's again.
 func TestAResumedPlannerSessionIsNotChargedTwice(t *testing.T) {

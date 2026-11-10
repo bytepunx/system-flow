@@ -284,7 +284,7 @@ func (l *launcher) curateEnded(run *AgentRun, exit *int) {
 	// A run on the usage limit spent nothing, so logRunEnd logs no activity
 	// for it, and the next run's since keeps pointing at the last activity:
 	// the acceptances it never took in are taken in by the next (ADR-0214).
-	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityCurator, run.Trigger, "", entries); err != nil {
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityCurator, run.Log, run.Trigger, "", entries); err != nil {
 		l.warn("curator activity not logged", "err", err)
 	}
 }

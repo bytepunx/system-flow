@@ -591,7 +591,7 @@ func (l *launcher) orchestrateEnded(run *AgentRun, exit *int) {
 		}
 		l.record(e)
 	}
-	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityOrchestrator, "", summary, nil); err != nil {
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, workitem.ActivityOrchestrator, run.Log, "", summary, nil); err != nil {
 		l.warn("orchestrator activity not logged", "err", err)
 	}
 }

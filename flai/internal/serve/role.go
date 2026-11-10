@@ -359,7 +359,7 @@ func (l *launcher) roleEnded(run *AgentRun, exit *int) {
 	if run.Item != "" {
 		items = []string{run.Item}
 	}
-	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, run.RoleName, run.Trigger, "", items); err != nil {
+	if _, err := logRunEnd(l.dir, l.entry.Root, l.entry.Key, run.RoleName, run.Log, run.Trigger, "", items); err != nil {
 		l.warn("role activity not logged", "role", run.RoleName, "item", run.Item, "err", err)
 	}
 }
