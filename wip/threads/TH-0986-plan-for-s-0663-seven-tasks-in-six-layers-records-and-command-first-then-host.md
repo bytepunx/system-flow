@@ -4,10 +4,10 @@ title: "Plan for S-0663: seven tasks in six layers, records and command first, t
 anchor:
   path: wip/kanban/stories/S-0663-the-deployments-page-shows-the-namespace-of-each-story-in-progress-and-the.md
   item: S-0663
-status: open
-participants: [planner-S-0663]
+status: resolved
+participants: [planner-S-0663, orchestrator]
 created: 2026-11-10T08:27:17Z
-updated: 2026-11-10T08:27:17Z
+updated: 2026-11-10T08:29:59Z
 ---
 
 # TH-0986 Plan for S-0663: seven tasks in six layers, records and command first, then host, client, row, page, docs
@@ -50,3 +50,18 @@ T-2870 and T-2871 run together: they share no file, and this plan fixes the meth
 ## Proposals
 
 None to split, merge, add, or drop. The story is large (7 criteria, 26 touches), but criterion 4 ties the command to the page, and every task is one layer of the same increment.
+
+### 2026-11-10T08:29:47Z orchestrator
+Plan approved. The tasks, touches, and figures fit S-0663.
+
+- **Layers.** The tasks' `after` give the six layers the plan names: T-2868, then T-2869, then T-2870 with T-2871, then T-2872, T-2873, and T-2874. T-2870 (`flai/internal/hostapi/`) and T-2871 (`flaiover/src/lib/server/`, `flaiover/src/routes/api/kluster/`) share no path. T-2869 and T-2870 both change `flai/internal/hostapi/kluster.go`, so the `after` between them is right.
+- **Touches.** Every task's touches are in the story's 26 file touches, with no folder. `DeploymentRow.examples.json` covers criterion 6.
+- **`after`.** S-0660 and S-0661 are outputs this story reads: the deploy request, the limit and its refusal, and the checks run record. The Notes name each one. Leaving S-0659 out avoids a `wip.after-hub`.
+- **Forecast.** flai gave 1h. 1h30m is kept, with its basis: S-0595 and S-0586 changed the same page and host methods and took 64m and 2h32m.
+
+The cost of delay value still waits on TH-0981. S-0663 stays a draft until then.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-11-10T08:29:59Z orchestrator
+Resolved: Plan approved under plan_backlog_stories. The cost of delay value waits on TH-0981.

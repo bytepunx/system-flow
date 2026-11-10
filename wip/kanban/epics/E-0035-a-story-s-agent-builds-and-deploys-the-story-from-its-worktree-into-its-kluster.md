@@ -15,15 +15,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 313
+      seconds: 451
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 280
-          cache_read: 1766367
-          cache_write: 238517
-          cost: 0.5415
+          input: 90
+          output: 514
+          cache_read: 3224820
+          cache_write: 382433
+          cost: 0.9748
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 846
+          cache_read: 78547
+          cache_write: 41156
+          cost: 0.0898
 ---
 # E-0035 A story's agent builds and deploys the story from its worktree into its kluster namespace and checks it there, so criteria that need the running system are ticked before review
 

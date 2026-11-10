@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 260
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 112
-      cache_read: 1260457
-      cache_write: 9717
-      cost: 0.4674
+      input: 9
+      output: 942
+      cache_read: 1260688
+      cache_write: 9482
+      cost: 0.3469
 ---
 # T-2843 The owners' MCP test server sets a slow threshold no call reaches, and FLAI_SLOW_REQUEST=1ns reproduces the slow log
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 253
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 88
-      cache_read: 1004984
-      cache_write: 4090
-      cost: 0.3713
+      input: 7
+      output: 748
+      cache_read: 1001537
+      cache_write: 7533
+      cost: 0.2756
 ---
 # T-2841 The dev server's 404 test allows the fake vite time to start, and a start delay reproduces the missing 404
 

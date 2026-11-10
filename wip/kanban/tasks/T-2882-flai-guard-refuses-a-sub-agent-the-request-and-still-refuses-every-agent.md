@@ -7,7 +7,7 @@ status: backlog
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:27:24Z
-updated: 2026-11-10T08:27:24Z
+updated: 2026-11-10T08:32:02Z
 transitions: []
 stream: S-0660
 tags: [cli]
@@ -27,3 +27,5 @@ It waits for nothing: the names come from the ADR, not from the code of the CLI 
 - `go test ./internal/guard/...` passes.
 
 ## Notes
+
+- Out of scope, as agreed on TH-0987: a sub-agent's `flai kluster status` falls through to the generic refusal in `flai/internal/guard/guard.go`, against `design/system/kluster.md`'s guard section. Record it with `flai issue new` when you start, so it gets its own story; do not fix it here.

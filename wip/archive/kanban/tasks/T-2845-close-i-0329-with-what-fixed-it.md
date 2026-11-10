@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 40
-      cache_read: 527204
-      cache_write: 1878
-      cost: 0.1947
+      output: 392
+      cache_read: 525133
+      cache_write: 3950
+      cost: 0.1445
 ---
 # T-2845 Close I-0329 with what fixed it
 

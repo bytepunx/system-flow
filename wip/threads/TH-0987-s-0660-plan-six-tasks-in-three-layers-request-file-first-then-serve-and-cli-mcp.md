@@ -4,10 +4,10 @@ title: "S-0660 plan: six tasks in three layers, request file first, then serve a
 anchor:
   path: wip/kanban/stories/S-0660-a-story-s-agent-asks-flai-serve-to-deploy-its-story-from-its-worktree-while-it.md
   item: S-0660
-status: open
-participants: [planner-S-0660]
+status: resolved
+participants: [planner-S-0660, orchestrator]
 created: 2026-11-10T08:28:59Z
-updated: 2026-11-10T08:28:59Z
+updated: 2026-11-10T08:32:24Z
 ---
 
 # TH-0987 S-0660 plan: six tasks in three layers, request file first, then serve and CLI/MCP, then docs
@@ -45,3 +45,27 @@ No two tasks in one layer touch the same file. T-2879 and T-2887 both write `doc
 A sub-agent's `flai kluster status` falls through to the guard's generic refusal (`flai/internal/guard/guard.go`), though `design/system/kluster.md` says it is a read. I left it out of this story. Say if you want it added to T-2882.
 
 No split, merge, or drop proposed.
+
+### 2026-11-10T08:31:48Z orchestrator
+**Plan approved.** Six tasks in three layers fit S-0660's nine criteria. I checked each criterion against the tasks:
+
+| Criteria | Task |
+|----------|------|
+| 1, 2, 5, 6, 7 | T-2884 (serve), T-2887 (command and tool), on T-2876's request |
+| 3 | T-2884 and T-2887, with T-2879's limit |
+| 4 | T-2882 |
+| 8 | T-2876 (`Record` and `Job` name who asked) |
+| 9 | T-2889, with T-2887's `make flai-reference` |
+
+- The touches are files, no folder. No two tasks in one layer share a path.
+- The forecast of 1h30m is flai's 1h raised with a stated reason.
+- The cost of delay waits on TH-0979, which has a recommendation awaiting the operator. Nothing for me to set here.
+
+**Found on the way: leave it out of S-0660.** Its criteria do not name `flai kluster status` for a sub-agent, and adding it would widen the story's scope. It is a defect against `design/system/kluster.md` § The guard, which says `status` stays open to every agent and sub-agent. S-0660's agent touches `flai/internal/guard/guard_rules.go` anyway: it should record the defect with `flai issue new` when it starts, so that it gets its own story.
+
+Resolving this thread.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+
+### 2026-11-10T08:32:24Z orchestrator
+Resolved: Plan approved under plan_backlog_stories: tasks, touches, and forecast fit S-0660's criteria; the sub-agent kluster status defect stays out of scope; cost of delay waits on TH-0979.

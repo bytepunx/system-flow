@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2079.8514
-accrued_seconds: 1539276
-tasks_completed: 2683
-last_run: 2026-11-10T08:28:45Z
+accrued_cost: 2080.5335
+accrued_seconds: 1539455
+tasks_completed: 2689
+last_run: 2026-11-10T08:32:12Z
 ---
 
 # Orchestrator activity
@@ -18813,6 +18813,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 32
 - Cost: 0.1635 USD, estimated
+
+### 2026-11-10T08:29:47Z
+
+- Summary: Answered TH-0986, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0663
+- Seconds: 48
+- Cost: 0.1851 USD, estimated
+
+### 2026-11-10T08:30:00Z
+
+- Summary: Approved and resolved TH-0986, planner-S-0663's plan (7 tasks in 6 layers, 26 file touches, forecast 1h30m against flai's 1h), under plan_backlog_stories; the value still waits on TH-0981.
+- Items: S-0663, TH-0986
+- Seconds: 13
+- Cost: 0.0247 USD, estimated
+
+### 2026-11-10T08:30:14Z
+
+- Summary: Left drafts S-0660, S-0661, S-0662, S-0663 as drafts: flai promote --drafts lists each as lacking only a cost of delay value, already asked on TH-0979, TH-0980, TH-0983, TH-0981 with my recommendations pending the operator, so no new thread. TH-0985 needed nothing: resolved by me earlier.
+- Items: S-0660, S-0661, S-0662, S-0663
+- Seconds: 14
+- Cost: 0.0254 USD, estimated
+
+### 2026-11-10T08:30:31Z
+
+- Summary: I approved and resolved the S-0663 plan (TH-0986). I left all four E-0035 drafts as drafts.
+- Items: none
+- Seconds: 17
+- Cost: 0.1590 USD, estimated
+
+### 2026-11-10T08:31:48Z
+
+- Summary: Answered TH-0987, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0660
+- Seconds: 63
+- Cost: 0.2879 USD, estimated
+
+### 2026-11-10T08:32:12Z
+
+- Summary: Answered TH-0988, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md
+- Items: S-0662
+- Seconds: 24
+- Cost: 0.0000 USD
 
 ## Refusals
 

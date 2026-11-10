@@ -23,16 +23,16 @@ tags: []
 touches: [flai/internal/serve/components_test.go, flai/internal/components/devserver_test.go, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 usage:
   source: log
-  seconds: 327
+  seconds: 344
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 12
-      output: 47
-      cache_read: 1722937
-      cache_write: 10017
-      cost: 0.6377
+      output: 1285
+      cache_read: 1720017
+      cache_write: 12937
+      cost: 0.4732
 ---
 # T-2859 The crash-later fake vites crash only after they have answered, and I-0331 is closed
 

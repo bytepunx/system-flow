@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-10T08:28:04Z
+updated: 2026-11-10T08:29:27Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
@@ -24,22 +24,22 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 1
-          output: 7
-          cache_read: 45476
-          cache_write: 3333
-          cost: 0.0132
+          output: 8
+          cache_read: 68310
+          cache_write: 4022
+          cost: 0.0195
 draft: true
 forecast:
-  duration: 3h
+  duration: 2h30m
   delivery: 2026-11-13T17:00:00Z
-  basis: "Nine tasks over five Go packages, the review page, three conventions in two copies, a role file in three, and five documents; raised from flai forecast's 16m, which counted no touches."
+  basis: "Nine tasks in four layers over five Go packages, the review page, two conventions and a role file in several copies, and five documents, reading three stories' records; raised from flai forecast's 1h27m."
   by: planner-S-0662
-  at: 2026-11-10T08:25:45Z
+  at: 2026-11-10T08:29:27Z
 ---
 # S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
 
@@ -96,6 +96,6 @@ Written by the planner, 2026-11-10.
 
 `docs/users/flai-reference.md` is left out: no flag is planned. The story's agent adds it with `flai touches` if a flag comes.
 
-**Forecast.** `flai forecast` gave 16m from 8 criteria and no touches. Raised to 3h: nine tasks across five Go packages, the dashboard's review page, three conventions in two copies each, a role file in three copies, and five documents. S-0628, a story of the same spread, was planned at 2h with six tasks. Delivery 2026-11-13T17:00:00Z, since S-0659, S-0660, and S-0661 are accepted first.
+**Forecast.** `flai forecast` gave 1h27m once the touches were in: 109 s a unit over 118 large feature stories, size 48 (8 criteria, 40 touches). Raised to 2h30m: nine tasks in four layers, and three of them read record shapes that S-0659, S-0660, and S-0661 have not written yet. S-0628, of a like spread, was planned at 2h with six tasks. Delivery 2026-11-13T17:00:00Z, since S-0659, S-0660, and S-0661 are accepted first.
 
 **Cost of delay.** No value yet: neither S-0662 nor E-0035 has inputs, so `flai cod` refuses. Asked on TH-0983, which points to the epic input asked on TH-0979.

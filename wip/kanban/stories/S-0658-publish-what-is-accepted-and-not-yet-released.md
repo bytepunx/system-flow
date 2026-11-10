@@ -3,10 +3,10 @@ id: S-0658
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T07:56:53Z
-updated: 2026-11-10T08:28:53Z
+updated: 2026-11-10T08:29:45Z
 transitions:
   - to: ready
     at: 2026-11-10T07:56:58Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:26:48Z
     by: agent-S-0658
+  - to: review
+    at: 2026-11-10T08:29:45Z
+    by: system-flow
 tags: []
 touches: [wip/kanban/stories/S-0658-publish-what-is-accepted-and-not-yet-released.md, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md, design/issues/summary.md]
 agent:
@@ -23,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 129
-  estimated: true
-  priced_by: estimate
+  seconds: 185
+  priced_by: harness
   turns:
     - day: 2026-11-10
+      ceremony: 1
       hand_edits: 1
-      work: 24
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 531
-      cache_read: 3345193
-      cache_write: 151504
-      cost: 1.2865
+      input: 80
+      output: 9201
+      cache_read: 5416458
+      cache_write: 161694
+      cost: 2.5612
   strategic:
     - kind: orchestrator
       seconds: 31
@@ -58,9 +61,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2856 Fetch the remote's branch and tags

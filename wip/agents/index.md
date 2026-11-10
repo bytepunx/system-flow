@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T08:29:11Z
+updated: 2026-11-10T08:32:38Z
 ---
 
 # Active streams
@@ -14,14 +14,13 @@ updated: 2026-11-10T08:29:11Z
 | [S-0637](S-0637.md) | Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back | review | agent-S-0637 | 2026-11-10T08:26:39Z |
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0648](S-0648.md) | flai check finds `item.duplicate-id` outside the story at close-out | in-progress | agent-S-0648 | 2026-11-10T08:28:06Z |
-| [S-0652](S-0652.md) | TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load | in-progress | agent-S-0652 | 2026-11-10T08:22:17Z |
-| [S-0658](S-0658.md) | Publish what is accepted and not yet released | in-progress | agent-S-0658 | 2026-11-10T08:29:06Z |
+| [S-0658](S-0658.md) | Publish what is accepted and not yet released | review | agent-S-0658 | 2026-11-10T08:29:44Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 192 | 1145.9750 USD | 146455 | 2026-11-10T07:01:28Z |
-| [orchestrator](orchestrator.md) | 2683 | 2079.8514 USD | 1539276 | 2026-11-10T08:28:45Z |
+| [orchestrator](orchestrator.md) | 2689 | 2080.5335 USD | 1539455 | 2026-11-10T08:32:12Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 120 | 192.1806 USD | 21470 | 2026-11-10T08:06:37Z |

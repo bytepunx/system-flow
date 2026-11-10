@@ -3,10 +3,10 @@ id: S-0652
 type: story
 nature: remediation
 title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOperatorsReplyBecomesADigestEntry fail the integration tier under host load
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T08:21:14Z
+updated: 2026-11-10T08:32:38Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:19Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:03:55Z
     by: agent-S-0652
+  - to: review
+    at: 2026-11-10T08:29:33Z
+    by: agent-S-0652
+  - to: done
+    at: 2026-11-10T08:32:38Z
+    by: orchestrator
 tags: []
 topics: [testing]
 touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, flai/internal/serve/components_test.go]
@@ -25,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1023
-  estimated: true
-  priced_by: estimate
+  seconds: 1550
+  priced_by: harness
   turns:
     - day: 2026-11-10
       test_runs: 2
       hand_edits: 3
-      work: 52
+      work: 140
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 1245
-      cache_read: 13692957
-      cache_write: 277104
-      cost: 5.1409
+      input: 296
+      output: 30966
+      cache_read: 41456760
+      cache_write: 311814
+      cost: 11.4064
   strategic:
     - kind: orchestrator
       seconds: 71
@@ -112,3 +117,12 @@ After: S-0647, in progress, changes the same dev server tests. It makes them che
 Forecast: `flai forecast` gave 5m from the median of 17 small remediation stories at size 2. It is raised to 45m. There are two separate fixes, each run before and after its reproduction. The close-out runs the integration tier, 10 to 20 minutes under load, as I-0329's instances show. The delivery moves 40m past `flai forecast`'s 08:12 for the same reason.
 
 Cost of delay: `flai cod` gives 27.50 USD a week from the 11m `time_lost_per_cycle` flai set from I-0329, at 150 USD an hour. It is written as it stands. I-0329 now has two instances, 15m in all, so flai's inputs undercount it; the inputs are the operator's, and they are left as they are.
+
+### Accepted by the orchestrator
+
+- Verified: a7a8b0e32fa6ca939ae851410d11848f9afa2a47
+- At: 2026-11-10T08:32:38Z
+
+Verdict: pass at a7a8b0e32fa6ca939ae851410d11848f9afa2a47; flai verify passed every step, integration and smoke included.
+- 1: flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/components_test.go
+- 2: design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md
