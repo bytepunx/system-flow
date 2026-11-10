@@ -1,8 +1,8 @@
 ---
 id: ADR-0108
 title: "flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then asks the operator on a thread"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0043]
