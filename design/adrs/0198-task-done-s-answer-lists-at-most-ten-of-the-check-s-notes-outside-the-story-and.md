@@ -1,8 +1,8 @@
 ---
 id: ADR-0198
 title: "task_done's answer lists at most ten of the check's notes outside the story and counts the rest in notes_omitted"
-status: proposed
-date: 2026-10-23
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0179]
