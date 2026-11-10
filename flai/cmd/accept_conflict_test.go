@@ -361,6 +361,38 @@ func TestTheOrchestratorSendsBackAStoryWhoseRebaseItCannotSettle(t *testing.T) {
 	}
 }
 
+// I-0315, ADR-0276: an acceptance whose rebase stopped on a design document
+// outside claims.shared, where the story and a story accepted before it each
+// added a section at one spot, sent the story back. It now merges the file by
+// sections and lands the story, with main's section and then the story's on
+// main, and opens no thread.
+func testAcceptMergesBySectionsADesignDocumentOutsideTheSharedPaths(t *testing.T) {
+	root, wt := sectionStories(t)
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
+	if code != 0 {
+		t.Fatalf("the acceptance stopped on %s: %d %s", causesDoc, code, errOut)
+	}
+	if strings.Contains(errOut, "sent back") {
+		t.Errorf("the story was sent back:\n%s", errOut)
+	}
+	hasBothCauses(t, "main's "+causesDoc, gitIn(t, root, "show", "main:"+causesDoc))
+	if gitIn(t, root, "branch", "--list", "story/S-0001") != "" {
+		t.Error("an accepted story's branch is removed")
+	}
+	if _, err := os.Stat(wt); err == nil {
+		t.Error("an accepted story's worktree is removed")
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all, err := threads.For(repo, "S-0001"); err != nil || len(all) != 0 {
+		t.Errorf("an acceptance that lands opens no thread: %v %+v", err, all)
+	}
+}
+
 // conflictedStoryInReview makes a project with story S-0001 in review whose
 // branch commits design/x.md with an unresolved conflict, its markers at
 // lines 4 and 8, and returns the main checkout, the story's worktree, and

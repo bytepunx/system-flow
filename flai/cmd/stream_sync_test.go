@@ -110,6 +110,8 @@ func TestAsTester(t *testing.T) {
 		testSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle,
 		testSyncMergesAnIssueBothSidesBumped,
 		testSyncTrialMergeLeavesOutIssueFiles,
+		testSyncMergesBySectionsADesignDocumentOutsideTheSharedPaths,
+		testAcceptMergesBySectionsADesignDocumentOutsideTheSharedPaths,
 		testSyncMergesTwoStoriesChangelogLinesByUnion,
 		testSyncTrialMergeReadsMergeUnionFromTheMainCheckout,
 		testSyncPutsTheBranchsChangelogLinesBackUnderUnreleased,
@@ -1331,6 +1333,104 @@ func testSyncTrialMergeLeavesOutIssueFiles(t *testing.T) {
 	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001") || len(convs) != 0 {
 		t.Errorf("sync output:\n%s\nconversations: %d", out, len(convs))
 	}
+}
+
+// causesDoc is a design document outside claims.shared, shaped as
+// design/system/server-performance.md was when I-0315 met it: a pass's
+// Stories table, after which each story added its own cause section at the
+// same spot, before the document's last section.
+const causesDoc = "design/system/server-performance.md"
+
+// causesText is causesDoc updated on updated, with the cause sections added
+// after the pass's Stories table.
+func causesText(updated string, causes ...string) string {
+	text := "---\ntitle: Server-side response times\nupdated: " + updated + "\nstatus: active\n---\n\n" +
+		"# Server-side response times\n\nHow long a request takes.\n\n" +
+		"## A second pass at 596 stories (S-0596)\n\nWhat the pass measured.\n\n" +
+		"### Stories\n\n| Cause | Story |\n|---|---|\n| 8 | S-0598 |\n| 9 | S-0599 |\n\n"
+	for _, c := range causes {
+		text += c
+	}
+	return text + "## Stories\n\nThe stories of the first pass.\n"
+}
+
+// mainsCause and storysCause are the sections main and the story's branch
+// each add at the same spot of causesDoc.
+const (
+	mainsCause  = "### Cause 9 fixed: the forecasts written in one pass (S-0599)\n\nMain's fix.\n\n"
+	storysCause = "### Cause 8 fixed: a checked write runs only the rules it can affect (S-0598)\n\nThe story's fix.\n\n"
+)
+
+// sectionStories makes S-0001 in progress, whose branch adds storysCause to
+// causesDoc, and commits mainsCause at the same spot on main, as the
+// acceptance of another story would (I-0315). The project's manifest shares
+// no path, so causesDoc is outside claims.shared. It fails t unless git's own
+// merge of the branch onto main conflicts in causesDoc, so that a rebase
+// without the section merge would stop. It returns the main checkout and
+// S-0001's worktree.
+func sectionStories(t *testing.T) (root, wt string) {
+	t.Helper()
+	root = syncProject(t)
+	_ = os.MkdirAll(filepath.Join(root, "design", "system"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, filepath.FromSlash(causesDoc)), []byte(causesText("2026-11-01")), 0o644)
+	gitIn(t, root, "add", causesDoc)
+	gitIn(t, root, "commit", "-q", "-m", "docs: the server's response times")
+	wt = openSyncStory(t, root, 1, causesDoc)
+	commitIn(t, wt, causesDoc, causesText("2026-11-09", storysCause))
+	_ = os.WriteFile(filepath.Join(root, filepath.FromSlash(causesDoc)), []byte(causesText("2026-11-08", mainsCause)), 0o644)
+	gitIn(t, root, "add", causesDoc)
+	gitIn(t, root, "commit", "-q", "-m", "docs: cause 9 fixed")
+	raw, err := storygit.TrialMerge(execx.System{}, root, "main", "story/S-0001")
+	if err != nil || !slices.Contains(raw, causesDoc) {
+		t.Fatalf("git's merge onto main does not conflict in %s: %v %q", causesDoc, err, raw)
+	}
+	return root, wt
+}
+
+// hasBothCauses fails t unless text is causesDoc with main's cause section
+// and then the story's, each once, after the Stories table and before the
+// last section, with the later updated date and no conflict marker.
+func hasBothCauses(t *testing.T, where, text string) {
+	t.Helper()
+	if want := causesText("2026-11-09", mainsCause, storysCause); text != strings.TrimSuffix(want, "\n") && text != want {
+		t.Errorf("%s:\n%s\nwant:\n%s", where, text, want)
+	}
+	if strings.Count(text, "### Cause 9 fixed") != 1 || strings.Count(text, "### Cause 8 fixed") != 1 || strings.Contains(text, strings.Repeat("<", 7)) {
+		t.Errorf("%s does not hold each cause once, unconflicted:\n%s", where, text)
+	}
+}
+
+// I-0315, ADR-0276: the stories that each added a section at one spot of a
+// design document outside claims.shared stopped at every sync. The sync now
+// merges the file by sections, keeping main's section and then the story's
+// and the later updated date, and finishes the rebase with no one's help.
+func testSyncMergesBySectionsADesignDocumentOutsideTheSharedPaths(t *testing.T) {
+	_, wt := sectionStories(t)
+
+	js, errOut, code := runIn(t, wt, "--json", "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("the sync stopped on %s: %d %s %s", causesDoc, code, js, errOut)
+	}
+	var res struct {
+		OK     bool     `json:"ok"`
+		Merged []string `json:"merged"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	if !res.OK || !slices.Equal(res.Merged, []string{causesDoc}) {
+		t.Errorf("sync --json: ok %v, merged %q; want %s merged", res.OK, res.Merged, causesDoc)
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Fatal("the rebase is left in progress")
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	if got := gitIn(t, wt, "log", "--format=%s", "main..HEAD"); got != "change "+causesDoc {
+		t.Errorf("story/S-0001's commits on main:\n%s", got)
+	}
+	hasBothCauses(t, "the branch's "+causesDoc, gitIn(t, wt, "show", "HEAD:"+causesDoc))
 }
 
 // sharedFriction is the issue file bumpStories records on main.
