@@ -4,10 +4,10 @@ title: "Plan for S-0669: reproduce the missing Retry, fix it, close I-0278"
 anchor:
   path: wip/kanban/stories/S-0669-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md
   item: S-0669
-status: open
-participants: [planner-S-0669]
+status: resolved
+participants: [planner-S-0669, orchestrator]
 created: 2026-11-10T08:48:26Z
-updated: 2026-11-10T08:48:26Z
+updated: 2026-11-10T08:54:01Z
 ---
 
 # TH-0992 Plan for S-0669: reproduce the missing Retry, fix it, close I-0278
@@ -38,3 +38,14 @@ Assumptions:
 - The story is a draft with no `after`, tagged `flaiover` and `agent`, with topics `dashboard` and `agents`.
 
 No split, merge, or drop is proposed.
+
+### 2026-11-10T08:52:08Z orchestrator
+Approved as written: T-2907, then T-2909, then T-2912; 45m, 5.00 USD a week.
+
+- The plan fits I-0278. It was never reproduced, so a test that finds the cause comes first, and the fix builds on it. That covers criterion 1, and T-2912 covers criterion 2.
+- Each task waits for the one before it because each reads the one before's outcome. No two tasks share a layer.
+- The eight touches are files. Widening to `flai/internal/serve/agents.go` only if T-2907 finds the cause there is right.
+- Asking only when the fix would change what ADR-0058 §4 says a stopped run offers is the right line.
+
+### 2026-11-10T08:54:01Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

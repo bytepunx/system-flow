@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1158.6595
-accrued_seconds: 146634
-tasks_completed: 201
-last_run: 2026-11-10T08:48:43Z
+accrued_cost: 1164.1047
+accrued_seconds: 146822
+tasks_completed: 209
+last_run: 2026-11-10T08:52:14Z
 ---
 
 # Planner activity
@@ -1605,3 +1605,67 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0669, T-2907, T-2909, T-2912
 - Seconds: 33
 - Cost: 1.9329 USD, estimated
+
+### 2026-11-10T08:48:56Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0670, T-2908, T-2911, T-2914, T-2916
+- Seconds: 13
+- Cost: 0.8205 USD, estimated
+
+### 2026-11-10T08:49:08Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0672, T-2917, T-2919, T-2922, T-2924
+- Seconds: 12
+- Cost: 0.3850 USD, estimated
+
+### 2026-11-10T08:49:21Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0671, T-2918, T-2920, T-2921, T-2923, T-2925
+- Seconds: 13
+- Cost: 0.3451 USD, estimated
+
+### 2026-11-10T08:49:57Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0667, T-2926, T-2927, T-2929
+- Seconds: 13
+- Cost: 0.4540 USD, estimated
+
+### 2026-11-10T08:50:24Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0673, T-2928, T-2930, T-2931, T-2933
+- Seconds: 27
+- Cost: 0.7572 USD, estimated
+
+### 2026-11-10T08:50:46Z
+
+- Summary: run ended
+- Trigger: asked
+- Items: S-0687, T-2932, T-2934, T-2935, T-2937, T-2938
+- Seconds: 22
+- Cost: 0.5139 USD, estimated
+
+### 2026-11-10T08:51:53Z
+
+- Summary: S-0674 is planned: I created tasks T-2936, T-2939, T-2940 and T-2941 in three layers, wrote its 19 touches, a 2h30m forecast and a 600 USD/week cost of delay, and opened plan thread TH-1001; there were no earlier tasks to revisit, and the operator moved the story to ready while I was planning.
+- Trigger: asked
+- Items: S-0674, T-2936, T-2939, T-2940, T-2941
+- Seconds: 67
+- Cost: 1.9583 USD, estimated
+
+### 2026-11-10T08:52:14Z
+
+- Summary: I re-planned S-0684 and the plan stands: the touches edit logged as by system-flow only added `flai/internal/mcpserver/task.go`, which the plan and T-2904 already cover. I created no tasks. I revisited T-2904, T-2905, T-2906, T-2910 and T-2915 and left them unchanged, rewrote only the story's `### Planning` notes to record the edit, the new figures and the replanned delivery, and replied on TH-0996.
+- Trigger: edited touches by system-flow
+- Items: S-0684, T-2904
+- Seconds: 21
+- Cost: 0.2112 USD, estimated

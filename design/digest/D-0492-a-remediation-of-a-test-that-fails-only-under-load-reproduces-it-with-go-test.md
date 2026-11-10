@@ -2,9 +2,9 @@
 id: D-0492
 title: "A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags"
 kind: decision
-sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314]
+sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309]
 topics: [testing, go, flai]
-paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release]
+paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release, flai/internal/channel, flai/cmd]
 date: 2026-11-07
 status: active
 absorbed_by: ""
@@ -28,4 +28,6 @@ S-0653, which remediated I-0314, made it a fifth time, citing this entry, to sho
 
 A later story that fixes a flaky test can do the same, and record the exception in its Decisions. A hand `go test` of `flai/internal/serve` must pass `-skip '^TestGateway'`, or it runs the paid gateway checks (D-0451). Reproduce before lengthening a wait (D-0413).
 
-Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314.
+S-0651, which remediated I-0309 (D-0557), confined the load further, to a single CPU: "each test binary, built with -race, ran pinned to one CPU with GOMAXPROCS=1 beside 40 busy loops on that CPU, so other agents on the host were not loaded. main's versions came from git archive main into a scratch copy." Main's channel test then failed 5 of 10 runs and its MCP test 1 of 5. A sub-agent cannot run `git archive`, which flai guard refuses it, and copies the worktree instead (D-0527).
+
+Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309.

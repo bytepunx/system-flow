@@ -3,12 +3,18 @@ id: T-2896
 type: task
 nature: improvement
 title: A start request marked probe gets a prompt that reads and reports and works no story
-status: backlog
+status: in-progress
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:45:58Z
-updated: 2026-11-10T08:45:58Z
-transitions: []
+updated: 2026-11-10T08:51:05Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:51:04Z
+    by: agent-S-0682
+  - to: in-progress
+    at: 2026-11-10T08:51:05Z
+    by: agent-S-0682
 stream: S-0682
 tags: [harness, containers]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]

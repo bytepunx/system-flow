@@ -3,12 +3,18 @@ id: T-2901
 type: task
 nature: remediation
 title: The guard counts the read forms of flai serve among the reads
-status: backlog
+status: in-progress
 parent: S-0680
 owner: alex
 created: 2026-11-10T08:46:44Z
-updated: 2026-11-10T08:46:44Z
-transitions: []
+updated: 2026-11-10T08:52:29Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:52:28Z
+    by: agent-S-0680
+  - to: in-progress
+    at: 2026-11-10T08:52:29Z
+    by: agent-S-0680
 stream: S-0680
 tags: [flai, guard]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go]

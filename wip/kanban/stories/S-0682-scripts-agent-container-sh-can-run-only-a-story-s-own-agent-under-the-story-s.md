@@ -3,11 +3,17 @@ id: S-0682
 type: story
 nature: improvement
 title: scripts/agent-container.sh can run only a story's own agent, under the story's own name, so a trial run of the image acts on the live story
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:06Z
-updated: 2026-11-10T08:49:28Z
-transitions: []
+updated: 2026-11-10T08:49:35Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:49:30Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T08:49:35Z
+    by: agent-S-0682
 tags: [containers, pilot, scripts]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]
 agent:
@@ -21,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 24
-          cache_read: 107258
-          cache_write: 551
-          cost: 0.0292
+          input: 4
+          output: 36
+          cache_read: 230748
+          cache_write: 4306
+          cost: 0.0637
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

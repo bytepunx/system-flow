@@ -2,7 +2,7 @@
 id: D-0550
 title: A remediation whose cause needs host load or the host's own network to appear meets a criterion's 'test that reproduces it' with a fake that stands in for the host or with before-and-after timings, and says so against the criterion
 kind: decision
-sources: [S-0640, I-0319, S-0645, I-0321, S-0655, I-0330, S-0650, I-0325, S-0649, I-0324]
+sources: [S-0640, I-0319, S-0645, I-0321, S-0655, I-0330, S-0650, I-0325, S-0649, I-0324, S-0652, I-0329, I-0331]
 topics: [testing, go, flaiover]
 paths: [design/conventions/code-quality.md, flaiover/src/lib/components, flai/cmd/dashboard_porthold_test.go, flaiover/src/routes/design/design.svelte.test.ts, flai/cmd/components_test.go, flai/internal/channel/channel_test.go]
 date: 2026-11-10
@@ -34,4 +34,6 @@ Where the race itself, not the load, can be widened by a seam, a deterministic t
 
 So a later remediation whose cause depends on the host's load or network first looks for a seam that widens the race without load; else it gives a fake that behaves as the host did, through a seam such as S-0645's `dialFunc`, or measured timings before and after. It states which against the criterion, rather than leave the criterion unmet. Where a load can be applied by hand, D-0492 says how to reproduce a Go test's failure under it.
 
-Sources: S-0640 (`wip/archive/agents/S-0640.md`, Decisions); I-0319; S-0645 (`wip/archive/agents/S-0645.md`, Decisions); I-0321; S-0655 and I-0330; S-0650 and I-0325; S-0649 and I-0324.
+S-0652 found seams of the same kind for I-0329 and I-0331: a 1 s start delay for the fake vite, and a 500 ms listen delay, each failing the old test on every run (D-0551), and `FLAI_SLOW_REQUEST=1ns` to force the slow-request log that load had caused (D-0558).
+
+Sources: S-0640 (`wip/archive/agents/S-0640.md`, Decisions); I-0319; S-0645 (`wip/archive/agents/S-0645.md`, Decisions); I-0321; S-0655 and I-0330; S-0650 and I-0325; S-0649 and I-0324; S-0652, I-0329, and I-0331.

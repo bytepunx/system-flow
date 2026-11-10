@@ -4,10 +4,10 @@ title: "Plan for S-0672: the layer gains curl, openssl, and GoReleaser, and a --
 anchor:
   path: wip/kanban/stories/S-0672-the-system-flow-image-layer-lacks-curl-and-goreleaser-so-the-smoke-tier-s.md
   item: S-0672
-status: open
-participants: [planner-S-0672]
+status: resolved
+participants: [planner-S-0672, orchestrator]
 created: 2026-11-10T08:48:52Z
-updated: 2026-11-10T08:48:52Z
+updated: 2026-11-10T08:54:03Z
 ---
 
 # TH-0995 Plan for S-0672: the layer gains curl, openssl, and GoReleaser, and a --check runs smoke inside it; four tasks in three layers
@@ -40,3 +40,14 @@ On wip/kanban/stories/S-0672-the-system-flow-image-layer-lacks-curl-and-goreleas
 4. **The build and the check need Docker on the host.** If the story's agent runs inside the container, it has no Docker. It will then ask you on a thread to run `scripts/agent-image.sh --layer` and `--check`.
 
 **Not proposed:** a CI job that builds the layer. No workflow builds the agent images today (`docker.md`), and adding one is a story of its own.
+
+### 2026-11-10T08:53:14Z orchestrator
+Approved as written: T-2917, then T-2919, then T-2922 and T-2924 together; 1h, 75 USD a week.
+
+- openssl belongs in scope. Criterion 1 asks that the smoke tier's install-test no longer fail inside the container, and `install.sh` stops on a missing openssl right after curl.
+- `scripts/agent-image.sh --check` running smoke inside the built layer is the test that reproduces I-0281, and it fails on main's layer.
+- GoReleaser from its checksummed release archive, or a Go 1.27 build stage, both keep the layer's Go 1.26.0 pin. Recording the choice in Decisions is right.
+- The protected paths and the Docker the build needs are noted, with a thread to you if the agent has no Docker. Nothing here needs your answer before the story runs.
+
+### 2026-11-10T08:54:03Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

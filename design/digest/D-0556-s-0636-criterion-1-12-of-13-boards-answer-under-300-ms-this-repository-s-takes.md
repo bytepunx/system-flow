@@ -2,9 +2,9 @@
 id: D-0556
 title: "S-0636 criterion 1: 12 of 13 boards answer under 300 ms; this repository's takes 169 to 404 ms, 5 of 10 calls at 300 ms or more: Recommended: take the agent's option"
 kind: answer
-sources: [TH-0961]
+sources: [TH-0961, S-0636, I-0333]
 topics: [server-side, back-end, flai, cli, go, code, all]
-paths: [design/system/server-performance.md, design/issues/summary.md, design/issues/I-0326-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md]
+paths: [design/system/server-performance.md, design/issues/summary.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md]
 date: 2026-11-10
 status: active
 absorbed_by: ""
@@ -38,4 +38,6 @@ This is a change to the story's scope, so it is the operator's to confirm. Under
 Source: design/digest/D-0535-s-0604-criterion-4-12-of-13-boards-answer-under-300-ms-this-repository-s-still.md
 ```
 
-Source: TH-0961.
+Applied, from S-0636's Decisions (`wip/archive/agents/S-0636.md`): "TH-0961 (2026-11-10): the operator confirmed the orchestrator's recommendation, reworded criterion 1 to "each answer moving towards 300 ms, and server-performance.md records the before and after", and ticked it. The diff meets it: this repository's p50 fell from 405 to 297 ms, and the other 12 from 66 to 9 ms. The 300 ms target is left to I-0333." The `I-0326` the answer names was a reused ID, recorded again as I-0333 (D-0560). TH-0961 asked what D-0535 had answered.
+
+Source: TH-0961, S-0636, I-0333.

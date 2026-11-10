@@ -8,7 +8,7 @@ paths: [design/system/server-performance.md, flai/internal/release/history.go, f
 date: 2026-11-09
 status: active
 absorbed_by: ""
-asked_again: []
+asked_again: [TH-0961]
 cited: [S-0636, T-2804, TH-0954, TH-0961]
 ---
 
@@ -30,4 +30,6 @@ Applied: S-0604's criterion 4 now reads "the other 12 answer under 300 ms, this 
 
 So a performance story whose absolute target is missed only because of causes other stories own has its criterion reworded to what its own cause owns, and the absolute target moves to a draft story whose `after` names the stories that own the rest, where it is measured again. D-0532 is the same answer for S-0603, where the target went to an issue because no story would measure it; D-0465 and D-0466 are the same move for a run that cannot happen before acceptance.
 
-Sources: TH-0912, S-0604, S-0636.
+TH-0961 asked it again for S-0636 itself, whose criterion 1 still missed 300 ms for this repository's board (169 to 404 ms) because of the merge queue's git reads, which no story owned. The orchestrator recommended the same move, citing this entry, and the operator confirmed it: the criterion was reworded to "each answer moving towards 300 ms, and server-performance.md records the before and after" and ticked, and the target went to I-0333 (D-0556).
+
+Sources: TH-0912, S-0604, S-0636, TH-0961.

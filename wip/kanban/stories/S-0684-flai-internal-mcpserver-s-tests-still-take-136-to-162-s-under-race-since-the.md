@@ -3,11 +3,17 @@ id: S-0684
 type: story
 nature: improvement
 title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T08:50:00Z
-transitions: []
+updated: 2026-11-10T08:51:59Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:50:05Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-10T08:50:12Z
+    by: agent-S-0684
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/session_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/process_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md, flai/internal/mcpserver/task.go]
@@ -16,6 +22,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 83
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 86
+          output: 7327
+          cache_read: 5762019
+          cache_write: 142702
+          cost: 1.9363
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 43s
@@ -66,7 +87,7 @@ Touches, all files, none a folder:
 | Touch | Source |
 |-------|--------|
 | `flai/internal/mcpserver/server.go`, `shared.go`, `issues.go` | Declared by the issue: its environment reads at `server.go:203-209`, `shared.go:180`, and `issues.go:196` |
-| `flai/internal/mcpserver/task.go` | Layout: it builds the environment of the child flai that `task_done` runs, which may need the session from the server's fields |
+| `flai/internal/mcpserver/task.go` | Layout: it builds the environment of the child flai that `task_done` runs, which may need the session from the server's fields. Added in the 08:48:56Z touches edit, logged as by system-flow. T-2904 touches it |
 | `flai/cmd/mcp.go`, `flai/cmd/mcp_http.go` | Co-change (`flai touches suggest`: 16 and 18 of 99 commits), and the layout: they build `mcpserver.Options` |
 | `flai/internal/mcpserver/permission.go`, `subproject.go`, `versions.go` | Layout: they hold `permissionPoll`, `flaiExecutable`, and the `FLAI_RELEASES_API` read that the serial tests swap |
 | `flai/internal/mcpserver/server_test.go` | Co-change (45 of 99) and the layout: it holds `TestMain`, `together`, and `TestAsTheStorysAgent` |
@@ -75,10 +96,10 @@ Touches, all files, none a folder:
 | `flai/cmd/orchestrate_permissions_test.go`, `flai/cmd/role_test.go`, `flai/internal/serve/restart_test.go` | Layout: they set the session variables before `mcpserver.New`, so they must pass `Options` once the server stops reading the environment |
 | The `design/issues/I-0234-…` file and `design/issues/summary.md` | The goal: `flai issue close` writes both |
 
-`folder.go` (63 percent co-change) is left out: it passes its `opt` to `newServer` already and reads no session variable. `docs/users/flai.md` and `design/system/flai-cli.md` are left out too, since what `flai mcp` does does not change.
+`folder.go` is left out, though `flai touches suggest` ranks it first: 63 percent co-change on the first plan, and 76 of the 1044 commits on the second. It passes its `opt` to `newServer` already and reads no session variable. `docs/users/flai.md` and `design/system/flai-cli.md` are left out too, since what `flai mcp` does does not change.
 
-Forecast: `flai forecast` gave 56m from size 33. It is raised to 2h. The work converts about 90 tests across 16 files, and each `-race` run of the package takes 2 to 3 minutes: at least two runs in each of T-2906, T-2910, and T-2915, plus the close-out's integration tier. The delivery moves by the same hour, to 15:00Z.
+Forecast: `flai forecast` gave 56m from size 33 on the first plan and 58m from size 34 on the second. It is raised to 2h. The work converts about 90 tests across 16 files, and each `-race` run of the package takes 2 to 3 minutes: at least two runs in each of T-2906, T-2910, and T-2915, plus the close-out's integration tier. flai's replan after S-0636's acceptance set the delivery and basis from the 2h. The story started at 08:50Z, so it is due about 10:50Z.
 
-Cost of delay: the value of 1.79 USD a week is `flai cod`'s, from the operator's input of 43 s lost per cycle at 150 USD an hour. It stands as computed. The input is the operator's, set by flai from I-0234's one occurrence of 1m, and this plan changes no input.
+Cost of delay: the value of 1.79 USD a week is `flai cod`'s, from the operator's input of 43 s lost per cycle at 150 USD an hour. It stands as computed on both plans. The input is the operator's, set by flai from I-0234's one occurrence of 1m, and this plan changes no input.
 
 `after`: none. The story reads no other story's output.

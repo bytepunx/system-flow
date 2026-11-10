@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -46,4 +46,12 @@ T-2643 runs in its own task worktree, `task/T-2643`, and its files are copied ba
 
 So a task that changes `components` beside one that changes `check` runs after it is done or in its own task worktree, as for `guard`.
 
-Sources: S-0553, S-0571, S-0602, S-0601.
+S-0654 met it inside one package, `flai/internal/itemedit`, whose two tasks shared no path. Its agent ran both in layer 1 at once, the second in a task worktree (`wip/archive/agents/S-0654.md`):
+
+```text
+Layer 1 runs as two task sub-agents at once. Both build and test the package `itemedit`, so T-2847 works in its own worktree, `.flai-cache/worktrees/T-2847` on `task/T-2847`, and I copy its two files back into the story's worktree rather than merge.
+```
+
+So two tasks in one package that share no file may still share a layer, one in a task worktree, copied back rather than merged.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654.

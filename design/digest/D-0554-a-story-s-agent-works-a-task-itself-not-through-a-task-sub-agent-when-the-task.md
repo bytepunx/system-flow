@@ -2,7 +2,7 @@
 id: D-0554
 title: A story's agent works a task itself, not through a task sub-agent, when the task is a few lines in a file it has already read, since a hand-off would cost more reading than the edit
 kind: decision
-sources: [S-0649, S-0650, S-0653]
+sources: [S-0649, S-0650, S-0653, S-0651, S-0652]
 topics: [delegation, code, testing]
 paths: [design/conventions/delegation.md]
 date: 2026-11-10
@@ -24,4 +24,6 @@ S-0653: T-2849 and T-2851 were worked by the story's agent, not task sub-agents:
 
 Each was a load-dependent test fix whose cause the story's agent had already read while confirming the planner's plan. So a story's agent whose task is a small edit to files already in its context may work it itself, and records the exception in its Decisions as these did. D-0523 is the related case of a fresh sub-agent in place of a fork, and D-0480 the case of work outside the worktree that sub-agents cannot reach.
 
-Sources: S-0649, S-0650, S-0653 (`wip/archive/agents/<story>.md`, Decisions).
+S-0651 and S-0652, two more load remediations, did the same: "Worked T-2839 and T-2842 myself rather than through task sub-agents: each is a few lines in one test file, quicker here than a hand-off" (S-0651), and "Both fixes are a few lines each, so I worked them myself, not through task sub-agents" (S-0652).
+
+Sources: S-0649, S-0650, S-0653, S-0651, S-0652 (`wip/archive/agents/<story>.md`, Decisions).

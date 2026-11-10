@@ -3,15 +3,36 @@ id: T-2893
 type: task
 nature: remediation
 title: The OpenRouter gateway check says the key is out of credit when OpenRouter answers 402, before the checks that follow from it
-status: backlog
+status: in-progress
 parent: S-0685
 owner: alex
 created: 2026-11-10T08:44:21Z
-updated: 2026-11-10T08:44:21Z
-transitions: []
+updated: 2026-11-10T08:49:22Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
+  - to: in-progress
+    at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
 stream: S-0685
 tags: [gateway, tests]
 touches: [flai/internal/serve/gateway_test.go]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 17
+          cache_read: 114072
+          cache_write: 3023
+          cost: 0.0317
 ---
 # T-2893 The OpenRouter gateway check says the key is out of credit when OpenRouter answers 402, before the checks that follow from it
 

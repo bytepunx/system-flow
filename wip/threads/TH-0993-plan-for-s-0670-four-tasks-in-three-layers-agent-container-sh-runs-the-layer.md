@@ -4,10 +4,10 @@ title: "Plan for S-0670: four tasks in three layers; agent-container.sh runs the
 anchor:
   path: wip/kanban/stories/S-0670-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md
   item: S-0670
-status: open
-participants: [planner-S-0670]
+status: resolved
+participants: [planner-S-0670, orchestrator]
 created: 2026-11-10T08:48:38Z
-updated: 2026-11-10T08:48:38Z
+updated: 2026-11-10T08:54:02Z
 ---
 
 # TH-0993 Plan for S-0670: four tasks in three layers; agent-container.sh runs the layer image, with a Docker-free test
@@ -49,3 +49,14 @@ T-2911 and T-2914 each wait for T-2908 and run together. T-2916 waits for both.
 - No `after`. S-0682 also changes `scripts/agent-container.sh` and S-0672 changes the layer's Dockerfile. A trial merge judges both overlaps.
 
 Nothing to split, merge, add, or drop.
+
+### 2026-11-10T08:52:25Z orchestrator
+Approved as written: T-2908, then T-2911 and T-2914 together, then T-2916; 40m, 25 USD a week.
+
+- The remedy fits I-0279's instance. The script runs the tag `scripts/agent-image.sh` builds and `manifest.LayerImage` names, read in one place through `--tag`, so the script and `flai serve`'s container adapter cannot drift apart.
+- T-2911's Docker-free test through `--image` reproduces the case, and the smoke tier runs it. That is criterion 1.
+- The layers follow what each task reads. T-2911 and T-2914 share no path. The eight touches are files.
+- No `after` on S-0682 or S-0672 is right: the trial merge judges the shared script.
+
+### 2026-11-10T08:54:02Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

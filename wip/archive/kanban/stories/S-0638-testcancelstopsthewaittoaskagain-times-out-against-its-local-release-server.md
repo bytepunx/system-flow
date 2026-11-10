@@ -3,10 +3,10 @@ id: S-0638
 type: story
 nature: remediation
 title: TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier
-status: review
+status: done
 owner: alex
 created: 2026-11-09T09:08:54Z
-updated: 2026-11-10T08:47:50Z
+updated: 2026-11-10T08:54:20Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:00Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T08:47:50Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T08:54:20Z
+    by: alex
 blocked:
   - from: 2026-11-09T23:17:04Z
     until: 2026-11-09T23:17:45Z

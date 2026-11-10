@@ -3,11 +3,17 @@ id: S-0680
 type: story
 nature: improvement
 title: flai guard refuses the orchestrator flai serve status, a read, because its reads do not list serve status
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:57Z
-updated: 2026-11-10T08:50:13Z
-transitions: []
+updated: 2026-11-10T08:50:37Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:50:17Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-10T08:50:37Z
+    by: agent-S-0680
 tags: [flai, guard]
 topics: [guard, orchestration]
 touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md]

@@ -4,10 +4,10 @@ title: "Plan for S-0671: close-out.sh takes --fresh and --all, and the serve job
 anchor:
   path: wip/kanban/stories/S-0671-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md
   item: S-0671
-status: open
-participants: [planner-S-0671]
+status: resolved
+participants: [planner-S-0671, orchestrator]
 created: 2026-11-10T08:48:50Z
-updated: 2026-11-10T08:48:50Z
+updated: 2026-11-10T08:54:02Z
 ---
 
 # TH-0994 Plan for S-0671: close-out.sh takes --fresh and --all, and the serve job passes them on
@@ -51,3 +51,14 @@ The remedy:
 - The thread `asked` that the start prompt named does not exist, and S-0671 had no earlier plan, no tasks, and no thread. So this run is a first plan.
 
 No split, merge, or drop is proposed.
+
+### 2026-11-10T08:52:55Z orchestrator
+Approved as written: T-2918 and T-2920 together, then T-2921 and T-2923, then T-2925; 45m, 12.50 USD a week.
+
+- The remedy covers both faces of I-0280: the script by hand, and the serve job that drops `fresh` and `all`. T-2920's test reproduces the job's face, which is criterion 1.
+- Passing variables, not flags, from the job is the right call. A worktree whose script predates the change ignores them instead of reading `--fresh` as the story.
+- Options before the story is right, since everything after it is `git commit`'s, `--all` included.
+- No ADR is needed for one script's interface and one job's environment. The layers share no path within a layer, and the twelve touches are files.
+
+### 2026-11-10T08:54:02Z orchestrator
+Resolved: Plan approved as written by the orchestrator under plan_backlog_stories.

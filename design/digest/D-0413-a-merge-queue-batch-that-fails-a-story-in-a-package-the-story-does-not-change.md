@@ -2,9 +2,9 @@
 id: D-0413
 title: A merge queue batch that fails a story in a package the story does not change is fixed inside the story, not re-enqueued unchanged, since the next loaded batch fails the same way
 kind: decision
-sources: [S-0507, TH-0723, TH-0724, I-0225, I-0226, S-0538, TH-0732, I-0203, S-0529, TH-0767, I-0221, S-0548]
+sources: [S-0507, TH-0723, TH-0724, I-0225, I-0226, S-0538, TH-0732, I-0203, S-0529, TH-0767, I-0221, S-0548, S-0652, I-0331]
 topics: [merge-queue, testing, go, code]
-paths: [scripts/integration.sh, flai/internal/mcpserver, flai/internal/serve/agents_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/verify_test.go]
+paths: [scripts/integration.sh, flai/internal/mcpserver, flai/internal/serve/agents_test.go, flai/internal/serve/forgemerge_test.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/serve/components_test.go]
 date: 2026-10-29
 status: active
 absorbed_by: ""
@@ -30,4 +30,6 @@ A later story sent back for a failure outside its own change should do the same:
 5. Record the underlying cost as an issue for a story of its own.
 6. Enqueue again only after that.
 
-Source: S-0507 (wip/archive/agents/S-0507.md, Decisions), TH-0723, TH-0724; S-0538 (wip/archive/agents/S-0538.md, Decisions), TH-0732; S-0529 (wip/archive/agents/S-0529.md, Decisions), TH-0767; S-0548 (wip/archive/agents/S-0548.md, Decisions), I-0225, I-0226.
+A close-out stopped by a test outside the story's change is handled the same way. S-0652's first close-out stopped at integration on `TestADevServerThatExitsOnItsOwnIsForgottenWithItsError`, outside its issue but of the same cause. From its Decisions (`wip/archive/agents/S-0652.md`): "I recorded it as I-0331 and fixed it here as T-2859, a third layer after the first two, rather than running the close-out again until it passed (code-quality: no retries)." (D-0551)
+
+Source: S-0507 (wip/archive/agents/S-0507.md, Decisions), TH-0723, TH-0724; S-0538 (wip/archive/agents/S-0538.md, Decisions), TH-0732; S-0529 (wip/archive/agents/S-0529.md, Decisions), TH-0767; S-0548 (wip/archive/agents/S-0548.md, Decisions), I-0225, I-0226; S-0652 (wip/archive/agents/S-0652.md, Decisions), I-0331.

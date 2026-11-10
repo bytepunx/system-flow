@@ -3,11 +3,17 @@ id: S-0687
 type: story
 nature: remediation
 title: A strategic agent's container runs flai with no host configuration, so the orchestrator's flai accept and flai verify inside it see no host actions and lack the test tiers' tools
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:14Z
-updated: 2026-11-10T08:49:49Z
-transitions: []
+updated: 2026-11-10T08:50:09Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:49:53Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-10T08:50:09Z
+    by: agent-S-0687
 tags: [flai]
 topics: [orchestration, review]
 touches: [design/adrs/README.md, design/adrs/0277-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md]
@@ -48,6 +54,8 @@ This story remediates [I-0256](../../../design/issues/I-0256-a-strategic-agent-s
 - T-2932 An ADR records that the orchestrator accepts and verifies through MCP calls that run on the host, and that its shell's accept and verify fail closed in a container
 - T-2934 The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
 - T-2935 The orchestrator's shell flai accept and tier-running flai verify refuse inside a role's container, naming the MCP tools, with a test that reproduces I-0256
+- T-2937 The orchestrator's role text and the strategic-agents convention, in every copy, accept through the MCP tool accept and verify through the MCP tool verify
+- T-2938 The design and the user guide describe the orchestrator's acceptance through the host in a container, and I-0256 is closed
 
 ## Notes
 

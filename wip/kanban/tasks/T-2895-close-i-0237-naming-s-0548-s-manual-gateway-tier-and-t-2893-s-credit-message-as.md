@@ -3,16 +3,34 @@ id: T-2895
 type: task
 nature: remediation
 title: Close I-0237 naming S-0548's manual gateway tier and T-2893's credit message as what fixed it
-status: backlog
+status: ready
 parent: S-0685
 owner: alex
 created: 2026-11-10T08:44:36Z
-updated: 2026-11-10T08:44:36Z
-transitions: []
+updated: 2026-11-10T08:49:22Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:49:22Z
+    by: agent-S-0685
 stream: S-0685
 tags: [gateway, issues]
 touches: [design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md]
 after: [T-2893]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 5
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 16
+          cache_read: 114072
+          cache_write: 3023
+          cost: 0.0317
 ---
 # T-2895 Close I-0237 naming S-0548's manual gateway tier and T-2893's credit message as what fixed it
 

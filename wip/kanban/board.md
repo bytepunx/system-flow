@@ -6,7 +6,11 @@ wip_limits:
   ready: 10
   in-progress: 5
   review: 5
-order: []
+order:
+  - S-0674
+  - S-0673
+  - S-0672
+  - S-0671
 ---
 
 # Board

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2082.0022
-accrued_seconds: 1539781
-tasks_completed: 2704
-last_run: 2026-11-10T08:48:42Z
+accrued_cost: 2083.4180
+accrued_seconds: 1540066
+tasks_completed: 2714
+last_run: 2026-11-10T08:53:39Z
 ---
 
 # Orchestrator activity
@@ -18961,6 +18961,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 11
 - Cost: 0.0292 USD, estimated
 
+### 2026-11-10T08:49:04Z
+
+- Summary: Approved planner-S-0685's plan on TH-0989 as written (T-2893 then T-2894, T-2895; 45m, 27.50 USD/week) and resolved it under plan_backlog_stories; kept the optional tasks since the operator finalized S-0685 and agent-S-0685 started it
+- Items: S-0685, TH-0989, T-2893, T-2894, T-2895
+- Seconds: 22
+- Cost: 0.1269 USD, estimated
+
+### 2026-11-10T08:49:15Z
+
+- Summary: Approved planner-S-0682's probe plan on TH-0990 and resolved it; finalized draft S-0682 (flai promote --drafts: complete, rank 5; 45m forecast, value 7.50 USD/week) under finalize_drafts
+- Items: S-0682, TH-0990
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:49:35Z
+
+- Summary: Promoted S-0682 to ready (flai promote --candidates rank 1, throughput figure 45m; ready had 0 of 10) and applied flai order --by throughput; left S-0241 (rank 2) in backlog, since it is blocked and TH-0790 asking to make it a draft is still unanswered
+- Items: S-0682, S-0241
+- Seconds: 20
+- Cost: 0.0689 USD, estimated
+
+### 2026-11-10T08:49:56Z
+
+- Summary: All four reasons are settled.
+- Items: none
+- Seconds: 21
+- Cost: 0.2165 USD, estimated
+
+### 2026-11-10T08:52:08Z
+
+- Summary: Answered TH-0992, citing no source
+- Items: S-0669
+- Seconds: 120
+- Cost: 1.0035 USD, estimated
+
+### 2026-11-10T08:52:25Z
+
+- Summary: Answered TH-0993, citing no source
+- Items: S-0670
+- Seconds: 17
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:52:55Z
+
+- Summary: Answered TH-0994, citing no source
+- Items: S-0671
+- Seconds: 30
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:53:14Z
+
+- Summary: Answered TH-0995, citing no source
+- Items: S-0672
+- Seconds: 19
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:53:28Z
+
+- Summary: Answered TH-0996, citing no source
+- Items: S-0684
+- Seconds: 14
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:53:39Z
+
+- Summary: Answered TH-0997, citing no source
+- Items: S-0667
+- Seconds: 11
+- Cost: 0.0000 USD
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -19656,4 +19726,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-10T07:00:20Z
 
 - Call: `flai issue show I-0324`
+- Needs: none
+
+### 2026-11-10T08:51:24Z
+
+- Call: `flai serve status`
 - Needs: none
