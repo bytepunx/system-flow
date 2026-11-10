@@ -242,4 +242,49 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 		expect(onstopped).not.toHaveBeenCalled();
 	});
+
+	it('offers Retry for an agent the operator stopped, under the rule the card menu uses (I-0278)', async () => {
+		answer({ ok: true, body: { story: 'S-0004' } });
+		const stopped: Record<string, StoryActivity> = {
+			'S-0004': {
+				state: 'failed',
+				why: 'stopped by the operator at 2026-11-07T06:24:57Z',
+				run: {
+					...run('S-0004'),
+					ended: '2026-11-07T06:25:00Z',
+					exit: 143,
+					outcome: 'stopped',
+					stopped: '2026-11-07T06:24:57Z'
+				}
+			}
+		};
+		const retryButton = () =>
+			card('S-0004')?.querySelector<HTMLButtonElement>('[data-testid="agent-retry"]') ?? null;
+		const props = (canStop: boolean, writable: boolean) =>
+			({ streams: [stream('S-0004')], agents: stopped, canStop, writable }) as never;
+
+		// one who may not write, or with the agent action off, gets no Retry
+		c = mount(ActivityView, { target: document.body, props: props(true, false) });
+		await settle();
+		expect(card('S-0004')!.textContent).toContain('agent stopped by the operator (claude)');
+		expect(retryButton()).toBeNull();
+		unmount(c);
+		c = mount(ActivityView, { target: document.body, props: props(false, true) });
+		await settle();
+		expect(retryButton()).toBeNull();
+		unmount(c);
+
+		c = mount(ActivityView, { target: document.body, props: props(true, true) });
+		await settle();
+		expect(stopButton('S-0004')).toBeNull();
+		expect(retryButton()?.textContent).toBe('Retry');
+		retryButton()!.click();
+		await settle();
+		expect(posts()).toEqual([
+			[
+				'/api/items/S-0004/agent',
+				expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'restart' }) })
+			]
+		]);
+	});
 });
