@@ -555,6 +555,85 @@ func TestTheProjectsLayerImageRunsItsContainerAgents(t *testing.T) {
 	}
 }
 
+// argMounts are the -v mounts of args, docker run's arguments as the fake
+// docker recorded them, in their order.
+func argMounts(args string) []harness.ContainerMount {
+	fields := strings.Fields(args)
+	var ms []harness.ContainerMount
+	for i := 0; i+1 < len(fields); i++ {
+		if fields[i] != "-v" {
+			continue
+		}
+		parts := strings.SplitN(fields[i+1], ":", 3)
+		ms = append(ms, harness.ContainerMount{Host: parts[0], Path: parts[1], ReadOnly: len(parts) == 3 && parts[2] == "ro"})
+	}
+	return ms
+}
+
+// recordedContainer checks that run, the run of subject on the container
+// harness, records in agents.json the image it ran, the name of its
+// container, and the mounts docker run was given, as the fake docker
+// recorded them in <subject>.txt.
+func (lab *agentLab) recordedContainer(subject string, run *AgentRun, image string) {
+	t := lab.t
+	t.Helper()
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, subject+".txt"))
+	args, _, _ := strings.Cut(string(got), "\n")
+	mounts := argMounts(args)
+	if len(mounts) == 0 {
+		t.Fatalf("docker run was given no mounts: %s", args)
+	}
+	name := harness.ContainerName(subject, run.Session)
+	if run.Image != image || run.Container != name || !slices.Equal(run.Mounts, mounts) {
+		t.Errorf("the run records image %q, container %q, and mounts %+v; want %q, %q, and %+v", run.Image, run.Container, run.Mounts, image, name, mounts)
+	}
+	record, _ := os.ReadFile(lab.o.Dir.agents())
+	for _, want := range []string{`"image": "` + image + `"`, `"container": "` + name + `"`, `"mounts": [`} {
+		if !strings.Contains(string(record), want) {
+			t.Errorf("agents.json lacks %s:\n%s", want, record)
+		}
+	}
+}
+
+// I-0274: a run on the container harness records the image it ran, the
+// container's name, and its mounts in agents.json, for a story's agent and a
+// strategic agent's, so that a run that used the project's layer image can be
+// shown to have done so once --rm has removed its container. Before S-0665
+// the record named only docker. A run on another harness records none of them.
+func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
+	const layer = "flai-agent-t-claude-code:local"
+	ctx := context.Background()
+	lab, _ := roleContainerLab(t)
+	layerManifest(lab)
+
+	id := containerStory(lab, "Recorded in a container", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	run := lab.run(id)
+	if run.Error != "" || run.Harness != harness.Container {
+		t.Fatalf("run: %+v", run)
+	}
+	lab.recordedContainer(id, run, layer)
+
+	epic := lab.epic.ID
+	if !lab.planInContainer(epic) {
+		t.Fatalf("the planner was not started: %+v", lab.planRun(epic))
+	}
+	plan := lab.planRun(epic)
+	waitFor(t, "the planner's container ran", func() bool {
+		data, _ := os.ReadFile(filepath.Join(lab.outDir, conventions.RolePlan+".txt"))
+		return strings.Contains(string(data), "config: ")
+	})
+	lab.recordedContainer(conventions.RolePlan, plan, layer)
+
+	host := lab.ready("On the host")
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(host); return r != nil && !r.live() })
+	if r := lab.run(host); r.Harness == harness.Container || r.Image != "" || r.Container != "" || r.Mounts != nil {
+		t.Errorf("a run on another harness records a container: %+v", r)
+	}
+}
+
 // S-0510: containerImageHost decides the container's image: the project's layer
 // for an inner harness with a harness image, else the host's, else the
 // default, in a copy of the host's images; an inner harness with no harness

@@ -380,14 +380,18 @@ func loopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// stopContainer stops run's container by the name the adapter gave it, from
-// the story or the role (containerSubject) and the session the run recorded,
-// once its docker client has been signalled: a client killed outright leaves
-// its container running. It says what it did, for the stop's journal entry;
-// a container gone with its client is no failure, and any other failure is
+// stopContainer stops run's container by the name the adapter gave it, as
+// the run recorded it, else, on a run recorded before S-0665, from the story
+// or the role (containerSubject) and the session the run recorded, once its
+// docker client has been signalled: a client killed outright leaves its
+// container running. It says what it did, for the stop's journal entry; a
+// container gone with its client is no failure, and any other failure is
 // warned of.
 func (l *launcher) stopContainer(cfg AgentConfig, run *AgentRun) string {
-	name := harness.ContainerName(run.containerSubject(), run.Session)
+	name := run.Container
+	if name == "" {
+		name = harness.ContainerName(run.containerSubject(), run.Session)
+	}
 	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "stop", name)
 	switch {
 	case err == nil:

@@ -421,7 +421,7 @@ func (r *AgentRun) clone() *AgentRun {
 		exit := *r.Exit
 		c.Exit = &exit
 	}
-	c.Entries, c.Conversations, c.WaitsOn = slices.Clone(r.Entries), slices.Clone(r.Conversations), slices.Clone(r.WaitsOn)
+	c.Entries, c.Conversations, c.WaitsOn, c.Mounts = slices.Clone(r.Entries), slices.Clone(r.Conversations), slices.Clone(r.WaitsOn), slices.Clone(r.Mounts)
 	c.StoryAgent = r.StoryAgent.Clone()
 	return &c
 }

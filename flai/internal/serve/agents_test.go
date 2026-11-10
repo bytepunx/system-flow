@@ -4798,7 +4798,7 @@ func TestUpdateAgentKeepsACopy(t *testing.T) {
 // S-0603: clone copies every field of a run that points, so a field added
 // with a pointer, a slice, or a map must be cloned there too.
 func TestAgentRunCloneCoversEveryField(t *testing.T) {
-	cloned := map[string]bool{"Exit": true, "Entries": true, "Conversations": true, "WaitsOn": true, "StoryAgent": true}
+	cloned := map[string]bool{"Exit": true, "Entries": true, "Conversations": true, "WaitsOn": true, "StoryAgent": true, "Mounts": true}
 	typ := reflect.TypeOf(AgentRun{})
 	for i := range typ.NumField() {
 		f := typ.Field(i)

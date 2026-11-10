@@ -349,6 +349,15 @@ type AgentRun struct {
 	// image holds, as the harness prints it, such as 2.1.312 for Claude Code
 	// (S-0508); empty on every other run, and when it could not be read.
 	HarnessVersion string `json:"harness_version,omitempty"`
+	// Image, Container, and Mounts are what a container run's docker run
+	// was given: the image it ran, the project's layer image when the
+	// manifest names one, its container's name, and its mounts in argv
+	// order, so that the run can be shown afterwards to have used them once
+	// --rm has removed its container (I-0274, S-0665); all empty on every
+	// other run, and on runs before S-0665.
+	Image     string                   `json:"image,omitempty"`
+	Container string                   `json:"container,omitempty"`
+	Mounts    []harness.ContainerMount `json:"mounts,omitempty"`
 }
 
 // same says whether r and o are one run: the same start of the same

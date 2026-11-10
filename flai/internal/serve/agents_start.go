@@ -411,6 +411,11 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err != nil {
 		return harness.Start{}, nil, err
 	}
+	if c := spec.Container; c != nil {
+		// Recorded so that agents.json says what the run ran once --rm has
+		// removed its container (I-0274).
+		run.Image, run.Container, run.Mounts = c.Image, c.Name, c.Mounts
+	}
 	keys, err := providerKeys(req, spec, os.LookupEnv)
 	if err != nil {
 		return harness.Start{}, nil, err
