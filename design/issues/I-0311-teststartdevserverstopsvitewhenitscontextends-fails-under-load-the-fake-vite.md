@@ -7,7 +7,7 @@ count: 3
 cost: 17m
 first_reported: 2026-11-08T01:43:19Z
 last_reported: 2026-11-09T22:25:39Z
-updated: 2026-11-09T22:25:39Z
+updated: 2026-11-10T05:12:04Z
 ---
 
 # I-0311 TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid
@@ -30,3 +30,5 @@ Story: S-0622.
 S-0622's close-out job S-0622-20261109T221518Z stopped at integration after 9m45s at 5714cb4 with flai/internal/components/devserver_test.go:430 TestStartDevServerStopsViteWhenItsContextEnds: "the fake vite wrote no pid". S-0622 changes only flai/cmd/orchestrate_permissions_test.go and flai/internal/serve/orchestrate_confirm_test.go, nothing under flai/internal/components; the host was running several stories' agents, planners, and the orchestrator at the time. The close-out was asked for again.
 
 ## Remediation
+
+Story S-0647 remediates this issue, created from it at 2026-11-10T05:12:04Z.
