@@ -1,8 +1,8 @@
 ---
 id: ADR-0091
 title: "A recommendation ends no thread wait, and flai stats reports the waits the orchestrator ended and those the operator's confirmation of a recommendation ended"
-status: proposed
-date: 2026-10-06
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0081]
