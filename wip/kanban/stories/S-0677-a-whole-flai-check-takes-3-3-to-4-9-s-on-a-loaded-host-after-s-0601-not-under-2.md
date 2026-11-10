@@ -6,7 +6,7 @@ title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:54Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:57:45Z
 transitions: []
 tags: [flai, performance, check]
 topics: [cli, server-side]
@@ -16,7 +16,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2s
@@ -31,6 +30,9 @@ forecast:
   basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675 and S-0676."
   by: flai
   at: 2026-11-10T10:54:40Z
+finalized:
+  by: alex
+  at: 2026-11-10T10:57:45Z
 ---
 # S-0677 A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path
 
