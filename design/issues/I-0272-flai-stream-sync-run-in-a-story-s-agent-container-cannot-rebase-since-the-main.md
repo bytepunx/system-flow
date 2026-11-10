@@ -7,7 +7,7 @@ count: 2
 cost: 6m
 first_reported: 2026-11-07T04:41:52Z
 last_reported: 2026-11-07T06:52:30Z
-updated: 2026-11-07T06:52:30Z
+updated: 2026-11-10T08:49:00Z
 ---
 
 # I-0272 flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
@@ -26,3 +26,5 @@ Story: S-0556.
 S-0556's agent ran flai stream sync S-0556 through Bash in its container with main not ahead, so no rebase was needed. It exited 0 and said the branch is rebased, but warned "story branch checks failed after the rebase": the trial merge with story/S-0565, git merge-tree --write-tree, exited 128 with "unable to create temporary file: Read-only file system". So in the container the sync can report success with its trial merge against other open stories not run. The MCP tool task_done, whose sync runs on the host, reported that same trial merge clean each time in this session.
 
 ## Remediation
+
+Story S-0689 remediates this issue, created from it at 2026-11-10T08:49:00Z.
