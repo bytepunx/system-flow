@@ -3,10 +3,10 @@ id: S-0668
 type: story
 nature: remediation
 title: A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T10:50:47Z
+updated: 2026-11-10T10:55:19Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T10:50:47Z
     by: agent-S-0668
+  - to: done
+    at: 2026-11-10T10:55:19Z
+    by: alex
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md, flai/internal/mcpserver/stream_sections_test.go, design/issues/I-0343-testarestartstartswhatisreadyandnothingtwice-fails-its-temp-folder-s-cleanup.md]
