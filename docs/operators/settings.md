@@ -512,6 +512,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--repo` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai dashboard versions](../users/flai-reference.md#flai-dashboard-versions), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--report` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--require-met` | [flai release](../users/flai-reference.md#flai-release) |
+| `--require-pending` | [flai release](../users/flai-reference.md#flai-release) |
 | `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness), [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider), [flai serve forge](../users/flai-reference.md#flai-serve-forge) |
 | `--revenue-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--role` | [flai prime](../users/flai-reference.md#flai-prime) |

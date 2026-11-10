@@ -3630,7 +3630,7 @@ flai queue resume
 Compute a release for one item, publish everything accepted since the last release, or say whether a release is due.
 
 ```text
-flai release <id> | --pending | --evaluate [flags]
+flai release <id> | --pending [--require-pending] | --evaluate [--require-met] [flags]
 ```
 
 Per design/conventions/git.md: the component the item delivers to gets the delivery-type bump (feature story minor, remediation or improvement patch; an epic none of its own, its stories carry theirs, ADR-0078); every other component its commits touched gets a patch. Components come from system-flow.yaml projects; the delivered one from the item's tags (a project name or one of its tags), the parent's tags, or --deliver. Code components get an annotated tag &lt;name&gt;/vX.Y.Z on HEAD; the template component gets its version file and changelog bumped (commit them).
@@ -3647,6 +3647,8 @@ flai release --evaluate says whether system-flow.yaml's orchestration.release po
 
 With --require-met, --evaluate prints the same and then exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (ADR-0240); met, it exits 0. It and --judged are refused without --evaluate.
 
+With --require-pending, --pending that finds nothing pending prints the same and then exits 2, naming each component's newest release: its tag (or, for the template, its version and version file), the commit, who made it, and when, so that a formula step whose publish another publish outran stops there and says which release covered what was pending (S-0643); with --json they are in covered\_by. A publish that releases something, or pushes what an earlier run left, exits as without it. With --dry-run it exits 2 the same way, so the preview matches the step. It is refused without --pending.
+
 Examples:
 
 ```bash
@@ -3654,6 +3656,7 @@ flai release S-031 --dry-run
 flai release S-031 --deliver flai --apply
 flai release --pending --dry-run
 flai release --pending
+flai release --pending --require-pending --json
 flai release --evaluate --json
 flai release --evaluate --require-met
 flai release --evaluate --require-met --judged "the editor epic is whole and tested"
@@ -3670,6 +3673,7 @@ Flags:
 | `--judged` string | with --evaluate, the judgement to release: under judgement a reason makes the policy met while a story is accepted and not yet released (ADR-0273) |
 | `--pending` | publish everything merged and unreleased since each component's last tag |
 | `--require-met` | with --evaluate, exit 2 with the reason when the policy is not met |
+| `--require-pending` | with --pending, exit 2 naming the release that covered it when nothing is pending |
 
 ### flai role
 
