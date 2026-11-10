@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -101,4 +104,106 @@ func rememberedMCPAddr(repo *workitem.Repo) string {
 		return ""
 	}
 	return strings.TrimSpace(string(data))
+}
+
+// mcpBind is the host's mcp.bind, the address flai host starts each
+// project's MCP server on, read from the configuration at every look;
+// config.DefaultMCPBind when it is unset or the configuration is not
+// readable.
+func (a *app) mcpBind() string {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return config.DefaultMCPBind
+	}
+	return cfg.MCPBind()
+}
+
+// mcpBindOf is cfg's mcp.bind as flai host uses it, and whether it is set,
+// for what shows the host's settings.
+func mcpBindOf(cfg config.Config) (string, bool) {
+	return cfg.MCPBind(), cfg.MCP.Bind != ""
+}
+
+// flai serve mcp: the host's say about the HTTP MCP server flai host starts
+// for each project it serves (S-0506).
+func newServeMCPCmd(a *app) *cobra.Command {
+	c := &cobra.Command{
+		Use:   "mcp",
+		Short: "The address flai host starts each project's HTTP MCP server on, on this host",
+		Long: `flai host starts a flai mcp http for every project flai serve serves, each on
+a port of its own that it keeps across restarts, and on mcp.bind, ` + config.DefaultMCPBind + ` by
+default, so that only this machine reaches it. flai serve mcp bind sets
+another address, an IP address or a host name without a port, such as
+0.0.0.0 or Docker's bridge gateway, 172.17.0.1, so that an agent in a
+container reaches the server through the host gateway; flai serve mcp clear
+goes back to ` + config.DefaultMCPBind + `. It is for every project on this host, and each
+server listens on it from its next start: flai host restart mcp starts them
+again now.
+
+Wherever it listens, the server refuses a request without the bearer token
+flai mcp token prints and one with an Origin header, and it warns in its log
+when it listens beyond this machine, since flai does not encrypt the token.`,
+		Example: `  flai serve mcp bind 0.0.0.0
+  flai host restart mcp
+  flai serve mcp show --json
+  flai serve mcp clear`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error { return a.showMCPSettings() },
+	}
+	bind := &cobra.Command{
+		Use:   "bind <address>",
+		Short: "Start each project's MCP server on this address, an IP address or a host name without a port (default " + config.DefaultMCPBind + ")",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if cfg, err = cfg.WithMCPBind(args[0]); err != nil {
+				return err
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showMCPSettings()
+		},
+	}
+	clear := &cobra.Command{
+		Use:   "clear",
+		Short: "Unset mcp.bind, so that each project's MCP server listens on " + config.DefaultMCPBind + " again",
+		Args:  cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error {
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if err := config.Save(path, cfg.WithoutMCPBind()); err != nil {
+				return err
+			}
+			return a.showMCPSettings()
+		},
+	}
+	c.AddCommand(bind, clear,
+		&cobra.Command{Use: "show", Short: "Print the address flai host starts each project's MCP server on", Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.showMCPSettings() }},
+	)
+	return c
+}
+
+// showMCPSettings prints mcp.bind as flai host uses it, and whether it is set.
+func (a *app) showMCPSettings() error {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	bind, set := mcpBindOf(cfg)
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"bind": bind, "bind_set": set})
+	}
+	if set {
+		fmt.Fprintf(a.out, "bind: %s: flai host starts each project's MCP server on this address, from its next start (flai host restart mcp); flai serve mcp clear goes back to %s\n", bind, config.DefaultMCPBind)
+	} else {
+		fmt.Fprintf(a.out, "bind: %s (default): flai host starts each project's MCP server on this machine only; flai serve mcp bind <address> sets another\n", bind)
+	}
+	return nil
 }
