@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T10:55:19Z
+updated: 2026-11-10T10:55:42Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-11-10T10:55:19Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0665](S-0665.md) | flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image | in-progress | agent-S-0665 | 2026-11-10T10:41:47Z |
-| [S-0684](S-0684.md) | flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest | review | agent-S-0684 | 2026-11-10T10:52:51Z |
 | [S-0708](S-0708.md) | TestGatewayStreamIsJudged and TestGatewayMissingNamesWhatIsMissing run in no tier, because go-test and integration skip ^TestGateway and the gateway tier runs only the two paid checks by name | in-progress | agent-S-0708 | 2026-11-10T10:52:56Z |
 | [S-0713](S-0713.md) | make agent-images fails at the first base image when Docker Desktop's credential helper desktop.exe cannot start from WSL | in-progress | agent-S-0713 | 2026-11-10T10:54:16Z |
 

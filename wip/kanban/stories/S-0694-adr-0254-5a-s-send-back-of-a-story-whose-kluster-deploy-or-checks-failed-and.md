@@ -6,7 +6,7 @@ title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks fail
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:42Z
 transitions: []
 tags: [flai, serve, kluster, accept]
 topics: [kluster, deployment, review]
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:23Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T03:26:00Z
+  delivery: 2026-11-11T03:25:00Z
   basis: "Its own forecast of 2h; 25th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0666, S-0675, S-0676, S-0677, S-0678, S-0679, S-0681, S-0683, S-0686, S-0688, S-0689, S-0690, S-0691, S-0692 and S-0693."
   by: flai
-  at: 2026-11-10T10:54:40Z
+  at: 2026-11-10T10:55:42Z
 ---
 # S-0694 ADR-0254 §5a's send-back of a story whose kluster deploy or checks failed, and its kluster acceptance blocker, are not built
 
