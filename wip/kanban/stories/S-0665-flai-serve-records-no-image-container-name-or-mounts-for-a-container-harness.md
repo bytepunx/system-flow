@@ -6,7 +6,7 @@ title: flai serve records no image, container name, or mounts for a container ha
 status: ready
 owner: alex
 created: 2026-11-10T08:34:37Z
-updated: 2026-11-10T09:53:50Z
+updated: 2026-11-10T09:55:06Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T08:51:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T12:24:00Z
-  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673 and S-0684."
+  delivery: 2026-11-10T12:23:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 5, behind S-0668, S-0669, S-0672, S-0673, S-0682 and S-0684."
   by: flai
-  at: 2026-11-10T09:53:50Z
+  at: 2026-11-10T09:55:06Z
 finalized:
   by: orchestrator
   at: 2026-11-10T08:57:54Z
