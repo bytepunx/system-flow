@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1008]
 ---
 
 # D-0569 Cost of delay input for S-0662: recommend penalty_per_week 30 USD: Recommended: take the planner's revised recommendation

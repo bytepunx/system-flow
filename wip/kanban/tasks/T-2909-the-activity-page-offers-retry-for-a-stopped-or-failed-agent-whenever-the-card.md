@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/routes/a
 after: [T-2907]
 usage:
   source: log
-  seconds: 0
+  seconds: 290
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 78
-      cache_read: 555753
-      cache_write: 3316
-      cost: 0.2059
+      input: 30
+      output: 249
+      cache_read: 3954011
+      cache_write: 26146
+      cost: 1.4649
 ---
 # T-2909 The Activity page offers Retry for a stopped or failed agent whenever the card's menu does
 

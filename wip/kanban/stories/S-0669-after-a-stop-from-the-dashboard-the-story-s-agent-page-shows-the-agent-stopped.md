@@ -6,7 +6,7 @@ title: After a stop from the dashboard, the story's agent page shows the agent s
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T09:54:42Z
+updated: 2026-11-10T09:55:12Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:34Z
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 430
+  seconds: 783
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
       ceremony: 2
       hand_edits: 1
-      work: 29
+      work: 35
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 617
-      cache_read: 8098527
-      cache_write: 272187
-      cost: 3.0819
+      input: 114
+      output: 872
+      cache_read: 12397980
+      cache_write: 304753
+      cost: 4.6754
   strategic:
     - kind: orchestrator
       seconds: 142
@@ -82,7 +82,7 @@ This story remediates [I-0278](../../../design/issues/I-0278-after-a-stop-from-t
 
 ## Acceptance criteria
 - [x] The cause I-0278 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0278 is closed with `flai issue close I-0278 --reason` saying what fixed it
+- [x] I-0278 is closed with `flai issue close I-0278 --reason` saying what fixed it
 
 ## Tasks
 - T-2907 A test reproduces the Activity page's missing Retry after a stop, and the narrative names its cause and the fix proposed

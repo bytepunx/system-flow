@@ -3,12 +3,18 @@ id: T-2947
 type: task
 nature: remediation
 title: flai stream state takes --context, --decision, and --question, and the reference and flag index list them
-status: backlog
+status: in-progress
 parent: S-0668
 owner: alex
 created: 2026-11-10T08:50:47Z
-updated: 2026-11-10T08:50:47Z
-transitions: []
+updated: 2026-11-10T09:55:09Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:55:08Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T09:55:09Z
+    by: system-flow
 stream: S-0668
 tags: [flai, narrative, cli]
 touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, docs/users/flai-reference.md, docs/operators/settings.md]

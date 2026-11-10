@@ -6,7 +6,7 @@ title: A story's agent in a container cannot write its narrative's Decisions, Co
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T09:35:43Z
+updated: 2026-11-10T09:55:08Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0668
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md]
+touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md, flai/internal/mcpserver/stream_sections_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5

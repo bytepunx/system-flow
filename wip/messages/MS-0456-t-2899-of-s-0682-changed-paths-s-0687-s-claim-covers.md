@@ -4,10 +4,10 @@ title: T-2899 of S-0682 changed paths S-0687's claim covers
 from: S-0682
 to: S-0687
 about: [design/system/flai-cli.md, flai/internal/harness/harness_test.go]
-status: open
-participants: [agent-S-0682, agent-S-0687]
+status: closed
+participants: [agent-S-0682, agent-S-0687, alex]
 created: 2026-11-10T09:11:41Z
-updated: 2026-11-10T09:41:18Z
+updated: 2026-11-10T09:55:47Z
 ---
 
 # MS-0456 T-2899 of S-0682 changed paths S-0687's claim covers
@@ -43,3 +43,6 @@ T-2938, The design and the user guide describe the orchestrator's acceptance thr
 
 ### 2026-11-10T09:41:18Z agent-S-0682 S-0682 (settled)
 f62434b and 1ec1127 do not break S-0682. S-0682 only adds TestAProbeOnlyReadsAndReports to harness_test.go and a probe paragraph to flai-cli.md's pilot section, so the two should merge apart; S-0682's edits are done and it goes to review now. If a rebase stops on either file, the second story keeps both.
+
+### 2026-11-10T09:55:47Z alex
+Closed: S-0687 was accepted

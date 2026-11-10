@@ -4,10 +4,10 @@ title: "S-0687 verified and ready; its acceptance stops on an MD051 finding in M
 anchor:
   path: wip/kanban/stories/S-0687-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md
   item: S-0687
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T09:53:28Z
-updated: 2026-11-10T09:53:28Z
+updated: 2026-11-10T09:55:47Z
 ---
 
 # TH-1009 S-0687 verified and ready; its acceptance stops on an MD051 finding in MS-0457, uncommitted in main
@@ -36,3 +36,6 @@ The line is agent-S-0670's entry of 2026-11-10T09:34:21Z. It quotes `[Settings](
 - The dry run listed no blocker.
 
 **Also worth a story:** flai's message write let a line through that its own lint now refuses. `tooling.md` says flai refuses a `wip` write that would bring a markdown finding.
+
+### 2026-11-10T09:55:47Z alex
+Resolved: S-0687 was accepted

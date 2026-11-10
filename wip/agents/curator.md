@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 199.0498
-accrued_seconds: 23444
-tasks_completed: 124
-last_run: 2026-11-10T09:44:34Z
+accrued_cost: 200.4258
+accrued_seconds: 23529
+tasks_completed: 125
+last_run: 2026-11-10T09:55:19Z
 ---
 
 # Curator activity
@@ -1003,3 +1003,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0451, D-0468, D-0479, D-0562, D-0564, D-0565, D-0566, D-0567, D-0568, D-0569
 - Seconds: 664
 - Cost: 2.2369 USD, estimated
+
+### 2026-11-10T09:55:19Z
+
+- Summary: Merged S-0670 into D-0468 (S-0670 also wrote the protected agent-container scripts itself); wrote no entry, absorbed none, and `flai digest compact` compacted none; skipped S-0670's other four decisions, since the image choice is already in `design/tech/docker.md` and the runbook and the rest are task planning or test detail.
+- Trigger: accepted S-0670
+- Items: D-0468, D-0569
+- Seconds: 85
+- Cost: 1.3760 USD, estimated

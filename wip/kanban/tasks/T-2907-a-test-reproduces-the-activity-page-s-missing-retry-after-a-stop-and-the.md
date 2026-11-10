@@ -32,7 +32,7 @@ usage:
       output: 184
       cache_read: 2119711
       cache_write: 12366
-      cost: 0.785
+      cost: 0.7847
 ---
 # T-2907 A test reproduces the Activity page's missing Retry after a stop, and the narrative names its cause and the fix proposed
 

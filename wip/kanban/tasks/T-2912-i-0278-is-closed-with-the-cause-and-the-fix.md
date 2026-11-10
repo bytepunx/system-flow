@@ -22,6 +22,18 @@ stream: S-0669
 tags: [issues]
 touches: [design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]
 after: [T-2909]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 33
+      cache_read: 593736
+      cache_write: 2658
+      cost: 0.2195
 ---
 # T-2912 I-0278 is closed with the cause and the fix
 

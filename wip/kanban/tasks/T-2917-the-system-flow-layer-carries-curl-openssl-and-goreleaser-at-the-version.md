@@ -3,12 +3,18 @@ id: T-2917
 type: task
 nature: remediation
 title: The system-flow layer carries curl, openssl, and GoReleaser at the version scripts/install-tools.sh pins
-status: backlog
+status: in-progress
 parent: S-0672
 owner: alex
 created: 2026-11-10T08:48:03Z
-updated: 2026-11-10T08:48:03Z
-transitions: []
+updated: 2026-11-10T09:55:10Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:55:10Z
+    by: agent-S-0672
+  - to: in-progress
+    at: 2026-11-10T09:55:10Z
+    by: agent-S-0672
 stream: S-0672
 tags: [docker, scripts]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh]
