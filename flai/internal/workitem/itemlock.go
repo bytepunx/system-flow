@@ -42,9 +42,11 @@ func (r *Repo) lockItems() (unlock func(), err error) {
 }
 
 // LockCheckedWrites takes the lock a checked creation holds from its write
-// until it keeps or removes the item, under which a reader that must not see
-// such an item, such as flai serve's look judging holds, reads (I-0301). It
-// is apart from the items lock, which Save takes while its holder holds this.
+// until it keeps or removes the item, and a checked edit from its first save
+// until it keeps or restores the edit, under which a reader that must not see
+// such a write, such as flai serve's look judging holds, reads (I-0301,
+// I-0328). It is apart from the items lock, which Save and Restore take while
+// its holder holds this.
 func (r *Repo) LockCheckedWrites() (unlock func(), err error) {
 	return lockFile(filepath.Join(r.CacheDir(), "items-checked.lock"), itemsLockWait)
 }

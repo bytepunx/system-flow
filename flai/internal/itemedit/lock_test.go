@@ -3,12 +3,82 @@ package itemedit
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// checkedWriteFree tries the checked-write lock without waiting long, and
+// says whether it was free.
+func checkedWriteFree(t *testing.T, repo *workitem.Repo) bool {
+	t.Helper()
+	unlock, err := filelock.Lock(filepath.Join(repo.CacheDir(), "items-checked.lock"), 20*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	unlock()
+	return true
+}
+
+// I-0328: a checked edit holds the checked-write lock from its first save
+// until the check keeps the edit or the restore puts it back, so that a
+// reader under it, such as flai serve's look judging holds, never sees an
+// edit the check refuses; and it lets the lock go once Apply returns.
+func TestTheCheckedWriteLockIsHeldWhileTheEditIsChecked(t *testing.T) {
+	at := time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name string
+		kept bool
+	}{
+		{"kept", true},
+		{"refused", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := planningRepo(t)
+			story, err := repo.Get("S-0001")
+			if err != nil {
+				t.Fatal(err)
+			}
+			was := snapshot(story.Path, filepath.Join(repo.AgentsDir(), "index.md"))
+			var during []bool
+			runCheck = func(r *workitem.Repo, now time.Time, w check.Write) (*check.Result, error) {
+				during = append(during, checkedWriteFree(t, r))
+				res, err := check.RunItemWrite(r, now, w)
+				if err != nil || tc.kept || len(during) < 2 {
+					return res, err
+				}
+				// the run with the edit in place refuses it
+				res.Findings = append(res.Findings, check.Finding{Level: check.Error, Rule: "item.probe", Path: rel(r, story.Path), Message: "refused by the test"})
+				res.Errors++
+				return res, nil
+			}
+			t.Cleanup(func() { runCheck = check.RunItemWrite })
+			_, err = Apply(repo, nil, "S-0001", Change{Tags: &[]string{"edited"}}, Options{By: "alex", NoCommit: true, Now: at})
+			if tc.kept && err != nil {
+				t.Fatalf("the edit is kept: %v", err)
+			}
+			if !tc.kept {
+				if _, ok := docedit.IsRefused(err); !ok {
+					t.Fatalf("want the edit refused, got %v", err)
+				}
+				sameFiles(t, was)
+			}
+			// the run before the write is free; the run with the edit in place holds it
+			if !slices.Equal(during, []bool{true, false}) {
+				t.Errorf("the lock was free before the write and held while the edit was checked, got free %v", during)
+			}
+			if !checkedWriteFree(t, repo) {
+				t.Error("the lock is free once Apply returns")
+			}
+		})
+	}
+}
 
 // editedStory notes S-0001 in an undo and saves the edit's change to it, tags
 // of its own, as Apply does before its check; it returns the undo and the

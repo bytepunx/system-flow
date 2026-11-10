@@ -592,22 +592,39 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	if err != nil {
 		return nil, err
 	}
-	u := &undo{repo: repo, files: map[string]*file{}}
-	fail := func(err error) (*Result, error) {
-		if rerr := u.restore(); rerr != nil {
-			return nil, fmt.Errorf("%w; and putting the files back failed: %w", err, rerr)
+	// From the first save until the edit is kept or put back, under the lock a
+	// reader that must not see an edit the check may yet refuse reads under,
+	// such as flai serve's look judging holds (I-0328, ADR-0272). Save and
+	// Restore take the items lock inside it.
+	unlock, err := repo.LockCheckedWrites()
+	if err != nil {
+		return nil, fmt.Errorf("edit %s: take the checked-write lock: %w; nothing was changed, so try again once the writer holding it is done", it.ID, err)
+	}
+	locked := true
+	release := func() {
+		if locked {
+			locked = false
+			unlock()
 		}
-		return nil, err
+	}
+	defer release()
+	u := &undo{repo: repo, files: map[string]*file{}}
+	// fail puts the files back and gives err, with the restore's own failure
+	fail := func(err error) error {
+		if rerr := u.restore(); rerr != nil {
+			return fmt.Errorf("%w; and putting the files back failed: %w", err, rerr)
+		}
+		return err
 	}
 	u.note(oldPath)
 	u.note(it.Path)
 	if err := repo.Save(it); err != nil {
-		return fail(err)
+		return nil, fail(err)
 	}
 	u.saved(it)
 	if it.Path != oldPath {
 		if err := os.Remove(oldPath); err != nil {
-			return fail(err)
+			return nil, fail(err)
 		}
 	}
 	// the parents' lists
@@ -616,7 +633,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		formerParent.Body = dropChild(formerParent.Body, it.ID)
 		formerParent.Updated = now
 		if err := repo.Save(formerParent); err != nil {
-			return fail(err)
+			return nil, fail(err)
 		}
 		u.saved(formerParent)
 	}
@@ -625,7 +642,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		workitem.AppendChild(newParent, it)
 		newParent.Updated = now
 		if err := repo.Save(newParent); err != nil {
-			return fail(err)
+			return nil, fail(err)
 		}
 		u.saved(newParent)
 	} else if retitled && it.Parent != "" {
@@ -634,7 +651,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 				u.note(p.Path)
 				p.Body, p.Updated = nb, now
 				if err := repo.Save(p); err != nil {
-					return fail(err)
+					return nil, fail(err)
 				}
 				u.saved(p)
 			}
@@ -642,11 +659,11 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	}
 	if retitled {
 		if err := retitleNarrative(repo, u, it, oldTitle); err != nil {
-			return fail(err)
+			return nil, fail(err)
 		}
 		if it.Path != oldPath {
 			if err := relink(u, links, filepath.Base(oldPath), filepath.Base(it.Path)); err != nil {
-				return fail(err)
+				return nil, fail(err)
 			}
 		}
 	}
@@ -654,7 +671,7 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 		index := filepath.Join(repo.AgentsDir(), "index.md")
 		u.note(index)
 		if err := repo.WriteIndex(items, opt.Now); err != nil {
-			return fail(err)
+			return nil, fail(err)
 		}
 	}
 
@@ -665,11 +682,11 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	write.Paths = append(write.Paths, files...)
 	after, err := runCheck(repo, opt.Now, write)
 	if err != nil {
-		return fail(err)
+		return nil, fail(err)
 	}
 	outside, err := check.ScopeToItem(after, repo, it, files)
 	if err != nil {
-		return fail(fmt.Errorf("check the edit of %s: %w", it.ID, err))
+		return nil, fail(fmt.Errorf("check the edit of %s: %w", it.ID, err))
 	}
 	// scoping drops findings and marks them, but keeps each one's rule, path,
 	// and message, which the known set matches on
@@ -713,8 +730,10 @@ func Apply(repo *workitem.Repo, r execx.Runner, id string, ch Change, opt Option
 	}
 	data, err := os.ReadFile(it.Path)
 	if err != nil {
-		return fail(err)
+		return nil, fail(err)
 	}
+	// the check kept the edit: a reader under the lock may see it now
+	release()
 	res.Path, res.Hash, res.Files = own, docedit.Hash(string(data)), files
 	note(repo, Notice{At: now, By: opt.By, ID: it.ID, Title: it.Title, Type: it.Type, Changed: changed})
 
