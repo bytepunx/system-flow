@@ -6,7 +6,7 @@ title: Stories that each add a section at one spot in a shared design document c
 status: backlog
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T07:12:18Z
+updated: 2026-11-10T07:44:10Z
 transitions: []
 tags: [flai, sync, acceptance]
 topics: [cli, go, code]
@@ -31,7 +31,6 @@ usage:
           cache_read: 83530
           cache_write: 3604
           cost: 0.0233
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h10m
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0649, S-0650, S-0655, S-0651, S-0653, S-0654, S-0657 and S-0241."
   by: flai
   at: 2026-11-10T07:12:18Z
+finalized:
+  by: alex
+  at: 2026-11-10T07:44:10Z
 ---
 # S-0637 Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
 
