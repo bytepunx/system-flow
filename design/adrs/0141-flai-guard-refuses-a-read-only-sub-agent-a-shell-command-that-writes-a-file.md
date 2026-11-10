@@ -1,8 +1,8 @@
 ---
 id: ADR-0141
 title: flai guard refuses a read-only sub-agent a shell command that writes a file outside the temporary folder
-status: proposed
-date: 2026-10-12
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0059, ADR-0060]
