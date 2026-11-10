@@ -6,7 +6,7 @@ title: "flai check finds `issues.summary` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:38Z
 transitions: []
 tags: [flai, issues, git]
 topics: [git]
@@ -17,6 +17,11 @@ agent:
   config:
     effort: high
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 5m
+    by: orchestrator
+    at: 2026-11-10T10:55:38Z
 forecast:
   duration: 60m
   delivery: 2026-11-11T04:41:00Z

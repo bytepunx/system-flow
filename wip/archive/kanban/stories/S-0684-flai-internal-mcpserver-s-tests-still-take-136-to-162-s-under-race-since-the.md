@@ -3,10 +3,10 @@ id: S-0684
 type: story
 nature: improvement
 title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T10:52:51Z
+updated: 2026-11-10T10:55:41Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:05Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T10:52:51Z
     by: agent-S-0684
+  - to: done
+    at: 2026-11-10T10:55:41Z
+    by: alex
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/shared.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/subproject.go, flai/internal/mcpserver/versions.go, flai/internal/mcpserver/session_test.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/orchestrate_test.go, flai/internal/mcpserver/orchestrator_end_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/shared_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/items_write_test.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/permission_test.go, flai/internal/mcpserver/subproject_test.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/outdated_test.go, flai/internal/mcpserver/process_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/role_test.go, flai/internal/serve/restart_test.go, design/issues/I-0234-flai-internal-mcpserver-s-tests-still-take-136-to-162-s-under-race-since-the.md, design/issues/summary.md, flai/internal/mcpserver/task.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/verify_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify.go]
