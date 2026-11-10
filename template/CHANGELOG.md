@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- S-0625 Under the judgement release policy the publish permission publishes nothing: every release since 2026-11-02 was the operator's by hand (patch).
+- S-0625 The baseline `publish` formula takes the input `judgement`, empty by default, and its evaluate step passes it to `flai release --evaluate --require-met --judged`, so the orchestrator's reasoning meets the `judgement` policy (patch, ADR-0273).
+- S-0625 The orchestrator's role file and the `strategic-agents.md` convention tell the orchestrator, under `judgement`, to run `flai formula run publish` with its reasoning as `--input judgement="<reasoning>"`, one sentence with no double quote, backtick, or dollar sign (patch, ADR-0273).
+
 ## 1.1.30 - 2026-11-10
 
 - S-0616 TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input (patch).

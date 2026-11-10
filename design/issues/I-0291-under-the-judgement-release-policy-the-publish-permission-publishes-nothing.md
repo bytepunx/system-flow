@@ -2,11 +2,11 @@
 id: I-0291
 title: "Under the judgement release policy the publish permission publishes nothing: every release since 2026-11-02 was the operator's by hand"
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T23:40:15Z
+updated: 2026-11-10T05:52:36Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ serve journal push entries since 2026-11-02T05:31 (last mcp.release_publish by t
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0625 remediates this issue, created from it at 2026-11-07T23:40:15Z.
+Closed 2026-11-10T05:52:36Z: S-0625 (ADR-0273): flai release --evaluate takes --judged "<reason>", which under judgement meets the policy while a story is accepted and not yet released and whole_epics holds nothing back; the publish formula declares the input judgement, which its evaluate step passes as --judged; and the orchestrator, under judgement, runs flai formula run publish --ready --autocommit --input judgement="<its reasoning>". TestPublishFormulaUnderJudgement runs the real formula's step 2 and reproduces the cause (exit 2 with no judgement) and the fix (exit 0 with one); TestReleaseEvaluateRequireMet and TestEvaluateJudged cover the flag.

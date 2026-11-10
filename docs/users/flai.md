@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 ---
 
@@ -384,6 +384,7 @@ flai formula show release-check                             # its inputs, its st
 flai formula run release-check --input version=1.4.0        # a backlog story and its tasks; prints the story's ID
 flai formula run release-check --input version=1.4.0 --epic E-0007 --autocommit --json
 flai formula run publish --ready --autocommit                # the story in ready, so flai serve starts its agent
+flai formula run publish --ready --autocommit --input judgement="the editor epic is whole and tested"   # under judgement, with the reason
 ```
 
 | Part of the story | From the formula |
@@ -413,7 +414,7 @@ The story is ordered, pulled, worked, and accepted as any story. A story's agent
 
 **From a role.** A role file whose `commands` list `flai formula run <name>` lets the role run that formula alone, with no flag but `--ready`, `--input`, `--autocommit`, and `--json`. The orchestrator's lists `flai formula run publish` under its `publish` permission, and flai refuses it every other formula ([When the orchestrator publishes](#when-the-orchestrator-publishes)).
 
-**The publish formula.** The template ships one formula, `publish` ([publish.md](../../design/workflows/formulas/publish.md)). Its three steps, each `in: main`, are `scripts/fetch.sh`, `flai release --evaluate --require-met`, and `flai release --pending --json`. The evaluate step names `stop: [2]`: with nothing to release, the policy is not met, so it exits 2 and stops the run, and the instance reaches review and acceptance without asking you. `flai formula run publish --ready` publishes as a story a story's agent works, measured and archived as any story.
+**The publish formula.** The template ships one formula, `publish` ([publish.md](../../design/workflows/formulas/publish.md)). Its three steps, each `in: main`, are `scripts/fetch.sh`, `flai release --evaluate --require-met --judged "{{judgement}}"`, and `flai release --pending --json`. Its input `judgement`, empty by default, is the reason under the `judgement` policy, which the evaluate step passes as `--judged` ([ADR-0273](../../design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)). The evaluate step names `stop: [2]`: with nothing to release, or under `judgement` with no reason, the policy is not met, so it exits 2 and stops the run, and the instance reaches review and acceptance without asking you. `flai formula run publish --ready` publishes as a story a story's agent works, measured and archived as any story.
 
 **The import and analysis-cadence formulas** (S-0424). The template ships two more:
 
@@ -3497,6 +3498,7 @@ The send-back thread quotes what failed in full: the failing tier's findings as 
 flai release --evaluate          # is the release policy met, and on what figures
 flai release --evaluate --json
 flai release --evaluate --require-met   # the same, then exit 2 unless the policy is met
+flai release --evaluate --require-met --judged "the editor epic is whole and tested"   # under judgement, with the reason
 ```
 
 `flai release --evaluate` says whether the project's release policy, `orchestration.release` in `system-flow.yaml` ([settings](../operators/settings.md)), is met, why, and the figures it rests on. Like `flai order --by` ([Ordering by a policy](#ordering-by-a-policy)), it is the orchestrator's arithmetic, kept in flai so that you and the dashboard get the same answer with no agent running. It weighs the stories accepted and not yet released, the ones `flai release --pending --dry-run` would publish: how many there are, and their cost of delay values per week added up.
@@ -3505,9 +3507,9 @@ flai release --evaluate --require-met   # the same, then exit 2 unless the polic
 |--------|----------|
 | `threshold` | The summed value of the stories waiting is at or over the policy's `value`, or their count is at or over its `count`. A story with no value counts toward the count, adds nothing to the sum, and is named. With nothing waiting it is not met. |
 | `theme` | Every story of the policy's `epic`, or of its `tag`, cancelled ones aside, is accepted, and at least one of them is not yet released. The ones not yet accepted are named. |
-| `judgement` | Never, by itself: whether to release is the orchestrator's call, or yours. This is the default. |
+| `judgement` | A judgement is given with `--judged "<reason>"` and at least one story is waiting: whether to release is the orchestrator's call, or yours, and the reason says why. With no reason, or an empty one, it is not met. This is the default ([ADR-0273](../../design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)). |
 
-It tags, bumps, commits, and pushes nothing; publishing is still `flai release --pending`. So it takes no item and refuses `--apply`, `--pending`, `--dry-run`, and `--deliver`. With `--require-met` it exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (S-0423). The dashboard reads the same answer through `flai serve` (`release.evaluate`), and agents through the MCP tool `release_evaluate`. A sub-agent and the planner may run it as a read.
+It tags, bumps, commits, and pushes nothing; publishing is still `flai release --pending`. So it takes no item and refuses `--apply`, `--pending`, `--dry-run`, and `--deliver`. With `--require-met` it exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (S-0423). `--judged` gives it the judgement: under `judgement` a reason meets the policy while a story is waiting and `whole_epics` holds nothing back, and under `threshold` and `theme` it changes nothing. Both are refused without `--evaluate`. The dashboard reads the same answer through `flai serve` (`release.evaluate`), and agents through the MCP tool `release_evaluate`. A sub-agent and the planner may run it as a read.
 
 With `orchestration.release.whole_epics` set, no policy is met while a story waiting belongs to an epic in neither review nor done. Those stories are listed under `held by epic:` with their epics and the epics' status, and in `held_by_epic` with `--json`. Under `judgement` they are what the orchestrator must not publish. A story with no epic is never held.
 
@@ -3515,7 +3517,7 @@ With `orchestration.release.whole_epics` set, no policy is met while a story wai
 
 With `orchestration.permissions.publish` on ([Running the orchestrator](#running-the-orchestrator)), the orchestrator publishes for you, by the release policy ([ADR-0094](../../design/adrs/0094-with-publish-on-the-orchestrator-publishes-only-through-release-publish-by-its.md)). Turning the permission on is your asking: agents still publish only when you ask. After each acceptance, its own or another's, it evaluates the policy. Under `threshold` or `theme` it publishes when the policy is met. Under `judgement` it publishes when it judges the unreleased work coherent and complete, and says why. Under every policy it never publishes a batch `whole_epics` holds back. Each release publishes everything accepted and not yet released, as the board's Publish does.
 
-Where the project has the `publish` formula, it publishes by running `flai formula run publish --ready --autocommit` when the policy is met (S-0423, [ADR-0240](../../design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). A story's agent then works the instance, whose last step is `flai release --pending`, and you or `accept_reviews` accept it. With nothing to release, its evaluate step exits 2 and stops the run cleanly, so the instance goes to review asking nothing. A refusal, the `push` gate or `conflict:`, blocks the step's task and asks you on a thread ([A story from a formula](#a-story-from-a-formula)). Where it has none, it publishes through the MCP tool `release_publish`, which runs the board's `flai release --pending` on the host, never forced. `flai guard` refuses it `flai release` other than `--evaluate`, `flai push`, `git push`, and `git tag`, whatever its permissions. `release_publish` refuses, changing nothing:
+Where the project has the `publish` formula, it publishes by running `flai formula run publish --ready --autocommit` when the policy is met (S-0423, [ADR-0240](../../design/adrs/0240-under-publish-the-orchestrator-starts-the-baseline-publish-formula-whose-main.md)). Under `judgement` it gives its reasoning as the formula's `judgement` input, `--input judgement="<its reasoning>"`, one sentence with no double quote, backtick, or dollar sign, and the evaluate step passes it as `--judged`, so the policy is met and the instance publishes ([ADR-0273](../../design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md)). With no input, the evaluate step stops the run as under any policy not met. A story's agent then works the instance, whose last step is `flai release --pending`, and you or `accept_reviews` accept it. With nothing to release, its evaluate step exits 2 and stops the run cleanly, so the instance goes to review asking nothing. A refusal, the `push` gate or `conflict:`, blocks the step's task and asks you on a thread ([A story from a formula](#a-story-from-a-formula)). Where it has none, it publishes through the MCP tool `release_publish`, which runs the board's `flai release --pending` on the host, never forced. `flai guard` refuses it `flai release` other than `--evaluate`, `flai push`, `git push`, and `git tag`, whatever its permissions. `release_publish` refuses, changing nothing:
 
 | When | It says |
 |------|---------|
