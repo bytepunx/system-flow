@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-10T09:29:05Z
+updated: 2026-11-10T09:39:38Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
@@ -34,6 +34,11 @@ usage:
           cache_write: 4735
           cost: 0.0682
 draft: true
+cost_of_delay:
+  inputs:
+    penalty_per_week: 30
+    by: alex
+    at: 2026-11-10T09:39:38Z
 forecast:
   duration: 2h30m
   delivery: 2026-11-10T19:46:00Z
