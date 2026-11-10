@@ -2,12 +2,12 @@
 id: I-0281
 title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 30m
 first_reported: 2026-11-07T07:12:34Z
 last_reported: 2026-11-07T07:12:34Z
-updated: 2026-11-10T08:34:49Z
+updated: 2026-11-10T10:10:21Z
 ---
 
 # I-0281 The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there
@@ -24,3 +24,4 @@ Met on S-0565's T-2452, 2026-11-07, on S-0556's accepted head `45b5126`, run ins
 ## Remediation
 
 Story S-0672 remediates this issue, created from it at 2026-11-10T08:34:49Z.
+Closed 2026-11-10T10:10:21Z: S-0672: the system-flow layer (flai/images/system-flow/Dockerfile) now carries curl and openssl, which install.sh needs, GoReleaser v2.18.1 at scripts/install-tools.sh's pin, which scripts/flai-snapshot.sh runs, and procps-ng, whose ps takes the -p that scripts/release-server.sh uses and BusyBox's ps refuses, a third gap found while fixing this. scripts/agent-image.sh --check runs the smoke tier inside the built layer with the close-out container's mounts. It failed on the layer built before (curl, openssl, goreleaser, ps -p) and passed on the new one, install test included.
