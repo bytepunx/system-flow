@@ -240,11 +240,17 @@ func (l *launcher) containerWorktree(story string) error {
 // when it is missing, which a strategic agent's container mounts read-only
 // over the checkout (ADR-0247 §1): docker would make a missing one the root
 // user's. It refuses a checkout with no .git folder, which has no hooks to
-// keep from the agent.
+// keep from the agent, and one whose .git/config is not a file, which the
+// container mounts read-only too and docker would make a folder of
+// (ADR-0281 §2).
 func containerHooks(root string) error {
 	git := filepath.Join(root, ".git")
 	if fi, err := os.Stat(git); err != nil || !fi.IsDir() {
 		return fmt.Errorf("the container harness mounts a strategic agent's main checkout with its .git/hooks read-only, and %s has no .git folder: run the agent in a container only in a git repository's main checkout, or run it on another harness", root)
+	}
+	config := filepath.Join(git, "config")
+	if fi, err := os.Stat(config); err != nil || !fi.Mode().IsRegular() {
+		return fmt.Errorf("the container harness mounts a strategic agent's main checkout with its .git/config read-only, and %s is not a file: run git init or repair the checkout so that it has one, or run the agent on another harness", config)
 	}
 	hooks := filepath.Join(git, "hooks")
 	if err := os.MkdirAll(hooks, 0o755); err != nil {

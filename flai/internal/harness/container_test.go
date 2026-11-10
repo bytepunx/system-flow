@@ -229,7 +229,7 @@ func TestTheContainersStartNamesItsImageNameAndMounts(t *testing.T) {
 			rw(worktree), ro(common), rw(reg), ro(filepath.Join(sr.Root, "wip")), ro(filepath.Join(sr.Root, "system-flow.yaml")),
 			rw(filepath.Join(sr.Root, ".flai-cache", "verify")), rw(filepath.Join(sr.Root, ".flai-cache", "items-checked.lock")), rw(scache), login}}},
 		{"planner, layer image", rr, host, harness.ContainerRun{Image: layer, Name: "flai-agent-plan-3f2a-b1", Mounts: []harness.ContainerMount{
-			rw(rr.Root), ro(filepath.Join(rr.Root, ".git", "hooks")), rw(rcache), login}}},
+			rw(rr.Root), ro(filepath.Join(rr.Root, ".git", "hooks")), ro(filepath.Join(rr.Root, ".git", "config")), rw(rcache), login}}},
 	} {
 		st, err := harness.Adapters[harness.Container].Start(c.r, c.host)
 		if err != nil {
@@ -478,10 +478,12 @@ var roleRuns = []struct {
 	{"curate", "curator", func(r *harness.Request) { r.Since = "2026-10-01" }},
 }
 
-// S-0509, ADR-0247: a strategic agent's container mounts the main checkout
-// read-write as its working directory, its .git/hooks read-only, the role's
-// cache folder, and the login read-only, and nothing else; it is named for
-// the role, and passed FLAI_ROLE by name rather than FLAI_STORY.
+// S-0509, ADR-0247, ADR-0281: a strategic agent's container mounts the main
+// checkout read-write as its working directory, its .git/hooks and its
+// .git/config read-only, so that the container cannot name a command git runs
+// on the host, the role's cache folder, and the login read-only, and nothing
+// else; it is named for the role, and passed FLAI_ROLE by name rather than
+// FLAI_STORY.
 func TestAStrategicAgentsContainerMountsTheCheckout(t *testing.T) {
 	for _, c := range roleRuns {
 		r, host := roleReq(t, c.role)
@@ -490,12 +492,12 @@ func TestAStrategicAgentsContainerMountsTheCheckout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", c.role, err)
 		}
-		root, hooks := r.Root, filepath.Join(r.Root, ".git", "hooks")
+		root, hooks, config := r.Root, filepath.Join(r.Root, ".git", "hooks"), filepath.Join(r.Root, ".git", "config")
 		cache := filepath.Join(r.Root, ".flai-cache", "agents", c.role)
 		user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
 		want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-" + c.role + "-3f2a-b1", "--user", user,
 			"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
-			"-v", root + ":" + root, "-w", root, "-v", hooks + ":" + hooks + ":ro", "-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
+			"-v", root + ":" + root, "-w", root, "-v", hooks + ":" + hooks + ":ro", "-v", config + ":" + config + ":ro", "-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
 			"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_ROLE", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
 			"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
 		if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {

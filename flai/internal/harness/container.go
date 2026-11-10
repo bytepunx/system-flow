@@ -315,8 +315,9 @@ func createLockFile(path string) error {
 // roleStart is Start for a strategic agent, the planner, the orchestrator,
 // the analyzer, or the curator (S-0509, ADR-0247): it mounts the project's
 // main checkout read-write at its host path as the working directory, the
-// checkout's .git/hooks read-only over it, the role's cache folder, and the
-// operator's login read-only, and nothing else; it passes the variables of
+// checkout's .git/hooks and .git/config read-only over it, so that nothing in
+// the container can name a command git runs on the host (ADR-0281), the
+// role's cache folder, and the operator's login read-only, and nothing else; it passes the variables of
 // roleContainerEnv by name, FLAI_ROLE's value in the docker client's
 // environment, as the claude-code adapter's is on the host; and it names the
 // container for the role.
@@ -330,9 +331,11 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 		return Start{}, err
 	}
 	hooks := filepath.Join(r.Root, ".git", "hooks")
+	config := filepath.Join(r.Root, ".git", "config")
 	argv := append(dockerRun(host, ContainerName(r.Role, r.Session)),
 		"-v", r.Root+":"+r.Root, "-w", r.Root,
 		"-v", hooks+":"+hooks+":ro",
+		"-v", config+":"+config+":ro",
 		"-v", cache+":"+cache)
 	st, err := containerStart(argv, roleContainerEnv, nil, r, host, image, cache, stdin)
 	if err != nil {

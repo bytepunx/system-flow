@@ -785,8 +785,8 @@ func TestAContainerAgentThatEndedAskingResumesInItsSessionAndCache(t *testing.T)
 }
 
 // roleContainerLab is containerLab for a strategic agent (S-0509): the
-// project is a git checkout whose .git has no hooks folder yet, and holds the
-// four roles' Claude Code definitions.
+// project is a git checkout whose .git has its config and no hooks folder
+// yet, and holds the four roles' Claude Code definitions.
 func roleContainerLab(t *testing.T) (*agentLab, string) {
 	t.Helper()
 	lab, token := containerLab(t)
@@ -794,12 +794,15 @@ func roleContainerLab(t *testing.T) (*agentLab, string) {
 	return lab, token
 }
 
-// roleContainerReady makes the lab's project a git checkout with no hooks
-// folder, and gives it the four roles' Claude Code definitions, which the
-// inner harness's start reads.
+// roleContainerReady makes the lab's project a git checkout with its config
+// and no hooks folder, and gives it the four roles' Claude Code definitions,
+// which the inner harness's start reads.
 func (lab *agentLab) roleContainerReady() {
 	lab.t.Helper()
 	if err := os.MkdirAll(filepath.Join(lab.root, ".git"), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab.root, ".git", "config"), []byte("[core]\n\trepositoryformatversion = 0\n"), 0o644); err != nil {
 		lab.t.Fatal(err)
 	}
 	defs := filepath.Join(lab.root, ".claude", "agents")
@@ -817,7 +820,8 @@ func (lab *agentLab) roleContainerReady() {
 // started on the container harness as ADR-0247 says, and returns pilot's
 // start request: docker run of the container named for the role and the
 // session, mounting the main checkout read-write at its path as the working
-// directory, its .git/hooks read-only, and the role's cache folder, and no
+// directory, its .git/hooks and .git/config read-only (ADR-0281), and the
+// role's cache folder, and no
 // story's worktree; FLAI_ROLE passed by name and FLAI_STORY not at all; the
 // hooks folder and the cache folder, with the link to the login, made; and
 // the image's Claude Code version recorded on the run.
@@ -836,9 +840,10 @@ func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Re
 	args, _, _ := strings.Cut(string(got), "\n")
 	root := lab.root
 	hooks := filepath.Join(root, ".git", "hooks")
+	config := filepath.Join(root, ".git", "config")
 	cache := harness.ContainerCache(root, role)
 	for _, want := range []string{"--name " + harness.ContainerName(role, run.Session) + " ", " -v " + root + ":" + root + " ", " -w " + root + " ",
-		" -v " + hooks + ":" + hooks + ":ro ", " -v " + cache + ":" + cache + " ", " -e FLAI_ROLE ", " flai-agent-claude-code:local"} {
+		" -v " + hooks + ":" + hooks + ":ro ", " -v " + config + ":" + config + ":ro ", " -v " + cache + ":" + cache + " ", " -e FLAI_ROLE ", " flai-agent-claude-code:local"} {
 		if !strings.Contains(args, want) {
 			t.Errorf("docker's arguments lack %q: %s", want, args)
 		}
@@ -963,5 +968,53 @@ func TestStrategicAgentsInContainersAreNoCauseToCheckTheHostsClaude(t *testing.T
 	manifestOn("agent:\n  harness: container\nplanning:\n  agent:\n    harness: claude-code\n")
 	if _, uses := claudeCodeProject(root); !uses {
 		t.Error("a planner on the host's claude-code does not have it checked")
+	}
+}
+
+// ADR-0281 §2: a strategic agent's start on the container harness is refused
+// before anything runs when the main checkout's .git/config is missing or is
+// a folder, since the container mounts it read-only and docker would make a
+// missing one a folder the root user owns; the checkout is left as it was.
+func TestAStrategicContainerIsRefusedACheckoutWithNoGitConfig(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		set  func(config string) error
+	}{
+		{"missing", os.Remove},
+		{"a folder", func(config string) error {
+			if err := os.Remove(config); err != nil {
+				return err
+			}
+			return os.Mkdir(config, 0o755)
+		}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab, _ := roleContainerLab(t)
+			config := filepath.Join(lab.root, ".git", "config")
+			if err := c.set(config); err != nil {
+				t.Fatal(err)
+			}
+			before, _ := os.Lstat(config)
+			id := lab.epic.ID
+			if lab.planInContainer(id) {
+				t.Fatal("started")
+			}
+			r := lab.planRun(id)
+			if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 {
+				t.Fatalf("run: %+v", r)
+			}
+			for _, s := range []string{config, "is not a file", "run the agent on another harness"} {
+				if !strings.Contains(r.Why, s) {
+					t.Errorf("the refusal does not say %q: %s", s, r.Why)
+				}
+			}
+			if _, err := os.Stat(filepath.Join(lab.outDir, conventions.RolePlan+".stdin")); err == nil {
+				t.Error("the planner's container was run")
+			}
+			after, _ := os.Lstat(config)
+			if (before == nil) != (after == nil) || (after != nil && after.IsDir() != before.IsDir()) {
+				t.Errorf("the refusal changed .git/config: %v, then %v", before, after)
+			}
+		})
 	}
 }
