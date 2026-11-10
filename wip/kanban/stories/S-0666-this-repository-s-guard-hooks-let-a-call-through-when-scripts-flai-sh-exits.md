@@ -6,7 +6,7 @@ title: This repository's guard hooks let a call through when scripts/flai.sh exi
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T10:55:48Z
+updated: 2026-11-10T10:57:18Z
 transitions: []
 tags: [guard, scripts, harness]
 topics: [harness, cli]
@@ -37,7 +37,6 @@ usage:
           cache_read: 68935829
           cache_write: 1044206
           cost: 23.6176
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -49,6 +48,9 @@ forecast:
   basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662 and S-0663."
   by: flai
   at: 2026-11-10T10:54:40Z
+finalized:
+  by: alex
+  at: 2026-11-10T10:57:18Z
 ---
 # S-0666 This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
 
