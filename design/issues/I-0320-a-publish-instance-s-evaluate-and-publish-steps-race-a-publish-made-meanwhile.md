@@ -2,12 +2,12 @@
 id: I-0320
 title: A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
 class: impression
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-09T16:58:32Z
 last_reported: 2026-11-09T16:58:32Z
-updated: 2026-11-09T21:22:33Z
+updated: 2026-11-10T06:51:32Z
 ---
 
 # I-0320 A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
@@ -24,3 +24,4 @@ S-0641, the publish formula's instance made by the orchestrator for S-0610 and S
 ## Remediation
 
 Story S-0643 remediates this issue, created from it at 2026-11-09T21:22:33Z.
+Closed 2026-11-10T06:51:32Z: S-0643: `flai release --pending --require-pending` exits 2 when nothing is pending and names the release that covered the work: each component's newest release, as tag or template version, commit, who made it, and when, in `covered_by` under `--json`. The publish formula's publish step now runs `flai release --pending --require-pending --json` with `stop: [2]`. So an instance whose evaluate step another publish outran stops cleanly and records that release, rather than closing on a release it did not make. `TestReleasePendingRequirePendingNamesTheReleaseThatOutranIt` in `flai/cmd/release_pending_test.go` reproduces the sequence: evaluate, then a hand publish, then the step.
