@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -1603,14 +1604,37 @@ func testTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
 
 // ownersServer is the fixture's server as the operator's own agent runs it:
 // the manifest's owner is alex, and the server's agent is agent, logging to
-// logs.
+// logs. Its slow threshold is an hour, so that a call a loaded host makes
+// slow logs no "request answered" event and logs holds only the warnings the
+// tests look for (I-0329).
 func ownersServer(t *testing.T, agent string, logs *bytes.Buffer) *fixture {
 	t.Helper()
 	return setupWith(t, func(o *Options) {
 		o.Repo.Manifest.Owner = "alex"
 		o.Agent = agent
 		o.Logger = slog.New(slog.NewJSONHandler(logs, nil))
+		o.Slow = time.Hour
 	})
+}
+
+// I-0329: under host load a thread_reply took longer than perf.Slow()'s
+// 500ms, the owners' server logged it as slow, and the tests that assert it
+// logged nothing failed. FLAI_SLOW_REQUEST=1ns makes every call slow by the
+// default threshold, so the owners' server must log none of them.
+func TestTheOwnersServerLogsNoSlowCall(t *testing.T) {
+	t.Setenv(perf.SlowEnv, "1ns")
+	var logs bytes.Buffer
+	f := ownersServer(t, "alex", &logs)
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which library?", On: f.story.ID, Author: "claude", Text: "SDK or hand-rolled?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "thread_reply", map[string]any{"id": th.ID, "text": "The official Go SDK."}); failed != "" {
+		t.Fatal(failed)
+	}
+	if logs.Len() != 0 {
+		t.Errorf("logged:\n%s", logs.String())
+	}
 }
 
 // digestEntries is the names of the files in the fixture's digest folder.
