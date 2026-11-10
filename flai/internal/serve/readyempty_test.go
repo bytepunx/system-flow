@@ -112,8 +112,15 @@ func (lab *readyEmptyLab) looks(n int) {
 // ready.
 func (lab *readyEmptyLab) ready(title string) string {
 	lab.t.Helper()
+	return lab.readyWith(title, []string{"docs/" + strings.ToLower(title)}, nil)
+}
+
+// readyWith makes a story with a criterion, touches, and after, and moves it
+// to ready.
+func (lab *readyEmptyLab) readyWith(title string, touches, after []string) string {
+	lab.t.Helper()
 	st, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: lab.epic.ID, Owner: "alex",
-		Touches: []string{"docs/" + strings.ToLower(title)}, Now: time.Now()})
+		Touches: touches, After: after, Now: time.Now()})
 	if err != nil {
 		lab.t.Fatal(err)
 	}
@@ -215,4 +222,59 @@ func TestNoReadyEmptyWithoutRoom(t *testing.T) {
 		lab.looks(3)
 		lab.want(0, "ready 0 with no in-progress limit")
 	})
+}
+
+// I-0285, ADR-0279: a ready column whose stories are all held on after is
+// drained, since none of them can fill a lane, so ready-empty is told and the
+// orchestrator is started to promote. Before ADR-0279 the held stories were
+// counted, two at a room of two, and nothing was told while lanes stood empty.
+// A story held on overlap alone still counts: a trial merge may clear it at the
+// next look.
+func TestReadyEmptyLeavesOutStoriesHeldOnAfter(t *testing.T) {
+	t.Run("held on after", func(t *testing.T) {
+		lab := newReadyEmptyLab(t, 3)
+		busy := lab.ready("Busy")
+		lab.move(busy, workitem.InProgress)
+		lab.readyWith("A", []string{"docs/a"}, []string{busy})
+		lab.readyWith("B", []string{"docs/b"}, []string{busy})
+		lab.looks(2)
+		lab.want(1, "two ready stories held on after at a room of two")
+		if e := lab.events()[0]; e.To != "0" || e.Fields[inbox.FieldRoom] != "2" || e.Fields[inbox.FieldLimit] != "3" {
+			t.Errorf("the event: %+v", e)
+		}
+	})
+	t.Run("held on overlap", func(t *testing.T) {
+		lab := newReadyEmptyLab(t, 3)
+		busy := lab.ready("Busy")
+		lab.move(busy, workitem.InProgress)
+		lab.readyWith("A", []string{"docs/busy"}, nil)
+		lab.readyWith("B", []string{"docs/busy"}, nil)
+		lab.looks(2)
+		lab.want(0, "two ready stories held on overlap at a room of two")
+	})
+}
+
+// ADR-0279: the count leaves out a story held on after, alone or with an
+// overlap, and keeps one held on overlap alone and one not held.
+func TestReadyNotHeldOnAfterCounts(t *testing.T) {
+	lab := newReadyEmptyLab(t, 5)
+	busy := lab.ready("Busy")
+	lab.move(busy, workitem.InProgress)
+	lab.readyWith("Free", []string{"docs/free"}, nil)
+	lab.readyWith("Overlap", []string{"docs/busy"}, nil)
+	lab.readyWith("After", []string{"docs/after"}, []string{busy})
+	lab.readyWith("Both", []string{"docs/busy"}, []string{busy})
+	stories, holds, _, _, _, err := readyStories(lab.repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stories) != 4 {
+		t.Fatalf("%d ready stories, want 4", len(stories))
+	}
+	if got := readyNotHeldOnAfter(stories, holds); got != 2 {
+		t.Errorf("readyNotHeldOnAfter = %d, want 2 (Free and Overlap)", got)
+	}
+	if got := readyNotHeldOnAfter(stories, nil); got != 4 {
+		t.Errorf("readyNotHeldOnAfter with no holds = %d, want 4", got)
+	}
 }

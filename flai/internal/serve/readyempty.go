@@ -29,26 +29,46 @@ func readyEmptyPath(repo *workitem.Repo) string {
 	return filepath.Join(repo.CacheDir(), "ready-empty.json")
 }
 
-// readyDrained decides, from the ready stories, held ones counted, the room
-// the in-progress limit leaves (the limit less the stories in progress, or
-// below zero when there is no limit), and whether the last look found ready
-// below the room, whether this look tells a ready-empty event and whether
-// ready is below the room now (ADR-0211 §1). Ready is below when it is fewer
-// than the room; with no limit, or no room, it is not. The event is told on
-// the look that finds it below after one that did not, and not again until a
-// look finds ready at the room or above.
+// readyNotHeldOnAfter counts the ready stories that no story named in after:
+// holds, the count ready-empty compares with the room (ADR-0279). A story held
+// on after waits for an acceptance and fills no lane meanwhile, so counting it
+// would keep the event, and the orchestrator's promotion, from a column full
+// of stories that cannot start (I-0285). A story held on overlap or on no
+// touches still counts: a trial merge, or a touch, may clear it at the next
+// look. ready is what readyStories answers, blocked stories already left out.
+func readyNotHeldOnAfter(ready []readyStory, holds *workitem.Holds) int {
+	n := 0
+	for _, s := range ready {
+		if holds != nil && s.item != nil {
+			if h := holds.Of(s.item); h != nil && h.Code == workitem.HoldAfter {
+				continue
+			}
+		}
+		n++
+	}
+	return n
+}
+
+// readyDrained decides, from the ready stories not held on after
+// (readyNotHeldOnAfter), the room the in-progress limit leaves (the limit
+// less the stories in progress, or below zero when there is no limit), and
+// whether the last look found ready below the room, whether this look tells a
+// ready-empty event and whether ready is below the room now (ADR-0211 §1).
+// Ready is below when it is fewer than the room; with no limit, or no room,
+// it is not. The event is told on the look that finds it below after one that
+// did not, and not again until a look finds ready at the room or above.
 func readyDrained(ready, room int, wasBelow bool) (emit, below bool) {
 	below = room > 0 && ready < room
 	return below && !wasBelow, below
 }
 
 // noteReadyEmpty appends a ready-empty event to the project's event log when
-// the ready column, ready stories in it, has drained below room, the
-// in-progress limit's room as readyStories counts it, since the last look,
-// and keeps whether it is below in .flai-cache, so that neither a later look
-// nor a restart of flai serve tells the same draining again. It keeps the
-// flag before it appends, so that a flag it cannot keep never tells one
-// draining at every look. A flag it cannot read or keep, a board it cannot
+// the ready column, ready stories in it not held on after, has drained below
+// room, the in-progress limit's room as readyStories counts it, since the
+// last look, and keeps whether it is below in .flai-cache, so that neither a
+// later look nor a restart of flai serve tells the same draining again. It
+// keeps the flag before it appends, so that a flag it cannot keep never tells
+// one draining at every look. A flag it cannot read or keep, a board it cannot
 // read for the limit, or an event it cannot append, is warned of and the look
 // goes on: the event log is news, not state (ADR-0211 §4).
 func (l *launcher) noteReadyEmpty(repo *workitem.Repo, ready, room int) {

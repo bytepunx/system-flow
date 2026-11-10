@@ -20,8 +20,8 @@ const Planned = "planned"
 
 // ReadyEmpty is the kind of the event that the ready column fell below the
 // in-progress limit's room, once per draining (ADR-0211): ID and Type are
-// "board", To is the ready count, Fields hold FieldRoom and FieldLimit, and By
-// is flai serve.
+// "board", To is the count of ready stories not held on after (ADR-0279),
+// Fields hold FieldRoom and FieldLimit, and By is flai serve.
 const ReadyEmpty = "ready-empty"
 
 // ReleaseDue is the kind of the event that an acceptance changed what flai
@@ -102,8 +102,8 @@ func PlannedEvent(id, typ, title, by string, written []string) LoggedEvent {
 }
 
 // ReadyEmptyEvent is the ready-empty event of a ready column holding ready
-// stories, below room, the in-progress limit less the stories in progress,
-// told by by.
+// stories not held on after (ADR-0279), below room, the in-progress limit less
+// the stories in progress, told by by.
 func ReadyEmptyEvent(ready, room, limit int, by string) LoggedEvent {
 	return LoggedEvent{Kind: ReadyEmpty, ID: "board", Type: "board", Title: "ready column", To: strconv.Itoa(ready), By: by,
 		Fields: map[string]string{FieldRoom: strconv.Itoa(room), FieldLimit: strconv.Itoa(limit)}}

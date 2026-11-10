@@ -120,7 +120,7 @@ func (r orchestrateReason) line() string {
 		}
 		s = "planned " + r.ID + wrote + title
 	case inbox.ReadyEmpty:
-		s = "ready-empty: the ready column holds " + r.To + ", below the in-progress room"
+		s = "ready-empty: the ready column holds " + r.To + " not held on after, below the in-progress room"
 	case reordered:
 		s = "reordered: the pull order changed"
 	default:
