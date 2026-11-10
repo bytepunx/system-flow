@@ -24,16 +24,16 @@ touches: [design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fa
 after: [T-2839, T-2842]
 usage:
   source: log
-  seconds: 1401
+  seconds: 1406
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 222
-      cache_read: 1744445
-      cache_write: 12404
-      cost: 0.6464
+      input: 30
+      output: 4607
+      cache_read: 1718125
+      cache_write: 38727
+      cost: 0.7457
 ---
 # T-2846 Confirm I-0309's tests under load and close I-0309
 

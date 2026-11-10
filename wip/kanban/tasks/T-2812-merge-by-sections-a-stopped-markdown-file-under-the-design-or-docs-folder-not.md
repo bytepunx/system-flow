@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 390
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 16
-      output: 128
-      cache_read: 2327948
-      cache_write: 8674
-      cost: 0.8598
+      output: 2295
+      cache_read: 2348400
+      cache_write: 18764
+      cost: 0.6556
 ---
 # T-2812 Merge by sections a stopped markdown file under the design or docs folder, not only one in claims.shared
 

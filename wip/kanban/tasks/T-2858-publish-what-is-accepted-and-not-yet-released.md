@@ -3,12 +3,18 @@ id: T-2858
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0658
 owner: alex
 created: 2026-11-10T07:56:53Z
-updated: 2026-11-10T07:56:53Z
-transitions: []
+updated: 2026-11-10T08:29:11Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:29:10Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:29:11Z
+    by: system-flow
 stream: S-0658
 tags: []
 after: [T-2857]

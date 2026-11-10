@@ -7,15 +7,38 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:07Z
-updated: 2026-11-10T08:09:07Z
+updated: 2026-11-10T08:22:10Z
 transitions: []
 tags: [cli]
+topics: [kluster, deployment]
+touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 161
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 35
+          output: 182
+          cache_read: 1164247
+          cache_write: 152235
+          cost: 0.3557
 draft: true
+forecast:
+  duration: 20m
+  delivery: 2026-11-10T10:44:00Z
+  basis: "flai forecast: median 116 s per unit of size over 5 done feature stories on claude-opus-5-5, times size 10 (7 criteria, 3 touches); S-0576, which wrote ADR-0254, took 710 s of agent time; 3rd in the pull order behind an in-progress limit of 5."
+  by: planner-S-0659
+  at: 2026-11-10T08:22:10Z
 ---
 # S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once
 
@@ -34,8 +57,25 @@ An ADR settles how a story in progress is deployed into its kluster namespace at
 - [ ] ADR-0254 names it in `superseded_by` or the new ADR names the sections it amends, as `design/conventions/decisions.md` has it, and `design/system/kluster.md` describes the design as decided and marks each part not yet built
 
 ## Tasks
+- T-2860 Write the ADR, proposed, that amends ADR-0254 §4, §5, §7, and §8 for a deploy a story's agent asks for while its story is in progress
+- T-2861 Describe in design/system/kluster.md the deploy a story's agent asks for as decided, marking each part not yet built
+- T-2862 Ask the operator to confirm the ADR's decisions on a thread, and accept it with their answer
 
 ## Notes
 
 - A design story: it changes no code.
 - The hand-off `flai verify --job` makes to flai serve is the pattern to weigh first.
+
+### Planning
+
+- Touches:
+  - `design/system/kluster.md`: design. The goal links it and the last criterion has it describe the decided design.
+  - `design/adrs/README.md`: co-change (27% of the commits that changed kluster.md and ADR-0254). `flai adr new` and `flai adr accept` write the index again.
+  - `design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md`: design. It changes only if the ADR supersedes it and `superseded_by` is set; with `--refines`, as T-2860 expects, it stays as it is.
+  - No folder touch on `design/adrs`. The new ADR's file takes the number `flai adr new` gives it when the story runs, and `flai adr new --commit` adds that file to the story's touches itself.
+  - Left out from `flai touches suggest`: the docs and `flai-cli.md`, `project-manifest.md`, `flaiover-dashboard.md`, and `design/tech/kluster.md`. They describe what is built; S-0660 to S-0663 change them as they build it.
+- Topics `kluster` and `deployment` were added, the topics of kluster.md and ADR-0254, so the story's pack briefs them.
+- No `after`: the story reads no other story's output. S-0660 to S-0663 build on this one's ADR.
+- Forecast 20m stands as `flai forecast` gives it. S-0576, which wrote ADR-0254 and its design, took 710 s of agent time; this ADR amends four of its sections and edits the same 56 KB design, so a little more is fair. The wait on the operator in T-2862 is wall time, not agent time.
+- Cost of delay: not set yet. Neither the story nor E-0035 has inputs; TH-0982 asks the operator for them.
+- Assumptions: the limit on story namespaces is set in the manifest's `kluster:` block; the third criterion's "ADR-0254 §4's" table means §5's, the only table of when a namespace is deployed and torn down (§4 is the variables).

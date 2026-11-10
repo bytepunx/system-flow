@@ -3,10 +3,10 @@ id: S-0637
 type: story
 nature: improvement
 title: Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-09T08:06:42Z
-updated: 2026-11-10T07:58:49Z
+updated: 2026-11-10T08:26:41Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:15Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T07:56:45Z
     by: agent-S-0637
+  - to: review
+    at: 2026-11-10T08:26:41Z
+    by: agent-S-0637
 tags: [flai, sync, acceptance]
 topics: [cli, go, code]
-touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0276-a-rebase-that-stops-on-a-markdown-file-under-the-manifest-s-design-or-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md]
+touches: [flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0276-a-rebase-that-stops-on-a-markdown-file-under-the-manifest-s-design-or-docs.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +27,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 987
-  estimated: true
-  priced_by: estimate
+  seconds: 1807
+  priced_by: harness
   turns:
     - day: 2026-11-10
+      ceremony: 2
       test_runs: 1
       hand_edits: 1
-      work: 39
+      work: 130
   models:
     - model: claude-opus-5-5
-      input: 154
-      output: 1083
-      cache_read: 19674796
-      cache_write: 377814
-      cost: 7.3785
+      input: 346
+      output: 50679
+      cache_read: 51861612
+      cache_write: 414390
+      cost: 14.4786
   strategic:
     - kind: orchestrator
       seconds: 33
@@ -75,8 +78,8 @@ finalized:
 This story remediates [I-0315](../../../design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-shared-design-document.md), "Stories that each add a section at one spot in a shared design document conflict at every sync and acceptance, and the acceptance sends them back". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0315 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0315 is closed with `flai issue close I-0315 --reason` saying what fixed it
+- [x] The cause I-0315 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0315 is closed with `flai issue close I-0315 --reason` saying what fixed it
 
 ## Tasks
 - T-2811 Record in an ADR that a rebase merges by sections every markdown document under the design and docs folders

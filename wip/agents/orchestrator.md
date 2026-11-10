@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2078.3914
-accrued_seconds: 1538685
-tasks_completed: 2666
-last_run: 2026-11-10T08:11:33Z
+accrued_cost: 2079.8514
+accrued_seconds: 1539276
+tasks_completed: 2683
+last_run: 2026-11-10T08:28:45Z
 ---
 
 # Orchestrator activity
@@ -18694,6 +18694,125 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 32
 - Cost: 0.1944 USD, estimated
+
+### 2026-11-10T08:17:48Z
+
+- Summary: Release due after S-0651 and S-0654 (threshold policy met: count 3 >= 1, value 102.5 USD/week < 1000; pending S-0651, S-0653, S-0654; nothing held by whole_epics). Did not run the publish formula again: its instance S-0658, made at 07:56, is in ready and publishes everything accepted and not yet released when worked, so it covers this batch.
+- Items: S-0651, S-0654, S-0653, S-0658
+- Seconds: 46
+- Cost: 0.0798 USD, estimated
+
+### 2026-11-10T08:18:15Z
+
+- Summary: I didn't start a new publish run, because one is already waiting to be worked.
+- Items: none
+- Seconds: 27
+- Cost: 0.0924 USD, estimated
+
+### 2026-11-10T08:20:18Z
+
+- Summary: Recommended an answer on TH-0979, citing design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+- Items: S-0660
+- Seconds: 43
+- Cost: 0.0789 USD, estimated
+
+### 2026-11-10T08:20:38Z
+
+- Summary: Recommended an answer on TH-0980, citing design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+- Items: S-0661
+- Seconds: 20
+- Cost: 0.0260 USD, estimated
+
+### 2026-11-10T08:20:49Z
+
+- Summary: Recommended (operator_only) on TH-0979 and TH-0980 a revenue_per_week on E-0035 with the operator's figure, per D-0479, over the planners' penalty_per_week 40; set nothing, since an epic input is outside plan_backlog_stories; threads left open
+- Items: S-0660, S-0661, E-0035, TH-0979, TH-0980
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:21:29Z
+
+- Summary: I've answered both cost-of-delay questions with a recommendation, but set nothing, so S-0660 and S-0661 still have no value until you give a figure.
+- Items: none
+- Seconds: 40
+- Cost: 0.2821 USD, estimated
+
+### 2026-11-10T08:22:45Z
+
+- Summary: Recommended an answer on TH-0982, citing design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+- Items: S-0659
+- Seconds: 53
+- Cost: 0.1266 USD, estimated
+
+### 2026-11-10T08:23:05Z
+
+- Summary: Recommended an answer on TH-0981, citing design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+- Items: S-0663
+- Seconds: 20
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:23:44Z
+
+- Summary: Recommended an answer on TH-0983, citing design/digest/D-0479-e-0032-cost-of-delay-inputs-so-its-stories-can-be-valued-i-entered-my-own.md
+- Items: S-0662
+- Seconds: 39
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:24:31Z
+
+- Summary: plan_backlog_stories: recommended (operator_only, money) on TH-0981 (S-0663), TH-0982 (S-0659), and TH-0983 (S-0662) one revenue_per_week input on E-0035, per D-0479, in place of the planners' story-level figures (2m, 30 USD); an epic input is not mine to set, so set nothing and left the threads open
+- Items: S-0659, S-0662, S-0663, E-0035
+- Seconds: 47
+- Cost: 0.0317 USD, estimated
+
+### 2026-11-10T08:25:02Z
+
+- Summary: finalize_drafts: left S-0659 a draft (flai promote --drafts position 1, 20m, lacks only a cost of delay value); opened no thread, since TH-0982 already asks for the E-0035 input its value waits on
+- Items: S-0659
+- Seconds: 31
+- Cost: 0.0000 USD
+
+### 2026-11-10T08:25:34Z
+
+- Summary: None of the three cost-of-delay threads is settled yet, because they all need one figure on epic E-0035 that only you can set. Draft S-0659 stays a draft until that figure is in.
+- Items: none
+- Seconds: 32
+- Cost: 0.3007 USD, estimated
+
+### 2026-11-10T08:26:59Z
+
+- Summary: Answered TH-0984, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0659
+- Seconds: 76
+- Cost: 0.2033 USD, estimated
+
+### 2026-11-10T08:27:17Z
+
+- Summary: Answered TH-0985, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0661
+- Seconds: 18
+- Cost: 0.0236 USD, estimated
+
+### 2026-11-10T08:27:42Z
+
+- Summary: Approved and resolved the planners' plans for S-0659 (TH-0984: 3 tasks, 3 layers, forecast 20m) and S-0661 (TH-0985: 5 tasks, 3 layers, forecast 1h15m) under plan_backlog_stories; both stay drafts until the operator gives E-0035's cost of delay inputs (TH-0982, TH-0980)
+- Items: S-0659, S-0661, TH-0984, TH-0985
+- Seconds: 25
+- Cost: 0.0251 USD, estimated
+
+### 2026-11-10T08:28:13Z
+
+- Summary: finalize_drafts: flai promote --drafts lists S-0659, S-0661, S-0660, S-0663, and S-0662 as incomplete, each lacking only a cost of delay value; left as drafts with no new thread, since my threads TH-0979 to TH-0983 already ask the operator for E-0035's inputs
+- Items: S-0659, S-0660, S-0661, S-0662, S-0663
+- Seconds: 31
+- Cost: 0.0263 USD, estimated
+
+### 2026-11-10T08:28:45Z
+
+- Summary: I settled both plan threads I was started for. All five E-0035 stories stay drafts, because each still lacks a cost of delay value.
+- Items: none
+- Seconds: 32
+- Cost: 0.1635 USD, estimated
 
 ## Refusals
 

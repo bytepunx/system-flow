@@ -24,16 +24,16 @@ touches: [design/issues/I-0315-stories-that-each-add-a-section-at-one-spot-in-a-
 after: [T-2813, T-2814]
 usage:
   source: log
-  seconds: 3
+  seconds: 12
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 24
-      cache_read: 318060
-      cache_write: 1053
-      cost: 0.1174
+      output: 313
+      cache_read: 320721
+      cache_write: 2563
+      cost: 0.0895
 ---
 # T-2815 Close I-0315 with what fixed it
 

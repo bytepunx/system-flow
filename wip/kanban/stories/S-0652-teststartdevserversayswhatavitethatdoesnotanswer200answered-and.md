@@ -6,7 +6,7 @@ title: TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered and TestAnOpe
 status: in-progress
 owner: alex
 created: 2026-11-10T05:44:45Z
-updated: 2026-11-10T08:15:17Z
+updated: 2026-11-10T08:21:14Z
 transitions:
   - to: ready
     at: 2026-11-10T07:44:19Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0652
 tags: []
 topics: [testing]
-touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md]
+touches: [flai/internal/components/devserver_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md, design/issues/summary.md, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, flai/internal/serve/components_test.go]
 after: [S-0647]
 agent:
   harness: claude-code
@@ -25,21 +25,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 390
+  seconds: 1023
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
-      test_runs: 1
-      hand_edits: 1
-      work: 24
+      test_runs: 2
+      hand_edits: 3
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 499
-      cache_read: 5168774
-      cache_write: 252669
-      cost: 1.9949
+      input: 118
+      output: 1245
+      cache_read: 13692957
+      cache_write: 277104
+      cost: 5.1409
   strategic:
     - kind: orchestrator
       seconds: 71

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 359
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 221
-      cache_read: 3226090
-      cache_write: 22135
-      cost: 1.1952
+      input: 22
+      output: 3190
+      cache_read: 3264595
+      cache_write: 26085
+      cost: 0.9114
 ---
 # T-2813 Say in the design and user docs that a stopped design or docs markdown file merges by sections
 

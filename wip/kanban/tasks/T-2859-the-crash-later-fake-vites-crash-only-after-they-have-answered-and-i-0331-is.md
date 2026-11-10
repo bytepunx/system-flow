@@ -3,11 +3,11 @@ id: T-2859
 type: task
 nature: remediation
 title: The crash-later fake vites crash only after they have answered, and I-0331 is closed
-status: in-progress
+status: done
 parent: S-0652
 owner: alex
 created: 2026-11-10T08:15:17Z
-updated: 2026-11-10T08:15:29Z
+updated: 2026-11-10T08:21:14Z
 transitions:
   - to: ready
     at: 2026-11-10T08:15:29Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:15:29Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T08:21:13Z
+    by: agent-S-0652
 stream: S-0652
 tags: []
-touches: [flai/internal/serve/components_test.go, flai/internal/components/devserver_test.go, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md, design/issues/summary.md]
+touches: [flai/internal/serve/components_test.go, flai/internal/components/devserver_test.go, design/issues/I-0331-testadevserverthatexitsonitsownisforgottenwithitserror-fails-the-integration.md, design/issues/summary.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
+usage:
+  source: log
+  seconds: 327
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 47
+      cache_read: 1722937
+      cache_write: 10017
+      cost: 0.6377
 ---
 # T-2859 The crash-later fake vites crash only after they have answered, and I-0331 is closed
 

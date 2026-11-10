@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 53
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 56
-      cache_read: 1381622
-      cache_write: 9232
-      cost: 0.5118
+      input: 9
+      output: 1366
+      cache_read: 1397865
+      cache_write: 11169
+      cost: 0.3903
 ---
 # T-2811 Record in an ADR that a rebase merges by sections every markdown document under the design and docs folders
 

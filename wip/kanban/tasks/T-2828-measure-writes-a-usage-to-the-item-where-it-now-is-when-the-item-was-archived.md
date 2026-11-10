@@ -3,12 +3,18 @@ id: T-2828
 type: task
 nature: remediation
 title: Measure writes a usage to the item where it now is when the item was archived since it was read
-status: backlog
+status: in-progress
 parent: S-0648
 owner: alex
 created: 2026-11-10T06:37:26Z
-updated: 2026-11-10T06:37:26Z
-transitions: []
+updated: 2026-11-10T08:28:04Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:28:02Z
+    by: agent-S-0648
+  - to: in-progress
+    at: 2026-11-10T08:28:04Z
+    by: agent-S-0648
 stream: S-0648
 tags: [flai, serve]
 touches: [flai/internal/serve/usage.go, flai/internal/serve/usage_test.go]

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 377
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 55
-      output: 343
-      cache_read: 8736708
-      cache_write: 68406
-      cost: 3.2398
+      input: 59
+      output: 8648
+      cache_read: 8849489
+      cache_write: 70710
+      cost: 2.4706
 ---
 # T-2814 Reproduce I-0315 in real git: two stories add a section at one spot of a design document outside claims.shared, and neither sync nor acceptance stops
 

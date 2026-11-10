@@ -3,36 +3,51 @@ id: S-0658
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T07:56:53Z
-updated: 2026-11-10T07:56:58Z
+updated: 2026-11-10T08:28:53Z
 transitions:
   - to: ready
     at: 2026-11-10T07:56:58Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-10T08:26:48Z
+    by: agent-S-0658
 tags: []
-touches: [wip/kanban/stories/S-0658-publish-what-is-accepted-and-not-yet-released.md]
+touches: [wip/kanban/stories/S-0658-publish-what-is-accepted-and-not-yet-released.md, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 129
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      hand_edits: 1
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 531
+      cache_read: 3345193
+      cache_write: 151504
+      cost: 1.2865
   strategic:
     - kind: orchestrator
-      seconds: 20
+      seconds: 31
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 37
-          cache_read: 208296
-          cache_write: 29829
-          cost: 0.0642
+          input: 9
+          output: 53
+          cache_read: 270825
+          cache_write: 41200
+          cost: 0.0841
 formula: publish
 ---
 # S-0658 Publish what is accepted and not yet released

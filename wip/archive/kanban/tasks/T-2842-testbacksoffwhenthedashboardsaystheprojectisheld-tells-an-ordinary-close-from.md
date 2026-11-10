@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 50
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 37
-      cache_read: 262808
-      cache_write: 4535
-      cost: 0.0984
+      input: 5
+      output: 701
+      cache_read: 261448
+      cache_write: 5893
+      cost: 0.1135
 ---
 # T-2842 TestBacksOffWhenTheDashboardSaysTheProjectIsHeld tells an ordinary close from the held back-off by a wide gap
 

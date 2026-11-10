@@ -3,11 +3,11 @@ id: T-2827
 type: task
 nature: remediation
 title: Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock
-status: in-progress
+status: done
 parent: S-0648
 owner: alex
 created: 2026-11-10T06:37:17Z
-updated: 2026-11-10T08:09:49Z
+updated: 2026-11-10T08:27:10Z
 transitions:
   - to: ready
     at: 2026-11-10T08:09:47Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:09:49Z
     by: agent-S-0648
+  - to: done
+    at: 2026-11-10T08:27:10Z
+    by: agent-S-0648
 stream: S-0648
 tags: [flai, workitem]
-touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/work-hierarchy.md]
+touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/work-hierarchy.md, design/adrs/0277-repo-save-refuses-to-write-an-active-work-item-whose-file-was-archived-since-it.md, design/adrs/README.md]
 usage:
   source: log
   seconds: 26
