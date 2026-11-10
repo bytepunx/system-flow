@@ -112,9 +112,10 @@ func kind(c byte) string {
 // harness, or one pilot cannot start; no cache, or one that is not an
 // absolute path to a folder isDir finds; or not the variables of the host's
 // HTTP MCP server's URL and token, which pilot always reaches, or a variable
-// it names that getenv finds unset or empty. It reports the first refusal,
-// in one line, naming the field and the variable but never a variable's
-// value.
+// it names that getenv finds unset or empty; or a probe, a trial of the agent
+// image (I-0224), that names a Role or an Item, since a probe is never a
+// strategic agent's run. It reports the first refusal, in one line, naming
+// the field and the variable but never a variable's value.
 func Check(req harness.Request, getenv func(string) string, isDir func(string) bool) error {
 	names := innerNames()
 	switch {
@@ -134,6 +135,10 @@ func Check(req harness.Request, getenv func(string) string, isDir func(string) b
 		return errors.New("the start request names no mcp_url_env; pilot reaches the host's HTTP MCP server, so set mcp_url_env to the name of the variable that holds its URL")
 	case req.MCPTokenEnv == "":
 		return errors.New("the start request names no mcp_token_env; pilot reaches the host's HTTP MCP server, so set mcp_token_env to the name of the variable that holds the agent's bearer token")
+	case req.Probe && req.Role != "":
+		return fmt.Errorf("the start request is a probe and names the Role %s; a probe is a trial of the agent image, never a strategic agent's run, so drop Role, or drop probe to start the role", strconv.Quote(req.Role))
+	case req.Probe && req.Item != "":
+		return fmt.Errorf("the start request is a probe and names the Item %s; a probe is a trial of the agent image, never a strategic agent's run, so drop Item, or drop probe to start the role on it", strconv.Quote(req.Item))
 	}
 	for _, v := range []struct{ field, name string }{{"mcp_url_env", req.MCPURLEnv}, {"mcp_token_env", req.MCPTokenEnv}, {"mcp_host_env", req.MCPHostEnv}} {
 		if v.name != "" && getenv(v.name) == "" {

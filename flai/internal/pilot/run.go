@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -46,7 +47,9 @@ func Main(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer, enviro
 // stderr itself. The child's environment is environ, then the adapter's
 // variables, then those the adapter copies from environ, then FLAI_AGENT,
 // FLAI_SESSION, and FLAI_STORY from the request, a later one of a name
-// winning, as os/exec keeps the last. It returns the harness's exit code, or
+// winning, as os/exec keeps the last; a probe's child has no FLAI_STORY at
+// all, not even environ's, so that its flai and the guard do not take it for
+// the story's agent (I-0224). It returns the harness's exit code, or
 // 128 and the signal's number when a signal ended it, and ExitUsage, after
 // one line on stderr, when the harness cannot be started.
 func Run(ctx context.Context, req harness.Request, stdout, stderr io.Writer, environ []string, signals <-chan os.Signal) int {
@@ -182,7 +185,12 @@ func childEnv(req harness.Request, spec harness.Start, environ []string) ([]stri
 		}
 		env = append(env, child+"="+value)
 	}
-	for _, v := range []struct{ name, value string }{{"FLAI_AGENT", req.Name}, {"FLAI_SESSION", req.Session}, {"FLAI_STORY", req.Story}} {
+	story := req.Story
+	if req.Probe {
+		story = ""
+		env = slices.DeleteFunc(env, func(kv string) bool { return strings.HasPrefix(kv, "FLAI_STORY=") })
+	}
+	for _, v := range []struct{ name, value string }{{"FLAI_AGENT", req.Name}, {"FLAI_SESSION", req.Session}, {"FLAI_STORY", story}} {
 		if v.value != "" {
 			env = append(env, v.name+"="+v.value)
 		}

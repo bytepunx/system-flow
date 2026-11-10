@@ -153,6 +153,47 @@ func TestCheckRefusesAStartRequestPilotCannotRun(t *testing.T) {
 	}
 }
 
+// I-0224: a probe is read, and passes the check with the story it runs in.
+func TestAProbeIsReadAndPassesTheCheck(t *testing.T) {
+	cache := t.TempDir()
+	in := `{"Story":"S-0507","Name":"probe-S-0507","probe":true,"inner":"claude-code",` +
+		`"mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN","cache":"` + filepath.ToSlash(cache) + `"}`
+	req, err := Read(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !req.Probe || req.Name != "probe-S-0507" || req.Story != "S-0507" {
+		t.Fatalf("read %+v, want a probe of S-0507 named probe-S-0507", req)
+	}
+	if err := Check(req, env, isDirOnly(cache)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// I-0224: a probe is a trial of the image, never a strategic agent's run.
+func TestCheckRefusesAProbeOfARoleOrAnItem(t *testing.T) {
+	cache := t.TempDir()
+	for _, c := range []struct {
+		name string
+		edit func(*harness.Request)
+		want string
+	}{
+		{"role", func(r *harness.Request) { r.Story, r.Role = "", "plan" }, `is a probe and names the Role "plan"; a probe is a trial of the agent image, never a strategic agent's run, so drop Role`},
+		{"item", func(r *harness.Request) { r.Item = "E-0029" }, `is a probe and names the Item "E-0029"; a probe is a trial of the agent image, never a strategic agent's run, so drop Item`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			req := valid(cache)
+			req.Probe = true
+			c.edit(&req)
+			err := Check(req, env, isDirOnly(cache))
+			oneLineWithoutSecrets(t, err)
+			if err != nil && !strings.Contains(err.Error(), c.want) {
+				t.Errorf("refused with %q, want it to say %q", err, c.want)
+			}
+		})
+	}
+}
+
 func TestCheckTakesARequestThatNamesNoHostVariable(t *testing.T) {
 	cache := t.TempDir()
 	req := valid(cache)

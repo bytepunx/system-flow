@@ -35,6 +35,7 @@ for a in "$@"; do printf '%s\000' "$a" >> "$d/argv"; done
   printf 'FLAI_AGENT=%s\n' "$FLAI_AGENT"
   printf 'FLAI_SESSION=%s\n' "$FLAI_SESSION"
   printf 'FLAI_STORY=%s\n' "$FLAI_STORY"
+  printf 'FLAI_STORY is %s\n' "${FLAI_STORY+set}"
   printf 'FLAI_ROLE=%s\n' "$FLAI_ROLE"
   printf 'FLAI_ITEM=%s\n' "$FLAI_ITEM"
   if [ -n "$FLAI_MCP_TOKEN" ]; then echo 'token=set'; else echo 'token=unset'; fi
@@ -294,6 +295,51 @@ func TestRunGivesTheHarnessItsEnvironment(t *testing.T) {
 		if !strings.Contains(string(data), want+"\n") {
 			t.Errorf("the harness's environment lacks %s:\n%s", want, data)
 		}
+	}
+}
+
+// I-0224: the start request scripts/agent-container.sh wrote for a trial of
+// the image, a story's agent under the story's own name, started claude with
+// the story's prompt, which begins S-0507 with story_start, and FLAI_STORY;
+// the same request marked probe, under a name of its own, starts it with the
+// probe's prompt and no FLAI_STORY, even one the container inherited.
+func TestRunStartsAProbeWithoutTheStory(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		probe  bool
+		agent  string
+		prompt string // what claude's prompt holds
+		not    string // what it does not
+		story  string // the child's FLAI_STORY lines
+	}{
+		{"the story's agent", false, "agent-S-0507", "story_start with S-0507", "trial of the agent image", "FLAI_STORY=S-0507\nFLAI_STORY is set\n"},
+		{"a probe", true, "probe-S-0507", "trial of the agent image", "story_start with S-0507", "FLAI_STORY=\nFLAI_STORY is \n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := fake(t)
+			req := valid(t.TempDir())
+			req.Name, req.Probe = c.agent, c.probe
+			if r := run(t, t.Context(), req, environ(dir, "FLAI_STORY=S-0507"), nil); r.code != 0 {
+				t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+			}
+			args := argv(t, dir)
+			i := slices.Index(args, "-p")
+			if i < 0 || i+1 >= len(args) {
+				t.Fatalf("argv has no -p prompt: %q", args)
+			}
+			if prompt := args[i+1]; !strings.Contains(prompt, c.prompt) || strings.Contains(prompt, c.not) {
+				t.Errorf("claude's prompt does not hold %q, or holds %q:\n%s", c.prompt, c.not, prompt)
+			}
+			env, err := os.ReadFile(filepath.Join(dir, "env"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"FLAI_AGENT=" + c.agent + "\n", "FLAI_SESSION=" + req.Session + "\n", c.story} {
+				if !strings.Contains(string(env), want) {
+					t.Errorf("the harness's environment lacks %q:\n%s", want, env)
+				}
+			}
+		})
 	}
 }
 
