@@ -3,10 +3,10 @@ id: S-0658
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-10T07:56:53Z
-updated: 2026-11-10T08:29:45Z
+updated: 2026-11-10T08:37:02Z
 transitions:
   - to: ready
     at: 2026-11-10T07:56:58Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T08:29:45Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T08:37:02Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0658-publish-what-is-accepted-and-not-yet-released.md, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md, design/issues/summary.md]
 agent:

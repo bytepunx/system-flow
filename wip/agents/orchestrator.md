@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2081.1289
-accrued_seconds: 1539606
-tasks_completed: 2696
-last_run: 2026-11-10T08:34:56Z
+accrued_cost: 2081.4574
+accrued_seconds: 1539636
+tasks_completed: 2698
+last_run: 2026-11-10T08:35:40Z
 ---
 
 # Orchestrator activity
@@ -18904,6 +18904,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 29
 - Cost: 0.1321 USD, estimated
+
+### 2026-11-10T08:35:24Z
+
+- Summary: Release due after S-0637's acceptance (threshold met: count 2 >= 1; value 202.5 USD/week < 1000; pending S-0637, S-0652). Started no new publish run: publish instance S-0664 is in progress, its evaluate step T-2891 finished at 08:34:56Z after S-0637 was accepted at 08:34:33Z, and its publish step T-2892, which releases everything accepted and unreleased, is under way, so it covers S-0637. A second run would duplicate it.
+- Items: S-0637, S-0652, S-0664
+- Seconds: 14
+- Cost: 0.0818 USD, estimated
+
+### 2026-11-10T08:35:40Z
+
+- Summary: I didn't start a new release for S-0637, because a publish run that covers it is already finishing.
+- Items: none
+- Seconds: 16
+- Cost: 0.2467 USD, estimated
 
 ## Refusals
 

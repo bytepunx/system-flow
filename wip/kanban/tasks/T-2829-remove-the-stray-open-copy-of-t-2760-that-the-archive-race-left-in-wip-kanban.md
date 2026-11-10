@@ -32,7 +32,7 @@ usage:
       output: 63
       cache_read: 1062823
       cache_write: 5009
-      cost: 0.3929
+      cost: 0.3928
 ---
 # T-2829 Remove the stray open copy of T-2760 that the archive race left in wip/kanban/tasks
 

@@ -23,16 +23,16 @@ tags: [flai, workitem]
 touches: [flai/internal/workitem/itemlock.go, flai/internal/workitem/itemlock_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/work-hierarchy.md, design/adrs/0277-repo-save-refuses-to-write-an-active-work-item-whose-file-was-archived-since-it.md, design/adrs/README.md]
 usage:
   source: log
-  seconds: 26
+  seconds: 1041
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 87
-      cache_read: 1331630
-      cache_write: 5514
-      cost: 0.492
+      input: 92
+      output: 608
+      cache_read: 4816223
+      cache_write: 227809
+      cost: 1.8556
 ---
 # T-2827 Repo.Save refuses to recreate an item file moved since it was read, and Archive moves under the items lock
 
