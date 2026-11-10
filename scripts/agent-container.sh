@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Run a story's agent headless in flai-agent-claude-code:local, started by hand (S-0505, S-0507).
+# Run a story's agent headless in the agent image, started by hand (S-0505, S-0507, S-0670).
 #   scripts/agent-container.sh S-nnnn                  pilot, the image's entrypoint, starts claude
 #   scripts/agent-container.sh S-nnnn -- cmd [arg]...  cmd instead of pilot, in the same mounts
 # Feeds pilot a start request on standard input (ADR-0212): the story, its worktree, the agent's
@@ -21,6 +21,10 @@
 # The container's flai keeps its config and cache under .flai-cache/agents/S-nnnn/flai (FLAI_CONFIG,
 # FLAI_CACHE_DIR), so nothing is written under the container's home.
 # FLAI_BIN       the flai that answers mcp status and token (default: the flai on PATH, installed)
+# FLAI_AGENT_IMAGE  the image (default: the one flai serve runs, as scripts/agent-image.sh --tag
+#                   prints it: the project's layer image when system-flow.yaml names
+#                   agent.image.layer, else flai-agent-claude-code:local); a run refuses an image
+#                   not built. scripts/agent-container.sh --image prints it and runs nothing.
 # FLAI_AGENT_NETWORK  bridge (default: host.docker.internal by host-gateway) or host
 # FLAI_AGENT_MODEL    the agent's model, such as haiku (default: claude's own)
 # FLAI_AGENT_MAX_BUDGET_USD  the agent's max_budget_usd, such as 0.05, for a trial run
@@ -29,7 +33,8 @@ set -eu
 # The installed flai, before env.sh puts this tree's bin/ first on PATH.
 FLAI_BIN="${FLAI_BIN:-$(command -v flai || true)}"
 . "$(dirname "$0")/env.sh"
-IMAGE="flai-agent-claude-code:local"
+IMAGE="${FLAI_AGENT_IMAGE:-$("$ROOT/scripts/agent-image.sh" --tag)}"
+[ "${1:-}" != "--image" ] || { printf '%s\n' "$IMAGE"; exit 0; }
 LOGIN_IN="/run/claude-login"
 STORY="${1:-}"
 case "$STORY" in
@@ -42,6 +47,9 @@ if [ "${1:-}" = "--" ]; then
 elif [ "$#" -gt 0 ]; then
   echo "usage: $0 S-nnnn [-- cmd [arg]...]" >&2; exit 2
 fi
+
+# A run in an image not built would make docker pull it, and fail on a local tag (I-0279).
+docker image inspect "$IMAGE" >/dev/null 2>&1 || { echo "no image $IMAGE: build it with scripts/agent-image.sh (make agent-images), or set FLAI_AGENT_IMAGE to one built" >&2; exit 1; }
 WORKTREE="$CACHE_ROOT/.flai-cache/worktrees/$STORY"
 AGENT_DIR="$CACHE_ROOT/.flai-cache/agents/$STORY"
 LOGIN="${FLAI_CLAUDE_LOGIN:-$HOME/.claude}"

@@ -5,6 +5,8 @@
 # flai-agent-<project key>-claude-code:local (S-0510). Not stamped, not signed.
 # --layer builds the project's layer alone, over the harness image already built, and fails when
 # the manifest names none.
+# --tag prints the image a story's agent runs in, and builds nothing: the layer's tag when the
+# manifest names a layer, else the harness image's (S-0670). scripts/agent-container.sh runs it.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
@@ -29,15 +31,20 @@ pinned() {
   grep "^$1=" scripts/install-tools.sh | sed 's/.*:-\(.*\)}".*/\1/'
 }
 
+# layer_tag prints the layer's tag, flai-agent-<key>-claude-code:local, the manifest's key in lower
+# case, as flai names the image (manifest.LayerImage), since docker refuses upper case.
+layer_tag() {
+  key="$(sed -n 's/^key:[ ]*//p' system-flow.yaml | tr -d "\"'" | tr '[:upper:]' '[:lower:]')"
+  [ -n "$key" ] || { echo "agent-image: system-flow.yaml names no key, which the layer's tag needs" >&2; exit 1; }
+  echo "flai-agent-$key-$INNER:local"
+}
+
 # build_layer builds the manifest's layer over the harness image, with Go at flai/go.mod's version
 # and the tool versions scripts/install-tools.sh pins as build arguments.
 build_layer() {
   layer="$1"
   [ -f "$layer" ] || { echo "agent-image: agent.image.layer names $layer, which is not a file; fix the path in system-flow.yaml" >&2; exit 1; }
-  # Lower case, as flai names the image (manifest.LayerImage), since docker refuses upper case.
-  key="$(sed -n 's/^key:[ ]*//p' system-flow.yaml | tr -d "\"'" | tr '[:upper:]' '[:lower:]')"
-  [ -n "$key" ] || { echo "agent-image: system-flow.yaml names no key, which the layer's tag needs" >&2; exit 1; }
-  tag="flai-agent-$key-$INNER:local"
+  tag="$(layer_tag)"
   go_version="$(sed -n 's/^go //p' flai/go.mod)"
   golangci="$(pinned GOLANGCI_LINT_VERSION)"
   shellcheck="$(pinned SHELLCHECK_VERSION)"
@@ -50,12 +57,21 @@ build_layer() {
 }
 
 layer="$(manifest_layer)"
+if [ "${1:-}" = "--tag" ]; then
+  [ "$#" -eq 1 ] || { echo "usage: scripts/agent-image.sh --tag" >&2; exit 2; }
+  if [ -n "$layer" ]; then
+    layer_tag
+  else
+    echo "$HARNESS"
+  fi
+  exit 0
+fi
 if [ "${1:-}" = "--layer" ]; then
   [ -n "$layer" ] || { echo "agent-image: system-flow.yaml names no agent.image.layer, so there is no layer to build" >&2; exit 1; }
   build_layer "$layer"
   exit 0
 fi
-[ "$#" -eq 0 ] || { echo "usage: scripts/agent-image.sh [--layer]" >&2; exit 2; }
+[ "$#" -eq 0 ] || { echo "usage: scripts/agent-image.sh [--layer | --tag]" >&2; exit 2; }
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 VERSION="$(git describe --tags --match 'flai/v*' --abbrev=0 2>/dev/null | sed 's|flai/v||' || echo dev)"
 # The commit's date, not the clock's, so an unchanged tree rebuilds from the cache.
