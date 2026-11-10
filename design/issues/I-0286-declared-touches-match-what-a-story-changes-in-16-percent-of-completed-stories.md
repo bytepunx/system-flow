@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-07T08:17:35Z
+updated: 2026-11-10T08:34:52Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,5 @@ claims.weeks[].exact_share W43 0.651, W44 0.360, W45 0.163 (7 of 43); coordinati
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0674 remediates this issue, created from it at 2026-11-10T08:34:52Z.
