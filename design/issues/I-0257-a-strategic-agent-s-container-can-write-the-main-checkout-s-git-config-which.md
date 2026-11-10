@@ -2,12 +2,12 @@
 id: I-0257
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
 class: impression
-status: open
+status: closed
 count: 2
 cost: 5m
 first_reported: 2026-11-02T19:06:40Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-10T08:37:15Z
+updated: 2026-11-10T19:44:25Z
 usage:
   strategic:
     - kind: analyzer
@@ -51,3 +51,4 @@ flai/internal/harness/container.go:276-277 mounts the main checkout read-write w
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0688 remediates this issue, created from it at 2026-11-10T08:37:15Z.
+Closed 2026-11-10T19:44:25Z: S-0688 (ADR-0281): roleStart in flai/internal/harness/container.go mounts the main checkout's .git/config read-only over the read-write checkout, beside .git/hooks, so a strategic agent's container can no longer write a command git runs on the host into it; flai serve refuses a strategic container start whose .git/config is not a regular file. TestAStrategicAgentsContainerMountsTheCheckout and the serve lab's roleContainerStarted pin the mount, and TestAStrategicContainerIsRefusedACheckoutWithNoGitConfig the refusal. ADR-0278 had already moved the orchestrator's acceptance, the one writer ADR-0247 kept .git/config writable for, to the host.
