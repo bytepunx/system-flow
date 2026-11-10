@@ -6,7 +6,7 @@ title: after chains on planned stories hold ready stories for days while in-prog
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:51Z
-updated: 2026-11-10T08:49:28Z
+updated: 2026-11-10T08:50:30Z
 transitions: []
 tags: [flai]
 topics: [ready]
@@ -37,7 +37,6 @@ usage:
           cache_read: 759050
           cache_write: 13855
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 56h
@@ -47,11 +46,14 @@ cost_of_delay:
   by: planner-S-0673
   at: 2026-11-10T08:48:47Z
 forecast:
-  duration: 1h30m
+  duration: 1h
   delivery: 2026-11-10T15:25:00Z
-  basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671 and S-0672."
-  by: flai
-  at: 2026-11-10T08:49:28Z
+  basis: flai forecast's 37m for size 22 (2 criteria, 20 touches), raised to 1h for an ADR and four tasks in three layers
+  by: planner-S-0673
+  at: 2026-11-10T08:49:59Z
+finalized:
+  by: alex
+  at: 2026-11-10T08:50:30Z
 ---
 # S-0673 after chains on planned stories hold ready stories for days while in-progress stays under two of five
 
@@ -67,6 +69,7 @@ This story remediates [I-0285](../../../design/issues/I-0285-after-chains-on-pla
 - T-2928 An ADR records what I-0285's instances show and decides that ready-empty counts only ready stories not held on after and that a move to ready warns of an after hold
 - T-2930 ready-empty counts only the ready stories not held on after, so held stories in ready no longer keep the orchestrator from promoting
 - T-2931 A move of a story to ready warns when a story it names in after is not done
+- T-2933 The user guide says what ready-empty counts and that a move to ready warns of an after hold, and I-0285 is closed
 
 ## Notes
 
@@ -104,7 +107,7 @@ Planned by planner-S-0673 on 2026-11-10. The plan's thread is on S-0673.
 
 Left out from `flai touches suggest`: `flai/internal/workitem/item.go`, `boardview.go`, `flai/cmd/items.go`, `board.go`, and `flai/internal/check/check.go`, which the change does not reach.
 
-**Forecast.** `flai forecast` gave 2m for size 2 with no touches. Set to 1h30m: four tasks in three layers, an ADR, two small changes in flai with a test each, and five documents, like S-0652's size. Delivery 2026-11-11T17:00:00Z, behind the 14 stories ahead of it in the pull order.
+**Forecast.** `flai forecast` gave 37m once the touches were in: 101 s a unit over 151 large improvement stories, size 22 (2 criteria, 20 touches). Raised to 1h, because the size counts neither the ADR the first task writes nor the four tasks in three layers.
 
 **Cost of delay.** `flai cod` gave 8,400 USD a week from the 56h input: W45's `after` hold at 150 USD an hour. The value is lowered to 1,039 USD a week, the rate since the planner's rule held: the stories with `after` started since 2026-11-03 were held 24,939 s (6.93 h) in all, and W46 0 s so far. The input is the operator's and stays as it is.
 
