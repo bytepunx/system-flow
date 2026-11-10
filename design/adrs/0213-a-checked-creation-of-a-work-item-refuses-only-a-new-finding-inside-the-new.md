@@ -1,8 +1,8 @@
 ---
 id: ADR-0213
 title: "A checked creation of a work item refuses only a new finding inside the new item's story, as a checked edit does"
-status: proposed
-date: 2026-10-28
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0197]
