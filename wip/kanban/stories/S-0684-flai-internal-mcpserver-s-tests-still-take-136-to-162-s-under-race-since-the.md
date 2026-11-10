@@ -6,7 +6,7 @@ title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, sinc
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:09Z
-updated: 2026-11-10T08:49:28Z
+updated: 2026-11-10T08:50:00Z
 transitions: []
 tags: [flai, go, mcp, testing]
 topics: [testing, mcp]
@@ -16,7 +16,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 43s
@@ -31,6 +30,9 @@ forecast:
   basis: "Its own forecast of 2h; 26th in the pull order with an in-progress limit of 5, behind S-0685, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668, S-0669, S-0670, S-0671, S-0672, S-0673, S-0674, S-0675, S-0676, S-0677, S-0678, S-0679, S-0680, S-0681, S-0682 and S-0683."
   by: flai
   at: 2026-11-10T08:49:28Z
+finalized:
+  by: alex
+  at: 2026-11-10T08:50:00Z
 ---
 # S-0684 flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
 
