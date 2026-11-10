@@ -1,7 +1,7 @@
 ---
 id: ADR-0276
 title: "A rebase that stops on a markdown file under the manifest's design or docs folder merges it by sections, as one inside claims.shared does"
-status: proposed
+status: accepted
 date: 2026-11-10
 supersedes: []
 superseded_by: []
