@@ -7,7 +7,7 @@ count: 2
 cost: 10m
 first_reported: 2026-11-02T19:44:22Z
 last_reported: 2026-11-07T09:46:28Z
-updated: 2026-11-07T09:46:28Z
+updated: 2026-11-10T08:55:29Z
 ---
 
 # I-0261 A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context
@@ -26,3 +26,5 @@ Story: S-0586.
 S-0586's pack came in 14 parts, 359 KB, each part repeating the topic sources list (about 20 KB of claim paths per topic). I read it once as text with flai prime --story into a git-ignored file instead of 14 prime calls.
 
 ## Remediation
+
+Story S-0699 remediates this issue, created from it at 2026-11-10T08:55:29Z.
