@@ -1,8 +1,8 @@
 ---
 id: ADR-0116
 title: "When flai measures a story's usage from its logs it classifies each turn of the story's own agent, records the counts per day in usage.turns, and flai stats reports them"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 ---
