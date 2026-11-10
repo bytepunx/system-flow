@@ -2,9 +2,9 @@
 
 ## Unreleased
 
-- S-0668 `tooling.md` says `flai stream state` and `stream_state` record `## Context`, `## Decisions`, and `## Open questions` too, with `--context`, `--decision`, and `--question`, so an agent whose `wip/` is read-only in a container records them; they may still be edited by hand where `wip/` is writable (patch, I-0277).
 - S-0671 `scripts/close-out.sh` takes `--fresh` and `--all` before the story, or `CLOSE_OUT_FRESH=1` and `CLOSE_OUT_ALL=1`, and passes them to `flai verify`, `--fresh` to the first round alone, so a second close-out at a commit the verify record passed runs every step again, and flai serve's close-out job asks for them by those variables (patch, I-0280).
 - S-0687 The orchestrator's role and the strategic-agents convention accept through the MCP tool `accept` and verify through the MCP tool `verify`, which run on the host, in place of the shell's `flai accept` and tier-running `flai verify`, which refuse in a role's container (patch, ADR-0278, I-0256).
+- S-0668 `tooling.md` says `flai stream state` and `stream_state` record `## Context`, `## Decisions`, and `## Open questions` too, with `--context`, `--decision`, and `--question`, so an agent whose `wip/` is read-only in a container records them; they may still be edited by hand where `wip/` is writable (patch, I-0277).
 
 ## 1.1.32 - 2026-11-10
 
