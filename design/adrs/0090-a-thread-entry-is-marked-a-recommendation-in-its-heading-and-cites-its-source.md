@@ -1,8 +1,8 @@
 ---
 id: ADR-0090
 title: "A thread entry is marked a recommendation in its heading and cites its source in its last line, and the operator confirms a pending recommendation to make it the answer"
-status: proposed
-date: 2026-10-06
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0020]
