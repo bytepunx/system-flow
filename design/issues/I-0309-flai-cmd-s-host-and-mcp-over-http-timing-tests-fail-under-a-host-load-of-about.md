@@ -2,12 +2,12 @@
 id: I-0309
 title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
 class: impression
-status: open
+status: closed
 count: 4
 cost: 14m
 first_reported: 2026-11-08T00:27:14Z
 last_reported: 2026-11-09T22:38:42Z
-updated: 2026-11-10T05:44:44Z
+updated: 2026-11-10T07:51:27Z
 ---
 
 # I-0309 flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
@@ -36,3 +36,4 @@ S-0634's close-out (job S-0634-20261109T222352Z, head 0473db7) stopped at integr
 ## Remediation
 
 Story S-0651 remediates this issue, created from it at 2026-11-10T05:44:44Z.
+Closed 2026-11-10T07:51:27Z: S-0651. TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp gives its client a 12 s deadline against the server's 2.25 s scaled bound, in place of 3 s, so only a wait held for the 600 s asked fails (T-2839). TestBacksOffWhenTheDashboardSaysTheProjectIsHeld uses a 4 s held back-off, at least 2 s after jitter, and allows an ordinary close 1 s, in place of 300 ms against 250 ms (T-2842). The import tests were fixed by S-0606's T-2709. Pinned to one CPU beside 40 busy loops, main's channel test failed 5 of 10 runs and its MCP test 1 of 5; the story's versions passed 10 of 10 and 5 of 5, and both import tests passed too.
