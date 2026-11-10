@@ -317,27 +317,22 @@ var analysisLink = regexp.MustCompile(`\]\((?:\./)?(\d{4}-\d{2}-\d{2}-[a-z]+\.md
 // digest validates the design folder's digest (ADR-0191): each entry's name
 // and front matter, what its sources and absorbed_by name, as digest.entry,
 // and text with the shape of a secret, as digest.secret, each on its line.
+// What each entry's file alone decides is kept between checks in the cache
+// folder by the file's size and modification time (S-0677); what its sources
+// and absorbed_by name is looked up every check.
 func (c *checker) digest() {
 	dir := filepath.Join(c.repo.Root, filepath.FromSlash(digest.Dir(c.repo.Manifest)))
-	entries, err := os.ReadDir(dir)
+	files, err := digest.CheckFolder(dir, c.repo.CacheDir(), digest.EnvFor(c.repo))
 	if err != nil {
 		return // optional until the first entry is written
 	}
-	env := digest.EnvFor(c.repo)
-	for _, e := range entries {
-		name := e.Name()
-		if e.IsDir() || !strings.HasSuffix(name, ".md") || digest.Skipped(name) {
+	for _, f := range files {
+		if f.Err != nil {
+			c.add(Error, digest.RuleEntry, f.Path, 1, "%v", f.Err)
 			continue
 		}
-		path := filepath.Join(dir, name)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			c.add(Error, digest.RuleEntry, path, 1, "%v", err)
-			continue
-		}
-		_, problems := digest.Validate(name, string(data), env)
-		for _, p := range problems {
-			c.add(Error, p.Rule, path, p.Line, "%s", p.Message)
+		for _, p := range f.Problems {
+			c.add(Error, p.Rule, f.Path, p.Line, "%s", p.Message)
 		}
 	}
 }

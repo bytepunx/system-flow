@@ -3,8 +3,11 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -112,6 +115,87 @@ func TestDigestEntriesAreChecked(t *testing.T) {
 		}
 		if strings.Contains(f.Message, token) {
 			t.Errorf("%s: the finding shows the secret: %s", want.name, f.Message)
+		}
+	}
+}
+
+// digestFindings are the findings of a whole check on the digest folder.
+func digestFindings(t *testing.T, repo *workitem.Repo) []Finding {
+	t.Helper()
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []Finding
+	for _, f := range res.Findings {
+		if strings.HasPrefix(filepath.ToSlash(f.Path), "design/digest/") {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// S-0677: the digest rule keeps what each entry's file alone decides in the
+// cache folder, so a second check gives the same findings from the kept
+// file; a source archived or removed since the kept run is still reported,
+// since what the sources and absorbed_by name is looked up every check.
+func TestDigestProblemsAreKeptAndSourcesLookedUpEachCheck(t *testing.T) {
+	repo := planningProject(t, "")
+	epic := mustItem(t, repo, workitem.Epic, "An epic", "")
+	if err := os.MkdirAll(repo.CacheDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(repo.Root, "design", "digest")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	for name, content := range map[string]string{
+		"D-0001-clean.md":  digestEntry("D-0001", nil, "What was decided, and why."),
+		"D-0005-kind.md":   digestEntry("D-0005", map[string]string{"kind": "guess"}, "A guess."),
+		"D-0008-gone.md":   digestEntry("D-0008", map[string]string{"status": "absorbed", "absorbed_by": "design/gone.md"}, "Gone."),
+		"D-0010-absorb.md": digestEntry("D-0010", map[string]string{"status": "absorbed", "absorbed_by": "design/kept.md"}, "Recorded."),
+		"../kept.md":       "# Kept\n",
+	} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(p, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cold := digestFindings(t, repo)
+	if len(cold) != 2 {
+		t.Fatalf("cold check: want the kind and the absorbed_by, got %+v", cold)
+	}
+	kept, err := filepath.Glob(filepath.Join(repo.CacheDir(), "digest-problems-*.json"))
+	if err != nil || len(kept) != 1 {
+		t.Fatalf("want one kept digest file after the first check, got %v (%v)", kept, err)
+	}
+	if warm := digestFindings(t, repo); !reflect.DeepEqual(warm, cold) {
+		t.Fatalf("warm check = %+v, want the cold check's %+v", warm, cold)
+	}
+
+	if err := os.Remove(epic.Path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(repo.Root, "design", "kept.md")); err != nil {
+		t.Fatal(err)
+	}
+	got := digestFindings(t, repo)
+	var says []string
+	for _, f := range got {
+		says = append(says, filepath.Base(f.Path)+": "+f.Message)
+	}
+	for _, want := range []string{
+		"D-0001-clean.md: source E-0001 names nothing",
+		"D-0010-absorb.md: absorbed_by is design/kept.md, which names no file",
+		"D-0005-kind.md: kind is \"guess\"",
+	} {
+		if !slices.ContainsFunc(says, func(s string) bool { return strings.Contains(s, want) }) {
+			t.Errorf("after the source and the file went, want a finding %q, got %q", want, says)
 		}
 	}
 }

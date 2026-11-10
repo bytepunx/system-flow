@@ -350,3 +350,38 @@ func TestEnvForKnowsWorkItemsThreadsAndIssues(t *testing.T) {
 		}
 	}
 }
+
+// S-0677: validate marks the problems Env decides, and Resolve keeps each
+// only when Env says it names nothing, in its place, with the marks cleared,
+// so that Validate answers as before.
+func TestResolveAsksEnvOfTheMarkedProblems(t *testing.T) {
+	content := strings.NewReplacer("S-0428,", "S-0999,", "status: active", "status: absorbed", `absorbed_by: ""`, "absorbed_by: design/gone.md#rules", "kind: decision", "kind: rumour").Replace(good)
+	_, problems := validate(goodName, content)
+	var marked []string
+	for _, p := range problems {
+		if p.Unknown != "" {
+			marked = append(marked, "unknown "+p.Unknown)
+		}
+		if p.Missing != "" {
+			marked = append(marked, "missing "+p.Missing)
+		}
+	}
+	if want := []string{"unknown S-0999", "unknown TH-0476", "missing design/gone.md"}; !reflect.DeepEqual(marked, want) {
+		t.Fatalf("marked %v, want %v", marked, want)
+	}
+	if got := Resolve(problems, Env{}); len(got) != 1 || !strings.Contains(got[0].Message, "rumour") {
+		t.Errorf("with no Env funcs, want only the kind, got %+v", got)
+	}
+	_, got := Validate(goodName, content, env)
+	if len(got) != 3 {
+		t.Fatalf("Validate = %+v, want the kind, S-0999, and the absorbed_by", got)
+	}
+	for _, p := range got {
+		if p.Unknown != "" || p.Missing != "" {
+			t.Errorf("Validate's problem keeps its mark: %+v", p)
+		}
+	}
+	if problems[1].Unknown != "S-0999" {
+		t.Errorf("Resolve changed the problems it was given: %+v", problems[1])
+	}
+}

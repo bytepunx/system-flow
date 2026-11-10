@@ -80,6 +80,13 @@ type Problem struct {
 	Line    int    `json:"line"`
 	Rule    string `json:"rule"`
 	Message string `json:"message"`
+
+	// Unknown, when set, is a source ID the problem is about: it stands only
+	// when an Env's Known says no item, thread, or issue has the ID.
+	Unknown string `json:"-"`
+	// Missing, when set, is a path from the project root the problem is
+	// about: it stands only when an Env's Exists says no file is there.
+	Missing string `json:"-"`
 }
 
 // String is the problem as "line N: rule: message".
@@ -296,6 +303,35 @@ func keyLine(fm, key string) int {
 // front matter against ADR-0191, what env can see of its sources and
 // absorbed_by, and that no text in it has the shape of a secret.
 func Validate(name, content string, env Env) (Entry, []Problem) {
+	e, problems := validate(name, content)
+	return e, Resolve(problems, env)
+}
+
+// Resolve is what env makes of the problems validate found in one file: the
+// problems the file alone decides, and of those about a source ID or a path,
+// only the ones env says name nothing, each in its place. A nil func of env
+// drops the problems that need it. The problems given are not changed.
+func Resolve(problems []Problem, env Env) []Problem {
+	var out []Problem
+	for _, p := range problems {
+		switch {
+		case p.Unknown != "" && (env.Known == nil || env.Known(p.Unknown)):
+			continue
+		case p.Missing != "" && (env.Exists == nil || env.Exists(p.Missing)):
+			continue
+		}
+		p.Unknown, p.Missing = "", ""
+		out = append(out, p)
+	}
+	return out
+}
+
+// validate is Validate without an Env: what the entry file alone decides,
+// with each problem about a source ID or a path that may name nothing marked
+// Unknown or Missing, for Resolve to keep or drop against the project. Its
+// problems may be kept between checks by the file's stat (CheckFolder);
+// Resolve's answers may not, since they follow other files.
+func validate(name, content string) (Entry, []Problem) {
 	var out []Problem
 	entry := func(field string, line int, format string, args ...any) {
 		out = append(out, Problem{Field: field, Line: line, Rule: RuleEntry, Message: fmt.Sprintf(format, args...)})
@@ -357,8 +393,9 @@ func Validate(name, content string, env Env) (Entry, []Problem) {
 		switch {
 		case !sourceID.MatchString(s):
 			entry("sources", at("sources"), "source %q is not the ID of a work item (E-, S-, T-), thread (TH-), or issue (I-)", s)
-		case env.Known != nil && !env.Known(s):
+		default:
 			entry("sources", at("sources"), "source %s names nothing in the project or its archive; give an ID that exists", s)
+			out[len(out)-1].Unknown = s
 		}
 	}
 	for _, t := range e.Topics {
@@ -376,8 +413,9 @@ func Validate(name, content string, env Env) (Entry, []Problem) {
 		entry("absorbed_by", at("absorbed_by"), "status is absorbed but absorbed_by is empty; give the path, from the project root, of the document that now records the fact")
 	case e.AbsorbedBy != "" && !filepath.IsLocal(filepath.FromSlash(absorbedFile)):
 		entry("absorbed_by", at("absorbed_by"), "absorbed_by is %q, not a path from the project root; give one such as design/system/overview.md", e.AbsorbedBy)
-	case e.AbsorbedBy != "" && env.Exists != nil && !env.Exists(absorbedFile):
+	case e.AbsorbedBy != "":
 		entry("absorbed_by", at("absorbed_by"), "absorbed_by is %s, which names no file; give the path of the document that records the fact", e.AbsorbedBy)
+		out[len(out)-1].Missing = absorbedFile
 	}
 	for _, id := range e.AskedAgain {
 		if !threadID.MatchString(id) {
