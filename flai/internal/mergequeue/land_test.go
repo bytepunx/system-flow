@@ -266,7 +266,7 @@ func TestMainMovingDropsAVerifiedBatchWhichIsBuiltAgain(t *testing.T) {
 	if built.Batch == nil || built.Batch.Step != StepVerified {
 		t.Fatalf("batch %+v, want it verified", built.Batch)
 	}
-	runGit(t, repo.MainRoot, "commit", "-q", "--allow-empty", "-m", "accepted by hand")
+	commitOnMain(t, repo, "y.txt", "accepted by hand\n")
 	moved := runGit(t, repo.MainRoot, "rev-parse", "main")
 
 	fa := &fakeAccept{t: t, repo: repo}
@@ -278,7 +278,7 @@ func TestMainMovingDropsAVerifiedBatchWhichIsBuiltAgain(t *testing.T) {
 	if dr == nil || dr.By != "flai serve" || !dr.At.Equal(t2) {
 		t.Fatalf("dropped %+v, want by flai serve at %s", dr, t2)
 	}
-	for _, says := range []string{"moved from " + short(built.Batch.Base) + " to " + short(moved), built.Batch.ID, "built again from the new main"} {
+	for _, says := range []string{"moved from " + short(built.Batch.Base) + " to " + short(moved), built.Batch.ID, "change paths outside wip/: y.txt", "built again from the new main"} {
 		if !strings.Contains(dr.Reason, says) {
 			t.Errorf("reason %q does not say %q", dr.Reason, says)
 		}
@@ -309,7 +309,7 @@ func TestMainMovingBetweenLandingsDropsTheBatch(t *testing.T) {
 	if dropped, err := DropIfMainMoved(execx.System{}, repo, "flai serve", t2); dropped || err != nil {
 		t.Errorf("dropped %v, %v; want main at the head the landing left kept", dropped, err)
 	}
-	runGit(t, repo.MainRoot, "commit", "-q", "--allow-empty", "-m", "accepted by hand")
+	commitOnMain(t, repo, "y.txt", "accepted by hand\n")
 
 	fa.after = nil
 	_, st := advance(t, deps(proc, t3), fa, repo)
@@ -321,6 +321,115 @@ func TestMainMovingBetweenLandingsDropsTheBatch(t *testing.T) {
 	}
 	if _, ok := st.EnqueuedAs(b); !ok {
 		t.Errorf("%s left the queue", b)
+	}
+}
+
+// commitOnMain writes content to rel in repo's main checkout and commits it
+// alone on main, a path under the ignored wip folder too.
+func commitOnMain(t *testing.T, repo *workitem.Repo, rel, content string) {
+	t.Helper()
+	writeFile(t, repo.MainRoot, rel, content)
+	runGit(t, repo.MainRoot, "add", "-f", "--", rel)
+	runGit(t, repo.MainRoot, "commit", "-q", "-m", "change "+rel, "--", rel)
+}
+
+// ADR-0282, I-0287: main moving while a verified batch waits to land, by a
+// commit that changes only wip paths no story of the batch changes, such as
+// flai's replan, keeps the batch, which lands its story over it with no new
+// verification.
+func TestAWipOnlyCommitOnMainKeepsAVerifiedBatchWhichLands(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+	_, built := runBatch(t, deps(proc, t1), repo)
+	if built.Batch == nil || built.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, want it verified", built.Batch)
+	}
+	commitOnMain(t, repo, "wip/kanban/board.md", "# Board\n\nreplanned\n")
+	if dropped, err := DropIfMainMoved(execx.System{}, repo, "flai serve", t2); dropped || err != nil {
+		t.Fatalf("dropped %v, %v; want the batch kept over a wip-only commit", dropped, err)
+	}
+	verified := len(proc.ran)
+
+	fa := &fakeAccept{t: t, repo: repo}
+	did, st := advance(t, deps(proc, t2), fa, repo)
+	if !did || !slices.Equal(fa.calls, []acceptCall{{a, "alex", built.Batch.ID}}) {
+		t.Errorf("did %v, accepted %+v; want %s landed from %s", did, fa.calls, a, built.Batch.ID)
+	}
+	if o, ok := outcomeOf(st, a); !ok || o.Outcome != OutcomeLanded {
+		t.Errorf("%s's outcome %+v, want landed", a, o)
+	}
+	if st.Batch != nil || len(proc.ran) != verified {
+		t.Errorf("batch %+v, verifications %d then %d; want the batch landed and gone with no new verification", st.Batch, verified, len(proc.ran))
+	}
+}
+
+// ADR-0282: a wip-only commit on main between two landings, such as the
+// replan an acceptance sets off, keeps the batch, and the next story lands
+// over it.
+func TestAWipOnlyCommitBetweenLandingsKeepsTheBatch(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueue(t, repo, a, b)
+	_, built := runBatch(t, deps(proc, t1), repo)
+	ctx, cancel := context.WithCancel(context.Background())
+	fa := &fakeAccept{t: t, repo: repo, after: func(string) { cancel() }}
+	if _, err := Advance(ctx, deps(proc, t2), fa.accept, repo); !errors.Is(err, context.Canceled) || len(fa.calls) != 1 {
+		t.Fatalf("%v, accepted %+v; want flai serve stopped after %s landed", err, fa.calls, a)
+	}
+	commitOnMain(t, repo, "wip/agents/"+a+".md", "# "+a+"\n")
+
+	fa.after = nil
+	_, st := advance(t, deps(proc, t3), fa, repo)
+	if want := []acceptCall{{a, "alex", built.Batch.ID}, {b, "alex", built.Batch.ID}}; !slices.Equal(fa.calls, want) {
+		t.Errorf("accepted %+v, want %+v", fa.calls, want)
+	}
+	if st.Batch != nil || len(st.Enqueued) != 0 {
+		t.Errorf("batch %+v, enqueued %+v; want both landed and the batch gone", st.Batch, st.Enqueued)
+	}
+}
+
+// ADR-0282 §2: main moving while a verified batch waits to land drops it, as
+// before, when main does not descend from the batch's base, or its commits
+// change a wip path a story of the batch changes too; the reason says which.
+func TestMainMovingOtherThanByWipOnlyCommitsDropsTheBatch(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		move func(t *testing.T, repo *workitem.Repo)
+		says string
+	}{
+		{name: "not descending", says: "does not descend from", move: func(t *testing.T, repo *workitem.Repo) {
+			orphan := runGit(t, repo.MainRoot, "commit-tree", "main^{tree}", "-m", "rewritten")
+			runGit(t, repo.MainRoot, "reset", "-q", "--hard", orphan)
+		}},
+		{name: "a wip path the story changes", says: "change wip/ paths a story of the batch changes too: wip/agents/shared.md", move: func(t *testing.T, repo *workitem.Repo) {
+			commitOnMain(t, repo, "wip/agents/shared.md", "main's\n")
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, proc := gitProject(t, "")
+			a, _ := readyStoryChanging(t, repo, "A", t0.Add(time.Hour), func(_, wt string) {
+				writeFile(t, wt, "a.txt", "a\n")
+				writeFile(t, wt, "wip/agents/shared.md", "the story's\n")
+				runGit(t, wt, "add", "-f", "--", "wip/agents/shared.md")
+			})
+			enqueue(t, repo, a)
+			_, built := runBatch(t, deps(proc, t1), repo)
+			if built.Batch == nil || built.Batch.Step != StepVerified {
+				t.Fatalf("batch %+v, want it verified", built.Batch)
+			}
+			tc.move(t, repo)
+
+			fa := &fakeAccept{t: t, repo: repo}
+			_, st := advance(t, deps(proc, t2), fa, repo)
+			if len(fa.calls) != 0 {
+				t.Errorf("accepted %+v, want nothing landed", fa.calls)
+			}
+			if st.Batch == nil || st.Batch.Dropped == nil || !strings.Contains(st.Batch.Dropped.Reason, tc.says) || !strings.Contains(st.Batch.Dropped.Reason, "the main branch moved") {
+				t.Errorf("batch %+v, want it dropped as main moved, saying %q", st.Batch, tc.says)
+			}
+		})
 	}
 }
 
@@ -428,9 +537,14 @@ func TestLandableAnswersTheRebasedHeadOrEveryReason(t *testing.T) {
 	says("the branch moved", reasons, storygit.Branch(a), short(headA))
 	runGit(t, wt, "reset", "-q", "--hard", headA)
 
-	runGit(t, repo.MainRoot, "commit", "-q", "--allow-empty", "-m", "accepted by hand")
+	commitOnMain(t, repo, "wip/kanban/board.md", "# Board\n")
 	_, reasons = landable(a, bt.ID)
-	says("main moved", reasons, "main branch main", short(bt.Base))
+	if len(reasons) != 0 {
+		t.Errorf("reasons %q after a wip-only commit on main, want none: the batch lands over it (ADR-0282)", reasons)
+	}
+	commitOnMain(t, repo, "y.txt", "accepted by hand\n")
+	_, reasons = landable(a, bt.ID)
+	says("main moved", reasons, "main branch main", short(bt.Base), "change paths outside wip/: y.txt")
 
 	if _, err := Update(repo.CacheDir(), func(s *State) error {
 		s.Batch = nil

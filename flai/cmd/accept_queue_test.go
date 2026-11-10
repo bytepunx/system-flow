@@ -319,6 +319,36 @@ func TestALandingIsRefusedUnlessTheBatchVerifiedWhatLands(t *testing.T) {
 	}
 }
 
+// ADR-0282, I-0287: flai accept --batch lands a story of a verified batch
+// when main gained, after the batch was verified, a commit that changes only
+// a wip path no story of the batch changes, as flai's replan does: the
+// landing takes the batch's verification, and the queue keeps the batch.
+func TestALandingGoesOverAWipOnlyCommitOnMain(t *testing.T) {
+	t.Parallel()
+	root, head := orchestratedStoryInReview(t, true)
+	rebased := landingState(t, root, head, "alex", nil)
+	if err := os.WriteFile(filepath.Join(root, "wip", "agents", "replan.md"), []byte("# Replan\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "--", "wip/agents/replan.md")
+	gitIn(t, root, "commit", "-q", "-m", "chore: replan forecasts", "--", "wip/agents/replan.md")
+	out, errOut, code := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "alex", "--batch", landingBatch, "--json")
+	if code != 0 {
+		t.Fatalf("flai accept --batch over a wip-only commit on main: %d %s\n%s", code, errOut, out)
+	}
+	var res accepted
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if res.Batch != landingBatch || res.Verified != rebased || !res.Merged || res.Status != workitem.Done {
+		t.Errorf("--json must carry the batch and its rebased head as the commit verified: %+v", res.Acceptance)
+	}
+	if got := gitIn(t, root, "show", "main:wip/agents/replan.md"); got != "# Replan" {
+		t.Errorf("main lost the wip-only commit: %q", got)
+	}
+	assertLanded(t, root, "alex")
+}
+
 // S-0400 criterion 2, ADR-0173: under pull-request acceptance there is no
 // merge queue, so --batch is refused before anything changes.
 func TestALandingIsRefusedUnderPullRequestAcceptance(t *testing.T) {

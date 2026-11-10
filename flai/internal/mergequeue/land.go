@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -30,8 +31,10 @@ type Accepter func(ctx context.Context, story, by, batch string) error
 // batch, as the preview of flai accept --batch checks it: the story's heads
 // in the batch, whose Rebased head is the verified commit the acceptance
 // takes, and every reason it may not land, each a sentence saying why and
-// what clears it, none when it may. Git is read through r. It is an error
-// only when the queue's state or the main branch cannot be read.
+// what clears it, none when it may. Main past where the batch's landing left
+// it is a reason only when the batch may not land over the commits it moved
+// by (mainMovedBy, ADR-0282). Git is read through r. It is an error only
+// when the queue's state or the main branch cannot be read.
 func Landable(r execx.Runner, repo *workitem.Repo, story, batch string) (Head, []string, error) {
 	st, err := ReadState(repo.CacheDir())
 	if err != nil {
@@ -84,7 +87,9 @@ func Landable(r execx.Runner, repo *workitem.Repo, story, batch string) (Head, [
 			return head, reasons, err
 		}
 		if at != l.Head {
-			reasons = append(reasons, fmt.Sprintf("the main branch %s is at %s, not at %s, where merge queue batch %s's landing left it; main moved other than by the batch's landing, so flai serve drops the batch and builds it again from the new main", main, short(at), short(l.Head), b.ID))
+			if why := mainMovedBy(r, repo, b, l.Head, at); why != "" {
+				reasons = append(reasons, fmt.Sprintf("the main branch %s is at %s, not at %s, where merge queue batch %s's landing left it, and %s; main moved other than by the batch's landing, so flai serve drops the batch and builds it again from the new main", main, short(at), short(l.Head), b.ID, why))
+			}
 		}
 	}
 	return head, reasons, nil
@@ -158,10 +163,13 @@ func landInLanding(l *Landing, story string) {
 // DropIfMainMoved drops, as by at at, repo's merge queue batch that is
 // verified and not dropped when the main branch's head is not where the
 // batch expects it, the head its landing left or, before any landing, the
-// commit it was built on, and reports whether it dropped it: the main branch
-// moved other than by the batch's landing, as by an acceptance by hand, so
-// what the batch verified is not what would land. Git is read through r. A
-// batch replaced or dropped meanwhile is left as it is.
+// commit it was built on, and main moved other than by commits the batch may
+// land over (mainMovedBy, ADR-0282), as by an acceptance by hand, so that
+// what the batch verified is not what would land; it reports whether it
+// dropped it. A main that moved only by commits changing wip paths none of
+// the batch's stories change keeps the batch, and the commit it expects does
+// not move. Git is read through r. A batch replaced or dropped meanwhile, or
+// one expecting another commit by then, is left as it is.
 func DropIfMainMoved(r execx.Runner, repo *workitem.Repo, by string, at time.Time) (bool, error) {
 	st, err := ReadState(repo.CacheDir())
 	if err != nil {
@@ -175,26 +183,87 @@ func DropIfMainMoved(r execx.Runner, repo *workitem.Repo, by string, at time.Tim
 	if err != nil {
 		return false, err
 	}
-	if head == expectedMain(b) {
+	want := expectedMain(b)
+	if head == want {
+		return false, nil
+	}
+	why := mainMovedBy(r, repo, b, want, head)
+	if why == "" {
 		return false, nil
 	}
 	dropped := false
 	if _, err := Update(repo.CacheDir(), func(s *State) error {
 		cur := s.Batch
-		if cur == nil || cur.ID != b.ID || cur.Dropped != nil || cur.Result == nil {
+		if cur == nil || cur.ID != b.ID || cur.Dropped != nil || cur.Result == nil || expectedMain(cur) != want {
 			return nil
 		}
-		want := expectedMain(cur)
-		if head == want {
-			return nil
-		}
-		reason := fmt.Sprintf("the main branch moved from %s to %s while merge queue batch %s waited to land; it is built again from the new main", short(want), short(head), cur.ID)
+		reason := fmt.Sprintf("the main branch moved from %s to %s while merge queue batch %s waited to land, and %s; it is built again from the new main", short(want), short(head), cur.ID, why)
 		cur.Dropped, dropped = &Dropped{Reason: reason, By: by, At: at.UTC()}, true
 		return nil
 	}); err != nil {
 		return false, err
 	}
 	return dropped, nil
+}
+
+// mainMovedBy is why batch b may not land over the commits the main branch
+// of repo gained from want, the commit b expects main at, to head, its head
+// now: "" when b may (ADR-0282), as when want is an ancestor of head, every
+// path changed from want to head is under the manifest's wip folder, and
+// none is among the paths b's stories change, from the commit b was built on
+// to the rebased head of its last story. Otherwise it says which of those
+// fails, naming the paths, or what git could not read, so that the batch is
+// dropped. Git is read through r in the main checkout.
+func mainMovedBy(r execx.Runner, repo *workitem.Repo, b *Batch, want, head string) string {
+	if _, err := r.Run(repo.MainRoot, "git", "merge-base", "--is-ancestor", want, head); err != nil {
+		return fmt.Sprintf("%s does not descend from %s", short(head), short(want))
+	}
+	moved, err := verify.BetweenPaths(r, repo.MainRoot, want, head)
+	if err != nil {
+		return fmt.Sprintf("what main changed cannot be read: %s", said(err))
+	}
+	rel, err := filepath.Rel(repo.MainRoot, repo.WipDir())
+	if err != nil {
+		return fmt.Sprintf("which paths are under the wip folder %s cannot be told: %s", repo.WipDir(), said(err))
+	}
+	wip := filepath.ToSlash(rel) + "/"
+	var outside []string
+	for _, p := range moved {
+		if !strings.HasPrefix(p, wip) {
+			outside = append(outside, p)
+		}
+	}
+	if len(outside) > 0 {
+		return fmt.Sprintf("its commits change paths outside %s: %s", wip, fewPaths(outside))
+	}
+	if len(moved) == 0 {
+		return ""
+	}
+	if len(b.Heads) == 0 || b.Heads[len(b.Heads)-1].Rebased == "" {
+		return fmt.Sprintf("the batch kept no rebased heads, so whether its stories change %s cannot be told", fewPaths(moved))
+	}
+	own, err := verify.BetweenPaths(r, repo.MainRoot, b.Base, b.Heads[len(b.Heads)-1].Rebased)
+	if err != nil {
+		return fmt.Sprintf("what the batch's stories change cannot be read: %s", said(err))
+	}
+	var shared []string
+	for _, p := range moved {
+		if slices.Contains(own, p) {
+			shared = append(shared, p)
+		}
+	}
+	if len(shared) > 0 {
+		return fmt.Sprintf("its commits change %s paths a story of the batch changes too: %s", wip, fewPaths(shared))
+	}
+	return ""
+}
+
+// fewPaths lists the first three of paths and says how many more there are.
+func fewPaths(paths []string) string {
+	if len(paths) <= 3 {
+		return strings.Join(paths, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(paths[:3], ", "), len(paths)-3)
 }
 
 // expectedMain is where b expects the main branch's head: where its landing
