@@ -2944,7 +2944,7 @@ flai guard did not run (exit 127): sh: 1: flai: not found
 no guarded call passes until flai is installed and on PATH
 ```
 
-Install flai, or put it on `PATH`, and the calls pass again. A guard that ran and exited with anything but 2, such as an older flai that has no `guard`, still lets the call through, as before. Inside the agent container the image's flai is the guard: the template's hook runs `flai` from `PATH`, and this repository's runs `scripts/flai.sh`, which runs the installed flai, with a warning, when the image has no `go` to build the tree's.
+Install flai, or put it on `PATH`, and the calls pass again. A guard that ran and exited with anything but 2, such as an older flai that has no `guard`, still lets the call through, as before. Inside the agent container the image's flai is the guard: the template's hook runs `flai` from `PATH`, and this repository's runs `scripts/flai.sh`, which runs the installed flai, with a warning, when the image has no `go` to build the tree's. When the tree's build fails, `scripts/flai.sh guard` runs the last `bin/flai` that built, else the installed flai, each with a warning, and exits 127 with neither, so a failed build refuses the call rather than letting it through ([ADR-0280](../../design/adrs/0280-scripts-flai-sh-guard-runs-an-older-bin-flai-or-else-the-installed-flai-when.md)).
 
 ### On OpenCode
 
