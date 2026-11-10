@@ -2,12 +2,12 @@
 id: I-0280
 title: scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-07T06:58:50Z
 last_reported: 2026-11-07T06:58:50Z
-updated: 2026-11-10T08:34:48Z
+updated: 2026-11-10T09:42:11Z
 ---
 
 # I-0280 scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
@@ -24,3 +24,4 @@ Met on S-0565's T-2452, 2026-11-07. S-0556's close-out passed on the host as a f
 ## Remediation
 
 Story S-0671 remediates this issue, created from it at 2026-11-10T08:34:48Z.
+Closed 2026-11-10T09:42:11Z: S-0671: scripts/close-out.sh, here and in the template, takes --fresh and --all before the story, or CLOSE_OUT_FRESH=1 and CLOSE_OUT_ALL=1, and passes them to flai verify (--fresh to the first round alone), so a second close-out at a commit the verify record passed runs every step again (T-2918, T-2921). flai serve's close-out job sets those variables for the worktree's script when the request asks for fresh or all, where it dropped them before (T-2920); TestAFreshOrAllCloseOutAsksTheWorktreesScriptForThem in flai/internal/serve/verifyjob_test.go reproduces it.
