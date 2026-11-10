@@ -1,8 +1,8 @@
 ---
 id: ADR-0107
 title: "flai task done closes a task in one call: commit, sync, move, log, widen touches, check, and inbox, stopping at the first step that fails"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0069]
