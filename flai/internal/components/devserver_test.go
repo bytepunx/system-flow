@@ -450,14 +450,21 @@ func TestStartDevServerStopsAViteThatDoesNotAnswerInTime(t *testing.T) {
 	waitAllGone(t, pids(), 1)
 }
 
+// I-0329: a vite that answers 404 is waited for until the deadline, and the
+// error names the 404 only when the fake was serving before it. Under host
+// load the fake had not started within the old 600ms deadline. The fake's
+// start delay, longer than that deadline, makes that happen every time, and
+// the deadline allows the delay with room for a loaded host's start.
 func TestStartDevServerSaysWhatAViteThatDoesNotAnswer200Answered(t *testing.T) {
-	opts, state := newFakeVite(t, "not-found")
-	opts.Timeout = 600 * time.Millisecond
+	opts, _ := newFakeVite(t, "not-found")
+	t.Setenv("FLAI_FAKE_VITE_DELAY", "1")
+	opts.Timeout = 5 * time.Second
+	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil || !strings.Contains(err.Error(), "it answered 404, and the harness answers 200") {
 		t.Errorf("error %v, want the 404 it answered", err)
 	}
-	waitGone(t, readPID(t, state, "pid"))
+	waitAllGone(t, pids(), 1)
 }
 
 func TestStartDevServerStopsViteWhenItsContextEnds(t *testing.T) {
