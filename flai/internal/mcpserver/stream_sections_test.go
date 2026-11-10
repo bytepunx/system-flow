@@ -21,7 +21,7 @@ const sectionsThreads = "<!-- threads:start -->\n- [TH-0007](../threads/TH-0007-
 // is not what I-0277 is about. The agent's session writes all three and
 // reads them back from the narrative, its threads block unchanged.
 func TestStreamStateWritesContextDecisionsAndQuestions(t *testing.T) {
-	t.Setenv("FLAI_SESSION", "s9")
+	t.Parallel()
 	f, _ := streamFixture(t)
 	f.lintAsThisProjectDoes(t)
 	path := f.repo.NarrativePath(f.story.ID)
