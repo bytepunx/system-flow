@@ -183,6 +183,11 @@ type Request struct {
 	// as pilot's start request names it (S-0507); empty for a start on the
 	// host, which is every start flai serve makes today.
 	Inner string `json:"inner,omitempty"`
+	// Probe is set for a hand-run trial of an agent image (I-0224): its agent
+	// only reads and reports, and works no item, not even Story, whose mounts
+	// it runs in. Only a start request scripts/agent-container.sh --probe
+	// writes sets it, never flai serve.
+	Probe bool `json:"probe,omitempty"`
 	// MCPURLEnv names the variable that holds the URL of the host's HTTP MCP
 	// server, for an agent in a container, which cannot start flai's server
 	// on stdio (S-0507). Set, the adapter configures the HTTP server by the
@@ -535,9 +540,14 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // role, the planner, the orchestrator, the analyzer, the curator, or a role
 // the project defines, is asked what its role file's start prompt says,
 // rendered over the run's fields (startPrompt, ADR-0250). Its error is a
-// start prompt that does not render, which stops the start.
+// start prompt that does not render, which stops the start. A probe, a trial
+// of an agent image, is asked only to read and report, before any other case
+// and whatever its story or role (probe, I-0224).
 // Only the claude-code and opencode adapters send a prompt.
 func Prompt(r Request) (string, error) {
+	if r.Probe {
+		return probe(r), nil
+	}
 	if r.RoleFile != nil {
 		return startPrompt(r)
 	}
@@ -600,6 +610,19 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 %[6]s
 
 %[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r), instance(r)), nil
+}
+
+// probe is what a trial of an agent image is asked: to read, report, and end.
+func probe(r Request) string {
+	story := ""
+	if r.Story != "" {
+		story = fmt.Sprintf(" You run in the mounts of story %[1]s, but %[1]s is not yours to work: do not start, take up, or change it.", r.Story)
+	}
+	return fmt.Sprintf(`You are %[1]s, started by hand as a trial of the agent image, not as any story's agent.%[2]s Do no work on any item: start, move, create, or edit none, and write to no thread, narrative, or file.
+
+Check only this. Call the flai MCP tools that read, each once: inbox, board, item_get on an item the board lists, doc_get on design/conventions/README.md, and doc_search for a word in it. Then run flai --version, git status, and git log -1 in your working directory. Never call the flai MCP tools that write: story_start, stream_state, task_done, item_new, item_edit, item_move, thread_open, thread_reply, or verify.
+
+Report one line per check: what you called or ran, and what you saw, or the error it gave. Then end.`, r.Name, story)
 }
 
 // instance tells the agent of a formula's instance, a story flai formula run

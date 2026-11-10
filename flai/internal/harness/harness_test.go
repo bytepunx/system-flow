@@ -258,6 +258,54 @@ func TestThePromptKeepsTheAgentToItsStoryAndTheInbox(t *testing.T) {
 	}
 }
 
+// I-0224: a trial of an agent image, a start request with probe set, only
+// reads and reports, whatever its story or role, and never works the story
+// whose mounts it runs in.
+func TestAProbeOnlyReadsAndReports(t *testing.T) {
+	r := req(nil)
+	r.Probe = true
+	p := mustPrompt(t, r)
+	for _, want := range []string{
+		"You are agent-S-0104, started by hand as a trial of the agent image, not as any story's agent.",
+		"You run in the mounts of story S-0104, but S-0104 is not yours to work",
+		"Do no work on any item",
+		"inbox", "board", "item_get", "doc_get", "doc_search",
+		"flai --version", "git status", "git log -1",
+		"Report one line per check", "Then end.",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("a probe's prompt lacks %q:\n%s", want, p)
+		}
+	}
+	_, never, ok := strings.Cut(p, "Never call the flai MCP tools that write: ")
+	if !ok {
+		t.Fatalf("a probe's prompt names no tools never to call:\n%s", p)
+	}
+	never, _, _ = strings.Cut(never, ".")
+	for _, tool := range []string{"story_start", "stream_state", "task_done", "item_new", "item_edit", "item_move", "thread_open", "thread_reply", "verify"} {
+		if !strings.Contains(never, tool) {
+			t.Errorf("a probe is not told never to call %s:\n%s", tool, p)
+		}
+	}
+	for _, story := range []string{"story_start with S-0104", "flai story start", "flai stream open", "flai stream state", "flai prime --story", "Work S-0104 to review", "flai task done", "flai move S-0104"} {
+		if strings.Contains(p, story) {
+			t.Errorf("a probe's prompt holds the story prompt's %q:\n%s", story, p)
+		}
+	}
+
+	r.Story = ""
+	if p := mustPrompt(t, r); strings.Contains(p, "mounts of story") || !strings.Contains(p, "trial of the agent image") {
+		t.Errorf("a probe with no story names none:\n%s", p)
+	}
+
+	for _, r := range []Request{planReq("S-0104", nil), orchestrateReq(nil)} {
+		r.Probe = true
+		if p, want := mustPrompt(t, r), mustPrompt(t, Request{Name: r.Name, Probe: true}); p != want {
+			t.Errorf("a probe in role %s does not get the probe's prompt first:\n%s", r.Role, p)
+		}
+	}
+}
+
 // S-0274: an agent for a ready story begins it with one call, story_start or
 // flai story start, and reads every part of the pack its answer lacks; one
 // for a story already in progress, which story_start refuses, still primes
