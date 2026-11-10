@@ -1,8 +1,8 @@
 ---
 id: ADR-0175
 title: "A rebase that stops on a markdown file inside the manifest's shared paths merges it by sections, and the merge queue keeps a story whose stop it cannot settle enqueued, messages a conflict with a story ahead in the batch, and sends back one with main"
-status: proposed
-date: 2026-10-19
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0098, ADR-0121, ADR-0126, ADR-0157, ADR-0173]
