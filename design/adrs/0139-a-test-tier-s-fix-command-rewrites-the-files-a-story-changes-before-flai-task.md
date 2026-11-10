@@ -1,8 +1,8 @@
 ---
 id: ADR-0139
 title: "A test tier's fix_command rewrites the files a story changes before flai task done commits them, after each clean sync's rebase, and before flai accept commits the main checkout, and never stops any of them"
-status: proposed
-date: 2026-10-12
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0069, ADR-0107]
