@@ -1,8 +1,8 @@
 ---
 id: ADR-0257
 title: "A rebase of a story branch puts the branch's own changelog lines back under the base branch's top Unreleased, writing each CHANGELOG.md as the base branch has it with the lines the branch added"
-status: proposed
-date: 2026-11-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0228]
