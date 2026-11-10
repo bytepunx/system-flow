@@ -11,16 +11,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // scopeFixture copies the good fixture, whose S-004 is in progress, and
-// gives the archived S-002 a branch that was never merged (I-0057).
+// gives the archived S-002 a branch that was never merged (I-0057). It
+// ignores .flai-cache/, as a project made from the template does, since the
+// record step makes it when it confirms a finding on a work item under the
+// checked-write lock (I-0316).
 func scopeFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	if err := os.CopyFS(root, os.DirFS("../internal/metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	refs := filepath.Join(root, ".git", "refs", "heads", "story")
@@ -980,5 +987,152 @@ func TestCheckFixRewritesTheIssuesSummary(t *testing.T) {
 	}
 	if slices.ContainsFunc(res.Findings, func(f rulePath) bool { return f.Rule == "issues.summary" }) {
 		t.Errorf("json should hold no issues.summary finding after the fix: %s", out)
+	}
+}
+
+// inFlightFixture is overlapFixture with two backlog stories outside S-004,
+// S-006 and S-007, each written whole and then again without its ## Tasks
+// section, as a checked creation's write the check is about to refuse.
+func inFlightFixture(t *testing.T) (root string, whole map[string]string) {
+	t.Helper()
+	root = overlapFixture(t, "", nil)
+	whole = map[string]string{}
+	epic := filepath.Join(root, "wip/kanban/epics/E-001-epic.md")
+	data, err := os.ReadFile(epic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(epic, []byte(strings.Replace(string(data), "- S-005 Five\n", "- S-005 Five\n- S-006 Six\n- S-007 Seven\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for id, title := range map[string]string{"S-006": "Six", "S-007": "Seven"} {
+		path := filepath.Join(root, "wip/kanban/stories", id+"-"+strings.ToLower(title)+".md")
+		whole[id] = path
+		story := "---\nid: " + id + "\ntype: story\nnature: feature\ntitle: " + title + "\nstatus: backlog\nparent: E-001\nowner: agent\n" +
+			"created: 2026-08-25T09:00:00Z\nupdated: 2026-08-25T09:00:00Z\ntransitions: []\ntags: []\n" +
+			"---\n\n# " + id + " " + title + "\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n"
+		if err := os.WriteFile(path, []byte(strings.Replace(story, "## Tasks\n\n", "", 1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path+".whole", []byte(story), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root, whole
+}
+
+// itemHeadingIssue is the issue a close-out records item.heading findings
+// outside its story in, "" when none was opened.
+func itemHeadingIssue(t *testing.T, root string) string {
+	t.Helper()
+	paths, err := filepath.Glob(filepath.Join(root, "design", "issues", "I-*-flai-check-finds-item-heading-outside-the-story-at-close-out.md"))
+	if err != nil || len(paths) > 1 {
+		t.Fatalf("item.heading issues: %v %v", paths, err)
+	}
+	if len(paths) == 0 {
+		return ""
+	}
+	data, err := os.ReadFile(paths[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// I-0316: S-0599's close-out read S-0636 while a checked creation had
+// written it without ## Tasks and not yet kept or removed it, and recorded
+// an item.heading the item never kept. The record step confirms a finding on
+// a work item under the checked-write lock the creation holds: S-006's
+// creation is put right before it lets go, so its finding is passed over;
+// S-007's still holds, so it is recorded.
+func TestCheckRecordIssuesConfirmsWorkItemFindingsUnderTheCheckedWriteLock(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root, whole := inFlightFixture(t)
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := check.RunScoped(repo, git, time.Now(), "S-004")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen int
+	for _, f := range res.Findings {
+		if f.Rule == "item.heading" && f.Outside {
+			seen++
+		}
+	}
+	if seen != 2 {
+		t.Fatalf("the check should find both stories' missing ## Tasks outside S-004: %+v", res.Findings)
+	}
+
+	unlock, err := repo.LockCheckedWrites() // the creation of S-006, in flight
+	if err != nil {
+		t.Fatal(err)
+	}
+	var errOut strings.Builder
+	a := &app{configPath: configOf(t), cwd: root, runner: git, out: &strings.Builder{}, errOut: &errOut}
+	done := make(chan error, 1)
+	go func() {
+		_, err := a.recordOutside(repo, res, "S-004")
+		done <- err
+	}()
+	time.Sleep(200 * time.Millisecond)
+	fixed, err := os.ReadFile(whole["S-006"] + ".whole")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(whole["S-006"], fixed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	unlock()
+	if err := <-done; err != nil {
+		t.Fatalf("record: %v\n%s", err, errOut.String())
+	}
+	doc := itemHeadingIssue(t, root)
+	if !strings.Contains(doc, "S-007-seven.md`: body is missing the \"## Tasks\" section") {
+		t.Errorf("S-007's finding still holds under the lock and should be recorded:\n%s", doc)
+	}
+	if strings.Contains(doc, "S-006") {
+		t.Errorf("S-006's finding was gone once its creation let go of the lock and should not be recorded:\n%s", doc)
+	}
+	if !strings.Contains(errOut.String(), "passed over") || !strings.Contains(errOut.String(), "S-006-six.md") {
+		t.Errorf("the record step should warn of the finding it passed over:\n%s", errOut.String())
+	}
+}
+
+// I-0316: when the checked-write lock cannot be taken, the record step
+// records the findings on work items as before and warns, so a close-out
+// never stops on the lock.
+func TestCheckRecordIssuesRecordsUnconfirmedWhenTheCheckedWriteLockCannotBeTaken(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root, _ := inFlightFixture(t)
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// a folder where the lock file goes cannot be opened to lock
+	if err := os.MkdirAll(filepath.Join(repo.CacheDir(), "items-checked.lock"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	res, err := check.RunScoped(repo, git, time.Now(), "S-004")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var errOut strings.Builder
+	a := &app{configPath: configOf(t), cwd: root, runner: git, out: &strings.Builder{}, errOut: &errOut}
+	if _, err := a.recordOutside(repo, res, "S-004"); err != nil {
+		t.Fatalf("record: %v\n%s", err, errOut.String())
+	}
+	doc := itemHeadingIssue(t, root)
+	if !strings.Contains(doc, "S-006-six.md`") || !strings.Contains(doc, "S-007-seven.md`") {
+		t.Errorf("without the lock both findings should be recorded as before:\n%s", doc)
+	}
+	if !strings.Contains(errOut.String(), "recorded unconfirmed") {
+		t.Errorf("the record step should warn that it could not confirm them:\n%s", errOut.String())
 	}
 }

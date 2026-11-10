@@ -241,10 +241,11 @@ func (r recordedIssue) describe() string {
 // the agent.image findings that the image layer went unchecked for want of
 // docker or is not built (ADR-0255), outside the story, and a markdown or
 // narrative.state finding on another open story's narrative (ADR-0123,
-// ADR-0125).
+// ADR-0125). A finding on an active work item is recorded only when it still
+// holds under the checked-write lock (confirmItemFindings, I-0316).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
-	for _, f := range res.Findings {
+	for _, f := range a.confirmItemFindings(repo, res.Findings, story) {
 		if !f.Outside || f.Rule == "wip.overlap" {
 			continue
 		}
@@ -279,6 +280,84 @@ func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string
 		}
 	}
 	return out, nil
+}
+
+// confirmItemFindings is findings less each one outside story, on an active
+// work item's file, that no longer holds once the checked writes in flight
+// have kept or undone what they wrote (I-0316). A checked creation or edit
+// writes the item, checks it, and removes or restores it when the check
+// refuses it, all under the checked-write lock (ADR-0272, ADR-0275); a check
+// run without that lock can read the item between the write and its removal
+// and report what never stays. So, under the lock, it runs the checked
+// write's rules on those items again (check.RunItemWrite) and keeps a
+// finding only when the run still gives one of its rule on its file. It warns
+// how many it passed over. When the lock cannot be taken or the run fails, it
+// warns and keeps every finding, so a close-out never stops on it.
+func (a *app) confirmItemFindings(repo *workitem.Repo, findings []check.Finding, story string) []check.Finding {
+	var dirs []string
+	for _, typ := range []string{workitem.Epic, workitem.Story, workitem.Task} {
+		dirs = append(dirs, repo.ItemDir(typ, false))
+	}
+	abs := func(p string) string {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(repo.Root, p)
+		}
+		return filepath.Clean(p)
+	}
+	onItem := func(f check.Finding) bool {
+		if !f.Outside || f.Rule == "wip.overlap" || f.Path == "" {
+			return false
+		}
+		p := abs(f.Path)
+		for _, d := range dirs {
+			if filepath.Dir(p) == filepath.Clean(d) {
+				return true
+			}
+		}
+		return false
+	}
+	var paths []string
+	for _, f := range findings {
+		if onItem(f) && !slices.Contains(paths, abs(f.Path)) {
+			paths = append(paths, abs(f.Path))
+		}
+	}
+	if len(paths) == 0 {
+		return findings
+	}
+	log := a.logger().With("component", "cmd", "story", story)
+	unlock, err := repo.LockCheckedWrites()
+	if err != nil {
+		log.Warn("findings on work items recorded unconfirmed", "count", len(paths), "err", err.Error())
+		return findings
+	}
+	defer unlock()
+	// a snapshot of the items kept from before a removal is not fresh
+	workitem.ItemsChanged(repo.KanbanDir())
+	again, err := check.RunItemWrite(repo, a.now(), check.Write{Paths: paths})
+	if err != nil {
+		log.Warn("findings on work items recorded unconfirmed", "count", len(paths), "err", err.Error())
+		return findings
+	}
+	holds := map[string]bool{}
+	for _, f := range again.Findings {
+		if f.Path != "" {
+			holds[f.Rule+"\x00"+abs(f.Path)] = true
+		}
+	}
+	kept := make([]check.Finding, 0, len(findings))
+	var passed []string
+	for _, f := range findings {
+		if onItem(f) && !holds[f.Rule+"\x00"+abs(f.Path)] {
+			passed = append(passed, f.Rule+" "+projectPath(repo, f.Path))
+			continue
+		}
+		kept = append(kept, f)
+	}
+	if len(passed) > 0 {
+		log.Warn("findings outside the story passed over, gone once checked writes finished", "count", len(passed), "findings", strings.Join(passed, "; "))
+	}
+	return kept
 }
 
 // findingText is a finding's message as one line of an issue's markdown:
