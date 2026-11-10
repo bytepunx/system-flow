@@ -3,12 +3,14 @@
 	// is saying and doing: a card whose story has had an agent flai serve started shows its stream,
 	// open while the agent runs, and an agent at work on a story with no narrative yet gets a card of
 	// its own. Since S-0170 each agent that runs, or waits for an answer, has Stop, which says what
-	// stopping does and has flai stop it once the operator confirms.
+	// stopping does and has flai stop it once the operator confirms. Since S-0669 (I-0278) a story's
+	// agent that failed or was stopped has Retry there instead, under the rule the story page and the
+	// card's menu share, which hides once pressed for that run until flai refuses.
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { age } from '$lib/age';
 	import { localTime } from '$lib/localtime';
-	import { activityLine, stoppable, type StoryActivity } from '$lib/activity';
+	import { activityLine, retryable, stoppable, type StoryActivity } from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 	import AgentStopConfirm from './AgentStopConfirm.svelte';
 	import AgentStream from './AgentStream.svelte';
@@ -30,15 +32,51 @@
 		streams,
 		agents = {},
 		canStop = false,
-		onstopped
+		writable = false,
+		onstopped,
+		onretried
 	}: {
 		streams: Stream[];
 		agents?: Record<string, StoryActivity>;
 		/** Whether the operator may stop an agent here: the agent host action is on. */
 		canStop?: boolean;
+		/** Whether the operator may write, as /api/board says. */
+		writable?: boolean;
 		/** Told the story whose agent flai stopped. */
 		onstopped?: (story: string) => void;
+		/** Told the story whose agent Retry asked flai to start again, whatever flai answered. */
+		onretried?: (story: string) => void;
 	} = $props();
+
+	// The run Retry was pressed for, per story: its button stays hidden while flai has it.
+	let retried = $state<Record<string, string>>({});
+	let retryErrors = $state<Record<string, string>>({});
+	const canRetry = (s: Stream, a: StoryActivity) =>
+		retryable(a, canStop, s.status, writable) && retried[s.stream] !== a.run.started;
+
+	async function retry(id: string, started: string) {
+		retried[id] = started;
+		delete retryErrors[id];
+		let error: string | null = null;
+		try {
+			const r = await api(`/api/items/${id}/agent`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'restart' })
+			});
+			if (!r.ok) {
+				const body = (await r.json().catch(() => ({}))) as { error?: string };
+				error = body.error ?? `the agent could not be restarted (${r.status})`;
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		}
+		if (error) {
+			retryErrors[id] = error;
+			delete retried[id];
+		}
+		onretried?.(id);
+	}
 
 	// The story whose agent the operator asked to stop, while the confirmation is open.
 	let stopping = $state<string | null>(null);
@@ -124,8 +162,20 @@
 				{@const a = agents[s.stream]}
 				<p class="mt-2 flex items-center gap-2 text-xs">
 					<AgentDot activity={a} /><span class="text-muted">{activityLine(a)}</span>
-					{#if canStop && stoppable(a)}{@render stopButton(s.stream)}{/if}
+					{#if canStop && stoppable(a)}{@render stopButton(
+							s.stream
+						)}{:else if canRetry(s, a)}<button
+							type="button"
+							class="ml-auto rounded border border-line px-2 py-0.5 text-xs"
+							onclick={() => retry(s.stream, a.run.started)}
+							data-testid="agent-retry">Retry</button
+						>{/if}
 				</p>
+				{#if retryErrors[s.stream]}
+					<p class="mt-1 text-xs text-warn" data-testid="agent-retry-error">
+						{retryErrors[s.stream]}
+					</p>
+				{/if}
 				<AgentStream story={s.stream} started={a.run.started} open={live(a)} />
 			{/if}
 		</li>

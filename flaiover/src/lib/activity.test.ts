@@ -312,6 +312,21 @@ describe("a story's agent action", () => {
 		expect(retryable(failed, true, 'review', true)).toBe(false);
 		expect(retryable({ state: 'working', run }, true, 'in-progress', true)).toBe(false);
 	});
+	it('retries an agent the operator stopped, for a story in progress (I-0278)', () => {
+		const stopped: StoryActivity = {
+			state: 'failed',
+			why: 'stopped by the operator at 2026-11-07T06:24:57Z',
+			run: {
+				...run,
+				ended: '2026-11-07T06:25:00Z',
+				exit: 143,
+				outcome: 'stopped',
+				stopped: '2026-11-07T06:24:57Z'
+			}
+		};
+		expect(retryable(stopped, true, 'in-progress', true)).toBe(true);
+		expect(agentAction(stopped, true, 'in-progress', true)).toEqual(retry);
+	});
 	it('starts the agent of a story in ready that has had none, held or not', () => {
 		expect(agentAction(undefined, true, 'ready', true)).toEqual(start);
 		expect(agentAction(held, true, 'ready', true)).toEqual(start);

@@ -260,8 +260,12 @@ describe('ActivityView stopping an agent (S-0170)', () => {
 		};
 		const retryButton = () =>
 			card('S-0004')?.querySelector<HTMLButtonElement>('[data-testid="agent-retry"]') ?? null;
-		const props = (canStop: boolean, writable: boolean) =>
-			({ streams: [stream('S-0004')], agents: stopped, canStop, writable }) as never;
+		const props = (canStop: boolean, writable: boolean) => ({
+			streams: [stream('S-0004')],
+			agents: stopped,
+			canStop,
+			writable
+		});
 
 		// one who may not write, or with the agent action off, gets no Retry
 		c = mount(ActivityView, { target: document.body, props: props(true, false) });

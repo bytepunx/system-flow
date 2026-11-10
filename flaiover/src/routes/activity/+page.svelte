@@ -14,6 +14,8 @@
 	let streams = $state<never[] | null>(null);
 	let error = $state<string | null>(null);
 	let host = $state<HostAgent | null>(null);
+	// Whether the dashboard may write, asked once: Retry needs it, as the story page's does.
+	let writable = $state(false);
 	const orchestrator = $derived(host?.state?.orchestrator ?? null);
 
 	async function loadAgents() {
@@ -40,9 +42,17 @@
 			error = e instanceof Error ? e.message : String(e);
 		}
 	}
+	async function loadWritable() {
+		try {
+			writable = (await (await api('/api/board')).json()).writable === true;
+		} catch {
+			// not known: no Retry
+		}
+	}
 	onMount(() => {
 		void load();
 		void loadAgents();
+		void loadWritable();
 		// the streams are read from the narratives and the work items, the agents from the items and
 		// the threads; flai serve says when an agent starts or ends (S-0161), the orchestrator's too
 		const agents = debounced(() => void loadAgents());
@@ -69,8 +79,9 @@
 <p class="mb-4 text-sm text-muted">
 	Read from the narratives in <code>wip/agents</code>. An agent that stops writing simply grows old
 	here. Each agent flai serve started shows its stream, read from the log flai gave it, and one that
-	runs can be stopped. The project's orchestrator, which flai serve runs while the orchestrate host
-	action is on, shows its newest run and its stream above the stories.
+	runs can be stopped. One that failed or was stopped can be retried. The project's orchestrator,
+	which flai serve runs while the orchestrate host action is on, shows its newest run and its stream
+	above the stories.
 </p>
 <!-- a reload that fails says so above the streams last shown rather than in their place, so the
 	page keeps its length and the operator their place in it (S-0178) -->
@@ -122,6 +133,8 @@
 		{streams}
 		agents={host?.state?.stories ?? {}}
 		canStop={!!host?.enabled}
+		{writable}
 		onstopped={() => void loadAgents()}
+		onretried={() => void loadAgents()}
 	/>
 {/if}
