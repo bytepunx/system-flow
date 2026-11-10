@@ -6,7 +6,7 @@ status: open
 count: 3
 first_reported: 2026-11-09T21:55:10Z
 last_reported: 2026-11-09T23:01:41Z
-updated: 2026-11-09T23:01:41Z
+updated: 2026-11-10T05:12:06Z
 ---
 
 # I-0323 flai check finds `item.duplicate-id` outside the story at close-out
@@ -32,3 +32,5 @@ flai check found outside the story:
 `wip/archive/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md`: T-2760 is also defined in /home/alex/git/bytepunx/system-flow/wip/kanban/tasks/T-2760-fetch-the-remote-s-branch-and-tags.md
 
 ## Remediation
+
+Story S-0648 remediates this issue, created from it at 2026-11-10T05:12:06Z.
