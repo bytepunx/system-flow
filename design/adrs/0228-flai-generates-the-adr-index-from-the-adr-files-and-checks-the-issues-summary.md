@@ -1,8 +1,8 @@
 ---
 id: ADR-0228
 title: "flai generates the ADR index from the ADR files and checks the issues summary against its folder, CHANGELOG.md files merge by union under one Unreleased section, and the acceptance notice leaves out the paths in claims.shared"
-status: proposed
-date: 2026-10-31
+status: accepted
+date: 2026-11-10
 supersedes: [ADR-0157]
 superseded_by: []
 refines: [ADR-0096, ADR-0098, ADR-0175]
