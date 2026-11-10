@@ -3,10 +3,10 @@ id: S-0650
 type: story
 nature: remediation
 title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T05:12:13Z
-updated: 2026-11-10T07:30:29Z
+updated: 2026-11-10T07:43:47Z
 transitions:
   - to: ready
     at: 2026-11-10T07:02:50Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T07:30:29Z
     by: agent-S-0650
+  - to: done
+    at: 2026-11-10T07:43:47Z
+    by: alex
 tags: []
 topics: [testing]
 touches: [flai/cmd/components_test.go, design/issues/I-0325-testcomponentsserveendswhenviteexits-fails-under-load-the-fake-vite-exits.md, design/issues/summary.md]
