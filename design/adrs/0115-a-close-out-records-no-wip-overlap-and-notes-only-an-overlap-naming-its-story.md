@@ -1,8 +1,8 @@
 ---
 id: ADR-0115
 title: "A close-out records no wip.overlap and notes only an overlap naming its story, and wip.overlap compares the claims of the stories in progress once per pair"
-status: proposed
-date: 2026-10-07
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0096]
