@@ -101,9 +101,34 @@ func (r *Repo) PlanArchive(items []*Item, ids []string) (*ArchivePlan, error) {
 	return plan, nil
 }
 
-// Archive moves the planned files into wip/archive.
+// Archive moves the planned files into wip/archive. The items move under the
+// items lock, so that a Save waiting on it reads after the move and refuses a
+// copy read before it with ErrItemMoved rather than writing it back where it
+// was (I-0323).
 func (r *Repo) Archive(plan *ArchivePlan) error {
-	for _, it := range plan.Items {
+	if err := r.archiveItems(plan.Items); err != nil {
+		return err
+	}
+	for _, src := range plan.Narratives {
+		dest := filepath.Join(r.ArchiveDir(), "agents", filepath.Base(src))
+		if err := moveNarrative(src, dest); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// archiveItems moves each item's file into wip/archive under the items lock.
+func (r *Repo) archiveItems(items []*Item) error {
+	if len(items) == 0 {
+		return nil
+	}
+	unlock, err := r.lockItems()
+	if err != nil {
+		return fmt.Errorf("archive %s and the rest of the plan: nothing was moved: %w", items[0].ID, err)
+	}
+	defer unlock()
+	for _, it := range items {
 		dest := filepath.Join(r.ItemDir(it.Type, true), filepath.Base(it.Path))
 		err := moveFile(it.Path, dest)
 		// this process's own move is seen by its next list of either folder (S-0606)
@@ -113,12 +138,6 @@ func (r *Repo) Archive(plan *ArchivePlan) error {
 			return err
 		}
 		it.Path, it.Archived = dest, true
-	}
-	for _, src := range plan.Narratives {
-		dest := filepath.Join(r.ArchiveDir(), "agents", filepath.Base(src))
-		if err := moveNarrative(src, dest); err != nil {
-			return err
-		}
 	}
 	return nil
 }

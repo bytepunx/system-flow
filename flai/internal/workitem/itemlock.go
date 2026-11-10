@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,17 +55,26 @@ func (r *Repo) LockCheckedWrites() (unlock func(), err error) {
 // lockFile takes an operating system lock on a file; tests count its calls.
 var lockFile = filelock.Lock
 
+// ErrItemMoved is a Save refused because the item was read as active and its
+// file was archived since: writing it would make the item again where it was,
+// beside where it now is (I-0323).
+var ErrItemMoved = errors.New("its file was archived since it was read")
+
 // saveLocked is Save's write of it, made while the caller holds the items
 // lock.
 func (r *Repo) saveLocked(it *Item) error {
 	if it.Path == "" {
 		it.Path = filepath.Join(r.ItemDir(it.Type, it.Archived), FileName(it.ID, it.Title))
 	}
-	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
+	archive := ""
+	if !it.Archived {
+		archive = r.ItemDir(it.Type, true)
+	}
+	doc, err := mergeSaved(it, archive)
+	if err != nil {
 		return err
 	}
-	doc, err := mergeSaved(it)
-	if err != nil {
+	if err := os.MkdirAll(filepath.Dir(it.Path), 0o755); err != nil {
 		return err
 	}
 	if raiseUpdated(it) {
@@ -108,17 +118,23 @@ func (r *Repo) SaveAll(items []*Item) (written []*Item, errs map[string]error) {
 }
 
 // mergeSaved is the document Save writes for it, under the items lock: it as
-// it is when it was made in memory or its file is missing, does not parse,
-// or is still what it was read as; otherwise it merged, part by part, with
-// what another writer saved since, and it is then made the merged item. A
-// part both changed differently, save updated, is a *ConflictError.
-func mergeSaved(it *Item) (string, error) {
+// it is when it was made in memory, its file does not parse or is still what
+// it was read as, or its file is missing and was not archived; otherwise it
+// merged, part by part, with what another writer saved since, and it is then
+// made the merged item. A part both changed differently, save updated, is a
+// *ConflictError, and an active item whose file is now in archive, the
+// archive folder of its type, is ErrItemMoved; archive is "" for an archived
+// item.
+func mergeSaved(it *Item, archive string) (string, error) {
 	mine := it.Marshal()
 	if it.readAs == "" {
 		return mine, nil
 	}
 	data, err := os.ReadFile(it.Path)
 	if os.IsNotExist(err) {
+		if err := refuseMoved(it, archive); err != nil {
+			return "", err
+		}
 		return mine, nil
 	}
 	if err != nil {
@@ -144,6 +160,52 @@ func mergeSaved(it *Item) (string, error) {
 	merged.Path, merged.Archived = it.Path, it.Archived
 	*it = *merged
 	return it.Marshal(), nil
+}
+
+// refuseMoved is ErrItemMoved for it, read from a file and missing at its
+// path, when no file of it is left in its folder, so that no title change
+// renamed it there, and one is in archive, its archive folder; nil when it
+// was not archived, and Save writes it as before.
+func refuseMoved(it *Item, archive string) error {
+	if archive == "" {
+		return nil
+	}
+	dir := filepath.Dir(it.Path)
+	left, err := hasFileOf(dir, it.ID)
+	if err != nil {
+		return fmt.Errorf("save %s: %w", it.ID, err)
+	}
+	if left {
+		return nil
+	}
+	archived, err := hasFileOf(archive, it.ID)
+	if err != nil {
+		return fmt.Errorf("save %s: %w", it.ID, err)
+	}
+	if !archived {
+		return nil
+	}
+	return fmt.Errorf("save %s: %w: it is gone from %s and is in %s, so nothing was written: read %s again where it now is and make the change there, if it is still to make",
+		it.ID, ErrItemMoved, dir, archive, it.ID)
+}
+
+// hasFileOf reports whether dir holds a work item file of id, named as
+// FileName names it under any title; a dir that is gone holds none.
+func hasFileOf(dir, id string) (bool, error) {
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("look in %s for a file of %s: %w", dir, id, err)
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if name == id+".md" || strings.HasPrefix(name, id+"-") && strings.HasSuffix(name, ".md") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // raiseUpdated sets its updated to the later of its created and its last

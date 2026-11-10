@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -439,5 +440,71 @@ func TestSaveAllRefusesOnlyTheItemWhosePartBothChanged(t *testing.T) {
 	}
 	if got := onDisk(t, second.Path); got.Forecast.IsZero() || got.Forecast.Delivery != stamp(time.Hour) {
 		t.Errorf("S-0002's forecast was not written:\n%s", got.Marshal())
+	}
+}
+
+// I-0323: flai serve's usage write read a task, flai accept archived it
+// meanwhile, and the usage write then saved its copy at the task's old path,
+// so the task was in wip/kanban and wip/archive both.
+func TestSaveRefusesACopyWhoseFileWasArchivedSince(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	c := copies(t, r, 2)
+	stale, archived := c[0], c[1]
+	old := stale.Path
+	if err := r.Archive(&ArchivePlan{Items: []*Item{archived}}); err != nil {
+		t.Fatal(err)
+	}
+	kept := readFile(t, archived.Path)
+	stale.Tags = []string{"usage"}
+	err := r.Save(stale)
+	if _, serr := os.Stat(old); !os.IsNotExist(serr) {
+		t.Errorf("the save made the item again at its old path %s (save: %v)", old, err)
+	}
+	if !errors.Is(err, ErrItemMoved) || !strings.Contains(err.Error(), "S-0001") {
+		t.Errorf("save of a copy whose file was archived: %v, want ErrItemMoved naming S-0001", err)
+	}
+	if got := readFile(t, archived.Path); got != kept {
+		t.Errorf("the archived file changed:\n%s\nwant\n%s", got, kept)
+	}
+}
+
+// A copy whose title changed is saved under its new name while the file it
+// was read from is still beside it, as flai edit renames an item: only an
+// item of which no file is left in its folder is refused.
+func TestSaveWritesARetitledCopyBesideTheFileItWasReadFrom(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	it := copies(t, r, 1)[0]
+	old := it.Path
+	it.Title = "Renamed"
+	it.Path = filepath.Join(filepath.Dir(old), FileName(it.ID, it.Title))
+	if err := r.Save(it); err != nil {
+		t.Fatalf("save of a retitled copy: %v", err)
+	}
+	if got := onDisk(t, it.Path); got.Title != "Renamed" {
+		t.Errorf("title %q at the new path, want Renamed", got.Title)
+	}
+}
+
+// A copy whose file was archived, after which its active folder was removed
+// as empty, is refused without making the folder again.
+func TestSaveRefusesAMovedCopyWithoutMakingItsFolder(t *testing.T) {
+	r := newProject(t)
+	readyStory(t, r)
+	c := copies(t, r, 2)
+	stale, archived := c[0], c[1]
+	if err := r.Archive(&ArchivePlan{Items: []*Item{archived}}); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Dir(stale.Path)
+	if err := os.Remove(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Save(stale); !errors.Is(err, ErrItemMoved) {
+		t.Errorf("save of a copy whose file was archived: %v, want ErrItemMoved", err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("the refused save made %s again", dir)
 	}
 }
