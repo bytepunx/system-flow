@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 ---
 
@@ -3643,9 +3643,9 @@ What is pending is worked out from this clone's tags and branch, and flai never 
 
 An agent flai serve started (FLAI\_STARTED\_BY=flai-serve, or FLAI\_STORY set), such as the publish formula's (ADR-0240), is refused --pending while the project's push host action is off, which publishing needs: nothing is applied, tagged, or pushed, and the exit is 4. The push host action is the operator's to turn on, with flai serve enable push on the host. The operator's own shell, with neither set, is not held, and neither is --dry-run, which publishes nothing (S-0423).
 
-flai release --evaluate says whether system-flow.yaml's orchestration.release policy is met, why, and the figures it rests on (S-0217): the stories accepted and not yet released, their count, and their cost of delay per week summed. A threshold is met when that sum or that count is at or over the value or count it sets; a story with no value counts but adds nothing to the sum, and is named. A theme is met when every story of its epic or its tag, archived or not and cancelled ones aside, is accepted and one at least is not yet released; the ones not yet accepted are named. Judgement, the default, is never met by itself: the call is the orchestrator's or the operator's. With orchestration.release.whole\_epics set, no policy is met while a story accepted and not yet released belongs to an epic in neither review nor done (S-0222); those stories are named with their epics, and under judgement they are what must not be published. It tags, bumps, commits, and pushes nothing, and so takes no item and none of --apply, --pending, --dry-run, or --deliver.
+flai release --evaluate says whether system-flow.yaml's orchestration.release policy is met, why, and the figures it rests on (S-0217): the stories accepted and not yet released, their count, and their cost of delay per week summed. A threshold is met when that sum or that count is at or over the value or count it sets; a story with no value counts but adds nothing to the sum, and is named. A theme is met when every story of its epic or its tag, archived or not and cancelled ones aside, is accepted and one at least is not yet released; the ones not yet accepted are named. Judgement, the default, is met only with a judgement given: the call is the orchestrator's or the operator's, and --judged "&lt;reason&gt;" gives it (ADR-0273). Under judgement a reason makes the evaluation met when a story is accepted and not yet released; an empty one is none. Under threshold and theme --judged changes nothing. With orchestration.release.whole\_epics set, no policy is met while a story accepted and not yet released belongs to an epic in neither review nor done (S-0222); those stories are named with their epics, and under judgement they are what must not be published. It tags, bumps, commits, and pushes nothing, and so takes no item and none of --apply, --pending, --dry-run, or --deliver.
 
-With --require-met, --evaluate prints the same and then exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (ADR-0240); met, it exits 0. It is refused without --evaluate.
+With --require-met, --evaluate prints the same and then exits 2 with the evaluation's reason when the policy is not met, so a script or a formula step stops there (ADR-0240); met, it exits 0. It and --judged are refused without --evaluate.
 
 Examples:
 
@@ -3656,6 +3656,7 @@ flai release --pending --dry-run
 flai release --pending
 flai release --evaluate --json
 flai release --evaluate --require-met
+flai release --evaluate --require-met --judged "the editor epic is whole and tested"
 ```
 
 Flags:
@@ -3666,6 +3667,7 @@ Flags:
 | `--deliver` string | component the item delivers to, when its tags do not say |
 | `--dry-run` | print the plan only, or with --pending what would publish |
 | `--evaluate` | say whether orchestration.release is met, with its figures; changes nothing |
+| `--judged` string | with --evaluate, the judgement to release: under judgement a reason makes the policy met while a story is accepted and not yet released (ADR-0273) |
 | `--pending` | publish everything merged and unreleased since each component's last tag |
 | `--require-met` | with --evaluate, exit 2 with the reason when the policy is not met |
 

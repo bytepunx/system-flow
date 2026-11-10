@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 ---
 
@@ -447,6 +447,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--item` | [flai activity log](../users/flai-reference.md#flai-activity-log) |
 | `--job` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
+| `--judged` | [flai release](../users/flai-reference.md#flai-release) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
 | `--keep-removal` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |

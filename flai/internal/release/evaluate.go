@@ -45,6 +45,9 @@ type Evaluation struct {
 	// While any is held the policy is not met, whichever it is; under
 	// judgement they are what the orchestrator must not publish.
 	HeldByEpic []HeldStory `json:"held_by_epic,omitempty"`
+	// Judged is the judgement given with --judged, trimmed; under judgement a
+	// non-empty one meets the policy when a story is pending (ADR-0273).
+	Judged string `json:"judged,omitempty"`
 }
 
 // HeldStory is a pending story whole_epics holds back, with its epic and
@@ -70,6 +73,12 @@ type EvaluatedStory struct {
 // EvaluateRepo is Evaluate on the repository's items and what its history
 // says is pending: accepted and not yet published (PendingBatch).
 func EvaluateRepo(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo) (Evaluation, error) {
+	return EvaluateRepoJudged(r, root, m, repo, "")
+}
+
+// EvaluateRepoJudged is EvaluateRepo with a judgement, as EvaluateJudged
+// takes it (ADR-0273).
+func EvaluateRepoJudged(r execx.Runner, root string, m manifest.Manifest, repo *workitem.Repo, judged string) (Evaluation, error) {
 	b, err := PendingBatch(r, root, m, repo)
 	if err != nil {
 		return Evaluation{}, err
@@ -78,7 +87,7 @@ func EvaluateRepo(r execx.Runner, root string, m manifest.Manifest, repo *workit
 	if err != nil {
 		return Evaluation{}, err
 	}
-	return Evaluate(m, items, b.IDs()), nil
+	return EvaluateJudged(m, items, b.IDs(), judged), nil
 }
 
 // Evaluate says whether m's orchestration.release is met by items, of which
@@ -86,12 +95,22 @@ func EvaluateRepo(r execx.Runner, root string, m manifest.Manifest, repo *workit
 // the pending stories' summed value or their count is at or over a figure
 // the manifest sets; a theme when every story of its epic or tag, cancelled
 // ones aside, is accepted and one at least is not yet released; judgement
-// never, the call being the orchestrator's or the operator's. With
+// never, the call being the orchestrator's or the operator's, given through
+// EvaluateJudged. With
 // whole_epics set, none is met while a pending story's epic is in neither
 // review nor done.
 func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bool) Evaluation {
+	return EvaluateJudged(m, items, pending, "")
+}
+
+// EvaluateJudged is Evaluate with a judgement, the reason the orchestrator
+// or the operator gives for releasing (ADR-0273). Under judgement a reason,
+// once trimmed not empty, meets the policy when a story is accepted and not
+// yet released, and whole_epics holds nothing back; an empty one is none.
+// Under threshold and theme it changes nothing.
+func EvaluateJudged(m manifest.Manifest, items []*workitem.Item, pending map[string]bool, judged string) Evaluation {
 	rel := m.Orchestration.Release
-	ev := Evaluation{Policy: rel.PolicyOrDefault(), Currency: m.Planning.CurrencyCode(), Pending: []EvaluatedStory{}}
+	ev := Evaluation{Policy: rel.PolicyOrDefault(), Currency: m.Planning.CurrencyCode(), Pending: []EvaluatedStory{}, Judged: strings.TrimSpace(judged)}
 	for _, it := range items {
 		if it.Type != workitem.Story || !pending[it.ID] {
 			continue
@@ -113,7 +132,7 @@ func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bo
 		ev.Epic, ev.Tag = strings.TrimSpace(rel.Epic), strings.TrimSpace(rel.Tag)
 		ev.theme(items, pending)
 	case manifest.ReleaseJudgement:
-		ev.Reason = fmt.Sprintf("the release policy is judgement, which is never met by itself: whether to release is the orchestrator's or the operator's call, with %s", ev.pendingPhrase())
+		ev.judgement()
 	default:
 		ev.Reason = fmt.Sprintf("%q is not a release policy, so it is never met; write judgement, threshold, or theme", rel.Policy)
 	}
@@ -121,6 +140,20 @@ func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bo
 		ev.holdByEpic(items, pending)
 	}
 	return ev
+}
+
+// judgement weighs the judgement policy: met only with a judgement given and
+// a story pending (ADR-0273).
+func (ev *Evaluation) judgement() {
+	switch {
+	case ev.Judged == "":
+		ev.Reason = fmt.Sprintf("the release policy is judgement, which is met only with a judgement given (--judged): whether to release is the orchestrator's or the operator's call, with %s", ev.pendingPhrase())
+	case ev.Count == 0:
+		ev.Reason = fmt.Sprintf("the release policy is judgement, judged %q, but there is %s", ev.Judged, ev.pendingPhrase())
+	default:
+		ev.Met = true
+		ev.Reason = fmt.Sprintf("the release policy is judgement, judged %q, with %s", ev.Judged, ev.pendingPhrase())
+	}
 }
 
 // holdByEpic sets HeldByEpic to the pending stories whose epic is in neither

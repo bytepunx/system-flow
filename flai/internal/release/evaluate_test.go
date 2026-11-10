@@ -146,6 +146,57 @@ func TestEvaluateJudgement(t *testing.T) {
 		if !strings.Contains(ev.Reason, "the orchestrator's or the operator's call") || !strings.Contains(ev.Reason, "3 accepted stories not yet released, worth 300 USD/week") {
 			t.Errorf("the reason says whose call it is, with the figures: %s", ev.Reason)
 		}
+		if !strings.Contains(ev.Reason, "--judged") {
+			t.Errorf("the reason names how a judgement is given: %s", ev.Reason)
+		}
+	}
+}
+
+// I-0291, ADR-0273: under judgement a judgement given meets the policy while
+// a story is pending and whole_epics holds nothing back; an empty or blank
+// one is none, and under threshold and theme it changes nothing.
+func TestEvaluateJudged(t *testing.T) {
+	items, pending := thresholdItems()
+	judgement := withRelease(manifest.Release{Policy: manifest.ReleaseJudgement})
+	reason := "the editor epic is whole and tested"
+
+	ev := EvaluateJudged(judgement, items, pending, "  "+reason+"\n")
+	if !ev.Met || ev.Judged != reason {
+		t.Fatalf("a judgement given meets judgement with a story pending: %+v", ev)
+	}
+	if !strings.Contains(ev.Reason, `judged "`+reason+`"`) || !strings.Contains(ev.Reason, "3 accepted stories not yet released, worth 300 USD/week") {
+		t.Errorf("the reason names the judgement and the figures: %s", ev.Reason)
+	}
+	if def := EvaluateJudged(manifest.Manifest{}, items, pending, reason); !def.Met {
+		t.Errorf("judgement as the default is met the same way: %+v", def)
+	}
+
+	for _, blank := range []string{"", "   ", "\t\n"} {
+		if ev := EvaluateJudged(judgement, items, pending, blank); ev.Met || ev.Judged != "" {
+			t.Errorf("a blank judgement %q is none: %+v", blank, ev)
+		}
+	}
+
+	ev = EvaluateJudged(judgement, items, map[string]bool{}, reason)
+	if ev.Met || !strings.Contains(ev.Reason, "no accepted story waiting for a release") {
+		t.Errorf("with nothing pending a judgement meets nothing, and says so: %+v", ev)
+	}
+
+	held := withRelease(manifest.Release{Policy: manifest.ReleaseJudgement, WholeEpics: true})
+	ev = EvaluateJudged(held, wholeEpicItems(), map[string]bool{"S-0001": true, "S-0002": true}, reason)
+	if ev.Met || len(ev.HeldByEpic) != 1 || !strings.Contains(ev.Reason, "whole_epics holds the batch back") {
+		t.Errorf("whole_epics still holds a judged batch back: %+v", ev)
+	}
+
+	threshold := withRelease(manifest.Release{Policy: manifest.ReleaseThreshold, Count: ptr(4)})
+	plain, judged := Evaluate(threshold, items, pending), EvaluateJudged(threshold, items, pending, reason)
+	if judged.Met || judged.Reason != plain.Reason {
+		t.Errorf("under threshold a judgement changes nothing: %+v vs %+v", judged, plain)
+	}
+	tItems := themeItems()
+	theme := withRelease(manifest.Release{Policy: manifest.ReleaseTheme, Epic: "E-0002"})
+	if a, b := Evaluate(theme, tItems, pending), EvaluateJudged(theme, tItems, pending, reason); a.Met != b.Met || a.Reason != b.Reason {
+		t.Errorf("under theme a judgement changes nothing: %+v vs %+v", b, a)
 	}
 }
 

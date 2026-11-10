@@ -228,6 +228,46 @@ func TestReleaseEvaluateRequireMet(t *testing.T) {
 		t.Errorf("--json prints the evaluation and exits 2 too: %d %+v", code, ev)
 	}
 
+	// I-0291, ADR-0273: under judgement --require-met exits 2 with no
+	// judgement, the publish formula's step 2 stopping every run; a judgement
+	// given meets it.
+	setReleasePolicy(t, root, "    policy: judgement\n")
+	_, errOut, code = runIn(t, root, "release", "--evaluate", "--require-met")
+	if code != 2 || !strings.Contains(errOut, "release policy judgement not met") {
+		t.Errorf("under judgement with no judgement it exits 2: %d %s", code, errOut)
+	}
+	for _, blank := range []string{"", "   "} {
+		if _, errOut, code := runIn(t, root, "release", "--evaluate", "--require-met", "--judged", blank); code != 2 {
+			t.Errorf("a blank judgement %q is none and exits 2: %d %s", blank, code, errOut)
+		}
+	}
+	reason := "both stories are whole and tested"
+	out, errOut, code = runIn(t, root, "release", "--evaluate", "--require-met", "--judged", reason)
+	if code != 0 || !strings.HasPrefix(out, "release policy judgement: met\n") || !strings.Contains(out, `judged "`+reason+`"`) {
+		t.Errorf("a judgement given meets judgement and is printed: %d %s %s", code, out, errOut)
+	}
+	out, _, code = runIn(t, root, "release", "--evaluate", "--require-met", "--judged", reason, "--json")
+	ev = release.Evaluation{}
+	if err := json.Unmarshal([]byte(out), &ev); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if code != 0 || !ev.Met || ev.Judged != reason {
+		t.Errorf("--json carries the judgement: %d %+v", code, ev)
+	}
+	setReleasePolicy(t, root, "    policy: threshold\n    count: 3\n")
+	if _, errOut, code := runIn(t, root, "release", "--evaluate", "--require-met", "--judged", reason); code != 2 {
+		t.Errorf("under threshold a judgement does not meet a policy not met: %d %s", code, errOut)
+	}
+
+	for _, args := range [][]string{
+		{"release", "--judged", reason},
+		{"release", "--pending", "--judged", reason},
+	} {
+		_, errOut, code := runIn(t, root, args...)
+		if code == 0 || !strings.Contains(errOut, "--judged") || !strings.Contains(errOut, "--evaluate") {
+			t.Errorf("flai %v is refused and says why: %d %s", args, code, errOut)
+		}
+	}
 	for _, args := range [][]string{
 		{"release", "--require-met"},
 		{"release", "--pending", "--require-met"},

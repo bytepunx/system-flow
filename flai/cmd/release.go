@@ -71,6 +71,7 @@ func (a *app) printPlan(plan *release.Plan) {
 func newReleaseCmd(a *app) *cobra.Command {
 	var deliver string
 	var dryRun, onlyPending, evaluate, requireMet bool
+	var judged string
 	c := &cobra.Command{
 		Use:   "release <id> | --pending | --evaluate",
 		Short: "Compute a release for one item, publish everything accepted since the last release, or say whether a release is due",
@@ -130,8 +131,11 @@ value or count it sets; a story with no value counts but adds nothing to the
 sum, and is named. A theme is met when every story of its epic or its tag,
 archived or not and cancelled ones aside, is accepted and one at least is
 not yet released; the ones not yet accepted are named. Judgement, the
-default, is never met by itself: the call is the orchestrator's or the
-operator's. With orchestration.release.whole_epics set, no policy is met
+default, is met only with a judgement given: the call is the orchestrator's
+or the operator's, and --judged "<reason>" gives it (ADR-0273). Under
+judgement a reason makes the evaluation met when a story is accepted and not
+yet released; an empty one is none. Under threshold and theme --judged
+changes nothing. With orchestration.release.whole_epics set, no policy is met
 while a story accepted and not yet released belongs to an epic in neither
 review nor done (S-0222); those stories are named with their epics, and
 under judgement they are what must not be published. It tags, bumps,
@@ -140,21 +144,25 @@ commits, and pushes nothing, and so takes no item and none of --apply,
 
 With --require-met, --evaluate prints the same and then exits 2 with the
 evaluation's reason when the policy is not met, so a script or a formula
-step stops there (ADR-0240); met, it exits 0. It is refused without
---evaluate.`,
+step stops there (ADR-0240); met, it exits 0. It and --judged are refused
+without --evaluate.`,
 		Example: `  flai release S-031 --dry-run
   flai release S-031 --deliver flai --apply
   flai release --pending --dry-run
   flai release --pending
   flai release --evaluate --json
-  flai release --evaluate --require-met`,
+  flai release --evaluate --require-met
+  flai release --evaluate --require-met --judged "the editor epic is whole and tested"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if evaluate {
-				return a.evaluateRelease(cmd, args, requireMet)
+				return a.evaluateRelease(cmd, args, requireMet, judged)
 			}
 			if requireMet {
 				return fmt.Errorf("--require-met says how --evaluate exits, so it takes --evaluate: flai release --evaluate --require-met")
+			}
+			if cmd.Flags().Changed("judged") {
+				return fmt.Errorf("--judged gives --evaluate a judgement, so it takes --evaluate: flai release --evaluate --require-met --judged \"<reason>\"")
 			}
 			if onlyPending {
 				if len(args) > 0 {
@@ -210,6 +218,7 @@ step stops there (ADR-0240); met, it exits 0. It is refused without
 	c.Flags().BoolVar(&onlyPending, "pending", false, "publish everything merged and unreleased since each component's last tag")
 	c.Flags().BoolVar(&evaluate, "evaluate", false, "say whether orchestration.release is met, with its figures; changes nothing")
 	c.Flags().BoolVar(&requireMet, "require-met", false, "with --evaluate, exit 2 with the reason when the policy is not met")
+	c.Flags().StringVar(&judged, "judged", "", "with --evaluate, the judgement to release: under judgement a reason makes the policy met while a story is accepted and not yet released (ADR-0273)")
 	return c
 }
 
@@ -221,8 +230,9 @@ const exitReleaseNotMet = 2
 // evaluateRelease is flai release --evaluate (S-0217): whether the release
 // policy is met, and its figures. It refuses everything that would release.
 // With requireMet (S-0423), a policy not met exits exitReleaseNotMet with the
-// evaluation's reason, after the evaluation is printed.
-func (a *app) evaluateRelease(cmd *cobra.Command, args []string, requireMet bool) error {
+// evaluation's reason, after the evaluation is printed. judged is the
+// judgement --judged gives, which under judgement meets the policy (ADR-0273).
+func (a *app) evaluateRelease(cmd *cobra.Command, args []string, requireMet bool, judged string) error {
 	if len(args) > 0 {
 		return fmt.Errorf("--evaluate weighs everything accepted and not yet released, not one item; drop %s", args[0])
 	}
@@ -238,7 +248,7 @@ func (a *app) evaluateRelease(cmd *cobra.Command, args []string, requireMet bool
 	if err != nil {
 		return err
 	}
-	ev, err := release.EvaluateRepo(a.runner, repo.Root, repo.Manifest, repo)
+	ev, err := release.EvaluateRepoJudged(a.runner, repo.Root, repo.Manifest, repo, judged)
 	if err != nil {
 		return err
 	}
