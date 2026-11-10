@@ -23,16 +23,16 @@ tags: [ci, security]
 touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", template/root/.github/workflows/system-flow-check.yml]
 usage:
   source: log
-  seconds: 343
+  seconds: 344
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 213
-      cache_read: 3771841
-      cache_write: 23798
-      cost: 1.3948
+      input: 28
+      output: 7339
+      cache_read: 3824067
+      cache_write: 61561
+      cost: 1.3867
 ---
 # T-2774 Every GitHub Actions step names a commit SHA, and every workflow grants contents read at the top level and writes only on the jobs that need them
 

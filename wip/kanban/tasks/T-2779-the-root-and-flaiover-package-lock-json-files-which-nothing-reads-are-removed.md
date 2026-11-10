@@ -23,16 +23,16 @@ tags: [flaiover, node]
 touches: [flaiover/package-lock.json, package-lock.json]
 usage:
   source: log
-  seconds: 341
+  seconds: 370
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 5
-      cache_read: 451477
-      cache_write: 6204
-      cost: 0.1682
+      input: 7
+      output: 1745
+      cache_read: 909082
+      cache_write: 14635
+      cost: 0.3297
 ---
 # T-2779 The root and flaiover package-lock.json files, which nothing reads, are removed, leaving flaiover/pnpm-lock.yaml the one lockfile
 

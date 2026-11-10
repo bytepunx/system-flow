@@ -3,14 +3,20 @@ id: S-0646
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: review
 owner: alex
 created: 2026-11-09T22:22:55Z
-updated: 2026-11-09T22:23:05Z
+updated: 2026-11-10T06:18:53Z
 transitions:
   - to: ready
     at: 2026-11-09T22:23:05Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-10T06:17:16Z
+    by: agent-S-0646
+  - to: review
+    at: 2026-11-10T06:18:53Z
+    by: agent-S-0646
 tags: []
 touches: [wip/kanban/stories/S-0646-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -19,20 +25,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 105
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 5736
+      cache_read: 3140209
+      cache_write: 148971
+      cost: 1.9347
   strategic:
     - kind: orchestrator
-      seconds: 68
+      seconds: 85
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 19
-          output: 117
-          cache_read: 518250
-          cache_write: 78648
-          cost: 0.1597
+          input: 25
+          output: 140
+          cache_read: 676316
+          cache_write: 101735
+          cost: 0.2082
 formula: publish
 ---
 # S-0646 Publish what is accepted and not yet released
@@ -43,9 +60,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released (skipped: step evaluate stopped the run with exit 2)
 
 ## Tasks
 - T-2822 Fetch the remote's branch and tags
@@ -55,3 +72,5 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with no inputs.
+
+Step evaluate stopped the run with exit 2; skipped T-2824.

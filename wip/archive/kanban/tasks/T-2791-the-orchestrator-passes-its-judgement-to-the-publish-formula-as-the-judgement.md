@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1534
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 314
-      cache_read: 4799703
-      cache_write: 310611
-      cost: 1.878
+      input: 36
+      output: 6212
+      cache_read: 5134927
+      cache_write: 128833
+      cost: 1.8957
 ---
 # T-2791 The orchestrator passes its judgement to the publish formula as the judgement input
 

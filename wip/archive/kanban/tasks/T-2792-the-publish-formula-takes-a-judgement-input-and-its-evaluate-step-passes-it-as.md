@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 337
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 184
-      cache_read: 6318540
-      cache_write: 35196
-      cost: 2.3348
+      input: 45
+      output: 7724
+      cache_read: 6384337
+      cache_write: 160180
+      cost: 2.357
 ---
 # T-2792 The publish formula takes a judgement input and its evaluate step passes it as --judged
 

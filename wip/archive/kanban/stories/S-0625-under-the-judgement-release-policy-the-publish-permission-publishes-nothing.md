@@ -3,10 +3,10 @@ id: S-0625
 type: story
 nature: improvement
 title: "Under the judgement release policy the publish permission publishes nothing: every release since 2026-11-02 was the operator's by hand"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:40:15Z
-updated: 2026-11-10T05:19:09Z
+updated: 2026-11-10T06:44:10Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:44Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:12:17Z
     by: agent-S-0625
+  - to: review
+    at: 2026-11-10T06:17:10Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T06:44:10Z
+    by: alex
 tags: [flai, template]
 topics: [release, orchestration, conventions]
-touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, flai/cmd/publish_judgement_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/issues/summary.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md]
+touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, flai/cmd/publish_judgement_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/issues/summary.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2436
-  estimated: true
-  priced_by: estimate
+  seconds: 3915
+  priced_by: harness
   turns:
     - day: 2026-11-10
       ceremony: 4
-      hand_edits: 1
-      work: 31
+      hand_edits: 2
+      work: 98
   models:
     - model: claude-opus-5-5
-      input: 218
-      output: 1447
-      cache_read: 27211641
-      cache_write: 1266372
-      cost: 10.4652
+      input: 368
+      output: 62782
+      cache_read: 51896144
+      cache_write: 1302049
+      cost: 19.1589
   strategic:
     - kind: orchestrator
       seconds: 69
@@ -91,8 +96,8 @@ finalized:
 This story remediates [I-0291](../../../design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md), "Under the judgement release policy the publish permission publishes nothing: every release since 2026-11-02 was the operator's by hand", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0291 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0291 is closed with `flai issue close I-0291 --reason` saying what fixed it
+- [x] The cause I-0291 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0291 is closed with `flai issue close I-0291 --reason` saying what fixed it
 
 ## Tasks
 - T-2788 Record in an ADR how the orchestrator's judgement reaches the publish formula's evaluate step

@@ -3,14 +3,17 @@ id: S-0631
 type: story
 nature: improvement
 title: Five source files under flai are over 2,000 lines
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:53Z
-updated: 2026-11-09T23:22:43Z
+updated: 2026-11-10T06:14:57Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:09Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T06:14:57Z
+    by: agent-S-0631
 tags: [cli]
 topics: [cli, testing, docs]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_spec.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/settings.go, flai/internal/serve/agents.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_activity.go, flai/internal/mcpserver/server.go, flai/cmd/serve_actions.go, flai/cmd/serve_agent.go, flai/cmd/serve_checks.go, flai/cmd/serve_components.go, flai/cmd/serve_harness.go, flai/cmd/serve_provider.go, flai/cmd/serve_notify.go, flai/cmd/serve_mcp.go, flai/cmd/serve_view.go, flai/cmd/serve_agent_run.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_strategic.go, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/manifest_accept.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_tests.go, flai/internal/check/check.go, flai/internal/check/check_layout.go, flai/internal/check/check_items.go, flai/internal/check/check_docs.go, flai/internal/check/check_roles.go, flai/internal/check/check_records.go, flai/internal/check/sourcesize_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_shell.go, flai/internal/watch/watch.go, design/system/flai-cli.md, design/system/server-performance.md, design/system/design-system-tool.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/system/agent-coordination.md, design/system/flaiover-dashboard.md, design/system/agent-prose.md, design/system/release-signing.md, design/issues/I-0298-five-source-files-under-flai-are-over-2-000-lines.md, design/issues/summary.md]
@@ -20,9 +23,23 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1394
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      test_runs: 2
+      hand_edits: 1
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 194
+      output: 1121
+      cache_read: 22127150
+      cache_write: 678948
+      cost: 8.3871
   strategic:
     - kind: orchestrator
       seconds: 241

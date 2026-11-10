@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 221
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 295
-      cache_read: 4959999
-      cache_write: 27922
-      cost: 1.833
+      input: 36
+      output: 6063
+      cache_read: 5011949
+      cache_write: 125747
+      cost: 1.8503
 ---
 # T-2788 Record in an ADR how the orchestrator's judgement reaches the publish formula's evaluate step
 

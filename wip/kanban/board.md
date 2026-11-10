@@ -7,8 +7,7 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0631
-  - S-0646
+  - S-0647
 ---
 
 # Board

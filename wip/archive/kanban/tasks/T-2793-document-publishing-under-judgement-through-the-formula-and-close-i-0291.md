@@ -24,16 +24,16 @@ touches: [docs/users/flai.md, docs/operators/settings.md, template/CHANGELOG.md,
 after: [T-2791, T-2792]
 usage:
   source: log
-  seconds: 100
+  seconds: 110
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 225
-      cache_read: 3160478
-      cache_write: 14375
-      cost: 1.1667
+      input: 23
+      output: 3859
+      cache_read: 3190147
+      cache_write: 80039
+      cost: 1.1777
 ---
 # T-2793 Document publishing under judgement through the formula and close I-0291
 

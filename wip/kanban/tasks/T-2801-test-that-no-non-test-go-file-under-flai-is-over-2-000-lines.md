@@ -3,12 +3,18 @@ id: T-2801
 type: task
 nature: improvement
 title: Test that no non-test Go file under flai is over 2,000 lines
-status: backlog
+status: in-progress
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:05:19Z
-updated: 2026-11-09T22:05:19Z
-transitions: []
+updated: 2026-11-10T06:39:19Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:39:17Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:39:19Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/check/sourcesize_test.go]

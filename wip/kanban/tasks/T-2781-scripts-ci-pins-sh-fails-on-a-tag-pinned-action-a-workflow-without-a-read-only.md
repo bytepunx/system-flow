@@ -3,11 +3,11 @@ id: T-2781
 type: task
 nature: remediation
 title: scripts/ci-pins.sh fails on a tag-pinned action, a workflow without a read-only top-level permissions block, an unpinned image, or a second flaiover lockfile, and smoke runs it
-status: in-progress
+status: done
 parent: S-0630
 owner: alex
 created: 2026-11-09T21:58:48Z
-updated: 2026-11-10T05:53:58Z
+updated: 2026-11-10T05:55:47Z
 transitions:
   - to: ready
     at: 2026-11-10T05:53:57Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:53:58Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T05:55:47Z
+    by: agent-S-0630
 stream: S-0630
 tags: [ci, security, test]
 touches: [scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md]
 after: [T-2774, T-2778, T-2779]
+usage:
+  source: log
+  seconds: 109
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 4925
+      cache_read: 2566378
+      cache_write: 41314
+      cost: 0.9306
 ---
 # T-2781 scripts/ci-pins.sh fails on a tag-pinned action, a workflow without a read-only top-level permissions block, an unpinned image, or a second flaiover lockfile, and smoke runs it
 
@@ -42,3 +57,5 @@ It waits for T-2774, T-2778, and T-2779: it must pass on the tree they pin, and 
 - `scripts/shellcheck.sh scripts/ci-pins.sh scripts/smoke.sh` passes, and `scripts/smoke.sh` runs it.
 
 ## Notes
+
+On the story's tree, `scripts/ci-pins.sh` exits 0. On the story's base, `git archive main | tar -x -C <tmp>` then `scripts/ci-pins.sh <tmp>`, it exits 1 with 51 findings: 42 tag-pinned `uses:` across the six workflows, the missing top-level `permissions:` of `flai.yml`, `flaiover.yml`, and `system-flow-check.yml`, the top-level writes of `release-flai.yml` (contents, id-token, attestations) and `release-flaiover.yml` (packages), `node:24-alpine` twice, `golang:1.26-alpine`, `alpine:3.24`, `golang:1.26.0-alpine` (an `-alpine` variant with no Alpine release, a rule added beyond the plan), `grafana/otel-lgtm:latest`, LiteLLM's `main-stable`, the second flaiover lockfile, and the root `package-lock.json`. Outside a git checkout it reads lockfiles from disk, inside one from `git ls-files`. Written for mawk too (no regex intervals). `flai test` on the three paths: shellcheck and markdown passed.

@@ -3,11 +3,17 @@ id: S-0643
 type: story
 nature: improvement
 title: A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-09T21:22:33Z
-updated: 2026-11-09T23:22:43Z
-transitions: []
+updated: 2026-11-10T06:20:08Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:19:55Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T06:20:08Z
+    by: agent-S-0643
 tags: [flai, release, formula]
 topics: [release, formula]
 touches: [flai/cmd/release.go, flai/cmd/release_pending_test.go, flai/internal/release/release.go, flai/internal/release/release_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/strategic-agents.md, design/issues/I-0320-a-publish-instance-s-evaluate-and-publish-steps-race-a-publish-made-meanwhile.md, design/issues/summary.md]
@@ -17,20 +23,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1135
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      hand_edits: 1
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 468
+      cache_read: 8103028
+      cache_write: 299819
+      cost: 3.0903
   strategic:
     - kind: orchestrator
-      seconds: 142
+      seconds: 166
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 24
-          output: 252
-          cache_read: 943474
-          cache_write: 89878
-          cost: 0.2755
+          input: 30
+          output: 284
+          cache_read: 1119057
+          cache_write: 117398
+          cost: 0.3299
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

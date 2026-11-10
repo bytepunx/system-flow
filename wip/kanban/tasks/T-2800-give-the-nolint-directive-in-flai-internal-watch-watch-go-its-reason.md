@@ -3,15 +3,36 @@ id: T-2800
 type: task
 nature: improvement
 title: Give the nolint directive in flai/internal/watch/watch.go its reason
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:05:07Z
-updated: 2026-11-09T22:05:07Z
-transitions: []
+updated: 2026-11-10T06:38:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:51Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:52Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:58Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/watch/watch.go]
+usage:
+  source: log
+  seconds: 1277
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 1
+      output: 14
+      cache_read: 487372
+      cache_write: 4460
+      cost: 0.1809
 ---
 # T-2800 Give the nolint directive in flai/internal/watch/watch.go its reason
 

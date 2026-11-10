@@ -3,16 +3,37 @@ id: T-2777
 type: task
 nature: improvement
 title: Run a container story's close-out job with its verify in the story's container and its commit and sync on the host through flai alone
-status: backlog
+status: done
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:58:30Z
-updated: 2026-11-09T21:58:45Z
-transitions: []
+updated: 2026-11-10T06:41:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:15:10Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T06:15:11Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T06:41:42Z
+    by: agent-S-0628
 stream: S-0628
 tags: [flai, serve, security]
-touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go]
+touches: [flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/container.go, flai/internal/serve/verifyjob_container.go]
 after: [T-2775]
+usage:
+  source: log
+  seconds: 1587
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 445
+      cache_read: 12333326
+      cache_write: 502022
+      cost: 4.7206
 ---
 # T-2777 Run a container story's close-out job with its verify in the story's container and its commit and sync on the host through flai alone
 

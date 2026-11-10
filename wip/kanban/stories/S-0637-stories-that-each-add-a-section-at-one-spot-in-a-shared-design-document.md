@@ -16,6 +16,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 23
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 8
+          cache_read: 83530
+          cache_write: 3604
+          cost: 0.0233
 draft: true
 cost_of_delay:
   inputs:

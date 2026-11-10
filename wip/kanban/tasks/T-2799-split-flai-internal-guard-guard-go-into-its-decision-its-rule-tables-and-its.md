@@ -3,15 +3,36 @@ id: T-2799
 type: task
 nature: improvement
 title: Split flai/internal/guard/guard.go into its decision, its rule tables, and its shell parsing
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:05:02Z
-updated: 2026-11-09T22:05:02Z
-transitions: []
+updated: 2026-11-10T06:38:54Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:50Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:50Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:54Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/guard_shell.go]
+usage:
+  source: log
+  seconds: 1279
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 68
+      cache_read: 2741452
+      cache_write: 18883
+      cost: 1.0151
 ---
 # T-2799 Split flai/internal/guard/guard.go into its decision, its rule tables, and its shell parsing
 

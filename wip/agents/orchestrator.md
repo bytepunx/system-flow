@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2070.1313
-accrued_seconds: 1536002
-tasks_completed: 2595
-last_run: 2026-11-10T05:48:14Z
+accrued_cost: 2073.0488
+accrued_seconds: 1537144
+tasks_completed: 2617
+last_run: 2026-11-10T06:40:58Z
 ---
 
 # Orchestrator activity
@@ -18198,6 +18198,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 23
 - Cost: 0.1600 USD, estimated
 
+### 2026-11-10T05:55:47Z
+
+- Summary: release-due S-0640: did not publish. release_evaluate (threshold policy, 1000 USD/week or 1 story) now answers not met: count 0, value 0 USD/week, nothing pending, though the event at 05:54:35Z reported 3 stories worth 75 USD/week. The batch was released after the event. The publish instance S-0646 is still in ready.
+- Items: S-0640, S-0646
+- Seconds: 35
+- Cost: 0.0970 USD, estimated
+
+### 2026-11-10T05:56:25Z
+
+- Summary: I did not publish a release for S-0640: the release policy is no longer met.
+- Items: none
+- Seconds: 38
+- Cost: 0.1444 USD, estimated
+
+### 2026-11-10T05:59:59Z
+
+- Summary: Recommended an answer on TH-0948, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0630
+- Seconds: 49
+- Cost: 0.0825 USD, estimated
+
+### 2026-11-10T06:00:49Z
+
+- Summary: TH-0948: re-posted the recommendation penalty_per_week 10 USD on S-0630 (in progress, no cost of delay), since agent-S-0630's update displaced the earlier one; set nothing, as S-0630 is no longer a backlog story and the operator has not decided the input
+- Items: S-0630, TH-0948
+- Seconds: 50
+- Cost: 0.0000 USD
+
+### 2026-11-10T06:01:26Z
+
+- Summary: I've re-posted my recommendation on TH-0948 and changed nothing on S-0630.
+- Items: none
+- Seconds: 37
+- Cost: 0.2463 USD, estimated
+
+### 2026-11-10T06:20:18Z
+
+- Summary: ready-empty: promoted S-0643 to ready (promote_candidates rank 1 by throughput, forecast 1h) and applied flai order --by throughput; left S-0241 (rank 2, 2h) in backlog: it is blocked and its notes say not to move it to ready until a headless session offers forks, and the operator moved it back to backlog on 2026-11-01
+- Items: S-0643, S-0241
+- Seconds: 48
+- Cost: 0.1088 USD, estimated
+
+### 2026-11-10T06:21:28Z
+
+- Summary: ready-empty: started the planner for S-0647, first of nine draft stories flai plan --candidates lists with no touches, forecast, or cost of delay; the rest follow one at a time. Left S-0637 a draft: complete per flai promote --drafts, but its remedy awaits the operator on TH-0957 (my TH-0960 says so). Did not re-plan E-0033: the operator's entry on TH-0916 is a confirmation that changes nothing
+- Items: S-0647, S-0637, E-0033
+- Seconds: 70
+- Cost: 0.0700 USD, estimated
+
+### 2026-11-10T06:22:02Z
+
+- Summary: Ready was empty, so I moved S-0643 to ready. Its agent has already pulled it into in-progress, which is now full at 5 of 5. Ready is empty again, but with no in-progress room left nothing more can be pulled for now.
+- Items: none
+- Seconds: 34
+- Cost: 0.1666 USD, estimated
+
+### 2026-11-10T06:25:19Z
+
+- Summary: Answered TH-0966, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0647
+- Seconds: 51
+- Cost: 0.1132 USD, estimated
+
+### 2026-11-10T06:26:15Z
+
+- Summary: Approved and resolved planner-S-0647's plan on TH-0966 (2 tasks fit the criteria and touches); finalized draft S-0647, listed complete by flai promote --drafts at rank 1 (40m forecast, 127.50 USD/week value)
+- Items: S-0647
+- Seconds: 56
+- Cost: 0.0573 USD, estimated
+
+### 2026-11-10T06:27:33Z
+
+- Summary: Promoted S-0647 to ready, rank 1 in flai promote --candidates (throughput, 40m), and ordered ready by throughput. Skipped S-0241 (rank 2, 2h): blocked since 2026-10-08, and its Notes say not before headless forks, as TH-0790 records
+- Items: S-0647
+- Seconds: 78
+- Cost: 0.0898 USD, estimated
+
+### 2026-11-10T06:29:15Z
+
+- Summary: S-0647 is now first in the ready column. It starts when an in-progress slot frees up: all 5 are taken.
+- Items: none
+- Seconds: 102
+- Cost: 0.1012 USD, estimated
+
+### 2026-11-10T06:31:00Z
+
+- Summary: TH-0966 and planned:S-0647 were already settled by the previous run (plan approved, thread resolved, S-0647 finalized and ready at rank 1, 40m). S-0647's planner has ended, so I started the planner for S-0648, the next story flai plan --candidates lists (no touches, forecast, or cost of delay). Seven draft stories wait their turn, one at a time.
+- Items: S-0647, S-0648
+- Seconds: 59
+- Cost: 0.1251 USD, estimated
+
+### 2026-11-10T06:32:04Z
+
+- Summary: I didn't need to do anything for either reason. My previous run had already handled both.
+- Items: none
+- Seconds: 64
+- Cost: 0.2575 USD, estimated
+
+### 2026-11-10T06:33:25Z
+
+- Summary: Answered TH-0967, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0648
+- Seconds: 23
+- Cost: 0.0439 USD, estimated
+
+### 2026-11-10T06:34:34Z
+
+- Summary: TH-0967: set S-0648's first cost of delay input, time_lost_per_cycle 2m (planner-S-0648's recommended figure; no reason in thread or story for 1m or 5m), under plan_backlog_stories; replied and resolved the thread. No value set: the planner works it out next run.
+- Items: S-0648, TH-0967
+- Seconds: 69
+- Cost: 0.0408 USD, estimated
+
+### 2026-11-10T06:35:18Z
+
+- Summary: I set S-0648's first cost of delay input to `time_lost_per_cycle: 2m` and closed TH-0967.
+- Items: none
+- Seconds: 44
+- Cost: 0.1842 USD, estimated
+
+### 2026-11-10T06:38:20Z
+
+- Summary: Left S-0648 a draft (flai promote --drafts: complete, position 1, 1h, value 5 USD/week, throughput): its remedy changes ADR-0184's missing-file rule with no ADR in its touches, and its goal asks for the remedy to be confirmed before it is built; opened TH-0969 recommending the operator confirm it and the planner add an ADR refining ADR-0184
+- Items: S-0648, TH-0969
+- Seconds: 82
+- Cost: 0.3320 USD, estimated
+
+### 2026-11-10T06:38:50Z
+
+- Summary: S-0648 is still a draft. I didn't finalize it, and I opened TH-0969 on it to explain why.
+- Items: none
+- Seconds: 30
+- Cost: 0.1877 USD, estimated
+
+### 2026-11-10T06:39:40Z
+
+- Summary: Recommended an answer on TH-0968, citing design/adrs/0184-every-work-item-write-takes-one-items-lock-and-merges-a-copy-read-before.md § Decision
+- Items: S-0648
+- Seconds: 45
+- Cost: 0.1728 USD, estimated
+
+### 2026-11-10T06:40:15Z
+
+- Summary: TH-0968: recommended the planner's S-0648 plan with one change, an ADR refining ADR-0184 in T-2827's touches, and left the thread open: the remedy reverses ADR-0184's missing-file rule, and the goal asks for the remedy to be confirmed. S-0648 stays a draft under TH-0969, opened already (promote --drafts: complete, position 1, 1h, throughput).
+- Items: S-0648
+- Seconds: 35
+- Cost: 0.0000 USD
+
+### 2026-11-10T06:40:58Z
+
+- Summary: S-0648 is still a draft, and its plan now waits on your decision.
+- Items: none
+- Seconds: 43
+- Cost: 0.2964 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -18883,4 +19037,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-09T17:15:30Z
 
 - Call: `flai serve status`
+- Needs: none
+
+### 2026-11-10T05:55:42Z
+
+- Call: `git for-each-ref --sort=-creatordate --format=%(refname:short) %(creatordate:iso-strict) refs/tags`
 - Needs: none

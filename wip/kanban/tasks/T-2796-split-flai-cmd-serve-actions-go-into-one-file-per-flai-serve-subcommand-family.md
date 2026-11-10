@@ -3,15 +3,36 @@ id: T-2796
 type: task
 nature: improvement
 title: Split flai/cmd/serve_actions.go into one file per flai serve subcommand family
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:04:40Z
-updated: 2026-11-09T22:04:40Z
-transitions: []
+updated: 2026-11-10T06:38:44Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:45Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:46Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:44Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/cmd/serve_actions.go, flai/cmd/serve_agent.go, flai/cmd/serve_checks.go, flai/cmd/serve_components.go, flai/cmd/serve_harness.go, flai/cmd/serve_provider.go, flai/cmd/serve_notify.go, flai/cmd/serve_mcp.go, flai/cmd/serve_view.go, flai/cmd/serve_agent_run.go]
+usage:
+  source: log
+  seconds: 1283
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 193
+      cache_read: 3020434
+      cache_write: 16607
+      cost: 1.1169
 ---
 # T-2796 Split flai/cmd/serve_actions.go into one file per flai serve subcommand family
 

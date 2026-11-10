@@ -3,15 +3,36 @@ id: T-2794
 type: task
 nature: improvement
 title: Split flai/internal/hostapi/writes.go by responsibility, cutting itemSpecs in three
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:04:19Z
-updated: 2026-11-09T22:04:19Z
-transitions: []
+updated: 2026-11-10T06:38:09Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:41Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:42Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:09Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_run.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_spec.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_describe.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/writes_outcome.go, flai/internal/hostapi/settings.go]
+usage:
+  source: log
+  seconds: 1287
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 246
+      cache_read: 5961669
+      cache_write: 27822
+      cost: 2.2027
 ---
 # T-2794 Split flai/internal/hostapi/writes.go by responsibility, cutting itemSpecs in three
 

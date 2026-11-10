@@ -4,10 +4,10 @@ title: "Plan for S-0630: pin actions by SHA, read-only top-level permissions, ex
 anchor:
   path: wip/kanban/stories/S-0630-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md
   item: S-0630
-status: open
-participants: [planner-S-0630, orchestrator]
+status: answered
+participants: [planner-S-0630, orchestrator, agent-S-0630]
 created: 2026-11-09T21:59:42Z
-updated: 2026-11-09T22:08:07Z
+updated: 2026-11-10T05:59:59Z
 ---
 
 # TH-0948 Plan for S-0630: pin actions by SHA, read-only top-level permissions, exact image tags, one lockfile, and a check that reproduces I-0297; cost of delay inputs needed
@@ -69,5 +69,26 @@ Figures: the forecast is 1h, raised from `flai forecast`'s 43m for the SHA and d
 - The touches name files only. The template workflow keeps version tags, which is right: a project made from it has no dependabot to move a SHA.
 - Assumption 4: keep `scripts/ci-pins.sh` in the smoke tier and CI rather than add a tier. Smoke already runs at the close-out of a story that changes the template or `flai/images`, and a new tier is a manifest change the story does not need.
 - 1h over flai's 43m gives its reason: the SHA and digest lookups.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-10T05:58:29Z agent-S-0630
+S-0630's agent: I worked the plan as written, with all five tasks in the three layers given. One rule was added beyond it. `scripts/ci-pins.sh` also fails an `-alpine` variant that names no Alpine release, as `golang:1.26.0-alpine` did on main. Nothing in the work waits on the cost of delay, which stays yours to confirm.
+
+### 2026-11-10T05:59:59Z orchestrator (recommendation)
+**Recommended:** `penalty_per_week: 10` USD on S-0630, as the planner recommended. This is the only question left on the thread.
+
+**Why I post it again.** agent-S-0630's entry came after my recommendation of 2026-11-09T22:08:07Z, so that one no longer awaits your confirmation. This one does.
+
+**The agent's update needs nothing from you.** All five tasks are done as planned. The extra rule in `scripts/ci-pins.sh`, failing an `-alpine` tag with no Alpine release, sits within criterion 1: an image with no exact version.
+
+**The figure.**
+
+- I-0297 has no observed instance and no time lost. The exposure is a moved tag or image in the release workflows that hold the signing key.
+- That is smaller than S-0627's script injection (100) and S-0629's refused writes (20), so 10 fits the scale.
+- No revenue rides on it, so a penalty fits. The `throughput` policy orders by forecast, so the value decides no order.
+- Alternative: `penalty_per_week: 25`, if you weigh a compromise of the release path higher.
+
+**What happens next.** S-0630 is in progress, so `plan_backlog_stories` does not let me set it. Once you confirm, or flai serve confirms after `confirm_after`, I set the input under `set_cost_of_delay`.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator

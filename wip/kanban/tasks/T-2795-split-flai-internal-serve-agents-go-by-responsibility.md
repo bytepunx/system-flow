@@ -3,15 +3,36 @@ id: T-2795
 type: task
 nature: improvement
 title: Split flai/internal/serve/agents.go by responsibility
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:04:32Z
-updated: 2026-11-09T22:04:32Z
-transitions: []
+updated: 2026-11-10T06:38:40Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:43Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:44Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:40Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_state.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_activity.go, flai/internal/mcpserver/server.go]
+usage:
+  source: log
+  seconds: 1285
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 171
+      cache_read: 3046885
+      cache_write: 298545
+      cost: 1.2303
 ---
 # T-2795 Split flai/internal/serve/agents.go by responsibility
 

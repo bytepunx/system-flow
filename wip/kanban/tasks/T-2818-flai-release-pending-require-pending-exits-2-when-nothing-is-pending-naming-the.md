@@ -3,15 +3,36 @@ id: T-2818
 type: task
 nature: improvement
 title: flai release --pending --require-pending exits 2 when nothing is pending, naming the release that covered it
-status: backlog
+status: done
 parent: S-0643
 owner: agent
 created: 2026-11-09T22:12:26Z
-updated: 2026-11-09T22:12:26Z
-transitions: []
+updated: 2026-11-10T06:39:01Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:21:48Z
+    by: agent-S-0643
+  - to: in-progress
+    at: 2026-11-10T06:21:49Z
+    by: agent-S-0643
+  - to: done
+    at: 2026-11-10T06:39:01Z
+    by: agent-S-0643
 stream: S-0643
 tags: [flai, release]
 touches: [flai/cmd/release.go, flai/cmd/release_pending_test.go, flai/internal/release/release.go, flai/internal/release/release_test.go]
+usage:
+  source: log
+  seconds: 1031
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 301
+      cache_read: 5746569
+      cache_write: 46075
+      cost: 2.1304
 ---
 # T-2818 flai release --pending --require-pending exits 2 when nothing is pending, naming the release that covered it
 

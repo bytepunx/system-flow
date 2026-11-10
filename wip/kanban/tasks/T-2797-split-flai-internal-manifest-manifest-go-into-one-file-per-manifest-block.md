@@ -3,15 +3,36 @@ id: T-2797
 type: task
 nature: improvement
 title: Split flai/internal/manifest/manifest.go into one file per manifest block
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:04:48Z
-updated: 2026-11-09T22:04:48Z
-transitions: []
+updated: 2026-11-10T06:38:47Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:47Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:48Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:47Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_strategic.go, flai/internal/manifest/manifest_roles.go, flai/internal/manifest/manifest_accept.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_tests.go]
+usage:
+  source: log
+  seconds: 1281
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 154
+      cache_read: 2728664
+      cache_write: 30935
+      cost: 1.0149
 ---
 # T-2797 Split flai/internal/manifest/manifest.go into one file per manifest block
 

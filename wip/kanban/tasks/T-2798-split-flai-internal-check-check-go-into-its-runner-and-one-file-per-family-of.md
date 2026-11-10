@@ -3,15 +3,36 @@ id: T-2798
 type: task
 nature: improvement
 title: Split flai/internal/check/check.go into its runner and one file per family of rules
-status: backlog
+status: done
 parent: S-0631
 owner: alex
 created: 2026-11-09T22:04:54Z
-updated: 2026-11-09T22:04:54Z
-transitions: []
+updated: 2026-11-10T06:38:51Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:16:48Z
+    by: agent-S-0631
+  - to: in-progress
+    at: 2026-11-10T06:16:49Z
+    by: agent-S-0631
+  - to: done
+    at: 2026-11-10T06:38:51Z
+    by: agent-S-0631
 stream: S-0631
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_layout.go, flai/internal/check/check_items.go, flai/internal/check/check_docs.go, flai/internal/check/check_roles.go, flai/internal/check/check_records.go]
+usage:
+  source: log
+  seconds: 1280
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 131
+      cache_read: 2154206
+      cache_write: 25951
+      cost: 0.8018
 ---
 # T-2798 Split flai/internal/check/check.go into its runner and one file per family of rules
 

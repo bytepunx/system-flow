@@ -3,12 +3,18 @@ id: T-2782
 type: task
 nature: improvement
 title: Run the operator's checks for a container story in the story's container
-status: backlog
+status: in-progress
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:59:00Z
-updated: 2026-11-09T21:59:00Z
-transitions: []
+updated: 2026-11-10T06:42:05Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:42:04Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T06:42:05Z
+    by: system-flow
 stream: S-0628
 tags: [flai, serve, security]
 touches: [flai/internal/serve/checks.go, flai/internal/serve/checks_test.go]

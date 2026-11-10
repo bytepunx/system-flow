@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1486
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 35
-      output: 210
-      cache_read: 4274938
-      cache_write: 605894
-      cost: 1.7936
+      output: 5933
+      cache_read: 4904340
+      cache_write: 123047
+      cost: 1.8106
 ---
 # T-2790 flai release --evaluate --judged meets the judgement policy with the orchestrator's reason
 

@@ -23,16 +23,16 @@ tags: [ci, security, docker]
 touches: [flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, ".github/dependabot.yml"]
 usage:
   source: log
-  seconds: 342
+  seconds: 357
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 171
-      cache_read: 2954169
-      cache_write: 24192
-      cost: 1.0945
+      input: 23
+      output: 6043
+      cache_read: 3148501
+      cache_write: 50685
+      cost: 1.1417
 ---
 # T-2778 Every base and local-stack image names an exact version, the released flaiover image its digest too, and dependabot watches the agent image folders
 

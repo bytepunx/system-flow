@@ -3,10 +3,10 @@ id: S-0630
 type: story
 nature: improvement
 title: CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-07T23:40:47Z
-updated: 2026-11-10T05:45:07Z
+updated: 2026-11-10T06:14:46Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:06Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:45:07Z
     by: agent-S-0630
+  - to: review
+    at: 2026-11-10T06:14:46Z
+    by: agent-S-0630
 tags: [flaiover, template, ci, security]
 topics: [ci, security, release]
-touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", ".github/dependabot.yml", template/root/.github/workflows/system-flow-check.yml, flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, flaiover/package-lock.json, package-lock.json, scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md, design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md]
+touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", ".github/dependabot.yml", template/root/.github/workflows/system-flow-check.yml, flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, flaiover/package-lock.json, package-lock.json, scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md, design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md, design/system/flaiover-dashboard.md, design/tech/README.md, docs/operators/index.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +27,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 472
-  estimated: true
-  priced_by: estimate
+  seconds: 1799
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      hand_edits: 1
-      work: 16
+      ceremony: 2
+      hand_edits: 2
+      work: 55
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 491
-      cache_read: 8951070
-      cache_write: 304166
-      cost: 3.4012
+      input: 180
+      output: 46623
+      cache_read: 24292476
+      cache_write: 391066
+      cost: 8.809
   strategic:
     - kind: orchestrator
-      seconds: 86
+      seconds: 135
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 62
-          cache_read: 502771
-          cache_write: 16554
-          cost: 0.1382
+          input: 17
+          output: 131
+          cache_read: 750287
+          cache_write: 77207
+          cost: 0.2207
     - kind: analyzer
       seconds: 41
       estimated: true
@@ -82,8 +85,8 @@ finalized:
 This story remediates [I-0297](../../../design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md), "CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0297 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0297 is closed with `flai issue close I-0297 --reason` saying what fixed it
+- [x] The cause I-0297 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0297 is closed with `flai issue close I-0297 --reason` saying what fixed it
 
 ## Tasks
 - T-2774 Every GitHub Actions step names a commit SHA, and every workflow grants contents read at the top level and writes only on the jobs that need them

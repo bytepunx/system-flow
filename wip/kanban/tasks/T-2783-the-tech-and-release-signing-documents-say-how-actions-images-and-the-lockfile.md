@@ -3,16 +3,37 @@ id: T-2783
 type: task
 nature: remediation
 title: The tech and release-signing documents say how actions, images, and the lockfile are pinned and which jobs write, and I-0297 is closed
-status: backlog
+status: done
 parent: S-0630
 owner: alex
 created: 2026-11-09T21:59:02Z
-updated: 2026-11-09T21:59:02Z
-transitions: []
+updated: 2026-11-10T05:57:57Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:55:58Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:55:59Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:57:57Z
+    by: agent-S-0630
 stream: S-0630
 tags: [docs, ci]
-touches: [design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md]
+touches: [design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md, design/system/flaiover-dashboard.md, design/tech/README.md, docs/operators/index.md]
 after: [T-2774, T-2778, T-2779, T-2781]
+usage:
+  source: log
+  seconds: 118
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 5304
+      cache_read: 2763615
+      cache_write: 44489
+      cost: 1.0021
 ---
 # T-2783 The tech and release-signing documents say how actions, images, and the lockfile are pinned and which jobs write, and I-0297 is closed
 
