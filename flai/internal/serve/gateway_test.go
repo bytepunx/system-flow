@@ -10,6 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"maps"
 	"net/http"
@@ -362,10 +365,40 @@ func (r gatewayRun) totalCost() float64 {
 	return r.Result.TotalCostUSD
 }
 
-// TestGatewayStreamIsJudged covers the check's reading of a stream with no
-// network: a sub-agent's refused work-item write, the main session's write,
+// TestOnlyThePaidChecksAreNamedTestGateway reproduces I-0334: the go-test and
+// integration tiers skip ^TestGateway, so a test with that prefix runs only if
+// scripts/gateway-smoke.sh, the paid gateway tier, runs it by name.
+func TestOnlyThePaidChecksAreNamedTestGateway(t *testing.T) {
+	script, err := os.ReadFile(filepath.Join("..", "..", "..", "scripts", "gateway-smoke.sh"))
+	if err != nil {
+		t.Fatalf("read the gateway tier's script: %v", err)
+	}
+	paid := regexp.MustCompile(`\bTestGateway\w*`).FindAllString(string(script), -1)
+	files, err := filepath.Glob("*_test.go")
+	if err != nil {
+		t.Fatalf("list the package's test files: %v", err)
+	}
+	fset := token.NewFileSet()
+	for _, file := range files {
+		f, err := parser.ParseFile(fset, file, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parse %s: %v", file, err)
+		}
+		for _, decl := range f.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || !strings.HasPrefix(fn.Name.Name, "TestGateway") || slices.Contains(paid, fn.Name.Name) {
+				continue
+			}
+			t.Errorf("%s (%s) runs in no tier: the go-test and integration tiers skip ^TestGateway and scripts/gateway-smoke.sh does not run it; rename it out of the prefix, or add it to scripts/gateway-smoke.sh as a paid check",
+				fn.Name.Name, fset.Position(fn.Pos()))
+		}
+	}
+}
+
+// TestStreamOfAGatewayRunIsJudged covers the check's reading of a stream with
+// no network: a sub-agent's refused work-item write, the main session's write,
 // the model the alias resolved to, the messages by ID, and the end.
-func TestGatewayStreamIsJudged(t *testing.T) {
+func TestStreamOfAGatewayRunIsJudged(t *testing.T) {
 	stream := strings.Join([]string{
 		`{"type":"system","subtype":"init","model":"anthropic/claude-haiku-4.5","tools":["Write","Agent","mcp__flai__item_edit"],"mcp_servers":[{"name":"flai","status":"connected"}]}`,
 		`{"type":"assistant","parent_tool_use_id":null,"message":{"id":"gen-1","model":"anthropic/claude-haiku-4.5","content":[{"type":"tool_use","id":"tu1","name":"Write","input":{"file_path":"/w/.claude/x.md","content":"x"}}],"usage":{"input_tokens":3,"output_tokens":1}}}`,
@@ -458,9 +491,9 @@ func TestCreditRefusalIsFoundInAGatewayRun(t *testing.T) {
 	}
 }
 
-// TestGatewayMissingNamesWhatIsMissing covers both checks' skips: each
+// TestMissingGatewayInputsAreNamed covers both checks' skips: each
 // variable that is not set, claude not on PATH, and nothing missing.
-func TestGatewayMissingNamesWhatIsMissing(t *testing.T) {
+func TestMissingGatewayInputsAreNamed(t *testing.T) {
 	notFound := exec.ErrNotFound
 	openRouter := []string{gatewayKeyEnv}
 	litellm := []string{litellmBaseEnv, litellmKeyEnv}
