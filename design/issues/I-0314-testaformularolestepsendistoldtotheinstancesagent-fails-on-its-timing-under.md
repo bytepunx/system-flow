@@ -7,7 +7,7 @@ count: 2
 cost: 6m
 first_reported: 2026-11-08T02:50:07Z
 last_reported: 2026-11-09T23:20:40Z
-updated: 2026-11-09T23:20:40Z
+updated: 2026-11-10T05:45:21Z
 ---
 
 # I-0314 TestAFormulaRoleStepsEndIsToldToTheInstancesAgent fails on its timing under load, in the go-test tier of any story that changes a package serve imports
@@ -26,3 +26,5 @@ Story: S-0633.
 On 2026-11-09, T-2786's flai test runs for flai/internal/itemnew and flai/internal/workitem each failed once in TestAFormulaRoleStepsEndIsToldToTheInstancesAgent, with a different message each time. Two other stories' agents and their go-test runs were loading the host. The test passed in the serve run before and after.
 
 ## Remediation
+
+Story S-0653 remediates this issue, created from it at 2026-11-10T05:45:21Z.
