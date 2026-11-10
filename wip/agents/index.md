@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T09:55:47Z
+updated: 2026-11-10T10:10:50Z
 ---
 
 # Active streams
@@ -10,11 +10,10 @@ updated: 2026-11-10T09:55:47Z
 | [S-0408](S-0408.md) | An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles | cancelled | system-flow | 2026-11-07T22:14:13Z |
 | [S-0409](S-0409.md) | The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is | cancelled | system-flow | 2026-11-07T22:04:57Z |
 | [S-0410](S-0410.md) | A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's | cancelled | agent-S-0410 | 2026-11-07T21:59:02Z |
-| [S-0668](S-0668.md) | A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps | in-progress | agent-S-0668 | 2026-11-10T09:55:17Z |
+| [S-0668](S-0668.md) | A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps | in-progress | agent-S-0668 | 2026-11-10T10:05:50Z |
 | [S-0669](S-0669.md) | After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry | in-progress | agent-S-0669 | 2026-11-10T09:55:10Z |
-| [S-0672](S-0672.md) | The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there | in-progress | agent-S-0672 | 2026-11-10T09:52:41Z |
+| [S-0672](S-0672.md) | The system-flow image layer lacks curl and GoReleaser, so the smoke tier's install-test fails inside the agent container and a Go story's close-out cannot pass there | in-progress | agent-S-0672 | 2026-11-10T10:10:28Z |
 | [S-0673](S-0673.md) | after chains on planned stories hold ready stories for days while in-progress stays under two of five | in-progress | agent-S-0673 | 2026-11-10T09:53:29Z |
-| [S-0682](S-0682.md) | scripts/agent-container.sh can run only a story's own agent, under the story's own name, so a trial run of the image acts on the live story | in-progress | agent-S-0682 | 2026-11-10T09:41:31Z |
 | [S-0684](S-0684.md) | flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest | in-progress | agent-S-0684 | 2026-11-10T09:42:23Z |
 
 ## Strategic agents
@@ -22,6 +21,6 @@ updated: 2026-11-10T09:55:47Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 213 | 1167.7065 USD | 147209 | 2026-11-10T09:47:17Z |
-| [orchestrator](orchestrator.md) | 2769 | 2090.3752 USD | 1542617 | 2026-11-10T09:55:09Z |
+| [orchestrator](orchestrator.md) | 2776 | 2091.2204 USD | 1542895 | 2026-11-10T10:10:20Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 125 | 200.4258 USD | 23529 | 2026-11-10T09:55:19Z |
+| [curator](curator.md) | 127 | 202.3707 USD | 23764 | 2026-11-10T09:59:37Z |
