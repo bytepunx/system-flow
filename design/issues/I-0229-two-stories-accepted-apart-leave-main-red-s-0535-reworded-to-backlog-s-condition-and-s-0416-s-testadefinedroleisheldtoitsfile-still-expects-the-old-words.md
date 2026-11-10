@@ -3,7 +3,7 @@ id: I-0229
 title: "Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words"
 class: defect
 status: open
-count: 3
+count: 4
 cost: 17m
 first_reported: 2026-10-29T03:27:16Z
 last_reported: 2026-11-10T11:28:58Z
@@ -24,6 +24,10 @@ Merge queue batch 20261029-031456 failed S-0519 at integration (TH-0730) on flai
 ### 2026-11-10T11:08:33Z
 Story: S-0665.
 Again on 2026-11-10: S-0668 added TestStreamStateWritesContextDecisionsAndQuestions in flai/internal/mcpserver with t.Setenv, and S-0684 added TestNoTestSetsTheProcess, which refuses a test that sets the environment. Each passed its own close-out; accepted apart, they left main's mcpserver tests red, and S-0665's go-test tier failed on it after a sync. S-0665's T-3079 made the test call t.Parallel, since streamFixture already gives the server its session through Options.
+
+### 2026-11-10T11:10:19Z
+Story: S-0708.
+S-0708's close-out (job S-0708-20261110T110353Z, at 0cbda19) stopped at integration on main's own failure. S-0668 added TestStreamStateWritesContextDecisionsAndQuestions in flai/internal/mcpserver/stream_sections_test.go, with t.Setenv and no t.Parallel(). S-0684 added TestNoTestSetsTheProcess, which fails on such a test. The two were accepted separately. S-0708 changes only flai/internal/serve/gateway_test.go and two docs, but the integration tier runs the whole module. S-0665's T-3079 fixes the test on S-0665's branch, so S-0708 cannot pass its close-out until that fix is on main.
 
 ### 2026-11-10T11:28:58Z
 Story: S-0666.
