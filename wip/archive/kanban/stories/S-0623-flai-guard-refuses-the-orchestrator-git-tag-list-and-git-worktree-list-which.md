@@ -3,10 +3,10 @@ id: S-0623
 type: story
 nature: improvement
 title: flai guard refuses the orchestrator git tag --list and git worktree list, which only read
-status: review
+status: done
 owner: alex
 created: 2026-11-07T23:40:02Z
-updated: 2026-11-09T22:48:12Z
+updated: 2026-11-10T05:12:50Z
 transitions:
   - to: ready
     at: 2026-11-09T21:56:39Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-09T22:48:12Z
     by: agent-S-0623
+  - to: done
+    at: 2026-11-10T05:12:50Z
+    by: alex
 tags: []
 topics: [guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/issues/I-0289-flai-guard-refuses-the-orchestrator-git-tag-list-and-git-worktree-list-which.md, design/issues/summary.md]

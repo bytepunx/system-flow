@@ -3,14 +3,17 @@ id: S-0640
 type: story
 nature: remediation
 title: A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-09T23:22:43Z
+updated: 2026-11-10T05:12:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:01Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T05:12:17Z
+    by: agent-S-0640
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
 touches: [flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md]
