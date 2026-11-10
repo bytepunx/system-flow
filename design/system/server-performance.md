@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -543,7 +543,7 @@ Each `agent.status` read and parsed the host's whole `agents.json`, 701 KB on th
 
 #### Fix
 
-- `Dir.AgentStates` (`flai/internal/serve/agents.go`) keeps what it parsed with the file's stat. It parses again only when the file, its size, or its modification time changed. It parses outside `agentsMu`, which it holds only to read or replace what is kept. Every write flai makes renames a new file into place, so the clock's granularity cannot hide one.
+- `Dir.AgentStates` (`flai/internal/serve/agents_state.go`) keeps what it parsed with the file's stat. It parses again only when the file, its size, or its modification time changed. It parses outside `agentsMu`, which it holds only to read or replace what is kept. Every write flai makes renames a new file into place, so the clock's granularity cannot hide one.
 - What `AgentStates` returns is shared, and its callers only read it. `updateAgent` works on a deep copy, keeps what it wrote with the stat after the write, and serializes writers on a lock of its own, `agentsWriteMu`, with the file lock for other processes. A reader never waits on a write.
 - `serve.Activity` reads the conversations once a call, with `messages.ReadAll`. Each live run is judged from that list with `messages.AwaitingOtherIn`. The holds are built from its shares and asks with `Repo.HoldsFrom` and `workitem.SharesAndAsks`. The answer is the same.
 - `Host.Agent` takes the request's context. Inside `agent.state` the serve log now shows `agent.states`, reading the agent states; `agent.roles`, the roles' states; and `agent.activity`, `serve.Activity`.
@@ -653,7 +653,7 @@ The program wrote nothing of its own. Like every `board.get`, its item lists may
 The planner's first idea was to take the projects below the import folders from the running flai serve's status. That status cannot say which import folder a registered project is below, since `serve.Place` leaves registered projects out of `ImportProjects` and `Unserved`. So the walk is replaced, not cached.
 
 - `serve.ImportRootOf` (`flai/internal/serve/below.go`) answers which import folder a root is below from the root's own path. It follows each import folder's walk down that path alone, by the walk's rules: no hidden or skipped folder, no symbolic link, at most `candidateDepth` deep, no repository above the root. The root must be a repository with a `system-flow.yaml`. That is a few stats a project, with no walk and no manifest load. `TestImportRootOfAgreesWithTheWalk` checks it against the walk on every folder of a tree that has each of those cases, with overlapping import folders.
-- `servedView` (`flai/cmd/serve_actions.go`) reads the configuration once a call. It no longer asks for the candidates, which the settings page does not show, so `serve.FindCandidates` no longer walks the import folders for it. While flai serve runs, a `settings.get` walks no folder. When it does not run, `belowImportRoots`' one `FindBelow` is the only walk. `TestServedViewSaysWhichImportFolderEachProjectIsBelow` (`flai/cmd/serve_project_test.go`) checks the answer for three served projects under two import folders, with flai serve running and stopped.
+- `servedView` (`flai/cmd/serve_view.go`) reads the configuration once a call. It no longer asks for the candidates, which the settings page does not show, so `serve.FindCandidates` no longer walks the import folders for it. While flai serve runs, a `settings.get` walks no folder. When it does not run, `belowImportRoots`' one `FindBelow` is the only walk. `TestServedViewSaysWhichImportFolderEachProjectIsBelow` (`flai/cmd/serve_project_test.go`) checks the answer for three served projects under two import folders, with flai serve running and stopped.
 - `settings.get` passes its context to `Host.Settings`, which records three phases: `settings.config`, the host configuration and what it says of the project; `settings.served`, the projects flai serve serves; and `settings.project`, the project's own manifest and MCP server.
 
 Measured on 2026-11-08 between 00:50 and 00:55 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), with the host's own configuration: flai serve running, 13 served projects, and 3 import folders. Both binaries ran `flai hostapi --timing settings.get` from the main checkout. Before is `main` at 9fa3fec41; after is `story/S-0605` at 2e6f35ff4. The two binaries took turns for eight rounds, and then the story's binary ran 20 more times. Both answered the same `host.projects`, byte for byte, and the same keys. The host was very busy: the load average was 58 to 63 over one minute and about 128 over fifteen.

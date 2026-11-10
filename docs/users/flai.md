@@ -139,7 +139,7 @@ To time one method with no transport at all, ask it of `flai hostapi` with `--ti
 flai hostapi --timing board.get '{"all":true}' >/dev/null
 ```
 
-A story's sub-agents, read-only ones among them, and the strategic agents' own calls may run `flai hostapi` alone and with a read method, `--timing` included. The read methods are those on `HostAPIReads` in `flai/internal/guard/guard.go`. `flai guard` refuses them every other method and names it: the host API's write methods are the story's agent's (S-0612, I-0307).
+A story's sub-agents, read-only ones among them, and the strategic agents' own calls may run `flai hostapi` alone and with a read method, `--timing` included. The read methods are those on `HostAPIReads` in `flai/internal/guard/guard_tables.go`. `flai guard` refuses them every other method and names it: the host API's write methods are the story's agent's (S-0612, I-0307).
 
 To see where `flai serve` spends its CPU, start it with `FLAI_PPROF_ADDR` set to a loopback address and read a profile with `go tool pprof`:
 

@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-11-06
+updated: 2026-11-10
 status: active
 topics: [cli, dashboard]
 ---
@@ -16,7 +16,7 @@ The finding of S-0124, for E-0009. The operator drags stories into `ready`, and 
 | `touches` on stories and tasks | Front matter, set with `--touches`, `flai touches`, `flai edit`, MCP and hostapi writes ([ADR-0019](../adrs/0019-story-branches-and-touches.md)) | Free strings, paths or component names. Advisory only. |
 | Overlap test | `PathsOverlap` and `Holds.Overlaps` in `flai/internal/workitem/hold.go`: equal, or one is a `/`-bounded prefix of the other, outside the shared paths | `flai check` warns `wip.overlap` once for each pair of stories in progress whose claims overlap, as the pull hold compares them (S-0279, [ADR-0115](../adrs/0115-a-close-out-records-no-wip-overlap-and-notes-only-an-overlap-naming-its-story.md)); the designer's inbox lists it; the MCP `who_touches` tool answers who covers a path. |
 | Document editor | flaiover `DocEditor.svelte` | The designer's Save is held until they tick "I know" when an in-progress item touches the document. The only gate anywhere, and not on agents. |
-| In-progress limit | `CanPull` in `workitem/boardview.go`, the launcher's `free` in `serve/agents.go` | The only thing that holds a ready story back. `flai move` only warns past it. |
+| In-progress limit | `CanPull` in `workitem/boardview.go`, the launcher's `free` in `serve/agents_launch.go` | The only thing that holds a ready story back. `flai move` only warns past it. |
 | Pull order | `order:` in `board.md`, `flai order` (S-0057) | `wait_for_work` offers `Ready[0]`; the launcher starts ready stories in this order. |
 | Blocked flag | `flai block` ([ADR-0004](../adrs/0004-workflow-states-and-transitions.md)) | The launcher skips a blocked ready story without saying so; `wait_for_work` does not skip it. Red ring and `BLOCKED` on the card. |
 | Story branches | `story/S-nnnn` in `.flai-cache/worktrees/` (ADR-0019) | A conflict between two open stories surfaces only after one is accepted, as a rebase conflict at the other's `flai stream sync` or `flai accept`. Nothing compares two open branches. |
@@ -26,7 +26,7 @@ The finding of S-0124, for E-0009. The operator drags stories into `ready`, and 
 
 ADR-0019 considered locks instead of `touches` and rejected them: "a lock nobody releases blocks work; a warning plus a visible badge keeps humans in charge." Any hold chosen here refines that decision, so it has to answer the same worry: a hold must be released by something that always happens (acceptance, cancellation, a return to backlog), be visible with its reason, and be overridable by the operator.
 
-Where a hold plugs in: the launcher's classification of ready stories (`launcher.look` in `serve/agents.go`), `wait_for_work`'s choice of story (`mcpserver/work.go`) and `CanPull`, the MCP `inbox` ready list, `flai board`, and `Activity()` for the yellow dot and its reason.
+Where a hold plugs in: the launcher's classification of ready stories (`launcher.look` in `serve/agents_launch.go`), `wait_for_work`'s choice of story (`mcpserver/work.go`) and `CanPull`, the MCP `inbox` ready list, `flai board`, and `Activity()` for the yellow dot and its reason.
 
 ## What is at stake
 

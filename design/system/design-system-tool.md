@@ -1,6 +1,6 @@
 ---
 title: A design system tool for the dashboard and agents
-updated: 2026-10-16
+updated: 2026-11-10
 status: active
 topics: [design, dashboard, cli]
 ---
@@ -87,7 +87,7 @@ A new top-level group, such as Design, takes four changes: its key in the `Group
 |--------|--------------|
 | `docs.tree` | Every file under the manifest's design, docs, and wip folders, recursively, with its title (`flai/internal/hostapi/docs.go`) |
 | `doc.get` | One Markdown file under those folders: its path, its front matter parsed from YAML into a map, its body, and its raw text. Any other path, or a file that is not `.md`, is refused (`docPath`). |
-| `doc.show` | `flai doc show`: the raw content, its SHA-256, and its edit mode, `full`, `body`, or `none`, with the reason (`flai/internal/hostapi/writes.go`) |
+| `doc.show` | `flai doc show`: the raw content, its SHA-256, and its edit mode, `full`, `body`, or `none`, with the reason (`flai/internal/hostapi/writes_streams.go`) |
 | `doc.save` | `flai doc save` with the hash the editor loaded; exit 3 is a conflict, exit 4 a refusal |
 
 What a save does to a design or docs file, which is in mode `full`:
@@ -136,7 +136,7 @@ The dashboard cannot read a whole file as a story's branch has it:
 
 ### How flai check validates design documents
 
-`flai check` (`flai/internal/check/check.go`, `documentation`) walks the design and docs folders and, for every Markdown file but a README:
+`flai check` (`flai/internal/check/check_docs.go`, `documentation`) walks the design and docs folders and, for every Markdown file but a README:
 
 | Rule | Level | What it checks |
 |------|-------|----------------|
@@ -177,7 +177,7 @@ The table weighs the host methods of 2026-10-13. The operator's decision (§ Dec
 
 ### file.get and file.save
 
-Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)) and built by S-0436 (`flai/internal/docedit/file.go`, `flai/cmd/file.go`, `flai/internal/hostapi/writes.go`). Two host methods read and save a text file that is not Markdown, as `doc.show` and `doc.save` do a Markdown one:
+Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)) and built by S-0436 (`flai/internal/docedit/file.go`, `flai/cmd/file.go`, `flai/internal/hostapi/writes_streams.go`). Two host methods read and save a text file that is not Markdown, as `doc.show` and `doc.save` do a Markdown one:
 
 | | |
 |-|-|
@@ -315,7 +315,7 @@ The operator decides the design system; agents propose changes and apply them. E
 
 - **S-0378**, accepted on 2026-10-14, gives option 2 its reads and writes. `flai doc show` and `flai doc save` take `--story`: the file resolves in the story's worktree, the check runs there, and the save commits that one path on the story's branch; a wip path, or a story with no worktree, is refused (T-1514). The dashboard's `/api/docs/edit` and `PUT /api/docs/file` pass `story` (T-1517), the editor opens on a story's branch (T-1518), and [ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md) records it, refining ADR-0023. `file.get` and `file.save` take `story` the same way ([file.get and file.save](#fileget-and-filesave)). A story's worktree exists while it is open, so the operator tweaks a proposal while it is in progress or in review.
 - **The stylesheet goes with every token save.** `doc.save` refuses any finding the new content introduces, on any path (`flai/internal/docedit/docedit.go`), and `file.save` keeps that rule. S-0385 as drafted adds `design.stale`, a finding when the stylesheet differs from the tokens. A token save that leaves the stylesheet as it was introduces it, so every save from the Design page, on main or on a branch, would be refused. So whenever flai writes the token file, it writes the stylesheet the manifest names in the same commit, and `design.stale` is left to hand edits. On main that is a file of a sub-project changed by a dashboard save, outside any story: a new kind of write, for the ADR that refines ADR-0023.
-- **Threads.** `thread.new` takes a document and a heading (`flai/internal/hostapi/writes.go`), and `/docs/<path>` shows a document's threads with a composer per heading (`Threads.svelte`, [ADR-0020](../adrs/0020-files-plus-mcp.md)). Every agent's inbox counts such a thread as awaiting it while the last entry is not its own (`flai/internal/inbox/inbox.go`). But flai serve starts agents for stories, and restarts a story's agent only for a thread on that story (`asking` in `flai/internal/serve/agents.go`). The orchestrator answers threads while its permission is on, and edits no file. A thread on the guidance discusses and records; it does not get the design system changed. A thread on a proposal story reaches that story's agent.
+- **Threads.** `thread.new` takes a document and a heading (`flai/internal/hostapi/writes_streams.go`), and `/docs/<path>` shows a document's threads with a composer per heading (`Threads.svelte`, [ADR-0020](../adrs/0020-files-plus-mcp.md)). Every agent's inbox counts such a thread as awaiting it while the last entry is not its own (`flai/internal/inbox/inbox.go`). But flai serve starts agents for stories, and restarts a story's agent only for a thread on that story (`asking` in `flai/internal/serve/agents_activity.go`). The orchestrator answers threads while its permission is on, and edits no file. A thread on the guidance discusses and records; it does not get the design system changed. A thread on a proposal story reaches that story's agent.
 - **Variants.** Option 1 already lets the operator try values without saving. Keeping the unsaved values in the browser across a reload gives most of what a store would, with nothing on the host.
 
 ### Asking for a change from the page
