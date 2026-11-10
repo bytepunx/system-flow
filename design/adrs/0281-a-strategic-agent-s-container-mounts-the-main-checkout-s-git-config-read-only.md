@@ -39,5 +39,5 @@ ADR-0247's other mounts, its guard, and its risks but `.git/config` stand.
 ## Alternatives considered
 
 - **Check `.git/config` after each strategic run.** `flai serve` would compare the file with what it held before the run, or look for command-naming keys, and raise what changed. It finds a write only after it is made, and git on the host may already have run the command between the write and the run's end, as `flai serve` runs git in the checkout throughout. Not built; the read-only mount makes the write impossible instead.
-- **Mount `.git` read-only as a whole.** The orchestrator's `flai subproject --autocommit` and `flai formula run --autocommit` commit on main from the container, and the planner's and the curator's writes would fail with any git index write. Rejected, as ADR-0247 rejected it.
+- **Mount `.git` read-only as a whole.** The orchestrator's `flai subproject --autocommit` and `flai formula run --autocommit` commit on main from the container, which needs the index, the objects, and the refs writable. Rejected, as ADR-0247 rejected it.
 - **Keep it, as no worse than a host run.** On the host, a role's shell can already write `.git/config`. But the container exists to narrow what a role reaches, and this is the plainest way back to the host left after `.git/hooks`.
