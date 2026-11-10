@@ -477,16 +477,22 @@ func TestAFormulaRoleStepsEndIsToldToTheInstancesAgent(t *testing.T) {
 		{asks, inbox.AgentEnded, "waiting for an answer to " + th.ID + ": Which risk counts?"},
 		{fails, inbox.AgentFailed, "ended (exit 3) running the role reviewer on " + fails},
 	} {
-		events, _, err := inbox.CatchUp(lab.repo, inbox.Reader{Agent: "agent-" + c.story}, c.story, false, time.Now(), items)
-		if err != nil {
-			t.Fatal(err)
-		}
+		// the run is recorded as ended before its agent event is appended
+		// (roleEnded), so the end is waited for, I-0314; each look advances
+		// the reader's cursor, so what every look reports is kept
 		var ends []inbox.Event
-		for _, e := range events {
-			if e.Kind == inbox.Agent && e.ID == c.story && e.To != inbox.AgentStarted {
-				ends = append(ends, e)
+		waitFor(t, "agent-"+c.story+" told of its run's end", func() bool {
+			events, _, err := inbox.CatchUp(lab.repo, inbox.Reader{Agent: "agent-" + c.story}, c.story, false, time.Now(), items)
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
+			for _, e := range events {
+				if e.Kind == inbox.Agent && e.ID == c.story && e.To != inbox.AgentStarted {
+					ends = append(ends, e)
+				}
+			}
+			return len(ends) > 0
+		})
 		if len(ends) != 1 || ends[0].By != "reviewer-"+c.story || ends[0].To != c.to || !strings.HasPrefix(ends[0].Fields[inbox.FieldWhy], c.why) {
 			t.Errorf("agent-%s is told of %+v, want one end of reviewer-%s, %s: %s", c.story, ends, c.story, c.to, c.why)
 		}
