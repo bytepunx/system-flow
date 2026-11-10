@@ -6,7 +6,7 @@ status: active
 
 # Run a story's agent in a container
 
-Building the agent images and running one story's Claude Code agent in a container by hand. This is the first step of E-0029, flai running agents in Docker containers. Since S-0508 `flai serve` starts a story's agent this way on `harness: container`, as [docs/users/flai.md](../../users/flai.md#in-a-container-the-container-harness) describes; this runbook is the hand-run form. The scripts came from the experiment S-0505, and its results document records what was measured.
+Building the agent images and running one story's Claude Code agent in a container by hand, or a probe that tries an image without working the story. This is the first step of E-0029, flai running agents in Docker containers. Since S-0508 `flai serve` starts a story's agent this way on `harness: container`, as [docs/users/flai.md](../../users/flai.md#in-a-container-the-container-harness) describes; this runbook is the hand-run form. The scripts came from the experiment S-0505, and its results document records what was measured.
 
 ## The images
 
@@ -42,17 +42,34 @@ It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and th
 ## Run
 
 ```bash
-scripts/agent-container.sh S-nnnn prompt.md          # the prompt from a file
-scripts/agent-container.sh S-nnnn < prompt.md        # or on standard input
-scripts/agent-container.sh S-nnnn -- git status      # a command in place of claude, same mounts
+scripts/agent-container.sh S-nnnn                   # the story's agent, working the live story
+scripts/agent-container.sh --probe S-nnnn           # a trial of the image, which works no item
+scripts/agent-container.sh [--probe] S-nnnn -- cmd  # cmd in place of pilot, same mounts
 ```
 
-It runs `claude -p` headless in the agent image ([Settings](#settings)) with the arguments `flai serve` gives a story's agent, as the operator's uid, and removes the container when it ends (`--rm`). The output is Claude Code's stream JSON on standard output. The agent's name on the MCP server is `agent-S-nnnn`.
+The script takes no prompt. pilot, the image's entrypoint, builds it from the start request the script feeds it, as `flai serve` does ([flai-cli.md](../../../design/system/flai-cli.md#pilot-the-agent-images-entrypoint-s-0507)).
 
-Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is git-ignored:
+| Form | Agent name | Session | `FLAI_STORY` | Prompt |
+|------|------------|---------|--------------|--------|
+| `S-nnnn` | `agent-S-nnnn` | `FLAI_AGENT_SESSION`, or a new one | `S-nnnn` | the story's agent's: it works the live story |
+| `--probe S-nnnn` | `probe-S-nnnn` | always a new one | none | read and report: it calls flai's read tools, runs `flai --version`, `git status`, and `git log -1`, reports one line per check, and ends |
 
-- `mcp.json`, mode 600, naming the HTTP MCP server with the token and a `timeout` of 1800000 milliseconds, so that a slow `task_done`, `story_start`, or `test` is not dropped at 60 seconds ([ADR-0258](../../../design/adrs/0258-the-mcp-file-flai-writes-for-its-http-server-names-a-per-server-timeout-of.md)). pilot in the image writes it, so an image built before that change writes it without the `timeout` and keeps the 60-second limit until `make agent-images` builds it again. It holds a secret: do not copy it or commit it.
-- `.credentials.json`, a symbolic link to `/run/claude-login/.credentials.json`, the login inside the container. It does not resolve on the host, and nothing from the login is copied.
+A run without `--probe` is the story's agent. It moves the story's tasks, commits through `task_done`, and writes the narrative, as `flai serve` would. Use `--probe` to try an image: its agent works no item and never calls a writing tool, so the live story is left as it was ([I-0224](../../../design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md), S-0682). The script says on standard error that the run is a probe. The mounts are the story's in both forms, so a probe sees what the story's agent would.
+
+A capped trial, on the smallest model and a budget of two cents:
+
+```bash
+FLAI_AGENT_MODEL=haiku FLAI_AGENT_MAX_BUDGET_USD=0.02 scripts/agent-container.sh --probe S-nnnn
+```
+
+With `--` the script runs the command in place of pilot, with `FLAI_AGENT` and `FLAI_SESSION` set as in the table, and `FLAI_STORY` only without `--probe`.
+
+Without `--`, pilot runs `claude -p` headless in the agent image ([Settings](#settings)) with the arguments `flai serve` gives a story's agent, as the operator's uid, and the container is removed when it ends (`--rm`). The output is Claude Code's stream JSON on standard output.
+
+The script and pilot write these to `.flai-cache/agents/S-nnnn/`, which is git-ignored:
+
+- `mcp.json`, mode 600, which pilot writes. It names the HTTP MCP server, with its URL, token, and Host as variables that Claude Code expands as it reads the file, so the token is not written. Its `timeout` of 1800000 milliseconds keeps a slow `task_done`, `story_start`, or `test` from being dropped at 60 seconds ([ADR-0258](../../../design/adrs/0258-the-mcp-file-flai-writes-for-its-http-server-names-a-per-server-timeout-of.md)). An image built before that change writes it without the `timeout` and keeps the 60-second limit until `make agent-images` builds it again.
+- `claude/.credentials.json`, a symbolic link to `/run/claude-login/.credentials.json`, the login inside the container. It does not resolve on the host, and nothing from the login is copied.
 - `flai/`, an empty folder for the container's flai. On its first run that flai writes its config there, `flai/config.json`, and keeps its cache in `flai/cache`.
 
 ### What it mounts
@@ -65,7 +82,7 @@ Before the run it writes two things to `.flai-cache/agents/S-nnnn/`, which is gi
 | `wip/` of the main checkout, as the manifest's `layout.wip` names it | the same path | read-only | the narrative, the board, the items, the threads, and the messages that `flai verify` checks ([ADR-0253](../../../design/adrs/0253-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-wip-and-system.md)) |
 | `system-flow.yaml` of the main checkout | the same path | read-only | by it flai knows the main checkout is there, so `flai verify` runs rather than refusing |
 | `.flai-cache/verify` of the main checkout, made first so it is yours | the same path | read-write | the report `flai verify` writes, which `flai verify --last` reads on the host |
-| `.flai-cache/agents/S-nnnn` | the same path, as `CLAUDE_CONFIG_DIR` | read-write | Claude Code's state: settings, transcript, caches; and in `flai/`, the container's flai config and cache |
+| `.flai-cache/agents/S-nnnn` | the same path | read-write | in `claude/`, the `CLAUDE_CONFIG_DIR`, Claude Code's state: settings, transcript, caches; in `flai/`, the container's flai config and cache |
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
@@ -106,7 +123,8 @@ Environment variables the script reads:
 | `FLAI_CLAUDE_LOGIN` | `~/.claude` | the folder holding the login, mounted read-only |
 | `FLAI_AGENT_MODEL` | Claude Code's own | `claude --model`, such as `haiku` |
 | `FLAI_AGENT_NETWORK` | `bridge` | `bridge` reaches the host as `host.docker.internal`; `host` uses Docker's host network |
-| `FLAI_SESSION` | a new UUID | the session ID the agent logs under |
+| `FLAI_AGENT_MAX_BUDGET_USD` | none | the agent's `max_budget_usd`, such as `0.02`, for a trial run |
+| `FLAI_AGENT_SESSION` | a new UUID | the session the agent logs under; a second run with the same one resumes it. Ignored with `--probe`, which always starts a new one |
 
 On the bridge network the agent sends the server's own `Host` header, `127.0.0.1:<port>`, whatever address it dials, because the server refuses a request on its loopback listener that names another host. On Docker Desktop the `host` network is the VM's, not the machine's, and the server is not reachable from it.
 
@@ -123,7 +141,7 @@ The container is removed when it stops. Whatever the agent left in the worktree 
 
 ## Clean up
 
-After the story, remove its cache folder. It holds the agent's transcript and `mcp.json` with the MCP token:
+After the story, remove its cache folder. It holds the agent's transcripts, a probe's among them, and `mcp.json`:
 
 ```bash
 rm -rf .flai-cache/agents/S-nnnn
@@ -135,7 +153,7 @@ Remove the images when you no longer run agents in containers:
 docker image rm flai-agent-sf-claude-code:local flai-agent-claude-code:local flai-agent-bedrock:local
 ```
 
-If a token in an `mcp.json` may have been copied elsewhere, rotate it with `flai mcp token --rotate`; every agent connected over HTTP then needs the new one.
+If the MCP token may have been copied elsewhere, rotate it with `flai mcp token --rotate`; every agent connected over HTTP then needs the new one.
 
 ## Limitations
 

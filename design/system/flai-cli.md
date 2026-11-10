@@ -674,7 +674,7 @@ Front matter is parsed with goccy/go-yaml but written by a small purpose-built e
 
 ### pilot, the agent images' entrypoint (S-0507)
 
-pilot is the module's second binary, `flai/pilot` over `flai/internal/pilot`. It is the entrypoint of the agent images, `tini -- pilot`. Why it is a binary of its own, not a flai subcommand, is in [ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md). The container harness it serves is in [agent-adapters.md](agent-adapters.md#a-container-harness-of-flais-own); the images are in [docker.md](../tech/docker.md). GoReleaser builds `flai` alone, so an installed flai has no pilot. `scripts/agent-container.sh S-nnnn` feeds it a start request by hand.
+pilot is the module's second binary, `flai/pilot` over `flai/internal/pilot`. It is the entrypoint of the agent images, `tini -- pilot`. Why it is a binary of its own, not a flai subcommand, is in [ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md). The container harness it serves is in [agent-adapters.md](agent-adapters.md#a-container-harness-of-flais-own); the images are in [docker.md](../tech/docker.md). GoReleaser builds `flai` alone, so an installed flai has no pilot. `scripts/agent-container.sh S-nnnn` feeds it a start request by hand, and `scripts/agent-container.sh --probe S-nnnn` a probe's (**A probe**, below).
 
 **The start request.** pilot reads one JSON object on standard input: a `harness.Request` (`flai/internal/harness/harness.go`), its fields by their Go names (`Story`, `Root`, `Name`, `Session`, `Agent`, `Role`), plus these:
 
@@ -685,21 +685,30 @@ pilot is the module's second binary, `flai/pilot` over `flai/internal/pilot`. It
 | `mcp_url_env` | The name of the variable that holds the host's HTTP MCP server's URL | Yes |
 | `mcp_token_env` | The name of the variable that holds the agent's bearer token for it | Yes |
 | `mcp_host_env` | The name of the variable that holds the Host the server listens under, when the container dials another address, such as `host.docker.internal` | No |
+| `probe` | `true` for a probe, a hand-run trial of the image (**A probe**, below) | No |
 
 The request names variables, never their values. `Resume` is never read from it.
 
-**The refusals.** pilot exits 2 (`pilot.ExitUsage`) with one line on standard error, prefixed `pilot:`, for: empty input; anything but one JSON object; a field `harness.Request` does not have; no `inner`, `inner` `container` (pilot runs in a container and cannot start another), or one no adapter has; no `cache`, a relative one, or one that is not a folder; no `mcp_url_env` or `mcp_token_env`; a named variable unset or empty in pilot's environment. The line names the field and the variable, never a value. A harness that cannot start, its program not on `PATH` or a file it reads not writable, also exits 2.
+**The refusals.** pilot exits 2 (`pilot.ExitUsage`) with one line on standard error, prefixed `pilot:`, for: empty input; anything but one JSON object; a field `harness.Request` does not have; no `inner`, `inner` `container` (pilot runs in a container and cannot start another), or one no adapter has; no `cache`, a relative one, or one that is not a folder; no `mcp_url_env` or `mcp_token_env`; a named variable unset or empty in pilot's environment; a probe that names a `Role` or an `Item`. The line names the field and the variable, never a value. A harness that cannot start, its program not on `PATH` or a file it reads not writable, also exits 2.
 
 **The run.** pilot gives a built-in strategic role its role file first ([A strategic agent's container](#a-strategic-agents-container-s-0509)). It calls the inner adapter's `Start` and writes the files `Start.Files` names. For `claude-code`:
 
 - `<cache>/mcp.json`, named in `--mcp-config` with `--strict-mcp-config`: the HTTP server, its URL, bearer token, and Host each `${VAR}` of the named variable, which claude expands as it reads the file, so no token is written; `X-Flai-Agent` is the agent's name; and `timeout`, `mcphttp.ClientTimeout`, so a call that does work runs past Claude Code's 60 seconds ([ADR-0258](../adrs/0258-the-mcp-file-flai-writes-for-its-http-server-names-a-per-server-timeout-of.md)).
 - `CLAUDE_CONFIG_DIR=<cache>/claude`, and `--agent <definition>` for a strategic role.
 
-The harness's environment is pilot's, then the adapter's, then `FLAI_AGENT`, `FLAI_SESSION`, and `FLAI_STORY` from the request's `Name`, `Session`, and `Story`. pilot starts the program from `PATH`.
+The harness's environment is pilot's, then the adapter's, then `FLAI_AGENT`, `FLAI_SESSION`, and `FLAI_STORY` from the request's `Name`, `Session`, and `Story`; a probe's has no `FLAI_STORY` (**A probe**, below). pilot starts the program from `PATH`.
 
 **The resume.** pilot records each session it starts as an empty file `<cache>/pilot/sessions/<session>`. A request whose `Session` is recorded there sets `Resume`, and the adapter resumes it: `--resume` for `claude-code`. A session's name is letters, digits, `.`, `_`, and `-`.
 
 **The relay.** pilot copies the harness's standard output to its own byte for byte, line by line, so `flai serve`'s readers stay per harness ([ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md)). The harness's standard error passes through. Beside a failure's one line, pilot writes two lines of its own on standard error, prefixed `pilot:`: a start line, new or resuming, and an end line with the exit code. It never writes a value, the session, or the argv. It forwards SIGTERM and SIGINT to the harness and exits with its code, or 128 plus the signal's number when a signal ended it.
+
+**A probe (S-0682).** A start request with `"probe": true` is a probe: a trial of the agent image by hand, which works no item ([I-0224](../issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md)). `harness.Request.Probe` holds it. `scripts/agent-container.sh --probe S-nnnn` writes it, with the name `probe-S-nnnn` and a new session; `flai serve` never sets it. A probe differs from a story's agent's start in three ways:
+
+- The prompt. `harness.Prompt` answers a probe first, whatever its `Story` or `Role`. The prompt says the agent is no story's agent and works no item. It calls flai's MCP tools that read, each once: `inbox`, `board`, `item_get`, `doc_get`, and `doc_search`. It runs `flai --version`, `git status`, and `git log -1`, reports one line per check, and ends. It names the tools that write as never to be called: `story_start`, `stream_state`, `task_done`, `item_new`, `item_edit`, `item_move`, `thread_open`, `thread_reply`, and `verify`.
+- The refusal. `Check` refuses a probe that names a `Role` or an `Item`, since a probe is never a strategic agent's run.
+- The environment. The harness gets no `FLAI_STORY`, not even one inherited from the container's environment, so neither its flai nor the guard takes it for the story's agent. `FLAI_AGENT` and `FLAI_SESSION` are the request's.
+
+The probe still runs in the story's mounts, so it sees what the story's agent would.
 
 ### The container harness (S-0508)
 
