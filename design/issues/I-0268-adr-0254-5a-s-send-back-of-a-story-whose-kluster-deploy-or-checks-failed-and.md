@@ -7,7 +7,7 @@ count: 2
 cost: 10m
 first_reported: 2026-11-07T03:22:56Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-07T08:17:36Z
+updated: 2026-11-10T08:54:25Z
 usage:
   strategic:
     - kind: analyzer
@@ -49,3 +49,5 @@ ADR-0254 § 5a and its Consequences (S-0579 adds the kluster blocker) are accept
 ## Remediation
 
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
+
+Story S-0694 remediates this issue, created from it at 2026-11-10T08:54:25Z.
