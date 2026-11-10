@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 )
 
@@ -48,11 +49,48 @@ type VersionsOut struct {
 	Minimum   string             `json:"minimum" jsonschema:"the project's flai.minimum; empty when it sets none"`
 }
 
+// Releases is the releases API the tool versions reads and the token it
+// reads with, given through Options in place of the environment.
+type Releases struct {
+	API   string // the API base; "" is api.github.com
+	Token string // the token; "" asks gh auth token through Options.Runner
+}
+
+// releasesSource is where s's versions reads the releases: Options.Releases
+// when given, else FLAI_RELEASES_API and the token GITHUB_TOKEN, GH_TOKEN,
+// or gh gives, as flai self-upgrade reads them.
+func (s *server) releasesSource() selfupgrade.Options {
+	if r := s.releases; r != nil {
+		token := r.Token
+		if token == "" {
+			token = ghToken(s.runner)
+		}
+		return selfupgrade.Options{APIBase: strings.TrimSpace(r.API), Token: token}
+	}
+	return selfupgrade.Options{APIBase: strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")), Token: selfupgrade.Token(s.runner)}
+}
+
+// ghToken is gh's session token through r, as selfupgrade.Token asks for it
+// when the environment holds none; "" without r, gh, or a session.
+func ghToken(r execx.Runner) string {
+	if r == nil {
+		return ""
+	}
+	if _, err := r.LookPath("gh"); err != nil {
+		return ""
+	}
+	out, err := r.Run("", "gh", "auth", "token")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
 // versions answers the published flai and dashboard releases, marking the
 // flai this server runs, the newest of each, and any flai below the
 // project's minimum (ADR-0117 §6).
 func (s *server) versions(ctx context.Context, _ *mcp.CallToolRequest, _ VersionsIn) (*mcp.CallToolResult, VersionsOut, error) {
-	opt := selfupgrade.Options{APIBase: strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")), Token: selfupgrade.Token(s.runner)}
+	opt := s.releasesSource()
 	flai, err := selfupgrade.List(ctx, opt, selfupgrade.TagPrefix)
 	if err != nil {
 		return nil, VersionsOut{}, err

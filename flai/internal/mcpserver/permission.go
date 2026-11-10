@@ -65,8 +65,16 @@ func permissionPromptText(hold time.Duration) string {
 const permissionScope = "permission_prompt approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects, other than .git, inside an in-progress story's worktree; anything else the session's permissions do not allow is refused, as before"
 
 // permissionPoll is how often a held permission_prompt reads its thread for
-// the operator's answer; tests shorten it.
+// the operator's answer when Options.PermissionPoll is zero.
 var permissionPoll = time.Second
+
+// permissionPollOf is how often s's held permission_prompt reads its thread.
+func (s *server) permissionPollOf() time.Duration {
+	if s.permPoll > 0 {
+		return s.permPoll
+	}
+	return permissionPoll
+}
 
 // PermissionIn is Claude Code's permission request.
 type PermissionIn struct {
@@ -294,7 +302,7 @@ func orQuoted(name string) string {
 // bounded by the server's permissionHold (ADR-0215), and its answer onto
 // Claude Code's decision.
 func (s *server) askOperator(ctx context.Context, story *workitem.Item, in PermissionIn, rel string) PermissionOut {
-	asker := ask.Asker{Repo: s.repo, Now: s.now, Poll: permissionPoll, Closing: s.closing, Logger: s.logger}
+	asker := ask.Asker{Repo: s.repo, Now: s.now, Poll: s.permissionPollOf(), Closing: s.closing, Logger: s.logger}
 	if ok, why := asker.Hold(ctx, permissionRequest(s.agent, story, in, rel), s.permissionHold); !ok {
 		return deny("%s", why)
 	}

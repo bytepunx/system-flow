@@ -128,6 +128,19 @@ type Options struct {
 	// every inbox (S-0534); nil, as a test or a server with no host has it,
 	// reads none.
 	Budgets BudgetRead
+	// PermissionPoll is how often a held permission_prompt reads its thread
+	// for the operator's answer; a second when zero.
+	PermissionPoll time.Duration
+	// FlaiExecutable is the flai binary subproject_edit runs; the running
+	// flai when empty.
+	FlaiExecutable string
+	// SubprojectEnv is added, as KEY=value entries after the process's own,
+	// to the environment of the flai subproject_edit runs, such as
+	// FLAI_CONFIG; nil adds none.
+	SubprojectEnv []string
+	// Releases is where the tool versions reads the published releases; nil
+	// reads FLAI_RELEASES_API and the token from GITHUB_TOKEN, GH_TOKEN, or gh.
+	Releases *Releases
 	// Story is the story a story's agent's session works, as flai serve sets
 	// FLAI_STORY; "" outside one (S-0272).
 	Story string
@@ -238,6 +251,12 @@ type server struct {
 	permissionHold time.Duration
 	// budgets reads the host's budget state for the inbox (S-0534)
 	budgets BudgetRead
+	// permPoll, flaiExe, subprojectEnv, and releases are Options'
+	// PermissionPoll, FlaiExecutable, SubprojectEnv, and Releases
+	permPoll      time.Duration
+	flaiExe       string
+	subprojectEnv []string
+	releases      *Releases
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -250,7 +269,7 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	if fromEnv {
 		opt = opt.WithSession(envSession())
 	}
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}

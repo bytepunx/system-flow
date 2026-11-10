@@ -12,7 +12,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -145,6 +147,9 @@ func (f *folder) all() []*server {
 		s := f.byRoot[root]
 		if s == nil {
 			repo, err := workitem.Open(root)
+			if err == nil {
+				err = tooOld(repo, f.opt.Version)
+			}
 			if err != nil {
 				f.leaveOut(root, err)
 				continue
@@ -157,6 +162,16 @@ func (f *folder) all() []*server {
 	sort.SliceStable(list, func(i, j int) bool { return list[i].key < list[j].key })
 	f.byRoot, f.list = byRoot, list
 	return list
+}
+
+// tooOld refuses a project whose minimum flai is above version, the flai
+// this server says it is (Options.Version), as manifest.Load refuses one
+// above the running flai; a version that is not a release refuses none.
+func tooOld(repo *workitem.Repo, version string) error {
+	if min := repo.Manifest.Flai.Minimum; buildinfo.Below(version, min) {
+		return &manifest.TooOldError{Path: filepath.Join(repo.Root, manifest.File), Minimum: min, Running: version}
+	}
+	return nil
 }
 
 // leaveOut logs once why a project under the folder is not served, such as

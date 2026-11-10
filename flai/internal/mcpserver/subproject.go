@@ -43,9 +43,17 @@ const subprojectEditDescription = "Add, change, or remove a sub-project, an entr
 // subcommands.
 var subprojectOps = []string{string(manifest.ProjectAdd), string(manifest.ProjectSet), string(manifest.ProjectRemove)}
 
-// flaiExecutable is the flai that subproject_edit runs: the one running,
-// whose code this server is. A test gives the flai it built from this tree.
+// flaiExecutable is the flai that subproject_edit runs when
+// Options.FlaiExecutable is empty: the one running, whose code this server is.
 var flaiExecutable = os.Executable
+
+// subprojectFlai is the flai s's subproject_edit runs.
+func (s *server) subprojectFlai() (string, error) {
+	if s.flaiExe != "" {
+		return s.flaiExe, nil
+	}
+	return flaiExecutable()
+}
 
 // SubprojectsIn asks for the sub-projects.
 type SubprojectsIn struct {
@@ -142,14 +150,14 @@ func (s *server) subprojectEdit(ctx context.Context, _ *mcp.CallToolRequest, in 
 	if err != nil {
 		return nil, SubprojectEditOut{}, err
 	}
-	exe, err := flaiExecutable()
+	exe, err := s.subprojectFlai()
 	if err != nil {
 		return nil, SubprojectEditOut{}, fmt.Errorf("cannot find the flai to run flai subproject %s with: %w; run it on the host instead", in.Op, err)
 	}
 	r, story := s.subprojectCheckout()
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.Dir = r.Root
-	cmd.Env = append(os.Environ(), "FLAI_AGENT="+s.agent, "FLAI_SESSION="+s.session, "LOG_FORMAT=json")
+	cmd.Env = append(append(os.Environ(), s.subprojectEnv...), "FLAI_AGENT="+s.agent, "FLAI_SESSION="+s.session, "LOG_FORMAT=json")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	runErr := cmd.Run()
