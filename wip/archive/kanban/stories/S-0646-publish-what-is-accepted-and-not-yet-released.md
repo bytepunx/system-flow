@@ -3,10 +3,10 @@ id: S-0646
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-09T22:22:55Z
-updated: 2026-11-10T06:18:53Z
+updated: 2026-11-10T06:44:52Z
 transitions:
   - to: ready
     at: 2026-11-09T22:23:05Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T06:18:53Z
     by: agent-S-0646
+  - to: done
+    at: 2026-11-10T06:44:52Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0646-publish-what-is-accepted-and-not-yet-released.md]
 agent:

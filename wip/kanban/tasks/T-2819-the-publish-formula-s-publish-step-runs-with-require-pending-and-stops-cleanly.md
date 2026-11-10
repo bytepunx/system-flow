@@ -3,12 +3,18 @@ id: T-2819
 type: task
 nature: improvement
 title: The publish formula's publish step runs with --require-pending and stops cleanly on exit 2
-status: backlog
+status: in-progress
 parent: S-0643
 owner: agent
 created: 2026-11-09T22:12:46Z
-updated: 2026-11-09T22:12:46Z
-transitions: []
+updated: 2026-11-10T06:44:29Z
+transitions:
+  - to: ready
+    at: 2026-11-10T06:44:28Z
+    by: agent-S-0643
+  - to: in-progress
+    at: 2026-11-10T06:44:29Z
+    by: agent-S-0643
 stream: S-0643
 tags: [formula, template]
 touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/formulas/README.md, template/root/design/workflows/formulas/README.md, template/CHANGELOG.md]
