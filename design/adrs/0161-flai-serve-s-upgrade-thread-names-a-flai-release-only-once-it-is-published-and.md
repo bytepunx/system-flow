@@ -1,8 +1,8 @@
 ---
 id: ADR-0161
 title: "flai serve's upgrade thread names a flai release only once it is published, and asks again on the next minute's look until it is"
-status: proposed
-date: 2026-10-15
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0158]
