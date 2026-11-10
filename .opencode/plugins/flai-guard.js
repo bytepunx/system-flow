@@ -11,11 +11,14 @@
 //
 // The guard answers with its exit status: 2 refuses, with the reason on
 // standard error, which the plugin throws so that OpenCode hands it back to
-// the model; any other status passes the call. When flai is not on PATH the
-// plugin passes every call and says so once, so that a project opened outside
-// flai serve still works; in a session flai started (FLAI_STARTED_BY,
+// the model; 126 or 127 says the guard did not run, as a shell says of a
+// program it cannot execute or find, which scripts/flai.sh exits with when it
+// can reach no flai (ADR-0280); any other status passes the call. When the
+// guard did not run, because it could not be started or exited 126 or 127,
+// the plugin passes every call and says so once, so that a project opened
+// outside flai serve still works; in a session flai started (FLAI_STARTED_BY,
 // FLAI_STORY, or FLAI_ROLE set) it refuses every call instead, since the
-// agent would otherwise run unguarded (ADR-0235).
+// agent would otherwise run unguarded (ADR-0235, ADR-0280).
 
 import { spawn } from "node:child_process";
 
@@ -26,6 +29,10 @@ const COMMAND = [new URL("../../scripts/flai.sh", import.meta.url).pathname];
 
 // REFUSES is the exit status with which flai guard refuses a call.
 const REFUSES = 2;
+
+// NOT_RUN are the exit statuses with which the guard command says the guard
+// did not run: 126, cannot execute, and 127, not found (ADR-0280).
+const NOT_RUN = [126, 127];
 
 // started says flai started this session, so a missing guard refuses.
 const started = Boolean(process.env.FLAI_STARTED_BY || process.env.FLAI_STORY || process.env.FLAI_ROLE);
@@ -78,7 +85,7 @@ export const FlaiGuard = async ({ client, directory }) => {
     return s;
   }
 
-  // missing passes a call when flai is not on PATH, saying so once, or
+  // missing passes a call when the guard did not run, saying so once, or
   // refuses it in a session flai started.
   function missing(why) {
     if (started) {
@@ -110,6 +117,7 @@ export const FlaiGuard = async ({ client, directory }) => {
         directory,
       );
       if (r.missing) return missing(r.stderr);
+      if (NOT_RUN.includes(r.code)) return missing(`exit ${r.code}: ${r.stderr.trim()}`);
       if (r.code === REFUSES) throw new Error(r.stderr.trim() || "flai guard refused the call");
     },
     "tool.execute.after": async (input, output) => {

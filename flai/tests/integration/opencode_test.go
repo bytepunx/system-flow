@@ -96,6 +96,128 @@ console.log(JSON.stringify(out));
 	}
 }
 
+// repoGuardPlugin is this repository's own flai-guard plugin, which runs the
+// guard through scripts/flai.sh, from this package's folder.
+const repoGuardPlugin = "../../../.opencode/plugins/flai-guard.js"
+
+// fakeFlaiSh stands in for scripts/flai.sh: it reads the call, says so on
+// standard error, and exits with GUARD_EXIT.
+const fakeFlaiSh = `#!/bin/sh
+cat >/dev/null
+echo "guard exit $GUARD_EXIT" >&2
+exit "$GUARD_EXIT"
+`
+
+// TestRepoFlaiGuardPluginJudgesGuardExit loads this repository's flai-guard
+// plugin with node, in a project whose scripts/flai.sh exits as each case
+// needs, and shows that an exit 126 or 127, a guard that did not run, refuses
+// a call in a session flai started and passes it, warning once, otherwise,
+// that 2 refuses with the guard's reason, and that any other status passes
+// (I-0275, ADR-0280). It needs node on PATH and skips without it.
+func TestRepoFlaiGuardPluginJudgesGuardExit(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is not on PATH, so the flai-guard plugin cannot be loaded outside OpenCode")
+	}
+	source, err := os.ReadFile(repoGuardPlugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	files := []struct {
+		path string
+		body string
+		mode os.FileMode
+	}{
+		{filepath.Join(".opencode", "plugins", "flai-guard.js"), string(source), 0o600},
+		{"package.json", `{"type": "module"}` + "\n", 0o600},
+		{filepath.Join("scripts", "flai.sh"), fakeFlaiSh, 0o700},
+	}
+	for _, f := range files {
+		path := filepath.Join(project, f.path)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(f.body), f.mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	script := filepath.Join(t.TempDir(), "drive.mjs")
+	const drive = `const warnings = [];
+console.warn = (...args) => warnings.push(args.join(" "));
+const { FlaiGuard } = await import(process.argv[2]);
+const client = { session: { get: async ({ path }) => ({ data: { id: path.id } }) } };
+const hooks = await FlaiGuard({ client, directory: process.cwd() });
+const refused = [];
+for (const callID of ["call_1", "call_2"]) {
+  try {
+    await hooks["tool.execute.before"]({ tool: "bash", sessionID: "ses_root", callID }, { args: { command: "true" } });
+    refused.push("");
+  } catch (e) {
+    refused.push(e.message);
+  }
+}
+console.log(JSON.stringify({ refused, warnings }));
+`
+	if err := os.WriteFile(script, []byte(drive), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	plugin := filepath.Join(project, ".opencode", "plugins", "flai-guard.js")
+	cases := []struct {
+		name    string
+		exit    int
+		started bool
+		refused string
+		warned  string
+	}{
+		{"exit 127 in a started session", 127, true, "flai guard did not run (exit 127: guard exit 127)", ""},
+		{"exit 127 outside one", 127, false, "", "flai guard did not run (exit 127: guard exit 127)"},
+		{"exit 126 in a started session", 126, true, "flai guard did not run (exit 126: guard exit 126)", ""},
+		{"exit 126 outside one", 126, false, "", "flai guard did not run (exit 126: guard exit 126)"},
+		{"exit 2 in a started session", 2, true, "guard exit 2", ""},
+		{"exit 2 outside one", 2, false, "guard exit 2", ""},
+		{"exit 1 in a started session", 1, true, "", ""},
+		{"exit 0 in a started session", 0, true, "", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, node, script, plugin)
+			cmd.Dir = project
+			cmd.Env = append(cleanFlaiEnv(), fmt.Sprintf("GUARD_EXIT=%d", c.exit))
+			if c.started {
+				cmd.Env = append(cmd.Env, "FLAI_STORY=S-0001")
+			}
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("node %s: %v", script, err)
+			}
+			var got struct {
+				Refused  []string `json:"refused"`
+				Warnings []string `json:"warnings"`
+			}
+			if err := json.Unmarshal(out, &got); err != nil {
+				t.Fatalf("reading %q: %v", out, err)
+			}
+			for i, r := range got.Refused {
+				if c.refused == "" && r != "" {
+					t.Errorf("call %d was refused: %q", i+1, r)
+				}
+				if c.refused != "" && !strings.Contains(r, c.refused) {
+					t.Errorf("call %d was not refused with %q: %q", i+1, c.refused, r)
+				}
+			}
+			switch {
+			case c.warned == "" && len(got.Warnings) != 0:
+				t.Errorf("the plugin warned: %q", got.Warnings)
+			case c.warned != "" && (len(got.Warnings) != 1 || !strings.Contains(got.Warnings[0], c.warned)):
+				t.Errorf("the plugin did not warn once with %q over two calls: %q", c.warned, got.Warnings)
+			}
+		})
+	}
+}
+
 // cleanFlaiEnv is the test's environment without the FLAI_ variables of the
 // session that runs it, so that the guard sees only what the test sets, and
 // without PWD, which names this package's folder inside a system-flow
