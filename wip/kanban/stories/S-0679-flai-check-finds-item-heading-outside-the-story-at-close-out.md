@@ -6,7 +6,7 @@ title: "flai check finds `item.heading` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:49Z
 transitions: []
 tags: [flai, check, container]
 touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -16,6 +16,11 @@ agent:
   config:
     effort: high
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 2m
+    by: orchestrator
+    at: 2026-11-10T10:55:49Z
 forecast:
   duration: 1h
   delivery: 2026-11-10T22:42:00Z

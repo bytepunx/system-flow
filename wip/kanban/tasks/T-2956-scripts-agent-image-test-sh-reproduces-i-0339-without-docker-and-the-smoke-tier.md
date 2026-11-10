@@ -3,11 +3,11 @@ id: T-2956
 type: task
 nature: remediation
 title: scripts/agent-image-test.sh reproduces I-0339 without Docker, and the smoke tier runs it
-status: in-progress
+status: done
 parent: S-0713
 owner: alex
 created: 2026-11-10T10:23:58Z
-updated: 2026-11-10T10:54:27Z
+updated: 2026-11-10T10:55:45Z
 transitions:
   - to: ready
     at: 2026-11-10T10:54:26Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:54:27Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T10:55:45Z
+    by: agent-S-0713
 stream: S-0713
 tags: [scripts, test]
 touches: [scripts/agent-image-test.sh, scripts/smoke.sh]
 after: [T-2955]
+usage:
+  source: log
+  seconds: 77
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 75
+      cache_read: 675841
+      cache_write: 3284
+      cost: 0.25
 ---
 # T-2956 scripts/agent-image-test.sh reproduces I-0339 without Docker, and the smoke tier runs it
 

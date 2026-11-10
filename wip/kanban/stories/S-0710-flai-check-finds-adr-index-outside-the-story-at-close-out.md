@@ -6,7 +6,7 @@ title: "flai check finds `adr.index` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T09:56:02Z
-updated: 2026-11-10T10:55:00Z
+updated: 2026-11-10T10:55:46Z
 transitions: []
 tags: [flai, adr]
 touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -16,6 +16,11 @@ agent:
   config:
     effort: high
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 2m
+    by: orchestrator
+    at: 2026-11-10T10:55:46Z
 forecast:
   duration: 45m
   delivery: 2026-11-11T06:44:00Z

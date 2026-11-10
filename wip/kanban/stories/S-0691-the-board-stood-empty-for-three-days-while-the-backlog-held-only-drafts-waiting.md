@@ -6,7 +6,7 @@ title: The board stood empty for three days while the backlog held only drafts w
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:56:15Z
 transitions: []
 tags: [flai]
 topics: [ready, threads]
@@ -39,6 +39,14 @@ usage:
           cache_write: 13854
           cost: 0.278
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 1h
+    by: orchestrator
+    at: 2026-11-10T10:55:47Z
+  value: 150
+  by: planner-S-0691
+  at: 2026-11-10T10:56:15Z
 forecast:
   duration: 1h
   delivery: 2026-11-11T01:12:00Z
@@ -97,8 +105,8 @@ Planned by planner-S-0691 on 2026-11-10. The plan's thread is TH-1042, on S-0691
 
 Left out from `flai touches suggest`: `flai/internal/inbox/inbox_test.go`, `events.go`, the `flai/internal/mcpserver` files, `flai/internal/storystart/start.go`, and `flai/cmd/serve_actions.go`. The change reaches none of them: it adds no event and no tool.
 
-**After.** S-0673. This story reads S-0673's decision, ADR-0279, and its change to `readyDrained` in `flai/internal/serve/readyempty.go`: `ready-empty` counts only the ready stories not held on `after`. "Holds no story that can start" is built on that count. S-0673 has every task done.
+**After.** S-0673. This story reads S-0673's decision, ADR-0279, and its change to `readyDrained` in `flai/internal/serve/readyempty.go`: `ready-empty` counts only the ready stories not held on `after`. "Holds no story that can start" is built on that count. S-0673 was accepted on 2026-11-10, so the `after` holds nothing now.
 
-**Forecast.** `flai forecast` gave 24m once the touches were in: 103 s a unit over 155 done large improvement stories, size 14 (2 criteria, 12 touches). It is raised to 1h, as S-0673's was for the same shape: the size counts neither the ADR the first task writes nor five tasks in four layers, two of which add Go files with tests. The delivery is flai's, 2026-11-10T19:10Z, moved 36m later to match.
+**Forecast.** `flai forecast` gave 24m once the touches were in: 103 s a unit over 155 done large improvement stories, size 14 (2 criteria, 12 touches). It is raised to 1h, as S-0673's was for the same shape: the size counts neither the ADR the first task writes nor five tasks in four layers, two of which add Go files with tests. flai keeps the delivery current with the pull order.
 
-**Cost of delay.** Not worked out yet. I-0288 measured no time lost, so flai set no input, and `flai cod` refuses with none. TH-1042 asks for the input, recommending `time_lost_per_cycle: 1h`.
+**Cost of delay.** 150 USD a week, as `flai cod` works it out from the input the orchestrator set on TH-1042, `time_lost_per_cycle: 1h`, at 150 USD an hour. It stands: I-0288 measured no time lost, and the hour is the operator's time per cycle to notice an empty board and find the decisions it waits on. The board's idle lanes are not counted again here; the stories that waited carry their own cost of delay.

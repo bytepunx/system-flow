@@ -23,7 +23,7 @@ tags: [scripts, docker]
 touches: [scripts/agent-image.sh]
 usage:
   source: log
-  seconds: 24
+  seconds: 25
   estimated: true
   priced_by: estimate
   models:

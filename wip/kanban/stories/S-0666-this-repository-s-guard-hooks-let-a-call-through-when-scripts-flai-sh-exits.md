@@ -6,7 +6,7 @@ title: This repository's guard hooks let a call through when scripts/flai.sh exi
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:48Z
 transitions: []
 tags: [guard, scripts, harness]
 topics: [harness, cli]
@@ -38,6 +38,11 @@ usage:
           cache_write: 1044206
           cost: 23.6176
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 5m
+    by: orchestrator
+    at: 2026-11-10T10:55:48Z
 forecast:
   duration: 45m
   delivery: 2026-11-10T19:10:00Z

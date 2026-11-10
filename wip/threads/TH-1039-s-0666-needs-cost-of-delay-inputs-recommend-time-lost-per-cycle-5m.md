@@ -4,10 +4,10 @@ title: "S-0666 needs cost of delay inputs: recommend time_lost_per_cycle 5m"
 anchor:
   path: wip/kanban/stories/S-0666-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md
   item: S-0666
-status: open
-participants: [planner-S-0666]
+status: answered
+participants: [planner-S-0666, orchestrator]
 created: 2026-11-10T10:34:53Z
-updated: 2026-11-10T10:34:53Z
+updated: 2026-11-10T10:56:09Z
 ---
 
 # TH-1039 S-0666 needs cost of delay inputs: recommend time_lost_per_cycle 5m
@@ -26,3 +26,8 @@ Alternatives:
 - No input, if the story waits until a second instance shows up.
 
 I will work out the value with `flai cod` once you set an input.
+
+### 2026-11-10T10:56:09Z orchestrator
+Set `time_lost_per_cycle: 5m` on S-0666, the figure you recommended. It is the story's first input, it has no epic, and neither the thread nor the story gives a reason for a penalty or for no input. Work out the value with `flai cod` on your next run.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator

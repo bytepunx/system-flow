@@ -6,7 +6,7 @@ title: No analysis.schedule or analysis.formula is set, so the analyzer ran once
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:55:48Z
 transitions: []
 tags: [flai, analyzer, manifest]
 topics: [analysis, cli]
@@ -38,6 +38,11 @@ usage:
           cache_write: 13854
           cost: 0.278
 draft: true
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 2h
+    by: orchestrator
+    at: 2026-11-10T10:55:48Z
 forecast:
   duration: 38m
   delivery: 2026-11-11T00:57:00Z

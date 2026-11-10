@@ -19,6 +19,18 @@ stream: S-0713
 tags: [docs, scripts]
 touches: [docs/operators/runbooks/agent-container.md, scripts/README.md]
 after: [T-2955]
+usage:
+  source: log
+  seconds: 75
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 75
+      cache_read: 675841
+      cache_write: 3284
+      cost: 0.25
 ---
 # T-2957 The agent-container runbook and scripts/README.md say what make agent-images does when the credential helper fails
 
