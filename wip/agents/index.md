@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-10T07:00:36Z
+updated: 2026-11-10T07:00:52Z
 ---
 
 # Active streams
@@ -15,7 +15,7 @@ updated: 2026-11-10T07:00:36Z
 | [S-0638](S-0638.md) | TestCancelStopsTheWaitToAskAgain times out against its local release server under load and stops a close-out's integration tier | in-progress | agent-S-0638 | 2026-11-10T01:31:13Z |
 | [S-0643](S-0643.md) | A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make | review | agent-S-0643 | 2026-11-10T06:57:22Z |
 | [S-0647](S-0647.md) | TestStartDevServerStopsViteWhenItsContextEnds fails under load: the fake vite wrote no pid | in-progress | agent-S-0647 | 2026-11-10T06:57:30Z |
-| [S-0656](S-0656.md) | Publish what is accepted and not yet released | in-progress | agent-S-0656 | 2026-11-10T07:00:14Z |
+| [S-0656](S-0656.md) | Publish what is accepted and not yet released | in-progress | agent-S-0656 | 2026-11-10T07:00:49Z |
 
 ## Strategic agents
 

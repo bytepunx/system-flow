@@ -6,7 +6,7 @@ title: "flai check finds `item.duplicate-id` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T05:12:06Z
-updated: 2026-11-10T06:37:42Z
+updated: 2026-11-10T07:00:52Z
 transitions: []
 tags: [flai, workitem]
 topics: [code, archive, usage]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-10T06:36:35Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T08:26:00Z
-  basis: "flai forecast's 22m (107 s per unit over 30 medium improvement stories, size 12) raised to 1h for four tasks, two race tests, and a close-out whose integration tier alone took 13m to 17m on S-0640, S-0625, and S-0630; delivery is flai's 07:48Z moved by the 38m added."
-  by: planner-S-0648
-  at: 2026-11-10T06:36:35Z
+  delivery: 2026-11-10T08:18:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241 and S-0637."
+  by: flai
+  at: 2026-11-10T07:00:52Z
 ---
 # S-0648 flai check finds `item.duplicate-id` outside the story at close-out
 

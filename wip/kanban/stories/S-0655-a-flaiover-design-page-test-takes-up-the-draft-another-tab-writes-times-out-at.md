@@ -6,7 +6,7 @@ title: "A flaiover design-page test, \"takes up the draft another tab writes\", 
 status: backlog
 owner: alex
 created: 2026-11-10T05:54:35Z
-updated: 2026-11-10T06:59:13Z
+updated: 2026-11-10T07:00:52Z
 transitions: []
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-11-10T06:59:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T09:05:00Z
-  basis: "Raised from flai forecast's 5m to 45m on S-0640, the same shape of fix, which took 40m with its vitest runs and flaiover close-out; delivery 40m past flai forecast's 08:25."
-  by: planner-S-0655
-  at: 2026-11-10T06:59:13Z
+  delivery: 2026-11-10T09:29:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649, S-0650, S-0651, S-0652, S-0653 and S-0654."
+  by: flai
+  at: 2026-11-10T07:00:52Z
 ---
 # S-0655 A flaiover design-page test, "takes up the draft another tab writes", times out at 5,000 ms under load and stops the flaiover tier
 
@@ -58,6 +58,7 @@ This story remediates [I-0330](../../../design/issues/I-0330-a-flaiover-design-p
 - [ ] I-0330 is closed with `flai issue close I-0330 --reason` saying what fixed it
 
 ## Tasks
+- T-2838 Measure where the design page's draft-from-another-tab test spends its time, and cut it below vitest's 5,000 ms under load
 
 ## Notes
 

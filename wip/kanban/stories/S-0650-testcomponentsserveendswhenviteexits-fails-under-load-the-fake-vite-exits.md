@@ -6,7 +6,7 @@ title: "TestComponentsServeEndsWhenViteExits fails under load: the fake vite exi
 status: backlog
 owner: alex
 created: 2026-11-10T05:12:13Z
-updated: 2026-11-10T06:58:54Z
+updated: 2026-11-10T07:00:52Z
 transitions: []
 tags: []
 topics: [testing]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T06:58:35Z
 forecast:
   duration: 35m
-  delivery: 2026-11-10T08:34:00Z
-  basis: flai forecast's 5m (median of 17 small remediation stories at size 2) raised to 35m for the integration and smoke close-out a flai/ change runs, 10 to 20 minutes under load, and repeated runs of the components serve tests with a start delay
-  by: planner-S-0650
-  at: 2026-11-10T06:58:35Z
+  delivery: 2026-11-10T08:36:00Z
+  basis: "Its own forecast of 35m; 5th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648 and S-0649."
+  by: flai
+  at: 2026-11-10T07:00:52Z
 ---
 # S-0650 TestComponentsServeEndsWhenViteExits fails under load: the fake vite exits before it answers
 

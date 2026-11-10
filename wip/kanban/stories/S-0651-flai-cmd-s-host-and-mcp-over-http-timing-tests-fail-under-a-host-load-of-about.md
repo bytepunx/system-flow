@@ -6,7 +6,7 @@ title: flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of 
 status: backlog
 owner: alex
 created: 2026-11-10T05:44:44Z
-updated: 2026-11-10T06:59:13Z
+updated: 2026-11-10T07:00:52Z
 transitions: []
 tags: [cli]
 topics: [testing]
@@ -27,10 +27,10 @@ cost_of_delay:
   at: 2026-11-10T06:59:13Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T09:10:00Z
-  basis: "flai forecast's 8m (72 s per unit, size 6) raised to 1h for two test edits, a reproduction under load, and a close-out whose integration tier ran 12 to 14 minutes in each I-0309 instance; delivery is flai's 08:16 plus the added 52 minutes."
-  by: planner-S-0651
-  at: 2026-11-10T06:59:13Z
+  delivery: 2026-11-10T09:37:00Z
+  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 5, behind S-0628, S-0636, S-0638, S-0647, S-0656, S-0241, S-0637, S-0648, S-0649 and S-0650."
+  by: flai
+  at: 2026-11-10T07:00:52Z
 ---
 # S-0651 flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
 
