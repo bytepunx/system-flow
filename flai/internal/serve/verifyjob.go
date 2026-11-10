@@ -105,7 +105,8 @@ type verifyPass struct {
 	limit time.Duration
 	run   closeOutRunner
 	// exe is this flai's own executable, which runs flai verify where the
-	// worktree has no close-out script.
+	// worktree has no close-out script, and the host's steps of a container
+	// story's close-out (ADR-0274).
 	exe func() (string, error)
 	// recorded is the verdict the verify record holds for the story's
 	// worktree as it stands, and true, or false when it holds none; nil
@@ -227,6 +228,15 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 	if running {
 		return closeout.Answer{Job: id, Story: story, Log: closeout.File(dir, story, closeout.LogSuffix)}
 	}
+	// A story whose agent runs in a container is closed out in it (ADR-0274):
+	// the record is not asked through git files the container may have
+	// changed to point elsewhere.
+	ca := p.containerAgentOf(repo, story)
+	if ca != nil {
+		if err := gitPointers(p.e.Root, story, worktree); err != nil {
+			return refused(err.Error())
+		}
+	}
 	if !req.Fresh && p.recorded != nil {
 		rep, ok, err := p.recorded(repo, story, worktree, req.All)
 		switch {
@@ -236,7 +246,7 @@ func (p *verifyPass) answer(ctx context.Context, repo *workitem.Repo, dir, story
 			return p.fromRecord(repo, req, rep)
 		}
 	}
-	return p.startJob(ctx, dir, worktree, req, refused)
+	return p.startJob(ctx, dir, worktree, req, ca, refused)
 }
 
 // fromRecord answers req with the verdict the record holds in rep, journals
@@ -257,15 +267,29 @@ func (p *verifyPass) fromRecord(repo *workitem.Repo, req closeout.Request, rep v
 }
 
 // startJob starts req's close-out in worktree as a job, records and journals
-// its start, and answers its id.
-func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req closeout.Request, refused func(string) closeout.Answer) closeout.Answer {
+// its start, and answers its id. The close-out of a story whose agent runs in
+// a container, ca, runs its verify there and its commit and sync on the host
+// (ADR-0274); any other story's runs command's argv on the host.
+func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req closeout.Request, ca *containerAgent, refused func(string) closeout.Answer) closeout.Answer {
 	story := req.Story
-	argv, err := p.command(worktree, req)
-	if err != nil {
-		return refused(err.Error())
-	}
 	started := p.o.Now().UTC()
-	job := closeout.Job{ID: story + "-" + started.Format("20060102T150405Z"), Story: story, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
+	stamp := started.Format("20060102T150405Z")
+	var body func(context.Context, io.Writer) (int, error)
+	command := ""
+	if ca != nil {
+		c := &containerCloseOut{p: p, agent: *ca, story: story, worktree: worktree, req: req, id: stamp}
+		body, command = c.run, c.String()
+	} else {
+		argv, err := p.command(worktree, req)
+		if err != nil {
+			return refused(err.Error())
+		}
+		body = func(jctx context.Context, out io.Writer) (int, error) {
+			return p.run(jctx, worktree, closeOutEnv(os.Environ(), req.By), out, argv)
+		}
+		command = strings.Join(argv, " ")
+	}
+	job := closeout.Job{ID: story + "-" + stamp, Story: story, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
 	if err := closeout.WriteJob(dir, job); err != nil {
 		return refused(fmt.Sprintf("flai serve could not start %s's close-out: %v", story, err))
 	}
@@ -273,11 +297,11 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 	p.running[story] = job.ID
 	p.mu.Unlock()
 	p.journal(hostapi.Entry{At: started.Format(time.RFC3339), By: req.By, Outcome: "started", Detail: story + " job " + job.ID})
-	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "by", req.By, "command", strings.Join(argv, " "))
+	p.o.Logger.Info("close-out job started", "component", "serve", "root", p.e.Root, "story", story, "job_id", job.ID, "by", req.By, "command", command)
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		p.runJob(ctx, dir, worktree, job, argv)
+		p.runJob(ctx, dir, worktree, job, body)
 	}()
 	return closeout.Answer{Job: job.ID, Story: story, Started: true, Log: closeout.File(dir, story, closeout.LogSuffix)}
 }
@@ -308,11 +332,11 @@ func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, e
 	return argv, nil
 }
 
-// runJob runs job's close-out, argv, in worktree for at most the pass's
+// runJob runs job's close-out, body, in worktree for at most the pass's
 // limit, its output in its log, then ends it. When ctx ends first, the
 // process group is stopped and the job left running in its state, for the
 // next flai serve to end interrupted.
-func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job closeout.Job, argv []string) {
+func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job closeout.Job, body func(context.Context, io.Writer) (int, error)) {
 	before := p.head(worktree)
 	jctx, cancel := context.WithTimeout(ctx, p.limit)
 	defer cancel()
@@ -322,7 +346,7 @@ func (p *verifyPass) runJob(ctx context.Context, dir, worktree string, job close
 	if out, err := os.Create(logPath); err != nil {
 		runErr = fmt.Errorf("create its log %s: %w", logPath, err)
 	} else {
-		code, runErr = p.run(jctx, worktree, closeOutEnv(os.Environ(), job.By), out, argv)
+		code, runErr = body(jctx, out)
 		_ = out.Close()
 	}
 	if ctx.Err() != nil {

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -105,27 +106,40 @@ func containerImageHost(root string, cfg AgentConfig, inner string) (host harnes
 // its inner harness, as agent names it, is not on this host, saying what to
 // do. An inner harness with no image is the adapter's to refuse.
 func (l *launcher) containerAllowed(cfg AgentConfig, agent *manifest.Agent) error {
+	_, _, err := containerImage(l.docker, l.entry.Root, cfg, agent)
+	return err
+}
+
+// containerImage is the container harness's host, its Program the docker
+// client cfg says, and the image agent's inner harness runs in, for the
+// project at root, once docker, through the runner docker, is on PATH and
+// says the image is on this host; it refuses otherwise, saying what to do.
+// The image is "" for an inner harness with no image, which the adapter
+// refuses. It is what containerAllowed checks for an agent's start and what
+// a story's close-out runs in (ADR-0274), so the two never disagree.
+func containerImage(docker execx.Runner, root string, cfg AgentConfig, agent *manifest.Agent) (harness.Host, string, error) {
 	program := containerProgram(cfg)
-	if _, err := l.docker.LookPath(program); err != nil {
-		return fmt.Errorf("the container harness runs %s, which is not on flai serve's PATH: install Docker, or name its client with flai serve agent harness container --program <path>", program)
+	if _, err := docker.LookPath(program); err != nil {
+		return harness.Host{}, "", fmt.Errorf("the container harness runs %s, which is not on flai serve's PATH: install Docker, or name its client with flai serve agent harness container --program <path>", program)
 	}
 	inner := innerOf(agent)
-	host, layer, err := containerImageHost(l.entry.Root, cfg, inner)
+	host, layer, err := containerImageHost(root, cfg, inner)
 	if err != nil {
-		return err
+		return harness.Host{}, "", err
 	}
+	host.Program = program
 	image := host.Images[inner]
 	if image == "" {
-		return nil
+		return host, "", nil
 	}
-	out, err := l.docker.Run(l.entry.Root, program, "image", "inspect", "--format", "{{.Id}}", image)
+	out, err := docker.Run(root, program, "image", "inspect", "--format", "{{.Id}}", image)
 	switch {
 	case err == nil:
-		return nil
+		return host, image, nil
 	case layer:
-		return fmt.Errorf("the image %[1]s, the project's layer for the inner harness %[2]s that agent.image.layer in %[3]s names, is not on this host (%[4]s): build it with make agent-images, or with scripts/agent-image.sh --layer over the harness image already built", image, inner, manifest.File, dockerSaid(out, err))
+		return harness.Host{}, "", fmt.Errorf("the image %[1]s, the project's layer for the inner harness %[2]s that agent.image.layer in %[3]s names, is not on this host (%[4]s): build it with make agent-images, or with scripts/agent-image.sh --layer over the harness image already built", image, inner, manifest.File, dockerSaid(out, err))
 	}
-	return fmt.Errorf("the image %[1]s the container harness runs the inner harness %[2]s in is not on this host (%[3]s): build it with make agent-images, or name another with flai serve agent harness container --image %[2]s=<image>", image, inner, dockerSaid(out, err))
+	return harness.Host{}, "", fmt.Errorf("the image %[1]s the container harness runs the inner harness %[2]s in is not on this host (%[3]s): build it with make agent-images, or name another with flai serve agent harness container --image %[2]s=<image>", image, inner, dockerSaid(out, err))
 }
 
 // containerReady readies the host for the start of an agent, run, on the
