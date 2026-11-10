@@ -3,10 +3,10 @@ id: S-0669
 type: story
 nature: improvement
 title: After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T10:50:18Z
+updated: 2026-11-10T10:54:59Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:34Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T10:50:18Z
     by: agent-S-0669
+  - to: done
+    at: 2026-11-10T10:54:59Z
+    by: alex
 tags: [flaiover, agent]
 topics: [dashboard, agents]
 touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/summary.md, design/issues/I-0341-agent-test-ts-s-does-not-ask-a-candidate-for-project-info-times-out-at-vitest-s.md, flaiover/src/routes/api/agent/agent.test.ts]
