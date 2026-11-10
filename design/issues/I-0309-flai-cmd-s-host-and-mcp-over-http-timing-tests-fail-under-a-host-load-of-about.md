@@ -7,7 +7,7 @@ count: 4
 cost: 14m
 first_reported: 2026-11-08T00:27:14Z
 last_reported: 2026-11-09T22:38:42Z
-updated: 2026-11-09T22:38:42Z
+updated: 2026-11-10T05:44:44Z
 ---
 
 # I-0309 flai/cmd's host and MCP-over-HTTP timing tests fail under a host load of about 200
@@ -34,3 +34,5 @@ Story: S-0634.
 S-0634's close-out (job S-0634-20261109T222352Z, head 0473db7) stopped at integration after 12m39s, with a load average of about 160 on 24 cores, on two timing tests in code the story does not touch: flai/cmd/mcp_http_test.go:357 TestMCPOverHTTPAnswersAWaitBeforeClaudeCodeGivesUp (wait_for_work outlives the client's 3s: context deadline exceeded) and flai/internal/channel/channel_test.go:297 TestBacksOffWhenTheDashboardSaysTheProjectIsHeld (an ordinary close waited 252ms). The second is in flai/internal/channel, not flai/cmd.
 
 ## Remediation
+
+Story S-0651 remediates this issue, created from it at 2026-11-10T05:44:44Z.
