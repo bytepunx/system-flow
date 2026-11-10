@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-11-08
+updated: 2026-11-10
 status: draft
 ---
 
@@ -68,7 +68,7 @@ The gateway checks run `claude -p` through a gateway with the `claude-code` adap
 flai test gateway             # or scripts/flai.sh test gateway, or scripts/gateway-smoke.sh
 ```
 
-No path selects it, and neither `flai test --all`, a close-out, nor the merge queue's batch runs it: since S-0548 the smoke tier no longer ends with it, so no batch spends gateway money or fails on a provider's answer, as one did on OpenRouter's 402 on 2026-10-31. The go-test and integration tiers skip `^TestGateway`, and `make test` never runs them. To run the tier on a schedule, see the [operators guide](../operators/index.md#the-gateway-checks-on-the-hosts-schedule-s-0548).
+No path selects it, and neither `flai test --all`, a close-out, nor the merge queue's batch runs it: since S-0548 the smoke tier no longer ends with it, so no batch spends gateway money or fails on a provider's answer, as one did on OpenRouter's 402 on 2026-10-31. The go-test and integration tiers skip `^TestGateway`, and `make test` never runs them. A check whose key is out of credit fails once, naming the provider's 402, which adding credit or raising the key's limit clears ([what it prints](../operators/index.md#the-gateway-checks-on-the-hosts-schedule-s-0548)). To run the tier on a schedule, see the [operators guide](../operators/index.md#the-gateway-checks-on-the-hosts-schedule-s-0548).
 
 What a run spends: in the batches of 2026-10-29 and 2026-10-30, the OpenRouter check raised its key's usage by 0.085 to 0.087 USD, which Claude Code counted as about 0.33 USD, and the LiteLLM check ran on a free model, so its key's spend did not move, though Claude Code counted 0.29 to 0.36 USD for it. That Claude Code figure, about 0.32 USD a check, is what `FLAI_TEST_GATEWAY_BUDGET` caps, for each check's session; a run of both takes 70 s to 194 s.
 
