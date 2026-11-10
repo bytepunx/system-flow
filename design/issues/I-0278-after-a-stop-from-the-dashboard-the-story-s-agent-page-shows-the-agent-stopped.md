@@ -2,12 +2,12 @@
 id: I-0278
 title: After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
 class: impression
-status: open
+status: closed
 count: 1
 cost: 2m
 first_reported: 2026-11-07T06:28:23Z
 last_reported: 2026-11-07T06:28:23Z
-updated: 2026-11-10T08:34:44Z
+updated: 2026-11-10T09:54:42Z
 ---
 
 # I-0278 After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
@@ -24,3 +24,4 @@ Met on S-0565's criterion 2, on S-0556's container run of 2026-11-07. The operat
 ## Remediation
 
 Story S-0669 remediates this issue, created from it at 2026-11-10T08:34:44Z.
+Closed 2026-11-10T09:54:42Z: Fixed by S-0669. The page with no Retry was the Activity page, where TH-0836 had the operator press Stop. ActivityView.svelte drew Stop under stoppable() and never drew Retry. The story page's StoryAgent and the card's menu both offered Retry under retryable(). ActivityView now offers Retry in Stop's place under retryable(), with writable from /api/board (T-2909, 9d0e68af1). The regression test is ActivityView.svelte.test.ts, "offers Retry for an agent the operator stopped, under the rule the card menu uses (I-0278)" (T-2907, eca43a87). It failed before the fix. activity.test.ts pins Retry for a stopped run of a story in progress.
