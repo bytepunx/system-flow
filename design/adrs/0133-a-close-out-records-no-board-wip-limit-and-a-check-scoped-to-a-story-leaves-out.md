@@ -1,8 +1,8 @@
 ---
 id: ADR-0133
 title: "A close-out records no board.wip-limit, and a check scoped to a story leaves out every board.wip-limit outside it"
-status: proposed
-date: 2026-10-08
+status: accepted
+date: 2026-11-10
 supersedes: []
 superseded_by: []
 refines: [ADR-0085, ADR-0122]
