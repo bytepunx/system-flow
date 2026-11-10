@@ -442,8 +442,9 @@ func TestTheOrchestratorEditsSubprojectsByItsPermission(t *testing.T) {
 // command line. The reads and the ordering by a policy that I-0230 found
 // refused pass under flai's baseline role file with a redirection as they do
 // without one, and its rules in Go judge each alike with one and without;
-// flai serve status, which no rule counts among its reads, is refused alike
-// with one and without. A call refused without a redirection is refused
+// flai serve status, which I-0318 found refused alike with one and without,
+// passes alike since S-0680 counts it among the reads, and flai serve stop is
+// refused alike. A call refused without a redirection is refused
 // alike with one, wherever it stands, so that a redirection before the
 // subcommand is not read as the command.
 func TestARedirectionNeitherAllowsNorRefusesTheOrchestratorsCommand(t *testing.T) {
@@ -466,7 +467,8 @@ func TestARedirectionNeitherAllowsNorRefusesTheOrchestratorsCommand(t *testing.T
 		{"flai board --json", "flai board 2>/dev/null --json", false},
 		{"flai board --json", "flai 2>/dev/null board --json", false},
 		{"flai queue --json", "flai queue --json 2>/dev/null", false},
-		{"flai serve status", "flai serve status 2>&1", true},
+		{"flai serve status", "flai serve status 2>&1", false},
+		{"flai serve stop", "flai serve stop 2>&1", true},
 	} {
 		for name, gr := range guards(allOn) {
 			want, got := gr.Decide(bash("", c.without)), gr.Decide(bash("", c.with))

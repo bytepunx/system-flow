@@ -67,6 +67,12 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 		"serve agent harness command --deny-protected=false",
 		"serve agent harness claude-code -- --permission-mode bypassPermissions",
 		"serve agent harness claude-code --reset",
+		// S-0680: the container harness's settings write it too
+		"serve agent harness container --image claude-code=x:1",
+		"serve agent harness container --image=claude-code=x:1",
+		"serve agent harness container --network flai",
+		"serve agent harness container --login /home/x/.claude",
+		"serve agent harness container --login=",
 		"serve agent provider litellm --api anthropic-messages --base-url http://h --key-env K",
 		"serve agent provider litellm --base-url=http://h",
 		"serve agent provider litellm --key-env K",
@@ -186,5 +192,106 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 	}
 	if r := served[0].guard.Decide(bash("", "flai serve enable auto-approve")); r.Call != "" {
 		t.Errorf("a story's agent's refusal is logged as the orchestrator's: %+v", r)
+	}
+}
+
+// I-0318, S-0680: the forms of flai serve that ADR-0220 leaves open as reads
+// pass for every agent the guard holds to its reads: the orchestrator, under
+// its rules in Go and its baseline file, the planner, the analyzer, the
+// curator, and a story's sub-agents, read-only or not, with a redirection or
+// without. Main's guard, with no serve entry among its reads, refused them
+// all. The forms that run, start, stop, or commit, and those that write the
+// host configuration, stay refused to each.
+func TestEveryAgentReadsTheReadFormsOfFlaiServe(t *testing.T) {
+	withServe := func(gr Guard) Guard {
+		gr.Commands = append(slices.Clone(gr.Commands), "serve", "config", "template")
+		return gr
+	}
+	readOnly := func(agentType string) bool { return agentType == "verifier" }
+	type agent struct {
+		name  string
+		guard Guard
+		as    string // the sub-agent's type, "" for the session's own call
+	}
+	story := withServe(Guard{Commands: g.Commands, Story: "S-0001", Served: true, ReadOnly: readOnly})
+	agents := []agent{
+		{"orchestrator, its rules in Go", withServe(orchestrator(allOn)), ""},
+		{"orchestrator, its baseline file", withServe(orchestrating(allOn, nil)), ""},
+		{"planner", withServe(planGuard), ""},
+		{"planner, its baseline file", withServe(Guard{Commands: g.Commands, Role: RolePlan, Design: "design"}), ""},
+		{"analyzer", withServe(Guard{Commands: g.Commands, Role: RoleAnalyze}), ""},
+		{"analyzer, its baseline file", withServe(Guard{Commands: g.Commands, Role: RoleAnalyze, Design: "design"}), ""},
+		{"curator", withServe(Guard{Commands: g.Commands, Role: RoleCurate}), ""},
+		{"curator, its baseline file", withServe(Guard{Commands: g.Commands, Role: RoleCurate, Design: "design"}), ""},
+		{"a read-only sub-agent", story, "verifier"},
+		{"a task sub-agent", story, "general-purpose"},
+	}
+	reads := []string{
+		"flai serve status",
+		"flai serve status --json",
+		"flai serve status 2>&1",
+		"cd /w && scripts/flai.sh serve status >/dev/null 2>&1",
+		"flai serve actions",
+		"flai serve journal",
+		"flai serve journal -n 5",
+		"flai serve journal --last 5 --json",
+		"flai serve agent",
+		"flai serve agent show",
+		"flai serve agent harness",
+		"flai serve agent harness claude-code",
+		"flai serve agent harness claude-code --project /w --json",
+		"flai serve agent provider",
+		"flai serve agent provider litellm",
+		"flai serve agent provider --json",
+		"flai serve checks show",
+		"flai serve components show",
+		"flai serve forge",
+		"flai serve forge github",
+		"scripts/flai.sh serve forge --json",
+		"flai serve notify show",
+		"flai serve mcp",
+		"flai serve mcp show",
+		"flai serve import list",
+	}
+	refused := []string{
+		"flai serve",
+		"flai serve --json",
+		"flai serve start",
+		"flai serve stop",
+		"flai serve status; flai serve stop",
+		"flai serve agent start S-0001",
+		"flai serve agent restart S-0001",
+		"flai serve agent stop S-0001",
+		"flai serve agent commit S-0001",
+		"flai serve agent stream S-0001",
+		"flai serve agent set --name me",
+		"flai serve agent harness container --image claude-code=x:1",
+		"flai serve agent harness container --network=flai",
+		"flai serve agent harness claude-code -- --verbose",
+		"flai serve agent provider litellm --key-env K",
+		"flai serve orchestrate start",
+		"flai serve project add /w",
+		"flai serve usage S-0001",
+		"flai serve settings",
+		"flai serve checks set --name lint -- make lint",
+		"flai serve components idle 5m",
+		"flai serve forge github --token-env T",
+		"flai serve notify set --url x",
+		"flai serve mcp bind 0.0.0.0",
+		"flai serve import add /w",
+		"flai serve enable auto-approve",
+	}
+	for _, a := range agents {
+		event := func(line string) Event { return bash(a.as, line) }
+		for _, line := range reads {
+			if r := a.guard.Decide(event(line)); r.Why != "" {
+				t.Errorf("%s: %q refused: %s", a.name, line, r.Why)
+			}
+		}
+		for _, line := range refused {
+			if r := a.guard.Decide(event(line)); r.Why == "" {
+				t.Errorf("%s: %q passes", a.name, line)
+			}
+		}
 	}
 }

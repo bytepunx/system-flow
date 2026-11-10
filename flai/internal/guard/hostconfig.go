@@ -29,7 +29,7 @@ var hostWrites = map[string][]string{
 // hostSettings are, for flai serve agent harness and provider, the flags
 // that make them write; without one they read.
 var hostSettings = map[string][]string{
-	"harness":  {"--program", "--guard", "--deny-protected", "--reset"},
+	"harness":  {"--program", "--guard", "--deny-protected", "--image", "--network", "--login", "--reset"},
 	"provider": {"--api", "--base-url", "--key-env", "--spend-key-env", "--model", "--reset"},
 }
 
@@ -39,7 +39,7 @@ var forgeSettings = []string{"--token-env", "--reset"}
 // hostValues are the flags, flai's own and those of the flai serve
 // sub-commands, that take a value as a word of their own, so that the
 // sub-command's own sub-command is the third word that is not a flag.
-var hostValues = map[string]bool{"--api": true, "--auto-restarts": true, "--base-url": true, "--command": true, "--config": true, "--guard": true, "--key-env": true, "--model": true, "--name": true, "--program": true, "--spend-key-env": true, "--token-env": true, "--url": true}
+var hostValues = map[string]bool{"--api": true, "--auto-restarts": true, "--base-url": true, "--command": true, "--config": true, "--guard": true, "--image": true, "--key-env": true, "--last": true, "--login": true, "--model": true, "--name": true, "--network": true, "--program": true, "--project": true, "--spend-key-env": true, "--token-env": true, "--url": true, "-n": true}
 
 // operatorsHost says why no agent writes the host configuration (ADR-0220).
 const operatorsHost = "the host configuration, ~/.flai/config.json or the file FLAI_CONFIG names, holds what the operator lets flai serve do on this host, its host actions, agent command, harnesses, providers, checks, forge token variable, reminder channel, import folders, and the address the MCP servers bind, and flai serve hands an agent no copy of its own, so an agent that wrote it could widen its own permissions or name a program the host runs; only the operator changes it, in a shell or through the dashboard's settings host action (ADR-0220)"

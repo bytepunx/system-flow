@@ -107,7 +107,10 @@ var cliReads = map[string][]string{
 // --write writes the definitions into .flai-cache/agents (S-0568, I-0245).
 // flai hostapi alone lists the host API's methods, and with a method on
 // HostAPIReads it answers that read, --timing or not; every other method
-// writes (S-0612, I-0307).
+// writes (S-0612, I-0307). flai serve reads in the forms serveReads lists,
+// those ADR-0220 leaves open, and in none that writes the host
+// configuration; flai serve alone runs the server, and its other forms start,
+// stop, or commit (S-0680, I-0318).
 // A command with no with flags reads in any form without its without flags.
 var flagReads = map[string]struct {
 	with    []string
@@ -120,7 +123,44 @@ var flagReads = map[string]struct {
 	"promote": {with: []string{"--candidates", "--drafts"}},
 	"release": {with: []string{"--evaluate"}},
 	"role":    {without: []string{"--write"}, form: readsRoles},
+	"serve":   {form: readsServe},
 	"verify":  {without: []string{"--job", "--record-issues"}},
+}
+
+// serveReads are the flai serve sub-commands that read in some form, each
+// with the sub-commands of its own it reads with: nil in any form, "" with
+// none. flai serve agent harness and provider, and flai serve forge, read
+// bare or with a name alone, and write with a setting, which writesHost
+// finds (ADR-0220).
+var serveReads = map[string][]string{
+	"actions":    nil,
+	"agent":      {"", "show", "harness", "provider"},
+	"checks":     {"show"},
+	"components": {"show"},
+	"forge":      nil,
+	"import":     {"list"},
+	"journal":    nil,
+	"mcp":        {"", "show"},
+	"notify":     {"show"},
+	"status":     nil,
+}
+
+// readsServe says whether the words of flai serve read: a sub-command and
+// form serveReads lists, which writes no host configuration.
+func readsServe(words []string) bool {
+	args := positionals(words, hostValues)
+	if len(args) < 2 {
+		return false
+	}
+	subs, ok := serveReads[args[1]]
+	if !ok || writesHost("serve", args[1], words) {
+		return false
+	}
+	var third string
+	if len(args) > 2 {
+		third = args[2]
+	}
+	return subs == nil || slices.Contains(subs, third)
 }
 
 // roleReads are the subcommands of flai role that read, "" for flai role
