@@ -24,16 +24,16 @@ touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows
 after: [T-2788]
 usage:
   source: log
-  seconds: 1477
+  seconds: 1534
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 271
-      cache_read: 4216588
-      cache_write: 302471
-      cost: 1.6607
+      input: 37
+      output: 314
+      cache_read: 4799703
+      cache_write: 310611
+      cost: 1.878
 ---
 # T-2791 The orchestrator passes its judgement to the publish formula as the judgement input
 

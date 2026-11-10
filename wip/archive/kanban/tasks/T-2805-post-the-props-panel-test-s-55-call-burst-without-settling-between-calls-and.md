@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 126
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 16
-      output: 140
-      cache_read: 1689379
-      cache_write: 4776
-      cost: 0.6223
+      output: 1664
+      cache_read: 1669730
+      cache_write: 24425
+      cost: 0.5627
 ---
 # T-2805 Post the props-panel test's 55-call burst without settling between calls, and measure the test before and after
 

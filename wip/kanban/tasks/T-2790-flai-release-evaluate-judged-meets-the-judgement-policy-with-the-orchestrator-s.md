@@ -24,7 +24,7 @@ touches: [flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/
 after: [T-2788]
 usage:
   source: log
-  seconds: 1479
+  seconds: 1486
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 210
       cache_read: 4274938
       cache_write: 605894
-      cost: 1.7937
+      cost: 1.7936
 ---
 # T-2790 flai release --evaluate --judged meets the judgement policy with the orchestrator's reason
 

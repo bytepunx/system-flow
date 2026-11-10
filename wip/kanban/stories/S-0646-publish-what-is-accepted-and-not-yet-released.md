@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 41
+      seconds: 68
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 76
-          cache_read: 290329
-          cache_write: 39097
-          cost: 0.0881
+          input: 19
+          output: 117
+          cache_read: 518250
+          cache_write: 78648
+          cost: 0.1597
 formula: publish
 ---
 # S-0646 Publish what is accepted and not yet released

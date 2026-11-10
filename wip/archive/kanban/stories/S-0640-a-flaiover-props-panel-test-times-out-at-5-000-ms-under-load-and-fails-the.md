@@ -3,10 +3,10 @@ id: S-0640
 type: story
 nature: remediation
 title: A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-10T05:38:07Z
+updated: 2026-11-10T05:54:32Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:01Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:12:17Z
     by: agent-S-0640
+  - to: review
+    at: 2026-11-10T05:51:59Z
+    by: agent-S-0640
+  - to: done
+    at: 2026-11-10T05:54:32Z
+    by: alex
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
 touches: [flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md, design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 465
-  estimated: true
-  priced_by: estimate
+  seconds: 2402
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 1
-      hand_edits: 1
-      work: 21
+      ceremony: 4
+      hand_edits: 3
+      work: 68
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 444
-      cache_read: 3909451
-      cache_write: 212034
-      cost: 1.5138
+      input: 158
+      output: 16804
+      cache_read: 16857188
+      cache_write: 246593
+      cost: 5.6809
   strategic:
     - kind: orchestrator
       seconds: 66

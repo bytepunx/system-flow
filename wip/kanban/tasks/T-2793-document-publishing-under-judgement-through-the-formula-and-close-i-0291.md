@@ -3,16 +3,37 @@ id: T-2793
 type: task
 nature: improvement
 title: Document publishing under judgement through the formula and close I-0291
-status: backlog
+status: done
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:02:44Z
-updated: 2026-11-09T22:02:44Z
-transitions: []
+updated: 2026-11-10T05:52:53Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:51:02Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:51:03Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:52:53Z
+    by: agent-S-0625
 stream: S-0625
 tags: [docs, template]
 touches: [docs/users/flai.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/issues/summary.md]
 after: [T-2791, T-2792]
+usage:
+  source: log
+  seconds: 100
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 225
+      cache_read: 3160478
+      cache_write: 14375
+      cost: 1.1667
 ---
 # T-2793 Document publishing under judgement through the formula and close I-0291
 

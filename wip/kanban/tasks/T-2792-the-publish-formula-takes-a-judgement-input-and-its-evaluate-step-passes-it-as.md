@@ -3,11 +3,11 @@ id: T-2792
 type: task
 nature: improvement
 title: The publish formula takes a judgement input and its evaluate step passes it as --judged
-status: in-progress
+status: done
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:02:27Z
-updated: 2026-11-10T05:45:00Z
+updated: 2026-11-10T05:50:37Z
 transitions:
   - to: ready
     at: 2026-11-10T05:45:00Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:45:00Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T05:50:37Z
+    by: agent-S-0625
 stream: S-0625
 tags: [flai, template]
 touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_judgement_test.go]
 after: [T-2790]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 184
+      cache_read: 6318540
+      cache_write: 35196
+      cost: 2.3348
 ---
 # T-2792 The publish formula takes a judgement input and its evaluate step passes it as --judged
 

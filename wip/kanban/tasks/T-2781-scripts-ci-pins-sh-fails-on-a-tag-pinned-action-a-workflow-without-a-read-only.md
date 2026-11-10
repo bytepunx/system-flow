@@ -3,12 +3,18 @@ id: T-2781
 type: task
 nature: remediation
 title: scripts/ci-pins.sh fails on a tag-pinned action, a workflow without a read-only top-level permissions block, an unpinned image, or a second flaiover lockfile, and smoke runs it
-status: backlog
+status: in-progress
 parent: S-0630
 owner: alex
 created: 2026-11-09T21:58:48Z
-updated: 2026-11-09T21:58:48Z
-transitions: []
+updated: 2026-11-10T05:53:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:53:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:53:58Z
+    by: system-flow
 stream: S-0630
 tags: [ci, security, test]
 touches: [scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md]

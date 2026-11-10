@@ -3,15 +3,36 @@ id: T-2779
 type: task
 nature: remediation
 title: The root and flaiover package-lock.json files, which nothing reads, are removed, leaving flaiover/pnpm-lock.yaml the one lockfile
-status: backlog
+status: done
 parent: S-0630
 owner: alex
 created: 2026-11-09T21:58:36Z
-updated: 2026-11-09T21:58:36Z
-transitions: []
+updated: 2026-11-10T05:53:24Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:47:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:47:14Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:53:24Z
+    by: agent-S-0630
 stream: S-0630
 tags: [flaiover, node]
 touches: [flaiover/package-lock.json, package-lock.json]
+usage:
+  source: log
+  seconds: 341
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 5
+      cache_read: 451477
+      cache_write: 6204
+      cost: 0.1682
 ---
 # T-2779 The root and flaiover package-lock.json files, which nothing reads, are removed, leaving flaiover/pnpm-lock.yaml the one lockfile
 
@@ -29,3 +50,5 @@ It waits for no task: no other task of S-0630 changes these files.
 - `scripts/flaiover-pnpm.sh install --frozen-lockfile`, or `scripts/flaiover-test.sh` where it runs, passes. Otherwise the task's Notes say why it was not run.
 
 ## Notes
+
+`git grep package-lock` outside `design/`, `wip/`, and `docs/` finds only flai's generic lockfile detection in `flai/internal/components` and test fixtures, which name no file of this repository, and `flaiover/.prettierignore`, which is harmless. pnpm is chosen before npm there anyway. Both files removed with `git rm`. `scripts/flaiover-image.sh`, which installs with `--frozen-lockfile` from `flaiover/pnpm-lock.yaml`, built while they were gone (T-2778's run).

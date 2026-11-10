@@ -24,16 +24,16 @@ touches: [design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms
 after: [T-2805]
 usage:
   source: log
-  seconds: 5
+  seconds: 10
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 48
-      cache_read: 448512
-      cache_write: 776
-      cost: 0.165
+      output: 441
+      cache_read: 442810
+      cache_write: 6478
+      cost: 0.1492
 ---
 # T-2807 Close I-0319 with what fixed it
 

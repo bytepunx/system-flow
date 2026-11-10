@@ -3,12 +3,18 @@ id: T-2775
 type: task
 nature: improvement
 title: Give the container adapter a docker run argv for one command in a story's container with its mounts
-status: backlog
+status: in-progress
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:58:16Z
-updated: 2026-11-09T21:59:10Z
-transitions: []
+updated: 2026-11-10T05:54:09Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:54:08Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:54:09Z
+    by: system-flow
 stream: S-0628
 tags: [flai, harness]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go]

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2069.5399
-accrued_seconds: 1535851
-tasks_completed: 2590
-last_run: 2026-11-10T05:15:39Z
+accrued_cost: 2070.1313
+accrued_seconds: 1536002
+tasks_completed: 2595
+last_run: 2026-11-10T05:48:14Z
 ---
 
 # Orchestrator activity
@@ -18162,6 +18162,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 28
 - Cost: 0.1616 USD, estimated
+
+### 2026-11-10T05:46:08Z
+
+- Summary: Release due after S-0634 (threshold: count 2 >= 1, value 37.5 USD/wk < 1000): did not run flai formula run publish, since publish instance S-0646 is already in ready (3rd in order) and publishes everything pending, S-0633 and S-0634, when its agent works it; a second instance would duplicate it.
+- Items: S-0634, S-0633, S-0646
+- Seconds: 48
+- Cost: 0.1146 USD, estimated
+
+### 2026-11-10T05:46:29Z
+
+- Summary: Review reason S-0633: nothing to do; alex accepted it at 2026-11-10T05:45:17Z, 19s after it reached review, and it is archived.
+- Items: S-0633
+- Seconds: 21
+- Cost: 0.0000 USD
+
+### 2026-11-10T05:46:54Z
+
+- Summary: I didn't start a new publish run or accept anything this time. The release is due, but a publish story for it already exists, and S-0633 had already been accepted when I got to it.
+- Items: none
+- Seconds: 25
+- Cost: 0.2167 USD, estimated
+
+### 2026-11-10T05:47:51Z
+
+- Summary: release-due S-0633: release_evaluate met under threshold (count 2 >= 1; value 37.5 USD/week of 1000; pending S-0633, S-0634). Did not run flai formula run publish: publish instance S-0646 is in ready (3rd of 3, unstarted, in-progress full at 5/5) and publishes everything accepted and unreleased when worked; a second instance would duplicate it and race it (I-0320, S-0643).
+- Items: S-0633, S-0634, S-0646
+- Seconds: 34
+- Cost: 0.1001 USD, estimated
+
+### 2026-11-10T05:48:14Z
+
+- Summary: I didn't start a new publish run, even though a release is due. Publish story S-0646 is already in ready and will release this batch when its agent works it.
+- Items: none
+- Seconds: 23
+- Cost: 0.1600 USD, estimated
 
 ## Refusals
 

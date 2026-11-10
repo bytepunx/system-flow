@@ -3,12 +3,18 @@ id: T-2772
 type: task
 nature: improvement
 title: Record in an ADR that a container story's close-out runs its verify in that container, and what still runs on the host
-status: backlog
+status: in-progress
 parent: S-0628
 owner: alex
 created: 2026-11-09T21:58:09Z
-updated: 2026-11-09T21:59:33Z
-transitions: []
+updated: 2026-11-10T05:54:07Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:54:07Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:54:07Z
+    by: system-flow
 stream: S-0628
 tags: [adr, security]
 touches: [design/adrs/0272-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in-that-container.md, design/adrs/README.md]

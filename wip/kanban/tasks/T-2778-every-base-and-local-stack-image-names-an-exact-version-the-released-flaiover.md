@@ -3,15 +3,36 @@ id: T-2778
 type: task
 nature: remediation
 title: Every base and local-stack image names an exact version, the released flaiover image its digest too, and dependabot watches the agent image folders
-status: backlog
+status: done
 parent: S-0630
 owner: alex
 created: 2026-11-09T21:58:31Z
-updated: 2026-11-09T21:58:31Z
-transitions: []
+updated: 2026-11-10T05:53:10Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:47:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:47:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:53:10Z
+    by: agent-S-0630
 stream: S-0630
 tags: [ci, security, docker]
 touches: [flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, ".github/dependabot.yml"]
+usage:
+  source: log
+  seconds: 342
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 171
+      cache_read: 2954169
+      cache_write: 24192
+      cost: 1.0945
 ---
 # T-2778 Every base and local-stack image names an exact version, the released flaiover image its digest too, and dependabot watches the agent image folders
 
@@ -36,3 +57,5 @@ It waits for no task: no other task of S-0630 changes these files.
 - `.github/dependabot.yml` lists the three image folders under its `docker` entry, and `scripts/shellcheck.sh scripts/litellm.sh` passes.
 
 ## Notes
+
+Pins taken 2026-11-10 from the registries. flaiover's two `FROM` lines are literal `node:24.22.2-alpine3.24@sha256:a34ab6d7…`, so dependabot can move them; nothing passed `NODE_VERSION`, so the argument is gone. The Go build stages use `golang:1.26.0-alpine3.23` through a new `GO_ALPINE_VERSION`, the newest Alpine golang 1.26.0 ships on, and bedrock's runtime is `alpine:3.24.4`, so the claude-code layer's Alpine Node 24 is unchanged. otel-lgtm is pinned at 0.40.0, LiteLLM at v1.108.4, and LiteLLM's Postgres at 16.15-alpine3.24. `scripts/flaiover-image.sh` built (exit 0, about 2.5 minutes; it replaced the host's `flaiover:local`). `docker build --check` passes on all three Dockerfiles. `scripts/litellm.sh up` was not run: it needs a paid key. The bedrock and system-flow images were not built.
