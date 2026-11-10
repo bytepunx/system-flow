@@ -3,10 +3,10 @@ id: S-0671
 type: story
 nature: improvement
 title: scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T09:52:35Z
+updated: 2026-11-10T09:54:59Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:54Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T09:52:35Z
     by: agent-S-0671
+  - to: done
+    at: 2026-11-10T09:54:59Z
+    by: orchestrator
 tags: [flai, template, close-out, verify, scripts]
 topics: [code, review]
 touches: [scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, template/CHANGELOG.md, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/devex.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/summary.md]
@@ -120,3 +123,12 @@ Left out of the co-change list: `design/conventions/work-management.md` and its 
 Figures. `flai forecast` gave 24m: 101 s per unit of size over 151 done improvement stories, times size 14. The duration is raised to 45m, since the story has five tasks across a shell script, a Go function and its serve test, the template copy, and four documents, and its close-out runs the template, integration, and smoke tiers. The delivery moves by the same 21m, to 12:34Z. The cost of delay value, 12.50 USD a week, is `flai cod`'s, from the operator's input of 5m lost per 168h cycle at 150 USD an hour, and stands.
 
 No `after`: the story reads no other story's output.
+
+### Accepted by the orchestrator
+
+- Verified: c44618c42538b1bb9d79710c2fcdd0641cdeeac8
+- At: 2026-11-10T09:54:59Z
+
+Verdict: meets. Both criteria are met at c44618c, every changed file is within the story's touches, and the close-out passed every step there.
+- 1: scripts/close-out.sh, template/root/scripts/close-out.sh, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, scripts/README.md, template/root/scripts/README.md, template/CHANGELOG.md, docs/users/flai.md, design/system/flai-cli.md, design/system/devex.md
+- 2: design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/summary.md

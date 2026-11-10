@@ -2,7 +2,7 @@
 id: D-0468
 title: flai guard refuses a story's sub-agent a write to scripts/agent-container.sh, scripts/agent-image.sh, or flai/images/ while auto-approve is off, so the story's agent writes those files from the content its sub-agent returns
 kind: decision
-sources: [S-0517, S-0510, S-0520]
+sources: [S-0517, S-0510, S-0520, S-0670]
 topics: [harness, docker, planning]
 paths: [scripts/agent-container.sh, scripts/agent-image.sh, flai/images, flai/internal/protected/protected.go, flai/internal/guard/call.go]
 date: 2026-11-02
@@ -22,7 +22,7 @@ S-0517 met this on T-2220, from its Decisions (`wip/archive/agents/S-0517.md`):
 The T-2220 script edits were mine: the guard protects `scripts/agent-container.sh` from a sub-agent, which returned the whole new file.
 ```
 
-For a later story that changes these files (S-0510, S-0518, S-0520): plan the edit as the story's agent's, or expect the task's sub-agent to hand back the file, rather than leaving the write to a sub-agent's layer. A story whose branch changes a protected path is also accepted by the operator only (ADR-0106).
+For a later story that changes these files (S-0510, S-0518, S-0520, S-0670): plan the edit as the story's agent's, or expect the task's sub-agent to hand back the file, rather than leaving the write to a sub-agent's layer. A story whose branch changes a protected path is also accepted by the operator only (ADR-0106).
 
 S-0510 planned around it from the start. From its Decisions (`wip/archive/agents/S-0510.md`):
 
@@ -36,4 +36,10 @@ S-0520 did the same. From its Decisions (`wip/archive/agents/S-0520.md`):
 T-2232 and T-2235 are mine, not a sub-agent's: the ADR's context is already in this session, and `scripts/agent-container.sh` is a path the guard protects from a sub-agent (D-0468).
 ```
 
-Sources: S-0517, S-0510, S-0520.
+So did S-0670, on T-2908, from its Decisions (`wip/archive/agents/S-0670.md`):
+
+```text
+T-2908 is mine, not a sub-agent's: both scripts are on the protected list (D-0468).
+```
+
+Sources: S-0517, S-0510, S-0520, S-0670.

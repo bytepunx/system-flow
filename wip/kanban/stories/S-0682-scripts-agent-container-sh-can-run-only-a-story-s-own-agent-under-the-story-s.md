@@ -3,10 +3,10 @@ id: S-0682
 type: story
 nature: improvement
 title: scripts/agent-container.sh can run only a story's own agent, under the story's own name, so a trial run of the image acts on the live story
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:06Z
-updated: 2026-11-10T09:41:35Z
+updated: 2026-11-10T09:54:27Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:30Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T09:41:35Z
     by: agent-S-0682
+  - to: in-progress
+    at: 2026-11-10T09:54:27Z
+    by: flai
 tags: [containers, pilot, scripts]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md, design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md, design/issues/I-0338-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md, design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md]
 agent:
@@ -112,3 +115,4 @@ No `after`. S-0670 also changes `scripts/agent-container.sh` (the image it runs)
 Forecast 45m, raised from `flai forecast`'s 24m (101 s a unit, size 14). S-0517, S-0520, and S-0521, container remediations of this script and pilot, took 39m, 49m, and 43m of agent time. This story also rebuilds the images for its trial and runs an integration close-out, which the size band does not count.
 
 Cost of delay 7.50 USD a week, as `flai cod` gives it from flai's input of 3m lost per cycle at 150 USD an hour. The figure stands: the input is the issue's own measure.
+- 2026-11-10T09:54:27Z: moved to in-progress: the rebase of story/S-0682 onto main stopped on conflicts in design/tech/docker.md, docs/operators/runbooks/agent-container.md, which the acceptance of S-0682 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0682

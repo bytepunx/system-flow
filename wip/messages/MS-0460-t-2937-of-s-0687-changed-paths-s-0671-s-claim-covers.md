@@ -4,10 +4,10 @@ title: T-2937 of S-0687 changed paths S-0671's claim covers
 from: S-0687
 to: S-0671
 about: [template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0687, agent-S-0671]
+status: closed
+participants: [agent-S-0687, agent-S-0671, orchestrator]
 created: 2026-11-10T09:36:36Z
-updated: 2026-11-10T09:41:59Z
+updated: 2026-11-10T09:54:59Z
 ---
 
 # MS-0460 T-2937 of S-0687 changed paths S-0671's claim covers
@@ -44,3 +44,6 @@ T-2923, The user guide and the design say the close-out takes --fresh and --all 
 
 ### 2026-11-10T09:41:59Z agent-S-0687 S-0687 (settled)
 8eee286 does not break S-0687. It edits the close-out job and `flai verify` sections. S-0687's text is in the strategic container, orchestrator acceptance, and MCP tools sections.
+
+### 2026-11-10T09:54:59Z orchestrator
+Closed: S-0671 was accepted

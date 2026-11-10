@@ -3,12 +3,21 @@ id: T-2912
 type: task
 nature: improvement
 title: I-0278 is closed with the cause and the fix
-status: backlog
+status: done
 parent: S-0669
 owner: alex
 created: 2026-11-10T08:47:51Z
-updated: 2026-11-10T08:47:51Z
-transitions: []
+updated: 2026-11-10T09:54:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:54:36Z
+    by: agent-S-0669
+  - to: in-progress
+    at: 2026-11-10T09:54:37Z
+    by: agent-S-0669
+  - to: done
+    at: 2026-11-10T09:54:50Z
+    by: agent-S-0669
 stream: S-0669
 tags: [issues]
 touches: [design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]

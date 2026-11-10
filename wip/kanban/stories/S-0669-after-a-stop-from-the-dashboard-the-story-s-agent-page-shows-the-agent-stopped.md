@@ -6,7 +6,7 @@ title: After a stop from the dashboard, the story's agent page shows the agent s
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T09:44:38Z
+updated: 2026-11-10T09:54:42Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:34Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0669
 tags: [flaiover, agent]
 topics: [dashboard, agents]
-touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]
+touches: [flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/lib/activity.test.ts, design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -81,7 +81,7 @@ finalized:
 This story remediates [I-0278](../../../design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md), "After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0278 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0278 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0278 is closed with `flai issue close I-0278 --reason` saying what fixed it
 
 ## Tasks
