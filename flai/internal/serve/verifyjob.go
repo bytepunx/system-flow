@@ -75,12 +75,20 @@ func runCloseOut(ctx context.Context, dir string, env []string, out io.Writer, a
 	}
 }
 
+// The variables that ask the worktree's close-out script for --fresh and
+// --all (S-0671).
+const (
+	closeOutFreshEnv = "CLOSE_OUT_FRESH"
+	closeOutAllEnv   = "CLOSE_OUT_ALL"
+)
+
 // closeOutEnv is env as a close-out job has it: without the host's address
-// and token, the variables that mark an agent's run or session, and the
-// forges' default token variables, as an agent's, and with FLAI_AGENT
-// naming the agent that asked.
+// and token, the variables that mark an agent's run or session, the forges'
+// default token variables, as an agent's, and the close-out script's own
+// fresh and all, which only the request sets, and with FLAI_AGENT naming the
+// agent that asked.
 func closeOutEnv(env []string, by string) []string {
-	drop := map[string]bool{"FLAI_AGENT": true, "FLAI_SESSION": true, host.URLEnv: true, host.TokenEnv: true}
+	drop := map[string]bool{"FLAI_AGENT": true, "FLAI_SESSION": true, host.URLEnv: true, host.TokenEnv: true, closeOutFreshEnv: true, closeOutAllEnv: true}
 	for _, name := range runMarks {
 		drop[name] = true
 	}
@@ -280,14 +288,14 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 		c := &containerCloseOut{p: p, agent: *ca, story: story, worktree: worktree, req: req, id: stamp}
 		body, command = c.run, c.String()
 	} else {
-		argv, err := p.command(worktree, req)
+		argv, extra, err := p.command(worktree, req)
 		if err != nil {
 			return refused(err.Error())
 		}
 		body = func(jctx context.Context, out io.Writer) (int, error) {
-			return p.run(jctx, worktree, closeOutEnv(os.Environ(), req.By), out, argv)
+			return p.run(jctx, worktree, append(closeOutEnv(os.Environ(), req.By), extra...), out, argv)
 		}
-		command = strings.Join(argv, " ")
+		command = strings.Join(append(slices.Clone(extra), argv...), " ")
 	}
 	job := closeout.Job{ID: story + "-" + stamp, Story: story, By: req.By, Message: req.Message, All: req.All, Fresh: req.Fresh, Started: started}
 	if err := closeout.WriteJob(dir, job); err != nil {
@@ -306,21 +314,30 @@ func (p *verifyPass) startJob(ctx context.Context, dir, worktree string, req clo
 	return closeout.Answer{Job: job.ID, Story: story, Started: true, Log: closeout.File(dir, story, closeout.LogSuffix)}
 }
 
-// command is what req's close-out runs in worktree: the worktree's close-out
-// script with the commit message, or, where it has none, this flai's verify
-// with --all and --fresh as asked. The script takes only git commit options
-// after the story, so all and fresh do not reach it.
-func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, error) {
+// command is what req's close-out runs in worktree, and the variables it adds
+// to the job's environment: the worktree's close-out script with the commit
+// message, and CLOSE_OUT_FRESH and CLOSE_OUT_ALL set to 1 as asked, or, where
+// it has none, this flai's verify with --all and --fresh as asked. The script
+// is given no flag for them, since one that predates them would take a
+// leading flag for the story; it ignores variables it does not read (S-0671).
+func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, []string, error) {
 	if info, err := os.Stat(filepath.Join(worktree, closeOutScript)); err == nil && !info.IsDir() {
 		argv := []string{"sh", closeOutScript, req.Story}
 		if req.Message != "" {
 			argv = append(argv, "-m", req.Message)
 		}
-		return argv, nil
+		var env []string
+		if req.Fresh {
+			env = append(env, closeOutFreshEnv+"=1")
+		}
+		if req.All {
+			env = append(env, closeOutAllEnv+"=1")
+		}
+		return argv, env, nil
 	}
 	flai, err := p.exe()
 	if err != nil {
-		return nil, fmt.Errorf("%s's worktree has no %s and this flai's executable is not known, so its close-out cannot run: run flai verify %s --record-issues in the worktree yourself: %w", req.Story, closeOutScript, req.Story, err)
+		return nil, nil, fmt.Errorf("%s's worktree has no %s and this flai's executable is not known, so its close-out cannot run: run flai verify %s --record-issues in the worktree yourself: %w", req.Story, closeOutScript, req.Story, err)
 	}
 	argv := []string{flai, "verify", req.Story, "--record-issues"}
 	if req.All {
@@ -329,7 +346,7 @@ func (p *verifyPass) command(worktree string, req closeout.Request) ([]string, e
 	if req.Fresh {
 		argv = append(argv, "--fresh")
 	}
-	return argv, nil
+	return argv, nil, nil
 }
 
 // runJob runs job's close-out, body, in worktree for at most the pass's

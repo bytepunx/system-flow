@@ -29,6 +29,7 @@ import (
 const stubCloseOut = `while [ -e hold ]; do sleep 0.02; done
 echo "close-out $*"
 echo "agent=$FLAI_AGENT"
+echo "fresh=${CLOSE_OUT_FRESH:-} all=${CLOSE_OUT_ALL:-}"
 [ ! -e next-head ] || cp next-head HEAD
 exit "$(cat exit-code 2>/dev/null || echo 0)"
 `
@@ -380,6 +381,61 @@ func TestAJobIsStoppedWithServeAndLeftForTheNextStart(t *testing.T) {
 	}
 	if n := len(lab.verified()); n != 0 {
 		t.Errorf("no verified event for a job flai serve stopped: %d", n)
+	}
+}
+
+// I-0280 (S-0671): a fresh request at a commit the record passed ran the
+// worktree's script, which answered from the record and ran nothing, since
+// the job dropped fresh and all for it. The job now asks the script for them
+// by CLOSE_OUT_FRESH and CLOSE_OUT_ALL, never by a flag an older script would
+// take for the story, and sets neither when the request does not ask.
+func TestAFreshOrAllCloseOutAsksTheWorktreesScriptForThem(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name string
+		req  closeout.Request
+		want string
+	}{
+		{"fresh and all", closeout.Request{Fresh: true, All: true, Message: "close out"}, "fresh=1 all=1"},
+		{"fresh", closeout.Request{Fresh: true}, "fresh=1 all="},
+		{"all", closeout.Request{All: true}, "fresh= all=1"},
+		{"neither", closeout.Request{}, "fresh= all="},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			lab := newVerifyLab(t, true)
+			lab.release()
+			lab.start()
+			if a := lab.ask(c.req); !a.Started {
+				t.Fatalf("the answer: %+v", a)
+			}
+			lab.awaitVerified(1)
+			out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			args := "close-out " + lab.story
+			if c.req.Message != "" {
+				args += " -m " + c.req.Message
+			}
+			if lines[0] != args {
+				t.Errorf("the script's arguments: no flag before the story, the story, and the message: %q", out)
+			}
+			if !slices.Contains(lines, c.want) {
+				t.Errorf("the script's environment: want %q in %q", c.want, out)
+			}
+		})
+	}
+}
+
+// The job's environment never carries flai serve's own CLOSE_OUT_FRESH or
+// CLOSE_OUT_ALL: only the request sets them.
+func TestACloseOutJobDropsServesOwnFreshAndAll(t *testing.T) {
+	t.Parallel()
+	env := closeOutEnv([]string{"PATH=/bin", "CLOSE_OUT_FRESH=1", "CLOSE_OUT_ALL=1"}, "agent-S-0001")
+	if !slices.Equal(env, []string{"PATH=/bin", "FLAI_AGENT=agent-S-0001"}) {
+		t.Errorf("the job's environment: %q", env)
 	}
 }
 
