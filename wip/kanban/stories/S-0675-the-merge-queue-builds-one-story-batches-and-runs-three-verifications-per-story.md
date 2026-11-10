@@ -6,7 +6,7 @@ title: The merge queue builds one-story batches and runs three verifications per
 status: backlog
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T10:54:40Z
+updated: 2026-11-10T10:57:29Z
 transitions: []
 tags: [flai, merge-queue]
 topics: [orchestration, metrics]
@@ -53,7 +53,6 @@ usage:
           cache_read: 759050
           cache_write: 13854
           cost: 0.278
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 7h
@@ -68,6 +67,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 3, behind S-0665, S-0708, S-0713, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0666."
   by: flai
   at: 2026-11-10T10:54:40Z
+finalized:
+  by: alex
+  at: 2026-11-10T10:57:29Z
 ---
 # S-0675 The merge queue builds one-story batches and runs three verifications per story landed
 
