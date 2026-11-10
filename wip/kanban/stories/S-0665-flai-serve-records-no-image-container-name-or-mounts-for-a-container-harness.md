@@ -3,11 +3,14 @@ id: S-0665
 type: story
 nature: improvement
 title: flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:37Z
-updated: 2026-11-10T08:54:23Z
-transitions: []
+updated: 2026-11-10T08:58:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:58:35Z
+    by: orchestrator
 tags: [serve, containers]
 topics: [docker, code]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, design/system/flai-cli.md, docs/users/flai.md, design/system/strategic-agents.md, design/issues/I-0274-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md, design/issues/summary.md]
@@ -37,7 +40,6 @@ usage:
           cache_read: 42559750
           cache_write: 641675
           cost: 11.7787
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -48,10 +50,13 @@ cost_of_delay:
   at: 2026-11-10T08:51:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T14:39:00Z
-  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662 and S-0663."
+  delivery: 2026-11-10T12:54:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669, S-0673 and S-0672."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
+finalized:
+  by: orchestrator
+  at: 2026-11-10T08:57:54Z
 ---
 # S-0665 flai serve records no image, container name, or mounts for a container harness run, so a run cannot be shown afterwards to have used the project's layer image
 

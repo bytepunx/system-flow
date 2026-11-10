@@ -6,7 +6,7 @@ title: scripts/close-out.sh takes no --fresh, so at a commit the verify record h
 status: ready
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T08:54:23Z
+updated: 2026-11-10T08:58:42Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:54Z
@@ -19,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 14
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 13
+          cache_read: 371213
+          cache_write: 5094
+          cost: 0.102
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -29,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:59Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T11:37:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673 and S-0672."
+  delivery: 2026-11-10T10:37:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687 and S-0670."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:50Z

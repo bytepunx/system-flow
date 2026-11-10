@@ -6,7 +6,7 @@ title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier'
 status: ready
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T08:54:23Z
+updated: 2026-11-10T08:58:42Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:47Z
@@ -19,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 13
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 13
+          cache_read: 371213
+          cache_write: 5094
+          cost: 0.102
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -29,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:48Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T10:46:00Z
-  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674 and S-0673."
+  delivery: 2026-11-10T11:31:00Z
+  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669 and S-0673."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:41Z

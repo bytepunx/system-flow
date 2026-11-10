@@ -3,11 +3,14 @@ id: S-0669
 type: story
 nature: improvement
 title: After a stop from the dashboard, the story's agent page shows the agent stopped by the operator with no Retry, while the card's menu offers Retry
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:44Z
-updated: 2026-11-10T08:54:23Z
-transitions: []
+updated: 2026-11-10T08:58:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:58:34Z
+    by: orchestrator
 tags: [flaiover, agent]
 topics: [dashboard, agents]
 touches: [flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, design/issues/I-0278-after-a-stop-from-the-dashboard-the-story-s-agent-page-shows-the-agent-stopped.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 120
+      seconds: 134
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 169
-          cache_read: 3181303
-          cache_write: 230669
-          cost: 0.9248
+          input: 37
+          output: 182
+          cache_read: 3552516
+          cache_write: 235764
+          cost: 1.0268
         - model: claude-sonnet-5-5
           input: 8
           output: 53
@@ -47,10 +50,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:12Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T16:18:00Z
-  basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667 and S-0668."
+  delivery: 2026-11-10T11:09:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671 and S-0668."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:13Z

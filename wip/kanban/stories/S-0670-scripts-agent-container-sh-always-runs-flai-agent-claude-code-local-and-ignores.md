@@ -3,11 +3,14 @@ id: S-0670
 type: story
 nature: remediation
 title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:46Z
-updated: 2026-11-10T08:54:23Z
-transitions: []
+updated: 2026-11-10T08:58:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:58:32Z
+    by: orchestrator
 tags: [scripts, docker]
 topics: [docker, code]
 touches: [scripts/agent-image.sh, scripts/agent-container.sh, scripts/agent-container-test.sh, scripts/smoke.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/summary.md]
@@ -16,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 14
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 13
+          cache_read: 371213
+          cache_write: 5094
+          cost: 0.102
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -26,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:24Z
 forecast:
   duration: 40m
-  delivery: 2026-11-10T16:26:00Z
-  basis: "Its own forecast of 40m; 16th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666, S-0667, S-0668 and S-0669."
+  delivery: 2026-11-10T10:20:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685 and S-0687."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:03Z

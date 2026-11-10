@@ -3,11 +3,14 @@ id: S-0668
 type: story
 nature: remediation
 title: A story's agent in a container cannot write its narrative's Decisions, Context, or Open questions, since wip is read-only there and flai stream state writes only Current state and Next steps
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T08:54:23Z
-transitions: []
+updated: 2026-11-10T08:58:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:58:33Z
+    by: orchestrator
 tags: [flai, mcp, narrative]
 topics: [narrative, mcp, harness]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes_streams.go, flai/internal/hostapi/writes_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0277-a-story-s-agent-in-a-container-cannot-write-its-narrative-s-decisions-context.md, design/issues/summary.md]
@@ -47,10 +50,10 @@ cost_of_delay:
   at: 2026-11-10T08:50:21Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T15:33:00Z
-  basis: "Its own forecast of 45m; 14th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665, S-0666 and S-0667."
+  delivery: 2026-11-10T10:31:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670 and S-0671."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:18Z

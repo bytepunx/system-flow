@@ -3,11 +3,14 @@ id: S-0667
 type: story
 nature: improvement
 title: A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T08:54:23Z
-transitions: []
+updated: 2026-11-10T08:58:42Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:58:35Z
+    by: orchestrator
 tags: [docker, agent-container]
 touches: [scripts/agent-container.sh, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md]
 agent:
@@ -15,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 13
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 12
+          cache_read: 371213
+          cache_write: 5094
+          cost: 0.102
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -25,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T08:49:29Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T16:00:00Z
-  basis: "Its own forecast of 1h30m; 13th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0674, S-0673, S-0672, S-0671, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0665 and S-0666."
+  delivery: 2026-11-10T12:50:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669, S-0673, S-0672 and S-0665."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:21Z

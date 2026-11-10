@@ -6,7 +6,7 @@ title: after chains on planned stories hold ready stories for days while in-prog
 status: ready
 owner: alex
 created: 2026-11-10T08:34:51Z
-updated: 2026-11-10T08:54:23Z
+updated: 2026-11-10T08:58:42Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:36Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-10T08:48:47Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T10:57:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687 and S-0674."
+  delivery: 2026-11-10T11:42:00Z
+  basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668 and S-0669."
   by: flai
-  at: 2026-11-10T08:54:23Z
+  at: 2026-11-10T08:58:42Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:30Z
