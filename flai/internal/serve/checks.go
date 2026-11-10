@@ -9,9 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Running checks for a story in review (S-0082, ADR-0029): the operator's
@@ -117,6 +122,15 @@ func (d Dir) RunChecks(story, root, worktree string, cfg ChecksConfig, now func(
 // ADR-0254 §8), and cut short, as cancelled, when ctx ends. With no env each
 // check gets flai's environment as it is.
 func (d Dir) RunChecksWith(ctx context.Context, story, root, worktree string, cfg ChecksConfig, env []string, now func() time.Time) (ChecksRun, error) {
+	return d.RunChecksIn(ctx, story, root, worktree, cfg, env, nil, now)
+}
+
+// RunChecksIn is RunChecksWith with each check run in the story's container,
+// in, when in is not nil, as ChecksContainer gives it for a story whose agent
+// runs on the container harness (ADR-0274, I-0295): no check's program runs on
+// the host then, and a container that cannot run fails the check. With in nil
+// each check runs on the host, in the worktree, as RunChecksWith runs it.
+func (d Dir) RunChecksIn(ctx context.Context, story, root, worktree string, cfg ChecksConfig, env []string, in *CheckContainer, now func() time.Time) (ChecksRun, error) {
 	if existing, ok := d.ChecksState(story); ok && existing.Running && Alive(existing.PID) {
 		return ChecksRun{}, fmt.Errorf("a checks run for %s is already active (pid %d); flai checks status %s says more", story, existing.PID, story)
 	}
@@ -138,7 +152,8 @@ func (d Dir) RunChecksWith(ctx context.Context, story, root, worktree string, cf
 	}
 	defer func() { _ = logFile.Close() }()
 
-	run := ChecksRun{Story: story, Root: root, Running: true, Started: now().UTC().Format(time.RFC3339), Log: logPath}
+	started := now().UTC()
+	run := ChecksRun{Story: story, Root: root, Running: true, Started: started.Format(time.RFC3339), Log: logPath}
 	if err := d.writeChecksState(run); err != nil {
 		return ChecksRun{}, err
 	}
@@ -150,8 +165,11 @@ func (d Dir) RunChecksWith(ctx context.Context, story, root, worktree string, cf
 	}
 
 	outcome := "passed"
+	if in != nil {
+		fmt.Fprintf(logFile, "=== in %s's container ===\n", story)
+	}
 stepLoop:
-	for _, nc := range cfg.Commands {
+	for i, nc := range cfg.Commands {
 		argv := Substitute(nc.Command, story, worktree)
 		if len(argv) == 0 || strings.TrimSpace(argv[0]) == "" {
 			outcome = "failed"
@@ -165,7 +183,15 @@ stepLoop:
 			run.PID, run.Current = pid, nc.Name
 			_ = d.writeChecksState(run)
 		}
-		exitCode, killedBy, startErr := runOneCheck(ctx, d.checksCancel(story), worktree, argv, env, logFile, onStart)
+		var exitCode *int
+		var killedBy string
+		var startErr error
+		if in == nil {
+			exitCode, killedBy, startErr = runOneCheck(ctx, d.checksCancel(story), worktree, argv, env, logFile, onStart, nil)
+		} else {
+			id := fmt.Sprintf("%s-%d", started.Format("20060102T150405Z"), i+1)
+			exitCode, killedBy, startErr = in.run(ctx, d.checksCancel(story), root, story, id, worktree, argv, env, logFile, onStart)
+		}
 		step.Ended = now().UTC().Format(time.RFC3339)
 		step.Exit = exitCode
 		run.Steps = append(run.Steps, step)
@@ -195,12 +221,76 @@ stepLoop:
 	return run, nil
 }
 
+// CheckContainer is where the checks of a story whose agent runs on the
+// container harness run (ADR-0274): the container harness's host and the
+// story's image, or Err, why its container cannot run, which fails each check
+// rather than run it on the host. Docker stops a check's container when the
+// check is cancelled or runs out of time; nil is the system's.
+type CheckContainer struct {
+	Host   harness.Host
+	Image  string
+	Err    error
+	Docker execx.Runner
+}
+
+// ChecksContainer is where story's checks run when its agent, resolved as flai
+// serve starts it (ADR-0251, ADR-0261), runs on the container harness: its
+// image, checked through docker as an agent's start checks it, or why it
+// cannot run there. It is nil for a story whose agent runs on any other
+// harness, or that cannot be read, whose checks run on the host as before.
+func ChecksContainer(repo *workitem.Repo, story string, cfg AgentConfig, docker execx.Runner) *CheckContainer {
+	it, err := repo.Get(story)
+	if err != nil {
+		return nil
+	}
+	agent := cfg.storyAgent(repo, it)
+	if agent == nil || agent.Harness != harness.Container {
+		return nil
+	}
+	host, image, err := containerImage(docker, mainCheckout(repo), cfg, agent)
+	if err == nil && image == "" {
+		err = fmt.Errorf("the container harness has no image for the inner harness %s of %s's agent: name one with flai serve agent harness container --image %s=<image>", innerOf(agent), story, innerOf(agent))
+	}
+	if err != nil {
+		return &CheckContainer{Err: fmt.Errorf("%s's agent runs in a container, so its checks run there and nothing runs on the host: %w", story, err), Docker: docker}
+	}
+	return &CheckContainer{Host: host, Image: image, Docker: docker}
+}
+
+// run runs one check, argv, in story's container named for id, with env's
+// names passed to it and their values in the docker client's environment, as
+// runOneCheck runs it on the host: the docker client in its own process
+// group, ended when ctx ends or the cancel file appears, after docker stop
+// has stopped its container by name (ADR-0058).
+func (c *CheckContainer) run(ctx context.Context, cancelFile, root, story, id, worktree string, argv, env []string, out io.Writer, onStart func(pid int)) (*int, string, error) {
+	if c.Err != nil {
+		return nil, "", c.Err
+	}
+	var names []string
+	for _, kv := range env {
+		if name, _, _ := strings.Cut(kv, "="); !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	cc, err := harness.ContainerCommand(harness.CommandRun{Root: root, Story: story, Purpose: "check", ID: id, Image: c.Image, Env: names, Argv: argv}, c.Host)
+	if err != nil {
+		return nil, "", err
+	}
+	docker := c.Docker
+	if docker == nil {
+		docker = execx.System{}
+	}
+	stop := func() { _, _ = docker.Run(worktree, cc.Argv[0], "stop", cc.Name) }
+	return runOneCheck(ctx, cancelFile, worktree, cc.Argv, append(slices.Clone(env), cc.Env...), out, onStart, stop)
+}
+
 // runOneCheck runs one command, with env over flai's environment when there
 // is any, in its own process group so cancelling it reaches anything it
 // spawned. It ends the process (terminate, then kill) the moment ctx ends (a
 // time limit, or flai serve stopping) or the cancel file appears (an
-// operator's cancel), and says which; otherwise it returns the exit code.
-func runOneCheck(ctx context.Context, cancelFile, dir string, argv, env []string, out io.Writer, onStart func(pid int)) (exitCode *int, killedBy string, err error) {
+// operator's cancel), and says which, running stop first when there is one;
+// otherwise it returns the exit code.
+func runOneCheck(ctx context.Context, cancelFile, dir string, argv, env []string, out io.Writer, onStart func(pid int), stop func()) (exitCode *int, killedBy string, err error) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = dir
 	if len(env) > 0 {
@@ -235,6 +325,9 @@ watch:
 				break watch
 			}
 		}
+	}
+	if stop != nil {
+		stop()
 	}
 	terminateThenKill(pid)
 	return exitCodeOf(<-done), killedBy, nil

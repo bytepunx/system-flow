@@ -64,8 +64,13 @@ func (a *app) runChecksRun(story string) error {
 	if env != nil {
 		fmt.Fprintf(a.errOut, "%s: checks run against its kluster namespace %s\n", story, ns)
 	}
+	// a story whose agent runs in a container is checked in it (ADR-0274)
+	in := serve.ChecksContainer(repo, story, a.agentConfig(mainRootOf(repo)), a.runner)
+	if in != nil {
+		fmt.Fprintf(a.errOut, "%s: checks run in its agent's container\n", story)
+	}
 	worktree := repo.WorktreePath(story)
-	run, err := a.serveDir().RunChecksWith(context.Background(), story, mainRootOf(repo), worktree, cfg, env, a.now)
+	run, err := a.serveDir().RunChecksIn(context.Background(), story, mainRootOf(repo), worktree, cfg, env, in, a.now)
 	if err != nil {
 		return err
 	}

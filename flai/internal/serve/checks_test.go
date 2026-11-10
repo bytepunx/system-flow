@@ -3,15 +3,18 @@
 package serve
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -353,5 +356,181 @@ func TestFailingChecksAgainstTheNamespaceOpenOneThreadAndMoveNothing(t *testing.
 	lab.round()
 	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
 		t.Errorf("a second look opened another thread: %d", len(got))
+	}
+}
+
+// fakeDockerClient writes a docker client into a folder of its own that
+// records its arguments, one a line, in argv beside it, and the value of
+// FLAI_KLUSTER_NAMESPACE it was given in env, then runs body.
+func fakeDockerClient(t *testing.T, body string) (program, argv, env string) {
+	t.Helper()
+	bin := t.TempDir()
+	program, argv, env = filepath.Join(bin, "docker"), filepath.Join(bin, "argv"), filepath.Join(bin, "env")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > " + argv + "\nprintf '%s\\n' \"$FLAI_KLUSTER_NAMESPACE\" > " + env + "\n" + body + "\n"
+	if err := os.WriteFile(program, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return program, argv, env
+}
+
+// reopened is lab's project read again, with the container harness its
+// manifest now names.
+func reopened(t *testing.T, lab *verifyLab) *workitem.Repo {
+	t.Helper()
+	repo, err := workitem.Open(lab.repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return repo
+}
+
+// stopRecorder is the docker a check's container is stopped through: it
+// records each call and runs nothing.
+type stopRecorder struct {
+	mu    sync.Mutex
+	calls [][]string
+}
+
+func (r *stopRecorder) Run(_, name string, args ...string) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.calls = append(r.calls, append([]string{name}, args...))
+	return "", nil
+}
+
+func (r *stopRecorder) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return r.Run(dir, name, args...)
+}
+
+func (*stopRecorder) LookPath(name string) (string, error) { return name, nil }
+
+func (r *stopRecorder) said() [][]string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.calls)
+}
+
+// I-0295, ADR-0274: a check of a story whose agent runs in a container runs
+// as docker run in a container from the story's image with the story's
+// mounts, its program the entrypoint and the run's environment passed by
+// name; nothing of the check runs on the host. Before ADR-0274 the check's
+// program ran on the host in the worktree.
+func TestAContainerStorysCheckRunsInItsContainerAndNothingOnTheHost(t *testing.T) {
+	lab, _ := newContainerLab(t, true)
+	in := ChecksContainer(reopened(t, lab), lab.story, AgentConfig{}, imageDocker{has: true})
+	if in == nil || in.Err != nil {
+		t.Fatalf("the container story's checks have no container: %+v", in)
+	}
+	program, argvFile, envFile := fakeDockerClient(t, "exit 0")
+	in.Host.Program = program
+	marker := filepath.Join(lab.worktree, "ran-on-the-host")
+	cfg := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "unit", Command: []string{"sh", "-c", "touch " + marker}}}, Timeout: time.Minute}
+	dir := Dir(filepath.Join(t.TempDir(), "serve"))
+	run, err := dir.RunChecksIn(context.Background(), lab.story, lab.repo.Root, lab.worktree, cfg, []string{"FLAI_KLUSTER_NAMESPACE=s-0001"}, in, nowFixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Outcome != "passed" {
+		t.Errorf("the run: %+v", run)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("the check's program ran on the host")
+	}
+	data, err := os.ReadFile(argvFile)
+	if err != nil {
+		t.Fatalf("docker was not run: %v", err)
+	}
+	root := lab.repo.Root
+	reg := filepath.Join(root, ".git", "worktrees", lab.story)
+	whole := " " + strings.ReplaceAll(strings.TrimSpace(string(data)), "\n", " ") + " "
+	for _, want := range []string{
+		" run --rm --name flai-check-" + lab.story + "-20260922T120000Z-1 ",
+		" -v " + lab.worktree + ":" + lab.worktree + " -w " + lab.worktree + " ",
+		" -v " + filepath.Join(root, ".git") + ":" + filepath.Join(root, ".git") + ":ro ",
+		" -v " + reg + ":" + reg + " ",
+		" -v " + filepath.Join(root, "wip") + ":" + filepath.Join(root, "wip") + ":ro ",
+		" -v " + filepath.Join(root, "system-flow.yaml") + ":" + filepath.Join(root, "system-flow.yaml") + ":ro ",
+		" -e FLAI_KLUSTER_NAMESPACE ",
+		" --entrypoint sh " + harness.DefaultImages[harness.ClaudeCode] + " -c touch " + marker + " ",
+	} {
+		if !strings.Contains(whole, want) {
+			t.Errorf("the check's docker run lacks %q:\n%s", want, whole)
+		}
+	}
+	if strings.Contains(whole, "s-0001") {
+		t.Error("a variable's value is in the docker run's arguments")
+	}
+	if ns, _ := os.ReadFile(envFile); strings.TrimSpace(string(ns)) != "s-0001" {
+		t.Errorf("the docker client's FLAI_KLUSTER_NAMESPACE: %q", ns)
+	}
+}
+
+// ADR-0058, ADR-0274: a cancelled check of a container story stops its
+// container by name, beside ending the docker client's process group.
+func TestACancelledContainerCheckStopsItsContainerByName(t *testing.T) {
+	lab, _ := newContainerLab(t, true)
+	in := ChecksContainer(reopened(t, lab), lab.story, AgentConfig{}, imageDocker{has: true})
+	if in == nil || in.Err != nil {
+		t.Fatalf("the container story's checks have no container: %+v", in)
+	}
+	program, _, _ := fakeDockerClient(t, "exec sleep 30")
+	in.Host.Program = program
+	stops := &stopRecorder{}
+	in.Docker = stops
+	cfg := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "slow", Command: []string{"sleep", "60"}}}, Timeout: time.Minute}
+	dir := Dir(filepath.Join(t.TempDir(), "serve"))
+	done := make(chan ChecksRun, 1)
+	go func() {
+		run, err := dir.RunChecksIn(context.Background(), lab.story, lab.repo.Root, lab.worktree, cfg, nil, in, nowFixed)
+		if err != nil {
+			t.Error(err)
+		}
+		done <- run
+	}()
+	waitForRunning(t, dir, lab.story)
+	if err := dir.CancelChecks(lab.story, 10*time.Second, func(d time.Duration) { time.Sleep(d) }); err != nil {
+		t.Fatal(err)
+	}
+	if run := <-done; run.Outcome != "cancelled" {
+		t.Errorf("the run: %+v", run)
+	}
+	want := []string{program, "stop", "flai-check-" + lab.story + "-20260922T120000Z-1"}
+	if calls := stops.said(); len(calls) != 1 || !slices.Equal(calls[0], want) {
+		t.Errorf("the stops: %q, want %q", calls, want)
+	}
+}
+
+// ADR-0274 §5: a container story whose image is not on the host fails its
+// check with the fix, and runs nothing on the host.
+func TestAContainerStorysCheckWithNoImageFailsAndRunsNothingOnTheHost(t *testing.T) {
+	lab, _ := newContainerLab(t, false)
+	in := ChecksContainer(reopened(t, lab), lab.story, AgentConfig{}, imageDocker{has: false})
+	if in == nil || in.Err == nil {
+		t.Fatalf("a story with no image has a container: %+v", in)
+	}
+	marker := filepath.Join(lab.worktree, "ran-on-the-host")
+	cfg := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "unit", Command: []string{"sh", "-c", "touch " + marker}}}, Timeout: time.Minute}
+	dir := Dir(filepath.Join(t.TempDir(), "serve"))
+	run, err := dir.RunChecksIn(context.Background(), lab.story, lab.repo.Root, lab.worktree, cfg, nil, in, nowFixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Outcome != "failed" {
+		t.Errorf("the run: %+v", run)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("the check's program ran on the host")
+	}
+	if log, _ := os.ReadFile(run.Log); !strings.Contains(string(log), "make agent-images") {
+		t.Errorf("the log does not name the fix:\n%s", log)
+	}
+}
+
+// A story whose agent runs on a host harness has no container, so its checks
+// run on the host, in the worktree, as before.
+func TestAHostHarnessStorysChecksHaveNoContainer(t *testing.T) {
+	lab := newVerifyLab(t, false)
+	if in := ChecksContainer(lab.repo, lab.story, AgentConfig{}, imageDocker{has: true}); in != nil {
+		t.Errorf("a host-harness story's checks run in a container: %+v", in)
 	}
 }

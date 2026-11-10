@@ -666,7 +666,12 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 	}
 	p.journal("started", fmt.Sprintf("checks of %s against %s at %s", j.story, ns, short(j.head)))
 	p.o.Logger.Info("kluster checks started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
-	run, err := p.o.Dir.RunChecksWith(ctx, j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, p.o.Now)
+	agents := AgentConfig{}
+	if p.o.Agent != nil {
+		agents = p.o.Agent(p.e.Root)
+	}
+	in := ChecksContainer(repo, j.story, agents, dockerOf(p.o))
+	run, err := p.o.Dir.RunChecksIn(ctx, j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, in, p.o.Now)
 	if err != nil {
 		p.journal("failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(j.head), err))
 		p.o.Logger.Info("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
