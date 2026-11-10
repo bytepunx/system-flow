@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2069.0904
-accrued_seconds: 1535702
-tasks_completed: 2585
-last_run: 2026-11-10T01:00:21Z
+accrued_cost: 2069.5399
+accrued_seconds: 1535851
+tasks_completed: 2590
+last_run: 2026-11-10T05:15:39Z
 ---
 
 # Orchestrator activity
@@ -18127,6 +18127,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1276 USD, estimated
+
+### 2026-11-10T05:13:41Z
+
+- Summary: release-due S-0622: release_evaluate met under threshold (5 pending, 11412.5 USD/week >= 1000; count 5 >= 1). No new publish formula run: publish instance S-0646 is already in ready, unstarted, and publishes everything accepted and not yet released when worked, S-0622 included.
+- Items: S-0622, S-0646, S-0616, S-0623, S-0632, S-0644
+- Seconds: 47
+- Cost: 0.0614 USD, estimated
+
+### 2026-11-10T05:13:58Z
+
+- Summary: release-due S-0645 (accepted by alex): release_evaluate still met under threshold (6 pending, 11442.5 USD/week). No new publish formula run: unstarted publish instance S-0646 in ready covers the whole batch.
+- Items: S-0645, S-0646
+- Seconds: 17
+- Cost: 0.0389 USD, estimated
+
+### 2026-11-10T05:14:19Z
+
+- Summary: A release is due, and I started no new publish run because one is already queued. S-0646 ("Publish what is accepted and not yet released") is in ready and nobody has started it. When it runs, it publishes everything accepted and not yet released.
+- Items: none
+- Seconds: 21
+- Cost: 0.0836 USD, estimated
+
+### 2026-11-10T05:15:11Z
+
+- Summary: release-due S-0623, S-0632, S-0645: release_evaluate met under threshold (6 pending, 11442.5 USD/week >= 1000; count 6 >= 1). No new publish formula run: unstarted publish instance S-0646 in ready publishes the whole batch when worked. TH-0965 left alone: its only entry is flai's send-back notice for S-0634's agent, not a thread for the orchestrator.
+- Items: S-0623, S-0632, S-0645, S-0646, S-0634
+- Seconds: 36
+- Cost: 0.1040 USD, estimated
+
+### 2026-11-10T05:15:39Z
+
+- Summary: I started no new publish run, though a release is due. A publish story is already queued and covers the whole batch.
+- Items: none
+- Seconds: 28
+- Cost: 0.1616 USD, estimated
 
 ## Refusals
 

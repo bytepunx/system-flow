@@ -6,7 +6,7 @@ title: "Under the judgement release policy the publish permission publishes noth
 status: in-progress
 owner: alex
 created: 2026-11-07T23:40:15Z
-updated: 2026-11-10T05:12:17Z
+updated: 2026-11-10T05:19:09Z
 transitions:
   - to: ready
     at: 2026-11-09T22:04:44Z
@@ -16,16 +16,29 @@ transitions:
     by: agent-S-0625
 tags: [flai, template]
 topics: [release, orchestration, conventions]
-touches: [design/adrs/0272-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md, design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, flai/cmd/publish_judgement_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, flai/cmd/publish_judgement_test.go, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/CHANGELOG.md, design/issues/I-0291-under-the-judgement-release-policy-the-publish-permission-publishes-nothing.md, design/issues/summary.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 354
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      hand_edits: 1
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 461
+      cache_read: 7502282
+      cache_write: 280479
+      cost: 2.8585
   strategic:
     - kind: orchestrator
       seconds: 69

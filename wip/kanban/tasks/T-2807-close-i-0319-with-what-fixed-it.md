@@ -3,16 +3,37 @@ id: T-2807
 type: task
 nature: remediation
 title: Close I-0319 with what fixed it
-status: backlog
+status: done
 parent: S-0640
 owner: alex
 created: 2026-11-09T22:08:00Z
-updated: 2026-11-09T22:08:00Z
-transitions: []
+updated: 2026-11-10T05:19:56Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:19:45Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:19:46Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:19:56Z
+    by: agent-S-0640
 stream: S-0640
 tags: [flaiover, testing]
 touches: [design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md]
 after: [T-2805]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 448512
+      cache_write: 776
+      cost: 0.165
 ---
 # T-2807 Close I-0319 with what fixed it
 

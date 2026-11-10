@@ -3,15 +3,36 @@ id: T-2805
 type: task
 nature: remediation
 title: Post the props-panel test's 55-call burst without settling between calls, and measure the test before and after
-status: backlog
+status: done
 parent: S-0640
 owner: alex
 created: 2026-11-09T22:07:53Z
-updated: 2026-11-09T22:07:53Z
-transitions: []
+updated: 2026-11-10T05:16:08Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:14:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:14:02Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T05:16:08Z
+    by: agent-S-0640
 stream: S-0640
 tags: [flaiover, testing, flaky-test]
 touches: [flaiover/src/routes/design/components/components.svelte.test.ts]
+usage:
+  source: log
+  seconds: 126
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 140
+      cache_read: 1689379
+      cache_write: 4776
+      cost: 0.6223
 ---
 # T-2805 Post the props-panel test's 55-call burst without settling between calls, and measure the test before and after
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.30 - 2026-11-10
+
+- S-0616 TestRenderPrototypeTemplate refuses any double curly brace in a rendered project, so a baseline formula the template ships cannot use an input (patch).
 - S-0616 `design/workflows/formulas/README.md` shows an input placeholder as `{{name}}` again, in place of describing it in words (patch): the template's render test no longer takes a `{{` in a file copied byte for byte for template syntax left unrendered (I-0249).
 
 ## 1.1.29 - 2026-11-09

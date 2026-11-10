@@ -6,7 +6,7 @@ title: A flaiover props-panel test times out at 5,000 ms under load and fails th
 status: in-progress
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-10T05:12:17Z
+updated: 2026-11-10T05:20:26Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:01Z
@@ -23,9 +23,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 465
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 444
+      cache_read: 3909451
+      cache_write: 212034
+      cost: 1.5138
   strategic:
     - kind: orchestrator
       seconds: 66
@@ -68,8 +81,8 @@ finalized:
 This story remediates [I-0319](../../../design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md), "A flaiover props-panel test times out at 5,000 ms under load and fails the flaiover tier, serial or beside integration". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0319 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0319 is closed with `flai issue close I-0319 --reason` saying what fixed it
+- [x] The cause I-0319 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0319 is closed with `flai issue close I-0319 --reason` saying what fixed it
 
 ## Tasks
 - T-2805 Post the props-panel test's 55-call burst without settling between calls, and measure the test before and after
@@ -98,3 +111,7 @@ Forecast: `flai forecast` gave 5m from the median of 17 small remediation storie
 Cost of delay: `flai cod` gives 37.50 USD a week from the 15m time_lost_per_cycle flai set from I-0319, at 150 USD an hour, and it is written as it stands. I-0319 has had 2 instances and 11m of cost since those inputs were set, so the inputs may now be low; they are the operator's to change, not the planner's.
 
 No `after`: the story reads no other story's output.
+
+### Outcome
+
+Criterion 1: the timeout needs a host load of 50 or more, so no deterministic test reproduces it, and none is added. The evidence is the test's own duration. It took 2,174 to 2,447 ms before the fix and 672 to 682 ms after, at a load of 12 to 19 on 24 cores. The test now also checks that a 55-call burst lands whole, all 50 entries newest first.

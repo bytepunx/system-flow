@@ -3,12 +3,18 @@ id: T-2790
 type: task
 nature: improvement
 title: flai release --evaluate --judged meets the judgement policy with the orchestrator's reason
-status: backlog
+status: in-progress
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:01:59Z
-updated: 2026-11-09T22:02:20Z
-transitions: []
+updated: 2026-11-10T05:19:14Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:19:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:19:14Z
+    by: system-flow
 stream: S-0625
 tags: [flai, cli]
 touches: [flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, docs/users/flai-reference.md, docs/operators/settings.md]

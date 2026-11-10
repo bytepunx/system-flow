@@ -6,7 +6,7 @@ title: flai serve starts a story's agent for a ready story the board holds no-to
 status: in-progress
 owner: alex
 created: 2026-11-07T23:41:06Z
-updated: 2026-11-10T01:31:16Z
+updated: 2026-11-10T05:24:24Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:17Z
@@ -19,9 +19,10 @@ blocked:
     until: 2026-11-10T00:59:09Z
     reason: awaiting the operator on TH-0963
   - from: 2026-11-10T01:31:02Z
+    until: 2026-11-10T05:14:28Z
     reason: "waiting for S-0645's acceptance (I-0321, TH-0963 option 1, TH-0964): then flai stream sync S-0633 and close out again"
 tags: [flai, serve]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/workitem/itemlock.go, design/adrs/0272-a-checked-creation-holds-a-checked-write-lock-from-its-write-until-it-keeps-or.md, design/adrs/README.md, design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/hold_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, design/system/workflow.md, design/issues/I-0301-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, design/issues/summary.md, wip/kanban/stories/S-0633-flai-serve-starts-a-story-s-agent-for-a-ready-story-the-board-holds-no-touches.md, flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, flai/internal/workitem/itemlock.go, design/adrs/0272-a-checked-creation-holds-a-checked-write-lock-from-its-write-until-it-keeps-or.md, design/adrs/README.md, design/issues/I-0328-a-checked-edit-of-a-work-item-writes-checks-and-restores-it-with-no-lock-so-a.md, design/issues/I-0314-testaformularolestepsendistoldtotheinstancesagent-fails-on-its-timing-under.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/I-0324-testeachrequestistimedbeneaththetransport-reads-the-request-answered-event.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
