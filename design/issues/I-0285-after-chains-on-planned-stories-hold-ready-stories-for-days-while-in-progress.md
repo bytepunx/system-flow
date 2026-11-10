@@ -2,11 +2,11 @@
 id: I-0285
 title: after chains on planned stories hold ready stories for days while in-progress stays under two of five
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-10T08:34:51Z
+updated: 2026-11-10T10:30:53Z
 usage:
   strategic:
     - kind: analyzer
@@ -48,3 +48,4 @@ claims.weeks[].held_seconds.after: W44 704,200 s, W45 203,155 s; S-0425 held 326
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0673 remediates this issue, created from it at 2026-11-10T08:34:51Z.
+Closed 2026-11-10T10:30:53Z: Fixed by S-0673 (ADR-0279). flai serve's ready-empty now counts only the ready stories not held on after. A column of stories held on after therefore starts the orchestrator to promote stories that can start. A move of a story to ready warns when a story it names in after is not done. The instances' long holds were on chains planned before ADR-0230. Since 2026-11-03, the longest after hold is 6,259 s, so the planner's rule needs no change. Tests: TestReadyEmptyLeavesOutStoriesHeldOnAfter and TestReadyNotHeldOnAfterCounts in flai/internal/serve, and TestMoveToReadyWarnsOfAfterHold in flai/internal/workitem.
