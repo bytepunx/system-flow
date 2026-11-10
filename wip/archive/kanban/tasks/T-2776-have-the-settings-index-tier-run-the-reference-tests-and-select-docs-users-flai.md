@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 1035
-      cache_read: 1324206
-      cache_write: 15580
-      cost: 0.4102
+      input: 9
+      output: 1023
+      cache_read: 1316824
+      cache_write: 22963
+      cost: 0.4676
 ---
 # T-2776 Have the settings-index tier run the reference tests and select docs/users/flai-reference.md
 

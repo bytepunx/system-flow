@@ -3,10 +3,10 @@ id: S-0634
 type: story
 nature: improvement
 title: flai test on a change to the manifest's settings catalog does not run TestReferenceIsCurrent, so a stale flai-reference.md first fails in the close-out's integration tier
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:41:12Z
-updated: 2026-11-10T05:13:22Z
+updated: 2026-11-10T05:44:41Z
 transitions:
   - to: ready
     at: 2026-11-09T22:01:06Z
@@ -20,9 +20,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:13:22Z
     by: flai
+  - to: review
+    at: 2026-11-10T05:44:26Z
+    by: agent-S-0634
+  - to: done
+    at: 2026-11-10T05:44:41Z
+    by: alex
 tags: []
 topics: [testing, flai, docs]
-touches: [flai/cmd/reference_test.go, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
+touches: [flai/cmd/reference_test.go, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0308-flai-test-on-a-change-to-the-manifest-s-settings-catalog-does-not-run.md, design/issues/summary.md, design/issues/I-0321-testtcpanswersalistenerandnotaclosedone-fails-on-every-run-on-the-operator-s.md, design/issues/I-0309-flai-cmd-s-host-and-mcp-over-http-timing-tests-fail-under-a-host-load-of-about.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md, design/issues/I-0329-teststartdevserversayswhatavitethatdoesnotanswer200answered-and.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -30,20 +36,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2918
+  seconds: 4764
   priced_by: harness
   turns:
     - day: 2026-11-09
       ceremony: 2
       hand_edits: 1
       work: 90
+    - day: 2026-11-10
+      ceremony: 3
+      hand_edits: 1
+      work: 28
   models:
     - model: claude-opus-5-5
-      input: 192
-      output: 20176
-      cache_read: 25806607
-      cache_write: 303629
-      cost: 7.9946
+      input: 260
+      output: 28425
+      cache_read: 36602254
+      cache_write: 638273
+      cost: 12.9962
   strategic:
     - kind: planner
       seconds: 292

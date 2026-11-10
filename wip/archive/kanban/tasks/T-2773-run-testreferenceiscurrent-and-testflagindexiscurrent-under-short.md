@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 1334
-      cache_read: 1705869
-      cache_write: 20070
-      cost: 0.5285
+      input: 12
+      output: 1317
+      cache_read: 1696359
+      cache_write: 29581
+      cost: 0.6023
 ---
 # T-2773 Run TestReferenceIsCurrent and TestFlagIndexIsCurrent under -short
 

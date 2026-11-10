@@ -19,6 +19,18 @@ stream: S-0625
 tags: [flai, template, conventions]
 touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]
 after: [T-2788]
+usage:
+  source: log
+  seconds: 1477
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 271
+      cache_read: 4216588
+      cache_write: 302471
+      cost: 1.6607
 ---
 # T-2791 The orchestrator passes its judgement to the publish formula as the judgement input
 

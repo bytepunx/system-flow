@@ -3,11 +3,11 @@ id: T-2790
 type: task
 nature: improvement
 title: flai release --evaluate --judged meets the judgement policy with the orchestrator's reason
-status: in-progress
+status: done
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:01:59Z
-updated: 2026-11-10T05:19:14Z
+updated: 2026-11-10T05:44:00Z
 transitions:
   - to: ready
     at: 2026-11-10T05:19:13Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:19:14Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T05:44:00Z
+    by: agent-S-0625
 stream: S-0625
 tags: [flai, cli]
 touches: [flai/cmd/release.go, flai/internal/release/evaluate.go, flai/internal/release/evaluate_test.go, flai/cmd/release_evaluate_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-2788]
+usage:
+  source: log
+  seconds: 1479
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 210
+      cache_read: 4274938
+      cache_write: 605894
+      cost: 1.7937
 ---
 # T-2790 flai release --evaluate --judged meets the judgement policy with the orchestrator's reason
 

@@ -6,7 +6,7 @@ title: A flaiover props-panel test times out at 5,000 ms under load and fails th
 status: in-progress
 owner: alex
 created: 2026-11-09T16:55:57Z
-updated: 2026-11-10T05:20:26Z
+updated: 2026-11-10T05:38:07Z
 transitions:
   - to: ready
     at: 2026-11-09T22:20:01Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0640
 tags: [flaiover, testing, flaky-test]
 topics: [testing]
-touches: [flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md]
+touches: [flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0319-a-flaiover-props-panel-test-times-out-at-5-000-ms-under-load-and-fails-the.md, design/issues/summary.md, design/issues/I-0330-a-flaiover-design-page-test-takes-up-the-draft-another-tab-writes-times-out-at.md, design/issues/I-0323-flai-check-finds-item-duplicate-id-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 882
-      cache_read: 1128195
-      cache_write: 13274
-      cost: 0.3495
+      output: 871
+      cache_read: 1121905
+      cache_write: 19564
+      cost: 0.3983
 ---
 # T-2780 Describe the reference tests' tier in devex.md and tooling.md and close I-0308
 

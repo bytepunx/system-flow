@@ -23,7 +23,7 @@ tags: [flai, design]
 touches: [design/adrs/README.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/project-manifest.md, design/adrs/0273-under-judgement-the-orchestrator-s-judgement-reaches-the-publish-formula-as-an.md]
 usage:
   source: log
-  seconds: 198
+  seconds: 221
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 295
       cache_read: 4959999
       cache_write: 27922
-      cost: 1.832
+      cost: 1.833
 ---
 # T-2788 Record in an ADR how the orchestrator's judgement reaches the publish formula's evaluate step
 
