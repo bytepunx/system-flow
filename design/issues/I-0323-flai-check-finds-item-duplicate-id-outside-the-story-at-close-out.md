@@ -2,11 +2,11 @@
 id: I-0323
 title: "flai check finds `item.duplicate-id` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 28
 first_reported: 2026-11-09T21:55:10Z
 last_reported: 2026-11-10T08:23:34Z
-updated: 2026-11-10T08:23:34Z
+updated: 2026-11-10T08:39:05Z
 ---
 
 # I-0323 flai check finds `item.duplicate-id` outside the story at close-out
@@ -174,3 +174,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0648 remediates this issue, created from it at 2026-11-10T05:12:06Z.
+Closed 2026-11-10T08:39:05Z: S-0648 fixed it. Every instance was a stray open copy of T-2760. flai serve's usage measure (serve.Measure's put) read the task, then flai accept's Repo.Archive moved its file into wip/archive without the items lock, and the measure's Repo.Save found no file at the old path and wrote the whole task back there. Now Repo.Save refuses an active copy whose file was archived since it was read, with workitem.ErrItemMoved, and Archive moves under the items lock (ADR-0277). Measure reads the task again where it now is and writes the usage to the archived copy. The stray T-2760 copy is removed. The tests are TestSaveRefusesACopyWhoseFileWasArchivedSince, TestArchiveMovesUnderTheItemsLockSoASaveWaitingIsRefused, and TestMeasureWritesATaskArchivedSinceItWasReadWhereItNowIs.
