@@ -23,32 +23,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 58
+  seconds: 90
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
       ceremony: 1
       hand_edits: 1
-      work: 11
+      work: 14
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 172
-      cache_read: 1561205
-      cache_write: 146322
-      cost: 0.6281
+      input: 36
+      output: 243
+      cache_read: 2048807
+      cache_write: 149496
+      cost: 0.8087
   strategic:
     - kind: orchestrator
-      seconds: 10
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 4
-          cache_read: 76674
-          cache_write: 1019
-          cost: 0.021
+          input: 7
+          output: 31
+          cache_read: 219462
+          cache_write: 33426
+          cost: 0.0684
 formula: publish
 ---
 # S-0664 Publish what is accepted and not yet released

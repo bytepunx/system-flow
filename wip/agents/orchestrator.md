@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2080.9020
-accrued_seconds: 1539562
-tasks_completed: 2694
-last_run: 2026-11-10T08:33:59Z
+accrued_cost: 2081.1289
+accrued_seconds: 1539606
+tasks_completed: 2696
+last_run: 2026-11-10T08:34:56Z
 ---
 
 # Orchestrator activity
@@ -18890,6 +18890,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.1835 USD, estimated
+
+### 2026-11-10T08:34:27Z
+
+- Summary: Release due after S-0652 (threshold policy met: count 1 of 1, value 27.5 USD/week under 1000; nothing held by whole_epics). Did not run the publish formula again: instance S-0664, started at 08:33 for this same acceptance, is in progress and publishes everything accepted and not yet released.
+- Items: S-0652, S-0664
+- Seconds: 15
+- Cost: 0.0948 USD, estimated
+
+### 2026-11-10T08:34:56Z
+
+- Summary: I didn't start another publish run for S-0652, because one was already running. An earlier orchestrator run started the publish formula as S-0664 at 08:33, right after S-0652 was accepted. That run is now at its evaluate step (T-2891), and it publishes everything accepted and not yet released.
+- Items: none
+- Seconds: 29
+- Cost: 0.1321 USD, estimated
 
 ## Refusals
 

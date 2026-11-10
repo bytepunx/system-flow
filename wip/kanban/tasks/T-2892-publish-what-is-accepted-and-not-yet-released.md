@@ -3,12 +3,18 @@ id: T-2892
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0664
 owner: alex
 created: 2026-11-10T08:33:20Z
-updated: 2026-11-10T08:33:20Z
-transitions: []
+updated: 2026-11-10T08:35:11Z
+transitions:
+  - to: ready
+    at: 2026-11-10T08:35:11Z
+    by: agent-S-0664
+  - to: in-progress
+    at: 2026-11-10T08:35:11Z
+    by: agent-S-0664
 stream: S-0664
 tags: []
 after: [T-2891]
