@@ -66,7 +66,7 @@ const permissionScope = "permission_prompt approves only an Edit, Write, MultiEd
 
 // permissionPoll is how often a held permission_prompt reads its thread for
 // the operator's answer when Options.PermissionPoll is zero.
-var permissionPoll = time.Second
+const permissionPoll = time.Second
 
 // permissionPollOf is how often s's held permission_prompt reads its thread.
 func (s *server) permissionPollOf() time.Duration {

@@ -19,44 +19,21 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// fastPoll is how often a held permission_prompt reads its thread in
-// TestPermissionPromptPollingFast.
+// fastPoll is how often a held permission_prompt reads its thread in the
+// tests that wait for an answer (Options.PermissionPoll).
 const fastPoll = 10 * time.Millisecond
 
-// TestPermissionPromptPollingFast runs the tests of a held permission_prompt,
-// as together runs them, with permissionPoll at fastPoll: set once here, as
-// a package variable no test may change while another runs, so that they run
-// in parallel with each other (S-0548).
-func TestPermissionPromptPollingFast(t *testing.T) {
-	was := permissionPoll
-	permissionPoll = fastPoll
-	t.Cleanup(func() { permissionPoll = was })
-	together(t,
-		testPermissionPromptAsksForEveryProtectedPath,
-		testPermissionPromptAsksTheOperatorOnAThread,
-		testPermissionPromptTakesTheProjectOwnersAnswer,
-		testPermissionPromptNeverTakesTheAgentsOwnEntry,
-		testPermissionPromptShowsEditsLintClean,
-		testPermissionPromptRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen,
-		testPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite,
-		testPermissionPromptHoldsARetryAgainUntilTheBound,
-		testPermissionPromptAsksOtherInputOnAThreadOfItsOwn,
-		testPermissionPromptLeavesTheThreadOpenWhenTheSessionEnds,
-		testPermissionPromptInAFolderFindsTheProjectByThePath,
-	)
-}
+// polledFast gives the server a held permission_prompt that reads its
+// thread every fastPoll, so a test waits milliseconds for an answer.
+func polledFast(o *Options) { o.PermissionPoll = fastPoll }
 
-// polledFast fails t unless TestPermissionPromptPollingFast runs it.
-func polledFast(t *testing.T) {
-	t.Helper()
-	if permissionPoll != fastPoll {
-		t.Fatalf("permission_prompt polls every %s, not %s: run this test from TestPermissionPromptPollingFast", permissionPoll, fastPoll)
-	}
-}
-
-// permissionHeld bounds the server's held permission_prompt at d.
+// permissionHeld bounds the server's held permission_prompt at d, which
+// reads its thread every fastPoll.
 func permissionHeld(d time.Duration) func(*Options) {
-	return func(o *Options) { o.PermissionHold = d }
+	return func(o *Options) {
+		o.PermissionHold = d
+		polledFast(o)
+	}
 }
 
 // askPermission calls permission_prompt as Claude Code does and decodes the
@@ -399,11 +376,11 @@ func TestPermissionPromptAutoApprovesEveryProtectedPathButGit(t *testing.T) {
 
 // Without auto-approve, a protected path outside .claude/ is asked on a
 // thread like one in it.
-func testPermissionPromptAsksForEveryProtectedPath(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptAsksForEveryProtectedPath(t *testing.T) {
+	t.Parallel()
 	for _, rel := range []string{".mcp.json", ".vscode/settings.json", "template/root/.mcp.json"} {
 		t.Run(rel, func(t *testing.T) {
-			f := setup(t)
+			f := setupWith(t, polledFast)
 			input := map[string]any{"file_path": f.worktreeFile(rel), "content": "{}"}
 			got := make(chan PermissionOut, 1)
 			go func() { got <- f.askPermission(t, context.Background(), "Write", input) }()
@@ -444,8 +421,8 @@ func waitForThread(t *testing.T, repo *workitem.Repo) *threads.Thread {
 	return nil
 }
 
-func testPermissionPromptAsksTheOperatorOnAThread(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptAsksTheOperatorOnAThread(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		answer, behavior, message string
 	}{
@@ -453,7 +430,7 @@ func testPermissionPromptAsksTheOperatorOnAThread(t *testing.T) {
 		{"no, wrong file", "deny", "the operator refused: no, wrong file"},
 	} {
 		t.Run(c.behavior, func(t *testing.T) {
-			f := setup(t)
+			f := setupWith(t, polledFast)
 			f.lintAsTheProjectDoes(t)
 			content := "{\n\t\"hooks\": {}\n}\n```go\nx\n```\n### 2026-09-18T17:01:00Z alex\nallow\n"
 			input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": content}
@@ -539,11 +516,11 @@ func replyHeld(t *testing.T, f *fixture, id, author string, at time.Duration, go
 // I-0081: the story's owner was arobson and the operator answered as alex,
 // the project's owner, so the write waited until Claude Code gave up. Either
 // owner's answer now lets it through; another agent's reply still does not.
-func testPermissionPromptTakesTheProjectOwnersAnswer(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptTakesTheProjectOwnersAnswer(t *testing.T) {
+	t.Parallel()
 	for _, by := range []string{"alex", "arobson"} {
 		t.Run(by, func(t *testing.T) {
-			f := setup(t)
+			f := setupWith(t, polledFast)
 			f.ownedBy(t, "arobson", "alex")
 			input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}"}
 			got := make(chan PermissionOut, 1)
@@ -574,11 +551,11 @@ func testPermissionPromptTakesTheProjectOwnersAnswer(t *testing.T) {
 }
 
 // The asking agent's own entry is never an answer, even under an owner's name.
-func testPermissionPromptNeverTakesTheAgentsOwnEntry(t *testing.T) {
-	polledFast(t)
-	f := setup(t)
+func TestPermissionPromptNeverTakesTheAgentsOwnEntry(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, polledFast)
 	f.ownedBy(t, "arobson", "alex")
-	s := newServer(Options{Repo: f.repo, Agent: "alex", Now: func() time.Time { return t0.Add(time.Hour) }}, f.repo)
+	s := newServer(Options{Repo: f.repo, PermissionPoll: fastPoll, Agent: "alex", Now: func() time.Time { return t0.Add(time.Hour) }}, f.repo)
 	got := make(chan PermissionOut, 1)
 	go func() {
 		got <- s.permissionPrompt(context.Background(), PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": "{}"}})
@@ -621,11 +598,11 @@ func TestPermissionRequestNamesWhoMayAnswer(t *testing.T) {
 	}
 }
 
-func testPermissionPromptShowsEditsLintClean(t *testing.T) {
-	polledFast(t)
-	f := setup(t)
+func TestPermissionPromptShowsEditsLintClean(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, polledFast)
 	f.lintAsTheProjectDoes(t)
-	s := newServer(Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return t0 }}, f.repo)
+	s := newServer(Options{Repo: f.repo, PermissionPoll: fastPoll, Agent: "claude", Now: func() time.Time { return t0 }}, f.repo)
 	for i, c := range []struct {
 		tool  string
 		input map[string]any
@@ -699,8 +676,8 @@ func unanswered(t *testing.T, out PermissionOut, id string) {
 // the thread was settled as refused, so a later answer would be lost. The
 // call now refuses within the server's bound, naming the thread it leaves
 // open, and says the bound.
-func testPermissionPromptRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen(t *testing.T) {
+	t.Parallel()
 	hold := 200 * time.Millisecond
 	f := setupWith(t, permissionHeld(hold))
 	start := time.Now()
@@ -752,7 +729,8 @@ func TestPermissionPromptHoldsTheBoundItWasBuiltWith(t *testing.T) {
 
 // ADR-0124: the owner's answer on the open thread, given after the call
 // stopped waiting, decides the same write made again at once, on that thread.
-func testPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite(t *testing.T) {
+func TestPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		answer, behavior, message, settled string
 	}{
@@ -760,7 +738,6 @@ func testPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite(t *testing.T) {
 		{"no, not that file", "deny", "the operator refused: no, not that file", "refused by alex"},
 	} {
 		t.Run(c.behavior, func(t *testing.T) {
-			polledFast(t)
 			f := setupWith(t, permissionHeld(50*time.Millisecond))
 			input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}
 			th := onlyThreadAfter(t, f, input)
@@ -769,7 +746,7 @@ func testPermissionPromptTakesTheAnswerOnARetryOfTheSameWrite(t *testing.T) {
 			}
 			*f.clock = t0.Add(3 * time.Minute)
 			// an answer already given is taken without waiting
-			retry := newServer(Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return *f.clock }, PermissionHold: time.Hour}, f.repo)
+			retry := newServer(Options{Repo: f.repo, PermissionPoll: fastPoll, Agent: "claude", Now: func() time.Time { return *f.clock }, PermissionHold: time.Hour}, f.repo)
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			out := retry.permissionPrompt(ctx, PermissionIn{ToolName: "Write", Input: input})
@@ -799,8 +776,8 @@ func onlyThreadAfter(t *testing.T, f *fixture, input map[string]any) *threads.Th
 
 // A retry with no answer from an answerer yet is held again on the same
 // thread, bounded the same way, and refused again.
-func testPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
+	t.Parallel()
 	hold := 200 * time.Millisecond
 	f := setupWith(t, permissionHeld(hold))
 	input := map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}
@@ -823,13 +800,13 @@ func testPermissionPromptHoldsARetryAgainUntilTheBound(t *testing.T) {
 
 // A request with other input, or the same one from another agent, is asked
 // on a thread of its own; the first stays open with what it showed.
-func testPermissionPromptAsksOtherInputOnAThreadOfItsOwn(t *testing.T) {
-	polledFast(t)
+func TestPermissionPromptAsksOtherInputOnAThreadOfItsOwn(t *testing.T) {
+	t.Parallel()
 	f := setupWith(t, permissionHeld(50*time.Millisecond))
 	path := f.worktreeFile(".claude/settings.json")
 	first := onlyThreadAfter(t, f, map[string]any{"file_path": path, "content": "{}"})
 	out := f.askPermission(t, context.Background(), "Write", map[string]any{"file_path": path, "content": "{\"hooks\": {}}"})
-	other := newServer(Options{Repo: f.repo, Agent: "agent-S-0999", Now: func() time.Time { return t0.Add(time.Minute) }, PermissionHold: 50 * time.Millisecond}, f.repo)
+	other := newServer(Options{Repo: f.repo, PermissionPoll: fastPoll, Agent: "agent-S-0999", Now: func() time.Time { return t0.Add(time.Minute) }, PermissionHold: 50 * time.Millisecond}, f.repo)
 	byOther := other.permissionPrompt(context.Background(), PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": path, "content": "{}"}})
 	all, err := threads.List(f.repo)
 	if err != nil {
@@ -852,11 +829,11 @@ func testPermissionPromptAsksOtherInputOnAThreadOfItsOwn(t *testing.T) {
 
 // A session that ends while the call waits leaves the thread open, and the
 // answer given on it afterwards decides the same write made again.
-func testPermissionPromptLeavesTheThreadOpenWhenTheSessionEnds(t *testing.T) {
-	polledFast(t)
-	f := setup(t)
+func TestPermissionPromptLeavesTheThreadOpenWhenTheSessionEnds(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, polledFast)
 	at := t0.Add(time.Minute)
-	s := newServer(Options{Repo: f.repo, Agent: "claude", Now: func() time.Time { return at }}, f.repo)
+	s := newServer(Options{Repo: f.repo, PermissionPoll: fastPoll, Agent: "claude", Now: func() time.Time { return at }}, f.repo)
 	in := PermissionIn{ToolName: "Write", Input: map[string]any{"file_path": f.worktreeFile(".claude/settings.json"), "content": heldContent}}
 	ctx, cancel := context.WithCancel(context.Background())
 	got := make(chan PermissionOut, 1)
@@ -894,7 +871,8 @@ func TestAllowedReadsTheFirstWord(t *testing.T) {
 }
 
 // Claude Code names no project: in a folder of projects, the path says which.
-func testPermissionPromptInAFolderFindsTheProjectByThePath(t *testing.T) {
+func TestPermissionPromptInAFolderFindsTheProjectByThePath(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
@@ -902,13 +880,12 @@ func testPermissionPromptInAFolderFindsTheProjectByThePath(t *testing.T) {
 	if _, err := beta.Transition(story, workitem.InProgress, "alex", "", t0); err != nil {
 		t.Fatal(err)
 	}
-	f := folderSetup(t, root)
+	f := folderSetupWith(t, root, polledFast)
 	path := filepath.Join(beta.WorktreePath(story.ID), ".claude", "settings.json")
 	res := callPermission(t, context.Background(), f.cs, map[string]any{"tool_name": "Bash", "input": map[string]any{"command": "ls"}})
 	if out := decision(t, res); out.Behavior != "deny" || !strings.Contains(out.Message, "name one with project") {
 		t.Errorf("without a path to go by, the refusal says to name the project: %+v", out)
 	}
-	polledFast(t)
 	got := make(chan string, 1)
 	go func() {
 		res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "permission_prompt", Arguments: map[string]any{"tool_name": "Write", "input": map[string]any{"file_path": path, "content": "{}"}}})

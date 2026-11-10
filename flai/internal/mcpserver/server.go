@@ -141,6 +141,9 @@ type Options struct {
 	// Releases is where the tool versions reads the published releases; nil
 	// reads FLAI_RELEASES_API and the token from GITHUB_TOKEN, GH_TOKEN, or gh.
 	Releases *Releases
+	// CloseOutWait is how long the tool verify waits for flai serve to take
+	// and answer its request; zero is closeout's defaults.
+	CloseOutWait closeout.Wait
 	// Story is the story a story's agent's session works, as flai serve sets
 	// FLAI_STORY; "" outside one (S-0272).
 	Story string
@@ -176,12 +179,6 @@ func SessionFromEnv() SessionEnv {
 	}
 }
 
-// envSession, when set, gives newServer the session of an Options that
-// names none. Only the package's TestMain sets it, to SessionFromEnv, for
-// the tests that still set the session in the environment; nil, as flai
-// mcp leaves it, gives none (I-0234).
-var envSession func() SessionEnv
-
 // WithSession is opt with the session's fields set from e.
 func (opt Options) WithSession(e SessionEnv) Options {
 	opt.Story, opt.Role, opt.Session, opt.Reasons, opt.StartedBy = e.Story, e.Role, e.Session, e.Reasons, e.StartedBy
@@ -209,9 +206,6 @@ type server struct {
 	// the story a story's agent's session works, as Options.Story says it; ""
 	// outside one, and then wait_for_events never tells the agent to end (S-0272)
 	story string
-	// storyFromEnv reads the story from envSession at each call, as the
-	// package's tests that set FLAI_STORY after the server is made need
-	storyFromEnv bool
 	// the caller's session, as Options.Session says it, which task_done's log
 	// entry carries as flai task done's does
 	session string
@@ -251,12 +245,14 @@ type server struct {
 	permissionHold time.Duration
 	// budgets reads the host's budget state for the inbox (S-0534)
 	budgets BudgetRead
-	// permPoll, flaiExe, subprojectEnv, and releases are Options'
-	// PermissionPoll, FlaiExecutable, SubprojectEnv, and Releases
+	// permPoll, flaiExe, subprojectEnv, releases, and closeOutWait are
+	// Options' PermissionPoll, FlaiExecutable, SubprojectEnv, Releases, and
+	// CloseOutWait
 	permPoll      time.Duration
 	flaiExe       string
 	subprojectEnv []string
 	releases      *Releases
+	closeOutWait  closeout.Wait
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -265,11 +261,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	fromEnv := envSession != nil && opt.Story == "" && opt.Role == "" && opt.Session == "" && opt.Reasons == "" && opt.StartedBy == ""
-	if fromEnv {
-		opt = opt.WithSession(envSession())
-	}
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases, closeOutWait: opt.CloseOutWait}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -289,7 +281,6 @@ func newServer(opt Options, repo *workitem.Repo) *server {
 	s.served = servedSession(s.role, s.story, opt.StartedBy)
 	s.reasons = strings.TrimSpace(opt.Reasons) != ""
 	s.session = opt.Session
-	s.storyFromEnv = fromEnv
 	if s.now == nil {
 		s.now = time.Now
 	}

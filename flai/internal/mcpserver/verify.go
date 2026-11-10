@@ -45,10 +45,6 @@ type VerifyOut struct {
 
 func (in VerifyIn) project() string { return in.Project }
 
-// closeOutWait is how long verify waits for flai serve to take and answer
-// the request: closeout's defaults, ten seconds each; a test shortens it.
-var closeOutWait = closeout.Wait{}
-
 // verify asks flai serve for the close-out of the story the call names as a
 // job, as flai verify --job does, and answers its answer; it runs nothing in
 // this process. A refusal and a request flai serve did not take are errors.
@@ -57,7 +53,7 @@ func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn
 	if err != nil {
 		return nil, VerifyOut{}, err
 	}
-	ans, err := closeout.Ask(ctx, s.repo.CacheDir(), closeout.Request{Story: story, By: s.agent, Message: in.Message, All: in.All, Fresh: in.Fresh}, closeOutWait)
+	ans, err := closeout.Ask(ctx, s.repo.CacheDir(), closeout.Request{Story: story, By: s.agent, Message: in.Message, All: in.All, Fresh: in.Fresh}, s.closeOutWait)
 	if err != nil {
 		return nil, VerifyOut{}, err
 	}

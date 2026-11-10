@@ -193,12 +193,8 @@ func (s *server) recordingStory(given string) string {
 	if v := strings.TrimSpace(given); v != "" {
 		return v
 	}
-	story := s.story
-	if s.storyFromEnv {
-		story = envSession().Story
-	}
-	if story != "" {
-		return story
+	if s.story != "" {
+		return s.story
 	}
 	if m := agentStoryRe.FindStringSubmatch(strings.TrimSpace(s.agent)); m != nil {
 		return m[1]

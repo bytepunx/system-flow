@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 )
 
@@ -18,17 +17,18 @@ import (
 // is missing, with a components key and no tags.
 const subprojectManifest = "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  # the sub-projects\n  - name: cli\n    path: flai\n    kind: go\n    tags: [backend]\n    install:\n      command: [go, mod, download]\n      paths: [go.sum]\n  - name: web\n    path: flaiover\n    kind: sveltekit\n    components:\n      setup: src/app.css\n"
 
-// subprojectFixture is setup in a session flai serve started when served is
-// guard.StartedByServe, with subprojectManifest written after the server
-// opened the project and cli's folder made, so that the tools must read the
-// manifest as it is now.
-func subprojectFixture(t *testing.T, served string) *fixture {
+// subprojectFixture is setup in a session flai serve started, with its
+// options changed by with, and with subprojectManifest written after the
+// server opened the project and cli's folder made, so that the tools must
+// read the manifest as it is now.
+func subprojectFixture(t *testing.T, with ...func(*Options)) *fixture {
 	t.Helper()
-	if served != "" {
-		// TestMain cleared it, and the rest of sessionEnv, for the others
-		t.Setenv(guard.StartedByEnv, served)
-	}
-	f := setup(t)
+	f := setupWith(t, func(o *Options) {
+		o.StartedBy = guard.StartedByServe
+		for _, w := range with {
+			w(o)
+		}
+	})
 	if err := os.WriteFile(f.manifest(), []byte(subprojectManifest), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,8 @@ func listed(ps []Subproject) string {
 // none, folder for whether the path is a folder, and components and install
 // as the manifest has them, null when it leaves them out.
 func TestSubprojectsListsTheManifestsSubprojects(t *testing.T) {
-	f := subprojectFixture(t, guard.StartedByServe)
+	t.Parallel()
+	f := subprojectFixture(t)
 	out, failed := f.call(t, guard.Subprojects, map[string]any{})
 	if failed != "" {
 		t.Fatal(failed)
@@ -104,10 +105,11 @@ func webFolder(t *testing.T, root string) {
 	}
 }
 
-// builtFlai builds flai from this tree for subproject_edit to run, in place
-// of the test binary os.Executable names, and gives the run a flai
-// configuration of its own.
-func builtFlai(t *testing.T) {
+// builtFlai builds flai from this tree and gives the server it as the flai
+// subproject_edit runs, in place of the test binary os.Executable names,
+// with a flai configuration of its own and the session flai serve started,
+// which the child inherits from the server's process outside a test.
+func builtFlai(t *testing.T) func(*Options) {
 	t.Helper()
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go not installed, to build flai with")
@@ -119,11 +121,11 @@ func builtFlai(t *testing.T) {
 	if out, err := exec.Command("go", "build", "-o", exe, "github.com/bytepunx/system-flow/flai").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
-	was := flaiExecutable
-	flaiExecutable = func() (string, error) { return exe, nil }
-	t.Cleanup(func() { flaiExecutable = was })
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "config.json"))
-	gittest.Identity(t, "t", "t@t")
+	config := filepath.Join(t.TempDir(), "config.json")
+	return func(o *Options) {
+		o.FlaiExecutable = exe
+		o.SubprojectEnv = append(o.SubprojectEnv, "FLAI_CONFIG="+config, guard.StartedByEnv+"="+guard.StartedByServe)
+	}
 }
 
 // S-0491: subproject_edit runs flai subproject in the project's checkout,
@@ -133,8 +135,8 @@ func builtFlai(t *testing.T) {
 // other keys, and remove takes it out and leaves the folder, each committing
 // nothing; a refusal writes nothing, neither the manifest nor a folder.
 func TestSubprojectEditAddsSetsAndRemovesCommittingNothing(t *testing.T) {
-	builtFlai(t)
-	f := subprojectFixture(t, guard.StartedByServe)
+	t.Parallel()
+	f := subprojectFixture(t, builtFlai(t))
 	root := f.repo.Root
 	webFolder(t, root)
 	gitIn(t, root, "init", "-q", "-b", "main")
@@ -229,9 +231,11 @@ func TestSubprojectEditAddsSetsAndRemovesCommittingNothing(t *testing.T) {
 // worktree, where the story's branch carries the change for flai task done
 // to commit, and say the story; the main checkout's manifest is left alone.
 func TestSubprojectEditWorksInTheStorysWorktree(t *testing.T) {
-	builtFlai(t)
-	f := subprojectFixture(t, guard.StartedByServe)
-	t.Setenv("FLAI_STORY", f.story.ID)
+	t.Parallel()
+	f := subprojectFixture(t, builtFlai(t))
+	// the story's agent's session, which its flai subproject inherits
+	story := f.story.ID
+	f = f.as(t, asStory(story), func(o *Options) { o.SubprojectEnv = append(o.SubprojectEnv, "FLAI_STORY="+story) })
 	wt := f.repo.WorktreePath(f.story.ID)
 	webFolder(t, wt)
 	branch := strings.Replace(subprojectManifest, "  - name: web\n", "  - name: site\n", 1)

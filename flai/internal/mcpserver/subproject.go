@@ -43,16 +43,13 @@ const subprojectEditDescription = "Add, change, or remove a sub-project, an entr
 // subcommands.
 var subprojectOps = []string{string(manifest.ProjectAdd), string(manifest.ProjectSet), string(manifest.ProjectRemove)}
 
-// flaiExecutable is the flai that subproject_edit runs when
-// Options.FlaiExecutable is empty: the one running, whose code this server is.
-var flaiExecutable = os.Executable
-
-// subprojectFlai is the flai s's subproject_edit runs.
+// subprojectFlai is the flai s's subproject_edit runs: Options.FlaiExecutable,
+// else the one running, whose code this server is.
 func (s *server) subprojectFlai() (string, error) {
 	if s.flaiExe != "" {
 		return s.flaiExe, nil
 	}
-	return flaiExecutable()
+	return os.Executable()
 }
 
 // SubprojectsIn asks for the sub-projects.

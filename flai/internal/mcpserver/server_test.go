@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -34,7 +33,7 @@ import (
 var t0 = time.Date(2026, 9, 18, 17, 0, 0, 0, time.UTC)
 
 // sessionEnv are the variables flai serve sets in an agent's session, which
-// the server reads when it starts and its tools read when called.
+// flai mcp reads with SessionFromEnv and gives the server through Options.
 var sessionEnv = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_SESSION", harness.ReasonsEnv, guard.StartedByEnv}
 
 // TestMain clears sessionEnv, so that no test inherits the session of the
@@ -55,9 +54,6 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	// the tests that still set the session in the environment have their
-	// servers read it from there (I-0234)
-	envSession = SessionFromEnv
 	code := m.Run()
 	_ = os.RemoveAll(gitDir)
 	os.Exit(code)
@@ -86,23 +82,6 @@ func isolateGit() (string, error) {
 		}
 	}
 	return dir, os.Unsetenv("EMAIL")
-}
-
-// together runs tests as parallel subtests of t, a test that does not run
-// in parallel and has set what they all need of the process, an environment
-// variable or a package variable: a test that sets either cannot run in
-// parallel with the package's other tests, but tests that need the same can
-// run with each other (S-0548). Each subtest is named for its function,
-// testX running as X.
-func together(t *testing.T, tests ...func(*testing.T)) {
-	t.Helper()
-	for _, test := range tests {
-		name := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
-		t.Run(strings.TrimPrefix(name[strings.LastIndex(name, ".")+1:], "test"), func(t *testing.T) {
-			t.Parallel()
-			test(t)
-		})
-	}
 }
 
 type fixture struct {

@@ -13,10 +13,11 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// closeOutFixture is setup with the story's worktree there.
-func closeOutFixture(t *testing.T) *fixture {
+// closeOutFixture is setup, with the server's options changed by with when
+// it is not nil, and with the story's worktree there.
+func closeOutFixture(t *testing.T, with func(*Options)) *fixture {
 	t.Helper()
-	f := setup(t)
+	f := setupWith(t, with)
 	if err := os.MkdirAll(f.repo.WorktreePath(f.story.ID), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func takeCloseOut(t *testing.T, cacheDir, story string, answer func(closeout.Req
 // id at once, or the id of the story's job already running.
 func TestVerifyAsksFlaiServeForTheCloseOutJob(t *testing.T) {
 	t.Parallel()
-	f := closeOutFixture(t)
+	f := closeOutFixture(t, nil)
 	res, err := f.cs.ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +154,7 @@ func TestVerifyAsksFlaiServeForTheCloseOutJob(t *testing.T) {
 // commit and the time of its run, and no job.
 func TestVerifyAnswersTheVerdictTheRecordHolds(t *testing.T) {
 	t.Parallel()
-	f := closeOutFixture(t)
+	f := closeOutFixture(t, nil)
 	ranAt := time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC)
 	takeCloseOut(t, f.repo.CacheDir(), f.story.ID, func(r closeout.Request) closeout.Answer {
 		return closeout.Answer{Story: r.Story, Recorded: true, Verdict: closeout.VerdictPassed, Commit: "0123abc4567", RanAt: ranAt}
@@ -171,7 +172,7 @@ func TestVerifyAnswersTheVerdictTheRecordHolds(t *testing.T) {
 // A request flai serve refuses is an error with its reason.
 func TestVerifyFailsWithTheReasonFlaiServeRefused(t *testing.T) {
 	t.Parallel()
-	f := closeOutFixture(t)
+	f := closeOutFixture(t, nil)
 	takeCloseOut(t, f.repo.CacheDir(), f.story.ID, func(r closeout.Request) closeout.Answer {
 		return closeout.Answer{Story: r.Story, Reason: "flai serve could not start " + r.Story + "'s close-out: the disk is full"}
 	})
@@ -183,11 +184,9 @@ func TestVerifyFailsWithTheReasonFlaiServeRefused(t *testing.T) {
 // ADR-0229 §1: with no flai serve to take the request, it is withdrawn and
 // the call fails, saying to run the close-out yourself.
 func TestVerifySaysFlaiServeIsNotRunning(t *testing.T) {
-	// it shortens the package's wait, so it runs before the parallel tests
-	was := closeOutWait
-	closeOutWait = closeout.Wait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond}
-	t.Cleanup(func() { closeOutWait = was })
-	f := closeOutFixture(t)
+	t.Parallel()
+	wait := closeout.Wait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond}
+	f := closeOutFixture(t, func(o *Options) { o.CloseOutWait = wait })
 	_, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
 	if !strings.Contains(failed, "flai serve is not running") || !strings.Contains(failed, "run the close-out script") {
 		t.Errorf("no flai serve: %q", failed)
@@ -201,7 +200,8 @@ func TestVerifySaysFlaiServeIsNotRunning(t *testing.T) {
 // story with no worktree are refused, saying what to do, and nothing is
 // asked of flai serve.
 func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
-	f := closeOutFixture(t)
+	t.Parallel()
+	f := closeOutFixture(t, nil)
 	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "alex", Now: t0})
 	if err != nil {
 		t.Fatal(err)

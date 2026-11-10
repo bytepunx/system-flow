@@ -12,8 +12,9 @@ import (
 // releasesStandIn answers as GitHub's API does for bytepunx/system-flow:
 // flai releases out of order, with a draft, a prerelease, and another
 // component's release among them, and dashboard tags with one that is not a
-// plain version. auth records the Authorization header of each request.
-func releasesStandIn(t *testing.T) (auth func() []string) {
+// plain version. api is its address, which a test gives the server in
+// Options.Releases; auth records the Authorization header of each request.
+func releasesStandIn(t *testing.T) (api string, auth func() []string) {
 	t.Helper()
 	var mu sync.Mutex
 	var seen []string
@@ -38,8 +39,7 @@ func releasesStandIn(t *testing.T) (auth func() []string) {
 		}
 	}))
 	t.Cleanup(srv.Close)
-	t.Setenv("FLAI_RELEASES_API", srv.URL)
-	return func() []string {
+	return srv.URL, func() []string {
 		mu.Lock()
 		defer mu.Unlock()
 		return append([]string{}, seen...)
@@ -68,10 +68,12 @@ func versionsOf(t *testing.T, list any, marks ...string) []string {
 }
 
 func TestVersionsListsTheFlaiAndDashboardReleasesNewestFirstWithTheirMarks(t *testing.T) {
-	auth := releasesStandIn(t)
-	t.Setenv("GITHUB_TOKEN", "tok")
-	t.Setenv("GH_TOKEN", "")
-	f := setupWith(t, func(o *Options) { o.Version = "1.9.0" })
+	t.Parallel()
+	api, auth := releasesStandIn(t)
+	f := setupWith(t, func(o *Options) {
+		o.Version = "1.9.0"
+		o.Releases = &Releases{API: api, Token: "tok"}
+	})
 	f.repo.Manifest.Flai.Minimum = "1.9.0"
 
 	out, failed := f.call(t, "versions", map[string]any{})
@@ -100,14 +102,18 @@ func TestVersionsListsTheFlaiAndDashboardReleasesNewestFirstWithTheirMarks(t *te
 	}
 	for _, h := range auth() {
 		if h != "Bearer tok" {
-			t.Errorf("a request went without GITHUB_TOKEN: %q", h)
+			t.Errorf("a request went without the token it was given: %q", h)
 		}
 	}
 }
 
 func TestVersionsMarksNoFlaiBelowAMinimumTheProjectDoesNotSet(t *testing.T) {
-	releasesStandIn(t)
-	f := setupWith(t, func(o *Options) { o.Version = "dev" })
+	t.Parallel()
+	api, _ := releasesStandIn(t)
+	f := setupWith(t, func(o *Options) {
+		o.Version = "dev"
+		o.Releases = &Releases{API: api}
+	})
 	out, failed := f.call(t, "versions", map[string]any{})
 	if failed != "" {
 		t.Fatalf("versions failed: %s", failed)
@@ -138,10 +144,12 @@ func (ghRunner) Run(_, name string, args ...string) (string, error) {
 }
 
 func TestVersionsReadsWithTheGhSessionWithoutATokenInTheEnvironment(t *testing.T) {
-	auth := releasesStandIn(t)
-	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
-	f := setupWith(t, func(o *Options) { o.Runner = ghRunner{} })
+	t.Parallel()
+	api, auth := releasesStandIn(t)
+	f := setupWith(t, func(o *Options) {
+		o.Runner = ghRunner{}
+		o.Releases = &Releases{API: api}
+	})
 	if _, failed := f.call(t, "versions", map[string]any{}); failed != "" {
 		t.Fatalf("versions failed: %s", failed)
 	}
@@ -157,12 +165,10 @@ func TestVersionsReadsWithTheGhSessionWithoutATokenInTheEnvironment(t *testing.T
 }
 
 func TestVersionsSaysWhatItCouldNotList(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.NotFoundHandler())
 	t.Cleanup(srv.Close)
-	t.Setenv("FLAI_RELEASES_API", srv.URL)
-	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GH_TOKEN", "")
-	f := setup(t)
+	f := setupWith(t, func(o *Options) { o.Releases = &Releases{API: srv.URL} })
 	_, failed := f.call(t, "versions", map[string]any{})
 	for _, want := range []string{"list the flai/v releases of bytepunx/system-flow", "404", "set GITHUB_TOKEN or run gh auth login"} {
 		if !strings.Contains(failed, want) {

@@ -13,7 +13,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -82,16 +81,13 @@ func TestInboxSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
 // S-0181: in a folder, a project whose minimum flai is above this one is
 // left out, and the log says why once, not at every look.
 func TestAFolderLeavesOutAProjectThatNeedsANewerFlai(t *testing.T) {
-	// serial: it changes buildinfo.Version, which every manifest.Load reads
+	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	makeProject(t, filepath.Join(root, "beta"), "beta")
 	man := filepath.Join(root, "beta", "system-flow.yaml")
 	m, _ := os.ReadFile(man)
 	_ = os.WriteFile(man, append(m, []byte("flai:\n  minimum: 9.0.0\n")...), 0o644)
-	was := buildinfo.Version
-	t.Cleanup(func() { buildinfo.Version = was })
-	buildinfo.Version = "1.26.4"
 
 	var logs bytes.Buffer
 	srv := New(Options{Folder: root, Agent: "claude", Version: "1.26.4", Now: func() time.Time { return t0 }, Rescan: time.Nanosecond,
