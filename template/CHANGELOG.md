@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0671 `scripts/close-out.sh` takes `--fresh` and `--all` before the story, or `CLOSE_OUT_FRESH=1` and `CLOSE_OUT_ALL=1`, and passes them to `flai verify`, `--fresh` to the first round alone, so a second close-out at a commit the verify record passed runs every step again, and flai serve's close-out job asks for them by those variables (patch, I-0280).
+
 ## 1.1.32 - 2026-11-10
 
 - S-0643 A publish instance's evaluate and publish steps race a publish made meanwhile, so its last step finds nothing pending and closes on a release it did not make (patch).

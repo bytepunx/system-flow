@@ -7,8 +7,17 @@
 # host, and waits for its verified event rather than running this script in a
 # turn; the job runs this script in the story's worktree. Run it by hand only
 # where no flai serve runs: the operator, or a session without serve.
-# Usage: scripts/close-out.sh S-nnnn [git commit options: -m, or -F with a file
-# outside the worktree, which git add -A would otherwise commit]
+# Usage: scripts/close-out.sh [--fresh] [--all] S-nnnn [git commit options: -m,
+# or -F with a file outside the worktree, which git add -A would otherwise
+# commit]
+# --fresh, or CLOSE_OUT_FRESH=1, has the first round's flai verify run every
+# step whatever the verify record holds, so a second close-out, in another
+# place, checks a commit the record already passed; later rounds reuse what
+# this run passed. --all, or CLOSE_OUT_ALL=1, has every round's flai verify
+# run the tiers it would leave to the merge queue. Both go before the story,
+# since everything after it is git commit's and --all is a git commit option
+# too. flai serve's close-out job sets the two variables when the request
+# asks for fresh or all.
 # The cycle before it (git.md): close each task when it is done with
 # flai task done, which commits, syncs, and checks, resolve what a stopped
 # sync lists, run the task's tests, and close any fix the same way; then
@@ -28,7 +37,23 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-[ $# -ge 1 ] || { echo "usage: scripts/close-out.sh S-nnnn [git commit options]" >&2; exit 2; }
+usage="usage: scripts/close-out.sh [--fresh] [--all] S-nnnn [git commit options]"
+fresh=""
+all=""
+[ "${CLOSE_OUT_FRESH:-}" != 1 ] || fresh=1
+[ "${CLOSE_OUT_ALL:-}" != 1 ] || all=1
+# The tiers flai verify runs inherit this environment: they are not asked.
+unset CLOSE_OUT_FRESH CLOSE_OUT_ALL
+while [ $# -ge 1 ]; do
+  case "$1" in
+    --fresh) fresh=1 ;;
+    --all) all=1 ;;
+    -*) echo "close-out: unknown option $1 before the story" >&2; echo "$usage" >&2; exit 2 ;;
+    *) break ;;
+  esac
+  shift
+done
+[ $# -ge 1 ] || { echo "$usage" >&2; exit 2; }
 story="$1"
 shift
 
@@ -74,8 +99,10 @@ tmp="$(mktemp -d)"
 while :; do
   step="flai verify"
   hint="; flai verify's last line above names the step it stopped at, or why it could not run"
-  echo "close-out: $step $story --record-issues"
-  flai verify "$story" --record-issues
+  echo "close-out: $step $story --record-issues${fresh:+ --fresh}${all:+ --all}"
+  flai verify "$story" --record-issues ${fresh:+"--fresh"} ${all:+"--all"}
+  # Only the first round is fresh: a later one reuses what this run passed.
+  fresh=""
   hint=""
 
   step="commit"
