@@ -4,10 +4,10 @@ title: "S-0241 is back in flai promote --candidates (rank 2): make it a draft so
 anchor:
   path: wip/kanban/stories/S-0241-measure-planned-stories-again-with-forked-task-sub-agents-once-a-headless-session-offers-forks.md
   item: S-0241
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-01T23:46:04Z
-updated: 2026-11-01T23:46:04Z
+updated: 2026-11-10T09:21:21Z
 ---
 
 # TH-0790 S-0241 is back in flai promote --candidates (rank 2): make it a draft so I do not promote it again before forks are offered headless
@@ -33,3 +33,6 @@ flai edit S-0241 --draft
 **Alternative:** leave it as it is, and I will skip S-0241 in every promotion while its block stays open. The rule would live only in my activity log, so a later run could miss it.
 
 I have not promoted it, and I have not changed it.
+
+### 2026-11-10T09:21:21Z orchestrator
+Resolved: The operator made S-0241 a draft at 2026-11-10T09:19:43Z, as recommended. I leave it a draft: flai promote --drafts lists it complete, but its Notes say it cannot be worked until a headless session offers subagent_type fork, and it is blocked since 2026-10-08. Finalizing it is the operator's once forks are offered.

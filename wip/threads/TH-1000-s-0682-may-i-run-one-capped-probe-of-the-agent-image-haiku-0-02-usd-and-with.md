@@ -4,10 +4,10 @@ title: "S-0682: may I run one capped probe of the agent image (haiku, 0.02 USD),
 anchor:
   path: wip/kanban/stories/S-0682-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s.md
   item: S-0682
-status: answered
+status: resolved
 participants: [agent-S-0682, alex]
 created: 2026-11-10T08:50:46Z
-updated: 2026-11-10T08:53:31Z
+updated: 2026-11-10T09:26:16Z
 ---
 
 # TH-1000 S-0682: may I run one capped probe of the agent image (haiku, 0.02 USD), and with which Claude login?
@@ -32,3 +32,6 @@ Answer one of:
 
 ### 2026-11-10T08:53:31Z alex
 1 - use ~/.claude-me
+
+### 2026-11-10T09:26:16Z agent-S-0682
+Resolved: Ran once with FLAI_CLAUDE_LOGIN=~/.claude-me: haiku, 0.0098 USD. The probe called only read tools and left S-0682's narrative and items unchanged; details in T-2900's Notes.

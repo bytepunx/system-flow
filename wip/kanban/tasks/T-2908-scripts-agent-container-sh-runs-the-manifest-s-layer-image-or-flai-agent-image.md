@@ -3,12 +3,18 @@ id: T-2908
 type: task
 nature: remediation
 title: scripts/agent-container.sh runs the manifest's layer image, or FLAI_AGENT_IMAGE, and refuses an image not built
-status: backlog
+status: in-progress
 parent: S-0670
 owner: alex
 created: 2026-11-10T08:47:36Z
-updated: 2026-11-10T08:47:36Z
-transitions: []
+updated: 2026-11-10T09:28:32Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:28:31Z
+    by: agent-S-0670
+  - to: in-progress
+    at: 2026-11-10T09:28:32Z
+    by: agent-S-0670
 stream: S-0670
 tags: [scripts, docker]
 touches: [scripts/agent-image.sh, scripts/agent-container.sh]

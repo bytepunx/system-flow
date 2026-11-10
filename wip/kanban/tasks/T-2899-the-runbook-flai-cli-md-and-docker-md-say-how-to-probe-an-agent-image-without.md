@@ -3,11 +3,11 @@ id: T-2899
 type: task
 nature: improvement
 title: The runbook, flai-cli.md, and docker.md say how to probe an agent image without acting on its story
-status: in-progress
+status: done
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:46:24Z
-updated: 2026-11-10T09:08:43Z
+updated: 2026-11-10T09:11:51Z
 transitions:
   - to: ready
     at: 2026-11-10T09:08:42Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:08:43Z
     by: agent-S-0682
+  - to: done
+    at: 2026-11-10T09:11:51Z
+    by: agent-S-0682
 stream: S-0682
 tags: [docs, containers]
 touches: [docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md]
 after: [T-2897, T-2898]
+usage:
+  source: log
+  seconds: 167
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 263
+      cache_read: 1517606
+      cache_write: 58034
+      cost: 0.58
 ---
 # T-2899 The runbook, flai-cli.md, and docker.md say how to probe an agent image without acting on its story
 

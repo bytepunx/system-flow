@@ -24,15 +24,15 @@ touches: [design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-2901]
 usage:
   source: log
-  seconds: 4
+  seconds: 12
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 1
-      output: 11
-      cache_read: 158392
-      cache_write: 225
+      output: 246
+      cache_read: 155827
+      cache_write: 2789
       cost: 0.0584
 ---
 # T-2902 The design and the user guide say the read forms of flai serve are open to every agent

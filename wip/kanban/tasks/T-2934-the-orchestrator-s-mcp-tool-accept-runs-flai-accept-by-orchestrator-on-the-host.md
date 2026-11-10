@@ -3,11 +3,11 @@ id: T-2934
 type: task
 nature: remediation
 title: The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
-status: in-progress
+status: done
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:37Z
-updated: 2026-11-10T08:56:39Z
+updated: 2026-11-10T09:24:13Z
 transitions:
   - to: ready
     at: 2026-11-10T08:56:37Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:56:39Z
     by: agent-S-0687
+  - to: done
+    at: 2026-11-10T09:24:13Z
+    by: agent-S-0687
 stream: S-0687
 tags: [flai, mcp, guard]
-touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go]
+touches: [flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go, flai/internal/roles/conditions.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/mcp_http_test.go]
 after: [T-2932]
+usage:
+  source: log
+  seconds: 1646
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 135
+      output: 700
+      cache_read: 24061959
+      cache_write: 543073
+      cost: 9.0558
 ---
 # T-2934 The orchestrator's MCP tool accept runs flai accept --by orchestrator on the host, with a dry run that answers the blockers
 

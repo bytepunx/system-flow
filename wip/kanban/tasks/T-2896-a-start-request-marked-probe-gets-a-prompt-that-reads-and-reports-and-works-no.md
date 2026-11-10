@@ -32,7 +32,7 @@ usage:
       output: 292
       cache_read: 1913664
       cache_write: 62075
-      cost: 0.7271
+      cost: 0.7272
 ---
 # T-2896 A start request marked probe gets a prompt that reads and reports and works no story
 

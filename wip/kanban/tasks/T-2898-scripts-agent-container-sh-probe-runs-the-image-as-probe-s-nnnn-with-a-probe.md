@@ -24,16 +24,16 @@ touches: [scripts/agent-container.sh]
 after: [T-2896]
 usage:
   source: log
-  seconds: 485
+  seconds: 510
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 27
-      cache_read: 439656
-      cache_write: 5721
-      cost: 0.1639
+      input: 7
+      output: 59
+      cache_read: 1050412
+      cache_write: 15705
+      cost: 0.3924
 ---
 # T-2898 scripts/agent-container.sh --probe runs the image as probe-S-nnnn with a probe start request
 

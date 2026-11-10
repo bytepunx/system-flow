@@ -3,10 +3,10 @@ id: TH-0728
 title: The host's flai 1.74.0 is older than flai 1.75.0 in this project's history
 anchor:
   path: system-flow.yaml
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, alex]
 created: 2026-10-29T03:03:23Z
-updated: 2026-10-29T03:03:23Z
+updated: 2026-11-10T09:17:44Z
 ---
 
 # TH-0728 The host's flai 1.74.0 is older than flai 1.75.0 in this project's history
@@ -23,3 +23,6 @@ auto-upgrade is on for this project, and flai serve first asked flai host for fl
 Upgrade it in a shell on the host with: flai host upgrade --version 1.75.0.
 
 flai serve asks once for each release: a newer one asks again.
+
+### 2026-11-10T09:17:44Z alex
+Resolved.

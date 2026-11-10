@@ -3,14 +3,17 @@ id: S-0670
 type: story
 nature: remediation
 title: "scripts/agent-container.sh always runs flai-agent-claude-code:local and ignores the manifest's agent.image.layer, so a close-out run by hand in it has none of the project's test tools"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:46Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:26:51Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:32Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-10T09:26:51Z
+    by: agent-S-0670
 tags: [scripts, docker]
 topics: [docker, code]
 touches: [scripts/agent-image.sh, scripts/agent-container.sh, scripts/agent-container-test.sh, scripts/smoke.sh, scripts/README.md, docs/operators/runbooks/agent-container.md, design/issues/I-0279-scripts-agent-container-sh-always-runs-flai-agent-claude-code-local-and-ignores.md, design/issues/summary.md]

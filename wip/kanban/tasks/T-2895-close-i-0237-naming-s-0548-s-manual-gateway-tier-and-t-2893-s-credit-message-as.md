@@ -23,9 +23,17 @@ tags: [gateway, issues]
 touches: [design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md]
 after: [T-2893]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 479
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 1622
+      cache_read: 1932515
+      cache_write: 22667
+      cost: 0.6003
   strategic:
     - kind: orchestrator
       seconds: 5

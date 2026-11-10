@@ -3,10 +3,10 @@ id: TH-0500
 title: sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt
 anchor:
   path: flai/internal/serve/forgestatus.go
-status: open
+status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-17T17:34:03Z
-updated: 2026-11-07T09:28:14Z
+updated: 2026-11-10T09:16:37Z
 ---
 
 # TH-0500 sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt
@@ -41,3 +41,6 @@ flai issue new "sendBackReason puts a CI check name and reviewer login unquoted 
 Then add the body from my first entry: in `flai/internal/serve/forgestatus.go`, quote the check name and the reviewer login in a code span and strip control characters, as the thread body already does. Low risk, since a check name comes from the repository's CI configuration.
 
 I will resolve this thread once the issue exists.
+
+### 2026-11-10T09:16:37Z alex
+Resolved.

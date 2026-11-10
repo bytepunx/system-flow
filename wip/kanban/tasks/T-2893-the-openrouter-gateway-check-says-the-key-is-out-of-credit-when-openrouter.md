@@ -22,9 +22,17 @@ stream: S-0685
 tags: [gateway, tests]
 touches: [flai/internal/serve/gateway_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 763
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 2924
+      cache_read: 3483942
+      cache_write: 40864
+      cost: 1.0823
   strategic:
     - kind: orchestrator
       seconds: 6

@@ -6,7 +6,7 @@ title: A strategic agent's container runs flai with no host configuration, so th
 status: in-progress
 owner: alex
 created: 2026-11-10T08:37:14Z
-updated: 2026-11-10T08:55:00Z
+updated: 2026-11-10T09:24:02Z
 transitions:
   - to: ready
     at: 2026-11-10T08:49:53Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0687
 tags: [flai]
 topics: [orchestration, review]
-touches: [design/adrs/README.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go]
+touches: [design/adrs/README.md, flai/internal/mcpserver/accept.go, flai/internal/mcpserver/accept_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/guard_rules.go, flai/internal/guard/guard.go, flai/internal/guard/orchestrate_test.go, flai/cmd/accept.go, flai/cmd/verify.go, flai/cmd/accept_orchestrator_test.go, flai/cmd/verify_test.go, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0256-a-strategic-agent-s-container-runs-flai-with-no-host-configuration-so-the.md, design/issues/summary.md, design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md, flai/cmd/mcp_http.go, flai/cmd/mcp.go, flai/internal/mcpserver/server.go, flai/internal/guard/guard_refusals.go, flai/internal/guard/call.go, flai/internal/hostapi/writes_outcome.go, flai/internal/roles/conditions.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/cmd/mcp_http_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 298
+  seconds: 2038
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-10
-      ceremony: 2
-      hand_edits: 1
-      work: 16
+      ceremony: 3
+      hand_edits: 2
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 504
-      cache_read: 10589920
-      cache_write: 316706
-      cost: 4.0129
+      input: 278
+      output: 1446
+      cache_read: 42088616
+      cache_write: 1269073
+      cost: 15.9577
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m

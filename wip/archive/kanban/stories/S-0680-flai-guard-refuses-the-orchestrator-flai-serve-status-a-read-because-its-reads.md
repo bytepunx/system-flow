@@ -3,10 +3,10 @@ id: S-0680
 type: story
 nature: improvement
 title: flai guard refuses the orchestrator flai serve status, a read, because its reads do not list serve status
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:57Z
-updated: 2026-11-10T09:03:48Z
+updated: 2026-11-10T09:29:01Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:17Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:50:37Z
     by: agent-S-0680
+  - to: review
+    at: 2026-11-10T09:26:43Z
+    by: agent-S-0680
+  - to: done
+    at: 2026-11-10T09:29:01Z
+    by: orchestrator
 tags: [flai, guard]
 topics: [guard, orchestration]
-touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md]
+touches: [flai/internal/guard/guard_tables.go, flai/internal/guard/guard.go, flai/internal/guard/hostconfig.go, flai/internal/guard/guard_test.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 710
-  estimated: true
-  priced_by: estimate
+  seconds: 2178
+  priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 2
+      ceremony: 4
       hand_edits: 1
-      work: 29
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 371
-      cache_read: 7469844
-      cache_write: 302364
-      cost: 2.8599
+      input: 146
+      output: 31218
+      cache_read: 19790722
+      cache_write: 354156
+      cost: 7.4163
   strategic:
     - kind: orchestrator
       seconds: 139
@@ -110,3 +115,12 @@ Touches, each a file:
 Forecast: flai gave 22m from 107 s per unit of size times size 12. I raised it to 45m because T-2901's table test covers every read and write form of `flai serve` for two kinds of agent, and a close-out of a story touching `flai/` runs the integration and smoke tiers. Delivery moves by the same 23m, to 2026-11-10T12:19:00Z.
 
 Cost of delay: 5 USD a week, as `flai cod` worked it out from the operator's input of 2m lost per 168h cycle at 150 USD an hour. Kept as it stands.
+
+### Accepted by the orchestrator
+
+- Verified: a4747df59a33c379cc8b4b5b4e718110186c17da
+- At: 2026-11-10T09:29:01Z
+
+Verdict: pass at a4747df59a33c379cc8b4b5b4e718110186c17da
+- 1: flai/internal/guard/guard_tables.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/orchestrate_test.go, design/system/strategic-agents.md, docs/users/flai.md
+- 2: design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-status-a-read-because-its-reads.md, design/issues/summary.md

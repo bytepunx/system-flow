@@ -3,10 +3,10 @@ id: TH-0669
 title: Claude Code 2.1.311 through anthropic fails flai's permission_prompt check
 anchor:
   path: system-flow.yaml
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, alex]
 created: 2026-10-26T21:55:54Z
-updated: 2026-10-26T21:55:54Z
+updated: 2026-11-10T09:17:38Z
 ---
 
 # TH-0669 Claude Code 2.1.311 through anthropic fails flai's permission_prompt check
@@ -24,3 +24,6 @@ session ended (success, 1 turns, 0s): You've hit your weekly limit · resets Oct
 ```
 
 Until this is fixed, writes to the paths Claude Code protects (.claude/, .mcp.json, and the rest ADR-0106 lists) will not go through permission_prompt: an agent's write to one is refused. The agents still run, and a story that writes no protected path is not held up. flai does not check 2.1.311 through anthropic again; to check it again, remove the anthropic entry under 2.1.311 from /home/alex/.flai/serve/claude-checks.json.
+
+### 2026-11-10T09:17:38Z alex
+Resolved.

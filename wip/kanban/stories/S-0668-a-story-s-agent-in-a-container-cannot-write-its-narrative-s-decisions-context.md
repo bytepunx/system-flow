@@ -6,7 +6,7 @@ title: A story's agent in a container cannot write its narrative's Decisions, Co
 status: ready
 owner: alex
 created: 2026-11-10T08:34:42Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:29:05Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:33Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T08:50:21Z
 forecast:
   duration: 45m
-  delivery: 2026-11-10T10:31:00Z
-  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670 and S-0671."
+  delivery: 2026-11-10T10:30:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684 and S-0687."
   by: flai
-  at: 2026-11-10T08:58:42Z
+  at: 2026-11-10T09:29:05Z
 finalized:
   by: alex
   at: 2026-11-10T08:51:18Z

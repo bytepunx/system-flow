@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2086.5212
-accrued_seconds: 1540949
-tasks_completed: 2736
-last_run: 2026-11-10T09:10:15Z
+accrued_cost: 2086.7741
+accrued_seconds: 1541093
+tasks_completed: 2738
+last_run: 2026-11-10T09:22:47Z
 ---
 
 # Orchestrator activity
@@ -19184,6 +19184,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 37
 - Cost: 0.0939 USD, estimated
+
+### 2026-11-10T09:21:23Z
+
+- Summary: Left draft S-0241 unfinalized under finalize_drafts: flai promote --drafts lists it complete (position 5, 2h, throughput), but the operator made it a draft on TH-0790's recommendation and its Notes say it cannot be worked until a headless session offers forks (blocked since 2026-10-08); resolved my TH-0790, whose concern is met, and opened no new thread since TH-0790 already said what it waits for.
+- Items: S-0241
+- Seconds: 60
+- Cost: 0.1167 USD, estimated
+
+### 2026-11-10T09:22:47Z
+
+- Summary: I left S-0241 as a draft and did not finalize it.
+- Items: none
+- Seconds: 84
+- Cost: 0.1362 USD, estimated
 
 ## Refusals
 

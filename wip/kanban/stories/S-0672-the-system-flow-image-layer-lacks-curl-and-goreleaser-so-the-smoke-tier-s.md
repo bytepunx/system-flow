@@ -6,7 +6,7 @@ title: The system-flow image layer lacks curl and GoReleaser, so the smoke tier'
 status: ready
 owner: alex
 created: 2026-11-10T08:34:49Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:29:05Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:47Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T08:47:48Z
 forecast:
   duration: 1h
-  delivery: 2026-11-10T11:31:00Z
-  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669 and S-0673."
+  delivery: 2026-11-10T11:30:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0670, S-0671, S-0682, S-0684, S-0687, S-0668, S-0669 and S-0673."
   by: flai
-  at: 2026-11-10T08:58:42Z
+  at: 2026-11-10T09:29:05Z
 finalized:
   by: alex
   at: 2026-11-10T08:50:41Z

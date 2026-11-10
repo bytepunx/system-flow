@@ -3,10 +3,10 @@ id: S-0685
 type: story
 nature: remediation
 title: The smoke tier's OpenRouter gateway check fails on a 402 because the operator's OpenRouter key is out of credits, so every close-out and batch that runs smoke fails
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:37:11Z
-updated: 2026-11-10T09:10:21Z
+updated: 2026-11-10T09:28:20Z
 transitions:
   - to: ready
     at: 2026-11-10T08:47:51Z
@@ -14,17 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-10T08:48:20Z
     by: agent-S-0685
+  - to: review
+    at: 2026-11-10T09:28:20Z
+    by: agent-S-0685
 tags: [gateway, tests]
-touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md]
+touches: [flai/internal/serve/gateway_test.go, docs/operators/index.md, docs/contributors/index.md, design/issues/I-0237-the-smoke-tier-s-openrouter-gateway-check-fails-on-a-402-because-the-operator-s.md, design/issues/summary.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md, design/issues/I-0337-flai-check-finds-adr-index-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2412
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 3
+      hand_edits: 1
+      work: 90
+  models:
+    - model: claude-opus-5-5
+      input: 196
+      output: 23317
+      cache_read: 27779932
+      cache_write: 325841
+      cost: 8.6298
   strategic:
     - kind: orchestrator
       seconds: 85

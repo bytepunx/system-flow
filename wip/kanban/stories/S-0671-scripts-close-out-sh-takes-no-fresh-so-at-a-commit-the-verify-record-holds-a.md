@@ -3,14 +3,17 @@ id: S-0671
 type: story
 nature: improvement
 title: scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:48Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:28:30Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:54Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T09:28:30Z
+    by: agent-S-0671
 tags: [flai, template, close-out, verify, scripts]
 topics: [code, review]
 touches: [scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, template/CHANGELOG.md, flai/internal/serve/verifyjob.go, flai/internal/serve/verifyjob_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/devex.md, design/issues/I-0280-scripts-close-out-sh-takes-no-fresh-so-at-a-commit-the-verify-record-holds-a.md, design/issues/summary.md]

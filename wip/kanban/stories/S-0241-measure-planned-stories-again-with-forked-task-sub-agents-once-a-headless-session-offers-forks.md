@@ -6,7 +6,7 @@ title: Measure planned stories again with forked task sub-agents once a headless
 status: backlog
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:19:41Z
 transitions:
   - to: ready
     at: 2026-10-30T00:10:25Z
@@ -31,21 +31,22 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 8734
+      seconds: 8794
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 405
-          output: 4285
-          cache_read: 35110082
-          cache_write: 1003228
-          cost: 8.6501
+          input: 419
+          output: 4377
+          cache_read: 35493973
+          cache_write: 1048871
+          cost: 8.7668
         - model: claude-sonnet-5-5
           input: 11
           output: 62
           cache_read: 181266
           cache_write: 63470
           cost: 0.1722
+draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 25

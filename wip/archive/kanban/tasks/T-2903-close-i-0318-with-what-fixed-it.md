@@ -24,16 +24,16 @@ touches: [design/issues/I-0318-flai-guard-refuses-the-orchestrator-flai-serve-st
 after: [T-2901]
 usage:
   source: log
-  seconds: 3
+  seconds: 49
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 1
-      output: 11
-      cache_read: 158392
-      cache_write: 225
-      cost: 0.0584
+      input: 11
+      output: 2262
+      cache_read: 1434276
+      cache_write: 25666
+      cost: 0.5375
 ---
 # T-2903 Close I-0318 with what fixed it
 

@@ -3,12 +3,18 @@ id: T-2937
 type: task
 nature: remediation
 title: The orchestrator's role text and the strategic-agents convention, in every copy, accept through the MCP tool accept and verify through the MCP tool verify
-status: backlog
+status: in-progress
 parent: S-0687
 owner: alex
 created: 2026-11-10T08:49:53Z
-updated: 2026-11-10T08:49:53Z
-transitions: []
+updated: 2026-11-10T09:25:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T09:25:48Z
+    by: agent-S-0687
+  - to: in-progress
+    at: 2026-11-10T09:25:50Z
+    by: agent-S-0687
 stream: S-0687
 tags: [roles, conventions, template]
 touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]

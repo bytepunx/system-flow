@@ -23,9 +23,17 @@ tags: [gateway, docs]
 touches: [docs/operators/index.md, docs/contributors/index.md]
 after: [T-2893]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 443
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 851
+      cache_read: 1014384
+      cache_write: 11898
+      cost: 0.3151
   strategic:
     - kind: orchestrator
       seconds: 5

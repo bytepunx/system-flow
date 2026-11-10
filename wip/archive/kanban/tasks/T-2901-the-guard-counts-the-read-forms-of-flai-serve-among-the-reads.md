@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 541
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 142
-      cache_read: 3088711
-      cache_write: 19188
-      cost: 1.1436
+      input: 23
+      output: 4816
+      cache_read: 3053260
+      cache_write: 54638
+      cost: 1.1442
 ---
 # T-2901 The guard counts the read forms of flai serve among the reads
 

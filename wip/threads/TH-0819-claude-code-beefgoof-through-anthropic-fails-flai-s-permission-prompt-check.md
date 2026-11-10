@@ -3,10 +3,10 @@ id: TH-0819
 title: Claude Code BEEFGOOF through anthropic fails flai's permission_prompt check
 anchor:
   path: system-flow.yaml
-status: answered
+status: resolved
 participants: [flai serve, alex]
 created: 2026-11-03T01:17:25Z
-updated: 2026-11-07T08:59:18Z
+updated: 2026-11-10T09:23:44Z
 ---
 
 # TH-0819 Claude Code BEEFGOOF through anthropic fails flai's permission_prompt check
@@ -31,3 +31,6 @@ Until this is fixed, writes to the paths Claude Code protects (.claude/, .mcp.js
 
 ### 2026-11-07T08:59:18Z alex
 the entry was removed so we can test this again
+
+### 2026-11-10T09:23:44Z alex
+Resolved.

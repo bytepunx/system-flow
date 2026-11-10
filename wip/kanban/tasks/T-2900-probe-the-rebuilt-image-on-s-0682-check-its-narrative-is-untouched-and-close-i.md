@@ -3,11 +3,11 @@ id: T-2900
 type: task
 nature: remediation
 title: Probe the rebuilt image on S-0682, check its narrative is untouched, and close I-0224
-status: in-progress
+status: done
 parent: S-0682
 owner: alex
 created: 2026-11-10T08:46:31Z
-updated: 2026-11-10T09:08:44Z
+updated: 2026-11-10T09:25:44Z
 transitions:
   - to: ready
     at: 2026-11-10T09:08:43Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-10T09:08:44Z
     by: agent-S-0682
+  - to: done
+    at: 2026-11-10T09:25:44Z
+    by: agent-S-0682
 stream: S-0682
 tags: [containers, issues]
-touches: [design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md]
+touches: [design/issues/I-0224-scripts-agent-container-sh-can-run-only-a-story-s-own-agent-under-the-story-s-own-name-so-a-trial-run-of-the-image-acts-on-the-live-story.md, design/issues/summary.md, design/system/flai-cli.md, docs/operators/runbooks/agent-container.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-2897, T-2898]
+usage:
+  source: log
+  seconds: 166
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 60
+      cache_read: 809162
+      cache_write: 5175
+      cost: 0.2997
 ---
 # T-2900 Probe the rebuilt image on S-0682, check its narrative is untouched, and close I-0224
 
@@ -39,3 +54,8 @@ Waits for T-2897 and T-2898: the trial runs the probe pilot and the script now m
 - Both of S-0682's criteria are ticked.
 
 ## Notes
+
+- Images rebuilt from story/S-0682 with `make agent-images` at 2026-11-10T09:13Z. The first try failed on Docker Desktop's credential helper (I-0339); a scratch `DOCKER_CONFIG` with no credential store built them, leaving `~/.docker/config.json` as it was.
+- Free check, `FLAI_CLAUDE_LOGIN=~/.claude-me scripts/agent-container.sh --probe S-0682 -- env`, exit 0: `FLAI_AGENT=probe-S-0682`, a new `FLAI_SESSION`, and no `FLAI_STORY`.
+- Capped probe, on the operator's yes on TH-1000, started 2026-11-10T09:14:40Z: `FLAI_CLAUDE_LOGIN=~/.claude-me FLAI_AGENT_MODEL=haiku FLAI_AGENT_MAX_BUDGET_USD=0.02 scripts/agent-container.sh --probe S-0682`, exit 0, 0.0098 USD. It called `inbox` (as `probe-S-0682`), `board`, `item_get S-0704`, `doc_get design/conventions/README.md`, `doc_search`, and one Bash call for the three commands, and no writing tool. S-0682's narrative, story file, and five task files had the same sha256 after it as before, and `.flai-cache/events.jsonl` gained no line.
+- The probe reported `flai --version` failing with `unknown flag: --version`: the command is `flai version`. The prompt, its test, the runbook, and flai-cli.md now say `flai version`.
