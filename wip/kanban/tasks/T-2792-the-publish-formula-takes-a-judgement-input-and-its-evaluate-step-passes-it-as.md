@@ -3,12 +3,18 @@ id: T-2792
 type: task
 nature: improvement
 title: The publish formula takes a judgement input and its evaluate step passes it as --judged
-status: backlog
+status: in-progress
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:02:27Z
-updated: 2026-11-09T22:02:38Z
-transitions: []
+updated: 2026-11-10T05:45:00Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:45:00Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T05:45:00Z
+    by: system-flow
 stream: S-0625
 tags: [flai, template]
 touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, flai/cmd/publish_judgement_test.go]

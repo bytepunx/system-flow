@@ -3,14 +3,17 @@ id: S-0630
 type: story
 nature: improvement
 title: CI actions and base images are pinned by tag, three workflows have no permissions block, and flaiover tracks two lockfiles
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-07T23:40:47Z
-updated: 2026-11-09T23:22:43Z
+updated: 2026-11-10T05:45:07Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:06Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T05:45:07Z
+    by: agent-S-0630
 tags: [flaiover, template, ci, security]
 topics: [ci, security, release]
 touches: [".github/workflows/flai.yml", ".github/workflows/flaiover.yml", ".github/workflows/system-flow-check.yml", ".github/workflows/release-flai.yml", ".github/workflows/release-flaiover.yml", ".github/workflows/install-published.yml", ".github/dependabot.yml", template/root/.github/workflows/system-flow-check.yml, flaiover/Dockerfile, flai/images/bedrock/Dockerfile, flai/images/system-flow/Dockerfile, flaiover/compose.yaml, scripts/litellm.sh, flaiover/package-lock.json, package-lock.json, scripts/ci-pins.sh, scripts/smoke.sh, scripts/README.md, design/tech/ci.md, design/tech/docker.md, design/tech/node.md, design/tech/observability.md, design/system/release-signing.md, design/issues/I-0297-ci-actions-and-base-images-are-pinned-by-tag-three-workflows-have-no.md, design/issues/summary.md]

@@ -3,11 +3,11 @@ id: T-2791
 type: task
 nature: improvement
 title: The orchestrator passes its judgement to the publish formula as the judgement input
-status: in-progress
+status: done
 parent: S-0625
 owner: alex
 created: 2026-11-09T22:02:09Z
-updated: 2026-11-10T05:19:16Z
+updated: 2026-11-10T05:44:50Z
 transitions:
   - to: ready
     at: 2026-11-10T05:19:15Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-10T05:19:16Z
     by: system-flow
+  - to: done
+    at: 2026-11-10T05:44:50Z
+    by: agent-S-0625
 stream: S-0625
 tags: [flai, template, conventions]
 touches: [design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md]

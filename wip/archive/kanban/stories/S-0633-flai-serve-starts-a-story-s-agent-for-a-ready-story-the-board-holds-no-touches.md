@@ -3,10 +3,10 @@ id: S-0633
 type: story
 nature: improvement
 title: flai serve starts a story's agent for a ready story the board holds no-touches, and story_start then refuses it
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-07T23:41:06Z
-updated: 2026-11-10T05:24:24Z
+updated: 2026-11-10T05:45:17Z
 transitions:
   - to: ready
     at: 2026-11-09T22:05:17Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-09T22:12:26Z
     by: agent-S-0633
+  - to: review
+    at: 2026-11-10T05:44:58Z
+    by: agent-S-0633
+  - to: done
+    at: 2026-11-10T05:45:17Z
+    by: alex
 blocked:
   - from: 2026-11-10T00:58:13Z
     until: 2026-11-10T00:59:09Z
@@ -30,7 +36,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 11888
+  seconds: 13712
   priced_by: harness
   empty_wakes: 3
   turns:
@@ -40,17 +46,17 @@ usage:
       hand_edits: 3
       work: 101
     - day: 2026-11-10
-      ceremony: 1
+      ceremony: 6
       empty_wakes: 2
       hand_edits: 1
-      work: 19
+      work: 74
   models:
     - model: claude-opus-5-5
-      input: 372
-      output: 76406
-      cache_read: 57619980
-      cache_write: 2527042
-      cost: 26.9225
+      input: 498
+      output: 85949
+      cache_read: 61526187
+      cache_write: 2597735
+      cost: 28.4606
   strategic:
     - kind: orchestrator
       seconds: 154
