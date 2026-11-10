@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:11:30Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
@@ -24,22 +24,22 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 31
+      seconds: 36
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 3
-          output: 32
-          cache_read: 185138
-          cache_write: 4437
-          cost: 0.0512
+          output: 33
+          cache_read: 247687
+          cache_write: 4735
+          cost: 0.0682
 draft: true
 forecast:
   duration: 2h30m
-  delivery: 2026-11-10T19:48:00Z
+  delivery: 2026-11-10T19:47:00Z
   basis: "Its own forecast of 2h30m; 15th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660 and S-0661."
   by: flai
-  at: 2026-11-10T08:58:42Z
+  at: 2026-11-10T09:11:30Z
 ---
 # S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-10T08:58:42Z
+updated: 2026-11-10T09:11:30Z
 transitions: []
 tags: [dashboard]
 topics: [kluster, deployment]
@@ -24,22 +24,22 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 82
+      seconds: 87
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 20
-          output: 149
-          cache_read: 777072
-          cache_write: 71133
-          cost: 0.2294
+          output: 150
+          cache_read: 839621
+          cache_write: 71431
+          cost: 0.2464
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T18:38:00Z
+  delivery: 2026-11-10T18:37:00Z
   basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 5, behind S-0680, S-0682, S-0684, S-0685, S-0687, S-0670, S-0671, S-0668, S-0669, S-0673, S-0672, S-0665, S-0667, S-0674, S-0704, S-0241, S-0659, S-0660, S-0661 and S-0662."
   by: flai
-  at: 2026-11-10T08:58:42Z
+  at: 2026-11-10T09:11:30Z
 ---
 # S-0663 The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
 
