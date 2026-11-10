@@ -7,7 +7,7 @@ count: 3
 cost: 6m
 first_reported: 2026-11-07T04:07:16Z
 last_reported: 2026-11-08T02:50:04Z
-updated: 2026-11-08T02:50:04Z
+updated: 2026-11-10T08:54:28Z
 ---
 
 # I-0269 repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it
@@ -30,3 +30,5 @@ Story: S-0607.
 S-0607, T-2656: the flaiover-flai tier failed once on `flaiover/src/lib/server/repo.test.ts:94` ("Repo on the monorepo reads every item with a consistent status", STACK_TRACE_ERROR), on a host at load about 90 on 24 cores. The change, in `flai/internal/hostapi/reads.go`, does not touch what that test reads. The same tier passed in the next run and in the close-out.
 
 ## Remediation
+
+Story S-0695 remediates this issue, created from it at 2026-11-10T08:54:28Z.
