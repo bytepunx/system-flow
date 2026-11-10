@@ -2,12 +2,12 @@
 id: I-0234
 title: flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 1m
 first_reported: 2026-10-31T09:50:04Z
 last_reported: 2026-10-31T09:50:04Z
-updated: 2026-11-10T08:37:09Z
+updated: 2026-11-10T10:34:20Z
 ---
 
 # I-0234 flai/internal/mcpserver's tests still take 136 to 162 s under -race, since the server reads the session's story, role, session, reasons, and started-by from the environment and 95 tests must run serially or in env groups before the rest
@@ -24,3 +24,4 @@ S-0548 made the package's tests parallel: 9m14s to 136 s (load 40 to 57), 141 s 
 ## Remediation
 
 Story S-0684 remediates this issue, created from it at 2026-11-10T08:37:09Z.
+Closed 2026-11-10T10:34:20Z: S-0684 fixed it. The server takes the session (Options.Story, Role, Session, Reasons, StartedBy) through mcpserver.Options, which flai mcp fills with SessionFromEnv. It also takes its test overrides that way: PermissionPoll, FlaiExecutable, SubprojectEnv, Releases, CloseOutWait, and Version. So no test of flai/internal/mcpserver sets the process or runs serially; together and the serial parents are gone, and process_test.go fails on any test that sets the process or skips t.Parallel. Measured with go test -race -count=1 on a 24-core host at load 53 to 156, alternating with main under the same load: 317.7, 200.0, and 155.5 s against main's 354.0, 352.7, and 414.6 s, and 57.2 s against 177.6 s with -short (T-2915's Notes).
