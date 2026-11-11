@@ -18,6 +18,20 @@
 	function meanwhile(hold: BudgetHold): string {
 		return hold.probing ? HOLDS + PROBING : HOLDS;
 	}
+
+	// S-0720: the hold can be cleared by hand on the host. A provider key may hold a space
+	// (`claude-code meclod`), so it is single-quoted for the shell when it holds anything but the
+	// characters a shell word needs no quoting for.
+	function shellWord(word: string): string {
+		return /^[A-Za-z0-9_@%+=:,./-]+$/.test(word) ? word : `'${word.replaceAll("'", `'\\''`)}'`;
+	}
+
+	const CLEAR = 'To clear the hold by hand, run ';
+	const ON_HOST = ' on the host.';
+
+	function clearCommand(hold: BudgetHold): string {
+		return `flai serve budget clear ${shellWord(hold.provider)}`;
+	}
 </script>
 
 {#if held.length}
@@ -26,6 +40,7 @@
 			{#each held as hold (hold.provider)}
 				<p class="mt-1 first:mt-0" data-budget-provider={hold.provider}>
 					<span class="font-medium">{outOfBudget(hold)}</span>{meanwhile(hold)}
+					{CLEAR}<code>{clearCommand(hold)}</code>{ON_HOST}
 				</p>
 			{/each}
 		</div>
