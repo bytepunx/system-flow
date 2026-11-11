@@ -6,7 +6,7 @@ title: The new item form's lint refusal is easy to miss, so a refused epic looks
 status: ready
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-11T05:25:48Z
+updated: 2026-11-11T05:47:59Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:27Z
@@ -40,15 +40,15 @@ usage:
           cache_write: 343216
           cost: 4.2776
     - kind: orchestrator
-      seconds: 34
+      seconds: 38
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 10
-          cache_read: 352833
-          cache_write: 9960
-          cost: 0.0992
+          input: 5
+          output: 20
+          cache_read: 416086
+          cache_write: 23811
+          cost: 0.1206
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T10:27:56Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T07:44:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693, S-0721, S-0696 and S-0697."
+  delivery: 2026-11-11T07:43:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693, S-0696 and S-0697."
   by: flai
-  at: 2026-11-11T05:25:48Z
+  at: 2026-11-11T05:47:59Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:40Z

@@ -6,7 +6,7 @@ title: "The integration and smoke tiers' when names template/**, but their paths
 status: ready
 owner: alex
 created: 2026-11-10T08:54:31Z
-updated: 2026-11-11T05:25:48Z
+updated: 2026-11-11T05:47:59Z
 transitions:
   - to: ready
     at: 2026-11-11T02:30:59Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 6
+      seconds: 11
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 2
-          cache_read: 102139
-          cache_write: 491
-          cost: 0.0281
+          input: 3
+          output: 12
+          cache_read: 165392
+          cache_write: 14342
+          cost: 0.0495
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:19Z
 forecast:
   duration: 30m
-  delivery: 2026-11-11T06:56:00Z
-  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693 and S-0721."
+  delivery: 2026-11-11T06:43:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691 and S-0693."
   by: flai
-  at: 2026-11-11T05:25:48Z
+  at: 2026-11-11T05:47:59Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:45Z
