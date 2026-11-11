@@ -6,18 +6,43 @@ title: A story's prime pack came in 22 parts, most of each part the same topic s
 status: ready
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T09:01:05Z
+updated: 2026-11-11T09:18:38Z
 transitions:
   - to: ready
     at: 2026-11-11T08:59:53Z
     by: alex
 tags: [flai, cli, go]
-touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
+touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 24
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 24
+          output: 3661
+          cache_read: 1151724
+          cache_write: 37652
+          cost: 0.5206
+    - kind: orchestrator
+      seconds: 54
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 100
+          cache_read: 432396
+          cache_write: 13158
+          cost: 0.1244
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -28,10 +53,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T13:20:00Z
-  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716 and S-0689."
+  delivery: 2026-11-11T13:36:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0694, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716 and S-0689."
   by: flai
-  at: 2026-11-11T09:01:05Z
+  at: 2026-11-11T09:18:38Z
 finalized:
   by: alex
   at: 2026-11-11T08:59:51Z
@@ -49,6 +74,7 @@ This story remediates [I-0261](../../../design/issues/I-0261-a-story-s-prime-pac
 ## Tasks
 - T-2992 A story's topic carries one claim source per item and sub-project, with the count of the paths that reach it
 - T-2996 Measure S-0425's and S-0586's packs again, record the parts in agent-context.md, and close I-0261
+- T-3111 A brief's JSON carries the count of its other reasons in place of the also list
 
 ## Notes
 
@@ -63,19 +89,31 @@ The planner (planner-S-0699) measured `flai prime --story --json` on main on 202
 | S-0425 | 840 KB | 12 KB, 136 sources | 106 KB | 362 KB | 342 KB, 288 briefs | 167 KB, 155 briefs | 134 KB |
 | S-0586 | 552 KB | 13 KB, 130 sources | 106 KB | 74 KB | 342 KB, 295 briefs | 164 KB, 160 briefs | 132 KB |
 
-Later parts do not repeat the topic sources: since T-0987, every part after the first carries an empty `topics` list (`flai/internal/context/parts.go`, `open`). The sources cost part 1 alone. The packs are large because every brief loads on a pack over its budget (TH-0032, ADR-0241), because each brief's JSON lists all of its other reasons, and because a topic holds one source per claimed path. The proposal and its two questions are on TH-1023. T-2992 needs no answer. The briefs tasks wait for it.
+Later parts do not repeat the topic sources: since T-0987, every part after the first carries an empty `topics` list (`flai/internal/context/parts.go`, `open`). The sources cost part 1 alone. The packs are large because every brief loads on a pack over its budget (TH-0032, ADR-0241), because each brief's JSON lists all of its other reasons, and because a topic holds one source per claimed path.
+
+The operator settled TH-1023 on 2026-11-11 by confirming the orchestrator's recommendation:
+
+- Q1, link-step ADR briefs to the catalog: no. Every brief still loads, ADR-0241 stands, and the story writes no ADR.
+- Q2, a count of a brief's other reasons in place of `also`: yes. T-3111 builds it. A loaded item keeps its list.
+
+Tasks and layers:
+
+1. T-2992 (topic sources folded per item and sub-project) and T-3111 (a brief's `also` as a count). They share no file and run together.
+2. T-2996 measures both packs again, records them, and closes I-0261. It waits for T-2992 and T-3111, since it measures what they saved, and T-3111 also edits `design/system/agent-context.md`.
 
 Touches:
 
 - `flai/internal/topics/story.go`, `flai/internal/topics/story_test.go`: layout. `topics.OfStory` writes the sources, and T-2992 folds them.
-- `flai/internal/context/context_test.go`, `flai/internal/mcpserver/prime_test.go`: layout and co-change. Each is where a pack-size bound can be tested.
-- `design/system/agent-context.md`: design. Its `### Delivered in parts` section records the parts, and T-2996 measures there.
+- `flai/internal/context/context_test.go`, `flai/internal/mcpserver/prime_test.go`: layout and co-change. Each is where T-2992's pack-size bound can be tested.
+- `flai/internal/context/items.go`, `flai/internal/context/context.go`, `flai/internal/context/design_test.go`: layout. `Selection.Items` sets a brief's `Also`, `Item.briefReason` counts it for the text pack, and `TestPrintedBriefsNameTheirFirstReasonAndCountTheRest` covers it. T-3111 changes them.
+- `design/system/agent-context.md`: design. Its `## Fitting the pack to a budget` says "the JSON keeps every reason", which T-3111 changes, and its `### Delivered in parts` records the parts, which T-2996 measures.
+- `design/system/flai-cli.md`, `docs/users/flai.md`: co-change, from `flai touches suggest`. The first lists the pack's JSON `items` fields, `also` among them; the second says how a brief counts its later reasons. T-3111 updates both.
 - `design/issues/I-0261-…md`, `design/issues/summary.md`: declared by the second criterion, which closes the issue.
-- `flai touches suggest` also lists `docs/users/flai.md`, `design/system/flai-cli.md`, `flai/cmd/prime.go`, `flai/internal/mcpserver/folder.go`, and `docs/users/flai-reference.md`. They describe "briefs are never cut" and the `also` reasons. They join the touches only with the briefs tasks, if TH-1023 keeps them.
+- `flai touches suggest` also lists `flai/cmd/prime.go`, `flai/internal/mcpserver/folder.go`, and `docs/users/flai-reference.md`. None names the `also` field or "briefs are never cut" in a way Q2 changes, and with Q1 no nothing else does, so they stay out.
 
 Figures:
 
-- Forecast: `flai forecast` gave 17m, which is 107 s per unit of size over 30 done improvement stories, times size 9. I raised it to 1h30m. The story has three to four Go tasks, possibly an ADR, and a regenerated reference. Its close-out runs the integration and smoke tiers, as every story that touches `flai/` does, and those tiers alone took S-0672 8m and S-0669 20m today. The delivery is flai's 16:56 plus that difference.
+- Forecast: `flai forecast` gave 17m, which is 107 s per unit of size over 35 done improvement stories, times size 9. I keep it raised to 1h30m. The story has two Go tasks and a measuring task. Its close-out runs the integration and smoke tiers, as every story that touches `flai/` does, and those tiers alone took S-0672 8m and S-0669 20m. The delivery, 13:20, is where flai places 1h30m in the pull order.
 - Cost of delay: 45 USD a week, as `flai cod` worked it out from flai's input of 18m lost per 168h cycle at 150 USD an hour. It stands. The input is the operator's, and it counts only the two recorded instances.
 
 The story names no `after`: it reads nothing another open story writes.

@@ -6,7 +6,7 @@ title: A trial merge that finds two open stories editing different sentences of 
 status: ready
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T09:01:05Z
+updated: 2026-11-11T09:18:38Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-11T08:54:09Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T11:29:00Z
-  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706 and S-0710."
+  delivery: 2026-11-11T11:25:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0694, S-0702, S-0706 and S-0710."
   by: flai
-  at: 2026-11-11T09:01:05Z
+  at: 2026-11-11T09:18:38Z
 finalized:
   by: alex
   at: 2026-11-11T08:50:48Z
