@@ -6,7 +6,7 @@ title: This repository's board.get takes 300 ms or more in half its calls with 1
 status: ready
 owner: alex
 created: 2026-11-10T08:54:37Z
-updated: 2026-11-11T05:20:51Z
+updated: 2026-11-11T05:25:48Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:19Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:42Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T08:35:00Z
-  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0694, S-0681, S-0718, S-0696 and S-0697."
+  delivery: 2026-11-11T08:04:00Z
+  basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693, S-0721, S-0696, S-0697 and S-0700."
   by: flai
-  at: 2026-11-11T05:20:51Z
+  at: 2026-11-11T05:25:48Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:47Z

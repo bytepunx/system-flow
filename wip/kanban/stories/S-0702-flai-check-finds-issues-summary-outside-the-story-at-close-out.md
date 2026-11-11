@@ -6,7 +6,7 @@ title: "flai check finds `issues.summary` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T05:24:55Z
+updated: 2026-11-11T05:25:48Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:36Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-10T11:07:46Z
 forecast:
   duration: 60m
-  delivery: 2026-11-11T09:42:00Z
-  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693, S-0721, S-0694, S-0681, S-0718, S-0696, S-0697, S-0698 and S-0700."
+  delivery: 2026-11-11T08:57:00Z
+  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0693, S-0721, S-0696, S-0697, S-0700 and S-0698."
   by: flai
-  at: 2026-11-11T05:24:55Z
+  at: 2026-11-11T05:25:48Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:11Z
