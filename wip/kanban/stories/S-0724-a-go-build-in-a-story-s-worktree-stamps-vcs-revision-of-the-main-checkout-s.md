@@ -3,11 +3,14 @@ id: S-0724
 type: story
 nature: remediation
 title: A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-11T08:46:42Z
-updated: 2026-11-11T08:56:25Z
-transitions: []
+updated: 2026-11-11T08:58:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:57:35Z
+    by: alex
 tags: [go, build, worktree]
 touches: [scripts/flai-build.sh, scripts/flai-build-stamp-test.sh, scripts/smoke.sh, scripts/README.md, design/system/release-signing.md, docs/users/flai.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md, design/issues/summary.md]
 agent:
@@ -40,10 +43,10 @@ cost_of_delay:
   at: 2026-11-11T08:55:22Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T23:34:00Z
-  basis: "Its own forecast of 1h; 29th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0716, S-0706, S-0719, S-0689, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0699, S-0701, S-0703, S-0707, S-0709, S-0710, S-0711, S-0712, S-0714, S-0715, S-0717, S-0720 and S-0723."
+  delivery: 2026-11-11T11:28:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706 and S-0719."
   by: flai
-  at: 2026-11-11T08:56:25Z
+  at: 2026-11-11T08:58:19Z
 finalized:
   by: alex
   at: 2026-11-11T08:50:05Z

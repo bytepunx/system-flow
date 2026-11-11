@@ -6,7 +6,7 @@ title: flai stream sync run in a story's agent container cannot rebase, since th
 status: ready
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T08:56:25Z
+updated: 2026-11-11T08:58:19Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
@@ -19,6 +19,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 22
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 1358
+          cache_read: 323499
+          cache_write: 8355
+          cost: 0.1553
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -29,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:16Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T13:03:00Z
-  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0716, S-0706 and S-0719."
+  delivery: 2026-11-11T12:47:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0719, S-0724 and S-0716."
   by: flai
-  at: 2026-11-11T08:56:25Z
+  at: 2026-11-11T08:58:19Z
 finalized:
   by: alex
   at: 2026-11-11T08:53:19Z
@@ -65,7 +80,7 @@ Proposed solution, from I-0272's two instances. ADR-0246 says `flai stream sync`
 - The container harness's start prompt names those tools in place of the shell's sync (T-3027).
 - Wherever a sync runs, a rebase that stops with no conflict says git's error with no false abort promise, and a trial merge that cannot run is reported as not run, never as clean (T-3030).
 
-No MCP tool syncs alone; adding one is left out of this story. No `stream_sync` MCP tool exists, yet `RequireMain`'s error and four documents name one. The replan of 2026-11-11 gives dropping it from the error to T-3026 and from the documents to T-3033.
+No MCP tool syncs alone; adding one is left out of this story. No `stream_sync` MCP tool exists, yet `RequireMain`'s error and three documents name one. The replan of 2026-11-11 gives dropping it from the error to T-3026 and from the documents to T-3033.
 
 Touches, all files, no folder:
 

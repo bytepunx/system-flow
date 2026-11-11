@@ -6,7 +6,7 @@ title: A story worktree's flaiover/node_modules installed inside the Alpine agen
 status: ready
 owner: alex
 created: 2026-11-10T09:11:37Z
-updated: 2026-11-11T08:56:25Z
+updated: 2026-11-11T08:58:19Z
 transitions:
   - to: ready
     at: 2026-11-11T08:51:57Z
@@ -23,6 +23,16 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 52
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 37
+          output: 5665
+          cache_read: 1691229
+          cache_write: 39748
+          cost: 0.7334
     - kind: orchestrator
       seconds: 6
       estimated: true
@@ -43,10 +53,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:25Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T11:29:00Z
-  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718 and S-0716."
+  delivery: 2026-11-11T10:23:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 3, behind S-0694, S-0698 and S-0702."
   by: flai
-  at: 2026-11-11T08:56:25Z
+  at: 2026-11-11T08:58:19Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:46Z
