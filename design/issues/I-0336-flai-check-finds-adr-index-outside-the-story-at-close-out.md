@@ -2,11 +2,11 @@
 id: I-0336
 title: "flai check finds `adr.index` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 2
 first_reported: 2026-11-10T09:08:17Z
 last_reported: 2026-11-10T09:11:58Z
-updated: 2026-11-10T09:56:02Z
+updated: 2026-11-11T14:17:32Z
 ---
 
 # I-0336 flai check finds `adr.index` outside the story at close-out
@@ -29,3 +29,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0710 remediates this issue, created from it at 2026-11-10T09:56:02Z.
+Closed 2026-11-11T14:17:32Z: S-0710: flai adr new, accept, and topics with --autocommit now commit the index HEAD's ADR files render with the ones the commit records in their place (adr.stageCommittedIndex), so an ADR file left uncommitted in the main checkout no longer puts a row in the committed index that its committed files do not render; TestAcceptCommitsTheIndexHEADsFilesRender reproduces the cause.
