@@ -2,12 +2,12 @@
 id: I-0348
 title: A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-11T07:50:38Z
 last_reported: 2026-11-11T07:50:38Z
-updated: 2026-11-11T08:46:42Z
+updated: 2026-11-11T14:42:00Z
 ---
 
 # I-0348 A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
@@ -24,3 +24,4 @@ Found by S-0686 while finding I-0255's cause. Go's VCS stamping looks up from th
 ## Remediation
 
 Story S-0724 remediates this issue, created from it at 2026-11-11T08:46:42Z.
+Closed 2026-11-11T14:42:00Z: S-0724: scripts/flai-build.sh builds bin/flai with -buildvcs=false and links buildinfo.Commit and Date by -ldflags -X from git run in the built tree, which resolves a worktree's .git file, so a story worktree's bin/flai names the story branch's commit. scripts/flai-build-stamp-test.sh reproduces the cause in a scratch main checkout with a nested story worktree and runs in the smoke tier (T-3093, T-3100).
