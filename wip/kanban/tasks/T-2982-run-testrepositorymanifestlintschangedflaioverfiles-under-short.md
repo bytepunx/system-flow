@@ -3,12 +3,18 @@ id: T-2982
 type: task
 nature: remediation
 title: Run TestRepositoryManifestLintsChangedFlaioverFiles under -short
-status: backlog
+status: in-progress
 parent: S-0693
 owner: alex
 created: 2026-11-10T10:29:27Z
-updated: 2026-11-10T10:29:27Z
-transitions: []
+updated: 2026-11-11T02:29:29Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:29:28Z
+    by: agent-S-0693
+  - to: in-progress
+    at: 2026-11-11T02:29:29Z
+    by: agent-S-0693
 stream: S-0693
 tags: [flai, tests]
 touches: [flai/internal/verify/select_test.go]

@@ -3,10 +3,10 @@ id: S-0695
 type: story
 nature: remediation
 title: repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:54:28Z
-updated: 2026-11-11T01:58:10Z
+updated: 2026-11-11T02:29:29Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:52Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T01:58:10Z
     by: agent-S-0695
+  - to: done
+    at: 2026-11-11T02:29:29Z
+    by: alex
 tags: [flaiover, testing]
 topics: [testing]
 touches: [flaiover/src/lib/server/repo.test.ts, design/issues/I-0269-repo-test-ts-s-whole-monorepo-read-times-out-at-vitest-s-5s-default-under-load.md, design/issues/summary.md]
