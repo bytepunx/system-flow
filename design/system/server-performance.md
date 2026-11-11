@@ -789,7 +789,7 @@ The other 12 projects answered under 300 ms in every call of both after runs, ag
 
 This repository did not answer under 300 ms in every call. Its after calls took 169 to 404 ms, and 5 of 10 took 300 ms or more: 373, 318, 304, 350, and 404 ms. S-0602 and S-0606 took out what S-0604 left to them. `repo.list` fell from 103 to 32 ms at the median, and `release.pending` from 41 to 20 ms. The thread read no longer shows in `merge.queue`.
 
-What is left is the merge queue's git, which runs only while stories are in review (`mergequeue.ComputeAt`, `flai/internal/mergequeue/eligible.go`):
+What is left is the merge queue's git, which runs only while stories are in review (`mergequeue.ComputeAt`, `flai/internal/mergequeue/eligible.go`). S-0698 reads it once a call, one `git for-each-ref` beside the `git status`: [The merge queue's git read once (S-0698)](#the-merge-queues-git-read-once-s-0698). Here it was:
 
 - `mainDirt` runs `git status --porcelain` on the main checkout: 52 to 148 ms a call after.
 - `git rev-parse` ran five times a call, one after another, for the heads `verified` and `mainDirt` read: 21 to 81 ms together.
@@ -797,6 +797,78 @@ What is left is the merge queue's git, which runs only while stories are in revi
 With five stories in review, `merge.queue` took 91 to 241 ms of each call, most of it that git. Its median did not fall: the thread read it lost was a smaller share than the git, whose time swings with the host's load. The rest of a call, `repo.list`, `board.view`, `repo.open`, `release.pending`, and the wait for a core, took 63 to 194 ms. The load average was 96 to 123 on 24 cores throughout, so every figure here is inflated, as in the earlier sections.
 
 The program wrote nothing of its own. No file under this repository's `.flai-cache` changed while it ran, worktrees aside.
+
+### The merge queue's git read once (S-0698)
+
+This section remedies [I-0333](../issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md), the merge queue's git that [S-0636](#13-boards-at-once-measured-again-after-s-0602-and-s-0606-s-0636) left in this repository's `board.get`.
+
+#### Cause
+
+While stories are in review, `mergequeue.ComputeAt` (`flai/internal/mergequeue/eligible.go`) ran git on every `board.get`. `verified` ran one `git rev-parse --verify --quiet story/S-nnnn^{commit}` for each story in review, one after another. `mainDirt` ran `git status --porcelain` on the main checkout on every call. When the main checkout had uncommitted files outside the shared set, it also read the main branch and its head, two more `git rev-parse`. `filling` read the main branch's head again, two more, when stories were enqueued and eligible. So the git a call ran grew with the stories in review, and each process waited for the one before.
+
+#### Fix
+
+- `ComputeAt` reads each story's last flai verify result first. That needs no git.
+- Only when one of them passed does it run git. It reads every local branch's head and the branch checked out with one `git for-each-ref` (`storygit.ReadHeads`, `flai/internal/storygit/storygit.go`). At the same time, on another goroutine, it runs the one `git status`.
+- `verified`, `mainDirt`, and `filling` take the heads from that read. None of them runs a `git rev-parse` of its own.
+- With no story in review whose verify passed, the merge queue runs no git. A story whose verify did not pass is not eligible, and its own head is not needed to say so.
+
+#### Measured on this repository
+
+- On 2026-11-11 between 08:45:19 and 08:45:59 UTC on the operator's host (WSL2, 24 cores, Go 1.26.0), as S-0636 measured.
+- Two trees were copied to `/tmp` and built there, each a copy of the tracked files under `flai/`. Before is `main` at 13bd47ab6, the story's base. After is `story/S-0698` at 02c2d8f0f, with T-3000 and T-3003.
+- S-0636's program, built against each tree, called `board.get` through `hostapi.MethodsFor` with a request timer, for the 13 projects in `~/.flai/serve/projects.json`. Each build ran per project what flai serve runs at both commits: the file watcher with its slow tier, its first snapshot taken first (S-0690), telling the item store of each change, with the item snapshot on; and the watcher over `mainRefs`, with `release.Watch`, `release.RefsMoved` on each change, and the word a tick after its first look.
+- The git processes of a call are the counts of its `exec.git.*` phases, which the timed runner records per call. Each copy's `execx.System` also counted every process it started. In each sequential call the two counts agreed.
+- Each run made a warm-up call and one sequential call per project, then five rounds of 13 calls released together: 65 calls. The builds ran in turn, before, after, before, after: 130 calls a build.
+- The one-minute load average was 6.2 at the start and 6.5 at the end, 5.3 to 7.5 throughout, on 24 cores. S-0636 measured at 96 to 123.
+- This repository had 5 stories in review throughout: S-0686, S-0691, S-0696, S-0697, and S-0700. Its main checkout had no uncommitted file outside the shared set, so `mainDirt` read no head in either build, and `filling` read none either.
+
+| 13 at once, a call | Before | After |
+|--------------------|--------|-------|
+| All 13 projects, p50 | 2.8 ms | 2.7 ms |
+| All 13 projects, p90 | 45 ms | 26 ms |
+| All 13 projects, max | 215 ms | 187 ms |
+| The other 12, p50 (max) | 2.6 ms (50) | 2.4 ms (30) |
+| This repository, p50 (range) | 192 ms (165 to 215) | 166 ms (150 to 187) |
+| This repository, sequential | 182 and 200 ms | 159 and 151 ms |
+| Calls under 300 ms | 130 of 130 | 130 of 130 |
+| This repository's calls under 300 ms | 10 of 10 | 10 of 10 |
+
+| Git processes a call | Before | After |
+|----------------------|--------|-------|
+| This repository, `git rev-parse` | 6 | 1 |
+| This repository, `git status` | 1 | 1 |
+| This repository, `git for-each-ref` | 0 | 1 |
+| This repository, `git diff`, in `undone.read` | 20 | 20 |
+| `auth`, `gno`, and `marketeer`, `git rev-parse` | 2, 1, and 5 | 0 |
+| `auth`, `gno`, and `marketeer`, `git for-each-ref` | 0 | 1 each |
+| All 130 calls, `git rev-parse` | 140 | 10 |
+| All 130 calls, `git status` | 40 | 40 |
+| All 130 calls, `git for-each-ref` | 0 | 40 |
+| Calls that ran `git rev-parse` | 40 of 130 | 10 of 130 |
+
+Four projects had stories in review: this repository, `auth`, `gno`, and `marketeer`. In this repository the merge queue ran 6 processes a call before, five `git rev-parse` and the `git status`, and 2 after. The one `git rev-parse` left is not the merge queue's: it is `undone.read`'s read of the main branch's name.
+
+| Phase, 13 at once, p50 (max) | Before | After |
+|------------------------------|--------|-------|
+| `merge.queue`, all | 0.1 ms (54) | 0.1 ms (39) |
+| `merge.queue`, the 4 projects with stories in review | 26.9 ms (54) | 17.2 ms (39) |
+| `merge.queue`, this repository | 49.7 ms (54.0) | 34.4 ms (38.6) |
+| `git status`, this repository | 24.9 ms (27.0) | 23.5 ms (27.2) |
+| `git rev-parse`, summed, this repository | 15.1 ms (16.0) | 2.2 ms (2.7) |
+| `git for-each-ref`, this repository | none | 3.4 ms (3.9) |
+| `undone.read`, this repository | 118 ms (131) | 107 ms (126) |
+| The rest of the call, this repository | 21.2 ms (34.1) | 21.4 ms (24.8) |
+
+The rest of the call is the call less `merge.queue` and `undone.read`: `repo.open`, `repo.list`, `board.view`, and `release.pending`.
+
+The merge queue's git no longer grows with the stories in review. In this repository `merge.queue` fell from 50 to 34 ms at the median, and the whole call from 192 to 166 ms. Most of what `merge.queue` still takes is the one `git status`, 21 to 27 ms. The `git for-each-ref` runs beside it.
+
+The host was quiet. I-0333's calls of 300 ms or more were at a load near 100, and at a load of 6 neither build had one. So these runs show the git a call runs and what it costs, not the condition I-0333 names. Three more pairs ran from 08:47:44 to 08:48:46 UTC at loads of 6.4 to 10.9. Stories left review meanwhile, so those in review fell from 4 to 1, and main moved. Before ran one `git rev-parse` for each story in review, and after one `git for-each-ref` whatever their number. In each build one of this repository's 15 calls at once took 300 ms or more, 391 ms before and 328 ms after. `undone.read` was the largest part of both, 214 and 118 ms.
+
+What is left is `undone.read`, now the largest part of this repository's call. S-0693, in progress, has an undone record of 20 paths. On every `board.get`, `boardUndone` (`flai/internal/hostapi/hostapi.go`) runs `storygit.RecordedUndone` for it: one `git rev-parse --abbrev-ref HEAD` and one `git diff` for each recorded path, one after another. That is 100 to 131 ms of each call here, more than half of it. The merge queue's `git status`, 21 to 27 ms, runs once a call while a story in review has a passing verify.
+
+The program wrote nothing of its own. The files under this repository's `.flai-cache` that changed, worktrees aside, changed after it ended.
 
 ### Cause 15 fixed: settings.get finds each project's import folder from its path (S-0605)
 
