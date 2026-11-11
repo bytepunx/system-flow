@@ -22,12 +22,18 @@ const (
 	FromAll   = "all"   // every story has all
 )
 
-// Source is one reason a story has a topic.
+// Source is one reason a story has a topic. A claim is one source per item
+// and sub-project however many of the item's touches entries reach it
+// (I-0261): Via is the first of them that Paths counts, or the first of them
+// when Paths counts none, and Paths is how many of them no earlier item of
+// the claim reached, so that a sub-project's Paths add up to the distinct
+// entries that reach it.
 type Source struct {
 	Kind    string `json:"kind"`              // own, epic, tag, claim, code, all
 	Item    string `json:"item,omitempty"`    // the story, epic, or task that says it
 	Project string `json:"project,omitempty"` // the sub-project reached, for tag, claim, and code
 	Via     string `json:"via,omitempty"`     // the tag or the touches entry that reached it
+	Paths   int    `json:"paths,omitempty"`   // for claim, the entries it counts
 }
 
 // String is the source in a few words: "tag cli reaches flai".
@@ -40,6 +46,9 @@ func (s Source) String() string {
 	case FromTag:
 		return fmt.Sprintf("tag %s reaches %s", s.Via, s.Project)
 	case FromClaim:
+		if s.Paths > 1 {
+			return fmt.Sprintf("%s touches %d paths, in %s", s.Item, s.Paths, s.Project)
+		}
 		return fmt.Sprintf("%s touches %s, in %s", s.Item, s.Via, s.Project)
 	case FromCode:
 		return s.Project + " is code"
@@ -106,11 +115,7 @@ func OfStory(story, epic *workitem.Item, tasks []*workitem.Item, projects []mani
 				reached = append(reached, Source{Kind: FromTag, Item: story.ID, Project: p.Name, Via: tag})
 			}
 		}
-		for _, c := range claim {
-			if names(p, c.entry) || workitem.PathsOverlap(c.entry, cleanPath(p.Path)) {
-				reached = append(reached, Source{Kind: FromClaim, Item: c.item, Project: p.Name, Via: c.entry})
-			}
-		}
+		reached = append(reached, claimsOn(p, claim)...)
 		if len(reached) == 0 {
 			continue
 		}
@@ -127,6 +132,35 @@ func OfStory(story, epic *workitem.Item, tasks []*workitem.Item, projects []mani
 		add(Code, s)
 	}
 	add(All, Source{Kind: FromAll})
+	return out
+}
+
+// claimsOn is the claim sources of sub-project p: one per item whose touches
+// entries reach it, in the claim's order, each counting the entries no
+// earlier item reached.
+func claimsOn(p manifest.Project, claim []touch) []Source {
+	var out []Source
+	at := map[string]int{}
+	counted := map[string]bool{}
+	for _, c := range claim {
+		if !names(p, c.entry) && !workitem.PathsOverlap(c.entry, cleanPath(p.Path)) {
+			continue
+		}
+		i, ok := at[c.item]
+		if !ok {
+			i = len(out)
+			at[c.item] = i
+			out = append(out, Source{Kind: FromClaim, Item: c.item, Project: p.Name, Via: c.entry})
+		}
+		if counted[c.entry] {
+			continue
+		}
+		counted[c.entry] = true
+		if out[i].Paths == 0 {
+			out[i].Via = c.entry
+		}
+		out[i].Paths++
+	}
 	return out
 }
 
@@ -189,17 +223,17 @@ func ForStory(repo *workitem.Repo, id string) ([]StoryTopic, error) {
 // flai by tag cli and 3 touches (S-0135, T-0496)". --json keeps every source.
 func (t StoryTopic) Summary() string {
 	type reach struct {
-		tags      []string
-		touches   []string
-		items     []string
-		seenTouch map[string]bool
-		seenItem  map[string]bool
+		tags     []string
+		touches  int    // the distinct entries, which the claims' Paths add up to
+		touch    string // the entry when there is one
+		items    []string
+		seenItem map[string]bool
 	}
 	var parts, order []string
 	by := map[string]*reach{}
 	get := func(p string) *reach {
 		if by[p] == nil {
-			by[p] = &reach{seenTouch: map[string]bool{}, seenItem: map[string]bool{}}
+			by[p] = &reach{seenItem: map[string]bool{}}
 			order = append(order, p)
 		}
 		return by[p]
@@ -212,10 +246,10 @@ func (t StoryTopic) Summary() string {
 			r.tags = append(r.tags, "tag "+s.Via)
 		case FromClaim:
 			r := get(s.Project)
-			if !r.seenTouch[s.Via] {
-				r.seenTouch[s.Via] = true
-				r.touches = append(r.touches, s.Via)
+			if s.Paths > 0 && r.touches == 0 {
+				r.touch = s.Via
 			}
+			r.touches += s.Paths
 			if !r.seenItem[s.Item] {
 				r.seenItem[s.Item] = true
 				r.items = append(r.items, s.Item)
@@ -229,12 +263,12 @@ func (t StoryTopic) Summary() string {
 	for _, p := range order {
 		r := by[p]
 		how := r.tags
-		switch len(r.touches) {
+		switch r.touches {
 		case 0:
 		case 1:
-			how = append(how, "touches "+r.touches[0]+" ("+strings.Join(r.items, ", ")+")")
+			how = append(how, "touches "+r.touch+" ("+strings.Join(r.items, ", ")+")")
 		default:
-			how = append(how, fmt.Sprintf("%d touches (%s)", len(r.touches), strings.Join(r.items, ", ")))
+			how = append(how, fmt.Sprintf("%d touches (%s)", r.touches, strings.Join(r.items, ", ")))
 		}
 		parts = append(parts, p+" by "+strings.Join(how, " and "))
 	}

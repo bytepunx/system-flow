@@ -1,13 +1,18 @@
 package context
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 const quality = `---
@@ -107,6 +112,57 @@ func TestFilterKeepsTheHeadingAboveAKeptSection(t *testing.T) {
 	}
 	if len(c.LeftOut) != 2 {
 		t.Errorf("json keeps every section left out: %+v", c.LeftOut)
+	}
+}
+
+// I-0261: a story whose 40 touches reach one sub-project of three topics
+// gets a pack whose topics encode in under 2 KB, where one claim source per
+// touches entry and topic took about 10 KB.
+func TestAPacksTopicsFoldAStorysTouches(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("system-flow.yaml", "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: flai\n    path: flai\n    kind: go\n    tags: [cli]\n")
+	write("design/conventions/README.md", "# Conventions\n\n- [code-quality.md](code-quality.md)\n")
+	write("design/conventions/code-quality.md", quality)
+	for _, d := range []string{"flai", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	touches := make([]string, 40)
+	for i := range touches {
+		touches[i] = fmt.Sprintf("flai/internal/pkg%02d/file.go", i)
+	}
+	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "A wide story", Owner: "alex", Touches: touches,
+		Now: time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC), Body: "## Goal\n\nBuild it.\n\n## Acceptance criteria\n\n- [ ] built\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := ForStory(repo, story.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names := topics.Names(p.Topics); !reflect.DeepEqual(names, []string{"flai", "cli", "go", topics.Code, topics.All}) {
+		t.Fatalf("topics %v", names)
+	}
+	data, err := json.Marshal(p.Topics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) >= 2048 {
+		t.Errorf("topics encode in %d bytes, want under 2048:\n%s", len(data), data)
 	}
 }
 

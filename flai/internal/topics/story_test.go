@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -86,6 +87,51 @@ func TestOfStoryTouchAboveASubProject(t *testing.T) {
 	ps := []manifest.Project{{Name: "api", Path: "services/api", Kind: "go"}}
 	if got := Names(OfStory(story(nil, []string{"services"}, nil), nil, nil, ps)); !reflect.DeepEqual(got, []string{"api", "go", "code", "all"}) {
 		t.Errorf("topics: %v", got)
+	}
+}
+
+// I-0261: a story whose 40 touches reach one sub-project has one claim
+// source under each of the sub-project's three topics, counting the 40,
+// not 40 sources under each.
+func TestOfStoryFoldsAnItemsClaimIntoOneSource(t *testing.T) {
+	touches := make([]string, 40)
+	for i := range touches {
+		touches[i] = fmt.Sprintf("flai/internal/f%02d.go", i)
+	}
+	want := Source{Kind: FromClaim, Item: "S-0001", Project: "flai", Via: "flai/internal/f00.go", Paths: 40}
+	list := OfStory(story(nil, touches, nil), nil, nil, projects)
+	if got := Names(list); !reflect.DeepEqual(got, []string{"flai", "cli", "go", "code", "all"}) {
+		t.Fatalf("topics: %v", got)
+	}
+	for _, top := range list[:3] {
+		if len(top.Sources) != 1 || top.Sources[0] != want {
+			t.Errorf("%s sources %+v, want %+v", top.Topic, top.Sources, want)
+		}
+		if s := top.Summary(); s != "flai by 40 touches (S-0001)" {
+			t.Errorf("%s summary %q", top.Topic, s)
+		}
+	}
+}
+
+// An open task's claim source counts only the entries the story's did not,
+// and names its first entry when it adds none; the summary counts each
+// entry once.
+func TestOfStoryCountsAnEntryOnceAcrossItems(t *testing.T) {
+	tasks := []*workitem.Item{
+		{ID: "T-0001", Type: workitem.Task, Parent: "S-0001", Status: workitem.Ready, Touches: []string{"flai/cmd", "flai/internal"}},
+		{ID: "T-0002", Type: workitem.Task, Parent: "S-0001", Status: workitem.Ready, Touches: []string{"flai/internal", "flai/cmd"}},
+	}
+	top := OfStory(story(nil, []string{"flai/cmd", "flai/cmd/"}, nil), nil, tasks, projects)[0]
+	want := []Source{
+		{Kind: FromClaim, Item: "S-0001", Project: "flai", Via: "flai/cmd", Paths: 1},
+		{Kind: FromClaim, Item: "T-0001", Project: "flai", Via: "flai/internal", Paths: 1},
+		{Kind: FromClaim, Item: "T-0002", Project: "flai", Via: "flai/internal"},
+	}
+	if !reflect.DeepEqual(top.Sources, want) {
+		t.Errorf("sources %+v\nwant %+v", top.Sources, want)
+	}
+	if s := top.Summary(); s != "flai by 2 touches (S-0001, T-0001, T-0002)" {
+		t.Errorf("summary %q", s)
 	}
 }
 
