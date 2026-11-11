@@ -815,7 +815,7 @@ func TestWhatEachStorysAgentIsDoing(t *testing.T) {
 	asks, blocked, fails := lab.ready("Asks"), lab.ready("Blocked"), lab.ready("Fails")
 	lab.l.look(ctx, false)
 	waitFor(t, "three run", func() bool { return lab.run(asks).live() && lab.run(blocked).live() && lab.run(fails).live() })
-	act := func() map[string]StoryActivity { return Activity(lab.root, lab.state(), false) }
+	act := func() map[string]StoryActivity { return Activity(context.Background(), lab.root, lab.state(), false) }
 	for _, id := range []string{asks, blocked, fails} {
 		if a := act()[id]; a.State != ActivityWorking || a.Run.Story != id {
 			t.Fatalf("%s at work: %+v", id, a)
@@ -883,7 +883,7 @@ func TestAnAgentThatEndedAskingIsStartedAgainWhenAnswered(t *testing.T) {
 	if r.Outcome != OutcomeAsked || r.Thread != th.ID || !strings.Contains(r.Why, "waiting for an answer to "+th.ID) {
 		t.Fatalf("asked: %+v", r)
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
 		t.Fatalf("activity: %+v", a)
 	}
 	// nothing is started again while the question is open
@@ -960,7 +960,7 @@ func TestAnAnsweredAgentWhoseStoryIsBackInReadyWaitsForItsHold(t *testing.T) {
 	if r := lab.run(id); r.live() || !strings.Contains(lab.state().Waiting, id+" "+why) {
 		t.Fatalf("started past its hold: %+v, waiting %q", r, lab.state().Waiting)
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.Hold == nil || !strings.HasPrefix(a.Why, why) {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.Hold == nil || !strings.HasPrefix(a.Why, why) {
 		t.Errorf("activity: %+v", a)
 	}
 
@@ -1053,7 +1053,7 @@ func TestAnAgentThatEndedOnAConversationIsStartedAgainOnTheReply(t *testing.T) {
 		t.Fatal(err)
 	}
 	waits := other + "'s agent to reply on " + c.ID + ": " + c.Title
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
 		!slices.Equal(a.Conversations, []string{c.ID}) || a.Why != "waiting for "+waits {
 		t.Fatalf("running, it waits on the other story's agent: %+v", a)
 	}
@@ -1063,7 +1063,7 @@ func TestAnAgentThatEndedOnAConversationIsStartedAgainOnTheReply(t *testing.T) {
 	if r.Outcome != OutcomeAsked || r.Thread != "" || !slices.Equal(r.Conversations, []string{c.ID}) || !slices.Equal(r.WaitsOn, []string{other}) || r.Why != "waiting for "+waits {
 		t.Fatalf("asked: %+v", r)
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != "" || !slices.Equal(a.WaitsOn, []string{other}) ||
 		!slices.Equal(a.Conversations, []string{c.ID}) || a.Why != r.Why {
 		t.Fatalf("ended, it waits on the other story's agent: %+v", a)
 	}
@@ -1121,7 +1121,7 @@ func TestAnAgentThatEndedAskingIsStartedAgainOnANewMessageToItsStory(t *testing.
 		t.Fatal(err)
 	}
 	both := "waiting for an answer to " + th.ID + ": " + th.Title + "; and for " + other + "'s agent to reply on " + c.ID + ": " + c.Title
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) || a.Why != both {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) || a.Why != both {
 		t.Fatalf("running, the operator's question is its thread, and the other story is named too: %+v", a)
 	}
 	lab.release(id)
@@ -1129,7 +1129,7 @@ func TestAnAgentThatEndedAskingIsStartedAgainOnANewMessageToItsStory(t *testing.
 	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID || !slices.Equal(r.Conversations, []string{c.ID}) || !slices.Equal(r.WaitsOn, []string{other}) || r.Why != both {
 		t.Fatalf("asked on both: %+v", r)
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID || !slices.Equal(a.WaitsOn, []string{other}) {
 		t.Fatalf("ended: %+v", a)
 	}
 	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
@@ -1199,7 +1199,7 @@ func TestAReplyBeforeTheEndIsJudgedStartsTheAgentAgain(t *testing.T) {
 		t.Errorf("answered at once by %q", got)
 	}
 	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || len(a.WaitsOn) != 0 || !slices.Equal(a.Conversations, []string{c.ID}) {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || len(a.WaitsOn) != 0 || !slices.Equal(a.Conversations, []string{c.ID}) {
 		t.Errorf("activity: %+v", a)
 	}
 	lab.l.look(ctx, false)
@@ -1245,7 +1245,7 @@ func TestAnAnswerBeforeTheEndIsJudgedStartsTheAgentAgain(t *testing.T) {
 		t.Errorf("answered at once by %q", got)
 	}
 	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
 		t.Errorf("activity: %+v", a)
 	}
 	lab.l.look(ctx, false)
@@ -1709,7 +1709,7 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		if r := lab.run(id); r.Queued == "" || r.Started != first.Started {
 			t.Errorf("recorded: %+v", r)
 		}
-		a := Activity(lab.root, lab.state(), false)[id]
+		a := Activity(context.Background(), lab.root, lab.state(), false)[id]
 		if a.State != ActivityWaiting || !strings.Contains(a.Why, "queued") {
 			t.Errorf("a queued agent waits: %+v", a)
 		}
@@ -1736,7 +1736,7 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		lab.release(id)
 		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 		// ended again, in ready, not queued: the launcher holds it as before
-		if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
+		if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
 			t.Errorf("after the queued agent failed: %+v", a)
 		}
 	})
@@ -1748,7 +1748,7 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 			s.put(&AgentRun{Story: id, Agent: "builder-" + id, Started: "2026-09-26T00:00:00Z", Ended: "2026-09-26T00:01:00Z",
 				Outcome: OutcomeFailed, Why: "ended (exit 1)", Queued: "2026-09-26T00:02:00Z"})
 		})
-		if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
+		if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
 			t.Errorf("in progress, a queued retry is moot: %+v", a)
 		}
 		// in progress, a retry starts at once, queued or not
@@ -1789,14 +1789,14 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		}
 
 		// the dashboard is told it was begun elsewhere, and has no agent here
-		a := Activity(lab.root, lab.state(), false)[id]
+		a := Activity(context.Background(), lab.root, lab.state(), false)[id]
 		if a.State != ActivityWaiting || a.Elsewhere == nil || a.Elsewhere.Host != "far-away" || a.Elsewhere.Here || a.Run == nil || a.Run.Started != "" ||
 			a.Why != "begun by builder-"+id+" on far-away at "+b.At+"; no agent here" {
 			t.Errorf("a story begun elsewhere: %+v %+v", a, a.Elsewhere)
 		}
 		there.Host = workitem.ThisHost()
 		_ = there.Save()
-		if a := Activity(lab.root, lab.state(), false)[id]; a.Elsewhere == nil || !a.Elsewhere.Here || !strings.Contains(a.Why, "on this host, outside flai serve") {
+		if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.Elsewhere == nil || !a.Elsewhere.Here || !strings.Contains(a.Why, "on this host, outside flai serve") {
 			t.Errorf("a story begun on this host outside flai serve: %+v", a)
 		}
 
@@ -1806,7 +1806,7 @@ func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {
 		}
 		// with an agent here it is this host's; the question its namesake asked
 		// there is its own
-		if a := Activity(lab.root, lab.state(), false)[id]; a.Elsewhere != nil || a.State != ActivityWaiting || a.Thread == "" {
+		if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.Elsewhere != nil || a.State != ActivityWaiting || a.Thread == "" {
 			t.Errorf("with an agent here it is this host's: %+v", a)
 		}
 		if run.PID == 0 || run.Agent != "builder-"+id || run.Queued != "" {
@@ -1883,7 +1883,7 @@ func TestAnAgentThatEndedAskingIsStartedAgainOnAConfirmationNotARecommendation(t
 	if _, err := threads.ReplyWith(lab.repo, th.ID, workitem.ActivityOrchestrator, "Nine.", time.Now(), threads.Marks{Recommendation: true, Source: threads.Source{Path: id}}); err != nil {
 		t.Fatal(err)
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityWaiting || a.Thread != th.ID {
 		t.Fatalf("a recommendation leaves the agent waiting: %+v", a)
 	}
 	lab.release(id)
@@ -2177,7 +2177,7 @@ func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
 	if started != 3 {
 		t.Errorf("%d agents started, want 3: %+v", started, lab.entries())
 	}
-	if a := Activity(lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
+	if a := Activity(context.Background(), lab.root, lab.state(), false)[id]; a.State != ActivityFailed {
 		t.Errorf("at the limit it reads failed: %+v", a)
 	}
 
@@ -2953,7 +2953,7 @@ func TestACommandStartIsRefusedWhatItsHarnessCannotDo(t *testing.T) {
 		if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.Harness != harness.Command || !strings.HasPrefix(r.Why, "could not be started: harness command cannot ") {
 			t.Fatalf("run %+v", r)
 		}
-		a := Activity(lab.root, lab.state(), false)[id]
+		a := Activity(context.Background(), lab.root, lab.state(), false)[id]
 		if a.State != ActivityFailed {
 			t.Errorf("the story's agent status: %+v", a)
 		}
@@ -4883,7 +4883,7 @@ func TestActivityReadsTheConversationsOnce(t *testing.T) {
 		}
 	}
 	conversationsRead.Store(&read)
-	got := Activity(lab.root, st, false)
+	got := Activity(context.Background(), lab.root, st, false)
 	conversationsRead.Store(nil)
 	if reads != 1 {
 		t.Errorf("read the conversations %d times, want once", reads)
@@ -4909,7 +4909,7 @@ func TestActivityReadsTheConversationsOnce(t *testing.T) {
 
 	// read again with the conversations gone, the answer changes: the first
 	// call took them from its one read
-	again := Activity(lab.root, st, false)
+	again := Activity(context.Background(), lab.root, st, false)
 	if a := again[talker]; a.State != ActivityWorking {
 		t.Errorf("with no conversations, %s still waits: %+v", talker, a)
 	}

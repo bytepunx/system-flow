@@ -78,7 +78,7 @@ func (a *app) host() hostapi.Host {
 			// analyzer run, its focus and report among it (S-0223), and the
 			// newest curator run, its since and entries among it (S-0431)
 			done = perf.Track(ctx, "agent.activity")
-			stories := serve.Activity(root, st, command != "")
+			stories := serve.Activity(ctx, root, st, command != "")
 			done()
 			if !finished {
 				// the open and live runs alone (S-0611): the board, the activity

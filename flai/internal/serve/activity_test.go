@@ -1,16 +1,19 @@
 package serve
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -1010,5 +1013,152 @@ func TestABuiltInAgentsRoleFileNamesItsRule(t *testing.T) {
 	}
 	if s := lab.strategicOf(story, workitem.ActivityOrchestrator); s != nil {
 		t.Errorf("%s's orchestrator usage = %+v, want none", story, s)
+	}
+}
+
+// overlapping makes, in lab's project, a story in progress touching flai/cmd
+// that no agent here began, a ready story touching flai/cmd/serve that it
+// holds, and a story in progress whose agent runs, and answers the agent
+// state with that run and the three stories' IDs.
+func (lab *activityLab) overlapping() (st AgentState, holder, held, worker string) {
+	lab.t.Helper()
+	now := runStart
+	epic, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Epic", Owner: "alex", Now: now})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	story := func(title, to string, touches ...string) string {
+		lab.t.Helper()
+		it, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: epic.ID, Owner: "alex", Touches: touches, Now: now})
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+		data, _ := os.ReadFile(it.Path)
+		if err := os.WriteFile(it.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644); err != nil {
+			lab.t.Fatal(err)
+		}
+		for _, s := range []string{workitem.Ready, workitem.InProgress} {
+			it, err = lab.repo.Get(it.ID)
+			if err != nil {
+				lab.t.Fatal(err)
+			}
+			if _, err := lab.repo.Transition(it, s, "alex", "", now); err != nil {
+				lab.t.Fatal(err)
+			}
+			if s == to {
+				break
+			}
+		}
+		return it.ID
+	}
+	holder = story("Holder", workitem.InProgress, "flai/cmd")
+	held = story("Held", workitem.Ready, "flai/cmd/serve")
+	worker = story("Worker", workitem.InProgress, "docs/worker")
+	st = AgentState{Stories: map[string]*AgentRun{worker: {Story: worker, Agent: "builder-" + worker, PID: 42, Started: now.Format(time.RFC3339)}}}
+	return st, holder, held, worker
+}
+
+// conflicting is a trial judge that finds every trial merge conflicting in
+// flai/cmd/serve/x.go, and counts its calls.
+func conflicting(calls *int) workitem.TrialJudge {
+	return func(string, string) ([]string, error) {
+		*calls++
+		return []string{"flai/cmd/serve/x.go"}, nil
+	}
+}
+
+// ticking is a request timer whose clock moves a millisecond at every look,
+// so that a phase that holds another is longer than it.
+func ticking() (context.Context, *perf.Recorder) {
+	ticks := 0
+	at := runStart
+	return perf.StartAt(context.Background(), func() time.Time {
+		ticks++
+		return at.Add(time.Duration(ticks) * time.Millisecond)
+	})
+}
+
+// I-0313: Activity answers the same whether or not a timer is on its
+// context, with and without a trial judge.
+func TestActivityAnswersTheSameWithATimer(t *testing.T) {
+	lab := newActivityLab(t)
+	st, holder, held, worker := lab.overlapping()
+	bare := Activity(context.Background(), lab.root, st, false)
+	timed, _ := ticking()
+	if got := Activity(timed, lab.root, st, false); !reflect.DeepEqual(got, bare) {
+		t.Errorf("timed:\n%+v\nwant:\n%+v", got, bare)
+	}
+	if a := bare[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap {
+		t.Errorf("held: %+v, want held by the overlap", a)
+	}
+	if a := bare[worker]; a.State != ActivityWorking {
+		t.Errorf("worker: %+v, want working", a)
+	}
+	if a := bare[holder]; a.Elsewhere == nil {
+		t.Errorf("holder: %+v, want begun elsewhere", a)
+	}
+
+	judged := func(ctx context.Context) map[string]StoryActivity {
+		t.Helper()
+		repo, err := workitem.Open(lab.root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		calls := 0
+		out := activityWith(ctx, repo, conflicting(&calls), st, false)
+		if calls != 1 {
+			t.Errorf("the judge was called %d times, want once", calls)
+		}
+		return out
+	}
+	want := judged(context.Background())
+	timed, _ = ticking()
+	if got := judged(timed); !reflect.DeepEqual(got, want) {
+		t.Errorf("timed with a judge:\n%+v\nwant:\n%+v", got, want)
+	}
+	if a := want[held]; a.Hold == nil || !strings.Contains(a.Why, "conflicts in flai/cmd/serve/x.go") {
+		t.Errorf("held with a judge: %+v, want the conflict named", a)
+	}
+}
+
+// I-0313: Activity records on its request's timer the runs judged, the holds
+// built, the stories begun elsewhere, and, inside the holds, the trial
+// judge's calls summed; without a judge there is no trial phase.
+func TestActivityRecordsItsPhases(t *testing.T) {
+	lab := newActivityLab(t)
+	st, _, _, _ := lab.overlapping()
+	phases := func(rec *perf.Recorder) map[string]perf.Phase {
+		got := map[string]perf.Phase{}
+		for _, ph := range rec.Phases() {
+			got[ph.Name] = ph
+		}
+		return got
+	}
+	ctx, rec := ticking()
+	Activity(ctx, lab.root, st, false)
+	got := phases(rec)
+	for _, name := range []string{"activity.conversations", "activity.runs", "activity.holds", "activity.elsewhere"} {
+		if ph, ok := got[name]; !ok || ph.Count != 1 {
+			t.Errorf("%s not recorded once: %v", name, rec)
+		}
+	}
+	if _, ok := got["activity.trial"]; ok {
+		t.Errorf("a trial phase with no judge: %v", rec)
+	}
+
+	repo, err := workitem.Open(lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	ctx, rec = ticking()
+	activityWith(ctx, repo, conflicting(&calls), st, false)
+	got = phases(rec)
+	trial, holds := got["activity.trial"], got["activity.holds"]
+	if trial.Count != calls || calls == 0 {
+		t.Errorf("activity.trial counted %d calls, the judge had %d: %v", trial.Count, calls, rec)
+	}
+	if trial.Total <= 0 || trial.Total >= holds.Total {
+		t.Errorf("activity.trial (%v) is not inside activity.holds (%v): %v", trial.Total, holds.Total, rec)
 	}
 }

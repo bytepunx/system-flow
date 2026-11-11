@@ -49,7 +49,7 @@ func TestAHeldStoryIsSkippedAndStartedFirstOnceClear(t *testing.T) {
 		t.Errorf("waiting: %q", w)
 	}
 	// agent.status: waiting, with the reason, though it never had an agent
-	a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[held]
+	a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held]
 	if a.State != ActivityWaiting || a.Why != why || a.Hold == nil || a.Hold.Code != workitem.HoldOverlap || a.Run == nil || a.Run.Story != held || a.Run.PID != 0 {
 		t.Errorf("activity: %+v", a)
 	}
@@ -67,8 +67,8 @@ func TestAHeldStoryIsSkippedAndStartedFirstOnceClear(t *testing.T) {
 	if lab.run(behind) != nil || !strings.Contains(lab.state().Waiting, "limit leaves no room for "+behind) {
 		t.Errorf("the story behind it took its place: %+v", lab.state())
 	}
-	if _, ok := Activity(lab.root, lab.state(), lab.cfg.commandSet())[held]; !ok || Activity(lab.root, lab.state(), lab.cfg.commandSet())[held].Hold != nil {
-		t.Errorf("still held once started: %+v", Activity(lab.root, lab.state(), lab.cfg.commandSet())[held])
+	if _, ok := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held]; !ok || Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held].Hold != nil {
+		t.Errorf("still held once started: %+v", Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held])
 	}
 	for _, id := range []string{held, clear} {
 		lab.release(id)
@@ -92,7 +92,7 @@ func TestOneLookStartsNoTwoThatOverlap(t *testing.T) {
 	if lab.run(second) != nil || lab.run(bare) != nil {
 		t.Fatalf("started beside an overlapping story: %+v", lab.state().Stories)
 	}
-	act := Activity(lab.root, lab.state(), lab.cfg.commandSet())
+	act := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())
 	if a := act[second]; a.State != ActivityWaiting || !strings.Contains(a.Why, "inside flai which "+first+" (its agent started) touches") {
 		t.Errorf("second: %+v", a)
 	}
@@ -230,7 +230,7 @@ func TestAStoryWaitsForTheStoryItNamesInAfter(t *testing.T) {
 	if lab.run(then) != nil {
 		t.Fatalf("started a story whose after: story is in backlog: %+v", lab.state().Stories)
 	}
-	if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[then]; a.State != ActivityWaiting || a.Why != why || a.Hold == nil || a.Hold.Code != workitem.HoldAfter {
+	if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[then]; a.State != ActivityWaiting || a.Why != why || a.Hold == nil || a.Hold.Code != workitem.HoldAfter {
 		t.Errorf("activity: %+v", a)
 	}
 
@@ -287,7 +287,7 @@ func TestTheLauncherHoldsAFileAndItsFolderBothWays(t *testing.T) {
 			if w := lab.state().Waiting; !strings.Contains(w, held+" held (overlap): touches "+c.held) || !strings.Contains(w, holder+" ("+c.label+")") {
 				t.Errorf("waiting: %q", w)
 			}
-			if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap {
+			if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap {
 				t.Errorf("activity: %+v", a)
 			}
 			// the holder is cancelled: the held story is started
@@ -320,7 +320,7 @@ func TestTheLauncherStartsAStoryOverlappingOnlyOneInReview(t *testing.T) {
 	if w := lab.state().Waiting; strings.Contains(w, ready) {
 		t.Errorf("waiting names the started story: %q", w)
 	}
-	if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[ready]; a.Hold != nil {
+	if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[ready]; a.Hold != nil {
 		t.Errorf("held by a story in review: %+v", a)
 	}
 	lab.release(ready)
@@ -410,7 +410,7 @@ func TestTheLauncherStartsAnOverlappingStoryOnACleanTrialMerge(t *testing.T) {
 	if w := lab.state().Waiting; strings.Contains(w, "held") || !strings.Contains(w, "the in-progress limit leaves no room for "+ready) {
 		t.Errorf("waiting: %q", w)
 	}
-	if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[ready]; a.Hold != nil {
+	if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[ready]; a.Hold != nil {
 		t.Errorf("activity says it is held: %+v", a)
 	}
 	if asks := lab.asks(ready); len(asks) != 0 {
@@ -458,7 +458,7 @@ func TestTheLauncherHoldsAnOverlappingStoryOnAConflictingTrialMerge(t *testing.T
 	if n := lab.said(held); n != 1 {
 		t.Errorf("logged %d times why %s waits", n, held)
 	}
-	if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap || !strings.Contains(a.Why, "conflicts in "+trialFile) {
+	if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[held]; a.Hold == nil || a.Hold.Code != workitem.HoldOverlap || !strings.Contains(a.Why, "conflicts in "+trialFile) {
 		t.Errorf("activity: %+v", a)
 	}
 	if asks := lab.asks(held); asks[holder] != 1 {

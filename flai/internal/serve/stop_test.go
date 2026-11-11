@@ -74,7 +74,7 @@ func TestTheOperatorStopsAStorysAgent(t *testing.T) {
 		if got.Exit == nil || *got.Exit != 143 {
 			t.Errorf("the exit the launcher saw is kept: %+v", got)
 		}
-		if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[id]; a.State != ActivityFailed || !strings.Contains(a.Why, "stopped by the operator") {
+		if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[id]; a.State != ActivityFailed || !strings.Contains(a.Why, "stopped by the operator") {
 			t.Errorf("activity: %+v", a)
 		}
 		j := lab.entries()

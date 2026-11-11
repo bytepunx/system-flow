@@ -1,12 +1,14 @@
 package serve
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"slices"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -95,21 +97,57 @@ func orSomeone(who string) string {
 // commandSet is whether a command is set on the host for the project: a
 // stand-in's harness is then the story's and the project's, else flai's
 // built-in default under them when they name none (ADR-0261).
-func Activity(root string, st AgentState, commandSet bool) map[string]StoryActivity {
+//
+// It times its parts as phases of the request ctx carries a timer for
+// (I-0313): activity.conversations, the conversations read once; activity.runs,
+// the runs judged; activity.holds, the holds built;
+// activity.trial, each call of the trial judge among them; and
+// activity.elsewhere, the stories begun elsewhere.
+func Activity(ctx context.Context, root string, st AgentState, commandSet bool) map[string]StoryActivity {
 	repo, err := workitem.Open(root)
 	if err != nil {
 		return map[string]StoryActivity{}
 	}
 	withTrial(repo, nil)
+	return activityWith(ctx, repo, repo.Trial, st, commandSet)
+}
+
+// activityWith is Activity read from repo, whose overlaps judge, when not
+// nil, judges by a trial merge.
+func activityWith(ctx context.Context, repo *workitem.Repo, judge workitem.TrialJudge, st AgentState, commandSet bool) map[string]StoryActivity {
+	repo.Trial = timedTrial(ctx, judge)
+	done := perf.Track(ctx, "activity.conversations")
 	convs := readConversations(repo)
+	done()
+	done = perf.Track(ctx, "activity.runs")
 	out := runActivity(repo, st, convs)
-	for id, h := range held(repo, st, convs) {
+	done()
+	done = perf.Track(ctx, "activity.holds")
+	holds := held(repo, st, convs)
+	done()
+	for id, h := range holds {
 		out[id] = StoryActivity{State: ActivityWaiting, Why: h.Reason, Run: standIn(repo, st, id, "", commandSet), Hold: h}
 	}
-	for id, e := range elsewhere(repo, st) {
+	done = perf.Track(ctx, "activity.elsewhere")
+	begun := elsewhere(repo, st)
+	done()
+	for id, e := range begun {
 		out[id] = StoryActivity{State: ActivityWaiting, Why: e.Said(), Run: standIn(repo, st, id, e.Agent, commandSet), Elsewhere: e}
 	}
 	return out
+}
+
+// timedTrial is judge with each call timed as the phase activity.trial of
+// the request ctx carries a timer for, so that the phase sums them; nil when
+// judge is, so that an overlap holds as it does without one.
+func timedTrial(ctx context.Context, judge workitem.TrialJudge) workitem.TrialJudge {
+	if judge == nil {
+		return nil
+	}
+	return func(held, holder string) ([]string, error) {
+		defer perf.Track(ctx, "activity.trial")()
+		return judge(held, holder)
+	}
 }
 
 // Unfinished is what agent.status answers of stories and plans without

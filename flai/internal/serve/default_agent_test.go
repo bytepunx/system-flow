@@ -182,11 +182,11 @@ func TestAStandInNamesTheBuiltinHarnessWhenNoCommandIsSet(t *testing.T) {
 	lab := newAgentLab(t)
 	id := lab.ready("Begun elsewhere")
 	lab.move(id, workitem.InProgress)
-	a := Activity(lab.root, lab.state(), false)[id]
+	a := Activity(context.Background(), lab.root, lab.state(), false)[id]
 	if a.Run == nil || a.Run.Harness != harness.ClaudeCode {
 		t.Errorf("no command set: %+v, want a stand-in on claude-code", a.Run)
 	}
-	if a := Activity(lab.root, lab.state(), true)[id]; a.Run == nil || a.Run.Harness != "" {
+	if a := Activity(context.Background(), lab.root, lab.state(), true)[id]; a.Run == nil || a.Run.Harness != "" {
 		t.Errorf("a command set: %+v, want a stand-in naming no harness", a.Run)
 	}
 }

@@ -69,7 +69,7 @@ func TestTheOrchestratorsAcceptanceEndsTheBoardsWaitOnTheOperator(t *testing.T) 
 	if w := lab.state().Waiting; !strings.Contains(w, after) || !strings.Contains(w, full) {
 		t.Errorf("waiting: %q", w)
 	}
-	if a := Activity(lab.root, lab.state(), lab.cfg.commandSet())[then]; a.Hold == nil || a.Hold.Code != workitem.HoldAfter {
+	if a := Activity(context.Background(), lab.root, lab.state(), lab.cfg.commandSet())[then]; a.Hold == nil || a.Hold.Code != workitem.HoldAfter {
 		t.Errorf("activity of %s: %+v", then, a)
 	}
 

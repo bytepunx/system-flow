@@ -253,7 +253,8 @@ func TestServeOrchestrateAction(t *testing.T) {
 
 // S-0603: agent.status records agent.state on the request's recorder, and
 // inside it the three parts of the state the host builds: reading the agent
-// states, the stories' activity, and the roles.
+// states, the stories' activity, and the roles; and inside the activity its
+// own parts (I-0313).
 func TestAgentStatusRecordsItsPhases(t *testing.T) {
 	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
@@ -293,6 +294,22 @@ func TestAgentStatusRecordsItsPhases(t *testing.T) {
 	}
 	if inner >= outer.Total {
 		t.Errorf("the three phases (%v) are not inside agent.state (%v): %v", inner, outer.Total, rec)
+	}
+	// I-0313: inside agent.activity, the runs judged, the holds built, and
+	// the stories begun elsewhere; the trial judge's phase, which needs a
+	// story's branch to trial-merge, is shown in serve's
+	// TestActivityRecordsItsPhases
+	var parts time.Duration
+	for _, name := range []string{"activity.conversations", "activity.runs", "activity.holds", "activity.elsewhere"} {
+		ph, ok := got[name]
+		if !ok || ph.Count != 1 {
+			t.Errorf("%s not recorded once: %v", name, rec)
+			continue
+		}
+		parts += ph.Total
+	}
+	if activity := got["agent.activity"]; parts >= activity.Total {
+		t.Errorf("activity's phases (%v) are not inside agent.activity (%v): %v", parts, activity.Total, rec)
 	}
 }
 
