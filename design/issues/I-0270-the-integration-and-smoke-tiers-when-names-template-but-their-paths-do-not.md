@@ -2,12 +2,12 @@
 id: I-0270
 title: "The integration and smoke tiers' when names template/**, but their paths do not select a template-only change, so a story that changes only template/ runs neither at close-out, against what code-quality.md and tooling.md say"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-07T04:41:00Z
 last_reported: 2026-11-07T04:41:00Z
-updated: 2026-11-10T08:54:31Z
+updated: 2026-11-11T08:11:40Z
 ---
 
 # I-0270 The integration and smoke tiers' when names template/**, but their paths do not select a template-only change, so a story that changes only template/ runs neither at close-out, against what code-quality.md and tooling.md say
@@ -24,3 +24,4 @@ S-0558 changed only template/ and design/ paths, and its close-out at 56003eb ra
 ## Remediation
 
 Story S-0696 remediates this issue, created from it at 2026-11-10T08:54:31Z.
+Closed 2026-11-11T08:11:40Z: S-0696: system-flow.yaml's integration and smoke tiers now hold template/** in their paths, so a template-only change selects both, the close-out runs them for their when, and the merge queue's batch runs them; TestRepositoryManifestRunsIntegrationAndSmokeForATemplateOnlyChange in flai/internal/verify holds it
