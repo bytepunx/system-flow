@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -79,6 +80,10 @@ type launcher struct {
 	// Claude Code version that has no record, beside the start (S-0618); nil
 	// checks none.
 	imageCheck func(root string, cfg AgentConfig, image, version, provider string)
+	// notify is Options.Notify, the host's reminder channel read at each
+	// look; nil is no channel. A starved board's thread says when there is
+	// none (ADR-0285).
+	notify func() config.Notify
 }
 
 // told records a run in the host's state and tells changed.
@@ -119,7 +124,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck,
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck, notify: o.Notify,
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},
@@ -642,6 +647,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	// most drained (ADR-0211 §1), counting only the stories not held on after
 	// (ADR-0279)
 	l.noteReadyEmpty(repo, readyNotHeldOnAfter(stories, holds), free)
+	// then whether nothing can start or be promoted while a lane is free
+	// (ADR-0285)
+	l.noteStarved(repo, stories, holds, free)
 	// The first look after flai serve starts is like any other: what keeps a
 	// restart from starting a story twice is its run in serve/agents.json,
 	// not what happened to be ready when flai serve began (S-0112).
