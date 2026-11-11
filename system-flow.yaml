@@ -27,7 +27,7 @@ projects:
       setup: src/routes/layout.css
     install:
       command: ["../scripts/flaiover-install.sh", "--if-needed"]
-      paths: ["package.json", "pnpm-lock.yaml"]
+      paths: ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc"]
   - name: template
     path: template
     kind: template
@@ -109,7 +109,7 @@ tests:
   - name: svelte-check
     command: ["../scripts/flaiover-check.sh"]
     dir: flaiover
-    paths: ["flaiover/src/**/*.ts", "flaiover/src/**/*.js", "flaiover/src/**/*.svelte", "flaiover/*.ts", "flaiover/*.js", "flaiover/tsconfig.json", "flaiover/package.json", "scripts/flaiover-check.sh"]
+    paths: ["flaiover/src/**/*.ts", "flaiover/src/**/*.js", "flaiover/src/**/*.svelte", "flaiover/*.ts", "flaiover/*.js", "flaiover/tsconfig.json", "flaiover/package.json", "flaiover/pnpm-workspace.yaml", "scripts/flaiover-check.sh"]
     format: plain
   - name: shellcheck
     command: [scripts/shellcheck.sh, "{files}"]
