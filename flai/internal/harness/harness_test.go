@@ -1132,6 +1132,66 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	}
 }
 
+// I-0272: in the container harness's container, whose main checkout's .git
+// is read-only (ADR-0246), the story's agent is told to close each task with
+// the MCP tool task_done and the story with verify, whose commit and sync run
+// on the host, and that flai stream sync, the shell's flai task done, and git
+// rebase cannot write there; it is told to run none of them, on any start.
+// A start on the host keeps its prompt.
+func TestTheContainersPromptClosesWithTaskDoneAndVerify(t *testing.T) {
+	host := req(&manifest.Agent{Harness: ClaudeCode})
+	readOnly := "You run in a container, where the main checkout's .git is read-only: flai stream sync, the shell's flai task done, and git rebase cannot write there, so never run them, and never start a rebase or merge by hand."
+	starts := map[string]func(*Request){
+		"new":        func(*Request) {},
+		"restarted":  func(r *Request) { r.Restart = "ended (exit 1)" },
+		"answered":   func(r *Request) { r.Answered = "TH-0001" },
+		"written to": func(r *Request) { r.Answered = "MS-0001" },
+		"sent back":  func(r *Request) { r.SentBack = &SentBack{Thread: "TH-0002", What: "a check failed"} },
+		"resumed":    func(r *Request) { r.SentBack = &SentBack{Thread: "TH-0002", What: "a check failed", Resumed: true} },
+		"instance":   func(r *Request) { r.Formula = "release" },
+	}
+	for name, set := range starts {
+		h := host
+		set(&h)
+		c := h
+		c.Inner = ClaudeCode
+		hp, cp := mustPrompt(t, h), mustPrompt(t, c)
+		if strings.Contains(hp, "You run in a container") || strings.Contains(hp, "sync run on the host") || strings.Contains(hp, "sync on the host") {
+			t.Errorf("%s: the host's prompt speaks of the container:\n%s", name, hp)
+		}
+		if w := "commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync S-0104 again and resolve what it lists, then move S-0104 to review"; !strings.Contains(hp, w) {
+			t.Errorf("%s: the host's prompt lacks %q:\n%s", name, w, hp)
+		}
+		if w := "then move S-0104 to review with flai move S-0104 review and end"; !strings.Contains(hp, w) {
+			t.Errorf("%s: the host's prompt lacks %q:\n%s", name, w, hp)
+		}
+		want := []string{"close every task with the flai MCP tool task_done and S-0104 out with the flai MCP tool verify, which commit and sync on the host, so that git status in the worktree is clean, then move S-0104 to review with the flai MCP tool item_move and end"}
+		if name == "new" || name == "restarted" || name == "sent back" || name == "instance" {
+			want = append(want,
+				"When a task is done, close it with the flai MCP tool task_done, with its docs and work-item updates in the change: it commits on story/S-0104, syncs S-0104's branch, moves the task to done",
+				"Its commit and its sync run on the host.",
+				"When the sync stops on conflicts, ask the designer with the flai MCP tool thread_open on S-0104, naming each path it lists",
+				"close any fix they need by calling task_done again.",
+				readOnly,
+				"close the task with task_done and test it as above",
+				"Move a task you have just written to ready and in-progress with the flai MCP tool item_move, to ready and then to in-progress",
+				"Before you move S-0104 to review, close every task with task_done, then ask flai serve for the close-out with the flai MCP tool verify, whose commit and sync run on the host, with S-0104 and its commit message",
+			)
+		}
+		for _, w := range want {
+			if !strings.Contains(cp, w) {
+				t.Errorf("%s: the container's prompt lacks %q:\n%s", name, w, cp)
+			}
+		}
+		rest := strings.ReplaceAll(cp, readOnly, "")
+		for _, never := range []string{"flai stream sync", "flai task done", "git rebase", "git add it", "flai move T-nnnn", "flai move S-0104 review"} {
+			if strings.Contains(rest, never) {
+				t.Errorf("%s: the container's prompt tells the agent to use %q:\n%s", name, never, cp)
+			}
+		}
+	}
+}
+
 // S-0422: the agent of a formula's instance is told, in a paragraph of its
 // own between the work and the delegation, that its story is an instance of
 // the formula and how its steps are worked; a story with no formula gets the
@@ -3126,9 +3186,15 @@ func TestClaudeCodeInAContainerReachesTheHostsHTTPServer(t *testing.T) {
 		if got := after(st.Argv, "--mcp-config"); got != "/cache/mcp.json" || !slices.Contains(st.Argv, "--strict-mcp-config") {
 			t.Errorf("--mcp-config = %q: %q", got, st.Argv)
 		}
-		// past the MCP configuration, the argv is the host's
-		i, j := slices.Index(st.Argv, "--mcp-config"), slices.Index(host.Argv, "--mcp-config")
-		if !slices.Equal(st.Argv[:i], host.Argv[:j]) || !slices.Equal(st.Argv[i+2:], host.Argv[j+2:]) {
+		// past the MCP configuration and the prompt, which closes tasks with
+		// task_done there (I-0272), the argv is the host's
+		if p := after(st.Argv, "-p"); !strings.Contains(p, "close it with the flai MCP tool task_done") {
+			t.Errorf("the container's prompt does not close tasks with task_done: %q", p)
+		}
+		cargv, hargv := slices.Clone(st.Argv), slices.Clone(host.Argv)
+		cargv[slices.Index(cargv, "-p")+1], hargv[slices.Index(hargv, "-p")+1] = "", ""
+		i, j := slices.Index(cargv, "--mcp-config"), slices.Index(hargv, "--mcp-config")
+		if !slices.Equal(cargv[:i], hargv[:j]) || !slices.Equal(cargv[i+2:], hargv[j+2:]) {
 			t.Errorf("container argv %q\nhost argv %q", st.Argv, host.Argv)
 		}
 		if !slices.Contains(st.Env, "CLAUDE_CONFIG_DIR=/cache/claude") {

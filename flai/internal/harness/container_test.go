@@ -305,6 +305,39 @@ func TestTheContainersStandardInputIsARequestPilotRuns(t *testing.T) {
 	}
 }
 
+// I-0272: the start request pilot reads names its inner harness, so the
+// inner harness's prompt closes tasks with task_done and the story with
+// verify; the host's request names none, and its prompt is the host's.
+func TestTheContainersRequestSaysItRunsInTheContainer(t *testing.T) {
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container, Config: map[string]string{"inner": harness.ClaudeCode}})
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pr, err := pilot.Read(bytes.NewReader(st.Stdin))
+	if err != nil {
+		t.Fatalf("pilot reads %s: %v", st.Stdin, err)
+	}
+	if pr.Inner == "" || r.Inner != "" {
+		t.Fatalf("the inner harness's request has inner %q, the host's %q: want only the inner harness's named", pr.Inner, r.Inner)
+	}
+	inner, err := harness.Prompt(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	onHost, err := harness.Prompt(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const closes = "When a task is done, close it with the flai MCP tool task_done"
+	if !strings.Contains(inner, closes) || !strings.Contains(inner, "verify, whose commit and sync run on the host") {
+		t.Errorf("the inner harness's prompt does not close with task_done and verify:\n%s", inner)
+	}
+	if strings.Contains(onHost, closes) || !strings.Contains(onHost, "close it with flai task done T-nnnn") {
+		t.Errorf("the host's prompt is the container's:\n%s", onHost)
+	}
+}
+
 func TestTheContainersImageNetworkAndProgramAreTheHosts(t *testing.T) {
 	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
 	host.Program, host.Network, host.Images = "/usr/bin/podman", "host", map[string]string{harness.ClaudeCode: "registry.example/agent:1"}
