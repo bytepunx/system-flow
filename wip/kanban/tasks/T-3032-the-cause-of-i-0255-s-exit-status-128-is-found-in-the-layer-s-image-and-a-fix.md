@@ -3,15 +3,36 @@ id: T-3032
 type: task
 nature: research
 title: The cause of I-0255's exit status 128 is found in the layer's image and a fix is proposed
-status: backlog
+status: done
 parent: S-0686
 owner: alex
 created: 2026-11-10T10:33:36Z
-updated: 2026-11-10T10:33:36Z
-transitions: []
+updated: 2026-11-11T05:25:13Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:24:53Z
+    by: agent-S-0686
+  - to: in-progress
+    at: 2026-11-11T05:24:53Z
+    by: agent-S-0686
+  - to: done
+    at: 2026-11-11T05:25:13Z
+    by: agent-S-0686
 stream: S-0686
 tags: [docker, agent-container, go]
 touches: [design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md]
+usage:
+  source: log
+  seconds: 20
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1692
+      cache_read: 542297
+      cache_write: 19899
+      cost: 0.3015
 ---
 # T-3032 The cause of I-0255's exit status 128 is found in the layer's image and a fix is proposed
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 218.8622
-accrued_seconds: 25595
-tasks_completed: 140
-last_run: 2026-11-11T05:09:51Z
+accrued_cost: 220.2223
+accrued_seconds: 25686
+tasks_completed: 141
+last_run: 2026-11-11T05:22:32Z
 ---
 
 # Curator activity
@@ -1131,3 +1131,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0580
 - Seconds: 125
 - Cost: 1.5044 USD, estimated
+
+### 2026-11-11T05:22:32Z
+
+- Summary: I wrote no new entries, merged S-0690 into D-0491, absorbed nothing, and `flai digest compact` compacted none. D-0491 now says S-0690 fixed I-0273 and that serve tests no longer need the probe wait; S-0690's other candidates were plan and progress notes.
+- Trigger: accepted S-0690
+- Items: D-0491, D-0580
+- Seconds: 91
+- Cost: 1.3601 USD, estimated

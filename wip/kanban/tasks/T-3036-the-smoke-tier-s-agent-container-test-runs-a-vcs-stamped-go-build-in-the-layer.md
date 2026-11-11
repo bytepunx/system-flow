@@ -3,16 +3,37 @@ id: T-3036
 type: task
 nature: remediation
 title: The smoke tier's agent-container test runs a VCS-stamped go build in the layer's image
-status: backlog
+status: done
 parent: S-0686
 owner: alex
 created: 2026-11-10T10:33:48Z
-updated: 2026-11-10T10:34:09Z
-transitions: []
+updated: 2026-11-11T05:26:30Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:25:30Z
+    by: agent-S-0686
+  - to: in-progress
+    at: 2026-11-11T05:25:30Z
+    by: agent-S-0686
+  - to: done
+    at: 2026-11-11T05:26:30Z
+    by: agent-S-0686
 stream: S-0686
 tags: [docker, agent-container, go, test]
-touches: [scripts/agent-container-test.sh]
+touches: [scripts/agent-vcs-test.sh, scripts/smoke.sh, scripts/README.md]
 after: [T-3032]
+usage:
+  source: log
+  seconds: 60
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1800
+      cache_read: 576950
+      cache_write: 21170
+      cost: 0.3208
 ---
 # T-3036 The smoke tier's agent-container test runs a VCS-stamped go build in the layer's image
 

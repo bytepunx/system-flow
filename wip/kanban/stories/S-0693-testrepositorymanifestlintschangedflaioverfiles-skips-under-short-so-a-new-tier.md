@@ -3,10 +3,10 @@ id: S-0693
 type: story
 nature: improvement
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-11T05:18:31Z
+updated: 2026-11-11T05:26:52Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:19Z
@@ -17,6 +17,12 @@ transitions:
   - to: review
     at: 2026-11-11T05:18:31Z
     by: agent-S-0693
+  - to: in-progress
+    at: 2026-11-11T05:21:14Z
+    by: alex
+blocked:
+  - from: 2026-11-11T05:26:52Z
+    reason: pause for urgent fix
 tags: [flai, tests]
 topics: [code]
 touches: [flai/internal/verify/select_test.go, design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md]
@@ -121,3 +127,4 @@ Figures:
 
 - Forecast 45m, adjusted from flai's 2m. flai's figure is 59 s per unit of size times size 2, counted before any touch was declared. It leaves out the close-out, whose integration and smoke tiers a change under `flai/` selects. Close-outs on this host took 8m14s (S-0672) and 20m44s (S-0669) today. Delivery 2026-11-10T14:51Z is flai's queue-based 14:08Z moved by the 43m added; the story is 25th in the pull order.
 - Cost of delay value 25 USD a week, as `flai cod` gives it from the operator's input of 10m per 168h cycle at 150 USD an hour. It stands: I-0327 has one instance, and the input is the operator's.
+- 2026-11-11T05:21:14Z: moved to in-progress: story/S-0693 undoes main's change to design/digest/D-0580-s-0692-which-analysis-schedule-should-t-3037-set-cadence-from-th-1038.md, wip/agents/S-0678.md, wip/agents/S-0686.md, wip/agents/S-0691.md, wip/agents/S-0693.md, wip/agents/curator.md, wip/agents/orchestrator.md, wip/archive/agents/S-0690.md, wip/archive/kanban/stories/S-0690-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, wip/archive/kanban/stories/S-0692-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md, wip/archive/kanban/tasks/T-2981-watch-watcher-takes-its-first-snapshot-on-a-call-of-its-own-before-run-and-run.md, wip/archive/kanban/tasks/T-2984-flai-serve-takes-a-served-project-s-watcher-s-first-snapshot-before-its-item.md, wip/archive/kanban/tasks/T-2988-flai-cli-md-says-the-watcher-s-first-snapshot-is-taken-before-a-served-project.md, wip/archive/kanban/tasks/T-2989-close-i-0273-with-the-fix-that-takes-the-watcher-s-first-snapshot-before-the.md, wip/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, wip/kanban/stories/S-0686-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, wip/kanban/stories/S-0691-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, wip/kanban/stories/S-0693-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, wip/kanban/stories/S-0718-publish-what-is-accepted-and-not-yet-released.md, wip/kanban/tasks/T-2982-run-testrepositorymanifestlintschangedflaioverfiles-under-short.md, wip/kanban/tasks/T-2985-close-i-0327-with-what-fixed-it.md, wip/kanban/tasks/T-3004-agent-status-times-serve-activity-s-parts-as-phases-of-the-request-the-runs-the.md, wip/kanban/tasks/T-3008-the-trial-judge-keeps-its-verdicts-per-root-and-commit-pair-across-calls-and.md, wip/kanban/tasks/T-3043-an-adr-records-what-i-0288-s-instance-shows-and-decides-that-flai-serve-asks.md, wip/kanban/tasks/T-3046-inbox-starved-lists-each-backlog-story-that-cannot-be-promoted-and-the-operator.md: restore main's version or redo the change (ADR-0155)

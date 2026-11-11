@@ -3,16 +3,34 @@ id: T-3039
 type: task
 nature: remediation
 title: "A story's container stamps go builds again, and the layer drops GOFLAGS=-buildvcs=false"
-status: backlog
+status: in-progress
 parent: S-0686
 owner: alex
 created: 2026-11-10T10:34:01Z
-updated: 2026-11-10T10:34:01Z
-transitions: []
+updated: 2026-11-11T05:25:30Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:25:30Z
+    by: agent-S-0686
+  - to: in-progress
+    at: 2026-11-11T05:25:30Z
+    by: agent-S-0686
 stream: S-0686
 tags: [docker, agent-container, go]
-touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, flai/internal/harness/container.go, flai/internal/harness/container_test.go]
-after: [T-3036]
+touches: [flai/images/system-flow/Dockerfile, flai/internal/harness/container.go, scripts/agent-container.sh]
+after: [T-3032]
+usage:
+  source: log
+  seconds: 99
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 4615
+      cache_read: 1478879
+      cache_write: 54265
+      cost: 0.8222
 ---
 # T-3039 A story's container stamps go builds again, and the layer drops GOFLAGS=-buildvcs=false
 

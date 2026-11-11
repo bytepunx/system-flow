@@ -6,7 +6,7 @@ title: agent.status with 13 projects at once is not under 200 ms
 status: in-progress
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-11T05:18:41Z
+updated: 2026-11-11T05:26:16Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:56Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:18:41Z
     by: agent-S-0678
+blocked:
+  - from: 2026-11-11T05:26:16Z
+    reason: pause for urgent fix
 tags: [cli]
 topics: [server-side]
 touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]

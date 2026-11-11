@@ -6,7 +6,7 @@ title: go build's VCS stamping fails with git exit status 128 inside the agent c
 status: in-progress
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-11T05:19:26Z
+updated: 2026-11-11T05:26:33Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:14Z
@@ -14,17 +14,31 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:19:26Z
     by: agent-S-0686
+blocked:
+  - from: 2026-11-11T05:26:33Z
+    reason: pause for urgent fix
 tags: [docker, agent-container, go]
-touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-container-test.sh, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
+touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-vcs-test.sh, scripts/smoke.sh, scripts/README.md, flai/internal/harness/container.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 466
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 34
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 25312
+      cache_read: 8112053
+      cache_write: 297660
+      cost: 4.5102
   strategic:
     - kind: orchestrator
       seconds: 13

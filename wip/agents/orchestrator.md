@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2107.0409
-accrued_seconds: 1547206
-tasks_completed: 2910
-last_run: 2026-11-11T05:11:10Z
+accrued_cost: 2109.3702
+accrued_seconds: 1547679
+tasks_completed: 2927
+last_run: 2026-11-11T05:47:44Z
 ---
 
 # Orchestrator activity
@@ -20402,6 +20402,125 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 32
 - Cost: 0.1758 USD, estimated
+
+### 2026-11-11T05:21:10Z
+
+- Summary: Accepted S-0690 at d59380bf087f under accept_reviews: close-out passed at the branch head, verifier matched both criteria to changed files, dry run showed no blockers; merged and archived.
+- Items: S-0690
+- Seconds: 63
+- Cost: 0.1794 USD, estimated
+
+### 2026-11-11T05:21:44Z
+
+- Summary: After accepting S-0690, release_evaluate is met under threshold (7 pending, 1005.04 USD/week vs 1000; count 7 vs 1). Did not run the publish formula again: its open instance S-0718 is in ready and publishes all pending work, S-0690 included.
+- Items: S-0690, S-0718
+- Seconds: 34
+- Cost: 0.0525 USD, estimated
+
+### 2026-11-11T05:22:08Z
+
+- Summary: I accepted S-0690 at commit `d59380bf087f`. It is merged and archived.
+- Items: none
+- Seconds: 24
+- Cost: 0.0967 USD, estimated
+
+### 2026-11-11T05:22:48Z
+
+- Summary: release-due after S-0690: threshold policy met (count 7 of 1; value 1005.04 of 1000 USD/week; pending S-0674, S-0676, S-0688, S-0690, S-0692, S-0695, S-0708). Did not run the publish formula again: its open instance S-0718 is in ready and its flai release --pending publishes the whole pending batch, S-0690 included; a second instance would duplicate it.
+- Items: S-0690, S-0718
+- Seconds: 21
+- Cost: 0.1020 USD, estimated
+
+### 2026-11-11T05:23:06Z
+
+- Summary: I didn't start a new publish run for the release-due reason on S-0690, because one is already waiting: S-0718, made by the publish formula, is in ready.
+- Items: none
+- Seconds: 18
+- Cost: 0.2309 USD, estimated
+
+### 2026-11-11T05:25:51Z
+
+- Summary: Ordered the ready column by throughput (flai order --by throughput --apply) after alex moved S-0721 to ready: S-0721 kept first (placed by alex 05:24:54Z), then S-0696 30m, S-0697 45m, S-0700 45m, S-0698 1h, S-0702 60m, S-0694 2h, S-0705 2h, S-0681 and S-0718 last with no forecast duration. No promotion: ready is 10/10.
+- Items: S-0721, S-0696, S-0697, S-0700, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718
+- Seconds: 22
+- Cost: 0.1231 USD, estimated
+
+### 2026-11-11T05:26:15Z
+
+- Summary: I reordered the ready column by throughput, and that was the only reason I was started for, so the run ends here.
+- Items: none
+- Seconds: 24
+- Cost: 0.1603 USD, estimated
+
+### 2026-11-11T05:26:37Z
+
+- Summary: Reason reordered: applied flai order --by throughput; the ready order was already the policy's (S-0721 kept, placed by alex at 05:24:54Z; then S-0696 30m, S-0697 45m, S-0700 45m, S-0698 1h, S-0702 60m, S-0694 2h, S-0705 2h, S-0681 and S-0718 with no forecast). No promotion: ready is full at 10/10.
+- Items: S-0721, S-0696, S-0697, S-0700, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718
+- Seconds: 15
+- Cost: 0.0907 USD, estimated
+
+### 2026-11-11T05:27:16Z
+
+- Summary: The ready column already matched the throughput policy, so nothing moved. I ran `flai order --by throughput --apply` for the reorder and it left the order as it was.
+- Items: none
+- Seconds: 39
+- Cost: 0.3099 USD, estimated
+
+### 2026-11-11T05:30:34Z
+
+- Summary: Recommended an answer on TH-1067, citing design/digest/D-0441-s-0550-plan-eight-tasks-in-four-layers-cost-of-delay-inputs-needed.md
+- Items: S-0721
+- Seconds: 20
+- Cost: 0.0690 USD, estimated
+
+### 2026-11-11T05:30:51Z
+
+- Summary: Approved S-0721's plan on TH-1067 (tasks T-3083..T-3085 cover all four criteria; 30m forecast reasoned) and recommended, operator-only, time_lost_per_cycle 10m as the planner proposed (D-0441); not set, since S-0721 is in progress, not backlog, and has no epic; thread left open
+- Items: S-0721, TH-1067
+- Seconds: 17
+- Cost: 0.0000 USD
+
+### 2026-11-11T05:31:10Z
+
+- Summary: Resolved TH-1067: alex confirmed the recommendation and set time_lost_per_cycle 10m on S-0721 himself; plan approved, nothing left to set
+- Items: S-0721, TH-1067
+- Seconds: 19
+- Cost: 0.0951 USD, estimated
+
+### 2026-11-11T05:31:26Z
+
+- Summary: TH-1067 is resolved. S-0721 now has its cost of delay input, `time_lost_per_cycle: 10m`, which you set yourself.
+- Items: none
+- Seconds: 16
+- Cost: 0.0937 USD, estimated
+
+### 2026-11-11T05:32:11Z
+
+- Summary: Resolved TH-1067 under plan_backlog_stories: S-0721's plan (T-3083, T-3084 in layer 1, T-3085 in layer 2) approved; alex's time_lost_per_cycle 10m stands and the planner wrote the value, 25 USD a week. S-0721 is in progress, so its planned reason needs nothing more.
+- Items: S-0721, TH-1067, T-3083, T-3084, T-3085
+- Seconds: 15
+- Cost: 0.1303 USD, estimated
+
+### 2026-11-11T05:32:36Z
+
+- Summary: I resolved TH-1067, and both reasons for this run are done.
+- Items: none
+- Seconds: 25
+- Cost: 0.1704 USD, estimated
+
+### 2026-11-11T05:47:21Z
+
+- Summary: S-0721 left in review: close-out passed at head 5d9c4a81a8f2, verifier passed all four criteria, dry run had no blocker, but accept refused criterion 3's evidence because the narrative wip/agents/S-0721.md is not a file the branch changes; opened TH-1068 recommending the operator accept it
+- Items: S-0721
+- Seconds: 78
+- Cost: 0.2306 USD, estimated
+
+### 2026-11-11T05:47:44Z
+
+- Summary: I didn't accept S-0721. It's still in review, and you'd need to accept it yourself.
+- Items: none
+- Seconds: 23
+- Cost: 0.1947 USD, estimated
 
 ## Refusals
 

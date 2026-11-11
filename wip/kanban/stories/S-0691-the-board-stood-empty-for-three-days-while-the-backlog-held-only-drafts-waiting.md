@@ -6,7 +6,7 @@ title: The board stood empty for three days while the backlog held only drafts w
 status: in-progress
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T05:06:07Z
+updated: 2026-11-11T05:26:42Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:32Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:06:07Z
     by: agent-S-0691
+blocked:
+  - from: 2026-11-11T05:26:42Z
+    reason: pause for urgent fix
 tags: [flai]
 topics: [ready, threads]
 touches: [design/adrs, design/adrs/README.md, flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go, flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/agents_launch.go, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, design/issues/summary.md]
@@ -25,19 +28,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 284
-  estimated: true
-  priced_by: estimate
+  seconds: 2411
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 23
+      ceremony: 1
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 377
-      cache_read: 4630255
-      cache_write: 261266
-      cost: 1.8054
+      input: 182
+      output: 83564
+      cache_read: 12428126
+      cache_write: 528909
+      cost: 7.7713
   strategic:
     - kind: orchestrator
       seconds: 39

@@ -3,11 +3,11 @@ id: T-3046
 type: task
 nature: improvement
 title: inbox.Starved lists each backlog story that cannot be promoted and the operator's decision it waits on
-status: in-progress
+status: done
 parent: S-0691
 owner: alex
 created: 2026-11-10T10:34:50Z
-updated: 2026-11-11T05:11:22Z
+updated: 2026-11-11T05:23:31Z
 transitions:
   - to: ready
     at: 2026-11-11T05:11:22Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:11:22Z
     by: agent-S-0691
+  - to: done
+    at: 2026-11-11T05:23:31Z
+    by: agent-S-0691
 stream: S-0691
 tags: [flai, go]
 touches: [flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go]
 after: [T-3043]
+usage:
+  source: log
+  seconds: 729
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 15178
+      cache_read: 2257366
+      cache_write: 96068
+      cost: 1.4115
 ---
 # T-3046 inbox.Starved lists each backlog story that cannot be promoted and the operator's decision it waits on
 

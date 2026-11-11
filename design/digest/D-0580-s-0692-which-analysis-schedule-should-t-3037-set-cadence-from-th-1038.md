@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-1038]
+cited: [S-0693, TH-1038, TH-1066]
 ---
 
 # D-0580 S-0692: which analysis.schedule should T-3037 set? (cadence from TH-1038): Recommended: weekly, `0 6 * * 1`, Mondays at 06:00 UTC, with `analysis.formula: analysis-cadence`

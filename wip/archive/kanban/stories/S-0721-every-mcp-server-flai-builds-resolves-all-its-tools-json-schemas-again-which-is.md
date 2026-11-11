@@ -3,10 +3,10 @@ id: S-0721
 type: story
 nature: improvement
 title: "Every MCP server flai builds resolves all its tools' JSON schemas again, which is 56% of the mcpserver tests' CPU: share one SchemaCache"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-11T05:24:30Z
-updated: 2026-11-11T05:30:40Z
+updated: 2026-11-11T05:47:58Z
 transitions:
   - to: ready
     at: 2026-11-11T05:24:47Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:27:10Z
     by: agent-S-0721
+  - to: review
+    at: 2026-11-11T05:45:25Z
+    by: agent-S-0721
+  - to: done
+    at: 2026-11-11T05:47:58Z
+    by: alex
 tags: [mcp, tests]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/tech/go-libraries.md, flai/internal/mcpserver/schema_cache_test.go, wip/agents/S-0721.md]
 agent:
@@ -22,25 +28,56 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1108
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 3
+      test_runs: 2
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 21852
+      cache_read: 12571761
+      cache_write: 319699
+      cost: 5.419
   strategic:
-    - kind: orchestrator
-      seconds: 5
+    - kind: planner
+      seconds: 249
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 10
-          cache_read: 63253
-          cache_write: 13851
-          cost: 0.0214
+          input: 58
+          output: 17810
+          cache_read: 1954424
+          cache_write: 92618
+          cost: 1.4883
+    - kind: orchestrator
+      seconds: 137
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 44
+          output: 359
+          cache_read: 1526591
+          cache_write: 236759
+          cost: 0.4893
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 35
+          cache_read: 44354
+          cache_write: 30821
+          cost: 0.0572
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: alex
     at: 2026-11-11T05:30:40Z
+  value: 25
+  by: planner-S-0721
+  at: 2026-11-11T05:31:11Z
 forecast:
   duration: 30m
   delivery: 2026-11-11T05:58:00Z
@@ -55,10 +92,10 @@ forecast:
 Every MCP server flai builds in one process takes its tools' JSON schemas from one shared `mcp.SchemaCache`, so a tool's schema is reflected and resolved once per process, not once per server. Nothing else changes: this story is the cache alone.
 
 ## Acceptance criteria
-- [ ] Both `mcp.NewServer` calls, in `flai/internal/mcpserver/server.go` (`New`) and `flai/internal/mcpserver/folder.go` (`newFolderServer`), set `ServerOptions.SchemaCache` to one package-level `mcp.NewSchemaCache()`.
-- [ ] A test builds two servers from the same options and shows `tools/list` answers the same tools with the same input and output schemas from both, and the same as a server built without the cache; and that servers built from differing options (single project and folder, each role) still list the schemas they listed before. If any tool's schema depends on its options and not on its Go type alone, that tool is kept out of the cache or the story stops and says so on a thread.
-- [ ] The story's narrative records the package's CPU time before and after, measured as in Notes, with and without `-race`; the `-race` run's user CPU is under half the before figure.
-- [ ] `design/tech/go-libraries.md` says of the go-sdk row that flai shares one `SchemaCache`; no dependency is added or upgraded.
+- [x] Both `mcp.NewServer` calls, in `flai/internal/mcpserver/server.go` (`New`) and `flai/internal/mcpserver/folder.go` (`newFolderServer`), set `ServerOptions.SchemaCache` to one package-level `mcp.NewSchemaCache()`.
+- [x] A test builds two servers from the same options and shows `tools/list` answers the same tools with the same input and output schemas from both, and the same as a server built without the cache; and that servers built from differing options (single project and folder, each role) still list the schemas they listed before. If any tool's schema depends on its options and not on its Go type alone, that tool is kept out of the cache or the story stops and says so on a thread.
+- [x] The story's narrative records the package's CPU time before and after, measured as in Notes, with and without `-race`; the `-race` run's user CPU is under half the before figure.
+- [x] `design/tech/go-libraries.md` says of the go-sdk row that flai shares one `SchemaCache`; no dependency is added or upgraded.
 
 ## Tasks
 - T-3083 Set one package-level mcp.SchemaCache on both MCP servers, with a test that their tool schemas are unchanged
@@ -100,6 +137,6 @@ Left out of what `flai touches suggest` lists: `docs/users/flai.md`, `design/sys
 
 Forecast: `flai forecast` gave 13m, from the median of 107 s per unit of size over 34 done improvement stories, times size 7. I raised it to 30m. Four timed runs of the package are needed, two of them under `-race` at about a minute each plus their builds, and the close-out runs the `-race` tier on this package too. Delivery counts from the start at 2026-11-11T05:28:00Z.
 
-Cost of delay: none is set. The story has no cost of delay inputs and no epic, so `flai cod` cannot work one out. The operator was asked for the inputs on the plan's thread.
+Cost of delay: 25 USD a week, as `flai cod` works it out from the operator's input on TH-1067. That input is 10m of time lost per 168h cycle, at 150 USD an hour and one cycle a week. It stands unadjusted: the figure is the operator's, and it matches D-0441 for the same kind of cost.
 
 No `after`: the story reads nothing another open story writes.

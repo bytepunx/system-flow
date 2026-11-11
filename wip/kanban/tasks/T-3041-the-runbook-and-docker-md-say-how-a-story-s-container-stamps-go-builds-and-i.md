@@ -7,12 +7,12 @@ status: backlog
 parent: S-0686
 owner: alex
 created: 2026-11-10T10:34:15Z
-updated: 2026-11-10T10:34:15Z
+updated: 2026-11-11T05:24:08Z
 transitions: []
 stream: S-0686
 tags: [docker, agent-container, docs]
 touches: [docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
-after: [T-3039]
+after: [T-3036, T-3039]
 ---
 # T-3041 The runbook and docker.md say how a story's container stamps go builds, and I-0255 is closed
 

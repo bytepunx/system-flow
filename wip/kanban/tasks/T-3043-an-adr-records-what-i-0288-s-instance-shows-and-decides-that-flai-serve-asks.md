@@ -23,16 +23,16 @@ tags: [flai, adr]
 touches: [design/adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md, design/adrs/README.md]
 usage:
   source: log
-  seconds: 67
+  seconds: 73
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 77
-      cache_read: 1632850
-      cache_write: 7896
-      cost: 0.6056
+      input: 23
+      output: 10759
+      cache_read: 1600174
+      cache_write: 68099
+      cost: 1.0006
 ---
 # T-3043 An ADR records what I-0288's instance shows and decides that flai serve asks the operator on one thread when nothing can be made ready
 
