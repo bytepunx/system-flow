@@ -2,11 +2,11 @@
 id: I-0288
 title: The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-10T08:49:02Z
+updated: 2026-11-11T07:49:44Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ cfd[] 2026-11-03 to 2026-11-05: backlog 26, ready 0, in-progress 0, review 0; tu
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0691 remediates this issue, created from it at 2026-11-10T08:49:02Z.
+Closed 2026-11-11T07:49:44Z: fixed by S-0691 (ADR-0285): when no story in ready can start, an in-progress lane is free, and no backlog story can be promoted, flai serve opens one thread to the operator on wip/kanban/board.md that lists each backlog story and the decision it waits on (a draft's open threads, the root of an after chain, a block's reason), says when the host has no reminder channel, adds an entry only when the list changes, and resolves it once a story can start
