@@ -1,6 +1,6 @@
 ---
 title: Signing releases and verifying the peer
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 topics: [cli, dashboard, release, security]
 ---
@@ -17,7 +17,7 @@ Every statement about this repository comes from its files, read on 2026-10-02. 
 
 - `release-flai.yml` runs GoReleaser on a tag `flai/v*` with `--clean --skip=validate`, under `permissions: contents: write` (since S-0630 granted on its `goreleaser` job, with `id-token` and `attestations`, over a top-level `contents: read`), and publishes to the GitHub release of `bytepunx/system-flow` named `flai vX.Y.Z`.
 - `flai/.goreleaser.yaml` builds `flai` for linux, darwin, and windows on amd64 and arm64 with `CGO_ENABLED=0`, `-trimpath`, and `-s -w`, and sets `buildinfo.Version`, `Commit`, and `Date` by `ldflags`. It archives each build as `flai_<version>_<os>_<arch>.tar.gz` (`.zip` on windows) and writes `checksums.txt`, SHA-256 of every archive. When this was written it had no `signs`, no `sboms`, and no `docker_signs` section, and nothing was signed. Since S-0232 its `signs` section signs `checksums.txt` into `checksums.txt.sig`, and the release publishes the key's public half as `cosign.pub`.
-- `flai version` prints the three build values and the Go version; a build without `ldflags` falls back to `debug.ReadBuildInfo` for the commit (`flai/internal/buildinfo/buildinfo.go`). A build from this tree by `scripts/flai.sh` has no version.
+- `flai version` prints the three build values and the Go version. A build from this tree by `scripts/flai.sh` has no version. `scripts/flai-build.sh` links the tree's commit and commit time into `Commit` and `Date` by `ldflags`, from git run in the tree, and builds with `-buildvcs=false`: Go's VCS lookup takes only a `.git` folder for a repository's root, so it stamped a build in a story's worktree, whose `.git` is a file, with the main checkout's HEAD (I-0348). Any other build without `ldflags` still falls back to `debug.ReadBuildInfo` for the commit and date (`flai/internal/buildinfo/buildinfo.go`).
 
 ### How flaiover is released
 

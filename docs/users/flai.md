@@ -254,6 +254,8 @@ flai version --json
 
 Prints the version, commit, build date, and Go version, and whether the build is a signed release.
 
+A build from a tree by `scripts/flai.sh` prints that tree's commit and its commit time as the build date, a story's worktree included: `scripts/flai-build.sh` links them from git run in the tree (I-0348). Where git cannot answer, both print `unknown`.
+
 A release of flai carries a release stamp: the line `flai <version> <commit>`, signed with the release key in CI before the build (S-0235). flai checks it against the release key it carries and its own version and commit. The last line of `flai version` says what it found:
 
 | Line | Meaning |
