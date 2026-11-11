@@ -6,7 +6,7 @@ title: sendBackReason puts a CI check name and reviewer login unquoted into the 
 status: backlog
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-10T09:56:05Z
+updated: 2026-11-11T09:03:41Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-11-11T09:03:41Z
 ---
 # S-0711 sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt
 
