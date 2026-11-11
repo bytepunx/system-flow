@@ -2,12 +2,12 @@
 id: I-0259
 title: A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-02T19:22:35Z
 last_reported: 2026-11-02T19:22:35Z
-updated: 2026-11-10T09:11:37Z
+updated: 2026-11-11T09:24:20Z
 ---
 
 # I-0259 A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse
@@ -24,3 +24,4 @@ S-0510 ran `scripts/flai.sh test` inside flai-agent-sf-claude-code:local on its 
 ## Remediation
 
 Story S-0706 remediates this issue, created from it at 2026-11-10T09:11:37Z.
+Closed 2026-11-11T09:24:20Z: S-0706: flaiover/pnpm-workspace.yaml sets supportedArchitectures with libc glibc and musl (T-2993), so one node_modules holds both native bindings for the host and the Alpine agent container; scripts/flaiover-install.sh --if-needed installs again when pnpm-lock.yaml, package.json, pnpm-workspace.yaml, or .npmrc is newer than the last install, and flai accept's install watches them (T-2994); scripts/flaiover-install-test.sh reproduces both, offline (T-2997).

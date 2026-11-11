@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 ---
 
@@ -89,6 +89,8 @@ The script and pilot write these to `.flai-cache/agents/S-nnnn/`, which is git-i
 | `~/.claude` (`FLAI_CLAUDE_LOGIN`) | `/run/claude-login` | read-only | the login; only `.credentials.json` is read |
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
+
+The worktree's `flaiover/node_modules` is inside the worktree mount, so the container and the host share it: a flaiover tier run in either installs it for both. It holds the native bindings of both libcs, glibc for the host and musl for the Alpine image, since `flaiover/pnpm-workspace.yaml` sets pnpm's `supportedArchitectures` ([I-0259](../../../design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md), S-0706). An install made before that setting holds only the libc it was made on. The next `scripts/flaiover-install.sh --if-needed` replaces it, since that script installs again whenever `pnpm-workspace.yaml` is newer than the install, and so does `make flaiover-install`.
 
 #### A mount you type by hand in zsh
 
