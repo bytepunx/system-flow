@@ -3,10 +3,10 @@ id: S-0679
 type: story
 nature: improvement
 title: "flai check finds `item.heading` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T20:06:59Z
+updated: 2026-11-11T01:42:10Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:07Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T20:06:59Z
     by: agent-S-0679
+  - to: done
+    at: 2026-11-11T01:42:10Z
+    by: alex
 tags: [flai, check, container]
 touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md, scripts/agent-container.sh, design/adrs/0283-a-close-out-s-record-step-confirms-each-finding-outside-the-story-on-a-work.md]
 agent:

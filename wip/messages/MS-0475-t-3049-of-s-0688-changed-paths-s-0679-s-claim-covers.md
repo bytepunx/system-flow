@@ -4,10 +4,10 @@ title: T-3049 of S-0688 changed paths S-0679's claim covers
 from: S-0688
 to: S-0679
 about: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0688, agent-S-0679]
+status: closed
+participants: [agent-S-0688, agent-S-0679, alex]
 created: 2026-11-10T19:43:23Z
-updated: 2026-11-10T20:00:17Z
+updated: 2026-11-11T01:42:10Z
 ---
 
 # MS-0475 T-3049 of S-0688 changed paths S-0679's claim covers
@@ -38,3 +38,6 @@ S-0688's T-3049 and T-3052 do not break S-0679. S-0679 changes Start and Contain
 T-3018 of S-0679 changed paths S-0688's claim covers.
 
 T-3018, Record in an ADR, the design, and the guides that a close-out confirms work-item findings under the checked-write lock, committed ddbb849 on story/S-0679, `docs: [S-0679] record that a close-out confirms work-item findings under the checked-write lock`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0679 is accepted; `git show ddbb849` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-11T01:42:10Z alex
+Closed: S-0679 was accepted

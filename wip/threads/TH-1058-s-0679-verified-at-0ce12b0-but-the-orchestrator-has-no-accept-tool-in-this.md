@@ -4,10 +4,10 @@ title: S-0679 verified at 0ce12b0 but the orchestrator has no accept tool in thi
 anchor:
   path: wip/kanban/stories/S-0679-flai-check-finds-item-heading-outside-the-story-at-close-out.md
   item: S-0679
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T20:08:27Z
-updated: 2026-11-10T20:08:27Z
+updated: 2026-11-11T01:42:10Z
 ---
 
 # TH-1058 S-0679 verified at 0ce12b0 but the orchestrator has no accept tool in this session
@@ -28,3 +28,6 @@ What I found:
 - Every changed file is in the story's touches.
 
 Why I did not accept: the MCP tool `accept` is not in this session's tools ("No such tool available: mcp__flai__accept"). The convention forbids me `flai accept` in the shell, so I could not take the dry-run preview or accept. The merge queue is off, so `queue_add` does not apply either. I will resolve this thread once the story is accepted or the tool is available.
+
+### 2026-11-11T01:42:10Z alex
+Resolved: S-0679 was accepted
