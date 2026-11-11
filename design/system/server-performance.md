@@ -1,6 +1,6 @@
 ---
 title: Server-side response times
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 topics: [server-side, back-end, cli, dashboard]
 ---
@@ -277,7 +277,7 @@ The item cache S-0156 added lived only in a process's memory, so every one-shot 
 
 - `store.list` stats each file of a folder under the folder's lock, takes the kept item of each file whose key still matches, and parses the rest on min(GOMAXPROCS, 16) workers, keeping them in file name order.
 - `mdlint.LintFolder` walks the folder and lints its files on the same bound of workers, in walk order (`flai/internal/mdlint/folder.go`).
-- A folder's first list in a process reads its kept items file, `.flai-cache/items-<folder>.json`, such as `items-wip-archive-kanban-tasks.json` (`flai/internal/workitem/kept.go`). A file whose size and modification time match its kept entry takes the kept item without a parse. A restored item equals `ReadItem`'s, its unknown fields and the form it was read as included.
+- A folder's first list in a process reads its kept items file, `.flai-cache/items-<folder>.json`, such as `items-wip-archive-kanban-tasks.json` (`flai/internal/workitem/kept.go`). Since S-0676 it is `items-<folder>.jsonl`, one line per item: see [Kept items read one line per item (S-0676)](#kept-items-read-one-line-per-item-s-0676). A file whose size and modification time match its kept entry takes the kept item without a parse. A restored item equals `ReadItem`'s, its unknown fields and the form it was read as included.
 - `flai check` keeps each file's findings in `.flai-cache/lint-findings-<hash of the folder>.json` (`flai/internal/mdlint/kept.go`). An entry is keyed by the file's path, size, and modification time, and the file as a whole by the configuration's hash: its bytes, its rules, a rule-set version, and the format version. A file whose key matches takes its kept findings unread.
 - Only a read made at least two seconds after the file last changed is kept, as S-0156 trusts one in memory.
 - Both files are written again only when what they hold changed. Each is written beside the old one and renamed over it, and only into a `.flai-cache` that exists, as S-0531's kept commits are.
@@ -310,9 +310,64 @@ The two binaries give the same `flai check --strict` output, byte for byte, and 
 
 What is left:
 
-- A fresh list with the kept files took 0.31 s at the lowest load, a load average of 35, and 0.94 s at the median. That is not yet the 0.3 s the story's title names. Most of it is decoding the kept items files: 10.5 MB of JSON, 6.0 MB of it the archived tasks and 3.8 MB the archived stories. The kept lint findings file is 0.9 MB.
+- A fresh list with the kept files took 0.31 s at the lowest load, a load average of 35, and 0.94 s at the median. That is not yet the 0.3 s the story's title names. Most of it is decoding the kept items files: 10.5 MB of JSON, 6.0 MB of it the archived tasks and 3.8 MB the archived stories. The kept lint findings file is 0.9 MB. S-0676 took that decode away ([I-0310](../issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md); [below](#kept-items-read-one-line-per-item-s-0676)).
 - About 2.8 s of a check's CPU is its other rules, cause 11's (S-0601).
 - `flai move` still lists twice (`flai/internal/workitem/transition.go`). In one process the second list stats the files and parses only what the move wrote.
+
+## Kept items read one line per item (S-0676)
+
+This section remedies [I-0310](../issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md), the cost S-0600 left in a fresh list.
+
+### Cause
+
+A kept items file was one JSON document (`flai/internal/workitem/kept.go`, version 1). A folder's first list in a process decoded the whole file on one goroutine, every entry's item included, before it looked at a single file. The six item folders were then listed one after another (`Repo.List`). `BenchmarkFreshListWithKeptItems` (`flai/internal/workitem/kept_bench_test.go`) split a fresh `Repo.List(true)` of this repository's 3,817 items, 12.1 MB of kept JSON, by phase, each on one goroutine:
+
+| Phase | ms |
+|-------|----|
+| `readKeptItems`'s decode of the whole file | 115 |
+| Each item's `json.Unmarshal` | 132 |
+| Each item's `Marshal`, the form it was read as | 190 |
+| Reading the folders and statting the files | 34 |
+| Clone and sort | 9 |
+| Reading the kept files | 4.6 |
+
+In the list the per-item work runs on 16 workers, but the whole-file decode does not. In a profile `restoreItem` took 47 percent of the CPU and `readKeptItems` 17 percent.
+
+### Fix
+
+- The kept items file is `.flai-cache/items-<folder>.jsonl`, version 2. Its first line is a JSON header with the format and the folder's absolute path. Each further line is one item file: its name, size, and modification time, its unknown fields, and its parsed item, apart by tabs. The name, the unknown fields, and the item are JSON, so a tab or newline inside them is escaped and cannot break a line.
+- `readKeptItems` splits the lines and reads only each line's key. An item's JSON is decoded only when its key matches its file, on the list's parse workers.
+- A header that is not this format's, or names another folder, is a miss for the whole file. A line that does not split is a miss for its own file alone.
+- `Repo.List` lists its six folders at once, each under its own lock. They share one bound of min(GOMAXPROCS, 16) parses at once.
+- A version 1 file, `items-<folder>.json`, is never read. It is left in place, since an older flai on the same host still reads and writes it.
+- Everything else S-0600 promised holds: a restored item equals `ReadItem`'s, the file is written whole through a rename into a `.flai-cache` that exists, and it is written only when what it holds changed.
+
+The benchmark priced the other remedies against a model of version 1 at 155 ms, at a load average of 30 to 58:
+
+| Remedy | ms |
+|--------|----|
+| Version 1 | 155 |
+| `readAs` made only when asked for | 148 |
+| Folders at once | 103 |
+| `encoding/gob` | 75 |
+| `encoding/gob`, folders at once | 49 |
+| One line per item | 69 |
+| One line per item, folders at once (chosen) | 52 |
+
+`encoding/gob` is not used: a round trip changed 1,223 of the 3,817 items, since gob does not tell an empty slice from none (`Tags`, `Transitions`, `Usage`, `CostOfDelay`). A restored item would no longer equal `ReadItem`'s. `readAs` stays made at restore: making it only when asked for saves about 10 ms, and needs a shared holder, a flag of its own in `itemlock.go` for an item made in memory, and a lazy comparison in `keep`.
+
+### Measured on this repository
+
+On 2026-11-11 at about 02:20 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0), in two scratch copies of the main checkout's `system-flow.yaml` and `wip` under `/tmp`: 3,817 work items. Each copy had its own `.flai-cache`. A small program, built with `go build -overlay` against `main` at fc8055fcb and against `story/S-0676` at 62806f7f7, opened the copy and timed `Repo.List(true)` in a fresh process. Each wrote its kept files in two warm-up runs. Then the two ran in turn, twelve rounds. The load average was 10 to 11.
+
+| Fresh process, kept files | `main` | S-0676 |
+|---------------------------|--------|--------|
+| `Repo.List(true)` in process, median | 209 ms | 83 ms |
+| `Repo.List(true)` in process, lowest | 184 ms | 75 ms |
+| The whole process, median | 233 ms | 103 ms |
+| Kept items files | 12.1 MB | 12.0 MB |
+
+A fresh list takes 0.40 of `main`'s time. The benchmark agreed, at a load average of 25 to 53: 60 to 76 ms against the version 1 model's 164 to 192 ms in the same interleaved runs. S-0600's 0.94 s median was taken at a load average of 34 to 66, so it does not compare with these figures directly.
 
 ## A second pass at 596 stories (S-0596)
 
