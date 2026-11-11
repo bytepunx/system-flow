@@ -24,3 +24,24 @@ S-0510, running `scripts/flai.sh test` inside flai-agent-sf-claude-code:local on
 ## Remediation
 
 Story S-0686 remediates this issue, created from it at 2026-11-10T08:37:12Z.
+
+### Cause, found by S-0686
+
+Go's VCS stamping does not run git where the module is. Go looks up from the module's folder for a `.git` folder, and a worktree's `.git` is a file, so Go passes over it. A story's worktree is `<main>/.flai-cache/worktrees/S-nnnn`, so Go stops at the main checkout and runs `git status --porcelain` there. Inside the container Docker makes the main checkout's folder as root, as the parent of its mounts, so git refuses it for dubious ownership and exits 128. Git run by hand in the worktree finds the worktree's `.git` file, so it works. Go keeps git's standard error to itself, so `GIT_TRACE` on standard error showed nothing.
+
+S-0686 reproduced it in `flai-agent-sf-claude-code:local` on 2026-11-11 with a `git` shim on `PATH` that logged each call:
+
+```text
+cwd=/home/alex/git/bytepunx/system-flow args=status --porcelain
+fatal: detected dubious ownership in repository at '/home/alex/git/bytepunx/system-flow'
+rc=128
+```
+
+| Mounts and environment | `go build -buildvcs=true` in the worktree |
+|------------------------|--------------------------------------------|
+| S-0510's: worktree, main `.git` read-only, registration, no `safe.directory` | `error obtaining VCS status: exit status 128` |
+| The harness's since ADR-0253 (S-0628): those, `wip/`, `system-flow.yaml`, and `GIT_CONFIG_*` giving `safe.directory` for the main checkout | passes, stamped |
+
+So the cause no longer occurs in a story's containers: `flai/internal/harness/container.go`'s `safeMain`, `scripts/agent-container.sh`, and `scripts/agent-image.sh --check` give git `safe.directory` for the main checkout. The fix proposed: a smoke test that builds with VCS stamping in the layer's image under the harness's mounts and fails without `safe.directory`, and the layer drops `GOFLAGS=-buildvcs=false`.
+
+Go stamping the main checkout's revision rather than the worktree's is a fault of its own, on the host too: a `go build` in a story's worktree records `vcs.revision` of the main checkout's `HEAD`.
