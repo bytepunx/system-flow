@@ -6,7 +6,7 @@ title: A trial merge that finds two open stories editing different sentences of 
 status: in-progress
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T14:21:49Z
+updated: 2026-11-11T14:24:09Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
@@ -15,16 +15,28 @@ transitions:
     at: 2026-11-11T14:21:49Z
     by: agent-S-0719
 tags: []
-touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0286-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md]
+touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md, design/adrs/0287-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences-keeping.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 814
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 536
+      cache_read: 4762122
+      cache_write: 388710
+      cost: 1.9068
   strategic:
     - kind: planner
       seconds: 279

@@ -3,10 +3,10 @@ id: S-0710
 type: story
 nature: improvement
 title: "flai check finds `adr.index` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T09:56:02Z
-updated: 2026-11-11T09:28:10Z
+updated: 2026-11-11T14:38:04Z
 transitions:
   - to: ready
     at: 2026-11-11T09:00:55Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-11T09:28:10Z
     by: agent-S-0710
+  - to: review
+    at: 2026-11-11T14:36:35Z
+    by: agent-S-0710
+  - to: done
+    at: 2026-11-11T14:38:04Z
+    by: orchestrator
 tags: [flai, adr]
-touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,20 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 547
+  seconds: 1715
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 38
+      ceremony: 2
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 458
-      cache_read: 4062720
-      cache_write: 360534
-      cost: 1.6372
+      input: 198
+      output: 22327
+      cache_read: 11517418
+      cache_write: 396930
+      cost: 4.2259
   strategic:
     - kind: planner
       seconds: 62
@@ -83,8 +89,8 @@ finalized:
 This story remediates [I-0336](../../../design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md), "flai check finds `adr.index` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0336 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0336 is closed with `flai issue close I-0336 --reason` saying what fixed it
+- [x] The cause I-0336 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0336 is closed with `flai issue close I-0336 --reason` saying what fixed it
 
 ## Tasks
 - T-2980 Commit an ADR index the committed ADR files render
@@ -115,3 +121,12 @@ The forecast: `flai forecast` gives 15m (107 s per unit over 32 done medium impr
 The cost of delay: 5.00 USD a week, as `flai cod` works it out from the operator's input on TH-1021, `time_lost_per_cycle: 2m` set by the orchestrator: 2m lost per 168h cycle at 150 USD an hour. It stands unadjusted: two close-outs met the finding, and each costs an agent a finding outside its story to read and an issue instance to record.
 
 No `after`: the story reads nothing another open story writes.
+
+### Accepted by the orchestrator
+
+- Verified: 8d436b30e08c8972a58275e9ac2a8ebe5cf3d515
+- At: 2026-11-11T14:38:04Z
+
+Verdict: pass, both criteria met at 8d436b30e08c, every changed file within the story's touches, close-out passed every step
+- 1: flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md
+- 2: design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md

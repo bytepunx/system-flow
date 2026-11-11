@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 229.4267
-accrued_seconds: 26817
-tasks_completed: 147
-last_run: 2026-11-11T09:20:13Z
+accrued_cost: 230.4336
+accrued_seconds: 26942
+tasks_completed: 148
+last_run: 2026-11-11T14:25:31Z
 ---
 
 # Curator activity
@@ -1187,3 +1187,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0463, D-0505, D-0588, D-0589
 - Seconds: 87
 - Cost: 0.9026 USD, estimated
+
+### 2026-11-11T14:25:31Z
+
+- Summary: I wrote D-0591 (a story may amend its own ADR in place until the ADR is on main) and D-0592 (`flai stream sync --json` builds its output map by hand in `flai/cmd/stream.go`), merged S-0702 into D-0529, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0702
+- Items: D-0529, D-0591, D-0592
+- Seconds: 125
+- Cost: 1.0069 USD, estimated

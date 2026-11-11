@@ -28,11 +28,11 @@ usage:
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 119
-      cache_read: 864850
-      cache_write: 10436
-      cost: 0.324
+      input: 15
+      output: 1992
+      cache_read: 863029
+      cache_write: 12260
+      cost: 0.3106
 ---
 # T-2980 Commit an ADR index the committed ADR files render
 

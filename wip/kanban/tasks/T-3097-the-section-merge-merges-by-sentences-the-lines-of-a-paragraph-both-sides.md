@@ -3,16 +3,37 @@ id: T-3097
 type: task
 nature: improvement
 title: The section merge merges by sentences the lines of a paragraph both sides change, and still stops when both change one sentence
-status: backlog
+status: done
 parent: S-0719
 owner: alex
 created: 2026-11-11T08:54:43Z
-updated: 2026-11-11T08:54:43Z
-transitions: []
+updated: 2026-11-11T14:35:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:24:27Z
+    by: agent-S-0719
+  - to: in-progress
+    at: 2026-11-11T14:24:27Z
+    by: agent-S-0719
+  - to: done
+    at: 2026-11-11T14:35:19Z
+    by: agent-S-0719
 stream: S-0719
 tags: [flai, go]
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go]
 after: [T-3094]
+usage:
+  source: log
+  seconds: 651
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 181
+      cache_read: 1307996
+      cache_write: 77335
+      cost: 0.5129
 ---
 # T-3097 The section merge merges by sentences the lines of a paragraph both sides change, and still stops when both change one sentence
 

@@ -24,16 +24,16 @@ touches: [design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-c
 after: [T-2980]
 usage:
   source: log
-  seconds: 31
+  seconds: 48
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 56
-      cache_read: 327207
-      cache_write: 3603
-      cost: 0.1225
+      input: 10
+      output: 1291
+      cache_read: 559180
+      cache_write: 7944
+      cost: 0.2012
 ---
 # T-2986 Close I-0336 with what fixed it
 

@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2980]
 usage:
   source: log
-  seconds: 31
+  seconds: 36
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 56
-      cache_read: 327207
-      cache_write: 3603
-      cost: 0.1225
+      output: 753
+      cache_read: 326174
+      cache_write: 4634
+      cost: 0.1174
 ---
 # T-2983 Say in the design and the user guide what an ADR commit records of the index
 

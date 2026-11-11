@@ -24,16 +24,16 @@ touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, f
 after: [T-3024]
 usage:
   source: log
-  seconds: 938
+  seconds: 1725
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 93
-      output: 438
-      cache_read: 5489034
-      cache_write: 320857
-      cost: 2.1504
+      input: 127
+      output: 609
+      cache_read: 6641060
+      cache_write: 362542
+      cost: 2.5926
 ---
 # T-3025 flai serve sends a story whose kluster deploy or checks failed back to in-progress, starts its agent, and keeps its namespace
 

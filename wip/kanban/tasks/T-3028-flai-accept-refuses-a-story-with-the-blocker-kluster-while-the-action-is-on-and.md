@@ -24,16 +24,16 @@ touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go
 after: [T-3024]
 usage:
   source: log
-  seconds: 937
+  seconds: 1731
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 109
-      output: 795
-      cache_read: 7355811
-      cache_write: 205151
-      cost: 2.7986
+      input: 144
+      output: 970
+      cache_read: 8576828
+      cache_write: 250619
+      cost: 3.2679
 ---
 # T-3028 flai accept refuses a story with the blocker kluster while the action is on, and --without-kluster lands it on the operator's word
 

@@ -3,15 +3,36 @@ id: T-3094
 type: task
 nature: improvement
 title: "ADR: the section merge merges by sentences the lines of a paragraph both sides change, refining ADR-0175 and ADR-0276"
-status: backlog
+status: done
 parent: S-0719
 owner: alex
 created: 2026-11-11T08:54:32Z
-updated: 2026-11-11T08:54:32Z
-transitions: []
+updated: 2026-11-11T14:24:09Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:23:43Z
+    by: agent-S-0719
+  - to: in-progress
+    at: 2026-11-11T14:23:43Z
+    by: agent-S-0719
+  - to: done
+    at: 2026-11-11T14:24:09Z
+    by: agent-S-0719
 stream: S-0719
 tags: [adr, design]
-touches: [design/adrs/0286-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences.md, design/adrs/README.md]
+touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 26
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 18
+      cache_read: 528018
+      cache_write: 3047
+      cost: 0.1966
 ---
 # T-3094 ADR: the section merge merges by sentences the lines of a paragraph both sides change, refining ADR-0175 and ADR-0276
 

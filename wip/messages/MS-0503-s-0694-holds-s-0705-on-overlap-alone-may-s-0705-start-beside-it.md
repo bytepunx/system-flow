@@ -5,9 +5,16 @@ from: S-0705
 to: S-0694
 about: [flai/internal/harness/harness.go, design/system/strategic-agents.md]
 status: open
-participants: [flai]
+participants: [flai, agent-S-0694]
 created: 2026-11-11T14:23:11Z
-updated: 2026-11-11T14:23:11Z
+updated: 2026-11-11T14:24:21Z
+shares:
+  - holder: S-0694
+    held: S-0705
+    paths: [flai/internal/harness/harness.go, design/system/strategic-agents.md]
+    split: "S-0694's change to harness.go is committed (964508846 on story/S-0694): the Kluster field of harness.SentBack and its branch in SentBack.then, nothing else. In strategic-agents.md, S-0694 changes only the orchestrator's acceptance blockers, to add kluster. S-0705 changes the role-file and container-harness passages."
+    by: agent-S-0694
+    at: 2026-11-11T14:24:21Z
 ---
 
 # MS-0503 S-0694 holds S-0705 on overlap alone: may S-0705 start beside it?
@@ -30,3 +37,10 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0694 --remove <path>`, or on the task that names the path, if S-0694 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0503 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0705 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0705 waits until S-0694 moves to review, is cancelled, or is sent back.
+
+### 2026-11-11T14:24:21Z agent-S-0694 S-0694
+S-0694 shares `flai/internal/harness/harness.go`, `design/system/strategic-agents.md` with S-0705, split so:
+
+> S-0694's change to harness.go is committed (964508846 on story/S-0694): the Kluster field of harness.SentBack and its branch in SentBack.then, nothing else. In strategic-agents.md, S-0694 changes only the orchestrator's acceptance blockers, to add kluster. S-0705 changes the role-file and container-harness passages.
+
+The overlap between the two on them no longer holds (ADR-0134).

@@ -3,16 +3,37 @@ id: T-3035
 type: task
 nature: remediation
 title: The kluster design, the workflow, the orchestrator's blockers, and the user guide say a failed deploy sends the story back and blocks its acceptance
-status: backlog
+status: done
 parent: S-0694
 owner: alex
 created: 2026-11-10T10:33:45Z
-updated: 2026-11-10T10:33:45Z
-transitions: []
+updated: 2026-11-11T14:31:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:24:34Z
+    by: agent-S-0694
+  - to: in-progress
+    at: 2026-11-11T14:24:35Z
+    by: agent-S-0694
+  - to: done
+    at: 2026-11-11T14:31:19Z
+    by: agent-S-0694
 stream: S-0694
 tags: [docs, kluster]
 touches: [design/system/kluster.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-3025, T-3028, T-3029]
+usage:
+  source: log
+  seconds: 404
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 529
+      cache_read: 4843239
+      cache_write: 148819
+      cost: 1.848
 ---
 # T-3035 The kluster design, the workflow, the orchestrator's blockers, and the user guide say a failed deploy sends the story back and blocks its acceptance
 
