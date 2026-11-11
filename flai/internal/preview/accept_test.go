@@ -1,6 +1,7 @@
 package preview
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -16,6 +17,8 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -344,6 +347,149 @@ func TestTheQueueTiersGateNeverOpensUnread(t *testing.T) {
 		if !strings.HasPrefix(res.QueueTiersWhy, c.why) || res.QueueTiersBlocker == nil || len(res.Blockers) != 1 || !strings.Contains(res.Blockers[0], c.why) {
 			t.Errorf("%s: why %q, blockers %q; want %q", name, res.QueueTiersWhy, res.Blockers, c.why)
 		}
+	}
+}
+
+// writeKlusterRecord writes r as its namespace's deployment record in repo's
+// main checkout, as a kluster deploy keeps it.
+func writeKlusterRecord(t *testing.T, repo *workitem.Repo, r kluster.Record) {
+	t.Helper()
+	path := kluster.RecordPath(repo.MainRoot, r.Namespace)
+	data, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ADR-0254 §5a: while the kluster host action is on and the manifest has a
+// kluster: block, every acceptance of a story, the operator's, the
+// orchestrator's (among its own blockers), and the queue's landing, lists the
+// blocker kluster until its namespace's deploy, and with the checks action on
+// its checks run, passed at its branch's head; --without-kluster lifts it for
+// the operator's alone, keeping why. With the action off, or no kluster:
+// block, nothing is gated.
+func TestTheKlusterGateHoldsEveryAcceptanceWhileTheActionIsOn(t *testing.T) {
+	at := time.Date(2026, 11, 11, 3, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s := forgeRepo(t, "local", at)
+	repo.Manifest.Kluster = &manifest.Kluster{Config: "kluster.yaml"}
+	git := withGit{gitAnswers{
+		"rev-parse --is-inside-work-tree":                                   "true",
+		"rev-parse --verify --quiet refs/heads/story/" + s.ID:               forgeHead,
+		"rev-parse --verify --quiet refs/heads/story/" + s.ID + "^{commit}": forgeHead,
+	}}
+	ns := strings.ToLower(s.ID)
+	never := s.ID + "'s namespace " + ns + " was never deployed"
+	accept := func(opts AcceptOptions) *Acceptance {
+		t.Helper()
+		res, err := AcceptWith(git, repo, s, "alex", at, log, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	held := func(res *Acceptance) bool {
+		return res.KlusterBlocker != nil && slices.Contains(res.Blockers, res.KlusterBlocker.Message)
+	}
+	passes := func(name string, res *Acceptance) {
+		t.Helper()
+		if res.KlusterWhy != "" || res.KlusterBlocker != nil || slices.ContainsFunc(res.Blockers, func(b string) bool { return strings.Contains(b, "kluster host action") }) {
+			t.Errorf("%s is not gated: why %q, blocker %+v, blockers %q", name, res.KlusterWhy, res.KlusterBlocker, res.Blockers)
+		}
+	}
+
+	// off, or no block: nothing is gated, though nothing was deployed
+	passes("the action off", accept(AcceptOptions{ChecksOn: true}))
+	repo.Manifest.Kluster = nil
+	passes("no kluster: block", accept(AcceptOptions{KlusterOn: true, ChecksOn: true}))
+	repo.Manifest.Kluster = &manifest.Kluster{Config: "kluster.yaml"}
+
+	// on and never deployed: every acceptance is held, naming why
+	on := AcceptOptions{KlusterOn: true, ChecksOn: true}
+	res := accept(on)
+	if b := res.KlusterBlocker; !held(res) || b.Code != BlockKluster || !strings.Contains(b.Message, never) || !strings.Contains(b.Message, "flai accept "+s.ID+" --without-kluster") || slices.Contains(res.OrchestratorBlockers, *b) {
+		t.Errorf("the operator's acceptance must list kluster: %+v %q", res.KlusterBlocker, res.Blockers)
+	}
+	res = accept(AcceptOptions{KlusterOn: true, ChecksOn: true, Orchestrator: true})
+	if b := res.KlusterBlocker; !held(res) || !slices.Contains(res.OrchestratorBlockers, *b) {
+		t.Errorf("the orchestrator's acceptance must list kluster among its own: %+v %+v", res.KlusterBlocker, res.OrchestratorBlockers)
+	}
+	if res = accept(AcceptOptions{KlusterOn: true, ChecksOn: true, Batch: "20261111-020000"}); !held(res) {
+		t.Errorf("the queue's landing must list kluster: %+v %q", res.KlusterBlocker, res.Blockers)
+	}
+
+	// --without-kluster is the operator's: no blocker, why kept
+	res = accept(AcceptOptions{KlusterOn: true, ChecksOn: true, WithoutKluster: true})
+	passed := res.KlusterBlocker == nil && !slices.ContainsFunc(res.Blockers, func(b string) bool { return strings.Contains(b, never) })
+	if !passed || !strings.HasPrefix(res.KlusterWhy, never) {
+		t.Errorf("--without-kluster lists no blocker and keeps why: %q %+v %q", res.KlusterWhy, res.KlusterBlocker, res.Blockers)
+	}
+	for name, opts := range map[string]AcceptOptions{
+		"the orchestrator's": {KlusterOn: true, Orchestrator: true, WithoutKluster: true},
+		"the queue's":        {KlusterOn: true, Batch: "20261111-020000", WithoutKluster: true},
+	} {
+		if res := accept(opts); !held(res) {
+			t.Errorf("--without-kluster does not lift %s acceptance: %+v", name, res.KlusterBlocker)
+		}
+	}
+
+	deployed := kluster.Record{Story: s.ID, Namespace: ns, Commit: forgeHead, Outcome: kluster.OutcomePassed}
+	for _, c := range []struct {
+		name   string
+		record kluster.Record
+		checks bool
+		why    string // "" when the gate passes
+	}{
+		{"deployed at an older head", kluster.Record{Story: s.ID, Namespace: ns, Commit: forgeOther, Outcome: kluster.OutcomePassed}, true, "not at the story's head abc1234def56"},
+		{"deploy failed", kluster.Record{Story: s.ID, Namespace: ns, Commit: forgeHead, Outcome: kluster.OutcomeFailed, FailedStep: kluster.StepDeploy}, true, "failed at the deploy step"},
+		{"checks not run", deployed, true, "no checks run against it has ended there yet"},
+		{"checks off", deployed, false, ""},
+		{"checks failed", kluster.Record{Story: s.ID, Namespace: ns, Commit: forgeHead, Outcome: kluster.OutcomePassed, ChecksCommit: forgeHead, ChecksOutcome: kluster.OutcomeFailed}, true, "checks run against it there ended failed"},
+		{"deploy and checks passed", kluster.Record{Story: s.ID, Namespace: ns, Commit: forgeHead, Outcome: kluster.OutcomePassed, ChecksCommit: forgeHead, ChecksOutcome: kluster.OutcomePassed}, true, ""},
+	} {
+		writeKlusterRecord(t, repo, c.record)
+		res := accept(AcceptOptions{KlusterOn: true, ChecksOn: c.checks})
+		if c.why == "" {
+			passes(c.name, res)
+			continue
+		}
+		if !held(res) || !strings.Contains(res.KlusterWhy, c.why) {
+			t.Errorf("%s: why %q, blockers %q; want %q", c.name, res.KlusterWhy, res.Blockers, c.why)
+		}
+	}
+}
+
+// ADR-0254 §5a: a record or a head that cannot be read holds the story,
+// saying why, so the kluster gate never opens unread.
+func TestTheKlusterGateNeverOpensUnread(t *testing.T) {
+	at := time.Date(2026, 11, 11, 3, 0, 0, 0, time.UTC)
+	repo, s := forgeRepo(t, "local", at)
+	repo.Manifest.Kluster = &manifest.Kluster{Config: "kluster.yaml"}
+	gate := func(r gitAnswers) *Acceptance {
+		res := &Acceptance{ID: s.ID, Branch: "story/" + s.ID}
+		klusterGate(r, repo, s, res, AcceptOptions{KlusterOn: true})
+		return res
+	}
+	res := gate(gitAnswers{})
+	if !strings.HasPrefix(res.KlusterWhy, "cannot resolve the head of "+s.ID+"'s branch refs/heads/story/"+s.ID) || res.KlusterBlocker == nil || len(res.Blockers) != 1 {
+		t.Errorf("a head that cannot be read: why %q, blockers %q", res.KlusterWhy, res.Blockers)
+	}
+	path := kluster.RecordPath(repo.MainRoot, strings.ToLower(s.ID))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res = gate(gitAnswers{"rev-parse --verify --quiet refs/heads/story/" + s.ID + "^{commit}": forgeHead})
+	if !strings.HasPrefix(res.KlusterWhy, "cannot tell whether its namespace was deployed at its head: read the deployment record") || res.KlusterBlocker == nil || len(res.Blockers) != 1 {
+		t.Errorf("a record that cannot be read: why %q, blockers %q", res.KlusterWhy, res.Blockers)
 	}
 }
 

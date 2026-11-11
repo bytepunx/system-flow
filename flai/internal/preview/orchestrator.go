@@ -71,6 +71,17 @@ type AcceptOptions struct {
 	// blocker it brings (ADR-0221).
 	QueueBatches      bool
 	WithoutQueueTiers bool
+	// KlusterOn says the kluster host action is on for the project, and
+	// ChecksOn the checks host action, which the caller reads from the
+	// configuration: while KlusterOn and the manifest has a kluster: block,
+	// every acceptance of a story waits for its namespace's deploy at its
+	// branch's head, and with ChecksOn for the checks run against it there;
+	// WithoutKluster is the operator's override of the blocker it brings,
+	// which no acceptance by the orchestrator or the queue's landing takes
+	// (ADR-0254 §5a).
+	KlusterOn      bool
+	ChecksOn       bool
+	WithoutKluster bool
 }
 
 // Evidence is the markdown an orchestrator writes from its verifier's report:

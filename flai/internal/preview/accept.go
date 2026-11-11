@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/release"
@@ -119,6 +120,15 @@ type Acceptance struct {
 	QueueTiers        []string `json:"queue_tiers,omitempty"`
 	QueueTiersWhy     string   `json:"queue_tiers_why,omitempty"`
 	QueueTiersBlocker *Blocker `json:"queue_tiers_blocker,omitempty"`
+	// KlusterWhy is why the kluster gate holds the story while the kluster
+	// host action is on for the project and its manifest has a kluster:
+	// block (ADR-0254 §5a): its namespace's last job and that job's outcome,
+	// or what could not be read; "" when the gate passes or does not apply.
+	// KlusterBlocker is the blocker it brings, also in Blockers, and for the
+	// orchestrator's acceptance in OrchestratorBlockers; nil under the
+	// operator's --without-kluster.
+	KlusterWhy     string   `json:"kluster_why,omitempty"`
+	KlusterBlocker *Blocker `json:"kluster_blocker,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -166,6 +176,12 @@ const (
 // queue did not run at its branch's head while the merge queue batches
 // (ADR-0221).
 const BlockQueueTiers = "queue_tiers"
+
+// BlockKluster is the code of the blocker of every acceptance of a story,
+// while the kluster host action is on, whose namespace was not deployed at
+// its branch's head, or whose checks run against it there did not pass
+// while the checks host action is on (ADR-0254 §5a).
+const BlockKluster = "kluster"
 
 // BlockDirtyMain is the code of the blocker of every acceptance but the
 // merge queue's landing for a story whose change would overwrite a file the
@@ -216,7 +232,12 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // keeps of its pull request. With opts.QueueBatches, a story's acceptance that
 // is neither the orchestrator's nor the queue's landing has the blocker
 // queue_tiers while its last flai verify did not run the tiers marked queue at
-// its branch's head, which opts.WithoutQueueTiers lifts (ADR-0221).
+// its branch's head, which opts.WithoutQueueTiers lifts (ADR-0221). With
+// opts.KlusterOn and a kluster: block in the manifest, every acceptance of a
+// story, the operator's, the orchestrator's, and the queue's landing, has the
+// blocker kluster until its namespace's deploy, and with opts.ChecksOn its
+// checks run against it, passed at its branch's head, which
+// opts.WithoutKluster lifts for the operator's alone (ADR-0254 §5a).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -379,6 +400,9 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 			res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
 		}
 	}
+	// while the kluster host action is on, a change the cluster has not run
+	// at the story's head is not shipped, whoever accepts it (ADR-0254 §5a)
+	klusterGate(r, repo, it, res, opts)
 	// a file outside the shared set the story's change would overwrite
 	// refuses every acceptance that merges here but the queue's landing,
 	// which holds such a story back itself (ADR-0178, ADR-0248); the
@@ -487,6 +511,57 @@ func queueTiersNotRun(r execx.Runner, repo *workitem.Repo, id, branch string) ([
 // the reason why gives, naming the ways out (ADR-0221).
 func QueueTiersBlocker(id, why string) Blocker {
 	return Blocker{Code: BlockQueueTiers, Message: fmt.Sprintf("%s's tiers marked queue have not run at its head: %s; while the merge queue batches, a hand acceptance waits for them: run flai verify %s --all, which reuses the tiers its last run passed at the same patch, enqueue it with flai queue add %s, or, as the operator in a shell, accept it with flai accept %s --without-queue-tiers (ADR-0221)", id, why, id, id, id)}
+}
+
+// klusterGate sets on res why story it is not accepted yet while the kluster
+// host action is on for the project (opts.KlusterOn) and its manifest has a
+// kluster: block, and, unless opts.WithoutKluster lifts it for the operator's
+// acceptance, the blocker kluster (ADR-0254 §5a): every acceptance waits for
+// the story's namespace to be deployed at its branch's head and, while
+// opts.ChecksOn, for the checks run against it to pass there. For the
+// orchestrator's acceptance the blocker is among its own. It gates only a
+// story with a branch, not done already: one with no branch merges no change
+// to deploy.
+func klusterGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
+	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || !opts.KlusterOn || repo.Manifest.Kluster == nil {
+		return
+	}
+	res.KlusterWhy = klusterHeld(r, repo, it.ID, opts.ChecksOn)
+	if res.KlusterWhy == "" || (opts.WithoutKluster && !opts.Orchestrator && opts.Batch == "") {
+		return
+	}
+	b := KlusterBlocker(it.ID, res.KlusterWhy)
+	res.KlusterBlocker = &b
+	if opts.Orchestrator {
+		res.OrchestratorBlockers = append(res.OrchestratorBlockers, b)
+		return
+	}
+	res.Blockers = append(res.Blockers, b.Message)
+}
+
+// klusterHeld is why story id's namespace does not let it be accepted, as
+// kluster.AcceptGate says it for the head of its branch in the main checkout,
+// with checksOn; "" when it does. A head or a record that cannot be read is
+// why, naming the error, so the gate never opens unread.
+func klusterHeld(r execx.Runner, repo *workitem.Repo, id string, checksOn bool) string {
+	head, err := kluster.StoryHead(r, repo.MainRoot, id)
+	if err != nil {
+		return fmt.Sprintf("cannot %v", err)
+	}
+	ok, why, err := kluster.AcceptGate(repo.MainRoot, id, head, checksOn)
+	switch {
+	case err != nil:
+		return fmt.Sprintf("cannot tell whether its namespace was deployed at its head: %v", err)
+	case ok:
+		return ""
+	}
+	return why
+}
+
+// KlusterBlocker is why story id cannot be accepted while the kluster host
+// action is on, for the reason why gives, naming the ways out (ADR-0254 §5a).
+func KlusterBlocker(id, why string) Blocker {
+	return Blocker{Code: BlockKluster, Message: fmt.Sprintf("the kluster host action is on, so %s is accepted only once its namespace was deployed at its head and, while the checks host action is on, the checks run against it passed there: %s; wait for flai serve to deploy it and run its checks, which flai kluster status shows, deploy it with flai kluster deploy %s in a shell on the host, or, as the operator in a shell, accept it with flai accept %s --without-kluster (ADR-0254)", id, why, id, id)}
 }
 
 // doneBy is who made it's last move to done, as its transitions record it;

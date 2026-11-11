@@ -65,8 +65,14 @@ held, the operator's move of a story from review to done enqueues it in the
 merge queue, as flai accept does (S-0552), and lands nothing: the story stays
 in review until the queue lands it once its batch passes, and a story
 enqueued already, or in the batch under way, is answered so, changing
-nothing. --without-queue-tiers and --keep-removal land it by hand as before,
-outside the queue; see flai accept --help.`,
+nothing. --without-queue-tiers, --without-kluster, and --keep-removal land it
+by hand as before, outside the queue; see flai accept --help.
+
+While the kluster host action is on, the move of a story from review to done
+is refused as flai accept refuses it, with the blocker kluster, until its
+namespace was deployed at its head and, while the checks host action is on,
+its checks passed there; --without-kluster lands it anyway on the operator's
+word and records it in its Notes (ADR-0254).`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-005 ready --yes                            # a draft, finalized with the move

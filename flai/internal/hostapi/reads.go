@@ -211,7 +211,10 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 
 		// accept.preview: what would block an acceptance, as flai accept
 		// --dry-run prints it, the tiers marked queue that did not run at the
-		// story's head among them while the merge queue batches (ADR-0221).
+		// story's head among them while the merge queue batches (ADR-0221),
+		// and the blocker kluster while the kluster host action is on and the
+		// story's namespace was not deployed, or its checks did not pass, at
+		// its head (ADR-0254 §5a).
 		"accept.preview": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			id, e := idOnly(raw)
 			if e != nil {
@@ -224,7 +227,8 @@ func readMethods(now func() time.Time, host Host) map[string]channel.Method {
 					return nil, err
 				}
 				batches := mergequeue.Batches(host.enabled(ActionMergeQueue, p.Root), repo.Manifest)
-				return preview.AcceptWith(r, repo, it, by, now(), log, preview.AcceptOptions{QueueBatches: batches})
+				return preview.AcceptWith(r, repo, it, by, now(), log, preview.AcceptOptions{QueueBatches: batches,
+					KlusterOn: host.enabled(ActionKluster, p.Root), ChecksOn: host.enabled(ActionChecks, p.Root)})
 			})
 		},
 

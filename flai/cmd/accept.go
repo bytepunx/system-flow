@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -54,6 +55,10 @@ type acceptOptions struct {
 	// queue batches though the tiers marked queue did not run at the story's
 	// head (ADR-0221).
 	withoutQueueTiers bool
+	// withoutKluster is the operator's override: accept while the kluster
+	// host action is on though the story's namespace was not deployed, or
+	// its checks did not pass, at its head (ADR-0254 §5a).
+	withoutKluster bool
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -263,14 +268,31 @@ not run and why. --without-queue-tiers lands the story anyway and writes,
 with the commit, the tiers that did not run, or why when no report at its
 head names them, who accepted, and when under ### Accepted without the queue
 tiers in its Notes. It is refused with --by orchestrator and with --batch, and
-changes nothing while the queue does not batch or the tiers ran.`,
+changes nothing while the queue does not batch or the tiers ran.
+
+While the kluster host action is on for the project and its system-flow.yaml
+has a kluster: block, a change the cluster has not run is not shipped
+(ADR-0254 §5a): every acceptance of a story with a branch, by hand, from the
+dashboard, --by orchestrator, and --batch alike, is refused, before anything
+is merged, until its namespace's record under .flai-cache/kluster says its
+deploy passed at the head of story/<id> and, while the checks host action is
+on, that the checks run against it passed there too. The refusal is the
+blocker kluster, naming the namespace's last job, its commit, and its
+outcome; --dry-run lists it, with --json under kluster_blocker, among the
+orchestrator_blockers for --by orchestrator, and kluster_why says why.
+--without-kluster lands the story anyway, on the operator's word, by hand
+outside the merge queue, and writes, with the commit, why the gate held it,
+who accepted, and when under ### Accepted without the kluster gate in its
+Notes. It is refused with --by orchestrator and with --batch, and changes
+nothing while the action is off or the gate passes.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
   flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
   flai accept S-031 --by orchestrator --batch 20261019-041200
-  flai accept S-031 --by alex --without-queue-tiers`,
+  flai accept S-031 --by alex --without-queue-tiers
+  flai accept S-031 --by alex --without-kluster`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -303,6 +325,7 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	c.Flags().StringVar(&o.verified, "verified", "", "with --by orchestrator: the commit its verifier passed, the story branch's head")
 	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion, or - <n>: T-nnnn done for a formula's instance (- reads standard input)")
 	c.Flags().BoolVar(&o.withoutQueueTiers, "without-queue-tiers", false, "as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221)")
+	c.Flags().BoolVar(&o.withoutKluster, "without-kluster", false, "as the operator: accept while the kluster host action is on though the story's namespace was not deployed, or its checks did not pass, at its head, recorded in its Notes (ADR-0254)")
 	c.Flags().StringArrayVar(&o.keepRemovals, "keep-removal", nil, "as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable)")
 	if f := c.Flags().Lookup("reason"); f == nil {
 		c.Flags().StringArrayVar(&o.reasons, "reason", nil, "with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable)")
@@ -367,11 +390,13 @@ type acceptQueued struct {
 // the operator's that the merge queue takes in place of a landing by hand
 // (S-0552): a story in review, accepted by neither the orchestrator nor the
 // queue's landing, while the queue batches, not as a dry run, and without
-// --without-queue-tiers or --keep-removal, which land it by hand, outside
-// the queue, as before. Whether the queue is held is read after.
+// --without-queue-tiers, --without-kluster, or --keep-removal, which land it
+// by hand, outside the queue, as before: the queue's landing waits for the
+// story's deploy, which --without-kluster lands it without (ADR-0254 §5a).
+// Whether the queue is held is read after.
 func queuesInstead(it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) bool {
 	return it.Type == workitem.Story && it.Status == workitem.Review && opts.QueueBatches && !opts.Orchestrator &&
-		o.batch == "" && !o.dryRun && !o.withoutQueueTiers && len(opts.Keep) == 0
+		o.batch == "" && !o.dryRun && !o.withoutQueueTiers && !o.withoutKluster && len(opts.Keep) == 0
 }
 
 // enqueueAccepted is the operator's acceptance of story it, by by, while the
@@ -556,6 +581,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		// (ADR-0221)
 		if opts.WithoutQueueTiers && res.QueueTiersWhy != "" {
 			it.Body = withNotesSection(it.Body, withoutQueueTiersNotes(res, a.now()))
+		}
+		// and the operator's acceptance without the kluster gate (ADR-0254
+		// §5a)
+		if opts.WithoutKluster && res.KlusterWhy != "" {
+			it.Body = withNotesSection(it.Body, withoutKlusterNotes(res, a.now()))
 		}
 		if err := repo.Save(it); err != nil {
 			return nil, err
@@ -1143,8 +1173,11 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // enqueues a story instead (S-0403); and --keep-removal as keptRemovals
 // refuses it (ADR-0155); and --without-queue-tiers with --batch or by the
 // orchestrator, whose acceptances the tiers marked queue do not gate
-// (ADR-0221). For the operator's acceptance it says whether the merge queue
-// batches, so that the preview gates it on those tiers. The finishing of a
+// (ADR-0221), and --without-kluster with either, the operator's alone
+// (ADR-0254 §5a). For the operator's acceptance it says whether the merge
+// queue batches, so that the preview gates it on those tiers, and for every
+// acceptance of a story whether the kluster and checks host actions are on,
+// so that the preview gates it on the story's deploy. The finishing of a
 // story done already needs no evidence, since the acceptance that moved it to
 // done wrote its own
 // (ADR-0189). For the queue's
@@ -1182,10 +1215,20 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-queue-tiers is the operator's acceptance by hand, and --batch %s is the merge queue's landing, whose batch ran every tier: give one or the other (ADR-0221)", o.batch)
 	case o.withoutQueueTiers && orchestrator:
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-queue-tiers is the operator's: the orchestrator never lands %s without the tiers marked queue, and enqueues it instead while the queue batches; leave it out (ADR-0221)", it.ID)
-	case !orchestrator:
+	case o.withoutKluster && o.batch != "":
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-kluster is the operator's acceptance by hand, and --batch %s is the merge queue's landing, which waits for %s's deploy and checks at its head: give one or the other (ADR-0254)", o.batch, it.ID)
+	case o.withoutKluster && orchestrator:
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --without-kluster is the operator's: the orchestrator never lands %s before its namespace's deploy and checks pass at its head; leave it out, and the operator lands it with flai accept %s --without-kluster (ADR-0254)", it.ID, it.ID)
+	}
+	klusterOn, checksOn, err := a.klusterGateOn(it, mainRootOf(repo))
+	if err != nil {
+		return preview.AcceptOptions{}, none, err
+	}
+	if !orchestrator {
 		// the queue's landing is not gated, so the queue is not read for it
 		batches := o.batch == "" && a.queueBatches(mainRootOf(repo))
-		return preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers}, none, nil
+		return preview.AcceptOptions{Keep: keep, Batch: o.batch, QueueBatches: batches, WithoutQueueTiers: o.withoutQueueTiers,
+			KlusterOn: klusterOn, ChecksOn: checksOn, WithoutKluster: o.withoutKluster}, none, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: %w", err)
@@ -1197,7 +1240,7 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if o.batch == "" && !o.dryRun && !resume && a.queueBatches(mainRootOf(repo)) {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the merge-queue host action is on and the queue batches, so the merge queue lands %s, not the orchestrator: %s, and flai serve lands it as the orchestrator once its batch passes (ADR-0176)", it.ID, enqueueInstead(it.ID))
 	}
-	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified, Batch: o.batch}
+	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified, Batch: o.batch, KlusterOn: klusterOn, ChecksOn: checksOn}
 	if o.evidence == "" {
 		switch {
 		case o.batch != "":
@@ -1227,6 +1270,25 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's evidence for %s cannot be read as ADR-0093 asks: %w", it.ID, err)
 	}
 	return opts, none, nil
+}
+
+// klusterGateOn reports whether the kluster host action is on for the project
+// whose main checkout is root, and the checks host action, in the
+// configuration this flai reads, for the kluster gate of story it's
+// acceptance (ADR-0254 §5a); both are off for an item that is not a story,
+// which the gate does not hold. A configuration that cannot be read refuses
+// the acceptance, so that the gate never opens unread.
+func (a *app) klusterGateOn(it *workitem.Item, root string) (klusterOn, checksOn bool, err error) {
+	if it.Type != workitem.Story {
+		return false, false, nil
+	}
+	if klusterOn, err = a.hostActionOn(hostapi.ActionKluster, root); err == nil && klusterOn {
+		checksOn, err = a.hostActionOn(hostapi.ActionChecks, root)
+	}
+	if err != nil {
+		return false, false, fmt.Errorf("rule: cannot tell whether the kluster host action holds %s until its namespace is deployed at its head: %w (ADR-0254)", it.ID, err)
+	}
+	return klusterOn, checksOn, nil
 }
 
 // enqueueInstead says how the orchestrator enqueues story id for the merge
@@ -1448,6 +1510,14 @@ func withoutQueueTiersNotes(res *preview.Acceptance, now time.Time) string {
 	}
 	fmt.Fprintf(&b, "- By: %s\n- At: %s\n", res.By, now.UTC().Format(time.RFC3339))
 	return b.String()
+}
+
+// withoutKlusterNotes is what the operator's acceptance with --without-kluster
+// writes under the story's Notes while the kluster host action is on
+// (ADR-0254 §5a): why the gate held the story, its namespace's last job and
+// that job's outcome, who accepted, and when.
+func withoutKlusterNotes(res *preview.Acceptance, now time.Time) string {
+	return fmt.Sprintf("### Accepted without the kluster gate\n\n- Why: %s\n- By: %s\n- At: %s\n", res.KlusterWhy, res.By, now.UTC().Format(time.RFC3339))
 }
 
 // withNotesSection is body with section appended to the end of its "## Notes"
