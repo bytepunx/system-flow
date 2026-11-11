@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-11T08:48:51Z
+updated: 2026-11-11T08:50:05Z
 ---
 
 # Active streams
@@ -9,13 +9,13 @@ updated: 2026-11-11T08:48:51Z
 |--------|-------|--------|------------|---------|
 | [S-0693](S-0693.md) | TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier | in-progress | agent-S-0693 | 2026-11-11T05:18:24Z |
 | [S-0698](S-0698.md) | This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review | in-progress | agent-S-0698 | 2026-11-11T08:42:44Z |
-| [S-0702](S-0702.md) | flai check finds `issues.summary` outside the story at close-out | in-progress | agent-S-0702 | 2026-11-11T08:46:59Z |
+| [S-0702](S-0702.md) | flai check finds `issues.summary` outside the story at close-out | in-progress | agent-S-0702 | 2026-11-11T08:49:50Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 232 | 1269.6533 USD | 150591 | 2026-11-11T06:14:41Z |
-| [orchestrator](orchestrator.md) | 2954 | 2113.2942 USD | 1548307 | 2026-11-11T08:48:36Z |
+| [orchestrator](orchestrator.md) | 2956 | 2113.5614 USD | 1548345 | 2026-11-11T08:49:20Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 144 | 226.0840 USD | 26322 | 2026-11-11T07:26:25Z |

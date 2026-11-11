@@ -6,7 +6,7 @@ title: A go build in a story's worktree stamps vcs.revision of the main checkout
 status: backlog
 owner: alex
 created: 2026-11-11T08:46:42Z
-updated: 2026-11-11T08:46:42Z
+updated: 2026-11-11T08:50:05Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-11-11T08:46:42Z
+finalized:
+  by: alex
+  at: 2026-11-11T08:50:05Z
 ---
 # S-0724 A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
 
