@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2102.3823
-accrued_seconds: 1545899
-tasks_completed: 2875
-last_run: 2026-11-11T01:41:00Z
+accrued_cost: 2102.5352
+accrued_seconds: 1545956
+tasks_completed: 2877
+last_run: 2026-11-11T01:42:42Z
 ---
 
 # Orchestrator activity
@@ -20157,6 +20157,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1941 USD, estimated
+
+### 2026-11-11T01:42:25Z
+
+- Summary: Release due after S-0675's acceptance (threshold policy: 4 stories pending, 1087.58 USD/week, at or over 1000 USD/week and count 1), but did not run flai formula run publish again: publish instance S-0704 is already in progress (T-2952 done, T-2953 evaluate next) and publishes everything accepted and unreleased, S-0665, S-0666, S-0675, S-0677 included.
+- Items: S-0675, S-0704
+- Seconds: 40
+- Cost: 0.0869 USD, estimated
+
+### 2026-11-11T01:42:42Z
+
+- Summary: I didn't start a new publish run, because one is already going: publish story S-0704 will release S-0675 and everything else that's accepted but not yet released.
+- Items: none
+- Seconds: 17
+- Cost: 0.0660 USD, estimated
 
 ## Refusals
 

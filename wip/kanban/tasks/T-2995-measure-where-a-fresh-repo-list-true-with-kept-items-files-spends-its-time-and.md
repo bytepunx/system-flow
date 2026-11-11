@@ -3,12 +3,18 @@ id: T-2995
 type: task
 nature: research
 title: Measure where a fresh Repo.List(true) with kept items files spends its time, and choose the remedy
-status: backlog
+status: in-progress
 parent: S-0676
 owner: alex
 created: 2026-11-10T10:30:49Z
-updated: 2026-11-10T10:30:49Z
-transitions: []
+updated: 2026-11-11T01:42:46Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:42:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:42:46Z
+    by: system-flow
 stream: S-0676
 tags: [flai, performance]
 touches: [flai/internal/workitem/kept_bench_test.go]

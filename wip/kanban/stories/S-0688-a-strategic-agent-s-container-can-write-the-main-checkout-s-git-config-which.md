@@ -3,10 +3,10 @@ id: S-0688
 type: story
 nature: improvement
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T19:50:12Z
+updated: 2026-11-11T01:42:29Z
 transitions:
   - to: ready
     at: 2026-11-10T11:00:29Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T19:50:12Z
     by: agent-S-0688
+  - to: in-progress
+    at: 2026-11-11T01:42:29Z
+    by: flai
 tags: [flai, container, security]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md, flai/internal/serve/container.go, design/system/agent-adapters.md]
 agent:
@@ -140,3 +143,4 @@ No `after`: S-0665, in progress, changes `container.go`, its test, `flai-cli.md`
 Forecast: with the touches written, `flai forecast` gives 23m (103 s per unit of size over 155 large-band improvement stories, size 13). Raised to 45m from comparable container mount stories: S-0517 took 39m and S-0520 49m, and this one adds an ADR and four documents to a one-line mount change. Delivery is flai's 17:14 plus the 22m added, 17:36.
 
 Cost of delay value: 22.50 USD a week, as `flai cod` works it out from the input flai set from I-0257 (9m lost per 168h cycle at 150 USD an hour). It stands: the time lost is the issue's own measured cost, and no revenue or penalty input exists.
+- 2026-11-11T01:42:29Z: moved to in-progress: the rebase of story/S-0688 onto main stopped on conflicts in design/system/agent-adapters.md, docs/operators/index.md, which the acceptance of S-0688 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0688

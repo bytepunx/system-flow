@@ -22,20 +22,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 84
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 288
+      cache_read: 1776225
+      cache_write: 154097
+      cost: 0.7116
   strategic:
     - kind: orchestrator
-      seconds: 206
+      seconds: 226
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 209
-          cache_read: 1533341
-          cache_write: 125967
-          cost: 0.4526
+          input: 44
+          output: 234
+          cache_read: 1674458
+          cache_write: 142397
+          cost: 0.4961
         - model: claude-sonnet-5-5
           input: 7
           output: 57

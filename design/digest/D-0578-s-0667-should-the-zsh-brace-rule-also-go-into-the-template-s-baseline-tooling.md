@@ -2,9 +2,9 @@
 id: D-0578
 title: "S-0667: should the zsh brace rule also go into the template's baseline tooling convention: Recommended: answer 1. Put the rule in the baseline through a follow-up story, and move S-0667 to review…"
 kind: answer
-sources: [TH-1047]
+sources: [TH-1047, S-0667]
 topics: [all]
-paths: [docs/operators/runbooks/agent-container.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md, design/conventions/tooling.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md]
+paths: [docs/operators/runbooks/agent-container.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md, design/conventions/tooling.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md, template/root/design/conventions/tooling.md]
 date: 2026-11-10
 status: active
 absorbed_by: ""
@@ -40,3 +40,5 @@ Source: design/conventions/decisions.md § Project additions
 ```
 
 Source: TH-1047.
+
+S-0667's agent recorded the same answer in its narrative: the baseline zsh rule in `template/root/design/conventions/tooling.md` says to quote every variable, but quoting does not stop zsh's `$name:r`, `:h`, `:t`, and `:e` modifiers (I-0276), and a story's agent does not edit a baseline rule. So S-0667 added the brace rule only as a project addition below the marker of `design/conventions/tooling.md`, and went to review unchanged; the baseline change waits for its own follow-up story (`wip/archive/agents/S-0667.md` § Decisions).

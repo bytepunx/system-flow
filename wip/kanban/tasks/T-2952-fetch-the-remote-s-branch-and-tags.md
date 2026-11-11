@@ -20,6 +20,18 @@ transitions:
     by: agent-S-0704
 stream: S-0704
 tags: []
+usage:
+  source: log
+  seconds: 14
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 112
+      cache_read: 633589
+      cache_write: 2428
+      cost: 0.2345
 ---
 # T-2952 Fetch the remote's branch and tags
 
