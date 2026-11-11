@@ -705,6 +705,11 @@ func Run(ctx context.Context, o Options) error {
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery,
 				Slow: slowPaths(e.Root), SlowEvery: o.WatchSlowEvery}
+			// The watcher's first snapshot is taken here, before the item
+			// snapshot and the first looks, so that a change made while they
+			// run is reported within a tick, not at the next minute's look
+			// (I-0273).
+			watcher.Mark()
 			// While the project is served, its item folders keep a snapshot
 			// between lists, which the watcher's changes mark stale, so that
 			// item.get and every list read no file and stat nothing (S-0606).
@@ -783,9 +788,10 @@ func Run(ctx context.Context, o Options) error {
 			looks.Add(2)
 			go func() {
 				defer looks.Done()
-				// A change made before the watcher's first look is in what it
-				// compares with and is never reported, so every item folder is
-				// looked at again at least once a minute (S-0606).
+				// The watcher reports every change made since its first snapshot,
+				// taken above before the first looks (I-0273); every item folder
+				// is still looked at again at least once a minute, for a change
+				// no watched path shows (S-0606).
 				refreshed := time.Now()
 				for {
 					select {

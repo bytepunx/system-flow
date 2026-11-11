@@ -1151,66 +1151,12 @@ func TestServeConfirmsARecommendationPastConfirmAfter(t *testing.T) {
 // roles.<name>.schedule is started by the next look after the schedule comes
 // round, recording the schedule as its trigger. Each is started once.
 func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
-	lab := roleLab(t)
-	lab.now = time.Now().Add(-time.Hour) // the items made before serving are history to its first look
-	roleDir := filepath.Join(lab.root, "design", "workflows", "roles")
-	auditor := strings.Replace(auditorRole, "  - asked\n", "  - {schedule: roles.auditor.schedule}\n", 1)
-	for name, body := range map[string]string{"watcher.md": watcherRole, "auditor.md": auditor} {
-		if err := os.WriteFile(filepath.Join(roleDir, name), []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"+
-		"orchestration:\n  coalesce: 1s\nroles:\n  auditor:\n    schedule: daily\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	for agent, summary := range map[string]string{"watcher": "Watched the move.", "auditor": "Audited the project."} {
-		stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal(summary, 2000, 0.5)}, "\n") + "\n"
-		if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+agent), []byte(stream), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	lab.cfg.Enabled = false // no story's agent: only the roles start
-	lab.cfg.RoleActions = map[string]bool{"watch": true, "audit": true}
-	story := lab.backlog("Reviewed", nil)
-	lab.toReady(story)
-	it, err := lab.repo.Get(story)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := lab.repo.Transition(it, workitem.InProgress, "builder", "", lab.now); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Work", Parent: story, Owner: "builder-" + story, Now: lab.now}); err != nil {
-		t.Fatal(err)
-	}
-
-	dash := channeltest.New(t, "s3cret")
-	keyFile := filepath.Join(t.TempDir(), "agent.key")
-	if err := os.WriteFile(keyFile, []byte("s3cret\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := lab.o.Dir.Register(Entry{Key: "t", Name: "t", Root: lab.root, URL: dash.URL, KeyFile: keyFile}); err != nil {
-		t.Fatal(err)
-	}
+	lab, story := newRoleServeLab(t)
 	// The loop's clock runs with the real one, ahead by ahead, so that a
 	// schedule can come round without a day's wait.
 	var ahead atomic.Int64
-	o := lab.o
-	o.Version, o.Every, o.WatchEvery = "test", 20*time.Millisecond, 20*time.Millisecond
-	o.Now = func() time.Time { return time.Now().Add(time.Duration(ahead.Load())) }
-	o.NewClient = func(e Entry, key []byte) *channel.Client {
-		return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-			Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
-	go func() { done <- Run(ctx, o) }()
-	t.Cleanup(func() {
-		cancel()
-		if err := <-done; err != nil {
-			t.Errorf("Run: %v", err)
-		}
+	serveRoleLab(t, lab, func(o *Options) {
+		o.Now = func() time.Time { return time.Now().Add(time.Duration(ahead.Load())) }
 	})
 	starts := func() int {
 		n := 0
@@ -1229,12 +1175,10 @@ func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
 		return doc.Entries
 	}
 	waitFor(t, "the first look finds the watcher on", func() bool { return lab.o.Dir.roleQueues()[lab.root]["watcher"].On })
-	// the move is made once the watcher has taken its first snapshot, which
-	// would otherwise hold it: then only the next minute's look sees it
-	watcherReports(t, dash.Wait(t), lab.root)
 
-	// an event: the story moved to review
-	it, err = lab.repo.Get(story)
+	// an event: the story moved to review, which the watcher reports, since
+	// it took its first snapshot before the first looks (I-0273)
+	it, err := lab.repo.Get(story)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1269,43 +1213,131 @@ func TestServeStartsADefinedRoleOnAnEventAndOnASchedule(t *testing.T) {
 	}
 }
 
-// watcherReports returns once flai serve's watcher for the project at root
-// reports a change to conn, the dashboard's connection. flai serve takes the
-// watcher's first snapshot in a goroutine of its own, after its first looks,
-// so a change made before that snapshot is in it, and no look sees it until
-// the next minute's (I-0247). It writes a new file under docs every 200
-// milliseconds until one is reported, so that one comes after the snapshot
-// however late it is taken.
-func watcherReports(t *testing.T, conn *channeltest.Conn, root string) {
+// A change made while flai serve's first looks at a project run is reported
+// by the project's watcher, and the looks it wakes act on it within seconds,
+// not at the next minute's look (I-0273). The story is moved to review from
+// the Agent hook the first look after the role starter's calls, the role
+// scheduler's: that is after the role starter has taken the events before it
+// as history, and, before S-0690, before the watcher took its first snapshot,
+// which then held the move, so that only the minute's look ran the watcher
+// role for it.
+func TestAChangeMadeDuringServesFirstLooksIsActedOnWithinSeconds(t *testing.T) {
+	lab, story := newRoleServeLab(t)
+	var moved atomic.Bool
+	movedAt := make(chan time.Time, 1)
+	serveRoleLab(t, lab, func(o *Options) {
+		agent, dir := o.Agent, o.Dir
+		o.Agent = func(root string) AgentConfig {
+			if !moved.Load() && dir.roleQueues()[lab.root]["watcher"].On && moved.CompareAndSwap(false, true) {
+				it, err := lab.repo.Get(story)
+				if err == nil {
+					_, err = lab.repo.Transition(it, workitem.Review, "builder", "", time.Now())
+				}
+				if err != nil {
+					t.Errorf("moving %s to review in the first looks: %v", story, err)
+				}
+				movedAt <- time.Now()
+			}
+			return agent(root)
+		}
+	})
+	var at time.Time
+	select {
+	case at = <-movedAt:
+	case <-time.After(30 * time.Second):
+		t.Fatal("the first looks never found the watcher role on")
+	}
+	// The watcher's run is queued with the 1 s coalesce, after one tick of
+	// 20 ms and its debounce: ten seconds is ample, and a sixth of the minute.
+	deadline := at.Add(10 * time.Second)
+	for r := lab.roleRun("watcher", ""); r == nil; r = lab.roleRun("watcher", "") {
+		if time.Now().After(deadline) {
+			t.Fatalf("no watcher run within 10 s of the move made in the first looks: the move waits for the minute's look\n%s", lab.logText())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if r := lab.roleRun("watcher", ""); r.Trigger != "moved "+story {
+		t.Errorf("the watcher's run's trigger = %q, want %q", r.Trigger, "moved "+story)
+	}
+	// the run's stub and its activity entry write into the project until it
+	// ends, so the test waits for both before its folders are removed (D-0427)
+	waitFor(t, "the watcher's run ended", func() bool { r := lab.roleRun("watcher", ""); return r != nil && r.Ended != "" })
+	waitFor(t, "the watcher's activity logged", func() bool {
+		doc, err := lab.repo.Activity("watcher")
+		return err == nil && len(doc.Entries) == 1
+	})
+}
+
+// newRoleServeLab is a project for flai serve with two roles, a watcher
+// started when a story moves to review and an auditor on a daily schedule, a
+// stub agent for each, no story's agent, and a story in progress, which it
+// returns, its items made an hour before so that they are history to serve's
+// first look.
+func newRoleServeLab(t *testing.T) (*agentLab, string) {
 	t.Helper()
-	dir := filepath.Join(root, "docs")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	lab := roleLab(t)
+	lab.now = time.Now().Add(-time.Hour) // the items made before serving are history to its first look
+	roleDir := filepath.Join(lab.root, "design", "workflows", "roles")
+	auditor := strings.Replace(auditorRole, "  - asked\n", "  - {schedule: roles.auditor.schedule}\n", 1)
+	for name, body := range map[string]string{"watcher.md": watcherRole, "auditor.md": auditor} {
+		if err := os.WriteFile(filepath.Join(roleDir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"+
+		"orchestration:\n  coalesce: 1s\nroles:\n  auditor:\n    schedule: daily\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	stop, stopped := make(chan struct{}), make(chan struct{})
-	defer func() { close(stop); <-stopped }()
-	go func() {
-		defer close(stopped)
-		for i := 0; ; i++ {
-			_ = os.WriteFile(filepath.Join(dir, fmt.Sprintf("probe-%d.md", i)), []byte("# Probe\n"), 0o644)
-			select {
-			case <-stop:
-				return
-			case <-time.After(200 * time.Millisecond):
-			}
+	for agent, summary := range map[string]string{"watcher": "Watched the move.", "auditor": "Audited the project."} {
+		stream := strings.Join([]string{streamCall("s", "m1", runStart, 999), streamFinal(summary, 2000, 0.5)}, "\n") + "\n"
+		if err := os.WriteFile(filepath.Join(lab.outDir, "stream-"+agent), []byte(stream), 0o644); err != nil {
+			t.Fatal(err)
 		}
-	}()
-	deadline := time.Now().Add(30 * time.Second)
-	var heard []string
-	for time.Now().Before(deadline) {
-		method, params := conn.Next(t)
-		var p struct {
-			Path string `json:"path"`
-		}
-		if method == "change" && json.Unmarshal(params, &p) == nil && strings.HasPrefix(filepath.ToSlash(p.Path), "docs/probe-") {
-			return
-		}
-		heard = append(heard, method+" "+string(params))
 	}
-	t.Fatalf("the watcher reported no probe under docs within 30s; heard %q", heard)
+	lab.cfg.Enabled = false // no story's agent: only the roles start
+	lab.cfg.RoleActions = map[string]bool{"watch": true, "audit": true}
+	story := lab.backlog("Reviewed", nil)
+	lab.toReady(story)
+	it, err := lab.repo.Get(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Transition(it, workitem.InProgress, "builder", "", lab.now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Work", Parent: story, Owner: "builder-" + story, Now: lab.now}); err != nil {
+		t.Fatal(err)
+	}
+	return lab, story
+}
+
+// serveRoleLab runs flai serve on lab's project, with its options changed by
+// change, until the test ends, connected to a test dashboard.
+func serveRoleLab(t *testing.T, lab *agentLab, change func(*Options)) {
+	t.Helper()
+	dash := channeltest.New(t, "s3cret")
+	keyFile := filepath.Join(t.TempDir(), "agent.key")
+	if err := os.WriteFile(keyFile, []byte("s3cret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.o.Dir.Register(Entry{Key: "t", Name: "t", Root: lab.root, URL: dash.URL, KeyFile: keyFile}); err != nil {
+		t.Fatal(err)
+	}
+	o := lab.o
+	o.Version, o.Every, o.WatchEvery = "test", 20*time.Millisecond, 20*time.Millisecond
+	o.Now = time.Now
+	o.NewClient = func(e Entry, key []byte) *channel.Client {
+		return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+			Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+	}
+	change(&o)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, o) }()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
 }
