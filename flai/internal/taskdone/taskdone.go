@@ -598,8 +598,20 @@ func (r *run) sync() error {
 			return nil
 		}
 		return fmt.Errorf("the sync refused %s: it has uncommitted changes in %s; %s", res.Worktree, strings.Join(res.Uncommitted, ", "), res.Continue)
+	}
+	return rebaseStopped(res)
+}
+
+// rebaseStopped is the error of a sync that left a rebase waiting in the
+// worktree: one it found, one it stopped on conflicts, or one git stopped
+// with no path in conflict, which names what git said in place of conflicts
+// (I-0272).
+func rebaseStopped(res storygit.SyncResult) error {
+	switch res.Stopped {
 	case storygit.StopRebaseInProgress:
 		return fmt.Errorf("the sync refused %s: a rebase waits there on %s; %s, or %s", res.Worktree, orNothing(res.Conflicts), res.Continue, res.Abort)
+	case storygit.StopGitError:
+		return fmt.Errorf("the rebase of %s onto %s stopped with no path in conflict; git said: %s; %s; to abort: %s", res.Branch, res.Base, res.RebaseError, res.Continue, res.Abort)
 	}
 	return fmt.Errorf("the rebase of %s onto %s stopped on conflicts in %s; %s, or %s", res.Branch, res.Base, orNothing(res.Conflicts), res.Continue, res.Abort)
 }

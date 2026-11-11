@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 )
 
 // gitIn runs git in dir for tests, failing the test on error.
@@ -19,6 +21,40 @@ func gitIn(t *testing.T, dir string, args ...string) string {
 		t.Fatalf("git %v: %v %s", args, err, out)
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// I-0272: a rebase git stopped with no path in conflict is reported by what
+// git said, with no step to resolve anything, and its one-line error gives
+// the stop's own steps, the abort's way back among them; a stop on conflicts
+// whose abort is safe reads as before.
+func TestSyncStoppedOnGitsErrorNamesItAndTheWayBack(t *testing.T) {
+	t.Parallel()
+	const (
+		said  = "error: insufficient permission for adding an object to repository database .git/objects"
+		cont  = "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again"
+		abort = "in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001: git cannot update refs/heads/story/S-0001 there (fatal: cannot lock ref), so the abort alone leaves HEAD detached"
+	)
+	stop := syncStoppedFrom(storygit.SyncResult{
+		Story: "S-0001", Branch: "story/S-0001", Base: "main", Worktree: ".flai-cache/worktrees/S-0001",
+		Stopped: storygit.StopGitError, Uncommitted: []string{}, Conflicts: []string{},
+		RebaseError: said, Continue: cont, Abort: abort, AbortUnsafe: "fatal: cannot lock ref",
+	})
+	headline := "story/S-0001 was not synced: the rebase onto main stopped with no path in conflict; git said: " + said
+	if want := headline + "\nTo continue: " + cont + "\nTo abort: " + abort + "\n"; stop.Report() != want {
+		t.Errorf("report:\n%s\nwant:\n%s", stop.Report(), want)
+	}
+	if want := headline + "; " + cont + "; to abort: " + abort; stop.Error() != want {
+		t.Errorf("error:\n%s\nwant:\n%s", stop.Error(), want)
+	}
+
+	conflicts := syncStoppedFrom(storygit.SyncResult{
+		Story: "S-0001", Branch: "story/S-0001", Base: "main", Worktree: ".flai-cache/worktrees/S-0001",
+		Stopped: storygit.StopConflicts, Uncommitted: []string{}, Conflicts: []string{"docs/guide.md"},
+		Continue: "resolve", Abort: "abort",
+	})
+	if want := "story/S-0001 was not synced: the rebase onto main stopped on conflicts in docs/guide.md; resolve them and git rebase --continue, or git rebase --abort, in .flai-cache/worktrees/S-0001"; conflicts.Error() != want {
+		t.Errorf("error:\n%s\nwant:\n%s", conflicts.Error(), want)
+	}
 }
 
 func testStoryBranchLifecycle(t *testing.T) {

@@ -95,6 +95,8 @@ func TestAsTester(t *testing.T) {
 		testSyncListsPathsChangedOutsideANarrowedClaim,
 		testSyncRefusesUncommittedChanges,
 		testSyncConflictListsPathsAndHowToContinueOrAbort,
+		testSyncOnAReadOnlyGitDirNamesGitsErrorAndTheWayBack,
+		testSyncOnAReadOnlyGitDirSaysTheTrialMergeDidNotRun,
 		testSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone,
 		testAcceptRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone,
 		testSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself,
@@ -656,6 +658,142 @@ func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 	syncJSON()
 	if !inProgress() {
 		t.Fatal("the --json sync did not stop on the conflicts")
+	}
+}
+
+// readOnlyGitDir makes root's .git read-only but for story's worktree
+// registration, as a story's agent container mounts them (ADR-0246), and
+// makes it writable again before the test's folders are removed. Root
+// ignores file modes, so the test is skipped under root.
+func readOnlyGitDir(t *testing.T, root, story string) {
+	t.Helper()
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file modes, so the main checkout's .git cannot be made read-only")
+	}
+	common := filepath.Join(root, ".git")
+	chmod := func(dirMode, fileMode os.FileMode, skip string) {
+		err := filepath.WalkDir(common, func(p string, d os.DirEntry, err error) error {
+			switch {
+			case err != nil:
+				return err
+			case p == skip:
+				return filepath.SkipDir
+			case d.Type()&os.ModeSymlink != 0:
+				return nil
+			case d.IsDir():
+				return os.Chmod(p, dirMode)
+			}
+			return os.Chmod(p, fileMode)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	// restore before TempDir's own cleanup, which runs after, removes it
+	t.Cleanup(func() { chmod(0o755, 0o644, "") })
+	chmod(0o555, 0o444, filepath.Join(common, "worktrees", story))
+}
+
+// I-0272: with the main checkout's .git read-only but for the story's
+// registration, as in its agent container, the rebase stops on git's error
+// with no path in conflict. flai stream sync names what git said, gives
+// nothing to resolve, and names git symbolic-ref after the abort, since git
+// cannot update the branch's ref there, rather than promising the abort puts
+// the branch back; the branch stays at its head.
+func testSyncOnAReadOnlyGitDirNamesGitsErrorAndTheWayBack(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/guide.md", "branch's line\n")
+	// main moves on, so the rebase has a commit to write
+	_ = os.WriteFile(filepath.Join(root, "README.md"), []byte("readme\n"), 0o644)
+	gitIn(t, root, "add", "README.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: readme")
+	head := gitIn(t, wt, "rev-parse", "refs/heads/story/S-0001")
+	readOnlyGitDir(t, root, "S-0001")
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code == 0 {
+		t.Fatalf("a sync whose rebase git stopped succeeded: %s", out)
+	}
+	for _, want := range []string{
+		"story/S-0001 was not synced: the rebase onto main stopped with no path in conflict; git said: ",
+		"\nTo continue: in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again\n",
+		"\nTo abort: in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001: git cannot update refs/heads/story/S-0001 there (",
+		"), so the abort alone leaves HEAD detached; story/S-0001 stays at its head " + head[:12] + "\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("report lacks %q:\n%s", want, out)
+		}
+	}
+	for _, said := range []string{out, errOut} {
+		for _, not := range []string{"resolve them", "resolve each conflicting path", "back as it was before the sync"} {
+			if strings.Contains(said, not) {
+				t.Errorf("a stop with nothing in conflict says %q:\n%s", not, said)
+			}
+		}
+	}
+	if !strings.Contains(errOut, "stopped with no path in conflict; git said: ") || !strings.Contains(errOut, "; to abort: in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001") {
+		t.Errorf("error: %s", errOut)
+	}
+	if got := gitIn(t, root, "rev-parse", "refs/heads/story/S-0001"); got != head {
+		t.Errorf("the branch moved from %s to %s", head, got)
+	}
+}
+
+// I-0272: with the main checkout's .git read-only but for the story's
+// registration and main not ahead, the rebase has nothing to do, but git
+// cannot write the trial merge's objects: flai stream sync says the trial
+// merge did not run to its end, and why, and names no pair as clean.
+func testSyncOnAReadOnlyGitDirSaysTheTrialMergeDidNotRun(t *testing.T) {
+	root := syncProject(t)
+	one := openSyncStory(t, root, 1, "docs")
+	two := openSyncStory(t, root, 2, "docs/guide.md")
+	commitIn(t, one, "docs/guide.md", "one's line\n")
+	commitIn(t, two, "docs/guide.md", "two's line\n")
+	readOnlyGitDir(t, root, "S-0001")
+
+	out, errOut, code := runIn(t, one, "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, out, errOut)
+	}
+	if strings.Contains(out, "no trial merge with the other open story branches: git ") {
+		t.Skip(out)
+	}
+	for _, want := range []string{
+		"story/S-0001 is rebased onto main\n",
+		"the trial merge with the other open story branches did not run to its end: git could not trial-merge story/S-0001 with story/S-0002: ",
+		"; a conflict with a branch it did not merge goes unfound until a sync runs it\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("sync output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "merges cleanly") || strings.Contains(out, "conflicts with") {
+		t.Errorf("a trial merge that did not run names no pair:\n%s", out)
+	}
+	out, errOut, code = runIn(t, one, "stream", "sync", "S-0001", "--json")
+	var got struct {
+		OK               bool   `json:"ok"`
+		TrialMergeFailed string `json:"trial_merge_failed"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil || !got.OK || !strings.HasPrefix(got.TrialMergeFailed, "git could not trial-merge story/S-0001 with story/S-0002: ") {
+		t.Errorf("--json does not say the trial merge did not run: %d %s %s", code, out, errOut)
+	}
+}
+
+// I-0272: the report says why the trial merge did not run to its end, after
+// the pairs it merged before.
+func TestPrintSyncChecksSaysTheTrialMergeDidNotRunToItsEnd(t *testing.T) {
+	t.Parallel()
+	var out strings.Builder
+	printSyncChecks(&out, &workitem.Item{ID: "S-0001"}, storygit.SyncResult{
+		TrialMergeFailed: "git could not trial-merge story/S-0001 with story/S-0003: fatal: unable to create temporary file: Read-only file system",
+		Branches:         []storygit.BranchCheck{{Story: "S-0002", Status: "in-progress", Branch: "story/S-0002", Clean: true}},
+	})
+	want := "the trial merge with the other open story branches did not run to its end: git could not trial-merge story/S-0001 with story/S-0003: fatal: unable to create temporary file: Read-only file system; a conflict with a branch it did not merge goes unfound until a sync runs it\n" +
+		"story/S-0001 merges cleanly with story/S-0002 (in progress)\n"
+	if out.String() != want {
+		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
 	}
 }
 

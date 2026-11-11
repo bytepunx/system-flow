@@ -290,7 +290,7 @@ so does the MCP tool verify's close-out.`,
 				if a.jsonOut {
 					_ = a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "worktree": res.Worktree, "ok": false,
 						"uncommitted": res.Uncommitted, "conflicts": res.Conflicts, "rebase_in_progress": res.RebaseInProgress(),
-						"continue": res.Continue, "abort": res.Abort})
+						"rebase_error": res.RebaseError, "continue": res.Continue, "abort": res.Abort, "abort_unsafe": res.AbortUnsafe})
 				} else {
 					fmt.Fprint(a.out, stop.Report())
 				}
@@ -299,7 +299,7 @@ so does the MCP tool verify's close-out.`,
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
 					"merged": res.Merged, "regenerated_at_head": res.RegeneratedAtHead, "changelogs": res.Changelogs, "folded": res.Folded, "fixed": res.Fixed,
-					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
+					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "trial_merge_failed": res.TrialMergeFailed, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)
 			printSyncChecks(a.out, it, res)

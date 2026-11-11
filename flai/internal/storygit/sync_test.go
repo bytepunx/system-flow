@@ -323,6 +323,9 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	if want := "in .flai-cache/worktrees/S-0001, run git rebase --abort, which puts story/S-0001 back as it was before the sync"; res.Abort != want {
 		t.Errorf("abort: %q", res.Abort)
 	}
+	if res.RebaseError != "" || res.AbortUnsafe != "" {
+		t.Errorf("a stop on conflicts, with the branch's ref writable, has no git error and a safe abort: %+v", res)
+	}
 	if !RebaseInProgress(execx.System{}, wt) {
 		t.Fatal("the rebase is not left waiting")
 	}
@@ -345,6 +348,132 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	// a rebase found waiting is the same stop, not another line
 	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, stop) {
 		t.Errorf("conflict log after the refused sync: %+v, want %+v", got, stop)
+	}
+}
+
+// readOnlyCommonDir makes the main checkout's .git read-only but for
+// story's registration, as a story's agent container mounts them (ADR-0246),
+// and makes it writable again before the test's folders are removed. Root
+// ignores file modes, so the test is skipped under root.
+func readOnlyCommonDir(t *testing.T, repo *workitem.Repo, story string) {
+	t.Helper()
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file modes, so the common dir cannot be made read-only")
+	}
+	common := filepath.Join(repo.MainRoot, ".git")
+	// restore before TempDir's own cleanup, which runs after, removes it
+	t.Cleanup(func() { chmodTree(t, common, "", 0o755, 0o644) })
+	chmodTree(t, common, filepath.Join(common, "worktrees", story), 0o555, 0o444)
+}
+
+// I-0272: on a common dir read-only but for the story's registration, the
+// rebase's first pick cannot write its objects and git stops the rebase with
+// no path in conflict. The sync names git's own error as what stopped it,
+// gives nothing to resolve, and, since git cannot lock the branch's ref
+// there, does not promise that git rebase --abort puts the branch back: it
+// names git symbolic-ref after it. The branch stays at its head, no conflict
+// is logged, and the steps it names put the worktree back on the branch,
+// clean, with no rebase waiting.
+func TestSyncOnAReadOnlyCommonDirStopsOnGitsErrorAndKeepsTheBranch(t *testing.T) {
+	isolateGit(t)
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] guide", "docs/guide.md")
+	commitFiles(t, repo.MainRoot, "docs: main moves on", "design/note.md")
+	r := execx.Runner(execx.System{})
+	head, err := r.Run(wt, "git", "rev-parse", "refs/heads/story/S-0001")
+	if err != nil {
+		t.Fatal(head, err)
+	}
+	readOnlyCommonDir(t, repo, "S-0001")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Synced || res.Stopped != StopGitError || !res.RebaseInProgress() || len(res.Conflicts) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if !strings.Contains(res.RebaseError, "error: ") || !strings.Contains(strings.ToLower(res.RebaseError), "permission") {
+		t.Errorf("the stop should name git's own error: %q", res.RebaseError)
+	}
+	if want := "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again"; res.Continue != want {
+		t.Errorf("continue: %q, want %q", res.Continue, want)
+	}
+	if !strings.Contains(res.AbortUnsafe, "refs/heads/story/S-0001") {
+		t.Errorf("the abort should be unsafe for git's failure to lock the branch's ref: %q", res.AbortUnsafe)
+	}
+	want := "in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001: git cannot update refs/heads/story/S-0001 there (" +
+		res.AbortUnsafe + "), so the abort alone leaves HEAD detached; story/S-0001 stays at its head " + head[:12]
+	if res.Abort != want {
+		t.Errorf("abort: %q, want %q", res.Abort, want)
+	}
+	if now, _ := r.Run(wt, "git", "rev-parse", "refs/heads/story/S-0001"); now != head {
+		t.Errorf("the branch moved from %s to %s", head, now)
+	}
+	if got := conflictLog(t, repo.CacheDir()); len(got) != 0 {
+		t.Errorf("a stop with no conflict is no line of the conflict log: %+v", got)
+	}
+
+	// the way back the stop names, with the common dir still read-only
+	_, _ = r.Run(wt, "git", "rebase", "--abort")
+	git(t, wt, "symbolic-ref", "HEAD", "refs/heads/story/S-0001")
+	if RebaseInProgress(r, wt) {
+		t.Error("a rebase still waits after the way back")
+	}
+	if got := headOf(t, wt); got != "story/S-0001" {
+		t.Errorf("after the way back %s is checked out", got)
+	}
+	if now, _ := r.Run(wt, "git", "rev-parse", "HEAD"); now != head {
+		t.Errorf("after the way back HEAD is %s, want the branch's head %s", now, head)
+	}
+	if dirty, err := Uncommitted(r, wt); err != nil || len(dirty) != 0 {
+		t.Errorf("uncommitted after the way back: %v %v", dirty, err)
+	}
+}
+
+// I-0272: on a common dir read-only but for the story's registration, with
+// main not ahead, the rebase has nothing to do and the sync stands, but git
+// cannot write the trial merge's objects: the result says the trial merge did
+// not run to its end, and why, rather than reading clean.
+func TestSyncOnAReadOnlyCommonDirSaysTheTrialMergeDidNotRun(t *testing.T) {
+	isolateGit(t)
+	repo, story, _, _ := conflictingPair(t)
+	readOnlyCommonDir(t, repo, "S-0001")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.TrialMergeSkipped != "" {
+		t.Skip(res.TrialMergeSkipped)
+	}
+	if !res.Synced || res.Stopped != "" || len(res.Branches) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	gits := strings.Contains(res.TrialMergeFailed, "error: ") || strings.Contains(res.TrialMergeFailed, "fatal: ")
+	if !gits || !strings.HasPrefix(res.TrialMergeFailed, "git could not trial-merge story/S-0001 with story/S-0002: ") {
+		t.Errorf("the trial merge should be reported not run, with git's error: %q", res.TrialMergeFailed)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"trial_merge_failed":"git could not trial-merge story/S-0001 with story/S-0002: `) {
+		t.Errorf("json lacks trial_merge_failed: %s", data)
+	}
+}
+
+// gitSaid keeps git's error and fatal lines, each once, and falls back to
+// the error's first line when git printed none.
+func TestGitSaidIsGitsErrorAndFatalLines(t *testing.T) {
+	for _, c := range []struct{ err, want string }{
+		{"git rebase main: exit status 1\nerror: a\nhint: resolve\nerror: a\nfatal: b", "error: a; fatal: b"},
+		{"git x: exit status 1\nsomething else", "git x: exit status 1"},
+	} {
+		if got := gitSaid(errors.New(c.err)); got != c.want {
+			t.Errorf("gitSaid(%q) = %q, want %q", c.err, got, c.want)
+		}
 	}
 }
 

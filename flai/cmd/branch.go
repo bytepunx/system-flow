@@ -81,8 +81,15 @@ type syncStopped struct {
 	// refused to touch it.
 	Found     bool
 	Conflicts []string
-	Continue  string
-	Abort     string // "" when there is nothing to abort
+	// Said is what git said when it stopped this sync's rebase with no path
+	// in conflict (I-0272).
+	Said     string
+	Continue string
+	Abort    string // "" when there is nothing to abort
+	// AbortUnsafe is set when git cannot update the branch's ref in the
+	// worktree, so git rebase --abort alone leaves HEAD detached and Abort
+	// names the way back (I-0272).
+	AbortUnsafe bool
 }
 
 // headline says why the branch was not synced, with what names the paths:
@@ -94,6 +101,8 @@ func (s *syncStopped) headline(paths string) string {
 		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s, with conflicts in %s", b, s.Worktree, paths)
 	case s.Found:
 		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s", b, s.Worktree)
+	case s.RebaseInProgress && s.Said != "":
+		return fmt.Sprintf("%s was not synced: the rebase onto %s stopped with no path in conflict; git said: %s", b, s.Base, s.Said)
 	case s.RebaseInProgress && paths != "":
 		return fmt.Sprintf("%s was not synced: the rebase onto %s stopped on conflicts in %s", b, s.Base, paths)
 	case s.RebaseInProgress:
@@ -103,13 +112,18 @@ func (s *syncStopped) headline(paths string) string {
 }
 
 // Error is one short line, for the error a command exits with: why, the
-// paths (at most ten), and the next step.
+// paths (at most ten), and the next step. A stop with nothing to resolve, or
+// whose abort alone would leave HEAD detached, gives its steps in full
+// (I-0272).
 func (s *syncStopped) Error() string {
 	msg := s.headline(workitem.Shorten(s.paths(), 10))
-	if s.RebaseInProgress {
-		return msg + fmt.Sprintf("; resolve them and git rebase --continue, or git rebase --abort, in %s", s.Worktree)
+	switch {
+	case !s.RebaseInProgress:
+		return msg + fmt.Sprintf("; commit them on %s, then sync again", storyBranch(s.Story))
+	case s.Said != "" || s.AbortUnsafe:
+		return msg + "; " + s.Continue + "; to abort: " + s.Abort
 	}
-	return msg + fmt.Sprintf("; commit them on %s, then sync again", storyBranch(s.Story))
+	return msg + fmt.Sprintf("; resolve them and git rebase --continue, or git rebase --abort, in %s", s.Worktree)
 }
 
 // Report is why, each path on a line of its own, and the steps to continue

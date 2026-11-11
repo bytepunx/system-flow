@@ -136,7 +136,47 @@ const (
 	// StopConflicts is this sync's rebase, stopped on conflicts and left in
 	// progress for the agent.
 	StopConflicts = "conflicts"
+	// StopGitError is this sync's rebase, stopped by an error of git's with
+	// no path in conflict, as when git cannot write the main checkout's .git,
+	// and left in progress for the agent (I-0272).
+	StopGitError = "git-error"
 )
+
+// gitSaid is what git said in err, a Runner's error: its error and fatal
+// lines, in order and each once, joined by "; ", or the error's first line
+// when git printed none.
+func gitSaid(err error) string {
+	lines := strings.Split(err.Error(), "\n")
+	var said []string
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if (strings.HasPrefix(l, "error: ") || strings.HasPrefix(l, "fatal: ")) && !slices.Contains(said, l) {
+			said = append(said, l)
+		}
+	}
+	if len(said) == 0 {
+		return strings.TrimSpace(lines[0])
+	}
+	return strings.Join(said, "; ")
+}
+
+// branchUnmovable reads branch's head in the worktree at dir and says why git
+// cannot update its ref there, as git rebase --abort must to put the branch
+// back, "" when it can; head is "" when git cannot read it. It asks git to
+// update the ref from its head to that same head: git takes the ref's lock in
+// the common dir, as the abort does, and since the value does not change it
+// writes neither the ref nor its reflog, so nothing is changed (I-0272).
+func branchUnmovable(r execx.Runner, dir, branch string) (head, why string) {
+	ref := "refs/heads/" + branch
+	head, err := r.Run(dir, "git", "rev-parse", "--verify", "--quiet", ref)
+	if err != nil {
+		return "", "its head cannot be read: " + gitSaid(err)
+	}
+	if _, err := r.Run(dir, "git", "update-ref", ref, head, head); err != nil {
+		return head, gitSaid(err)
+	}
+	return head, ""
+}
 
 // GeneratedFile is a committed file flai writes from others, so a rebase
 // stopped on it alone is resolved by writing it again (ADR-0098).
@@ -305,13 +345,21 @@ type SyncResult struct {
 	Base     string `json:"base"`
 	Worktree string `json:"worktree"` // relative to the main checkout
 	Synced   bool   `json:"synced"`
-	Stopped  string `json:"stopped,omitempty"` // StopUncommitted, StopRebaseInProgress, or StopConflicts
+	Stopped  string `json:"stopped,omitempty"` // StopUncommitted, StopRebaseInProgress, StopConflicts, or StopGitError
 	// Uncommitted is the worktree's uncommitted paths, when they refused it.
 	Uncommitted []string `json:"uncommitted"`
 	// Conflicts is the paths the waiting rebase stopped on.
 	Conflicts []string `json:"conflicts"`
-	Continue  string   `json:"continue,omitempty"`
-	Abort     string   `json:"abort,omitempty"` // "" when there is nothing to abort
+	// RebaseError is what git said when it stopped this sync's rebase with no
+	// path in conflict (StopGitError, I-0272).
+	RebaseError string `json:"rebase_error,omitempty"`
+	Continue    string `json:"continue,omitempty"`
+	Abort       string `json:"abort,omitempty"` // "" when there is nothing to abort
+	// AbortUnsafe is why git cannot update the branch's ref in the worktree,
+	// as when the main checkout's .git is read-only there, so that git rebase
+	// --abort would leave HEAD detached; Abort then names the way back
+	// (I-0272). "" when the abort puts the branch back.
+	AbortUnsafe string `json:"abort_unsafe,omitempty"`
 	// Regenerated is the generated files written again to continue the
 	// rebase, once for each stop on them alone.
 	Regenerated []string `json:"regenerated"`
@@ -337,6 +385,11 @@ type SyncResult struct {
 	Branches []BranchCheck `json:"branches"`
 	// TrialMergeSkipped says why the trial merge did not run, when it did not.
 	TrialMergeSkipped string `json:"trial_merge_skipped,omitempty"`
+	// TrialMergeFailed says why the trial merge did not run to its end, when
+	// git could not run it, as when it cannot write the main checkout's .git,
+	// or another check of the branch failed; Branches holds the pairs merged
+	// before it (I-0272).
+	TrialMergeFailed string `json:"trial_merge_failed,omitempty"`
 	// Outside is the paths the branch changed outside the story's claim.
 	Outside []string `json:"outside_touches"`
 	// UndoesMain is the paths where this rebase left the branch removing
@@ -347,7 +400,7 @@ type SyncResult struct {
 // RebaseInProgress reports whether the result leaves a rebase waiting in the
 // worktree, whether this sync stopped it or found it.
 func (s SyncResult) RebaseInProgress() bool {
-	return s.Stopped == StopRebaseInProgress || s.Stopped == StopConflicts
+	return s.Stopped == StopRebaseInProgress || s.Stopped == StopConflicts || s.Stopped == StopGitError
 }
 
 // Sync rebases the story's branch onto the main branch inside its worktree,
@@ -375,7 +428,10 @@ func (s SyncResult) RebaseInProgress() bool {
 // every other open story's, telling each conflicting pair in its
 // conversation (ADR-0121), and lists what the branch changed outside the
 // story's claim; a check that fails then is logged, the sync stands, and the
-// result holds what the checks found before it failed. A rebase stopped on
+// result holds what the checks found before it failed and, in
+// TrialMergeFailed, why the trial merge did not run to its end (I-0272). A
+// rebase git stops with no path in conflict, as when it cannot write the main
+// checkout's .git, is a StopGitError with what git said (I-0272). A rebase stopped on
 // conflicts, and each conflict message a trial merge sends or changes, is a
 // line of the conflict log (S-0337).
 func Sync(o SyncOptions) (SyncResult, error) {
@@ -391,6 +447,10 @@ func Sync(o SyncOptions) (SyncResult, error) {
 	}
 	withRecordedUndone(o, &res)
 	if err := checkSync(o, &res); err != nil {
+		// I-0272: a sync whose trial merge did not run never reads clean
+		if res.TrialMergeFailed == "" {
+			res.TrialMergeFailed = "a check of the branch failed: " + gitSaid(err)
+		}
 		o.Log.Warn("story branch checks failed after the rebase", "component", "git", "story", o.Story.ID, "err", err)
 		return res, nil
 	}
@@ -431,7 +491,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	}
 	res.Base = base
 	if RebaseInProgress(o.Runner, path) {
-		return stopped(o, res, StopRebaseInProgress, Conflicts(o.Runner, path)), nil
+		return stopped(o, res, StopRebaseInProgress, Conflicts(o.Runner, path), ""), nil
 	}
 	dirty, err := Uncommitted(o.Runner, path)
 	if err != nil {
@@ -454,16 +514,25 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		o.Log.Warn("the branch's head not read, so its changelog lines are not put back under Unreleased", "component", "git", "story", id, "err", err)
 		oldHead = ""
 	}
-	if _, err := o.Runner.Run(path, "git", "rebase", base); err != nil {
+	if _, rerr := o.Runner.Run(path, "git", "rebase", base); rerr != nil {
 		if !RebaseInProgress(o.Runner, path) {
-			return res, err
+			return res, rerr
 		}
-		conflicts, waits, err := continueOverGenerated(o, path, &res)
+		s, err := continueOverGenerated(o, path, &res)
 		if err != nil {
 			return res, err
 		}
-		if waits {
-			return stopped(o, res, StopConflicts, conflicts), nil
+		switch {
+		case s.Waits && len(s.Conflicts) > 0:
+			return stopped(o, res, StopConflicts, s.Conflicts, ""), nil
+		case s.Waits:
+			// I-0272: nothing conflicts, so git's error is what stopped it,
+			// the rebase's own when no continue stopped it since
+			said := s.Said
+			if said == "" {
+				said = gitSaid(rerr)
+			}
+			return stopped(o, res, StopGitError, nil, said), nil
 		}
 	}
 	res.Synced = true
@@ -765,29 +834,58 @@ func again(o SyncOptions) string {
 }
 
 // stopped is res with the rebase waiting in the worktree, why, its
-// conflicts, and how to continue or abort it.
-func stopped(o SyncOptions, res SyncResult, why string, conflicts []string) SyncResult {
+// conflicts, what git said when it stopped it with none (StopGitError), and
+// how to continue or abort it. Before it offers git rebase --abort it checks
+// that git can update the branch's ref, which the abort must to put the
+// branch back; when git cannot, the abort leaves HEAD detached, so Abort
+// names git symbolic-ref after it, and AbortUnsafe why (I-0272).
+func stopped(o SyncOptions, res SyncResult, why string, conflicts []string, said string) SyncResult {
 	res.Stopped = why
 	if conflicts != nil {
 		res.Conflicts = conflicts
 	}
-	res.Continue = fmt.Sprintf("in %s, resolve each conflicting path, git add it, and run git rebase --continue; then run %s again", res.Worktree, again(o))
-	if len(conflicts) == 0 {
+	switch {
+	case len(res.Conflicts) > 0:
+		res.Continue = fmt.Sprintf("in %s, resolve each conflicting path, git add it, and run git rebase --continue; then run %s again", res.Worktree, again(o))
+	case why == StopGitError:
+		res.RebaseError = said
+		res.Continue = fmt.Sprintf("in %s nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run %s again", res.Worktree, again(o))
+	default:
 		res.Continue = fmt.Sprintf("in %s, git add the resolved paths and run git rebase --continue; then run %s again", res.Worktree, again(o))
 	}
 	res.Abort = fmt.Sprintf("in %s, run git rebase --abort, which puts %s back as it was before the sync", res.Worktree, res.Branch)
+	head, unsafe := branchUnmovable(o.Runner, o.Repo.WorktreePath(o.Story.ID), res.Branch)
+	if unsafe == "" {
+		return res
+	}
+	res.AbortUnsafe = unsafe
+	res.Abort = fmt.Sprintf("in %s, run git rebase --abort and then git symbolic-ref HEAD refs/heads/%s: git cannot update refs/heads/%s there (%s), so the abort alone leaves HEAD detached",
+		res.Worktree, res.Branch, res.Branch, unsafe)
+	if head != "" {
+		res.Abort += fmt.Sprintf("; %s stays at its head %s", res.Branch, shortHash(head))
+	}
 	return res
+}
+
+// shortHash is the first twelve characters of a commit's hash.
+func shortHash(h string) string {
+	if len(h) > 12 {
+		return h[:12]
+	}
+	return h
 }
 
 // continueOverGenerated continues the rebase stopped in the story's worktree
 // at path with ContinueOverResolved, adding each file it merges to res.Merged
-// and each it writes again to res.Regenerated. It reports whether the rebase
-// is left waiting for the agent, and that stop's conflicts.
-func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflicts []string, waits bool, err error) {
+// and each it writes again to res.Regenerated. It answers what
+// ContinueOverResolved settled: whether the rebase is left waiting for the
+// agent, that stop's conflicts, and what git said when a continue stopped it
+// with none.
+func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (Settled, error) {
 	s, err := ContinueOverResolved(o.Runner, path, o.Files, o.Log, o.Story.ID)
 	res.Merged = append(res.Merged, s.Merged...)
 	res.Regenerated = append(res.Regenerated, s.Regenerated...)
-	return s.Conflicts, s.Waits, err
+	return s, err
 }
 
 // Settled is what ContinueOverResolved did to a stopped rebase.
@@ -803,6 +901,10 @@ type Settled struct {
 	// resolve; Conflicts is that stop's conflicting paths.
 	Waits     bool
 	Conflicts []string
+	// Said is what git said when a continue stopped the rebase with no path
+	// in conflict, as when it cannot write the main checkout's .git (I-0272);
+	// "" otherwise, and for the stop it was given, whose error its caller has.
+	Said string
 }
 
 // ContinueOverResolved continues the rebase of story stopped in the worktree
@@ -814,17 +916,23 @@ type Settled struct {
 // stages them all, and continues (ADR-0098). It runs no fold. A stop it does
 // not resolve, or whose merge, writing, or staging fails, as a section merge
 // that does not settle a shared file does, is left waiting, logged to log
-// at warn with the error. An error is a continue git failed without
+// at warn with the error, and with what git said when a continue stopped it
+// with no path in conflict. An error is a continue git failed without
 // stopping; what it settled before it is reported with it.
 func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Logger, story string) (Settled, error) {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
 	var s Settled
+	// the error of the last continue, which stopped the rebase again
+	var stoppedBy error
 	for RebaseInProgress(r, dir) {
 		conflicts := Conflicts(r, dir)
 		wait := func() (Settled, error) {
 			s.Waits, s.Conflicts = true, conflicts
+			if len(conflicts) == 0 && stoppedBy != nil {
+				s.Said = gitSaid(stoppedBy)
+			}
 			return s, nil
 		}
 		merge, regen, ok := resolvable(conflicts, files)
@@ -857,8 +965,9 @@ func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Log
 			log.Warn("resolved files not staged; the rebase is left for the agent", "component", "git", "story", story, "paths", staged, "err", err)
 			return wait()
 		}
-		if err := ContinueRebase(r, dir); err != nil && !RebaseInProgress(r, dir) {
-			return s, err
+		stoppedBy = ContinueRebase(r, dir)
+		if stoppedBy != nil && !RebaseInProgress(r, dir) {
+			return s, stoppedBy
 		}
 	}
 	return s, nil
@@ -924,7 +1033,8 @@ func relPath(root, p string) string {
 // checkSync sets res.Outside to the paths the story's branch changed since
 // res.Base outside its claim, and res.Branches to the trial merge of the
 // branch with the branch of every other story in progress or in review that
-// has one, in ID order.
+// has one, in ID order. A trial merge git cannot run sets
+// res.TrialMergeFailed to what git said and is the error.
 func checkSync(o SyncOptions, res *SyncResult) error {
 	repo, story, r := o.Repo, o.Story, o.Runner
 	items, err := repo.List(false)
@@ -958,6 +1068,7 @@ func checkSync(o SyncOptions, res *SyncResult) error {
 	for _, other := range others {
 		conflicts, err := TrialMerge(r, repo.MainRoot, res.Branch, Branch(other.ID))
 		if err != nil {
+			res.TrialMergeFailed = fmt.Sprintf("git could not trial-merge %s with %s: %s", res.Branch, Branch(other.ID), gitSaid(err))
 			return fmt.Errorf("trial merge of %s with %s: %w", res.Branch, Branch(other.ID), err)
 		}
 		theirs, err := branchChanges(r, repo.MainRoot, res.Base, Branch(other.ID))

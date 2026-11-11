@@ -19,7 +19,7 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 	return &syncStopped{
 		Story: res.Story, Base: res.Base, Worktree: res.Worktree, Uncommitted: res.Uncommitted,
 		RebaseInProgress: res.RebaseInProgress(), Found: res.Stopped == storygit.StopRebaseInProgress,
-		Conflicts: res.Conflicts, Continue: res.Continue, Abort: res.Abort,
+		Conflicts: res.Conflicts, Said: res.RebaseError, Continue: res.Continue, Abort: res.Abort, AbortUnsafe: res.AbortUnsafe != "",
 	}
 }
 
@@ -37,6 +37,7 @@ func mergedWhat(p string) string {
 // (ADR-0175), the generated files it wrote again at the branch's head
 // (ADR-0286), the changelogs whose lines it put back under "## Unreleased"
 // (ADR-0257), the issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
+// why the trial merge did not run or did not run to its end (I-0272),
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
 // clean pair resolved, each path where the branch undoes the main branch's
@@ -60,6 +61,9 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 	}
 	if res.TrialMergeSkipped != "" {
 		fmt.Fprintf(w, "no trial merge with the other open story branches: %s\n", res.TrialMergeSkipped)
+	}
+	if res.TrialMergeFailed != "" {
+		fmt.Fprintf(w, "the trial merge with the other open story branches did not run to its end: %s; a conflict with a branch it did not merge goes unfound until a sync runs it\n", res.TrialMergeFailed)
 	}
 	for _, b := range res.Branches {
 		state := strings.ReplaceAll(b.Status, "-", " ")

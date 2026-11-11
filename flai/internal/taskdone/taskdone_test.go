@@ -1691,3 +1691,22 @@ func TestBehindRelease(t *testing.T) {
 		}
 	}
 }
+
+// I-0272: a sync that git stopped with no path in conflict says what git
+// said, with no conflicts to resolve, and the abort's way back; a stop on
+// conflicts still names them.
+func TestARebaseGitStoppedSaysWhatGitSaid(t *testing.T) {
+	res := storygit.SyncResult{
+		Branch: "story/S-004", Base: "main", Stopped: storygit.StopGitError,
+		RebaseError: "error: unable to write object", Continue: "in wt nothing conflicts", Abort: "in wt, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-004",
+	}
+	err := rebaseStopped(res).Error()
+	want := "the rebase of story/S-004 onto main stopped with no path in conflict; git said: error: unable to write object; in wt nothing conflicts; to abort: in wt, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-004"
+	if err != want {
+		t.Errorf("got %q\nwant %q", err, want)
+	}
+	res.Stopped, res.RebaseError, res.Conflicts = storygit.StopConflicts, "", []string{"a.md"}
+	if err := rebaseStopped(res).Error(); !strings.HasPrefix(err, "the rebase of story/S-004 onto main stopped on conflicts in a.md; ") {
+		t.Errorf("a stop on conflicts says %q", err)
+	}
+}
