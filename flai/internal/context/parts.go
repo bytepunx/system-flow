@@ -245,7 +245,7 @@ func (it Item) text() string { return it.Text }
 func (it Item) chunk(text string, k, n int) Item {
 	it.Text, it.Chunk, it.Chunks = text, k, n
 	if k > 1 {
-		it.Also = nil
+		it.Also, it.More = nil, 0
 	}
 	return it
 }

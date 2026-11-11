@@ -572,10 +572,10 @@ func (it Item) print(sized bool) string {
 }
 
 // briefReason is a brief's first reason without the heading it was found
-// under, and how many more there are.
+// under, and how many more there are, from its count of them.
 func (it Item) briefReason() string {
 	r, _, _ := strings.Cut(it.Reason, " § ")
-	switch n := len(it.Also); n {
+	switch n := it.More; n {
 	case 0:
 		return r
 	case 1:

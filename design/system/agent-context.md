@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-11-02
+updated: 2026-11-11
 status: active
 topics: [cli, conventions]
 ---
@@ -178,7 +178,7 @@ S-0146 built ADR-0049's budget, briefs, and ranked fill in `flai/internal/contex
 
 - The budget counts everything `flai prime --story` prints, the header included. A project sets it as `prime.budget` in `system-flow.yaml`, because a pack is the same for every agent on the project; `--budget` overrides it for one run.
 - Briefs are never cut (TH-0032, the designer's choice). When the conventions, what is named, and the briefs exceed the budget, the header says which part took it over (`exceeded`: `conventions`, `named`, or `briefs`) and nothing is ranked. Since S-0563 this holds when the conventions alone take the pack over too ([ADR-0241](../adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md), TH-0805). Until then such a pack was the conventions and a catalog, a cliff that the open-issues table, at about 250 bytes per issue, moved: the orchestrator's general pack lost all 138 briefs a few KB of conventions or issues past it (I-0250). The pack tells the agent that a brief is not the document, and to read one whole when it bears on the story.
-- Design briefs print under one `briefs` heading, ADR briefs one line each under `decisions`, each with its first reason and a count of the others; the JSON keeps every reason.
+- Design briefs print under one `briefs` heading, ADR briefs one line each under `decisions`, each with its first reason and a count of the others. In the JSON a brief keeps that count, in `more`, and a loaded item keeps the list, in `also` (I-0261).
 - The one step also reaches an ADR that refines a named or briefed one. A decision sentence of under five words, a bold lead-in, takes the next sentence with it.
 - The ranked step tries every section that matches in rank order, not five and five, and keeps each that fits; an ADR whole first, then its best section.
 

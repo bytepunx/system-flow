@@ -15,7 +15,8 @@ type Item struct {
 	Label   string   `json:"label,omitempty"`   // the heading path as printed, without the document's title
 	Step    string   `json:"step"`              // named, briefed, digest, or ranked
 	Reason  string   `json:"reason"`
-	Also    []string `json:"also,omitempty"`  // the reasons found for it after the first
+	Also    []string `json:"also,omitempty"`  // the reasons found for it after the first, for what is loaded
+	More    int      `json:"more,omitempty"`  // how many reasons were found for a brief after the first
 	Size    int      `json:"size"`            // bytes of Text
 	Whole   int      `json:"whole,omitempty"` // bytes of the whole document, for a brief
 	Text    string   `json:"text"`            // what is loaded, or the brief
@@ -31,7 +32,9 @@ type Item struct {
 // document order; a reason's sections of one document that follow each
 // other print as one item, and all of a document under one reason prints
 // whole, front matter included. A briefed document that is loaded whole
-// prints once, loaded, with the brief's reasons listed on it.
+// prints once, loaded, with the brief's reasons listed on it. A brief counts
+// the reasons found for it after the first in More rather than listing them
+// (I-0261).
 func (s *Selection) Items() []Item {
 	named, ranked := s.loaded(StepNamed), s.loaded(StepRanked)
 	var designs, adrs []Item
@@ -47,7 +50,7 @@ func (s *Selection) Items() []Item {
 			}
 			continue
 		}
-		it := Item{Path: d.Path, ID: d.ID, Title: d.Title, Step: StepBriefed, Reason: b.reason, Also: b.also, Whole: len(d.Raw)}
+		it := Item{Path: d.Path, ID: d.ID, Title: d.Title, Step: StepBriefed, Reason: b.reason, More: len(b.also), Whole: len(d.Raw)}
 		if d.Kind == KindADR {
 			it.Text = adrBrief(d)
 			it.Size = len(it.Text)

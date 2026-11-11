@@ -1,6 +1,7 @@
 package context
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -461,8 +462,49 @@ func TestItemsAreNamedThenBriefsThenDecisionsThenRanked(t *testing.T) {
 	}
 }
 
+// A brief counts the reasons found for it after the first rather than
+// listing them, so its JSON carries no also list (I-0261); what is loaded
+// keeps the list.
+func TestABriefCountsItsOtherReasonsAndALoadedItemListsThem(t *testing.T) {
+	s := fixture(t)
+	cli, goDoc := s.byPath["design/system/cli.md"], s.byPath["design/tech/go.md"]
+	for _, r := range []string{"topics: cli", "linked from ADR-0002", "named in S-0001"} {
+		s.addBrief(cli, r, nil)
+		s.choose(goDoc, goDoc.all(), StepNamed, r)
+	}
+	var brief, loaded *Item
+	items := s.Items()
+	for i := range items {
+		switch items[i].Path {
+		case cli.Path:
+			brief = &items[i]
+		case goDoc.Path:
+			loaded = &items[i]
+		}
+	}
+	if brief == nil || loaded == nil {
+		t.Fatalf("items %+v", items)
+	}
+	if brief.Step != StepBriefed || brief.Reason != "topics: cli" || brief.Also != nil || brief.More != 2 {
+		t.Errorf("brief %+v", brief)
+	}
+	if loaded.Step != StepNamed || loaded.More != 0 || !slices.Equal(loaded.Also, []string{"linked from ADR-0002", "named in S-0001"}) {
+		t.Errorf("loaded %+v", loaded)
+	}
+	raw, err := json.Marshal(brief)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if j := string(raw); strings.Contains(j, `"also"`) || !strings.Contains(j, `"more":2`) {
+		t.Errorf("brief JSON %s", j)
+	}
+	if got := brief.Printed(); !strings.Contains(got, "; topics: cli, and 2 more)") {
+		t.Errorf("printed brief %q", got)
+	}
+}
+
 func TestPrintedBriefsNameTheirFirstReasonAndCountTheRest(t *testing.T) {
-	adr := Item{Path: "design/adrs/0002-second.md", ID: "ADR-0002", Title: "Second", Step: StepBriefed, Reason: "linked from design/system/cli.md § Rules", Also: []string{"refined by ADR-0003", "topics: cli"}, Text: "Commands are verbs.", Whole: 99}
+	adr := Item{Path: "design/adrs/0002-second.md", ID: "ADR-0002", Title: "Second", Step: StepBriefed, Reason: "linked from design/system/cli.md § Rules", More: 2, Text: "Commands are verbs.", Whole: 99}
 	if got := adr.Printed(); got != "- ADR-0002 Second (design/adrs/0002-second.md; linked from design/system/cli.md, and 2 more): Commands are verbs.\n" {
 		t.Errorf("ADR brief %q", got)
 	}
