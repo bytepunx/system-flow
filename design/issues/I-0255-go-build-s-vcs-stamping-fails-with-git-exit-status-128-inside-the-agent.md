@@ -2,12 +2,12 @@
 id: I-0255
 title: go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand
 class: defect
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-11-02T19:02:40Z
 last_reported: 2026-11-02T19:02:40Z
-updated: 2026-11-10T08:37:12Z
+updated: 2026-11-11T07:50:20Z
 ---
 
 # I-0255 go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand
@@ -45,3 +45,4 @@ rc=128
 So the cause no longer occurs in a story's containers: `flai/internal/harness/container.go`'s `safeMain`, `scripts/agent-container.sh`, and `scripts/agent-image.sh --check` give git `safe.directory` for the main checkout. The fix proposed: a smoke test that builds with VCS stamping in the layer's image under the harness's mounts and fails without `safe.directory`, and the layer drops `GOFLAGS=-buildvcs=false`.
 
 Go stamping the main checkout's revision rather than the worktree's is a fault of its own, on the host too: a `go build` in a story's worktree records `vcs.revision` of the main checkout's `HEAD`.
+Closed 2026-11-11T07:50:20Z: S-0686. The 128 was git refusing the root-owned main checkout for dubious ownership: for a story's worktree Go's VCS stamping runs git in the main checkout, as Go passes over the worktree's .git file. The safe.directory for the main checkout that the container harness gives since ADR-0253 (S-0628) already admits it; S-0686 dropped the layer's GOFLAGS=-buildvcs=false workaround, said why in container.go, agent-container.sh, the layer's Dockerfile, docker.md, and the runbook, and added scripts/agent-vcs-test.sh to the smoke tier, which builds stamped in the layer's image under the harness's mounts and fails without the safe.directory.
