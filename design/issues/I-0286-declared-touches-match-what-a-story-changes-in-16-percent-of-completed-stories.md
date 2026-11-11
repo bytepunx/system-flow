@@ -2,11 +2,11 @@
 id: I-0286
 title: Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations
 class: efficiency
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:35Z
 last_reported: 2026-11-07T08:17:35Z
-updated: 2026-11-10T08:34:52Z
+updated: 2026-11-11T02:05:38Z
 usage:
   strategic:
     - kind: analyzer
@@ -48,3 +48,4 @@ claims.weeks[].exact_share W43 0.651, W44 0.360, W45 0.163 (7 of 43); coordinati
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0674 remediates this issue, created from it at 2026-11-10T08:34:52Z.
+Closed 2026-11-11T02:05:38Z: Fixed by S-0674 (ADR-0284). T-2939: storygit.Committed and the touches drift leave out flai's folders, wip and the design folder's digest, analysis, and issues, on both sides, so flai's bookkeeping commits (accept and archive, create story, record I-nnnn) no longer count as files outside a story's touches; TestClaimsDriftLeavesOutFlaiFoldersOnBothSides reproduces the instance. T-2940: flai task done removes from the closing task's touches each file the branch does not change, and from the story's when no other open task names it. Measured 2026-11-11 with flai stats --since 30d, stories from S-0560 on: exact 27 of 114 before, 78 of 103 after T-2939 (11 stories changed only flai's folders and have no drift entry now); 1 story still has a file outside its touches (S-0664, two ADR files), and 24 of the 25 with unchanged touches had every one named by a task, which T-2940's narrowing drops at the task's close. Weekly exact_share W46 0.303 to 0.771, W45 0.123 to 0.593.
