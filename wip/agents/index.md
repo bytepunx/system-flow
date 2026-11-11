@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-11T09:02:34Z
+updated: 2026-11-11T09:03:17Z
 ---
 
 # Active streams
@@ -17,6 +17,6 @@ updated: 2026-11-11T09:02:34Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 238 | 1277.0320 USD | 151022 | 2026-11-11T08:58:05Z |
-| [orchestrator](orchestrator.md) | 2972 | 2115.4512 USD | 1548747 | 2026-11-11T09:01:42Z |
+| [orchestrator](orchestrator.md) | 2973 | 2115.5747 USD | 1548789 | 2026-11-11T09:02:54Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
 | [curator](curator.md) | 146 | 228.5241 USD | 26730 | 2026-11-11T08:53:48Z |

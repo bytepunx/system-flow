@@ -6,7 +6,7 @@ title: flai task done's sync reports undoes_main for paths the story never chang
 status: backlog
 owner: alex
 created: 2026-11-10T10:10:59Z
-updated: 2026-11-11T09:01:05Z
+updated: 2026-11-11T09:03:17Z
 transitions: []
 tags: [flai, git]
 topics: [git]
@@ -31,7 +31,6 @@ usage:
           cache_read: 1167497
           cache_write: 34082
           cost: 0.3284
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 45m; 23rd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716, S-0689, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707, S-0709 and S-0711."
   by: flai
   at: 2026-11-11T09:01:05Z
+finalized:
+  by: alex
+  at: 2026-11-11T09:03:17Z
 ---
 # S-0712 flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync
 
