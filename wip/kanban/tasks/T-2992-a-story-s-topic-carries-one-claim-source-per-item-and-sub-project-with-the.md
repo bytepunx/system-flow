@@ -3,15 +3,36 @@ id: T-2992
 type: task
 nature: improvement
 title: A story's topic carries one claim source per item and sub-project, with the count of the paths that reach it
-status: backlog
+status: done
 parent: S-0699
 owner: alex
 created: 2026-11-10T10:30:27Z
-updated: 2026-11-10T10:30:27Z
-transitions: []
+updated: 2026-11-11T15:15:44Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:04:54Z
+    by: agent-S-0699
+  - to: in-progress
+    at: 2026-11-11T15:04:54Z
+    by: agent-S-0699
+  - to: done
+    at: 2026-11-11T15:15:44Z
+    by: agent-S-0699
 stream: S-0699
 tags: [flai, cli, go]
-touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go]
+touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go]
+usage:
+  source: log
+  seconds: 650
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 8785
+      cache_read: 1824280
+      cache_write: 77521
+      cost: 1.0161
 ---
 # T-2992 A story's topic carries one claim source per item and sub-project, with the count of the paths that reach it
 

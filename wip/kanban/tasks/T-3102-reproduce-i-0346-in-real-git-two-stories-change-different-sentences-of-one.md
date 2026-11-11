@@ -24,16 +24,16 @@ touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
 after: [T-3097]
 usage:
   source: log
-  seconds: 612
+  seconds: 615
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 279
-      cache_read: 2144660
-      cache_write: 75093
-      cost: 0.8219
+      input: 31
+      output: 10605
+      cache_read: 2161730
+      cache_write: 88668
+      cost: 1.2407
 ---
 # T-3102 Reproduce I-0346 in real git: two stories change different sentences of one paragraph of a design document, and neither sync nor acceptance stops
 

@@ -3,25 +3,42 @@ id: S-0699
 type: story
 nature: improvement
 title: A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T14:52:10Z
+updated: 2026-11-11T15:31:55Z
 transitions:
   - to: ready
     at: 2026-11-11T08:59:53Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T15:03:49Z
+    by: agent-S-0699
+  - to: review
+    at: 2026-11-11T15:31:51Z
+    by: agent-S-0699
 tags: [flai, cli, go]
-touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
+touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md, flai/internal/context/parts.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1698
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 53
+  models:
+    - model: claude-opus-5-5
+      input: 210
+      output: 45780
+      cache_read: 9506369
+      cache_write: 403966
+      cost: 5.2947
   strategic:
     - kind: planner
       seconds: 24
@@ -34,15 +51,15 @@ usage:
           cache_write: 37652
           cost: 0.5206
     - kind: orchestrator
-      seconds: 56
+      seconds: 82
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 100
-          cache_read: 446302
-          cache_write: 13682
-          cost: 0.1284
+          input: 21
+          output: 178
+          cache_read: 886374
+          cache_write: 72394
+          cost: 0.2687
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -68,8 +85,8 @@ finalized:
 This story remediates [I-0261](../../../design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md), "A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0261 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0261 is closed with `flai issue close I-0261 --reason` saying what fixed it
+- [x] The cause I-0261 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0261 is closed with `flai issue close I-0261 --reason` saying what fixed it
 
 ## Tasks
 - T-2992 A story's topic carries one claim source per item and sub-project, with the count of the paths that reach it

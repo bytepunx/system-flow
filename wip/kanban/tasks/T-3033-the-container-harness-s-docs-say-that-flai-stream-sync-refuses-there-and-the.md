@@ -3,16 +3,37 @@ id: T-3033
 type: task
 nature: remediation
 title: The container harness's docs say that flai stream sync refuses there and the MCP tools task_done and verify sync on the host, and I-0272 is closed
-status: backlog
+status: done
 parent: S-0689
 owner: alex
 created: 2026-11-10T10:33:41Z
-updated: 2026-11-11T08:55:11Z
-transitions: []
+updated: 2026-11-11T16:04:38Z
+transitions:
+  - to: ready
+    at: 2026-11-11T16:01:05Z
+    by: agent-S-0689
+  - to: in-progress
+    at: 2026-11-11T16:01:05Z
+    by: agent-S-0689
+  - to: done
+    at: 2026-11-11T16:04:38Z
+    by: agent-S-0689
 stream: S-0689
 tags: [docs, container]
 touches: [docs/users/flai.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md]
 after: [T-3026, T-3027, T-3030]
+usage:
+  source: log
+  seconds: 213
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 17043
+      cache_read: 3009657
+      cache_write: 155104
+      cost: 1.8391
 ---
 # T-3033 The container harness's docs say that flai stream sync refuses there and the MCP tools task_done and verify sync on the host, and I-0272 is closed
 

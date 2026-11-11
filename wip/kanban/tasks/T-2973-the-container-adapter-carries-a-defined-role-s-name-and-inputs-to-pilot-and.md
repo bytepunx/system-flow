@@ -3,15 +3,36 @@ id: T-2973
 type: task
 nature: improvement
 title: The container adapter carries a defined role's name and inputs to pilot and names its container and cache by the role's name
-status: backlog
+status: done
 parent: S-0705
 owner: alex
 created: 2026-11-10T10:28:54Z
-updated: 2026-11-10T10:28:54Z
-transitions: []
+updated: 2026-11-11T15:38:31Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:27:24Z
+    by: agent-S-0705
+  - to: in-progress
+    at: 2026-11-11T15:27:24Z
+    by: agent-S-0705
+  - to: done
+    at: 2026-11-11T15:38:31Z
+    by: agent-S-0705
 stream: S-0705
 tags: [flai, harness]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go]
+usage:
+  source: log
+  seconds: 667
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 17831
+      cache_read: 3011244
+      cache_write: 151133
+      cost: 1.8397
 ---
 # T-2973 The container adapter carries a defined role's name and inputs to pilot and names its container and cache by the role's name
 

@@ -3,16 +3,37 @@ id: T-2975
 type: task
 nature: improvement
 title: pilot loads a defined role's file by its name from the mounted checkout and starts the inner harness as that role
-status: backlog
+status: done
 parent: S-0705
 owner: alex
 created: 2026-11-10T10:29:04Z
-updated: 2026-11-10T10:29:04Z
-transitions: []
+updated: 2026-11-11T15:58:49Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:38:41Z
+    by: agent-S-0705
+  - to: in-progress
+    at: 2026-11-11T15:38:41Z
+    by: agent-S-0705
+  - to: done
+    at: 2026-11-11T15:58:49Z
+    by: agent-S-0705
 stream: S-0705
 tags: [flai, harness]
 touches: [flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go]
 after: [T-2973]
+usage:
+  source: log
+  seconds: 1208
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 13043
+      cache_read: 2202684
+      cache_write: 110552
+      cost: 1.3457
 ---
 # T-2975 pilot loads a defined role's file by its name from the mounted checkout and starts the inner harness as that role
 

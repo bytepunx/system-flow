@@ -3,16 +3,37 @@ id: T-3110
 type: task
 nature: remediation
 title: Document how flai reads past a work item file that does not parse, and close I-0344
-status: backlog
+status: done
 parent: S-0716
 owner: alex
 created: 2026-11-11T08:56:59Z
-updated: 2026-11-11T08:56:59Z
-transitions: []
+updated: 2026-11-11T15:15:20Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:13:57Z
+    by: agent-S-0716
+  - to: in-progress
+    at: 2026-11-11T15:13:57Z
+    by: agent-S-0716
+  - to: done
+    at: 2026-11-11T15:15:20Z
+    by: agent-S-0716
 stream: S-0716
 tags: [docs, issues]
 touches: [design/system/work-hierarchy.md, docs/users/flai.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md, design/issues/summary.md]
 after: [T-3108, T-3109]
+usage:
+  source: log
+  seconds: 83
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 7024
+      cache_read: 1322940
+      cache_write: 53183
+      cost: 0.7238
 ---
 # T-3110 Document how flai reads past a work item file that does not parse, and close I-0344
 

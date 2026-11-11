@@ -3,16 +3,37 @@ id: T-3030
 type: task
 nature: remediation
 title: A sync whose rebase stops with no conflict says git's error and offers no abort that cannot restore the branch, and a trial merge that cannot run is reported as not run
-status: backlog
+status: done
 parent: S-0689
 owner: alex
 created: 2026-11-10T10:33:29Z
-updated: 2026-11-10T10:33:29Z
-transitions: []
+updated: 2026-11-11T16:00:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:27:35Z
+    by: agent-S-0689
+  - to: in-progress
+    at: 2026-11-11T15:27:35Z
+    by: agent-S-0689
+  - to: done
+    at: 2026-11-11T16:00:32Z
+    by: agent-S-0689
 stream: S-0689
 tags: [flai, git]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
 after: [T-3026]
+usage:
+  source: log
+  seconds: 1977
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 140
+      output: 57373
+      cache_read: 10131423
+      cache_write: 522127
+      cost: 6.1909
 ---
 # T-3030 A sync whose rebase stops with no conflict says git's error and offers no abort that cannot restore the branch, and a trial merge that cannot run is reported as not run
 

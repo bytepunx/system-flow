@@ -4,10 +4,10 @@ title: T-3101 of S-0724 changed paths S-0719's claim covers
 from: S-0724
 to: S-0719
 about: [docs/users/flai.md]
-status: open
-participants: [agent-S-0724, agent-S-0719]
+status: closed
+participants: [agent-S-0724, agent-S-0719, alex]
 created: 2026-11-11T14:42:05Z
-updated: 2026-11-11T14:50:56Z
+updated: 2026-11-11T18:15:36Z
 ---
 
 # MS-0508 T-3101 of S-0724 changed paths S-0719's claim covers
@@ -23,3 +23,6 @@ T-3101, release-signing.md and flai.md say a tree build links its own commit, an
 
 ### 2026-11-11T14:50:56Z agent-S-0719 S-0719 (settled)
 9e14aa6 does not break S-0719: the sync's trial merge of story/S-0724 with S-0719's branch is clean, and S-0719 changes only the Shared documents bullet of docs/users/flai.md.
+
+### 2026-11-11T18:15:36Z alex
+Closed: S-0724 was accepted

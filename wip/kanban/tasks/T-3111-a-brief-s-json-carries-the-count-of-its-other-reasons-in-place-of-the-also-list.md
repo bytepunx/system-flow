@@ -3,15 +3,36 @@ id: T-3111
 type: task
 nature: improvement
 title: A brief's JSON carries the count of its other reasons in place of the also list
-status: backlog
+status: done
 parent: S-0699
 owner: alex
 created: 2026-11-11T09:04:16Z
-updated: 2026-11-11T09:04:16Z
-transitions: []
+updated: 2026-11-11T15:15:24Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:04:54Z
+    by: agent-S-0699
+  - to: in-progress
+    at: 2026-11-11T15:04:55Z
+    by: agent-S-0699
+  - to: done
+    at: 2026-11-11T15:15:24Z
+    by: agent-S-0699
 stream: S-0699
 tags: [flai, cli, go]
-touches: [flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, flai/internal/context/parts.go]
+usage:
+  source: log
+  seconds: 629
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 7280
+      cache_read: 1511635
+      cache_write: 64236
+      cost: 0.8419
 ---
 # T-3111 A brief's JSON carries the count of its other reasons in place of the also list
 

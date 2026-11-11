@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2120.7191
-accrued_seconds: 1549749
-tasks_completed: 3019
-last_run: 2026-11-11T14:44:55Z
+accrued_cost: 2122.8135
+accrued_seconds: 1550135
+tasks_completed: 3035
+last_run: 2026-11-11T16:16:31Z
 ---
 
 # Orchestrator activity
@@ -21165,6 +21165,118 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.2792 USD, estimated
+
+### 2026-11-11T14:52:22Z
+
+- Summary: Accepted S-0694 at 9cb9d38759f1 (close-out passed at the branch head, verifier matched both criteria, no blockers); merged and archived. Overlaps flagged to S-0689 (harness.go) and S-0719 (workflow.md). Value 50 USD/week over a 2h forecast.
+- Items: S-0694
+- Seconds: 71
+- Cost: 0.2466 USD, estimated
+
+### 2026-11-11T14:52:43Z
+
+- Summary: Release evaluated after S-0694's acceptance: threshold met (count 9 ≥ 1; value 352.5 USD/week). Started no new publish run: S-0718, the publish formula's open instance, is in ready and releases everything pending, S-0694 included, when it runs.
+- Items: S-0694, S-0718
+- Seconds: 21
+- Cost: 0.0650 USD, estimated
+
+### 2026-11-11T14:52:58Z
+
+- Summary: I accepted S-0694 at commit `9cb9d38759f1`. It is merged into main and archived.
+- Items: none
+- Seconds: 15
+- Cost: 0.1223 USD, estimated
+
+### 2026-11-11T14:53:26Z
+
+- Summary: Release-due S-0694: release_evaluate met under threshold (count 9 >= 1; value 352.5 of 1000 USD/week; pending S-0686, S-0691, S-0694, S-0696, S-0697, S-0698, S-0700, S-0702, S-0710). Started no publish formula run: its open instance S-0718 is in ready, waiting on the full in-progress limit (3 of 3), and publishes all 9 when an agent pulls it; a second instance would duplicate it.
+- Items: S-0694, S-0718
+- Seconds: 21
+- Cost: 0.1069 USD, estimated
+
+### 2026-11-11T14:53:40Z
+
+- Summary: I did not publish a release for S-0694, because a publish run is already waiting to go.
+- Items: none
+- Seconds: 14
+- Cost: 0.1179 USD, estimated
+
+### 2026-11-11T15:04:48Z
+
+- Summary: S-0719 in review: last verify record passed at 58e5daa, but story/S-0719's head is 0d7a306 (the close-out commit, changing I-0347 and design/issues/summary.md); asked flai serve for the close-out at the head, which started job S-0719-20261111T150441Z. Left in review for a later run to read the verdict and accept.
+- Items: S-0719
+- Seconds: 32
+- Cost: 0.1181 USD, estimated
+
+### 2026-11-11T15:05:05Z
+
+- Summary: I haven't accepted S-0719 yet. It stays in review until a close-out passes at the head of its branch.
+- Items: none
+- Seconds: 17
+- Cost: 0.1061 USD, estimated
+
+### 2026-11-11T15:25:01Z
+
+- Summary: S-0716 in review: last verify record names 0d0f57ac, not the branch head 829f9970, so asked flai serve for its close-out (job S-0716-20261111T152456Z); left in review until a later run reads the verdict
+- Items: S-0716
+- Seconds: 16
+- Cost: 0.0949 USD, estimated
+
+### 2026-11-11T15:25:22Z
+
+- Summary: S-0716 is still in review, not accepted: its close-out has to be rerun at the branch's head first, and that job is running now.
+- Items: none
+- Seconds: 21
+- Cost: 0.2082 USD, estimated
+
+### 2026-11-11T15:32:53Z
+
+- Summary: S-0699 in review: its last passing verify (e960da34) is one commit behind the branch head 7b856c4a (its close-out commit, design/issues only), so asked flai serve for its close-out under accept_reviews; job S-0699-20261111T153241Z started, so the story stays in review for a later run to read the verdict and accept.
+- Items: S-0699
+- Seconds: 26
+- Cost: 0.1403 USD, estimated
+
+### 2026-11-11T15:33:08Z
+
+- Summary: I haven't accepted S-0699 yet, and it stays in review. Its last passing verify, at `e960da34`, is one commit behind the branch head, `7b856c4a`.
+- Items: none
+- Seconds: 15
+- Cost: 0.0893 USD, estimated
+
+### 2026-11-11T16:14:48Z
+
+- Summary: S-0705 and S-0689 in review: last verify passed at 3a0359bf and 1f2fe7de, one close-out commit behind the branch heads eb6676a8 and 64c7298c; asked flai serve for close-outs at the heads (jobs S-0705-20261111T161441Z, S-0689-20261111T161442Z), left in review for a later run to accept
+- Items: S-0705, S-0689
+- Seconds: 28
+- Cost: 0.1674 USD, estimated
+
+### 2026-11-11T16:15:14Z
+
+- Summary: ready-empty: promoted the six promote_candidates to ready in throughput order (S-0715 40m rank 1, S-0707 45m rank 2, S-0714 45m rank 3, S-0711 1h rank 4, S-0712 1h rank 5, S-0720 1h30m rank 6), ready now 8/10; applied flai order --by throughput, S-0681 and S-0718 after them for want of a forecast duration
+- Items: S-0715, S-0707, S-0714, S-0711, S-0712, S-0720
+- Seconds: 26
+- Cost: 0.0603 USD, estimated
+
+### 2026-11-11T16:15:33Z
+
+- Summary: Nothing was accepted this run. Both stories stay in review until a later run reads their close-out results. The ready column is refilled to 8 of 10.
+- Items: none
+- Seconds: 19
+- Cost: 0.2059 USD, estimated
+
+### 2026-11-11T16:16:04Z
+
+- Summary: Pull order changed: applied flai order --by throughput; ready order unchanged (S-0715 40m, S-0707 45m, S-0714 45m, S-0711 1h, S-0712 1h, S-0720 1h30m, then S-0681 and S-0718 with no forecast). promote_candidates lists none, so nothing promoted.
+- Items: S-0715, S-0707, S-0714, S-0711, S-0712, S-0720, S-0681, S-0718
+- Seconds: 17
+- Cost: 0.1145 USD, estimated
+
+### 2026-11-11T16:16:31Z
+
+- Summary: The ready column was already in throughput order, so applying the policy (`flai order --by throughput --apply`) changed nothing. I started this run only because the pull order changed, and that is now handled.
+- Items: none
+- Seconds: 27
+- Cost: 0.1307 USD, estimated
 
 ## Refusals
 

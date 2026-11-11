@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 671
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 231
-      cache_read: 1428293
-      cache_write: 55029
-      cost: 0.5492
+      input: 20
+      output: 7086
+      cache_read: 1444545
+      cache_write: 59251
+      cost: 0.8291
 ---
 # T-3099 Say in the design and the user docs that the section merge settles a paragraph both sides change in different sentences
 

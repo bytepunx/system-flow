@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 26
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 18
-      cache_read: 528018
-      cache_write: 3047
-      cost: 0.1966
+      input: 7
+      output: 2537
+      cache_read: 517175
+      cache_write: 21213
+      cost: 0.2968
 ---
 # T-3094 ADR: the section merge merges by sentences the lines of a paragraph both sides change, refining ADR-0175 and ADR-0276
 

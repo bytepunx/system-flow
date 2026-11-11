@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 652
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 181
-      cache_read: 1307996
-      cache_write: 77335
-      cost: 0.5129
+      input: 19
+      output: 6618
+      cache_read: 1349114
+      cache_write: 55337
+      cost: 0.7743
 ---
 # T-3097 The section merge merges by sentences the lines of a paragraph both sides change, and still stops when both change one sentence
 

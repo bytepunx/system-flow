@@ -3,16 +3,37 @@ id: T-3108
 type: task
 nature: remediation
 title: flai check reports a work item file that does not parse as one finding on its path and checks the rest
-status: backlog
+status: done
 parent: S-0716
 owner: alex
 created: 2026-11-11T08:56:45Z
-updated: 2026-11-11T08:56:45Z
-transitions: []
+updated: 2026-11-11T15:08:45Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:55:07Z
+    by: agent-S-0716
+  - to: in-progress
+    at: 2026-11-11T14:55:08Z
+    by: agent-S-0716
+  - to: done
+    at: 2026-11-11T15:08:45Z
+    by: agent-S-0716
 stream: S-0716
 tags: [flai, check]
 touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/scope.go, flai/internal/check/items_test.go, flai/internal/check/scope_test.go, flai/internal/verify/story_test.go]
 after: [T-3107]
+usage:
+  source: log
+  seconds: 817
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 25259
+      cache_read: 4757737
+      cache_write: 191266
+      cost: 2.603
 ---
 # T-3108 flai check reports a work item file that does not parse as one finding on its path and checks the rest
 

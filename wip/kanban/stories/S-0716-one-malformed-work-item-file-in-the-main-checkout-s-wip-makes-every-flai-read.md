@@ -3,10 +3,10 @@ id: S-0716
 type: story
 nature: remediation
 title: One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-11T01:40:46Z
-updated: 2026-11-11T14:43:52Z
+updated: 2026-11-11T15:24:22Z
 transitions:
   - to: ready
     at: 2026-11-11T08:51:27Z
@@ -14,17 +14,31 @@ transitions:
   - to: in-progress
     at: 2026-11-11T14:43:52Z
     by: agent-S-0716
+  - to: review
+    at: 2026-11-11T15:24:09Z
+    by: agent-S-0716
 tags: [flai]
-touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/scope.go, flai/internal/check/items_test.go, flai/internal/check/scope_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/verify/story_test.go, design/system/work-hierarchy.md, docs/users/flai.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md, design/issues/summary.md]
+touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/workitem/narrative_test.go, flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/scope.go, flai/internal/check/items_test.go, flai/internal/check/scope_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/verify/story_test.go, design/system/work-hierarchy.md, docs/users/flai.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md, design/issues/summary.md, flai/internal/mcpserver/folder_test.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2447
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 48
+  models:
+    - model: claude-opus-5-5
+      input: 340
+      output: 89348
+      cache_read: 16829473
+      cache_write: 676561
+      cost: 9.2076
   strategic:
     - kind: planner
       seconds: 69
@@ -37,15 +51,15 @@ usage:
           cache_write: 33986
           cost: 0.5926
     - kind: orchestrator
-      seconds: 8
+      seconds: 24
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 9
-          cache_read: 46441
-          cache_write: 2407
-          cost: 0.0136
+          input: 10
+          output: 87
+          cache_read: 322865
+          cache_write: 63378
+          cost: 0.1085
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -71,8 +85,8 @@ finalized:
 This story remediates [I-0344](../../../design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md), "One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0344 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0344 is closed with `flai issue close I-0344 --reason` saying what fixed it
+- [x] The cause I-0344 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0344 is closed with `flai issue close I-0344 --reason` saying what fixed it
 
 ## Tasks
 - T-3107 Repo.List skips a work item file that does not parse and keeps its path and error for the check

@@ -3,16 +3,37 @@ id: T-2996
 type: task
 nature: improvement
 title: Measure S-0425's and S-0586's packs again, record the parts in agent-context.md, and close I-0261
-status: backlog
+status: done
 parent: S-0699
 owner: alex
 created: 2026-11-10T10:30:50Z
-updated: 2026-11-11T09:04:21Z
-transitions: []
+updated: 2026-11-11T15:23:01Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:21:37Z
+    by: agent-S-0699
+  - to: in-progress
+    at: 2026-11-11T15:21:37Z
+    by: agent-S-0699
+  - to: done
+    at: 2026-11-11T15:23:01Z
+    by: agent-S-0699
 stream: S-0699
 tags: [flai, docs]
 touches: [design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
 after: [T-2992, T-3111]
+usage:
+  source: log
+  seconds: 84
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 4746
+      cache_read: 985501
+      cache_write: 41878
+      cost: 0.5489
 ---
 # T-2996 Measure S-0425's and S-0586's packs again, record the parts in agent-context.md, and close I-0261
 

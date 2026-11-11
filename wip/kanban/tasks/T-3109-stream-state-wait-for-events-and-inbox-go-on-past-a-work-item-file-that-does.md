@@ -3,16 +3,37 @@ id: T-3109
 type: task
 nature: remediation
 title: stream_state, wait_for_events, and inbox go on past a work item file that does not parse, with tests
-status: backlog
+status: done
 parent: S-0716
 owner: alex
 created: 2026-11-11T08:56:52Z
-updated: 2026-11-11T08:56:52Z
-transitions: []
+updated: 2026-11-11T15:08:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:55:08Z
+    by: agent-S-0716
+  - to: in-progress
+    at: 2026-11-11T14:55:08Z
+    by: agent-S-0716
+  - to: done
+    at: 2026-11-11T15:08:59Z
+    by: agent-S-0716
 stream: S-0716
 tags: [flai, mcp]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/stream_test.go]
+touches: [flai/internal/workitem/narrative_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/folder_test.go]
 after: [T-3107]
+usage:
+  source: log
+  seconds: 831
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 14218
+      cache_read: 2678046
+      cache_write: 107660
+      cost: 1.4652
 ---
 # T-3109 stream_state, wait_for_events, and inbox go on past a work item file that does not parse, with tests
 

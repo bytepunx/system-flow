@@ -3,11 +3,11 @@ id: T-3107
 type: task
 nature: remediation
 title: Repo.List skips a work item file that does not parse and keeps its path and error for the check
-status: in-progress
+status: done
 parent: S-0716
 owner: alex
 created: 2026-11-11T08:56:33Z
-updated: 2026-11-11T14:44:56Z
+updated: 2026-11-11T14:54:46Z
 transitions:
   - to: ready
     at: 2026-11-11T14:44:56Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T14:44:56Z
     by: agent-S-0716
+  - to: done
+    at: 2026-11-11T14:54:46Z
+    by: agent-S-0716
 stream: S-0716
 tags: [flai, workitem]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go]
+usage:
+  source: log
+  seconds: 590
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 9880
+      cache_read: 1860942
+      cache_write: 74812
+      cost: 1.0181
 ---
 # T-3107 Repo.List skips a work item file that does not parse and keeps its path and error for the check
 

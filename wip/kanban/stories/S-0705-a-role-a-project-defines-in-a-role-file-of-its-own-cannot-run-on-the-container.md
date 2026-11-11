@@ -3,26 +3,49 @@ id: S-0705
 type: story
 nature: improvement
 title: A role a project defines in a role file of its own cannot run on the container harness, since the start request does not carry its file to pilot
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-11T14:52:10Z
+updated: 2026-11-11T16:13:45Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:45Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T15:24:17Z
+    by: agent-S-0705
+  - to: review
+    at: 2026-11-11T16:13:45Z
+    by: agent-S-0705
 tags: [flai]
 topics: [harness, docker, code]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/plan.go, flai/internal/serve/role.go, design/issues/I-0350-the-container-harness-s-design-and-operator-docs-still-say-the-close-out-and.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2986
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 5
+      work: 44
+  models:
+    - model: claude-haiku-5-5
+      input: 4
+      output: 14585
+      cache_read: 13257
+      cache_write: 129591
+      cost: 0.1099
+    - model: claude-opus-5-5
+      input: 320
+      output: 100816
+      cache_read: 17025212
+      cache_write: 854490
+      cost: 10.4012
   strategic:
     - kind: planner
       seconds: 20
@@ -41,15 +64,15 @@ usage:
           cache_write: 92957
           cost: 1.9533
     - kind: orchestrator
-      seconds: 11
+      seconds: 25
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 11
-          cache_read: 179295
-          cache_write: 14864
-          cost: 0.0535
+          input: 10
+          output: 42
+          cache_read: 437363
+          cache_write: 54274
+          cost: 0.1372
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -75,8 +98,8 @@ finalized:
 This story remediates [I-0258](../../../design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md), "A role a project defines in a role file of its own cannot run on the container harness, since the start request does not carry its file to pilot". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0258 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0258 is closed with `flai issue close I-0258 --reason` saying what fixed it
+- [x] The cause I-0258 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0258 is closed with `flai issue close I-0258 --reason` saying what fixed it
 
 ## Tasks
 - T-2973 The container adapter carries a defined role's name and inputs to pilot and names its container and cache by the role's name

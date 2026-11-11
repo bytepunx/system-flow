@@ -3,10 +3,10 @@ id: S-0719
 type: story
 nature: improvement
 title: A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T14:24:09Z
+updated: 2026-11-11T15:03:59Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
@@ -14,8 +14,11 @@ transitions:
   - to: in-progress
     at: 2026-11-11T14:21:49Z
     by: agent-S-0719
+  - to: review
+    at: 2026-11-11T15:03:41Z
+    by: agent-S-0719
 tags: []
-touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md, design/adrs/0287-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences-keeping.md]
+touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md, design/adrs/0287-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences-keeping.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,20 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1734
-  estimated: true
-  priced_by: estimate
+  seconds: 2546
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 25
+      ceremony: 2
+      work: 41
   models:
     - model: claude-opus-5-5
-      input: 154
-      output: 838
-      cache_read: 7799063
-      cache_write: 477326
-      cost: 3.0643
+      input: 198
+      output: 68595
+      cache_read: 13983005
+      cache_write: 573544
+      cost: 8.0252
   strategic:
     - kind: planner
       seconds: 279
@@ -55,15 +57,15 @@ usage:
           cache_write: 490422
           cost: 5.2219
     - kind: orchestrator
-      seconds: 59
+      seconds: 91
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 122
-          cache_read: 529608
-          cache_write: 78910
-          cost: 0.1698
+          input: 29
+          output: 193
+          cache_read: 889599
+          cache_write: 138920
+          cost: 0.2879
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -89,8 +91,8 @@ finalized:
 This story remediates [I-0346](../../../design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md), "A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0346 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0346 is closed with `flai issue close I-0346 --reason` saying what fixed it
+- [x] The cause I-0346 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0346 is closed with `flai issue close I-0346 --reason` saying what fixed it
 
 ## Tasks
 - T-3094 ADR: the section merge merges by sentences the lines of a paragraph both sides change, refining ADR-0175 and ADR-0276

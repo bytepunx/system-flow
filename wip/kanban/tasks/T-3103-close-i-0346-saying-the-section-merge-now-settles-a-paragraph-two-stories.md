@@ -3,16 +3,37 @@ id: T-3103
 type: task
 nature: improvement
 title: Close I-0346, saying the section merge now settles a paragraph two stories change in different sentences
-status: backlog
+status: done
 parent: S-0719
 owner: alex
 created: 2026-11-11T08:55:04Z
-updated: 2026-11-11T08:55:04Z
-transitions: []
+updated: 2026-11-11T14:53:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:53:09Z
+    by: agent-S-0719
+  - to: in-progress
+    at: 2026-11-11T14:53:09Z
+    by: agent-S-0719
+  - to: done
+    at: 2026-11-11T14:53:19Z
+    by: agent-S-0719
 stream: S-0719
 tags: [issues]
 touches: [design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md]
 after: [T-3102, T-3099]
+usage:
+  source: log
+  seconds: 10
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1573
+      cache_read: 320746
+      cache_write: 13156
+      cost: 0.1841
 ---
 # T-3103 Close I-0346, saying the section merge now settles a paragraph two stories change in different sentences
 

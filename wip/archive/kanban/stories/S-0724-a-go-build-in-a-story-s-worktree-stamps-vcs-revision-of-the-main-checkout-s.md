@@ -3,10 +3,10 @@ id: S-0724
 type: story
 nature: remediation
 title: A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
-status: review
+status: done
 owner: alex
 created: 2026-11-11T08:46:42Z
-updated: 2026-11-11T14:43:48Z
+updated: 2026-11-11T18:15:36Z
 transitions:
   - to: ready
     at: 2026-11-11T08:57:35Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T14:43:42Z
     by: agent-S-0724
+  - to: done
+    at: 2026-11-11T18:15:36Z
+    by: alex
 tags: [go, build, worktree]
 touches: [scripts/flai-build.sh, scripts/flai-build-stamp-test.sh, scripts/smoke.sh, scripts/README.md, design/system/release-signing.md, docs/users/flai.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:

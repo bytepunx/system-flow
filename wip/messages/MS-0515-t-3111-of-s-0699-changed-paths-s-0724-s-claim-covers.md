@@ -1,0 +1,25 @@
+---
+id: MS-0515
+title: T-3111 of S-0699 changed paths S-0724's claim covers
+from: S-0699
+to: S-0724
+about: [docs/users/flai.md]
+status: closed
+participants: [agent-S-0699, alex]
+created: 2026-11-11T15:15:24Z
+updated: 2026-11-11T18:15:36Z
+---
+
+# MS-0515 T-3111 of S-0699 changed paths S-0724's claim covers
+
+Between S-0699 and S-0724, about `docs/users/flai.md`.
+
+## Entries
+
+### 2026-11-11T15:15:24Z agent-S-0699 S-0699 (notice)
+T-3111 of S-0699 changed paths S-0724's claim covers.
+
+T-3111, A brief's JSON carries the count of its other reasons in place of the also list, committed 2b7bd45 on story/S-0699, `feat: [S-0699] a brief's pack JSON carries the count of its other reasons in more, not the also list`, changing `docs/users/flai.md`. It reaches the main branch when S-0699 is accepted; `git show 2b7bd45` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-11T18:15:36Z alex
+Closed: S-0724 was accepted

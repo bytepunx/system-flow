@@ -3,10 +3,10 @@ id: S-0689
 type: story
 nature: remediation
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T14:50:40Z
+updated: 2026-11-11T16:13:51Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
@@ -14,18 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-11T14:50:40Z
     by: agent-S-0689
+  - to: review
+    at: 2026-11-11T16:13:51Z
+    by: agent-S-0689
 tags: [flai, git, container]
 topics: [git]
-touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md]
+touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md, flai/internal/taskdone/taskdone.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5013
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 2
+      work: 54
+  models:
+    - model: claude-opus-5-5
+      input: 396
+      output: 162699
+      cache_read: 28730924
+      cache_write: 1480659
+      cost: 17.5564
   strategic:
     - kind: planner
       seconds: 22
@@ -38,15 +52,15 @@ usage:
           cache_write: 8355
           cost: 0.1553
     - kind: orchestrator
-      seconds: 20
+      seconds: 34
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 22
-          cache_read: 109934
-          cache_write: 14272
-          cost: 0.0346
+          input: 8
+          output: 53
+          cache_read: 368001
+          cache_write: 53682
+          cost: 0.1183
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -72,8 +86,8 @@ finalized:
 This story remediates [I-0272](../../../design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md), "flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0272 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0272 is closed with `flai issue close I-0272 --reason` saying what fixed it
+- [x] The cause I-0272 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0272 is closed with `flai issue close I-0272 --reason` saying what fixed it
 
 ## Tasks
 - T-3026 flai stream sync and the shell's flai task done refuse at once in a story's agent container, naming the MCP tools that sync on the host

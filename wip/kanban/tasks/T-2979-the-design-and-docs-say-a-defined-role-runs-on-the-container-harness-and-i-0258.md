@@ -3,16 +3,37 @@ id: T-2979
 type: task
 nature: improvement
 title: The design and docs say a defined role runs on the container harness, and I-0258 is closed
-status: backlog
+status: done
 parent: S-0705
 owner: alex
 created: 2026-11-10T10:29:20Z
-updated: 2026-11-10T10:29:20Z
-transitions: []
+updated: 2026-11-11T16:04:21Z
+transitions:
+  - to: ready
+    at: 2026-11-11T15:59:00Z
+    by: agent-S-0705
+  - to: in-progress
+    at: 2026-11-11T15:59:00Z
+    by: agent-S-0705
+  - to: done
+    at: 2026-11-11T16:04:21Z
+    by: agent-S-0705
 stream: S-0705
 tags: [docs, issues]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md]
 after: [T-2975, T-2976]
+usage:
+  source: log
+  seconds: 321
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 16981
+      cache_read: 2867628
+      cache_write: 143925
+      cost: 1.7519
 ---
 # T-2979 The design and docs say a defined role runs on the container harness, and I-0258 is closed
 
