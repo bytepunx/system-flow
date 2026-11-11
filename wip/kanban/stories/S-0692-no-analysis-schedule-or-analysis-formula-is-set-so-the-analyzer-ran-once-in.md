@@ -3,11 +3,14 @@ id: S-0692
 type: story
 nature: improvement
 title: No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-11T01:45:02Z
-transitions: []
+updated: 2026-11-11T01:46:11Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:45:04Z
+    by: alex
 tags: [flai, analyzer, manifest]
 topics: [analysis, cli]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check_roles.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md, design/issues/summary.md]
@@ -67,10 +70,10 @@ cost_of_delay:
   at: 2026-11-10T11:08:12Z
 forecast:
   duration: 38m
-  delivery: 2026-11-11T12:50:00Z
-  basis: "Its own forecast of 38m; 15th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683 and S-0689."
+  delivery: 2026-11-11T02:53:00Z
+  basis: "Its own forecast of 38m; 2nd in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688 and S-0695."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:13:45Z

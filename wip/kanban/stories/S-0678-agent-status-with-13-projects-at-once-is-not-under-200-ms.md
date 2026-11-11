@@ -6,7 +6,7 @@ title: agent.status with 13 projects at once is not under 200 ms
 status: ready
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-11T01:45:02Z
+updated: 2026-11-11T01:46:11Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:56Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 5
+      seconds: 8
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 1
-          output: 4
-          cache_read: 92745
-          cache_write: 4930
-          cost: 0.0267
+          output: 5
+          cache_read: 110843
+          cache_write: 5115
+          cost: 0.0318
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1s
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T05:05:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690 and S-0691."
+  delivery: 2026-11-11T05:50:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692, S-0690, S-0693 and S-0691."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:53Z

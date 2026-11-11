@@ -6,7 +6,7 @@ title: The board stood empty for three days while the backlog held only drafts w
 status: ready
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T01:45:02Z
+updated: 2026-11-11T01:46:11Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:32Z
@@ -26,15 +26,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 29
+      seconds: 32
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 34
-          cache_read: 400738
-          cache_write: 8956
-          cost: 0.112
+          input: 3
+          output: 36
+          cache_read: 418836
+          cache_write: 9141
+          cost: 0.1171
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -61,10 +61,10 @@ cost_of_delay:
   at: 2026-11-10T10:56:15Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T03:48:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688 and S-0690."
+  delivery: 2026-11-11T04:41:00Z
+  basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692, S-0690 and S-0693."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:48Z

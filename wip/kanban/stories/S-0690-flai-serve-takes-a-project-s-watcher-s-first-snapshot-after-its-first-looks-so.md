@@ -6,7 +6,7 @@ title: flai serve takes a project's watcher's first snapshot after its first loo
 status: ready
 owner: alex
 created: 2026-11-10T08:49:01Z
-updated: 2026-11-11T01:45:02Z
+updated: 2026-11-11T01:46:11Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:25Z
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 6
+      seconds: 9
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 2
-          cache_read: 102139
-          cache_write: 491
-          cost: 0.0281
+          input: 1
+          output: 4
+          cache_read: 120237
+          cache_write: 676
+          cost: 0.0332
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:31Z
 forecast:
   duration: 40m
-  delivery: 2026-11-11T02:32:00Z
-  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, behind S-0674, S-0676 and S-0688."
+  delivery: 2026-11-11T03:25:00Z
+  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695 and S-0692."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:46Z

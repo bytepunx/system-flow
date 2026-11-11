@@ -6,7 +6,7 @@ title: "The integration and smoke tiers' when names template/**, but their paths
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:31Z
-updated: 2026-11-11T01:45:02Z
+updated: 2026-11-11T01:46:11Z
 transitions: []
 tags: [flai, testing, manifest]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:19Z
 forecast:
   duration: 30m
-  delivery: 2026-11-11T13:56:00Z
-  basis: "Its own forecast of 30m; 19th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0692, S-0693, S-0694 and S-0695."
+  delivery: 2026-11-11T13:33:00Z
+  basis: "Its own forecast of 30m; 19th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692, S-0690, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683 and S-0689."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:45Z

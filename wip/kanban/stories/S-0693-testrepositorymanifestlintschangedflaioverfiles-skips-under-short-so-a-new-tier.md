@@ -3,11 +3,14 @@ id: S-0693
 type: story
 nature: improvement
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-11T01:45:02Z
-transitions: []
+updated: 2026-11-11T01:46:11Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:45:19Z
+    by: alex
 tags: [flai, tests]
 topics: [code]
 touches: [flai/internal/verify/select_test.go, design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T13:52:00Z
-  basis: "Its own forecast of 45m; 16th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689 and S-0692."
+  delivery: 2026-11-11T04:28:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692 and S-0690."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:43Z

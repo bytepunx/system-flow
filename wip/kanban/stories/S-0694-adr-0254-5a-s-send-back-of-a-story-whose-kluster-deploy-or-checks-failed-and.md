@@ -3,11 +3,14 @@ id: S-0694
 type: story
 nature: improvement
 title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks failed, and its kluster acceptance blocker, are not built"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-11T01:45:02Z
-transitions: []
+updated: 2026-11-11T01:46:11Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:45:35Z
+    by: alex
 tags: [flai, serve, kluster, accept]
 topics: [kluster, deployment, review]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/move.go, flai/cmd/accept_kluster_test.go, flai/internal/hostapi/reads.go, flai/internal/mcpserver/queue.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/kluster.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:23Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T15:24:00Z
-  basis: "Its own forecast of 2h; 17th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0692 and S-0693."
+  delivery: 2026-11-11T07:03:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692, S-0690, S-0693, S-0691, S-0678 and S-0686."
   by: flai
-  at: 2026-11-11T01:45:02Z
+  at: 2026-11-11T01:46:11Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:10Z
