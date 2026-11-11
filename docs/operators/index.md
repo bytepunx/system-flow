@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 ---
 
@@ -683,7 +683,7 @@ flai serve disable analyze     # no more runs, asked for or scheduled
 
 **Where to look.** The run is kept in `serve/agents.json` under `analyzer`, with its focus, what started it, and the report it wrote; its output is in `serve/agents/<key>-analyzer-<time>.log`, and what it did and cost in `wip/agents/analyzer.md`, whose entry names the report or says none was written. `flai hostapi agent.status` shows the run as `analyzer`. A run that wrote no report is recorded as `failed`. The reports are under `design/analysis/`, which the dashboard's Docs page shows. The analyzer asks you in a thread on its report when it needs an input of yours. While the analyzer's provider is out of budget, `flai analyze` is refused, and a scheduled run waits until the hold ends ([When a provider is out of budget](#when-a-provider-is-out-of-budget-s-0534)).
 
-**The schedule can start a formula instead (S-0424).** Set [`analysis.formula`](settings.md#project-manifest) by hand in `system-flow.yaml`, such as `analysis.formula: analysis-cadence`, and each time `analysis.schedule` comes round with `analyze` on, `flai serve` makes that formula's instance, in ready and committed, in place of starting the analyzer. The instance is a story: a story's agent works it within the in-progress limit, and you accept it. The template's `analysis-cadence` runs the analyzer, which still needs `analyze` on, then lists the open issues its report names, so you choose at its acceptance which become stories. The journal has each instance under `formula`, started by `analysis.schedule <spec>`. `flai check` reports a name no formula file defines, and a formula with an input that has no default.
+**The schedule can start a formula instead (S-0424).** Set [`analysis.formula`](settings.md#project-manifest) with `flai manifest set analysis.formula=analysis-cadence`, or on the Analyzer page, and each time `analysis.schedule` comes round with `analyze` on, `flai serve` makes that formula's instance, in ready and committed, in place of starting the analyzer. The instance is a story: a story's agent works it within the in-progress limit, and you accept it. The template's `analysis-cadence` runs the analyzer, which still needs `analyze` on, then lists the open issues its report names, so you choose at its acceptance which become stories. The journal has each instance under `formula`, started by `analysis.schedule <spec>`. `flai manifest set` refuses, and `flai check` reports, a name no formula file defines, and a formula with an input that has no default.
 
 ### The curate host action: the curator (S-0431)
 

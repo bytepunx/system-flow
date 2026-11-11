@@ -3,6 +3,7 @@
 ## Unreleased
 
 - S-0674 `git.md` and `work-management.md` say `flai task done` narrows the touches too: it removes from the closing task's touches each file the branch does not change, and from the story's when no other open task names it (patch, ADR-0284, I-0286).
+- S-0692 `flai manifest set` and the Analyzer page write `analysis.formula`, and refuse, writing nothing, a formula no file defines or one with an input that has no default, as `flai check`'s `manifest.analysis` reports them (patch, I-0292).
 
 ## 1.1.33 - 2026-11-10
 

@@ -2618,7 +2618,7 @@ analysis:
 
 A scheduled time that comes while an analyzer runs is skipped, and so is one that passed while `flai serve` was down or `analyze` was off; a schedule you set or change first comes round at its next time from then. Each scheduled run starts a session you pay for without asking each time, so there is no schedule until you set one. `flai check` reports a schedule it cannot read, or an agent that is not valid.
 
-To have the schedule start a formula in place of the analyzer, name it in `analysis.formula`, by hand (S-0424):
+To have the schedule start a formula in place of the analyzer, name it in `analysis.formula` (S-0424), with `flai manifest set analysis.formula=analysis-cadence` or on the Analyzer page (S-0692):
 
 ```yaml
 analysis:
@@ -2626,7 +2626,7 @@ analysis:
   formula: analysis-cadence  # the template's: run the analyzer, then list the open issues its report names
 ```
 
-Each time the schedule comes round with `analyze` on, `flai serve` makes that formula's story in ready and commits it, and a story's agent works it within the in-progress limit. With `analysis-cadence`, its first task runs the analyzer with no focus and its second lists the issues the report names, which you choose stories from when you accept it. `flai check` reports a name no formula file defines, or a formula with an input that has no default. `flai manifest set` and the Analyzer page do not set it yet.
+Each time the schedule comes round with `analyze` on, `flai serve` makes that formula's story in ready and commits it, and a story's agent works it within the in-progress limit. With `analysis-cadence`, its first task runs the analyzer with no focus and its second lists the issues the report names, which you choose stories from when you accept it. `flai manifest set` refuses, writing nothing, and `flai check` reports, a name no formula file defines, or a formula with an input that has no default.
 
 The analyzer runs in the project's main checkout, as `analyzer`, with its agent: `analysis.agent`, laid over the project's `agent` as `planning.agent` is for the planner. With `claude-code` it runs as the definition flai generates from its role file, `design/workflows/roles/analyzer.md`, at every start, and reads nothing under `.claude/` ([ADR-0236](../../design/adrs/0236-a-built-in-role-s-claude-code-definition-is-generated-into-flai-cache-agents-by.md), [Role files](#role-files)). A command you set with `flai serve agent set` gets `FLAI_ROLE=analyze`, and `FLAI_FOCUS` when you gave a focus. The run does not count against the in-progress limit and holds no story back.
 
@@ -2677,7 +2677,7 @@ When it ends, `flai serve` records how: `failed` when it ended on the usage limi
 
 #### Changing the strategic agents' settings
 
-`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, and the curator's agent, schedule, and compaction window (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
+`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, the planner's and the analyzer's agents and schedules, the analyzer's formula, and the curator's agent, schedule, and compaction window (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
 
 ```bash
 flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
@@ -2698,6 +2698,7 @@ flai manifest set analysis.schedule=daily --autocommit --json
 | `planning.agent`, `analysis.agent`, `digest.agent`, and `roles.<name>.agent` for a role your project defines | An agent as JSON, such as `{"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}`, written whole; `{}` removes it, and the agent is the project's |
 | `planning.replan` | `never`, `deterministic`, or `agent`; `deterministic` by default |
 | `planning.schedule`, `analysis.schedule`, `digest.schedule` | A five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; none by default |
+| `analysis.formula` | A formula's name in kebab-case, one a file under `design/workflows/formulas/` defines with a default for every input, such as `analysis-cadence`; none by default, and the schedule starts the analyzer |
 | `planning.hour_rate` | A number of zero or more, in the project's currency |
 | `planning.cycle`, `planning.default_duration` | A Go duration longer than zero, such as `168h`; `168h` and `1h` by default |
 | `digest.compact_after` | A Go duration, such as `720h`, or `0` for no compaction; `720h` by default |
