@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2127.4174
-accrued_seconds: 1550980
-tasks_completed: 3071
-last_run: 2026-11-11T23:18:14Z
+accrued_cost: 2128.1907
+accrued_seconds: 1551120
+tasks_completed: 3077
+last_run: 2026-11-11T23:24:21Z
 ---
 
 # Orchestrator activity
@@ -21529,6 +21529,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.1486 USD, estimated
+
+### 2026-11-11T23:22:38Z
+
+- Summary: Accepted S-0720 at fa9f4f9: close-out passed at the branch head, verifier matched all 4 criteria to changed files, dry run had no blockers; overlaps reported to S-0701 and S-0711
+- Items: S-0720
+- Seconds: 57
+- Cost: 0.2255 USD, estimated
+
+### 2026-11-11T23:22:56Z
+
+- Summary: Started publish formula instance S-0727 (ready, commit 00498707e) after S-0720's acceptance: policy threshold met, pending count 1 at threshold 1, value 375 USD/week against 1000
+- Items: S-0727, S-0720
+- Seconds: 18
+- Cost: 0.0603 USD, estimated
+
+### 2026-11-11T23:23:15Z
+
+- Summary: Ran flai order --by throughput --apply after the ready column changed (S-0727 entered it and was pulled at once); ready order is S-0681 alone, held on no-touches, no forecast duration
+- Items: S-0681
+- Seconds: 19
+- Cost: 0.1256 USD, estimated
+
+### 2026-11-11T23:23:31Z
+
+- Summary: I accepted S-0720 and started the publish formula instance, S-0727, which its agent is now working.
+- Items: none
+- Seconds: 16
+- Cost: 0.1023 USD, estimated
+
+### 2026-11-11T23:24:03Z
+
+- Summary: Release due after S-0720's acceptance (threshold policy met: count 1 of 1, value 375 of 1000 USD). Started no new publish run: publish formula instance S-0727, made at 23:22:51Z right after the acceptance, is in progress and publishes everything accepted and unreleased, S-0720 included.
+- Items: S-0720, S-0727
+- Seconds: 12
+- Cost: 0.0862 USD, estimated
+
+### 2026-11-11T23:24:21Z
+
+- Summary: I started no new publish run, because a release for S-0720 is already in progress.
+- Items: none
+- Seconds: 18
+- Cost: 0.1734 USD, estimated
 
 ## Refusals
 

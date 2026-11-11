@@ -3,12 +3,18 @@ id: T-3126
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0727
 owner: alex
 created: 2026-11-11T23:22:51Z
-updated: 2026-11-11T23:22:51Z
-transitions: []
+updated: 2026-11-11T23:24:38Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:24:38Z
+    by: agent-S-0727
+  - to: in-progress
+    at: 2026-11-11T23:24:38Z
+    by: agent-S-0727
 stream: S-0727
 tags: []
 after: [T-3125]
