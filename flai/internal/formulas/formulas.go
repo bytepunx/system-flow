@@ -551,6 +551,37 @@ func Find(formulas []Formula, name string) (Formula, error) {
 	return Formula{}, fmt.Errorf("no formula is named %s; the formulas are %s (flai formula list)", name, strings.Join(names, ", "))
 }
 
+// AnalysisFormulaErrors are the ways analysis.formula naming name falls short
+// of the formulas a project's files define (S-0424, S-0692), each a sentence
+// beginning with the key: the formula is one a file defines, and, since
+// analysis.schedule makes its instance with no inputs, its every input carries
+// a default. list and problems are what Load gave for the design folder
+// design. None for an empty name, nor for a formula whose file does not
+// parse, which Load's problem on it reports. flai check reports each as
+// manifest.analysis, and flai manifest set refuses each.
+func AnalysisFormulaErrors(list []Formula, problems []Problem, design, name string) []string {
+	if name == "" {
+		return nil
+	}
+	file := path.Join(Dir(design), name+".md")
+	for _, p := range problems {
+		if p.Path == file {
+			return nil
+		}
+	}
+	f, err := Find(list, name)
+	if err != nil {
+		return []string{"analysis.formula: " + err.Error()}
+	}
+	var out []string
+	for _, in := range f.Inputs {
+		if in.Required() {
+			out = append(out, fmt.Sprintf("analysis.formula names %s, whose input %s has no default, but analysis.schedule makes its instance with no inputs; give %s a default in %s, or name another formula", name, in.Name, in.Name, f.Path))
+		}
+	}
+	return out
+}
+
 // Layers are the formula's step ids in layers: first the steps after no
 // step, then each layer the steps whose after are all in earlier ones, ids in
 // file order within a layer, as a story's plan layers its tasks. An after

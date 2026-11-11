@@ -116,6 +116,60 @@ func TestManifestSetRefuses(t *testing.T) {
 	}
 }
 
+// S-0692 (I-0292): flai manifest set writes analysis.formula naming a formula
+// a file defines, every input with a default, and refuses, writing nothing, a
+// name no file defines and a formula with an input that has no default, with
+// the reason flai check gives as manifest.analysis; --unset removes it.
+func TestManifestSetWritesAnalysisFormula(t *testing.T) {
+	t.Parallel()
+	root, before := manifestProject(t)
+	dir := filepath.Join(root, "design", "workflows", "formulas")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	formula := func(name, input string) string {
+		return "---\ntitle: " + name + "\nname: " + name + "\ndescription: d\ninputs:\n  - " + input +
+			"\nsteps:\n  - id: list\n    title: List\n    run: {flai: issue list --json}\n---\n\n# " + name + "\n"
+	}
+	for name, input := range map[string]string{
+		"analysis-cadence": `{name: focus, description: f, default: ""}`,
+		"needs-a-focus":    `{name: focus, description: f}`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(formula(name, input)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	refused := func(value, says string) {
+		t.Helper()
+		out, _, code := runIn(t, root, "manifest", "set", "analysis.formula="+value, "analysis.schedule=0 6 * * 1", "--json")
+		var got struct {
+			Refused []manifest.Problem `json:"refused"`
+		}
+		if code != 1 || json.Unmarshal([]byte(out), &got) != nil || len(got.Refused) != 1 ||
+			got.Refused[0].Field != "analysis.formula" || !strings.Contains(got.Refused[0].Reason, says) {
+			t.Errorf("analysis.formula=%s: %d %s, want refused saying %q", value, code, out, says)
+		}
+		if after := readManifest(t, root); after != before {
+			t.Errorf("analysis.formula=%s changed the manifest:\n%s", value, after)
+		}
+	}
+	refused("nope", "no formula is named nope; the formulas are analysis-cadence, needs-a-focus")
+	refused("needs-a-focus", "names needs-a-focus, whose input focus has no default")
+	refused("Not Kebab", "is not a formula's name")
+
+	out, errOut, code := runIn(t, root, "manifest", "set", "analysis.formula=analysis-cadence", "analysis.schedule=0 6 * * 1")
+	if code != 0 {
+		t.Fatalf("exit %d: %s %s", code, out, errOut)
+	}
+	if want := before + "analysis:\n  formula: analysis-cadence\n  schedule: \"0 6 * * 1\"\n"; readManifest(t, root) != want {
+		t.Errorf("manifest:\n%s\nwant:\n%s", readManifest(t, root), want)
+	}
+	if out, errOut, code := runIn(t, root, "manifest", "set", "--unset", "analysis.formula"); code != 0 || strings.Contains(readManifest(t, root), "formula:") {
+		t.Errorf("--unset analysis.formula: %d %s %s\n%s", code, out, errOut, readManifest(t, root))
+	}
+}
+
 // S-0229: with --autocommit the change is committed, system-flow.yaml alone,
 // with its trailers.
 func TestManifestSetAutocommitsTheManifestAlone(t *testing.T) {

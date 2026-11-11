@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
@@ -85,6 +86,11 @@ unless the project sets dashboard.autocommit: false.`,
 			if err != nil {
 				return err
 			}
+			if problems, err := analysisFormulaProblems(repo.Root, repo.Manifest.Layout["design"], set); err != nil {
+				return err
+			} else if len(problems) > 0 {
+				return a.refusedSettings(&manifest.RefusedError{Problems: problems})
+			}
 			if err := manifest.WriteSettings(filepath.Join(repo.Root, manifest.File), set, unset); err != nil {
 				var refused *manifest.RefusedError
 				if errors.As(err, &refused) {
@@ -105,6 +111,33 @@ unless the project sets dashboard.autocommit: false.`,
 	c.Flags().BoolVar(&autocommit, "autocommit", false, "commit system-flow.yaml on its own, unless dashboard.autocommit is false")
 	c.Flags().StringArrayVar(&trailers, "trailer", nil, "a trailer line for the commit (repeatable)")
 	return c
+}
+
+// analysisFormulaProblems are the ways an analysis.formula among set falls
+// short of the formula files under the design folder design, as flai check's
+// manifest.analysis reports them (S-0692): none when set does not name the
+// key, or names it with a value the manifest's own validation refuses.
+func analysisFormulaProblems(root, design string, set []manifest.Assignment) ([]manifest.Problem, error) {
+	const key = "analysis.formula"
+	name := ""
+	for _, s := range set {
+		if s.Key == key {
+			name = strings.TrimSpace(s.Value)
+		}
+	}
+	if name == "" || len((manifest.Analysis{Formula: name}).Errors()) > 0 {
+		return nil, nil // WriteSettings refuses what the manifest's validation does, with its reason
+	}
+	list, parsed, err := formulas.Load(root, design)
+	if err != nil {
+		return nil, err
+	}
+	var out []manifest.Problem
+	for _, msg := range formulas.AnalysisFormulaErrors(list, parsed, design, name) {
+		reason := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(msg, key), ":"))
+		out = append(out, manifest.Problem{Field: key, Reason: reason})
+	}
+	return out, nil
 }
 
 // settingsHelp lists the catalog's keys for the command's help: each with

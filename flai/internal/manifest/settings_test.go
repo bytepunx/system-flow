@@ -73,6 +73,9 @@ func TestEditSettingsWritesEachKindAndKeepsTheRest(t *testing.T) {
 			replaced(t, "  cycle: 168h                 # a week\n", "  cycle: 336h                 # a week\n")},
 		{KindCron, Assignment{"analysis.schedule", "0 6 * * 1"},
 			settingsFixture + "analysis:\n  schedule: \"0 6 * * 1\"\n"},
+		// S-0692: analysis.formula is flai manifest set's to write
+		{KindText, Assignment{"analysis.formula", "analysis-cadence"},
+			settingsFixture + "analysis:\n  formula: analysis-cadence\n"},
 		{KindCron, Assignment{"planning.schedule", "daily"},
 			replaced(t, "      effort: medium\n", "      effort: medium\n  schedule: daily\n")},
 		{KindAgent, Assignment{"planning.agent", `{"harness":"claude-code","config":{"effort":"high"}}`},
@@ -160,6 +163,7 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"negative count", []Assignment{{"orchestration.release.count", "-2"}}, nil, "orchestration.release.count", "-2 is not a number of zero or more"},
 		{"duration", []Assignment{{"planning.cycle", "0s"}}, nil, "planning.cycle", "is not a duration longer than zero"},
 		{"cron", []Assignment{{"analysis.schedule", "* * *"}}, nil, "analysis.schedule", "has 3 fields, not five"},
+		{"formula's name", []Assignment{{"analysis.formula", "Analysis Cadence"}}, nil, "analysis.formula", `"Analysis Cadence" is not a formula's name such as analysis-cadence`},
 		{"agent", []Assignment{{"planning.agent", `{"harness":"Bad Harness"}`}}, nil, "planning.agent", "is not a name such as claude-code"},
 		{"agent's provider", []Assignment{{"planning.agent", `{"provider":"Lite LLM"}`}}, nil, "planning.agent", `provider "Lite LLM" is not a name such as litellm`},
 		{"not an agent", []Assignment{{"analysis.agent", "claude"}}, nil, "analysis.agent", "is not an agent"},
@@ -889,7 +893,7 @@ func TestSettingValues(t *testing.T) {
 	if a, ok := got["planning.agent"].Value.(*Agent); !ok || a.Model != "claude-sonnet-5" {
 		t.Errorf("planning.agent = %v", got["planning.agent"].Value)
 	}
-	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "digest.schedule", "digest.compact_after", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max", "merge_queue.coalesce"} {
+	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.formula", "analysis.agent", "digest.schedule", "digest.compact_after", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max", "merge_queue.coalesce"} {
 		if v := got[key]; v.Set || v.Value != nil {
 			t.Errorf("%s is unset, got %v", key, v.Value)
 		}

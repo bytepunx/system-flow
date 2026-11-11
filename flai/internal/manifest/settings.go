@@ -17,8 +17,9 @@ import (
 
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do, how it orders and releases, and
-// when flai serve starts and stops its runs (ADR-0209), the planner's and the analyzer's agents and schedules, and the curator's
-// agent (ADR-0196), schedule, and compaction window (ADR-0199); when the
+// when flai serve starts and stops its runs (ADR-0209), the planner's and
+// the analyzer's agents and schedules, the analyzer's formula (S-0692), and
+// the curator's agent (ADR-0196), schedule, and compaction window (ADR-0199); when the
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
 // most stories a batch of the merge queue holds (S-0399) and how long it
@@ -232,6 +233,9 @@ func buildCatalog() []Setting {
 		Setting{Key: "analysis.schedule", Kind: KindCron,
 			Meaning: "When flai serve runs the analyzer, a five-field cron expression in UTC or daily; unset, it runs only when you ask.",
 			get:     func(m Manifest) (any, bool) { return text(m.Analysis.Schedule) }},
+		Setting{Key: "analysis.formula", Kind: KindText,
+			Meaning: "The formula, by its name in kebab-case, whose instance flai serve makes each time analysis.schedule comes round, in place of starting the analyzer; one a file under design/workflows/formulas defines, every input with a default; unset, the schedule starts the analyzer.",
+			get:     func(m Manifest) (any, bool) { return text(m.Analysis.Formula) }},
 		Setting{Key: "digest.agent", Kind: KindAgent,
 			Meaning: "The curator's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
 			get:     func(m Manifest) (any, bool) { return agent(m.Digest.Agent) }},

@@ -521,6 +521,34 @@ func TestFind(t *testing.T) {
 	}
 }
 
+// S-0692: analysis.formula names a formula a file defines whose every input
+// has a default, as flai check and flai manifest set both hold it.
+func TestAnalysisFormulaErrors(t *testing.T) {
+	str := func(s string) *string { return &s }
+	list := []Formula{
+		{Name: "analysis-cadence", Path: "design/workflows/formulas/analysis-cadence.md", Inputs: []Input{{Name: "focus", Default: str("")}}},
+		{Name: "release", Path: "design/workflows/formulas/release.md", Inputs: []Input{{Name: "version"}, {Name: "channel", Default: str("stable")}, {Name: "notes"}}},
+	}
+	broken := []Problem{{Path: "design/workflows/formulas/broken.md", Line: 1, Code: CodeFile, Message: "does not parse"}}
+	for _, c := range []struct {
+		name string
+		want []string
+	}{
+		{"", nil},
+		{"analysis-cadence", nil},
+		{"broken", nil}, // left to the formulas.file problem on its file
+		{"nope", []string{"analysis.formula: no formula is named nope; the formulas are analysis-cadence, release (flai formula list)"}},
+		{"release", []string{
+			"analysis.formula names release, whose input version has no default, but analysis.schedule makes its instance with no inputs; give version a default in design/workflows/formulas/release.md, or name another formula",
+			"analysis.formula names release, whose input notes has no default, but analysis.schedule makes its instance with no inputs; give notes a default in design/workflows/formulas/release.md, or name another formula",
+		}},
+	} {
+		if got := AnalysisFormulaErrors(list, broken, "design", c.name); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("AnalysisFormulaErrors(%q) = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 func TestLoadReadsTheFolder(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "design", "workflows", "formulas")

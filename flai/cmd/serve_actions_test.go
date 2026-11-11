@@ -1862,6 +1862,7 @@ func TestSettingsShowAndSaveTheStrategicAgentsSettings(t *testing.T) {
 		{"planning.agent", "agent", `{"model":"claude-sonnet-5"}`, "", true},
 		{"planning.replan", "choice", ``, "deterministic", false},
 		{"analysis.schedule", "cron", ``, "", false},
+		{"analysis.formula", "text", ``, "", false},
 	} {
 		s, ok := byKey[c.key]
 		if !ok || s.Kind != c.kind || string(s.Value) != c.value || s.Default != c.def || s.Set != c.set || s.Meaning == "" {
