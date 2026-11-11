@@ -170,3 +170,27 @@ func TestARebaseStoppedOnTheADRIndexWritesItFromBothSidesADRFiles(t *testing.T) 
 		t.Errorf("the rebase did not finish clean:\n%s", git(t, root, "status"))
 	}
 }
+
+// ADR-0286 §3: two summaries are the same when only their updated lines
+// differ, as the summary generated file and the issues.summary check both
+// compare them; a row of difference, or an updated line one lacks, is not.
+func TestSameSummaryLeavesOutTheUpdatedLine(t *testing.T) {
+	one := []*Issue{{ID: "I-0001", Path: "design/issues/I-0001-a.md", Class: "defect", Title: "A", Count: 1, Status: "open", LastReported: "2026-11-01"}}
+	two := append(slices.Clone(one), &Issue{ID: "I-0002", Path: "design/issues/I-0002-b.md", Class: "defect", Title: "B", Count: 1, Status: "open", LastReported: "2026-11-02"})
+	earlier, later := Summary(one, t0), Summary(one, t0.Add(48*time.Hour))
+	if earlier == later {
+		t.Fatal("the summaries written at two times do not differ in their updated lines")
+	}
+	if !SameSummary(earlier, later) {
+		t.Error("summaries that differ only in their updated lines are not the same")
+	}
+	if SameSummary(earlier, Summary(two, t0)) {
+		t.Error("summaries that differ in a row are the same")
+	}
+	if SameSummary(earlier, strings.Replace(earlier, "updated:", "written:", 1)) {
+		t.Error("a summary whose updated line is another line is the same")
+	}
+	if gen := Generated(repo(t), "", func() time.Time { return t0 }); gen[0].Same == nil || !gen[0].Same(earlier, later) {
+		t.Error("the summary generated file does not compare by SameSummary")
+	}
+}

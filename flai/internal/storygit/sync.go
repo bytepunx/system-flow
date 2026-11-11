@@ -3,6 +3,7 @@ package storygit
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -141,13 +142,17 @@ const (
 // stopped on it alone is resolved by writing it again (ADR-0098).
 type GeneratedFile struct {
 	Path string // relative to the repository root, as git names it
-	// Regenerate writes the file again in the story's worktree as it is at
-	// the stop.
+	// Regenerate writes the file again in the story's worktree as it is
+	// then: at a stop, or at the branch's head once the rebase finishes.
 	Regenerate func() error
 	// From says whether a merged file, as git names it, is one the file is
 	// written from, so that a stop that merges it writes the file again; nil
 	// is none.
 	From func(path string) bool
+	// Same says whether the file written equals the head's for what it
+	// holds, so that a write that changes only when it was written is no
+	// change (ADR-0286); nil is byte-equal.
+	Same func(head, written string) bool
 }
 
 // MergedFiles is the committed files flai merges itself from a stopped
@@ -310,6 +315,10 @@ type SyncResult struct {
 	// Regenerated is the generated files written again to continue the
 	// rebase, once for each stop on them alone.
 	Regenerated []string `json:"regenerated"`
+	// RegeneratedAtHead is the generated files written again at the branch's
+	// head once a rebase that wrote one at a stop finished, and committed on
+	// the branch because they differed from the head's (ADR-0286).
+	RegeneratedAtHead []string `json:"regenerated_at_head"`
 	// Merged is the files merged to continue the rebase, the shared files
 	// merged by sections among them, once for each stop on them (ADR-0126,
 	// ADR-0175).
@@ -348,9 +357,14 @@ func (s SyncResult) RebaseInProgress() bool {
 // merges, and markdown files inside the manifest's claims.shared it merges
 // by sections it resolves and continues (ADR-0098, ADR-0126, ADR-0175); on
 // any other conflict, or a shared file the section merge does not settle,
-// the rebase is left in progress for the agent. A refusal or a stop
+// the rebase is left in progress for the agent. Once a rebase that wrote a
+// generated file again at a stop finishes, it writes every generated file
+// again at the branch's head, from the files there, and commits those that
+// differ from the head's, so that a later commit replayed cleanly over a file
+// written at a stop does not leave it stale (ADR-0286). A refusal or a stop
 // is a result, with how to continue and abort; an error is a sync that could
-// not be tried, a rebase git failed without stopping, or a fold written but
+// not be tried, a rebase git failed without stopping, generated files written
+// again at the head but not committed, or a fold written but
 // not committed, or a lint fix written but not committed. After a clean
 // rebase it puts the branch's own changelog lines back under the main
 // branch's top "## Unreleased" (ADR-0257), folds what the branch added into
@@ -391,7 +405,10 @@ func Sync(o SyncOptions) (SyncResult, error) {
 }
 
 // Rebase is Sync's rebase, fold, and lint fix without the checks after them,
-// as flai accept runs it before merging the branch. After a clean rebase it
+// as flai accept runs it before merging the branch. Once a rebase that wrote
+// a generated file again at a stop finishes, it writes every generated file
+// again at the branch's head and commits those that differ from the head's
+// (ADR-0286). After a clean rebase it
 // puts the branch's own changelog lines back under the main branch's top
 // "## Unreleased", committing that on the branch (ADR-0257), then finds the
 // paths where the branch now undoes the main branch's change and records them
@@ -404,7 +421,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	repo, id := o.Repo, o.Story.ID
 	path := repo.WorktreePath(id)
 	res := SyncResult{Story: id, Branch: Branch(id), Worktree: relPath(repo.MainRoot, path),
-		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Changelogs: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}, UndoesMain: []Undone{}}
+		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, RegeneratedAtHead: []string{}, Merged: []string{}, Changelogs: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}, UndoesMain: []Undone{}}
 	if _, err := os.Stat(path); err != nil {
 		return res, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, res.Worktree, id)
 	}
@@ -450,6 +467,11 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		}
 	}
 	res.Synced = true
+	// first, so that every step after it reads the generated files as the
+	// head's own files render them, and the fold finds them current
+	if err := regenerateAtHead(o, path, &res); err != nil {
+		return res, err
+	}
 	if err := settleChangelogs(o, path, oldBase, oldHead, &res); err != nil {
 		return res, err
 	}
@@ -458,6 +480,120 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		return res, err
 	}
 	return res, fix(o, path, &res)
+}
+
+// regenerateAtHead runs RegenerateAtHead in the story's worktree at path
+// once a rebase that wrote a generated file again at a stop finished, and
+// sets res.RegeneratedAtHead (ADR-0286). A rebase that wrote none at a stop
+// writes nothing. One that fails with nothing left to commit is logged and
+// the sync stands; files written but not committed are an error saying what
+// to commit.
+func regenerateAtHead(o SyncOptions, path string, res *SyncResult) error {
+	if len(res.Regenerated) == 0 {
+		return nil
+	}
+	id := o.Story.ID
+	committed, err := RegenerateAtHead(o.Runner, path, o.Files, id)
+	if err != nil && len(committed) == 0 {
+		o.Log.Warn("the generated files not written again at the branch's head; the sync stands", "component", "git", "story", id, "err", err)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("%w; then run %s again", err, again(o))
+	}
+	res.RegeneratedAtHead = append(res.RegeneratedAtHead, committed...)
+	for _, p := range committed {
+		o.Log.Info("generated file written again at the branch's head and committed", "component", "git", "story", id, "path", p)
+	}
+	return nil
+}
+
+// regeneratedSubject is the subject of the commit of the generated files
+// written again at story's branch's head (ADR-0286).
+func regeneratedSubject(story string) string {
+	return fmt.Sprintf("docs: [%s] write the generated files again at the branch's head", story)
+}
+
+// RegenerateAtHead writes each of files' generated files again in the
+// worktree at dir, at the head of a branch whose rebase has finished, from
+// the files there, and commits on the branch those that differ from the
+// head's by their Same (ADR-0286). Each generated file's Regenerate writes in
+// that worktree. One equal to the head's is put back as the head has it; one
+// the worktree does not have is left, as the fold leaves it; one the head
+// lacks differs. It returns the paths committed, as git names them, sorted;
+// with an error they are the paths written and not committed, none when
+// nothing is left to commit.
+func RegenerateAtHead(r execx.Runner, dir string, files Files, story string) ([]string, error) {
+	var differ []string
+	var failed error
+	for _, f := range files.Generated {
+		// a file whose write fails is still read, to commit or put back what
+		// it left, before the files after it are left as the head has them
+		if err := f.Regenerate(); err != nil {
+			failed = fmt.Errorf("write %s again at the branch's head in %s: %w", f.Path, dir, err)
+		}
+		changed, present, err := differsFromHead(r, dir, f)
+		switch {
+		case err != nil:
+			failed = errors.Join(failed, err)
+		case changed:
+			differ = append(differ, f.Path)
+		case present:
+			if _, err := r.Run(dir, "git", "checkout", "HEAD", "--", f.Path); err != nil {
+				differ = append(differ, f.Path)
+				failed = errors.Join(failed, fmt.Errorf("put %s back as the head has it in %s: %w", f.Path, dir, err))
+			}
+		}
+		if failed != nil {
+			break
+		}
+	}
+	if len(differ) == 0 {
+		return nil, failed
+	}
+	sort.Strings(differ)
+	list := strings.Join(differ, ", ")
+	commit := fmt.Sprintf("in %s, git add -- %s and commit it as %q", dir, strings.Join(differ, " "), regeneratedSubject(story))
+	undone := func(step string, err error) error {
+		return fmt.Errorf("%s %s written again at the branch's head: %w; %s", step, list, err, commit)
+	}
+	if failed != nil {
+		return differ, fmt.Errorf("%w; %s is written again at the branch's head and not committed: %s", failed, list, commit)
+	}
+	if _, err := r.Run(dir, "git", append([]string{"add", "--"}, differ...)...); err != nil {
+		return differ, undone("stage", err)
+	}
+	if _, err := r.Run(dir, "git", "commit", "-q", "-m", regeneratedSubject(story)); err != nil {
+		return differ, undone("commit", err)
+	}
+	return differ, nil
+}
+
+// differsFromHead says whether the generated file f, as the worktree at dir
+// has it, differs from HEAD's by f.Same, and whether the worktree has it at
+// all; one HEAD lacks differs. Both sides are read as the runner reads HEAD's,
+// trimmed and ending in one newline, so a difference in the blank lines at
+// either end is none.
+func differsFromHead(r execx.Runner, dir string, f GeneratedFile) (changed, present bool, err error) {
+	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f.Path)))
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, false, nil
+	}
+	if err != nil {
+		return false, true, fmt.Errorf("read %s written again at the branch's head in %s: %w", f.Path, dir, err)
+	}
+	head, ok := showFile(r, dir, "HEAD", f.Path)
+	if !ok {
+		return true, true, nil
+	}
+	written := strings.TrimSpace(string(data))
+	if written != "" {
+		written += "\n"
+	}
+	if f.Same != nil {
+		return !f.Same(head, written), true, nil
+	}
+	return head != written, true, nil
 }
 
 // settleChangelogs runs SettleChangelogs after the clean rebase in the

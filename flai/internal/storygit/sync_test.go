@@ -3,6 +3,7 @@ package storygit
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -372,6 +373,150 @@ func TestSyncRegeneratesGeneratedFilesItStopsOnAlone(t *testing.T) {
 	// S-0337: a stop settled by generated files alone is no conflict
 	if got := conflictLog(t, repo.CacheDir()); len(got) != 0 {
 		t.Errorf("conflict log: %+v", got)
+	}
+}
+
+// listing is the generated file docs/gen.md that lists the files under
+// docs/items in the worktree wt, as the issues summary lists the issue files.
+func listing(wt string) GeneratedFile {
+	return GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		items, err := os.ReadDir(filepath.Join(wt, "docs", "items"))
+		if err != nil {
+			return err
+		}
+		var b strings.Builder
+		for _, it := range items {
+			b.WriteString(it.Name() + "\n")
+		}
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte(b.String()), 0o644)
+	}}
+}
+
+// I-0266, ADR-0286: a later commit that adds a file the generated file is
+// written from, and leaves the generated file alone, replays cleanly over
+// the file written at a stop, so once the rebase finishes the sync writes it
+// again at the branch's head and commits it.
+func TestSyncWritesTheGeneratedFilesAgainAtTheHeadAfterAStopOnThem(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] one", "docs/items/a.md", "docs/gen.md")
+	commitFiles(t, wt, "feat: [S-0001] two", "docs/items/b.md")
+	commitFiles(t, repo.MainRoot, "docs: main's", "docs/items/m.md", "docs/gen.md")
+
+	res, err := Sync(syncOptions(repo, story, listing(wt)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || strings.Join(res.Regenerated, ",") != "docs/gen.md" || strings.Join(res.RegeneratedAtHead, ",") != "docs/gen.md" {
+		t.Fatalf("result: %+v", res)
+	}
+	r := execx.System{}
+	if got, _ := r.Run(wt, "git", "show", "HEAD:docs/gen.md"); got != "a.md\nb.md\nm.md" {
+		t.Errorf("the head's docs/gen.md does not list every file under docs/items: %q", got)
+	}
+	if got, _ := r.Run(wt, "git", "log", "--format=%s", "main..HEAD"); got != "docs: [S-0001] write the generated files again at the branch's head\nfeat: [S-0001] two\nfeat: [S-0001] one" {
+		t.Errorf("the branch's commits:\n%s", got)
+	}
+	if got, _ := r.Run(wt, "git", "show", "--name-only", "--format=", "HEAD"); got != "docs/gen.md" {
+		t.Errorf("the commit at the head changed %q", got)
+	}
+	if st, _ := Uncommitted(r, wt); len(st) != 0 {
+		t.Errorf("the worktree is not clean: %v", st)
+	}
+	if data, _ := json.Marshal(res); !strings.Contains(string(data), `"regenerated_at_head":["docs/gen.md"]`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// ADR-0286 §1: a rebase that met no stop writes no generated file again at
+// the head and adds no commit, even where the head's would render otherwise.
+func TestSyncWhoseRebaseDidNotStopWritesNothingAgainAtTheHead(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] item", "docs/items/b.md")
+	commitFiles(t, repo.MainRoot, "docs: main moves on", "design/note.md")
+	r := execx.System{}
+
+	res, err := Sync(syncOptions(repo, story, listing(wt)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || len(res.Regenerated) != 0 || len(res.RegeneratedAtHead) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if got, _ := r.Run(wt, "git", "log", "--format=%s", "main..HEAD"); got != "feat: [S-0001] item" {
+		t.Errorf("the branch's commits:\n%s", got)
+	}
+	if _, err := os.Stat(filepath.Join(wt, "docs", "gen.md")); !os.IsNotExist(err) {
+		t.Errorf("docs/gen.md was written: %v", err)
+	}
+	if data, _ := json.Marshal(res); !strings.Contains(string(data), `"regenerated_at_head":[]`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// ADR-0286 §3: a generated file written again at the head that equals the
+// head's by its Same, as a summary whose updated line alone changed, is put
+// back as the head has it, and nothing is committed.
+func TestSyncCommitsNoGeneratedFileTheHeadsEqualsBySame(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] one", "docs/gen.md")
+	commitFiles(t, repo.MainRoot, "docs: main's gen", "docs/gen.md")
+	writes := 0
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		writes++
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte(fmt.Sprintf("written %d\nbody\n", writes)), 0o644)
+	}, Same: func(head, written string) bool {
+		_, h, _ := strings.Cut(head, "\n")
+		_, w, _ := strings.Cut(written, "\n")
+		return h == w
+	}}
+
+	res, err := Sync(syncOptions(repo, story, gen))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || strings.Join(res.Regenerated, ",") != "docs/gen.md" || len(res.RegeneratedAtHead) != 0 || writes != 2 {
+		t.Fatalf("result: %+v, written %d times", res, writes)
+	}
+	r := execx.System{}
+	if got, _ := r.Run(wt, "git", "log", "--format=%s", "main..HEAD"); got != "feat: [S-0001] one" {
+		t.Errorf("the branch's commits:\n%s", got)
+	}
+	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "gen.md")); string(got) != "written 1\nbody\n" {
+		t.Errorf("docs/gen.md is not put back as the head has it: %q", got)
+	}
+	if st, _ := Uncommitted(r, wt); len(st) != 0 {
+		t.Errorf("the worktree is not clean: %v", st)
+	}
+}
+
+// ADR-0286 §6: a generated file written again at the head and not committed,
+// because another's write failed, is given back with an error naming what to
+// add and the subject to commit it with; a write that fails with nothing to
+// commit gives back none.
+func TestRegenerateAtHeadNamesWhatItWroteAndDidNotCommit(t *testing.T) {
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
+	commitFiles(t, dir, "docs: gen", "docs/gen.md")
+	changed := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		return os.WriteFile(filepath.Join(dir, "docs", "gen.md"), []byte("new\n"), 0o644)
+	}}
+	broken := GeneratedFile{Path: "docs/other.md", Regenerate: func() error { return errors.New("unreadable") }}
+
+	written, err := RegenerateAtHead(r, dir, Files{Generated: []GeneratedFile{changed, broken}}, "S-0001")
+	want := `git add -- docs/gen.md and commit it as "docs: [S-0001] write the generated files again at the branch's head"`
+	if !reflect.DeepEqual(written, []string{"docs/gen.md"}) || err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "unreadable") {
+		t.Fatalf("written %v, error %v; want docs/gen.md and an error naming %s", written, err, want)
+	}
+	git(t, dir, "checkout", "HEAD", "--", "docs/gen.md")
+
+	written, err = RegenerateAtHead(r, dir, Files{Generated: []GeneratedFile{broken}}, "S-0001")
+	if len(written) != 0 || err == nil || !strings.Contains(err.Error(), "write docs/other.md again at the branch's head") {
+		t.Errorf("written %v, error %v; want none and the write's error", written, err)
+	}
+	if got, _ := r.Run(dir, "git", "log", "-1", "--format=%s"); got != "docs: gen" {
+		t.Errorf("a commit was made: %q", got)
 	}
 }
 

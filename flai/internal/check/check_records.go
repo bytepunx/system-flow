@@ -186,15 +186,10 @@ func (c *checker) issues() {
 		c.add(Warning, "issues.summary", dir, 1, "summary.md is missing; run flai check --fix or flai issue summary, which write it")
 		return
 	}
-	if summaryUpdated.ReplaceAllString(string(data), "") != summaryUpdated.ReplaceAllString(issues.Summary(list, c.now), "") {
+	if !issues.SameSummary(string(data), issues.Summary(list, c.now)) {
 		c.add(Warning, "issues.summary", summaryPath, 1, "summary.md differs from what its issue files render; run flai check --fix or flai issue summary, which rewrite it")
 	}
 }
-
-// summaryUpdated is summary.md's updated line, which says when it was
-// written rather than what it holds, so the issues.summary comparison leaves
-// it out.
-var summaryUpdated = regexp.MustCompile(`(?m)^updated: .*$`)
 
 // issuesNoStory warns about each open issue older than issues.story_after
 // that no open story links (S-0198). An invalid story_after is layout's

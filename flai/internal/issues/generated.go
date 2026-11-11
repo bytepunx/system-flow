@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -27,6 +28,17 @@ func Generated(r *workitem.Repo, story string, now func() time.Time) []storygit.
 	return generatedIn(r, RepoFor(r, story), execx.System{}, now)
 }
 
+// SameSummary says whether two summaries hold the same, their updated lines
+// left out: the one comparison flai check's issues.summary and the rebase's
+// write at the branch's head make (ADR-0228, ADR-0286).
+func SameSummary(a, b string) bool {
+	return summaryUpdated.ReplaceAllString(a, "") == summaryUpdated.ReplaceAllString(b, "")
+}
+
+// summaryUpdated is the summary's updated line, which says when it was
+// written rather than what it holds.
+var summaryUpdated = regexp.MustCompile(`(?m)^updated: .*$`)
+
 // generatedIn is Generated written in wt, the project r checked out in the
 // worktree whose rebase stopped, reading git there with run.
 func generatedIn(r, wt *workitem.Repo, run execx.Runner, now func() time.Time) []storygit.GeneratedFile {
@@ -38,6 +50,7 @@ func generatedIn(r, wt *workitem.Repo, run execx.Runner, now func() time.Time) [
 			return err
 		},
 		From: func(p string) bool { return isIssuePath(r, p) },
+		Same: SameSummary,
 	}, {
 		Path:       index,
 		Regenerate: func() error { return writeIndex(run, wt, index) },

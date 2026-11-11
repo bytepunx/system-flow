@@ -291,7 +291,7 @@ rebase that found it).`,
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
-					"merged": res.Merged, "changelogs": res.Changelogs, "folded": res.Folded, "fixed": res.Fixed,
+					"merged": res.Merged, "regenerated_at_head": res.RegeneratedAtHead, "changelogs": res.Changelogs, "folded": res.Folded, "fixed": res.Fixed,
 					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)
