@@ -2,12 +2,12 @@
 id: I-0345
 title: wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-10T11:10:23Z
 last_reported: 2026-11-10T11:10:23Z
-updated: 2026-11-11T01:43:38Z
+updated: 2026-11-11T22:52:53Z
 ---
 
 # I-0345 wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file
@@ -35,3 +35,4 @@ So the file did not parse from 11:03:59.967 to 11:04:19.632. Any writer can leav
 ## Remediation
 
 Story S-0717 remediates this issue, created from it at 2026-11-11T01:43:38Z.
+Closed 2026-11-11T22:52:53Z: S-0716 fixed the cause: Repo.List skips a work item file that does not parse (711f3d9c1), so wait_for_events, inbox, and the other readers list the rest. S-0717 found the writer was S-0665's agent's Write tool call, not a checked creation (T-3120), and pinned wait_for_events in one project and across a folder of projects while a task file holds only PLACEHOLDER (T-3121: TestWaitForEventsAnswersWhileATaskFileHoldsOnlyAPlaceholder, TestWaitForEventsAcrossAFolderAnswersWhileATaskFileHoldsOnlyAPlaceholder).
