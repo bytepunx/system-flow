@@ -4,10 +4,10 @@ title: S-0708 is verified and ready to accept, but this orchestrator session has
 anchor:
   path: wip/kanban/stories/S-0708-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md
   item: S-0708
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T19:37:41Z
-updated: 2026-11-10T19:37:41Z
+updated: 2026-11-11T01:43:36Z
 ---
 
 # TH-1056 S-0708 is verified and ready to accept, but this orchestrator session has no accept tool
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0708-testgatewaystreamisjudged-and-testgatewaymissingnam
   - 1: `flai/internal/serve/gateway_test.go` renames the two no-network tests to `TestStreamOfAGatewayRunIsJudged` and `TestMissingGatewayInputsAreNamed`. It adds `TestOnlyThePaidChecksAreNamedTestGateway`, which fails on any `TestGateway*` function that `scripts/gateway-smoke.sh` does not run by name. `design/conventions/code-quality.md` and `docs/contributors/index.md` state the naming rule.
   - 2: `design/issues/I-0334-…-run-in-no.md` is closed with its reason, and `design/issues/summary.md` is updated.
 - All 7 changed files are within the story's touches. No test or script still uses the old names.
+
+### 2026-11-11T01:43:36Z alex
+Resolved: S-0708 was accepted

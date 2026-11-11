@@ -3,12 +3,18 @@ id: T-2936
 type: task
 nature: improvement
 title: "ADR: the touches drift leaves out the folders flai writes, and flai task done narrows a closing task's unchanged touches"
-status: backlog
+status: in-progress
 parent: S-0674
 owner: alex
 created: 2026-11-10T08:49:51Z
-updated: 2026-11-10T08:49:51Z
-transitions: []
+updated: 2026-11-11T01:43:22Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:43:20Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:43:22Z
+    by: system-flow
 stream: S-0674
 tags: [flai, adr]
 touches: [design/adrs/README.md]

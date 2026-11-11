@@ -3,15 +3,18 @@ id: T-2940
 type: task
 nature: improvement
 title: flai task done narrows the closing task's touches, and the story's, to the files the branch changes
-status: backlog
+status: ready
 parent: S-0674
 owner: alex
 created: 2026-11-10T08:50:09Z
-updated: 2026-11-10T08:50:09Z
-transitions: []
+updated: 2026-11-11T01:43:24Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:43:21Z
+    by: system-flow
 stream: S-0674
 tags: [flai, cli]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, docs/users/flai.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/cmd/task_done.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md]
 after: [T-2936]
 ---
 # T-2940 flai task done narrows the closing task's touches, and the story's, to the files the branch changes

@@ -3,12 +3,15 @@ id: T-2941
 type: task
 nature: remediation
 title: Measure exact_share again and close I-0286 with what fixed it
-status: backlog
+status: ready
 parent: S-0674
 owner: alex
 created: 2026-11-10T08:50:19Z
-updated: 2026-11-10T08:50:19Z
-transitions: []
+updated: 2026-11-11T01:43:21Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:43:21Z
+    by: system-flow
 stream: S-0674
 tags: [flai, issues]
 touches: [design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md]

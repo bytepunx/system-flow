@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2102.5352
-accrued_seconds: 1545956
-tasks_completed: 2877
-last_run: 2026-11-11T01:42:42Z
+accrued_cost: 2102.6062
+accrued_seconds: 1545980
+tasks_completed: 2879
+last_run: 2026-11-11T01:43:12Z
 ---
 
 # Orchestrator activity
@@ -20171,6 +20171,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.0660 USD, estimated
+
+### 2026-11-11T01:43:01Z
+
+- Summary: Release due after S-0677 and S-0679: release_evaluate met under threshold (5 stories, 1087.58 USD/week against 1000 USD/week and count 1). Started no new publish run, because publish formula instance S-0704 is already in progress at T-2954, its publish step, and will release this same batch (S-0665, S-0666, S-0675, S-0677, S-0679).
+- Items: S-0704, S-0677, S-0679
+- Seconds: 13
+- Cost: 0.0710 USD, estimated
+
+### 2026-11-11T01:43:12Z
+
+- Summary: TH-1061 (S-0688 sent back on rebase conflicts in design/system/agent-adapters.md and docs/operators/index.md): left alone. Its last entry is flai's notice, the thread is for S-0688's agent, and the acceptance was the operator's, not mine.
+- Items: S-0688
+- Seconds: 11
+- Cost: 0.0000 USD
 
 ## Refusals
 

@@ -3,12 +3,15 @@ id: T-2939
 type: task
 nature: remediation
 title: The touches drift leaves out the digest, analysis, issues, and wip folders on both sides, with a test that reproduces I-0286
-status: backlog
+status: ready
 parent: S-0674
 owner: alex
 created: 2026-11-10T08:50:01Z
-updated: 2026-11-10T08:50:01Z
-transitions: []
+updated: 2026-11-11T01:43:21Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:43:21Z
+    by: system-flow
 stream: S-0674
 tags: [flai, metrics]
 touches: [flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, design/system/metrics.md]

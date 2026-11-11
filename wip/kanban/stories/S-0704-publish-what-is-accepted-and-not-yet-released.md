@@ -6,7 +6,7 @@ title: Publish what is accepted and not yet released
 status: in-progress
 owner: alex
 created: 2026-11-10T08:56:47Z
-updated: 2026-11-11T01:41:18Z
+updated: 2026-11-11T01:43:34Z
 transitions:
   - to: ready
     at: 2026-11-10T08:56:57Z
@@ -23,30 +23,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 84
+  seconds: 125
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-11
-      work: 15
+      work: 20
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 288
-      cache_read: 1776225
-      cache_write: 154097
-      cost: 0.7116
+      input: 44
+      output: 358
+      cache_read: 2633304
+      cache_write: 163074
+      cost: 1.0309
   strategic:
     - kind: orchestrator
-      seconds: 226
+      seconds: 231
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 44
-          output: 234
-          cache_read: 1674458
-          cache_write: 142397
-          cost: 0.4961
+          input: 47
+          output: 256
+          cache_read: 1743140
+          cache_write: 159532
+          cost: 0.5198
         - model: claude-sonnet-5-5
           input: 7
           output: 57
@@ -63,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-2952 Fetch the remote's branch and tags
@@ -75,3 +75,5 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+Published 2026-11-11: flai 1.86.13 → 1.86.14, tag `flai/v1.86.14`, pushed with the branch. It bundles S-0665, S-0666, S-0675, S-0677, and S-0679. The policy was `threshold`, met at 5 stories worth 1087.58 USD/week. Each step's bare `flai` ran as the main checkout's `scripts/flai.sh`, since the installed flai (1.86.12) was behind the project's newest release (S-0681).

@@ -3,10 +3,10 @@ id: S-0708
 type: story
 nature: remediation
 title: "TestGatewayStreamIsJudged and TestGatewayMissingNamesWhatIsMissing run in no tier, because go-test and integration skip ^TestGateway and the gateway tier runs only the two paid checks by name"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T09:55:53Z
-updated: 2026-11-10T19:36:12Z
+updated: 2026-11-11T01:43:36Z
 transitions:
   - to: ready
     at: 2026-11-10T10:29:38Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T19:36:12Z
     by: system-flow
+  - to: done
+    at: 2026-11-11T01:43:36Z
+    by: alex
 blocked:
   - from: 2026-11-10T11:10:53Z
     until: 2026-11-10T11:14:20Z
