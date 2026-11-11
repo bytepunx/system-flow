@@ -83,13 +83,13 @@ For this dashboard's own build, the heading is `unsigned allowed: dashboard` and
 
 ### Out of budget
 
-When an agent's run ends on its provider's usage limit, `flai serve` starts no agent on that provider, on any project, until the limit resets (S-0534, [ADR-0209](../../design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5). While it holds one, a banner under the header says so on every page, one line per provider, with the time in your zone:
+When an agent's run ends on its usage limit, `flai serve` starts no agent on that provider or login, on any project, until the limit resets (S-0534, [ADR-0209](../../design/adrs/0209-the-orchestrator-runs-for-a-reason-and-ends-started-by-flai-serve-on-the-events.md) §5). The hold is named by its key: the provider, else the harness and its program, such as `claude-code meclod` (S-0720). While it holds one, a banner under the header says so on every page, one line per hold, with the time in your zone and the command that clears it by hand:
 
 ```text
-claude-code is out of budget (usage_limit_reached) until 2026-10-29 04:00 EDT; flai serve holds every agent start on it until then.
+claude-code meclod is out of budget (usage_limit_reached) until 2026-10-29 04:00 EDT; flai serve holds every agent start on it until then. To clear the hold by hand, run flai serve budget clear 'claude-code meclod' on the host.
 ```
 
-Once the time has passed, `flai serve` starts one run to learn whether the limit has reset, and the line adds "A probe is running to learn whether the limit has reset." The banner has no X: it goes by itself once the hold ends. Meanwhile **Start agent**, **Retry**, **Plan**, and the other starts are refused with the provider and the time. The [operators guide](../operators/index.md#when-a-provider-is-out-of-budget-s-0534) says what waits and how it ends.
+Once the time has passed, `flai serve` starts one run to learn whether the limit has reset, and the line adds "A probe is running to learn whether the limit has reset." The banner has no X: it goes by itself once the hold ends, or once you clear it on the host with the command it names. Meanwhile **Start agent**, **Retry**, **Plan**, and the other starts are refused with the provider and the time. The [operators guide](../operators/index.md#when-a-provider-is-out-of-budget-s-0534) says what waits and how it ends.
 
 ## Notices
 
