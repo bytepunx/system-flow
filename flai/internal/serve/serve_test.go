@@ -54,7 +54,7 @@ func runWith(t *testing.T, dir Dir, dash *channeltest.Dashboard, change func(*Op
 	o := Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
 		NewClient: func(e Entry, key []byte) *channel.Client {
 			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-				Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+				Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 		}}
 	change(&o)
 	go func() {
@@ -669,7 +669,7 @@ func TestServeTellsTheDashboardWhenAStorysAgentStartsAndEnds(t *testing.T) {
 			},
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {

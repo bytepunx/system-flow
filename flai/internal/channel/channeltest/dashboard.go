@@ -42,13 +42,66 @@ type Dashboard struct {
 // Version is what the dashboard's default stamp and its answer to hello name.
 const Version = "9.9.9"
 
-// Conn is one proven connection from a flai.
+// Conn is one proven connection from a flai. The dashboard reads it for its
+// whole life, so it answers flai's pings however long a test leaves it
+// unread, and keeps what it read for Ask, Next, and Last (I-0267).
 type Conn struct {
 	Project string
 	Kind    string // what hello said: empty for a project, channel.KindCandidate for one offered for import
 	// Release is the stamp flai sent in hello; nil when it sent none.
 	Release *channel.Release
 	ws      *websocket.Conn
+
+	mu    sync.Mutex
+	read  [][]byte      // messages read and not yet taken
+	ended error         // why reading ended; nil while the connection is open
+	more  chan struct{} // closed, and replaced, when a message is read or reading ends
+}
+
+func newConn(ws *websocket.Conn) *Conn { return &Conn{ws: ws, more: make(chan struct{})} }
+
+// pump reads the connection until it closes, keeping each message; reading is
+// what answers a ping.
+func (c *Conn) pump() {
+	for {
+		_, data, err := c.ws.Read(context.Background())
+		c.mu.Lock()
+		if err != nil {
+			c.ended = err
+		} else {
+			c.read = append(c.read, data)
+		}
+		close(c.more)
+		c.more = make(chan struct{})
+		c.mu.Unlock()
+		if err != nil {
+			return
+		}
+	}
+}
+
+// take returns the next message read, waiting for one until ctx ends, or the
+// error reading ended with once every message read is taken.
+func (c *Conn) take(ctx context.Context) ([]byte, error) {
+	for {
+		c.mu.Lock()
+		if len(c.read) > 0 {
+			data := c.read[0]
+			c.read = c.read[1:]
+			c.mu.Unlock()
+			return data, nil
+		}
+		ended, more := c.ended, c.more
+		c.mu.Unlock()
+		if ended != nil {
+			return nil, ended
+		}
+		select {
+		case <-more:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 }
 
 // Sign returns statement as a release stamp signed by the dashboard's key,
@@ -155,8 +208,10 @@ func New(t *testing.T, key string) *Dashboard {
 			_ = c.Close(websocket.StatusPolicyViolation, "bad proof")
 			return
 		}
-		d.Proven <- &Conn{Project: hp.Project.Key, Kind: hp.Kind, Release: hp.Release, ws: c}
-		<-ctx.Done()
+		conn := newConn(c)
+		conn.Project, conn.Kind, conn.Release = hp.Project.Key, hp.Kind, hp.Release
+		d.Proven <- conn
+		conn.pump()
 	}))
 	t.Cleanup(srv.Close)
 	d.URL = srv.URL
@@ -184,7 +239,7 @@ func (c *Conn) Ask(t *testing.T, method, params string) (json.RawMessage, *chann
 	if err := c.ws.Write(ctx, websocket.MessageText, req); err != nil {
 		t.Fatal(err)
 	}
-	_, data, err := c.ws.Read(ctx)
+	data, err := c.take(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +253,7 @@ func (c *Conn) Next(t *testing.T) (method string, params json.RawMessage) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, data, err := c.ws.Read(ctx)
+	data, err := c.take(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +270,7 @@ func (c *Conn) Last(t *testing.T) []string {
 	defer cancel()
 	var out []string
 	for {
-		_, data, err := c.ws.Read(ctx)
+		data, err := c.take(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				t.Fatal("flai did not close the connection")

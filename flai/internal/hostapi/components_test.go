@@ -268,7 +268,7 @@ func TestComponentsAnswerThroughTheChannelWithTheProjectKeyInTheirParams(t *test
 	withNode(t, &listNode{stdout: `{"components":[{"path":"src/lib/Button.svelte","props":[{"name":"label","kind":"string","required":true}]}]}`})
 	dash := channeltest.New(t, "s3cret")
 	client := &channel.Client{URL: dash.URL, Key: []byte("s3cret"), Project: p, Methods: MethodsFor("test", func() time.Time { return t0 }, host),
-		Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+		Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() {
