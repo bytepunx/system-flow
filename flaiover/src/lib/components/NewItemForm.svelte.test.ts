@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import NewItemForm from './NewItemForm.svelte';
 
@@ -48,7 +48,17 @@ const button = () => document.querySelector<HTMLButtonElement>('form button')!;
 
 describe('NewItemForm', () => {
 	let c: ReturnType<typeof mount> | undefined;
+	// jsdom lays nothing out and has no scrollIntoView; record what the form asks to be scrolled to
+	const scrolled: Element[] = [];
+	const scrollIntoView = Element.prototype.scrollIntoView;
+	beforeEach(() => {
+		scrolled.length = 0;
+		Element.prototype.scrollIntoView = function (this: Element) {
+			scrolled.push(this);
+		};
+	});
 	afterEach(() => {
+		Element.prototype.scrollIntoView = scrollIntoView;
 		if (c) unmount(c);
 		c = undefined;
 		api.mockReset();
@@ -254,6 +264,62 @@ describe('NewItemForm', () => {
 		expect(q<HTMLTextAreaElement>('body').value).toBe('## Goal\nNo notes.\n');
 		expect(q<HTMLInputElement>('title').value).toBe('Refused');
 		expect(oncreated).not.toHaveBeenCalled();
+	});
+
+	// I-0263: the refusal is drawn below the body and its preview, under the fold of a long body,
+	// so a submit from the title with Enter saw nothing change and the form looked hung
+	it('scrolls to and focuses a refusal, and marks the Create button refused until the text changes', async () => {
+		backend(() => ({
+			ok: false,
+			statusText: 'Unprocessable',
+			json: async () => ({
+				error: 'flai check has 1 finding(s) with this epic; nothing was created',
+				findings: [
+					{
+						level: 'warning',
+						rule: 'markdown.MD034',
+						path: 'wip/x.md',
+						line: 3,
+						message: 'MD034/no-bare-urls Bare URL used'
+					}
+				]
+			})
+		}));
+		c = mount(NewItemForm, {
+			target: document.body,
+			props: { oncreated: vi.fn(), initialType: 'epic' }
+		});
+		await settle();
+		type(q<HTMLInputElement>('title'), 'Refused epic');
+		type(q<HTMLTextAreaElement>('body'), '## Outcome\nSee https://example.com\n');
+		expect(button().textContent!.trim()).toBe('Create epic');
+		const submit = async () => {
+			q<HTMLFormElement>('new-item').dispatchEvent(
+				new Event('submit', { bubbles: true, cancelable: true })
+			);
+			await settle();
+		};
+		await submit();
+		const refusal = q('refusal');
+		expect(scrolled).toEqual([refusal]);
+		expect(document.activeElement).toBe(refusal);
+		expect(button().textContent!.trim()).toBe('Refused: fix it and create epic again');
+		expect(button().dataset.refused).toBe('true');
+		expect(button().getAttribute('aria-describedby')).toBe(refusal.id);
+		expect(button().disabled).toBe(false);
+
+		// the same refusal again is scrolled to and focused again
+		q<HTMLInputElement>('title').focus();
+		await submit();
+		expect(scrolled).toHaveLength(2);
+		expect(document.activeElement).toBe(q('refusal'));
+
+		// a change to the text clears the mark; the findings stay until the next submit
+		type(q<HTMLTextAreaElement>('body'), '## Outcome\nSee <https://example.com>\n');
+		expect(button().textContent!.trim()).toBe('Create epic');
+		expect(button().dataset.refused).toBeUndefined();
+		expect(button().hasAttribute('aria-describedby')).toBe(false);
+		expect(q('refusal').textContent).toContain('markdown.MD034');
 	});
 
 	// S-0103: a story's agent over the project's default, of which only what is typed is sent

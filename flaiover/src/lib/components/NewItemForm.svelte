@@ -57,6 +57,26 @@
 	let error = $state<string | null>(null);
 	let findings = $state<Finding[]>([]);
 	let busy = $state(false);
+	// A refusal is drawn below the body and its preview, under the fold of a long body, so each one
+	// is scrolled to and focused (I-0263): `shown` counts them, so the same words again move too.
+	let refusalEl = $state<HTMLElement | undefined>(undefined);
+	let shown = $state(0);
+	// The title and body a refusal answered: the Create button says it was refused until they change.
+	let refusedText = $state<string | null>(null);
+	const wasRefused = $derived(
+		error !== null && created === null && refusedText === `${title}\u0000${body}`
+	);
+	function refuse(message: string, found: Finding[] = []) {
+		error = message;
+		findings = found;
+		refusedText = `${title}\u0000${body}`;
+		shown++;
+	}
+	$effect(() => {
+		if (shown === 0 || !refusalEl) return;
+		refusalEl.scrollIntoView({ block: 'center' });
+		refusalEl.focus({ preventScroll: true });
+	});
 
 	const meaning = $derived(NATURES.find((n) => n.name === nature)?.meaning ?? '');
 	const html = $derived(render(body, 'wip/kanban/new.md'));
@@ -123,11 +143,12 @@
 		if (!ready) return;
 		error = null;
 		findings = [];
+		refusedText = null;
 		let agent: Agent | undefined;
 		if (type === 'story') {
 			const parsed = parseConfig(agentConfig);
 			if ('error' in parsed) {
-				error = `agent config: ${parsed.error}`;
+				refuse(`agent config: ${parsed.error}`);
 				return;
 			}
 			agent = agentFrom(harness, model, parsed.config, undefined, provider);
@@ -153,8 +174,7 @@
 			const answer = await r.json();
 			if (!r.ok) {
 				// The text stays: a refusal is something to fix, not to retype.
-				error = answer.error ?? r.statusText;
-				findings = answer.findings ?? [];
+				refuse(answer.error ?? r.statusText, answer.findings ?? []);
 				return;
 			}
 			const id = answer.item.id as string;
@@ -168,13 +188,15 @@
 				if (!m.ok) {
 					const refused = await m.json().catch(() => ({}));
 					created = id;
-					error = `${id} was created, but moving it to ${to} was refused: ${refused.error ?? m.statusText}`;
+					refuse(
+						`${id} was created, but moving it to ${to} was refused: ${refused.error ?? m.statusText}`
+					);
 					return;
 				}
 			}
 			oncreated(id);
 		} catch (err) {
-			error = err instanceof Error ? err.message : String(err);
+			refuse(err instanceof Error ? err.message : String(err));
 		} finally {
 			busy = false;
 		}
@@ -311,6 +333,9 @@
 		<div
 			class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
 			role="alert"
+			id="new-item-refusal"
+			tabindex="-1"
+			bind:this={refusalEl}
 			data-testid="refusal"
 		>
 			<p>{error}</p>
@@ -334,8 +359,16 @@
 
 	<button
 		class="rounded bg-primary px-4 py-2 text-sm text-on-primary disabled:opacity-50"
+		class:ring-2={wasRefused}
+		class:ring-danger={wasRefused}
 		disabled={!ready}
+		aria-describedby={wasRefused ? 'new-item-refusal' : undefined}
+		data-refused={wasRefused ? 'true' : undefined}
 	>
-		{busy ? 'Creating…' : `Create ${type}`}
+		{busy
+			? 'Creating…'
+			: wasRefused
+				? `Refused: fix it and create ${type} again`
+				: `Create ${type}`}
 	</button>
 </form>
