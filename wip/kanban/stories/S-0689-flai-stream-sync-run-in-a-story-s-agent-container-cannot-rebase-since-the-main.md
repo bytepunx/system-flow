@@ -3,14 +3,17 @@ id: S-0689
 type: story
 nature: remediation
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T08:53:19Z
-transitions: []
+updated: 2026-11-11T08:56:25Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:53:38Z
+    by: alex
 tags: [flai, git, container]
 topics: [git]
-touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md]
+touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -26,10 +29,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:16Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T19:37:00Z
-  basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-11T13:03:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0716, S-0706 and S-0719."
   by: flai
-  at: 2026-11-11T08:48:03Z
+  at: 2026-11-11T08:56:25Z
 finalized:
   by: alex
   at: 2026-11-11T08:53:19Z
@@ -62,16 +65,19 @@ Proposed solution, from I-0272's two instances. ADR-0246 says `flai stream sync`
 - The container harness's start prompt names those tools in place of the shell's sync (T-3027).
 - Wherever a sync runs, a rebase that stops with no conflict says git's error with no false abort promise, and a trial merge that cannot run is reported as not run, never as clean (T-3030).
 
-No MCP tool syncs alone; adding one is left out of this story.
+No MCP tool syncs alone; adding one is left out of this story. No `stream_sync` MCP tool exists, yet `RequireMain`'s error and four documents name one. The replan of 2026-11-11 gives dropping it from the error to T-3026 and from the documents to T-3033.
 
 Touches, all files, no folder:
 
 - From the code layout, found by the explorer: `flai/cmd/verify.go` (the container helper beside `orchestratorInRoleContainer`), `flai/cmd/stream.go`, `flai/cmd/stream_sync.go`, `flai/cmd/stream_sync_test.go`, `flai/cmd/task_done.go`, `flai/cmd/task_done_test.go`, `flai/cmd/branch.go`, `flai/cmd/branch_test.go`, `flai/internal/storygit/sync.go`, `flai/internal/storygit/sync_test.go`, `flai/internal/harness/harness.go`, `flai/internal/harness/harness_test.go`, `flai/internal/harness/container.go`, and `flai/internal/harness/container_test.go`.
-- From the design and docs that describe the container harness: `docs/users/flai.md`, `docs/users/flai-reference.md` (regenerated from the help text), `design/system/flai-cli.md`, and `docs/operators/runbooks/agent-container.md`.
+- From the code layout, added at the replan: `flai/internal/workitem/repo.go`, whose `RequireMain` error names the `stream_sync` tool, and `flai/internal/taskdone/taskdone_test.go`, which pins that text.
+- From the design and docs that describe the container harness: `docs/users/flai.md`, `docs/users/flai-reference.md` (regenerated from the help text), `design/system/flai-cli.md`, and `docs/operators/runbooks/agent-container.md`. Added at the replan: `design/system/agent-adapters.md`, whose MCP server row and open question name `stream_sync`.
 - From the criteria: the I-0272 file and `design/issues/summary.md`, which `flai issue close` writes.
 - The story declared none. `flai touches suggest` listed co-changed paths at 10 percent or less, none tied to this change, so none was added.
 
-Forecast: `flai forecast` gave 39m. It is raised to 1h30m for four tasks across three packages, a reproduction on a read-only git common dir, and the integration and smoke tiers a `flai/` change selects at close-out, which took 8m14s and 20m44s in today's close-outs of S-0672 and S-0669. The delivery moves by the same 51m from flai's 17:22Z.
+Since the first plan, S-0688, S-0679, S-0686, S-0674, and S-0665 changed `flai/internal/harness/container.go` and `flai/cmd/task_done.go`. None changes where the sync refuses or what the container prompt says, so the tasks stand.
+
+Forecast: `flai forecast` gave 40m. It is raised to 1h30m for four tasks across four packages, a reproduction on a read-only git common dir, and the integration and smoke tiers a `flai/` change selects at close-out, which took 8m14s and 20m44s in the close-outs of S-0672 and S-0669. The two added files are small text changes and add nothing. The delivery moves by the same 50m from flai's 11:44Z.
 
 Cost of delay: 30 USD a week, as `flai cod` worked it from the operator's input of 12m lost per 168h cycle at 150 USD an hour. It stands: the issue's two instances give no reason to change it.
 

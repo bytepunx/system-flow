@@ -3,13 +3,16 @@ id: S-0706
 type: story
 nature: remediation
 title: A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T09:11:37Z
-updated: 2026-11-11T08:48:51Z
-transitions: []
+updated: 2026-11-11T08:56:25Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:51:57Z
+    by: alex
 tags: [flaiover, scripts, agent-container]
-touches: [flaiover/package.json, scripts/flaiover-install.sh, scripts/flaiover-install-test.sh, scripts/README.md, design/tech/node.md, docs/operators/runbooks/agent-container.md, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md, design/issues/summary.md]
+touches: [flaiover/package.json, flaiover/pnpm-workspace.yaml, system-flow.yaml, scripts/flaiover-install.sh, scripts/flaiover-install-test.sh, scripts/README.md, design/tech/node.md, docs/operators/runbooks/agent-container.md, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -40,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:25Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T20:36:00Z
-  basis: "Its own forecast of 45m; 16th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0699, S-0701 and S-0703."
+  delivery: 2026-11-11T11:29:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718 and S-0716."
   by: flai
-  at: 2026-11-11T08:48:51Z
+  at: 2026-11-11T08:56:25Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:46Z
@@ -70,23 +73,33 @@ Cost of delay inputs set by flai from I-0259. time_lost_per_cycle 9m: 10m per oc
 
 ### Planning
 
-The proposed remedy is the first one the issue's instance names: pnpm's `supportedArchitectures` with `libc: [glibc, musl]`. With it, one `flaiover/node_modules` holds both native bindings, and the host and the Alpine agent container can share it. `flaiover/pnpm-lock.yaml` already records both variants, so the lockfile is not expected to change. Keeping `node_modules` apart per platform would need a per-platform mount or path in `scripts/agent-container.sh` and `flai/internal/harness/container.go`. That is a larger change, and nothing in the instance asks for it. The setting alone does not reach an existing install: `scripts/flaiover-install.sh --if-needed` compares only the lockfile's mtime with `node_modules/.modules.yaml`. So T-2994 widens that check.
+The proposed remedy is the first one the issue's instance names: pnpm's `supportedArchitectures` with `libc: [glibc, musl]`. With it, one `flaiover/node_modules` holds both native bindings, and the host and the Alpine agent container can share it. `flaiover/pnpm-lock.yaml` already records both variants, so the lockfile is not expected to change. Keeping `node_modules` apart per platform would need a per-platform mount or path in `scripts/agent-container.sh` and `flai/internal/harness/container.go`. That is a larger change, and nothing in the instance asks for it.
+
+The setting alone does not reach an existing install. `scripts/flaiover-install.sh --if-needed` compares only the lockfile's mtime with `node_modules/.modules.yaml`. flai accept runs flaiover's `install` only for a change to `package.json` or `pnpm-lock.yaml`. So T-2994 widens both: the script's check, and the `install` `paths` in `system-flow.yaml`.
+
+Replanned on 2026-11-11 at the orchestrator's request. The only thread on the story, TH-1027, is resolved and holds no entry from the operator. The replan changed three things:
+
+- The setting's home is `flaiover/pnpm-workspace.yaml`, which already holds `onlyBuiltDependencies`. `package.json` stays the fallback.
+- The accept `install` `paths` were added to T-2994.
+- The test's README row was added to T-2997.
 
 Touches, all files, no folder:
 
 | Touch | Source |
 |-------|--------|
-| `flaiover/package.json` | design: the `pnpm` field the pinned pnpm 10.34.5 reads `supportedArchitectures` from, watched already by the accept `install` in `system-flow.yaml` |
-| `scripts/flaiover-install.sh` | layout: its `--if-needed` stamp check skips a configuration change |
-| `scripts/flaiover-install-test.sh` | layout: the offline install test that reproduces I-0177, where I-0259's reproduction fits |
-| `scripts/README.md` | layout: describes the install step |
-| `design/tech/node.md` | design: the store and frozen-lockfile notes |
-| `docs/operators/runbooks/agent-container.md` | design: the mounts the worktree's `node_modules` is shared through |
+| `flaiover/package.json` | declared; design: the fallback home of the setting, watched already by the accept `install` |
+| `flaiover/pnpm-workspace.yaml` | layout: it already holds flaiover's pnpm settings (`onlyBuiltDependencies`), so `supportedArchitectures` goes there |
+| `system-flow.yaml` | layout: flaiover's accept `install` `paths` name only `package.json` and `pnpm-lock.yaml`; the `install` key is written by hand, since `flai subproject` does not set it |
+| `scripts/flaiover-install.sh` | declared; layout: its `--if-needed` stamp check skips a configuration change |
+| `scripts/flaiover-install-test.sh` | declared; layout: the offline install test that reproduces I-0177, where I-0259's reproduction fits; `scripts/flaiover-test.sh` runs it |
+| `scripts/README.md` | declared; layout: describes the install step and the test |
+| `design/tech/node.md` | declared; design: the store and frozen-lockfile notes |
+| `docs/operators/runbooks/agent-container.md` | declared; design: the mounts the worktree's `node_modules` is shared through |
 | `design/issues/I-0259-…md`, `design/issues/summary.md` | declared by the criteria: `flai issue close` writes both |
 
-`flai touches suggest` listed only files that change with nearly everything (`design/system/flai-cli.md` 5%, `docs/users/flai.md` 5%, and issue files from other stories). This story changes none of them, so none was added. If T-2993 finds `flaiover/pnpm-workspace.yaml` the better home, that file and `system-flow.yaml` join its touches, as its Work says.
+`flai touches suggest` listed only files that change with nearly everything (`docs/users/flai.md` 5%, `design/system/flai-cli.md` 5%, and issue files from other stories). This story changes none of them, so none was added.
 
-Forecast: flai gave 23m (median 134 s per unit of size over 54 done medium remediation stories on claude-opus-5-5, size 10: 2 criteria and 8 touches). It is raised to 45m. The test needs an offline pnpm fixture with libc-specific optional packages, and confirming the fix means one `node_modules` read from both the container and the host. Delivery is flai's 2026-11-10T16:59Z moved by the 22m added.
+Forecast: flai gave 23m (median 135 s per unit of size over 59 done medium remediation stories on claude-opus-5-5, size 10: 2 criteria and 8 touches). It is raised to 45m. The test needs an offline pnpm fixture with libc-specific optional packages, and confirming the fix means one `node_modules` read from both the container and the host. Delivery is flai's 2026-11-11T10:31Z moved by the 22m added.
 
 Cost of delay: 22.50 USD a week, flai's value from the operator's input of 9m lost per 168h cycle at 150 USD an hour. It stands. I-0259 has one instance, and its cost recurs only for a story whose flaiover tier runs both in the container and on the host.
 

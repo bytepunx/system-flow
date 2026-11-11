@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-11T08:48:51Z
+updated: 2026-11-11T08:56:25Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T09:36:53Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T14:51:00Z
-  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241 and S-0659."
+  delivery: 2026-11-11T15:58:00Z
+  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 3, behind S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0716, S-0706, S-0719, S-0689, S-0241 and S-0659."
   by: flai
-  at: 2026-11-11T08:48:51Z
+  at: 2026-11-11T08:56:25Z
 finalized:
   by: orchestrator
   at: 2026-11-10T09:39:54Z
