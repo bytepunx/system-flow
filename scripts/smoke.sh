@@ -93,6 +93,9 @@ echo "smoke: agent-container.sh runs the manifest's layer image (I-0279)"
 echo "smoke: agent-image.sh builds with no login when the credential helper fails (I-0339)"
 "$ROOT/scripts/agent-image-test.sh"
 
+echo "smoke: go build stamps a story's worktree in the agent image with the harness's safe.directory (I-0255)"
+"$ROOT/scripts/agent-vcs-test.sh"
+
 if has markdown:all; then
   echo "smoke: markdown lint: skipped, the markdown tier linted every file in this run"
 elif has markdown && ! changes .markdownlint-cli2.jsonc .markdownlint-cli2.yaml .markdownlint.jsonc .markdownlint.json .markdownlint.yaml .markdownlint.yml scripts/lint-md.sh; then
