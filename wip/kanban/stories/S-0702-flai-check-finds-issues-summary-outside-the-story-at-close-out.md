@@ -3,14 +3,17 @@ id: S-0702
 type: story
 nature: improvement
 title: "flai check finds `issues.summary` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T08:46:41Z
+updated: 2026-11-11T08:46:59Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:36Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:46:59Z
+    by: agent-S-0702
 tags: [flai, issues, git]
 topics: [git]
 touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md]

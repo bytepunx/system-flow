@@ -3,10 +3,10 @@ id: S-0691
 type: story
 nature: improvement
 title: The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T08:00:48Z
+updated: 2026-11-11T08:47:47Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:32Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T08:00:48Z
     by: agent-S-0691
+  - to: done
+    at: 2026-11-11T08:47:47Z
+    by: alex
 blocked:
   - from: 2026-11-11T05:26:42Z
     until: 2026-11-11T07:42:24Z
