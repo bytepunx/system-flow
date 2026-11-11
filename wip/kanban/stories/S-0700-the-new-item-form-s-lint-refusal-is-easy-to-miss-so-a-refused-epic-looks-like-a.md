@@ -3,11 +3,14 @@ id: S-0700
 type: story
 nature: remediation
 title: The new item form's lint refusal is easy to miss, so a refused epic looks like a hang
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-11T02:27:14Z
-transitions: []
+updated: 2026-11-11T05:07:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:31:27Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md, design/issues/summary.md]
 agent:
@@ -56,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T10:27:56Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T14:06:00Z
-  basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0696, S-0697, S-0698 and S-0699."
+  delivery: 2026-11-11T08:19:00Z
+  basis: "Its own forecast of 45m; 9th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696, S-0697 and S-0698."
   by: flai
-  at: 2026-11-11T02:27:14Z
+  at: 2026-11-11T05:07:32Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:40Z

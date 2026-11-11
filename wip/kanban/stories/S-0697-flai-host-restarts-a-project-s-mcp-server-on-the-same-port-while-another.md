@@ -3,11 +3,14 @@ id: S-0697
 type: story
 nature: remediation
 title: flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:54:33Z
-updated: 2026-11-11T02:27:14Z
-transitions: []
+updated: 2026-11-11T05:07:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:31:09Z
+    by: alex
 tags: [flai, host, mcp]
 topics: [mcp, host]
 touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, design/system/flai-cli.md, docs/operators/index.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:28:31Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T13:21:00Z
-  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689 and S-0696."
+  delivery: 2026-11-11T07:34:00Z
+  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718 and S-0696."
   by: flai
-  at: 2026-11-11T02:27:14Z
+  at: 2026-11-11T05:07:32Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:41Z

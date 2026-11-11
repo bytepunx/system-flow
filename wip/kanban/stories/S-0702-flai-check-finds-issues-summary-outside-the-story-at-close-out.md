@@ -3,11 +3,14 @@ id: S-0702
 type: story
 nature: improvement
 title: "flai check finds `issues.summary` outside the story at close-out"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T02:29:02Z
-transitions: []
+updated: 2026-11-11T05:07:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:31:36Z
+    by: alex
 tags: [flai, issues, git]
 topics: [git]
 touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-11-10T11:07:46Z
 forecast:
   duration: 60m
-  delivery: 2026-11-11T15:22:00Z
-  basis: "Its own forecast of 1h; 21st in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0696, S-0697, S-0698, S-0699, S-0700 and S-0701."
+  delivery: 2026-11-11T09:29:00Z
+  basis: "Its own forecast of 1h; 10th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696, S-0697, S-0698 and S-0700."
   by: flai
-  at: 2026-11-11T02:29:02Z
+  at: 2026-11-11T05:07:32Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:11Z

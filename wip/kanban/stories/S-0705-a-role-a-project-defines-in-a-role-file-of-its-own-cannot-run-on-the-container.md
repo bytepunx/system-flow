@@ -3,11 +3,14 @@ id: S-0705
 type: story
 nature: improvement
 title: A role a project defines in a role file of its own cannot run on the container harness, since the start request does not carry its file to pilot
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-11T02:28:16Z
-transitions: []
+updated: 2026-11-11T05:07:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:31:45Z
+    by: alex
 tags: [flai]
 topics: [harness, docker, code]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:53Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T17:44:00Z
-  basis: "Its own forecast of 2h; 23rd in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0696, S-0697, S-0698, S-0699, S-0700, S-0701, S-0702 and S-0703."
+  delivery: 2026-11-11T10:55:00Z
+  basis: "Its own forecast of 2h; 11th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696, S-0697, S-0698, S-0700 and S-0702."
   by: flai
-  at: 2026-11-11T02:28:16Z
+  at: 2026-11-11T05:07:32Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:44Z

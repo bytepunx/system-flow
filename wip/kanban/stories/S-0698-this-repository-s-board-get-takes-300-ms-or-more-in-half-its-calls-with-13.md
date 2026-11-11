@@ -3,11 +3,14 @@ id: S-0698
 type: story
 nature: improvement
 title: This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:54:37Z
-updated: 2026-11-11T02:28:16Z
-transitions: []
+updated: 2026-11-11T05:07:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:31:19Z
+    by: alex
 tags: [cli]
 topics: [server-side, back-end]
 touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md]
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:42Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T13:55:00Z
-  basis: "Its own forecast of 1h; 17th in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0696 and S-0697."
+  delivery: 2026-11-11T08:24:00Z
+  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696 and S-0697."
   by: flai
-  at: 2026-11-11T02:28:16Z
+  at: 2026-11-11T05:07:32Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:47Z

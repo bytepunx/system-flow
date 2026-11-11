@@ -7,7 +7,7 @@ status: backlog
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:07Z
-updated: 2026-11-11T02:27:14Z
+updated: 2026-11-11T05:07:32Z
 transitions: []
 tags: [cli]
 topics: [kluster, deployment]
@@ -35,10 +35,10 @@ usage:
 draft: true
 forecast:
   duration: 20m
-  delivery: 2026-11-11T07:00:00Z
-  basis: "Its own forecast of 20m; 9th in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691, S-0678, S-0686, S-0694, S-0681, S-0718 and S-0241."
+  delivery: 2026-11-11T11:24:00Z
+  basis: "Its own forecast of 20m; 13th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696, S-0697, S-0698, S-0700, S-0702, S-0705 and S-0241."
   by: flai
-  at: 2026-11-11T02:27:14Z
+  at: 2026-11-11T05:07:32Z
 ---
 # S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once
 
