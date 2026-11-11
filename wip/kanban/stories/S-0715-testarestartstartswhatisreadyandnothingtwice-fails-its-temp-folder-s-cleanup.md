@@ -6,7 +6,7 @@ title: "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cle
 status: ready
 owner: alex
 created: 2026-11-10T10:55:22Z
-updated: 2026-11-11T18:15:37Z
+updated: 2026-11-11T18:16:00Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:02Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-11T09:04:21Z
 forecast:
   duration: 40m
-  delivery: 2026-11-11T19:11:00Z
+  delivery: 2026-11-11T19:12:00Z
   basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-11-11T18:15:37Z
+  at: 2026-11-11T18:16:00Z
 finalized:
   by: alex
   at: 2026-11-11T09:02:10Z

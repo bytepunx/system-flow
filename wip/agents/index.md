@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-11T18:15:37Z
+updated: 2026-11-11T18:16:00Z
 ---
 
 # Active streams
@@ -13,7 +13,6 @@ updated: 2026-11-11T18:15:37Z
 | [S-0705](S-0705.md) | A role a project defines in a role file of its own cannot run on the container harness, since the start request does not carry its file to pilot | review | agent-S-0705 | 2026-11-11T16:13:50Z |
 | [S-0706](S-0706.md) | A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse | review | agent-S-0706 | 2026-11-11T09:27:58Z |
 | [S-0716](S-0716.md) | One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them | review | agent-S-0716 | 2026-11-11T15:24:06Z |
-| [S-0719](S-0719.md) | A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance | review | agent-S-0719 | 2026-11-11T15:03:37Z |
 
 ## Strategic agents
 
