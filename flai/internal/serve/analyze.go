@@ -193,7 +193,7 @@ func startedBy(run *AgentRun) string {
 // not make, is an agent event on the analyzer's role (S-0532), or on the
 // formula's instance it was started for (analyzeOn). A start the
 // budget state of its provider holds is not made and nothing is recorded:
-// held is that state, nil when it was not held (spawnGated, S-0534).
+// held is that state, nil when it was not held (spawnGatedWith, S-0534).
 func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, focus, trigger string) (started bool, held *Budget) {
 	return l.analyzeOn(ctx, cfg, agent, focus, trigger, "")
 }

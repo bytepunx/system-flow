@@ -453,7 +453,7 @@ func (r *orchestrator) journalStop(at, detail string) {
 // included, is an agent event on the orchestrator's role, saying why it was
 // started and for which reasons, and so is a start it could not make, once
 // as it is journalled (S-0532). A start the budget state of its provider
-// holds is not made and nothing is recorded (spawnGated, S-0534): held is
+// holds is not made and nothing is recorded (spawnGatedWith, S-0534): held is
 // that state, nil when it was not held, and why it is held is returned as
 // said, logged when it is not the one said last, so that a hold is logged
 // once per state. The reasons a run is started for are taken out of the

@@ -19,8 +19,8 @@ import (
 )
 
 // Starting a story's agent on the container harness (S-0508, ADR-0212), or
-// a strategic agent's, the planner's, the orchestrator's, the analyzer's, or
-// the curator's (S-0509, ADR-0247).
+// a strategic agent's, the planner's, the orchestrator's, the analyzer's,
+// the curator's (S-0509, ADR-0247), or a role's the project defines (S-0705).
 //
 // The adapter builds the docker run; flai serve readies the host for it, in
 // startOf, which every start goes through. Before the start it refuses one
@@ -36,8 +36,8 @@ import (
 // would make an empty folder, the root user's, where a missing mount should
 // be, it opens a story's worktree when it has none, and makes the main
 // checkout's .git/hooks for a strategic agent's when it is missing; and it
-// makes the cache folder of the story or the role with the link to the
-// operator's login. The token and the keys reach the docker
+// makes the cache folder of the story or the role, a defined role's by its
+// name, with the link to the operator's login. The token and the keys reach the docker
 // client by environment, and pilot's start request its standard input
 // (spawnWith). A stop stops the container by its name.
 
@@ -146,9 +146,11 @@ func containerImage(docker execx.Runner, root string, cfg AgentConfig, agent *ma
 // container harness for req, a story's or a strategic agent's, once the
 // adapter has taken it: it reads the inner harness's version from its image
 // onto run, makes the main checkout's .git/hooks for a strategic agent's,
-// and makes the cache folder of the story or the role, as the adapter named
-// it from req. A story's worktree is opened before the adapter is asked
-// (containerWorktree, startOf), since the adapter reads its git to mount it.
+// and makes the cache folder the adapter mounts, named as it named it from
+// req (harness.ContainerSubject): the story's, a defined role's by its name,
+// or a built-in role's by its verb. A story's worktree is opened before the
+// adapter is asked (containerWorktree, startOf), since the adapter reads its
+// git to mount it.
 func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, req harness.Request) error {
 	inner := innerOf(req.Agent)
 	if inner == harness.ClaudeCode {
@@ -158,14 +160,12 @@ func (l *launcher) containerReady(cfg AgentConfig, run *AgentRun, req harness.Re
 		}
 		l.containerVersion(cfg, run, host.Images[inner], req.ProviderName)
 	}
-	subject := req.Story
-	if subject == "" {
-		subject = req.Role
+	if req.Story == "" {
 		if err := containerHooks(l.entry.Root); err != nil {
 			return err
 		}
 	}
-	return containerCache(l.entry.Root, subject, inner == harness.ClaudeCode)
+	return containerCache(l.entry.Root, harness.ContainerSubject(req), inner == harness.ClaudeCode)
 }
 
 // containerVersion records on run the version of Claude Code image holds, as
@@ -259,8 +259,8 @@ func containerHooks(root string) error {
 	return nil
 }
 
-// containerCache makes the cache folder of the container of subject, a
-// story's ID or a strategic agent's role, under the project at root, the
+// containerCache makes the cache folder of the container of subject, as
+// harness.ContainerSubject gives it, under the project at root, the
 // user's alone, with its flai and claude folders, and, when login, links
 // claude/.credentials.json to the login the container mounts read-only,
 // replacing what is there, so that Claude Code finds it.
@@ -387,8 +387,9 @@ func loopbackHost(host string) bool {
 }
 
 // stopContainer stops run's container by the name the adapter gave it, as
-// the run recorded it, else, on a run recorded before S-0665, from the story
-// or the role (containerSubject) and the session the run recorded, once its
+// the run recorded it, else, on a run recorded before S-0665, from the story,
+// the defined role's name, or the built-in role (containerSubject) and the
+// session the run recorded, once its
 // docker client has been signalled: a client killed outright leaves its
 // container running. It says what it did, for the stop's journal entry; a
 // container gone with its client is no failure, and any other failure is
@@ -410,13 +411,16 @@ func (l *launcher) stopContainer(cfg AgentConfig, run *AgentRun) string {
 }
 
 // containerSubject is what the container of r, a run on the container
-// harness, was named for, as the start's request named it to the adapter:
-// its story, else the role of the strategic agent it is, told by the fields
-// that tell the runs apart.
+// harness, was named for, as harness.ContainerSubject named it from the
+// start's request: its story, else the name of the role the project defines
+// that it runs, else the role of the built-in strategic agent it is, told by
+// the fields that tell the runs apart.
 func (r *AgentRun) containerSubject() string {
 	switch {
 	case r.Story != "":
 		return r.Story
+	case r.defined():
+		return r.RoleName
 	case r.Role != "":
 		return r.Role
 	case r.Item != "":
@@ -428,7 +432,8 @@ func (r *AgentRun) containerSubject() string {
 }
 
 // containerSaid is the field a line logged of r's container names it by: its
-// story, or the role of a strategic agent's.
+// story, or what a strategic agent's is named for, a defined role's name or
+// a built-in role's verb.
 func (r *AgentRun) containerSaid() []any {
 	if r.Story != "" {
 		return []any{"story", r.Story}

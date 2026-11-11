@@ -173,7 +173,7 @@ func lastCurated(repo *workitem.Repo) (string, error) {
 // start it could not make, is an agent event on the curator's role, the start
 // saying what started it, what it takes in, and a retry's reset (S-0532). A
 // start the budget state of its provider holds is not made and nothing is
-// recorded: held is that state, nil when it was not held (spawnGated,
+// recorded: held is that state, nil when it was not held (spawnGatedWith,
 // S-0534).
 func (l *launcher) curate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, since, trigger, resetAt string) (started bool, held *Budget) {
 	now := l.now().UTC()

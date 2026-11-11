@@ -175,7 +175,7 @@ func planCheck(o Options, e Entry, item string) (planStart, error) {
 // prompt names it (S-0524, ADR-0222). Its start, or the start it could not
 // make, is an agent event on item (S-0532). A start the budget state of its
 // provider holds is not made and nothing is recorded: held is that state,
-// nil when it was not held (spawnGated, S-0534).
+// nil when it was not held (spawnGatedWith, S-0534).
 func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent *manifest.Agent, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
 	run := &AgentRun{Item: item, Agent: workitem.ActivityPlanner + "-" + item, Started: now.Format(time.RFC3339), Session: newSession(), Trigger: trigger}
@@ -271,11 +271,6 @@ func (l *launcher) planEnded(run *AgentRun, exit *int) {
 			l.warn("planned event not logged", "item", run.Item, "err", err)
 		}
 	}
-}
-
-// spawnGated is spawnGatedWith with nothing on the child's standard input.
-func (l *launcher) spawnGated(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (cmd *exec.Cmd, out *os.File, held *Budget, err error) {
-	return l.spawnGatedWith(ctx, run, argv, subject, at, env, nil)
 }
 
 // spawnGatedWith is spawnWith behind the budget gate (budgetStart, S-0534),

@@ -5,6 +5,7 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -816,16 +817,28 @@ func (lab *agentLab) roleContainerReady() {
 	}
 }
 
-// roleContainerStarted checks that run, the strategic agent's in role, was
-// started on the container harness as ADR-0247 says, and returns pilot's
-// start request: docker run of the container named for the role and the
-// session, mounting the main checkout read-write at its path as the working
-// directory, its .git/hooks and .git/config read-only (ADR-0281), and the
-// role's cache folder, and no
-// story's worktree; FLAI_ROLE passed by name and FLAI_STORY not at all; the
-// hooks folder and the cache folder, with the link to the login, made; and
-// the image's Claude Code version recorded on the run.
+// roleContainerStarted checks that run, the built-in strategic agent's in
+// role, was started on the container harness as ADR-0247 says, its container
+// and cache folder named for the role, and returns pilot's start request
+// (strategicContainerStarted).
 func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Request {
+	lab.t.Helper()
+	return lab.strategicContainerStarted(role, role, run)
+}
+
+// strategicContainerStarted checks that run, a strategic agent's in role,
+// whose container and cache folder are named for subject, the role itself
+// for a built-in one and its name for one the project defines (S-0705), was
+// started on the container harness as ADR-0247 says, and returns pilot's
+// start request, which the fake docker recorded under role, FLAI_ROLE's
+// value: docker run of the container named for subject and the session,
+// mounting the main checkout read-write at its path as the working
+// directory, its .git/hooks and .git/config read-only (ADR-0281), and
+// subject's cache folder, and no story's worktree; FLAI_ROLE passed by name
+// and FLAI_STORY not at all; the hooks folder and subject's cache folder,
+// with the link to the login, made; and the image's Claude Code version
+// recorded on the run.
+func (lab *agentLab) strategicContainerStarted(role, subject string, run *AgentRun) harness.Request {
 	t := lab.t
 	t.Helper()
 	if run == nil || run.Error != "" || run.PID == 0 || run.Command != "docker" || run.Harness != harness.Container || run.HarnessVersion != "2.1.312" {
@@ -841,8 +854,8 @@ func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Re
 	root := lab.root
 	hooks := filepath.Join(root, ".git", "hooks")
 	config := filepath.Join(root, ".git", "config")
-	cache := harness.ContainerCache(root, role)
-	for _, want := range []string{"--name " + harness.ContainerName(role, run.Session) + " ", " -v " + root + ":" + root + " ", " -w " + root + " ",
+	cache := harness.ContainerCache(root, subject)
+	for _, want := range []string{"--name " + harness.ContainerName(subject, run.Session) + " ", " -v " + root + ":" + root + " ", " -w " + root + " ",
 		" -v " + hooks + ":" + hooks + ":ro ", " -v " + config + ":" + config + ":ro ", " -v " + cache + ":" + cache + " ", " -e FLAI_ROLE ", " flai-agent-claude-code:local"} {
 		if !strings.Contains(args, want) {
 			t.Errorf("docker's arguments lack %q: %s", want, args)
@@ -862,7 +875,7 @@ func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Re
 		t.Errorf("no .git/hooks folder was made: %v", err)
 	}
 	if fi, err := os.Stat(cache); err != nil || fi.Mode().Perm() != 0o700 {
-		t.Errorf("the role's cache folder is not the user's alone: %v %v", fi, err)
+		t.Errorf("the cache folder %s is not the user's alone: %v %v", cache, fi, err)
 	}
 	if to, err := os.Readlink(filepath.Join(cache, "claude", ".credentials.json")); err != nil || to != harness.ContainerLogin+"/.credentials.json" {
 		t.Errorf("the login's link: %q %v", to, err)
@@ -875,6 +888,91 @@ func (lab *agentLab) roleContainerStarted(role string, run *AgentRun) harness.Re
 		t.Errorf("the start request: %+v", req)
 	}
 	return req
+}
+
+// I-0258, S-0705: a role the project defines, on the container harness, is
+// started in a container named for the role's name rather than its verb,
+// which a built-in role or another defined role could share: flai serve makes
+// the cache folder the adapter mounts under the name, with the link to the
+// login, and none under the verb, and the run records the container by its
+// name. A stop runs docker stop on that container, by the name the run
+// recorded and, for a run recorded without it, by the role's name and the
+// session. Before S-0705 flai serve made the cache folder under the verb,
+// and the folder the container mounted was docker's to make, the root
+// user's.
+func TestADefinedRoleOnTheContainerHarnessIsReadiedAndStoppedByItsName(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	dir := filepath.Join(lab.root, "design", "workflows", "roles")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "reviewer.md"), []byte(reviewerRole), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	story := lab.backlog("Reviewed in a container", nil)
+	repo, err := workitem.Open(lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := definedRole(repo, "reviewer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.l.mu.Lock()
+	started, _ := lab.l.role(context.Background(), lab.cfg, f, story, &manifest.Agent{Harness: harness.Container}, nil, TriggerAsked)
+	lab.l.mu.Unlock()
+	run := lab.roleRun("reviewer", story)
+	if !started {
+		t.Fatalf("not started: %+v", run)
+	}
+	req := lab.strategicContainerStarted("review", "reviewer", run)
+	if req.RoleName != "reviewer" || req.Item != story || req.Name != "reviewer-"+story {
+		t.Errorf("the start request names role %q, item %q, agent %q; want reviewer, %s, reviewer-%s", req.RoleName, req.Item, req.Name, story, story)
+	}
+	if _, err := os.Stat(harness.ContainerCache(lab.root, "review")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a cache folder was made under the role's verb: %v", err)
+	}
+	name := harness.ContainerName("reviewer", run.Session)
+	if run.Container != name {
+		t.Errorf("the run records container %q, want %s", run.Container, name)
+	}
+	waitFor(t, "it ended", func() bool { r := lab.roleRun("reviewer", story); return r != nil && !r.live() })
+	unrecorded := *run
+	unrecorded.Container = ""
+	for _, r := range []*AgentRun{run, &unrecorded} {
+		if said := lab.l.stopContainer(lab.cfg, r); said != "stopped its container "+name {
+			t.Errorf("the stop of a run recording container %q says %q, want it stopped %s", r.Container, said, name)
+		}
+	}
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-stopped")); string(got) != name+"\n"+name+"\n" {
+		t.Errorf("docker stop was given %q, not %s twice", got, name)
+	}
+}
+
+// S-0705: a container run recorded without its container's name, as runs
+// before S-0665 were, is stopped by the name the adapter gave it: its
+// story's, a defined role's name, not its verb, or a built-in role's verb.
+func TestAContainerRunWithoutItsRecordedNameIsNamedAsTheAdapterNamedIt(t *testing.T) {
+	const session = "3f2a-b1"
+	for _, c := range []struct {
+		name string
+		run  AgentRun
+		want string
+	}{
+		{"a story's agent", AgentRun{Story: "S-0042"}, "S-0042"},
+		{"a defined role on an item", AgentRun{Item: "S-0042", Role: "review", RoleName: "reviewer"}, "reviewer"},
+		{"a defined role on no item", AgentRun{Role: "audit", RoleName: "auditor"}, "auditor"},
+		{"a defined role in a built-in verb", AgentRun{Role: conventions.RoleCurate, RoleName: "librarian"}, "librarian"},
+		{"the curator", AgentRun{Role: conventions.RoleCurate}, conventions.RoleCurate},
+		{"the planner", AgentRun{Item: "E-0029"}, conventions.RolePlan},
+		{"the analyzer", AgentRun{Focus: "risk"}, conventions.RoleAnalyze},
+		{"the orchestrator", AgentRun{}, conventions.RoleOrchestrate},
+	} {
+		c.run.Session = session
+		if got, want := harness.ContainerName(c.run.containerSubject(), c.run.Session), "flai-agent-"+c.want+"-"+session; got != want {
+			t.Errorf("%s's container is named %s, want %s", c.name, got, want)
+		}
+	}
 }
 
 // S-0509, ADR-0247 §2: turning the orchestrate action off stops the

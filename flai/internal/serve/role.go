@@ -265,7 +265,7 @@ func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 // <S-nnnn>"), journals it under f's action, and says whether it started. A
 // start
 // the budget state of its provider holds is not made and nothing is
-// recorded: held is that state, nil when it was not held (spawnGated,
+// recorded: held is that state, nil when it was not held (spawnGatedWith,
 // S-0534).
 func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item string, agent *manifest.Agent, inputs []harness.Input, trigger string) (started bool, held *Budget) {
 	now := l.now().UTC()
@@ -296,7 +296,7 @@ func (l *launcher) role(ctx context.Context, cfg AgentConfig, f roles.Role, item
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, held, err := l.spawnGated(ctx, run, spec.Argv, f.Name, now, append(spec.Env, keys...))
+	cmd, out, held, err := l.spawnGatedWith(ctx, run, spec.Argv, f.Name, now, append(spec.Env, keys...), spec.Stdin)
 	if held != nil {
 		return false, held
 	}
