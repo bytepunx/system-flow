@@ -1,2 +1,8 @@
 onlyBuiltDependencies:
   - esbuild
+# The host (glibc) and the Alpine agent container (musl) share a story
+# worktree's node_modules, so install both libcs' native bindings (I-0259).
+supportedArchitectures:
+  os: [current]
+  cpu: [current]
+  libc: [glibc, musl]
