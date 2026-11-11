@@ -2,12 +2,12 @@
 id: I-0269
 title: repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it
 class: defect
-status: open
+status: closed
 count: 3
 cost: 6m
 first_reported: 2026-11-07T04:07:16Z
 last_reported: 2026-11-08T02:50:04Z
-updated: 2026-11-10T08:54:28Z
+updated: 2026-11-11T01:53:30Z
 ---
 
 # I-0269 repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it
@@ -32,3 +32,4 @@ S-0607, T-2656: the flaiover-flai tier failed once on `flaiover/src/lib/server/r
 ## Remediation
 
 Story S-0695 remediates this issue, created from it at 2026-11-10T08:54:28Z.
+Closed 2026-11-11T01:53:30Z: Fixed by S-0695 (T-2969): the Repo on the monorepo describe in flaiover/src/lib/server/repo.test.ts now has { timeout: 30000 }, as search.test.ts's adrs on the monorepo has. The read takes under a second alone; all three instances were timeouts on a loaded host, and 30 s leaves room for that without hiding a hang. D-0524's other suspected cause, concurrent writes to the main checkout, does not hold: flai writes each item atomically, so a reader sees it whole.
