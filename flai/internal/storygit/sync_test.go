@@ -956,7 +956,8 @@ func TestSyncTrialMergeStillReportsASharedMarkdownFile(t *testing.T) {
 	}
 }
 
-// ADR-0126: after a clean rebase the fold runs with the base branch; what it
+// ADR-0126: after a clean rebase the fold runs with the base branch's commit
+// the rebase took (I-0338); what it
 // folds is committed on the branch with the generated files written again,
 // a deleted file included.
 func TestSyncCommitsTheFoldAfterACleanRebase(t *testing.T) {
@@ -964,6 +965,11 @@ func TestSyncCommitsTheFoldAfterACleanRebase(t *testing.T) {
 	story, wt := openStory(t, repo, "S-0001", "docs")
 	commitFiles(t, wt, "feat: [S-0001] dup", "docs/dup.md")
 	commitFiles(t, repo.MainRoot, "docs: main's keep", "docs/keep.md")
+	r := execx.System{}
+	mainHead, err := r.Run(repo.MainRoot, "git", "rev-parse", "main")
+	if err != nil {
+		t.Fatal(mainHead, err)
+	}
 	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
 		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("after the fold\n"), 0o644)
 	}}
@@ -984,10 +990,9 @@ func TestSyncCommitsTheFoldAfterACleanRebase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res.Synced || gotBase != "main" || len(res.Folded) != 2 || res.Folded[0] != (Folded{From: "I-0002", Into: "I-0001"}) {
-		t.Fatalf("result: %+v, base %q", res, gotBase)
+	if !res.Synced || res.Base != "main" || gotBase != mainHead || len(res.Folded) != 2 || res.Folded[0] != (Folded{From: "I-0002", Into: "I-0001"}) {
+		t.Fatalf("result: %+v, base %q, want main's head %s", res, gotBase, mainHead)
 	}
-	r := execx.System{}
 	if got, _ := r.Run(wt, "git", "log", "-1", "--format=%s"); got != "docs: [S-0001] fold I-0002 into I-0001, I-0003 into I-0001" {
 		t.Errorf("the fold's commit: %q", got)
 	}
@@ -1353,6 +1358,65 @@ func TestSyncFindsNothingUndoneOnABranchThatKeepsMainsChanges(t *testing.T) {
 	}
 }
 
+// gainingRunner is the real runner, running gain once, right after the
+// sync's first git rebase onto a base returns: main gaining commits while
+// the sync runs (I-0338, I-0335).
+type gainingRunner struct {
+	execx.System
+	gain   func()
+	gained bool
+}
+
+func (g *gainingRunner) Run(dir, name string, args ...string) (string, error) {
+	out, err := g.System.Run(dir, name, args...)
+	if name == "git" && len(args) == 2 && args[0] == "rebase" && !strings.HasPrefix(args[1], "--") && !g.gained {
+		g.gained = true
+		g.gain()
+	}
+	return out, err
+}
+
+// gainedAfterTheRebase fails t unless the runner's gain ran and the rebased
+// worktree wt lacks path, which only main's gained commits hold.
+func gainedAfterTheRebase(t *testing.T, g *gainingRunner, wt, path string) {
+	t.Helper()
+	if !g.gained {
+		t.Fatal("main gained nothing during the sync: no git rebase onto a base ran")
+	}
+	if _, err := os.Stat(filepath.Join(wt, filepath.FromSlash(path))); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the branch holds %s, which main gained after the rebase: %v", path, err)
+	}
+}
+
+// I-0338, I-0335: two commits main gains while the sync runs, after its
+// rebase, one to a path main changed since the branch left it and one to a
+// new path, neither of which the branch changes, are no lines the branch
+// undoes: the sync reports none and records none.
+func TestSyncFindsNothingUndoneWhenMainGainsCommitsWhileItRuns(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] the branch's own", "docs/branch.md")
+	commitFiles(t, repo.MainRoot, "docs: main moves on", "design/note.md")
+	o := syncOptions(repo, story)
+	g := &gainingRunner{gain: func() {
+		commitFiles(t, repo.MainRoot, "docs: [S-0002] accepted during the sync", "design/adr.md")
+		commitFiles(t, repo.MainRoot, "docs: [S-0003] main's note again during the sync", "design/note.md")
+	}}
+	o.Runner = g
+
+	res, err := Sync(o)
+	if err != nil || !res.Synced || res.Stopped != "" {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	gainedAfterTheRebase(t, g, wt, "design/adr.md")
+	if res.UndoesMain == nil || len(res.UndoesMain) != 0 {
+		t.Errorf("undoes main: %+v", res.UndoesMain)
+	}
+	if _, err := os.Stat(UndoneRecordPath(repo.CacheDir(), "S-0001")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a record was written: %v", err)
+	}
+}
+
 // releasedChangelog is a changelog as flai release leaves it, its top
 // "## Unreleased" empty above the version it named, with older sections
 // below, main's duplicate "## 1.1.3" heading among them (I-0251).
@@ -1455,6 +1519,34 @@ func TestSyncPutsTheBranchsChangelogLinesUnderMainsTopUnreleased(t *testing.T) {
 		t.Fatalf("sync across 1.1.18: %+v %v", res, err)
 	}
 	settledAs(t, wt, releasedChangelog("- S-0518 A story's line (patch).\n\n## 1.1.18 - 2026-11-02\n\n- S-0422 Another story's line (patch).\n\n## 1.1.17 - 2026-11-02\n\n- S-0400 An earlier line (patch).\n\n"), res)
+}
+
+// I-0338, ADR-0257: a line another story adds to main's changelog while the
+// sync runs, after its rebase across a release, is not settled into the
+// branch's changelog: the branch holds main's changelog as the rebase took
+// it with its own line under the top "## Unreleased", and undoes nothing.
+func TestSyncSettlesTheChangelogAgainstMainAsTheRebaseTookIt(t *testing.T) {
+	repo, story, wt := changelogProject(t)
+	releaseOnMain(t, repo, "1.1.17", "- S-0400 An earlier line (patch).\n")
+	o := syncOptions(repo, story)
+	g := &gainingRunner{gain: func() {
+		main, err := os.ReadFile(filepath.Join(repo.MainRoot, "CHANGELOG.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(t, repo.MainRoot, "CHANGELOG.md", strings.Replace(string(main), "## Unreleased\n\n", "## Unreleased\n\n- S-0422 Another story's line (patch).\n\n", 1))
+		write(t, repo.MainRoot, "docs/note.md", "S-0422's\n")
+		git(t, repo.MainRoot, "add", "--", "CHANGELOG.md", "docs/note.md")
+		git(t, repo.MainRoot, "commit", "-q", "-m", "feat: [S-0422] accepted during the sync")
+	}}
+	o.Runner = g
+
+	res, err := Sync(o)
+	if err != nil || !res.Synced {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	gainedAfterTheRebase(t, g, wt, "docs/note.md")
+	settledAs(t, wt, releasedChangelog("- S-0518 A story's line (patch).\n\n## 1.1.17 - 2026-11-02\n\n- S-0400 An earlier line (patch).\n\n"), res)
 }
 
 // A branch that does not change the changelog gets no commit across a
