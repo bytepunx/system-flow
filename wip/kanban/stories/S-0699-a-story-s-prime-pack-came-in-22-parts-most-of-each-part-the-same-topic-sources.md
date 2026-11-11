@@ -6,7 +6,7 @@ title: A story's prime pack came in 22 parts, most of each part the same topic s
 status: ready
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T09:18:38Z
+updated: 2026-11-11T14:23:13Z
 transitions:
   - to: ready
     at: 2026-11-11T08:59:53Z
@@ -34,15 +34,15 @@ usage:
           cache_write: 37652
           cost: 0.5206
     - kind: orchestrator
-      seconds: 54
+      seconds: 56
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 7
           output: 100
-          cache_read: 432396
-          cache_write: 13158
-          cost: 0.1244
+          cache_read: 446302
+          cache_write: 13682
+          cost: 0.1284
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T13:36:00Z
-  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0694, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716 and S-0689."
+  delivery: 2026-11-11T17:27:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719, S-0724, S-0716 and S-0689."
   by: flai
-  at: 2026-11-11T09:18:38Z
+  at: 2026-11-11T14:23:13Z
 finalized:
   by: alex
   at: 2026-11-11T08:59:51Z

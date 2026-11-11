@@ -6,7 +6,7 @@ title: A role a project defines in a role file of its own cannot run on the cont
 status: ready
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-11T09:18:38Z
+updated: 2026-11-11T14:23:13Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:45Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 92957
           cost: 1.9533
     - kind: orchestrator
-      seconds: 9
+      seconds: 11
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 3
           output: 11
-          cache_read: 165390
-          cache_write: 14340
-          cost: 0.0495
+          cache_read: 179295
+          cache_write: 14864
+          cost: 0.0535
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:53Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T15:11:00Z
-  basis: "Its own forecast of 2h; 7th in the pull order with an in-progress limit of 3, behind S-0694, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716, S-0689 and S-0699."
+  delivery: 2026-11-11T18:38:00Z
+  basis: "Its own forecast of 2h; 5th in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719, S-0724, S-0716, S-0689 and S-0699."
   by: flai
-  at: 2026-11-11T09:18:38Z
+  at: 2026-11-11T14:23:13Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:44Z

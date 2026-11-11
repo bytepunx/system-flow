@@ -6,7 +6,7 @@ title: flai stream sync run in a story's agent container cannot rebase, since th
 status: ready
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T09:18:38Z
+updated: 2026-11-11T14:23:13Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 8355
           cost: 0.1553
     - kind: orchestrator
-      seconds: 18
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 1
-          output: 21
-          cache_read: 96028
-          cache_write: 13748
-          cost: 0.0306
+          output: 22
+          cache_read: 109934
+          cache_write: 14272
+          cost: 0.0346
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:16Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T12:53:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0694, S-0702, S-0706, S-0710, S-0719, S-0724 and S-0716."
+  delivery: 2026-11-11T17:12:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719, S-0724 and S-0716."
   by: flai
-  at: 2026-11-11T09:18:38Z
+  at: 2026-11-11T14:23:13Z
 finalized:
   by: alex
   at: 2026-11-11T08:53:19Z
