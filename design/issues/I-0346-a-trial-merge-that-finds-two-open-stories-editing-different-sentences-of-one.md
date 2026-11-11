@@ -2,12 +2,12 @@
 id: I-0346
 title: A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-11-11T01:43:39Z
 last_reported: 2026-11-11T01:43:39Z
-updated: 2026-11-11T02:29:04Z
+updated: 2026-11-11T14:53:12Z
 ---
 
 # I-0346 A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
@@ -24,3 +24,4 @@ S-0688 and S-0666 each changed a different sentence of one paragraph in design/s
 ## Remediation
 
 Story S-0719 remediates this issue, created from it at 2026-11-11T02:29:04Z.
+Closed 2026-11-11T14:53:12Z: S-0719: the section merge now merges by sentences the prose lines both sides change (ADR-0287, mergeLines in flai/internal/storygit/mdmerge.go), so a paragraph two stories change in different sentences no longer stops flai stream sync, task done's sync, flai accept, or the merge queue's batch, and the second story is not sent back; both changing one sentence still stops. testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf and testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged reproduce I-0346 in real git and fail without the fix. The trial merge still reports the pair, as ADR-0276 leaves it.
