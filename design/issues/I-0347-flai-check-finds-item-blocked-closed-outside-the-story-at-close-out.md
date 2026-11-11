@@ -3,10 +3,10 @@ id: I-0347
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
 class: efficiency
 status: open
-count: 9
+count: 10
 first_reported: 2026-11-11T07:11:49Z
-last_reported: 2026-11-11T14:17:48Z
-updated: 2026-11-11T14:17:48Z
+last_reported: 2026-11-11T14:32:28Z
+updated: 2026-11-11T14:32:28Z
 ---
 
 # I-0347 flai check finds `item.blocked-closed` outside the story at close-out
@@ -58,6 +58,11 @@ flai check found outside the story:
 
 ### 2026-11-11T14:17:48Z
 Story: S-0710.
+flai check found outside the story:
+`wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md`: done item still has an open blocked interval
+
+### 2026-11-11T14:32:28Z
+Story: S-0694.
 flai check found outside the story:
 `wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md`: done item still has an open blocked interval
 
