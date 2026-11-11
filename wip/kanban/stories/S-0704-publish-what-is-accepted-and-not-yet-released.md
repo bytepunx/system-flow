@@ -3,14 +3,17 @@ id: S-0704
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:56:47Z
-updated: 2026-11-10T08:56:57Z
+updated: 2026-11-11T01:41:18Z
 transitions:
   - to: ready
     at: 2026-11-10T08:56:57Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:41:18Z
+    by: agent-S-0704
 tags: []
 touches: [wip/kanban/stories/S-0704-publish-what-is-accepted-and-not-yet-released.md]
 agent:

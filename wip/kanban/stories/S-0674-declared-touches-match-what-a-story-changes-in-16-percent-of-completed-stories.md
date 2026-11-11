@@ -3,14 +3,17 @@ id: S-0674
 type: story
 nature: improvement
 title: Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:52Z
-updated: 2026-11-11T01:41:10Z
+updated: 2026-11-11T01:41:18Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:34Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T01:41:18Z
+    by: agent-S-0674
 tags: [flai]
 topics: [metrics, claims]
 touches: [design/adrs, flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, design/system/metrics.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, docs/users/flai.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md]

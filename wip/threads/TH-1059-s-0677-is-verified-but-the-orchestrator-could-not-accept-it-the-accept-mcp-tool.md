@@ -4,10 +4,10 @@ title: "S-0677 is verified, but the orchestrator could not accept it: the accept
 anchor:
   path: wip/kanban/stories/S-0677-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md
   item: S-0677
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T20:16:28Z
-updated: 2026-11-10T20:16:28Z
+updated: 2026-11-11T01:41:41Z
 ---
 
 # TH-1059 S-0677 is verified, but the orchestrator could not accept it: the accept MCP tool is not in its session
@@ -26,3 +26,6 @@ What I found:
 - Every changed file is under the story's touches.
 
 The blocker: this orchestrator session has no MCP tool `accept`. The call failed with `No such tool available: mcp__flai__accept`. The installed flai is 1.86.12. The convention forbids running `flai accept` in the orchestrator's shell. So the story stays in review, and I ran no dry run.
+
+### 2026-11-11T01:41:41Z alex
+Resolved: S-0677 was accepted

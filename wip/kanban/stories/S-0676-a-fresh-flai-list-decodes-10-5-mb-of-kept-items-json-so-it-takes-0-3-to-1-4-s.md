@@ -3,14 +3,17 @@ id: S-0676
 type: story
 nature: improvement
 title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-11T01:40:45Z
+updated: 2026-11-11T01:41:18Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:41Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T01:41:18Z
+    by: agent-S-0676
 tags: [flai, performance]
 topics: [back-end, cli]
 touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/kept_bench_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, design/system/server-performance.md, docs/operators/runbooks/backup.md, design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md, design/issues/summary.md]

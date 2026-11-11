@@ -3,10 +3,10 @@ id: S-0677
 type: story
 nature: improvement
 title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:54Z
-updated: 2026-11-10T20:15:04Z
+updated: 2026-11-11T01:41:40Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:48Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T20:15:04Z
     by: system-flow
+  - to: done
+    at: 2026-11-11T01:41:40Z
+    by: alex
 tags: [flai, performance, check]
 topics: [cli, server-side]
 touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go, flai/internal/check/check_records.go, flai/internal/check/digest_test.go, flai/internal/check/check_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/kept.go, flai/internal/digest/kept_test.go, flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/operators/runbooks/backup.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md, flai/cmd/promote_test.go]
