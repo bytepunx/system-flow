@@ -45,6 +45,7 @@ type agentLab struct {
 	repo    *workitem.Repo
 	epic    *workitem.Item
 	l       *launcher
+	others  []*launcher // the launchers made after l, as by a restart; settle waits for them too
 	cfg     AgentConfig
 	mu      sync.Mutex
 	journal []hostapi.Entry
@@ -145,28 +146,71 @@ func newAgentLab(t *testing.T) *agentLab {
 // startedPID finds the process ID in a journal entry for a started agent.
 var startedPID = regexp.MustCompile(`\(pid (\d+)\)`)
 
+// launcher is another flai serve on the lab's project, as after a restart.
+// The lab waits for its agents too before its folders go: a launcher records
+// an agent's end under the root after the stub has exited (I-0343).
+func (lab *agentLab) launcher() *launcher {
+	l := newLauncher(lab.o, lab.l.entry)
+	lab.others = append(lab.others, l)
+	return l
+}
+
 // settle ends every stub still held and waits, for a few seconds at most,
-// until each stub the journal says was started has marked its exit and the
-// launcher has recorded as ended each agent it waits for.
+// until each stub the journal says was started has marked its exit and every
+// launcher of the lab has recorded as ended each agent it waits for. Past
+// the deadline it logs what it still waited for, so that a cleanup that then
+// fails names it.
 func (lab *agentLab) settle() {
 	_ = os.Remove(filepath.Join(lab.outDir, "hold"))
 	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		lab.l.mu.Lock()
-		waiting := len(lab.l.waiting)
-		lab.l.mu.Unlock()
-		ended := waiting == 0
+	for {
+		var waited, running []string
+		for i, l := range append([]*launcher{lab.l}, lab.others...) {
+			l.mu.Lock()
+			for pid := range l.waiting {
+				waited = append(waited, fmt.Sprintf("launcher %d pid %d", i, pid))
+			}
+			l.mu.Unlock()
+		}
 		for _, e := range lab.entries() {
 			if m := startedPID.FindStringSubmatch(e.Detail); m != nil {
 				if _, err := os.Stat(filepath.Join(lab.outDir, "ended-"+m[1])); err != nil {
-					ended = false
+					running = append(running, "pid "+m[1])
 				}
 			}
 		}
-		if ended {
+		if len(waited) == 0 && len(running) == 0 {
+			return
+		}
+		if !time.Now().Before(deadline) {
+			lab.t.Logf("settle gave up waiting: launchers still wait for %v; stubs not ended: %v", waited, running)
 			return
 		}
 		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// I-0343: the lab's cleanup waits for every launcher the lab made, not only
+// its first, so that a second launcher still recording an agent's end does
+// not write into a folder as testing removes it.
+func TestTheLabSettlesEveryLauncherItMade(t *testing.T) {
+	lab := newAgentLab(t)
+	fresh := lab.launcher()
+	// an agent fresh waits for, whose end it records in 200 ms
+	fresh.mu.Lock()
+	fresh.waiting[-1] = true
+	fresh.mu.Unlock()
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		fresh.mu.Lock()
+		delete(fresh.waiting, -1)
+		fresh.mu.Unlock()
+	}()
+	lab.settle()
+	fresh.mu.Lock()
+	defer fresh.mu.Unlock()
+	if len(fresh.waiting) != 0 {
+		t.Errorf("settle returned while the second launcher still waited for %v", fresh.waiting)
 	}
 }
 
@@ -670,7 +714,7 @@ func TestARestartStartsWhatIsReadyAndNothingTwice(t *testing.T) {
 	// missed: it entered ready while no flai serve ran
 	missed := lab.ready("Missed")
 
-	fresh := newLauncher(lab.o, lab.l.entry)
+	fresh := lab.launcher()
 	fresh.look(ctx, false)
 	fresh.look(ctx, false)
 	waitFor(t, "the missed story's agent runs", func() bool { return lab.run(missed).live() })
