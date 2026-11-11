@@ -6,7 +6,7 @@ title: "The integration and smoke tiers' when names template/**, but their paths
 status: ready
 owner: alex
 created: 2026-11-10T08:54:31Z
-updated: 2026-11-11T06:15:20Z
+updated: 2026-11-11T07:23:13Z
 transitions:
   - to: ready
     at: 2026-11-11T02:30:59Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:19Z
 forecast:
   duration: 30m
-  delivery: 2026-11-11T06:52:00Z
-  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 3, behind S-0686, S-0691, S-0693 and S-0722."
+  delivery: 2026-11-11T08:00:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 3, behind S-0686, S-0691 and S-0693."
   by: flai
-  at: 2026-11-11T06:15:20Z
+  at: 2026-11-11T07:23:13Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:45Z
