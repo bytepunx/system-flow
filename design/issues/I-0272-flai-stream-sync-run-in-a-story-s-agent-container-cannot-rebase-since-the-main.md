@@ -2,12 +2,12 @@
 id: I-0272
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
 class: defect
-status: open
+status: closed
 count: 2
 cost: 6m
 first_reported: 2026-11-07T04:41:52Z
 last_reported: 2026-11-07T06:52:30Z
-updated: 2026-11-10T08:49:00Z
+updated: 2026-11-11T16:04:17Z
 ---
 
 # I-0272 flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
@@ -28,3 +28,4 @@ S-0556's agent ran flai stream sync S-0556 through Bash in its container with ma
 ## Remediation
 
 Story S-0689 remediates this issue, created from it at 2026-11-10T08:49:00Z.
+Closed 2026-11-11T16:04:17Z: S-0689 fixed it. In a story's agent container, flai stream sync and the shell's flai task done now refuse before any git call, naming the MCP tools task_done and verify, which sync on the host (T-3026). The container harness's start prompt closes tasks with task_done, the story with verify, and moves items with item_move (T-3027). Wherever a sync runs, a rebase git stops with no conflict says what git said and offers no abort that cannot put the branch back, naming git symbolic-ref after it when the ref cannot be updated, and a trial merge that cannot run is reported as trial_merge_failed, never as clean (T-3030).
