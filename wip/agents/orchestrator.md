@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2128.1907
-accrued_seconds: 1551120
-tasks_completed: 3077
-last_run: 2026-11-11T23:24:21Z
+accrued_cost: 2128.2861
+accrued_seconds: 1551142
+tasks_completed: 3078
+last_run: 2026-11-11T23:26:29Z
 ---
 
 # Orchestrator activity
@@ -21571,6 +21571,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1734 USD, estimated
+
+### 2026-11-11T23:26:29Z
+
+- Summary: S-0727 (publish formula instance) in review: last verify passed at bc89a4cd, not the branch head b4984d8e, so asked flai serve for its close-out; job S-0727-20261111T232622Z started, story left in review until its verdict is read
+- Items: S-0727
+- Seconds: 22
+- Cost: 0.0954 USD, estimated
 
 ## Refusals
 
