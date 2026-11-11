@@ -143,8 +143,8 @@ REQUEST="$(printf '{"Story":"%s","Root":"%s","Project":"%s","Name":"%s","Session
 FLAI_MCP_URL="$URL" FLAI_MCP_TOKEN="$TOKEN" FLAI_MCP_HOST="$HOST_HEADER"
 export FLAI_MCP_URL FLAI_MCP_TOKEN FLAI_MCP_HOST
 # Docker makes the main checkout's own folder as root, as its mounts' parent, so git there, as
-# flai verify runs it to find the main branch, is told by command-line configuration that the
-# folder is safe (ADR-0253).
+# flai verify runs it to find the main branch and go build to stamp a build of the worktree, is told
+# by command-line configuration that the folder is safe (ADR-0253, I-0255).
 # NET_ARGS splits on spaces by design: it holds no path. The registration's mount comes after the
 # read-only .git's, the shorter destination first, so that Docker nests it over its parent.
 run() {

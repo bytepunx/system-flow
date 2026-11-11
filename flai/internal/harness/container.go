@@ -217,7 +217,9 @@ func (container) Start(r Request, host Host) (Start, error) {
 // GIT_CONFIG_KEY_0, and GIT_CONFIG_VALUE_0, which git honours for it. Docker
 // makes the main checkout's own folder as root, as the parent of its mounts,
 // so git refuses to run there, as flai verify does to find the main branch,
-// for dubious ownership (ADR-0253). None when ms names no main checkout.
+// for dubious ownership (ADR-0253). go build's VCS stamping runs git there
+// too, since Go passes over a worktree's .git file (I-0255). None when ms
+// names no main checkout.
 func safeMain(ms []storygit.Mount) []string {
 	for _, m := range ms {
 		if filepath.Base(m.Path) == "system-flow.yaml" {
