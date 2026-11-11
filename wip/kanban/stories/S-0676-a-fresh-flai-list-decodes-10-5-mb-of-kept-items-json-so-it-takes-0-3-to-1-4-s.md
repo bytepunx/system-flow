@@ -3,10 +3,10 @@ id: S-0676
 type: story
 nature: improvement
 title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-11T01:41:18Z
+updated: 2026-11-11T02:26:42Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:41Z
@@ -14,18 +14,33 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:41:18Z
     by: agent-S-0676
+  - to: review
+    at: 2026-11-11T02:26:42Z
+    by: agent-S-0676
 tags: [flai, performance]
 topics: [back-end, cli]
-touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/kept_bench_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, design/system/server-performance.md, docs/operators/runbooks/backup.md, design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md, design/issues/summary.md]
+touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/kept_bench_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, design/system/server-performance.md, docs/operators/runbooks/backup.md, design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md, design/issues/summary.md, design/system/flai-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2472
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 218
+      output: 1328
+      cache_read: 28761120
+      cache_write: 742310
+      cost: 10.8831
   strategic:
     - kind: orchestrator
       seconds: 16
@@ -62,8 +77,8 @@ finalized:
 This story remediates [I-0310](../../../design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md), "A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0310 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0310 is closed with `flai issue close I-0310 --reason` saying what fixed it
+- [x] The cause I-0310 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0310 is closed with `flai issue close I-0310 --reason` saying what fixed it
 
 ## Tasks
 - T-2995 Measure where a fresh Repo.List(true) with kept items files spends its time, and choose the remedy

@@ -3,15 +3,36 @@ id: T-2969
 type: task
 nature: remediation
 title: Give repo.test.ts's whole-monorepo describe a 30 s timeout, as search.test.ts's monorepo describe has
-status: backlog
+status: done
 parent: S-0695
 owner: alex
 created: 2026-11-10T10:28:26Z
-updated: 2026-11-10T10:28:26Z
-transitions: []
+updated: 2026-11-11T01:53:16Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:53:11Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:53:12Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T01:53:16Z
+    by: agent-S-0695
 stream: S-0695
 tags: [flaiover, testing]
 touches: [flaiover/src/lib/server/repo.test.ts]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 376
+      cache_read: 167227
+      cache_write: 6328
+      cost: 0.0916
 ---
 # T-2969 Give repo.test.ts's whole-monorepo describe a 30 s timeout, as search.test.ts's monorepo describe has
 

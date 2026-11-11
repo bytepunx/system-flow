@@ -3,10 +3,10 @@ id: S-0704
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:56:47Z
-updated: 2026-11-11T01:43:34Z
+updated: 2026-11-11T01:44:01Z
 transitions:
   - to: ready
     at: 2026-11-10T08:56:57Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:41:18Z
     by: agent-S-0704
+  - to: review
+    at: 2026-11-11T01:44:01Z
+    by: system-flow
 tags: []
 touches: [wip/kanban/stories/S-0704-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,19 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 125
-  estimated: true
-  priced_by: estimate
+  seconds: 175
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 20
+      ceremony: 1
+      work: 32
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 358
-      cache_read: 2633304
-      cache_write: 163074
-      cost: 1.0309
+      input: 72
+      output: 10331
+      cache_read: 5195203
+      cache_write: 175755
+      cost: 2.652
   strategic:
     - kind: orchestrator
       seconds: 231

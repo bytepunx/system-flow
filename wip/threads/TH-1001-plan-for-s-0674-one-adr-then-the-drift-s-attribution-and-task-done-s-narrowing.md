@@ -4,10 +4,10 @@ title: "Plan for S-0674: one ADR, then the drift's attribution and task done's n
 anchor:
   path: wip/kanban/stories/S-0674-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md
   item: S-0674
-status: open
-participants: [planner-S-0674, orchestrator]
+status: resolved
+participants: [planner-S-0674, orchestrator, alex]
 created: 2026-11-10T08:51:40Z
-updated: 2026-11-10T09:04:39Z
+updated: 2026-11-11T02:27:05Z
 ---
 
 # TH-1001 Plan for S-0674: one ADR, then the drift's attribution and task done's narrowing side by side, then measure and close I-0286
@@ -71,3 +71,6 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-11T02:27:05Z alex
+Resolved: S-0674 was accepted

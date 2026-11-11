@@ -3,16 +3,37 @@ id: T-3040
 type: task
 nature: improvement
 title: Close I-0292 with the reason that the analysis schedule now starts analysis-cadence
-status: backlog
+status: done
 parent: S-0692
 owner: alex
 created: 2026-11-10T10:34:10Z
-updated: 2026-11-10T10:34:10Z
-transitions: []
+updated: 2026-11-11T02:26:23Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:26:14Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T02:26:14Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T02:26:23Z
+    by: agent-S-0692
 stream: S-0692
 tags: [issues]
 touches: [design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md, design/issues/summary.md]
 after: [T-3034, T-3037]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 633039
+      cache_write: 846
+      cost: 0.3212
 ---
 # T-3040 Close I-0292 with the reason that the analysis schedule now starts analysis-cadence
 

@@ -3,19 +3,37 @@ id: T-2941
 type: task
 nature: remediation
 title: Measure exact_share again and close I-0286 with what fixed it
-status: ready
+status: done
 parent: S-0674
 owner: alex
 created: 2026-11-10T08:50:19Z
-updated: 2026-11-11T01:43:21Z
+updated: 2026-11-11T02:05:57Z
 transitions:
   - to: ready
     at: 2026-11-11T01:43:21Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-11T02:04:57Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T02:05:57Z
+    by: agent-S-0674
 stream: S-0674
 tags: [flai, issues]
 touches: [design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md]
 after: [T-2939, T-2940]
+usage:
+  source: log
+  seconds: 60
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 3394
+      cache_read: 1708209
+      cache_write: 39540
+      cost: 0.6631
 ---
 # T-2941 Measure exact_share again and close I-0286 with what fixed it
 

@@ -3,10 +3,10 @@ id: S-0674
 type: story
 nature: improvement
 title: Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:52Z
-updated: 2026-11-11T01:41:18Z
+updated: 2026-11-11T02:27:05Z
 transitions:
   - to: ready
     at: 2026-11-10T08:50:34Z
@@ -14,18 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:41:18Z
     by: agent-S-0674
+  - to: review
+    at: 2026-11-11T02:10:53Z
+    by: agent-S-0674
+  - to: done
+    at: 2026-11-11T02:27:05Z
+    by: alex
 tags: [flai]
 topics: [metrics, claims]
-touches: [design/adrs, flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, design/system/metrics.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, docs/users/flai.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md]
+touches: [design/adrs, flai/internal/storygit/committed.go, flai/internal/storygit/committed_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, design/system/metrics.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, docs/users/flai.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md, design/issues/summary.md, design/conventions/git.md, design/system/workflow.md, docs/users/flai-reference.md, flai/cmd/task_done.go, template/root/design/conventions/git.md, design/adrs/0284-the-touches-drift-leaves-out-the-folders-flai-writes-wip-and-the-design-folder.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1795
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 52
+  models:
+    - model: claude-opus-5-5
+      input: 226
+      output: 63601
+      cache_read: 32009627
+      cache_write: 740924
+      cost: 12.4256
   strategic:
     - kind: planner
       seconds: 67
@@ -38,15 +55,21 @@ usage:
           cache_write: 105255
           cost: 1.9583
     - kind: orchestrator
-      seconds: 58
+      seconds: 112
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 75
-          cache_read: 289596
-          cache_write: 14309
-          cost: 0.0827
+          input: 14
+          output: 132
+          cache_read: 621420
+          cache_write: 94131
+          cost: 0.1964
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 60
+          cache_read: 41904
+          cache_write: 29839
+          cost: 0.0544
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -88,8 +111,8 @@ finalized:
 This story remediates [I-0286](../../../design/issues/I-0286-declared-touches-match-what-a-story-changes-in-16-percent-of-completed-stories.md), "Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0286 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0286 is closed with `flai issue close I-0286 --reason` saying what fixed it
+- [x] The cause I-0286 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0286 is closed with `flai issue close I-0286 --reason` saying what fixed it
 
 ## Tasks
 - T-2936 ADR: the touches drift leaves out the folders flai writes, and flai task done narrows a closing task's unchanged touches

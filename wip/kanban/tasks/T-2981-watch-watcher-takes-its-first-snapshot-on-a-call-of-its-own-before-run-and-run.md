@@ -3,15 +3,36 @@ id: T-2981
 type: task
 nature: remediation
 title: watch.Watcher takes its first snapshot on a call of its own before Run, and Run compares its first tick with it
-status: backlog
+status: done
 parent: S-0690
 owner: alex
 created: 2026-11-10T10:29:24Z
-updated: 2026-11-10T10:29:24Z
-transitions: []
+updated: 2026-11-11T02:16:58Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:12:25Z
+    by: agent-S-0690
+  - to: in-progress
+    at: 2026-11-11T02:12:25Z
+    by: agent-S-0690
+  - to: done
+    at: 2026-11-11T02:16:58Z
+    by: agent-S-0690
 stream: S-0690
 tags: [flai, watch]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go]
+usage:
+  source: log
+  seconds: 272
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 8
+      cache_read: 195824
+      cache_write: 1287
+      cost: 0.0727
 ---
 # T-2981 watch.Watcher takes its first snapshot on a call of its own before Run, and Run compares its first tick with it
 

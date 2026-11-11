@@ -2,9 +2,9 @@
 id: D-0451
 title: "A go test run by hand on flai/internal/serve without -skip '^TestGateway' runs the paid gateway checks, which flai test's go-test tier always skips"
 kind: decision
-sources: [S-0549, S-0685, I-0334]
+sources: [S-0549, S-0685, I-0334, S-0708]
 topics: [testing, go, flai]
-paths: [flai/internal/serve/gateway_test.go, system-flow.yaml, design/conventions/delegation.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md]
+paths: [flai/internal/serve/gateway_test.go, system-flow.yaml, design/conventions/delegation.md, design/conventions/code-quality.md, design/issues/I-0334-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md]
 date: 2026-11-02
 status: active
 absorbed_by: ""
@@ -20,6 +20,6 @@ The gateway checks are `TestGateway*` in `flai/internal/serve/gateway_test.go`. 
 
 Source: S-0549.
 
-The same pattern works the other way. A test in `flai/internal/serve` named `TestGateway…` runs in no tier: go-test and integration skip `^TestGateway`, and the `gateway` tier runs only the two paid checks by name. So a no-network test of the gateway code is named outside that pattern. S-0685 (T-2893) named its 402 test `TestCreditRefusalIsFoundInAGatewayRun` for that reason: "a `TestGateway…` name would run in no tier" (`wip/archive/agents/S-0685.md`, § Decisions). Two older no-network tests, `TestGatewayStreamIsJudged` and `TestGatewayMissingNamesWhatIsMissing`, still run in no tier; I-0334 records them.
+The other side of the pattern, that the `TestGateway` prefix names only a paid check `scripts/gateway-smoke.sh` runs by name and a no-network gateway test takes another name, is now stated in `design/conventions/code-quality.md` § Project additions. S-0708 (T-2961, T-2962) renamed the two no-network tests I-0334 recorded to `TestStreamOfAGatewayRunIsJudged` and `TestMissingGatewayInputsAreNamed`, and added `TestOnlyThePaidChecksAreNamedTestGateway`, which fails on a `TestGateway*` function the script does not run; I-0334 is closed. S-0685's `TestCreditRefusalIsFoundInAGatewayRun` was the first test named that way (`wip/archive/agents/S-0685.md`, § Decisions; `wip/archive/agents/S-0708.md`, § Decisions).
 
-Sources: S-0549; S-0685; I-0334.
+Sources: S-0549; S-0685; I-0334; S-0708.

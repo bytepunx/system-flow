@@ -3,14 +3,21 @@ id: S-0692
 type: story
 nature: improvement
 title: No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-11T01:46:11Z
+updated: 2026-11-11T02:26:31Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:04Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T01:58:15Z
+    by: agent-S-0692
+blocked:
+  - from: 2026-11-11T02:22:45Z
+    until: 2026-11-11T02:25:29Z
+    reason: awaiting the operator on TH-1065
 tags: [flai, analyzer, manifest]
 topics: [analysis, cli]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check_roles.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/strategic-agents.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, template/CHANGELOG.md, system-flow.yaml, design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md, design/issues/summary.md]
@@ -20,9 +27,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1210
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 180
+      output: 34799
+      cache_read: 20982671
+      cache_write: 991801
+      cost: 11.1523
   strategic:
     - kind: planner
       seconds: 24
@@ -35,15 +54,15 @@ usage:
           cache_write: 17184
           cost: 0.2377
     - kind: orchestrator
-      seconds: 87
+      seconds: 231
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 133
-          cache_read: 1403701
-          cache_write: 80096
-          cost: 0.4063
+          input: 51
+          output: 327
+          cache_read: 2158466
+          cache_write: 192476
+          cost: 0.646
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -85,8 +104,8 @@ finalized:
 This story remediates [I-0292](../../../design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md), "No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0292 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0292 is closed with `flai issue close I-0292 --reason` saying what fixed it
+- [x] The cause I-0292 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0292 is closed with `flai issue close I-0292 --reason` saying what fixed it
 
 ## Tasks
 - T-3031 flai manifest set writes analysis.formula and refuses a formula no file defines or one with an input that has no default

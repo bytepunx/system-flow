@@ -3,14 +3,20 @@ id: S-0695
 type: story
 nature: remediation
 title: repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:54:28Z
-updated: 2026-11-11T01:46:11Z
+updated: 2026-11-11T01:58:10Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:52Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T01:50:19Z
+    by: agent-S-0695
+  - to: review
+    at: 2026-11-11T01:58:10Z
+    by: agent-S-0695
 tags: [flaiover, testing]
 topics: [testing]
 touches: [flaiover/src/lib/server/repo.test.ts, design/issues/I-0269-repo-test-ts-s-whole-monorepo-read-times-out-at-vitest-s-5s-default-under-load.md, design/issues/summary.md]
@@ -20,20 +26,37 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 479
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 10222
+      cache_read: 4542885
+      cache_write: 171911
+      cost: 2.4886
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 72
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 22
+          output: 152
+          cache_read: 1352868
+          cache_write: 96425
+          cost: 0.3983
+        - model: claude-sonnet-5-5
           input: 4
-          output: 28
-          cache_read: 685977
-          cache_write: 2228
-          cost: 0.1881
+          output: 48
+          cache_read: 12602
+          cache_write: 31468
+          cost: 0.0334
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -59,8 +82,8 @@ finalized:
 This story remediates [I-0269](../../../design/issues/I-0269-repo-test-ts-s-whole-monorepo-read-times-out-at-vitest-s-5s-default-under-load.md), "repo.test.ts's whole-monorepo read times out at vitest's 5s default under load and stops a close-out that does not touch it". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0269 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0269 is closed with `flai issue close I-0269 --reason` saying what fixed it
+- [x] The cause I-0269 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0269 is closed with `flai issue close I-0269 --reason` saying what fixed it
 
 ## Tasks
 - T-2969 Give repo.test.ts's whole-monorepo describe a 30 s timeout, as search.test.ts's monorepo describe has

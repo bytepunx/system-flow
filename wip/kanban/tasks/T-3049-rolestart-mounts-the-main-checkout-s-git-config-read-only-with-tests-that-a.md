@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 4374
-      cache_read: 1734896
-      cache_write: 51085
-      cost: 0.8214
+      input: 13
+      output: 2276
+      cache_read: 1739558
+      cache_write: 42215
+      cost: 0.722
 ---
 # T-3049 roleStart mounts the main checkout's .git/config read-only, with tests that a strategic container's config is not writable
 

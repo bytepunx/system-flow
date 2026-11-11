@@ -23,16 +23,16 @@ tags: []
 after: [T-2953]
 usage:
   source: log
-  seconds: 23
+  seconds: 24
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 67
-      cache_read: 690052
-      cache_write: 5372
-      cost: 0.2564
+      input: 9
+      output: 1338
+      cache_read: 672666
+      cache_write: 22756
+      cost: 0.3434
 ---
 # T-2954 Publish what is accepted and not yet released
 

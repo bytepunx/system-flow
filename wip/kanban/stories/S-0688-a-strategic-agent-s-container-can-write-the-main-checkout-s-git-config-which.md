@@ -3,10 +3,10 @@ id: S-0688
 type: story
 nature: improvement
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-11T01:42:29Z
+updated: 2026-11-11T01:50:13Z
 transitions:
   - to: ready
     at: 2026-11-10T11:00:29Z
@@ -20,8 +20,11 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:42:29Z
     by: flai
+  - to: review
+    at: 2026-11-11T01:50:13Z
+    by: agent-S-0688
 tags: [flai, container, security]
-touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md, flai/internal/serve/container.go, design/system/agent-adapters.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md, flai/internal/serve/container.go, design/system/agent-adapters.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -29,36 +32,39 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1239
+  seconds: 1704
   priced_by: harness
   turns:
     - day: 2026-11-10
       ceremony: 4
       work: 43
+    - day: 2026-11-11
+      ceremony: 3
+      work: 46
   models:
     - model: claude-opus-5-5
-      input: 134
-      output: 32977
-      cache_read: 13079202
-      cache_write: 385127
-      cost: 6.1923
+      input: 236
+      output: 40718
+      cache_read: 31121341
+      cache_write: 755247
+      cost: 12.9169
   strategic:
     - kind: orchestrator
-      seconds: 63
+      seconds: 125
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 13
-          output: 98
-          cache_read: 857306
-          cache_write: 70882
-          cost: 0.2544
+          input: 27
+          output: 180
+          cache_read: 1378745
+          cache_write: 162221
+          cost: 0.4235
         - model: claude-sonnet-5-5
-          input: 6
-          output: 49
-          cache_read: 41962
-          cache_write: 39950
-          cost: 0.0616
+          input: 10
+          output: 101
+          cache_read: 54536
+          cache_write: 69692
+          cost: 0.0936
     - kind: analyzer
       seconds: 42
       estimated: true

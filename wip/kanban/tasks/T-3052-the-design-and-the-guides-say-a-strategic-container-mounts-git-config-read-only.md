@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 6471
-      cache_read: 2566542
-      cache_write: 75574
-      cost: 1.2151
+      input: 20
+      output: 3367
+      cache_read: 2573439
+      cache_write: 62452
+      cost: 1.0681
 ---
 # T-3052 The design and the guides say a strategic container mounts .git/config read-only
 

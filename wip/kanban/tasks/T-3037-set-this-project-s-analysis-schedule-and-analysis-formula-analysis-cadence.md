@@ -3,16 +3,37 @@ id: T-3037
 type: task
 nature: improvement
 title: Set this project's analysis.schedule and analysis.formula analysis-cadence through flai manifest set
-status: backlog
+status: done
 parent: S-0692
 owner: alex
 created: 2026-11-10T10:33:56Z
-updated: 2026-11-10T10:34:07Z
-transitions: []
+updated: 2026-11-11T02:26:05Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:25:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T02:25:47Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T02:26:05Z
+    by: agent-S-0692
 stream: S-0692
 tags: [manifest, analyzer]
 touches: [system-flow.yaml]
 after: [T-3031]
+usage:
+  source: log
+  seconds: 18
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 19
+      cache_read: 914310
+      cache_write: 2514
+      cost: 0.4646
 ---
 # T-3037 Set this project's analysis.schedule and analysis.formula analysis-cadence through flai manifest set
 

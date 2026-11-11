@@ -3,11 +3,11 @@ id: T-2995
 type: task
 nature: research
 title: Measure where a fresh Repo.List(true) with kept items files spends its time, and choose the remedy
-status: in-progress
+status: done
 parent: S-0676
 owner: alex
 created: 2026-11-10T10:30:49Z
-updated: 2026-11-11T01:42:46Z
+updated: 2026-11-11T01:59:26Z
 transitions:
   - to: ready
     at: 2026-11-11T01:42:46Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:42:46Z
     by: system-flow
+  - to: done
+    at: 2026-11-11T01:59:26Z
+    by: agent-S-0676
 stream: S-0676
 tags: [flai, performance]
 touches: [flai/internal/workitem/kept_bench_test.go]
+usage:
+  source: log
+  seconds: 1000
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 460
+      cache_read: 9091447
+      cache_write: 50332
+      cost: 3.3722
 ---
 # T-2995 Measure where a fresh Repo.List(true) with kept items files spends its time, and choose the remedy
 

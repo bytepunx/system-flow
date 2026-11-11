@@ -3,12 +3,18 @@ id: T-2984
 type: task
 nature: remediation
 title: flai serve takes a served project's watcher's first snapshot before its item snapshot and its first looks
-status: backlog
+status: in-progress
 parent: S-0690
 owner: alex
 created: 2026-11-10T10:29:34Z
-updated: 2026-11-10T10:29:46Z
-transitions: []
+updated: 2026-11-11T02:17:20Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:17:19Z
+    by: agent-S-0690
+  - to: in-progress
+    at: 2026-11-11T02:17:20Z
+    by: agent-S-0690
 stream: S-0690
 tags: [flai, serve]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]

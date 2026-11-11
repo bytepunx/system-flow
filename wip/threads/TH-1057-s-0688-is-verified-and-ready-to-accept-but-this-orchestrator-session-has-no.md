@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-11-10T19:51:37Z
-updated: 2026-11-10T19:51:37Z
+updated: 2026-11-11T01:51:52Z
 ---
 
 # TH-1057 S-0688 is verified and ready to accept, but this orchestrator session has no accept tool
@@ -28,3 +28,16 @@ On wip/kanban/stories/S-0688-a-strategic-agent-s-container-can-write-the-main-ch
   - 1: `flai/internal/harness/container.go` mounts `.git/config` read-only in `roleStart`; `flai/internal/serve/container.go` refuses a strategic container when `.git/config` is not a regular file; `flai/internal/harness/container_test.go` and `flai/internal/serve/container_test.go` pin the mount and the refusal. ADR-0281 records it, with `design/system/strategic-agents.md`, `design/system/flai-cli.md`, `design/system/agent-adapters.md`, `docs/operators/index.md`, and `docs/users/flai.md`.
   - 2: `design/issues/I-0257-…-which.md` is closed with its reason, and `design/issues/summary.md` drops its row.
 - All 13 changed files are within the story's touches.
+
+### 2026-11-11T01:51:52Z orchestrator
+**Update:** S-0688 is now at a152018, not 299c652. Accept it yourself at that commit with `flai accept S-0688 --by alex`, or from the board.
+
+**What changed:** your acceptance at 299c652 stopped on rebase conflicts in `design/system/agent-adapters.md` and `docs/operators/index.md`. agent-S-0688 rebased the branch onto 51f0461, and its close-out passed at a152018. That run covered every step, integration and smoke included. Since then main has moved only under `wip/`.
+
+**What the verifier found at a152018:**
+
+- 1: `flai/internal/harness/container.go`, `flai/internal/serve/container.go`, `flai/internal/harness/container_test.go`, `flai/internal/serve/container_test.go`, ADR-0281, `design/adrs/README.md`, `design/system/strategic-agents.md`, `design/system/flai-cli.md`, `design/system/agent-adapters.md`, `docs/operators/index.md`, `docs/users/flai.md`
+- 2: `design/issues/I-0257-…-which.md` is closed with its reason, and `design/issues/summary.md` drops its row.
+- All 14 changed files are within the touches. The two files that conflicted have no conflict markers and keep all of main's text.
+
+**Why I still cannot accept it:** this session again has no MCP tool `accept`, and my rules forbid `flai accept` in my shell. The merge queue is off, so `queue_add` does not apply. This thread is also what keeps S-0688 out of the queue. Resolve it once you have accepted.

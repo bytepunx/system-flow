@@ -3,16 +3,37 @@ id: T-2998
 type: task
 nature: improvement
 title: Restore the kept items files without decoding 10.5 MB of JSON, as T-2995 chose
-status: backlog
+status: done
 parent: S-0676
 owner: alex
 created: 2026-11-10T10:31:01Z
-updated: 2026-11-10T10:31:01Z
-transitions: []
+updated: 2026-11-11T02:17:01Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:59:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:59:44Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T02:17:01Z
+    by: agent-S-0676
 stream: S-0676
 tags: [flai, performance]
-touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go]
+touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/kept_bench_test.go]
 after: [T-2995]
+usage:
+  source: log
+  seconds: 1037
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 310
+      cache_read: 9056200
+      cache_write: 380187
+      cost: 3.4808
 ---
 # T-2998 Restore the kept items files without decoding 10.5 MB of JSON, as T-2995 chose
 

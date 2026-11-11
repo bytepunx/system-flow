@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 4707
-      cache_read: 1866688
-      cache_write: 54966
-      cost: 0.8838
+      input: 14
+      output: 2449
+      cache_read: 1871704
+      cache_write: 45422
+      cost: 0.7768
 ---
 # T-3045 Record in an ADR refining ADR-0247 that a strategic agent's container mounts .git/config read-only
 

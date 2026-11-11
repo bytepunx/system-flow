@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 1654
-      cache_read: 656160
-      cache_write: 19321
-      cost: 0.3107
+      input: 5
+      output: 861
+      cache_read: 657923
+      cache_write: 15966
+      cost: 0.2731
 ---
 # T-3055 Close I-0257 with the read-only .git/config mount as its fix
 

@@ -3,15 +3,36 @@ id: T-3031
 type: task
 nature: improvement
 title: flai manifest set writes analysis.formula and refuses a formula no file defines or one with an input that has no default
-status: backlog
+status: done
 parent: S-0692
 owner: alex
 created: 2026-11-10T10:33:30Z
-updated: 2026-11-10T10:33:30Z
-transitions: []
+updated: 2026-11-11T02:09:02Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:59:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T01:59:01Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T02:09:02Z
+    by: agent-S-0692
 stream: S-0692
 tags: [flai, manifest]
 touches: [flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check_roles.go, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/cmd/serve_actions_test.go]
+usage:
+  source: log
+  seconds: 601
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 15988
+      cache_read: 8955464
+      cache_write: 453919
+      cost: 4.7759
 ---
 # T-3031 flai manifest set writes analysis.formula and refuses a formula no file defines or one with an input that has no default
 

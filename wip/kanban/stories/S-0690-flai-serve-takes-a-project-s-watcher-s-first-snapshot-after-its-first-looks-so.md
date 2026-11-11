@@ -3,14 +3,17 @@ id: S-0690
 type: story
 nature: remediation
 title: flai serve takes a project's watcher's first snapshot after its first looks, so a change made in between waits up to a minute for the next look
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:01Z
-updated: 2026-11-11T01:46:11Z
+updated: 2026-11-11T02:10:58Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:25Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T02:10:58Z
+    by: agent-S-0690
 tags: [flai, serve]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/flai-cli.md, design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, design/issues/summary.md]
 agent:
@@ -19,20 +22,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 361
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 174
+      cache_read: 2060857
+      cache_write: 182243
+      cost: 0.8273
   strategic:
     - kind: orchestrator
-      seconds: 9
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 4
-          cache_read: 120237
-          cache_write: 676
-          cost: 0.0332
+          input: 3
+          output: 14
+          cache_read: 165441
+          cache_write: 5263
+          cost: 0.047
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
