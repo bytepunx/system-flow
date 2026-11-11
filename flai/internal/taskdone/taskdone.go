@@ -143,13 +143,16 @@ type Log struct {
 
 // Touches is what the touches step added to the task's touches and to the
 // story's, the committed paths it left out because the story's branch no
-// longer changes them against the main branch (ADR-0144), and the stories in
-// progress the story's claim grew into.
+// longer changes them against the main branch (ADR-0144), the stories in
+// progress the story's claim grew into, and the files it removed from the
+// task's touches and the story's because the branch does not change them
+// (ADR-0284).
 type Touches struct {
 	Task      []string               `json:"task"`
 	Story     []string               `json:"story"`
 	Unchanged []string               `json:"unchanged"`
 	Overlaps  []itemedit.Overlapping `json:"overlaps"`
+	Narrowed  itemedit.Narrowed      `json:"narrowed"`
 }
 
 // MaxNotes is the most of the check's notes outside the story that a Check
@@ -678,16 +681,36 @@ func (r *run) log() error {
 // flai touches --add records them; the wip folder is flai's and is left out,
 // and so is each path the commit step left for another task (ADR-0128). The
 // committed paths the branch no longer changes are listed in
-// Touches.Unchanged. It never removes a touch.
+// Touches.Unchanged. Then, with a commit or without, it narrows: it removes
+// from the task's touches each file the branch does not change, and from the
+// story's each of those no other open task names (ADR-0284).
 func (r *run) touches() error {
-	t := &Touches{Task: []string{}, Story: []string{}, Unchanged: []string{}, Overlaps: []itemedit.Overlapping{}}
+	t := &Touches{Task: []string{}, Story: []string{}, Unchanged: []string{}, Overlaps: []itemedit.Overlapping{},
+		Narrowed: itemedit.Narrowed{Task: []string{}, Story: []string{}}}
 	r.res.Touches = t
-	if r.res.Commit == nil {
-		return nil
-	}
 	branch, err := r.branchChanges()
 	if err != nil {
 		return err
+	}
+	if err := r.widen(t, branch); err != nil {
+		return err
+	}
+	n, err := itemedit.NarrowStory(itemedit.NarrowOptions{
+		Repo: r.o.Repo, Story: r.story.ID, Task: r.task.ID, Tree: r.wt, Changed: branch, By: r.o.Agent, Now: r.o.Now,
+	})
+	t.Narrowed = n
+	if err != nil {
+		return fmt.Errorf("narrow the touches of %s and %s to what %s changes: %w; run %s again", r.task.ID, r.story.ID, storygit.Branch(r.story.ID), err, r.again())
+	}
+	return nil
+}
+
+// widen is the touches step's widening (ADR-0144): it adds the committed
+// paths among branch to the task's and the story's touches, and lists the
+// others in t.Unchanged. With no commit it adds nothing.
+func (r *run) widen(t *Touches, branch []string) error {
+	if r.res.Commit == nil {
+		return nil
 	}
 	var paths []string
 	for _, p := range r.res.Commit.Paths {
@@ -715,15 +738,16 @@ func (r *run) touches() error {
 }
 
 // branchChanges is the paths the story's branch changes against its merge
-// base with the main branch, both sides of a rename included (ADR-0144).
+// base with the main branch, both sides of a rename included (ADR-0144,
+// ADR-0284).
 func (r *run) branchChanges() ([]string, error) {
 	base, err := storygit.MainBranch(r.o.Runner, mainRoot(r.o.Repo))
 	if err != nil {
-		return nil, fmt.Errorf("read the main branch's name in the main checkout to list what %s changes against it and widen the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), err, r.again())
+		return nil, fmt.Errorf("read the main branch's name in the main checkout to list what %s changes against it and widen and narrow the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), err, r.again())
 	}
 	out, err := r.git("diff", "--name-only", "--no-renames", "-z", base+"...HEAD")
 	if err != nil {
-		return nil, fmt.Errorf("list the paths %s changes against %s in %s to widen the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), base, r.rel(r.wt), err, r.again())
+		return nil, fmt.Errorf("list the paths %s changes against %s in %s to widen and narrow the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), base, r.rel(r.wt), err, r.again())
 	}
 	return nulSeparated(out), nil
 }

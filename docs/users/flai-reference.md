@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 ---
 
@@ -5234,12 +5234,12 @@ Create tasks (flai show prints one, flai move transitions it).
 
 Subcommands:
 
-- [done](#flai-task-done): Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox
+- [done](#flai-task-done): Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen and narrow touches, check, and read the inbox
 - [new](#flai-task-new): Create a task from the item template
 
 #### flai task done
 
-Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox.
+Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen and narrow touches, check, and read the inbox.
 
 ```text
 flai task done <task> [-m "<message>"] [flags]
@@ -5275,7 +5275,11 @@ Close a task in one call (ADR-0107). flai finds the task's story and works in th
    do not cover, are added to each, as flai touches records them
    (ADR-0144). A committed path the branch no longer changes, reverted to
    the main branch's version, is listed as unchanged and not added. A path
-   left is never added, and no touch is removed.
+   left is never added. Then, with a commit or without, each of the task's
+   touches that names a file the branch does not change against the main
+   branch is removed from the task's touches, and from the story's when no
+   other open task names it, and listed as narrowed; a sub-project's name or
+   tag, a folder in the worktree, and a path under wip are kept (ADR-0284).
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note. Every finding is listed,
    but only the first 10 notes; the rest are counted in check.notes_omitted,

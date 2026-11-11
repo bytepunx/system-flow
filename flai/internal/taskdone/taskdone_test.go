@@ -851,6 +851,70 @@ func TestRunWidensTouchesOnlyWithPathsTheBranchStillChanges(t *testing.T) {
 	}
 }
 
+// I-0286, ADR-0284: a task's predicted files that its work never changed
+// leave its touches when it closes, and the story's when no other open task
+// names them; a file another open task names stays on the story, and a
+// folder in the worktree stays on the task.
+func TestRunNarrowsTheTouchesToWhatTheBranchChanges(t *testing.T) {
+	repo, wt := project(t)
+	setTouches(t, repo, "T-003", "src/a.go", "src/never.go", "src/shared.go", "src")
+	setTouches(t, repo, "S-004", "src/never.go", "src/shared.go")
+	second := newTask(t, repo, "Shared", "src/shared.go")
+	write(t, wt, "src/a.go", "package src\n")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Touches == nil {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	if n := res.Touches.Narrowed; strings.Join(n.Task, ",") != "src/never.go,src/shared.go" || strings.Join(n.Story, ",") != "src/never.go" {
+		t.Errorf("narrowed %+v", n)
+	}
+	if got := get(t, repo, "T-003").Touches; strings.Join(got, ",") != "src/a.go,src" {
+		t.Errorf("T-003 touches %v", got)
+	}
+	if got := get(t, repo, "S-004").Touches; strings.Join(got, ",") != "src/shared.go,src/a.go" {
+		t.Errorf("S-004 touches %v", got)
+	}
+	if got := get(t, repo, second).Touches; strings.Join(got, ",") != "src/shared.go" {
+		t.Errorf("%s touches %v", second, got)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"narrowed":{"task":["src/never.go","src/shared.go"],"story":["src/never.go"]}`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// ADR-0284: a task closed with nothing to commit still narrows its touches,
+// and the story's, to what the branch changes.
+func TestRunNarrowsWithNothingToCommit(t *testing.T) {
+	repo, _ := project(t)
+	setTouches(t, repo, "T-003", "src/never.go")
+	setTouches(t, repo, "S-004", "src/never.go", "README.md")
+
+	res, err := Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit != nil || res.Touches == nil {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	if n := res.Touches.Narrowed; strings.Join(n.Task, ",") != "src/never.go" || strings.Join(n.Story, ",") != "src/never.go" {
+		t.Errorf("narrowed %+v", n)
+	}
+	if got := get(t, repo, "T-003").Touches; len(got) != 0 {
+		t.Errorf("T-003 touches %v", got)
+	}
+	if got := get(t, repo, "S-004").Touches; strings.Join(got, ",") != "README.md" {
+		t.Errorf("S-004 touches %v", got)
+	}
+}
+
 // ADR-0128: a changed file no task declares goes with the task closed first,
 // whichever it is, and widens that task's touches.
 func TestRunCommitsAnUndeclaredFileWithTheTaskClosedFirst(t *testing.T) {

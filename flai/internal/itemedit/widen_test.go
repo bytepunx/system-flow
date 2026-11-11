@@ -142,3 +142,66 @@ func TestWidenStoryWidensTheTaskAndTheStoryOutsideWip(t *testing.T) {
 		t.Errorf("nothing to add: %+v %v", again, err)
 	}
 }
+
+// ADR-0284: NarrowStory removes from the closing task's touches each file the
+// branch does not change, keeping a changed file, a folder in the tree, a
+// folder no longer in the tree whose files the branch deleted, a
+// sub-project's name or tag, and a path under wip, and removes the same file
+// from the story's touches only when no other open task names it; a done or
+// cancelled task's touches do not keep it.
+func TestNarrowStoryRemovesThePredictedFilesTheBranchDoesNotChange(t *testing.T) {
+	at := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
+	repo, story := claimRepo(t, at)
+	tree := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tree, "docs/guide"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mine := story("Mine", workitem.InProgress, "docs/a.md", "docs/b.md", "docs/c.md", "design", "src/x.go")
+	task := func(title string, touches ...string) *workitem.Item {
+		t.Helper()
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: title, Parent: mine.ID, Owner: "alex", Touches: touches, Now: at})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return it
+	}
+	closing := task("Closing", "src/x.go", "docs/a.md", "docs/b.md", "docs/c.md", "docs/guide", "gone", "cli", "wip/kanban/x.md")
+	task("Open", "docs/b.md")
+	done := task("Done", "docs/c.md")
+	done.Status = workitem.Done
+	if err := repo.Save(done); err != nil {
+		t.Fatal(err)
+	}
+	later := at.Add(time.Hour)
+
+	n, err := NarrowStory(NarrowOptions{
+		Repo: repo, Story: mine.ID, Task: closing.ID, Tree: tree, By: "claude", Now: func() time.Time { return later },
+		Changed: []string{"src/x.go", "flai/cmd/y.go", "gone/old.md"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"docs/a.md", "docs/b.md", "docs/c.md"}; !reflect.DeepEqual(n.Task, want) {
+		t.Errorf("task narrowed %v, want %v", n.Task, want)
+	}
+	if want := []string{"docs/a.md", "docs/c.md"}; !reflect.DeepEqual(n.Story, want) {
+		t.Errorf("story narrowed %v, want %v", n.Story, want)
+	}
+	if got, _ := repo.Get(closing.ID); !reflect.DeepEqual(got.Touches, []string{"src/x.go", "docs/guide", "gone", "cli", "wip/kanban/x.md"}) || got.Updated != later.Format(workitem.TimeFormat) {
+		t.Errorf("task touches %v, updated %s", got.Touches, got.Updated)
+	}
+	if got, _ := repo.Get(mine.ID); !reflect.DeepEqual(got.Touches, []string{"docs/b.md", "design", "src/x.go"}) {
+		t.Errorf("story touches %v", got.Touches)
+	}
+	if notices := Notices(repo); len(notices) != 2 || notices[0].ID != closing.ID || notices[1].ID != mine.ID {
+		t.Errorf("notices %+v", notices)
+	}
+
+	again, err := NarrowStory(NarrowOptions{Repo: repo, Story: mine.ID, Task: closing.ID, Tree: tree, By: "claude", Changed: []string{"src/x.go", "gone/old.md"}})
+	if err != nil || again.Task == nil || again.Story == nil || len(again.Task)+len(again.Story) != 0 {
+		t.Errorf("nothing to narrow: %+v %v", again, err)
+	}
+	if len(Notices(repo)) != 2 {
+		t.Error("an edit with nothing to narrow was written")
+	}
+}

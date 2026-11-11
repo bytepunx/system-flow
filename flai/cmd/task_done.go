@@ -22,7 +22,7 @@ func newTaskDoneCmd(a *app) *cobra.Command {
 	var message, logEntry string
 	c := &cobra.Command{
 		Use:   "done <task> [-m \"<message>\"]",
-		Short: "Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox",
+		Short: "Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen and narrow touches, check, and read the inbox",
 		Long: `Close a task in one call (ADR-0107). flai finds the task's story and works
 in the story's worktree. The steps run in this order, and the first that
 fails stops the run; the steps after it are not done.
@@ -54,7 +54,11 @@ fails stops the run; the steps after it are not done.
    do not cover, are added to each, as flai touches records them
    (ADR-0144). A committed path the branch no longer changes, reverted to
    the main branch's version, is listed as unchanged and not added. A path
-   left is never added, and no touch is removed.
+   left is never added. Then, with a commit or without, each of the task's
+   touches that names a file the branch does not change against the main
+   branch is removed from the task's touches, and from the story's when no
+   other open task names it, and listed as narrowed; a sub-project's name or
+   tag, a folder in the worktree, and a path under wip are kept (ADR-0284).
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note. Every finding is listed,
    but only the first 10 notes; the rest are counted in check.notes_omitted,
@@ -190,8 +194,8 @@ func (a *app) printTaskDone(res taskdone.Result) {
 		fmt.Fprintf(w, "log: %s at %s: %s\n", l.Stream, l.At, l.Entry)
 	}
 	if t := res.Touches; t != nil {
-		if len(t.Task)+len(t.Story) == 0 {
-			fmt.Fprintln(w, "touches: nothing to add")
+		if len(t.Task)+len(t.Story)+len(t.Narrowed.Task) == 0 {
+			fmt.Fprintln(w, "touches: nothing to add or remove")
 		}
 		if len(t.Task) > 0 {
 			fmt.Fprintf(w, "touches: added to %s: %s\n", res.Task, strings.Join(t.Task, ", "))
@@ -205,6 +209,12 @@ func (a *app) printTaskDone(res taskdone.Result) {
 				base = res.Sync.Base
 			}
 			fmt.Fprintf(w, "touches: not added, unchanged against %s: %s\n", base, strings.Join(t.Unchanged, ", "))
+		}
+		if len(t.Narrowed.Task) > 0 {
+			fmt.Fprintf(w, "touches: removed from %s, not changed by the branch: %s\n", res.Task, strings.Join(t.Narrowed.Task, ", "))
+		}
+		if len(t.Narrowed.Story) > 0 {
+			fmt.Fprintf(w, "touches: removed from %s, no other open task names them: %s\n", res.Story, strings.Join(t.Narrowed.Story, ", "))
 		}
 		printOverlapping(w, t.Overlaps)
 	}

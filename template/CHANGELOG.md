@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0674 `git.md` and `work-management.md` say `flai task done` narrows the touches too: it removes from the closing task's touches each file the branch does not change, and from the story's when no other open task names it (patch, ADR-0284, I-0286).
+
 ## 1.1.33 - 2026-11-10
 
 - S-0671 scripts/close-out.sh takes no --fresh, so at a commit the verify record holds a pass for it runs no tier, and a second close-out in another place cannot check the same commit again (patch).
