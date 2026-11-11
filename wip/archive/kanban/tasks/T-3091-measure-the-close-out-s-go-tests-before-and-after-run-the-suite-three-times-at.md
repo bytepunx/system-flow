@@ -3,16 +3,37 @@ id: T-3091
 type: task
 nature: improvement
 title: Measure the close-out's Go tests before and after, run the suite three times at one core, and set the timeouts again from the figures
-status: backlog
+status: done
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:06:49Z
-updated: 2026-11-11T06:06:49Z
-transitions: []
+updated: 2026-11-11T06:57:41Z
+transitions:
+  - to: ready
+    at: 2026-11-11T06:27:15Z
+    by: agent-S-0722
+  - to: in-progress
+    at: 2026-11-11T06:27:15Z
+    by: agent-S-0722
+  - to: done
+    at: 2026-11-11T06:57:41Z
+    by: agent-S-0722
 stream: S-0722
 tags: []
-touches: [scripts/integration.sh, system-flow.yaml]
+touches: [scripts/integration.sh, system-flow.yaml, flai/internal/verify/select_test.go]
 after: [T-3090]
+usage:
+  source: log
+  seconds: 1826
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 13383
+      cache_read: 3795297
+      cache_write: 77712
+      cost: 1.5796
 ---
 # T-3091 Measure the close-out's Go tests before and after, run the suite three times at one core, and set the timeouts again from the figures
 

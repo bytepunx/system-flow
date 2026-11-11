@@ -3,12 +3,15 @@ id: T-3089
 type: task
 nature: improvement
 title: Say where the tiers are described that a close-out's Go tests run on one core without -race, and when to run flai test race
-status: backlog
+status: cancelled
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:05:46Z
-updated: 2026-11-11T06:05:46Z
-transitions: []
+updated: 2026-11-11T06:27:08Z
+transitions:
+  - to: cancelled
+    at: 2026-11-11T06:27:08Z
+    by: agent-S-0722
 stream: S-0722
 tags: [tests, close-out, docs]
 touches: [design/system/workflow.md, design/system/project-manifest.md, design/system/devex.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, scripts/README.md, docs/operators/index.md]
@@ -39,3 +42,4 @@ Waits for the second task: it describes the `race` tier that task adds. It runs 
 - `flai test` on the changed files passes and `flai check --strict` is clean.
 
 ## Notes
+- 2026-11-11T06:27:08Z: moved to cancelled: duplicates agent-S-0722's set T-3090 to T-3092, written at the same time (TH-1069); kept the story's agent's set and folded in this one's points

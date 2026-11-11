@@ -3,12 +3,15 @@ id: T-3086
 type: task
 nature: improvement
 title: Run the go-test tier, integration.sh, and test.sh without -race, one package at a time, on one core
-status: backlog
+status: cancelled
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:05:17Z
-updated: 2026-11-11T06:05:17Z
-transitions: []
+updated: 2026-11-11T06:27:07Z
+transitions:
+  - to: cancelled
+    at: 2026-11-11T06:27:07Z
+    by: agent-S-0722
 stream: S-0722
 tags: [tests, close-out]
 touches: [system-flow.yaml, scripts/integration.sh, scripts/test.sh, flai/internal/verify/select_test.go]
@@ -38,3 +41,4 @@ Waits for nothing: it is the first layer.
 - `flai test flai/internal/verify/select_test.go system-flow.yaml scripts/integration.sh scripts/test.sh` passes, and `flai check --strict` is clean.
 
 ## Notes
+- 2026-11-11T06:27:07Z: moved to cancelled: duplicates agent-S-0722's set T-3090 to T-3092, written at the same time (TH-1069); kept the story's agent's set and folded in this one's points

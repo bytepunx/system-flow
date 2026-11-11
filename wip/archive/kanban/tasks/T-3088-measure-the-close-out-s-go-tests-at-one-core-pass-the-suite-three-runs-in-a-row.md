@@ -3,12 +3,15 @@ id: T-3088
 type: task
 nature: improvement
 title: Measure the close-out's Go tests at one core, pass the suite three runs in a row, and set the timeouts again
-status: backlog
+status: cancelled
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:05:38Z
-updated: 2026-11-11T06:05:38Z
-transitions: []
+updated: 2026-11-11T06:27:08Z
+transitions:
+  - to: cancelled
+    at: 2026-11-11T06:27:08Z
+    by: agent-S-0722
 stream: S-0722
 tags: [tests, close-out]
 touches: [system-flow.yaml, scripts/integration.sh, scripts/race.sh]
@@ -33,3 +36,4 @@ Waits for the second task: it measures the tiers as both earlier tasks leave the
 - Each timeout is set from the figures or kept with its reason restated, and `flai check --strict` is clean.
 
 ## Notes
+- 2026-11-11T06:27:08Z: moved to cancelled: duplicates agent-S-0722's set T-3090 to T-3092, written at the same time (TH-1069); kept the story's agent's set and folded in this one's points

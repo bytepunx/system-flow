@@ -3,10 +3,10 @@ id: S-0722
 type: story
 nature: improvement
 title: "A close-out's Go tests run under -race on every core, so three stories closing out at once took the host to a load of 84: run them on one core without -race"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-11T05:50:20Z
-updated: 2026-11-11T06:14:31Z
+updated: 2026-11-11T07:23:12Z
 transitions:
   - to: ready
     at: 2026-11-11T05:50:21Z
@@ -14,28 +14,56 @@ transitions:
   - to: in-progress
     at: 2026-11-11T06:02:34Z
     by: agent-S-0722
+  - to: review
+    at: 2026-11-11T07:20:56Z
+    by: agent-S-0722
+  - to: done
+    at: 2026-11-11T07:23:12Z
+    by: alex
 tags: [tests, close-out]
-touches: [system-flow.yaml, scripts/integration.sh, scripts/test.sh, scripts/flai-test.sh, design/system/workflow.md, scripts/race.sh, Makefile, flai/internal/verify/select_test.go, design/system/project-manifest.md, design/system/devex.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, scripts/README.md, docs/operators/index.md, docs/contributors/index.md, flai/README.md]
+touches: [system-flow.yaml, scripts/integration.sh, scripts/test.sh, scripts/flai-test.sh, design/system/workflow.md, Makefile, flai/internal/verify/select_test.go, design/system/project-manifest.md, design/system/devex.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, scripts/README.md, docs/operators/index.md, docs/contributors/index.md, flai/README.md, flai/internal/manifest/manifest_test.go, flai/internal/manifest/manifest_tests.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4732
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 6
+      test_runs: 7
+      work: 68
+  models:
+    - model: claude-opus-5-5
+      input: 230
+      output: 70839
+      cache_read: 20089990
+      cache_write: 411360
+      cost: 8.3612
   strategic:
-    - kind: orchestrator
-      seconds: 53
+    - kind: planner
+      seconds: 708
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 91
-          cache_read: 281857
-          cache_write: 63942
-          cost: 0.096
+          input: 114
+          output: 34926
+          cache_read: 9156803
+          cache_write: 193239
+          cost: 4.0762
+    - kind: orchestrator
+      seconds: 127
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 38
+          output: 251
+          cache_read: 1398425
+          cache_write: 268215
+          cost: 0.4632
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -58,12 +86,12 @@ forecast:
 The Go tests a story's close-out runs use one core and no race detector, so several stories can close out at once without saturating the host. The race detector still runs, by hand and where the whole suite is run on purpose, not in every close-out.
 
 ## Acceptance criteria
-- [ ] The `go-test` tier in `system-flow.yaml` and the `integration` tier's `scripts/integration.sh`, as a close-out runs them, run `go test` without `-race`, with `-p 1` (one package at a time, which also bounds the compiler), and with the test binaries held to one core (`GOMAXPROCS=1`); `scripts/test.sh` matches.
-- [ ] The race detector is kept as a tier of its own, `race`, marked `manual: true` like `gateway`: `flai test race` runs the full suite under `-race` as `integration.sh` does today, and `scripts/flai-test.sh` (`make flai-test`) still runs it. No close-out and no merge queue batch runs it unasked.
-- [ ] The narrative records, measured on this host for a change that touches `flai/internal/mcpserver`: the close-out's Go tests' wall time, user CPU, and peak cores before and after. After, one close-out's Go tests hold no more than about one core.
-- [ ] Every test passes at one core, three runs in a row. A test that only passes with more is fixed if the fix is small, and otherwise the story stops and says which on a thread; it is not skipped and the cap is not raised to hide it.
-- [ ] The timeouts sized for `-race` (20 minutes a package, and the comment in `integration.sh` citing S-0507 and I-0225) are set again from the measured figures, or kept with the reason restated.
-- [ ] `design/system/workflow.md` (or where the tiers are described) says what a close-out runs, that it is one core by design, and when to run `flai test race`; the template's copy of anything changed here is changed with it.
+- [x] The `go-test` tier in `system-flow.yaml` and the `integration` tier's `scripts/integration.sh`, as a close-out runs them, run `go test` without `-race`, with `-p 1` (one package at a time, which also bounds the compiler), and with the test binaries held to one core (`GOMAXPROCS=1`); `scripts/test.sh` matches.
+- [x] The race detector is kept as a tier of its own, `race`, marked `manual: true` like `gateway`: `flai test race` runs the full suite under `-race` as `integration.sh` does today, and `scripts/flai-test.sh` (`make flai-test`) still runs it. No close-out and no merge queue batch runs it unasked.
+- [x] The narrative records, measured on this host for a change that touches `flai/internal/mcpserver`: the close-out's Go tests' wall time, user CPU, and peak cores before and after. After, one close-out's Go tests hold no more than about one core.
+- [x] Every test passes at one core, three runs in a row. A test that only passes with more is fixed if the fix is small, and otherwise the story stops and says which on a thread; it is not skipped and the cap is not raised to hide it.
+- [x] The timeouts sized for `-race` (20 minutes a package, and the comment in `integration.sh` citing S-0507 and I-0225) are set again from the measured figures, or kept with the reason restated.
+- [x] `design/system/workflow.md` (or where the tiers are described) says what a close-out runs, that it is one core by design, and when to run `flai test race`; the template's copy of anything changed here is changed with it.
 
 ## Tasks
 - T-3086 Run the go-test tier, integration.sh, and test.sh without -race, one package at a time, on one core

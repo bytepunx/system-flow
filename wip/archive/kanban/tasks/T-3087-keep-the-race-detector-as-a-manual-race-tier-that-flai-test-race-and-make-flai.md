@@ -3,12 +3,15 @@ id: T-3087
 type: task
 nature: improvement
 title: Keep the race detector as a manual race tier that flai test race and make flai-test run
-status: backlog
+status: cancelled
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:05:28Z
-updated: 2026-11-11T06:05:28Z
-transitions: []
+updated: 2026-11-11T06:27:07Z
+transitions:
+  - to: cancelled
+    at: 2026-11-11T06:27:07Z
+    by: agent-S-0722
 stream: S-0722
 tags: [tests, close-out]
 touches: [scripts/race.sh, system-flow.yaml, scripts/flai-test.sh, Makefile, flai/internal/verify/select_test.go]
@@ -35,3 +38,4 @@ Waits for the first task: both write the `tests` list in `system-flow.yaml` and 
 - `flai test scripts/race.sh scripts/flai-test.sh system-flow.yaml flai/internal/verify/select_test.go` passes, and `flai check --strict` is clean.
 
 ## Notes
+- 2026-11-11T06:27:07Z: moved to cancelled: duplicates agent-S-0722's set T-3090 to T-3092, written at the same time (TH-1069); kept the story's agent's set and folded in this one's points

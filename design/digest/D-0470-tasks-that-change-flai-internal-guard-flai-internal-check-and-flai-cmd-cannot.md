@@ -2,7 +2,7 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678]
 topics: [planning, go, code, flai]
 paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone]
 date: 2026-11-03
@@ -62,4 +62,12 @@ T-2940 works in its own worktree, task/T-2940 from story/S-0674 (delegation.md):
 
 So a task that changes `taskdone` beside one that changes `storygit` runs after it or in its own task worktree.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674.
+S-0678 met it between `flai/internal/storygit` and `flai/internal/serve`. Its planner put T-3004 (`serve/agents_activity.go`) and T-3008 (`storygit/trial.go`) in one layer, as they share no path, and its agent ran T-3008 in a task worktree of its own (`wip/archive/agents/S-0678.md`):
+
+```text
+T-3008 runs in its own worktree from story/S-0678 (task/T-3008). flai/internal/serve imports storygit, so T-3004's tests build the package T-3008 is editing (delegation.md, Tasks worked by sub-agents). Its two files are copied back into the story worktree before its close.
+```
+
+So a task that changes `storygit` beside one that changes `serve` runs before it or in its own task worktree.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678.

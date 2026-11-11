@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 221.8681
-accrued_seconds: 26032
-tasks_completed: 142
-last_run: 2026-11-11T05:53:50Z
+accrued_cost: 223.5854
+accrued_seconds: 26135
+tasks_completed: 143
+last_run: 2026-11-11T06:17:08Z
 ---
 
 # Curator activity
@@ -1147,3 +1147,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0441, D-0571, D-0582
 - Seconds: 346
 - Cost: 1.6458 USD, estimated
+
+### 2026-11-11T06:17:08Z
+
+- Summary: Merged S-0678 into D-0470. Wrote no new entries, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0678
+- Items: D-0470, D-0581
+- Seconds: 103
+- Cost: 1.7173 USD, estimated

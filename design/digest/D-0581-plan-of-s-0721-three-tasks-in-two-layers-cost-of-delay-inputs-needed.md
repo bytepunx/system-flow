@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1069]
 ---
 
 # D-0581 Plan of S-0721: three tasks in two layers; cost of delay inputs needed: Recommendation: set `time_lost_per_cycle: 10m` on S-0721, as the planner recommends

@@ -3,16 +3,37 @@ id: T-3092
 type: task
 nature: improvement
 title: The design and docs say what a close-out's Go tests run, that it is one core by design, and when to run flai test race
-status: backlog
+status: done
 parent: S-0722
 owner: alex
 created: 2026-11-11T06:06:52Z
-updated: 2026-11-11T06:06:52Z
-transitions: []
+updated: 2026-11-11T07:07:37Z
+transitions:
+  - to: ready
+    at: 2026-11-11T06:57:57Z
+    by: agent-S-0722
+  - to: in-progress
+    at: 2026-11-11T06:57:58Z
+    by: agent-S-0722
+  - to: done
+    at: 2026-11-11T07:07:37Z
+    by: agent-S-0722
 stream: S-0722
 tags: []
-touches: [design/system/workflow.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, docs/contributors/index.md, flai/README.md, Makefile]
+touches: [design/system/workflow.md, design/system/project-manifest.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, docs/contributors/index.md, flai/README.md, Makefile, design/system/devex.md, docs/operators/index.md]
 after: [T-3091]
+usage:
+  source: log
+  seconds: 579
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 12590
+      cache_read: 3570636
+      cache_write: 73112
+      cost: 1.4861
 ---
 # T-3092 The design and docs say what a close-out's Go tests run, that it is one core by design, and when to run flai test race
 

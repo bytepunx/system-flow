@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2109.9362
-accrued_seconds: 1547798
-tasks_completed: 2932
-last_run: 2026-11-11T06:10:01Z
+accrued_cost: 2111.1075
+accrued_seconds: 1548010
+tasks_completed: 2940
+last_run: 2026-11-11T07:22:25Z
 ---
 
 # Orchestrator activity
@@ -20556,6 +20556,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 26
 - Cost: 0.1337 USD, estimated
+
+### 2026-11-11T06:15:21Z
+
+- Summary: Accepted S-0678 at f36bfb6ddda1c66aba0f61643272d5da354d3df8: close-out passed at branch head, verifier matched both criteria to changed files, dry run showed no blockers; merged and archived 4 items
+- Items: S-0678
+- Seconds: 50
+- Cost: 0.1865 USD, estimated
+
+### 2026-11-11T06:15:43Z
+
+- Summary: Release evaluated after S-0678's acceptance: threshold met (count 1 of 1, value 0.04 of 1000 USD). Did not run the publish formula again: its instance S-0718 is already in ready and publishes everything accepted and unreleased, S-0678 included, when it runs
+- Items: S-0678, S-0718
+- Seconds: 22
+- Cost: 0.0530 USD, estimated
+
+### 2026-11-11T06:16:02Z
+
+- Summary: I accepted S-0678 at commit `f36bfb6` and did not publish, because the release already queued as S-0718 will cover it.
+- Items: none
+- Seconds: 19
+- Cost: 0.1122 USD, estimated
+
+### 2026-11-11T06:16:57Z
+
+- Summary: TH-1069 and planned:S-0722: nothing to do. The operator confirmed time_lost_per_cycle 30m and resolved TH-1069; S-0722 already carries the input (by alex) and the planner's value of 75 USD a week. S-0722 is in progress, so its duplicate task sets (T-3086..T-3089 vs T-3090..T-3092) are its agent's to settle.
+- Items: S-0722
+- Seconds: 37
+- Cost: 0.1125 USD, estimated
+
+### 2026-11-11T06:17:07Z
+
+- Summary: Release due after S-0678 (threshold policy met: count 1 of 1, value 0.04 USD of 1000). Started no new publish instance: S-0718, the publish formula's instance from 2026-11-11T01:44Z, is open in ready and publishes everything accepted and unreleased, S-0678 included.
+- Items: S-0678, S-0718
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-11T06:17:26Z
+
+- Summary: I've handled all three reasons. None of them needed a change from me, and I logged each decision.
+- Items: none
+- Seconds: 19
+- Cost: 0.3250 USD, estimated
+
+### 2026-11-11T07:22:07Z
+
+- Summary: S-0722 in review: last passing verify was at d5f243dec730, but story/S-0722's head is 1ba83107c (the close-out commit, adding I-0347 and summary.md). Asked flai serve for its close-out at the head; it started job S-0722-20261111T072147Z, so the story stays in review for a later run, which reads the verdict with flai verify S-0722 --last --json, then verifies the diff and accepts (accept_reviews on, merge queue off).
+- Items: S-0722
+- Seconds: 37
+- Cost: 0.2547 USD, estimated
+
+### 2026-11-11T07:22:25Z
+
+- Summary: S-0722 is still in review, not accepted: its last passing close-out was one commit behind the head of its branch.
+- Items: none
+- Seconds: 18
+- Cost: 0.1274 USD, estimated
 
 ## Refusals
 
