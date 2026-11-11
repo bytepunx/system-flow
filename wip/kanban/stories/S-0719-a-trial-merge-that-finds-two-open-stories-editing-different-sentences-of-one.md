@@ -6,7 +6,7 @@ title: A trial merge that finds two open stories editing different sentences of 
 status: backlog
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T02:29:04Z
+updated: 2026-11-11T08:50:48Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-11-11T02:29:04Z
+finalized:
+  by: alex
+  at: 2026-11-11T08:50:48Z
 ---
 # S-0719 A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
 
