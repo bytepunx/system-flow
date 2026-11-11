@@ -213,6 +213,8 @@ While the merge-queue host action is on and the queue batches (accept\_reviews o
 
 While the queue batches, the queue's batch runs the tiers the manifest marks queue, which flai verify and the close-out leave to it, so a story accepted by hand would land without them (ADR-0221, I-0203). An acceptance that would land the story by hand, neither the orchestrator's nor the queue's landing (while the queue is held, with --keep-removal, or as --dry-run previews), is then refused, before anything is merged, until the story's last flai verify passed at its branch's head with every tier marked queue that it selects: none left queued and none failed. The refusal names the tiers and flai verify &lt;id&gt; --all, which reuses the tiers the last run passed at the same patch and runs the rest; enqueueing the story with flai queue add &lt;id&gt; lets the batch run them instead. --dry-run lists it as the blocker queue\_tiers, with --json under queue\_tiers\_blocker, and queue\_tiers and queue\_tiers\_why say which tiers did not run and why. --without-queue-tiers lands the story anyway and writes, with the commit, the tiers that did not run, or why when no report at its head names them, who accepted, and when under ### Accepted without the queue tiers in its Notes. It is refused with --by orchestrator and with --batch, and changes nothing while the queue does not batch or the tiers ran.
 
+While the kluster host action is on for the project and its system-flow.yaml has a kluster: block, a change the cluster has not run is not shipped (ADR-0254 §5a): every acceptance of a story with a branch, by hand, from the dashboard, --by orchestrator, and --batch alike, is refused, before anything is merged, until its namespace's record under .flai-cache/kluster says its deploy passed at the head of story/&lt;id&gt; and, while the checks host action is on, that the checks run against it passed there too. The refusal is the blocker kluster, naming the namespace's last job, its commit, and its outcome; --dry-run lists it, with --json under kluster\_blocker, among the orchestrator\_blockers for --by orchestrator, and kluster\_why says why. --without-kluster lands the story anyway, on the operator's word, by hand outside the merge queue, and writes, with the commit, why the gate held it, who accepted, and when under ### Accepted without the kluster gate in its Notes. It is refused with --by orchestrator and with --batch, and changes nothing while the action is off or the gate passes.
+
 Examples:
 
 ```bash
@@ -223,6 +225,7 @@ flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
 flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
 flai accept S-031 --by orchestrator --batch 20261019-041200
 flai accept S-031 --by alex --without-queue-tiers
+flai accept S-031 --by alex --without-kluster
 ```
 
 Flags:
@@ -237,6 +240,7 @@ Flags:
 | `--reason` stringArray | with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
+| `--without-kluster` | as the operator: accept while the kluster host action is on though the story's namespace was not deployed, or its checks did not pass, at its head, recorded in its Notes (ADR-0254) |
 | `--without-queue-tiers` | as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221) |
 
 ### flai activity
@@ -3267,7 +3271,9 @@ A story's epic follows it in the same write (ADR-0076): to ready with its first 
 
 Moving a story from review to done is acceptance: it runs the same flow as flai accept (merge the story branch, archive, commit), with the same flags. It is refused as flai accept is: under --json, a refusal for lint the fix left or for a path the branch undoes of main's change exits 4 and prints {"refused": {...}}, the same object. There is no other way for a story to become done. When the story is its epic's last open one, the epic is accepted and archived with it. Acceptance computes no release; see flai release --pending.
 
-While the merge-queue host action is on and the queue batches and is not held, the operator's move of a story from review to done enqueues it in the merge queue, as flai accept does (S-0552), and lands nothing: the story stays in review until the queue lands it once its batch passes, and a story enqueued already, or in the batch under way, is answered so, changing nothing. --without-queue-tiers and --keep-removal land it by hand as before, outside the queue; see flai accept --help.
+While the merge-queue host action is on and the queue batches and is not held, the operator's move of a story from review to done enqueues it in the merge queue, as flai accept does (S-0552), and lands nothing: the story stays in review until the queue lands it once its batch passes, and a story enqueued already, or in the batch under way, is answered so, changing nothing. --without-queue-tiers, --without-kluster, and --keep-removal land it by hand as before, outside the queue; see flai accept --help.
+
+While the kluster host action is on, the move of a story from review to done is refused as flai accept refuses it, with the blocker kluster, until its namespace was deployed at its head and, while the checks host action is on, its checks passed there; --without-kluster lands it anyway on the operator's word and records it in its Notes (ADR-0254).
 
 Examples:
 
@@ -3292,6 +3298,7 @@ Flags:
 | `--reason` string | why (required for cancelled and review → in-progress; for done, why each --keep-removal is kept) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
+| `--without-kluster` | as the operator: accept while the kluster host action is on though the story's namespace was not deployed, or its checks did not pass, at its head, recorded in its Notes (ADR-0254) |
 | `--without-queue-tiers` | as the operator: accept while the merge queue batches though the tiers marked queue did not run at the story's head, recorded in its Notes (ADR-0221) |
 
 ### flai new

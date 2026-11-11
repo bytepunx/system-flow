@@ -1949,6 +1949,28 @@ One job runs at a time per project. A second `deploy`, `teardown`, or `promote` 
 
 These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. `flai serve enable kluster` turns the host action on, and writes the block first for a project with none ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
 
+### When a story's deploy or its checks fail
+
+While the `kluster` host action is on and the block names a `deploy`, `flai serve` deploys each story that enters review into its namespace, and deploys it again in place at each new head. With the `checks` host action on, it then runs the checks against that namespace ([kluster.md](../../design/system/kluster.md#what-happens-when)).
+
+A deploy that fails, or a checks run that does not pass, sends the story back (S-0694, [ADR-0254](../../design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md)):
+
+- `flai serve` opens one thread on the story, `flai serve could not deploy S-nnnn into its kluster namespace` or `flai serve's checks against S-nnnn's kluster namespace failed`, naming the job, the step, the commit, and the log. A later failure adds to it.
+- It moves the story from review to in-progress as `flai`, with a reason naming the job, the step, and the commit. A story no longer in review at that commit, or one whose action you turned off meanwhile, is not moved, and the thread says why.
+- It keeps the story's namespace as the failure left it, so that you and the story's agent can look at what failed: `flai kluster deployments` and the Deployments page show it. Nothing tears it down while the story stands in progress where the send-back put it.
+- With the `agent` host action on, it starts the story's agent once on the thread. The agent fixes the change, or says on the thread that the cause is outside the story, such as the cluster's shared services.
+- Once the story is back in review, at a new commit or the same one, it is deployed again in place. A deploy that passes resolves the deploy's thread, and a checks run that passes the checks'. Cancelling or accepting the story tears its namespace down and resolves its threads.
+
+While the action is on, the story's acceptance waits for this. Every acceptance of a story, yours, the dashboard's, the orchestrator's, and the merge queue's, is refused with the blocker `kluster` until its namespace was deployed at its branch's head and, while `checks` is on, the checks run against it passed there. The blocker names the namespace's last job, its commit, and its outcome. `flai accept --dry-run` lists it, and with `--json` it is in `kluster_blocker`, with `kluster_why`. The merge queue lists such a story as not eligible, with the reason `kluster`, and does not batch it; the orchestrator may still enqueue it, and the queue waits for the deploy.
+
+When the cause is outside the story, land it anyway:
+
+```bash
+flai accept S-0042 --by alex --without-kluster    # or flai move S-0042 done --without-kluster
+```
+
+`--without-kluster` lands the story by hand, outside the merge queue, and writes, with its commit, an `### Accepted without the kluster gate` section in the story's `## Notes`: why the gate held it, who accepted, and when. It is yours alone: it is refused with `--by orchestrator` and with `--batch`, and the board and the dashboard do not take it. While the action is off, or once the gate passes, it changes nothing.
+
 ## Check the repository
 
 ```bash
@@ -3082,6 +3104,8 @@ A story whose branch changes a protected path ([Writes to protected paths](#writ
 
 While the merge queue batches and is not held, your acceptance lands nothing: it enqueues the story, and the queue lands it once its batch passes. While the queue is held, or with `--without-queue-tiers` or `--keep-removal`, your acceptance lands the story by hand, and then waits for the tiers the close-out left to the queue to run at the story's head. It is refused with the blocker `queue_tiers` until `flai verify S-0031 --all` has run them, and `--without-queue-tiers` lands the story without them, recorded in its Notes ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)).
 
+While the `kluster` host action is on, every acceptance also waits for the story's deploy into its kluster namespace. It is refused with the blocker `kluster` until the deploy, and while `checks` is on the checks run against it, passed at the story's head, and `--without-kluster` lands the story anyway, recorded in its Notes ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail)).
+
 Under `acceptance.mode: pull-request`, acceptance also waits for the pull request's required checks, its standing requested changes, and its required approvals ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)). It then merges the pull request on the forge in place of the rebase and fast-forward here ([The merge on the forge](#the-merge-on-the-forge)).
 
 Another git process can hold the main checkout's index lock when acceptance commits: `flai serve`'s replan, an agent's commit, or another acceptance. Acceptance then waits and tries again, for up to about nine seconds, and never removes the lock file (S-0307). When the lock is still held, the acceptance fails and exits non-zero, in the dashboard too. The error shows git's own message and says what is left:
@@ -3319,6 +3343,7 @@ The preview adds these blockers to an acceptance by the orchestrator, and `flai 
 | `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes. For a formula's instance, its item names no task of the story, or one that is not done, or, given as `skipped`, one not cancelled by a stop |
 | `protected_paths` | The branch changes a path Claude Code protects, which only you accept |
 | `not_story` | The item is an epic, which is yours to accept |
+| `kluster` | The `kluster` host action is on, and the story's namespace was not deployed at its branch's head or, while `checks` is on, its checks did not pass there. It blocks every acceptance; the orchestrator never passes `--without-kluster`, and its enqueue is not refused for it ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail)) |
 
 Under `acceptance.mode: pull-request`, the pull request's blockers stop the orchestrator as they stop you ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)). It never approves a review, so a story whose base branch requires approvals waits for your reviewers.
 
@@ -3394,7 +3419,8 @@ batch: none
 | `thread_open` | A thread on the story or one of its tasks is not resolved; the reason names each |
 | `undone_main` | Its branch undoes main's change to a path; the reason names the paths. The queue never batches it until you restore them, keep the removal, or send the story back |
 | `dirty_main` | Its change would overwrite uncommitted or untracked files in the main checkout outside `wip/`, `design/`, and the shared paths, which the landing commits; the reason names them and the command that frees it, `git stash push -- <files>`, each path quoted for the shell. Commit the files or run the command, and the reason clears once they are clean |
-| `unreadable` | Its last `flai verify` result, or its record of undone paths, cannot be read |
+| `kluster` | The `kluster` host action is on, and its namespace was not deployed at its branch's head or, while `checks` is on, the checks run against it did not pass there; the reason names the last job and its outcome ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail)) |
+| `unreadable` | Its last `flai verify` result, its record of undone paths, or its kluster namespace's record cannot be read |
 
 A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`. While the next batch waits to fill, a line says so in its place: `batch fills until 10:03:00Z: 1 of 4 stories (S-0001)` ([The batch](#the-batch)). Once the batch is verified, a line under it says `result: passed`, or `result: failed at <tier>`, with when it finished and a summary: the tiers that passed, or the failing tier's first findings. A batch dropped says who dropped it, when, and why. A batch whose landing waits on main says `landing waits on main at S-nnnn since <time>: <what flai accept said>` ([Landing and sending back](#landing-and-sending-back)). A story its landing held back has a line `held back: S-nnnn, by the main checkout's uncommitted <files>; free it: git stash push -- <files>`. `outcomes` lists each story's last outcome when there is one, such as `waiting`, `left_out`, `sent_back`, `accepted_by_hand` ([The batch](#the-batch)), `landed`, `held_back`, or `failing` ([Landing and sending back](#landing-and-sending-back)), with what happened and the paths. A held queue starts with `held by <who> at <time>: no batch is built until flai queue resume`. A queue the main checkout holds says so next, with each finding ([When the main checkout holds the queue](#when-the-main-checkout-holds-the-queue)). These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file the queue is empty, with no batch and no outcome. With no story in review, `flai queue` says `no story is in review`.
 
@@ -3414,7 +3440,7 @@ It refuses, and changes nothing, a story that is not in review, an item that is 
 
 `flai queue remove S-nnnn` takes a story out. When the batch under verification holds it, the batch is dropped, so that the queue never lands a story no one has enqueued, and the next batch can start. It refuses a story that is not enqueued.
 
-While the queue batches and is not held, accepting a story with `flai accept`, `flai move S-nnnn done`, or from the board enqueues it as `flai queue add` does ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)). An acceptance that lands the story by hand, while the queue is held or with `--without-queue-tiers` or `--keep-removal`, takes it out of the queue, and drops the batch that holds it. Its outcome is `accepted_by_hand`.
+While the queue batches and is not held, accepting a story with `flai accept`, `flai move S-nnnn done`, or from the board enqueues it as `flai queue add` does ([Accepting by hand while the queue batches](#accepting-by-hand-while-the-queue-batches)). An acceptance that lands the story by hand, while the queue is held or with `--without-queue-tiers`, `--without-kluster`, or `--keep-removal`, takes it out of the queue, and drops the batch that holds it. Its outcome is `accepted_by_hand`.
 
 #### Accepting by hand while the queue batches
 
@@ -3426,10 +3452,11 @@ enqueued S-0042 in the merge queue at position 2 as alex, and it stays in review
 
 A story enqueued already, or in the batch under way, is answered so, and nothing changes. A story the queue finds not eligible is refused, with each reason, as `flai queue add` refuses it. With `--json` the answer has `queue`: `enqueued` (whether this acceptance enqueued it), `batch` (the batch under way that holds it), `position`, `by`, and `at`.
 
-Three ways land a story by hand while the queue batches:
+Four ways land a story by hand while the queue batches:
 
 - hold the queue first, `flai queue hold` ([Holding the queue](#holding-the-queue));
 - `--without-queue-tiers`, which lands it without the `queue` tiers (below);
+- `--without-kluster`, which lands it without its kluster deploy ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail));
 - `--keep-removal`, for a story whose branch undoes main's change, which the queue never batches ([Accept and release](#accept-and-release)).
 
 A landing by hand takes the story out of the queue and drops the batch that holds it. `--dry-run` previews a landing by hand.
