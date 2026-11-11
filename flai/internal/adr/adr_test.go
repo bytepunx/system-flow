@@ -3,6 +3,7 @@ package adr
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/adrindex"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -204,5 +206,101 @@ func TestWritesReplaceTheFiles(t *testing.T) {
 		if strings.HasSuffix(e.Name(), ".tmp") {
 			t.Errorf("a temporary file was left behind: %s", e.Name())
 		}
+	}
+}
+
+// gitRepo is indexRepo with ADR 0002 proposed, its index rendered, and all of
+// it committed in a git repository; git runs it in the root.
+func gitRepo(t *testing.T) (*workitem.Repo, string, func(...string) string) {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	repo, dir := indexRepo(t)
+	if err := os.WriteFile(filepath.Join(dir, "0002-second.md"), []byte(adrText("0002", "Second", "proposed")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adrindex.Write(dir); err != nil {
+		t.Fatal(err)
+	}
+	git := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo.Root
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return string(out)
+	}
+	git("init", "-q", "-b", "main")
+	git("config", "user.email", "t@t")
+	git("config", "user.name", "t")
+	git("add", "-A")
+	git("commit", "-q", "-m", "init")
+	return repo, dir, git
+}
+
+// headIndexIsRendered fails unless the index HEAD holds is what HEAD's ADR
+// files render, as a worktree made from HEAD renders it, and returns it.
+func headIndexIsRendered(t *testing.T, git func(...string) string) string {
+	t.Helper()
+	wt := filepath.Join(t.TempDir(), "wt")
+	git("worktree", "add", "-q", "--detach", wt, "HEAD")
+	dir := filepath.Join(wt, "design", "adrs")
+	return indexIsRendered(t, dir)
+}
+
+// I-0336: an ADR another write left uncommitted, here ADR-0001 accepted with
+// its own index row, is not in the index the commit of ADR-0002's acceptance
+// records, so a worktree made from that commit finds no adr.index; the
+// working tree keeps the index its own files render, both rows accepted.
+func TestAcceptCommitsTheIndexHEADsFilesRender(t *testing.T) {
+	repo, dir, git := gitRepo(t)
+	now := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
+	first := filepath.Join(dir, "0001-first.md")
+	if err := os.WriteFile(first, []byte(adrText("0001", "First", "superseded")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adrindex.Write(dir); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Accept(repo, execx.System{}, 2, Options{Now: now, Autocommit: true})
+	if err != nil {
+		t.Fatalf("Accept: %v", err)
+	}
+	if !res.Committed || res.CommitError != "" {
+		t.Fatalf("not committed: %+v", res)
+	}
+	committed := headIndexIsRendered(t, git)
+	if want := "| [0001](0001-first.md) | First | accepted |\n| [0002](0002-second.md) | Second | accepted |\n"; !strings.Contains(committed, want) {
+		t.Errorf("the committed index renders HEAD's files, not the working tree's:\n%s\nwant rows:\n%s", committed, want)
+	}
+	working := indexIsRendered(t, dir)
+	if !strings.Contains(working, "| [0001](0001-first.md) | First | superseded |\n") {
+		t.Errorf("the working tree's index renders its own files:\n%s", working)
+	}
+	status := git("status", "--porcelain")
+	if want := " M design/adrs/0001-first.md\n M design/adrs/README.md\n"; status != want {
+		t.Errorf("git status:\n%s\nwant:\n%s", status, want)
+	}
+}
+
+// With nothing else uncommitted, New commits the index the working tree
+// holds, and leaves the checkout clean.
+func TestNewCommitsTheWorkingIndexWhenNothingElseIsUncommitted(t *testing.T) {
+	repo, dir, git := gitRepo(t)
+	res, err := New(repo, execx.System{}, Options{Title: "Third", Supersedes: []int{2}, Body: "## Decision\n\nWe decide again.\n", Now: time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC), Autocommit: true})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !res.Committed || res.CommitError != "" {
+		t.Fatalf("not committed: %+v", res)
+	}
+	if committed, working := headIndexIsRendered(t, git), indexIsRendered(t, dir); committed != working {
+		t.Errorf("committed index:\n%s\nworking tree's:\n%s", committed, working)
+	}
+	if status := git("status", "--porcelain"); status != "" {
+		t.Errorf("git status: %s", status)
 	}
 }

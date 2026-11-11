@@ -14,11 +14,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"testing/fstest"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/adrindex"
@@ -339,7 +342,7 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 		return nil, &docedit.RefusedError{Path: res.Path, Reason: fmt.Sprintf("flai check has %d finding(s) with this ADR; nothing was created", len(refused)), Findings: refused}
 	}
 	if opt.Autocommit && repo.Manifest.Autocommit() {
-		res.commit(r, repo.Root, fmt.Sprintf("docs: %s %s", res.ID, title), opt.Trailers)
+		res.commit(r, repo, fmt.Sprintf("docs: %s %s", res.ID, title), opt.Trailers)
 	}
 	return res, nil
 }
@@ -410,7 +413,7 @@ func Accept(repo *workitem.Repo, r execx.Runner, n int, opt Options) (*Result, e
 		return nil, &docedit.RefusedError{Path: res.Path, Reason: fmt.Sprintf("flai check has %d finding(s) with %s accepted; nothing was changed", len(refused), res.ID), Findings: refused}
 	}
 	if opt.Autocommit && repo.Manifest.Autocommit() {
-		res.commit(r, repo.Root, fmt.Sprintf("docs: %s accepted", res.ID), opt.Trailers)
+		res.commit(r, repo, fmt.Sprintf("docs: %s accepted", res.ID), opt.Trailers)
 	}
 	return res, nil
 }
@@ -477,7 +480,7 @@ func SetTopics(repo *workitem.Repo, r execx.Runner, n int, list []string, opt Op
 		return nil, &docedit.RefusedError{Path: res.Path, Reason: fmt.Sprintf("flai check has %d finding(s) with these topics on %s; nothing was changed", len(refused), res.ID), Findings: refused}
 	}
 	if opt.Autocommit && repo.Manifest.Autocommit() {
-		res.commit(r, repo.Root, fmt.Sprintf("docs: %s topics %s", res.ID, strings.Join(clean, ", ")), opt.Trailers)
+		res.commit(r, repo, fmt.Sprintf("docs: %s topics %s", res.ID, strings.Join(clean, ", ")), opt.Trailers)
 	}
 	return res, nil
 }
@@ -553,8 +556,14 @@ func relTo(root, path string) string {
 }
 
 // commit records the changed paths, and only them. A failed commit is not a
-// failed creation: the files are written and valid.
-func (res *Result) commit(r execx.Runner, root, msg string, trailers []string) {
+// failed creation: the files are written and valid. The index it records is
+// the one HEAD's ADR files, with those it records, render (I-0336): an ADR
+// file the checkout holds uncommitted, written by another flai adr or by
+// hand, is in the working tree's index but not in the committed one, so the
+// commit records no row its committed ADR files do not render. The working
+// tree keeps the index its own files render.
+func (res *Result) commit(r execx.Runner, repo *workitem.Repo, msg string, trailers []string) {
+	root := repo.Root
 	if r == nil {
 		return
 	}
@@ -563,6 +572,18 @@ func (res *Result) commit(r execx.Runner, root, msg string, trailers []string) {
 	}
 	if len(trailers) > 0 {
 		msg += "\n\n" + strings.Join(trailers, "\n")
+	}
+	if index := adrindex.Path(repo); slices.Contains(res.Changed, index) {
+		restore, err := stageCommittedIndex(r, repo, res.Changed)
+		if err != nil {
+			res.CommitError = err.Error()
+			return
+		}
+		defer func() {
+			if err := restore(); err != nil && res.CommitError == "" {
+				res.CommitError = err.Error()
+			}
+		}()
 	}
 	if _, err := r.Run(root, "git", append([]string{"add", "--"}, res.Changed...)...); err != nil {
 		res.CommitError = err.Error()
@@ -578,4 +599,104 @@ func (res *Result) commit(r execx.Runner, root, msg string, trailers []string) {
 		return
 	}
 	res.Committed, res.Commit = true, strings.TrimSpace(sha)
+}
+
+// stageCommittedIndex writes in place of the working tree's index the one
+// the commit of changed is to record, when the two differ, and returns what
+// writes the working tree's back. That index is HEAD's index text with its
+// table rendered from HEAD's ADR files, each file changed names in place of
+// HEAD's; with no index in HEAD, the working tree's text around the table.
+func stageCommittedIndex(r execx.Runner, repo *workitem.Repo, changed []string) (func() error, error) {
+	index := adrindex.Path(repo)
+	file := filepath.Join(repo.Root, filepath.FromSlash(index))
+	working, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	folder, current, err := headADRs(r, repo)
+	if err != nil {
+		return nil, fmt.Errorf("read the ADR files at HEAD to render the index the commit records: %w", err)
+	}
+	if current == "" {
+		current = string(working)
+	}
+	for _, p := range changed {
+		if !adrindex.Source(repo, p) {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(p)))
+		if err != nil {
+			return nil, err
+		}
+		folder[path.Base(p)] = &fstest.MapFile{Data: data}
+	}
+	want, err := adrindex.Render(folder, current)
+	if err != nil {
+		return nil, err
+	}
+	if want == string(working) {
+		return func() error { return nil }, nil
+	}
+	if err := atomicfile.WriteFile(file, []byte(want), 0o644); err != nil {
+		return nil, err
+	}
+	return func() error { return atomicfile.WriteFile(file, working, 0o644) }, nil
+}
+
+// headADRs is the ADR files HEAD holds, by file name, and HEAD's index text,
+// empty when HEAD has none. A checkout with no commit yet holds none.
+func headADRs(r execx.Runner, repo *workitem.Repo) (fstest.MapFS, string, error) {
+	folder := fstest.MapFS{}
+	if !hasCommit(r, repo.Root) {
+		return folder, "", nil
+	}
+	index := adrindex.Path(repo)
+	dir := path.Dir(index)
+	list, err := r.Run(repo.Root, "git", "ls-tree", "--name-only", "-z", "HEAD", "--", dir+"/")
+	if err != nil {
+		return nil, "", err
+	}
+	var specs, names []string
+	for _, p := range strings.Split(list, "\x00") {
+		if p == index || adrindex.Source(repo, p) {
+			specs, names = append(specs, "HEAD:"+p), append(names, p)
+		}
+	}
+	if len(specs) == 0 {
+		return folder, "", nil
+	}
+	out, err := r.RunInput(repo.Root, "git", strings.Join(specs, "\n")+"\n", "cat-file", "--batch")
+	if err != nil {
+		return nil, "", err
+	}
+	// each object is "sha type size\n", then size bytes and a newline; the
+	// runner trims the last newline, and with it any the last file ends with,
+	// which neither front matter nor the index's render reads
+	var current string
+	for _, p := range names {
+		head, rest, _ := strings.Cut(out, "\n")
+		meta := strings.Fields(head)
+		if len(meta) != 3 || meta[1] != "blob" {
+			return nil, "", fmt.Errorf("git cat-file gave %q for %s", head, p)
+		}
+		size, err := strconv.Atoi(meta[2])
+		if err != nil {
+			return nil, "", fmt.Errorf("git cat-file gave %q for %s", head, p)
+		}
+		size = min(size, len(rest))
+		data := rest[:size]
+		out = strings.TrimPrefix(rest[size:], "\n")
+		if p == index {
+			current = data
+			continue
+		}
+		folder[path.Base(p)] = &fstest.MapFile{Data: []byte(data)}
+	}
+	return folder, current, nil
+}
+
+// hasCommit says whether the checkout at root has a HEAD commit.
+func hasCommit(r execx.Runner, root string) bool {
+	_, err := r.Run(root, "git", "rev-parse", "--verify", "--quiet", "HEAD^{commit}")
+	return err == nil
 }
