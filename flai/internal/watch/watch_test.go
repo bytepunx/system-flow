@@ -113,6 +113,36 @@ func TestReportsChangedAddedAndRemovedFilesUnderTheWatchedPathsOnly(t *testing.T
 	c.wait(t)
 }
 
+// A file changed, one removed, and one added after Mark and before Run starts
+// are each reported by Run's first ticks, under a fast path and a slow one
+// (I-0273). Without Mark, Run's own first snapshot would hold them, and none
+// would be reported. Run with no Mark is TestReportsChangedAddedAndRemoved…
+// above, unchanged.
+func TestAChangeMadeBetweenMarkAndRunIsReported(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "wip/kanban/a.md", "a\n")
+	write(t, root, "wip/kanban/b.md", "b\n")
+	write(t, root, "wip/archive/d.md", "d\n")
+	w := &Watcher{Root: root, Paths: []string{"wip"}, Every: 20 * time.Millisecond, Slow: []string{"wip/archive"}}
+	w.Mark()
+
+	write(t, root, "wip/kanban/a.md", "a changed\n")
+	if err := os.Remove(filepath.Join(root, "wip/kanban/b.md")); err != nil {
+		t.Fatal(err)
+	}
+	write(t, root, "wip/kanban/c.md", "c\n")
+	write(t, root, "wip/archive/e.md", "e\n")
+
+	c := &collector{}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { w.Run(ctx, c.emit); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+	// a removal is reported on the first tick, an addition or a change once it
+	// has held still for one tick
+	c.wait(t, "wip/kanban/b.md", "wip/archive/e.md", "wip/kanban/a.md", "wip/kanban/c.md")
+}
+
 // slowFixture is a project with a fast item folder and a slow archive below
 // the fast wip folder, as flai serve watches them, on a clock the test moves
 // and a stat that records each path the slow tier statted.

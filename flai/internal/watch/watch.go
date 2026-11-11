@@ -38,9 +38,20 @@ type Watcher struct {
 	Slow      []string
 	SlowEvery time.Duration // default 10s
 
-	now  func() time.Time                  // the clock; time.Now when nil
-	stat func(string) (fs.FileInfo, error) // the slow tier's stat; os.Lstat when nil
-	slow *slowTier
+	now   func() time.Time                  // the clock; time.Now when nil
+	stat  func(string) (fs.FileInfo, error) // the slow tier's stat; os.Lstat when nil
+	slow  *slowTier
+	first map[string]sig // the first snapshot Mark took, which Run compares its first tick with
+}
+
+// Mark takes the watcher's first snapshot now, in the caller's goroutine, so
+// that Run reports every change made after Mark returns, however late Run
+// starts (I-0273). Without it, Run takes its first snapshot as it starts, and a
+// change made before then is in it and never reported. Call it at most once,
+// before Run starts: a second Mark, or one made while Run runs, is not
+// supported.
+func (w *Watcher) Mark() {
+	w.first = w.snapshot()
 }
 
 // slowTier is what the slow tier keeps between looks: each folder's own
@@ -272,12 +283,19 @@ func (d *debounce) tick(cur map[string]sig) []string {
 // Run calls emit with the repository-relative path of each file that was
 // added, changed, or removed, until ctx ends. A file still being written is
 // reported once it has looked the same for one tick, which is the debounce.
+// Its first tick compares with the snapshot Mark took, or, with no Mark, with
+// one Run takes as it starts.
 func (w *Watcher) Run(ctx context.Context, emit func(rel string)) {
 	every := w.Every
 	if every <= 0 {
 		every = 300 * time.Millisecond
 	}
-	d := newDebounce(w.snapshot())
+	first := w.first
+	w.first = nil
+	if first == nil {
+		first = w.snapshot()
+	}
+	d := newDebounce(first)
 	tick := time.NewTicker(every)
 	defer tick.Stop()
 	for {
