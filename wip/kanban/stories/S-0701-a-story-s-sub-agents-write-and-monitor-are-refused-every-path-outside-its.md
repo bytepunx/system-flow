@@ -3,11 +3,14 @@ id: S-0701
 type: story
 nature: improvement
 title: A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-11T22:31:13Z
-transitions: []
+updated: 2026-11-11T23:05:14Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:05:09Z
+    by: orchestrator
 tags: [harness, serve, docker]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md]
 agent:
@@ -21,16 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 42
+      seconds: 55
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 76
-          cache_read: 372455
-          cache_write: 69627
-          cost: 0.1235
-draft: true
+          input: 15
+          output: 93
+          cache_read: 532237
+          cache_write: 72416
+          cost: 0.1694
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 26m
@@ -41,10 +43,13 @@ cost_of_delay:
   at: 2026-11-10T10:30:33Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-12T08:31:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 3, behind S-0720, S-0717, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-12T01:13:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0720."
   by: flai
-  at: 2026-11-11T22:31:13Z
+  at: 2026-11-11T23:05:14Z
+finalized:
+  by: orchestrator
+  at: 2026-11-11T23:04:50Z
 ---
 # S-0701 A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
 

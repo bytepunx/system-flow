@@ -3,11 +3,14 @@ id: S-0703
 type: story
 nature: remediation
 title: "TestARepositoryIsOfferedImportedAndThenServed fails the close-out's integration tier with \"failed to read frame header: EOF\" under host load, on a branch that does not touch flai/internal/serve"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:55:40Z
-updated: 2026-11-11T22:31:13Z
-transitions: []
+updated: 2026-11-11T23:05:14Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:05:09Z
+    by: orchestrator
 tags: [flai, tests]
 touches: [flai/internal/serve/candidates_test.go, flai/internal/channel/channeltest/dashboard.go, design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md]
 agent:
@@ -36,7 +39,16 @@ usage:
           cache_read: 9089807
           cache_write: 217495
           cost: 3.982
-draft: true
+    - kind: orchestrator
+      seconds: 39
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 22
+          cache_read: 341624
+          cache_write: 20306
+          cost: 0.1022
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -47,10 +59,13 @@ cost_of_delay:
   at: 2026-11-10T10:34:08Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-12T08:49:00Z
-  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 3, behind S-0720, S-0717, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683 and S-0701."
+  delivery: 2026-11-12T01:13:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0720 and S-0701."
   by: flai
-  at: 2026-11-11T22:31:13Z
+  at: 2026-11-11T23:05:14Z
+finalized:
+  by: orchestrator
+  at: 2026-11-11T23:04:49Z
 ---
 # S-0703 TestARepositoryIsOfferedImportedAndThenServed fails the close-out's integration tier with "failed to read frame header: EOF" under host load, on a branch that does not touch flai/internal/serve
 
