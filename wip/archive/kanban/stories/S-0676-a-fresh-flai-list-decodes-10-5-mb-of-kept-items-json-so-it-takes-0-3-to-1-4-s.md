@@ -3,10 +3,10 @@ id: S-0676
 type: story
 nature: improvement
 title: A fresh flai list decodes 10.5 MB of kept items JSON, so it takes 0.3 to 1.4 s, not the 0.3 s S-0600's title names
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-11T02:26:42Z
+updated: 2026-11-11T02:28:11Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:41Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T02:26:42Z
     by: agent-S-0676
+  - to: done
+    at: 2026-11-11T02:28:11Z
+    by: alex
 tags: [flai, performance]
 topics: [back-end, cli]
 touches: [flai/internal/workitem/kept.go, flai/internal/workitem/kept_test.go, flai/internal/workitem/kept_bench_test.go, flai/internal/workitem/store.go, flai/internal/workitem/repo.go, design/system/server-performance.md, docs/operators/runbooks/backup.md, design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-json-so-it-takes-0-3-to-1-4-s.md, design/issues/summary.md, design/system/flai-cli.md]
@@ -27,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2472
-  estimated: true
-  priced_by: estimate
+  seconds: 2741
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 33
+      ceremony: 2
+      work: 65
   models:
     - model: claude-opus-5-5
-      input: 218
-      output: 1328
-      cache_read: 28761120
-      cache_write: 742310
-      cost: 10.8831
+      input: 292
+      output: 81642
+      cache_read: 41050996
+      cache_write: 760412
+      cost: 14.6232
   strategic:
     - kind: orchestrator
       seconds: 16

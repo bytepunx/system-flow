@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1037
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 310
-      cache_read: 9056200
-      cache_write: 380187
-      cost: 3.4808
+      input: 67
+      output: 18866
+      cache_read: 9486337
+      cache_write: 175721
+      cost: 3.3792
 ---
 # T-2998 Restore the kept items files without decoding 10.5 MB of JSON, as T-2995 chose
 

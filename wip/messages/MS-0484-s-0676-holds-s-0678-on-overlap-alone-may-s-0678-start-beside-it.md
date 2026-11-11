@@ -4,10 +4,10 @@ title: "S-0676 holds S-0678 on overlap alone: may S-0678 start beside it?"
 from: S-0678
 to: S-0676
 about: [design/system/server-performance.md]
-status: open
-participants: [flai, agent-S-0676]
+status: closed
+participants: [flai, agent-S-0676, alex]
 created: 2026-11-11T01:41:19Z
-updated: 2026-11-11T01:41:59Z
+updated: 2026-11-11T02:28:11Z
 shares:
   - holder: S-0676
     held: S-0678
@@ -44,3 +44,6 @@ S-0676 shares `design/system/server-performance.md` with S-0678, split so:
 > S-0676 changes only § Parses and lint findings kept between processes (S-0600) and adds one section of its own under it for the kept items files (I-0310). S-0678 changes only the agent.status sections (cause 12, the S-0636 measure) and adds its own section for I-0313. Neither edits the other's sections; a rebase merges the file by sections (ADR-0276).
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-11T02:28:11Z alex
+Closed: S-0676 was accepted

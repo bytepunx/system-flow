@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 141
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 294
-      cache_read: 6300631
-      cache_write: 31872
-      cost: 2.3359
+      input: 45
+      output: 12661
+      cache_read: 6366024
+      cache_write: 117922
+      cost: 2.2677
 ---
 # T-3001 Time a fresh list on this repository before and after, and record it in server-performance.md and the backup runbook
 

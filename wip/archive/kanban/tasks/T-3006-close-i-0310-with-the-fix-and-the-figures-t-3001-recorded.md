@@ -24,16 +24,16 @@ touches: [design/issues/I-0310-a-fresh-flai-list-decodes-10-5-mb-of-kept-items-j
 after: [T-3001]
 usage:
   source: log
-  seconds: 6
+  seconds: 8
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 46
-      cache_read: 641589
-      cache_write: 1097
-      cost: 0.2371
+      input: 5
+      output: 1285
+      cache_read: 646088
+      cache_write: 11968
+      cost: 0.2301
 ---
 # T-3006 Close I-0310 with the fix and the figures T-3001 recorded
 

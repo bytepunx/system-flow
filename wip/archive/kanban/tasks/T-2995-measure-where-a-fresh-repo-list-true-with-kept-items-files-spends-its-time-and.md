@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1000
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 460
-      cache_read: 9091447
-      cache_write: 50332
-      cost: 3.3722
+      input: 65
+      output: 18277
+      cache_read: 9190176
+      cache_write: 170235
+      cost: 3.2737
 ---
 # T-2995 Measure where a fresh Repo.List(true) with kept items files spends its time, and choose the remedy
 
