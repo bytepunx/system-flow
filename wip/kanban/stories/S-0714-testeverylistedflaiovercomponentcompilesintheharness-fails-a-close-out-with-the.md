@@ -6,7 +6,7 @@ title: "TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out w
 status: backlog
 owner: alex
 created: 2026-11-10T10:54:41Z
-updated: 2026-11-10T10:54:41Z
+updated: 2026-11-11T09:02:34Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-11-10T10:54:41Z
+finalized:
+  by: alex
+  at: 2026-11-11T09:02:34Z
 ---
 # S-0714 TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out with "the setup src/routes/layout.css does not compile: 404, 404 page not found" while the main checkout's flaiover node_modules is intact
 
