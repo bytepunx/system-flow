@@ -6,7 +6,7 @@ title: flai task done's sync reports undoes_main for paths the story never chang
 status: ready
 owner: alex
 created: 2026-11-10T10:10:59Z
-updated: 2026-11-11T16:15:10Z
+updated: 2026-11-11T18:15:37Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 191153
           cost: 3.2214
     - kind: orchestrator
-      seconds: 115
+      seconds: 121
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 246
-          cache_read: 1741904
-          cache_write: 97244
-          cost: 0.5067
+          input: 27
+          output: 262
+          cache_read: 1819158
+          cache_write: 106577
+          cost: 0.5311
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-11T09:06:14Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T18:22:00Z
+  delivery: 2026-11-11T20:23:00Z
   basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 3, behind S-0715, S-0707, S-0714 and S-0711."
   by: flai
-  at: 2026-11-11T16:15:10Z
+  at: 2026-11-11T18:15:37Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:17Z

@@ -6,7 +6,7 @@ title: sendBackReason puts a CI check name and reviewer login unquoted into the 
 status: ready
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-11T16:15:10Z
+updated: 2026-11-11T18:15:37Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
@@ -35,15 +35,15 @@ usage:
           cache_write: 35083
           cost: 0.6841
     - kind: orchestrator
-      seconds: 42
+      seconds: 48
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 137
-          cache_read: 709554
-          cache_write: 115442
-          cost: 0.2307
+          input: 18
+          output: 153
+          cache_read: 786808
+          cache_write: 124776
+          cost: 0.2551
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-11T09:09:25Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T18:10:00Z
+  delivery: 2026-11-11T20:10:00Z
   basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0715, S-0707 and S-0714."
   by: flai
-  at: 2026-11-11T16:15:10Z
+  at: 2026-11-11T18:15:37Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:41Z

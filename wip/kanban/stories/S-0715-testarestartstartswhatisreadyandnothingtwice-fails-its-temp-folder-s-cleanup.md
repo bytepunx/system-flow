@@ -6,7 +6,7 @@ title: "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cle
 status: ready
 owner: alex
 created: 2026-11-10T10:55:22Z
-updated: 2026-11-11T16:15:10Z
+updated: 2026-11-11T18:15:37Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:02Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 475131
           cost: 2.5108
     - kind: orchestrator
-      seconds: 66
+      seconds: 74
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 144
-          cache_read: 733681
-          cache_write: 87893
-          cost: 0.2297
+          input: 21
+          output: 160
+          cache_read: 810936
+          cache_write: 97228
+          cost: 0.2541
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-11T09:04:21Z
 forecast:
   duration: 40m
-  delivery: 2026-11-11T17:11:00Z
+  delivery: 2026-11-11T19:11:00Z
   basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-11-11T16:15:10Z
+  at: 2026-11-11T18:15:37Z
 finalized:
   by: alex
   at: 2026-11-11T09:02:10Z

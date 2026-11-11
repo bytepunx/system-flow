@@ -6,7 +6,7 @@ title: The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's to
 status: ready
 owner: alex
 created: 2026-11-10T09:11:42Z
-updated: 2026-11-11T16:15:10Z
+updated: 2026-11-11T18:15:37Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:02Z
@@ -39,6 +39,16 @@ usage:
           cache_read: 51538468
           cache_write: 912167
           cost: 19.2585
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 16
+          cache_read: 77254
+          cache_write: 9334
+          cost: 0.0244
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -49,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:46Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T17:11:00Z
+  delivery: 2026-11-11T19:12:00Z
   basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0715."
   by: flai
-  at: 2026-11-11T16:15:10Z
+  at: 2026-11-11T18:15:37Z
 finalized:
   by: alex
   at: 2026-11-11T09:05:30Z

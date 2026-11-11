@@ -6,7 +6,7 @@ title: "TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out w
 status: ready
 owner: alex
 created: 2026-11-10T10:54:41Z
-updated: 2026-11-11T16:15:10Z
+updated: 2026-11-11T18:15:37Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
@@ -33,6 +33,16 @@ usage:
           cache_read: 400440
           cache_write: 10446
           cost: 0.1649
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 16
+          cache_read: 77254
+          cache_write: 9334
+          cost: 0.0244
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -43,10 +53,10 @@ cost_of_delay:
   at: 2026-11-11T09:06:26Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T17:16:00Z
+  delivery: 2026-11-11T19:17:00Z
   basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0715 and S-0707."
   by: flai
-  at: 2026-11-11T16:15:10Z
+  at: 2026-11-11T18:15:37Z
 finalized:
   by: alex
   at: 2026-11-11T09:02:34Z
