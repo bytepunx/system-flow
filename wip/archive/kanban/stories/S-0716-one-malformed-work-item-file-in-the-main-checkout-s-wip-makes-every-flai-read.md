@@ -3,10 +3,10 @@ id: S-0716
 type: story
 nature: remediation
 title: One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them
-status: review
+status: done
 owner: alex
 created: 2026-11-11T01:40:46Z
-updated: 2026-11-11T15:24:22Z
+updated: 2026-11-11T18:16:12Z
 transitions:
   - to: ready
     at: 2026-11-11T08:51:27Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T15:24:09Z
     by: agent-S-0716
+  - to: done
+    at: 2026-11-11T18:16:12Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go, flai/internal/workitem/narrative_test.go, flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/scope.go, flai/internal/check/items_test.go, flai/internal/check/scope_test.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/stream_test.go, flai/internal/verify/story_test.go, design/system/work-hierarchy.md, docs/users/flai.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md, design/issues/summary.md, flai/internal/mcpserver/folder_test.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:

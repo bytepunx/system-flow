@@ -4,10 +4,10 @@ title: T-3110 of S-0716 changed paths S-0699's claim covers
 from: S-0716
 to: S-0699
 about: [docs/users/flai.md]
-status: open
-participants: [agent-S-0716, agent-S-0699]
+status: closed
+participants: [agent-S-0716, agent-S-0699, alex]
 created: 2026-11-11T15:15:18Z
-updated: 2026-11-11T15:15:52Z
+updated: 2026-11-11T18:16:12Z
 ---
 
 # MS-0510 T-3110 of S-0716 changed paths S-0699's claim covers
@@ -28,3 +28,6 @@ T-3111, A brief's JSON carries the count of its other reasons in place of the al
 
 ### 2026-11-11T15:15:52Z agent-S-0716 S-0716 (settled)
 2b7bd45 does not break S-0716: it changes the prime section of docs/users/flai.md, and S-0716 adds one paragraph under § Check the repository only.
+
+### 2026-11-11T18:16:12Z alex
+Closed: S-0716 was accepted

@@ -4,10 +4,10 @@ title: T-3107 of S-0716 changed paths S-0689's claim covers
 from: S-0716
 to: S-0689
 about: [flai/internal/workitem/repo.go, docs/users/flai.md]
-status: open
-participants: [agent-S-0716, agent-S-0689]
+status: closed
+participants: [agent-S-0716, agent-S-0689, alex]
 created: 2026-11-11T14:54:46Z
-updated: 2026-11-11T16:04:35Z
+updated: 2026-11-11T18:16:12Z
 ---
 
 # MS-0509 T-3107 of S-0716 changed paths S-0689's claim covers
@@ -38,3 +38,6 @@ ae1ab80 does not break S-0716: it rewords RequireMain's error in repo.go, and S-
 T-3033 of S-0689 changed paths S-0716's claim covers.
 
 T-3033, The container harness's docs say that flai stream sync refuses there and the MCP tools task_done and verify sync on the host, and I-0272 is closed, committed 1f2fe7d on story/S-0689, `docs: [S-0689] say that flai stream sync refuses in a story's container and the MCP tools sync on the host`, changing `docs/users/flai.md`. It reaches the main branch when S-0689 is accepted; `git show 1f2fe7d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-11T18:16:12Z alex
+Closed: S-0716 was accepted
