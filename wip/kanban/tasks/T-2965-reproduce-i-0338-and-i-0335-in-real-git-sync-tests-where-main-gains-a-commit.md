@@ -3,11 +3,11 @@ id: T-2965
 type: task
 nature: remediation
 title: Reproduce I-0338 and I-0335 in real-git sync tests where main gains a commit between the rebase and the checks after it
-status: in-progress
+status: done
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:28:03Z
-updated: 2026-11-11T22:12:59Z
+updated: 2026-11-11T22:21:09Z
 transitions:
   - to: ready
     at: 2026-11-11T22:12:59Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T22:12:59Z
     by: agent-S-0712
+  - to: done
+    at: 2026-11-11T22:21:09Z
+    by: agent-S-0712
 stream: S-0712
 tags: [flai, git, test]
 touches: [flai/internal/storygit/sync_test.go]
 after: [T-2963]
+usage:
+  source: log
+  seconds: 490
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 5764
+      cache_read: 1447381
+      cache_write: 61848
+      cost: 0.8109
 ---
 # T-2965 Reproduce I-0338 and I-0335 in real-git sync tests where main gains a commit between the rebase and the checks after it
 
@@ -41,3 +56,11 @@ It waits for T-2963: the tests pass only with that fix, and they call `Rebase` a
 - `flai test flai/internal/storygit` passes.
 
 ## Notes
+
+Without T-2963's change: a scratch copy of `flai/` outside the worktree, with `sync.go`, `undone.go`, and `undone_test.go` from `13a3ac957~1` and this task's `sync_test.go`, ran `go test -count=1 -run '<the three names>' ./internal/storygit`.
+
+- `TestSyncFindsNothingUndoneWhenMainGainsCommitsWhileItRuns` fails there: `undoes main: [{Path:design/adr.md ...} {Path:design/note.md ...}]` and `a record was written`. It reproduces I-0338 and I-0335.
+- `TestSyncSettlesTheChangelogAgainstMainAsTheRebaseTookIt` fails there too: the settled `## Unreleased` holds S-0422's line, gained after the rebase, and `docs/note.md` is reported undone.
+- `TestSyncCommitsTheFoldAfterACleanRebase`, changed to expect main's commit, fails there with `base "main"`.
+
+With the change, all three pass without `-short`, and `flai test flai/internal/storygit` passes.

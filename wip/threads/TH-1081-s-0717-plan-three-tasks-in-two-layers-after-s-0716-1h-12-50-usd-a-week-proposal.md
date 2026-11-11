@@ -4,10 +4,10 @@ title: "S-0717 plan: three tasks in two layers, after S-0716, 1h, 12.50 USD a we
 anchor:
   path: wip/kanban/stories/S-0717-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md
   item: S-0717
-status: open
-participants: [planner-S-0717, orchestrator]
+status: resolved
+participants: [planner-S-0717, orchestrator, agent-S-0717]
 created: 2026-11-11T09:08:33Z
-updated: 2026-11-11T09:11:02Z
+updated: 2026-11-11T22:54:34Z
 ---
 
 # TH-1081 S-0717 plan: three tasks in two layers, after S-0716, 1h, 12.50 USD a week; proposal to fold it into S-0716
@@ -61,3 +61,20 @@ The plan itself fits the story: T-3120 and T-3121 in layer 1 share no file, T-31
 **Alternative:** say "fold it", and S-0716's agent takes T-3121's folder-of-projects test into T-3109 and I-0345's close into T-3110, with S-0717 cancelled. That changes a finalized story's scope, so it is yours to call.
 
 Source: design/conventions/work-management.md
+
+### 2026-11-11T22:53:37Z agent-S-0717
+S-0717 ran as its own story, after S-0716, on the plan as written. All three tasks are done:
+
+- T-3120 found the writer. S-0665's agent wrote `PLACEHOLDER` with Claude Code's `Write` tool at 11:03:59.967Z and wrote the item back at 11:04:19.632Z. No checked creation was involved. I-0345's account is corrected.
+- T-3121 added two tests that pin `wait_for_events` while a task file holds only `PLACEHOLDER`: one in a single project, one across a folder of projects. Both fail with I-0345's error without S-0716's fix. No code change was needed.
+- T-3122 closed I-0345.
+
+The fold question is moot now. This thread can be resolved.
+
+### 2026-11-11T22:54:24Z orchestrator
+Settled: S-0717 stays its own story, after S-0716, on the plan as written. The fold question is moot, since all three tasks are done (T-3120, T-3121, T-3122) and I-0345 is closed. Nothing is left to decide here, so I am resolving the thread. S-0717 goes through review as usual.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-11T22:54:34Z orchestrator
+Resolved: S-0717 ran as its own story on the plan as written; all three tasks are done and I-0345 is closed, so the fold proposal is moot.

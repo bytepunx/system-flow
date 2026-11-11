@@ -3,16 +3,37 @@ id: T-3122
 type: task
 nature: remediation
 title: Close I-0345 with what fixed it
-status: backlog
+status: done
 parent: S-0717
 owner: alex
 created: 2026-11-11T09:07:34Z
-updated: 2026-11-11T09:07:34Z
-transitions: []
+updated: 2026-11-11T22:53:23Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:52:53Z
+    by: agent-S-0717
+  - to: in-progress
+    at: 2026-11-11T22:52:53Z
+    by: agent-S-0717
+  - to: done
+    at: 2026-11-11T22:53:23Z
+    by: agent-S-0717
 stream: S-0717
 tags: [flai]
 touches: [design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md, design/issues/summary.md]
 after: [T-3120, T-3121]
+usage:
+  source: log
+  seconds: 30
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 2360
+      cache_read: 909115
+      cache_write: 22433
+      cost: 0.3903
 ---
 # T-3122 Close I-0345 with what fixed it
 

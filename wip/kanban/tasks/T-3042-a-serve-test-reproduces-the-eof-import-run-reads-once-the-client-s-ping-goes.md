@@ -3,15 +3,31 @@ id: T-3042
 type: task
 nature: remediation
 title: A serve test reproduces the EOF import.run reads once the client's ping goes unanswered by the test dashboard
-status: backlog
+status: done
 parent: S-0703
 owner: alex
 created: 2026-11-10T10:34:32Z
-updated: 2026-11-10T10:34:32Z
-transitions: []
+updated: 2026-11-11T23:17:58Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:17:53Z
+    by: agent-S-0703
+  - to: in-progress
+    at: 2026-11-11T23:17:53Z
+    by: agent-S-0703
+  - to: done
+    at: 2026-11-11T23:17:58Z
+    by: agent-S-0703
 stream: S-0703
 tags: [flai, tests]
 touches: [flai/internal/serve/candidates_test.go]
+after: [T-3044]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models: []
 ---
 # T-3042 A serve test reproduces the EOF import.run reads once the client's ping goes unanswered by the test dashboard
 

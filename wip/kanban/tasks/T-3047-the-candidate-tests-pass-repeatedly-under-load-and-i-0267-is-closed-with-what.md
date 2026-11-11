@@ -3,16 +3,37 @@ id: T-3047
 type: task
 nature: remediation
 title: The candidate tests pass repeatedly under load, and I-0267 is closed with what fixed it
-status: backlog
+status: done
 parent: S-0703
 owner: alex
 created: 2026-11-10T10:34:54Z
-updated: 2026-11-10T10:34:54Z
-transitions: []
+updated: 2026-11-11T23:19:39Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:18:08Z
+    by: agent-S-0703
+  - to: in-progress
+    at: 2026-11-11T23:18:08Z
+    by: agent-S-0703
+  - to: done
+    at: 2026-11-11T23:19:39Z
+    by: agent-S-0703
 stream: S-0703
 tags: [flai, tests, issues]
 touches: [design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md]
-after: [T-3044]
+after: [T-3042, T-3044]
+usage:
+  source: log
+  seconds: 89
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 32
+      cache_read: 464715
+      cache_write: 2652
+      cost: 0.1735
 ---
 # T-3047 The candidate tests pass repeatedly under load, and I-0267 is closed with what fixed it
 

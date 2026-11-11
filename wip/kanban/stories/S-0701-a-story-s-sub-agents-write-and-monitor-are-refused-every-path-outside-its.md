@@ -3,14 +3,17 @@ id: S-0701
 type: story
 nature: improvement
 title: A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-11T23:05:14Z
+updated: 2026-11-11T23:05:21Z
 transitions:
   - to: ready
     at: 2026-11-11T23:05:09Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T23:05:21Z
+    by: agent-S-0701
 tags: [harness, serve, docker]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md]
 agent:
@@ -19,20 +22,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 259
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 408
+      cache_read: 2717418
+      cache_write: 281976
+      cost: 1.1138
   strategic:
     - kind: orchestrator
-      seconds: 55
+      seconds: 64
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 93
-          cache_read: 532237
-          cache_write: 72416
-          cost: 0.1694
+          input: 18
+          output: 129
+          cache_read: 680430
+          cache_write: 73658
+          cost: 0.2116
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 26m

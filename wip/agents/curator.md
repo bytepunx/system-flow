@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 241.6823
-accrued_seconds: 27971
-tasks_completed: 154
-last_run: 2026-11-11T22:04:35Z
+accrued_cost: 242.6723
+accrued_seconds: 28021
+tasks_completed: 155
+last_run: 2026-11-11T22:18:41Z
 ---
 
 # Curator activity
@@ -1243,3 +1243,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 123
 - Cost: 1.5545 USD, estimated
+
+### 2026-11-11T22:18:41Z
+
+- Summary: I found nothing new to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The one candidate since 2026-11-11T22:04:35Z was the publish formula's step order in S-0718, which is progress that ADR-0239 already states. No design document has changed since the last run, and D-0594, D-0595, and D-0596 stay active.
+- Trigger: accepted S-0718
+- Items: none
+- Seconds: 50
+- Cost: 0.9900 USD, estimated

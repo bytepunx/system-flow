@@ -3,16 +3,37 @@ id: T-2970
 type: task
 nature: remediation
 title: Close I-0338 and I-0335 with the reason that the sync now compares against the commit its rebase took
-status: backlog
+status: done
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:28:27Z
-updated: 2026-11-11T09:05:13Z
-transitions: []
+updated: 2026-11-11T22:21:43Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:21:26Z
+    by: agent-S-0712
+  - to: in-progress
+    at: 2026-11-11T22:21:26Z
+    by: agent-S-0712
+  - to: done
+    at: 2026-11-11T22:21:43Z
+    by: agent-S-0712
 stream: S-0712
 tags: [issues]
 touches: [design/issues/I-0338-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/summary.md]
 after: [T-2965, T-2967]
+usage:
+  source: log
+  seconds: 17
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2167
+      cache_read: 544027
+      cache_write: 23247
+      cost: 0.3048
 ---
 # T-2970 Close I-0338 and I-0335 with the reason that the sync now compares against the commit its rebase took
 

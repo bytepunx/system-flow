@@ -3,15 +3,36 @@ id: T-3121
 type: task
 nature: remediation
 title: wait_for_events, in one project and across a folder of projects, answers past a task file that holds only PLACEHOLDER, with tests
-status: backlog
+status: done
 parent: S-0717
 owner: alex
 created: 2026-11-11T09:07:28Z
-updated: 2026-11-11T09:07:28Z
-transitions: []
+updated: 2026-11-11T22:49:15Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:32:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T22:32:57Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T22:49:14Z
+    by: agent-S-0717
 stream: S-0717
 tags: [flai]
-touches: [flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go]
+touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go]
+usage:
+  source: log
+  seconds: 977
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 8538
+      cache_read: 3289122
+      cache_write: 81162
+      cost: 1.4122
 ---
 # T-3121 wait_for_events, in one project and across a folder of projects, answers past a task file that holds only PLACEHOLDER, with tests
 

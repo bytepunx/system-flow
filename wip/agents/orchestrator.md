@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2125.1542
-accrued_seconds: 1550548
-tasks_completed: 3050
-last_run: 2026-11-11T22:15:40Z
+accrued_cost: 2127.4174
+accrued_seconds: 1550980
+tasks_completed: 3071
+last_run: 2026-11-11T23:18:14Z
 ---
 
 # Orchestrator activity
@@ -21382,6 +21382,153 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.0851 USD, estimated
+
+### 2026-11-11T22:17:49Z
+
+- Summary: Accepted S-0718, the publish formula's instance (flai 1.86.18), at 4528074d00ce: close-out passed at the branch head, no blockers in the preview, evidence T-3080, T-3081, T-3082 done.
+- Items: S-0718
+- Seconds: 46
+- Cost: 0.1742 USD, estimated
+
+### 2026-11-11T22:18:02Z
+
+- Summary: Did not publish after S-0718's acceptance: release_evaluate under threshold is not met, 0 stories pending (count threshold 1), value 0 of 1000 USD.
+- Items: S-0718
+- Seconds: 13
+- Cost: 0.0266 USD, estimated
+
+### 2026-11-11T22:18:19Z
+
+- Summary: I accepted S-0718, the publish formula's run that released flai 1.86.18, so this run's one reason is done.
+- Items: none
+- Seconds: 17
+- Cost: 0.1656 USD, estimated
+
+### 2026-11-11T22:31:16Z
+
+- Summary: Promoted S-0717 to ready, rank 1 of 1 in flai promote --candidates by throughput (1h forecast), for ready-empty (ready 1 of 10); ordered ready by throughput: S-0717 (1h), S-0681 (no forecast).
+- Items: S-0717, S-0681
+- Seconds: 26
+- Cost: 0.1748 USD, estimated
+
+### 2026-11-11T22:31:24Z
+
+- Summary: S-0712 in review: last verify passed at 72c82eb, not the branch head dad5565; asked flai serve for its close-out (job S-0712-20261111T223102Z) and left it in review for a later run to read the verdict and accept.
+- Items: S-0712
+- Seconds: 8
+- Cost: 0.0260 USD, estimated
+
+### 2026-11-11T22:31:41Z
+
+- Summary: I moved S-0717 to ready, but S-0712 is still in review: its close-out is re-running as a job.
+- Items: none
+- Seconds: 17
+- Cost: 0.1616 USD, estimated
+
+### 2026-11-11T22:32:16Z
+
+- Summary: Pull order changed: applied flai order --by throughput; ready holds only S-0681 (rank 1, no forecast duration, held no-touches), so the order is unchanged. promote_candidates lists no candidates, so nothing promoted.
+- Items: S-0681
+- Seconds: 24
+- Cost: 0.0610 USD, estimated
+
+### 2026-11-11T22:32:33Z
+
+- Summary: I reapplied the throughput order to the ready column, and nothing in it changed.
+- Items: none
+- Seconds: 17
+- Cost: 0.2066 USD, estimated
+
+### 2026-11-11T22:54:24Z
+
+- Summary: Answered TH-1081, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0717
+- Seconds: 12
+- Cost: 0.0460 USD, estimated
+
+### 2026-11-11T22:54:41Z
+
+- Summary: Settled planner-S-0717's TH-1081 under plan_backlog_stories: S-0717 ran as its own story on the plan as written (T-3120 to T-3122 done, I-0345 closed), so the fold proposal is moot; replied and resolved the thread.
+- Items: S-0717, TH-1081
+- Seconds: 17
+- Cost: 0.0413 USD, estimated
+
+### 2026-11-11T22:54:56Z
+
+- Summary: I've resolved TH-1081, which covered S-0717's plan and the planner's proposal to fold S-0717 into S-0716. That was the only reason I was started for, so I'm ending.
+- Items: none
+- Seconds: 15
+- Cost: 0.0978 USD, estimated
+
+### 2026-11-11T23:04:02Z
+
+- Summary: S-0717 in review: last verify passed at 02b5b0d but the branch head is c7d01bd, so asked flai serve for its close-out; it started job S-0717-20261111T230355Z, so S-0717 stays in review for a later run to read the verdict
+- Items: S-0717
+- Seconds: 39
+- Cost: 0.0956 USD, estimated
+
+### 2026-11-11T23:04:27Z
+
+- Summary: Answered TH-1041, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0703
+- Seconds: 25
+- Cost: 0.0563 USD, estimated
+
+### 2026-11-11T23:04:54Z
+
+- Summary: Approved and resolved planner-S-0703's plan on TH-1041 (3 tasks in 3 layers, 1h30m, 22.50 USD/week); finalized complete drafts S-0703 and S-0701 (plan approved on remedy A the operator confirmed, D-0589) from flai promote --drafts ranks 3 and 2; left S-0241 (draft by design, TH-0790), S-0709 and S-0683 (pending recommendations awaiting the operator), and incomplete drafts S-0659, S-0723, S-0725, S-0726
+- Items: S-0703, S-0701
+- Seconds: 27
+- Cost: 0.0918 USD, estimated
+
+### 2026-11-11T23:05:20Z
+
+- Summary: Promoted S-0701 and S-0703 to ready, ranks 1 and 2 of flai promote --candidates by throughput (1h30m each), ready had room (1/10); applied flai order --by throughput: S-0701, S-0703, S-0681 (no forecast duration)
+- Items: S-0701, S-0703, S-0681
+- Seconds: 26
+- Cost: 0.1266 USD, estimated
+
+### 2026-11-11T23:05:40Z
+
+- Summary: plan E-0034 (first in flai plan --candidates) refused: image flai-agent-sf-claude-code:local, the layer agent.image.layer names for claude-code, is not on this host; not retrying, and starting no story planner (S-0659, S-0723, S-0725, S-0726) until it is built
+- Items: E-0034
+- Seconds: 20
+- Cost: 0.0646 USD, estimated
+
+### 2026-11-11T23:06:02Z
+
+- Summary: The ready column is refilled: S-0701 and S-0703 went to ready and their agents have already started them. S-0717 is not accepted yet, because its new close-out is still running. The planner could not start because a Docker image is missing on the host.
+- Items: none
+- Seconds: 22
+- Cost: 0.1646 USD, estimated
+
+### 2026-11-11T23:06:30Z
+
+- Summary: Pull order changed: applied flai order --by throughput to the ready column; S-0681, the only ready story, stays first (no forecast duration). No promote candidates; S-0681 stays held (no-touches) while in-progress is full 3/3.
+- Items: S-0681
+- Seconds: 15
+- Cost: 0.0535 USD, estimated
+
+### 2026-11-11T23:06:47Z
+
+- Summary: I applied the throughput order to the ready column, which was the reason this run started. Nothing else needed doing for it.
+- Items: none
+- Seconds: 17
+- Cost: 0.2246 USD, estimated
+
+### 2026-11-11T23:17:58Z
+
+- Summary: Left TH-1084 to the operator: its only entry is flai serve's upgrade notice, which answer_threads excludes; the upgrade changes the host, so it is the operator's (flai host upgrade --version 1.86.18 once flai/v1.86.18 is published).
+- Items: TH-1084
+- Seconds: 13
+- Cost: 0.0555 USD, estimated
+
+### 2026-11-11T23:18:14Z
+
+- Summary: I left TH-1084 unanswered, and it is still open for you. The host runs flai 1.86.17, older than 1.86.18, the newest release tagged in this project's history.
+- Items: none
+- Seconds: 16
+- Cost: 0.1486 USD, estimated
 
 ## Refusals
 

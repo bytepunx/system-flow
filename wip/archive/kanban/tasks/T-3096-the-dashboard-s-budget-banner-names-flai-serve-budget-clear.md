@@ -3,11 +3,11 @@ id: T-3096
 type: task
 nature: remediation
 title: The dashboard's budget banner names flai serve budget clear
-status: in-progress
+status: done
 parent: S-0720
 owner: alex
 created: 2026-11-11T08:54:39Z
-updated: 2026-11-11T21:57:46Z
+updated: 2026-11-11T22:18:31Z
 transitions:
   - to: ready
     at: 2026-11-11T21:57:35Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T21:57:46Z
     by: agent-S-0720
+  - to: done
+    at: 2026-11-11T22:18:31Z
+    by: agent-S-0720
 stream: S-0720
 tags: [flaiover, budget]
 touches: [flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts]
+usage:
+  source: log
+  seconds: 1245
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 9887
+      cache_read: 2708418
+      cache_write: 45794
+      cost: 1.0173
 ---
 # T-3096 The dashboard's budget banner names flai serve budget clear
 

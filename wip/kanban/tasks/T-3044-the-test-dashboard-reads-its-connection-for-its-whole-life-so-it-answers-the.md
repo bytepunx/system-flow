@@ -3,16 +3,36 @@ id: T-3044
 type: task
 nature: remediation
 title: The test dashboard reads its connection for its whole life, so it answers the client's pings
-status: backlog
+status: done
 parent: S-0703
 owner: alex
 created: 2026-11-10T10:34:46Z
-updated: 2026-11-10T10:34:46Z
-transitions: []
+updated: 2026-11-11T23:12:54Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:07:37Z
+    by: agent-S-0703
+  - to: in-progress
+    at: 2026-11-11T23:07:37Z
+    by: agent-S-0703
+  - to: done
+    at: 2026-11-11T23:12:54Z
+    by: agent-S-0703
 stream: S-0703
 tags: [flai, tests]
-touches: [flai/internal/channel/channeltest/dashboard.go]
-after: [T-3042]
+touches: [flai/internal/channel/channeltest/dashboard.go, flai/internal/hostapi/components_test.go, flai/internal/serve/serve_test.go]
+usage:
+  source: log
+  seconds: 317
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 84
+      cache_read: 1515319
+      cache_write: 10938
+      cost: 0.5667
 ---
 # T-3044 The test dashboard reads its connection for its whole life, so it answers the client's pings
 

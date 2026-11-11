@@ -3,15 +3,36 @@ id: T-3120
 type: task
 nature: research
 title: Find what wrote PLACEHOLDER into T-3079's file and correct I-0345's account of it
-status: backlog
+status: done
 parent: S-0717
 owner: alex
 created: 2026-11-11T09:07:17Z
-updated: 2026-11-11T09:07:17Z
-transitions: []
+updated: 2026-11-11T22:33:14Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:32:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T22:32:57Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T22:33:14Z
+    by: agent-S-0717
 stream: S-0717
 tags: [flai]
 touches: [design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md]
+usage:
+  source: log
+  seconds: 17
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 536
+      cache_read: 206579
+      cache_write: 5098
+      cost: 0.0887
 ---
 # T-3120 Find what wrote PLACEHOLDER into T-3079's file and correct I-0345's account of it
 

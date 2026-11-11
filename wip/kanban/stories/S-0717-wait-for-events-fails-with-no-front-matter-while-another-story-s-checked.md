@@ -3,16 +3,22 @@ id: S-0717
 type: story
 nature: remediation
 title: wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file
-status: ready
+status: review
 owner: alex
 created: 2026-11-11T01:43:38Z
-updated: 2026-11-11T22:31:13Z
+updated: 2026-11-11T23:02:55Z
 transitions:
   - to: ready
     at: 2026-11-11T22:31:08Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T22:31:25Z
+    by: agent-S-0717
+  - to: review
+    at: 2026-11-11T23:02:49Z
+    by: agent-S-0717
 tags: [flai]
-touches: [flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md, design/issues/summary.md, design/issues/I-0352-a-story-s-agent-can-overwrite-a-work-item-file-whole-with-write-front-matter.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 after: [S-0716]
 agent:
   harness: claude-code
@@ -20,9 +26,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1909
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 4
+      work: 48
+  models:
+    - model: claude-opus-5-5
+      input: 180
+      output: 33979
+      cache_read: 13090405
+      cache_write: 323018
+      cost: 5.6205
   strategic:
     - kind: planner
       seconds: 33
@@ -35,15 +52,15 @@ usage:
           cache_write: 18132
           cost: 0.5565
     - kind: orchestrator
-      seconds: 38
+      seconds: 119
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 117
-          cache_read: 424497
-          cache_write: 93339
-          cost: 0.1449
+          input: 40
+          output: 349
+          cache_read: 1237790
+          cache_write: 237207
+          cost: 0.4152
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -69,8 +86,8 @@ finalized:
 This story remediates [I-0345](../../../design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md), "wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0345 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0345 is closed with `flai issue close I-0345 --reason` saying what fixed it
+- [x] The cause I-0345 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0345 is closed with `flai issue close I-0345 --reason` saying what fixed it
 
 ## Tasks
 - T-3120 Find what wrote PLACEHOLDER into T-3079's file and correct I-0345's account of it

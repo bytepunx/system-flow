@@ -3,10 +3,10 @@ id: S-0720
 type: story
 nature: remediation
 title: A usage limit on one Claude login holds every start on claude-code, and changing the harness's program or login does not lift it
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-11T05:05:59Z
-updated: 2026-11-11T21:55:05Z
+updated: 2026-11-11T23:22:26Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
@@ -14,17 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-11-11T21:55:05Z
     by: agent-S-0720
+  - to: review
+    at: 2026-11-11T23:21:00Z
+    by: agent-S-0720
+  - to: done
+    at: 2026-11-11T23:22:26Z
+    by: orchestrator
 tags: [flai, flaiover, serve, budget]
-touches: [flai/internal/serve/budget.go, flai/cmd/serve_agent.go, design/system/flai-cli.md, flai/internal/serve/budget_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/cmd/serve.go, flai/cmd/serve_budget.go, flai/cmd/serve_budget_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [flai/internal/serve/budget.go, flai/cmd/serve_agent.go, design/system/flai-cli.md, flai/internal/serve/budget_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/cmd/serve.go, flai/cmd/serve_budget.go, flai/cmd/serve_budget_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, docs/users/flai-reference.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, flai/internal/serve/agents_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/plan_test.go, flai/internal/serve/start_test.go, flai/internal/guard/guard_tables.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/runbooks/backup.md, design/adrs/0290-the-host-s-budget-state-is-kept-per-provider-else-per-harness-program-and-login.md, design/adrs/README.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5178
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 8
+      test_runs: 2
+      work: 116
+  models:
+    - model: claude-opus-5-5
+      input: 770
+      output: 221121
+      cache_read: 60571113
+      cache_write: 1024131
+      cost: 22.7515
   strategic:
     - kind: planner
       seconds: 1
@@ -68,10 +86,10 @@ forecast:
 When the operator changes what a harness runs as (its program, its arguments, or the container's login), a usage limit recorded for the old login stops holding starts, and a limit on one login never holds a project that runs on another. The operator can also clear a budget state by hand.
 
 ## Acceptance criteria
-- [ ] `flai serve agent harness <name>` (the dashboard's harness setting included), when it changes the program, arguments, or login a project's or the host's harness runs with, ends the hold on that harness's budget state for what it changed, so the next start goes as the probe; the change is journaled under `serve.budget` with why, and sent as a notice like any other clear.
-- [ ] A budget state is kept under what tells one login from another (the provider, else the harness with its resolved program and login), so a run of `rmhclod` ending on the limit does not hold a project whose `claude-code` program is `meclod`; a `budget.json` in the old shape is still read.
-- [ ] `flai serve budget clear [<provider>]` clears a state by hand and `flai serve budget` shows it; the hold's message (`budgetHeldWhy`) and the dashboard name that command.
-- [ ] Tests cover: a harness change lifting the hold, two programs on one harness held apart, and the manual clear; `design/system/flai-cli.md` and the operator docs describe all three.
+- [x] `flai serve agent harness <name>` (the dashboard's harness setting included), when it changes the program, arguments, or login a project's or the host's harness runs with, ends the hold on that harness's budget state for what it changed, so the next start goes as the probe; the change is journaled under `serve.budget` with why, and sent as a notice like any other clear.
+- [x] A budget state is kept under what tells one login from another (the provider, else the harness with its resolved program and login), so a run of `rmhclod` ending on the limit does not hold a project whose `claude-code` program is `meclod`; a `budget.json` in the old shape is still read.
+- [x] `flai serve budget clear [<provider>]` clears a state by hand and `flai serve budget` shows it; the hold's message (`budgetHeldWhy`) and the dashboard name that command.
+- [x] Tests cover: a harness change lifting the hold, two programs on one harness held apart, and the manual clear; `design/system/flai-cli.md` and the operator docs describe all three.
 
 ## Tasks
 - T-3095 Keep a budget state under the harness's resolved program and login, and still read the old shape
@@ -80,6 +98,7 @@ When the operator changes what a harness runs as (its program, its arguments, or
 - T-3104 flai serve budget shows the budget states and flai serve budget clear clears one by hand
 - T-3105 flai serve agent harness clears the budget state of the program, arguments, or login it changes
 - T-3106 Describe the per-login budget state, the harness change's clear, and flai serve budget in the design and the docs
+- T-3123 Record the per-login budget key and the guarded clear in an ADR, linked from flai-cli.md
 
 ## Notes
 
@@ -118,3 +137,14 @@ Figures:
 - Cost of delay 375 USD a week, as `flai cod` works it out from `time_lost_per_cycle` 2h30m (TH-1070, set by the orchestrator): 2h30m a week at 150 USD an hour. It stands: the input measures the 2026-11-11 hold, and the host default still runs `rmhclod`.
 
 Assumption: whether an old-shape entry keyed `claude-code` holds every program on the harness until it clears is left to T-3095, which records the choice.
+
+### Accepted by the orchestrator
+
+- Verified: fa9f4f976827b1f0d11140753c7292bade463899
+- At: 2026-11-11T23:22:26Z
+
+Verdict: met. All four criteria are met, and the close-out passed at fa9f4f9.
+- 1: flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/internal/serve/budget.go, flai/internal/serve/notify.go, flai/cmd/serve_actions_test.go, flai/internal/serve/notify_test.go
+- 2: flai/internal/serve/budget.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/orchestrate.go, flai/internal/serve/budget_test.go
+- 3: flai/cmd/serve_budget.go, flai/cmd/serve.go, flai/cmd/serve_budget_test.go, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, flai/internal/guard/guard_tables.go, flai/internal/guard/hostconfig.go
+- 4: flai/cmd/serve_actions_test.go, flai/internal/serve/budget_test.go, flai/cmd/serve_budget_test.go, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md

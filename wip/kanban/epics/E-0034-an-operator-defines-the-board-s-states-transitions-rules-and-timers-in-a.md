@@ -10,6 +10,21 @@ updated: 2026-11-10T07:55:17Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, template]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 20
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 4
+          output: 7
+          cache_read: 227338
+          cache_write: 1251
+          cost: 0.0646
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 

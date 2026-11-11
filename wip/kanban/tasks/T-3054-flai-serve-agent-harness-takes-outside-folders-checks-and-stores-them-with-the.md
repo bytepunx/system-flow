@@ -3,12 +3,18 @@ id: T-3054
 type: task
 nature: improvement
 title: flai serve agent harness takes --outside folders, checks and stores them with the harness's settings, and shows them
-status: backlog
+status: in-progress
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:09Z
-updated: 2026-11-10T10:35:09Z
-transitions: []
+updated: 2026-11-11T23:10:01Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:10:01Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-11T23:10:01Z
+    by: agent-S-0701
 stream: S-0701
 tags: [serve, config]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md]

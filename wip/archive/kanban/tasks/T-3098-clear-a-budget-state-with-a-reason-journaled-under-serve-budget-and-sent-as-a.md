@@ -3,16 +3,37 @@ id: T-3098
 type: task
 nature: remediation
 title: "Clear a budget state with a reason: journaled under serve.budget and sent as a notice, and budgetHeldWhy names flai serve budget clear"
-status: backlog
+status: done
 parent: S-0720
 owner: alex
 created: 2026-11-11T08:54:48Z
-updated: 2026-11-11T08:54:48Z
-transitions: []
+updated: 2026-11-11T22:35:48Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:22:54Z
+    by: agent-S-0720
+  - to: in-progress
+    at: 2026-11-11T22:23:14Z
+    by: agent-S-0720
+  - to: done
+    at: 2026-11-11T22:35:48Z
+    by: agent-S-0720
 stream: S-0720
 tags: [flai, serve, budget]
-touches: [flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go]
+touches: [flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/internal/serve/start_test.go, flai/internal/serve/plan_test.go]
 after: [T-3095]
+usage:
+  source: log
+  seconds: 754
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 24312
+      cache_read: 6659680
+      cache_write: 112601
+      cost: 2.5015
 ---
 # T-3098 Clear a budget state with a reason: journaled under serve.budget and sent as a notice, and budgetHeldWhy names flai serve budget clear
 

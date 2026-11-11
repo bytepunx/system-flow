@@ -3,15 +3,36 @@ id: T-3048
 type: task
 nature: improvement
 title: Record in an ADR that the operator's outside folders reach a story's agent and its sub-agents as --add-dir and container mounts, and that Monitor joins the default tools
-status: backlog
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:34:59Z
-updated: 2026-11-10T10:34:59Z
-transitions: []
+updated: 2026-11-11T23:09:37Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:06:31Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-11T23:06:31Z
+    by: agent-S-0701
+  - to: done
+    at: 2026-11-11T23:09:37Z
+    by: agent-S-0701
 stream: S-0701
 tags: [adr, design]
-touches: [design/adrs/README.md, design/system/agent-adapters.md]
+touches: [design/adrs/README.md, design/system/agent-adapters.md, design/adrs/0289-flai-serve-gives-a-story-s-agent-and-its-sub-agents-the-outside-folders-the.md]
+usage:
+  source: log
+  seconds: 183
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 258
+      cache_read: 1616339
+      cache_write: 84809
+      cost: 0.6317
 ---
 # T-3048 Record in an ADR that the operator's outside folders reach a story's agent and its sub-agents as --add-dir and container mounts, and that Monitor joins the default tools
 

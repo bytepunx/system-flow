@@ -3,16 +3,37 @@ id: T-3106
 type: task
 nature: remediation
 title: Describe the per-login budget state, the harness change's clear, and flai serve budget in the design and the docs
-status: backlog
+status: done
 parent: S-0720
 owner: alex
 created: 2026-11-11T08:55:25Z
-updated: 2026-11-11T08:55:25Z
-transitions: []
+updated: 2026-11-11T23:02:26Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:55:48Z
+    by: agent-S-0720
+  - to: in-progress
+    at: 2026-11-11T22:55:48Z
+    by: agent-S-0720
+  - to: done
+    at: 2026-11-11T23:02:26Z
+    by: agent-S-0720
 stream: S-0720
 tags: [flai, flaiover, docs, budget]
-touches: [design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/system/project-manifest.md, docs/operators/runbooks/backup.md, design/system/strategic-agents.md]
 after: [T-3104, T-3105, T-3096]
+usage:
+  source: log
+  seconds: 398
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 22754
+      cache_read: 6232830
+      cache_write: 105384
+      cost: 2.3411
 ---
 # T-3106 Describe the per-login budget state, the harness change's clear, and flai serve budget in the design and the docs
 

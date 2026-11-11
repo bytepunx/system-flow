@@ -3,16 +3,19 @@ id: S-0712
 type: story
 nature: remediation
 title: flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T10:10:59Z
-updated: 2026-11-11T21:55:01Z
+updated: 2026-11-11T22:30:15Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-11T21:55:01Z
+    by: agent-S-0712
+  - to: review
+    at: 2026-11-11T22:30:15Z
     by: agent-S-0712
 tags: [flai, git]
 topics: [git]
@@ -24,19 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 711
-  estimated: true
-  priced_by: estimate
+  seconds: 2129
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 22
+      hand_edits: 1
+      work: 42
   models:
     - model: claude-opus-5-5
-      input: 100
-      output: 601
-      cache_read: 5096452
-      cache_write: 382334
-      cost: 2.0336
+      input: 202
+      output: 48917
+      cache_read: 12283213
+      cache_write: 524877
+      cost: 6.8815
   strategic:
     - kind: planner
       seconds: 127
@@ -49,15 +52,15 @@ usage:
           cache_write: 191153
           cost: 3.2214
     - kind: orchestrator
-      seconds: 121
+      seconds: 129
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 27
-          output: 262
-          cache_read: 1819158
-          cache_write: 106577
-          cost: 0.5311
+          input: 29
+          output: 286
+          cache_read: 1910916
+          cache_write: 106890
+          cost: 0.5571
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -85,9 +88,9 @@ This story remediates [I-0338](../../../design/issues/I-0338-flai-task-done-s-sy
 It also remediates [I-0335](../../../design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md), "flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs", which has the same cause. The operator merged S-0709 into this story on TH-1017.
 
 ## Acceptance criteria
-- [ ] The cause I-0338 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0338 is closed with `flai issue close I-0338 --reason` saying what fixed it
-- [ ] I-0335 is closed with `flai issue close I-0335 --reason` saying what fixed it
+- [x] The cause I-0338 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0338 is closed with `flai issue close I-0338 --reason` saying what fixed it
+- [x] I-0335 is closed with `flai issue close I-0335 --reason` saying what fixed it
 
 ## Tasks
 - T-2963 Take main's head once as a commit in storygit.Rebase and pass that commit to the undone check and the changelog settle

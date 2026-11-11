@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 580
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 443
-      cache_read: 2892989
-      cache_write: 170663
-      cost: 1.1372
+      input: 49
+      output: 11881
+      cache_read: 2983247
+      cache_write: 127478
+      cost: 1.6713
 ---
 # T-2963 Take main's head once as a commit in storygit.Rebase and pass that commit to the undone check and the changelog settle
 

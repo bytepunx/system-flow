@@ -3,16 +3,37 @@ id: T-3105
 type: task
 nature: remediation
 title: flai serve agent harness clears the budget state of the program, arguments, or login it changes
-status: backlog
+status: done
 parent: S-0720
 owner: alex
 created: 2026-11-11T08:55:12Z
-updated: 2026-11-11T08:55:20Z
-transitions: []
+updated: 2026-11-11T22:55:34Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:36:30Z
+    by: agent-S-0720
+  - to: in-progress
+    at: 2026-11-11T22:36:30Z
+    by: agent-S-0720
+  - to: done
+    at: 2026-11-11T22:55:34Z
+    by: agent-S-0720
 stream: S-0720
 tags: [flai, cli, serve, budget]
 touches: [flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go]
 after: [T-3098]
+usage:
+  source: log
+  seconds: 1144
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 21453
+      cache_read: 5876546
+      cache_write: 99360
+      cost: 2.2073
 ---
 # T-3105 flai serve agent harness clears the budget state of the program, arguments, or login it changes
 

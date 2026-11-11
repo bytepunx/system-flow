@@ -3,11 +3,11 @@ id: T-3095
 type: task
 nature: remediation
 title: Keep a budget state under the harness's resolved program and login, and still read the old shape
-status: in-progress
+status: done
 parent: S-0720
 owner: alex
 created: 2026-11-11T08:54:35Z
-updated: 2026-11-11T21:57:46Z
+updated: 2026-11-11T22:18:12Z
 transitions:
   - to: ready
     at: 2026-11-11T21:57:35Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T21:57:46Z
     by: agent-S-0720
+  - to: done
+    at: 2026-11-11T22:18:12Z
+    by: agent-S-0720
 stream: S-0720
 tags: [flai, serve, budget]
-touches: [flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go]
+touches: [flai/internal/serve/budget.go, flai/internal/serve/budget_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/orchestrate.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 1226
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 19547
+      cache_read: 5354424
+      cache_write: 90532
+      cost: 2.0112
 ---
 # T-3095 Keep a budget state under the harness's resolved program and login, and still read the old shape
 
