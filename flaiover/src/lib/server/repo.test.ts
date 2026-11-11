@@ -90,16 +90,22 @@ describe('Repo on the metrics fixture', () => {
 	});
 });
 
-describe.skipIf(!existsSync(resolve(monorepo, 'system-flow.yaml')))('Repo on the monorepo', () => {
-	it('reads every item with a consistent status', async () => {
-		const r = new Repo(monorepo, flaiAsk(monorepo));
-		const items = await r.items({ archive: true });
-		expect(items.length).toBeGreaterThan(50);
-		for (const it of items) {
-			expect(it.status, it.path).toBe(it.transitions.at(-1)?.to ?? 'backlog');
-		}
-	});
-});
+// A one-shot flai lists every item of the monorepo, archive included: under a second alone, but
+// over vitest's 5 s default while other agents' tiers load the host (I-0269), as search.test.ts's is.
+describe.skipIf(!existsSync(resolve(monorepo, 'system-flow.yaml')))(
+	'Repo on the monorepo',
+	{ timeout: 30000 },
+	() => {
+		it('reads every item with a consistent status', async () => {
+			const r = new Repo(monorepo, flaiAsk(monorepo));
+			const items = await r.items({ archive: true });
+			expect(items.length).toBeGreaterThan(50);
+			for (const it of items) {
+				expect(it.status, it.path).toBe(it.transitions.at(-1)?.to ?? 'backlog');
+			}
+		});
+	}
+);
 
 // S-0336: the conversations between stories, remembered until a document or an item changes.
 describe('Repo.messages', () => {
