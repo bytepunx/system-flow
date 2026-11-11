@@ -3,15 +3,36 @@ id: T-3012
 type: task
 nature: improvement
 title: Keep the digest rule's per-entry results under .flai-cache, keyed by each entry's size and modification time
-status: backlog
+status: done
 parent: S-0677
 owner: alex
 created: 2026-11-10T10:31:37Z
-updated: 2026-11-10T10:31:37Z
-transitions: []
+updated: 2026-11-10T19:45:47Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:33:57Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:33:58Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:45:47Z
+    by: agent-S-0677
 stream: S-0677
 tags: [flai, performance, check, digest]
 touches: [flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/kept.go, flai/internal/digest/kept_test.go, flai/internal/check/check_records.go, flai/internal/check/digest_test.go]
+usage:
+  source: log
+  seconds: 709
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 18450
+      cache_read: 7137776
+      cache_write: 226930
+      cost: 3.1395
 ---
 # T-3012 Keep the digest rule's per-entry results under .flai-cache, keyed by each entry's size and modification time
 

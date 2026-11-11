@@ -3,15 +3,36 @@ id: T-3010
 type: task
 nature: improvement
 title: Run oneItem over the items on check.Run's pool, with only the byID fill first and alone
-status: backlog
+status: done
 parent: S-0677
 owner: alex
 created: 2026-11-10T10:31:27Z
-updated: 2026-11-10T10:31:56Z
-transitions: []
+updated: 2026-11-10T19:51:50Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:33:56Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:33:56Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:51:50Z
+    by: agent-S-0677
 stream: S-0677
 tags: [flai, performance, check]
 touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go]
+usage:
+  source: log
+  seconds: 1074
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 13319
+      cache_read: 5152666
+      cache_write: 163818
+      cost: 2.2664
 ---
 # T-3010 Run oneItem over the items on check.Run's pool, with only the byID fill first and alone
 

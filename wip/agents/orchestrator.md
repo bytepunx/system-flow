@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2098.4947
-accrued_seconds: 1545055
-tasks_completed: 2850
-last_run: 2026-11-10T19:25:15Z
+accrued_cost: 2102.1177
+accrued_seconds: 1545864
+tasks_completed: 2873
+last_run: 2026-11-10T20:21:43Z
 ---
 
 # Orchestrator activity
@@ -19983,6 +19983,167 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 16
 - Cost: 0.1240 USD, estimated
 
+### 2026-11-10T19:27:03Z
+
+- Summary: Release due for S-0665 (threshold met: count 1 at or over 1, value 37.5 USD of 1000): ran no new publish formula, since its instance S-0704 is already in ready, not held, 8th in pull order, and publishes everything accepted and not yet released, S-0665 included, when a story's agent pulls it.
+- Items: S-0665, S-0704
+- Seconds: 24
+- Cost: 0.0866 USD, estimated
+
+### 2026-11-10T19:27:20Z
+
+- Summary: I didn't start a new publish run for S-0665, because S-0704 will release it.
+- Items: none
+- Seconds: 17
+- Cost: 0.1081 USD, estimated
+
+### 2026-11-10T19:29:37Z
+
+- Summary: Answered TH-1049, citing wip/archive/kanban/stories/S-0665-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md
+- Items: S-0708
+- Seconds: 44
+- Cost: 0.1055 USD, estimated
+
+### 2026-11-10T19:30:03Z
+
+- Summary: Answered TH-1051, citing wip/archive/kanban/stories/S-0665-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md
+- Items: S-0666
+- Seconds: 26
+- Cost: 0.0000 USD
+
+### 2026-11-10T19:30:33Z
+
+- Summary: TH-1047 was already resolved: the operator confirmed answer 1, so the rule goes into the template's baseline through a follow-up story (D-0578). No such story exists, so I opened TH-1053 asking the operator to create it. I told S-0708 (TH-1049) and S-0666 (TH-1051) that S-0665 is on main at 548c45261, so their agents can close out.
+- Items: S-0667, S-0708, S-0666, S-0665
+- Seconds: 30
+- Cost: 0.0000 USD
+
+### 2026-11-10T19:31:06Z
+
+- Summary: I had nothing to do on TH-1047 itself. You had already confirmed the recommendation and agent-S-0667 had resolved the thread. While checking it, I found and handled three follow-ons.
+- Items: none
+- Seconds: 33
+- Cost: 0.2299 USD, estimated
+
+### 2026-11-10T19:32:06Z
+
+- Summary: S-0667 verified at 9493b67 (close-out passed, verifier: both criteria met), but this session has no MCP accept tool, so I left it in review and asked the operator to accept it on TH-1054. TH-1051: agent-S-0666's last entry asks nothing (it synced onto S-0665's fix and its close-out runs), so no reply.
+- Items: S-0667, S-0666
+- Seconds: 52
+- Cost: 0.1630 USD, estimated
+
+### 2026-11-10T19:32:50Z
+
+- Summary: I couldn't accept S-0667, so it stays in review and needs you to accept it. This session has no MCP `accept` tool, the same gap as TH-1050, and my rules forbid `flai accept` in my shell.
+- Items: none
+- Seconds: 44
+- Cost: 0.2591 USD, estimated
+
+### 2026-11-10T19:34:14Z
+
+- Summary: S-0666 verified at f63f738 (close-out passed every step; verifier: both criteria met, all files in touches) but left in review: this session has no MCP accept tool and flai accept is forbidden in my shell; opened TH-1055 asking the operator to accept it
+- Items: S-0666, TH-1055
+- Seconds: 66
+- Cost: 0.2550 USD, estimated
+
+### 2026-11-10T19:34:43Z
+
+- Summary: S-0666 is still in review. It is verified and ready to accept, but I could not accept it.
+- Items: none
+- Seconds: 29
+- Cost: 0.2112 USD, estimated
+
+### 2026-11-10T19:35:32Z
+
+- Summary: Answered TH-1034, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0677
+- Seconds: 20
+- Cost: 0.0613 USD, estimated
+
+### 2026-11-10T19:35:49Z
+
+- Summary: Approved and resolved TH-1034, S-0677's plan, under plan_backlog_stories: four tasks in three layers fit both criteria; 1h forecast, 0.08 USD a week value (throughput policy, forecast 1h). Set no cost of delay input: the story is in progress and its input is set already.
+- Items: S-0677
+- Seconds: 17
+- Cost: 0.0225 USD, estimated
+
+### 2026-11-10T19:36:09Z
+
+- Summary: I approved the plan for S-0677 and closed its thread, TH-1034. That was the only reason this run was started for, so I'm ending now.
+- Items: none
+- Seconds: 20
+- Cost: 0.2220 USD, estimated
+
+### 2026-11-10T19:37:43Z
+
+- Summary: Verified S-0708 at e344f2d: the close-out passed at the branch head and the verifier found both criteria met. Could not accept it because this session has no MCP accept tool, and the merge queue is off. Opened TH-1056 asking the operator to accept it.
+- Items: S-0708
+- Seconds: 55
+- Cost: 0.1515 USD, estimated
+
+### 2026-11-10T19:38:35Z
+
+- Summary: I did not accept S-0708: this session has no MCP `accept` tool. The story is verified and passes both criteria, so it is ready for you to accept.
+- Items: none
+- Seconds: 52
+- Cost: 0.2569 USD, estimated
+
+### 2026-11-10T19:51:39Z
+
+- Summary: Verified S-0688 at 299c652 (close-out passed, both criteria met, all changed files in touches); could not accept it, as this session has no MCP tool accept, so opened TH-1057 asking the operator to accept it.
+- Items: S-0688, TH-1057
+- Seconds: 48
+- Cost: 0.1559 USD, estimated
+
+### 2026-11-10T19:51:57Z
+
+- Summary: S-0688 is ready to accept, but I couldn't accept it myself: this session doesn't have the MCP tool `accept`.
+- Items: none
+- Seconds: 18
+- Cost: 0.2621 USD, estimated
+
+### 2026-11-10T20:08:28Z
+
+- Summary: Verified S-0679 at 0ce12b0a: close-out passed at the branch head, and the verifier matched criteria 1 and 2 to changed files. Did not accept because the accept MCP tool is missing from this session, and flai guard refused `flai mcp tools`. Left S-0679 in review and opened a thread recommending the operator accept it.
+- Items: S-0679
+- Seconds: 52
+- Cost: 0.1888 USD, estimated
+
+### 2026-11-10T20:08:54Z
+
+- Summary: S-0679 passed every check, but I could not accept it, so it is still in review.
+- Items: none
+- Seconds: 26
+- Cost: 0.1581 USD, estimated
+
+### 2026-11-10T20:16:30Z
+
+- Summary: Verified S-0677 at 3a33974 (close-out passed, verifier: both criteria met, all files in touches) but could not accept it: the accept MCP tool is not in this session (No such tool available: mcp__flai__accept). Left it in review and opened TH-1059 asking the operator to accept it or expose the tool.
+- Items: S-0677, TH-1059
+- Seconds: 52
+- Cost: 0.1783 USD, estimated
+
+### 2026-11-10T20:16:58Z
+
+- Summary: S-0677 is verified but not accepted. This session has no `accept` MCP tool, so it stays in review.
+- Items: none
+- Seconds: 28
+- Cost: 0.1487 USD, estimated
+
+### 2026-11-10T20:21:27Z
+
+- Summary: S-0675 verified at 52120096 (close-out passed every step; verifier: both criteria met, all 17 files within touches), but not accepted: this session has no MCP tool accept and the merge queue is off. Left in review; opened TH-1060 asking the operator to accept it.
+- Items: S-0675
+- Seconds: 40
+- Cost: 0.1431 USD, estimated
+
+### 2026-11-10T20:21:43Z
+
+- Summary: I didn't accept S-0675, even though it passed every check: this session has no MCP tool `accept`. It is still in review.
+- Items: none
+- Seconds: 16
+- Cost: 0.2554 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -20693,4 +20854,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-10T11:01:39Z
 
 - Call: `do scripts/flai.sh thread resolve $t --reason Plan approved by the orchestrator under plan_backlog_stories`
+- Needs: none
+
+### 2026-11-10T20:08:20Z
+
+- Call: `flai mcp tools`
 - Needs: none

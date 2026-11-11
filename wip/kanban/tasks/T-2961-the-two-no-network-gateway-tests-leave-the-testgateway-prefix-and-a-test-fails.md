@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 1199
-      cache_read: 1021388
-      cache_write: 13228
-      cost: 0.3296
+      input: 7
+      output: 895
+      cache_read: 1017379
+      cache_write: 16700
+      cost: 0.3521
 ---
 # T-2961 The two no-network gateway tests leave the TestGateway prefix, and a test fails on a TestGateway function gateway-smoke.sh does not run
 

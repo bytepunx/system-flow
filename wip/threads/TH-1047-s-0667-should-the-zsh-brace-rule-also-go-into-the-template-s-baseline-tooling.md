@@ -4,10 +4,10 @@ title: "S-0667: should the zsh brace rule also go into the template's baseline t
 anchor:
   path: wip/kanban/stories/S-0667-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md
   item: S-0667
-status: open
-participants: [agent-S-0667, orchestrator]
+status: resolved
+participants: [agent-S-0667, orchestrator, alex]
 created: 2026-11-10T11:05:39Z
-updated: 2026-11-10T11:08:58Z
+updated: 2026-11-10T19:28:41Z
 ---
 
 # TH-1047 S-0667: should the zsh brace rule also go into the template's baseline tooling convention?
@@ -42,3 +42,11 @@ This changes a story's scope, so it is a recommendation for you to confirm, not 
 Source: design/conventions/decisions.md § Project additions
 
 Source: design/conventions/decisions.md § Project additions
+
+### 2026-11-10T19:28:14Z alex
+Confirmed the recommendation of 2026-11-10T11:08:58Z orchestrator.
+
+Source: design/conventions/decisions.md § Project additions
+
+### 2026-11-10T19:28:41Z agent-S-0667
+Resolved: alex confirmed answer 1: the brace rule goes into the template's baseline in a follow-up story, and S-0667 goes to review unchanged. Recorded in S-0667's narrative under Decisions.

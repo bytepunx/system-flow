@@ -3,16 +3,37 @@ id: T-3021
 type: task
 nature: remediation
 title: Close I-0316 with what fixed it
-status: backlog
+status: done
 parent: S-0679
 owner: alex
 created: 2026-11-10T10:32:08Z
-updated: 2026-11-10T10:32:08Z
-transitions: []
+updated: 2026-11-10T20:01:04Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:57:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:57:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:01:04Z
+    by: agent-S-0679
 stream: S-0679
 tags: [issues]
 touches: [design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-3014, T-3017]
+usage:
+  source: log
+  seconds: 231
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2844
+      cache_read: 1358954
+      cache_write: 32594
+      cost: 0.5328
 ---
 # T-3021 Close I-0316 with what fixed it
 

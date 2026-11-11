@@ -3,16 +3,37 @@ id: T-3076
 type: task
 nature: improvement
 title: The design and the user guide say which moves of main drop a verified batch and that flai stats counts drops
-status: backlog
+status: done
 parent: S-0675
 owner: alex
 created: 2026-11-10T10:36:56Z
-updated: 2026-11-10T10:36:56Z
-transitions: []
+updated: 2026-11-10T20:16:12Z
+transitions:
+  - to: ready
+    at: 2026-11-10T20:14:17Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T20:14:17Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:16:12Z
+    by: agent-S-0675
 stream: S-0675
 tags: [docs, merge-queue]
-touches: [design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md]
+touches: [design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-3074, T-3075]
+usage:
+  source: log
+  seconds: 115
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 10131
+      cache_read: 3890290
+      cache_write: 94161
+      cost: 1.5727
 ---
 # T-3076 The design and the user guide say which moves of main drop a verified batch and that flai stats counts drops
 

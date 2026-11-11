@@ -3,10 +3,10 @@ id: S-0666
 type: story
 nature: improvement
 title: This repository's guard hooks let a call through when scripts/flai.sh exits other than 2, 126, or 127, as a failed go build inside the agent container would
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:38Z
-updated: 2026-11-10T11:30:23Z
+updated: 2026-11-11T01:39:50Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:24Z
@@ -14,11 +14,18 @@ transitions:
   - to: in-progress
     at: 2026-11-10T11:14:16Z
     by: agent-S-0666
+  - to: review
+    at: 2026-11-10T19:32:27Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T01:39:50Z
+    by: alex
 blocked:
   - from: 2026-11-10T11:29:23Z
     until: 2026-11-10T11:30:01Z
     reason: awaiting the operator on TH-1051
   - from: 2026-11-10T11:30:23Z
+    until: 2026-11-10T19:26:07Z
     reason: awaiting the operator on TH-1051
 tags: [guard, scripts, harness]
 topics: [harness, cli]
@@ -30,19 +37,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 926
+  seconds: 1320
   priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 2
-      work: 44
+      ceremony: 4
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 210
-      output: 57341
-      cache_read: 14503681
-      cache_write: 478396
-      cost: 7.398
+      input: 304
+      output: 64230
+      cache_read: 29722541
+      cache_write: 832406
+      cost: 13.412
   strategic:
     - kind: planner
       seconds: 292
@@ -61,15 +68,21 @@ usage:
           cache_write: 1044206
           cost: 23.6176
     - kind: orchestrator
-      seconds: 66
+      seconds: 158
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 209
-          cache_read: 1255404
-          cache_write: 131023
-          cost: 0.3799
+          input: 52
+          output: 378
+          cache_read: 1971577
+          cache_write: 244498
+          cost: 0.608
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 73
+          cache_read: 89174
+          cache_write: 55096
+          cost: 0.1085
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

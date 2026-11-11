@@ -6,7 +6,7 @@ title: flai serve takes a project's watcher's first snapshot after its first loo
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:01Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-11T01:39:51Z
 transitions: []
 tags: [flai, serve]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/flai-cli.md, design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, design/issues/summary.md]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:31Z
 forecast:
   duration: 40m
-  delivery: 2026-11-11T06:45:00Z
-  basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686 and S-0689."
+  delivery: 2026-11-11T11:59:00Z
+  basis: "Its own forecast of 40m; 15th in the pull order with an in-progress limit of 3, behind S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686 and S-0689."
   by: flai
-  at: 2026-11-10T19:26:06Z
+  at: 2026-11-11T01:39:51Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:46Z

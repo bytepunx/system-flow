@@ -3,15 +3,36 @@ id: T-3017
 type: task
 nature: remediation
 title: Mount the main checkout's checked-write lock file in the close-out's container
-status: backlog
+status: done
 parent: S-0679
 owner: alex
 created: 2026-11-10T10:31:52Z
-updated: 2026-11-10T10:31:52Z
-transitions: []
+updated: 2026-11-10T19:52:18Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:37:38Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:37:38Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:52:18Z
+    by: agent-S-0679
 stream: S-0679
 tags: [flai, container]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, scripts/agent-container.sh]
+usage:
+  source: log
+  seconds: 880
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 15537
+      cache_read: 7423567
+      cache_write: 178053
+      cost: 2.9105
 ---
 # T-3017 Mount the main checkout's checked-write lock file in the close-out's container
 

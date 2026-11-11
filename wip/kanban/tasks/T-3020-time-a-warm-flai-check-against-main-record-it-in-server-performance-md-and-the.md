@@ -3,16 +3,37 @@ id: T-3020
 type: task
 nature: improvement
 title: Time a warm flai check against main, record it in server-performance.md and the docs, and close I-0312
-status: backlog
+status: done
 parent: S-0677
 owner: alex
 created: 2026-11-10T10:32:07Z
-updated: 2026-11-10T10:32:07Z
-transitions: []
+updated: 2026-11-10T20:10:27Z
+transitions:
+  - to: ready
+    at: 2026-11-10T20:06:47Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T20:06:47Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:10:27Z
+    by: agent-S-0677
 stream: S-0677
 tags: [flai, performance, docs]
 touches: [design/system/server-performance.md, design/system/flai-cli.md, docs/operators/runbooks/backup.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md]
 after: [T-3010, T-3016]
+usage:
+  source: log
+  seconds: 220
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 20336
+      cache_read: 7867393
+      cache_write: 250127
+      cost: 3.4604
 ---
 # T-3020 Time a warm flai check against main, record it in server-performance.md and the docs, and close I-0312
 

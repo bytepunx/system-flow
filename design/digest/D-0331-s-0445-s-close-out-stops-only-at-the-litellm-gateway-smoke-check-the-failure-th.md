@@ -9,7 +9,7 @@ date: 2026-10-20
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0708, TH-1049]
 ---
 
 # D-0331 S-0445's close-out stops only at the LiteLLM gateway smoke check, the failure TH-0529 and TH-0530 report: recommend setting FLAI_TEST_LITELLM_HAIKU on the host, then I run it again: Recommendation…

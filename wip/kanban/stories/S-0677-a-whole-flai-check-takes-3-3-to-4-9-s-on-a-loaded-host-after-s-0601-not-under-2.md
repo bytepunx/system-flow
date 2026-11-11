@@ -3,22 +3,60 @@ id: S-0677
 type: story
 nature: improvement
 title: "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path"
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:34:54Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-10T20:15:04Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:48Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T19:32:40Z
+    by: agent-S-0677
+  - to: review
+    at: 2026-11-10T20:15:04Z
+    by: system-flow
 tags: [flai, performance, check]
 topics: [cli, server-side]
-touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go, flai/internal/check/check_records.go, flai/internal/check/digest_test.go, flai/internal/check/check_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/kept.go, flai/internal/digest/kept_test.go, flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/operators/runbooks/backup.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md]
+touches: [flai/internal/check/check.go, flai/internal/check/check_items.go, flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go, flai/internal/check/check_records.go, flai/internal/check/digest_test.go, flai/internal/check/check_test.go, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/kept.go, flai/internal/digest/kept_test.go, flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, design/system/server-performance.md, design/system/flai-cli.md, docs/operators/runbooks/backup.md, design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md, design/issues/summary.md, flai/cmd/promote_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2560
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      work: 43
+  models:
+    - model: claude-opus-5-5
+      input: 254
+      output: 85314
+      cache_read: 33004689
+      cache_write: 1049312
+      cost: 14.5169
+  strategic:
+    - kind: orchestrator
+      seconds: 89
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 26
+          output: 185
+          cache_read: 728122
+          cache_write: 109814
+          cost: 0.2306
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 44
+          cache_read: 12743
+          cache_write: 29071
+          cost: 0.0315
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2s
@@ -44,8 +82,8 @@ finalized:
 This story remediates [I-0312](../../../design/issues/I-0312-a-whole-flai-check-takes-3-3-to-4-9-s-on-a-loaded-host-after-s-0601-not-under-2.md), "A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0312 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0312 is closed with `flai issue close I-0312 --reason` saying what fixed it
+- [x] The cause I-0312 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0312 is closed with `flai issue close I-0312 --reason` saying what fixed it
 
 ## Tasks
 - T-3010 Run oneItem over the items on check.Run's pool, with only the byID fill first and alone

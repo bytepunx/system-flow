@@ -3,36 +3,59 @@ id: S-0679
 type: story
 nature: improvement
 title: "flai check finds `item.heading` outside the story at close-out"
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:34:56Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-10T20:06:59Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:07Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T19:36:19Z
+    by: agent-S-0679
+  - to: review
+    at: 2026-11-10T20:06:59Z
+    by: agent-S-0679
 tags: [flai, check, container]
-touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/adrs/README.md, design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md, design/issues/summary.md, scripts/agent-container.sh, design/adrs/0283-a-close-out-s-record-step-confirms-each-finding-outside-the-story-on-a-work.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1854
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 1
+      work: 42
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 62229
+      cache_read: 29732153
+      cache_write: 713122
+      cost: 11.6569
   strategic:
     - kind: orchestrator
-      seconds: 2
+      seconds: 54
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 0
-          cache_read: 52492
-          cache_write: 3880
-          cost: 0.0154
+          input: 14
+          output: 74
+          cache_read: 456020
+          cache_write: 55315
+          cost: 0.1407
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 51
+          cache_read: 41856
+          cache_write: 42397
+          cost: 0.0635
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -55,8 +78,8 @@ finalized:
 This story remediates [I-0316](../../../design/issues/I-0316-flai-check-finds-item-heading-outside-the-story-at-close-out.md), "flai check finds `item.heading` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0316 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0316 is closed with `flai issue close I-0316 --reason` saying what fixed it
+- [x] The cause I-0316 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0316 is closed with `flai issue close I-0316 --reason` saying what fixed it
 
 ## Tasks
 - T-3014 Confirm a close-out's findings on work items under the checked-write lock before recording them

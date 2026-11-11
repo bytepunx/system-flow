@@ -3,16 +3,37 @@ id: T-3077
 type: task
 nature: improvement
 title: Close I-0287 with what fixed it
-status: backlog
+status: done
 parent: S-0675
 owner: alex
 created: 2026-11-10T10:37:00Z
-updated: 2026-11-10T10:37:00Z
-transitions: []
+updated: 2026-11-10T20:16:17Z
+transitions:
+  - to: ready
+    at: 2026-11-10T20:14:17Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T20:14:18Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:16:17Z
+    by: agent-S-0675
 stream: S-0675
 tags: [issues]
 touches: [design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md, design/issues/summary.md]
 after: [T-3074, T-3075]
+usage:
+  source: log
+  seconds: 119
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1584
+      cache_read: 608180
+      cache_write: 14720
+      cost: 0.2459
 ---
 # T-3077 Close I-0287 with what fixed it
 

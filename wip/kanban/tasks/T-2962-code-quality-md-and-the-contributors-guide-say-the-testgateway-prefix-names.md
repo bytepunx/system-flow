@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 1066
-      cache_read: 907908
-      cache_write: 11759
-      cost: 0.293
+      input: 6
+      output: 795
+      cache_read: 904344
+      cache_write: 14845
+      cost: 0.313
 ---
 # T-2962 code-quality.md and the contributors guide say the TestGateway prefix names only the paid checks the gateway tier runs
 

@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 1442
-      cache_read: 668011
-      cache_write: 11426
-      cost: 0.2539
+      output: 1283
+      cache_read: 659925
+      cache_write: 19513
+      cost: 0.3138
 ---
 # T-2929 The runbook says why a hand docker run typed in zsh can mount an empty folder, and I-0276 is closed
 

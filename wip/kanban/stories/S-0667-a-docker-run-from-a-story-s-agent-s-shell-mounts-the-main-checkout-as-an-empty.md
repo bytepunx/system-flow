@@ -3,10 +3,10 @@ id: S-0667
 type: story
 nature: improvement
 title: A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T11:05:54Z
+updated: 2026-11-10T19:29:36Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -14,8 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:58:37Z
     by: agent-S-0667
+  - to: review
+    at: 2026-11-10T19:29:36Z
+    by: system-flow
 blocked:
   - from: 2026-11-10T11:05:54Z
+    until: 2026-11-10T19:28:15Z
     reason: awaiting the operator on TH-1047
 tags: [docker, agent-container]
 touches: [docs/operators/runbooks/agent-container.md, design/issues/I-0276-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md, design/issues/summary.md, design/conventions/tooling.md, design/issues/I-0344-one-malformed-work-item-file-in-the-main-checkout-s-wip-makes-every-flai-read.md]
@@ -26,31 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 438
+  seconds: 519
   priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 3
+      ceremony: 5
       hand_edits: 2
-      work: 65
+      work: 74
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 30550
-      cache_read: 14154776
-      cache_write: 242114
-      cost: 5.3795
+      input: 174
+      output: 33258
+      cache_read: 17100972
+      cache_write: 505643
+      cost: 8.1312
   strategic:
     - kind: orchestrator
-      seconds: 135
+      seconds: 161
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 204
-          cache_read: 2326623
-          cache_write: 213216
-          cost: 0.6935
+          input: 34
+          output: 240
+          cache_read: 2514259
+          cache_write: 250675
+          cost: 0.7554
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 14
+          cache_read: 6369
+          cache_write: 19789
+          cost: 0.0197
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m

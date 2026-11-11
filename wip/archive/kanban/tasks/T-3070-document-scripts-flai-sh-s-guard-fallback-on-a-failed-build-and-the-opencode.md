@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 6171
-      cache_read: 1560816
-      cache_write: 51483
-      cost: 0.7961
+      input: 16
+      output: 3369
+      cache_read: 1558980
+      cache_write: 43661
+      cost: 0.7035
 ---
 # T-3070 Document scripts/flai.sh's guard fallback on a failed build and the OpenCode plugin's 126 and 127 refusal
 

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 6479
-      cache_read: 1638798
-      cache_write: 54055
-      cost: 0.8359
+      input: 17
+      output: 3537
+      cache_read: 1636870
+      cache_write: 45842
+      cost: 0.7386
 ---
 # T-3071 Close I-0275 with what fixed it
 

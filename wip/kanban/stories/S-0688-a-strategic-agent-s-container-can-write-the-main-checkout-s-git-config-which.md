@@ -3,36 +3,59 @@ id: S-0688
 type: story
 nature: improvement
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-10T19:50:12Z
 transitions:
   - to: ready
     at: 2026-11-10T11:00:29Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T19:29:44Z
+    by: agent-S-0688
+  - to: review
+    at: 2026-11-10T19:50:12Z
+    by: agent-S-0688
 tags: [flai, container, security]
-touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md, flai/internal/serve/container.go, design/system/agent-adapters.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1239
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 4
+      work: 43
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 32977
+      cache_read: 13079202
+      cache_write: 385127
+      cost: 6.1923
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 63
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 26
-          cache_read: 583837
-          cache_write: 1737
-          cost: 0.1601
+          input: 13
+          output: 98
+          cache_read: 857306
+          cache_write: 70882
+          cost: 0.2544
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 49
+          cache_read: 41962
+          cache_write: 39950
+          cost: 0.0616
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -74,8 +97,8 @@ finalized:
 This story remediates [I-0257](../../../design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md), "A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0257 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0257 is closed with `flai issue close I-0257 --reason` saying what fixed it
+- [x] The cause I-0257 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0257 is closed with `flai issue close I-0257 --reason` saying what fixed it
 
 ## Tasks
 - T-3045 Record in an ADR refining ADR-0247 that a strategic agent's container mounts .git/config read-only

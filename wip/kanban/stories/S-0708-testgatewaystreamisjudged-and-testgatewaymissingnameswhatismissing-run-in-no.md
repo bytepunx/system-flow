@@ -3,10 +3,10 @@ id: S-0708
 type: story
 nature: remediation
 title: "TestGatewayStreamIsJudged and TestGatewayMissingNamesWhatIsMissing run in no tier, because go-test and integration skip ^TestGateway and the gateway tier runs only the two paid checks by name"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T09:55:53Z
-updated: 2026-11-10T11:14:57Z
+updated: 2026-11-10T19:36:12Z
 transitions:
   - to: ready
     at: 2026-11-10T10:29:38Z
@@ -14,11 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T10:52:56Z
     by: agent-S-0708
+  - to: review
+    at: 2026-11-10T19:36:12Z
+    by: system-flow
 blocked:
   - from: 2026-11-10T11:10:53Z
     until: 2026-11-10T11:14:20Z
     reason: awaiting the operator on TH-1049
   - from: 2026-11-10T11:14:57Z
+    until: 2026-11-10T19:29:38Z
     reason: awaiting the operator on TH-1049
 tags: [flai, go, testing]
 topics: [testing, code]
@@ -30,31 +34,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1111
+  seconds: 1505
   priced_by: harness
   turns:
     - day: 2026-11-10
-      ceremony: 1
-      hand_edits: 4
-      work: 94
+      ceremony: 3
+      hand_edits: 5
+      work: 135
   models:
     - model: claude-opus-5-5
-      input: 236
-      output: 34591
-      cache_read: 29462076
-      cache_write: 381574
-      cost: 9.5085
+      input: 328
+      output: 40350
+      cache_read: 45879026
+      cache_write: 753105
+      cost: 15.8797
   strategic:
     - kind: orchestrator
-      seconds: 142
+      seconds: 241
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 74
-          cache_read: 861688
-          cache_write: 34814
-          cost: 0.2453
+          input: 39
+          output: 221
+          cache_read: 1457435
+          cache_write: 159774
+          cost: 0.4434
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 48
+          cache_read: 49038
+          cache_write: 29325
+          cost: 0.0589
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

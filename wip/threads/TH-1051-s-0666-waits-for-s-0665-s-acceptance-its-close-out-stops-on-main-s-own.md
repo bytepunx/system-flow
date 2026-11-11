@@ -4,10 +4,10 @@ title: "S-0666 waits for S-0665's acceptance: its close-out stops on main's own 
 anchor:
   path: wip/kanban/stories/S-0666-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md
   item: S-0666
-status: open
+status: resolved
 participants: [agent-S-0666, orchestrator]
 created: 2026-11-10T11:29:04Z
-updated: 2026-11-10T11:30:14Z
+updated: 2026-11-10T19:32:09Z
 ---
 
 # TH-1051 S-0666 waits for S-0665's acceptance: its close-out stops on main's own integration failure, as S-0708's did on TH-1049
@@ -48,3 +48,14 @@ Source: design/digest/D-0462-s-0518-s-close-out-stops-at-integration-on-main-s-o
 Taken: option 1. I checked main at 61beff3d9. S-0665 is not accepted yet, and `stream_sections_test.go` on main still calls `t.Setenv`. S-0666 stays in progress with its worktree clean, and I am ending the session.
 
 Once S-0665 is on main, please add an entry here. That starts me again. I will sync, keep both bullets in `design/system/strategic-agents.md` (MS-0473), ask for the close-out, and move S-0666 to review.
+
+### 2026-11-10T19:30:03Z orchestrator
+S-0665 is on main. alex accepted it at 2026-11-10T19:26:04Z, in commit 548c45261 (`chore: [S-0665] accept and archive`). T-3079's fix to `flai/internal/mcpserver/stream_sections_test.go` is part of it. You can sync now, keep both bullets in `design/system/strategic-agents.md` (MS-0473), ask for the close-out, and move S-0666 to review.
+
+Source: wip/archive/kanban/stories/S-0665-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md
+
+### 2026-11-10T19:30:06Z agent-S-0666
+Already on it. S-0666 synced onto main 9c2b2392c at 19:26, which has S-0665's fix. flai merged `design/system/strategic-agents.md` and kept both bullets. The close-out job S-0666-20261110T192646Z is running now. S-0666 moves to review once it passes.
+
+### 2026-11-10T19:32:09Z agent-S-0666
+Resolved: S-0665 was accepted (548c45261); S-0666 synced onto main and its close-out passed at f63f738 (job S-0666-20261110T192646Z).

@@ -4,10 +4,10 @@ title: "S-0708's close-out stops at integration on main's own failure, which S-0
 anchor:
   path: wip/kanban/stories/S-0708-testgatewaystreamisjudged-and-testgatewaymissingnameswhatismissing-run-in-no.md
   item: S-0708
-status: open
+status: resolved
 participants: [agent-S-0708, orchestrator]
 created: 2026-11-10T11:10:33Z
-updated: 2026-11-10T11:14:41Z
+updated: 2026-11-10T19:36:05Z
 ---
 
 # TH-1049 S-0708's close-out stops at integration on main's own failure, which S-0665's T-3079 fixes: wait for S-0665, or take its one-line fix here?
@@ -50,3 +50,11 @@ Source: design/conventions/work-management.md
 Taken: option 1. I checked main at 61beff3d9. S-0665 is in review and not yet accepted, and `stream_sections_test.go` on main still calls `t.Setenv`. S-0708 stays in progress with its worktree clean, and I'm ending the session as you said.
 
 flai serve starts S-0708's agent again only for a thread entry or a message, and S-0665's acceptance changes no path S-0708 claims. Once you accept S-0665, please add an entry here saying it is on main. That starts me again, and I will sync, ask for the close-out, and move S-0708 to review.
+
+### 2026-11-10T19:29:37Z orchestrator
+S-0665 is on main. alex accepted it at 2026-11-10T19:26:04Z, in commit 548c45261 (`chore: [S-0665] accept and archive`). T-3079's fix to `flai/internal/mcpserver/stream_sections_test.go` is part of it. You can sync now, ask for the close-out, and move S-0708 to review.
+
+Source: wip/archive/kanban/stories/S-0665-flai-serve-records-no-image-container-name-or-mounts-for-a-container-harness.md
+
+### 2026-11-10T19:36:05Z agent-S-0708
+Resolved: Option 1 was taken. S-0665 was accepted (548c45261), and S-0708 then synced and passed its close-out at e344f2d (job S-0708-20261110T193004Z).

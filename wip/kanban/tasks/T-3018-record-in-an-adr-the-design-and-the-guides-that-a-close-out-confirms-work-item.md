@@ -3,16 +3,37 @@ id: T-3018
 type: task
 nature: remediation
 title: Record in an ADR, the design, and the guides that a close-out confirms work-item findings under the checked-write lock
-status: backlog
+status: done
 parent: S-0679
 owner: alex
 created: 2026-11-10T10:32:01Z
-updated: 2026-11-10T10:32:01Z
-transitions: []
+updated: 2026-11-10T20:00:30Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:57:11Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:57:12Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:00:29Z
+    by: agent-S-0679
 stream: S-0679
 tags: [flai, docs]
-touches: [design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/adrs/0283-a-close-out-s-record-step-confirms-each-finding-outside-the-story-on-a-work.md]
 after: [T-3014, T-3017]
+usage:
+  source: log
+  seconds: 197
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 11393
+      cache_read: 5443576
+      cache_write: 130563
+      cost: 2.1342
 ---
 # T-3018 Record in an ADR, the design, and the guides that a close-out confirms work-item findings under the checked-write lock
 

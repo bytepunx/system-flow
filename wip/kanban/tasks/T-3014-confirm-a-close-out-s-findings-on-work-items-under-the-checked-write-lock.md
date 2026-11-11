@@ -3,15 +3,36 @@ id: T-3014
 type: task
 nature: remediation
 title: Confirm a close-out's findings on work items under the checked-write lock before recording them
-status: backlog
+status: done
 parent: S-0679
 owner: alex
 created: 2026-11-10T10:31:43Z
-updated: 2026-11-10T10:31:43Z
-transitions: []
+updated: 2026-11-10T19:52:12Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:37:37Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:37:37Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:52:12Z
+    by: agent-S-0679
 stream: S-0679
 tags: [flai, check]
 touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/itemwrite.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 875
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 19070
+      cache_read: 9111418
+      cache_write: 218536
+      cost: 3.5723
 ---
 # T-3014 Confirm a close-out's findings on work items under the checked-write lock before recording them
 

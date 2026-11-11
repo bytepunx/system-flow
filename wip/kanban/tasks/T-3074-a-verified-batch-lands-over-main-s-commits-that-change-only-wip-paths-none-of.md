@@ -3,16 +3,37 @@ id: T-3074
 type: task
 nature: improvement
 title: A verified batch lands over main's commits that change only wip paths none of its stories change
-status: backlog
+status: done
 parent: S-0675
 owner: alex
 created: 2026-11-10T10:36:36Z
-updated: 2026-11-10T10:36:36Z
-transitions: []
+updated: 2026-11-10T20:10:00Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:54:43Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:54:43Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:10:00Z
+    by: agent-S-0675
 stream: S-0675
 tags: [flai, merge-queue]
 touches: [flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/cmd/accept_queue_test.go]
 after: [T-3073]
+usage:
+  source: log
+  seconds: 917
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 18905
+      cache_read: 7259489
+      cache_write: 175710
+      cost: 2.9347
 ---
 # T-3074 A verified batch lands over main's commits that change only wip paths none of its stories change
 

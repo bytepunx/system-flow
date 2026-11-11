@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 658
-      cache_read: 560456
-      cache_write: 7259
-      cost: 0.1809
+      output: 491
+      cache_read: 558256
+      cache_write: 9164
+      cost: 0.1932
 ---
 # T-2964 I-0334 is closed with the reason that the no-network gateway tests left the TestGateway prefix and a test guards it
 

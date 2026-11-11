@@ -3,16 +3,37 @@ id: T-3075
 type: task
 nature: improvement
 title: The queue logs each dropped batch with its reason, and flai stats counts drops per week
-status: backlog
+status: done
 parent: S-0675
 owner: alex
 created: 2026-11-10T10:36:47Z
-updated: 2026-11-10T10:36:47Z
-transitions: []
+updated: 2026-11-10T20:09:48Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:54:44Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:54:44Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:09:48Z
+    by: agent-S-0675
 stream: S-0675
 tags: [flai, merge-queue, metrics]
-touches: [flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go]
+touches: [flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go, flai/cmd/stats_test.go]
 after: [T-3073]
+usage:
+  source: log
+  seconds: 904
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 11703
+      cache_read: 4493990
+      cache_write: 108773
+      cost: 1.8167
 ---
 # T-3075 The queue logs each dropped batch with its reason, and flai stats counts drops per week
 

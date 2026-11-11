@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 4917
-      cache_read: 1243656
-      cache_write: 41021
-      cost: 0.6344
+      input: 13
+      output: 2684
+      cache_read: 1242193
+      cache_write: 34789
+      cost: 0.5605
 ---
 # T-3069 This repository's OpenCode flai-guard plugin refuses a call when scripts/flai.sh exits 126 or 127 in a session flai started
 

@@ -3,16 +3,37 @@ id: T-3049
 type: task
 nature: improvement
 title: roleStart mounts the main checkout's .git/config read-only, with tests that a strategic container's config is not writable
-status: backlog
+status: done
 parent: S-0688
 owner: alex
 created: 2026-11-10T10:35:00Z
-updated: 2026-11-10T10:35:00Z
-transitions: []
+updated: 2026-11-10T19:43:24Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:32:47Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:32:49Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:43:24Z
+    by: agent-S-0688
 stream: S-0688
 tags: [flai, container, security]
-touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, flai/internal/serve/container.go]
 after: [T-3045]
+usage:
+  source: log
+  seconds: 635
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 4374
+      cache_read: 1734896
+      cache_write: 51085
+      cost: 0.8214
 ---
 # T-3049 roleStart mounts the main checkout's .git/config read-only, with tests that a strategic container's config is not writable
 

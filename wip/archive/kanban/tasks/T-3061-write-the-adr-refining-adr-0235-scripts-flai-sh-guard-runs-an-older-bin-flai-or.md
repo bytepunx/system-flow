@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 2967
-      cache_read: 750499
-      cache_write: 24755
-      cost: 0.3828
+      input: 8
+      output: 1620
+      cache_read: 749616
+      cache_write: 20994
+      cost: 0.3383
 ---
 # T-3061 Write the ADR refining ADR-0235: scripts/flai.sh guard runs an older bin/flai or the installed flai when the build fails, and exits 127 with neither
 

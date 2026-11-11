@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 15
-      output: 3996
-      cache_read: 1010751
-      cache_write: 33339
-      cost: 0.5156
+      input: 10
+      output: 2182
+      cache_read: 1009562
+      cache_write: 28274
+      cost: 0.4556
 ---
 # T-3066 scripts/flai.sh guard falls back to an older bin/flai or the installed flai when go build fails, and exits 127 with neither, with a test that makes the build fail
 

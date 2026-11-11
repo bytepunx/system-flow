@@ -3,15 +3,36 @@ id: T-3073
 type: task
 nature: improvement
 title: Record in an ADR that a verified batch lands over main's wip-only commits and that every drop is logged and counted
-status: backlog
+status: done
 parent: S-0675
 owner: alex
 created: 2026-11-10T10:36:24Z
-updated: 2026-11-10T10:36:24Z
-transitions: []
+updated: 2026-11-10T19:53:57Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:53:12Z
+    by: agent-S-0675
+  - to: in-progress
+    at: 2026-11-10T19:53:13Z
+    by: agent-S-0675
+  - to: done
+    at: 2026-11-10T19:53:57Z
+    by: agent-S-0675
 stream: S-0675
 tags: [adr, merge-queue]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 44
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 2058
+      cache_read: 790235
+      cache_write: 19127
+      cost: 0.3195
 ---
 # T-3073 Record in an ADR that a verified batch lands over main's wip-only commits and that every drop is logged and counted
 

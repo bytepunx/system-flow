@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 207.9804
-accrued_seconds: 24659
-tasks_completed: 132
-last_run: 2026-11-10T11:09:19Z
+accrued_cost: 210.0617
+accrued_seconds: 24818
+tasks_completed: 133
+last_run: 2026-11-10T19:28:49Z
 ---
 
 # Curator activity
@@ -1067,3 +1067,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0468, D-0532, D-0573
 - Seconds: 442
 - Cost: 1.6972 USD, estimated
+
+### 2026-11-10T19:28:49Z
+
+- Summary: I wrote D-0575, D-0576 and D-0577, merged S-0665/T-3079 into D-0571, absorbed D-0575 into `design/system/flai-cli.md` § The container harness (S-0508), and `flai digest compact` compacted none (it recorded citers on 2 entries).
+- Trigger: accepted S-0665
+- Items: D-0331, D-0462, D-0571, D-0575, D-0576, D-0577, D-0578
+- Seconds: 159
+- Cost: 2.0813 USD, estimated

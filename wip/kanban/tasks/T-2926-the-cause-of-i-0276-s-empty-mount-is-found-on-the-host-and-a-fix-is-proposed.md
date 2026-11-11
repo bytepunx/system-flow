@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 9219
-      cache_read: 4271569
-      cache_write: 73064
-      cost: 1.6234
+      input: 43
+      output: 8207
+      cache_read: 4219862
+      cache_write: 124773
+      cost: 2.0065
 ---
 # T-2926 The cause of I-0276's empty mount is found on the host and a fix is proposed
 

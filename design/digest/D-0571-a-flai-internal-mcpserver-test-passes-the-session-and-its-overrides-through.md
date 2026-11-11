@@ -2,9 +2,9 @@
 id: D-0571
 title: "A flai/internal/mcpserver test passes the session and its overrides through mcpserver.Options and calls t.Parallel; it never sets the process environment or a package variable, and process_test.go fails one that does (I-0234)"
 kind: decision
-sources: [S-0684, I-0234, T-2904, T-2905, T-2906, T-2910, T-2915]
+sources: [S-0684, I-0234, T-2904, T-2905, T-2906, T-2910, T-2915, S-0665, T-3079]
 topics: [testing, go, mcp, code]
-paths: [flai/internal/mcpserver, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
+paths: [flai/internal/mcpserver, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/stream_sections_test.go]
 date: 2026-11-10
 status: active
 absorbed_by: ""
@@ -24,4 +24,10 @@ So a new `mcpserver` test gives what it needs as `Options` fields and calls `t.P
 
 Measured with `go test -race -count=1` at load 53 to 156, alternating with main under the same load: 317.7, 200.0, and 155.5 s against main's 354.0, 352.7, and 414.6 s; 57.2 s against 177.6 s with `-short` (T-2915's Notes).
 
-Sources: S-0684 (T-2904, T-2905, T-2906, T-2910, T-2915), I-0234. Replaces the rule in D-0443.
+The rule bit at once on a test written against the old one. S-0668 and S-0684, accepted apart, left main red: `TestNoTestSetsTheProcess` refused `TestStreamStateWritesContextDecisionsAndQuestions`'s `t.Setenv`. S-0665's T-3079 fixed it the same way (`wip/archive/agents/S-0665.md`, Decisions):
+
+```text
+The test now calls `t.Parallel`, since `streamFixture` already gives the session through `Options`. Bumped I-0229, the issue for stories accepted apart leaving main red.
+```
+
+Sources: S-0684 (T-2904, T-2905, T-2906, T-2910, T-2915), I-0234, S-0665 (T-3079). Replaces the rule in D-0443.

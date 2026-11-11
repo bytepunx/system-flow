@@ -3,16 +3,37 @@ id: T-3016
 type: task
 nature: improvement
 title: Keep the conflict-marker scan's per-file results under .flai-cache, keyed by each file's size and modification time
-status: backlog
+status: done
 parent: S-0677
 owner: alex
 created: 2026-11-10T10:31:44Z
-updated: 2026-11-10T10:31:44Z
-transitions: []
+updated: 2026-11-10T20:06:22Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:52:05Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:52:05Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T20:06:22Z
+    by: agent-S-0677
 stream: S-0677
 tags: [flai, performance, check]
-touches: [flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, flai/internal/check/check_records.go, flai/internal/check/check_test.go]
+touches: [flai/internal/conflictmark/kept.go, flai/internal/conflictmark/kept_test.go, flai/internal/check/check_records.go, flai/internal/check/check_test.go, flai/cmd/promote_test.go]
 after: [T-3012]
+usage:
+  source: log
+  seconds: 857
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 53
+      output: 17811
+      cache_read: 6890328
+      cache_write: 219063
+      cost: 3.0307
 ---
 # T-3016 Keep the conflict-marker scan's per-file results under .flai-cache, keyed by each file's size and modification time
 

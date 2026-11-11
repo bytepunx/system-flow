@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 931
-      cache_read: 431291
-      cache_write: 7377
-      cost: 0.1639
+      input: 4
+      output: 829
+      cache_read: 426071
+      cache_write: 12598
+      cost: 0.2026
 ---
 # T-3078 The tooling convention says to brace a shell variable before a colon, since zsh reads $name:r as a modifier
 

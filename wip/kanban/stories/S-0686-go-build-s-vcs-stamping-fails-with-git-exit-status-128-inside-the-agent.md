@@ -6,7 +6,7 @@ title: go build's VCS stamping fails with git exit status 128 inside the agent c
 status: backlog
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-11T01:39:51Z
 transitions: []
 tags: [docker, agent-container, go]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-container-test.sh, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:53Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T06:43:00Z
-  basis: "Its own forecast of 1h30m; 17th in the pull order with an in-progress limit of 3, behind S-0666, S-0667, S-0708, S-0688, S-0677, S-0679, S-0675, S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-11T11:57:00Z
+  basis: "Its own forecast of 1h30m; 13th in the pull order with an in-progress limit of 3, behind S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
   by: flai
-  at: 2026-11-10T19:26:06Z
+  at: 2026-11-11T01:39:51Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:11Z

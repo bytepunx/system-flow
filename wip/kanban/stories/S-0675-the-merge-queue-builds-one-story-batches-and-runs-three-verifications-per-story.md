@@ -3,26 +3,49 @@ id: S-0675
 type: story
 nature: improvement
 title: The merge queue builds one-story batches and runs three verifications per story landed
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T19:26:06Z
+updated: 2026-11-10T20:20:13Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:32Z
     by: alex
+  - to: in-progress
+    at: 2026-11-10T19:50:18Z
+    by: agent-S-0675
+  - to: review
+    at: 2026-11-10T20:20:13Z
+    by: agent-S-0675
 tags: [flai, merge-queue]
 topics: [orchestration, metrics]
-touches: [design/adrs, design/adrs/README.md, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/cmd/accept_queue_test.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go, design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, template/CHANGELOG.md, design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/cmd/accept_queue_test.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go, design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md, design/issues/summary.md, flai/cmd/stats_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1808
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 5
+      work: 44
+  models:
+    - model: claude-haiku-5-5
+      input: 10
+      output: 13877
+      cache_read: 110897
+      cache_write: 137765
+      cost: 0.093
+    - model: claude-opus-5-5
+      input: 232
+      output: 61751
+      cache_read: 23712283
+      cache_write: 573936
+      cost: 9.5859
   strategic:
     - kind: planner
       seconds: 197
@@ -40,6 +63,22 @@ usage:
           cache_read: 19053967
           cache_write: 337286
           cost: 7.7275
+    - kind: orchestrator
+      seconds: 40
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 10
+          output: 49
+          cache_read: 318543
+          cache_write: 70807
+          cost: 0.1073
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 44
+          cache_read: 19929
+          cache_write: 27464
+          cost: 0.0358
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -81,8 +120,8 @@ finalized:
 This story remediates [I-0287](../../../design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md), "The merge queue builds one-story batches and runs three verifications per story landed", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0287 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0287 is closed with `flai issue close I-0287 --reason` saying what fixed it
+- [x] The cause I-0287 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0287 is closed with `flai issue close I-0287 --reason` saying what fixed it
 
 ## Tasks
 - T-3073 Record in an ADR that a verified batch lands over main's wip-only commits and that every drop is logged and counted

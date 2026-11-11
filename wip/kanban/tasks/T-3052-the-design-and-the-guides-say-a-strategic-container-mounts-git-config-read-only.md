@@ -3,16 +3,37 @@ id: T-3052
 type: task
 nature: improvement
 title: The design and the guides say a strategic container mounts .git/config read-only
-status: backlog
+status: done
 parent: S-0688
 owner: alex
 created: 2026-11-10T10:35:05Z
-updated: 2026-11-10T10:35:05Z
-transitions: []
+updated: 2026-11-10T19:43:58Z
+transitions:
+  - to: ready
+    at: 2026-11-10T19:32:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-10T19:32:51Z
+    by: system-flow
+  - to: done
+    at: 2026-11-10T19:43:58Z
+    by: agent-S-0688
 stream: S-0688
 tags: [docs, container]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md]
 after: [T-3045]
+usage:
+  source: log
+  seconds: 667
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 6471
+      cache_read: 2566542
+      cache_write: 75574
+      cost: 1.2151
 ---
 # T-3052 The design and the guides say a strategic container mounts .git/config read-only
 
