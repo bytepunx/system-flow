@@ -31,6 +31,8 @@ Work is pulled, not pushed. An agent starting a session:
 4. If the story has no tasks, reads its goal, acceptance criteria, and notes and writes them, each with `## Work` and `## Done when`. If the planner drafted them (S-0255), reviews them against the story first and changes, adds, or cancels what it would plan differently. If the story does not say enough to do that, blocks it with the reason, opens a thread on it saying what is missing, and pulls the next story.
 5. Works tasks in order, transitioning each task as it goes.
 
+A pull needs a ready story to take. When none can start and none can be made ready, `flai serve` asks the operator on one thread of its own, which names the decisions the board waits on ([Cadence](#cadence), [ADR-0285](../adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md)).
+
 ## Definition of ready (story)
 
 - `## Goal` and `## Acceptance criteria` are filled.
@@ -163,6 +165,15 @@ When an agent cannot proceed it appends an open `blocked` interval with a reason
 There are no sprints. Flow is continuous. The dashboard's charts replace the status meeting: cycle time scatter shows whether stories are getting slower, burn-up shows scope versus completion per epic, and the state-time breakdown shows where time is spent. Reviewing those charts weekly and adjusting WIP limits or definitions is the process improvement loop.
 
 A thread that awaits the operator has a cadence of its own when the manifest sets `threads.remind_after` ([ADR-0205](../adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)). Once its last entry is older than that, `flai serve` reminds the operator of it through the channel the host keeps, and again every `threads.remind_every`, 24 hours unless set, while it still awaits them. A new entry starts the count over. The reminder is written nowhere in the repository, so it ends no wait.
+
+A starved board has a thread of its own (S-0691, I-0288, [ADR-0285](../adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md)). At each look, after it notes `ready-empty`, `flai serve` finds the board starved when three things hold. No ready story can start, counted as `ready-empty` counts them: blocked ones are left out, and so are those held on `after`. The in-progress limit leaves room. `flai promote --candidates` lists no candidate. With no in-progress limit, the board is never starved. While it is starved, `flai serve` keeps one thread open to the operator on `wip/kanban/board.md`, as the author `flai serve`. The thread lists each backlog story the promotion refuses, in the pull order, with the decision it waits on:
+
+- a draft to finalize, with each open thread on it or its tasks that awaits the operator;
+- a hold on `after`, with the story at the root of its chain;
+- a block, with its reason;
+- else the reasons the promotion gives, such as no forecast or no cost of delay.
+
+When the host has no reminder channel, the thread says so and names `flai serve notify set`. `flai serve` adds an entry only when the list's text changes. What it last wrote is kept in the main checkout's `.flai-cache/starved.json`, so a restart writes nothing again and finds the open thread by its anchor, author, and title. At the first look that finds the board no longer starved, it resolves the thread and says why: a ready story can start, a candidate can be promoted, every lane is taken, or there is no limit. The next starving opens a new thread. When the operator resolves the thread while the board stays starved, it is not opened again until the list changes. The orchestrator leaves the thread alone, as it leaves every thread neither a story's agent nor a planner opened. While the thread is open it awaits the operator, so the dashboard's inbox lists it and the reminder above covers it.
 
 ## Branches and collisions (ADR-0019)
 

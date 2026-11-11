@@ -539,7 +539,7 @@ The host action `orchestrate`, off by default, turns it on for a project: `flai 
 | `{event: edited, when: draft-changed}` | a draft story was edited, but for the replan's forecast edits by `flai` |
 | `{event: planned}` | a planner's run ended having written items |
 | `{event: release-due}` | an acceptance changed what `flai release --evaluate` answers |
-| `{event: ready-empty}` | the ready stories not held on `after` fell below the in-progress limit's room, once per draining ([ADR-0279](../adrs/0279-ready-empty-counts-only-the-ready-stories-not-held-on-after-and-a-move-of-a.md)) |
+| `{event: ready-empty}` | the ready stories not held on `after` fell below the in-progress limit's room, once per draining ([ADR-0279](../adrs/0279-ready-empty-counts-only-the-ready-stories-not-held-on-after-and-a-move-of-a.md)). When no candidate can be promoted either, `flai serve` also asks the operator on a thread of its own on the board, which the orchestrator leaves alone ([ADR-0285](../adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md), [workflow.md](workflow.md#cadence)) |
 | `{event: reordered}` | the pull order changed |
 | `{schedule: orchestration.schedule}` | `orchestration.schedule` came round; unset by default |
 
