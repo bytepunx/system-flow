@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-11-10
+updated: 2026-11-11
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -301,7 +301,7 @@ What claims cost in holds and parallelism, and how far a story's declared touche
 | `claims.weeks[].exact_share` | `exact` over `stories`. Absent when `stories` is 0: a week without such a story has no share | From 0 to 1, not rounded |
 | `claims.drift[]` | One entry per story of the report that a commit names, by ID: `id`, `committed` (the files its commits changed), `outside` (those under none of its touches), and `unchanged` (its touches no committed file is under), each a sorted list of paths, with `outside_count` and `unchanged_count` | Sorted lists of paths; whole counts |
 
-A story's commits are those on the main branch and the `story/` branches whose subject names it in brackets, `[S-nnnn]`, merges left out; their files under the `wip` folder are left out, since flai writes them. Its touches are its own and those of its tasks not cancelled, a project's name or tag read as its path, as a claim reads them. A file is under a touch that is the file or a folder that holds it. When git cannot be read, `claims.drift` is absent and `flai stats` says so on stderr, and so are `stories`, `exact`, and `exact_share` in every week; `held_seconds` is still there.
+A story's commits are those on the main branch and the `story/` branches whose subject names it in brackets, `[S-nnnn]`, merges left out; their files under flai's folders are left out, since flai writes them: the `wip` folder, and the `digest`, `analysis`, and `issues` folders of the `design` folder ([ADR-0284](../adrs/0284-the-touches-drift-leaves-out-the-folders-flai-writes-wip-and-the-design-folder.md)). Its touches are its own and those of its tasks not cancelled, a project's name or tag read as its path, as a claim reads them, leaving out each touch that is one of flai's folders or lies under one. So a digest entry an acceptance swept in, the issue a story was made from, or a `wip` touch counts on neither side, and a story whose committed files all lie under flai's folders has no entry in `claims.drift[]`. A file is under a touch that is the file or a folder that holds it. When git cannot be read, `claims.drift` is absent and `flai stats` says so on stderr, and so are `stories`, `exact`, and `exact_share` in every week; `held_seconds` is still there.
 
 The replay has no trial-merge judge ([ADR-0230](../adrs/0230-a-ready-story-whose-claim-overlaps-a-story-in-progress-is-held-only-when-a.md)). It counts a story whose claim overlaps as held by `overlap`, as the claims alone give it, even when a clean trial let it start.
 

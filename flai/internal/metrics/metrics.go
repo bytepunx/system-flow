@@ -49,6 +49,10 @@ type Options struct {
 	Projects []manifest.Project
 	WIPLimit int
 	Commits  map[string][]string
+	// FlaiFolders are the folders flai writes, storygit.FlaiFolders of the
+	// manifest: the touches drift leaves out the committed files and the
+	// touches under them, on both sides (ADR-0284). None leaves nothing out.
+	FlaiFolders []string
 	// Shared is the manifest's claims, whose shared paths an overlap wholly
 	// inside holds nothing in the replay of the holds (ADR-0096).
 	Shared manifest.Claims

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -146,8 +147,11 @@ func firstDay(t time.Time) time.Time {
 // touchDrift is, in ID order, each story among items with committed files:
 // those under none of its touches and its touches under which none falls. Its
 // touches are its own and its tasks' that were not cancelled, read as a claim
-// reads them.
-func touchDrift(items, all []*workitem.Item, projects []manifest.Project, commits map[string][]string) []TouchDrift {
+// reads them. The files and the touches under opt.FlaiFolders are left out
+// on both sides, since flai writes them (ADR-0284): a story with no committed
+// file outside them has no entry.
+func touchDrift(items, all []*workitem.Item, opt Options) []TouchDrift {
+	commits, folders := opt.Commits, opt.FlaiFolders
 	tasks := map[string][]*workitem.Item{}
 	for _, it := range all {
 		if it.Type == workitem.Task && it.Status != workitem.Cancelled {
@@ -155,19 +159,22 @@ func touchDrift(items, all []*workitem.Item, projects []manifest.Project, commit
 			tasks[p] = append(tasks[p], it)
 		}
 	}
-	reader := workitem.NewHolds(nil, projects)
+	reader := workitem.NewHolds(nil, opt.Projects)
 	out := []TouchDrift{}
 	for _, it := range items {
 		id := workitem.CanonicalID(it.ID)
-		files := commits[id]
-		if it.Type != workitem.Story || len(files) == 0 {
+		if it.Type != workitem.Story {
+			continue
+		}
+		files := slices.DeleteFunc(slices.Clone(commits[id]), func(f string) bool { return storygit.InFolders(f, folders) })
+		if len(files) == 0 {
 			continue
 		}
 		touches := slices.Clone(it.Touches)
 		for _, t := range tasks[id] {
 			touches = append(touches, t.Touches...)
 		}
-		claim := reader.Claim(&workitem.Item{Touches: touches})
+		claim := slices.DeleteFunc(slices.Clone(reader.Claim(&workitem.Item{Touches: touches})), func(t string) bool { return storygit.InFolders(t, folders) })
 		d := TouchDrift{ID: it.ID, Committed: slices.Compact(slices.Sorted(slices.Values(files))), Outside: []string{}, Unchanged: []string{}}
 		used := map[string]bool{}
 		for _, f := range d.Committed {
@@ -529,12 +536,13 @@ type keptDrift struct {
 }
 
 // configKey is the manifest's projects and shared paths as the replay and the
-// drift read them, "" when they cannot be written down, which keeps nothing.
+// drift read them, and flai's folders the drift leaves out, "" when they cannot be written down, which keeps nothing.
 func configKey(opt Options) string {
 	b, err := json.Marshal(struct {
-		Projects []manifest.Project
-		Shared   manifest.Claims
-	}{opt.Projects, opt.Shared})
+		Projects    []manifest.Project
+		Shared      manifest.Claims
+		FlaiFolders []string
+	}{opt.Projects, opt.Shared, opt.FlaiFolders})
 	if err != nil {
 		return ""
 	}
@@ -597,7 +605,7 @@ func driftFor(items, all []*workitem.Item, opt Options) []TouchDrift {
 func keptTouchDrift(all []*workitem.Item, opt Options) (drift []TouchDrift, worked bool) {
 	config := configKey(opt)
 	if opt.Root == "" || opt.ItemsGeneration == 0 || opt.CommitsKey == "" || config == "" {
-		return touchDrift(all, all, opt.Projects, opt.Commits), true
+		return touchDrift(all, all, opt), true
 	}
 	kept.Lock()
 	k, ok := kept.drift[opt.Root]
@@ -605,7 +613,7 @@ func keptTouchDrift(all []*workitem.Item, opt Options) (drift []TouchDrift, work
 	if ok && k.generation == opt.ItemsGeneration && k.commits == opt.CommitsKey && k.config == config {
 		return k.drift, false
 	}
-	drift = touchDrift(all, all, opt.Projects, opt.Commits)
+	drift = touchDrift(all, all, opt)
 	kept.Lock()
 	if cur, ok := kept.drift[opt.Root]; !ok || cur.generation <= opt.ItemsGeneration {
 		kept.drift[opt.Root] = keptDrift{generation: opt.ItemsGeneration, commits: opt.CommitsKey, config: config, drift: drift}

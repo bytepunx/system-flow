@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -12,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -22,7 +24,7 @@ var storyID = regexp.MustCompile(`^S-\d+$`)
 // committedRead is what Committed last read in one repository root, and the
 // key it read it at.
 type committedRead struct {
-	key       string // the main branch, the wip folder, and git show-ref --heads
+	key       string // the main branch, flai's folders, and git show-ref --heads
 	committed map[string][]string
 }
 
@@ -35,10 +37,11 @@ var keptCommitted = struct {
 
 // Committed is, per story by its canonical ID, the files changed by the
 // commits on the main branch and the story branches whose subject names it in
-// brackets ([S-nnnn]), merges left out, and the files under the wip folder
-// left out, since flai writes them (S-0205). Paths are relative to the
-// project's root, sorted and without repeats; a story none of whose commits
-// changed a file outside wip has no entry. It reads git log, in the main
+// brackets ([S-nnnn]), merges left out, and the files under flai's folders
+// left out, since flai writes them (S-0205, ADR-0284): FlaiFolders names
+// them. Paths are relative to the project's root, sorted and without
+// repeats; a story none of whose commits changed a file outside flai's
+// folders has no entry. It reads git log, in the main
 // checkout, once per change of a branch tip, keeping the result per
 // repository root in memory for the life of the process (I-0184) and in
 // CommittedPath of the main checkout's cache folder between processes
@@ -52,7 +55,7 @@ func Committed(r execx.Runner, repo *workitem.Repo) (map[string][]string, error)
 }
 
 // CommittedKeyed is Committed and the key it read the commits at: the main
-// branch, the wip folder, and every local branch's tip, which moves whenever
+// branch, flai's folders, and every local branch's tip, which moves whenever
 // what Committed answers can change (S-0608). A caller may keep what it
 // computes from the commits under the key until it moves.
 func CommittedKeyed(r execx.Runner, repo *workitem.Repo) (map[string][]string, string, error) {
@@ -67,7 +70,7 @@ func CommittedKeyed(r execx.Runner, repo *workitem.Repo) (map[string][]string, s
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read the stories' commits in %s: %w; run flai in a git checkout with a branch and a commit on it", root, err)
 	}
-	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"
+	folders := FlaiFolders(repo.Manifest)
 	keptCommitted.Lock()
 	defer keptCommitted.Unlock()
 	// Every local branch's tip, story or not: a move of any of them reads the
@@ -76,7 +79,9 @@ func CommittedKeyed(r execx.Runner, repo *workitem.Repo) (map[string][]string, s
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read the branch tips in %s to tell whether the stories' commits changed: %w; run flai in a git checkout with a branch and a commit on it", root, err)
 	}
-	key := main + "\n" + wip + "\n" + tips
+	// The folders are in the key, so that an answer kept under other folders,
+	// or under the wip folder alone as before ADR-0284, is read again.
+	key := main + "\n" + strings.Join(folders, ",") + "\n" + tips
 	if prev, ok := keptCommitted.roots[root]; ok && prev.key == key {
 		return copyCommitted(prev.committed), key, nil
 	}
@@ -85,7 +90,7 @@ func CommittedKeyed(r execx.Runner, repo *workitem.Repo) (map[string][]string, s
 		keptCommitted.roots[root] = committedRead{key: key, committed: committed}
 		return copyCommitted(committed), key, nil
 	}
-	committed, err := readCommitted(r, root, main, wip)
+	committed, err := readCommitted(r, root, main, folders)
 	if err != nil {
 		return nil, "", err
 	}
@@ -106,7 +111,7 @@ func CommittedPath(cacheDir string) string {
 // repository root it read it in, and the key it read it at.
 type keptCommittedFile struct {
 	Root      string              `json:"root"`
-	Key       string              `json:"key"` // the main branch, the wip folder, and git show-ref --heads
+	Key       string              `json:"key"` // the main branch, flai's folders, and git show-ref --heads
 	Committed map[string][]string `json:"committed"`
 }
 
@@ -158,8 +163,8 @@ func writeKeptCommitted(path string, kept keptCommittedFile) error {
 }
 
 // readCommitted reads Committed's answer from git log in root, the main
-// branch and the story branches, leaving out the files under wip.
-func readCommitted(r execx.Runner, root, main, wip string) (map[string][]string, error) {
+// branch and the story branches, leaving out the files under folders.
+func readCommitted(r execx.Runner, root, main string, folders []string) (map[string][]string, error) {
 	// --relative and the pathspec keep the files under the project's root and
 	// name them from it; --full-history keeps every commit that touched them,
 	// whichever side of a merge it is on.
@@ -176,7 +181,7 @@ func readCommitted(r execx.Runner, root, main, wip string) (map[string][]string,
 			continue
 		}
 		for _, f := range lines[1:] {
-			if f == "" || strings.HasPrefix(f, wip) {
+			if f == "" || InFolders(f, folders) {
 				continue
 			}
 			for _, id := range ids {
@@ -192,6 +197,40 @@ func readCommitted(r execx.Runner, root, main, wip string) (map[string][]string,
 		committed[id] = slices.Sorted(maps.Keys(set))
 	}
 	return committed, nil
+}
+
+// FlaiFolders are the folders flai writes in a project, from the root, without
+// a trailing slash (ADR-0284): the manifest's wip folder, and the digest,
+// analysis, and issues folders of its design folder, "design" when the
+// layout names none. A story's commits and its touches under them are left
+// out of the touches drift. The three names are digest.Folder,
+// analysis.Folder, and the issues folder, written out here because the
+// digest package imports this one.
+func FlaiFolders(m manifest.Manifest) []string {
+	var out []string
+	if w := strings.Trim(path.Clean("/"+strings.TrimSpace(m.Layout["wip"])), "/"); w != "" {
+		out = append(out, w)
+	}
+	design := strings.Trim(path.Clean("/"+strings.TrimSpace(m.Layout["design"])), "/")
+	if design == "" {
+		design = "design"
+	}
+	for _, f := range []string{"digest", "analysis", "issues"} {
+		out = append(out, design+"/"+f)
+	}
+	return out
+}
+
+// InFolders says whether p, a path from the project's root, is one of
+// folders or lies under one.
+func InFolders(p string, folders []string) bool {
+	p = strings.TrimPrefix(strings.TrimSuffix(p, "/"), "./")
+	for _, f := range folders {
+		if p == f || strings.HasPrefix(p, f+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // copyCommitted is a copy of committed that shares no slice with it, so that

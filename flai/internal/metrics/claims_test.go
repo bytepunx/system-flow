@@ -280,6 +280,53 @@ func TestClaimsDriftComparesCommitsWithTouches(t *testing.T) {
 	}
 }
 
+// I-0286, ADR-0284: a story's commits under flai's folders, the digest
+// entries an acceptance swept in, the issue it was made from, and an analysis
+// report, are not files it changed, and its touches under them, wip or an
+// issue it closes, are not touches it missed: on both sides the drift leaves
+// them out, so a story whose own files match its touches is exact. Without
+// the folders, the same story is counted inexact on both sides, as I-0286
+// found it in 80 of 115 stories.
+func TestClaimsDriftLeavesOutFlaiFoldersOnBothSides(t *testing.T) {
+	const day = "2026-08-29T00:00:00Z"
+	done := []string{workitem.InProgress, "2026-08-30T00:00:00Z", workitem.Done, "2026-08-31T00:00:00Z"}
+	task := claimItem("T-0001", workitem.Task, day, []string{"design/issues/I-0001-a.md", "wip/agents/S-0001.md"})
+	task.Parent, task.Status = "S-0001", workitem.Done
+	items := []*workitem.Item{
+		claimItem("S-0001", workitem.Story, day, []string{"flai/internal/metrics/claims.go", "design/issues/summary.md"}, done...),
+		task,
+		// only flai's bookkeeping: no entry
+		claimItem("S-0002", workitem.Story, day, []string{"flai/x.go"}, done...),
+	}
+	commits := map[string][]string{
+		"S-0001": {"flai/internal/metrics/claims.go", "design/digest/D-0001-a.md", "design/issues/I-0001-a.md",
+			"design/issues/summary.md", "design/analysis/2026-08-29-all.md"},
+		"S-0002": {"design/digest/D-0002-b.md"},
+	}
+	opt := Options{Now: now, Since: 10 * 24 * time.Hour, Commits: commits,
+		FlaiFolders: []string{"wip", "design/digest", "design/analysis", "design/issues"}}
+	rep := Compute(items, opt)
+	want := []TouchDrift{{ID: "S-0001", Committed: []string{"flai/internal/metrics/claims.go"}, Outside: []string{}, Unchanged: []string{}}}
+	if rep.Claims.Drift == nil || !reflect.DeepEqual(*rep.Claims.Drift, want) {
+		t.Errorf("drift = %+v, want %+v", rep.Claims.Drift, want)
+	}
+	exact := 0
+	for _, w := range rep.Claims.Weeks {
+		if w.Exact != nil {
+			exact += *w.Exact
+		}
+	}
+	if exact != 1 {
+		t.Errorf("exact stories over the weeks = %d, want 1: %+v", exact, rep.Claims.Weeks)
+	}
+
+	opt.FlaiFolders = nil
+	drift := *Compute(items, opt).Claims.Drift
+	if len(drift) != 2 || drift[0].OutsideCount != 2 || drift[0].UnchangedCount != 1 {
+		t.Errorf("drift without flai's folders = %+v, want S-0001 with the digest and analysis files outside and the wip touch unchanged, and S-0002", drift)
+	}
+}
+
 // S-0214: the stories held at each day's end, the time held per ISO week by
 // the reason each hold is named by, and per week the stories of the drift
 // completed in it and how many of them had exact touches (ADR-0113).
@@ -571,6 +618,7 @@ func TestTheTouchesDriftIsKeptUntilItsKeysMove(t *testing.T) {
 		{"a moved commits' key", func(o *Options) { o.CommitsKey = "tips-2" }},
 		{"a moved generation", func(o *Options) { o.ItemsGeneration = 2 }},
 		{"other projects", func(o *Options) { o.Projects = o.Projects[:1] }},
+		{"other flai folders", func(o *Options) { o.FlaiFolders = []string{"wip", "design/digest"} }},
 	} {
 		c.change(&opt)
 		if _, worked := keptTouchDrift(all, opt); !worked {
@@ -583,12 +631,12 @@ func TestTheTouchesDriftIsKeptUntilItsKeysMove(t *testing.T) {
 	items := storiesOf(all)
 	half := items[:len(items)/2]
 	for name, its := range map[string][]*workitem.Item{"every story": items, "half the stories": half, "no story": nil} {
-		got, want := driftFor(its, all, opt), touchDrift(its, all, opt.Projects, opt.Commits)
+		got, want := driftFor(its, all, opt), touchDrift(its, all, opt)
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s: kept drift = %+v, want %+v", name, got, want)
 		}
 	}
-	if len(touchDrift(items, all, opt.Projects, opt.Commits)) == 0 {
+	if len(touchDrift(items, all, opt)) == 0 {
 		t.Error("no story drifted in the history, want some")
 	}
 }

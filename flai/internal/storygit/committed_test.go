@@ -83,6 +83,49 @@ func TestCommittedReadsEachStorysFilesFromTheMainAndStoryBranches(t *testing.T) 
 	}
 }
 
+// I-0286, ADR-0284: the files a story's commits change under flai's folders,
+// the wip folder and the design folder's digest, analysis, and issues, are
+// left out, as flai writes them; the design folder's other files are kept.
+func TestCommittedLeavesOutFlaiFolders(t *testing.T) {
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
+	repo := &workitem.Repo{Root: dir, MainRoot: dir, Manifest: manifest.Manifest{Layout: map[string]string{"wip": "wip", "design": "design"}}}
+	commitFiles(t, dir, "chore: [S-0001] create story", "design/issues/I-0001-a.md", "design/issues/summary.md", "wip/kanban/stories/S-0001.md")
+	commitFiles(t, dir, "feat: [S-0001] the change", "cli/a.go", "design/system/a.md", "design/adrs/0001-a.md")
+	commitFiles(t, dir, "chore: [S-0001] accept and archive", "design/digest/D-0001-a.md", "design/analysis/2026-01-01-all.md")
+	commitFiles(t, dir, "chore: [S-0002] accept and archive", "design/digest/D-0002-b.md")
+	got, err := Committed(r, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string][]string{"S-0001": {"cli/a.go", "design/adrs/0001-a.md", "design/system/a.md"}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("committed = %v, want %v", got, want)
+	}
+}
+
+func TestFlaiFolders(t *testing.T) {
+	for _, c := range []struct {
+		layout map[string]string
+		want   []string
+	}{
+		{map[string]string{"wip": "wip", "design": "design"}, []string{"wip", "design/digest", "design/analysis", "design/issues"}},
+		{map[string]string{"wip": "./work/", "design": "docs/design/"}, []string{"work", "docs/design/digest", "docs/design/analysis", "docs/design/issues"}},
+		{nil, []string{"design/digest", "design/analysis", "design/issues"}},
+	} {
+		if got := FlaiFolders(manifest.Manifest{Layout: c.layout}); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("FlaiFolders(%v) = %v, want %v", c.layout, got, c.want)
+		}
+	}
+	folders := FlaiFolders(manifest.Manifest{Layout: map[string]string{"wip": "wip"}})
+	for p, want := range map[string]bool{
+		"wip": true, "wip/agents/S-1.md": true, "design/issues": true, "design/issues/": true, "./design/digest/D-1.md": true,
+		"design/issuesx.md": false, "design/system/a.md": false, "wipe.go": false, "design": false,
+	} {
+		if got := InFolders(p, folders); got != want {
+			t.Errorf("InFolders(%q) = %v, want %v", p, got, want)
+		}
+	}
+}
+
 // A project in a folder of a larger repository reads only its own files,
 // named from its root.
 func TestCommittedKeepsToTheProjectsFolder(t *testing.T) {

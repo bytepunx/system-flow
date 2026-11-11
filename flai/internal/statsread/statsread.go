@@ -149,7 +149,7 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	opt.WIPLimit, opt.Order = board.WIPLimits[workitem.InProgress], board.Order
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
-	opt.Commits = commits
+	opt.Commits, opt.FlaiFolders = commits, storygit.FlaiFolders(repo.Manifest)
 	opt.Root, opt.ItemsGeneration, opt.CommitsKey = repo.Root, generation, commitsKey
 	opt.Conversations = convs
 	opt.Conflicts, opt.ConflictsUnreadable = conflicts, errConflicts != nil
