@@ -30,13 +30,18 @@ const mcpPorts = 20
 // and one failed to listen on every start (S-0110). A new port also leaves
 // out avoid, the ports other projects remember while their servers are not
 // running yet, so that one move does not push the next project off its port.
+// Nor is a remembered port that cannot be listened on: flai host asks only
+// when the project's own server is not running, so another process holds it,
+// and the server would fail to listen on it at every start (I-0271).
 // taken and avoid hold addresses and are compared by port alone, whatever
 // host each names, so that a change of mcp.bind moves no project off its
 // port.
 func mcpAddrFor(repo *workitem.Repo, bind string, taken, avoid map[string]bool) (string, error) {
 	takenPorts, avoidPorts := portsOf(taken), portsOf(avoid)
 	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] {
-		return net.JoinHostPort(bind, port), nil
+		if addr := net.JoinHostPort(bind, port); freePort(addr) {
+			return addr, nil
+		}
 	}
 	first, err := strconv.Atoi(portOf(mcpDefaultAddr))
 	if err != nil {

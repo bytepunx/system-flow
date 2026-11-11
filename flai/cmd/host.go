@@ -624,15 +624,23 @@ func (l *hostLauncher) mcp(root string) (host.Spec, error) {
 // that a change takes effect at a server's next start, with the ports
 // already given to other projects left out: two starting at once must not
 // pick the same free port. A project keeps the port it was given while the
-// host runs, on the bind address as it is now.
+// host runs, on the bind address as it is now, while that port can be
+// listened on: the host asks only when the project's own server is not
+// running, so a port that cannot be is another process's, and the project
+// moves to a free one rather than fail on it at every start (I-0271).
 func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 	bind := l.a.mcpBind()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	held := ""
 	if addr, ok := l.taken[repo.MainRoot]; ok {
 		addr = net.JoinHostPort(bind, portOf(addr))
-		l.taken[repo.MainRoot] = addr
-		return addr, nil
+		if freePort(addr) {
+			l.taken[repo.MainRoot] = addr
+			return addr, nil
+		}
+		held = addr
+		delete(l.taken, repo.MainRoot)
 	}
 	others := map[string]bool{}
 	for _, addr := range l.taken {
@@ -657,10 +665,18 @@ func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if was := rememberedMCPAddr(repo); was != "" && portOf(was) != portOf(addr) {
+	was := held
+	if was == "" {
+		was = rememberedMCPAddr(repo)
+	}
+	if was != "" && portOf(was) != portOf(addr) {
 		// the server remembers the new one when it starts; an agent given the
 		// old one must be given this
-		l.a.logger().Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
+		if portsOf(others)[portOf(was)] {
+			l.a.logger().Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
+		} else {
+			l.a.logger().Warn("mcp address moved: another process holds it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
+		}
 	}
 	l.taken[repo.MainRoot] = addr
 	return addr, nil
