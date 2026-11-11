@@ -6,7 +6,7 @@ title: A usage limit on one Claude login holds every start on claude-code, and c
 status: ready
 owner: alex
 created: 2026-11-11T05:05:59Z
-updated: 2026-11-11T18:15:37Z
+updated: 2026-11-11T18:16:13Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-11-11T08:56:05Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T20:51:00Z
+  delivery: 2026-11-11T20:52:00Z
   basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0715, S-0707, S-0714, S-0711 and S-0712."
   by: flai
-  at: 2026-11-11T18:15:37Z
+  at: 2026-11-11T18:16:13Z
 ---
 # S-0720 A usage limit on one Claude login holds every start on claude-code, and changing the harness's program or login does not lift it
 

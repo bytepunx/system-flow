@@ -6,7 +6,7 @@ title: sendBackReason puts a CI check name and reviewer login unquoted into the 
 status: ready
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-11T18:15:37Z
+updated: 2026-11-11T18:16:13Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-11T09:09:25Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T20:10:00Z
+  delivery: 2026-11-11T20:11:00Z
   basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0715, S-0707 and S-0714."
   by: flai
-  at: 2026-11-11T18:15:37Z
+  at: 2026-11-11T18:16:13Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:41Z
