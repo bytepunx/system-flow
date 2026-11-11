@@ -3,14 +3,17 @@ id: S-0718
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-11T01:44:41Z
-updated: 2026-11-11T01:44:44Z
+updated: 2026-11-11T22:13:46Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:44Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-11T22:13:46Z
+    by: agent-S-0718
 tags: []
 touches: [wip/kanban/stories/S-0718-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -19,20 +22,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 92
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 284
+      cache_read: 1982134
+      cache_write: 152353
+      cost: 0.7923
   strategic:
     - kind: orchestrator
-      seconds: 249
+      seconds: 253
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 75
-          output: 435
-          cache_read: 2822794
-          cache_write: 388088
-          cost: 0.8954
+          input: 77
+          output: 448
+          cache_read: 2878292
+          cache_write: 399275
+          cost: 0.9142
 formula: publish
 ---
 # S-0718 Publish what is accepted and not yet released

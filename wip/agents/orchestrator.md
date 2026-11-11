@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2123.6871
-accrued_seconds: 1550269
-tasks_completed: 3042
-last_run: 2026-11-11T18:30:09Z
+accrued_cost: 2124.8155
+accrued_seconds: 1550505
+tasks_completed: 3048
+last_run: 2026-11-11T22:14:57Z
 ---
 
 # Orchestrator activity
@@ -21326,6 +21326,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.2265 USD, estimated
+
+### 2026-11-11T21:56:44Z
+
+- Summary: Review reasons S-0715, S-0707, S-0714: S-0715 verified passed at head 4952f0d from the record, verifier passed both criteria, dry run clear, but the accept call was refused because the operator (alex) accepted S-0715 at 21:56:13Z meanwhile; close-out jobs started for S-0707 and S-0714 at their heads, then the operator accepted both too. Nothing left to do for these reviews.
+- Items: S-0715, S-0707, S-0714
+- Seconds: 108
+- Cost: 0.4202 USD, estimated
+
+### 2026-11-11T21:56:53Z
+
+- Summary: Publish decision: release_evaluate met under threshold (count 4 >= 1; value 97.5 USD/week; pending S-0689, S-0707, S-0714, S-0715). Did not run flai formula run publish: its open instance S-0718 (ready, made 2026-11-11T01:44Z) publishes everything accepted and unreleased when it is worked, so a second instance would duplicate it.
+- Items: S-0718
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-11-11T21:57:20Z
+
+- Summary: All three stories in review (S-0715, S-0707, S-0714) are now done. The operator (alex) accepted them on the board, and the acceptances themselves were not mine.
+- Items: none
+- Seconds: 27
+- Cost: 0.2282 USD, estimated
+
+### 2026-11-11T21:57:57Z
+
+- Summary: Release due for S-0689, S-0707, S-0714, S-0715 (threshold: count 4 >= 1, value 97.5 USD/week < 1000): started no new publish instance, since S-0718, the publish formula's open instance, is in ready and its step 3 (flai release --pending) releases everything accepted and unreleased when its agent runs it; a second instance would duplicate it and exit 2 at step 3.
+- Items: S-0689, S-0707, S-0714, S-0715, S-0718
+- Seconds: 22
+- Cost: 0.0940 USD, estimated
+
+### 2026-11-11T21:58:17Z
+
+- Summary: A release is due under the threshold policy, but I didn't start a new publish run. S-0718, the publish formula's run that is already open, will publish this batch once it is worked.
+- Items: none
+- Seconds: 20
+- Cost: 0.1919 USD, estimated
+
+### 2026-11-11T22:14:57Z
+
+- Summary: S-0711 in review: last verify passed at 7a69329e but story/S-0711's head is dbe41536 (close-out commit), so asked flai serve for its close-out at the head; job S-0711-20261111T221436Z started, verdict not in yet. Left S-0711 in review for a later run to verify and accept under accept_reviews (throughput policy).
+- Items: S-0711
+- Seconds: 50
+- Cost: 0.1941 USD, estimated
 
 ## Refusals
 

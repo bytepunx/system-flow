@@ -3,12 +3,18 @@ id: T-2967
 type: task
 nature: remediation
 title: Say in workflow.md and the users guide that the undone check compares against the commit the rebase took
-status: backlog
+status: in-progress
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:28:18Z
-updated: 2026-11-11T09:05:09Z
-transitions: []
+updated: 2026-11-11T22:12:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:12:59Z
+    by: agent-S-0712
+  - to: in-progress
+    at: 2026-11-11T22:12:59Z
+    by: agent-S-0712
 stream: S-0712
 tags: [docs, git]
 touches: [design/system/workflow.md, docs/users/flai.md]

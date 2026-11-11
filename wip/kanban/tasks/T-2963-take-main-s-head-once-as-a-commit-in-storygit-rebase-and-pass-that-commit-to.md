@@ -3,15 +3,36 @@ id: T-2963
 type: task
 nature: remediation
 title: Take main's head once as a commit in storygit.Rebase and pass that commit to the undone check and the changelog settle
-status: backlog
+status: done
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:27:51Z
-updated: 2026-11-11T09:04:58Z
-transitions: []
+updated: 2026-11-11T22:06:46Z
+transitions:
+  - to: ready
+    at: 2026-11-11T21:57:06Z
+    by: agent-S-0712
+  - to: in-progress
+    at: 2026-11-11T21:57:06Z
+    by: agent-S-0712
+  - to: done
+    at: 2026-11-11T22:06:46Z
+    by: agent-S-0712
 stream: S-0712
 tags: [flai, git]
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go]
+usage:
+  source: log
+  seconds: 580
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 443
+      cache_read: 2892989
+      cache_write: 170663
+      cost: 1.1372
 ---
 # T-2963 Take main's head once as a commit in storygit.Rebase and pass that commit to the undone check and the changelog settle
 

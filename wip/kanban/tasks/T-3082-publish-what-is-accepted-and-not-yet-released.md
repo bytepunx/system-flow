@@ -3,12 +3,18 @@ id: T-3082
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0718
 owner: alex
 created: 2026-11-11T01:44:41Z
-updated: 2026-11-11T01:44:41Z
-transitions: []
+updated: 2026-11-11T22:15:21Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:15:21Z
+    by: agent-S-0718
+  - to: in-progress
+    at: 2026-11-11T22:15:21Z
+    by: agent-S-0718
 stream: S-0718
 tags: []
 after: [T-3081]

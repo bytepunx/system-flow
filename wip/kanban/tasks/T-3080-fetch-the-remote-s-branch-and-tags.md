@@ -3,14 +3,35 @@ id: T-3080
 type: task
 nature: improvement
 title: Fetch the remote's branch and tags
-status: backlog
+status: done
 parent: S-0718
 owner: alex
 created: 2026-11-11T01:44:41Z
-updated: 2026-11-11T01:44:41Z
-transitions: []
+updated: 2026-11-11T22:14:41Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:14:15Z
+    by: agent-S-0718
+  - to: in-progress
+    at: 2026-11-11T22:14:15Z
+    by: agent-S-0718
+  - to: done
+    at: 2026-11-11T22:14:41Z
+    by: agent-S-0718
 stream: S-0718
 tags: []
+usage:
+  source: log
+  seconds: 26
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 103
+      cache_read: 811104
+      cache_write: 2200
+      cost: 0.3019
 ---
 # T-3080 Fetch the remote's branch and tags
 
@@ -23,3 +44,5 @@ Run `scripts/fetch.sh` from the project's main checkout, `/home/alex/git/bytepun
 `scripts/fetch.sh` exits 0 in the main checkout.
 
 ## Notes
+
+- 2026-11-11: `scripts/fetch.sh` ran in the main checkout and exited 0, printing `fetch.sh: git fetch --tags` and nothing else.

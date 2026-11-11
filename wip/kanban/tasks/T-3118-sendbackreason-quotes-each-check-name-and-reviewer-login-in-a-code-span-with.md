@@ -3,15 +3,36 @@ id: T-3118
 type: task
 nature: remediation
 title: sendBackReason quotes each check name and reviewer login in a code span with its control characters dropped
-status: backlog
+status: done
 parent: S-0711
 owner: alex
 created: 2026-11-11T09:06:10Z
-updated: 2026-11-11T09:06:10Z
-transitions: []
+updated: 2026-11-11T22:02:20Z
+transitions:
+  - to: ready
+    at: 2026-11-11T21:56:34Z
+    by: agent-S-0711
+  - to: in-progress
+    at: 2026-11-11T21:56:38Z
+    by: agent-S-0711
+  - to: done
+    at: 2026-11-11T22:02:20Z
+    by: agent-S-0711
 stream: S-0711
 tags: [flai, go, serve, forge]
 touches: [flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 342
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 4128
+      cache_read: 2540724
+      cache_write: 66443
+      cost: 1.1224
 ---
 # T-3118 sendBackReason quotes each check name and reviewer login in a code span with its control characters dropped
 

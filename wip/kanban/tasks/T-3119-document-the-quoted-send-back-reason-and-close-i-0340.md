@@ -3,16 +3,37 @@ id: T-3119
 type: task
 nature: remediation
 title: Document the quoted send-back reason and close I-0340
-status: backlog
+status: done
 parent: S-0711
 owner: alex
 created: 2026-11-11T09:06:17Z
-updated: 2026-11-11T09:06:17Z
-transitions: []
+updated: 2026-11-11T22:03:15Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:02:39Z
+    by: agent-S-0711
+  - to: in-progress
+    at: 2026-11-11T22:02:47Z
+    by: agent-S-0711
+  - to: done
+    at: 2026-11-11T22:03:15Z
+    by: agent-S-0711
 stream: S-0711
 tags: [docs, issues]
 touches: [design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0340-sendbackreason-puts-a-ci-check-name-and-reviewer-login-unquoted-into-the-agent.md, design/issues/summary.md]
 after: [T-3118]
+usage:
+  source: log
+  seconds: 28
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 1479
+      cache_read: 910156
+      cache_write: 23802
+      cost: 0.4021
 ---
 # T-3119 Document the quoted send-back reason and close I-0340
 

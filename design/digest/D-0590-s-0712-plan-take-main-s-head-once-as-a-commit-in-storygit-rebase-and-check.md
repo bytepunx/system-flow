@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0712]
 ---
 
 # D-0590 S-0712 plan: take main's head once as a commit in storygit.Rebase and check undoes_main against it, four tasks in three layers; proposes merging S-0709: Recommended: merge the two stories into…

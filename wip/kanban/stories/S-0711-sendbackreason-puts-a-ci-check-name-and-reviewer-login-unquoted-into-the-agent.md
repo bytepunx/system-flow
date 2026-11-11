@@ -3,16 +3,19 @@ id: S-0711
 type: story
 nature: improvement
 title: sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-11T21:54:58Z
+updated: 2026-11-11T22:13:32Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-11T21:54:58Z
+    by: agent-S-0711
+  - to: review
+    at: 2026-11-11T22:13:32Z
     by: agent-S-0711
 tags: []
 topics: [forge, orchestration]
@@ -23,9 +26,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1126
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 3
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 14332
+      cache_read: 8820539
+      cache_write: 230669
+      cost: 3.8965
   strategic:
     - kind: planner
       seconds: 61
@@ -38,15 +52,21 @@ usage:
           cache_write: 35083
           cost: 0.6841
     - kind: orchestrator
-      seconds: 48
+      seconds: 98
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 153
-          cache_read: 786808
-          cache_write: 124776
-          cost: 0.2551
+          input: 34
+          output: 278
+          cache_read: 1363773
+          cache_write: 198576
+          cost: 0.4387
+        - model: claude-sonnet-5-5
+          input: 2
+          output: 24
+          cache_read: 0
+          cache_write: 13783
+          cost: 0.0105
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
@@ -72,8 +92,8 @@ finalized:
 This story remediates [I-0340](../../../design/issues/I-0340-sendbackreason-puts-a-ci-check-name-and-reviewer-login-unquoted-into-the-agent.md), "sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0340 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0340 is closed with `flai issue close I-0340 --reason` saying what fixed it
+- [x] The cause I-0340 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0340 is closed with `flai issue close I-0340 --reason` saying what fixed it
 
 ## Tasks
 - T-3118 sendBackReason quotes each check name and reviewer login in a code span with its control characters dropped

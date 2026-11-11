@@ -3,12 +3,18 @@ id: T-2965
 type: task
 nature: remediation
 title: Reproduce I-0338 and I-0335 in real-git sync tests where main gains a commit between the rebase and the checks after it
-status: backlog
+status: in-progress
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:28:03Z
-updated: 2026-11-11T09:05:05Z
-transitions: []
+updated: 2026-11-11T22:12:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T22:12:59Z
+    by: agent-S-0712
+  - to: in-progress
+    at: 2026-11-11T22:12:59Z
+    by: agent-S-0712
 stream: S-0712
 tags: [flai, git, test]
 touches: [flai/internal/storygit/sync_test.go]

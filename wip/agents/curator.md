@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 237.4740
-accrued_seconds: 27442
-tasks_completed: 152
-last_run: 2026-11-11T18:21:56Z
+accrued_cost: 241.6823
+accrued_seconds: 27971
+tasks_completed: 154
+last_run: 2026-11-11T22:04:35Z
 ---
 
 # Curator activity
@@ -1227,3 +1227,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0477, D-0593
 - Seconds: 191
 - Cost: 2.2754 USD, estimated
+
+### 2026-11-11T22:02:20Z
+
+- Summary: Curation since 2026-11-11T18:21:56Z: 35 candidates read; wrote D-0594 (pilot's strict request reader, so container-only behaviour keys on Request.Inner), D-0595 (I-0343: agent-lab cleanup waits for every launcher) and D-0596 (this host's 40525–44620 ephemeral port range); merged S-0714's I-0342 fix into D-0572 and S-0689 into D-0592; absorbed D-0572 into design/system/component-library.md § The dev server; flai digest compact compacted none.
+- Trigger: accepted S-0689
+- Items: D-0572, D-0590, D-0592, D-0594, D-0595, D-0596
+- Seconds: 406
+- Cost: 2.6538 USD, estimated
+
+### 2026-11-11T22:04:35Z
+
+- Summary: I found nothing new to take in: I wrote, merged and absorbed no entries, and `flai digest compact` compacted none. The run at 22:02:20Z had already taken in all 35 candidates since 2026-11-11T18:21:56Z: D-0592 and D-0594 (S-0689), D-0595 (S-0715), and D-0572 and D-0596 (S-0714). ADR-0288 records S-0707's fix, and nothing has come in since 22:02:20Z.
+- Trigger: accepted S-0707, S-0714, S-0715
+- Items: none
+- Seconds: 123
+- Cost: 1.5545 USD, estimated
