@@ -2,12 +2,12 @@
 id: I-0271
 title: flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-07T04:41:15Z
 last_reported: 2026-11-07T04:41:15Z
-updated: 2026-11-10T08:54:33Z
+updated: 2026-11-11T08:08:34Z
 ---
 
 # I-0271 flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
@@ -24,3 +24,4 @@ Found by S-0569's T-2529 while reproducing I-0247's TestHostRunsServeAndTheMCPSe
 ## Remediation
 
 Story S-0697 remediates this issue, created from it at 2026-11-10T08:54:33Z.
+Closed 2026-11-11T08:08:34Z: S-0697 (T-2974, a617cba): hostLauncher.mcpAddr and mcpAddrFor in flai/cmd now check that the port a project was given, or remembers, can be listened on at each start, and move the project to the next free port when another process holds it, logging "mcp address moved: another process holds it" with from and to. TestTheHostMovesAProjectOffAPortAnotherProcessHolds reproduces the instance and fails on main's launcher. The probe and the child's bind can still race; that now costs one failed start, after which the next start moves the port.
