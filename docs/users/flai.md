@@ -544,7 +544,7 @@ The start is refused, as a start that failed, when one of these holds:
 | `config.inner` names `container`, `command`, or no harness flai has | `flai edit <story> --agent-config inner=claude-code` |
 | Arguments are set for the harness after `--` | `flai serve agent harness container --`, which clears them; its mounts and variables are fixed |
 | The start names neither a story nor a role, or both | Start it for one |
-| The agent is a role your project defines in a role file of its own | Run it on another harness |
+| The agent is a role your project defines whose name is `plan`, `orchestrate`, `analyze`, or `curate`, a built-in role's | Rename the role, or run it on another harness |
 | The project is not a git repository, so the story has no worktree | Run its agent on another harness |
 | The worktree's `.git` file, its registration `.git/worktrees/<story>`, or the registration's `commondir` is missing; the message names the path | `git worktree repair <worktree>` from the main checkout, or `git worktree prune` and `flai stream open <story>` to make it again |
 
@@ -591,23 +591,23 @@ What still runs a container story's code on the host, by design: the merge queue
 
 ##### The strategic agents in a container
 
-The planner, the orchestrator, the analyzer, and the curator run in a container too when their agent's harness is `container` (S-0509, [ADR-0247](../../design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md)):
+The planner, the orchestrator, the analyzer, the curator, and a role your project defines run in a container too when their agent's harness is `container` (S-0509, S-0705, [ADR-0247](../../design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md)):
 
 ```bash
 flai manifest set planning.agent='{"harness":"container","config":{"inner":"claude-code"}}'
 ```
 
-`analysis.agent` and `digest.agent` take the same; `orchestration.agent` is set by hand in `system-flow.yaml`, with `harness: container` under it. The host's settings are the same as a story's: image, network, and login. These agents work in the main checkout, not a worktree, so their container mounts other things:
+`analysis.agent`, `digest.agent`, and `roles.<name>.agent` take the same; `orchestration.agent` is set by hand in `system-flow.yaml`, with `harness: container` under it. The host's settings are the same as a story's: image, network, and login. These agents work in the main checkout, not a worktree, so their container mounts other things:
 
 | Host path | In the container | Mode | For |
 |-----------|------------------|------|-----|
 | the main checkout | the same path, the working directory | read-write | the work items, reports, and digest entries the role writes, as on the host |
 | `.git/hooks` of the main checkout | the same path, over the checkout | read-only | a hook written there would run on your host |
 | `.git/config` of the main checkout | the same path, over the checkout | read-only | a command named there would run on your host ([ADR-0281](../../design/adrs/0281-a-strategic-agent-s-container-mounts-the-main-checkout-s-git-config-read-only.md)) |
-| `.flai-cache/agents/<role>`, `<role>` one of `plan`, `orchestrate`, `analyze`, `curate` | the same path | read-write | as a story's cache folder |
+| `.flai-cache/agents/<role>`, `<role>` one of `plan`, `orchestrate`, `analyze`, `curate`, or the name of a role your project defines | the same path | read-write | as a story's cache folder |
 | the folder `--login` names | `/run/claude-login` | read-only | your Claude login |
 
-The container is named `flai-agent-<role>-<session>`. It gets `FLAI_ROLE` in place of `FLAI_STORY`. pilot reads the role's file from the mounted checkout, so the agent starts as the same definition it runs as on the host, and `flai guard` holds it to the same rules. A role your project defines in a role file of its own cannot run on `container` yet. What the roles may write in it is in [strategic-agents.md](../../design/system/strategic-agents.md#in-a-container-s-0509).
+The container is named `flai-agent-<role>-<session>`. It gets `FLAI_ROLE` in place of `FLAI_STORY`. pilot reads the role's file from the mounted checkout, so the agent starts as the same definition it runs as on the host, and `flai guard` holds it to the same rules. A role your project defines is named by its name, not its verb, in its container and cache folder, `flai-agent-<name>-<session>` and `.flai-cache/agents/<name>`; pilot reads its file from the mounted checkout and gets the run's inputs in its start request. A defined role named `plan`, `orchestrate`, `analyze`, or `curate` is refused on `container`, since its cache folder would be that built-in role's. What the roles may write in it is in [strategic-agents.md](../../design/system/strategic-agents.md#in-a-container-s-0509).
 
 The container's flai has no host configuration of yours: it sees none of your host actions, such as whether the merge queue batches, and lacks the test tiers' tools. So an orchestrator in a container verifies and accepts on the host ([ADR-0278](../../design/adrs/0278-the-orchestrator-accepts-through-an-mcp-tool-that-runs-flai-accept-on-the-host.md)): it asks for the close-out with the MCP tool `verify`, reads the verdict with `flai verify S-nnnn --last`, and accepts with the MCP tool `accept`, which runs `flai accept --by orchestrator` on your host with your configuration ([When the orchestrator accepts](#when-the-orchestrator-accepts)). In its shell there, `flai accept`, its `--dry-run` included, and a `flai verify` that runs tiers refuse: they say your host's actions cannot be read in a role's container and name those tools. `flai verify --last` and `--job` still run.
 

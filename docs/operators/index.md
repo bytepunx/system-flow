@@ -703,7 +703,7 @@ flai serve disable curate        # no more runs
 
 ### Strategic agents in a container (S-0509)
 
-The planner, the orchestrator, the analyzer, and the curator run in a container from the agent images when their agent's harness is `container`: `planning.agent`, `orchestration.agent`, `analysis.agent`, or `digest.agent` in `system-flow.yaml` ([The strategic agents in a container](../users/flai.md#the-strategic-agents-in-a-container)). They use the image, network, and login you set with `flai serve agent harness container`, as a story's agent does. The decision is [ADR-0247](../../design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md).
+The planner, the orchestrator, the analyzer, the curator, and a role your project defines (S-0705) run in a container from the agent images when their agent's harness is `container`: `planning.agent`, `orchestration.agent`, `analysis.agent`, `digest.agent`, or `roles.<name>.agent` in `system-flow.yaml` ([The strategic agents in a container](../users/flai.md#the-strategic-agents-in-a-container)). They use the image, network, and login you set with `flai serve agent harness container`, as a story's agent does. The decision is [ADR-0247](../../design/adrs/0247-a-strategic-agent-s-container-mounts-the-main-checkout-read-write-at-its-host.md).
 
 **Understand what it mounts.** A story's container sees its worktree. A strategic agent's sees the whole main checkout:
 
@@ -712,16 +712,16 @@ The planner, the orchestrator, the analyzer, and the curator run in a container 
 | The main checkout, at its host path, as the working directory | read-write |
 | Its `.git/hooks`, which `flai serve` makes when missing | read-only |
 | Its `.git/config`, without which `flai serve` refuses the start | read-only |
-| The role's cache folder, `.flai-cache/agents/<role>`: `plan`, `orchestrate`, `analyze`, or `curate` | read-write |
+| The role's cache folder, `.flai-cache/agents/<role>`: `plan`, `orchestrate`, `analyze`, or `curate`, or a defined role's name | read-write |
 | Your Claude login folder, at `/run/claude-login` | read-only |
 
 Never your home, `~/.ssh`, `~/.flai`, or the Docker socket. So the container narrows the rest of your machine away, not the checkout. `flai guard` runs inside it from the checkout's `.claude/settings.json` and holds each role to what it holds it to on the host. In this repository that hook runs `scripts/flai.sh guard`, which builds flai with the project layer's `go`; when it has no `go` or the build fails, it runs an older `bin/flai` or the image's flai, and with neither it exits 127 and the hook refuses the call ([ADR-0280](../../design/adrs/0280-scripts-flai-sh-guard-runs-an-older-bin-flai-or-else-the-installed-flai-when.md)). A shell command the guard does not see can still write any file of the checkout, `.git` and every story's worktree under `.flai-cache` among them, but not `.git/hooks` or `.git/config`. `.git/config` can name commands git runs on your host, such as `core.fsmonitor`, so it is read-only, and a git command in the container that writes it fails ([ADR-0281](../../design/adrs/0281-a-strategic-agent-s-container-mounts-the-main-checkout-s-git-config-read-only.md)). If your checkout has no `.git/config` file, `flai serve` refuses the start and names the file: repair the checkout, or run the agent on another harness.
 
-**Find or stop it.** The container is named `flai-agent-<role>-<session>`; `docker ps --filter name=flai-agent-` lists them. `flai serve` stops the orchestrator's by name, `docker stop flai-agent-orchestrate-<session>`, when you turn `orchestrate` off, when a run passes `orchestration.run_timeout`, and on `flai serve orchestrate stop`. The journal says what happened to the container.
+**Find or stop it.** The container is named `flai-agent-<role>-<session>`, a defined role's by its name, as its cache folder is; `docker ps --filter name=flai-agent-` lists them. `flai serve` stops the orchestrator's by name, `docker stop flai-agent-orchestrate-<session>`, when you turn `orchestrate` off, when a run passes `orchestration.run_timeout`, and on `flai serve orchestrate stop`. The journal says what happened to the container.
 
 **Where a story's code runs.** The orchestrator's own `flai verify` and `flai accept`, run in its shell, run a story's tiers and an acceptance's `fix_command` inside its container, against the read-write checkout above. The close-out it asks for with the MCP tool `verify`, and the merge queue's batch, run in `flai serve` on your machine: the close-out by the story's own harness, so a container story's verify runs in that story's container ([ADR-0274](../../design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md)), and the batch in the main checkout after an acceptance decision.
 
-**What it cannot do yet.** The container's flai has no host configuration of yours: its `FLAI_CONFIG` is in the cache folder. So `flai accept` while the merge queue batches, or `flai verify`, sees none of your host actions there, and the image lacks the test tiers' tools. A role your project defines in a role file of its own cannot run on `container`: run it on another harness.
+**What it cannot do yet.** The container's flai has no host configuration of yours: its `FLAI_CONFIG` is in the cache folder. So `flai accept` while the merge queue batches, or `flai verify`, sees none of your host actions there, and the image lacks the test tiers' tools. A role your project defines whose name is `plan`, `orchestrate`, `analyze`, or `curate` is refused on `container`, since its cache folder would be that built-in role's: rename it, or run it on another harness.
 
 ### Defining a role (S-0414)
 
