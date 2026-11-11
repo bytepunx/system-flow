@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,6 +27,10 @@ const ExitUsage = 2
 // container is the inner harness pilot refuses whatever the adapters hold:
 // pilot runs inside a container, so it cannot start another (S-0507).
 const container = "container"
+
+// roleName is a role's name, kebab-case as flai check holds a role file's
+// name to (roles.Validate), which is the stem of its file's name.
+var roleName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 
 // unknownField is how encoding/json begins the error for a field the
 // decoded struct does not have, when unknown fields are disallowed; the
@@ -113,9 +118,12 @@ func kind(c byte) string {
 // absolute path to a folder isDir finds; or not the variables of the host's
 // HTTP MCP server's URL and token, which pilot always reaches, or a variable
 // it names that getenv finds unset or empty; or a probe, a trial of the agent
-// image (I-0224), that names a Role or an Item, since a probe is never a
-// strategic agent's run. It reports the first refusal, in one line, naming
-// the field and the variable but never a variable's value.
+// image (I-0224), that names a Role, an Item, or a role_name, since a probe is
+// never a strategic agent's run; or a role_name, the name of a role the
+// project defines (S-0705), with no Role, with a Story, or that is not a
+// role's kebab-case name, which names its file and so must hold no path. It
+// reports the first refusal, in one line, naming the field and the variable
+// but never a variable's value.
 func Check(req harness.Request, getenv func(string) string, isDir func(string) bool) error {
 	names := innerNames()
 	switch {
@@ -139,6 +147,14 @@ func Check(req harness.Request, getenv func(string) string, isDir func(string) b
 		return fmt.Errorf("the start request is a probe and names the Role %s; a probe is a trial of the agent image, never a strategic agent's run, so drop Role, or drop probe to start the role", strconv.Quote(req.Role))
 	case req.Probe && req.Item != "":
 		return fmt.Errorf("the start request is a probe and names the Item %s; a probe is a trial of the agent image, never a strategic agent's run, so drop Item, or drop probe to start the role on it", strconv.Quote(req.Item))
+	case req.Probe && req.RoleName != "":
+		return fmt.Errorf("the start request is a probe and names the role_name %s; a probe is a trial of the agent image, never a strategic agent's run, so drop role_name, or drop probe to start the role", strconv.Quote(req.RoleName))
+	case req.RoleName != "" && req.Role == "":
+		return fmt.Errorf("the start request names the role_name %s and no Role; a role the project defines runs in its file's verb, so set Role to it, or drop role_name", strconv.Quote(req.RoleName))
+	case req.RoleName != "" && req.Story != "":
+		return fmt.Errorf("the start request names the role_name %s and the Story %s; a role the project defines never works a story, so drop Story, or drop role_name to start the story's agent", strconv.Quote(req.RoleName), strconv.Quote(req.Story))
+	case req.RoleName != "" && !roleName.MatchString(req.RoleName):
+		return fmt.Errorf("the start request's role_name %s is not a role's name, which is kebab-case and names its role file, so holds no path; set role_name to the role file's name without .md", strconv.Quote(req.RoleName))
 	}
 	for _, v := range []struct{ field, name string }{{"mcp_url_env", req.MCPURLEnv}, {"mcp_token_env", req.MCPTokenEnv}, {"mcp_host_env", req.MCPHostEnv}} {
 		if v.name != "" && getenv(v.name) == "" {

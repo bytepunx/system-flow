@@ -568,3 +568,132 @@ func TestMainRefusesInOneLine(t *testing.T) {
 		})
 	}
 }
+
+// triagerFile is a role the project defines in a role file of its own, the
+// triager: it runs in role triage on a story.
+const triagerFile = `---
+title: Triager
+updated: 2026-11-11
+status: active
+name: triager
+role: triage
+definition:
+  description: Triages a story for flai serve.
+  tools: [Read, Grep, mcp__flai__item_get]
+  model: inherit
+action: triage
+trigger:
+  - asked
+item: [story]
+topics: [planning]
+works_story: false
+charge: none
+tools: []
+commands: []
+files: []
+permissions: []
+---
+
+You are the triager: read the story and say where it belongs.
+`
+
+// withRoleFile is checkout with data as its role file name.md under the
+// design folder's workflows/roles.
+func withRoleFile(t *testing.T, name, data string) string {
+	t.Helper()
+	root := checkout(t)
+	p := filepath.Join(root, "design", "workflows", "roles", name+".md")
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// definedStart is the start request the container adapter writes for the
+// triager on S-0042 with two inputs, in the checkout root: its name in
+// role_name, never its file.
+func definedStart(cache, root string) harness.Request {
+	req := valid(cache)
+	req.Story, req.Root, req.Role, req.RoleName, req.Item, req.Name = "", root, "triage", "triager", "S-0042", harness.RoleAgent("triager", "S-0042")
+	req.Inputs = []harness.Input{{Name: "depth", Value: "thorough"}, {Name: "scope", Value: "touches"}}
+	return req
+}
+
+// I-0258, S-0705: a role the project defines, named by role_name in the
+// start request, starts the inner harness as that role, from its file in
+// the mounted checkout, as flai serve starts it on the host: with --agent
+// and its definition, FLAI_AGENT, FLAI_ROLE, FLAI_ITEM, and a start prompt
+// that holds the run's inputs.
+func TestRunStartsADefinedRoleFromTheFileItsNameNames(t *testing.T) {
+	dir := fake(t)
+	req := definedStart(t.TempDir(), withRoleFile(t, "triager", triagerFile))
+	if r := run(t, t.Context(), req, environ(dir), nil); r.code != 0 {
+		t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+	}
+	args := argv(t, dir)
+	if !follows(args, "--agent", "triager") {
+		t.Errorf("the triager's argv has no --agent triager: %q", args)
+	}
+	if prompt := agentPrompt(t, args, "triager"); !strings.Contains(prompt, "You are the triager") {
+		t.Errorf("the triager's definition's prompt is not its role file's body:\n%s", prompt)
+	}
+	i := slices.Index(args, "-p")
+	if i < 0 || i+1 >= len(args) {
+		t.Fatalf("argv has no -p prompt: %q", args)
+	}
+	for _, want := range []string{"- depth: thorough", "- scope: touches", "S-0042"} {
+		if !strings.Contains(args[i+1], want) {
+			t.Errorf("the triager's start prompt lacks %q:\n%s", want, args[i+1])
+		}
+	}
+	env, err := os.ReadFile(filepath.Join(dir, "env"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"FLAI_AGENT=triager-S-0042\n", "FLAI_ROLE=triage\n", "FLAI_ITEM=S-0042\n"} {
+		if !strings.Contains(string(env), want) {
+			t.Errorf("the triager's environment lacks %q:\n%s", want, env)
+		}
+	}
+}
+
+// S-0705: pilot refuses a defined role's start, before the inner harness
+// starts, when the checkout holds no file of its role_name, when its file
+// does not parse or names another role, and when its file's verb is not the
+// request's Role, each in one line that says what to do.
+func TestRunRefusesADefinedRoleItCannotLoad(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		file   string // the role file triager.md; none when empty
+		change func(*harness.Request)
+		says   string
+	}{
+		{"no file", "", func(*harness.Request) {}, "names the role file design/workflows/roles/triager.md, which is not in the checkout mounted at"},
+		{"a file that does not parse", "---\nname: [\n---\n", func(*harness.Request) {}, "the role file design/workflows/roles/triager.md that the start request's role_name names does not load (roles.file: "},
+		{"a file of another role", strings.Replace(triagerFile, "name: triager", "name: sorter", 1), func(*harness.Request) {}, `names its role "sorter", not the start request's role_name triager`},
+		{"another verb", triagerFile, func(r *harness.Request) { r.Role = "review" }, `the role triager runs in role triage, as its file design/workflows/roles/triager.md says, and the start request's Role is "review"; set Role to triage`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir := fake(t)
+			root := checkout(t)
+			if c.file != "" {
+				root = withRoleFile(t, "triager", c.file)
+			}
+			req := definedStart(t.TempDir(), root)
+			c.change(&req)
+			r := run(t, t.Context(), req, environ(dir), nil)
+			if r.code != ExitUsage || !strings.Contains(r.stderr, c.says) {
+				t.Errorf("pilot exited %d, want %d saying %q; stderr: %s", r.code, ExitUsage, c.says, r.stderr)
+			}
+			if lines := strings.Split(strings.TrimSuffix(r.stderr, "\n"), "\n"); len(lines) != 1 {
+				t.Errorf("pilot's refusal is not one line: %q", r.stderr)
+			}
+			if _, err := os.Stat(filepath.Join(dir, "argv")); err == nil {
+				t.Error("the harness was started")
+			}
+		})
+	}
+}

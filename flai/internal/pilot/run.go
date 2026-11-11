@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -67,12 +68,16 @@ func Run(ctx context.Context, req harness.Request, stdout, stderr io.Writer, env
 
 // prepare makes the command that runs req's inner harness, and the marker
 // that records its session: it sets req.Resume when the cache records the
-// session already, gives a built-in role its role file, writes the files the
-// adapter's start needs, and builds the child's environment. It starts
-// nothing.
+// session already, gives a role the project defines the role file its
+// role_name names (defined) and a built-in role its role file (builtin),
+// writes the files the adapter's start needs, and builds the child's
+// environment. It starts nothing.
 func prepare(req *harness.Request, stderr io.Writer, environ []string) (*exec.Cmd, string, error) {
 	marker, err := resume(req)
 	if err != nil {
+		return nil, "", err
+	}
+	if err := defined(req); err != nil {
 		return nil, "", err
 	}
 	if err := builtin(req); err != nil {
@@ -98,11 +103,11 @@ func prepare(req *harness.Request, stderr io.Writer, environ []string) (*exec.Cm
 	if err != nil {
 		return nil, "", err
 	}
-	path, err := exec.LookPath(spec.Argv[0])
+	program, err := exec.LookPath(spec.Argv[0])
 	if err != nil {
 		return nil, "", fmt.Errorf("the inner harness %s's program %s is not found on pilot's PATH: %w; build the agent image over the harness's layer, which installs it", req.Inner, strconv.Quote(spec.Argv[0]), err)
 	}
-	cmd := &exec.Cmd{Path: path, Args: spec.Argv, Env: env, Stderr: stderr}
+	cmd := &exec.Cmd{Path: program, Args: spec.Argv, Env: env, Stderr: stderr}
 	return cmd, marker, nil
 }
 
@@ -134,8 +139,9 @@ func resume(req *harness.Request) (string, error) {
 // (ADR-0247 §3): the mounted checkout's own under its design folder, else
 // the baseline flai carries (roles.Builtin), so that its definition's prompt
 // is the file's body with the project's additions below the marker. Nothing
-// for a story's agent or a role the project defines. A manifest or a role
-// file that cannot be read refuses the start.
+// for a story's agent or a role the project defines, which defined has given
+// its file already. A manifest or a role file that cannot be read refuses
+// the start.
 func builtin(req *harness.Request) error {
 	if req.Story != "" || req.RoleFile != nil || req.Role == "" {
 		return nil
@@ -154,6 +160,44 @@ func builtin(req *harness.Request) error {
 		return err
 	}
 	req.Builtin = &f
+	return nil
+}
+
+// defined gives req, the start of a role the project defines, the role file
+// its role_name names, <design>/workflows/roles/<role_name>.md in the
+// mounted checkout, as flai serve does on the host from the same file, since
+// the start request carries its name in place of the file (S-0705, I-0258):
+// so the inner harness starts it as on the host, as its definition, with
+// FLAI_AGENT, FLAI_ROLE, FLAI_ITEM, and a start prompt with the run's
+// inputs. Nothing for a request with no role_name. It refuses a manifest it
+// cannot read, a role_name no file has, a file that does not parse or names
+// another role, and a file whose verb is not the request's Role.
+func defined(req *harness.Request) error {
+	if req.RoleName == "" || req.RoleFile != nil {
+		return nil
+	}
+	m, err := manifest.Load(filepath.Join(req.Root, manifest.File))
+	if err != nil {
+		return fmt.Errorf("the role %s runs from its role file under the design folder the project's %s names, which pilot cannot read: %w; mount the project's main checkout at the start request's root", req.RoleName, manifest.File, err)
+	}
+	rel := path.Join(roles.Dir(m.Layout["design"]), req.RoleName+".md")
+	data, err := os.ReadFile(filepath.Join(req.Root, filepath.FromSlash(rel)))
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf("the start request's role_name %s names the role file %s, which is not in the checkout mounted at %s; add the file, or set role_name to the name of a role the project defines", req.RoleName, rel, req.Root)
+	case err != nil:
+		return fmt.Errorf("reading the role file %s that the start request's role_name names: %w; mount the project's main checkout at the start request's root", rel, err)
+	}
+	f, p := roles.Parse(rel, string(data))
+	switch {
+	case p != nil:
+		return fmt.Errorf("the role file %s that the start request's role_name names does not load (%s: %s); fix it, as flai check reports it", rel, p.Code, p.Message)
+	case f.Name != req.RoleName:
+		return fmt.Errorf("the role file %s names its role %q, not the start request's role_name %s; make the name and the file's the same, as flai check says", rel, f.Name, req.RoleName)
+	case f.Role != req.Role:
+		return fmt.Errorf("the role %s runs in role %s, as its file %s says, and the start request's Role is %q; set Role to %s", f.Name, f.Role, rel, req.Role, f.Role)
+	}
+	req.RoleFile = &f
 	return nil
 }
 

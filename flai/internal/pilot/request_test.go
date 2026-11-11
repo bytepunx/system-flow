@@ -194,6 +194,49 @@ func TestCheckRefusesAProbeOfARoleOrAnItem(t *testing.T) {
 	}
 }
 
+// S-0705: a defined role's start request, its name in role_name, passes the
+// check.
+func TestCheckTakesADefinedRolesStartRequest(t *testing.T) {
+	cache := t.TempDir()
+	req := valid(cache)
+	req.Story, req.Role, req.RoleName, req.Item, req.Name = "", "triage", "triager", "S-0042", "triager-S-0042"
+	if err := Check(req, env, isDirOnly(cache)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0705: role_name names a role the project defines, so Check refuses it
+// with no Role, with a Story, on a probe, and as anything but a role's
+// kebab-case name, which pilot joins to the role files' folder.
+func TestCheckRefusesARoleNamePilotCannotRun(t *testing.T) {
+	cache := t.TempDir()
+	for _, c := range []struct {
+		name string
+		edit func(*harness.Request)
+		want string
+	}{
+		{"no role", func(r *harness.Request) { r.Role = "" }, `names the role_name "triager" and no Role; a role the project defines runs in its file's verb, so set Role to it, or drop role_name`},
+		{"a story", func(r *harness.Request) { r.Story = "S-0507" }, `names the role_name "triager" and the Story "S-0507"; a role the project defines never works a story, so drop Story`},
+		{"a probe", func(r *harness.Request) { r.Probe, r.Role, r.Item = true, "", "" }, `is a probe and names the role_name "triager"; a probe is a trial of the agent image, never a strategic agent's run, so drop role_name`},
+		{"a path", func(r *harness.Request) { r.RoleName = "../../etc/passwd" }, `role_name "../../etc/passwd" is not a role's name, which is kebab-case and names its role file, so holds no path; set role_name to the role file's name without .md`},
+		{"a folder", func(r *harness.Request) { r.RoleName = "roles/triager" }, `role_name "roles/triager" is not a role's name`},
+		{"dot dot", func(r *harness.Request) { r.RoleName = ".." }, `role_name ".." is not a role's name`},
+		{"dot", func(r *harness.Request) { r.RoleName = "." }, `role_name "." is not a role's name`},
+		{"not kebab-case", func(r *harness.Request) { r.RoleName = "Triager" }, `role_name "Triager" is not a role's name`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			req := valid(cache)
+			req.Story, req.Role, req.RoleName, req.Item, req.Name = "", "triage", "triager", "S-0042", "triager-S-0042"
+			c.edit(&req)
+			err := Check(req, env, isDirOnly(cache))
+			oneLineWithoutSecrets(t, err)
+			if err != nil && !strings.Contains(err.Error(), c.want) {
+				t.Errorf("refused with %q, want it to say %q", err, c.want)
+			}
+		})
+	}
+}
+
 func TestCheckTakesARequestThatNamesNoHostVariable(t *testing.T) {
 	cache := t.TempDir()
 	req := valid(cache)
