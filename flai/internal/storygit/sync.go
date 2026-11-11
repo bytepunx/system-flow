@@ -519,20 +519,24 @@ func regeneratedSubject(story string) string {
 // the files there, and commits on the branch those that differ from the
 // head's by their Same (ADR-0286). Each generated file's Regenerate writes in
 // that worktree. One equal to the head's is put back as the head has it; one
-// the worktree does not have is left, as the fold leaves it; one the head
-// lacks differs. It returns the paths committed, as git names them, sorted;
-// with an error they are the paths written and not committed, none when
-// nothing is left to commit.
+// the head does not have is not written, so that a project without it, as
+// one with no issues summary, does not gain it here. It returns the paths
+// committed, as git names them, sorted; with an error they are the paths
+// written and not committed, none when nothing is left to commit.
 func RegenerateAtHead(r execx.Runner, dir string, files Files, story string) ([]string, error) {
 	var differ []string
 	var failed error
 	for _, f := range files.Generated {
+		head, ok := showFile(r, dir, "HEAD", f.Path)
+		if !ok {
+			continue
+		}
 		// a file whose write fails is still read, to commit or put back what
 		// it left, before the files after it are left as the head has them
 		if err := f.Regenerate(); err != nil {
 			failed = fmt.Errorf("write %s again at the branch's head in %s: %w", f.Path, dir, err)
 		}
-		changed, present, err := differsFromHead(r, dir, f)
+		changed, present, err := differsFromHead(dir, f, head)
 		switch {
 		case err != nil:
 			failed = errors.Join(failed, err)
@@ -570,21 +574,17 @@ func RegenerateAtHead(r execx.Runner, dir string, files Files, story string) ([]
 }
 
 // differsFromHead says whether the generated file f, as the worktree at dir
-// has it, differs from HEAD's by f.Same, and whether the worktree has it at
-// all; one HEAD lacks differs. Both sides are read as the runner reads HEAD's,
-// trimmed and ending in one newline, so a difference in the blank lines at
-// either end is none.
-func differsFromHead(r execx.Runner, dir string, f GeneratedFile) (changed, present bool, err error) {
+// has it, differs from head, HEAD's as showFile reads it, by f.Same, and
+// whether the worktree has it at all. The worktree's is read as showFile
+// reads HEAD's, trimmed and ending in one newline, so a difference in the
+// blank lines at either end is none.
+func differsFromHead(dir string, f GeneratedFile, head string) (changed, present bool, err error) {
 	data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f.Path)))
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, false, nil
 	}
 	if err != nil {
 		return false, true, fmt.Errorf("read %s written again at the branch's head in %s: %w", f.Path, dir, err)
-	}
-	head, ok := showFile(r, dir, "HEAD", f.Path)
-	if !ok {
-		return true, true, nil
 	}
 	written := strings.TrimSpace(string(data))
 	if written != "" {

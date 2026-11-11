@@ -498,13 +498,21 @@ func TestSyncCommitsNoGeneratedFileTheHeadsEqualsBySame(t *testing.T) {
 // commit gives back none.
 func TestRegenerateAtHeadNamesWhatItWroteAndDidNotCommit(t *testing.T) {
 	r, dir := execx.Runner(execx.System{}), gitRepo(t)
-	commitFiles(t, dir, "docs: gen", "docs/gen.md")
+	commitFiles(t, dir, "docs: gen", "docs/gen.md", "docs/other.md")
 	changed := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
 		return os.WriteFile(filepath.Join(dir, "docs", "gen.md"), []byte("new\n"), 0o644)
 	}}
 	broken := GeneratedFile{Path: "docs/other.md", Regenerate: func() error { return errors.New("unreadable") }}
+	// a generated file the head does not have is not written there, so a
+	// project without one does not gain it
+	absent := GeneratedFile{Path: "docs/absent.md", Regenerate: func() error {
+		return os.WriteFile(filepath.Join(dir, "docs", "absent.md"), []byte("new\n"), 0o644)
+	}}
 
-	written, err := RegenerateAtHead(r, dir, Files{Generated: []GeneratedFile{changed, broken}}, "S-0001")
+	written, err := RegenerateAtHead(r, dir, Files{Generated: []GeneratedFile{absent, changed, broken}}, "S-0001")
+	if _, serr := os.Stat(filepath.Join(dir, "docs", "absent.md")); serr == nil {
+		t.Errorf("docs/absent.md, which the head does not have, was written")
+	}
 	want := `git add -- docs/gen.md and commit it as "docs: [S-0001] write the generated files again at the branch's head"`
 	if !reflect.DeepEqual(written, []string{"docs/gen.md"}) || err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "unreadable") {
 		t.Fatalf("written %v, error %v; want docs/gen.md and an error naming %s", written, err, want)
