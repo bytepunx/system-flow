@@ -3,10 +3,10 @@ id: S-0705
 type: story
 nature: improvement
 title: A role a project defines in a role file of its own cannot run on the container harness, since the start request does not carry its file to pilot
-status: review
+status: done
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-11T16:13:45Z
+updated: 2026-11-11T18:16:50Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:45Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T16:13:45Z
     by: agent-S-0705
+  - to: done
+    at: 2026-11-11T18:16:50Z
+    by: alex
 tags: [flai]
 topics: [harness, docker, code]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, flai/internal/pilot/run.go, flai/internal/pilot/run_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0258-a-role-a-project-defines-in-a-role-file-of-its-own-cannot-run-on-the-container.md, design/issues/summary.md, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/orchestrate.go, flai/internal/serve/plan.go, flai/internal/serve/role.go, design/issues/I-0350-the-container-harness-s-design-and-operator-docs-still-say-the-close-out-and.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
