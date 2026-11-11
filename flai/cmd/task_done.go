@@ -111,6 +111,11 @@ version behind it (ADR-0142).`,
 			if err != nil {
 				return err
 			}
+			// the MCP tool task_done runs taskdone.Run on the host itself,
+			// so only the shell's call in a container is refused (I-0272)
+			if err := a.refuseSyncInStoryContainer(repo, "flai task done"); err != nil {
+				return err
+			}
 			agent, session := agentIdentity()
 			res, err := taskdone.Run(cmd.Context(), taskdone.Options{
 				Repo: repo, Runner: a.runner, Task: args[0], Message: message, LogEntry: logEntry,

@@ -256,7 +256,11 @@ change and cannot find the path itself, warns on it from the record for as
 long as the branch still removes those lines. The sync still exits 0. With
 --json, undoes_main lists each path with its path, lines (main's lines the
 branch removes), and old_base (the branch's merge base with main before the
-rebase that found it).`,
+rebase that found it).
+
+In a story's agent container, where the main checkout's .git is read-only, it
+refuses before any git call: the MCP tool task_done syncs on the host, and
+so does the MCP tool verify's close-out.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -264,6 +268,9 @@ rebase that found it).`,
 				return err
 			}
 			if err := repo.RequireMain("flai stream sync"); err != nil {
+				return err
+			}
+			if err := a.refuseSyncInStoryContainer(repo, "flai stream sync"); err != nil {
 				return err
 			}
 			it, err := repo.Get(args[0])

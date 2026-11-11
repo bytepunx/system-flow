@@ -104,6 +104,50 @@ func taskStatus(t *testing.T, root string) string {
 	return it.Status
 }
 
+// I-0272: in S-004's agent container, whose flai reads its configuration
+// from the story's cache folder with FLAI_STORY set, the main checkout's .git
+// is read-only, so flai task done refuses before any git call, naming the MCP
+// tools task_done and verify: nothing is committed, HEAD stays, and the task
+// stays in progress. With FLAI_STORY set and the configuration outside the
+// story's cache folder, as on the host, it closes the task as before.
+func TestTaskDoneRefusesInAStorysContainer(t *testing.T) {
+	gittest.Identity(t, "t", "t@t")
+	t.Setenv("FLAI_AGENT", "agent-S-004")
+	t.Setenv("FLAI_SESSION", "s1")
+	root, wt := taskDoneProject(t)
+	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	roleCacheConfig(t, root, "S-004") // the configuration S-004's container gives its flai
+	t.Setenv("FLAI_STORY", "S-004")
+
+	out, errOut, code := taskDone(t, wt, "T-003", "-m", "feat: [S-004] T-003 the readme")
+	if code == 0 || out != "" {
+		t.Fatalf("task done in the story's container must be refused: exit %d\n%s", code, out)
+	}
+	for _, want := range []string{"flai task done cannot run in S-004's agent container", "the main checkout's .git is mounted read-only there", "the MCP tool task_done", "the MCP tool verify", "ADR-0274"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal must say %q:\n%s", want, errOut)
+		}
+	}
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("a refused close moved HEAD from %s to %s", head, got)
+	}
+	if dirty := gitIn(t, wt, "status", "--porcelain"); dirty != "M README.md" {
+		t.Errorf("a refused close must leave README.md uncommitted: %q", dirty)
+	}
+	if st := taskStatus(t, root); st != workitem.InProgress {
+		t.Errorf("T-003 is %s", st)
+	}
+
+	useConfig(t, filepath.Join(t.TempDir(), "host.json"))
+	if out, errOut, code := taskDone(t, wt, "T-003", "-m", "feat: [S-004] T-003 the readme"); code != 0 {
+		t.Errorf("task done on the host closes the task: exit %d\n%s%s", code, out, errOut)
+	}
+	if st := taskStatus(t, root); st != workitem.Done {
+		t.Errorf("T-003 is %s", st)
+	}
+}
+
 // ADR-0107: flai task done commits, tells the other open stories whose claim
 // covers the commit (S-0333), syncs, moves the task to done, logs, widens the
 // touches, checks, and reads the inbox, a line for each; called again with

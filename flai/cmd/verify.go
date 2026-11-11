@@ -518,8 +518,45 @@ func (a *app) orchestratorInRoleContainer(repo *workitem.Repo) (string, bool) {
 	if os.Getenv("FLAI_ROLE") != guard.RoleOrchestrate {
 		return "", false
 	}
+	return a.configInAgentCache(repo, "")
+}
+
+// storyInContainer reports whether this flai runs in a story's agent
+// container: FLAI_STORY names the story, and the configuration it reads lies
+// in that story's cache folder, <main checkout>/.flai-cache/agents/<story>, as
+// the container gives it (harness.ContainerCache), and that story. The main
+// checkout's .git is mounted read-only there (ADR-0246), though its
+// system-flow.yaml is mounted too (ADR-0253), so Repo.RequireMain lets
+// commands through that write to it (I-0272).
+func (a *app) storyInContainer(repo *workitem.Repo) (string, bool) {
+	story := os.Getenv("FLAI_STORY")
+	if story == "" {
+		return "", false
+	}
+	_, ok := a.configInAgentCache(repo, story)
+	return story, ok
+}
+
+// configInAgentCache returns the configuration this flai reads, --config or
+// FLAI_CONFIG, and whether it lies in the cache folder that the container of
+// subject, a story's ID or a role, mounts under the main checkout's
+// .flai-cache/agents, or in any of those folders when subject is empty.
+func (a *app) configInAgentCache(repo *workitem.Repo, subject string) (string, bool) {
 	path := config.ResolvePath(a.configPath)
-	return path, pathWithin(filepath.Join(repo.CacheDir(), "agents"), path)
+	return path, pathWithin(filepath.Join(repo.CacheDir(), "agents", subject), path)
+}
+
+// refuseSyncInStoryContainer is the refusal of what, flai stream sync or
+// flai task done, in a story's agent container, before any git call: its
+// rebase and trial merge write to the main checkout's .git, which is
+// read-only there, and the MCP tools task_done and verify sync on the host
+// instead (I-0272, ADR-0274). Nil outside such a container.
+func (a *app) refuseSyncInStoryContainer(repo *workitem.Repo, what string) error {
+	story, ok := a.storyInContainer(repo)
+	if !ok {
+		return nil
+	}
+	return fmt.Errorf("rule: %s cannot run in %s's agent container: the main checkout's .git is mounted read-only there (ADR-0246), so no rebase or trial merge can be written; close the task with the MCP tool task_done, which closes a task and syncs on the host, or run the story's close-out with the MCP tool verify, which syncs on the host (ADR-0274)", what, story)
 }
 
 // pathWithin reports whether path lies below dir, both made absolute and

@@ -553,7 +553,7 @@ func TestRunRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 	}
 	before := narrative(t, repo)
 	res, err := Run(context.Background(), options(repo, "fix: [S-004] m"))
-	want := "flai task done needs the main checkout " + main + ", which is not here: " + wt + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync"
+	want := "flai task done needs the main checkout " + main + ", which is not here: " + wt + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify or task_done"
 	if err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatalf("%v, want %q", err, want)
 	}

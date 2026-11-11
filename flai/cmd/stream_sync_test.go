@@ -508,7 +508,7 @@ func testSyncRefusesUncommittedChanges(t *testing.T) {
 
 // I-0219: in S-004's worktree mounted without its main checkout, as in an
 // agent container, flai stream sync refuses before it reads the base branch
-// from the main checkout, naming it and the MCP tool stream_sync, and
+// from the main checkout, naming it and the MCP tools verify and task_done, and
 // changes nothing.
 func TestSyncRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 	t.Parallel()
@@ -516,12 +516,57 @@ func TestSyncRefusesAWorktreeWhoseMainCheckoutIsAbsent(t *testing.T) {
 	worktree, main := absentMainWorktree(t)
 	before := treeOf(t, worktree)
 	out, errOut, code := runIn(t, worktree, "stream", "sync", "S-004")
-	want := "flai stream sync needs the main checkout " + main + ", which is not here: " + worktree + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync"
+	want := "flai stream sync needs the main checkout " + main + ", which is not here: " + worktree + " is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify or task_done"
 	if code == 0 || out != "" || !strings.Contains(errOut, want) {
 		t.Errorf("exit %d\nout %q\nerr %q, want %q", code, out, errOut, want)
 	}
 	if after := treeOf(t, worktree); !maps.Equal(before, after) {
 		t.Error("a refused sync changed the worktree")
+	}
+}
+
+// I-0272: in S-0001's agent container its flai reads its configuration from
+// the story's cache folder, FLAI_STORY names the story, and the main
+// checkout's system-flow.yaml is mounted (ADR-0253) but its .git read-only
+// (ADR-0246). There flai stream sync refuses before any git call, naming the
+// MCP tools task_done and verify, and the branch and HEAD stay as they were.
+// With FLAI_STORY set and the configuration outside the story's cache folder,
+// as on the host, it rebases as before.
+func TestSyncRefusesInAStorysContainer(t *testing.T) {
+	t.Setenv("FLAI_AGENT", "tester")
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/guide.md", "branch's line\n")
+	// main moves on, so a rebase would have something to do
+	_ = os.WriteFile(filepath.Join(root, "README.md"), []byte("readme\n"), 0o644)
+	gitIn(t, root, "add", "README.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: readme")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	roleCacheConfig(t, root, "S-0001") // the configuration S-0001's container gives its flai
+	t.Setenv("FLAI_STORY", "S-0001")
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code == 0 || out != "" {
+		t.Fatalf("sync in the story's container must be refused: exit %d\n%s", code, out)
+	}
+	for _, want := range []string{"flai stream sync cannot run in S-0001's agent container", "the main checkout's .git is mounted read-only there", "the MCP tool task_done", "the MCP tool verify", "ADR-0274"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal must say %q:\n%s", want, errOut)
+		}
+	}
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("a refused sync moved HEAD from %s to %s", head, got)
+	}
+	if branch := gitIn(t, wt, "rev-parse", "--abbrev-ref", "HEAD"); branch != "story/S-0001" {
+		t.Errorf("a refused sync left %s checked out", branch)
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Error("a refused sync started a rebase")
+	}
+
+	useConfig(t, filepath.Join(t.TempDir(), "host.json"))
+	if out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001"); code != 0 || !strings.Contains(out, "story/S-0001 is rebased onto main") {
+		t.Errorf("sync on the host rebases: exit %d\n%s%s", code, out, errOut)
 	}
 }
 

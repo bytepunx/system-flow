@@ -5098,6 +5098,8 @@ After a clean rebase it trial-merges the branch with the branch of every other s
 
 After a clean rebase it warns on each path where the rebased branch removes lines the main branch added since the branch left it, as when a revert of the story's own change is replayed cleanly over main's identical change (I-0124, ADR-0155), inside the story's claim or outside it. The warning names flai stream restore &lt;id&gt; --path &lt;path&gt;, which commits main's version of the path on the branch, and flai accept &lt;id&gt; --keep-removal &lt;path&gt; --reason "&lt;why&gt;", for the operator to keep the removal. Each such path is recorded in the main checkout's .flai-cache/undone/&lt;id&gt;.json and blocks the story's acceptance until it is restored or kept. A later sync, whose rebase starts past main's change and cannot find the path itself, warns on it from the record for as long as the branch still removes those lines. The sync still exits 0. With --json, undoes\_main lists each path with its path, lines (main's lines the branch removes), and old\_base (the branch's merge base with main before the rebase that found it).
 
+In a story's agent container, where the main checkout's .git is read-only, it refuses before any git call: the MCP tool task\_done syncs on the host, and so does the MCP tool verify's close-out.
+
 ### flai subproject
 
 List, add, change, and remove the sub-projects under projects in system-flow.yaml.

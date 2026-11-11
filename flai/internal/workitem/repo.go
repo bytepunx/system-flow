@@ -96,7 +96,7 @@ func (r *Repo) RequireMain(what string) error {
 	if r.MainAbsent == "" {
 		return nil
 	}
-	return fmt.Errorf("%s needs the main checkout %s, which is not here: %s is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify, task_done, or stream_sync, which run there", what, r.MainAbsent, r.Root)
+	return fmt.Errorf("%s needs the main checkout %s, which is not here: %s is a story worktree mounted without it, as in an agent container; run it on the host, or call the MCP tool verify or task_done, which run there", what, r.MainAbsent, r.Root)
 }
 
 // CacheDir is .flai-cache in the main checkout: token, worktrees, tool caches.
