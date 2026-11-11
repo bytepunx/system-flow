@@ -3,10 +3,10 @@ id: S-0688
 type: story
 nature: improvement
 title: A strategic agent's container can write the main checkout's .git/config, which can name commands git runs on the host
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:37:15Z
-updated: 2026-11-11T01:50:13Z
+updated: 2026-11-11T02:28:57Z
 transitions:
   - to: ready
     at: 2026-11-10T11:00:29Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-11-11T01:50:13Z
     by: agent-S-0688
+  - to: done
+    at: 2026-11-11T02:28:57Z
+    by: alex
 tags: [flai, container, security]
 touches: [design/adrs, design/adrs/README.md, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/serve/container_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, design/issues/I-0257-a-strategic-agent-s-container-can-write-the-main-checkout-s-git-config-which.md, design/issues/summary.md, flai/internal/serve/container.go, design/system/agent-adapters.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md]
 agent:
