@@ -541,6 +541,100 @@ func TestStartDevServerRefusesARelativeFolder(t *testing.T) {
 	}
 }
 
+// I-0342: a port from the ephemeral range went, once vite stopped
+// listening, to another process's test server, which answered 404.
+func TestFreePortAnswersAPortOutsideTheHostsEphemeralRange(t *testing.T) {
+	data, err := os.ReadFile("/proc/sys/net/ipv4/ip_local_port_range")
+	if err != nil {
+		t.Skipf("this host says no ephemeral port range: %v", err)
+	}
+	var lo, hi int
+	if _, err := fmt.Sscan(string(data), &lo, &hi); err != nil {
+		t.Fatalf("cannot read the range %q: %v", data, err)
+	}
+	for range 50 {
+		port, err := freePort()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if port < 10000 || port > 65535 || (port >= lo && port <= hi) {
+			t.Fatalf("freePort answered %d; want one from 10000 to 65535 outside the ephemeral range %d-%d", port, lo, hi)
+		}
+	}
+}
+
+func TestEphemeralRangeIsTheHostsOrIANAs(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		data   string
+		err    error
+		lo, hi int
+	}{
+		{"linux's", "40525\t44620\n", nil, 40525, 44620},
+		{"one starting low", "1024 30000", nil, 1024, 30000},
+		{"unreadable", "", fs.ErrNotExist, 49152, 65535},
+		{"empty", "", nil, 49152, 65535},
+		{"one number", "40525", nil, 49152, 65535},
+		{"three numbers", "1 2 3", nil, 49152, 65535},
+		{"not numbers", "low high", nil, 49152, 65535},
+		{"backwards", "44620 40525", nil, 49152, 65535},
+		{"port zero", "0 30000", nil, 49152, 65535},
+		{"past the last port", "40000 70000", nil, 49152, 65535},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			var asked string
+			lo, hi := ephemeralRange(func(p string) ([]byte, error) {
+				asked = p
+				return []byte(c.data), c.err
+			})
+			if asked != ephemeralRangeFile {
+				t.Errorf("read %q, want %q", asked, ephemeralRangeFile)
+			}
+			if lo != c.lo || hi != c.hi {
+				t.Errorf("range %d-%d, want %d-%d", lo, hi, c.lo, c.hi)
+			}
+		})
+	}
+}
+
+func TestPortOutsideChoosesAmongThePortsOutsideTheRange(t *testing.T) {
+	for _, c := range []struct {
+		lo, hi, first, last, count int
+	}{
+		{40525, 44620, 10000, 65535, 65536 - 10000 - (44620 - 40525 + 1)},
+		{1024, 30000, 30001, 65535, 65535 - 30000},
+		{49152, 65535, 10000, 49151, 49152 - 10000},
+		{10000, 10000, 10001, 65535, 65535 - 10000},
+	} {
+		t.Run(fmt.Sprintf("%d-%d", c.lo, c.hi), func(t *testing.T) {
+			n := 0
+			if _, ok := portOutside(c.lo, c.hi, func(m int) int { n = m; return 0 }); !ok {
+				t.Fatal("found no port")
+			}
+			if n != c.count {
+				t.Errorf("chose among %d ports, want %d", n, c.count)
+			}
+			first, last := maxPort, minPort
+			for k := range n {
+				port, ok := portOutside(c.lo, c.hi, func(int) int { return k })
+				if !ok || port < minPort || port > maxPort || (port >= c.lo && port <= c.hi) {
+					t.Fatalf("choice %d is port %d (%v), inside %d-%d or outside %d-%d", k, port, ok, c.lo, c.hi, minPort, maxPort)
+				}
+				first, last = min(first, port), max(last, port)
+			}
+			if first != c.first || last != c.last {
+				t.Errorf("chose from %d to %d, want %d to %d", first, last, c.first, c.last)
+			}
+		})
+	}
+}
+
+func TestPortOutsideFindsNoneWhenTheRangeCoversThemAll(t *testing.T) {
+	if port, ok := portOutside(1024, 65535, func(int) int { return 0 }); ok {
+		t.Errorf("chose port %d inside 1024-65535", port)
+	}
+}
+
 func TestTailKeepsTheLastLinesThatAreNotBlank(t *testing.T) {
 	var copied bytes.Buffer
 	tl := &tail{out: &copied}

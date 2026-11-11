@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -45,6 +46,28 @@ const waitDelay = 5 * time.Second
 // portTries is how many free ports StartDevServer starts vite on before it
 // gives up, when each is taken before vite binds it.
 const portTries = 3
+
+// minPort and maxPort bound the ports freePort chooses from: above the
+// ports of well-known and commonly run services, up to the last port.
+const (
+	minPort = 10000
+	maxPort = 65535
+)
+
+// ephemeralRangeFile is where Linux says which ports it hands out to a
+// listen on port 0 and to outgoing connections.
+const ephemeralRangeFile = "/proc/sys/net/ipv4/ip_local_port_range"
+
+// ianaEphemeralLo and ianaEphemeralHi are IANA's dynamic port range, which
+// freePort avoids where ephemeralRangeFile cannot be read.
+const (
+	ianaEphemeralLo = 49152
+	ianaEphemeralHi = 65535
+)
+
+// bindTries is how many ports freePort tries to listen on before it gives
+// up, when each is in use.
+const bindTries = 20
 
 // portTaken is what vite's last lines say when its port was in use: Vite's
 // "Port 5173 is already in use", or a bind's "address already in use".
@@ -357,20 +380,84 @@ func findVite(dir string) (string, bool, error) {
 	return vite, true, nil
 }
 
-// freePort is a loopback port nothing listens on, found by listening on
-// port 0 and closing it. Another process may take it before vite does;
-// --strictPort makes vite exit then, rather than take another, and
+// freePort is a loopback port nothing listens on, chosen at random from
+// minPort to maxPort outside the host's ephemeral port range and checked by
+// listening on it and closing it. The kernel hands out ports in that range
+// to every listen on port 0 and every outgoing connection, so a port taken
+// from it, as port 0 gives, can go to another process's test server the
+// moment vite stops listening (I-0342); outside it, only a process that asks
+// for the port by number takes it. One may still do so before vite binds
+// it; --strictPort makes vite exit then, rather than take another, and
 // StartDevServer picks another.
 func freePort() (int, error) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	lo, hi := ephemeralRange(os.ReadFile)
+	var taken error
+	for range bindTries {
+		port, ok := portOutside(lo, hi, rand.IntN)
+		if !ok {
+			return 0, fmt.Errorf("cannot find a port for the Vite dev server: the host's ephemeral port range %d-%d covers every port from %d to %d; narrow it in %s, then run this again", lo, hi, minPort, maxPort, ephemeralRangeFile)
+		}
+		l, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+		if err != nil {
+			taken = err
+			continue
+		}
+		if err := l.Close(); err != nil {
+			return 0, fmt.Errorf("cannot free port %d on 127.0.0.1 for the Vite dev server: %w", port, err)
+		}
+		return port, nil
+	}
+	return 0, fmt.Errorf("cannot find a free port on 127.0.0.1 for the Vite dev server: each of the %d ports flai tried from %d to %d, outside the ephemeral range %d-%d, could not be listened on; check that loopback networking works and what on this host holds so many ports, then run this again: %w", bindTries, minPort, maxPort, lo, hi, taken)
+}
+
+// ephemeralRange is the host's ephemeral port range, lo to hi, as read
+// reads it from ephemeralRangeFile, or IANA's 49152-65535 where it cannot
+// be read or does not hold one, as on hosts other than Linux.
+func ephemeralRange(read func(string) ([]byte, error)) (lo, hi int) {
+	data, err := read(ephemeralRangeFile)
 	if err != nil {
-		return 0, fmt.Errorf("cannot find a free port on 127.0.0.1 for the Vite dev server: %w; check that loopback networking works", err)
+		return ianaEphemeralLo, ianaEphemeralHi
 	}
-	port := l.Addr().(*net.TCPAddr).Port
-	if err := l.Close(); err != nil {
-		return 0, fmt.Errorf("cannot free port %d on 127.0.0.1 for the Vite dev server: %w", port, err)
+	lo, hi, ok := parsePortRange(string(data))
+	if !ok {
+		return ianaEphemeralLo, ianaEphemeralHi
 	}
-	return port, nil
+	return lo, hi
+}
+
+// parsePortRange reads a port range written as two numbers apart, lo then
+// hi, as ip_local_port_range holds it, and whether s is one.
+func parsePortRange(s string) (lo, hi int, ok bool) {
+	f := strings.Fields(s)
+	if len(f) != 2 {
+		return 0, 0, false
+	}
+	lo, err := strconv.Atoi(f[0])
+	if err != nil {
+		return 0, 0, false
+	}
+	hi, err = strconv.Atoi(f[1])
+	if err != nil || lo < 1 || lo > hi || hi > maxPort {
+		return 0, 0, false
+	}
+	return lo, hi, true
+}
+
+// portOutside is a port from minPort to maxPort outside lo to hi, chosen
+// with intN, which answers a number from 0 to n-1 as rand.IntN does, and
+// whether there is one.
+func portOutside(lo, hi int, intN func(n int) int) (int, bool) {
+	below := max(0, min(lo, maxPort+1)-minPort)
+	start := max(hi+1, minPort)
+	above := max(0, maxPort-start+1)
+	if below+above == 0 {
+		return 0, false
+	}
+	k := intN(below + above)
+	if k < below {
+		return minPort + k, true
+	}
+	return start + k - below, true
 }
 
 // tail keeps the last tailLines lines written to it that are not blank, and
