@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,11 +40,18 @@ import (
 // every start on its harness, whatever its program and login, until it
 // clears, since which login reached the limit cannot be told (budgetIn).
 //
-// Every project's launcher in one flai serve reads and writes the file under
-// budgetMu; the MCP server and the host API read it, from other processes,
-// with Budgets. A change is announced in one place, launcher.budgetChanged,
-// which journals it, logs it, and sends a set, an extension, or a clear to
-// the operator through the channel of ADR-0205 as a BudgetNotice.
+// The operator clears a state by hand, from a flai of their own, with
+// ClearBudgets (S-0720): flai serve budget clear, or a change of the
+// harness's program, arguments, or login.
+//
+// Every project's launcher in one flai serve, and the flai that clears a
+// state, reads and writes the file under budgetLock, budgetMu and an OS lock
+// on the file; the MCP server and the host API read it, from other
+// processes, with Budgets. A change flai serve makes is announced in one
+// place, launcher.budgetChanged, which journals it, logs it, and sends a
+// set, an extension, or a clear to the operator through the channel of
+// ADR-0205 as a BudgetNotice; a clear by hand is announced by its flai with
+// the same entry and notice, from BudgetClearedEntry and BudgetClearedNotice.
 
 const (
 	// budgetBackoffFirst is how long a limit with no reset time holds its
@@ -69,7 +77,7 @@ const (
 	budgetExtended = "extended" // a run ended on the limit, and it holds longer
 	budgetProbing  = "probe"    // a start goes through as the probe
 	budgetReleased = "released" // the probe's start could not be made
-	budgetCleared  = "cleared"  // the probe ended on anything but the limit, or ran past budgetProbeServed
+	budgetCleared  = "cleared"  // the probe ended on anything but the limit, or ran past budgetProbeServed, or the operator cleared it
 )
 
 // Budget is one provider's budget state, as budget.json holds it and the MCP
@@ -144,6 +152,19 @@ var budgetMu sync.Mutex
 
 func (d Dir) budgetFile() string { return filepath.Join(string(d), "budget.json") }
 
+// budgetLock holds budget.json for one read-modify-write until the returned
+// func is called: budgetMu against the launchers of this process, and an OS
+// lock on the file against another, such as the flai that clears a state
+// while flai serve runs.
+func (d Dir) budgetLock() (unlock func()) {
+	budgetMu.Lock()
+	unlockFile := lockFile(d.budgetFile() + ".lock")
+	return func() {
+		unlockFile()
+		budgetMu.Unlock()
+	}
+}
+
 // budgetKey is what a run's budget state was kept under before S-0720: the
 // provider it named, or its harness, such as claude-code, when it named none.
 func budgetKey(provider, harness string) string {
@@ -155,16 +176,22 @@ func budgetKey(provider, harness string) string {
 
 // budgetKeyOf is what the budget state of a run on the harness name under
 // cfg is kept under (S-0720): provider, when the run names one; else the
-// harness, a space, and its program, the one the operator set for it or
-// else its adapter's default, such as "claude-code meclod" or "claude-code
-// claude"; and, when the host sets a login for the harness, " login " and
-// its folder, such as "container docker login /home/alex/.claude-rmh". The
-// program's arguments are not part of it.
+// harness's key as the host sets it (BudgetKey).
 func budgetKeyOf(cfg AgentConfig, name, provider string) string {
 	if provider != "" {
 		return provider
 	}
-	host := cfg.host(name)
+	return BudgetKey(name, cfg.host(name))
+}
+
+// BudgetKey is what the budget state of a run on the harness name, as host
+// sets it, that names no provider is kept under (S-0720): the harness, a
+// space, and its program, the one host sets or else its adapter's default,
+// such as "claude-code meclod" or "claude-code claude"; and, when host sets
+// a login, " login " and its folder, such as "container docker login
+// /home/alex/.claude-rmh". The program's arguments are not part of it. A
+// state set before S-0720 is kept under the harness's name alone.
+func BudgetKey(name string, host harness.Host) string {
 	program := host.Program
 	if a, ok := harness.Adapters[name]; ok && program == "" {
 		program = a.DefaultHost().Program
@@ -263,7 +290,20 @@ func (b Budget) backoff() time.Duration {
 	return d
 }
 
-// budgets reads the budget state, by provider; none is an empty map.
+// budgetUnparsed is a budget.json, at path, that does not parse, and why.
+type budgetUnparsed struct {
+	path string
+	err  error
+}
+
+func (e *budgetUnparsed) Error() string {
+	return fmt.Sprintf("%s: %v; clear it with flai serve budget clear, and flai serve holds no start until a run ends on a usage limit again", e.path, e.err)
+}
+
+func (e *budgetUnparsed) Unwrap() error { return e.err }
+
+// budgets reads the budget state, by provider; none is an empty map. A file
+// that does not parse is a *budgetUnparsed.
 func (d Dir) budgets() (map[string]Budget, error) {
 	out := map[string]Budget{}
 	data, err := os.ReadFile(d.budgetFile())
@@ -274,7 +314,7 @@ func (d Dir) budgets() (map[string]Budget, error) {
 		return nil, err
 	}
 	if err := json.Unmarshal(data, &out); err != nil {
-		return nil, fmt.Errorf("%s: %w; remove it and flai serve holds no start until a run ends on a usage limit again", d.budgetFile(), err)
+		return nil, &budgetUnparsed{path: d.budgetFile(), err: err}
 	}
 	return out, nil
 }
@@ -307,6 +347,49 @@ func (d Dir) budgetHeld(key string, now time.Time) (Budget, bool, error) {
 	return b, ok && b.Held(now), nil
 }
 
+// BudgetClear is what ClearBudgets did: the states it removed, sorted by
+// provider as Budgets sorts them, and, when budget.json did not parse and
+// the clear of every state replaced it with none, why it did not parse.
+type BudgetClear struct {
+	Removed []Budget
+	Unread  error
+}
+
+// ClearBudgets removes the budget states kept under keys, each as Budgets
+// names it, or every state when keys is empty, so that the next start on
+// each goes (S-0720). A key with no state removes nothing. A budget.json
+// that does not parse is replaced with none by a clear of every state, and
+// refused by a clear of some, naming the clear of every state.
+func (d Dir) ClearBudgets(keys []string) (BudgetClear, error) {
+	defer d.budgetLock()()
+	all, err := d.budgets()
+	var unparsed *budgetUnparsed
+	switch {
+	case errors.As(err, &unparsed) && len(keys) == 0:
+		return BudgetClear{Unread: unparsed.err}, d.write(d.budgetFile(), map[string]Budget{})
+	case errors.As(err, &unparsed):
+		return BudgetClear{}, fmt.Errorf("clear the budget state of %s: %s does not parse: %w; flai serve budget clear with no key replaces it with none",
+			strings.Join(keys, ", "), unparsed.path, unparsed.err)
+	case err != nil:
+		return BudgetClear{}, fmt.Errorf("clear the budget state: %w", err)
+	}
+	if len(keys) == 0 {
+		keys = slices.Collect(maps.Keys(all))
+	}
+	var removed []Budget
+	for _, key := range keys {
+		if b, ok := all[key]; ok {
+			removed = append(removed, b)
+			delete(all, key)
+		}
+	}
+	if len(removed) == 0 {
+		return BudgetClear{}, nil
+	}
+	slices.SortFunc(removed, func(a, b Budget) int { return cmp.Compare(a.Provider, b.Provider) })
+	return BudgetClear{Removed: removed}, d.write(d.budgetFile(), all)
+}
+
 // budgetStart is the gate a start of run passes before it spawns, at the
 // state of key (budgetIn): it goes when no state is set; it is held
 // while the state holds; once Until has passed it goes as the probe, claimed
@@ -314,8 +397,7 @@ func (d Dir) budgetHeld(key string, now time.Time) (Budget, bool, error) {
 // recorded none within budgetProbeSpawn, is claimed over; one that ran past
 // budgetProbeServed clears the state, and the start goes.
 func (d Dir) budgetStart(key string, run BudgetProbe, now time.Time) (budgetGate, budgetChange, error) {
-	budgetMu.Lock()
-	defer budgetMu.Unlock()
+	defer d.budgetLock()()
 	all, err := d.budgets()
 	if err != nil {
 		return budgetGate{}, budgetChange{}, err
@@ -343,8 +425,7 @@ func (d Dir) budgetStart(key string, run BudgetProbe, now time.Time) (budgetGate
 // budgetSpawned records the process of run, the probe of the state of
 // key, once it is spawned; nothing when run is not the probe.
 func (d Dir) budgetSpawned(key string, run BudgetProbe) error {
-	budgetMu.Lock()
-	defer budgetMu.Unlock()
+	defer d.budgetLock()()
 	all, err := d.budgets()
 	if err != nil {
 		return err
@@ -363,8 +444,7 @@ func (d Dir) budgetSpawned(key string, run BudgetProbe) error {
 // could not be made, so that the next start probes; nothing when run is not
 // the probe.
 func (d Dir) budgetRelease(key string, run BudgetProbe) (budgetChange, error) {
-	budgetMu.Lock()
-	defer budgetMu.Unlock()
+	defer d.budgetLock()()
 	all, err := d.budgets()
 	if err != nil {
 		return budgetChange{}, err
@@ -390,8 +470,7 @@ func (d Dir) budgetRelease(key string, run BudgetProbe) (budgetChange, error) {
 // end frees the probe, and its end on anything but the limit clears the
 // state. Any other end changes nothing.
 func (d Dir) budgetEnded(key string, run BudgetProbe, lim *usage.Limit, now time.Time) (budgetChange, error) {
-	budgetMu.Lock()
-	defer budgetMu.Unlock()
+	defer d.budgetLock()()
 	all, err := d.budgets()
 	if err != nil {
 		return budgetChange{}, err
@@ -473,6 +552,42 @@ func (ch budgetChange) detail() string {
 	return fmt.Sprintf("cleared the budget state: %s; starts on %s go again; it was %s", ch.Why, ch.State.Provider, budgetSaid(ch.State))
 }
 
+// entry is the journal entry of ch, made by by at at, of no project.
+func (ch budgetChange) entry(by string, at time.Time) hostapi.Entry {
+	return hostapi.Entry{At: at.UTC().Format(time.RFC3339), Action: hostapi.ActionAgent, Method: "serve.budget", By: by, Outcome: "done", Detail: ch.detail()}
+}
+
+// notice is the notice of ch at at, naming projects, the host's.
+func (ch budgetChange) notice(at time.Time, projects []string) BudgetNotice {
+	return BudgetNotice{State: ch.Kind, Provider: ch.State.Provider, Limit: ch.State.Limit, Status: ch.State.Status,
+		Since: ch.State.Since, Until: ch.State.Until, At: at, Why: ch.Why, Projects: projects, Href: BudgetHref}
+}
+
+// BudgetClearedEntry is the journal entry of the operator's clear of b, by
+// by, such as flai serve budget clear, at at, for why: method serve.budget,
+// as flai serve journals its own changes, with no project; the caller sets
+// Project and Root for a clear made in one.
+func BudgetClearedEntry(b Budget, why, by string, at time.Time) hostapi.Entry {
+	return budgetChange{Kind: budgetCleared, State: b, Why: why}.entry(by, at)
+}
+
+// BudgetClearedNotice is the notice of the operator's clear of b at at, for
+// why, naming projects, those the host serves (ProjectNames), as flai serve
+// sends of its own clears with SendBudget.
+func BudgetClearedNotice(b Budget, why string, at time.Time, projects []string) BudgetNotice {
+	return budgetChange{Kind: budgetCleared, State: b, Why: why}.notice(at, projects)
+}
+
+// ProjectNames are the names of the projects of a serve folder's registry,
+// all, by key when one has none, as a budget notice names them.
+func ProjectNames(all []Entry) []string {
+	out := make([]string, 0, len(all))
+	for _, e := range all {
+		out = append(out, cmp.Or(e.Name, e.Key))
+	}
+	return out
+}
+
 // budgetChanged announces ch: it journals it, logs it, and, for a set, an
 // extension, or a clear, sends its notice (budgetNotice). Nothing when ch
 // changed nothing.
@@ -481,8 +596,9 @@ func (l *launcher) budgetChanged(ch budgetChange) {
 		return
 	}
 	if l.record != nil {
-		l.record(hostapi.Entry{At: l.now().UTC().Format(time.RFC3339), Action: hostapi.ActionAgent, Method: "serve.budget", Project: l.entry.Key, Root: l.entry.Root,
-			By: "flai serve", Outcome: "done", Detail: ch.detail()})
+		e := ch.entry("flai serve", l.now())
+		e.Project, e.Root = l.entry.Key, l.entry.Root
+		l.record(e)
 	}
 	l.log("budget state "+ch.Kind, "provider", ch.State.Provider, "limit", ch.State.Limit, "status", ch.State.Status,
 		"until", ch.State.Until.UTC().Format(time.RFC3339), "backoff", ch.State.Backoff, "run", ch.Run.Work, "started", ch.Run.Started)
@@ -567,8 +683,7 @@ func (l *launcher) budgetNotice(ch budgetChange) {
 		}
 		return
 	}
-	notice := BudgetNotice{State: ch.Kind, Provider: ch.State.Provider, Limit: ch.State.Limit, Status: ch.State.Status,
-		Since: ch.State.Since, Until: ch.State.Until, At: l.now(), Projects: l.budgetProjects(), Href: BudgetHref}
+	notice := ch.notice(l.now(), l.budgetProjects())
 	attrs := []any{"state", notice.State, "provider", notice.Provider, "until", notice.Until.UTC().Format(time.RFC3339)}
 	if err := n.send(context.Background(), channel, notice); err != nil {
 		l.warn("budget notice not sent", append(attrs, "err", err.Error())...)
@@ -586,11 +701,7 @@ func (l *launcher) budgetProjects() []string {
 		l.warn("budget notice names no project: the registry is not read", "err", err)
 		return nil
 	}
-	out := make([]string, 0, len(all))
-	for _, e := range all {
-		out = append(out, cmp.Or(e.Name, e.Key))
-	}
-	return out
+	return ProjectNames(all)
 }
 
 // budgetStart is the gate run's start passes once its harness, provider,
@@ -671,11 +782,33 @@ func (l *launcher) budgetHolds(key string) (Budget, bool) {
 	return b, held
 }
 
+// BudgetClearCommand is the command that clears the budget state of key by
+// hand, its key one word for the shell: flai serve budget clear
+// 'claude-code meclod'. The dashboard's banner quotes it by the same rule.
+func BudgetClearCommand(key string) string {
+	return "flai serve budget clear " + shellWord(key)
+}
+
+// shellPlain are the bytes a word for a POSIX shell may hold unquoted.
+const shellPlain = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-"
+
+// shellWord is s as one word for a POSIX shell: as it is when it is all
+// shellPlain, else in single quotes, each single quote in it closing the
+// quotes, escaped with a backslash, and opening them again.
+func shellWord(s string) string {
+	if s != "" && strings.Trim(s, shellPlain) == "" {
+		return s
+	}
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
 // budgetHeldWhy says why a start on b's provider is held, as a start the
-// operator asks for by hand is refused and a held start is logged: such as
-// "held: claude-code usage limit (usage_limit_reached) until
-// 2026-10-28T09:00:00Z; flai serve starts it when the limit resets", or,
-// once until has passed, that the probe runs.
+// operator asks for by hand is refused and a held start is logged, and the
+// command that clears the hold by hand (BudgetClearCommand): such as "held:
+// claude-code meclod usage limit (usage_limit_reached) until
+// 2026-10-28T09:00:00Z; flai serve starts it when the limit resets, or clear
+// it by hand with flai serve budget clear 'claude-code meclod'", or, once
+// until has passed, that the probe runs.
 func budgetHeldWhy(b Budget, now time.Time) string {
 	limit := b.Limit
 	if limit == "" && b.Status != 0 {
@@ -685,8 +818,10 @@ func budgetHeldWhy(b Budget, now time.Time) string {
 		limit = " (" + limit + ")"
 	}
 	until := b.Until.UTC().Format(time.RFC3339)
+	byHand := BudgetClearCommand(b.Provider)
 	if !now.Before(b.Until) {
-		return fmt.Sprintf("held: %s usage limit%s, a probe running since %s to learn whether it has reset; flai serve starts it when the probe ends clean", b.Provider, limit, until)
+		return fmt.Sprintf("held: %s usage limit%s, a probe running since %s to learn whether it has reset; flai serve starts it when the probe ends clean, or clear it by hand with %s",
+			b.Provider, limit, until, byHand)
 	}
-	return fmt.Sprintf("held: %s usage limit%s until %s; flai serve starts it when the limit resets", b.Provider, limit, until)
+	return fmt.Sprintf("held: %s usage limit%s until %s; flai serve starts it when the limit resets, or clear it by hand with %s", b.Provider, limit, until, byHand)
 }

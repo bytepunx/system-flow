@@ -337,3 +337,22 @@ func TestABudgetNoticeOfAClear(t *testing.T) {
 		t.Errorf("no project is an empty list: %s", data)
 	}
 }
+
+// S-0720: a clear's notice says why it cleared, in its why and at the end of
+// its entry's title; a notice with no why has neither (wantBudgetBody).
+func TestABudgetNoticeOfAClearSaysWhy(t *testing.T) {
+	n := testBudgetNotice()
+	n.State, n.Why = "cleared", "cleared by hand with flai serve budget clear"
+	data, err := json.Marshal(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	entry, _ := got["entry"].(map[string]any)
+	if got["why"] != n.Why || !strings.HasSuffix(fmt.Sprint(entry["title"]), "; cleared by hand with flai serve budget clear") {
+		t.Errorf("a clear with why: %s", data)
+	}
+}

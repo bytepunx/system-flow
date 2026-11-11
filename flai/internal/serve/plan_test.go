@@ -697,7 +697,7 @@ func (lab *agentLab) budgetCleared() {
 // heldFor is the refusal of a start on the stub's harness, command, while
 // budgetHeldOn holds it until until.
 func heldFor(until time.Time) string {
-	return "held: command usage limit (usage_limit_reached) until " + until.UTC().Format(time.RFC3339) + "; flai serve starts it when the limit resets"
+	return "held: command usage limit (usage_limit_reached) until " + until.UTC().Format(time.RFC3339) + "; flai serve starts it when the limit resets, or clear it by hand with flai serve budget clear command"
 }
 
 // anHour is a time an hour from now, to the second, which a budget state

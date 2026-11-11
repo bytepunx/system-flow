@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -693,5 +694,205 @@ func TestTheContainerKeyNamesItsLogin(t *testing.T) {
 	}
 	if gate := lab.l.budgetStart(lab.on("S-0003", me, harness.Container, "")); !gate.Go {
 		t.Errorf("a start under another login is %+v, want it to go", gate)
+	}
+}
+
+// BudgetKey is the key of a harness as the host sets it, the one a run on it
+// that names no provider is kept under.
+func TestBudgetKeyIsTheKeyARunOnTheHarnessIsKeptUnder(t *testing.T) {
+	for _, c := range []struct {
+		cfg  AgentConfig
+		name string
+	}{
+		{rmhclod, harness.ClaudeCode},
+		{meclod, harness.ClaudeCode},
+		{AgentConfig{}, harness.ClaudeCode},
+		{AgentConfig{Harnesses: map[string]harness.Host{harness.Container: {Login: "/home/alex/.claude-rmh"}}}, harness.Container},
+	} {
+		if got, want := BudgetKey(c.name, c.cfg.host(c.name)), budgetKeyOf(c.cfg, c.name, ""); got != want {
+			t.Errorf("BudgetKey of %s under %+v = %q, want %q", c.name, c.cfg, got, want)
+		}
+	}
+}
+
+// S-0720: the operator's clear removes the state under the key it names, and
+// no other, so that the next start on it goes, not as a probe, since no
+// state is left to probe; a key with no state removes nothing.
+func TestAClearRemovesTheStateOfItsKeyAndTheNextStartGoes(t *testing.T) {
+	lab := newBudgetLab(t)
+	lab.l.budgetEnded(lab.on("S-0001", meclod, harness.ClaudeCode, ""), limited(budgetReset))
+	lab.l.budgetEnded(lab.on("S-0002", meclod, harness.ClaudeCode, "anthropic"), limited(budgetReset))
+	got, err := lab.dir.ClearBudgets([]string{"claude-code meclod", "claude-code nobody"})
+	if err != nil || len(got.Removed) != 1 || got.Removed[0].Provider != "claude-code meclod" || !got.Removed[0].Until.Equal(budgetReset) || got.Unread != nil {
+		t.Fatalf("clear = %+v, %v; want the state of claude-code meclod removed", got, err)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0003", meclod, harness.ClaudeCode, "")); !gate.Go || gate.Probe {
+		t.Errorf("after the clear a start is %+v, want it to go", gate)
+	}
+	if all, err := lab.dir.Budgets(); err != nil || len(all) != 1 || all[0].Provider != "anthropic" {
+		t.Errorf("after the clear budgets = %+v, %v; want anthropic's alone", all, err)
+	}
+	if got, err := lab.dir.ClearBudgets([]string{"claude-code nobody"}); err != nil || len(got.Removed) != 0 {
+		t.Errorf("a clear of a key with no state = %+v, %v; want nothing removed and no error", got, err)
+	}
+	if got, err := newBudgetLab(t).dir.ClearBudgets(nil); err != nil || len(got.Removed) != 0 {
+		t.Errorf("a clear with no budget.json = %+v, %v; want nothing removed and no error", got, err)
+	}
+}
+
+// A state of the old shape is cleared by its key, the harness's bare name,
+// and the starts of every program on the harness go again.
+func TestAClearByTheLegacyKeyLiftsTheOldState(t *testing.T) {
+	lab := newBudgetLab(t)
+	if err := lab.dir.write(lab.dir.budgetFile(), map[string]Budget{harness.ClaudeCode: {Provider: harness.ClaudeCode, Limit: "usage_limit_reached", Status: 429,
+		Since: budgetAt, Until: budgetReset, Reset: budgetReset, Backoff: budgetBackoffFirst.String()}}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := lab.dir.ClearBudgets([]string{BudgetKey(harness.ClaudeCode, meclod.host(harness.ClaudeCode)), harness.ClaudeCode}); err != nil ||
+		len(got.Removed) != 1 || got.Removed[0].Provider != harness.ClaudeCode {
+		t.Fatalf("clear = %+v, %v; want the old claude-code state removed", got, err)
+	}
+	for _, cfg := range []AgentConfig{rmhclod, meclod} {
+		if gate := lab.l.budgetStart(lab.on("S-0001", cfg, harness.ClaudeCode, "")); !gate.Go || gate.Probe {
+			t.Errorf("after the clear a start of %+v is %+v, want it to go", cfg, gate)
+		}
+	}
+}
+
+// A clear with no key removes every state, sorted by key as Budgets sorts.
+func TestAClearWithNoKeyRemovesEveryState(t *testing.T) {
+	lab := newBudgetLab(t)
+	lab.l.budgetEnded(lab.on("S-0001", meclod, harness.ClaudeCode, ""), limited(budgetReset))
+	lab.l.budgetEnded(lab.on("S-0002", meclod, harness.ClaudeCode, "anthropic"), limited(time.Time{}))
+	got, err := lab.dir.ClearBudgets(nil)
+	if err != nil || len(got.Removed) != 2 || got.Removed[0].Provider != "anthropic" || got.Removed[1].Provider != "claude-code meclod" {
+		t.Fatalf("clear = %+v, %v; want anthropic's and claude-code meclod's removed, in that order", got, err)
+	}
+	if all, err := lab.dir.Budgets(); err != nil || len(all) != 0 {
+		t.Errorf("after the clear budgets = %+v, %v; want none", all, err)
+	}
+}
+
+// A budget.json that does not parse names the clear; a clear with no key
+// replaces it with none and says why it did not parse, and a clear of a key
+// is refused, naming the clear with no key.
+func TestAClearOfAFileThatDoesNotParse(t *testing.T) {
+	lab := newBudgetLab(t)
+	if err := os.MkdirAll(string(lab.dir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(lab.dir.budgetFile(), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lab.dir.Budgets(); err == nil || !strings.Contains(err.Error(), "clear it with flai serve budget clear") {
+		t.Errorf("reading a file that does not parse: %v, want an error naming flai serve budget clear", err)
+	}
+	if _, err := lab.dir.ClearBudgets([]string{"claude-code"}); err == nil || !strings.Contains(err.Error(), "flai serve budget clear with no key replaces it") {
+		t.Errorf("a clear of a key: %v, want it refused naming the clear with no key", err)
+	}
+	got, err := lab.dir.ClearBudgets(nil)
+	if err != nil || got.Unread == nil || len(got.Removed) != 0 {
+		t.Fatalf("a clear with no key = %+v, %v; want the file replaced, saying why it did not parse", got, err)
+	}
+	if all, err := lab.dir.Budgets(); err != nil || len(all) != 0 {
+		t.Errorf("after the clear budgets = %+v, %v; want none", all, err)
+	}
+}
+
+// The flai that clears a state, another process than flai serve, and flai
+// serve's launchers take turns on budget.json: each waits while another
+// holds its OS lock.
+func TestAReadModifyWriteWaitsForTheFileLock(t *testing.T) {
+	for name, write := range map[string]func(lab *budgetLab){
+		"a clear":     func(lab *budgetLab) { _, _ = lab.dir.ClearBudgets(nil) },
+		"a run's end": func(lab *budgetLab) { lab.l.budgetEnded(lab.run("S-0002", "gateway"), limited(time.Time{})) },
+		"a start":     func(lab *budgetLab) { lab.l.budgetStart(lab.run("S-0003", "anthropic")) },
+	} {
+		lab := newBudgetLab(t)
+		lab.l.budgetEnded(lab.run("S-0001", "anthropic"), limited(time.Time{}))
+		lab.at = lab.at.Add(budgetBackoffFirst)
+		unlock, err := filelock.Lock(lab.dir.budgetFile()+".lock", time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before, _ := os.ReadFile(lab.dir.budgetFile())
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			write(lab)
+		}()
+		select {
+		case <-done:
+			t.Errorf("%s went on while another process held budget.json's lock", name)
+		case <-time.After(200 * time.Millisecond):
+		}
+		if now, _ := os.ReadFile(lab.dir.budgetFile()); !bytes.Equal(now, before) {
+			t.Errorf("%s wrote budget.json while another process held its lock", name)
+		}
+		unlock()
+		<-done
+		if now, _ := os.ReadFile(lab.dir.budgetFile()); bytes.Equal(now, before) {
+			t.Errorf("%s did not write budget.json once the lock was free", name)
+		}
+	}
+}
+
+// The operator's clear is journalled under serve.budget, as flai serve's own
+// clears are, with why, and its notice is a clear's, carrying why.
+func TestAClearByHandIsJournalledAndNoticedWithWhy(t *testing.T) {
+	b := Budget{Provider: "claude-code meclod", Limit: "usage_limit_reached", Status: 429, Since: budgetAt, Until: budgetReset, Reset: budgetReset, Backoff: "5m0s"}
+	why := "the operator cleared it by hand"
+	at := budgetAt.Add(time.Minute)
+	e := BudgetClearedEntry(b, why, "flai serve budget clear", at)
+	wantDetail := "cleared the budget state: the operator cleared it by hand; starts on claude-code meclod go again; it was provider claude-code meclod, on usage_limit_reached (429), held until " +
+		budgetReset.Format(time.RFC3339) + ", the reset the API reported"
+	if e.Method != "serve.budget" || e.Action != hostapi.ActionAgent || e.Outcome != "done" || e.By != "flai serve budget clear" ||
+		e.At != at.Format(time.RFC3339) || e.Detail != wantDetail || e.Project != "" || e.Root != "" {
+		t.Errorf("entry = %+v, want detail %q", e, wantDetail)
+	}
+	n := BudgetClearedNotice(b, why, at, ProjectNames([]Entry{{Key: "t", Name: "system-flow"}, {Key: "u"}}))
+	if n.State != "cleared" || n.Why != why || n.Provider != b.Provider || n.Limit != b.Limit || n.Status != 429 || !n.Since.Equal(budgetAt) ||
+		!n.Until.Equal(budgetReset) || !n.At.Equal(at) || n.Href != BudgetHref || !slices.Equal(n.Projects, []string{"system-flow", "u"}) {
+		t.Errorf("notice = %+v, want a clear of %s carrying why", n, b.Provider)
+	}
+}
+
+// A clear flai serve makes, a probe's clean end, sends a notice that says
+// why; a set and an extension carry none.
+func TestTheProbesClearNoticeCarriesWhy(t *testing.T) {
+	lab := newBudgetLab(t)
+	box := lab.notices(config.Notify{URL: "https://push.example/flai"})
+	lab.l.budgetEnded(lab.run("S-0001", "anthropic"), limited(time.Time{}))
+	lab.at = lab.at.Add(budgetBackoffFirst)
+	probe := lab.run("S-0002", "anthropic")
+	lab.l.budgetStart(probe)
+	lab.l.budgetEnded(probe, nil)
+	if len(box.sent) != 2 || box.sent[0].Why != "" || box.sent[1].State != "cleared" || box.sent[1].Why != "the probe ended on no usage limit" {
+		t.Errorf("sent %+v, want a set with no why and a clear saying the probe ended on no usage limit", box.sent)
+	}
+}
+
+// S-0720: a held start names the command that clears the hold by hand, its
+// key quoted for the shell as the dashboard's banner quotes it, before the
+// reset and while the probe runs.
+func TestAHoldNamesTheCommandThatClearsIt(t *testing.T) {
+	b := Budget{Provider: "claude-code meclod", Limit: "usage_limit_reached", Until: budgetReset}
+	for _, now := range []time.Time{budgetAt, budgetReset} {
+		if got := budgetHeldWhy(b, now); !strings.HasSuffix(got, ", or clear it by hand with flai serve budget clear 'claude-code meclod'") {
+			t.Errorf("at %s: %q, want it to name the clear with the key quoted", now, got)
+		}
+	}
+	for key, want := range map[string]string{
+		"claude-code":                   "flai serve budget clear claude-code",
+		"anthropic":                     "flai serve budget clear anthropic",
+		"container docker login /h/.c":  "flai serve budget clear 'container docker login /h/.c'",
+		"it's":                          `flai serve budget clear 'it'\''s'`,
+		"a@b%c+d=e:f,g./h-i_J0":         "flai serve budget clear a@b%c+d=e:f,g./h-i_J0",
+		"":                              "flai serve budget clear ''",
+		"claude-code $(rm -rf ~) `x` *": "flai serve budget clear 'claude-code $(rm -rf ~) `x` *'",
+	} {
+		if got := BudgetClearCommand(key); got != want {
+			t.Errorf("BudgetClearCommand(%q) = %q, want %q", key, got, want)
+		}
 	}
 }

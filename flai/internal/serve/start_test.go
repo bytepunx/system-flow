@@ -280,7 +280,7 @@ func TestAStartTheBudgetStateHoldsIsRefusedWithNothingRecorded(t *testing.T) {
 	claude := &manifest.Agent{Harness: harness.ClaudeCode}
 	until := time.Now().Add(time.Hour).UTC()
 	lab.holdBudget(until)
-	want := "'s agent is not started: held: claude-code usage limit (usage_limit_reached) until " + until.Format(time.RFC3339) + "; flai serve starts it when the limit resets"
+	want := "'s agent is not started: held: claude-code usage limit (usage_limit_reached) until " + until.Format(time.RFC3339) + "; flai serve starts it when the limit resets, or clear it by hand with flai serve budget clear claude-code"
 	refusedWith := func(what string, err error, id string) {
 		t.Helper()
 		var no *Refused

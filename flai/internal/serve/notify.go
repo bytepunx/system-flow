@@ -127,8 +127,9 @@ const BudgetHref = "/"
 type BudgetNotice struct {
 	// State is the change: set, extended, or cleared.
 	State string `json:"state"`
-	// Provider is the provider the state is kept under, or the runs'
-	// harness when they named none.
+	// Provider is what the state is kept under, as Budget.Provider names it:
+	// the provider the runs named, or their harness, its program, and its
+	// login, such as "claude-code meclod".
 	Provider string `json:"provider"`
 	// Limit is the error the harness named, such as usage_limit_reached, and
 	// Status its HTTP status; each empty when it named none.
@@ -140,6 +141,10 @@ type BudgetNotice struct {
 	Until time.Time `json:"until"`
 	// At is when the state changed.
 	At time.Time `json:"at"`
+	// Why is why a clear cleared the state, such as "the probe ended on no
+	// usage limit" or the operator's clear by hand; empty for a set or an
+	// extension.
+	Why string `json:"why,omitempty"`
 	// Projects are the names of the projects the host serves, each of which
 	// the state holds.
 	Projects []string `json:"projects"`
@@ -156,7 +161,8 @@ var budgetNoticeTitles = map[string]string{
 }
 
 // MarshalJSON writes the notice with kind budget, its times in UTC to the
-// second, and flaiover's entry, kind budget and keyed budget:<provider>.
+// second, and flaiover's entry, kind budget and keyed budget:<provider>,
+// whose title ends with why when the notice has one.
 func (n BudgetNotice) MarshalJSON() ([]byte, error) {
 	type plain BudgetNotice
 	at := func(t time.Time) string {
@@ -172,6 +178,9 @@ func (n BudgetNotice) MarshalJSON() ([]byte, error) {
 	title := n.Provider + " budget " + n.State
 	if f, ok := budgetNoticeTitles[n.State]; ok {
 		title = fmt.Sprintf(f, n.Provider, at(n.Until))
+	}
+	if n.Why != "" {
+		title += "; " + n.Why
 	}
 	return json.Marshal(struct {
 		Kind string `json:"kind"`
