@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1269.6533
-accrued_seconds: 150591
-tasks_completed: 232
-last_run: 2026-11-11T06:14:41Z
+accrued_cost: 1284.8258
+accrued_seconds: 151434
+tasks_completed: 245
+last_run: 2026-11-11T09:09:38Z
 ---
 
 # Planner activity
@@ -1851,3 +1851,107 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0722, T-3086, T-3087, T-3088, T-3089, T-3090, T-3091, T-3092
 - Seconds: 708
 - Cost: 4.0762 USD, estimated
+
+### 2026-11-11T08:55:33Z
+
+- Summary: I planned S-0719 and created five tasks: T-3094, T-3097, T-3099, T-3102 and T-3103. There were none to revisit, and no thread called "asked" exists on S-0719, so I planned from the story and I-0346. I enriched the story with touches, a 1h forecast and a cost of delay of 37.50 USD a week. The plan is in thread TH-1071, and the operator moved S-0719 to ready while I planned.
+- Trigger: asked
+- Items: S-0719, T-3094, T-3097, T-3099, T-3102, T-3103
+- Seconds: 279
+- Cost: 5.6018 USD, estimated
+
+### 2026-11-11T08:55:41Z
+
+- Summary: Planned S-0724 (fix: `flai-build.sh` builds with `-buildvcs=false` and links the tree's own commit; no thread `asked` existed, so planned from I-0348): wrote 8 file touches, forecast 1h, cost of delay 25 USD/week, and `### Planning` notes; created tasks T-3093, T-3100, T-3101 in three layers; revisited none; plan thread TH-1072.
+- Trigger: asked
+- Items: S-0724, T-3093, T-3100, T-3101
+- Seconds: 8
+- Cost: 0.2045 USD, estimated
+
+### 2026-11-11T08:56:33Z
+
+- Summary: S-0706 replanned: created no tasks; revisited T-2993 (setting in `flaiover/pnpm-workspace.yaml`), T-2994 (+ accept install paths in `system-flow.yaml`) and T-2997 (+ README row), T-2999 unchanged; added 2 story touches, kept 45m (delivery 10:53Z) and 22.50 USD/week; nothing new from the operator found, so plan in TH-1074.
+- Trigger: asked
+- Items: S-0706, T-2993, T-2994, T-2997
+- Seconds: 52
+- Cost: 0.7334 USD, estimated
+
+### 2026-11-11T08:56:34Z
+
+- Summary: Planned S-0720: 21 file touches, tags flai and flaiover added, forecast 1h30m (flai's 46m raised), cost of delay 375 USD a week from TH-1070's 2h30m input, and plan thread TH-1075 opened. I created tasks T-3095, T-3096, T-3098, T-3104, T-3105 and T-3106 in four layers and revisited none, since the story had no tasks and no "asked" thread exists.
+- Trigger: asked
+- Items: S-0720, T-3095, T-3096, T-3098, T-3104, T-3105, T-3106
+- Seconds: 1
+- Cost: 0.0911 USD, estimated
+
+### 2026-11-11T08:56:56Z
+
+- Summary: I replanned S-0689 and widened T-3026 and T-3033 to remove a `stream_sync` MCP tool that does not exist; T-3027 and T-3030 still fit and are unchanged, and I created no tasks. The plan is in thread TH-1073, `flai check --strict` reports nothing on the story or its tasks, and no question is open.
+- Trigger: asked
+- Items: S-0689, T-3026, T-3033
+- Seconds: 22
+- Cost: 0.1553 USD, estimated
+
+### 2026-11-11T08:58:05Z
+
+- Summary: Planned S-0716: set its 17 file touches, a 1h30m forecast (2026-11-11T11:31Z), and a 7.50 USD/week cost of delay; created tasks T-3107 (layer 1), T-3108 and T-3109 (layer 2), and T-3110 (layer 3), with no tasks to revisit, and summarised the plan on thread TH-1076. No thread with an operator request was found on S-0716, so the plan rests on I-0344.
+- Trigger: asked
+- Items: S-0716, T-3107, T-3108, T-3109, T-3110
+- Seconds: 69
+- Cost: 0.5926 USD, estimated
+
+### 2026-11-11T09:05:02Z
+
+- Summary: Planned S-0715 (touches `flai/internal/serve/agents_test.go`, I-0343's file and `design/issues/summary.md`; forecast raised from 6m to 40m; cost of delay 30 USD/week), created tasks T-3112 (lab waits for every launcher it makes) and T-3113 (close I-0343, after T-3112), revisited none, and opened TH-1077, which notes that no thread named "asked" exists on S-0715.
+- Trigger: asked
+- Items: S-0715, T-3112, T-3113
+- Seconds: 163
+- Cost: 2.6463 USD, estimated
+
+### 2026-11-11T09:05:26Z
+
+- Summary: I replanned S-0699 following the TH-1023 answers: created T-3111 for the `also` count, revisited T-2992 and T-2996, refreshed the touches and Planning notes, and posted the plan on TH-1078.
+- Trigger: orchestrator; TH-1023
+- Items: S-0699, T-3111, T-2996
+- Seconds: 24
+- Cost: 0.5206 USD, estimated
+
+### 2026-11-11T09:06:40Z
+
+- Summary: S-0712 is replanned for the S-0709 merge the operator confirmed on TH-1017. Created none; revisited T-2963 (adds the `SettleChangelogs` pin), T-2965 (undone and changelog reproductions), T-2967 (links I-0335) and T-2970 (closes I-0338 and I-0335); gave S-0712 an I-0335 Goal paragraph, a third criterion, the I-0335 touch, a 1h forecast and 15 USD/week cost of delay; plan on TH-1017; S-0709's cancellation left to the operator or orchestrator.
+- Trigger: asked
+- Items: S-0712, T-2963, T-2965, T-2967, T-2970
+- Seconds: 74
+- Cost: 1.9874 USD, estimated
+
+### 2026-11-11T09:06:44Z
+
+- Summary: Planned S-0714 for the first time (no earlier plan or thread existed): set its 10 file touches, a 45m forecast (flai gave 27m), a cost of delay of 25 USD a week and Planning notes; created tasks T-3114, T-3115, T-3116 and T-3117 in four layers, revisited none, and summarised the plan in TH-1080.
+- Trigger: asked
+- Items: S-0714, T-3114, T-3115, T-3116, T-3117
+- Seconds: 4
+- Cost: 0.1649 USD, estimated
+
+### 2026-11-11T09:08:04Z
+
+- Summary: I revisited S-0712 after the orchestrator's 6m cost of delay input, kept its cost of delay at 15 USD a week and its 1h forecast, moved delivery to 22:58Z (flai now gives 27m at size 12), created no tasks, left T-2963, T-2965, T-2967 and T-2970 unchanged, and noted on TH-1017 that cancelling S-0709 is still the operator's call.
+- Trigger: edited cost_of_delay by orchestrator
+- Items: S-0712
+- Seconds: 53
+- Cost: 1.2340 USD, estimated
+
+### 2026-11-11T09:08:37Z
+
+- Summary: I planned S-0717 from scratch: there was no earlier plan, and no thread on it carried a request from the operator. I wrote tasks T-3120, T-3121 and T-3122 in two layers, set the story's touches, `after` S-0716, a 1h forecast and a cost of delay of 12.50 USD a week, and opened TH-1081, which proposes folding S-0717 into S-0716.
+- Trigger: asked
+- Items: S-0717, T-3120, T-3121, T-3122
+- Seconds: 33
+- Cost: 0.5565 USD, estimated
+
+### 2026-11-11T09:09:38Z
+
+- Summary: Planned S-0711: created T-3118 (`sendBackReason` quotes each check name and reviewer login in a code span with control characters dropped, plus a test that reproduces I-0340) and T-3119 (docs, then close I-0340, after T-3118), set 7 file touches, a 1h forecast and 2.50 USD a week cost of delay, revisited no tasks, and my closing reply reopened plan thread TH-1079, which the guard won't let me resolve, so it needs resolving again.
+- Trigger: asked
+- Items: S-0711, T-3118, T-3119
+- Seconds: 61
+- Cost: 0.6841 USD, estimated

@@ -3,16 +3,37 @@ id: T-3009
 type: task
 nature: improvement
 title: The merge queue's batch rebase writes the generated files again at each story's rebased head after it wrote one at a stop
-status: backlog
+status: done
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:26Z
-updated: 2026-11-10T10:31:26Z
-transitions: []
+updated: 2026-11-11T09:17:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:05:24Z
+    by: agent-S-0702
+  - to: in-progress
+    at: 2026-11-11T09:05:24Z
+    by: agent-S-0702
+  - to: done
+    at: 2026-11-11T09:17:59Z
+    by: agent-S-0702
 stream: S-0702
 tags: [flai, git, merge-queue]
 touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go]
 after: [T-3005]
+usage:
+  source: log
+  seconds: 755
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 287
+      cache_read: 1757338
+      cache_write: 71527
+      cost: 0.6769
 ---
 # T-3009 The merge queue's batch rebase writes the generated files again at each story's rebased head after it wrote one at a stop
 

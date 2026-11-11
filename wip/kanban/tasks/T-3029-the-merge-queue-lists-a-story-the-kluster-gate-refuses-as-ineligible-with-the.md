@@ -3,12 +3,18 @@ id: T-3029
 type: task
 nature: remediation
 title: The merge queue lists a story the kluster gate refuses as ineligible, with the reason kluster, instead of batching it
-status: backlog
+status: in-progress
 parent: S-0694
 owner: alex
 created: 2026-11-10T10:33:28Z
-updated: 2026-11-10T10:33:28Z
-transitions: []
+updated: 2026-11-11T09:13:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:13:59Z
+    by: agent-S-0694
+  - to: in-progress
+    at: 2026-11-11T09:13:59Z
+    by: agent-S-0694
 stream: S-0694
 tags: [flai, kluster, merge-queue]
 touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go]

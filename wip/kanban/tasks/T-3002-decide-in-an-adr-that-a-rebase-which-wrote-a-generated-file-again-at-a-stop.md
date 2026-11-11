@@ -3,15 +3,36 @@ id: T-3002
 type: task
 nature: improvement
 title: Decide in an ADR that a rebase which wrote a generated file again at a stop writes it again at the branch's head and commits it
-status: backlog
+status: done
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:10Z
-updated: 2026-11-10T11:07:00Z
-transitions: []
+updated: 2026-11-11T08:49:35Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:49:08Z
+    by: agent-S-0702
+  - to: in-progress
+    at: 2026-11-11T08:49:09Z
+    by: agent-S-0702
+  - to: done
+    at: 2026-11-11T08:49:35Z
+    by: agent-S-0702
 stream: S-0702
 tags: [adr, git]
-touches: [design/adrs/0280-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-it-again-at-the.md, design/adrs/README.md]
+touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 26
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 32
+      cache_read: 374517
+      cache_write: 2565
+      cost: 0.1395
 ---
 # T-3002 Decide in an ADR that a rebase which wrote a generated file again at a stop writes it again at the branch's head and commits it
 

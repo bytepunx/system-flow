@@ -7,7 +7,7 @@ status: backlog
 parent: S-0712
 owner: alex
 created: 2026-11-10T10:28:18Z
-updated: 2026-11-10T10:28:18Z
+updated: 2026-11-11T09:05:09Z
 transitions: []
 stream: S-0712
 tags: [docs, git]
@@ -18,7 +18,7 @@ after: [T-2963]
 
 ## Work
 
-Two documents describe how the undone check works: the S-0371 paragraph in `design/system/workflow.md` under "Branches and collisions (ADR-0019)", and the "Main's change undone." bullet under "Story branches" in `docs/users/flai.md`. Add one sentence to each, as T-2963 leaves the code: the sync takes main's head once, as a commit, before it rebases. It reads the old base against that commit, rebases onto it, and compares against it. So a commit main gains while the sync runs is never counted as a change the branch undoes (I-0338). Link I-0338 from the design paragraph as it links I-0124. ADR-0155 is accepted and stays as it is, since its text still fits.
+Two documents describe how the undone check works: the S-0371 paragraph in `design/system/workflow.md` under "Branches and collisions (ADR-0019)", and the "Main's change undone." bullet under "Story branches" in `docs/users/flai.md`. Add one sentence to each, as T-2963 leaves the code: the sync takes main's head once, as a commit, before it rebases. It reads the old base against that commit, rebases onto it, compares against it, and settles the branch's changelog lines under its `## Unreleased`. So a commit main gains while the sync runs is never counted as a change the branch undoes (I-0338, I-0335). Link I-0338 and I-0335 from the design paragraph as it links I-0124. ADR-0155 is accepted and stays as it is, since its text still fits.
 
 It waits for T-2963: it describes the code that task leaves.
 

@@ -7,12 +7,12 @@ status: backlog
 parent: S-0699
 owner: alex
 created: 2026-11-10T10:30:50Z
-updated: 2026-11-10T10:30:50Z
+updated: 2026-11-11T09:04:21Z
 transitions: []
 stream: S-0699
 tags: [flai, docs]
 touches: [design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
-after: [T-2992]
+after: [T-2992, T-3111]
 ---
 # T-2996 Measure S-0425's and S-0586's packs again, record the parts in agent-context.md, and close I-0261
 

@@ -3,14 +3,17 @@ id: S-0694
 type: story
 nature: improvement
 title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks failed, and its kluster acceptance blocker, are not built"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-11T08:56:25Z
+updated: 2026-11-11T08:56:31Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:35Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:56:31Z
+    by: agent-S-0694
 tags: [flai, serve, kluster, accept]
 topics: [kluster, deployment, review]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/move.go, flai/cmd/accept_kluster_test.go, flai/internal/hostapi/reads.go, flai/internal/mcpserver/queue.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/kluster.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md, design/issues/summary.md]
@@ -20,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1027
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 372
+      cache_read: 3317637
+      cache_write: 233488
+      cost: 1.3143
   strategic:
     - kind: orchestrator
       seconds: 14

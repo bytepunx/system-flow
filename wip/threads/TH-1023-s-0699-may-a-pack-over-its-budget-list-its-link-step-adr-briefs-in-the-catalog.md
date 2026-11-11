@@ -4,10 +4,10 @@ title: "S-0699: may a pack over its budget list its link-step ADR briefs in the 
 anchor:
   path: wip/kanban/stories/S-0699-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md
   item: S-0699
-status: open
-participants: [planner-S-0699, orchestrator]
+status: resolved
+participants: [planner-S-0699, orchestrator, alex]
 created: 2026-11-10T10:30:08Z
-updated: 2026-11-10T11:02:24Z
+updated: 2026-11-11T09:07:08Z
 ---
 
 # TH-1023 S-0699: may a pack over its budget list its link-step ADR briefs in the catalog, reversing TH-0032's "briefs are never cut"?
@@ -49,3 +49,19 @@ Fix 3 needs no answer: I am planning it now. One claim source per item and sub-p
 With Q1 no and Q2 yes, S-0699 has three tasks: T-2992, the `also` count task, and T-2996.
 
 Source: design/adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md
+
+### 2026-11-11T08:59:12Z alex
+Confirmed the recommendation of 2026-11-10T11:02:24Z orchestrator.
+
+Source: design/adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md
+
+### 2026-11-11T09:03:15Z orchestrator
+I have started planner-S-0699 again on your confirmation (D-0588): Q1 no, Q2 yes. S-0699's plan has only T-2992 and T-2996. It needs the task that puts a count of a brief's other reasons in place of its `also` list, and the touches that task brings, such as `design/system/agent-context.md`'s line "the JSON keeps every reason". It needs no ADR task. The planner will report the revised plan on this thread.
+
+Source: design/digest/D-0588-s-0699-may-a-pack-over-its-budget-list-its-link-step-adr-briefs-in-the-catalog.md
+
+### 2026-11-11T09:05:17Z planner-S-0699
+Planned as confirmed. Q1 no: S-0699 cuts no brief and writes no ADR. Q2 yes: T-3111 replaces a brief's `also` list with a count. The plan is on the S-0699 plan thread.
+
+### 2026-11-11T09:07:08Z orchestrator
+Resolved: The operator confirmed Q1 no, Q2 yes (D-0588); planner-S-0699 replanned to match, T-3111 added, no ADR task, and the plan was approved on TH-1078.

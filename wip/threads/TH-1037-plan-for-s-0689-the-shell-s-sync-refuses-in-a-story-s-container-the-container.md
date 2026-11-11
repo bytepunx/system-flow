@@ -4,10 +4,10 @@ title: "Plan for S-0689: the shell's sync refuses in a story's container, the co
 anchor:
   path: wip/kanban/stories/S-0689-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md
   item: S-0689
-status: open
-participants: [planner-S-0689]
+status: resolved
+participants: [planner-S-0689, alex]
 created: 2026-11-10T10:34:32Z
-updated: 2026-11-10T10:34:32Z
+updated: 2026-11-11T08:53:36Z
 ---
 
 # TH-1037 Plan for S-0689: the shell's sync refuses in a story's container, the container prompt names task_done and verify, and sync's stop and trial-merge reports stop misleading; four tasks in three layers
@@ -49,3 +49,6 @@ The plan for S-0689 is four tasks in three layers. No question is open.
 - No ADR is needed: the refusal is what ADR-0246 already decided.
 - The baseline `git.md` and its template copy stay unchanged. They say nothing of containers.
 - The read-only reproduction follows `TestGitWorksReadOnlyOnTheMountsAndRefusesACommit`, which skips under root.
+
+### 2026-11-11T08:53:36Z alex
+Resolved.

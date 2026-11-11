@@ -3,10 +3,10 @@ id: S-0698
 type: story
 nature: improvement
 title: This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:54:37Z
-updated: 2026-11-11T08:42:44Z
+updated: 2026-11-11T09:18:37Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:19Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-11T08:21:24Z
     by: agent-S-0698
+  - to: review
+    at: 2026-11-11T09:17:10Z
+    by: agent-S-0698
+  - to: done
+    at: 2026-11-11T09:18:37Z
+    by: orchestrator
 tags: [cli]
 topics: [server-side, back-end]
-touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md, flai/internal/storygit/trial.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md, flai/internal/storygit/trial.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0349-board-get-s-undone-read-runs-one-git-diff-per-recorded-path-of-each-story-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1282
-  estimated: true
-  priced_by: estimate
+  seconds: 3363
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 3
-      work: 39
+      ceremony: 7
+      work: 97
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 518
-      cache_read: 12439621
-      cache_write: 364785
-      cost: 4.7341
+      input: 300
+      output: 73316
+      cache_read: 42362864
+      cache_write: 564194
+      cost: 14.1447
   strategic:
     - kind: orchestrator
       seconds: 10
@@ -74,8 +79,8 @@ finalized:
 This story remediates [I-0333](../../../design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md), "This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0333 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0333 is closed with `flai issue close I-0333 --reason` saying what fixed it
+- [x] The cause I-0333 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0333 is closed with `flai issue close I-0333 --reason` saying what fixed it
 
 ## Tasks
 - T-3000 storygit reads every local branch's head and the checked-out branch in one git for-each-ref
@@ -123,3 +128,12 @@ No `after`: the story reads nothing another open story writes.
 Forecast: 1h, raised from `flai forecast`'s 18m. The size-based figure leaves no room for a real-git test and a before-and-after `board.get` measure like S-0636's, which ran 130 calls a build on two builds. Delivery moves with it, from flai's 15:57 to 16:39.
 
 Cost of delay: 12.50 USD a week, as `flai cod S-0698` works it out from the one input flai set from I-0333, `time_lost_per_cycle: 5m`, at 150 USD an hour. The value stands as computed. One occurrence is all the issue has recorded, and nothing gives a reason to weigh it more.
+
+### Accepted by the orchestrator
+
+- Verified: 57f1257979c3da0b22250277fab270fc24b04b02
+- At: 2026-11-11T09:18:37Z
+
+Verdict: meets all criteria
+- 1: flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/storygit/trial.go, design/system/server-performance.md
+- 2: design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md

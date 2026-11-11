@@ -3,14 +3,17 @@ id: S-0706
 type: story
 nature: remediation
 title: A story worktree's flaiover/node_modules installed inside the Alpine agent container holds only musl native bindings, so the host's flaiover tier then fails, and the reverse
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T09:11:37Z
-updated: 2026-11-11T08:58:19Z
+updated: 2026-11-11T09:17:19Z
 transitions:
   - to: ready
     at: 2026-11-11T08:51:57Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T09:17:19Z
+    by: agent-S-0706
 tags: [flaiover, scripts, agent-container]
 touches: [flaiover/package.json, flaiover/pnpm-workspace.yaml, system-flow.yaml, scripts/flaiover-install.sh, scripts/flaiover-install-test.sh, scripts/README.md, design/tech/node.md, docs/operators/runbooks/agent-container.md, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md, design/issues/summary.md]
 agent:
@@ -34,15 +37,15 @@ usage:
           cache_write: 39748
           cost: 0.7334
     - kind: orchestrator
-      seconds: 6
+      seconds: 69
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 2
-          cache_read: 102139
-          cache_write: 491
-          cost: 0.0281
+          input: 17
+          output: 114
+          cache_read: 834279
+          cache_write: 107398
+          cost: 0.2624
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m

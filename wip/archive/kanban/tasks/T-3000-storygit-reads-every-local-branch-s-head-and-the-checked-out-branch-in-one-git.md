@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 5
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 707536
-      cache_write: 535
-      cost: 0.2618
+      input: 5
+      output: 1212
+      cache_read: 700444
+      cache_write: 9329
+      cost: 0.2339
 ---
 # T-3000 storygit reads every local branch's head and the checked-out branch in one git for-each-ref
 

@@ -3,12 +3,18 @@ id: T-3028
 type: task
 nature: remediation
 title: flai accept refuses a story with the blocker kluster while the action is on, and --without-kluster lands it on the operator's word
-status: backlog
+status: in-progress
 parent: S-0694
 owner: alex
 created: 2026-11-10T10:33:07Z
-updated: 2026-11-10T10:33:39Z
-transitions: []
+updated: 2026-11-11T09:13:59Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:13:58Z
+    by: agent-S-0694
+  - to: in-progress
+    at: 2026-11-11T09:13:59Z
+    by: agent-S-0694
 stream: S-0694
 tags: [flai, kluster, accept]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/move.go, flai/cmd/accept_kluster_test.go, flai/internal/hostapi/reads.go, flai/internal/mcpserver/queue.go]

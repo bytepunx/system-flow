@@ -26,7 +26,7 @@ usage:
   source: log
   seconds: 5
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models: []
 ---
 # T-3003 merge.queue reads the heads once and runs git status only when a story in review passed verify, at the same time as the heads

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 226.0840
-accrued_seconds: 26322
-tasks_completed: 144
-last_run: 2026-11-11T07:26:25Z
+accrued_cost: 228.5241
+accrued_seconds: 26730
+tasks_completed: 146
+last_run: 2026-11-11T08:53:48Z
 ---
 
 # Curator activity
@@ -1163,3 +1163,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0416, D-0583, D-0584, D-0585, D-0586
 - Seconds: 187
 - Cost: 2.4986 USD, estimated
+
+### 2026-11-11T08:52:37Z
+
+- Summary: I wrote D-0587, merged S-0686 and I-0255 into D-0477, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0686
+- Items: D-0477, D-0587
+- Seconds: 348
+- Cost: 1.9684 USD, estimated
+
+### 2026-11-11T08:53:48Z
+
+- Summary: I found nothing to take in: the harvest since 2026-11-11T08:52:37Z returned no candidates, so I wrote and merged no entries. I absorbed none; no design document states D-0585's fact and no recent design change covers an active entry. `flai digest compact` compacted none.
+- Trigger: accepted S-0691, S-0696, S-0697, S-0700
+- Items: none
+- Seconds: 60
+- Cost: 0.4717 USD, estimated

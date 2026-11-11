@@ -4,10 +4,10 @@ title: "Plan for S-0707: the MCP tool test lists a command only for the tier tha
 anchor:
   path: wip/kanban/stories/S-0707-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md
   item: S-0707
-status: open
-participants: [planner-S-0707]
+status: resolved
+participants: [planner-S-0707, alex]
 created: 2026-11-10T10:33:13Z
-updated: 2026-11-10T10:33:13Z
+updated: 2026-11-11T09:05:28Z
 ---
 
 # TH-1035 Plan for S-0707: the MCP tool test lists a command only for the tier that failed, three tasks in three layers
@@ -45,3 +45,6 @@ The fix is in the MCP tool `test` alone (`flai/internal/mcpserver/test.go`):
 ## Changes I would propose
 
 None: no task to split, merge, or drop. If you want the CLI's JSON cut as well, say so and I will widen T-3019 to `flai/internal/verify` and `flai/cmd/test.go`.
+
+### 2026-11-11T09:05:28Z alex
+Resolved.

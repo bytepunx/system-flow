@@ -3,16 +3,37 @@ id: T-3007
 type: task
 nature: improvement
 title: Measure this repository's board.get with stories in review before and after, record it in the design, and close I-0333
-status: backlog
+status: done
 parent: S-0698
 owner: alex
 created: 2026-11-10T10:31:24Z
-updated: 2026-11-10T10:31:24Z
-transitions: []
+updated: 2026-11-11T08:53:10Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:52:58Z
+    by: agent-S-0698
+  - to: in-progress
+    at: 2026-11-11T08:52:58Z
+    by: agent-S-0698
+  - to: done
+    at: 2026-11-11T08:53:10Z
+    by: agent-S-0698
 stream: S-0698
 tags: [cli, docs]
 touches: [design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md]
 after: [T-3003]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 5454
+      cache_read: 3151388
+      cache_write: 41971
+      cost: 1.0522
 ---
 # T-3007 Measure this repository's board.get with stories in review before and after, record it in the design, and close I-0333
 

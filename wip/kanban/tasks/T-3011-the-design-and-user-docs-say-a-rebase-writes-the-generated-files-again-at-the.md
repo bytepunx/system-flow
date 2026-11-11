@@ -3,16 +3,37 @@ id: T-3011
 type: task
 nature: improvement
 title: The design and user docs say a rebase writes the generated files again at the branch's head
-status: backlog
+status: done
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:36Z
-updated: 2026-11-10T10:35:21Z
-transitions: []
+updated: 2026-11-11T09:05:10Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:49:55Z
+    by: agent-S-0702
+  - to: in-progress
+    at: 2026-11-11T08:49:55Z
+    by: agent-S-0702
+  - to: done
+    at: 2026-11-11T09:05:10Z
+    by: agent-S-0702
 stream: S-0702
 tags: [docs]
 touches: [design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
 after: [T-3002]
+usage:
+  source: log
+  seconds: 915
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 283
+      cache_read: 1887728
+      cache_write: 71777
+      cost: 0.7252
 ---
 # T-3011 The design and user docs say a rebase writes the generated files again at the branch's head
 

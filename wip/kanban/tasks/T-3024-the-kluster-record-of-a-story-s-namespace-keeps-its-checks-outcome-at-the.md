@@ -3,15 +3,36 @@ id: T-3024
 type: task
 nature: remediation
 title: The kluster record of a story's namespace keeps its checks outcome at the deployed commit, with a gate acceptance can read
-status: backlog
+status: done
 parent: S-0694
 owner: alex
 created: 2026-11-10T10:32:34Z
-updated: 2026-11-10T10:32:34Z
-transitions: []
+updated: 2026-11-11T09:13:35Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:57:52Z
+    by: agent-S-0694
+  - to: in-progress
+    at: 2026-11-11T08:57:52Z
+    by: agent-S-0694
+  - to: done
+    at: 2026-11-11T09:13:35Z
+    by: agent-S-0694
 stream: S-0694
 tags: [flai, kluster, serve]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go]
+usage:
+  source: log
+  seconds: 943
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 271
+      cache_read: 2580346
+      cache_write: 124432
+      cost: 1.0011
 ---
 # T-3024 The kluster record of a story's namespace keeps its checks outcome at the deployed commit, with a gate acceptance can read
 

@@ -4,10 +4,10 @@ title: "S-0701: which remedy for I-0265 — host-granted outside folders, story-
 anchor:
   path: wip/kanban/stories/S-0701-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md
   item: S-0701
-status: open
-participants: [planner-S-0701, orchestrator]
+status: resolved
+participants: [planner-S-0701, orchestrator, alex]
 created: 2026-11-10T10:30:43Z
-updated: 2026-11-10T11:02:38Z
+updated: 2026-11-11T09:03:13Z
 ---
 
 # TH-1025 S-0701: which remedy for I-0265 — host-granted outside folders, story-requested within a host list, or a prompt warning only?
@@ -86,3 +86,16 @@ This is host configuration and a paid call, so it is yours alone.
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md
+
+### 2026-11-11T09:00:54Z alex
+Confirmed the recommendation of 2026-11-10T11:02:38Z orchestrator.
+
+Source: design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md
+
+### 2026-11-11T09:02:54Z orchestrator
+Approved: S-0701's plan stands as drafted on remedy A, which you confirmed (D-0589). Its seven tasks in six layers (T-3048 to T-3068), its touches, the 1h30m forecast, and the 65 USD a week value fit the story. Your confirmation changes nothing in the plan, so I start no new planner run. T-3059 may make its one scratch `claude -p` on the cheapest model, as the recommendation you confirmed allows. S-0701 is still a draft.
+
+Source: design/digest/D-0589-s-0701-which-remedy-for-i-0265-host-granted-outside-folders-story-requested.md
+
+### 2026-11-11T09:03:13Z orchestrator
+Resolved: The operator confirmed remedy A (D-0589). S-0701's plan was already drafted on A, and it is approved as it stands.

@@ -3,16 +3,37 @@ id: T-3005
 type: task
 nature: improvement
 title: flai stream sync writes the generated files again at the branch's head after a rebase that wrote one at a stop, and commits what changed
-status: backlog
+status: done
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:20Z
-updated: 2026-11-10T10:31:20Z
-transitions: []
+updated: 2026-11-11T09:04:54Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:49:55Z
+    by: agent-S-0702
+  - to: in-progress
+    at: 2026-11-11T08:49:55Z
+    by: agent-S-0702
+  - to: done
+    at: 2026-11-11T09:04:54Z
+    by: agent-S-0702
 stream: S-0702
 tags: [flai, git, issues]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/check/check_records.go, flai/cmd/stream.go, flai/cmd/stream_sync.go]
 after: [T-3002]
+usage:
+  source: log
+  seconds: 899
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 465
+      cache_read: 3888583
+      cache_write: 232456
+      cost: 1.5251
 ---
 # T-3005 flai stream sync writes the generated files again at the branch's head after a rebase that wrote one at a stop, and commits what changed
 

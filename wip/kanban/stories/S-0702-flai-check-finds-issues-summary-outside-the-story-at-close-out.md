@@ -6,7 +6,7 @@ title: "flai check finds `issues.summary` outside the story at close-out"
 status: in-progress
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T08:46:59Z
+updated: 2026-11-11T09:05:24Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:36Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0702
 tags: [flai, issues, git]
 topics: [git]
-touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/check/check_records.go, design/adrs/0286-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-every-generated.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1892
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 2
+      work: 35
+  models:
+    - model: claude-opus-5-5
+      input: 210
+      output: 1351
+      cache_read: 10830504
+      cache_write: 585234
+      cost: 4.2248
   strategic:
     - kind: planner
       seconds: 52
