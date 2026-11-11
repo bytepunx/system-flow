@@ -730,6 +730,51 @@ func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *test
 	}
 }
 
+// I-0270: a story that changes only template/ runs this repository's
+// integration and smoke tiers in its close-out, as their when says and
+// code-quality.md and tooling.md say, and the merge queue's batch, which picks
+// tiers by paths alone, runs them too. Their when named template/**, but
+// SelectStoryLeavingQueue applies when only to the tiers paths already chose,
+// and neither tier's paths selected template/, so S-0558's template-only
+// close-out ran neither. Not gated under -short, so that make test catches a
+// manifest that opens the gap again.
+func TestRepositoryManifestRunsIntegrationAndSmokeForATemplateOnlyChange(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const changed = "template/root/design/conventions/code-quality.md"
+	if _, err := os.Stat(filepath.Join(root, changed)); err != nil {
+		t.Fatalf("%s: %v; name another file under template/", changed, err)
+	}
+	fsys := os.DirFS(root)
+	paths := []string{changed}
+	batch := map[string]bool{}
+	for _, s := range SelectStory(fsys, tiers, paths) {
+		batch[s.Tier.Name] = true
+	}
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths, paths)
+	ranFor := map[string]string{}
+	for _, s := range run {
+		ranFor[s.Tier.Name] = s.RanFor
+	}
+	for _, name := range []string{"integration", "smoke"} {
+		if !batch[name] {
+			t.Errorf("%s: the batch's selection leaves out %s", changed, name)
+		}
+		if want := "its when template/** matches " + changed; ranFor[name] != want {
+			t.Errorf("%s: the close-out runs %s for %q, want %q", changed, name, ranFor[name], want)
+		}
+	}
+	for _, s := range queued {
+		t.Errorf("%s: the close-out leaves %s to the queue", changed, s.Tier.Name)
+	}
+}
+
 // S-0722: the race detector runs in this repository's race tier alone, the
 // full suite under -race on every core, and only by name, flai test race, as
 // the gateway tier does: no close-out, --all run, or batch runs it unasked.
