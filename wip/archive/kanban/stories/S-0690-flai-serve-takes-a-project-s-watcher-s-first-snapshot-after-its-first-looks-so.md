@@ -3,10 +3,10 @@ id: S-0690
 type: story
 nature: remediation
 title: flai serve takes a project's watcher's first snapshot after its first looks, so a change made in between waits up to a minute for the next look
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:49:01Z
-updated: 2026-11-11T05:05:18Z
+updated: 2026-11-11T05:20:47Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:25Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-11T02:10:58Z
     by: agent-S-0690
+  - to: review
+    at: 2026-11-11T05:19:19Z
+    by: agent-S-0690
+  - to: done
+    at: 2026-11-11T05:20:47Z
+    by: orchestrator
 tags: [flai, serve]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/flai-cli.md, design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, design/issues/summary.md]
 agent:
@@ -23,19 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1354
+  seconds: 2230
   priced_by: harness
   turns:
     - day: 2026-11-11
+      ceremony: 2
       test_runs: 4
-      work: 40
+      work: 84
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 28633
-      cache_read: 8579459
-      cache_write: 245100
-      cost: 4.2497
+      input: 192
+      output: 34146
+      cache_read: 11994125
+      cache_write: 316005
+      cost: 5.6106
   strategic:
     - kind: orchestrator
       seconds: 17
@@ -112,3 +119,12 @@ Tasks, in three layers:
 1. T-2981, the watcher's first snapshot on a call of its own.
 2. T-2984, serve takes it before the item snapshot and the first looks, with the reproducing test (after T-2981).
 3. T-2988, `design/system/flai-cli.md` (after T-2984); T-2989, close I-0273 (after T-2984). They share no path and run together.
+
+### Accepted by the orchestrator
+
+- Verified: d59380bf087fc4c47c4ea8c9e1dc231037957626
+- At: 2026-11-11T05:20:47Z
+
+Verdict: pass. Close-out passed every step at d59380bf087fc4c47c4ea8c9e1dc231037957626; the diff meets both criteria and stays within the story's touches.
+- 1: flai/internal/watch/watch.go, flai/internal/watch/watch_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, design/system/flai-cli.md
+- 2: design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, design/issues/summary.md

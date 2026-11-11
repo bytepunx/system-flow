@@ -24,9 +24,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 284
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 377
+      cache_read: 4630255
+      cache_write: 261266
+      cost: 1.8054
   strategic:
     - kind: orchestrator
       seconds: 39

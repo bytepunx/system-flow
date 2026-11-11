@@ -3,16 +3,37 @@ id: T-2985
 type: task
 nature: remediation
 title: Close I-0327 with what fixed it
-status: backlog
+status: done
 parent: S-0693
 owner: alex
 created: 2026-11-10T10:29:34Z
-updated: 2026-11-10T10:29:34Z
-transitions: []
+updated: 2026-11-11T05:11:09Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:11:02Z
+    by: agent-S-0693
+  - to: in-progress
+    at: 2026-11-11T05:11:02Z
+    by: agent-S-0693
+  - to: done
+    at: 2026-11-11T05:11:09Z
+    by: agent-S-0693
 stream: S-0693
 tags: [issues]
 touches: [design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md, design/issues/summary.md]
 after: [T-2982]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 222
+      cache_read: 74569
+      cache_write: 4538
+      cost: 0.0557
 ---
 # T-2985 Close I-0327 with what fixed it
 

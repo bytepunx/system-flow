@@ -3,12 +3,18 @@ id: T-3004
 type: task
 nature: improvement
 title: "agent.status times serve.Activity's parts as phases of the request: the runs, the holds with their trial merges, and elsewhere"
-status: backlog
+status: in-progress
 parent: S-0678
 owner: alex
 created: 2026-11-10T10:31:16Z
-updated: 2026-11-10T10:31:16Z
-transitions: []
+updated: 2026-11-11T05:20:02Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:20:02Z
+    by: agent-S-0678
+  - to: in-progress
+    at: 2026-11-11T05:20:02Z
+    by: agent-S-0678
 stream: S-0678
 tags: [cli]
 touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]

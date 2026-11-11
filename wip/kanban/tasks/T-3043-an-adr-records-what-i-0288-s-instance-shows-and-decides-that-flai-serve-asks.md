@@ -3,15 +3,36 @@ id: T-3043
 type: task
 nature: improvement
 title: An ADR records what I-0288's instance shows and decides that flai serve asks the operator on one thread when nothing can be made ready
-status: backlog
+status: done
 parent: S-0691
 owner: alex
 created: 2026-11-10T10:34:39Z
-updated: 2026-11-10T10:34:39Z
-transitions: []
+updated: 2026-11-11T05:10:50Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:09:36Z
+    by: agent-S-0691
+  - to: in-progress
+    at: 2026-11-11T05:09:37Z
+    by: agent-S-0691
+  - to: done
+    at: 2026-11-11T05:10:50Z
+    by: agent-S-0691
 stream: S-0691
 tags: [flai, adr]
-touches: [design/adrs/README.md]
+touches: [design/adrs/0285-when-nothing-can-be-made-ready-flai-serve-opens-one-thread-to-the-operator-on.md, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 67
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 77
+      cache_read: 1632850
+      cache_write: 7896
+      cost: 0.6056
 ---
 # T-3043 An ADR records what I-0288's instance shows and decides that flai serve asks the operator on one thread when nothing can be made ready
 

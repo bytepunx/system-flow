@@ -3,16 +3,19 @@ id: S-0693
 type: story
 nature: improvement
 title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-11T02:27:23Z
+updated: 2026-11-11T05:18:31Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:19Z
     by: alex
   - to: in-progress
     at: 2026-11-11T02:27:23Z
+    by: agent-S-0693
+  - to: review
+    at: 2026-11-11T05:18:31Z
     by: agent-S-0693
 tags: [flai, tests]
 topics: [code]
@@ -24,18 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 459
+  seconds: 1267
   priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 11
+      ceremony: 2
+      work: 26
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 3463
-      cache_read: 781504
-      cache_write: 86167
-      cost: 0.915
+      input: 64
+      output: 7292
+      cache_read: 2067531
+      cache_write: 164431
+      cost: 1.8751
   strategic:
     - kind: planner
       seconds: 23
@@ -88,8 +92,8 @@ finalized:
 This story remediates [I-0327](../../../design/issues/I-0327-testrepositorymanifestlintschangedflaioverfiles-skips-under-short-so-a-new-tier.md), "TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0327 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0327 is closed with `flai issue close I-0327 --reason` saying what fixed it
+- [x] The cause I-0327 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0327 is closed with `flai issue close I-0327 --reason` saying what fixed it
 
 ## Tasks
 - T-2982 Run TestRepositoryManifestLintsChangedFlaioverFiles under -short

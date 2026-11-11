@@ -3,14 +3,17 @@ id: S-0686
 type: story
 nature: remediation
 title: go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-11T05:07:32Z
+updated: 2026-11-11T05:19:26Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:14Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T05:19:26Z
+    by: agent-S-0686
 tags: [docker, agent-container, go]
 touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-container-test.sh, flai/internal/harness/container.go, flai/internal/harness/container_test.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
 agent:

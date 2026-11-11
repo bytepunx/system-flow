@@ -3,12 +3,18 @@ id: T-3008
 type: task
 nature: improvement
 title: The trial judge keeps its verdicts per root and commit pair across calls, and reads the branch heads with one git process a call
-status: backlog
+status: in-progress
 parent: S-0678
 owner: alex
 created: 2026-11-10T10:31:25Z
-updated: 2026-11-10T10:31:25Z
-transitions: []
+updated: 2026-11-11T05:20:02Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:20:02Z
+    by: agent-S-0678
+  - to: in-progress
+    at: 2026-11-11T05:20:02Z
+    by: agent-S-0678
 stream: S-0678
 tags: [cli]
 touches: [flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go]

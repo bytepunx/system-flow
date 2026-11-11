@@ -3,11 +3,11 @@ id: T-2982
 type: task
 nature: remediation
 title: Run TestRepositoryManifestLintsChangedFlaioverFiles under -short
-status: in-progress
+status: done
 parent: S-0693
 owner: alex
 created: 2026-11-10T10:29:27Z
-updated: 2026-11-11T02:29:29Z
+updated: 2026-11-11T05:10:27Z
 transitions:
   - to: ready
     at: 2026-11-11T02:29:28Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T02:29:29Z
     by: agent-S-0693
+  - to: done
+    at: 2026-11-11T05:10:27Z
+    by: agent-S-0693
 stream: S-0693
 tags: [flai, tests]
 touches: [flai/internal/verify/select_test.go]
 usage:
   source: log
-  seconds: 326
+  seconds: 643
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 1199
-      cache_read: 270650
-      cache_write: 29841
-      cost: 0.3169
+      input: 19
+      output: 2158
+      cache_read: 592887
+      cache_write: 49451
+      cost: 0.5574
 ---
 # T-2982 Run TestRepositoryManifestLintsChangedFlaioverFiles under -short
 
