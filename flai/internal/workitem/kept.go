@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,32 +9,39 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 )
 
 // keptVersion is the format of a kept items file. Raise it whenever Item, or
 // a type it holds, changes in a way that the JSON of an older flai would not
-// restore exactly; a file of another version is a miss.
-const keptVersion = 1
+// restore exactly, or the file's lines change; a file of another version is
+// a miss. Version 1 was one JSON document, items-<folder>.json (S-0600);
+// version 2 is a line per item, items-<folder>.jsonl (S-0676).
+const keptVersion = 2
 
-// keptItemsFile is what a folder's kept items file holds between processes
-// (S-0600): the absolute folder it describes, its format, and per item file
-// the key it was parsed at and the item as ParseItem left it.
-type keptItemsFile struct {
-	Version int          `json:"version"`
-	Dir     string       `json:"dir"`
-	Files   []keptRecord `json:"files"`
+// keptHeader is the first line of a kept items file: its format and the
+// absolute folder it describes.
+type keptHeader struct {
+	Version int    `json:"version"`
+	Dir     string `json:"dir"`
 }
 
-// keptRecord is one item file of a kept items file. Size and ModTime are its
-// stat when it was parsed; an entry is written only once that parse was
-// trusted, racyWindow after the file's modification.
+// keptRecord is one item file of a kept items file, one line of it (S-0676):
+// its name as a JSON string, its size and modification time in Unix
+// nanoseconds, its unknown fields as JSON or null, and the item as
+// ParseItem left it, as JSON, each apart from the next by a tab. JSON escapes
+// every tab and newline inside a value, so neither can break a line. Size and
+// ModTime are the file's stat when it was parsed; an entry is written only
+// once that parse was trusted, racyWindow after the file's modification.
+// Reading the file splits its lines and reads only the key; the item and its
+// unknown fields are decoded only for a file whose key matches.
 type keptRecord struct {
-	Name    string          `json:"name"`
-	Size    int64           `json:"size"`
-	ModTime int64           `json:"mod_time"` // Unix nanoseconds
-	Item    json.RawMessage `json:"item"`
-	Unknown []Field         `json:"unknown,omitempty"` // Item's JSON leaves them out
+	Name    string
+	Size    int64
+	ModTime int64           // Unix nanoseconds
+	Item    json.RawMessage // never changed: it may share the file's bytes
+	Unknown json.RawMessage // the item's unknown fields, which Item's JSON leaves out; nil for none
 }
 
 // fileKey is what tells a file's kept parse still holds: its size and
@@ -61,12 +69,14 @@ func keptItemsPath(cache, dir string) string {
 		sum := sha256.Sum256([]byte(dir))
 		name = "dir-" + hex.EncodeToString(sum[:8])
 	}
-	return filepath.Join(cache, "items-"+name+".json")
+	return filepath.Join(cache, "items-"+name+".jsonl")
 }
 
 // readKeptItems is the kept items file at path, by file name, when it is of
-// this format and describes dir. A file that is missing, cannot be read or
-// decoded, is of another version, or describes another folder holds none.
+// this format and describes dir. A file that is missing or cannot be read,
+// whose first line is not this format's header for dir, holds none; a line
+// that does not split into a record is a miss for its file alone. The items
+// are left undecoded, each a slice of the file's bytes.
 func readKeptItems(path, dir string) map[string]keptRecord {
 	if path == "" {
 		return nil
@@ -75,17 +85,64 @@ func readKeptItems(path, dir string) map[string]keptRecord {
 	if err != nil {
 		return nil
 	}
-	var kf keptItemsFile
-	if err := json.Unmarshal(data, &kf); err != nil || kf.Version != keptVersion || kf.Dir != dir {
+	head, rest, _ := bytes.Cut(data, []byte{'\n'})
+	var h keptHeader
+	if err := json.Unmarshal(head, &h); err != nil || h.Version != keptVersion || h.Dir != dir {
 		return nil
 	}
-	out := make(map[string]keptRecord, len(kf.Files))
-	for _, rec := range kf.Files {
-		if rec.Name != "" && len(rec.Item) > 0 {
+	out := make(map[string]keptRecord, bytes.Count(rest, []byte{'\n'}))
+	for len(rest) > 0 {
+		var line []byte
+		line, rest, _ = bytes.Cut(rest, []byte{'\n'})
+		if rec, ok := parseKeptLine(line); ok {
 			out[rec.Name] = rec
 		}
 	}
 	return out
+}
+
+// parseKeptLine splits one record line of a kept items file; ok is false for
+// a line that does not split into one.
+func parseKeptLine(line []byte) (keptRecord, bool) {
+	var parts [5][]byte
+	for i := range 4 {
+		var found bool
+		parts[i], line, found = bytes.Cut(line, []byte{'\t'})
+		if !found {
+			return keptRecord{}, false
+		}
+	}
+	parts[4] = line
+	name, ok := keptName(parts[0])
+	if !ok {
+		return keptRecord{}, false
+	}
+	size, err1 := strconv.ParseInt(string(parts[1]), 10, 64)
+	mod, err2 := strconv.ParseInt(string(parts[2]), 10, 64)
+	if err1 != nil || err2 != nil || len(parts[4]) == 0 {
+		return keptRecord{}, false
+	}
+	rec := keptRecord{Name: name, Size: size, ModTime: mod, Item: json.RawMessage(parts[4][:len(parts[4]):len(parts[4])])}
+	if u := parts[3]; string(u) != "null" {
+		rec.Unknown = json.RawMessage(u[:len(u):len(u)])
+	}
+	return rec, true
+}
+
+// keptName decodes a record's name, a JSON string; one with no escape is
+// taken as it is, without a decoder.
+func keptName(raw []byte) (string, bool) {
+	if len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' {
+		return "", false
+	}
+	if inner := raw[1 : len(raw)-1]; !bytes.ContainsAny(inner, "\\\"") {
+		return string(inner), len(inner) > 0
+	}
+	var name string
+	if err := json.Unmarshal(raw, &name); err != nil {
+		return "", false
+	}
+	return name, name != ""
 }
 
 // restoreItem rebuilds the item of rec as ReadItem gives it for the file
@@ -96,7 +153,11 @@ func restoreItem(path string, rec keptRecord) (*Item, error) {
 	if err := json.Unmarshal(rec.Item, &it); err != nil {
 		return nil, err
 	}
-	it.Unknown = rec.Unknown
+	if len(rec.Unknown) > 0 {
+		if err := json.Unmarshal(rec.Unknown, &it.Unknown); err != nil {
+			return nil, err
+		}
+	}
 	it.Path = path
 	it.Archived = false
 	it.readAs = it.Marshal()
@@ -109,6 +170,15 @@ func encodeKept(it *Item) (json.RawMessage, error) {
 	c := *it
 	c.Path, c.Archived = "", false
 	return json.Marshal(&c)
+}
+
+// encodeUnknown is the JSON a kept items file holds for an item's unknown
+// fields: nil, written as null, for none.
+func encodeUnknown(fields []Field) (json.RawMessage, error) {
+	if len(fields) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(fields)
 }
 
 // writeKept writes the folder's trusted parses to its kept items file, when
@@ -130,7 +200,7 @@ func (f *folder) writeKept(path, dir string) {
 	if f.written == nil && len(now) == 0 || f.written != nil && maps.Equal(now, f.written) {
 		return
 	}
-	kf := keptItemsFile{Version: keptVersion, Dir: dir, Files: make([]keptRecord, 0, len(now))}
+	recs := make([]keptRecord, 0, len(now))
 	for _, name := range slices.Sorted(maps.Keys(now)) {
 		k := f.files[name]
 		if k.raw == nil {
@@ -140,18 +210,61 @@ func (f *folder) writeKept(path, dir string) {
 			}
 			k.raw = raw
 		}
+		unknown, err := encodeUnknown(k.item.Unknown)
+		if err != nil {
+			return
+		}
 		key := now[name]
-		kf.Files = append(kf.Files, keptRecord{Name: name, Size: key.size, ModTime: key.mod, Item: k.raw, Unknown: k.item.Unknown})
+		recs = append(recs, keptRecord{Name: name, Size: key.size, ModTime: key.mod, Item: k.raw, Unknown: unknown})
 	}
-	if writeKeptItems(path, kf) == nil {
+	if writeKeptItems(path, dir, recs) == nil {
 		f.written = now
 	}
 }
 
-// writeKeptItems writes kf to path through a temporary file in the same
-// folder renamed over it.
-func writeKeptItems(path string, kf keptItemsFile) error {
-	data, err := json.Marshal(kf)
+// encodeKeptItems is the kept items file of dir holding recs.
+func encodeKeptItems(dir string, recs []keptRecord) ([]byte, error) {
+	head, err := json.Marshal(keptHeader{Version: keptVersion, Dir: dir})
+	if err != nil {
+		return nil, err
+	}
+	size := len(head) + 1
+	for _, rec := range recs {
+		size += len(rec.Name) + len(rec.Item) + len(rec.Unknown) + 64
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, size))
+	buf.Write(head)
+	buf.WriteByte('\n')
+	for _, rec := range recs {
+		name, err := json.Marshal(rec.Name)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(name)
+		buf.WriteByte('\t')
+		buf.WriteString(strconv.FormatInt(rec.Size, 10))
+		buf.WriteByte('\t')
+		buf.WriteString(strconv.FormatInt(rec.ModTime, 10))
+		buf.WriteByte('\t')
+		if len(rec.Unknown) > 0 {
+			buf.Write(rec.Unknown)
+		} else {
+			buf.WriteString("null")
+		}
+		buf.WriteByte('\t')
+		buf.Write(rec.Item)
+		buf.WriteByte('\n')
+	}
+	return buf.Bytes(), nil
+}
+
+// writeKeptItems writes the kept items file of dir holding recs to path,
+// through a temporary file in the same folder renamed over it. It leaves a
+// version 1 file, items-<folder>.json, where it is: an older flai on the same
+// host, such as an installed MCP server, still reads and writes it, and would
+// parse every item again in each process were it removed.
+func writeKeptItems(path, dir string, recs []keptRecord) error {
+	data, err := encodeKeptItems(dir, recs)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package workitem
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -230,47 +229,124 @@ func TestAColdListParsesOnlyTheFileThatChanged(t *testing.T) {
 	sameItems(t, items, readAll(t, dir))
 }
 
+// keptLines is the kept items file at path, a line to an entry.
+func keptLines(t *testing.T, path string) []string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+}
+
+// spoilLine replaces the n-th line, the header being 0, of the kept items
+// file at path with what edit makes of it.
+func spoilLine(t *testing.T, path string, n int, edit func(string) string) {
+	t.Helper()
+	lines := keptLines(t, path)
+	lines[n] = edit(lines[n])
+	mustWrite(t, path, strings.Join(lines, "\n")+"\n")
+}
+
 func TestAMissingDamagedForeignOrOlderKeptFileIsAMiss(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		spoil func(t *testing.T, path, data string)
+		spoil func(t *testing.T, path string)
+		want  int // files parsed, of 5
 	}{
-		{"missing", func(t *testing.T, path, _ string) { mustRemove(t, path) }},
-		{"truncated", func(t *testing.T, path, data string) { mustWrite(t, path, data[:len(data)/2]) }},
-		{"not json", func(t *testing.T, path, _ string) { mustWrite(t, path, "not json at all") }},
-		{"another folder", func(t *testing.T, path, data string) {
-			mustWrite(t, path, strings.Replace(data, `"dir":"`, `"dir":"/elsewhere`, 1))
-		}},
-		{"another version", func(t *testing.T, path, data string) {
-			mustWrite(t, path, strings.Replace(data, fmt.Sprintf(`"version":%d`, keptVersion), `"version":999`, 1))
-		}},
-		{"a damaged entry", func(t *testing.T, path, data string) {
-			mustWrite(t, path, strings.Replace(data, `"item":{`, `"item":{"id":7,`, 1))
-		}},
+		{"missing", func(t *testing.T, path string) { mustRemove(t, path) }, 5},
+		{"not a header", func(t *testing.T, path string) {
+			spoilLine(t, path, 0, func(string) string { return "not json at all" })
+		}, 5},
+		{"another folder", func(t *testing.T, path string) {
+			spoilLine(t, path, 0, func(l string) string { return strings.Replace(l, `"dir":"`, `"dir":"/elsewhere`, 1) })
+		}, 5},
+		{"another version", func(t *testing.T, path string) {
+			spoilLine(t, path, 0, func(l string) string {
+				return strings.Replace(l, fmt.Sprintf(`"version":%d`, keptVersion), `"version":999`, 1)
+			})
+		}, 5},
+		// Cut inside the third entry: the two before it still restore.
+		{"truncated", func(t *testing.T, path string) {
+			lines := keptLines(t, path)
+			mustWrite(t, path, strings.Join(lines[:3], "\n")+"\n"+lines[3][:len(lines[3])/2])
+		}, 3},
+		{"an entry that does not decode as an item", func(t *testing.T, path string) {
+			spoilLine(t, path, 1, func(l string) string { return strings.Replace(l, "\t{", "\t{\"id\":7,", 1) })
+		}, 1},
+		// I-0310: an entry that is not JSON at all spoils only its own file.
+		// Version 1 was one JSON document, so one broken entry made the whole
+		// file a miss, and reading it decoded every entry, matching or not.
+		{"an entry that is not JSON", func(t *testing.T, path string) {
+			spoilLine(t, path, 2, func(l string) string { return l[:strings.LastIndex(l, "\t")] + "\t{\"id\":" })
+		}, 1},
+		{"a line that is not an entry", func(t *testing.T, path string) {
+			spoilLine(t, path, 4, func(l string) string { return strings.Replace(l, "\t", " ", 2) })
+		}, 1},
+		{"an unknown field that does not decode", func(t *testing.T, path string) {
+			spoilLine(t, path, 5, func(l string) string { return strings.Replace(l, "\tnull\t", "\t[{\"Name\":7}]\t", 1) })
+		}, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir, cache := keptFolder(t, 5, true)
 			coldList(t, dir, cache)
-			path := keptItemsPath(cache, dir)
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			tc.spoil(t, path, string(data))
+			tc.spoil(t, keptItemsPath(cache, dir))
 			items, n := coldList(t, dir, cache)
 			sameItems(t, items, readAll(t, dir))
-			want := 5
-			if tc.name == "a damaged entry" {
-				want = 1
-			}
-			if n != want {
-				t.Errorf("parsed %d files, want %d", n, want)
+			if n != tc.want {
+				t.Errorf("parsed %d files, want %d", n, tc.want)
 			}
 			if _, n := coldList(t, dir, cache); n != 0 {
 				t.Errorf("the kept file was not written again whole: the next process parsed %d", n)
 			}
 		})
 	}
+}
+
+// A kept items file version 1 wrote, one JSON document beside the new file's
+// name, is never read: the first list parses every file, writes the new
+// file, and leaves the old one for an older flai that may still use it.
+func TestAVersion1KeptFileIsAMissAndTheNextListWritesTheNewOne(t *testing.T) {
+	dir, cache := keptFolder(t, 4, true)
+	path := keptItemsPath(cache, dir)
+	if !strings.HasSuffix(path, ".jsonl") {
+		t.Fatalf("the kept items file is %s, want a .jsonl", path)
+	}
+	old := strings.TrimSuffix(path, ".jsonl") + ".json"
+	v1 := fmt.Sprintf(`{"version":1,"dir":%q,"files":[]}`, dir)
+	mustWrite(t, old, v1)
+	if _, n := coldList(t, dir, cache); n != 4 {
+		t.Errorf("with only a version 1 file, a new process parsed %d files, want 4", n)
+	}
+	if got := readKeptItems(path, dir); len(got) != 4 {
+		t.Errorf("the list wrote %d entries in the new file, want 4", len(got))
+	}
+	if data, err := os.ReadFile(old); err != nil || string(data) != v1 {
+		t.Errorf("the version 1 file was changed: %q, %v", data, err)
+	}
+	if _, n := coldList(t, dir, cache); n != 0 {
+		t.Errorf("a second process parsed %d files", n)
+	}
+}
+
+// A name that needs escaping in JSON, a tab or a quote in it, keeps its line
+// whole and restores.
+func TestAKeptEntryNamedWithATabOrAQuoteRestores(t *testing.T) {
+	dir, cache := keptFolder(t, 2, true)
+	for _, name := range []string{"E-0003-a\ttab.md", `E-0004-a"quote.md`} {
+		path := filepath.Join(dir, name)
+		mustWrite(t, path, itemDoc(name[:6], "Odd"))
+		past := time.Now().Add(-time.Hour)
+		if err := os.Chtimes(path, past, past); err != nil {
+			t.Fatal(err)
+		}
+	}
+	coldList(t, dir, cache)
+	items, n := coldList(t, dir, cache)
+	if n != 0 {
+		t.Errorf("parsed %d files, want every one restored", n)
+	}
+	sameItems(t, items, readAll(t, dir))
 }
 
 func TestAProjectWithoutACacheFolderKeepsNothing(t *testing.T) {
@@ -304,13 +380,8 @@ func TestTheKeptFileIsWrittenWholeThroughARename(t *testing.T) {
 	if err != nil || len(left) != 0 {
 		t.Errorf("temporary files left in the cache folder: %v %v", left, err)
 	}
-	var kf keptItemsFile
-	data, err := os.ReadFile(keptItemsPath(cache, dir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(data, &kf); err != nil || kf.Version != keptVersion || kf.Dir != dir || len(kf.Files) != 30 {
-		t.Errorf("kept file: version %d, dir %s, %d files, %v", kf.Version, kf.Dir, len(kf.Files), err)
+	if got := readKeptItems(keptItemsPath(cache, dir), dir); len(got) != 30 {
+		t.Errorf("the kept file holds %d entries, want 30", len(got))
 	}
 	if _, n := coldList(t, dir, cache); n != 0 {
 		t.Errorf("after lists at once, a new process parsed %d files", n)
@@ -353,8 +424,9 @@ func TestKeptItemsRestoreAsReadItemReadsThem(t *testing.T) {
 	}
 }
 
-// Every item of this repository restores from its kept entry as ReadItem
-// reads it.
+// Every item of this repository restores from its kept items file as
+// ReadItem reads it: each folder's items are written to a kept items file as
+// a list writes them, read back, and restored.
 func TestKeptItemsRestoreThisRepositorysItems(t *testing.T) {
 	if testing.Short() {
 		t.Skip("reads every item of the monorepo")
@@ -366,22 +438,42 @@ func TestKeptItemsRestoreThisRepositorysItems(t *testing.T) {
 	n := 0
 	for _, archived := range []bool{false, true} {
 		for _, typ := range Types {
-			files, _ := filepath.Glob(filepath.Join(r.ItemDir(typ, archived), "*.md"))
+			dir := r.ItemDir(typ, archived)
+			files, _ := filepath.Glob(filepath.Join(dir, "*.md"))
+			want := map[string]*Item{}
+			var recs []keptRecord
 			for _, f := range files {
-				want, err := ReadItem(f)
+				it, err := ReadItem(f)
 				if err != nil {
 					continue
 				}
-				raw, err := encodeKept(want)
+				raw, err := encodeKept(it)
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := restoreItem(f, keptRecord{Item: raw, Unknown: want.Unknown})
+				unknown, err := encodeUnknown(it.Unknown)
 				if err != nil {
-					t.Fatalf("%s: %v", f, err)
+					t.Fatal(err)
 				}
-				if !reflect.DeepEqual(got, want) {
-					t.Errorf("%s restores as\n%#v\nnot\n%#v", f, got, want)
+				name := filepath.Base(f)
+				want[name] = it
+				recs = append(recs, keptRecord{Name: name, Size: 1, ModTime: 2, Item: raw, Unknown: unknown})
+			}
+			path := filepath.Join(t.TempDir(), "items.jsonl")
+			if err := writeKeptItems(path, dir, recs); err != nil {
+				t.Fatal(err)
+			}
+			kept := readKeptItems(path, dir)
+			if len(kept) != len(want) {
+				t.Fatalf("%s: the kept file holds %d entries, want %d", dir, len(kept), len(want))
+			}
+			for name, w := range want {
+				got, err := restoreItem(filepath.Join(dir, name), kept[name])
+				if err != nil {
+					t.Fatalf("%s: %v", name, err)
+				}
+				if !reflect.DeepEqual(got, w) {
+					t.Errorf("%s restores as\n%#v\nnot\n%#v", name, got, w)
 				}
 				n++
 			}
@@ -389,6 +481,54 @@ func TestKeptItemsRestoreThisRepositorysItems(t *testing.T) {
 	}
 	if n == 0 {
 		t.Skip("no items found")
+	}
+}
+
+// Repo.List lists its folders at once (S-0676): it still gives every item of
+// the current and archived folders once, marked archived by its folder and
+// sorted by ID, and the error of a folder it cannot read.
+func TestListGivesEveryFolderAtOnceInIDOrder(t *testing.T) {
+	r := newProject(t)
+	epic := mustCreate(t, r, Epic, "Epic", "")
+	var stories []*Item
+	for i := range 6 {
+		stories = append(stories, mustCreate(t, r, Story, fmt.Sprintf("Story %d", i), epic.ID))
+	}
+	mustCreate(t, r, Task, "Task", stories[0].ID)
+	for _, it := range stories[:3] {
+		to := filepath.Join(r.ItemDir(Story, true), filepath.Base(it.Path))
+		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(it.Path, to); err != nil {
+			t.Fatal(err)
+		}
+	}
+	items, err := r.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 8 {
+		t.Fatalf("listed %d items, want 8", len(items))
+	}
+	for i, it := range items {
+		if i > 0 && !lessID(items[i-1].ID, it.ID) {
+			t.Errorf("%s listed after %s", it.ID, items[i-1].ID)
+		}
+		if want := strings.Contains(it.Path, string(filepath.Separator)+"archive"+string(filepath.Separator)); it.Archived != want {
+			t.Errorf("%s: archived %t, from %s", it.ID, it.Archived, it.Path)
+		}
+	}
+	tasks := r.ItemDir(Task, true)
+	if err := os.MkdirAll(filepath.Dir(tasks), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, tasks, "a file where a folder should be")
+	if _, err := r.List(true); err == nil {
+		t.Error("a folder that cannot be read listed without an error")
+	}
+	if items, err := r.List(false); err != nil || len(items) != 5 {
+		t.Errorf("without the archive: %d items, %v", len(items), err)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -148,24 +149,41 @@ func (r *Repo) ItemDir(typ string, archived bool) string {
 // by ID. Each is the caller's own copy; only files that changed since the
 // process last read them are read again (S-0156), and a process's first list
 // of a folder parses only the files that changed since a process last kept
-// it in the cache folder (S-0600).
+// it in the cache folder (S-0600). The folders are listed at once, each under
+// its own lock, sharing one bound of parses at once (S-0676); an error is the
+// first folder's, in the order current before archived and Types.
 func (r *Repo) List(includeArchive bool) ([]*Item, error) {
-	var items []*Item
+	type folderList struct {
+		dir      string
+		archived bool
+		items    []*Item
+		err      error
+	}
+	var lists []*folderList
 	scopes := []bool{false}
 	if includeArchive {
 		scopes = append(scopes, true)
 	}
 	for _, archived := range scopes {
 		for _, typ := range Types {
-			found, err := parsed.list(r.ItemDir(typ, archived), r.CacheDir())
-			if err != nil {
-				return nil, err
-			}
-			for _, it := range found {
-				it.Archived = archived
-			}
-			items = append(items, found...)
+			lists = append(lists, &folderList{dir: r.ItemDir(typ, archived), archived: archived})
 		}
+	}
+	cache, slots := r.CacheDir(), parseSlots()
+	var wg sync.WaitGroup
+	for _, l := range lists {
+		wg.Go(func() { l.items, l.err = parsed.listOn(l.dir, cache, slots) })
+	}
+	wg.Wait()
+	var items []*Item
+	for _, l := range lists {
+		if l.err != nil {
+			return nil, l.err
+		}
+		for _, it := range l.items {
+			it.Archived = l.archived
+		}
+		items = append(items, l.items...)
 	}
 	sort.Slice(items, func(i, j int) bool { return lessID(items[i].ID, items[j].ID) })
 	return items, nil

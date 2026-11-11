@@ -219,6 +219,12 @@ func (f *folder) keepSnapshot(items []*Item, mark uint64, trusted bool) {
 // it). They are never changed and never handed out; callers copy what they
 // hand on.
 func (s *store) items(dir, cache string) ([]*Item, error) {
+	return s.itemsOn(dir, cache, nil)
+}
+
+// itemsOn is items, its parses taking slots, a list's bound shared by the
+// folders it lists at once (S-0676); with none, the look makes its own.
+func (s *store) itemsOn(dir, cache string, slots chan struct{}) ([]*Item, error) {
 	f := s.folder(dir)
 	if items, ok := f.fresh(); ok {
 		return items, nil
@@ -229,7 +235,7 @@ func (s *store) items(dir, cache string) ([]*Item, error) {
 		return items, nil // another caller looked while this one waited
 	}
 	mark := f.marks.Load()
-	items, trusted, err := f.lookAll(dir, cache)
+	items, trusted, err := f.lookAll(dir, cache, slots)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +300,12 @@ type look struct {
 // list returns a copy of every item in dir, in file name order. A folder
 // that does not exist has none.
 func (s *store) list(dir, cache string) ([]*Item, error) {
-	items, err := s.items(dir, cache)
+	return s.listOn(dir, cache, nil)
+}
+
+// listOn is list, its parses taking slots as itemsOn's do.
+func (s *store) listOn(dir, cache string, slots chan struct{}) ([]*Item, error) {
+	items, err := s.itemsOn(dir, cache, slots)
 	if err != nil {
 		return nil, err
 	}
@@ -312,10 +323,10 @@ func (s *store) list(dir, cache string) ([]*Item, error) {
 // file, takes the kept item of each whose key still matches, in memory or,
 // on the folder's first list in the process, in its kept items file in the
 // cache folder cache (S-0600), parses the rest on a bounded pool of
-// workers, keeps what they parsed, and writes the kept items file again when
-// what it holds changed. With no cache, or a cache folder that does not
-// exist, nothing is kept between processes.
-func (f *folder) lookAll(dir, cache string) ([]*Item, bool, error) {
+// workers, each parse taking one of slots, keeps what they parsed, and writes
+// the kept items file again when what it holds changed. With no cache, or a
+// cache folder that does not exist, nothing is kept between processes.
+func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool, error) {
 	f.looks++
 	path := keptItemsPath(cache, dir)
 	if !f.loaded && path != "" {
@@ -346,7 +357,7 @@ func (f *folder) lookAll(dir, cache string) ([]*Item, bool, error) {
 		}
 		files = append(files, f.lookup(dir, name))
 	}
-	parseAll(dir, files)
+	parseAll(dir, files, slots)
 	seen := make(map[string]bool, len(files))
 	out := make([]*Item, 0, len(files))
 	trusted := true
@@ -392,18 +403,29 @@ func (f *folder) lookup(dir, name string) *look {
 	return l
 }
 
-// parseAll parses every file lookup left without an item, on at most
-// parsers() workers, restoring instead the item of one whose kept items
-// file's entry matched, unless that entry does not decode. It writes only
-// each file's own look, so it needs no lock of its own.
-func parseAll(dir string, files []*look) {
+// parseSlots is a bound of parsers() parses at once, for the folders of one
+// list to share.
+func parseSlots() chan struct{} { return make(chan struct{}, parsers()) }
+
+// parseAll parses every file lookup left without an item, restoring instead
+// the item of one whose kept items file's entry matched, unless that entry
+// does not decode. Each parse or restore takes one of slots, so that at most
+// parsers() run at once across the folders that share them; with no slots,
+// the folder has its own. It writes only each file's own look, so it needs
+// no lock of its own.
+func parseAll(dir string, files []*look, slots chan struct{}) {
 	var todo []*look
 	for _, l := range files {
 		if l.err == nil && l.item == nil {
 			todo = append(todo, l)
 		}
 	}
+	if slots == nil {
+		slots = parseSlots()
+	}
 	parse := func(l *look) {
+		slots <- struct{}{}
+		defer func() { <-slots }()
 		if l.rec != nil {
 			if it, err := restoreItem(filepath.Join(dir, l.name), *l.rec); err == nil {
 				l.item, l.restored = it, true
