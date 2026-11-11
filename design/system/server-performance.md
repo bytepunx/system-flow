@@ -1021,6 +1021,90 @@ The measurement ran on 2026-11-09 between 17:25 and 17:26 UTC, on the operator's
 - These one-shot times include the cold reads. What the smaller answers save in flai serve is the encoding, and the time each answer holds the connection's write lock while the next request's answer waits.
 - `send_ms` itself was not measured. flai serve on this host runs the installed flai 1.86.4, which does not log it, and it will be logged once a flai release with S-0611 runs there. The serve log's `send_ms` will then show what is left of the wait on the write lock.
 
+### Cause 12 again: the trial merges kept across calls and Activity's phases (S-0678)
+
+This section remedies [I-0313](../issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md), the time [S-0603](#cause-12-fixed-agentsjson-kept-parsed-and-the-conversations-read-once-s-0603) left in this repository's `agent.status`.
+
+#### Cause
+
+After S-0603, this repository's `agent.status` still took about 1.1 s with 13 projects at once. S-0602 has since kept the threads and the conversations parsed. What was left was the holds' trial merges. `serve.Activity` made a new trial judge on every call (`withTrial`, `storygit.NewTrialJudge`). A judge kept its answers only for its own call. So every call ran `git --version`, one `git rev-parse` for each branch judged, and one `git merge-tree` for each pair of commits its overlaps with stories in progress named, though no branch had moved. `serve.Activity` took no context, so the serve log showed `agent.activity` and nothing inside it.
+
+#### Fix
+
+- `serve.Activity` takes the request's context. It records its parts as phases inside `agent.activity` (`flai/internal/serve/agents_activity.go`):
+  - `activity.conversations`: reading the conversations, once a call.
+  - `activity.runs`: judging the runs.
+  - `activity.holds`: building the holds.
+  - `activity.trial`: each call of the trial judge, summed, with its count.
+  - `activity.elsewhere`: the stories begun elsewhere.
+- The trial judge keeps each raw `TrialMerge` answer process-wide, by root and by the pair of commits merged, at most 256 for each root (`flai/internal/storygit/trial.go`). A pair of commits always merges the same way, so a kept answer is never stale. The resolved files are left out of it on each call, as before.
+- It asks git's version once for each runner, not once a call.
+- It reads every branch head with one `git for-each-ref` a judge call, instead of one `git rev-parse` for each branch.
+
+#### Measured on this repository
+
+The measurement ran on 2026-11-11 between 05:52 and 06:05 UTC, on the operator's host (WSL2, 24 cores, Go 1.26.0, git 2.47.3).
+
+- Before is `main` at 6d35e4103, the story's base. After is `story/S-0678` at f361a9b7a, with T-3004 and T-3008. `flai guard` refuses `git archive` to a sub-agent. So each tree is a copy of the tracked files under `flai/`, taken from the worktree at f361a9b7a. The before copy has the story's diff reversed, and each file the story changed was compared with `git show 6d35e4103`.
+- The program followed S-0603's and was built under `/tmp` inside each copy's module. Per call it did what the host's `Agent` does for `agent.status` without `finished`, less the configuration read and the encoding: `AgentStates`, `RoleStates`, `Activity`, and `Unfinished`. A `perf` recorder in the call's context timed each part as the host's `Agent` does. So the before build records `agent.states`, `agent.roles`, and `agent.activity`, and the after build also records the `activity.*` phases inside it.
+- It read the host's own `~/.flai/serve/agents.json`, 851 KB, and the 13 projects it names that exist.
+- Sequential: one warm call per project, after a warm-up round. At once: 13 calls, one per project, released together, five rounds a run: 65 calls.
+- The two builds ran in turn: before, after, before, after.
+- The repository held 1,068 threads and 493 conversations.
+
+The host was quiet: the one-minute load average was 11.3 to 11.4, against 95 to 101 when S-0603 measured. The table gives the four runs. Fifteen more pairs, one every 40 s at loads of 3.8 to 12.6, gave figures in the same ranges. In those, before answered 63 to 65 of 65 calls under 200 ms, with a maximum of 159 to 208 ms. After answered all 65 in every run, with a maximum of 87 to 125 ms.
+
+| Case | Before | After |
+|------|--------|-------|
+| This repository, sequential | 126 to 132 ms | 65 to 80 ms |
+| The other 12, sequential, p50 | 9 to 10 ms | 10 to 12 ms |
+| 13 at once, a call, p50 | 25 to 27 ms | 24 to 25 ms |
+| 13 at once, a call, p90 | 74 to 84 ms | 46 to 48 ms |
+| 13 at once, a call, max | 160 to 211 ms | 89 to 94 ms |
+| 13 at once, a round's wall time | 144 to 212 ms | 85 to 96 ms |
+| 13 at once, a round's CPU, git not counted | 353 to 440 ms | 330 to 356 ms |
+| 13 at once, calls under 200 ms | 64 and 65 of 65 | 65 and 65 of 65 |
+| 13 at once, this repository, p50 | 150 to 168 ms | 88 to 90 ms |
+
+The phases, 13 at once, over the two runs of each build. This repository is one call a round: its p50 and max are over its five calls a run. All 13 are over the 65 calls a run. Before records no `activity.*` phases.
+
+| Phase | This repository, before p50 (max) | This repository, after p50 (max) | All 13, before p50 (max) | All 13, after p50 (max) |
+|-------|-----------------------------------|----------------------------------|--------------------------|-------------------------|
+| `agent.states` | 0.0 ms (0.4) | 0.0 ms (0.0) | 0.0 ms (1.1) | 0.0 ms (0.7) |
+| `agent.roles` | 29 to 33 ms (44) | 30 to 31 ms (34) | 17 to 21 ms (44) | 18 to 19 ms (34) |
+| `agent.activity` | 119 to 130 ms (157) | 54 to 55 ms (58) | 5 to 6 ms (157) | 5 to 6 ms (58) |
+| `activity.conversations` | — | 3.4 to 3.5 ms (4.1) | — | 0.0 to 0.1 ms (4.1) |
+| `activity.runs` | — | 16.6 to 16.8 ms (17.7) | — | 0.0 to 0.1 ms (17.7) |
+| `activity.holds` | — | 27.7 to 28.0 ms (30.4) | — | 1.3 to 1.4 ms (30.4) |
+| `activity.trial`, 8 calls | — | 24.1 to 24.7 ms (26.8) | — | 0.0 ms (26.8) |
+| `activity.elsewhere` | — | 0.9 to 1.0 ms (1.3) | — | 0.2 ms (1.5) |
+| `agent.unfinished` | 3.7 to 3.9 ms (9.6) | 3.7 to 4.0 ms (5.1) | 1.1 ms (9.6) | 0.9 to 1.0 ms (5.1) |
+
+`activity.trial` is inside `activity.holds`, and every `activity.*` phase is inside `agent.activity`.
+
+A second program timed this repository's call alone, ten times after the rounds. It took the process's CPU time and its children's, which are the git processes. These runs were at 06:04 to 06:05 UTC, at loads of 11.8 to 14.7, two runs of each build. By then the board had changed, and the trial judge was called 10 times a call.
+
+| This repository alone, ten calls a run, p50 | Before | After |
+|----------------------------------------------|--------|-------|
+| Wall time | 145 to 152 ms | 74 to 84 ms |
+| CPU in flai's process | 83 to 96 ms | 64 to 69 ms |
+| CPU in git processes | 88 to 94 ms | 27 to 29 ms |
+| `agent.activity` | 128 to 134 ms | 58 to 67 ms |
+| `activity.trial`, 10 calls | — | 30 to 33 ms |
+
+The git time this repository's call spent fell from about 90 ms to about 28 ms. The whole call fell by half, alone and with 13 at once. On this host, every call with 13 at once answered under 200 ms in every run of the after build. At this load, `main` itself missed by only 0 to 2 calls of 65. That is because S-0602 had already taken the threads and the conversations out of the call. So the fall measured against `main` is the figure that holds. This repository's call lost about 60 to 80 ms of wall time and about 60 ms of git CPU. Over all 17 pairs of runs, the slowest call with 13 at once took 87 to 125 ms, not 159 to 211 ms.
+
+What is left in this repository's call is about 65 ms of CPU in flai and 28 ms in git:
+
+- `activity.trial` is the largest part, 24 to 33 ms. It is one `git for-each-ref` for each judge call, 8 to 10 a call, about 3 ms each. No merge runs while no branch moves.
+- `activity.runs` takes about 17 ms: the runs judged against the kept threads and conversations.
+- `agent.roles` takes about 13 ms alone and about 30 ms with 13 at once. Its code did not change, so the difference is the wait for a core.
+- The rest of the holds takes about 4 ms, and the conversations 3 to 4 ms.
+
+No part takes most of the call. At a load of 100 on 24 cores, the call's 90 ms or so of CPU would wait for a core, as in S-0603's figures. No run at that load was measured here. Reading the heads once for each `Activity` call, rather than once for each judge call, would save about 7 to 9 of the 8 to 10 `for-each-ref` processes. By these figures that is about 20 to 30 ms more off the call.
+
+The program wrote nothing of its own. Like every `agent.status` in flai serve, its trial merges wrote tree objects into each project's object store, with no ref and no worktree. With the kept answers, they did so only for a pair of commits first seen in the process. Its item lists may have written the rebuildable kept items files under `.flai-cache`.
+
 ## Stories
 
 Each cause has a backlog story under [E-0012](../../wip/kanban/epics/E-0012-performance-analysis-and-improvements.md), with the cause's numbers and a proposed solution. Causes 1 to 4 are the largest share of a board load; 5 multiplies 4 and every write on hosts with a long `PATH`. S-0471 remedies a regression found later, recorded as I-0155, and S-0500 the `git log` that was left in every warm chart answer after it, recorded as I-0184, and S-0531 the one left in every cold answer, recorded as I-0209.
