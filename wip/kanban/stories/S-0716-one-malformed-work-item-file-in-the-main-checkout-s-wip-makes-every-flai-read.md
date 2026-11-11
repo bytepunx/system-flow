@@ -6,7 +6,7 @@ title: One malformed work item file in the main checkout's wip makes every flai 
 status: backlog
 owner: alex
 created: 2026-11-11T01:40:46Z
-updated: 2026-11-11T01:40:46Z
+updated: 2026-11-11T08:51:23Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
     by: flai
     at: 2026-11-11T01:40:46Z
+finalized:
+  by: alex
+  at: 2026-11-11T08:51:23Z
 ---
 # S-0716 One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them
 
