@@ -4398,7 +4398,7 @@ func TestAHeldProviderStartsNoStorysAgentUntilItClears(t *testing.T) {
 			detail = e.Detail
 		}
 	}
-	if !strings.Contains(detail, "again for "+limited+" as builder-"+limited+" on its own, its last agent having ended on the usage limit, which no longer holds claude-code; no automatic restart spent (pid ") {
+	if !strings.Contains(detail, "again for "+limited+" as builder-"+limited+" on its own, its last agent having ended on the usage limit, which no longer holds claude-code "+lab.stub+"; no automatic restart spent (pid ") {
 		t.Errorf("the limited story's start was journalled as %q", detail)
 	}
 	events := lab.storyEvents(limited)

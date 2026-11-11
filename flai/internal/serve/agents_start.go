@@ -204,6 +204,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if story.Agent != nil {
 		run.Provider = story.Agent.Provider
 	}
+	run.BudgetKey = budgetKeyOf(cfg, name, run.Provider)
 	gate := l.budgetStart(run)
 	if !gate.Go {
 		l.holdStart(story.ID, gate.State)
@@ -264,12 +265,12 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	}
 	switch {
 	case story.AfterLimit:
-		entry.Detail = fmt.Sprintf("started %s again for %s as %s on its own, its last agent having ended on the usage limit, which no longer holds %s; no automatic restart spent (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, budgetKey(run.Provider, run.Harness), run.PID, run.Log)
+		entry.Detail = fmt.Sprintf("started %s again for %s as %s on its own, its last agent having ended on the usage limit, which no longer holds %s; no automatic restart spent (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, runBudgetKey(run), run.PID, run.Log)
 	case story.AutoRestarts > 0:
 		entry.Detail = fmt.Sprintf("started %s again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.startedSaid(), story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
 	}
 	if probe {
-		entry.Detail += "; the probe of the budget state of " + budgetKey(run.Provider, run.Harness)
+		entry.Detail += "; the probe of the budget state of " + gate.State.Provider
 	}
 	said := []any{"story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID}
 	if unguarded != "" {
@@ -409,6 +410,10 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err := l.provide(cfg, run, &req); err != nil {
 		return harness.Start{}, nil, err
 	}
+	// The key the budget gate holds the start by: a story's agent's start has
+	// passed its gate already, a strategic role's passes it after this
+	// (spawnGatedWith).
+	run.BudgetKey = budgetKeyOf(cfg, name, run.Provider)
 	if err := l.builtinFile(&req); err != nil {
 		return harness.Start{}, nil, err
 	}

@@ -230,7 +230,11 @@ type AgentRun struct {
 	// none, and on runs before S-0350.
 	Provider string `json:"provider,omitempty"`
 	KeyEnv   string `json:"key_env,omitempty"`
-	PID      int    `json:"pid,omitempty"`
+	// BudgetKey is what the run's budget state is kept under (budgetKeyOf),
+	// such as "claude-code meclod", resolved before its start's gate; empty
+	// on runs before S-0720, whose state is kept under budgetKey.
+	BudgetKey string `json:"budget_key,omitempty"`
+	PID       int    `json:"pid,omitempty"`
 	// Start is when the process started as the system counts it (clock
 	// ticks since boot on Linux), which tells it from another given the same
 	// PID since (S-0170); 0 where it is not known, and on runs before it.

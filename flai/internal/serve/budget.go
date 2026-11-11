@@ -22,14 +22,22 @@ import (
 
 // The host's budget state (S-0534, ADR-0209 §5). When a run of any role, or
 // a story's agent, ends on the harness's usage limit, flai serve records a
-// budget state for the provider the run went through, in budget.json in the
+// budget state for the account the run went through, in budget.json in the
 // serve folder: the limit the harness named, when it was first set, and the
 // time it holds until, the reset the API reported, or else a backoff that
-// starts at 5m and doubles, up to 1h, each time the limit outlasts it. While
-// it holds, no run starts on that provider on any project the host serves.
+// starts at 5m and doubles, up to 1h, each time the limit outlasts it. The
+// account is the provider the run named, or else its harness, the program
+// the harness runs, and the login the host gives it (budgetKeyOf, S-0720),
+// so that a limit on one Claude login holds no start on another. While it
+// holds, no run starts on that account on any project the host serves.
 // Once it has passed, one start goes through as the probe, and every other
 // waits while it runs: its end on anything but the limit clears the state,
 // and its end on the limit extends it.
+//
+// Before S-0720 a state was kept under the harness alone, such as
+// claude-code. budget.json in that shape is still read: such a state holds
+// every start on its harness, whatever its program and login, until it
+// clears, since which login reached the limit cannot be told (budgetIn).
 //
 // Every project's launcher in one flai serve reads and writes the file under
 // budgetMu; the MCP server and the host API read it, from other processes,
@@ -67,8 +75,10 @@ const (
 // Budget is one provider's budget state, as budget.json holds it and the MCP
 // server and the host API read it.
 type Budget struct {
-	// Provider is what the state is kept under (budgetKey): the provider the
-	// runs named, or their harness when they named none.
+	// Provider is what the state is kept under (budgetKeyOf): the provider
+	// the runs named, or, when they named none, their harness, its program,
+	// and its login, such as "claude-code meclod"; their harness alone, such
+	// as claude-code, on a state set before S-0720.
 	Provider string `json:"provider"`
 	// Limit is the error the harness named, such as usage_limit_reached, and
 	// Status its HTTP status, such as 429; each empty when it named none.
@@ -134,13 +144,72 @@ var budgetMu sync.Mutex
 
 func (d Dir) budgetFile() string { return filepath.Join(string(d), "budget.json") }
 
-// budgetKey is what a run's budget state is kept under: the provider it
-// named, or its harness, such as claude-code, when it named none.
+// budgetKey is what a run's budget state was kept under before S-0720: the
+// provider it named, or its harness, such as claude-code, when it named none.
 func budgetKey(provider, harness string) string {
 	if provider != "" {
 		return provider
 	}
 	return harness
+}
+
+// budgetKeyOf is what the budget state of a run on the harness name under
+// cfg is kept under (S-0720): provider, when the run names one; else the
+// harness, a space, and its program, the one the operator set for it or
+// else its adapter's default, such as "claude-code meclod" or "claude-code
+// claude"; and, when the host sets a login for the harness, " login " and
+// its folder, such as "container docker login /home/alex/.claude-rmh". The
+// program's arguments are not part of it.
+func budgetKeyOf(cfg AgentConfig, name, provider string) string {
+	if provider != "" {
+		return provider
+	}
+	host := cfg.host(name)
+	program := host.Program
+	if a, ok := harness.Adapters[name]; ok && program == "" {
+		program = a.DefaultHost().Program
+	}
+	key := name
+	if program != "" {
+		key += " " + program
+	}
+	if host.Login != "" {
+		key += " login " + host.Login
+	}
+	return key
+}
+
+// runBudgetKey is what run's budget state is kept under: the key recorded
+// at its start, or, on a run recorded before S-0720, the key of then.
+func runBudgetKey(run *AgentRun) string {
+	if run.BudgetKey != "" {
+		return run.BudgetKey
+	}
+	return budgetKey(run.Provider, run.Harness)
+}
+
+// budgetLegacy is what the state of key was kept under before S-0720: the
+// harness, key's first word, when key is a harness's (budgetKeyOf); else key
+// itself, a provider, whose name has no space (manifest.ProviderErrors).
+func budgetLegacy(key string) string {
+	name, _, _ := strings.Cut(key, " ")
+	return name
+}
+
+// budgetIn is the key of all that the state of key is under: key when all
+// has it; else its legacy key when all has that, a state set before S-0720,
+// which holds every start on its harness, whatever its program and login,
+// since which login reached the limit cannot be told; else key, under which
+// a state is set. So a run that ends on the limit while only a legacy state
+// is set extends it, and the legacy state's probe that ends clean clears it.
+func budgetIn(all map[string]Budget, key string) string {
+	if _, ok := all[key]; ok {
+		return key
+	}
+	if _, ok := all[budgetLegacy(key)]; ok {
+		return budgetLegacy(key)
+	}
+	return key
 }
 
 // probeOf is run, in the project at root, as the budget state knows it.
@@ -225,7 +294,8 @@ func (d Dir) Budgets() ([]Budget, error) {
 	return out, nil
 }
 
-// budgetHeld is the budget state of key, and whether it holds a start at now.
+// budgetHeld is the budget state of key (budgetIn), and whether it holds a
+// start at now.
 func (d Dir) budgetHeld(key string, now time.Time) (Budget, bool, error) {
 	budgetMu.Lock()
 	defer budgetMu.Unlock()
@@ -233,16 +303,16 @@ func (d Dir) budgetHeld(key string, now time.Time) (Budget, bool, error) {
 	if err != nil {
 		return Budget{}, false, err
 	}
-	b, ok := all[key]
+	b, ok := all[budgetIn(all, key)]
 	return b, ok && b.Held(now), nil
 }
 
-// budgetStart is the gate a start of run on key passes before it spawns: it
-// goes when no state is set; it is held while the state holds; once Until
-// has passed it goes as the probe, claimed for it, unless a probe still runs.
-// A probe whose process is gone, or that recorded none within
-// budgetProbeSpawn, is claimed over; one that ran past budgetProbeServed
-// clears the state, and the start goes.
+// budgetStart is the gate a start of run passes before it spawns, at the
+// state of key (budgetIn): it goes when no state is set; it is held
+// while the state holds; once Until has passed it goes as the probe, claimed
+// for it, unless a probe still runs. A probe whose process is gone, or that
+// recorded none within budgetProbeSpawn, is claimed over; one that ran past
+// budgetProbeServed clears the state, and the start goes.
 func (d Dir) budgetStart(key string, run BudgetProbe, now time.Time) (budgetGate, budgetChange, error) {
 	budgetMu.Lock()
 	defer budgetMu.Unlock()
@@ -250,6 +320,7 @@ func (d Dir) budgetStart(key string, run BudgetProbe, now time.Time) (budgetGate
 	if err != nil {
 		return budgetGate{}, budgetChange{}, err
 	}
+	key = budgetIn(all, key)
 	b, ok := all[key]
 	switch {
 	case !ok:
@@ -269,8 +340,8 @@ func (d Dir) budgetStart(key string, run BudgetProbe, now time.Time) (budgetGate
 	return budgetGate{Go: true, Probe: true, State: b}, budgetChange{Kind: budgetProbing, State: b, Run: run}, d.write(d.budgetFile(), all)
 }
 
-// budgetSpawned records the process of run, the probe on key, once it is
-// spawned; nothing when run is not the probe.
+// budgetSpawned records the process of run, the probe of the state of
+// key, once it is spawned; nothing when run is not the probe.
 func (d Dir) budgetSpawned(key string, run BudgetProbe) error {
 	budgetMu.Lock()
 	defer budgetMu.Unlock()
@@ -278,6 +349,7 @@ func (d Dir) budgetSpawned(key string, run BudgetProbe) error {
 	if err != nil {
 		return err
 	}
+	key = budgetIn(all, key)
 	b, ok := all[key]
 	if !ok || !b.Probe.is(run) {
 		return nil
@@ -287,8 +359,9 @@ func (d Dir) budgetSpawned(key string, run BudgetProbe) error {
 	return d.write(d.budgetFile(), all)
 }
 
-// budgetRelease frees the probe on key for run, whose start could not be
-// made, so that the next start probes; nothing when run is not the probe.
+// budgetRelease frees the probe of the state of key for run, whose start
+// could not be made, so that the next start probes; nothing when run is not
+// the probe.
 func (d Dir) budgetRelease(key string, run BudgetProbe) (budgetChange, error) {
 	budgetMu.Lock()
 	defer budgetMu.Unlock()
@@ -296,6 +369,7 @@ func (d Dir) budgetRelease(key string, run BudgetProbe) (budgetChange, error) {
 	if err != nil {
 		return budgetChange{}, err
 	}
+	key = budgetIn(all, key)
 	b, ok := all[key]
 	if !ok || !b.Probe.is(run) {
 		return budgetChange{}, nil
@@ -305,15 +379,16 @@ func (d Dir) budgetRelease(key string, run BudgetProbe) (budgetChange, error) {
 	return budgetChange{Kind: budgetReleased, State: b, Run: run}, d.write(d.budgetFile(), all)
 }
 
-// budgetEnded records the end of run on key, on lim, the usage limit it
-// ended on, or nil when it ended on none, at now. A run on the limit sets
-// the state when none is set: until the reset lim names, when it is after
-// now, else for the first backoff. When one is set, a later reset extends it
-// to that reset, and a refusal after Until passed, the probe's included,
-// doubles the backoff, up to budgetBackoffMax, and holds for it: the runs
-// that were going when the state was set, refused within its hold, do not
-// compound it. The probe's end frees the probe, and its end on anything but
-// the limit clears the state. Any other end changes nothing.
+// budgetEnded records the end of run in the state of key, on lim, the
+// usage limit it ended on, or nil when it ended on none, at now. A run on
+// the limit sets the state under key when none is set: until the reset
+// lim names, when it is after now, else for the first backoff. When one is
+// set, a later reset extends it to that reset, and a refusal after Until
+// passed, the probe's included, doubles the backoff, up to
+// budgetBackoffMax, and holds for it: the runs that were going when the
+// state was set, refused within its hold, do not compound it. The probe's
+// end frees the probe, and its end on anything but the limit clears the
+// state. Any other end changes nothing.
 func (d Dir) budgetEnded(key string, run BudgetProbe, lim *usage.Limit, now time.Time) (budgetChange, error) {
 	budgetMu.Lock()
 	defer budgetMu.Unlock()
@@ -321,6 +396,7 @@ func (d Dir) budgetEnded(key string, run BudgetProbe, lim *usage.Limit, now time
 	if err != nil {
 		return budgetChange{}, err
 	}
+	key = budgetIn(all, key)
 	now = now.UTC()
 	b, ok := all[key]
 	probe := ok && b.Probe.is(run)
@@ -517,12 +593,13 @@ func (l *launcher) budgetProjects() []string {
 	return out
 }
 
-// budgetStart is the gate run's start passes once its harness and provider
-// are resolved and before it spawns (budgetStart on the Dir), announcing
-// what it changed. A budget state that cannot be read is warned of and the
-// start goes: a file in error must not hold every start on the host.
+// budgetStart is the gate run's start passes once its harness, provider,
+// and budget key are resolved and before it spawns (budgetStart on the Dir),
+// announcing what it changed. A budget state that cannot be read is warned
+// of and the start goes: a file in error must not hold every start on the
+// host.
 func (l *launcher) budgetStart(run *AgentRun) budgetGate {
-	gate, ch, err := l.dir.budgetStart(budgetKey(run.Provider, run.Harness), probeOf(l.entry.Root, run), l.now())
+	gate, ch, err := l.dir.budgetStart(runBudgetKey(run), probeOf(l.entry.Root, run), l.now())
 	if err != nil {
 		l.warn("budget state not read before a start; it goes", "run", probeOf(l.entry.Root, run).Work, "err", err)
 		return budgetGate{Go: true}
@@ -534,7 +611,7 @@ func (l *launcher) budgetStart(run *AgentRun) budgetGate {
 // budgetSpawned records run's process on the probe, when run is the probe,
 // once it is spawned; an error is warned of.
 func (l *launcher) budgetSpawned(run *AgentRun) {
-	if err := l.dir.budgetSpawned(budgetKey(run.Provider, run.Harness), probeOf(l.entry.Root, run)); err != nil {
+	if err := l.dir.budgetSpawned(runBudgetKey(run), probeOf(l.entry.Root, run)); err != nil {
 		l.warn("budget state's probe not recorded with its process", "run", probeOf(l.entry.Root, run).Work, "err", err)
 	}
 }
@@ -542,7 +619,7 @@ func (l *launcher) budgetSpawned(run *AgentRun) {
 // budgetRelease frees the probe for run, whose start could not be made,
 // when run is the probe, and announces it; an error is warned of.
 func (l *launcher) budgetRelease(run *AgentRun) {
-	ch, err := l.dir.budgetRelease(budgetKey(run.Provider, run.Harness), probeOf(l.entry.Root, run))
+	ch, err := l.dir.budgetRelease(runBudgetKey(run), probeOf(l.entry.Root, run))
 	if err != nil {
 		l.warn("budget state's probe not freed", "run", probeOf(l.entry.Root, run).Work, "err", err)
 		return
@@ -554,7 +631,7 @@ func (l *launcher) budgetRelease(run *AgentRun) {
 // for none, in the budget state (budgetEnded on the Dir), and announces what
 // it changed; an error is warned of.
 func (l *launcher) budgetEnded(run *AgentRun, lim *usage.Limit) {
-	ch, err := l.dir.budgetEnded(budgetKey(run.Provider, run.Harness), probeOf(l.entry.Root, run), lim, l.now())
+	ch, err := l.dir.budgetEnded(runBudgetKey(run), probeOf(l.entry.Root, run), lim, l.now())
 	if err != nil {
 		l.warn("budget state not recorded at a run's end", "run", probeOf(l.entry.Root, run).Work, "err", err)
 		return
@@ -562,10 +639,10 @@ func (l *launcher) budgetEnded(run *AgentRun, lim *usage.Limit) {
 	l.budgetChanged(ch)
 }
 
-// budgetKeyFor is the key a start of agent under cfg is held by (budgetKey):
-// the provider agent names, or the harness it would run on, as harness.For
-// picks it; "" when no harness can start it, which the start refuses on its
-// own.
+// budgetKeyFor is the key a start of agent under cfg is held by
+// (budgetKeyOf): the provider agent names, or the harness it would run on, as
+// harness.For picks it, with its program and login; "" when no harness can
+// start it, which the start refuses on its own.
 func budgetKeyFor(cfg AgentConfig, agent *manifest.Agent) string {
 	name, _, err := harness.For(agent, cfg.host(harness.Command).Program != "")
 	if err != nil {
@@ -575,12 +652,13 @@ func budgetKeyFor(cfg AgentConfig, agent *manifest.Agent) string {
 	if agent != nil {
 		provider = agent.Provider
 	}
-	return budgetKey(provider, name)
+	return budgetKeyOf(cfg, name, provider)
 }
 
-// budgetHolds is the budget state of key, and whether it holds a start at
-// the launcher's clock; a state that cannot be read is warned of and holds
-// nothing, as at a start (budgetStart), and an empty key holds nothing.
+// budgetHolds is the budget state of key (budgetIn), and whether it holds a
+// start at the launcher's clock; a state that cannot be read is warned of
+// and holds nothing, as at a start (budgetStart), and an empty key holds
+// nothing.
 func (l *launcher) budgetHolds(key string) (Budget, bool) {
 	if key == "" {
 		return Budget{}, false

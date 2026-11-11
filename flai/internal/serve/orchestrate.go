@@ -173,7 +173,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	case run != nil && run.Held:
 		return
 	case run != nil && run.UsageLimited:
-		if _, held := r.starter.budgetHolds(budgetKey(run.Provider, run.Harness)); held {
+		if _, held := r.starter.budgetHolds(runBudgetKey(run)); held {
 			return
 		}
 	case run != nil && run.Outcome == OutcomeFailed && !r.due(run):

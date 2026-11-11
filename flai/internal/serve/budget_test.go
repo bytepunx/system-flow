@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
@@ -70,6 +72,21 @@ func (lab *budgetLab) held(key string) (Budget, bool) {
 	}
 	return b, held
 }
+
+// on is a story's agent's run on harness name under cfg, with provider, ""
+// for none, and the budget key its start resolves (budgetKeyOf).
+func (lab *budgetLab) on(story string, cfg AgentConfig, name, provider string) *AgentRun {
+	run := lab.run(story, provider)
+	run.Harness, run.BudgetKey = name, budgetKeyOf(cfg, name, provider)
+	return run
+}
+
+// rmhclod and meclod are two hosts' configurations whose claude-code runs a
+// program each, each its own login, as the operator's do.
+var (
+	rmhclod = AgentConfig{Harnesses: map[string]harness.Host{harness.ClaudeCode: {Program: "rmhclod", Args: []string{"--verbose"}}}}
+	meclod  = AgentConfig{Harnesses: map[string]harness.Host{harness.ClaudeCode: {Program: "meclod"}}}
+)
 
 // limited is a refusal on the usage limit that names reset, zero for none.
 func limited(reset time.Time) *usage.Limit {
@@ -552,5 +569,129 @@ func TestNoChannelSendsNothingAndWarnsOnce(t *testing.T) {
 		if strings.Contains(logs, "budget notice sent") {
 			t.Errorf("registered %v: a notice is logged as sent:\n%s", registered, logs)
 		}
+	}
+}
+
+// S-0720: a run on one program of claude-code that ends on the limit holds
+// the starts of that program, and not those of another program on the same
+// harness, which may run under another login; a program the operator set
+// none for is the adapter's default, and the program's arguments are not
+// part of the key.
+func TestALimitHoldsTheProgramItWasReachedOnAndNotAnother(t *testing.T) {
+	for _, c := range []struct {
+		cfg  AgentConfig
+		name string
+		want string
+	}{
+		{rmhclod, harness.ClaudeCode, "claude-code rmhclod"},
+		{meclod, harness.ClaudeCode, "claude-code meclod"},
+		{AgentConfig{}, harness.ClaudeCode, "claude-code claude"},
+		{AgentConfig{Command: []string{"mycmd", "-x"}}, harness.Command, "command mycmd"},
+	} {
+		if got := budgetKeyOf(c.cfg, c.name, ""); got != c.want {
+			t.Errorf("key of %s under %+v = %q, want %q", c.name, c.cfg, got, c.want)
+		}
+	}
+	lab := newBudgetLab(t)
+	lab.l.budgetEnded(lab.on("S-0001", rmhclod, harness.ClaudeCode, ""), limited(budgetReset))
+	if gate := lab.l.budgetStart(lab.on("S-0002", rmhclod, harness.ClaudeCode, "")); gate.Go || gate.State.Provider != "claude-code rmhclod" {
+		t.Errorf("a start of the program that reached the limit is %+v, want held by claude-code rmhclod", gate)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0003", meclod, harness.ClaudeCode, "")); !gate.Go || gate.Probe {
+		t.Errorf("a start of another program on claude-code is %+v, want it to go", gate)
+	}
+	if b, held := lab.l.budgetHolds(budgetKeyFor(rmhclod, nil)); !held || b.Provider != "claude-code rmhclod" {
+		t.Errorf("a start asked for by hand of the program that reached the limit is held %v by %+v", held, b)
+	}
+	if b, held := lab.l.budgetHolds(budgetKeyFor(meclod, nil)); held {
+		t.Errorf("a start asked for by hand of another program is held by %+v", b)
+	}
+}
+
+// A run that names a provider is kept under the provider, as before S-0720,
+// whatever its harness's program, and holds no start that names none.
+func TestARunThatNamesAProviderIsKeptUnderIt(t *testing.T) {
+	if got := budgetKeyOf(rmhclod, harness.ClaudeCode, "anthropic"); got != "anthropic" {
+		t.Errorf("a run naming anthropic is kept under %q, want the provider", got)
+	}
+	if got := budgetKeyFor(rmhclod, &manifest.Agent{Provider: "anthropic"}); got != "anthropic" {
+		t.Errorf("a start naming anthropic is held by %q, want the provider", got)
+	}
+	lab := newBudgetLab(t)
+	lab.l.budgetEnded(lab.on("S-0001", rmhclod, harness.ClaudeCode, "anthropic"), limited(budgetReset))
+	if gate := lab.l.budgetStart(lab.on("S-0002", meclod, harness.ClaudeCode, "anthropic")); gate.Go || gate.State.Provider != "anthropic" {
+		t.Errorf("a start on the provider from another program is %+v, want held by anthropic", gate)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0003", rmhclod, harness.ClaudeCode, "")); !gate.Go {
+		t.Errorf("a start that names no provider is %+v, want it to go", gate)
+	}
+}
+
+// budget.json before S-0720 keeps a state under the harness alone. It is
+// read, and holds every start on its harness, whatever its program, since
+// which login reached the limit cannot be told: a refusal while it holds
+// extends it rather than set a state of its own, and its probe's clean end
+// clears it. A start that names a provider is not held by it.
+func TestAStateOfTheOldShapeHoldsEveryProgramOnItsHarnessUntilItClears(t *testing.T) {
+	lab := newBudgetLab(t)
+	if err := os.MkdirAll(string(lab.dir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	old := `{"claude-code": {"provider": "claude-code", "limit": "usage_limit_reached", "status": 429,
+		"since": "2026-10-28T07:00:00Z", "until": "2026-10-28T08:00:00Z", "reset": "2026-10-28T08:00:00Z", "backoff": "5m0s"}}`
+	if err := os.WriteFile(lab.dir.budgetFile(), []byte(old), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, cfg := range []AgentConfig{rmhclod, meclod} {
+		if gate := lab.l.budgetStart(lab.on("S-0001", cfg, harness.ClaudeCode, "")); gate.Go || gate.State.Provider != "claude-code" {
+			t.Errorf("a start of %+v is %+v, want held by the old claude-code state", cfg, gate)
+		}
+		if _, held := lab.l.budgetHolds(budgetKeyFor(cfg, nil)); !held {
+			t.Errorf("a start of %+v asked for by hand is not held by the old claude-code state", cfg)
+		}
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0002", meclod, harness.ClaudeCode, "anthropic")); !gate.Go {
+		t.Errorf("a start naming a provider is %+v, want it to go", gate)
+	}
+	later := budgetReset.Add(time.Hour)
+	lab.l.budgetEnded(lab.on("S-0003", meclod, harness.ClaudeCode, ""), limited(later))
+	if all, err := lab.dir.Budgets(); err != nil || len(all) != 1 || all[0].Provider != "claude-code" || !all[0].Until.Equal(later) {
+		t.Fatalf("after a refusal while the old state holds, budgets = %+v, %v; want the old state extended to %s", all, err, later)
+	}
+	lab.at = later
+	probe := lab.on("S-0004", rmhclod, harness.ClaudeCode, "")
+	if gate := lab.l.budgetStart(probe); !gate.Go || !gate.Probe {
+		t.Fatalf("the first start after the reset is %+v, want the probe of the old state", gate)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0005", meclod, harness.ClaudeCode, "")); gate.Go {
+		t.Errorf("another program's start while the old state's probe runs is %+v, want held", gate)
+	}
+	lab.l.budgetEnded(probe, nil)
+	if all, err := lab.dir.Budgets(); err != nil || len(all) != 0 {
+		t.Errorf("after the probe's clean end budgets = %+v, %v; want none", all, err)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0005", meclod, harness.ClaudeCode, "")); !gate.Go || gate.Probe {
+		t.Errorf("after the old state cleared a start is %+v, want it to go", gate)
+	}
+}
+
+// The container harness's key names its login, the folder the host mounts
+// into it, so that a limit on one login holds no start under another.
+func TestTheContainerKeyNamesItsLogin(t *testing.T) {
+	rmh := AgentConfig{Harnesses: map[string]harness.Host{harness.Container: {Login: "/home/alex/.claude-rmh"}}}
+	me := AgentConfig{Harnesses: map[string]harness.Host{harness.Container: {Program: "podman", Login: "/home/alex/.claude-me"}}}
+	if got := budgetKeyOf(rmh, harness.Container, ""); got != "container docker login /home/alex/.claude-rmh" {
+		t.Errorf("key = %q, want the container's default program and its login", got)
+	}
+	if got := budgetKeyOf(me, harness.Container, ""); got != "container podman login /home/alex/.claude-me" {
+		t.Errorf("key = %q, want the container's program and its login", got)
+	}
+	lab := newBudgetLab(t)
+	lab.l.budgetEnded(lab.on("S-0001", rmh, harness.Container, ""), limited(budgetReset))
+	if gate := lab.l.budgetStart(lab.on("S-0002", rmh, harness.Container, "")); gate.Go {
+		t.Errorf("a start under the login that reached the limit is %+v, want held", gate)
+	}
+	if gate := lab.l.budgetStart(lab.on("S-0003", me, harness.Container, "")); !gate.Go {
+		t.Errorf("a start under another login is %+v, want it to go", gate)
 	}
 }
