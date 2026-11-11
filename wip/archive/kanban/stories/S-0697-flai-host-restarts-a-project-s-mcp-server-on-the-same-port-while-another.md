@@ -3,10 +3,10 @@ id: S-0697
 type: story
 nature: remediation
 title: flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:54:33Z
-updated: 2026-11-11T08:19:28Z
+updated: 2026-11-11T08:48:03Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:09Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T08:19:23Z
     by: system-flow
+  - to: done
+    at: 2026-11-11T08:48:03Z
+    by: alex
 tags: [flai, host, mcp]
 topics: [mcp, host]
 touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, design/system/flai-cli.md, docs/operators/index.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
