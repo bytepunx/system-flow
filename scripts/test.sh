@@ -5,6 +5,7 @@
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT/flai"
-echo "behavior tests (go test -short)"
-go test -race -short -count=1 ./...
+# One core and no race detector, as the close-out's go-test tier (S-0722).
+echo "behavior tests (go test -short, one core)"
+GOMAXPROCS=1 go test -p 1 -short -count=1 ./...
 "$ROOT/scripts/flaiover-unit.sh"

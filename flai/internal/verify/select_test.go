@@ -707,7 +707,9 @@ func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *test
 			got = s.Argv
 		}
 	}
-	flags := []string{"go", "test", "-json", "-race", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway"}
+	// one package at a time, every go process on one core, and no race
+	// detector, so that close-outs at once do not saturate the host (S-0722)
+	flags := []string{"env", "GOMAXPROCS=1", "go", "test", "-json", "-p", "1", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway"}
 	if len(got) <= len(flags) || !reflect.DeepEqual(got[:len(flags)], flags) {
 		t.Fatalf("go-test runs %q, want %q and the packages", got, flags)
 	}
@@ -725,6 +727,41 @@ func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *test
 	}
 	if want := []string{"../scripts/integration.sh", "-json"}; !reflect.DeepEqual(integration, want) {
 		t.Errorf("integration runs %q, want %q, which runs go test without -short", integration, want)
+	}
+}
+
+// S-0722: the race detector runs in this repository's race tier alone, the
+// full suite under -race on every core, and only by name, flai test race, as
+// the gateway tier does: no close-out, --all run, or batch runs it unasked.
+// Not gated under -short, so that make test catches a manifest that changes it.
+func TestRepositoryManifestRunsTheRaceDetectorOnlyByName(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, ok := SelectTier(tiers, "race")
+	if !ok || !s.Tier.Manual || s.Tier.Queue || strings.Join(s.Argv, " ") != "../scripts/integration.sh --race -json" {
+		t.Fatalf("the race tier: %+v %v", s, ok)
+	}
+	paths := []string{"scripts/integration.sh", "flai/internal/verify/select.go"}
+	runs := map[string][]Selected{
+		"paths": Select(os.DirFS(root), tiers, paths, false),
+		"all":   Select(os.DirFS(root), tiers, nil, true),
+		"story": SelectStory(os.DirFS(root), tiers, paths),
+	}
+	for name, run := range runs {
+		for _, sel := range run {
+			if sel.Tier.Name == "race" {
+				t.Errorf("a %s run selects the race tier", name)
+			}
+			if slices.Contains(sel.Argv, "-race") || slices.Contains(sel.Argv, "--race") {
+				t.Errorf("a %s run's tier %s runs %q, with the race detector", name, sel.Tier.Name, sel.Argv)
+			}
+		}
 	}
 }
 

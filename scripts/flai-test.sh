@@ -3,10 +3,13 @@
 # golangci-lint v2 (scripts/install-tools.sh).
 # The full Go run in integration.sh holds every short test, so test.sh's short
 # Go run is left out here and only its vitest half, flaiover-unit.sh, is kept.
+# integration.sh runs with --race, the race tier's run, on every core: this is
+# where the race detector runs, since no close-out runs it (S-0722).
 # Keep in step with the tiers under tests in system-flow.yaml, which flai test
 # runs for the paths a change touches: shellcheck, gofmt, vet, golangci-lint,
-# vitest, integration, and smoke here; go-test, integration.sh's Go run on the
-# changed packages, is held by integration, and markdown is lint-md.sh's.
+# vitest, race, and smoke here; go-test, integration.sh's Go run on the
+# changed packages, is held by race, as integration is, and markdown is
+# lint-md.sh's.
 set -eu
 . "$(dirname "$0")/env.sh"
 "$ROOT/scripts/shellcheck.sh"
@@ -23,5 +26,5 @@ case "$version" in
 esac
 "$lint" run ./...
 "$ROOT/scripts/flaiover-unit.sh"
-"$ROOT/scripts/integration.sh"
+"$ROOT/scripts/integration.sh" --race
 "$ROOT/scripts/smoke.sh"

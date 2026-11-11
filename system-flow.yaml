@@ -76,7 +76,7 @@ tests:
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: golangci-json
   - name: go-test
-    command: [go, test, "-json", "-race", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "{importers}"]
+    command: [env, "GOMAXPROCS=1", go, test, "-json", "-p", "1", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "{importers}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
@@ -156,6 +156,13 @@ tests:
     command: [scripts/gateway-smoke.sh]
     paths: ["scripts/gateway-smoke.sh"]
     format: plain
+    all_only: true
+    manual: true
+  - name: race
+    command: ["../scripts/integration.sh", "--race", "-json"]
+    dir: flai
+    paths: ["scripts/integration.sh"]
+    format: go-test-json
     all_only: true
     manual: true
 orchestration:

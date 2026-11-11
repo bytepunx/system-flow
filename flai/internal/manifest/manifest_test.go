@@ -1888,7 +1888,8 @@ func TestTestErrors(t *testing.T) {
 // timeout of its own is warned of, naming the tier's index, field, and name,
 // since go's 10-minute default panics naming only the package; one that names
 // a timeout, in any of the forms go takes, and one that runs a script or
-// another go command, are not.
+// another go command, are not. go test run through env, with the variables it
+// sets, is still go test (S-0722).
 func TestTestWarnings(t *testing.T) {
 	tier := func(command, all []string) TestTier {
 		return TestTier{Name: "go-test", Command: command, AllCommand: all, Paths: []string{"flai/**"}}
@@ -1904,6 +1905,9 @@ func TestTestWarnings(t *testing.T) {
 		{"go by its path", tier([]string{"/usr/local/go/bin/go", "test", "{packages}"}, nil), []string{`tests[0].command (tier "go-test") runs go test with no -timeout`}},
 		{"a timeout after -args is still one", tier([]string{"go", "test", "{packages}", "-args", "-test.timeout=20m"}, nil), nil},
 		{"a value is not a flag", tier([]string{"go", "test", "-run", "timeout", "{packages}"}, nil), []string{`tests[0].command (tier "go-test")`}},
+		{"go test through env", tier([]string{"env", "GOMAXPROCS=1", "go", "test", "-json", "{packages}"}, nil), []string{`tests[0].command (tier "go-test") runs go test with no -timeout`}},
+		{"a timeout through env", tier([]string{"/usr/bin/env", "GOMAXPROCS=1", "GOFLAGS=-mod=mod", "go", "test", "-timeout", "20m", "{packages}"}, nil), nil},
+		{"env running another program", tier([]string{"env", "GOMAXPROCS=1", "make", "test"}, nil), nil},
 		{"three dashes are not the flag", tier([]string{"go", "test", "---timeout=20m", "{packages}"}, nil), []string{`tests[0].command (tier "go-test")`}},
 	} {
 		t.Run(c.name, func(t *testing.T) {

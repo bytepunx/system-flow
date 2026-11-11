@@ -276,7 +276,7 @@ func (m Manifest) TestWarnings() []string {
 			field string
 			args  []string
 		}{{"command", t.Command}, {"all_command", t.AllCommand}} {
-			if runsGoTest(c.args) && !slices.ContainsFunc(c.args[2:], isTimeoutFlag) {
+			if flags, ok := goTestFlags(c.args); ok && !slices.ContainsFunc(flags, isTimeoutFlag) {
 				warns = append(warns, testField(i, t, c.field)+` runs go test with no -timeout, so go's 10-minute default panics naming only the package when a slow host reaches it; add "-timeout" and a duration above the slowest package's, such as "20m"`)
 			}
 		}
@@ -284,10 +284,21 @@ func (m Manifest) TestWarnings() []string {
 	return warns
 }
 
-// runsGoTest reports whether args run go test: the program is go, by name or
-// by a path ending in it, and its first argument is test.
-func runsGoTest(args []string) bool {
-	return len(args) >= 2 && filepath.Base(strings.TrimSpace(args[0])) == "go" && args[1] == "test"
+// goTestFlags is what follows test when args run go test: the program is go,
+// by name or by a path ending in it, and its first argument is test, either
+// directly or through env and the variables it sets, as a tier that runs go
+// test at GOMAXPROCS=1 does (S-0722).
+func goTestFlags(args []string) ([]string, bool) {
+	if len(args) > 0 && filepath.Base(strings.TrimSpace(args[0])) == "env" {
+		args = args[1:]
+		for len(args) > 0 && !strings.HasPrefix(args[0], "-") && strings.Contains(args[0], "=") {
+			args = args[1:]
+		}
+	}
+	if len(args) >= 2 && filepath.Base(strings.TrimSpace(args[0])) == "go" && args[1] == "test" {
+		return args[2:], true
+	}
+	return nil, false
 }
 
 // isTimeoutFlag reports whether a is go test's timeout flag, with one dash or
