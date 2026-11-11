@@ -3168,7 +3168,7 @@ func TestAStorySentBackFromReviewGetsItsAgentOnce(t *testing.T) {
 	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
 	got, _ := os.ReadFile(out)
 	for _, want := range []string{
-		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the required check ci failed on abc1234def56 of pull request #12.",
+		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the required check `ci` failed on abc1234def56 of pull request #12.",
 		"thread_get (flai thread show " + th.ID + " on the host); your inbox lists it, awaiting you",
 		"move " + id + " to review again; flai serve pushes the fix",
 		"--resume " + first.Session,
@@ -3240,7 +3240,7 @@ func TestAStorySentBackIsStartedAfreshOrBeforeARestart(t *testing.T) {
 		}
 		got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
 		for _, want := range []string{
-			"because flai sent it back from review to in-progress, on thread " + th.ID + ": the required check ci failed on abc1234 of pull request #12.",
+			"because flai sent it back from review to in-progress, on thread " + th.ID + ": the required check `ci` failed on abc1234 of pull request #12.",
 			"This host has no session of its last agent to go on in.",
 			"your first inbox lists it, awaiting you",
 			"flai stream open " + id,

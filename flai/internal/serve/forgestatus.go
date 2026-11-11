@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -403,17 +404,39 @@ func sendBackText(st forge.Status, fresh []failure, fenced bool) string {
 	return b.String()
 }
 
-// sendBackReason names each failure the story is sent back for, for its move.
+// sendBackReason names each failure the story is sent back for, for its move
+// and for the start prompt of the agent flai serve starts for it. A check's
+// name and a reviewer's login are the forge's text, not flai's: each is
+// quoted as forgeName quotes it, so that neither reads as an instruction in
+// the prompt (I-0340).
 func sendBackReason(pr int, backs []forge.SendBack) string {
 	parts := make([]string, 0, len(backs))
 	for _, b := range backs {
 		if b.Kind == forge.EventCheck {
-			parts = append(parts, fmt.Sprintf("the required check %s failed on %s of pull request #%d", b.Name, short(b.Commit), pr))
+			parts = append(parts, fmt.Sprintf("the required check %s failed on %s of pull request #%d", forgeName(b.Name), short(b.Commit), pr))
 		} else {
-			parts = append(parts, fmt.Sprintf("%s requested changes on pull request #%d", b.Name, pr))
+			parts = append(parts, fmt.Sprintf("%s requested changes on pull request #%d", forgeName(b.Name), pr))
 		}
 	}
 	return strings.Join(parts, "; ")
+}
+
+// forgeName is name, a check's name or a reviewer's login as the forge gave
+// it, on one line in a code span: its line ends, tabs, and other white space
+// control characters made one space, its other control and format characters
+// (such as ESC and a bidirectional override) dropped, and its runs of spaces
+// folded.
+func forgeName(name string) string {
+	name = strings.Map(func(r rune) rune {
+		switch {
+		case unicode.IsControl(r) && unicode.IsSpace(r):
+			return ' '
+		case unicode.IsControl(r), unicode.Is(unicode.Cf, r):
+			return -1
+		}
+		return r
+	}, name)
+	return codeSpan(strings.Join(strings.Fields(name), " "))
 }
 
 // quote is the forge's text s, trimmed to quoteLimit characters: a
