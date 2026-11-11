@@ -3,16 +3,37 @@ id: T-2988
 type: task
 nature: remediation
 title: flai-cli.md says the watcher's first snapshot is taken before a served project's first looks
-status: backlog
+status: done
 parent: S-0690
 owner: alex
 created: 2026-11-10T10:29:50Z
-updated: 2026-11-10T10:29:50Z
-transitions: []
+updated: 2026-11-11T02:33:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:32:56Z
+    by: agent-S-0690
+  - to: in-progress
+    at: 2026-11-11T02:33:00Z
+    by: agent-S-0690
+  - to: done
+    at: 2026-11-11T02:33:19Z
+    by: agent-S-0690
 stream: S-0690
 tags: [docs, serve]
 touches: [design/system/flai-cli.md]
 after: [T-2984]
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1640
+      cache_read: 491315
+      cache_write: 14036
+      cost: 0.2434
 ---
 # T-2988 flai-cli.md says the watcher's first snapshot is taken before a served project's first looks
 

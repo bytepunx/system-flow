@@ -24,16 +24,16 @@ touches: [design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-s
 after: [T-3034, T-3037]
 usage:
   source: log
-  seconds: 5
+  seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 633039
-      cache_write: 846
-      cost: 0.3212
+      input: 5
+      output: 651
+      cache_read: 627579
+      cache_write: 16010
+      cost: 0.2344
 ---
 # T-3040 Close I-0292 with the reason that the analysis schedule now starts analysis-cadence
 

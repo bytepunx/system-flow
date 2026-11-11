@@ -9,7 +9,7 @@ date: 2026-10-29
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0543, TH-0813]
+cited: [S-0543, S-0690, T-2984, TH-0813]
 ---
 
 # D-0427 flai serve's Run returned before a served project's loop goroutine and its watcher's looks ended, so a look in flight wrote into a test's temp folder after the test and its cleanup failed with directory not empty

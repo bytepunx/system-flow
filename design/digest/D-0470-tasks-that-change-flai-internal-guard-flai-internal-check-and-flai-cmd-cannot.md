@@ -53,6 +53,7 @@ Layer 1 runs as two task sub-agents at once. Both build and test the package `it
 ```
 
 So two tasks in one package that share no file may still share a layer, one in a task worktree, copied back rather than merged.
+
 S-0674 met it between `flai/internal/storygit` and `flai/internal/taskdone`. Its planner put T-2939 (`storygit/committed.go`) and T-2940 (`taskdone/taskdone.go`) in one layer, as they share no path, and its agent ran T-2940 in a task worktree of its own (`wip/archive/agents/S-0674.md`):
 
 ```text

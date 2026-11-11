@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1038]
 ---
 
 # D-0579 Plan for S-0692: make analysis.formula settable, set a weekly analysis schedule, four tasks in three layers; two questions: The revisited plan is approved, and S-0692 is finalized

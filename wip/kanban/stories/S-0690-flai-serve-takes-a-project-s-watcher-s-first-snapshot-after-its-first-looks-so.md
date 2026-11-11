@@ -6,7 +6,7 @@ title: flai serve takes a project's watcher's first snapshot after its first loo
 status: in-progress
 owner: alex
 created: 2026-11-10T08:49:01Z
-updated: 2026-11-11T02:10:58Z
+updated: 2026-11-11T05:05:18Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:25Z
@@ -23,19 +23,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 361
-  estimated: true
-  priced_by: estimate
+  seconds: 1354
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 15
+      test_runs: 4
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 174
-      cache_read: 2060857
-      cache_write: 182243
-      cost: 0.8273
+      input: 96
+      output: 28633
+      cache_read: 8579459
+      cache_write: 245100
+      cost: 4.2497
   strategic:
     - kind: orchestrator
       seconds: 17
@@ -72,8 +72,8 @@ finalized:
 This story remediates [I-0273](../../../design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md), "flai serve takes a project's watcher's first snapshot after its first looks, so a change made in between waits up to a minute for the next look". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0273 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0273 is closed with `flai issue close I-0273 --reason` saying what fixed it
+- [x] The cause I-0273 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0273 is closed with `flai issue close I-0273 --reason` saying what fixed it
 
 ## Tasks
 - T-2981 watch.Watcher takes its first snapshot on a call of its own before Run, and Run compares its first tick with it

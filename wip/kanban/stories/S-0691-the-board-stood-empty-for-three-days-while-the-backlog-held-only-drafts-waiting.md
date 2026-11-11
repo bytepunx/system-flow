@@ -3,14 +3,17 @@ id: S-0691
 type: story
 nature: improvement
 title: The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T02:27:14Z
+updated: 2026-11-11T05:06:07Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:32Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T05:06:07Z
+    by: agent-S-0691
 tags: [flai]
 topics: [ready, threads]
 touches: [design/adrs, design/adrs/README.md, flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go, flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/agents_launch.go, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, design/issues/summary.md]

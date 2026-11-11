@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0690]
 ---
 
 # D-0513 flai serve's project loop makes its one-minute time.After again on each pass, and it stays unchanged until a measurement shows a minute look delayed

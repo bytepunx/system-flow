@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0543]
+cited: [S-0543, S-0690]
 ---
 
 # D-0491 Four integration-tier tests that failed close-outs on a loaded host raced their own setup, so each now waits for the event it depends on rather than sleeping longer (I-0247)

@@ -3,16 +3,37 @@ id: T-2989
 type: task
 nature: remediation
 title: Close I-0273 with the fix that takes the watcher's first snapshot before the first looks
-status: backlog
+status: done
 parent: S-0690
 owner: alex
 created: 2026-11-10T10:29:54Z
-updated: 2026-11-10T10:29:54Z
-transitions: []
+updated: 2026-11-11T02:33:28Z
+transitions:
+  - to: ready
+    at: 2026-11-11T02:32:57Z
+    by: agent-S-0690
+  - to: in-progress
+    at: 2026-11-11T02:33:01Z
+    by: agent-S-0690
+  - to: done
+    at: 2026-11-11T02:33:28Z
+    by: agent-S-0690
 stream: S-0690
 tags: [issues]
 touches: [design/issues/I-0273-flai-serve-takes-a-project-s-watcher-s-first-snapshot-after-its-first-looks-so.md, design/issues/summary.md]
 after: [T-2984]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1666
+      cache_read: 499062
+      cache_write: 14257
+      cost: 0.2472
 ---
 # T-2989 Close I-0273 with the fix that takes the watcher's first snapshot before the first looks
 

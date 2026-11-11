@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 601
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 77
-      output: 15988
-      cache_read: 8955464
-      cache_write: 453919
-      cost: 4.7759
+      input: 66
+      output: 9366
+      cache_read: 9027914
+      cache_write: 230303
+      cost: 3.3715
 ---
 # T-3031 flai manifest set writes analysis.formula and refuses a formula no file defines or one with an input that has no default
 

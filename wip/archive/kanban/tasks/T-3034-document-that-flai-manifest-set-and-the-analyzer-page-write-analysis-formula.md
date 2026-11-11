@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 438
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 9743
-      cache_read: 5457200
-      cache_write: 276605
-      cost: 2.9103
+      input: 40
+      output: 5707
+      cache_read: 5501349
+      cache_write: 140340
+      cost: 2.0545
 ---
 # T-3034 Document that flai manifest set and the Analyzer page write analysis.formula, and regenerate the command reference
 

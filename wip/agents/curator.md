@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 214.8020
-accrued_seconds: 25156
-tasks_completed: 137
-last_run: 2026-11-11T01:45:53Z
+accrued_cost: 217.3578
+accrued_seconds: 25470
+tasks_completed: 139
+last_run: 2026-11-11T02:32:53Z
 ---
 
 # Curator activity
@@ -1107,3 +1107,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 54
 - Cost: 1.0733 USD, estimated
+
+### 2026-11-11T02:30:52Z
+
+- Summary: I wrote no new entries, merged S-0674 into D-0470 and TH-1038 into D-0580, absorbed nothing, and `flai digest compact` compacted none.
+- Trigger: accepted S-0674
+- Items: D-0427, D-0470, D-0491, D-0513, D-0579, D-0580
+- Seconds: 210
+- Cost: 1.7723 USD, estimated
+
+### 2026-11-11T02:32:53Z
+
+- Summary: I wrote no new entries, merged S-0704 into D-0559 and I-0269's fix with S-0695 into D-0524, absorbed nothing, and `flai digest compact` compacted none; the other candidates are already recorded in ADR-0281, ADR-0284, `design/system/server-performance.md`, D-0470, D-0579 and D-0580, or were plan chatter.
+- Trigger: accepted S-0676, S-0688, S-0695, S-0704
+- Items: D-0427, D-0524, D-0559
+- Seconds: 104
+- Cost: 0.7835 USD, estimated

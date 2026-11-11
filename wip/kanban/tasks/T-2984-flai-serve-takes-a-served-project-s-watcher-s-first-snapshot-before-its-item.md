@@ -3,11 +3,11 @@ id: T-2984
 type: task
 nature: remediation
 title: flai serve takes a served project's watcher's first snapshot before its item snapshot and its first looks
-status: in-progress
+status: done
 parent: S-0690
 owner: alex
 created: 2026-11-10T10:29:34Z
-updated: 2026-11-11T02:17:20Z
+updated: 2026-11-11T02:32:14Z
 transitions:
   - to: ready
     at: 2026-11-11T02:17:19Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T02:17:20Z
     by: agent-S-0690
+  - to: done
+    at: 2026-11-11T02:32:14Z
+    by: agent-S-0690
 stream: S-0690
 tags: [flai, serve]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
 after: [T-2981]
+usage:
+  source: log
+  seconds: 894
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 15252
+      cache_read: 4570021
+      cache_write: 130557
+      cost: 2.2637
 ---
 # T-2984 flai serve takes a served project's watcher's first snapshot before its item snapshot and its first looks
 
@@ -40,3 +55,5 @@ In `flai/internal/serve/serve_test.go`, add a test that reproduces I-0273. Serve
 - `flai test flai/internal/serve` passes.
 
 ## Notes
+
+`TestAChangeMadeDuringServesFirstLooksIsActedOnWithinSeconds` moves the story to review from the `Agent` hook of the first look after the role starter's, the role scheduler's, so the window is not a race: against `main`'s `serve.go` it failed 20 of 20 runs (`go test -short -count=20`, "no watcher run within 10 s of the move made in the first looks"). With the fix, it and `TestServeStartsADefinedRoleOnAnEventAndOnASchedule`, without the `watcherReports` probe wait (the helper is removed), passed 25 of 25 runs each under `-race -count=25`. A first version ended at the run's start and failed 4 of 20 on its own `TempDir` cleanup, with the role's stub still writing (D-0427); it now waits for the run's end and its activity entry. The dashboard's `change` notification is not asserted: `channel.Client.Notify` drops one sent before the dashboard connects, and the watcher's first tick can come first. The run, which only the watcher's report or the minute's look can start, shows the report.

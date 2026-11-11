@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2105.8326
-accrued_seconds: 1546844
-tasks_completed: 2900
-last_run: 2026-11-11T02:29:57Z
+accrued_cost: 2106.3546
+accrued_seconds: 1547008
+tasks_completed: 2905
+last_run: 2026-11-11T02:32:52Z
 ---
 
 # Orchestrator activity
@@ -20332,6 +20332,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0692, S-0676
 - Seconds: 172
 - Cost: 0.3369 USD, estimated
+
+### 2026-11-11T02:30:27Z
+
+- Summary: Decided not to start a new publish instance after S-0676's acceptance. release_evaluate is met under threshold (count 5 at or over 1; value 692.54 against 1000; pending S-0674, S-0676, S-0688, S-0695, S-0708). The open publish instance S-0718, in ready, publishes everything accepted and unreleased when it runs, so this batch goes with it.
+- Items: S-0718, S-0676
+- Seconds: 30
+- Cost: 0.0000 USD
+
+### 2026-11-11T02:31:06Z
+
+- Summary: Closed my thread TH-1062 on S-0704: alex accepted S-0704 at 02:30:26Z, and had resolved TH-1062 at the same time, so my entry repeats theirs. alex also accepted S-0688 and S-0695. Those two acceptances are in the publish batch S-0718 will release (5 pending, threshold met).
+- Items: S-0704, S-0718
+- Seconds: 39
+- Cost: 0.0940 USD, estimated
+
+### 2026-11-11T02:31:41Z
+
+- Summary: Both reasons needed nothing from me, because you settled each one first.
+- Items: none
+- Seconds: 35
+- Cost: 0.0831 USD, estimated
+
+### 2026-11-11T02:32:10Z
+
+- Summary: Release due after S-0674, S-0676, S-0688, S-0695 accepted: threshold policy met (count 5 at or over 1; value 692.54 USD/week under 1000), but started no new publish instance, because S-0718, an open instance of the publish formula, is already in ready and its flai release --pending publishes the whole pending batch (S-0674, S-0676, S-0688, S-0695, S-0708); a second instance would duplicate it and find nothing left.
+- Items: S-0674, S-0676, S-0688, S-0695, S-0708, S-0718
+- Seconds: 18
+- Cost: 0.1026 USD, estimated
+
+### 2026-11-11T02:32:52Z
+
+- Summary: A release is due, but I didn't start a new publish run. The story S-0718, made by the publish formula, is already in ready and will publish the whole pending batch when its agent works it.
+- Items: none
+- Seconds: 42
+- Cost: 0.2423 USD, estimated
 
 ## Refusals
 

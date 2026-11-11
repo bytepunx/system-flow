@@ -23,16 +23,16 @@ tags: [flai, watch]
 touches: [flai/internal/watch/watch.go, flai/internal/watch/watch_test.go]
 usage:
   source: log
-  seconds: 272
+  seconds: 273
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 8
-      cache_read: 195824
-      cache_write: 1287
-      cost: 0.0727
+      output: 640
+      cache_read: 191636
+      cache_write: 5475
+      cost: 0.0949
 ---
 # T-2981 watch.Watcher takes its first snapshot on a call of its own before Run, and Run compares its first tick with it
 
@@ -54,3 +54,5 @@ This is the first layer: it waits for no task.
 - `flai test flai/internal/watch` passes.
 
 ## Notes
+
+The method is `Watcher.Mark`. `TestAChangeMadeBetweenMarkAndRunIsReported` covers a fast and a slow path. The "Run with no Mark" test is the existing `TestReportsChangedAddedAndRemovedFilesUnderTheWatchedPathsOnly`, unchanged. `flai test` on `flai/internal/watch` passed.

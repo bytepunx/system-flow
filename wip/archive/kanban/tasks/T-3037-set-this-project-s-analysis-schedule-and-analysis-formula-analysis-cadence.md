@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 18
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 19
-      cache_read: 914310
-      cache_write: 2514
-      cost: 0.4646
+      input: 7
+      output: 942
+      cache_read: 907704
+      cache_write: 23156
+      cost: 0.339
 ---
 # T-3037 Set this project's analysis.schedule and analysis.formula analysis-cadence through flai manifest set
 

@@ -3,10 +3,10 @@ id: S-0692
 type: story
 nature: improvement
 title: No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:49:03Z
-updated: 2026-11-11T02:26:31Z
+updated: 2026-11-11T05:07:30Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:04Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-11T01:58:15Z
     by: agent-S-0692
+  - to: review
+    at: 2026-11-11T05:05:52Z
+    by: agent-S-0692
+  - to: done
+    at: 2026-11-11T05:07:30Z
+    by: orchestrator
 blocked:
   - from: 2026-11-11T02:22:45Z
     until: 2026-11-11T02:25:29Z
@@ -28,20 +34,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1210
-  estimated: true
-  priced_by: estimate
+  seconds: 1723
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 38
+      ceremony: 4
+      work: 101
   models:
     - model: claude-opus-5-5
-      input: 180
-      output: 34799
-      cache_read: 20982671
-      cache_write: 991801
-      cost: 11.1523
+      input: 318
+      output: 45178
+      cache_read: 41336462
+      cache_write: 1098921
+      cost: 15.8626
   strategic:
     - kind: planner
       seconds: 24
@@ -144,3 +149,12 @@ Forecast: 38m, flai's figure, kept. Its size counts 20 touches. Nine of them are
 Cost of delay: 300 USD a week, flai's figure from `flai cod`, kept. The orchestrator set the one input, `time_lost_per_cycle: 2h`, on TH-1038, the figure recommended there; at the project's 150 USD an hour and a 168h cycle that is 300 USD a week. The story has no epic to inherit from, and no revenue or penalty applies.
 
 The cadence is money, and the operator's. TH-1038 recommends weekly, `0 6 * * 1`, about 3.5 USD a month at the last run's 0.82 USD; it awaits the operator. T-3037 sets what the operator chooses, so only T-3037 waits on the answer.
+
+### Accepted by the orchestrator
+
+- Verified: d3f17876038647743ab2168abf517d76a6968acc
+- At: 2026-11-11T05:07:30Z
+
+Verdict: pass
+- 1: system-flow.yaml, flai/cmd/manifest.go, flai/cmd/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check_roles.go, flai/cmd/serve_actions_test.go
+- 2: design/issues/I-0292-no-analysis-schedule-or-analysis-formula-is-set-so-the-analyzer-ran-once-in.md, design/issues/summary.md
