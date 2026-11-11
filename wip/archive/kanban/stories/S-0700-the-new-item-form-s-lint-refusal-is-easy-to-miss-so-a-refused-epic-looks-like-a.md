@@ -3,10 +3,10 @@ id: S-0700
 type: story
 nature: remediation
 title: The new item form's lint refusal is easy to miss, so a refused epic looks like a hang
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-11T08:28:06Z
+updated: 2026-11-11T08:48:51Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:27Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T08:28:06Z
     by: agent-S-0700
+  - to: done
+    at: 2026-11-11T08:48:51Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2113.0754
-accrued_seconds: 1548268
-tasks_completed: 2953
-last_run: 2026-11-11T08:47:57Z
+accrued_cost: 2113.2942
+accrued_seconds: 1548307
+tasks_completed: 2954
+last_run: 2026-11-11T08:48:36Z
 ---
 
 # Orchestrator activity
@@ -20703,6 +20703,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0686, S-0718
 - Seconds: 34
 - Cost: 0.1427 USD, estimated
+
+### 2026-11-11T08:48:36Z
+
+- Summary: I didn't start a publish run for S-0686. An earlier publish run, story S-0718 (created 2026-11-11T01:44Z), is still waiting in ready, and starting a second one would duplicate it.
+- Items: none
+- Seconds: 39
+- Cost: 0.2188 USD, estimated
 
 ## Refusals
 
