@@ -4,10 +4,10 @@ title: S-0704 is verified and ready to accept, but this orchestrator session has
 anchor:
   path: wip/kanban/stories/S-0704-publish-what-is-accepted-and-not-yet-released.md
   item: S-0704
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-11T01:45:21Z
-updated: 2026-11-11T01:45:21Z
+updated: 2026-11-11T02:30:26Z
 ---
 
 # TH-1062 S-0704 is verified and ready to accept, but this orchestrator session has no accept tool
@@ -32,3 +32,6 @@ On wip/kanban/stories/S-0704-publish-what-is-accepted-and-not-yet-released.md.
 - Its notes record the release: flai 1.86.14, tag `flai/v1.86.14`, bundling S-0665, S-0666, S-0675, S-0677, and S-0679.
 
 **Also:** S-0708 was accepted after that release. I started the publish instance S-0718 for it.
+
+### 2026-11-11T02:30:26Z alex
+Resolved: S-0704 was accepted

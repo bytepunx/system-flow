@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -53,5 +53,12 @@ Layer 1 runs as two task sub-agents at once. Both build and test the package `it
 ```
 
 So two tasks in one package that share no file may still share a layer, one in a task worktree, copied back rather than merged.
+S-0674 met it between `flai/internal/storygit` and `flai/internal/taskdone`. Its planner put T-2939 (`storygit/committed.go`) and T-2940 (`taskdone/taskdone.go`) in one layer, as they share no path, and its agent ran T-2940 in a task worktree of its own (`wip/archive/agents/S-0674.md`):
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654.
+```text
+T-2940 works in its own worktree, task/T-2940 from story/S-0674 (delegation.md): flai/internal/taskdone imports storygit, which T-2939 changes, so a half-done edit could fail its tests.
+```
+
+So a task that changes `taskdone` beside one that changes `storygit` runs after it or in its own task worktree.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674.

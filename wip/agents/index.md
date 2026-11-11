@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-11T02:29:32Z
+updated: 2026-11-11T02:30:26Z
 ---
 
 # Active streams
@@ -10,7 +10,6 @@ updated: 2026-11-11T02:29:32Z
 | [S-0690](S-0690.md) | flai serve takes a project's watcher's first snapshot after its first looks, so a change made in between waits up to a minute for the next look | in-progress | agent-S-0690 | 2026-11-11T02:16:58Z |
 | [S-0692](S-0692.md) | No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days | in-progress | system-flow | 2026-11-11T02:26:38Z |
 | [S-0693](S-0693.md) | TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier | in-progress | agent-S-0693 | 2026-11-11T02:27:23Z |
-| [S-0704](S-0704.md) | Publish what is accepted and not yet released | review | system-flow | 2026-11-11T01:43:58Z |
 
 ## Strategic agents
 
