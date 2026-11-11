@@ -7,6 +7,7 @@ package components
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -93,10 +94,13 @@ type ServeOptions struct {
 // Serve writes the harness of opts.Sub into HarnessDir, over the
 // sub-project's own Vite config when it has one, and starts the
 // sub-project's own Vite dev server on it, returning once the harness page
-// at HarnessPath answers, as StartDevServer does. It refuses a sub-project
-// whose kind manifest.SupportsComponents does not take, one whose folder is
-// missing, and one without vite installed, with an error that wraps
-// ErrViteMissing; each error names the sub-project.
+// at HarnessPath answers, as StartDevServer does. Each call makes a new
+// random token, which the harness sets HarnessHeader to and StartDevServer
+// waits for, so that another server on the dev server's port is not taken
+// for it. It refuses a sub-project whose kind manifest.SupportsComponents
+// does not take, one whose folder is missing, and one without vite
+// installed, with an error that wraps ErrViteMissing; each error names the
+// sub-project.
 func Serve(ctx context.Context, opts ServeOptions) (*DevServer, error) {
 	name := opts.Sub.Name
 	if !filepath.IsAbs(opts.Root) || opts.Project == "" {
@@ -116,12 +120,14 @@ func Serve(ctx context.Context, opts ServeOptions) (*DevServer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot serve sub-project %s's components: %w", name, err)
 	}
+	token := rand.Text()
 	config, err := WriteHarness(HarnessDir(opts.Root, opts.Project, name), Harness{
 		Dir:     dir,
 		Config:  own,
 		Setup:   settings.Setup,
 		Include: settings.Include,
 		Exclude: settings.Exclude,
+		Token:   token,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot serve sub-project %s's components: %w", name, err)
@@ -132,6 +138,7 @@ func Serve(ctx context.Context, opts ServeOptions) (*DevServer, error) {
 		Path:    HarnessPath,
 		Timeout: opts.Timeout,
 		Output:  opts.Output,
+		Token:   token,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("cannot serve sub-project %s's components: %w", name, err)

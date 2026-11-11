@@ -23,6 +23,12 @@ var harnessFiles embed.FS
 // origin of the page that frames it.
 const HarnessPath = "/__flai/components/"
 
+// HarnessHeader is the response header the harness's plugin sets, on every
+// answer its dev server gives, to the Token the harness was written with, so
+// that flai tells its own dev server's answers from those of another server
+// on the same port (I-0342).
+const HarnessHeader = "X-Flai-Harness"
+
 // HarnessConfig is the name of the Vite config WriteHarness writes, which
 // the dev server is run with by --config.
 const HarnessConfig = "vite.config.mjs"
@@ -47,6 +53,9 @@ type Harness struct {
 	Include []string
 	// Exclude are the components key's exclude globs.
 	Exclude []string
+	// Token is what the plugin sets HarnessHeader to on every answer; Serve
+	// makes a new one for each start.
+	Token string
 }
 
 // HarnessDir is the folder of the harness of the sub-project named
@@ -83,6 +92,7 @@ type harnessOptions struct {
 	Include []string `json:"include"`
 	Exclude []string `json:"exclude"`
 	Setup   string   `json:"setup"`
+	Token   string   `json:"token"`
 }
 
 // WriteHarness writes h's harness into dir, which HarnessDir names: the
@@ -112,7 +122,7 @@ func WriteHarness(dir string, h Harness) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot write the component harness: %w", err)
 	}
-	opts, err := json.Marshal(harnessOptions{Root: h.Dir, Config: h.Config, Files: dir, Include: include, Exclude: exclude, Setup: h.Setup})
+	opts, err := json.Marshal(harnessOptions{Root: h.Dir, Config: h.Config, Files: dir, Include: include, Exclude: exclude, Setup: h.Setup, Token: h.Token})
 	if err != nil {
 		return "", fmt.Errorf("cannot write the component harness for %s: %w", h.Dir, err)
 	}

@@ -505,8 +505,10 @@ func TestHelperComponentsVite(t *testing.T) {
 	if d, err := time.ParseDuration(os.Getenv("FLAI_FAKE_COMPONENTS_VITE_DELAY")); err == nil {
 		time.Sleep(d)
 	}
+	token := fakeViteToken(args)
 	mux := http.NewServeMux()
 	mux.HandleFunc(components.HarnessPath, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set(components.HarnessHeader, token)
 		_, _ = io.WriteString(w, "harness")
 		once.Do(func() { close(answered) })
 	})
@@ -514,6 +516,27 @@ func TestHelperComponentsVite(t *testing.T) {
 	err := http.ListenAndServe("127.0.0.1:"+port, mux)
 	fmt.Fprintln(os.Stderr, "cannot serve:", err)
 	os.Exit(1)
+}
+
+// fakeViteToken is the token the harness config that args name with
+// --config gives the plugin, which the fake sends as vite's plugin does, or
+// empty when it cannot be read.
+func fakeViteToken(args []string) string {
+	i := slices.Index(args, "--config")
+	if i < 0 || i+1 >= len(args) {
+		return ""
+	}
+	src, err := os.ReadFile(args[i+1])
+	if err != nil {
+		return ""
+	}
+	_, rest, _ := strings.Cut(string(src), "\nconst flai = ")
+	line, _, _ := strings.Cut(rest, "\n")
+	var opts struct {
+		Token string `json:"token"`
+	}
+	_ = json.Unmarshal([]byte(strings.TrimSuffix(line, ";")), &opts)
+	return opts.Token
 }
 
 // fakeComponentsVite installs, as the node_modules/.bin/vite of the

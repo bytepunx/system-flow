@@ -20,12 +20,18 @@
 // .svelte file whose path in the sub-project matches an include glob and no
 // exclude glob, outside node_modules and folders whose names begin with a
 // dot. A component added or removed while the server runs reloads the page.
+//
+// Every answer the dev server gives, the page, the modules, the stylesheets,
+// errors and 404s alike, carries the X-Flai-Harness header set to the token
+// flai wrote into the config for this start, by which flai tells its own
+// dev server from another server that answers on its port (I-0342).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const page = '/__flai/components';
+const header = 'X-Flai-Harness';
 const harnessId = 'virtual:flai-components/harness.mjs';
 const frameId = 'virtual:flai-components/Frame.svelte';
 const catalogueId = 'virtual:flai-components';
@@ -52,8 +58,9 @@ const frame = `<script>
 // flaiComponents is the plugin. root is the sub-project's folder, absolute;
 // files the folder flai wrote the harness into; include and exclude the
 // components key's globs, as flai's CheckGlob accepts them; setup the
-// module, relative to root, imported before any component, or empty.
-export default function flaiComponents({ root, files, include, exclude = [], setup = '' }) {
+// module, relative to root, imported before any component, or empty; token
+// the value of the header on every answer.
+export default function flaiComponents({ root, files, include, exclude = [], setup = '', token = '' }) {
 	const globs = { include: include.map(compileGlob), exclude: exclude.map(compileGlob) };
 	const isComponent = (rel) =>
 		rel.endsWith('.svelte') &&
@@ -78,6 +85,13 @@ export default function flaiComponents({ root, files, include, exclude = [], set
 			if (id === frameId) return frame;
 		},
 		configureServer(server) {
+			// First, and added here rather than in a returned hook, so that it
+			// runs before Vite's own middlewares and SvelteKit's router, and
+			// every answer carries the token.
+			server.middlewares.use((_req, res, next) => {
+				res.setHeader(header, token);
+				next();
+			});
 			// Added here rather than in a returned hook, so that it runs
 			// before SvelteKit's router, which answers every other path.
 			server.middlewares.use(async (req, res, next) => {

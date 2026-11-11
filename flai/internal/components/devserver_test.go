@@ -3,6 +3,8 @@ package components
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -36,7 +38,8 @@ func TestHelperVite(t *testing.T) {
 
 // runFakeVite behaves as mode says and never returns. Before anything else
 // it writes its pid, its arguments after --, and its folder into
-// FLAI_FAKE_VITE_DIR, when that is set.
+// FLAI_FAKE_VITE_DIR, when that is set. It sets HarnessHeader on its answers
+// to the token of the config its --config names, as the harness does.
 func runFakeVite(mode string) {
 	args := os.Args
 	if i := slices.Index(args, "--"); i >= 0 {
@@ -79,11 +82,16 @@ func runFakeVite(mode string) {
 	case "not-found":
 		status = http.StatusNotFound
 	}
+	token := ""
+	if i := slices.Index(args, "--config"); i >= 0 && i+1 < len(args) {
+		token = fakeToken(args[i+1])
+	}
 	// crash-later crashes 300ms after it first answers, so that flai's probe
 	// has seen it answer however slowly a loaded host starts it (I-0331).
 	var crash sync.Once
 	mux := http.NewServeMux()
 	mux.HandleFunc("/__flai/components/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set(HarnessHeader, token)
 		w.WriteHeader(status)
 		_, _ = io.WriteString(w, "harness")
 		if mode == "crash-later" {
@@ -102,9 +110,24 @@ func runFakeVite(mode string) {
 	os.Exit(1)
 }
 
+// fakeToken is the token of the harness config at config, as the fake vite
+// reads it; it says on standard error why when it cannot, and answers empty.
+func fakeToken(config string) string {
+	data, err := os.ReadFile(config)
+	if err == nil {
+		var opts harnessOptions
+		if opts, err = configOptions(string(data)); err == nil {
+			return opts.Token
+		}
+	}
+	fmt.Fprintln(os.Stderr, "cannot read the harness token:", err)
+	return ""
+}
+
 // newFakeVite is the options for a sub-project whose node_modules/.bin/vite
 // runs the test binary as TestHelperVite in mode, and the folder the fake
-// writes what it was given into. With FLAI_FAKE_VITE_DELAY set, the script
+// writes what it was given into. The options' Config is a harness config
+// carrying their Token, which the fake answers with. With FLAI_FAKE_VITE_DELAY set, the script
 // sleeps that many seconds before it runs the test binary, as a loaded host
 // is slow to start it.
 func newFakeVite(t *testing.T, mode string) (DevServerOptions, string) {
@@ -128,11 +151,21 @@ func newFakeVite(t *testing.T, mode string) (DevServerOptions, string) {
 	state := t.TempDir()
 	t.Setenv("FLAI_FAKE_VITE", mode)
 	t.Setenv("FLAI_FAKE_VITE_DIR", state)
+	token := rand.Text()
+	opts, err := json.Marshal(harnessOptions{Token: token})
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := filepath.Join(state, HarnessConfig)
+	if err := os.WriteFile(config, []byte(harnessConfig(opts)), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	return DevServerOptions{
 		Dir:     sub,
-		Config:  filepath.Join(state, "vite.config.mjs"),
+		Config:  config,
 		Path:    "/__flai/components/",
 		Timeout: 10 * time.Second,
+		Token:   token,
 	}, state
 }
 
@@ -238,14 +271,20 @@ func (s *syncBuffer) String() string {
 
 // holdPorts makes pickPort, for the test, answer a port the test holds open
 // for its first n picks and a free port after, and returns the held port and
-// the count of picks.
-func holdPorts(t *testing.T, n int) (int, *int) {
+// the count of picks. With h, the test's server answers on the held port
+// with it; without, it never answers.
+func holdPorts(t *testing.T, n int, h http.Handler) (int, *int) {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = l.Close() })
+	if h != nil {
+		srv := &http.Server{Handler: h, ReadHeaderTimeout: time.Second}
+		go func() { _ = srv.Serve(l) }()
+		t.Cleanup(func() { _ = srv.Close() })
+	}
 	held := l.Addr().(*net.TCPAddr).Port
 	picks := new(int)
 	saved := pickPort
@@ -272,6 +311,9 @@ func TestStartDevServerRunsTheSubProjectsViteAndWaitsForItToAnswer(t *testing.T)
 	if s.Port() <= 0 || s.URL() != fmt.Sprintf("http://127.0.0.1:%d/__flai/components/", s.Port()) {
 		t.Errorf("port %d, URL %s", s.Port(), s.URL())
 	}
+	if s.Token() != opts.Token {
+		t.Errorf("token %q, want the options' %q", s.Token(), opts.Token)
+	}
 	if pid := readPID(t, state, "pid"); s.PID() != pid {
 		t.Errorf("PID %d, the fake is %d", s.PID(), pid)
 	}
@@ -293,8 +335,8 @@ func TestStartDevServerRunsTheSubProjectsViteAndWaitsForItToAnswer(t *testing.T)
 	}
 	body, _ := io.ReadAll(resp.Body)
 	_ = resp.Body.Close()
-	if resp.StatusCode != http.StatusOK || string(body) != "harness" {
-		t.Errorf("GET %s: %d %q", s.URL(), resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK || string(body) != "harness" || resp.Header.Get(HarnessHeader) != opts.Token {
+		t.Errorf("GET %s: %d %q, %s %q", s.URL(), resp.StatusCode, body, HarnessHeader, resp.Header.Get(HarnessHeader))
 	}
 	if !strings.Contains(out.String(), "VITE ready") {
 		t.Errorf("Output got %q, want vite's output", out.String())
@@ -382,7 +424,7 @@ func TestStopFromManyGoroutinesStopsOnce(t *testing.T) {
 // I-0162: the port freePort picked was taken before vite bound it.
 func TestStartDevServerStartsViteAgainOnAnotherPortWhenItsPortWasTaken(t *testing.T) {
 	opts, _ := newFakeVite(t, "serve")
-	held, picks := holdPorts(t, 1)
+	held, picks := holdPorts(t, 1, nil)
 	s, err := StartDevServer(context.Background(), opts)
 	if err != nil {
 		t.Fatal(err)
@@ -400,7 +442,7 @@ func TestStartDevServerStartsViteAgainOnAnotherPortWhenItsPortWasTaken(t *testin
 
 func TestStartDevServerGivesUpAfterThreePortsAllTaken(t *testing.T) {
 	opts, _ := newFakeVite(t, "serve")
-	_, picks := holdPorts(t, portTries)
+	_, picks := holdPorts(t, portTries, nil)
 	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
@@ -419,7 +461,7 @@ func TestStartDevServerGivesUpAfterThreePortsAllTaken(t *testing.T) {
 
 func TestStartDevServerReturnsTheLastLinesOfAViteThatExitsEarly(t *testing.T) {
 	opts, _ := newFakeVite(t, "exit-early")
-	_, picks := holdPorts(t, 0)
+	_, picks := holdPorts(t, 0, nil)
 	pids := launchedPIDs(t)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
@@ -529,10 +571,73 @@ func TestErrSaysWhyAServerExitedOnItsOwn(t *testing.T) {
 
 func TestStartDevServerRefusesASubProjectWithoutVite(t *testing.T) {
 	dir := t.TempDir()
-	_, err := StartDevServer(context.Background(), DevServerOptions{Dir: dir})
+	_, err := StartDevServer(context.Background(), DevServerOptions{Dir: dir, Token: "t"})
 	if !errors.Is(err, ErrViteMissing) || !strings.Contains(err.Error(), "npm install or pnpm install in "+dir) {
 		t.Errorf("error %v, want ErrViteMissing with the fix", err)
 	}
+}
+
+func TestStartDevServerRefusesOptionsWithoutAToken(t *testing.T) {
+	opts, _ := newFakeVite(t, "serve")
+	opts.Token = ""
+	pids := launchedPIDs(t)
+	if _, err := StartDevServer(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "needs the token its harness was written with") {
+		t.Errorf("error %v, want one asking for the token", err)
+	}
+	waitAllGone(t, pids(), 0)
+}
+
+// harnessAnswer answers 200 at the harness path, as vite would, without the
+// header flai's harness sets: another process's server on the port.
+func harnessAnswer() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc(HarnessPath, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "another server")
+	})
+	return mux
+}
+
+// I-0342: another process's server held the port picked for vite and
+// answered 200, and flai took it for vite. Its answers lack the token, so
+// flai waits past them, vite finds the port taken and exits, and flai starts
+// it on another port.
+func TestStartDevServerDoesNotTakeAnotherServerOnItsPortForVite(t *testing.T) {
+	opts, _ := newFakeVite(t, "serve")
+	held, picks := holdPorts(t, 1, harnessAnswer())
+	s, err := StartDevServer(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Stop() })
+	if s.Port() == held || *picks != 2 {
+		t.Fatalf("serves on %d after %d picks, and another server holds %d; want vite on a second port", s.Port(), *picks, held)
+	}
+	resp, err := http.Get(s.URL())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || string(body) != "harness" || resp.Header.Get(HarnessHeader) != s.Token() {
+		t.Errorf("GET %s: %d %q, %s %q; want vite's answer with the token %q", s.URL(), resp.StatusCode, body, HarnessHeader, resp.Header.Get(HarnessHeader), s.Token())
+	}
+}
+
+func TestStartDevServerSaysAnotherServerAnswersWhenOnlyItDoes(t *testing.T) {
+	opts, _ := newFakeVite(t, "never-answer")
+	opts.Timeout = 2 * time.Second
+	held, _ := holdPorts(t, 1, harnessAnswer())
+	pids := launchedPIDs(t)
+	_, err := StartDevServer(context.Background(), opts)
+	if err == nil {
+		t.Fatal("a start whose only answers came from another server succeeded")
+	}
+	for _, w := range []string{"another server, not this vite, answers there", "it answered 200 without the " + HarnessHeader + " header", fmt.Sprintf("listens on port %d", held), "flai stopped it"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("error lacks %q:\n%v", w, err)
+		}
+	}
+	waitAllGone(t, pids(), 1)
 }
 
 func TestStartDevServerRefusesARelativeFolder(t *testing.T) {

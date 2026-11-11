@@ -107,6 +107,11 @@ type DevServerOptions struct {
 	// Output, when set, also gets Vite's standard output and standard error,
 	// as they come.
 	Output io.Writer
+	// Token is the value the harness Config was written with, which its
+	// plugin sets HarnessHeader to on every answer; StartDevServer takes an
+	// answer for this vite's only when it carries it, and refuses an empty
+	// one.
+	Token string
 }
 
 // DevServer is a Vite dev server flai started, in a process group of its
@@ -115,6 +120,7 @@ type DevServer struct {
 	dir     string
 	url     string
 	port    int
+	token   string
 	pid     int
 	started time.Time
 	cmd     *exec.Cmd
@@ -131,17 +137,22 @@ type DevServer struct {
 
 // StartDevServer starts the Vite dev server of the sub-project in
 // opts.Dir, on 127.0.0.1 and a free port, and returns once an HTTP GET of its
-// URL answers 200, as the harness page does. ctx bounds only that wait: once
+// URL answers 200 with opts.Token in HarnessHeader, as the harness page does.
+// An answer without the token is another server's on that port, not this
+// vite's, and is not taken for it (I-0342). ctx bounds only that wait: once
 // it answers, the server runs until Stop. A server that exits first because
 // its port was taken before it bound it is started again on another free
 // port, portTries ports in all. A server that exits first otherwise, that
-// does not answer 200 within the timeout, or whose wait ctx ends, is stopped,
-// with nothing it started left behind, and the error says why, with its last
-// lines of output. A sub-project without vite installed is refused with
-// ErrViteMissing.
+// does not answer 200 with the token within the timeout, or whose wait ctx
+// ends, is stopped, with nothing it started left behind, and the error says
+// why, with its last lines of output. A sub-project without vite installed
+// is refused with ErrViteMissing, and options without a Token are refused.
 func StartDevServer(ctx context.Context, opts DevServerOptions) (*DevServer, error) {
 	if !filepath.IsAbs(opts.Dir) {
 		return nil, fmt.Errorf("cannot start a Vite dev server in %q: flai needs the sub-project's folder as an absolute path", opts.Dir)
+	}
+	if opts.Token == "" {
+		return nil, fmt.Errorf("cannot start a Vite dev server in %s: flai needs the token its harness was written with, by which it tells the dev server's answers from another server's; write the harness with a Token and pass the same one", opts.Dir)
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = DevServerTimeout
@@ -199,6 +210,7 @@ func launch(vite string, port int, opts DevServerOptions) (*DevServer, error) {
 		dir:     opts.Dir,
 		url:     "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port)) + opts.Path,
 		port:    port,
+		token:   opts.Token,
 		pid:     cmd.Process.Pid,
 		started: time.Now(),
 		cmd:     cmd,
@@ -236,6 +248,10 @@ func (s *DevServer) URL() string { return s.url }
 
 // Port is the loopback port the server listens on.
 func (s *DevServer) Port() int { return s.port }
+
+// Token is the value of HarnessHeader on every answer the server gives,
+// which tells them from another server's.
+func (s *DevServer) Token() string { return s.token }
 
 // PID is the process ID of vite, which leads the server's process group.
 func (s *DevServer) PID() int { return s.pid }
@@ -318,8 +334,11 @@ func (s *DevServer) exitStatus() string {
 	return s.cmd.ProcessState.String()
 }
 
-// await waits for the server's URL to answer 200, polling every pollEvery,
-// and stops the server when it does not within timeout or ctx ends.
+// await waits for the server's URL to answer 200 with the server's token,
+// polling every pollEvery, and stops the server when it does not within
+// timeout or ctx ends. An answer without the token is another server's, and
+// is waited past: a vite that finds the port taken exits, and StartDevServer
+// starts it on another.
 func (s *DevServer) await(ctx context.Context, timeout time.Duration) error {
 	client := &http.Client{
 		Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true},
@@ -330,11 +349,16 @@ func (s *DevServer) await(ctx context.Context, timeout time.Duration) error {
 	defer deadline.Stop()
 	tick := time.NewTicker(pollEvery)
 	defer tick.Stop()
-	last := 0
+	last, other := 0, 0 // the last status this vite and another server answered
 	for {
-		if status := probe(ctx, client, s.url); status == http.StatusOK {
+		status, ours := probe(ctx, client, s.url, s.token)
+		switch {
+		case status == 0:
+		case !ours:
+			other = status
+		case status == http.StatusOK:
 			return nil
-		} else if status != 0 {
+		default:
 			last = status
 		}
 		select {
@@ -343,6 +367,9 @@ func (s *DevServer) await(ctx context.Context, timeout time.Duration) error {
 		case <-ctx.Done():
 			return errors.Join(fmt.Errorf("stopped the Vite dev server in %s before it answered at %s: %w", s.dir, s.url, ctx.Err()), s.Stop())
 		case <-deadline.C:
+			if last == 0 && other != 0 {
+				return errors.Join(fmt.Errorf("the Vite dev server in %s did not answer at %s within %s, so flai stopped it: another server, not this vite, answers there (it answered %d without the %s header flai's harness sets on every answer); find what else on this host listens on port %d and stop it, or run this again for another port%s", s.dir, s.url, timeout, other, HarnessHeader, s.port, detail(s.out.last())), s.Stop())
+			}
 			answered := ""
 			if last != 0 {
 				answered = fmt.Sprintf(" (it answered %d, and the harness answers 200)", last)
@@ -353,19 +380,21 @@ func (s *DevServer) await(ctx context.Context, timeout time.Duration) error {
 	}
 }
 
-// probe is the status an HTTP GET of url answers, or 0 when it does not.
-func probe(ctx context.Context, client *http.Client, url string) int {
+// probe is the status an HTTP GET of url answers, or 0 when it does not,
+// and whether the answer carries token in HarnessHeader, as the answers of
+// flai's harness do.
+func probe(ctx context.Context, client *http.Client, url, token string) (int, bool) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	_, _ = io.Copy(io.Discard, resp.Body)
 	_ = resp.Body.Close()
-	return resp.StatusCode
+	return resp.StatusCode, resp.Header.Get(HarnessHeader) == token
 }
 
 // findVite is the vite launcher of the sub-project in dir, in its

@@ -2,6 +2,7 @@ package components
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,16 +32,26 @@ func writtenOptions(t *testing.T, p string) (harnessOptions, string) {
 		t.Fatal(err)
 	}
 	src := string(data)
+	opts, err := configOptions(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return opts, src
+}
+
+// configOptions are the options the config whose source is src passes the
+// plugin, read back from its JSON.
+func configOptions(src string) (harnessOptions, error) {
 	_, rest, ok := strings.Cut(src, "\nconst flai = ")
 	if !ok {
-		t.Fatalf("config has no options:\n%s", src)
+		return harnessOptions{}, fmt.Errorf("config has no options:\n%s", src)
 	}
 	line, _, _ := strings.Cut(rest, "\n")
 	var opts harnessOptions
 	if err := json.Unmarshal([]byte(strings.TrimSuffix(line, ";")), &opts); err != nil {
-		t.Fatalf("config's options %q are not JSON: %v", line, err)
+		return harnessOptions{}, fmt.Errorf("config's options %q are not JSON: %w", line, err)
 	}
-	return opts, src
+	return opts, nil
 }
 
 func TestWriteHarnessForASvelteKitSubProject(t *testing.T) {
@@ -60,7 +71,7 @@ func TestWriteHarnessForASvelteKitSubProject(t *testing.T) {
 	if want := filepath.Join(root, ".flai-cache", "components", "acme", "web"); dir != want {
 		t.Fatalf("HarnessDir = %q, want %q", dir, want)
 	}
-	h := Harness{Dir: sub, Config: own, Setup: "src/routes/layout.css", Include: []string{"src/lib/**/*.svelte"}, Exclude: []string{"src/lib/harness"}}
+	h := Harness{Dir: sub, Config: own, Setup: "src/routes/layout.css", Include: []string{"src/lib/**/*.svelte"}, Exclude: []string{"src/lib/harness"}, Token: "t0ken"}
 	got, err := WriteHarness(dir, h)
 	if err != nil {
 		t.Fatal(err)
@@ -82,8 +93,8 @@ func TestWriteHarnessForASvelteKitSubProject(t *testing.T) {
 		}
 	}
 	opts, src := writtenOptions(t, got)
-	want := harnessOptions{Root: sub, Config: own, Files: dir, Include: h.Include, Exclude: h.Exclude, Setup: "src/routes/layout.css"}
-	if opts.Root != want.Root || opts.Config != want.Config || opts.Files != want.Files || opts.Setup != want.Setup ||
+	want := harnessOptions{Root: sub, Config: own, Files: dir, Include: h.Include, Exclude: h.Exclude, Setup: "src/routes/layout.css", Token: "t0ken"}
+	if opts.Root != want.Root || opts.Config != want.Config || opts.Files != want.Files || opts.Setup != want.Setup || opts.Token != want.Token ||
 		!slices.Equal(opts.Include, want.Include) || !slices.Equal(opts.Exclude, want.Exclude) {
 		t.Errorf("options %+v, want %+v", opts, want)
 	}
@@ -190,6 +201,17 @@ func TestThePluginServesTheHarnessPath(t *testing.T) {
 	}
 	if !strings.Contains(string(plugin), "'"+strings.TrimSuffix(HarnessPath, "/")+"'") {
 		t.Errorf("plugin.mjs does not serve %s", HarnessPath)
+	}
+	if !strings.Contains(string(plugin), "'"+HarnessHeader+"'") || !strings.Contains(string(plugin), "setup = '', token = '' })") {
+		t.Errorf("plugin.mjs does not take the token and name the header %s", HarnessHeader)
+	}
+	// I-0342: the header goes on every answer, so it is set by the first
+	// middleware, before the page's and before Vite's own.
+	sets := strings.Index(string(plugin), "res.setHeader(header, token);\n\t\t\t\tnext();")
+	first := strings.Index(string(plugin), "server.middlewares.use(")
+	pageAt := strings.Index(string(plugin), "url.pathname !== page")
+	if sets < 0 || first < 0 || pageAt < 0 || sets < first || sets > pageAt || strings.Count(string(plugin)[first:sets], "server.middlewares.use(") != 1 {
+		t.Errorf("plugin.mjs does not set %s to the token in its first middleware, before the page's", HarnessHeader)
 	}
 	page, err := harnessFiles.ReadFile("harness/harness.html")
 	if err != nil {
