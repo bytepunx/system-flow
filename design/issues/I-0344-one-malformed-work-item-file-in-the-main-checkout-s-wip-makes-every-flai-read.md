@@ -2,12 +2,12 @@
 id: I-0344
 title: One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them
 class: defect
-status: open
+status: closed
 count: 1
 cost: 3m
 first_reported: 2026-11-10T11:05:08Z
 last_reported: 2026-11-10T11:05:08Z
-updated: 2026-11-11T01:40:46Z
+updated: 2026-11-11T15:15:11Z
 ---
 
 # I-0344 One malformed work item file in the main checkout's wip makes every flai read of the project fail, a story's close-out and wait_for_events among them
@@ -24,3 +24,4 @@ S-0667, at 11:04:19Z on 2026-11-10: wip/kanban/tasks/T-3079-teststreamstatewrite
 ## Remediation
 
 Story S-0716 remediates this issue, created from it at 2026-11-11T01:40:46Z.
+Closed 2026-11-11T15:15:11Z: S-0716: Repo.List leaves out an item file that cannot be read or does not parse and lists the rest, and Repo.Unreadable names it, so flai check, the close-out, task done, inbox, wait_for_events, wait_for_work, and stream_state's index write go on past it; flai check reports the file once as item.unreadable, a note outside the story whose file it is. Tests reproduce it with a task file holding PLACEHOLDER.
