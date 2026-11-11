@@ -6,7 +6,7 @@ title: A story's prime pack came in 22 parts, most of each part the same topic s
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T08:46:41Z
+updated: 2026-11-11T08:47:48Z
 transitions: []
 tags: [flai, cli, go]
 touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T19:51:00Z
-  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683 and S-0689."
+  delivery: 2026-11-11T19:53:00Z
+  basis: "Its own forecast of 1h30m; 13th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683 and S-0689."
   by: flai
-  at: 2026-11-11T08:46:41Z
+  at: 2026-11-11T08:47:48Z
 ---
 # S-0699 A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context
 

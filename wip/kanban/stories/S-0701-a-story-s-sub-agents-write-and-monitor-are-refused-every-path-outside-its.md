@@ -6,7 +6,7 @@ title: A story's sub-agents, Write, and Monitor are refused every path outside i
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-11T08:46:41Z
+updated: 2026-11-11T08:47:48Z
 transitions: []
 tags: [harness, serve, docker]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-11-10T10:30:33Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T20:49:00Z
-  basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689 and S-0699."
+  delivery: 2026-11-11T20:50:00Z
+  basis: "Its own forecast of 1h30m; 14th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689 and S-0699."
   by: flai
-  at: 2026-11-11T08:46:41Z
+  at: 2026-11-11T08:47:48Z
 ---
 # S-0701 A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
 
