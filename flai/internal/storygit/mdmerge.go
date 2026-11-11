@@ -13,8 +13,9 @@ var ErrNotSettled = errors.New("the markdown file is not settled by sections; re
 
 // MergeMarkdown merges a markdown file from a stopped rebase's three versions by sections (ADR-0175).
 //
-// ours is the branch being rebased onto and theirs the commit being replayed,
-// as Stages names them. A file it cannot settle is an error wrapping
+// A section both sides change merges by lines, and a paragraph or list item
+// both change merges by its sentences (ADR-0287). ours is the branch being
+// rebased onto and theirs the commit being replayed, as Stages names them. A file it cannot settle is an error wrapping
 // ErrNotSettled that names each section by its heading path, and each front
 // matter key, it could not settle.
 func MergeMarkdown(base, ours, theirs string) (string, error) {
@@ -419,31 +420,87 @@ type lineHunk struct {
 // mergeLines merges two sides' changes to base line by line. Changes that
 // touch different base lines are both kept, even when adjacent; insertions
 // at one place take ours' lines, then theirs'; a change both make alike is
-// kept once. It reports false when both change or remove the same base lines.
+// kept once. Where both change the same base lines, and every line there is
+// prose or a list item on all three sides, it merges those lines again by
+// their sentences (ADR-0287). It reports false when both change or remove the
+// same base lines and that does not settle them.
 func mergeLines(base, ours, theirs []string) ([]string, bool) {
+	pb, po, pt := proseLines(base), proseLines(ours), proseLines(theirs)
+	return merge3(base, ours, theirs, func(r overlap) ([]string, bool) {
+		if slices.Contains(pb[r.start:r.end], false) || slices.Contains(po[r.o0:r.o1], false) || slices.Contains(pt[r.t0:r.t1], false) {
+			return nil, false
+		}
+		return mergeSentences(base[r.start:r.end], ours[r.o0:r.o1], theirs[r.t0:r.t1])
+	})
+}
+
+// overlap is a run of base lines both sides change, base[start:end], with
+// each side's lines for it, ours[o0:o1] and theirs[t0:t1].
+type overlap struct {
+	start, end, o0, o1, t0, t1 int
+}
+
+// merge3 merges two sides' changes to base element by element, as mergeLines
+// describes. Where both change the same elements it gathers the run of base
+// elements their overlapping changes span and settles it with settle; a nil
+// settle, or one that reports false, makes merge3 report false.
+func merge3(base, ours, theirs []string, settle func(overlap) ([]string, bool)) ([]string, bool) {
 	ho, ht := lineHunks(base, ours), lineHunks(base, theirs)
+	oShift, tShift := 0, 0 // how far each side's index runs ahead of base's past the hunks taken
+	popO := func() lineHunk {
+		h := ho[0]
+		ho = ho[1:]
+		oShift += len(h.lines) - (h.end - h.start)
+		return h
+	}
+	popT := func() lineHunk {
+		h := ht[0]
+		ht = ht[1:]
+		tShift += len(h.lines) - (h.end - h.start)
+		return h
+	}
 	var out []string
 	pos := 0
 	for len(ho) > 0 || len(ht) > 0 {
 		var h lineHunk
 		switch {
 		case len(ht) == 0:
-			h, ho = ho[0], ho[1:]
+			h = popO()
 		case len(ho) == 0:
-			h, ht = ht[0], ht[1:]
+			h = popT()
 		default:
 			a, c := ho[0], ht[0]
 			switch {
 			case a.start == c.start && a.end == c.end && slices.Equal(a.lines, c.lines):
-				h, ho, ht = a, ho[1:], ht[1:]
+				h = popO()
+				popT()
 			case a.start == a.end && c.start == c.end && a.start == c.start:
-				h, ho, ht = lineHunk{a.start, a.end, slices.Concat(a.lines, c.lines)}, ho[1:], ht[1:]
+				h = lineHunk{a.start, a.end, slices.Concat(popO().lines, popT().lines)}
 			case touches(a, c):
-				return nil, false
+				if settle == nil {
+					return nil, false
+				}
+				span := lineHunk{start: min(a.start, c.start), end: max(a.end, c.end)}
+				o0, t0 := span.start+oShift, span.start+tShift
+				for grows := true; grows; {
+					switch {
+					case len(ho) > 0 && touches(ho[0], span):
+						span.end = max(span.end, popO().end)
+					case len(ht) > 0 && touches(ht[0], span):
+						span.end = max(span.end, popT().end)
+					default:
+						grows = false
+					}
+				}
+				lines, ok := settle(overlap{span.start, span.end, o0, span.end + oShift, t0, span.end + tShift})
+				if !ok {
+					return nil, false
+				}
+				h = lineHunk{span.start, span.end, lines}
 			case a.start < c.start || a.start == a.end:
-				h, ho = a, ho[1:]
+				h = popO()
 			default:
-				h, ht = c, ht[1:]
+				h = popT()
 			}
 		}
 		out = append(out, base[pos:h.start]...)
@@ -451,6 +508,73 @@ func mergeLines(base, ours, theirs []string) ([]string, bool) {
 		pos = h.end
 	}
 	return append(out, base[pos:]...), true
+}
+
+// proseLines marks each line that is prose or a list item: not a heading, a
+// table row, a fence line, or a line inside a fenced code block.
+func proseLines(lines []string) []bool {
+	out := make([]bool, len(lines))
+	fence := ""
+	for i, l := range lines {
+		switch {
+		case fence != "":
+			if closesFence(l, fence) {
+				fence = ""
+			}
+		case fenceMarker(l) != "":
+			fence = fenceMarker(l)
+		default:
+			_, _, heading := atxHeading(l)
+			out[i] = !heading && !strings.HasPrefix(strings.TrimSpace(l), "|")
+		}
+	}
+	return out
+}
+
+// mergeSentences merges three versions of a run of prose lines by their
+// sentences (ADR-0287), reporting false when both sides change or remove the
+// same sentence.
+func mergeSentences(base, ours, theirs []string) ([]string, bool) {
+	tokens, ok := merge3(sentences(base), sentences(ours), sentences(theirs), nil)
+	if !ok {
+		return nil, false
+	}
+	text := strings.Join(tokens, "")
+	if text == "" {
+		return nil, true
+	}
+	return strings.Split(strings.TrimSuffix(text, "\n"), "\n"), true
+}
+
+// sentences cuts lines into tokens that join back into them: each sentence,
+// which ends at '.', '?', or '!' followed by a space or the line's end; each
+// run of spaces and tabs; and the line break that ends each line.
+func sentences(lines []string) []string {
+	var out []string
+	for _, l := range lines {
+		for l != "" {
+			n := len(l) - len(strings.TrimLeft(l, " \t"))
+			if n == 0 {
+				n = sentenceEnd(l)
+			}
+			out = append(out, l[:n])
+			l = l[n:]
+		}
+		out = append(out, "\n")
+	}
+	return out
+}
+
+// sentenceEnd is the length of the sentence that starts line: through its
+// first '.', '?', or '!' followed by a space, a tab, or the line's end, or the
+// whole line when it has none.
+func sentenceEnd(line string) int {
+	for i := 0; i < len(line); i++ {
+		if strings.IndexByte(".?!", line[i]) >= 0 && (i+1 == len(line) || line[i+1] == ' ' || line[i+1] == '\t') {
+			return i + 1
+		}
+	}
+	return len(line)
 }
 
 // touches reports whether two hunks change the same base lines, or one

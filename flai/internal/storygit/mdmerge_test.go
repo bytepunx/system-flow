@@ -179,6 +179,50 @@ func TestMergeMarkdownSettles(t *testing.T) {
 			theirs: md("---", "title: Y", "tags:", "  - a", "status: active", "---", "# T"),
 			want:   md("---", "title: Y", "tags:", "  - a", "  - b", "status: active", "---", "# T"),
 		},
+		// I-0346, ADR-0287: a paragraph is one line, so two sides changing
+		// different sentences of it change the same line; its sentences merge.
+		{
+			name:   "different sentences of a one-line paragraph changed by each side are both kept",
+			base:   md("# T", "", "## A", "", "One is here. Two is here. Three is here."),
+			ours:   md("# T", "", "## A", "", "One is ours. Two is here. Three is here."),
+			theirs: md("# T", "", "## A", "", "One is here. Two is here. Three is theirs."),
+			want:   md("# T", "", "## A", "", "One is ours. Two is here. Three is theirs."),
+		},
+		{
+			name:   "adjacent sentences of a paragraph changed by each side are both kept",
+			base:   md("# T", "", "## A", "", "One is here. Two is here? Three is here!"),
+			ours:   md("# T", "", "## A", "", "One is ours. Two is here? Three is here!"),
+			theirs: md("# T", "", "## A", "", "One is here. Two is theirs? Three is here!"),
+			want:   md("# T", "", "## A", "", "One is ours. Two is theirs? Three is here!"),
+		},
+		{
+			name:   "a sentence one side adds lands beside a sentence the other changes",
+			base:   md("# T", "", "## A", "", "One is here. Two is here. Three is here."),
+			ours:   md("# T", "", "## A", "", "One is here. New is ours. Two is here. Three is here."),
+			theirs: md("# T", "", "## A", "", "One is here. Two is theirs. Three is here."),
+			want:   md("# T", "", "## A", "", "One is here. New is ours. Two is theirs. Three is here."),
+		},
+		{
+			name:   "different sentences of a list item changed by each side are both kept",
+			base:   md("# T", "", "## L", "", "- First is here. Second is here.", "- Other."),
+			ours:   md("# T", "", "## L", "", "- First is ours. Second is here.", "- Other."),
+			theirs: md("# T", "", "## L", "", "- First is here.  Second is theirs.", "- Other."),
+			want:   md("# T", "", "## L", "", "- First is ours.  Second is theirs.", "- Other."),
+		},
+		{
+			name:   "a run of lines both change merges by sentences across its lines",
+			base:   md("# T", "", "## A", "", "One is here. Two is here.", "Next is here.", "", "Last."),
+			ours:   md("# T", "", "## A", "", "One is ours. Two is here.", "Next is ours.", "", "Last."),
+			theirs: md("# T", "", "## A", "", "One is here. Two is theirs.", "Next is here.", "", "Last."),
+			want:   md("# T", "", "## A", "", "One is ours. Two is theirs.", "Next is ours.", "", "Last."),
+		},
+		{
+			name:   "a line one side inserts between prose lines the other changes lands between them",
+			base:   md("# T", "", "## A", "", "one", "two", "three"),
+			ours:   md("# T", "", "## A", "", "one ours", "two ours", "three"),
+			theirs: md("# T", "", "## A", "", "one", "new", "two", "three"),
+			want:   md("# T", "", "## A", "", "one ours", "new", "two ours", "three"),
+		},
 		{
 			name:   "a file without a final newline stays without one",
 			base:   "# T\n\nt",
@@ -201,8 +245,10 @@ func TestMergeMarkdownSettles(t *testing.T) {
 
 func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 	doc := md("---", "title: X", "status: active", "---", "", "# T", "", "## A", "", "one", "two", "three", "", "## B", "", "b1")
+	// ADR-0287 merges prose by sentences; these lines are not prose.
+	other := md("# T", "", "## A", "", "| one. | two. |", "", "```", "one. two.", "```")
 	for _, tc := range []struct {
-		name, ours, theirs, where string
+		name, base, ours, theirs, where string
 	}{
 		{
 			name:   "the same line changed differently",
@@ -212,8 +258,30 @@ func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 		},
 		{
 			name:   "lines inserted inside lines the other changes",
-			ours:   strings.Replace(doc, "one\ntwo", "one ours\ntwo ours", 1),
+			ours:   strings.Replace(doc, "one\ntwo", "one and two ours", 1),
 			theirs: strings.Replace(doc, "one\ntwo", "one\nnew\ntwo", 1),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			// I-0346, ADR-0287: a sentence both change is still for the agent.
+			name:   "the same sentence of a paragraph changed differently",
+			base:   strings.Replace(doc, "two", "One is here. Two is here.", 1),
+			ours:   strings.Replace(doc, "two", "One is ours. Two is here.", 1),
+			theirs: strings.Replace(doc, "two", "One is theirs. Two is here.", 1),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			name:   "different cells of one table row changed by each side",
+			base:   other,
+			ours:   strings.Replace(other, "| one. |", "| one ours. |", 1),
+			theirs: strings.Replace(other, "two. |", "two theirs. |", 1),
+			where:  `section "T > A": both sides change the same lines`,
+		},
+		{
+			name:   "different words of one line in a fenced code block changed by each side",
+			base:   other,
+			ours:   strings.Replace(other, "one. two.\n```", "one ours. two.\n```", 1),
+			theirs: strings.Replace(other, "one. two.\n```", "one. two theirs.\n```", 1),
 			where:  `section "T > A": both sides change the same lines`,
 		},
 		{
@@ -236,7 +304,11 @@ func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := MergeMarkdown(doc, tc.ours, tc.theirs)
+			base := tc.base
+			if base == "" {
+				base = doc
+			}
+			got, err := MergeMarkdown(base, tc.ours, tc.theirs)
 			if !errors.Is(err, ErrNotSettled) {
 				t.Fatalf("MergeMarkdown = %q, %v; want an error wrapping ErrNotSettled", got, err)
 			}
@@ -244,6 +316,18 @@ func TestMergeMarkdownLeavesWhatItCannotSettle(t *testing.T) {
 				t.Errorf("error %q does not name %q", err, tc.where)
 			}
 		})
+	}
+}
+
+func TestSentencesCutsTokensThatJoinBack(t *testing.T) {
+	lines := []string{"  - One. Two?  e.g. three!", "", "no end\t"}
+	got := sentences(lines)
+	want := []string{"  ", "- One.", " ", "Two?", "  ", "e.g.", " ", "three!", "\n", "\n", "no end\t", "\n"}
+	if !slices.Equal(got, want) {
+		t.Errorf("sentences %q, want %q", got, want)
+	}
+	if back := strings.Join(got, ""); back != strings.Join(lines, "\n")+"\n" {
+		t.Errorf("tokens join to %q, want the lines back", back)
 	}
 }
 
