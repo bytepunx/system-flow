@@ -8,7 +8,7 @@ paths: [flai/internal/context/context.go, flai/internal/context/brief_test.go, f
 date: 2026-11-02
 status: absorbed
 absorbed_by: "design/adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md#decision"
-asked_again: []
+asked_again: [TH-1023]
 cited: [TH-0806]
 ---
 

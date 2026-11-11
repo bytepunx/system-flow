@@ -3,16 +3,37 @@ id: T-2986
 type: task
 nature: remediation
 title: Close I-0336 with what fixed it
-status: backlog
+status: done
 parent: S-0710
 owner: alex
 created: 2026-11-10T10:29:38Z
-updated: 2026-11-10T10:29:38Z
-transitions: []
+updated: 2026-11-11T14:17:38Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:16:50Z
+    by: agent-S-0710
+  - to: in-progress
+    at: 2026-11-11T14:16:50Z
+    by: agent-S-0710
+  - to: done
+    at: 2026-11-11T14:17:38Z
+    by: agent-S-0710
 stream: S-0710
 tags: [issues]
 touches: [design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-2980]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 56
+      cache_read: 327207
+      cache_write: 3603
+      cost: 0.1225
 ---
 # T-2986 Close I-0336 with what fixed it
 

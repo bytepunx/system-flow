@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0711, T-3118, TH-1079]
 ---
 
 # D-0505 sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt: file this as an issue

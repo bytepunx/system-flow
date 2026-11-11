@@ -3,15 +3,36 @@ id: T-2993
 type: task
 nature: remediation
 title: Make pnpm install both the glibc and the musl native bindings for flaiover
-status: backlog
+status: done
 parent: S-0706
 owner: alex
 created: 2026-11-10T10:30:28Z
-updated: 2026-11-11T08:54:15Z
-transitions: []
+updated: 2026-11-11T09:20:23Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:18:56Z
+    by: agent-S-0706
+  - to: in-progress
+    at: 2026-11-11T09:18:57Z
+    by: agent-S-0706
+  - to: done
+    at: 2026-11-11T09:20:23Z
+    by: agent-S-0706
 stream: S-0706
 tags: [flaiover]
-touches: [flaiover/package.json, flaiover/pnpm-workspace.yaml]
+touches: [flaiover/pnpm-workspace.yaml]
+usage:
+  source: log
+  seconds: 86
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1909
+      cache_read: 770179
+      cache_write: 17580
+      cost: 0.3329
 ---
 # T-2993 Make pnpm install both the glibc and the musl native bindings for flaiover
 

@@ -3,15 +3,36 @@ id: T-2980
 type: task
 nature: remediation
 title: Commit an ADR index the committed ADR files render
-status: backlog
+status: done
 parent: S-0710
 owner: alex
 created: 2026-11-10T10:29:22Z
-updated: 2026-11-10T10:29:22Z
-transitions: []
+updated: 2026-11-11T14:16:33Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:10:59Z
+    by: agent-S-0710
+  - to: in-progress
+    at: 2026-11-11T14:10:59Z
+    by: agent-S-0710
+  - to: done
+    at: 2026-11-11T14:16:33Z
+    by: agent-S-0710
 stream: S-0710
 tags: [flai, adr]
 touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go]
+usage:
+  source: log
+  seconds: 334
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 119
+      cache_read: 864850
+      cache_write: 10436
+      cost: 0.324
 ---
 # T-2980 Commit an ADR index the committed ADR files render
 

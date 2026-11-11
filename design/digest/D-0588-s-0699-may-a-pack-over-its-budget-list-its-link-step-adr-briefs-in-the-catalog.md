@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1023, TH-1078]
 ---
 
 # D-0588 S-0699: may a pack over its budget list its link-step ADR briefs in the catalog, reversing TH-0032's "briefs are never cut": Recommended: Q1 no, Q2 yes

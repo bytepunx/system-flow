@@ -3,10 +3,10 @@ id: S-0702
 type: story
 nature: improvement
 title: "flai check finds `issues.summary` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T09:05:24Z
+updated: 2026-11-11T14:23:12Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:36Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-11T08:46:59Z
     by: agent-S-0702
+  - to: review
+    at: 2026-11-11T14:21:40Z
+    by: agent-S-0702
+  - to: done
+    at: 2026-11-11T14:23:12Z
+    by: orchestrator
 tags: [flai, issues, git]
 topics: [git]
-touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/check/check_records.go, design/adrs/0286-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-every-generated.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/internal/check/check_records.go, design/adrs/0286-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-every-generated.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1892
+  seconds: 3299
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-11
-      ceremony: 2
-      work: 35
+      ceremony: 6
+      test_runs: 3
+      work: 110
   models:
     - model: claude-opus-5-5
-      input: 210
-      output: 1351
-      cache_read: 10830504
-      cache_write: 585234
-      cost: 4.2248
+      input: 380
+      output: 11642
+      cache_read: 26294454
+      cache_write: 704715
+      cost: 12.5386
   strategic:
     - kind: planner
       seconds: 52
@@ -84,8 +91,8 @@ finalized:
 This story remediates [I-0266](../../../design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md), "flai check finds `issues.summary` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0266 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0266 is closed with `flai issue close I-0266 --reason` saying what fixed it
+- [x] The cause I-0266 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0266 is closed with `flai issue close I-0266 --reason` saying what fixed it
 
 ## Tasks
 - T-3002 Decide in an ADR that a rebase which wrote a generated file again at a stop writes it again at the branch's head and commits it
@@ -149,3 +156,12 @@ Layers, approved on TH-1033:
 4. T-3015 (close I-0266), last.
 
 No `after`: S-0702 reads nothing another open story writes. S-0710 (`adr.index` outside the story) has a different cause, an ADR file left uncommitted on main. S-0709 and S-0712 also change `flai/internal/storygit/sync.go`, for `undoes_main`. The trial merge judges that overlap, and the pull order decides which goes first.
+
+### Accepted by the orchestrator
+
+- Verified: cde26f90ed37e005663b933d15fbfb82dff0f90c
+- At: 2026-11-11T14:23:12Z
+
+Verdict: pass, verified at cde26f90ed37e005663b933d15fbfb82dff0f90c; close-out passed every step there.
+- 1: flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/check/check_records.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, design/adrs/0286-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-every-generated.md, design/adrs/README.md
+- 2: design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story-at-close-out.md, design/issues/summary.md

@@ -32,7 +32,7 @@ usage:
       output: 32
       cache_read: 374517
       cache_write: 2565
-      cost: 0.1395
+      cost: 0.1751
 ---
 # T-3002 Decide in an ADR that a rebase which wrote a generated file again at a stop writes it again at the branch's head and commits it
 

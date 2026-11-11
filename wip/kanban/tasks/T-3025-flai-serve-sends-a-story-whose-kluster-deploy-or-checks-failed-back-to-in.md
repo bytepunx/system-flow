@@ -3,11 +3,11 @@ id: T-3025
 type: task
 nature: remediation
 title: flai serve sends a story whose kluster deploy or checks failed back to in-progress, starts its agent, and keeps its namespace
-status: in-progress
+status: done
 parent: S-0694
 owner: alex
 created: 2026-11-10T10:32:46Z
-updated: 2026-11-11T09:13:58Z
+updated: 2026-11-11T14:22:46Z
 transitions:
   - to: ready
     at: 2026-11-11T09:13:58Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T09:13:58Z
     by: agent-S-0694
+  - to: done
+    at: 2026-11-11T14:22:46Z
+    by: agent-S-0694
 stream: S-0694
 tags: [flai, kluster, serve]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/serve/checks_test.go]
 after: [T-3024]
+usage:
+  source: log
+  seconds: 938
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 438
+      cache_read: 5489034
+      cache_write: 320857
+      cost: 2.1504
 ---
 # T-3025 flai serve sends a story whose kluster deploy or checks failed back to in-progress, starts its agent, and keeps its namespace
 

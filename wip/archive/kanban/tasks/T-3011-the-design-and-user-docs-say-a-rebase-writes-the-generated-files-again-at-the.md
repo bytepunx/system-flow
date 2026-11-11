@@ -33,7 +33,7 @@ usage:
       output: 283
       cache_read: 1887728
       cache_write: 71777
-      cost: 0.7252
+      cost: 0.9097
 ---
 # T-3011 The design and user docs say a rebase writes the generated files again at the branch's head
 

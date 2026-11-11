@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1025]
 ---
 
 # D-0589 S-0701: which remedy for I-0265 — host-granted outside folders, story-requested within a host list, or a prompt warning only: Recommended: remedy A, the host grants outside folders per harness, as…

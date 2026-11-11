@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2117.7979
-accrued_seconds: 1549265
-tasks_completed: 2999
-last_run: 2026-11-11T09:11:36Z
+accrued_cost: 2118.9716
+accrued_seconds: 1549453
+tasks_completed: 3007
+last_run: 2026-11-11T09:29:17Z
 ---
 
 # Orchestrator activity
@@ -21025,6 +21025,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.4249 USD, estimated
+
+### 2026-11-11T09:18:54Z
+
+- Summary: Accepted S-0698 at 57f1257 (close-out passed at the branch head; verifier: both criteria met; dry run had no blockers). The merge overlapped S-0694 on mergequeue/eligible.go and eligible_test.go, and flai reports it.
+- Items: S-0698
+- Seconds: 58
+- Cost: 0.2055 USD, estimated
+
+### 2026-11-11T09:19:15Z
+
+- Summary: Release due after accepting S-0698: release_evaluate met under threshold (count 6 >= 1; value 285 of 1000 USD/week; pending S-0686, S-0691, S-0696, S-0697, S-0698, S-0700). Started no new publish formula run: its open instance S-0718 is in ready, waiting on in-progress room (3 of 3), and publishes everything accepted and unreleased when it runs. A second instance would duplicate it.
+- Items: S-0698, S-0718
+- Seconds: 21
+- Cost: 0.0693 USD, estimated
+
+### 2026-11-11T09:19:34Z
+
+- Summary: After flai re-forecast the ready stories, ran flai order --by throughput --apply. The order stands: S-0710 45m, S-0719 1h, S-0724 1h, S-0716 1h30m, S-0689 1h30m, S-0699 1h30m, S-0705 2h, then S-0681 and S-0718 with no forecast.
+- Items: S-0710, S-0719, S-0724, S-0716, S-0689, S-0699, S-0705, S-0681, S-0718
+- Seconds: 19
+- Cost: 0.0364 USD, estimated
+
+### 2026-11-11T09:19:53Z
+
+- Summary: I accepted S-0698 at commit 57f1257, its branch head, and it is merged and done.
+- Items: none
+- Seconds: 19
+- Cost: 0.2600 USD, estimated
+
+### 2026-11-11T09:20:23Z
+
+- Summary: Release due after S-0698's acceptance (threshold policy met: 6 accepted unreleased stories, count 6 >= 1; value 285 of 1000 USD). Started no new publish instance: S-0718, the publish formula's instance made 2026-11-11T01:44Z, is already in ready and publishes everything accepted and unreleased, S-0698 included, once a story's agent pulls it (in-progress is full, 3 of 3).
+- Items: S-0698, S-0718, S-0686, S-0691, S-0696, S-0697, S-0700
+- Seconds: 14
+- Cost: 0.0905 USD, estimated
+
+### 2026-11-11T09:20:40Z
+
+- Summary: I started no new release: S-0718, the publish formula's instance from 01:44Z today, already covers it.
+- Items: none
+- Seconds: 17
+- Cost: 0.1323 USD, estimated
+
+### 2026-11-11T09:28:58Z
+
+- Summary: S-0706 in review: last verify passed at b0f8380, not the head of story/S-0706 (a3c50a2); asked flai serve for its close-out (job S-0706-20261111T092853Z) and left it in review for a later run to verify and accept
+- Items: S-0706
+- Seconds: 21
+- Cost: 0.1340 USD, estimated
+
+### 2026-11-11T09:29:17Z
+
+- Summary: S-0706 is still in review: I haven't accepted it yet because its last passing close-out was not at the branch's latest commit.
+- Items: none
+- Seconds: 19
+- Cost: 0.2457 USD, estimated
 
 ## Refusals
 

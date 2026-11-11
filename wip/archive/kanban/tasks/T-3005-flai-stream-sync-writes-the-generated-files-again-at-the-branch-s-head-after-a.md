@@ -7,7 +7,7 @@ status: done
 parent: S-0702
 owner: alex
 created: 2026-11-10T10:31:20Z
-updated: 2026-11-11T09:04:54Z
+updated: 2026-11-11T14:11:27Z
 transitions:
   - to: ready
     at: 2026-11-11T08:49:55Z
@@ -20,7 +20,7 @@ transitions:
     by: agent-S-0702
 stream: S-0702
 tags: [flai, git, issues]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/check/check_records.go, flai/cmd/stream.go, flai/cmd/stream_sync.go]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/check/check_records.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, design/adrs/0286-a-rebase-that-wrote-a-generated-file-again-at-a-stop-writes-every-generated.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-3002]
 usage:
   source: log
@@ -33,7 +33,7 @@ usage:
       output: 465
       cache_read: 3888583
       cache_write: 232456
-      cost: 1.5251
+      cost: 1.9132
 ---
 # T-3005 flai stream sync writes the generated files again at the branch's head after a rebase that wrote one at a stop, and commits what changed
 

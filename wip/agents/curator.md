@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 228.5241
-accrued_seconds: 26730
-tasks_completed: 146
-last_run: 2026-11-11T08:53:48Z
+accrued_cost: 229.4267
+accrued_seconds: 26817
+tasks_completed: 147
+last_run: 2026-11-11T09:20:13Z
 ---
 
 # Curator activity
@@ -1179,3 +1179,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 60
 - Cost: 0.4717 USD, estimated
+
+### 2026-11-11T09:20:13Z
+
+- Summary: I merged TH-1023 into D-0463 as asked again and wrote no new entries, because D-0588, D-0589 and D-0590 already hold the three operator answers and the design already records S-0698's decisions; I absorbed none (D-0584, D-0585, D-0586, D-0528, D-0556 and D-0588 to D-0590 stay active) and `flai digest compact` compacted none.
+- Trigger: accepted S-0698
+- Items: D-0463, D-0505, D-0588, D-0589
+- Seconds: 87
+- Cost: 0.9026 USD, estimated

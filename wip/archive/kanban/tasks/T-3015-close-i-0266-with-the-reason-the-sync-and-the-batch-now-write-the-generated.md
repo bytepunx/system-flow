@@ -24,7 +24,7 @@ touches: [design/issues/I-0266-flai-check-finds-issues-summary-outside-the-story
 after: [T-3005, T-3009, T-3011]
 usage:
   source: log
-  seconds: 9
+  seconds: 12
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 48
       cache_read: 530344
       cache_write: 867
-      cost: 0.1966
+      cost: 0.2466
 ---
 # T-3015 Close I-0266 with the reason the sync and the batch now write the generated files again at the head
 

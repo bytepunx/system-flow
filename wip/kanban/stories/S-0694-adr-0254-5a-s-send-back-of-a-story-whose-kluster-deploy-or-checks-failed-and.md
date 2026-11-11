@@ -6,7 +6,7 @@ title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks fail
 status: in-progress
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-11T08:56:31Z
+updated: 2026-11-11T14:22:53Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:35Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0694
 tags: [flai, serve, kluster, accept]
 topics: [kluster, deployment, review]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/move.go, flai/cmd/accept_kluster_test.go, flai/internal/hostapi/reads.go, flai/internal/mcpserver/queue.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/kluster.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md, design/issues/summary.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/move.go, flai/cmd/accept_kluster_test.go, flai/internal/hostapi/reads.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/kluster.md, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-deploy-or-checks-failed-and.md, design/issues/summary.md, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/serve/mergequeue.go, flai/cmd/queue.go, flai/internal/serve/checks_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,19 +24,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1027
+  seconds: 1988
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-11
-      work: 15
+      work: 18
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 372
-      cache_read: 3317637
-      cache_write: 233488
-      cost: 1.3143
+      input: 336
+      output: 1843
+      cache_read: 17899681
+      cache_write: 862508
+      cost: 6.9446
   strategic:
     - kind: orchestrator
       seconds: 14

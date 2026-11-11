@@ -3,16 +3,37 @@ id: T-2983
 type: task
 nature: remediation
 title: Say in the design and the user guide what an ADR commit records of the index
-status: backlog
+status: done
 parent: S-0710
 owner: alex
 created: 2026-11-10T10:29:30Z
-updated: 2026-11-10T10:29:44Z
-transitions: []
+updated: 2026-11-11T14:17:26Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:16:50Z
+    by: agent-S-0710
+  - to: in-progress
+    at: 2026-11-11T14:16:50Z
+    by: agent-S-0710
+  - to: done
+    at: 2026-11-11T14:17:26Z
+    by: agent-S-0710
 stream: S-0710
 tags: [cli, docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2980]
+usage:
+  source: log
+  seconds: 31
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 56
+      cache_read: 327207
+      cache_write: 3603
+      cost: 0.1225
 ---
 # T-2983 Say in the design and the user guide what an ADR commit records of the index
 

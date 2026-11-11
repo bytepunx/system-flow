@@ -33,7 +33,7 @@ usage:
       output: 287
       cache_read: 1757338
       cache_write: 71527
-      cost: 0.6769
+      cost: 0.8491
 ---
 # T-3009 The merge queue's batch rebase writes the generated files again at each story's rebased head after it wrote one at a stop
 

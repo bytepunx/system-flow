@@ -3,14 +3,17 @@ id: S-0719
 type: story
 nature: improvement
 title: A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T09:18:38Z
+updated: 2026-11-11T14:21:49Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T14:21:49Z
+    by: agent-S-0719
 tags: []
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/0286-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences.md, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md]
 agent:
@@ -40,15 +43,15 @@ usage:
           cache_write: 490422
           cost: 5.2219
     - kind: orchestrator
-      seconds: 57
+      seconds: 59
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 16
-          output: 121
-          cache_read: 515702
-          cache_write: 78386
-          cost: 0.1658
+          input: 17
+          output: 122
+          cache_read: 529608
+          cache_write: 78910
+          cost: 0.1698
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m

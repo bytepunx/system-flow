@@ -3,16 +3,37 @@ id: T-2999
 type: task
 nature: remediation
 title: Say in node.md and the agent-container runbook that flaiover's node_modules holds both libc variants, and close I-0259
-status: backlog
+status: done
 parent: S-0706
 owner: alex
 created: 2026-11-10T10:31:01Z
-updated: 2026-11-10T10:31:01Z
-transitions: []
+updated: 2026-11-11T09:24:32Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:23:56Z
+    by: agent-S-0706
+  - to: in-progress
+    at: 2026-11-11T09:23:56Z
+    by: agent-S-0706
+  - to: done
+    at: 2026-11-11T09:24:32Z
+    by: agent-S-0706
 stream: S-0706
 tags: [docs, issues]
 touches: [design/tech/node.md, docs/operators/runbooks/agent-container.md, design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md, design/issues/summary.md]
 after: [T-2997]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 4555
+      cache_read: 1837384
+      cache_write: 41940
+      cost: 0.7942
 ---
 # T-2999 Say in node.md and the agent-container runbook that flaiover's node_modules holds both libc variants, and close I-0259
 

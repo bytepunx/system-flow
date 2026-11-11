@@ -32,7 +32,7 @@ usage:
       output: 271
       cache_read: 2580346
       cache_write: 124432
-      cost: 1.0011
+      cost: 1.0012
 ---
 # T-3024 The kluster record of a story's namespace keeps its checks outcome at the deployed commit, with a gate acceptance can read
 

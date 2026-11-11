@@ -3,14 +3,17 @@ id: S-0710
 type: story
 nature: improvement
 title: "flai check finds `adr.index` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T09:56:02Z
-updated: 2026-11-11T09:01:05Z
+updated: 2026-11-11T09:28:10Z
 transitions:
   - to: ready
     at: 2026-11-11T09:00:55Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T09:28:10Z
+    by: agent-S-0710
 tags: [flai, adr]
 touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
@@ -19,9 +22,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 547
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 458
+      cache_read: 4062720
+      cache_write: 360534
+      cost: 1.6372
   strategic:
     - kind: planner
       seconds: 62
@@ -34,15 +49,15 @@ usage:
           cache_write: 145532
           cost: 0.8
     - kind: orchestrator
-      seconds: 40
+      seconds: 43
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 66
-          cache_read: 967638
-          cache_write: 13058
-          cost: 0.2695
+          input: 10
+          output: 67
+          cache_read: 981544
+          cache_write: 13582
+          cost: 0.2735
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m

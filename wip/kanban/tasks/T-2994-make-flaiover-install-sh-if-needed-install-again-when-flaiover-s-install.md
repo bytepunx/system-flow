@@ -3,15 +3,36 @@ id: T-2994
 type: task
 nature: remediation
 title: Make flaiover-install.sh --if-needed install again when flaiover's install configuration is newer than the last install
-status: backlog
+status: done
 parent: S-0706
 owner: alex
 created: 2026-11-10T10:30:38Z
-updated: 2026-11-11T08:54:21Z
-transitions: []
+updated: 2026-11-11T09:20:35Z
+transitions:
+  - to: ready
+    at: 2026-11-11T09:18:57Z
+    by: agent-S-0706
+  - to: in-progress
+    at: 2026-11-11T09:18:57Z
+    by: agent-S-0706
+  - to: done
+    at: 2026-11-11T09:20:35Z
+    by: agent-S-0706
 stream: S-0706
 tags: [scripts, flaiover]
 touches: [scripts/flaiover-install.sh, scripts/README.md, system-flow.yaml]
+usage:
+  source: log
+  seconds: 98
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 2485
+      cache_read: 1002349
+      cache_write: 22879
+      cost: 0.4332
 ---
 # T-2994 Make flaiover-install.sh --if-needed install again when flaiover's install configuration is newer than the last install
 
