@@ -393,6 +393,103 @@ func testAcceptMergesBySectionsADesignDocumentOutsideTheSharedPaths(t *testing.T
 	}
 }
 
+// I-0346, ADR-0287: S-0688 and S-0666 each changed a different sentence of
+// one one-line paragraph of a design document; once S-0666 was accepted,
+// S-0688's acceptance stopped on it and sent S-0688 back to in-progress. The
+// section merge now merges the paragraph by sentences, so the acceptance
+// lands the story, with main's sentence and the story's in the paragraph on
+// main, and sends nothing back.
+func testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged(t *testing.T) {
+	root, wt := sentenceStories(t,
+		[]string{adaptersFirstMain, adaptersSecond, adaptersThird},
+		[]string{adaptersFirst, adaptersSecond, adaptersThirdStorys})
+	issueStoryInReview(t, root, "S-0002", "T-0002")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0002", "--by", "alex")
+	if code != 0 {
+		t.Fatalf("the acceptance stopped on %s: %d %s", adaptersDoc, code, errOut)
+	}
+	if strings.Contains(errOut, "sent back") {
+		t.Errorf("the story was sent back:\n%s", errOut)
+	}
+	isAdapters(t, "main's "+adaptersDoc, gitIn(t, root, "show", "main:"+adaptersDoc), adaptersFirstMain, adaptersSecond, adaptersThirdStorys)
+	if gitIn(t, root, "branch", "--list", "story/S-0002") != "" {
+		t.Error("an accepted story's branch is removed")
+	}
+	if _, err := os.Stat(wt); err == nil {
+		t.Error("an accepted story's worktree is removed")
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if story.Status != workitem.Done || !story.Archived {
+		t.Errorf("the story is accepted and archived: %s, archived %v", story.Status, story.Archived)
+	}
+	all, err := threads.For(repo, "S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, th := range all {
+		if strings.HasPrefix(th.Title, "Acceptance sent back") {
+			t.Errorf("an acceptance that lands opens no send-back thread: %+v", th)
+		}
+	}
+}
+
+// I-0346, ADR-0287: where both stories changed the same sentence of the
+// paragraph, each its own way, the sentence merge cannot keep both, so the
+// acceptance still sends the story back, as it sends back any rebase it
+// cannot settle: the worktree is clean at the branch's head, main keeps the
+// first story's sentence, and the story is in progress again, moved by flai.
+func testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged(t *testing.T) {
+	root, wt := sentenceStories(t,
+		[]string{adaptersFirst, adaptersSecondMain, adaptersThird},
+		[]string{adaptersFirst, adaptersSecondStorys, adaptersThird})
+	issueStoryInReview(t, root, "S-0002", "T-0002")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0002", "--by", "alex")
+	if code == 0 {
+		t.Fatalf("the send back is not an acceptance: %d %s", code, errOut)
+	}
+	for _, want := range []string{"S-0002 was sent back to in-progress", "stopped on conflicts in " + adaptersDoc, "its agent resolves them on TH-"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal must say %q:\n%s", want, errOut)
+		}
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Error("the rebase still waits in the worktree")
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean:\n%s", st)
+	}
+	if got := gitIn(t, wt, "rev-parse", "HEAD"); got != head {
+		t.Errorf("the worktree is at %s, want the branch's head %s", got, head)
+	}
+	if got := gitIn(t, root, "rev-parse", "main"); got != mainBefore {
+		t.Errorf("main moved from %s to %s", mainBefore, got)
+	}
+	isAdapters(t, "main's "+adaptersDoc, gitIn(t, root, "show", "main:"+adaptersDoc), adaptersFirst, adaptersSecondMain, adaptersThird)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := story.Transitions[len(story.Transitions)-1]
+	if story.Status != workitem.InProgress || last.To != workitem.InProgress || last.By != "flai" {
+		t.Errorf("the story is sent back by flai: %s, last %+v", story.Status, last)
+	}
+}
+
 // conflictedStoryInReview makes a project with story S-0001 in review whose
 // branch commits design/x.md with an unresolved conflict, its markers at
 // lines 4 and 8, and returns the main checkout, the story's worktree, and

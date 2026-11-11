@@ -112,6 +112,9 @@ func TestAsTester(t *testing.T) {
 		testSyncTrialMergeLeavesOutIssueFiles,
 		testSyncMergesBySectionsADesignDocumentOutsideTheSharedPaths,
 		testAcceptMergesBySectionsADesignDocumentOutsideTheSharedPaths,
+		testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf,
+		testAcceptLandsAStoryThatChangedAnotherSentenceOfAParagraphMainChanged,
+		testAcceptSendsBackAStoryThatChangedTheSentenceOfAParagraphMainChanged,
 		testSyncMergesTwoStoriesChangelogLinesByUnion,
 		testSyncTrialMergeReadsMergeUnionFromTheMainCheckout,
 		testSyncPutsTheBranchsChangelogLinesBackUnderUnreleased,
@@ -1431,6 +1434,111 @@ func testSyncMergesBySectionsADesignDocumentOutsideTheSharedPaths(t *testing.T) 
 		t.Errorf("story/S-0001's commits on main:\n%s", got)
 	}
 	hasBothCauses(t, "the branch's "+causesDoc, gitIn(t, wt, "show", "HEAD:"+causesDoc))
+}
+
+// adaptersDoc is a design document outside claims.shared, shaped as
+// design/system/agent-adapters.md was when I-0346 met it: a section whose
+// paragraph is one line of sentences, of which two stories each changed one.
+const adaptersDoc = "design/system/agent-adapters.md"
+
+// The sentences of adaptersDoc's paragraph: as main had them before either
+// story, and as a story rewrote the first, the second, or the third.
+const (
+	adaptersFirst  = "The container harness runs the agent in a container."
+	adaptersSecond = "It mounts the story's worktree and nothing else."
+	adaptersThird  = "It ends when the agent ends."
+
+	adaptersFirstMain    = "The container harness runs the agent in a container of flai's own."
+	adaptersSecondMain   = "It mounts the story's worktree read-write and nothing else."
+	adaptersSecondStorys = "It mounts the story's worktree and the shared cache."
+	adaptersThirdStorys  = "It ends when the agent ends, and removes the container."
+)
+
+// adaptersText is adaptersDoc with its paragraph of sentences, on one line as
+// this repository writes a paragraph.
+func adaptersText(sentences ...string) string {
+	return "---\ntitle: Agent adapters\nupdated: 2026-11-10\nstatus: active\n---\n\n" +
+		"# Agent adapters\n\nWhat starts an agent.\n\n" +
+		"## A container harness of flai's own\n\n" + strings.Join(sentences, " ") + "\n\n" +
+		"## Today\n\nOne harness.\n"
+}
+
+// sentenceStories commits adaptersDoc on main, makes S-0001 and S-0002 in
+// progress, whose branches change its paragraph to ones and to twos, and
+// accepts S-0001, as S-0666 was accepted before S-0688 (I-0346). The
+// project's manifest shares no path, so adaptersDoc is outside claims.shared.
+// It fails t unless git's own merge of story/S-0002 onto main then conflicts
+// in adaptersDoc, so that a rebase without the section merge would stop. It
+// returns the main checkout and S-0002's worktree.
+func sentenceStories(t *testing.T, ones, twos []string) (root, wt string) {
+	t.Helper()
+	root = syncProject(t)
+	_ = os.MkdirAll(filepath.Join(root, "design", "system"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, filepath.FromSlash(adaptersDoc)), []byte(adaptersText(adaptersFirst, adaptersSecond, adaptersThird)), 0o644)
+	gitIn(t, root, "add", adaptersDoc)
+	gitIn(t, root, "commit", "-q", "-m", "docs: agent adapters")
+	one := openSyncStory(t, root, 1, adaptersDoc)
+	wt = openSyncStory(t, root, 2, adaptersDoc)
+	commitIn(t, one, adaptersDoc, adaptersText(ones...))
+	commitIn(t, wt, adaptersDoc, adaptersText(twos...))
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	if _, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex"); code != 0 {
+		t.Fatalf("acceptance of S-0001: %d %s", code, errOut)
+	}
+	raw, err := storygit.TrialMerge(execx.System{}, root, "main", "story/S-0002")
+	if err != nil || !slices.Contains(raw, adaptersDoc) {
+		t.Fatalf("git's merge onto main does not conflict in %s: %v %q", adaptersDoc, err, raw)
+	}
+	return root, wt
+}
+
+// I-0346, ADR-0287: two stories that each changed a different sentence of
+// one one-line paragraph of a design document change the same line, which
+// the section merge's line merge could not keep both of, so the second's sync
+// stopped once the first was accepted. The sync now merges the paragraph by
+// sentences, keeping main's sentence and the story's, and finishes the rebase
+// with no conflict left in the worktree.
+func testSyncMergesBySentencesAParagraphMainChangedAnotherSentenceOf(t *testing.T) {
+	_, wt := sentenceStories(t,
+		[]string{adaptersFirstMain, adaptersSecond, adaptersThird},
+		[]string{adaptersFirst, adaptersSecond, adaptersThirdStorys})
+
+	js, errOut, code := runIn(t, wt, "--json", "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("the sync stopped on %s: %d %s %s", adaptersDoc, code, js, errOut)
+	}
+	var res struct {
+		OK     bool     `json:"ok"`
+		Merged []string `json:"merged"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	if !res.OK || !slices.Equal(res.Merged, []string{adaptersDoc}) {
+		t.Errorf("sync --json: ok %v, merged %q; want %s merged", res.OK, res.Merged, adaptersDoc)
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Fatal("the rebase is left in progress")
+	}
+	if unmerged := gitIn(t, wt, "diff", "--name-only", "--diff-filter=U"); unmerged != "" {
+		t.Errorf("paths are left unmerged: %s", unmerged)
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	if got := gitIn(t, wt, "log", "--format=%s", "main..HEAD"); got != "change "+adaptersDoc {
+		t.Errorf("story/S-0002's commits on main:\n%s", got)
+	}
+	isAdapters(t, "the branch's "+adaptersDoc, gitIn(t, wt, "show", "HEAD:"+adaptersDoc), adaptersFirstMain, adaptersSecond, adaptersThirdStorys)
+}
+
+// isAdapters fails t unless text is adaptersDoc with its paragraph of
+// sentences, as git show prints it.
+func isAdapters(t *testing.T, where, text string, sentences ...string) {
+	t.Helper()
+	if want := adaptersText(sentences...); text != strings.TrimSuffix(want, "\n") {
+		t.Errorf("%s:\n%s\nwant:\n%s", where, text, want)
+	}
 }
 
 // sharedFriction is the issue file bumpStories records on main.
