@@ -403,6 +403,56 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 	}
 }
 
+// I-0345: across a folder, one project whose task file holds only
+// PLACEHOLDER, as an agent's Write left one, fails neither the catch-up
+// before the hold nor the one on its wake: the wait reports the other
+// project's change rather than fail the whole folder with "no front matter".
+func TestWaitForEventsAcrossAFolderAnswersWhileATaskFileHoldsOnlyAPlaceholder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	alpha := makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
+	parent := backlogStoryIn(t, alpha, "Alpha work", t0)
+	task, err := alpha.Create(workitem.NewOptions{Type: workitem.Task, Title: "Alpha task", Parent: parent.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := heldSetup(t, root)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	story := backlogStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
+	halfWrite(t, task.Path)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": int(heldWait / time.Second)})
+	if _, err := beta.Transition(story, workitem.Ready, "alex", "", t0.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		out := a.out
+		events, _ := out["events"].([]any)
+		if a.failed != "" || out["timed_out"] == true || len(events) == 0 {
+			t.Fatalf("wait: %v %s", out, a.failed)
+		}
+		moved := false
+		for _, e := range events {
+			e := e.(map[string]any)
+			if e["project"] != "beta" {
+				t.Errorf("event from elsewhere: %v", e)
+			}
+			moved = moved || e["id"] == story.ID && e["kind"] == workitem.Moved && e["to"] == workitem.Ready
+		}
+		if !moved {
+			t.Errorf("beta's story moved to ready: %v", events)
+		}
+	case <-time.After(heldWait + 10*time.Second):
+		t.Fatal("wait_for_events never answered")
+	}
+	if data, err := os.ReadFile(task.Path); err != nil || string(data) != "PLACEHOLDER" {
+		t.Errorf("the placeholder stayed throughout: %q %v", data, err)
+	}
+}
+
 // ADR-0211: across a folder, each kind flai serve, flai accept, and the
 // threads add is read back through wait_for_events and through the inbox of
 // the project it happened in, with its fields, and in no other project: an

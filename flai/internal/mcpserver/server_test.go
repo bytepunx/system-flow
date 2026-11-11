@@ -743,6 +743,48 @@ func TestWaitForEventsReportsAnEventWhileHeld(t *testing.T) {
 	}
 }
 
+// I-0345: while a task file holds only PLACEHOLDER, as an agent's Write left
+// one for about 20 seconds, wait_for_events answers rather than fail with
+// "no front matter": a wait made while the file stays holds, its catch-up
+// before the hold listing the items past it, and the catch-up on its wake
+// reports a story's change made meanwhile. The wake on the half-write itself
+// is TestWaitForEventsAnswersPastAnUnreadableTaskFile's (I-0344).
+func TestWaitForEventsAnswersWhileATaskFileHoldsOnlyAPlaceholder(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, holdLong)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	halfWrite(t, f.task.Path)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
+	it, err := f.repo.Get(f.story.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := workitem.BlockItem(it, "waiting on the designer", t0.Add(10*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.repo.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	var w toolAnswer
+	select {
+	case w = <-done:
+	case <-time.After(heldWait + 10*time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+	if w.failed != "" || w.out["timed_out"] == true {
+		t.Fatalf("a change while the placeholder stays: %v %s", w.out, w.failed)
+	}
+	if got := changeSummaries(w.out, "events"); len(got) != 1 || !strings.Contains(got[0], f.story.ID+" ") || !strings.Contains(got[0], "was blocked: waiting on the designer") {
+		t.Errorf("events: %v", got)
+	}
+	if data, err := os.ReadFile(f.task.Path); err != nil || string(data) != "PLACEHOLDER" {
+		t.Errorf("the placeholder stayed throughout: %q %v", data, err)
+	}
+}
+
 // I-0059: wait_for_events holds for the timeout asked, up to 30 minutes,
 // and for a minute when none is asked.
 func TestWaitForEventsHoldsUpToTheLongestWait(t *testing.T) {
