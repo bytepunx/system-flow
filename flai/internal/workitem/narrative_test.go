@@ -357,6 +357,41 @@ func TestWriteStreamStateWritesContextDecisionsAndQuestions(t *testing.T) {
 	}
 }
 
+// I-0344: a task file of another story that holds only PLACEHOLDER, as one
+// does for the moment it is half-written, once failed the list the index is
+// written from, so stream_state wrote the narrative and failed on the index.
+// Both are written now, and the index still has every stream's status.
+func TestWriteStreamStateWritesTheIndexPastAnUnreadableItem(t *testing.T) {
+	r := inProgressStream(t)
+	other := mustCreate(t, r, Story, "Other", "")
+	task := mustCreate(t, r, Task, "Half-written", other.ID)
+	if err := os.WriteFile(task.Path, []byte("PLACEHOLDER"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	later := t0.Add(time.Hour)
+	res, err := r.WriteStreamState("S-0001", StreamText{Current: "Past it."}, StreamOptions{Agent: "b", Now: later})
+	if err != nil {
+		t.Fatalf("stream state with an unreadable task file: %v", err)
+	}
+	if !res.Changed {
+		t.Errorf("result: %+v", res)
+	}
+	n, err := ReadNarrative(r.NarrativePath("S-0001"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, _ := NarrativeSection(n.Body, CurrentState); s.Text != "Past it." {
+		t.Errorf("current state: %q", s.Text)
+	}
+	stamp := later.Format(TimeFormat)
+	if index := readFile(t, filepath.Join(r.AgentsDir(), "index.md")); !strings.Contains(index, "| [S-0001](S-0001.md) | S | in-progress | b | "+stamp+" |") {
+		t.Errorf("index does not show the write with the stream's status:\n%s", index)
+	}
+	if bad := r.Unreadable(); len(bad) != 1 || bad[0].Path != task.Path {
+		t.Errorf("unreadable: %+v, want the task file the list left out", bad)
+	}
+}
+
 // A question is written above the block that mirrors threads, which stays
 // byte for byte as it was; OpenQuestions lists it and AnswerOpenQuestion
 // moves it to Decisions. Writing it by replacing the whole section would

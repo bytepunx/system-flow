@@ -2,6 +2,8 @@ package mcpserver
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +90,109 @@ func TestAFirstLookCoversADayOfStoriesAndEpics(t *testing.T) {
 	}
 	if ids[old.ID] || ids[task.ID] || ids[f.task.ID] {
 		t.Errorf("an older change or a task transition is reported on a first look: %v", ids)
+	}
+}
+
+// otherTask makes a story with a task in repo and returns the task's file.
+func otherTask(t *testing.T, repo *workitem.Repo) string {
+	t.Helper()
+	other, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Half-written", Parent: other.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return task.Path
+}
+
+// halfWrite overwrites the item file at path with PLACEHOLDER, which does not
+// parse, as a file holds for the moment it is half-written (I-0344).
+func halfWrite(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("PLACEHOLDER"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// I-0344: a task file of another story that does not parse once failed every
+// list of the project, and inbox with it. The inbox answers past it with the
+// other items' changes and the ready stories.
+func TestInboxAnswersPastAnUnreadableTaskFile(t *testing.T) {
+	t.Parallel()
+	f := setup(t)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	s := f.readyStory(t, "Made ready meanwhile", t0.Add(5*time.Minute))
+	halfWrite(t, otherTask(t, f.repo))
+
+	*f.clock = t0.Add(11 * time.Minute)
+	out, failed := f.call(t, "inbox", map[string]any{})
+	if failed != "" {
+		t.Fatalf("inbox with an unreadable task file: %s", failed)
+	}
+	reported := false
+	for _, c := range out["changes"].([]any) {
+		reported = reported || c.(map[string]any)["id"] == s.ID
+	}
+	if !reported {
+		t.Errorf("the other story's move is not reported: %v", out["changes"])
+	}
+	if ready := out["ready"].([]any); len(ready) != 1 || ready[0].(map[string]any)["id"] != s.ID {
+		t.Errorf("ready: %v", out["ready"])
+	}
+}
+
+// I-0344: wait_for_events failed three times on a task file that held only
+// PLACEHOLDER. A held wait that wakes on such a file answers with the path
+// that changed, and the next wait answers with what others did meanwhile.
+func TestWaitForEventsAnswersPastAnUnreadableTaskFile(t *testing.T) {
+	t.Parallel()
+	f := setupWith(t, holdLong)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	// the task is written before the wait, so that the wait wakes on its
+	// file's half-write alone
+	path := otherTask(t, f.repo)
+	done := f.callHeld(t, "wait_for_events", map[string]any{"timeout_seconds": heldSeconds})
+	halfWrite(t, path)
+	rel, err := filepath.Rel(f.repo.Root, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		if a.failed != "" {
+			t.Fatalf("wait_for_events with an unreadable task file: %s", a.failed)
+		}
+		changed, _ := a.out["changed"].([]any)
+		named := false
+		for _, p := range changed {
+			named = named || p == filepath.ToSlash(rel)
+		}
+		if a.out["timed_out"] == true || !named {
+			t.Errorf("the wait does not name the file that changed (%s): %v", rel, a.out)
+		}
+	case <-time.After(heldWait + 10*time.Second):
+		t.Fatal("wait_for_events never answered")
+	}
+
+	s := f.readyStory(t, "Made ready meanwhile", t0.Add(2*time.Minute))
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1})
+	if failed != "" {
+		t.Fatalf("the next wait: %s", failed)
+	}
+	events, _ := out["events"].([]any)
+	reported := false
+	for _, e := range events {
+		reported = reported || e.(map[string]any)["id"] == s.ID
+	}
+	if !reported {
+		t.Errorf("the next wait does not report the other story's move: %v", out)
 	}
 }
 

@@ -84,6 +84,33 @@ func TestStreamStateWritesCurrentStateAndNextSteps(t *testing.T) {
 	}
 }
 
+// I-0344: with a task file of another story holding only PLACEHOLDER,
+// stream_state once wrote the narrative and failed to write the narratives'
+// index, whose list of items failed on that file. It answers, and writes both.
+func TestStreamStateWritesTheIndexPastAnUnreadableTaskFile(t *testing.T) {
+	t.Parallel()
+	f, _ := streamFixture(t)
+	halfWrite(t, otherTask(t, f.repo))
+	out, failed := f.call(t, "stream_state", map[string]any{"story": f.story.ID, "current": "Past it."})
+	if failed != "" {
+		t.Fatalf("stream_state with an unreadable task file: %s", failed)
+	}
+	if out["changed"] != true {
+		t.Errorf("the answer: %v", out)
+	}
+	n, err := workitem.ReadNarrative(f.repo.NarrativePath(f.story.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := section(t, n.Body, workitem.CurrentState); got != "Past it." {
+		t.Errorf("current state: %q", got)
+	}
+	row := "| [" + f.story.ID + "](" + f.story.ID + ".md) | Story | in-progress | claude | 2026-09-18T17:01:00Z |"
+	if index, err := os.ReadFile(f.repo.NarrativePath("index")); err != nil || !strings.Contains(string(index), row) {
+		t.Errorf("the narratives' index is not written with the write (%s): %v\n%s", row, err, index)
+	}
+}
+
 // Each text alone writes its own section and leaves the other as it is.
 func TestStreamStateWritesEachTextAlone(t *testing.T) {
 	t.Parallel()

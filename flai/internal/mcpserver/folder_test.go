@@ -270,11 +270,13 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 	}
 }
 
-// I-0102: a held wait that reads a story file os.WriteFile has truncated and
-// not yet filled fails with the file's parse error. readyStoryIn once wrote
+// I-0102: a held wait that read a story file os.WriteFile had truncated and
+// not yet filled failed with the file's parse error. readyStoryIn once wrote
 // that way while TestWaitForWorkAcrossAFolder held its wait, and a loaded host
-// widened the window until a poll fell into it.
-func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
+// widened the window until a poll fell into it. I-0344: the list of items now
+// leaves such a file out, so the wait goes on past it and answers on its
+// timeout, across both projects, as it would without that story.
+func TestAHeldWaitGoesOnPastATruncatedStory(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
@@ -285,14 +287,16 @@ func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
 	}
 	f := heldSetup(t, root)
 
-	done := f.callHeld(t, "wait_for_work", map[string]any{"timeout_seconds": int(heldWait / time.Second)})
+	// two seconds is a hundred polls, which see the truncation and go on
+	done := f.callHeld(t, "wait_for_work", map[string]any{"timeout_seconds": 2})
 	if err := os.Truncate(s.Path, 0); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case a := <-done:
-		if !strings.Contains(a.failed, filepath.Base(s.Path)) {
-			t.Errorf("the wait did not fail on the truncated story: %v %q", a.out, a.failed)
+		projects, _ := a.out["projects"].([]any)
+		if a.failed != "" || a.out["timed_out"] != true || a.out["waiting_for"] != "ready" || len(projects) != 2 {
+			t.Errorf("the wait did not go on past the truncated story to its timeout: %v %q", a.out, a.failed)
 		}
 	case <-time.After(heldWait + 10*time.Second):
 		t.Fatal("wait_for_work never answered")
