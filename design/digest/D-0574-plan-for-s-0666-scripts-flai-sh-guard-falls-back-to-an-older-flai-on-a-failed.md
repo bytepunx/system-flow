@@ -2,12 +2,12 @@
 id: D-0574
 title: "Plan for S-0666: scripts/flai.sh guard falls back to an older flai on a failed build and exits 127 with none, five tasks in three layers: Recommended: confirm the plan as written, T-3069 included"
 kind: answer
-sources: [TH-1045]
+sources: [TH-1045, S-0666]
 topics: [harness, cli, flai, go, code, all]
 paths: [design/adrs, design/adrs/README.md, scripts/flai.sh, flai/cmd/guard_test.go, ".opencode/plugins/flai-guard.js", flai/tests/integration/opencode_test.go, scripts/README.md, docs/users/flai.md, design/system/agent-adapters.md, docs/operators/index.md, design/system/strategic-agents.md, design/issues/I-0275-this-repository-s-guard-hooks-let-a-call-through-when-scripts-flai-sh-exits.md, design/issues/summary.md, design/issues/I-0229-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s-condition-and-s-0416-s-testadefinedroleisheldtoitsfile-still-expects-the-old-words.md]
 date: 2026-11-10
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0280-scripts-flai-sh-guard-runs-an-older-bin-flai-or-else-the-installed-flai-when.md#decision"
 asked_again: []
 cited: []
 ---
@@ -38,3 +38,5 @@ Source: design/adrs/0235-the-guard-hook-refuses-a-call-when-flai-guard-cannot-st
 ```
 
 Source: TH-1045.
+
+S-0666's agent recorded in its narrative that the recommendation reversed part of ADR-0235, so it was the operator's to confirm. Work went on once the operator moved S-0666 to ready with the plan on it, and the new ADR, [ADR-0280](../adrs/0280-scripts-flai-sh-guard-runs-an-older-bin-flai-or-else-the-installed-flai-when.md), was written proposed so the operator still decides at acceptance (`wip/archive/agents/S-0666.md` § Decisions).

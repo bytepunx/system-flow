@@ -8,7 +8,7 @@ paths: [".claude/settings.json", template/root/.claude/settings.json, template/C
 date: 2026-11-02
 status: active
 absorbed_by: ""
-asked_again: [TH-0962, TH-0963]
+asked_again: [TH-0962, TH-0963, TH-1049, TH-1051]
 cited: [S-0633, S-0638, S-0666, TH-0804, TH-0805, TH-0962, TH-0963, TH-1051]
 ---
 

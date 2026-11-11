@@ -3,10 +3,10 @@ id: S-0667
 type: story
 nature: improvement
 title: A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:40Z
-updated: 2026-11-10T19:29:36Z
+updated: 2026-11-11T01:40:44Z
 transitions:
   - to: ready
     at: 2026-11-10T08:58:35Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T19:29:36Z
     by: system-flow
+  - to: done
+    at: 2026-11-11T01:40:44Z
+    by: alex
 blocked:
   - from: 2026-11-10T11:05:54Z
     until: 2026-11-10T19:28:15Z

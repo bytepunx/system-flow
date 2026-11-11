@@ -4,10 +4,10 @@ title: S-0667 is verified and ready to accept, but this orchestrator session has
 anchor:
   path: wip/kanban/stories/S-0667-a-docker-run-from-a-story-s-agent-s-shell-mounts-the-main-checkout-as-an-empty.md
   item: S-0667
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-10T19:32:03Z
-updated: 2026-11-10T19:32:03Z
+updated: 2026-11-11T01:40:44Z
 ---
 
 # TH-1054 S-0667 is verified and ready to accept, but this orchestrator session has no accept tool
@@ -30,3 +30,6 @@ On wip/kanban/stories/S-0667-a-docker-run-from-a-story-s-agent-s-shell-mounts-th
 - All changed files are within the story's touches, including the new issue I-0344.
 
 **Follow-up:** TH-1053 still asks for the story that puts the zsh brace rule into the template's baseline.
+
+### 2026-11-11T01:40:44Z alex
+Resolved: S-0667 was accepted
