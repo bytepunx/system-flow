@@ -2,12 +2,12 @@
 id: I-0338
 title: flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync
 class: defect
-status: open
+status: closed
 count: 1
 cost: 3m
 first_reported: 2026-11-10T09:13:03Z
 last_reported: 2026-11-10T09:13:03Z
-updated: 2026-11-10T10:10:59Z
+updated: 2026-11-11T22:21:35Z
 ---
 
 # I-0338 flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync
@@ -24,3 +24,4 @@ S-0682's T-2899 close (task_done, 2026-11-10T09:11:52Z): the sync step answered 
 ## Remediation
 
 Story S-0712 remediates this issue, created from it at 2026-11-10T10:10:59Z.
+Closed 2026-11-11T22:21:35Z: S-0712: storygit.Rebase now takes main's head once, as a commit, before it reads the merge base, and rebases onto it, checks undoes_main, settles the changelogs, and folds the issues against that commit, so a commit main gains while flai task done's sync runs is not reported or recorded (T-2963). TestSyncFindsNothingUndoneWhenMainGainsCommitsWhileItRuns in flai/internal/storygit/sync_test.go reproduces the cause and fails without the fix (T-2965).
