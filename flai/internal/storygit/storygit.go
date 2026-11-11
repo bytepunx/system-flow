@@ -44,6 +44,39 @@ func MainBranch(r execx.Runner, mainRoot string) (string, error) {
 	return out, nil
 }
 
+// Heads is the commit each local branch of a checkout is at, by branch name,
+// and the branch the checkout has checked out, "" when HEAD is at none of
+// them, as one git for-each-ref reads them.
+type Heads struct {
+	Commits map[string]string
+	Checked string
+}
+
+// ReadHeads reads every local branch's head and the branch checked out at
+// root with one git for-each-ref, in place of one rev-parse a branch
+// (S-0698). A branch at an annotated tag is at the tag's commit, and one at
+// no commit is left out, as rev-parse's ^{commit} finds none for it.
+func ReadHeads(r execx.Runner, root string) (Heads, error) {
+	read, err := readRefs(r, root)
+	if err != nil {
+		return Heads{}, err
+	}
+	return Heads{Commits: read.heads, Checked: read.main}, nil
+}
+
+// Main is the branch checked out and the commit it is at, as MainBranch and
+// a rev-parse of it read them, or an error saying why there is none.
+func (h Heads) Main() (branch, head string, err error) {
+	if h.Checked == "" {
+		return "", "", fmt.Errorf("the main checkout has a detached HEAD or no branch; check out a branch first")
+	}
+	head, ok := h.Commits[h.Checked]
+	if !ok {
+		return "", "", fmt.Errorf("git names no commit for %s; check that git can read the main branch", h.Checked)
+	}
+	return h.Checked, head, nil
+}
+
 // BranchExists reports whether the local branch exists.
 func BranchExists(r execx.Runner, root, branch string) bool {
 	_, err := r.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)

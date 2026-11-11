@@ -110,7 +110,7 @@ const refsFormat = "--format=%(refname)%09%(HEAD)%09%(*objecttype)%09%(*objectna
 func readRefs(r execx.Runner, root string) (refs, error) {
 	out, err := r.Run(root, "git", "for-each-ref", refsFormat, "refs/heads/")
 	if err != nil {
-		return refs{}, fmt.Errorf("read the heads of the local branches in %s to trial-merge: %w", root, err)
+		return refs{}, fmt.Errorf("read the heads of the local branches in %s: %w; check that git can read the repository", root, err)
 	}
 	read := refs{heads: map[string]string{}}
 	for line := range strings.SplitSeq(out, "\n") {

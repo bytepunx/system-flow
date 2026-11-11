@@ -2,6 +2,7 @@ package storygit
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -138,5 +139,72 @@ func TestChangedAmongIsEmptyWhenTheChangeLeavesTheDirtyFilesAlone(t *testing.T) 
 	writeFile(t, dir, "notes.md")
 	if got := overwritten(); len(got) != 0 {
 		t.Fatalf("dirty elsewhere: overwritten = %v; want none", got)
+	}
+}
+
+// processCounter is the real runner, counting the processes it starts.
+type processCounter struct {
+	execx.System
+	calls []string
+}
+
+func (c *processCounter) Run(dir, name string, args ...string) (string, error) {
+	c.calls = append(c.calls, name+" "+strings.Join(args, " "))
+	return c.System.Run(dir, name, args...)
+}
+
+// S-0698: ReadHeads reads every local branch's head and the branch checked
+// out with one git process, each head the commit rev-parse's ^{commit}
+// names, a branch at an annotated tag at the tag's commit; with HEAD
+// detached no branch is checked out, and Main says why. Integration: it
+// runs real git.
+func TestReadHeadsReadsEveryBranchAndTheCheckedOutOneInOneProcess(t *testing.T) {
+	dir := gitRepo(t)
+	git(t, dir, "branch", Branch("S-0001"))
+	git(t, dir, "checkout", "-q", "-b", Branch("S-0002"))
+	write(t, dir, "b.md", "two\n")
+	git(t, dir, "add", "-A")
+	git(t, dir, "commit", "-q", "-m", "two")
+	git(t, dir, "tag", "-a", "-m", "a tag", "v1")
+	tag, err := (execx.System{}).Run(dir, "git", "rev-parse", "v1")
+	if err != nil {
+		t.Fatal(tag, err)
+	}
+	git(t, dir, "update-ref", "refs/heads/tagged", tag)
+	git(t, dir, "checkout", "-q", "main")
+
+	r := &processCounter{}
+	heads, err := ReadHeads(r, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.calls) != 1 || !strings.HasPrefix(r.calls[0], "git for-each-ref ") {
+		t.Errorf("ReadHeads ran %q, want one git for-each-ref", r.calls)
+	}
+	want := map[string]string{}
+	for _, b := range []string{"main", Branch("S-0001"), Branch("S-0002"), "tagged"} {
+		head, err := (execx.System{}).Run(dir, "git", "rev-parse", "--verify", "--quiet", b+"^{commit}")
+		if err != nil {
+			t.Fatal(head, err)
+		}
+		want[b] = head
+	}
+	if !reflect.DeepEqual(heads.Commits, want) {
+		t.Errorf("heads %v, want rev-parse's %v", heads.Commits, want)
+	}
+	if branch, head, err := heads.Main(); err != nil || branch != "main" || head != want["main"] {
+		t.Errorf("Main = %q %q %v, want main at %s", branch, head, err, want["main"])
+	}
+
+	git(t, dir, "checkout", "-q", "--detach", "main")
+	heads, err = ReadHeads(execx.System{}, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if heads.Checked != "" || heads.Commits["main"] != want["main"] {
+		t.Errorf("detached: checked %q, main at %q, want none checked and main at %s", heads.Checked, heads.Commits["main"], want["main"])
+	}
+	if _, _, err := heads.Main(); err == nil || !strings.Contains(err.Error(), "detached HEAD") {
+		t.Errorf("detached: Main error %v, want one saying HEAD is detached", err)
 	}
 }
