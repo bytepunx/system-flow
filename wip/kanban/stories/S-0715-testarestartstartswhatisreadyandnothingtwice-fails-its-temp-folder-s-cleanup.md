@@ -6,7 +6,7 @@ title: "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cle
 status: backlog
 owner: alex
 created: 2026-11-10T10:55:22Z
-updated: 2026-11-10T10:55:22Z
+updated: 2026-11-11T09:02:10Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
     by: flai
     at: 2026-11-10T10:55:22Z
+finalized:
+  by: alex
+  at: 2026-11-11T09:02:10Z
 ---
 # S-0715 TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cleanup with "directory not empty", as I-0048's and I-0233's serve tests did
 
