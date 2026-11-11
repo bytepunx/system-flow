@@ -6,7 +6,7 @@ title: "flai check finds `adr.index` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T09:56:02Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:46:41Z
 transitions: []
 tags: [flai, adr]
 touches: [flai/internal/adr/adr.go, flai/internal/adr/adr_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0336-flai-check-finds-adr-index-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-10T11:06:57Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T21:01:00Z
-  basis: "Its own forecast of 45m; 24th in the pull order with an in-progress limit of 3, behind S-0686, S-0691, S-0693, S-0696, S-0697, S-0700, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0699, S-0701, S-0703, S-0706, S-0707 and S-0709."
+  delivery: 2026-11-11T21:39:00Z
+  basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0699, S-0701, S-0703, S-0706, S-0707 and S-0709."
   by: flai
-  at: 2026-11-11T07:23:13Z
+  at: 2026-11-11T08:46:41Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:12Z

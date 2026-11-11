@@ -6,7 +6,7 @@ title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks fail
 status: ready
 owner: alex
 created: 2026-11-10T08:54:25Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:46:41Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:35Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:23Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T10:53:00Z
-  basis: "Its own forecast of 2h; 6th in the pull order with an in-progress limit of 3, behind S-0686, S-0691, S-0693, S-0696, S-0697, S-0700, S-0698 and S-0702."
+  delivery: 2026-11-11T11:32:00Z
+  basis: "Its own forecast of 2h; 2nd in the pull order with an in-progress limit of 3, behind S-0693, S-0698 and S-0702."
   by: flai
-  at: 2026-11-11T07:23:13Z
+  at: 2026-11-11T08:46:41Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:10Z
