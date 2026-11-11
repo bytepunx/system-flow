@@ -76,7 +76,7 @@ tests:
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: golangci-json
   - name: go-test
-    command: [env, "GOMAXPROCS=1", go, test, "-json", "-p", "1", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway", "{importers}"]
+    command: [env, "GOMAXPROCS=1", go, test, "-json", "-p", "1", "-short", "-count=1", "-timeout", "10m", "-skip", "^TestGateway", "{importers}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json

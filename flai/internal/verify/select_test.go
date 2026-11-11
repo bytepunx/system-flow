@@ -709,7 +709,7 @@ func TestRepositoryManifestRunsChangedGoPackagesShortAndIntegrationWhole(t *test
 	}
 	// one package at a time, every go process on one core, and no race
 	// detector, so that close-outs at once do not saturate the host (S-0722)
-	flags := []string{"env", "GOMAXPROCS=1", "go", "test", "-json", "-p", "1", "-short", "-count=1", "-timeout", "20m", "-skip", "^TestGateway"}
+	flags := []string{"env", "GOMAXPROCS=1", "go", "test", "-json", "-p", "1", "-short", "-count=1", "-timeout", "10m", "-skip", "^TestGateway"}
 	if len(got) <= len(flags) || !reflect.DeepEqual(got[:len(flags)], flags) {
 		t.Fatalf("go-test runs %q, want %q and the packages", got, flags)
 	}

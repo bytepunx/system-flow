@@ -25,13 +25,18 @@ if [ "$CACHE_ROOT" != "$ROOT" ]; then
   "$ROOT/scripts/flaiover-install.sh" --if-needed
 fi
 cd "$ROOT/flai"
-# 20 minutes a package, not go test's 10: flai/internal/mcpserver's suite took 8 to 10 minutes
-# under -race before S-0548 ran it in parallel, and crossed 10 in merge queue batch
-# 20261028-231632 (S-0507, I-0225).
 if [ -n "$race" ]; then
+  # 20 minutes a package under -race: flai/internal/mcpserver's suite took 8 to 10
+  # minutes before S-0548 ran it in parallel, and crossed 10 in merge queue batch
+  # 20261028-231632 (S-0507, I-0225); the slowest package took 252 s on every core
+  # with the host at a load of 69 (S-0722).
   echo "integration tests (go test -race, full, every core)"
   go test -race -count=1 -timeout 20m -skip '^TestGateway' "$@" ./...
 else
+  # 10 minutes a package at one core: the slowest, ./cmd and ./internal/mcpserver,
+  # took 130 to 133 s and 121 s in three runs (S-0722), so a host loaded three
+  # times over still leaves them inside it, and a hung test is named well before
+  # the whole run would end.
   echo "integration tests (go test, full, one core)"
-  GOMAXPROCS=1 go test -p 1 -count=1 -timeout 20m -skip '^TestGateway' "$@" ./...
+  GOMAXPROCS=1 go test -p 1 -count=1 -timeout 10m -skip '^TestGateway' "$@" ./...
 fi
