@@ -2,6 +2,7 @@ package harness_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"maps"
 	"os"
 	"path/filepath"
@@ -569,10 +570,7 @@ func TestAStrategicAgentsContainerRefusesWhatItCannotRun(t *testing.T) {
 	}{
 		{"neither a story nor a role", func(r *harness.Request, _ *harness.Host) { r.Role = "" }, "names neither a story nor a role: start it for one"},
 		{"a story and a role", func(r *harness.Request, _ *harness.Host) { r.Story = "S-0509" }, "not both: start it for one"},
-		{"a role that is not a strategic one", func(r *harness.Request, _ *harness.Host) { r.Role = "review" }, `"review" is none of them: start one of them, or run this agent on another harness`},
-		{"a role the project defines", func(r *harness.Request, _ *harness.Host) {
-			r.Role, r.RoleFile = "review", &roles.Role{Name: "reviewer", Role: "review"}
-		}, "run it on another harness until a story carries its file to pilot"},
+		{"a role that is neither built in nor defined", func(r *harness.Request, _ *harness.Host) { r.Role = "review" }, `"review" is none of them, nor a role the project defines in a role file of its own: start one of them or a defined role, or run this agent on another harness`},
 		{"a login that is the checkout", func(r *harness.Request, h *harness.Host) { h.Login = r.Root }, "which a container never mounts"},
 		{"a login that is the home", func(_ *harness.Request, h *harness.Host) { h.Login = filepath.Dir(h.Login) }, "which a container never mounts"},
 		{"an analyzer given an item", func(r *harness.Request, _ *harness.Host) { r.Role, r.Item = "analyze", "E-0029" }, "inner harness claude-code refuses the start"},
@@ -583,6 +581,218 @@ func TestAStrategicAgentsContainerRefusesWhatItCannotRun(t *testing.T) {
 		c.change(&r, &host)
 		if _, err := harness.Adapters[harness.Container].Start(r, host); err == nil || !strings.Contains(err.Error(), c.says) {
 			t.Errorf("%s: %v, want %q", c.name, err, c.says)
+		}
+	}
+}
+
+// triagerFile is a role the project defines in a role file of its own, the
+// triager: it runs in role triage on a story.
+const triagerFile = `---
+title: Triager
+updated: 2026-11-11
+status: active
+name: triager
+role: triage
+definition:
+  description: Triages a story for flai serve.
+  tools: [Read, Grep, mcp__flai__item_get]
+  model: inherit
+action: triage
+trigger:
+  - asked
+item: [story]
+topics: [planning]
+works_story: false
+charge: none
+tools: []
+commands: []
+files: []
+permissions: []
+---
+
+You are the triager: read the story and say where it belongs.
+`
+
+// triager is triagerFile, read as flai reads a role file.
+func triager(t *testing.T) *roles.Role {
+	t.Helper()
+	f, p := roles.Parse("design/workflows/roles/triager.md", triagerFile)
+	if p != nil {
+		t.Fatal(p)
+	}
+	return &f
+}
+
+// definedReq is a start of the triager on S-0042 on the container harness,
+// with two inputs, as flai serve starts a role the project defines: its file,
+// its verb as the role, and RoleAgent of its name and item as its name, in
+// the main checkout roleReq makes.
+func definedReq(t *testing.T) (harness.Request, harness.Host) {
+	t.Helper()
+	r, host := roleReq(t, "triage")
+	r.RoleFile, r.Item, r.Name = triager(t), "S-0042", harness.RoleAgent("triager", "S-0042")
+	r.Inputs = []harness.Input{{Name: "depth", Value: "thorough"}, {Name: "scope", Value: "touches"}}
+	return r, host
+}
+
+// I-0258, S-0705: a role the project defines runs on the container harness
+// as a built-in role does, rather than being refused: its container mounts
+// the main checkout, its .git/hooks and .git/config read-only, its cache
+// folder, and the login, in the order a built-in role's does and nothing
+// else, and both its container and its cache folder are named for the
+// role's name, not its verb, which a built-in role could share.
+func TestADefinedRolesContainerMountsWhatABuiltInRolesDoesNamedForItsName(t *testing.T) {
+	r, host := definedReq(t)
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err != nil {
+		t.Fatalf("the container harness refuses a role the project defines: %v", err)
+	}
+	root, hooks, config := r.Root, filepath.Join(r.Root, ".git", "hooks"), filepath.Join(r.Root, ".git", "config")
+	cache := filepath.Join(r.Root, ".flai-cache", "agents", "triager")
+	user := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
+	want := []string{"docker", "run", "--rm", "-i", "--name", "flai-agent-triager-3f2a-b1", "--user", user,
+		"--network", "bridge", "--add-host", "host.docker.internal:host-gateway",
+		"-v", root + ":" + root, "-w", root, "-v", hooks + ":" + hooks + ":ro", "-v", config + ":" + config + ":ro", "-v", cache + ":" + cache, "-v", host.Login + ":/run/claude-login:ro",
+		"-e", "FLAI_AGENT", "-e", "FLAI_SESSION", "-e", "FLAI_ROLE", "-e", "FLAI_STARTED_BY", "-e", "FLAI_MCP_URL", "-e", "FLAI_MCP_TOKEN",
+		"-e", "FLAI_CONFIG", "-e", "FLAI_CACHE_DIR", "-e", "GATEWAY_KEY", "flai-agent-claude-code:local"}
+	if st.Harness != harness.Container || !slices.Equal(st.Argv, want) {
+		t.Errorf("harness %q argv\n%q\nwant\n%q", st.Harness, st.Argv, want)
+	}
+	wantEnv := []string{"FLAI_CONFIG=" + cache + "/flai/config.json", "FLAI_CACHE_DIR=" + cache + "/flai/cache", "FLAI_ROLE=triage"}
+	if !slices.Equal(st.Env, wantEnv) {
+		t.Errorf("env %q, want %q", st.Env, wantEnv)
+	}
+	pr, host2 := roleReq(t, "plan")
+	pr.Item = "E-0029"
+	plan, err := harness.Adapters[harness.Container].Start(pr, host2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Container == nil || plan.Container == nil || len(st.Container.Mounts) != len(plan.Container.Mounts) {
+		t.Fatalf("the defined role's mounts %+v, the planner's %+v: want as many", st.Container, plan.Container)
+	}
+	for i, m := range st.Container.Mounts {
+		p := plan.Container.Mounts[i]
+		if m.Path == harness.ContainerLogin || p.Path == harness.ContainerLogin {
+			if m.Path != p.Path || m.ReadOnly != p.ReadOnly {
+				t.Errorf("mount %d is %+v, and the planner's is %+v: want the login at the same place", i, m, p)
+			}
+			continue
+		}
+		rel, _ := filepath.Rel(r.Root, m.Path)
+		prel, _ := filepath.Rel(pr.Root, p.Path)
+		if prel == filepath.Join(".flai-cache", "agents", "plan") {
+			prel = filepath.Join(".flai-cache", "agents", "triager")
+		}
+		if rel != prel || m.ReadOnly != p.ReadOnly || m.Host != m.Path {
+			t.Errorf("mount %d is %+v, and the planner's is %+v: want the same but for the cache folder's name", i, m, p)
+		}
+	}
+	if st.Container.Name != "flai-agent-triager-3f2a-b1" {
+		t.Errorf("the container is named %s, want it named for the role's name", st.Container.Name)
+	}
+}
+
+// I-0258, S-0705: pilot's start request for a role the project defines names
+// the role's file by its name, role_name, beside its verb, its item, and its
+// inputs, and carries nothing of the file itself, which pilot loads from the
+// mounted checkout; it is one pilot checks, and, with the file loaded by that
+// name, one its inner harness starts as the role, under RoleAgent of its name
+// and item.
+func TestADefinedRolesContainerHandsPilotItsNameNotItsFile(t *testing.T) {
+	r, host := definedReq(t)
+	st, err := harness.Adapters[harness.Container].Start(r, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(st.Stdin, &raw); err != nil {
+		t.Fatalf("the start request %s: %v", st.Stdin, err)
+	}
+	if raw["role_name"] != "triager" || raw["Role"] != "triage" || raw["Item"] != "S-0042" || raw["Name"] != "triager-S-0042" {
+		t.Errorf("the start request %s: want role_name triager, Role triage, Item S-0042, Name triager-S-0042", st.Stdin)
+	}
+	for _, never := range []string{"RoleFile", "Builtin", "You are the triager", "Triages a story", "triager.md"} {
+		if strings.Contains(string(st.Stdin), never) {
+			t.Errorf("the start request carries %q of the role file: %s", never, st.Stdin)
+		}
+	}
+	pr, err := pilot.Read(bytes.NewReader(st.Stdin))
+	if err != nil {
+		t.Fatalf("pilot reads %s: %v", st.Stdin, err)
+	}
+	cache := filepath.Join(r.Root, ".flai-cache", "agents", "triager")
+	env := map[string]string{"FLAI_MCP_URL": "http://host.docker.internal:4243/mcp", "FLAI_MCP_TOKEN": "t"}
+	if err := pilot.Check(pr, func(n string) string { return env[n] }, func(p string) bool { return p == cache }); err != nil {
+		t.Errorf("pilot refuses %s: %v", st.Stdin, err)
+	}
+	if pr.RoleName != "triager" || pr.RoleFile != nil || pr.Role != "triage" || pr.Item != "S-0042" || pr.Name != "triager-S-0042" ||
+		pr.Root != r.Root || pr.Cache != cache || pr.Story != "" || !slices.Equal(pr.Inputs, r.Inputs) {
+		t.Errorf("request %+v", pr)
+	}
+	if got := harness.ContainerSubject(pr); got != "triager" {
+		t.Errorf("pilot's request's subject is %q, want the role's name", got)
+	}
+	pr.RoleFile = triager(t)
+	inner, err := harness.Adapters[pr.Inner].Start(pr, harness.Host{})
+	if err != nil {
+		t.Fatalf("the inner harness refuses the request pilot reads, with the role's file loaded: %v", err)
+	}
+	if i := slices.Index(inner.Argv, "--agent"); i < 0 || i+1 >= len(inner.Argv) || inner.Argv[i+1] != "triager" {
+		t.Errorf("the inner start has no --agent triager: %q", inner.Argv)
+	}
+	for _, kv := range []string{"FLAI_AGENT=triager-S-0042", "FLAI_ROLE=triage", "FLAI_ITEM=S-0042"} {
+		if !slices.Contains(inner.Env, kv) {
+			t.Errorf("the inner start's env %q lacks %s", inner.Env, kv)
+		}
+	}
+}
+
+// S-0705: the container harness refuses what it cannot run of a role the
+// project defines: one named for a built-in role's verb, whose container
+// and cache folder would be the built-in role's, and one whose name names no
+// container; and it refuses what the inner harness refuses of the role, as
+// pilot would, which it can only do with the role's file in hand.
+func TestADefinedRolesContainerRefusesWhatItCannotRun(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		change func(*harness.Request)
+		says   string
+	}{
+		{"a name that is a built-in role's verb", func(r *harness.Request) {
+			r.RoleFile.Name, r.Name = "plan", harness.RoleAgent("plan", r.Item)
+		}, "is the built-in role plan's verb, so on the container harness its container and its cache folder would be the built-in role's"},
+		{"a name that names no container", func(r *harness.Request) { r.RoleFile.Name = "a b" }, `names its role "a b", which names no container`},
+		{"a run in another role than its file's", func(r *harness.Request) { r.Role = "review" }, "the role triager runs in role triage, as its file design/workflows/roles/triager.md says"},
+		{"an item of a kind its file does not take", func(r *harness.Request) {
+			r.Item, r.Name = "E-0029", harness.RoleAgent("triager", "E-0029")
+		}, "the role triager takes story, as its file design/workflows/roles/triager.md says"},
+		{"a name other than RoleAgent's", func(r *harness.Request) { r.Name = "agent-triage" }, "start it as triager-S-0042"},
+	} {
+		r, host := definedReq(t)
+		c.change(&r)
+		if _, err := harness.Adapters[harness.Container].Start(r, host); err == nil || !strings.Contains(err.Error(), c.says) {
+			t.Errorf("%s: %v, want %q", c.name, err, c.says)
+		}
+	}
+}
+
+// S-0705: a run's container and cache are named for its story, else for a
+// role the project defines by its name, from its file on the host or from
+// role_name in pilot's start request, else for a built-in role by its verb.
+func TestContainerSubjectIsTheStoryTheDefinedRolesNameOrTheBuiltInRolesVerb(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		r    harness.Request
+		want string
+	}{
+		{"a story", harness.Request{Story: "S-0508"}, "S-0508"},
+		{"a defined role on the host", harness.Request{Role: "triage", RoleFile: &roles.Role{Name: "triager", Role: "triage"}, Item: "S-0042"}, "triager"},
+		{"a defined role in pilot's start request", harness.Request{Role: "triage", RoleName: "triager", Item: "S-0042"}, "triager"},
+		{"a built-in role", harness.Request{Role: "plan", Item: "E-0029"}, "plan"},
+	} {
+		if got := harness.ContainerSubject(c.r); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
 		}
 	}
 }

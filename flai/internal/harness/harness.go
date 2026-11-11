@@ -79,8 +79,13 @@ type Request struct {
 	// its harness definition, and its body (S-0417). Name is then RoleAgent
 	// of its name and Item. Nil for the built-in roles, which run as their
 	// own definitions, and for an agent working a story. Never read from a
-	// start request.
+	// start request: pilot loads it by RoleName from the mounted checkout
+	// (S-0705).
 	RoleFile *roles.Role `json:"-"`
+	// RoleName is the name of a defined role's file, which pilot's start
+	// request carries in place of the file (S-0705); empty for any other
+	// agent, and on the host, where RoleFile says it.
+	RoleName string `json:"role_name,omitempty"`
 	// Builtin is the role file a built-in role runs from, the project's or
 	// the baseline flai carries (roles.Builtin): its body, the project's
 	// additions below the marker included, is the prompt of the definition
@@ -89,9 +94,9 @@ type Request struct {
 	// the prompt of its .claude/agents file. Never read from a start request.
 	Builtin *roles.Role `json:"-"`
 	// Inputs are a defined role's run's inputs, in the order given, which
-	// its prompt names (S-0417); none for any other agent. Never read from a
-	// start request.
-	Inputs []Input `json:"-"`
+	// its prompt names (S-0417); none for any other agent. Pilot's start
+	// request carries them, since the checkout it mounts does not (S-0705).
+	Inputs []Input `json:"inputs,omitempty"`
 	// Item is the epic or story the planner plans, or a defined role runs
 	// on, checked by the caller; empty when the agent works a story,
 	// orchestrates, analyzes, or curates, or a defined role runs on none.

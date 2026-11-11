@@ -107,9 +107,25 @@ func ContainerInners() []string {
 	return slices.DeleteFunc(Names(), func(n string) bool { return n == Container || n == Command || n == OpenCode })
 }
 
-// ContainerName is the name of the container in session of subject, a
-// story's ID or a strategic agent's role, such as plan, by which flai serve
-// stops it.
+// ContainerSubject is what a run's container and cache folder are named for
+// (ContainerName, ContainerCache): its story's ID, else the name of the role
+// the project defines that it runs, else its built-in role's verb, such as
+// plan.
+func ContainerSubject(r Request) string {
+	switch {
+	case r.Story != "":
+		return r.Story
+	case r.RoleFile != nil:
+		return r.RoleFile.Name
+	case r.RoleName != "":
+		return r.RoleName
+	}
+	return r.Role
+}
+
+// ContainerName is the name of the container in session of subject, as
+// ContainerSubject gives it: a story's ID, a defined role's name, or a
+// built-in role's verb, such as plan, by which flai serve stops it.
 func ContainerName(subject, session string) string {
 	if session == "" {
 		return "flai-agent-" + subject
@@ -119,8 +135,8 @@ func ContainerName(subject, session string) string {
 
 // ContainerCache is the folder under the project at root that keeps the inner
 // harness's configuration and sessions and the container's flai's for
-// subject, a story's ID or a strategic agent's role, such as plan, mounted at
-// the same path.
+// subject, as ContainerSubject gives it: a story's ID, a defined role's
+// name, or a built-in role's verb, such as plan, mounted at the same path.
 func ContainerCache(root, subject string) string {
 	return filepath.Join(root, ".flai-cache", "agents", subject)
 }
@@ -139,9 +155,10 @@ func ContainerCache(root, subject string) string {
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
 // which names the inner harness, the cache, and the MCP server's variables,
-// never a value. A strategic agent's start mounts the main checkout instead
-// (roleStart). It refuses a request that is neither a story's agent's nor a
-// built-in strategic agent's (containerSubject), the operator's arguments, an
+// never a value. A strategic agent's start, a built-in role's or one the
+// project defines, mounts the main checkout instead (roleStart). It refuses a
+// request that is neither a story's agent's nor a strategic agent's
+// (containerSubject), the operator's arguments, an
 // inner harness with no image, a login the inner harness needs and the host
 // has not set, a worktree whose git or main checkout it cannot mount, and
 // what the inner harness itself refuses of the request, as pilot would.
@@ -315,16 +332,19 @@ func createLockFile(path string) error {
 }
 
 // roleStart is Start for a strategic agent, the planner, the orchestrator,
-// the analyzer, or the curator (S-0509, ADR-0247): it mounts the project's
+// the analyzer, the curator (S-0509, ADR-0247), or a role the project
+// defines (S-0705): it mounts the project's
 // main checkout read-write at its host path as the working directory, the
 // checkout's .git/hooks and .git/config read-only over it, so that nothing in
 // the container can name a command git runs on the host (ADR-0281), the
 // role's cache folder, and the operator's login read-only, and nothing else; it passes the variables of
 // roleContainerEnv by name, FLAI_ROLE's value in the docker client's
 // environment, as the claude-code adapter's is on the host; and it names the
-// container for the role.
+// container and the cache folder for the role, a defined role's by its name
+// (ContainerSubject).
 func roleStart(r Request, host Host, inner, image string) (Start, error) {
-	cache := ContainerCache(r.Root, r.Role)
+	subject := ContainerSubject(r)
+	cache := ContainerCache(r.Root, subject)
 	if err := mountable(r.Root, r.Root, cache, host.Login); err != nil {
 		return Start{}, err
 	}
@@ -334,7 +354,7 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 	}
 	hooks := filepath.Join(r.Root, ".git", "hooks")
 	config := filepath.Join(r.Root, ".git", "config")
-	argv := append(dockerRun(host, ContainerName(r.Role, r.Session)),
+	argv := append(dockerRun(host, ContainerName(subject, r.Session)),
 		"-v", r.Root+":"+r.Root, "-w", r.Root,
 		"-v", hooks+":"+hooks+":ro",
 		"-v", config+":"+config+":ro",
@@ -348,20 +368,25 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 }
 
 // containerSubject refuses a start the container harness cannot run: one
-// that names neither a story nor a role, or both; a role a project defines in
-// a role file of its own, whose file the start request does not carry to
-// pilot; a role that is not a built-in strategic one; and a story that is not
-// a story's ID.
+// that names neither a story nor a role, or both; a role a project defines
+// whose name is a built-in role's verb, whose container and cache folder
+// would be that role's, or names no container; a role that is neither a
+// built-in strategic one nor one the project defines; and a story that is
+// not a story's ID. What the inner harness refuses of a defined role, such
+// as a run in another role than its file's verb, pilotStdin refuses.
 func containerSubject(r Request) error {
+	f := r.RoleFile
 	switch {
 	case r.Story == "" && r.Role == "":
 		return fmt.Errorf("the container harness runs a story's agent or a strategic agent, and this start names neither a story nor a role: start it for one")
 	case r.Story != "" && r.Role != "":
 		return fmt.Errorf("this start names story %s and role %q, and the container harness runs a story's agent or a strategic agent, not both: start it for one", r.Story, r.Role)
-	case r.RoleFile != nil:
-		return fmt.Errorf("role %q is one the project defines in a role file of its own, which the container harness cannot carry to pilot: run it on another harness until a story carries its file to pilot", r.Role)
-	case r.Story == "" && !slices.Contains(conventions.StrategicRoles, r.Role):
-		return fmt.Errorf("the container harness runs the strategic agents in role %s, and %q is none of them: start one of them, or run this agent on another harness", strings.Join(conventions.StrategicRoles, ", "), r.Role)
+	case f != nil && slices.Contains(conventions.StrategicRoles, f.Name):
+		return fmt.Errorf("the role file %s names its role %s, which is the built-in role %s's verb, so on the container harness its container and its cache folder would be the built-in role's: give the role another name, or run it on another harness", f.Path, f.Name, f.Name)
+	case f != nil && (!containerSession.MatchString(f.Name) || f.Name == "." || f.Name == ".."):
+		return fmt.Errorf("the role file %s names its role %q, which names no container or cache folder: give it a kebab-case name, as flai check says", f.Path, f.Name)
+	case r.Story == "" && f == nil && !slices.Contains(conventions.StrategicRoles, r.Role):
+		return fmt.Errorf("the container harness runs the strategic agents in role %s, and %q is none of them, nor a role the project defines in a role file of its own: start one of them or a defined role, or run this agent on another harness", strings.Join(conventions.StrategicRoles, ", "), r.Role)
 	case r.Story != "" && (filepath.Base(r.Story) != r.Story || r.Story == ".."):
 		return fmt.Errorf("the story %q is not a story's ID", r.Story)
 	}
@@ -620,12 +645,18 @@ func containerRun(argv []string) *ContainerRun {
 
 // pilotRequest is the start request pilot reads for r: r in the container's
 // terms, rooted in root, all of the project it mounts, a story's worktree or
-// the main checkout, its agent the inner harness's without inner, and the
-// inner harness, the cache, and the MCP server's variables named.
+// the main checkout, its agent the inner harness's without inner, a defined
+// role's file named by RoleName, and the inner harness, the cache, and the
+// MCP server's variables named. It keeps a defined role's RoleFile, which
+// its JSON drops, so that pilotStdin's inner harness refuses what pilot's
+// would once pilot loads the file by that name.
 func pilotRequest(r Request, inner, root, cache string) Request {
 	pr := r
 	pr.Root, pr.Flai = root, ""
-	pr.RoleFile, pr.Builtin, pr.Inputs, pr.Resume = nil, nil, nil, false
+	pr.Builtin, pr.Resume, pr.RoleName = nil, false, ""
+	if r.RoleFile != nil {
+		pr.RoleName = r.RoleFile.Name
+	}
 	pr.Inner, pr.Cache, pr.MCPURLEnv, pr.MCPTokenEnv, pr.MCPHostEnv = inner, cache, containerURLEnv, containerTokenEnv, ""
 	if a := r.Agent; a != nil {
 		ia := *a
