@@ -49,7 +49,8 @@ func hostProviders(set map[string]manifest.Provider, lookup func(string) (string
 // inner harness, the defaults filled in, its network, and its login folder
 // (S-0508). from, when given, says for each where its entry comes from
 // (ADR-0261). The command's program and arguments are flai serve agent set's
-// command, never set here.
+// command, never set here. A harness with outside folders, the folders
+// outside the project its agents reach, gives them (ADR-0289).
 func (a *app) hostHarnesses(agent config.AgentStart, from func(name string) string) map[string]any {
 	out := map[string]any{}
 	for _, n := range append(settable(), harness.Command) {
@@ -67,6 +68,9 @@ func (a *app) hostHarnesses(agent config.AgentStart, from func(name string) stri
 		caps := harness.Adapters[n].Capabilities()
 		entry := map[string]any{"program": h.Program, "args": args, "set": set.Program != "" || set.Args != nil,
 			"guard": set.Guard, "deny_protected": set.DenyProtected, "guard_capable": caps.Guard, "ask_capable": caps.Ask}
+		if len(set.Outside) > 0 {
+			entry["outside"] = set.Outside
+		}
 		if from != nil {
 			entry["from"] = from(n)
 		}

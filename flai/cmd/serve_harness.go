@@ -143,10 +143,10 @@ func quoteArgs(args []string) string {
 // the container harness takes --image, --network, and --login (S-0508).
 func newServeAgentHarnessCmd(a *app) *cobra.Command {
 	var program, guard, network, login, project string
-	var images []string
+	var images, outside []string
 	var reset, denyProtected, all bool
 	c := &cobra.Command{
-		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [--project <root> | --all-projects] [-- args...]",
+		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--outside <dir>]... [--reset] [--project <root> | --all-projects] [-- args...]",
 		Short: "Set the program a harness is, the arguments that say what its agent may do, and what you lift on it",
 		Long: `A story names its harness, such as claude-code; you say here what that is on
 this host. --program is what is run, and the arguments after -- replace the
@@ -183,6 +183,15 @@ set; --network "" goes back to it. --login is the folder holding your Claude
 login, mounted read-only, an existing folder given as an absolute path or
 under ~/; --login "" clears it.
 
+--outside grants a folder outside the project that a story's agent and its
+sub-agents may read and write, on every harness: the claude-code harness
+passes it as --add-dir and the container harness mounts it at its own path
+(ADR-0289). Repeat it once per folder; the folders given replace the list,
+and --outside "" clears it. Each must be an existing folder, given absolute
+or under ~/, and is kept absolute. It refuses your home folder, ~/.flai and
+any folder under or holding it, and any folder that holds the project or
+that the project holds; with --all-projects, every project this host knows.
+
 The command harness takes only --guard, --deny-protected, and --reset: its
 program and arguments are set with flai serve agent set.
 
@@ -210,12 +219,15 @@ removes its entry, so that it reads every project's again.`,
   flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
   flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
   flai serve agent harness container --network flai-agents
+  flai serve agent harness claude-code --outside ~/src/other --outside /srv/data
+  flai serve agent harness claude-code --outside ""
   flai serve agent harness claude-code --all-projects --program /usr/local/bin/claude
   flai serve agent harness claude-code --project /home/me/src/other --reset`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			guardSet, denySet := cmd.Flags().Changed("guard"), cmd.Flags().Changed("deny-protected")
 			imageSet, networkSet, loginSet := cmd.Flags().Changed("image"), cmd.Flags().Changed("network"), cmd.Flags().Changed("login")
 			containerSet := imageSet || networkSet || loginSet
+			outsideSet := cmd.Flags().Changed("outside")
 			dash := cmd.ArgsLenAtDash()
 			names, rest := args, []string(nil)
 			if dash >= 0 {
@@ -223,7 +235,7 @@ removes its entry, so that it reads every project's again.`,
 			}
 			known := append(settable(), harness.Command)
 			if len(names) == 0 {
-				if dash >= 0 || program != "" || reset || guardSet || denySet || containerSet {
+				if dash >= 0 || program != "" || reset || guardSet || denySet || containerSet || outsideSet {
 					return fmt.Errorf("name the harness: %s", strings.Join(known, ", "))
 				}
 				return a.showAgentCommand("")
@@ -241,8 +253,8 @@ removes its entry, so that it reads every project's again.`,
 			if containerSet && name != config.ContainerHarness {
 				return fmt.Errorf("--image, --network, and --login are the %s harness's, which %s is not; set them with flai serve agent harness %s", config.ContainerHarness, name, config.ContainerHarness)
 			}
-			if reset && (program != "" || dash >= 0 || guardSet || denySet || containerSet) {
-				return fmt.Errorf("--reset takes neither --program, --guard, --deny-protected, --image, --network, --login, nor arguments")
+			if reset && (program != "" || dash >= 0 || guardSet || denySet || containerSet || outsideSet) {
+				return fmt.Errorf("--reset takes neither --program, --guard, --deny-protected, --image, --network, --login, --outside, nor arguments")
 			}
 			setImages, err := parseImages(images)
 			if err != nil {
@@ -279,6 +291,11 @@ removes its entry, so that it reads every project's again.`,
 			}
 			if loginSet {
 				h.Login = login
+			}
+			if outsideSet {
+				if h.Outside, err = a.outsideFolders(name, outside, root, cfg); err != nil {
+					return err
+				}
 			}
 			if program != "" {
 				h.Program = program
@@ -325,6 +342,7 @@ removes its entry, so that it reads every project's again.`,
 	c.Flags().StringArrayVar(&images, "image", nil, "the container harness's image for an inner harness, as <inner>=<image>; repeat for each (flai-agent-<inner>:local unless set)")
 	c.Flags().StringVar(&network, "network", "", `the Docker network the container harness's agents join; "" is Docker's default bridge`)
 	c.Flags().StringVar(&login, "login", "", `the folder holding your Claude login, which the container harness mounts read-only; "" clears it`)
+	c.Flags().StringArrayVar(&outside, "outside", nil, `a folder outside the project a story's agent and its sub-agents may read and write, as --add-dir or a container mount (ADR-0289); repeat for each, "" clears them`)
 	c.Flags().BoolVar(&reset, "reset", false, "go back to the adapter's program and arguments, and lift nothing")
 	return c
 }
@@ -359,6 +377,30 @@ func loginFolder(p string) (string, error) {
 		return "", fmt.Errorf("--login %q: %s is not a folder; give the folder holding your Claude login, as --login ~/.claude", p, abs)
 	}
 	return abs, nil
+}
+
+// outsideFolders is the --outside folders of the harness name, checked by
+// config.OutsideFolders against the home folder and the project at root, or
+// with root "" (--all-projects) every project this host knows: those flai
+// serve serves, the one in the working directory, and those with settings in
+// cfg. "" alone, or none at all, clears the list (ADR-0289).
+func (a *app) outsideFolders(name string, flags []string, root string, cfg config.Config) ([]string, error) {
+	dirs := slices.DeleteFunc(slices.Clone(flags), func(d string) bool { return d == "" })
+	if len(dirs) == 0 {
+		return nil, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("--outside: find your home folder, which no outside folder may be: %w; set HOME", err)
+	}
+	roots := []string{root}
+	if root == "" {
+		roots = append(a.servedRoots(), slices.Collect(maps.Keys(cfg.Agent.Projects))...)
+		for _, list := range cfg.HostActions {
+			roots = append(roots, slices.DeleteFunc(slices.Clone(list), func(r string) bool { return !filepath.IsAbs(r) })...)
+		}
+	}
+	return config.OutsideFolders(name, dirs, home, roots)
 }
 
 // settable are the harnesses the operator sets with flai serve agent harness:

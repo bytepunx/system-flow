@@ -80,6 +80,7 @@ type hostSettingsView struct {
 			Images  map[string]string `json:"images"`
 			Network string            `json:"network"`
 			Login   string            `json:"login"`
+			Outside []string          `json:"outside"`
 		} `json:"harnesses"`
 		Providers map[string]struct {
 			API    string `json:"api"`
@@ -147,6 +148,9 @@ func writeHostSettings(w io.Writer, name, root string, v hostSettingsView) {
 			from = "set"
 		}
 		fmt.Fprintf(w, "  harness %s: %s (%s)\n", n, strings.TrimSpace(h.Program+" "+strings.Join(h.Args, " ")), from)
+		if len(h.Outside) > 0 {
+			fmt.Fprintf(w, "    outside: %s\n", strings.Join(h.Outside, ", "))
+		}
 		if n != config.ContainerHarness {
 			continue
 		}

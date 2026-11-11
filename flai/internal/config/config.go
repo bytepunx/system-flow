@@ -464,11 +464,17 @@ type HarnessHost struct {
 	// Login is the absolute path of the folder holding the operator's Claude
 	// login, which the container harness mounts read-only.
 	Login string `json:"login,omitempty"`
+	// Outside are the folders outside the project that a story's agent and
+	// its sub-agents may read and write, each absolute and cleaned, as
+	// OutsideFolders checks them: passed as --add-dir by the claude-code
+	// harness and mounted by the container harness (ADR-0289). Unlike
+	// Images, Network, and Login, every harness takes them.
+	Outside []string `json:"outside,omitempty"`
 }
 
 // IsZero reports whether the entry sets nothing.
 func (h HarnessHost) IsZero() bool {
-	return h.Program == "" && h.Args == nil && h.Guard == "" && !h.DenyProtected && len(h.Images) == 0 && h.Network == "" && h.Login == ""
+	return h.Program == "" && h.Args == nil && h.Guard == "" && !h.DenyProtected && len(h.Images) == 0 && h.Network == "" && h.Login == "" && len(h.Outside) == 0
 }
 
 // Image is the container harness's image for the inner harness: the one
@@ -534,8 +540,9 @@ func (a AgentStart) WithHarness(name string, h HarnessHost) (AgentStart, error) 
 	return a, nil
 }
 
-// checkHarnesses refuses a harness entry whose guard checkGuard refuses or
-// whose container settings checkContainer refuses.
+// checkHarnesses refuses a harness entry whose guard checkGuard refuses,
+// whose container settings checkContainer refuses, or whose outside folders
+// checkOutside refuses.
 func checkHarnesses(harnesses map[string]HarnessHost) error {
 	var errs []string
 	for _, name := range slices.Sorted(maps.Keys(harnesses)) {
@@ -543,6 +550,7 @@ func checkHarnesses(harnesses map[string]HarnessHost) error {
 			errs = append(errs, err.Error())
 		}
 		errs = append(errs, checkContainer(name, harnesses[name])...)
+		errs = append(errs, checkOutside(name, harnesses[name].Outside)...)
 	}
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
@@ -582,6 +590,116 @@ func checkContainer(name string, h HarnessHost) []string {
 		errs = append(errs, fmt.Sprintf("agent.harnesses.%s.login is %q, which is not an absolute path: set the folder holding your Claude login with flai serve agent harness %s --login ~/.claude", name, h.Login, name))
 	}
 	return errs
+}
+
+// checkOutside refuses an outside folder of the harness name's entry that is
+// not an absolute path, as a hand-edited file may hold; OutsideFolders, which
+// flai serve agent harness runs, checks the rest against the disk (ADR-0289).
+func checkOutside(name string, dirs []string) []string {
+	var errs []string
+	for _, dir := range dirs {
+		if !filepath.IsAbs(dir) {
+			errs = append(errs, fmt.Sprintf("agent.harnesses.%s.outside holds %q, which is not an absolute path: set the folders with flai serve agent harness %s --outside <dir>, given absolute or under ~/, or clear them with --outside \"\"", name, dir, name))
+		}
+	}
+	return errs
+}
+
+// OutsideFolders is the folders dirs, given as flai serve agent harness
+// name's --outside, each absolute and cleaned, ~/ expanded against home, in
+// the order given and each once: the folders outside the project that a
+// story's agent and its sub-agents may read and write (ADR-0289). It refuses
+// a folder that is not absolute or under ~/, one that does not exist or is a
+// file, home itself, one that is, is under, or holds home's .flai, and one
+// that holds a project at roots or that a project at roots holds, every
+// refusal naming the folder and the flag that fixes it. A symbolic link is
+// checked as itself and as what it points at.
+func OutsideFolders(name string, dirs []string, home string, roots []string) ([]string, error) {
+	var out, errs []string
+	fix := fmt.Sprintf("name another folder with flai serve agent harness %s --outside <dir>, or clear them with --outside \"\"", name)
+	flaiDir := filepath.Join(home, ".flai")
+	for _, given := range dirs {
+		dir := given
+		if dir == "~" || strings.HasPrefix(dir, "~/") {
+			dir = filepath.Join(home, strings.TrimPrefix(dir, "~"))
+		}
+		if !filepath.IsAbs(dir) {
+			errs = append(errs, fmt.Sprintf("--outside %q is not an absolute path: give the folder absolute or under ~/, as flai serve agent harness %s --outside ~/src/other", given, name))
+			continue
+		}
+		dir = filepath.Clean(dir)
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			errs = append(errs, fmt.Sprintf("--outside %q: %s is not an existing folder; %s", given, dir, fix))
+			continue
+		}
+		forms := pathForms(dir)
+		var problem string
+		switch {
+		case overlaps(forms, pathForms(home), false):
+			problem = "is your home folder, which would open every file you own to the agent"
+		case overlaps(forms, pathForms(flaiDir), true):
+			problem = fmt.Sprintf("is, is under, or holds %s, flai's own configuration and state, which an agent that wrote could widen its own permissions (ADR-0220)", flaiDir)
+		default:
+			for _, root := range roots {
+				rootForms := pathForms(root)
+				if anyHolds(forms, rootForms) {
+					problem = fmt.Sprintf("holds the project at %s, whose main checkout only flai writes", root)
+					break
+				}
+				if anyHolds(rootForms, forms) {
+					problem = fmt.Sprintf("is inside the project at %s, which a story's agent reaches through its worktree already", root)
+					break
+				}
+			}
+		}
+		if problem != "" {
+			errs = append(errs, fmt.Sprintf("--outside %q: %s %s; %s", given, dir, problem, fix))
+			continue
+		}
+		if !slices.Contains(out, dir) {
+			out = append(out, dir)
+		}
+	}
+	if len(errs) > 0 {
+		return nil, errors.New(strings.Join(errs, "; "))
+	}
+	return out, nil
+}
+
+// pathForms are the absolute path p as given and, when it differs, the path
+// its symbolic links resolve to.
+func pathForms(p string) []string {
+	forms := []string{filepath.Clean(p)}
+	if resolved, err := filepath.EvalSymlinks(p); err == nil && resolved != forms[0] {
+		forms = append(forms, resolved)
+	}
+	return forms
+}
+
+// overlaps reports whether a form of a is a form of b, or, with nested,
+// whether one holds the other.
+func overlaps(a, b []string, nested bool) bool {
+	if nested {
+		return anyHolds(a, b) || anyHolds(b, a)
+	}
+	for _, x := range a {
+		if slices.Contains(b, x) {
+			return true
+		}
+	}
+	return false
+}
+
+// anyHolds reports whether a form of parent is, or holds, a form of child.
+func anyHolds(parents, children []string) bool {
+	for _, p := range parents {
+		for _, c := range children {
+			if rel, err := filepath.Rel(p, c); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // dockerName is what Docker takes as a network's name, and the container:

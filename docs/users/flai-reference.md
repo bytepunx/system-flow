@@ -3952,7 +3952,7 @@ flai serve agent commit S-0140
 Set the program a harness is, the arguments that say what its agent may do, and what you lift on it.
 
 ```text
-flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--reset] [--project <root> | --all-projects] [-- args...] [flags]
+flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--outside <dir>]... [--reset] [--project <root> | --all-projects] [-- args...] [flags]
 ```
 
 A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
@@ -3964,6 +3964,8 @@ On a harness that cannot ask before a protected write, a start is refused unless
 The opencode harness runs opencode run with no arguments of flai's: it can neither run flai guard nor ask, so it starts only with the auto-approve host action on or --deny-protected, and --deny-protected has flai give OpenCode a deny rule for each protected path (ADR-0260).
 
 The container harness runs an inner harness, claude-code, in a Docker container, and only it takes --image, --network, and --login. --image &lt;inner&gt;=&lt;image&gt; is the image the inner harness runs in, flai-agent-&lt;inner&gt;:local (make agent-images) unless set; repeat it for each inner harness. --network is the Docker network the container joins, Docker's default bridge with the host reached through Docker's host gateway unless set; --network "" goes back to it. --login is the folder holding your Claude login, mounted read-only, an existing folder given as an absolute path or under ~/; --login "" clears it.
+
+--outside grants a folder outside the project that a story's agent and its sub-agents may read and write, on every harness: the claude-code harness passes it as --add-dir and the container harness mounts it at its own path (ADR-0289). Repeat it once per folder; the folders given replace the list, and --outside "" clears it. Each must be an existing folder, given absolute or under ~/, and is kept absolute. It refuses your home folder, ~/.flai and any folder under or holding it, and any folder that holds the project or that the project holds; with --all-projects, every project this host knows.
 
 The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
 
@@ -3985,6 +3987,8 @@ flai serve agent harness command --deny-protected=false
 flai serve agent harness opencode --program /opt/opencode/bin/opencode --deny-protected
 flai serve agent harness container --image claude-code=flai-agent-claude-code:local --login ~/.claude
 flai serve agent harness container --network flai-agents
+flai serve agent harness claude-code --outside ~/src/other --outside /srv/data
+flai serve agent harness claude-code --outside ""
 flai serve agent harness claude-code --all-projects --program /usr/local/bin/claude
 flai serve agent harness claude-code --project /home/me/src/other --reset
 ```
@@ -3999,6 +4003,7 @@ Flags:
 | `--image` stringArray | the container harness's image for an inner harness, as &lt;inner&gt;=&lt;image&gt;; repeat for each (flai-agent-&lt;inner&gt;:local unless set) |
 | `--login` string | the folder holding your Claude login, which the container harness mounts read-only; "" clears it |
 | `--network` string | the Docker network the container harness's agents join; "" is Docker's default bridge |
+| `--outside` stringArray | a folder outside the project a story's agent and its sub-agents may read and write, as --add-dir or a container mount (ADR-0289); repeat for each, "" clears them |
 | `--program` string | the program the harness is on this host |
 | `--project` string | the main checkout of the project whose harness this is, not the one in the working directory |
 | `--reset` | go back to the adapter's program and arguments, and lift nothing |

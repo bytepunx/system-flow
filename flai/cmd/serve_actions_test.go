@@ -948,6 +948,78 @@ func TestServeAgentHarnessContainerRefusals(t *testing.T) {
 	}
 }
 
+// S-0701 (ADR-0289): flai serve agent harness --outside keeps the folders,
+// ~/ resolved, as the project's entry of any harness, for every project with
+// --all-projects; show lists them; --outside "" and --reset clear them; and a
+// folder inside the project is refused, changing nothing. Not parallel:
+// it sets HOME for ~/.
+func TestServeAgentHarnessOutside(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	other, scratch := filepath.Join(home, "src", "other"), t.TempDir()
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--outside", "~/src/other", "--outside", scratch)
+	if code != 0 || !strings.Contains(out, "  outside: "+other+", "+scratch+", which a story's agent and its sub-agents may read and write") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	project := func() config.HarnessHost {
+		cfg, _, err := (&app{configPath: configOf(t)}).loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Agent.Project(root).Harnesses["claude-code"]
+	}
+	if got := project(); !reflect.DeepEqual(got, config.HarnessHost{Outside: []string{other, scratch}}) {
+		t.Errorf("kept as the project's entry: %+v", got)
+	}
+	js, _, _ := runIn(t, root, "serve", "agent", "show", "--json")
+	var shown struct {
+		Harnesses map[string]struct {
+			Outside []string `json:"outside"`
+		} `json:"harnesses"`
+	}
+	if err := json.Unmarshal([]byte(js), &shown); err != nil || !slices.Equal(shown.Harnesses["claude-code"].Outside, []string{other, scratch}) {
+		t.Errorf("flai serve agent show --json: %v %s", err, js)
+	}
+	if out, _, _ := runIn(t, root, "serve", "settings"); !strings.Contains(out, "    outside: "+other+", "+scratch+"\n") {
+		t.Errorf("flai serve settings names the folders: %s", out)
+	}
+	var settings hostSettingsView
+	if js, _, _ := runIn(t, root, "serve", "settings", "--json"); json.Unmarshal([]byte(js), &settings) != nil || !slices.Equal(settings.Agent.Harnesses["claude-code"].Outside, []string{other, scratch}) {
+		t.Errorf("flai serve settings --json gives the folders: %s", js)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--outside", filepath.Join(root, "wip")); code == 0 || !strings.Contains(errOut, "is inside the project at "+root) || !strings.Contains(errOut, "or clear them with --outside") {
+		t.Errorf("a folder inside the project: %d %s", code, errOut)
+	}
+	if got := project(); len(got.Outside) != 2 {
+		t.Errorf("a refusal changes nothing: %+v", got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--outside", "")
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Projects != nil {
+		t.Errorf(`--outside "" clears them, and the entry with nothing else: %+v`, cfg.Agent.Projects)
+	}
+	if out, _, _ := runIn(t, root, "serve", "agent", "harness"); strings.Contains(out, "outside:") {
+		t.Errorf("show says nothing of no folders: %s", out)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--all-projects", "--outside", scratch); code != 0 {
+		t.Fatalf("--all-projects: %d %s", code, errOut)
+	}
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); !slices.Equal(cfg.Agent.Harnesses[config.ContainerHarness].Outside, []string{scratch}) {
+		t.Errorf("kept for every project: %+v", cfg.Agent.Harnesses)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--reset", "--outside", scratch); code == 0 || !strings.Contains(errOut, "--reset takes neither") {
+		t.Errorf("--reset with --outside: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "agent", "harness", "container", "--all-projects", "--reset")
+	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); cfg.Agent.Harnesses != nil {
+		t.Errorf("--reset clears them: %+v", cfg.Agent.Harnesses)
+	}
+}
+
 // S-0508: config names the container harness and its inner harnesses
 // itself, since it cannot import harness; they are harness's.
 func TestConfigContainerNamesAreTheHarnesss(t *testing.T) {

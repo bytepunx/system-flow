@@ -73,6 +73,8 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 		"serve agent harness container --network flai",
 		"serve agent harness container --login /home/x/.claude",
 		"serve agent harness container --login=",
+		"serve agent harness claude-code --outside /home/x/src/other",
+		"serve agent harness claude-code --outside=",
 		"serve agent provider litellm --api anthropic-messages --base-url http://h --key-env K",
 		"serve agent provider litellm --base-url=http://h",
 		"serve agent provider litellm --key-env K",

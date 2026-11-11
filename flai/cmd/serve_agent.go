@@ -300,19 +300,20 @@ func (a *app) showAgentCommand(root string, lifted ...budgetLift) error {
 			Images        map[string]string `json:"images,omitempty"`
 			Network       string            `json:"network,omitempty"`
 			Login         string            `json:"login,omitempty"`
+			Outside       []string          `json:"outside,omitempty"`
 			From          string            `json:"from,omitempty"`
 		}
 		hosts := map[string]shown{}
 		for _, name := range settable() {
 			set, h := agent.Harnesses[name], a.harnessHost(agent, name)
-			s := shown{Program: h.Program, Args: h.Args, Guard: set.Guard, DenyProtected: set.DenyProtected, From: harnessFrom(name)}
+			s := shown{Program: h.Program, Args: h.Args, Guard: set.Guard, DenyProtected: set.DenyProtected, Outside: set.Outside, From: harnessFrom(name)}
 			if name == config.ContainerHarness {
 				s.Images, s.Network, s.Login = set.ShownImages(), set.Network, set.Login
 			}
 			hosts[name] = s
 		}
 		if set, ok := agent.Harnesses[harness.Command]; ok {
-			s := shown{Guard: set.Guard, DenyProtected: set.DenyProtected, From: harnessFrom(harness.Command)}
+			s := shown{Guard: set.Guard, DenyProtected: set.DenyProtected, Outside: set.Outside, From: harnessFrom(harness.Command)}
 			if len(agent.Command) > 0 {
 				s.Program, s.Args = agent.Command[0], agent.Command[1:]
 			}
@@ -360,13 +361,17 @@ func (a *app) showAgentCommand(root string, lifted ...budgetLift) error {
 }
 
 // printLifts prints what the operator lifts on a harness, under its line in
-// show: guard none and deny_protected, each with what it gives up (ADR-0131).
+// show: guard none and deny_protected, each with what it gives up (ADR-0131),
+// and the outside folders it grants (ADR-0289).
 func printLifts(a *app, set config.HarnessHost) {
 	if set.Guard == config.GuardNone {
 		fmt.Fprintln(a.out, "  guard: none, so a story's sub-agents run without flai guard where the harness cannot run it, and could move items, write threads, or commit")
 	}
 	if set.DenyProtected {
 		fmt.Fprintln(a.out, "  deny_protected: your arguments deny the protected paths, so flai starts the agent where the harness cannot ask before a protected write")
+	}
+	if len(set.Outside) > 0 {
+		fmt.Fprintf(a.out, "  outside: %s, which a story's agent and its sub-agents may read and write; --outside \"\" clears them\n", strings.Join(set.Outside, ", "))
 	}
 }
 

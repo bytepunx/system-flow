@@ -655,6 +655,107 @@ func TestContainerHarnessSettingsRefused(t *testing.T) {
 	}
 }
 
+// S-0701 (ADR-0289): OutsideFolders takes existing folders given absolute or
+// under ~/, cleaned and each once, and refuses a relative path, a missing
+// folder, a file, home, ~/.flai and what holds it, and a folder that holds
+// the project or that the project holds, each naming the folder and the flag.
+func TestOutsideFolders(t *testing.T) {
+	home := t.TempDir()
+	root := filepath.Join(home, "src", "project")
+	other := filepath.Join(home, "src", "other")
+	scratch := t.TempDir()
+	for _, d := range []string{root, other, filepath.Join(root, "sub"), filepath.Join(home, ".flai", "serve")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	file := filepath.Join(scratch, "file")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(scratch, "link")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+	got, err := OutsideFolders("claude-code", []string{"~/src/other", scratch + "/./", other}, home, []string{root})
+	if err != nil || !reflect.DeepEqual(got, []string{other, scratch}) {
+		t.Errorf("a valid list, absolute, cleaned, and each once: %v %v", got, err)
+	}
+	for _, tc := range []struct {
+		dir, want string
+	}{
+		{"src/other", `--outside "src/other" is not an absolute path`},
+		{"~other", `is not an absolute path`},
+		{filepath.Join(scratch, "missing"), "is not an existing folder"},
+		{file, "is not an existing folder"},
+		{"~", "is your home folder"},
+		{home, "is your home folder"},
+		{"~/.flai", "flai's own configuration and state"},
+		{filepath.Join(home, ".flai", "serve"), "flai's own configuration and state"},
+		{filepath.Dir(home), "flai's own configuration and state"},
+		{filepath.Join(home, "src"), "holds the project at " + root},
+		{root, "holds the project at " + root},
+		{filepath.Join(root, "sub"), "is inside the project at " + root},
+		{link, "holds the project at " + root},
+	} {
+		got, err := OutsideFolders("claude-code", []string{other, tc.dir}, home, []string{root})
+		if err == nil || got != nil {
+			t.Errorf("%s: not refused: %v", tc.dir, got)
+			continue
+		}
+		for _, w := range []string{tc.want, "flai serve agent harness claude-code --outside"} {
+			if !strings.Contains(err.Error(), w) {
+				t.Errorf("%s: %v, want %q", tc.dir, err, w)
+			}
+		}
+	}
+	if got, err := OutsideFolders("claude-code", []string{filepath.Join(home, "src")}, home, nil); err != nil || len(got) != 1 {
+		t.Errorf("with no project root, only home and ~/.flai are refused: %v %v", got, err)
+	}
+}
+
+// S-0701 (ADR-0289): every harness keeps outside folders, round-tripped
+// through a save and a load; a relative one is refused when set, saved, or
+// loaded from a hand-edited file.
+func TestHarnessOutside(t *testing.T) {
+	set := HarnessHost{Outside: []string{"/srv/other", "/tmp/scratch"}}
+	if set.IsZero() {
+		t.Error("an entry that sets only outside is not zero")
+	}
+	c := Default()
+	for _, name := range []string{"claude-code", ContainerHarness, "opencode"} {
+		agent, err := c.Agent.WithHarness(name, set)
+		if err != nil {
+			t.Fatalf("%s takes outside: %v", name, err)
+		}
+		c.Agent = agent
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil || !reflect.DeepEqual(back.Agent.Harnesses["claude-code"], set) || !reflect.DeepEqual(back.Agent.Harnesses[ContainerHarness], set) {
+		t.Errorf("round trip: %+v %v", back.Agent.Harnesses, err)
+	}
+	want := `agent.harnesses.claude-code.outside holds "src/other", which is not an absolute path`
+	bad := HarnessHost{Outside: []string{"/srv/other", "src/other"}}
+	if _, err := Default().Agent.WithHarness("claude-code", bad); err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), `--outside ""`) {
+		t.Errorf("set: %v", err)
+	}
+	if _, err := Parse([]byte(`{"agent":{"harnesses":{"claude-code":{"outside":["/srv/other","src/other"]}}}}`)); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("loaded: %v", err)
+	}
+	if _, err := Parse([]byte(`{"agent":{"projects":{"/p":{"harnesses":{"claude-code":{"outside":["src/other"]}}}}}}`)); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("loaded under agent.projects: %v", err)
+	}
+	c = Default()
+	c.Agent.Harnesses = map[string]HarnessHost{"claude-code": bad}
+	if err := Save(filepath.Join(t.TempDir(), "config.json"), c); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("saved: %v", err)
+	}
+}
+
 // S-0082: checks round-trips as a list of named argument lists, and, like
 // agent, stays out of Keys() and unreachable by flai config set.
 func TestChecksRoundTrip(t *testing.T) {
