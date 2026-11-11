@@ -3,10 +3,10 @@ id: S-0699
 type: story
 nature: improvement
 title: A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T15:31:55Z
+updated: 2026-11-11T18:16:27Z
 transitions:
   - to: ready
     at: 2026-11-11T08:59:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T15:31:51Z
     by: agent-S-0699
+  - to: done
+    at: 2026-11-11T18:16:27Z
+    by: alex
 tags: [flai, cli, go]
 touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/context/items.go, flai/internal/context/context.go, flai/internal/context/design_test.go, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md, flai/internal/context/parts.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:

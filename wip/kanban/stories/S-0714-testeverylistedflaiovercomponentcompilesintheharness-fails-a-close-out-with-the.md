@@ -3,14 +3,17 @@ id: S-0714
 type: story
 nature: remediation
 title: "TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out with \"the setup src/routes/layout.css does not compile: 404, 404 page not found\" while the main checkout's flaiover node_modules is intact"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T10:54:41Z
-updated: 2026-11-11T18:16:00Z
+updated: 2026-11-11T18:16:21Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T18:16:21Z
+    by: agent-S-0714
 tags: []
 touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/harness/plugin.mjs, flai/internal/components/serve.go, flai/internal/components/flaiover_test.go, design/system/component-library.md, design/issues/I-0342-testeverylistedflaiovercomponentcompilesintheharness-fails-a-close-out-with-the.md, design/issues/summary.md]
 agent:
