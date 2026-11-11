@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2111.1075
-accrued_seconds: 1548010
-tasks_completed: 2940
-last_run: 2026-11-11T07:22:25Z
+accrued_cost: 2112.9327
+accrued_seconds: 1548234
+tasks_completed: 2952
+last_run: 2026-11-11T08:29:14Z
 ---
 
 # Orchestrator activity
@@ -20612,6 +20612,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1274 USD, estimated
+
+### 2026-11-11T07:24:04Z
+
+- Summary: Release-due on S-0722: did not publish. release_evaluate (threshold) is not met, count 0 of 1, value 0 of 1000 USD/week, nothing pending; the batch was already released as flai/v1.86.16 right after the acceptance.
+- Items: S-0722
+- Seconds: 16
+- Cost: 0.0729 USD, estimated
+
+### 2026-11-11T07:24:21Z
+
+- Summary: I didn't publish a release for S-0722, because there was nothing left to release. After you accepted it at 07:23:12Z, the batch went out about three seconds later as `flai/v1.86.16`.
+- Items: none
+- Seconds: 17
+- Cost: 0.1076 USD, estimated
+
+### 2026-11-11T08:01:07Z
+
+- Summary: S-0686 in review: last verify record passed at f36a976, not the branch head a6e03fd (close-out commit), so asked flai serve for its close-out; it started job S-0686-20261111T080103Z. Left in review for a later run to read the verdict and accept (value 35 USD/week).
+- Items: S-0686
+- Seconds: 18
+- Cost: 0.1239 USD, estimated
+
+### 2026-11-11T08:01:23Z
+
+- Summary: I haven't accepted S-0686 yet. It stays in review until a new close-out confirms the branch's latest commit.
+- Items: none
+- Seconds: 16
+- Cost: 0.1219 USD, estimated
+
+### 2026-11-11T08:02:26Z
+
+- Summary: S-0691 in review: last passing verify was at f9354d4, not the branch head bb63d64 (close-out commit after it); asked flai serve for its close-out, which started job S-0691-20261111T080220Z. Left in review for a later run to read the verdict and accept under accept_reviews.
+- Items: S-0691
+- Seconds: 29
+- Cost: 0.0946 USD, estimated
+
+### 2026-11-11T08:02:44Z
+
+- Summary: S-0691 is still in review and not accepted yet. Its close-out has to run again first.
+- Items: none
+- Seconds: 18
+- Cost: 0.2842 USD, estimated
+
+### 2026-11-11T08:20:12Z
+
+- Summary: S-0697 in review: last verify passed at 9e0f34266a6d, not the branch head 99f886a2a29a, so asked flai serve for its close-out; it started job S-0697-20261111T082008Z. Left in review for a later run to read the verdict and accept.
+- Items: S-0697
+- Seconds: 14
+- Cost: 0.1061 USD, estimated
+
+### 2026-11-11T08:20:30Z
+
+- Summary: I haven't accepted S-0697 yet: it is waiting on a new close-out, which is still running.
+- Items: none
+- Seconds: 18
+- Cost: 0.2955 USD, estimated
+
+### 2026-11-11T08:22:20Z
+
+- Summary: S-0696 in review: last verify record is at 330ee92, not the branch head b3bb969, so asked flai serve for its close-out (job S-0696-20261111T082212Z); left in review until the verdict is recorded
+- Items: S-0696
+- Seconds: 27
+- Cost: 0.1198 USD, estimated
+
+### 2026-11-11T08:22:38Z
+
+- Summary: S-0696 is still in review, not accepted. Its last passing close-out was recorded at commit 330ee92, but the branch head is now b3bb969, so that verdict doesn't cover the commit that would be merged.
+- Items: none
+- Seconds: 18
+- Cost: 0.1126 USD, estimated
+
+### 2026-11-11T08:28:56Z
+
+- Summary: S-0700 in review: its last verify passed at 3ce2ea360cab, not the branch head 44aff7fe6b71, so asked flai serve for its close-out (job S-0700-20261111T082852Z); left in review for a later run to read the verdict and accept
+- Items: S-0700
+- Seconds: 15
+- Cost: 0.1041 USD, estimated
+
+### 2026-11-11T08:29:14Z
+
+- Summary: S-0700 is still in review: I haven't accepted it, because it still needs a close-out at its branch head.
+- Items: none
+- Seconds: 18
+- Cost: 0.2820 USD, estimated
 
 ## Refusals
 

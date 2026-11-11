@@ -3,16 +3,37 @@ id: T-3056
 type: task
 nature: improvement
 title: The workflow and strategic-agents design and the user guide say that flai serve asks the operator on one thread when nothing can be made ready
-status: backlog
+status: done
 parent: S-0691
 owner: alex
 created: 2026-11-10T10:35:17Z
-updated: 2026-11-10T10:35:17Z
-transitions: []
+updated: 2026-11-11T07:49:21Z
+transitions:
+  - to: ready
+    at: 2026-11-11T07:48:27Z
+    by: agent-S-0691
+  - to: in-progress
+    at: 2026-11-11T07:48:27Z
+    by: agent-S-0691
+  - to: done
+    at: 2026-11-11T07:49:21Z
+    by: agent-S-0691
 stream: S-0691
 tags: [docs, design]
 touches: [design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md]
 after: [T-3050]
+usage:
+  source: log
+  seconds: 54
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 713
+      cache_read: 206919
+      cache_write: 6020
+      cost: 0.1038
 ---
 # T-3056 The workflow and strategic-agents design and the user guide say that flai serve asks the operator on one thread when nothing can be made ready
 

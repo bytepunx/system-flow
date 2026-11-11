@@ -2,9 +2,9 @@
 id: D-0416
 title: flai test's go-test tier can hit go test's 10-minute timeout on flai/internal/mcpserver under -race on a loaded host with no test hung, naming only the package (I-0227)
 kind: cause
-sources: [S-0535, I-0227, S-0417, S-0548, S-0540]
+sources: [S-0535, I-0227, S-0417, S-0548, S-0540, S-0722]
 topics: [flai, go, mcp, code]
-paths: [flai/internal/mcpserver, system-flow.yaml, flai/internal/verify/select.go, flai/internal/verify/gotest.go, design/system/project-manifest.md]
+paths: [flai/internal/mcpserver, system-flow.yaml, flai/internal/verify/select.go, flai/internal/verify/gotest.go, design/system/project-manifest.md, scripts/integration.sh]
 date: 2026-10-29
 status: active
 absorbed_by: ""
@@ -13,6 +13,8 @@ cited: [S-0540, T-2327, T-2328]
 ---
 
 # D-0416 flai test's go-test tier can hit go test's 10-minute timeout on flai/internal/mcpserver under -race on a loaded host with no test hung, naming only the package (I-0227)
+
+**No longer current in part: S-0722 changed the tiers on 2026-11-11 (D-0585).** The go-test tier and `scripts/integration.sh` now run on one core without `-race`, at `GOMAXPROCS=1` with `-p 1` (D-0584), and take `-timeout 10m`; only the manual race tier, `scripts/integration.sh --race`, runs under `-race` and keeps `-timeout 20m`. What follows is how the 20m came about.
 
 S-0535 changed `flai/internal/mcpserver`. `flai test` on its paths failed the go-test tier twice, at 10m21s and 10m1.6s, with a finding that named only the package. The tier in `system-flow.yaml` passed no `-timeout`, so go test's 10-minute default applied to the `-race` run, and the panic named no test.
 
@@ -24,4 +26,4 @@ S-0540 fixed the second cause, the finding that names only the package. A scratc
 
 What remains is I-0234: about 70 s of tests run serially because the server reads the session from the environment (D-0443), and then the two prime tests, about 550 user-seconds under `-race` in `ctxpack.ForStory`. S-0548 tried a faster written-path search in `Selection.refs` (T-2420). It measured no gain under `-race`, "506 to 587 user-seconds on the prime tests against 570 to 589 without it", so it was reverted and T-2420 cancelled; "the profile that pointed there was taken without `-race`". So a later story that speeds up those tests profiles and measures them under `-race`, as the tiers run them.
 
-Sources: S-0535 and S-0417's narratives, § Decisions; I-0227 and its `## Remediation`; S-0548's narrative (`wip/archive/agents/S-0548.md`), § Decisions; S-0540's narrative (`wip/archive/agents/S-0540.md`), § Decisions; I-0234.
+Sources: S-0535 and S-0417's narratives, § Decisions; I-0227 and its `## Remediation`; S-0548's narrative (`wip/archive/agents/S-0548.md`), § Decisions; S-0540's narrative (`wip/archive/agents/S-0540.md`), § Decisions; I-0234; S-0722's narrative (`wip/archive/agents/S-0722.md`), § Decisions.

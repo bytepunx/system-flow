@@ -3,15 +3,36 @@ id: T-2966
 type: task
 nature: remediation
 title: Scroll to and focus the new item form's refusal, and mark the Create button refused
-status: backlog
+status: done
 parent: S-0700
 owner: alex
 created: 2026-11-10T10:28:13Z
-updated: 2026-11-10T10:28:13Z
-transitions: []
+updated: 2026-11-11T08:23:16Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:20:45Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T08:20:45Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T08:23:16Z
+    by: agent-S-0700
 stream: S-0700
 tags: [dashboard]
 touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts]
+usage:
+  source: log
+  seconds: 151
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 4348
+      cache_read: 2258477
+      cache_write: 60037
+      cost: 1.019
 ---
 # T-2966 Scroll to and focus the new item form's refusal, and mark the Create button refused
 

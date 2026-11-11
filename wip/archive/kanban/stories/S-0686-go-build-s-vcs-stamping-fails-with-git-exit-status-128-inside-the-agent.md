@@ -3,10 +3,10 @@ id: S-0686
 type: story
 nature: remediation
 title: go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-11T05:26:33Z
+updated: 2026-11-11T08:46:40Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:14Z
@@ -14,11 +14,18 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:19:26Z
     by: agent-S-0686
+  - to: review
+    at: 2026-11-11T08:00:16Z
+    by: agent-S-0686
+  - to: done
+    at: 2026-11-11T08:46:40Z
+    by: alex
 blocked:
   - from: 2026-11-11T05:26:33Z
+    until: 2026-11-11T07:42:21Z
     reason: pause for urgent fix
 tags: [docker, agent-container, go]
-touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-vcs-test.sh, scripts/smoke.sh, scripts/README.md, flai/internal/harness/container.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md]
+touches: [flai/images/system-flow/Dockerfile, scripts/agent-container.sh, scripts/agent-vcs-test.sh, scripts/smoke.sh, scripts/README.md, flai/internal/harness/container.go, docs/operators/runbooks/agent-container.md, design/tech/docker.md, design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md, design/issues/summary.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -26,30 +33,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 466
+  seconds: 1543
   priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 34
+      ceremony: 4
+      work: 58
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 25312
-      cache_read: 8112053
-      cache_write: 297660
-      cost: 4.5102
+      input: 138
+      output: 33162
+      cache_read: 10355922
+      cache_write: 389650
+      cost: 5.8522
   strategic:
     - kind: orchestrator
-      seconds: 13
+      seconds: 31
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 13
-          cache_read: 156044
-          cache_write: 9701
-          cost: 0.0456
+          input: 14
+          output: 98
+          cache_read: 532578
+          cache_write: 78459
+          cost: 0.1695
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 14m
@@ -75,8 +82,8 @@ finalized:
 This story remediates [I-0255](../../../design/issues/I-0255-go-build-s-vcs-stamping-fails-with-git-exit-status-128-inside-the-agent.md), "go build's VCS stamping fails with git exit status 128 inside the agent container, though git answers each command there by hand". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0255 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0255 is closed with `flai issue close I-0255 --reason` saying what fixed it
+- [x] The cause I-0255 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0255 is closed with `flai issue close I-0255 --reason` saying what fixed it
 
 ## Tasks
 - T-3032 The cause of I-0255's exit status 128 is found in the layer's image and a fix is proposed

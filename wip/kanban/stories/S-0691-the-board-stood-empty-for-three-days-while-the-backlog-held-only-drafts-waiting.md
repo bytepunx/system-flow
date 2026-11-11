@@ -3,10 +3,10 @@ id: S-0691
 type: story
 nature: improvement
 title: The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T05:26:42Z
+updated: 2026-11-11T08:00:48Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:32Z
@@ -14,12 +14,16 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:06:07Z
     by: agent-S-0691
+  - to: review
+    at: 2026-11-11T08:00:48Z
+    by: agent-S-0691
 blocked:
   - from: 2026-11-11T05:26:42Z
+    until: 2026-11-11T07:42:24Z
     reason: pause for urgent fix
 tags: [flai]
 topics: [ready, threads]
-touches: [design/adrs, design/adrs/README.md, flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go, flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/agents_launch.go, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go, flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/agents_launch.go, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 after: [S-0673]
 agent:
   harness: claude-code
@@ -28,30 +32,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2411
+  seconds: 3533
   priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 1
-      work: 34
+      ceremony: 7
+      work: 66
   models:
     - model: claude-opus-5-5
-      input: 182
-      output: 83564
-      cache_read: 12428126
-      cache_write: 528909
-      cost: 7.7713
+      input: 264
+      output: 94764
+      cache_read: 15680316
+      cache_write: 623520
+      cost: 9.4029
   strategic:
     - kind: orchestrator
-      seconds: 39
+      seconds: 68
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 46
-          cache_read: 464039
-          cache_write: 13728
-          cost: 0.1309
+          input: 14
+          output: 125
+          cache_read: 741371
+          cache_write: 76384
+          cost: 0.2255
     - kind: analyzer
       seconds: 42
       estimated: true
@@ -93,8 +97,8 @@ finalized:
 This story remediates [I-0288](../../../design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md), "The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again", which the analysis in [2026-11-07-all.md](../../../design/analysis/2026-11-07-all.md) found. The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0288 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0288 is closed with `flai issue close I-0288 --reason` saying what fixed it
+- [x] The cause I-0288 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0288 is closed with `flai issue close I-0288 --reason` saying what fixed it
 
 ## Tasks
 - T-3043 An ADR records what I-0288's instance shows and decides that flai serve asks the operator on one thread when nothing can be made ready

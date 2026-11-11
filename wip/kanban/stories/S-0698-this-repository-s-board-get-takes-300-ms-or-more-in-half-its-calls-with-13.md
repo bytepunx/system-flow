@@ -3,26 +3,41 @@ id: S-0698
 type: story
 nature: improvement
 title: This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:54:37Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:42:44Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:19Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:21:24Z
+    by: agent-S-0698
 tags: [cli]
 topics: [server-side, back-end]
-touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md]
+touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, design/system/server-performance.md, design/system/flai-cli.md, design/issues/I-0333-this-repository-s-board-get-takes-300-ms-or-more-in-half-its-calls-with-13.md, design/issues/summary.md, flai/internal/storygit/trial.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1282
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-11
+      ceremony: 3
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 518
+      cache_read: 12439621
+      cache_write: 364785
+      cost: 4.7341
   strategic:
     - kind: orchestrator
       seconds: 10

@@ -3,26 +3,44 @@ id: S-0697
 type: story
 nature: remediation
 title: flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:54:33Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:19:28Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:09Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:01:00Z
+    by: agent-S-0697
+  - to: review
+    at: 2026-11-11T08:19:23Z
+    by: system-flow
 tags: [flai, host, mcp]
 topics: [mcp, host]
-touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, design/system/flai-cli.md, docs/operators/index.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md, design/issues/summary.md]
+touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, design/system/flai-cli.md, docs/operators/index.md, design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1122
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 3
+      test_runs: 2
+      work: 34
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 20390
+      cache_read: 9546485
+      cache_write: 287215
+      cost: 4.6152
   strategic:
     - kind: planner
       seconds: 22
@@ -41,15 +59,15 @@ usage:
           cache_write: 175332
           cost: 3.193
     - kind: orchestrator
-      seconds: 11
+      seconds: 25
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 12
-          cache_read: 165392
-          cache_write: 14342
-          cost: 0.0495
+          input: 13
+          output: 88
+          cache_read: 462563
+          cache_write: 98085
+          cost: 0.1556
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -75,8 +93,8 @@ finalized:
 This story remediates [I-0271](../../../design/issues/I-0271-flai-host-restarts-a-project-s-mcp-server-on-the-same-port-while-another.md), "flai host restarts a project's MCP server on the same port while another process holds it, so the project has no MCP server until that process lets go". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0271 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0271 is closed with `flai issue close I-0271 --reason` saying what fixed it
+- [x] The cause I-0271 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0271 is closed with `flai issue close I-0271 --reason` saying what fixed it
 
 ## Tasks
 - T-2974 flai host moves a project's MCP server off a port another process holds, and a test reproduces I-0271

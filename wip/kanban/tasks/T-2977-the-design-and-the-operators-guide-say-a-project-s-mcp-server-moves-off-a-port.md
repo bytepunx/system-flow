@@ -3,16 +3,37 @@ id: T-2977
 type: task
 nature: remediation
 title: The design and the operators' guide say a project's MCP server moves off a port another process holds
-status: backlog
+status: done
 parent: S-0697
 owner: alex
 created: 2026-11-10T10:29:09Z
-updated: 2026-11-10T10:29:09Z
-transitions: []
+updated: 2026-11-11T08:08:29Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:08:09Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-11T08:08:10Z
+    by: system-flow
+  - to: done
+    at: 2026-11-11T08:08:29Z
+    by: agent-S-0697
 stream: S-0697
 tags: [docs, host, mcp]
 touches: [design/system/flai-cli.md, docs/operators/index.md]
 after: [T-2974]
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 588
+      cache_read: 275165
+      cache_write: 8279
+      cost: 0.133
 ---
 # T-2977 The design and the operators' guide say a project's MCP server moves off a port another process holds
 

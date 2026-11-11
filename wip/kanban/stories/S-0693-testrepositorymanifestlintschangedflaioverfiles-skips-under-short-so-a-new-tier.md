@@ -6,7 +6,7 @@ title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a 
 status: in-progress
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-11T05:26:52Z
+updated: 2026-11-11T07:42:27Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:19Z
@@ -22,6 +22,7 @@ transitions:
     by: alex
 blocked:
   - from: 2026-11-11T05:26:52Z
+    until: 2026-11-11T07:42:27Z
     reason: pause for urgent fix
 tags: [flai, tests]
 topics: [code]

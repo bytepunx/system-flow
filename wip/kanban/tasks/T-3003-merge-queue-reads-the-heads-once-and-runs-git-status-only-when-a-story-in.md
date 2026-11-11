@@ -3,16 +3,31 @@ id: T-3003
 type: task
 nature: improvement
 title: merge.queue reads the heads once and runs git status only when a story in review passed verify, at the same time as the heads
-status: backlog
+status: done
 parent: S-0698
 owner: alex
 created: 2026-11-10T10:31:13Z
-updated: 2026-11-10T10:31:13Z
-transitions: []
+updated: 2026-11-11T08:42:44Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:42:38Z
+    by: agent-S-0698
+  - to: in-progress
+    at: 2026-11-11T08:42:38Z
+    by: agent-S-0698
+  - to: done
+    at: 2026-11-11T08:42:43Z
+    by: agent-S-0698
 stream: S-0698
 tags: [cli]
-touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go]
+touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-3000]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models: []
 ---
 # T-3003 merge.queue reads the heads once and runs git status only when a story in review passed verify, at the same time as the heads
 

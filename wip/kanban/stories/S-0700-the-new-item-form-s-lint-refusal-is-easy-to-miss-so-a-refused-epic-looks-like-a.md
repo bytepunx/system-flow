@@ -3,25 +3,42 @@ id: S-0700
 type: story
 nature: remediation
 title: The new item form's lint refusal is easy to miss, so a refused epic looks like a hang
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:28:06Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:27Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:19:31Z
+    by: agent-S-0700
+  - to: review
+    at: 2026-11-11T08:28:06Z
+    by: agent-S-0700
 tags: [dashboard]
-touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md, design/issues/summary.md]
+touches: [flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 526
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 5
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 18038
+      cache_read: 9369318
+      cache_write: 249066
+      cost: 4.2275
   strategic:
     - kind: planner
       seconds: 41
@@ -40,15 +57,15 @@ usage:
           cache_write: 343216
           cost: 4.2776
     - kind: orchestrator
-      seconds: 38
+      seconds: 53
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 20
-          cache_read: 416086
-          cache_write: 23811
-          cost: 0.1206
+          input: 15
+          output: 104
+          cache_read: 709360
+          cache_write: 104175
+          cost: 0.2247
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -74,8 +91,8 @@ finalized:
 This story remediates [I-0263](../../../design/issues/I-0263-the-new-item-form-s-lint-refusal-is-easy-to-miss-so-a-refused-epic-looks-like-a.md), "The new item form's lint refusal is easy to miss, so a refused epic looks like a hang". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0263 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0263 is closed with `flai issue close I-0263 --reason` saying what fixed it
+- [x] The cause I-0263 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0263 is closed with `flai issue close I-0263 --reason` saying what fixed it
 
 ## Tasks
 - T-2966 Scroll to and focus the new item form's refusal, and mark the Create button refused

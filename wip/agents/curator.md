@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 223.5854
-accrued_seconds: 26135
-tasks_completed: 143
-last_run: 2026-11-11T06:17:08Z
+accrued_cost: 226.0840
+accrued_seconds: 26322
+tasks_completed: 144
+last_run: 2026-11-11T07:26:25Z
 ---
 
 # Curator activity
@@ -1155,3 +1155,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0470, D-0581
 - Seconds: 103
 - Cost: 1.7173 USD, estimated
+
+### 2026-11-11T07:26:25Z
+
+- Summary: Curated S-0722: wrote D-0584 (one core is `GOMAXPROCS=1`, not `go test -cpu 1`), D-0585 (one-core Go tiers take `-timeout 10m`, race tier keeps 20m; `docs/users/flai.md` still says 20m) and D-0586 (node settings don't bound the components tests' burst), merged S-0722 into D-0416 and D-0583, absorbed none, and `flai digest compact` compacted none.
+- Trigger: accepted S-0722
+- Items: D-0416, D-0583, D-0584, D-0585, D-0586
+- Seconds: 187
+- Cost: 2.4986 USD, estimated

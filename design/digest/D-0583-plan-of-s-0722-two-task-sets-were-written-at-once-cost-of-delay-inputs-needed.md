@@ -2,7 +2,7 @@
 id: D-0583
 title: "Plan of S-0722: two task sets were written at once; cost of delay inputs needed: Recommended: set `time_lost_per_cycle: 30m` on S-0722 (75 USD a week), as the planner recommends"
 kind: answer
-sources: [TH-1069]
+sources: [TH-1069, S-0722]
 topics: [flai, cli, go, code, all]
 paths: [system-flow.yaml, scripts/integration.sh, scripts/test.sh, scripts/flai-test.sh, design/system/workflow.md, scripts/race.sh, Makefile, flai/internal/verify/select_test.go, design/system/project-manifest.md, design/system/devex.md, design/conventions/code-quality.md, design/conventions/tooling.md, design/tech/go.md, scripts/README.md, docs/operators/index.md, docs/contributors/index.md, flai/README.md]
 date: 2026-11-11
@@ -54,4 +54,10 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 Source: design/digest/D-0581-plan-of-s-0721-three-tasks-in-two-layers-cost-of-delay-inputs-needed.md
 ````
 
-Source: TH-1069.
+What the story's agent did, from S-0722's Decisions (`wip/archive/agents/S-0722.md`):
+
+```text
+Kept my task set T-3090 to T-3092 and cancelled the planner's T-3086 to T-3089, written at the same time for the same work, as the planner and the orchestrator proposed on TH-1069. Folded in its three points: the before figures were measured before T-3090 changed any command; T-3092 also covers design/system/devex.md and docs/operators/index.md and adds a make race target; T-3090 has the test that no paths, --all, or story run selects race.
+```
+
+Sources: TH-1069; S-0722.

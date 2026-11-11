@@ -3,15 +3,36 @@ id: T-2974
 type: task
 nature: remediation
 title: flai host moves a project's MCP server off a port another process holds, and a test reproduces I-0271
-status: backlog
+status: done
 parent: S-0697
 owner: alex
 created: 2026-11-10T10:28:58Z
-updated: 2026-11-10T10:28:58Z
-transitions: []
+updated: 2026-11-11T08:07:50Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:03:37Z
+    by: agent-S-0697
+  - to: in-progress
+    at: 2026-11-11T08:03:38Z
+    by: agent-S-0697
+  - to: done
+    at: 2026-11-11T08:07:50Z
+    by: agent-S-0697
 stream: S-0697
 tags: [flai, host, mcp]
 touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go]
+usage:
+  source: log
+  seconds: 252
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3336
+      cache_read: 1561740
+      cache_write: 46986
+      cost: 0.755
 ---
 # T-2974 flai host moves a project's MCP server off a port another process holds, and a test reproduces I-0271
 

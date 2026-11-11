@@ -3,16 +3,37 @@ id: T-2990
 type: task
 nature: remediation
 title: "Say in project-manifest.md and devex.md that this repository's integration and smoke paths select template/**"
-status: backlog
+status: done
 parent: S-0696
 owner: alex
 created: 2026-11-10T10:29:54Z
-updated: 2026-11-10T10:29:54Z
-transitions: []
+updated: 2026-11-11T08:11:15Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:10:56Z
+    by: agent-S-0696
+  - to: in-progress
+    at: 2026-11-11T08:10:57Z
+    by: agent-S-0696
+  - to: done
+    at: 2026-11-11T08:11:15Z
+    by: agent-S-0696
 stream: S-0696
 tags: [docs, testing]
 touches: [design/system/project-manifest.md, design/system/devex.md]
 after: [T-2987]
+usage:
+  source: log
+  seconds: 18
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 672
+      cache_read: 532622
+      cache_write: 15595
+      cost: 0.2447
 ---
 # T-2990 Say in project-manifest.md and devex.md that this repository's integration and smoke paths select template/**
 

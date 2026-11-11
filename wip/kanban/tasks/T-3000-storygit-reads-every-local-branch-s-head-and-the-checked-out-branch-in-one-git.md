@@ -3,15 +3,36 @@ id: T-3000
 type: task
 nature: improvement
 title: storygit reads every local branch's head and the checked-out branch in one git for-each-ref
-status: backlog
+status: done
 parent: S-0698
 owner: alex
 created: 2026-11-10T10:31:03Z
-updated: 2026-11-10T10:31:03Z
-transitions: []
+updated: 2026-11-11T08:31:25Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:31:17Z
+    by: agent-S-0698
+  - to: in-progress
+    at: 2026-11-11T08:31:20Z
+    by: agent-S-0698
+  - to: done
+    at: 2026-11-11T08:31:25Z
+    by: agent-S-0698
 stream: S-0698
 tags: [cli]
-touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go]
+touches: [flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/storygit/trial.go]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 707536
+      cache_write: 535
+      cost: 0.2618
 ---
 # T-3000 storygit reads every local branch's head and the checked-out branch in one git for-each-ref
 

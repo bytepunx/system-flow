@@ -3,15 +3,36 @@ id: T-2987
 type: task
 nature: remediation
 title: "Add template/** to the integration and smoke tiers' paths, with a manifest test that a template-only change runs both"
-status: backlog
+status: done
 parent: S-0696
 owner: alex
 created: 2026-11-10T10:29:40Z
-updated: 2026-11-10T10:29:40Z
-transitions: []
+updated: 2026-11-11T08:04:05Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:03:16Z
+    by: agent-S-0696
+  - to: in-progress
+    at: 2026-11-11T08:03:16Z
+    by: agent-S-0696
+  - to: done
+    at: 2026-11-11T08:04:05Z
+    by: agent-S-0696
 stream: S-0696
 tags: [flai, testing, manifest]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go]
+usage:
+  source: log
+  seconds: 49
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1274
+      cache_read: 1010753
+      cache_write: 29595
+      cost: 0.4644
 ---
 # T-2987 Add template/** to the integration and smoke tiers' paths, with a manifest test that a template-only change runs both
 

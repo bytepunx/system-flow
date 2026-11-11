@@ -3,14 +3,20 @@ id: S-0696
 type: story
 nature: remediation
 title: "The integration and smoke tiers' when names template/**, but their paths do not select a template-only change, so a story that changes only template/ runs neither at close-out, against what code-quality.md and tooling.md say"
-status: ready
+status: review
 owner: alex
 created: 2026-11-10T08:54:31Z
-updated: 2026-11-11T07:23:13Z
+updated: 2026-11-11T08:21:16Z
 transitions:
   - to: ready
     at: 2026-11-11T02:30:59Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T08:00:55Z
+    by: agent-S-0696
+  - to: review
+    at: 2026-11-11T08:21:16Z
+    by: agent-S-0696
 tags: [flai, testing, manifest]
 topics: [testing]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/system/project-manifest.md, design/system/devex.md, design/issues/I-0270-the-integration-and-smoke-tiers-when-names-template-but-their-paths-do-not.md, design/issues/summary.md]
@@ -20,20 +26,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1257
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      test_runs: 1
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 12060
+      cache_read: 9565281
+      cache_write: 280075
+      cost: 4.3952
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 38
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 12
-          cache_read: 165392
-          cache_write: 14342
-          cost: 0.0495
+          input: 15
+          output: 93
+          cache_read: 531629
+          cache_write: 78277
+          cost: 0.1693
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -59,8 +76,8 @@ finalized:
 This story remediates [I-0270](../../../design/issues/I-0270-the-integration-and-smoke-tiers-when-names-template-but-their-paths-do-not.md), "The integration and smoke tiers' when names template/**, but their paths do not select a template-only change, so a story that changes only template/ runs neither at close-out, against what code-quality.md and tooling.md say". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0270 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0270 is closed with `flai issue close I-0270 --reason` saying what fixed it
+- [x] The cause I-0270 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0270 is closed with `flai issue close I-0270 --reason` saying what fixed it
 
 ## Tasks
 - T-2987 Add template/** to the integration and smoke tiers' paths, with a manifest test that a template-only change runs both
