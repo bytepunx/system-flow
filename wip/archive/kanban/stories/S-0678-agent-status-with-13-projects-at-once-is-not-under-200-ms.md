@@ -3,10 +3,10 @@ id: S-0678
 type: story
 nature: improvement
 title: agent.status with 13 projects at once is not under 200 ms
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-11T05:26:16Z
+updated: 2026-11-11T06:15:07Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:56Z
@@ -14,21 +14,38 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:18:41Z
     by: agent-S-0678
+  - to: review
+    at: 2026-11-11T06:13:48Z
+    by: agent-S-0678
+  - to: done
+    at: 2026-11-11T06:15:07Z
+    by: orchestrator
 blocked:
   - from: 2026-11-11T05:26:16Z
     reason: pause for urgent fix
 tags: [cli]
 topics: [server-side]
-touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
+touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md, flai/internal/serve/agents_test.go, flai/internal/serve/default_agent_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/review_wait_test.go, flai/internal/serve/stop_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3319
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 2
+      work: 45
+  models:
+    - model: claude-opus-5-5
+      input: 310
+      output: 121337
+      cache_read: 19780108
+      cache_write: 885123
+      cost: 11.7389
   strategic:
     - kind: orchestrator
       seconds: 15
@@ -65,8 +82,8 @@ finalized:
 This story remediates [I-0313](../../../design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md), "agent.status with 13 projects at once is not under 200 ms". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0313 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0313 is closed with `flai issue close I-0313 --reason` saying what fixed it
+- [x] The cause I-0313 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0313 is closed with `flai issue close I-0313 --reason` saying what fixed it
 
 ## Tasks
 - T-3004 agent.status times serve.Activity's parts as phases of the request: the runs, the holds with their trial merges, and elsewhere
@@ -100,3 +117,12 @@ The story declared no touches. `flai touches suggest` from the three code paths 
 Forecast: `flai forecast` gave 20m, 107 s per unit of size times 11. Raised to 1h30m: S-0603, the first pass at the same call with the same measurement, took 2h35m of agent work, S-0604 1h04m, and S-0602 47m. Most of the time is the measurement program and the runs on a loaded host.
 
 Cost of delay: 0.04 USD a week, as `flai cod` works it out from the input flai set from I-0313, 1s lost per 168h cycle. Not adjusted: the input is the operator's, and the issue's cost is its one occurrence.
+
+### Accepted by the orchestrator
+
+- Verified: f36bfb6ddda1c66aba0f61643272d5da354d3df8
+- At: 2026-11-11T06:15:07Z
+
+Verdict: pass at f36bfb6ddda1c66aba0f61643272d5da354d3df8
+- 1: flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go, flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go
+- 2: design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md

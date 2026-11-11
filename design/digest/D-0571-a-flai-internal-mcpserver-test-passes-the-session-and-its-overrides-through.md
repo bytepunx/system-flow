@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0721]
 ---
 
 # D-0571 A flai/internal/mcpserver test passes the session and its overrides through mcpserver.Options and calls t.Parallel; it never sets the process environment or a package variable, and process_test.go fails one that does (I-0234)

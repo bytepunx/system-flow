@@ -3,11 +3,11 @@ id: T-3008
 type: task
 nature: improvement
 title: The trial judge keeps its verdicts per root and commit pair across calls, and reads the branch heads with one git process a call
-status: in-progress
+status: done
 parent: S-0678
 owner: alex
 created: 2026-11-10T10:31:25Z
-updated: 2026-11-11T05:20:02Z
+updated: 2026-11-11T05:49:24Z
 transitions:
   - to: ready
     at: 2026-11-11T05:20:02Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:20:02Z
     by: agent-S-0678
+  - to: done
+    at: 2026-11-11T05:49:24Z
+    by: agent-S-0678
 stream: S-0678
 tags: [cli]
 touches: [flai/internal/storygit/trial.go, flai/internal/storygit/trial_test.go]
+usage:
+  source: log
+  seconds: 1762
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 20457
+      cache_read: 3334935
+      cache_write: 149232
+      cost: 1.9792
 ---
 # T-3008 The trial judge keeps its verdicts per root and commit pair across calls, and reads the branch heads with one git process a call
 

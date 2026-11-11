@@ -6,7 +6,7 @@ title: "A close-out's Go tests run under -race on every core, so three stories c
 status: in-progress
 owner: alex
 created: 2026-11-11T05:50:20Z
-updated: 2026-11-11T06:14:00Z
+updated: 2026-11-11T06:14:31Z
 transitions:
   - to: ready
     at: 2026-11-11T05:50:21Z
@@ -41,6 +41,9 @@ cost_of_delay:
     time_lost_per_cycle: 30m
     by: alex
     at: 2026-11-11T06:14:00Z
+  value: 75
+  by: planner-S-0722
+  at: 2026-11-11T06:14:31Z
 forecast:
   duration: 2h
   delivery: 2026-11-11T08:03:00Z
@@ -92,7 +95,7 @@ Related: S-0721 (share one SchemaCache) cuts the work itself; this story bounds 
 
 ### Planning
 
-Two task sets were written at once: the planner's T-3086 to T-3089 and the story's agent's T-3090 to T-3092, for the same work. Only one set should stay; the plan's thread on S-0722 proposes which, and the story's agent decides.
+Two task sets were written at once: the planner's T-3086 to T-3089 and the story's agent's T-3090 to T-3092, for the same work. Only one set should stay; the plan's thread on S-0722 (TH-1069) proposes keeping the agent's set, and the story's agent decides.
 
 Touches, file by file, and where each came from:
 
@@ -111,4 +114,4 @@ No `after`: the story reads nothing another open story writes. S-0721, which it 
 
 Forecast: `flai forecast` gave 20m (107 s a unit of size over 35 done improvement stories, times size 11). Raised to 2h, because the story runs the full Go suite at least six times, before and after, three runs in a row at one core, and the race tier, about 10 minutes each under `-race` and several minutes at one core.
 
-Cost of delay: the story has no inputs and no epic, so `flai cod` refuses; the inputs are asked for on the plan's thread.
+Cost of delay: 75 USD a week, as `flai cod` works it out from the operator's input on TH-1069, `time_lost_per_cycle: 30m` at 150 USD an hour and one 168h cycle a week. It stands unadjusted: the input is the operator's, and nothing in the story argues for another figure.

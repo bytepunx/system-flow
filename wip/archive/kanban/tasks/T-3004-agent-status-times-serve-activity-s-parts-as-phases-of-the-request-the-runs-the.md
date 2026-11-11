@@ -3,11 +3,11 @@ id: T-3004
 type: task
 nature: improvement
 title: "agent.status times serve.Activity's parts as phases of the request: the runs, the holds with their trial merges, and elsewhere"
-status: in-progress
+status: done
 parent: S-0678
 owner: alex
 created: 2026-11-10T10:31:16Z
-updated: 2026-11-11T05:20:02Z
+updated: 2026-11-11T05:49:08Z
 transitions:
   - to: ready
     at: 2026-11-11T05:20:02Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-11T05:20:02Z
     by: agent-S-0678
+  - to: done
+    at: 2026-11-11T05:49:08Z
+    by: agent-S-0678
 stream: S-0678
 tags: [cli]
-touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go]
+touches: [flai/internal/serve/agents_activity.go, flai/internal/serve/activity_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents_test.go, flai/internal/serve/default_agent_test.go, flai/internal/serve/hold_test.go, flai/internal/serve/review_wait_test.go, flai/internal/serve/stop_test.go]
+usage:
+  source: log
+  seconds: 1746
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 28229
+      cache_read: 4601779
+      cache_write: 205921
+      cost: 2.731
 ---
 # T-3004 agent.status times serve.Activity's parts as phases of the request: the runs, the holds with their trial merges, and elsewhere
 

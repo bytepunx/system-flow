@@ -3,16 +3,37 @@ id: T-3013
 type: task
 nature: improvement
 title: Measure 13 agent.status calls at once before and after, record them in server-performance.md, and close I-0313
-status: backlog
+status: done
 parent: S-0678
 owner: alex
 created: 2026-11-10T10:31:37Z
-updated: 2026-11-10T10:31:37Z
-transitions: []
+updated: 2026-11-11T06:08:19Z
+transitions:
+  - to: ready
+    at: 2026-11-11T05:50:09Z
+    by: agent-S-0678
+  - to: in-progress
+    at: 2026-11-11T05:50:09Z
+    by: agent-S-0678
+  - to: done
+    at: 2026-11-11T06:08:19Z
+    by: agent-S-0678
 stream: S-0678
 tags: [cli, docs]
 touches: [design/system/server-performance.md, design/issues/I-0313-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/issues/summary.md]
 after: [T-3004, T-3008]
+usage:
+  source: log
+  seconds: 1090
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 31341
+      cache_read: 5109079
+      cache_write: 228622
+      cost: 3.0321
 ---
 # T-3013 Measure 13 agent.status calls at once before and after, record them in server-performance.md, and close I-0313
 

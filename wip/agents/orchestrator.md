@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2109.3702
-accrued_seconds: 1547679
-tasks_completed: 2927
-last_run: 2026-11-11T05:47:44Z
+accrued_cost: 2109.9362
+accrued_seconds: 1547798
+tasks_completed: 2932
+last_run: 2026-11-11T06:10:01Z
 ---
 
 # Orchestrator activity
@@ -20521,6 +20521,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 23
 - Cost: 0.1947 USD, estimated
+
+### 2026-11-11T05:48:54Z
+
+- Summary: release-due S-0721: did not publish. The release was already published at 6d35e4103 (flai 1.86.15, flaiover 0.58.6, template 1.1.34) after S-0721's acceptance; release_evaluate now answers threshold not met, 0 pending stories, 0 of 1000 USD/week, count 0 of 1. Ran no publish formula; S-0718, the earlier publish instance, stays in ready.
+- Items: S-0721, S-0718
+- Seconds: 17
+- Cost: 0.0874 USD, estimated
+
+### 2026-11-11T05:49:17Z
+
+- Summary: I didn't publish anything for S-0721's release-due reason, because that release had already gone out.
+- Items: none
+- Seconds: 23
+- Cost: 0.2489 USD, estimated
+
+### 2026-11-11T06:09:07Z
+
+- Summary: Recommended an answer on TH-1069, citing design/digest/D-0581-plan-of-s-0721-three-tasks-in-two-layers-cost-of-delay-inputs-needed.md
+- Items: S-0722
+- Seconds: 25
+- Cost: 0.0713 USD, estimated
+
+### 2026-11-11T06:09:35Z
+
+- Summary: TH-1069: recommended (operator only) time_lost_per_cycle 30m on S-0722 (75 USD a week, planner's figure); not set, since S-0722 is in progress with no epic. Endorsed the planner's proposal to keep T-3090..T-3092 for agent-S-0722 to decide; thread left open.
+- Items: S-0722
+- Seconds: 28
+- Cost: 0.0247 USD, estimated
+
+### 2026-11-11T06:10:01Z
+
+- Summary: TH-1069 needs your decision on S-0722's cost of delay. I recommended a figure on the thread but set nothing, and the thread stays open.
+- Items: none
+- Seconds: 26
+- Cost: 0.1337 USD, estimated
 
 ## Refusals
 
