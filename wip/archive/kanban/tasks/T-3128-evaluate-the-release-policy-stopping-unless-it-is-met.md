@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 13
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 8
-      cache_read: 161719
-      cache_write: 402
-      cost: 0.0602
+      output: 280
+      cache_read: 155838
+      cache_write: 6283
+      cost: 0.087
 ---
 # T-3128 Evaluate the release policy, stopping unless it is met
 
