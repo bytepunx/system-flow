@@ -2157,15 +2157,24 @@ func TestWaitForEventsHoldsWhileTheStoryOwesAReply(t *testing.T) {
 }
 
 // headRunner answers git rev-parse with head, as for a story branch whose
-// head is head, and runs no other git.
+// head is head, and git for-each-ref with each of branches at head, and runs
+// no other git.
 type headRunner struct {
 	noGitRunner
-	head string
+	head     string
+	branches *[]string
 }
 
 func (r headRunner) Run(dir, name string, args ...string) (string, error) {
 	if name == "git" && len(args) > 0 && args[0] == "rev-parse" {
 		return r.head + "\n", nil
+	}
+	if name == "git" && len(args) > 0 && args[0] == "for-each-ref" && r.branches != nil {
+		var lines []string
+		for _, b := range *r.branches {
+			lines = append(lines, "refs/heads/"+b+"\t\t\t\tcommit\t"+r.head)
+		}
+		return strings.Join(lines, "\n"), nil
 	}
 	return r.noGitRunner.Run(dir, name, args...)
 }
@@ -2177,7 +2186,8 @@ func (r headRunner) Run(dir, name string, args ...string) (string, error) {
 func TestBoardToolCarriesTheMergeQueue(t *testing.T) {
 	t.Parallel()
 	const head = "0123456789abcdef0123456789abcdef01234567"
-	runner := headRunner{head: head}
+	var branches []string
+	runner := headRunner{head: head, branches: &branches}
 	f := setupWith(t, func(o *Options) { o.Runner = runner })
 	toReview := func(s *workitem.Item, at time.Time) {
 		t.Helper()
@@ -2195,6 +2205,7 @@ func TestBoardToolCarriesTheMergeQueue(t *testing.T) {
 		}
 	}
 	ready := f.readyStory(t, "Ready to land", t0)
+	branches = append(branches, "story/"+ready.ID)
 	body, err := os.ReadFile(ready.Path)
 	if err != nil {
 		t.Fatal(err)

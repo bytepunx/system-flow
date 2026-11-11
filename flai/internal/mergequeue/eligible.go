@@ -174,7 +174,11 @@ func Batches(actionOn bool, m manifest.Manifest) bool {
 // cannot be read is ineligible for it; the items, the threads, or the state
 // that cannot be read are an error. Its Window is as it stands now, read
 // with the main branch's head; a head git cannot read leaves it nil. While
-// no story is in review it reads no thread and runs no git (S-0604).
+// no story is in review it reads no thread and runs no git (S-0604). It
+// reads every branch head with one git for-each-ref and the main checkout's
+// git status beside it, and both only while a story in review has a passing
+// flai verify result, so the git it runs does not grow with the stories in
+// review (S-0698).
 func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 	return ComputeAt(r, repo, time.Now())
 }
@@ -213,16 +217,29 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 	if err != nil {
 		return q, fmt.Errorf("read the threads to check the stories in review for the merge queue: %w; fix the thread file it names", err)
 	}
-	dirty := mainDirt(r, repo)
+	reports := make([]lastVerify, len(review))
+	anyPassed := false
+	for i, it := range review {
+		reports[i] = readLastVerify(repo, it.ID)
+		anyPassed = anyPassed || reports[i].reason == nil
+	}
+	// Only a story whose last flai verify passed needs its branch's head,
+	// and only its head can be held back by the main checkout's dirt, so
+	// with none, no git runs; otherwise every head is one read, beside the
+	// main checkout's status (S-0698).
+	var g gitState
+	if anyPassed {
+		g = readGitState(r, repo)
+	}
 	enqueued := map[string]bool{}
 	for _, e := range st.Enqueued {
 		enqueued[workitem.CanonicalID(e.Story)] = true
 	}
 	var entries []Entry
-	for _, it := range review {
+	for i, it := range review {
 		e := Entry{Story: it.ID, Title: it.Title, EnteredReview: enteredReview(it), Enqueued: enqueued[workitem.CanonicalID(it.ID)]}
 		var verifyReason *Reason
-		e.Head, verifyReason = verified(r, repo, it.ID)
+		e.Head, verifyReason = g.verified(it.ID, reports[i])
 		if verifyReason != nil {
 			e.Reasons = append(e.Reasons, *verifyReason)
 		}
@@ -235,7 +252,7 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 		if reason := undoesMain(r, repo, it.ID); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
-		if reason := dirty.holds(r, repo, it.ID, e.Head); reason != nil {
+		if reason := g.dirt.holds(r, repo, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		entries = append(entries, e)
@@ -250,25 +267,25 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 			q.Ineligible = append(q.Ineligible, e)
 		}
 	}
-	q.Window = filling(r, repo, q, now)
+	q.Window = filling(repo, q, g, now)
 	return q, nil
 }
 
 // filling is the window q's next batch fills in at now, as RunBatch would
-// pick it from the main branch's head: nil while the queue is held, by the
-// operator or the preflight, a batch is under way or waits to be landed or
-// bisected, the queue has no window to wait out, or the main branch's head
-// cannot be read. It reads git only when stories are enqueued and eligible
-// and merge_queue.coalesce is more than zero.
-func filling(r execx.Runner, repo *workitem.Repo, q Queue, now time.Time) *Window {
+// pick it from the main branch's head, as g read it: nil while the queue is
+// held, by the operator or the preflight, a batch is under way or waits to
+// be landed or bisected, the queue has no window to wait out, or the main
+// branch's head was not read. A story is eligible only once its flai verify
+// passed, so g holds the heads whenever a story is.
+func filling(repo *workitem.Repo, q Queue, g gitState, now time.Time) *Window {
 	if q.Held || q.Preflight != nil || (q.Batch != nil && (q.Batch.Result == nil || q.Batch.Dropped == nil)) {
 		return nil
 	}
 	coalesce := repo.Manifest.MergeQueueCoalesce()
-	if coalesce <= 0 || len(enqueuedEligible(q)) == 0 {
+	if coalesce <= 0 || len(enqueuedEligible(q)) == 0 || g.headsErr != nil {
 		return nil
 	}
-	_, base, err := mainHead(r, repo, "read the merge queue's window")
+	_, base, err := g.heads.Main()
 	if err != nil {
 		return nil
 	}
@@ -314,35 +331,78 @@ func enteredReview(it *workitem.Item) time.Time {
 	return it.EnteredAt().UTC()
 }
 
-// verified is the head of story's branch and nil when its last flai verify
-// passed there; otherwise the reason it did not, with the head when it was
-// read.
-func verified(r execx.Runner, repo *workitem.Repo, story string) (string, *Reason) {
+// lastVerify is a story's last flai verify result as the queue reads it:
+// the commit it passed at, or the reason it did not pass.
+type lastVerify struct {
+	commit string
+	reason *Reason
+}
+
+// readLastVerify reads story's last flai verify result, which needs no git.
+func readLastVerify(repo *workitem.Repo, story string) lastVerify {
 	rep, ok, err := verify.LastReport(repo, story)
 	switch {
 	case err != nil:
-		return "", &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read the last flai verify result of %s: %v", story, err)}
+		return lastVerify{reason: &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read the last flai verify result of %s: %v", story, err)}}
 	case !ok:
-		return "", &Reason{Kind: KindVerifyMissing, Text: fmt.Sprintf("%s has no flai verify result: run flai verify %s at the head of its branch", story, story)}
+		return lastVerify{reason: &Reason{Kind: KindVerifyMissing, Text: fmt.Sprintf("%s has no flai verify result: run flai verify %s at the head of its branch", story, story)}}
 	case !rep.Passed:
 		at := ""
 		if rep.StoppedAt != "" {
 			at = " at its step " + rep.StoppedAt
 		}
-		return "", &Reason{Kind: KindVerifyFailed, Text: fmt.Sprintf("the last flai verify of %s failed%s, at %s: fix it and run flai verify %s again", story, at, short(rep.Commit), story)}
+		return lastVerify{reason: &Reason{Kind: KindVerifyFailed, Text: fmt.Sprintf("the last flai verify of %s failed%s, at %s: fix it and run flai verify %s again", story, at, short(rep.Commit), story)}}
+	}
+	return lastVerify{commit: rep.Commit}
+}
+
+// gitState is the git the queue reads once for every story in review: each
+// local branch's head and the branch checked out, or why they could not be
+// read, and the main checkout's dirt.
+type gitState struct {
+	heads    storygit.Heads
+	headsErr error
+	dirt     dirt
+}
+
+// readGitState reads repo's branch heads with one git for-each-ref and,
+// at the same time, the main checkout's uncommitted files with one git
+// status, both through r (S-0698).
+func readGitState(r execx.Runner, repo *workitem.Repo) gitState {
+	var (
+		d    storygit.Dirty
+		dErr error
+		done = make(chan struct{})
+	)
+	go func() {
+		defer close(done)
+		d, dErr = storygit.DirtyMain(r, repo)
+	}()
+	var g gitState
+	g.heads, g.headsErr = storygit.ReadHeads(r, repo.MainRoot)
+	<-done
+	g.dirt = mainDirt(d, dErr, g.heads, g.headsErr)
+	return g
+}
+
+// verified is the head of story's branch and nil when its last flai verify,
+// last, passed there; otherwise the reason it did not, with the head when it
+// was read.
+func (g gitState) verified(story string, last lastVerify) (string, *Reason) {
+	if last.reason != nil {
+		return "", last.reason
 	}
 	branch := storygit.Branch(story)
-	out, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
-	head := strings.TrimSpace(out)
-	if err != nil || head == "" {
+	head, ok := g.heads.Commits[branch]
+	if g.headsErr != nil || !ok {
 		why := "git names no commit"
-		if err != nil {
-			why = err.Error()
+		if g.headsErr != nil {
+			why = g.headsErr.Error()
 		}
 		return "", &Reason{Kind: KindBranchUnread, Text: fmt.Sprintf("cannot read the head of %s to check that flai verify passed there: %s; a story is batched from its branch, so check that git can read it", branch, why)}
 	}
-	if rep.Commit != head {
-		return head, &Reason{Kind: KindVerifyStale, Text: fmt.Sprintf("the last flai verify of %s passed at %s, but the head of %s is %s: run flai verify %s again at the head", story, short(rep.Commit), branch, short(head), story)}
+	if last.commit != head {
+		return head, &Reason{Kind: KindVerifyStale, Text: fmt.Sprintf("the last flai verify of %s passed at %s, but the head of %s is %s: run flai verify %s again at the head", story, short(last.commit), branch, short(head), story)}
 	}
 	return head, nil
 }
@@ -419,22 +479,21 @@ type dirt struct {
 	main  string
 }
 
-// mainDirt reads repo's main checkout's uncommitted files outside the shared
-// set, wip, design, and the shared paths, which the landing commits
-// (ADR-0248), and the main branch's head through r. A checkout git cannot
-// read has none to hold a story back; the stories' other reasons say what
-// git cannot read.
-func mainDirt(r execx.Runner, repo *workitem.Repo) dirt {
-	d, err := storygit.DirtyMain(r, repo)
-	if err != nil || len(d.Rest) == 0 {
+// mainDirt is the main checkout's dirt from what was read of it: its
+// uncommitted files outside the shared set, wip, design, and the shared
+// paths, which the landing commits (ADR-0248), d unless dErr, and the main
+// branch's head from heads unless headsErr. A checkout git cannot read has
+// none to hold a story back; the stories' other reasons say what git cannot
+// read.
+func mainDirt(d storygit.Dirty, dErr error, heads storygit.Heads, headsErr error) dirt {
+	if dErr != nil || headsErr != nil || len(d.Rest) == 0 {
 		return dirt{}
 	}
-	files := d.Rest
-	_, head, err := mainHead(r, repo, "read the main branch")
+	_, head, err := heads.Main()
 	if err != nil {
 		return dirt{}
 	}
-	return dirt{files: files, main: head}
+	return dirt{files: d.Rest, main: head}
 }
 
 // holds is the reason naming the uncommitted files of the main checkout that

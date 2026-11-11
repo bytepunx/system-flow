@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,7 +36,32 @@ func (g scriptedGit) Run(_, name string, args ...string) (string, error) {
 	if out, ok := g[strings.Join(args, " ")]; ok && name == "git" {
 		return out, nil
 	}
+	if name == "git" && len(args) == 3 && args[0] == "for-each-ref" && args[2] == "refs/heads/" {
+		return g.refs(), nil
+	}
 	return "", errors.New("unscripted: " + name + " " + strings.Join(args, " "))
+}
+
+// refs is what git for-each-ref answers storygit.ReadHeads from the heads
+// scripted as rev-parse answers: each branch at its commit, the one the
+// abbrev-ref of HEAD names marked checked out.
+func (g scriptedGit) refs() string {
+	const verify = "rev-parse --verify --quiet "
+	var lines []string
+	for args, commit := range g {
+		branch, ok := strings.CutPrefix(args, verify)
+		if !ok || !strings.HasSuffix(branch, "^{commit}") {
+			continue
+		}
+		branch = strings.TrimPrefix(strings.TrimSuffix(branch, "^{commit}"), "refs/heads/")
+		mark := ""
+		if g["rev-parse --abbrev-ref HEAD"] == branch {
+			mark = "*"
+		}
+		lines = append(lines, "refs/heads/"+branch+"\t"+mark+"\t\t\tcommit\t"+commit)
+	}
+	slices.Sort(lines)
+	return strings.Join(lines, "\n")
 }
 
 func (g scriptedGit) RunInput(dir, name, _ string, args ...string) (string, error) {
@@ -355,14 +381,18 @@ func TestUnderPullRequestAcceptanceTheQueueIsOff(t *testing.T) {
 	}
 }
 
-// countingGit is scriptedGit that counts every process it is asked for.
+// countingGit is scriptedGit that counts every process it is asked for,
+// from any goroutine.
 type countingGit struct {
 	scriptedGit
 	calls *[]string
+	mu    *sync.Mutex
 }
 
 func (g countingGit) Run(dir, name string, args ...string) (string, error) {
+	g.mu.Lock()
 	*g.calls = append(*g.calls, name+" "+strings.Join(args, " "))
+	g.mu.Unlock()
 	return g.scriptedGit.Run(dir, name, args...)
 }
 
@@ -386,7 +416,7 @@ func TestWithNoStoryInReviewTheQueueReadsNoThreadAndRunsNoGit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var calls []string
-	g := countingGit{scriptedGit: scriptedGit{}, calls: &calls}
+	g := countingGit{scriptedGit: scriptedGit{}, calls: &calls, mu: &sync.Mutex{}}
 
 	q, err := ComputeAt(g, repo, t0)
 	if err != nil {
@@ -586,5 +616,59 @@ func TestTheQueueCarriesTheWindow(t *testing.T) {
 	delete(g, "rev-parse --abbrev-ref HEAD")
 	if q, err := ComputeAt(g, repo, ends.Add(-time.Minute)); err != nil || q.Window != nil {
 		t.Errorf("main unread: window %+v, %v; want none", q.Window, err)
+	}
+}
+
+// S-0698, I-0333: the queue reads every branch head with one git
+// for-each-ref and the main checkout's status with one git status, however
+// many stories are in review, where it ran a rev-parse for each story and two
+// more for the main branch. While no story in review has a passing flai
+// verify result, no head can be held back by the main checkout's dirt, and
+// it runs no git at all.
+func TestTheQueuesGitDoesNotGrowWithTheStoriesInReview(t *testing.T) {
+	status := []string{"-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all"}
+	for _, n := range []int{1, 3, 6} {
+		repo := project(t, "")
+		var calls []string
+		g := countingGit{scriptedGit: scriptedGit{}, calls: &calls, mu: &sync.Mutex{}}
+		g.script("main", "rev-parse", "--abbrev-ref", "HEAD")
+		g.script("m1", "rev-parse", "--verify", "--quiet", "refs/heads/main^{commit}")
+		g.script("", status...)
+		var stories []string
+		for i := range n {
+			s, _ := story(t, repo, "Verified", []bool{true}, t0.Add(time.Duration(i+1)*time.Hour))
+			passed(t, repo, g.scriptedGit, s.ID, "c0ffee"+s.ID)
+			stories = append(stories, s.ID)
+		}
+		writeState(t, repo.CacheDir(), `{"enqueued": [{"story": "`+stories[0]+`", "by": "alex", "at": "2026-10-19T08:00:00Z"}]}`)
+
+		q, err := ComputeAt(g, repo, time.Date(2026, 10, 19, 8, 1, 0, 0, time.UTC))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := ids(q.Eligible); !slices.Equal(got, stories) {
+			t.Errorf("%d in review: eligible %v, want %v", n, got, stories)
+		}
+		if q.Window == nil {
+			t.Errorf("%d in review: no window, want the enqueued story's, from main's head", n)
+		}
+		slices.Sort(calls)
+		want := []string{"git -c core.quotePath=false status --porcelain --no-renames --untracked-files=all", "git for-each-ref"}
+		if len(calls) != 2 || calls[0] != want[0] || !strings.HasPrefix(calls[1], want[1]+" ") {
+			t.Errorf("%d in review: the queue ran %q, want one git status and one git for-each-ref", n, calls)
+		}
+
+		calls = calls[:0]
+		for _, id := range stories {
+			if err := verify.SaveReport(repo, verify.Report{Story: id, Commit: "c0ffee" + id, Passed: false}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := ComputeAt(g, repo, t0); err != nil {
+			t.Fatal(err)
+		}
+		if len(calls) != 0 {
+			t.Errorf("%d in review, none verified: the queue ran %q, want no git", n, calls)
+		}
 	}
 }

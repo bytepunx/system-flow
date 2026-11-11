@@ -3517,7 +3517,26 @@ func (g queueGit) Run(_, name string, args ...string) (string, error) {
 	if out, ok := g[strings.Join(args, " ")]; ok && name == "git" {
 		return out, nil
 	}
+	if name == "git" && len(args) == 3 && args[0] == "for-each-ref" && args[2] == "refs/heads/" {
+		return g.refs(), nil
+	}
 	return "", errors.New("unscripted: " + name + " " + strings.Join(args, " "))
+}
+
+// refs is what git for-each-ref answers storygit.ReadHeads from the branch
+// heads scripted as rev-parse answers, each branch at its commit (S-0698).
+func (g queueGit) refs() string {
+	var lines []string
+	for args, commit := range g {
+		branch, ok := strings.CutPrefix(args, "rev-parse --verify --quiet ")
+		if !ok || !strings.HasSuffix(branch, "^{commit}") {
+			continue
+		}
+		branch = strings.TrimPrefix(strings.TrimSuffix(branch, "^{commit}"), "refs/heads/")
+		lines = append(lines, "refs/heads/"+branch+"\t\t\t\tcommit\t"+commit)
+	}
+	slices.Sort(lines)
+	return strings.Join(lines, "\n")
 }
 
 func (g queueGit) RunInput(dir, name, _ string, args ...string) (string, error) {
