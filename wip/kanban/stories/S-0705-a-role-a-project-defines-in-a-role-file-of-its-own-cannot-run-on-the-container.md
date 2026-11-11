@@ -6,7 +6,7 @@ title: A role a project defines in a role file of its own cannot run on the cont
 status: ready
 owner: alex
 created: 2026-11-10T09:11:33Z
-updated: 2026-11-11T14:23:13Z
+updated: 2026-11-11T14:38:04Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:45Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:53Z
 forecast:
   duration: 2h
-  delivery: 2026-11-11T18:38:00Z
-  basis: "Its own forecast of 2h; 5th in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719, S-0724, S-0716, S-0689 and S-0699."
+  delivery: 2026-11-11T18:53:00Z
+  basis: "Its own forecast of 2h; 4th in the pull order with an in-progress limit of 3, behind S-0694, S-0719, S-0724, S-0716, S-0689 and S-0699."
   by: flai
-  at: 2026-11-11T14:23:13Z
+  at: 2026-11-11T14:38:04Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:44Z

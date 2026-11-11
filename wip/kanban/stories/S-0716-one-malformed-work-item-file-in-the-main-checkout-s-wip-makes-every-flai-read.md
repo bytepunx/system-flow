@@ -6,7 +6,7 @@ title: One malformed work item file in the main checkout's wip makes every flai 
 status: ready
 owner: alex
 created: 2026-11-11T01:40:46Z
-updated: 2026-11-11T14:23:13Z
+updated: 2026-11-11T14:38:04Z
 transitions:
   - to: ready
     at: 2026-11-11T08:51:27Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-11-11T08:57:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T16:14:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719 and S-0724."
+  delivery: 2026-11-11T16:29:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0694, S-0719 and S-0724."
   by: flai
-  at: 2026-11-11T14:23:13Z
+  at: 2026-11-11T14:38:04Z
 finalized:
   by: alex
   at: 2026-11-11T08:51:23Z

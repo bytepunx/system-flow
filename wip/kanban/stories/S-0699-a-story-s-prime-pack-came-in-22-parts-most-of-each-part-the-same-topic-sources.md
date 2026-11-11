@@ -6,7 +6,7 @@ title: A story's prime pack came in 22 parts, most of each part the same topic s
 status: ready
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T14:23:13Z
+updated: 2026-11-11T14:38:04Z
 transitions:
   - to: ready
     at: 2026-11-11T08:59:53Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T17:27:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0694, S-0710, S-0719, S-0724, S-0716 and S-0689."
+  delivery: 2026-11-11T17:41:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0719, S-0724, S-0716 and S-0689."
   by: flai
-  at: 2026-11-11T14:23:13Z
+  at: 2026-11-11T14:38:04Z
 finalized:
   by: alex
   at: 2026-11-11T08:59:51Z
