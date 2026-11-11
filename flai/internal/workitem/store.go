@@ -67,6 +67,17 @@ type folder struct {
 	have     bool       // snap holds a look
 	snapOK   bool       // every file of that look was trusted
 	snapMark uint64     // marks when that look began
+
+	// bad is the files the folder's latest look could not read, in file name
+	// order, whether or not it keeps a snapshot; smu guards it too.
+	bad []Unreadable
+}
+
+// Unreadable is an item file a list skipped because it could not be stat'd,
+// read, or parsed, and the error that took it (I-0344).
+type Unreadable struct {
+	Path string // the file, under the folder as the list was given it
+	Err  error  // the error the stat, read, or parse gave
 }
 
 type kept struct {
@@ -204,11 +215,12 @@ func (f *folder) fresh() ([]*Item, bool) {
 	return nil, false
 }
 
-// keepSnapshot records a look that began at mark as the snapshot, when the
-// folder keeps one.
-func (f *folder) keepSnapshot(items []*Item, mark uint64, trusted bool) {
+// keepSnapshot records the files a look could not read and, when the folder
+// keeps a snapshot, the look that began at mark as the snapshot.
+func (f *folder) keepSnapshot(items []*Item, bad []Unreadable, mark uint64, trusted bool) {
 	f.smu.Lock()
 	defer f.smu.Unlock()
+	f.bad = bad
 	if f.on {
 		f.snap, f.have, f.snapOK, f.snapMark = items, true, trusted, mark
 	}
@@ -223,7 +235,9 @@ func (s *store) items(dir, cache string) ([]*Item, error) {
 }
 
 // itemsOn is items, its parses taking slots, a list's bound shared by the
-// folders it lists at once (S-0676); with none, the look makes its own.
+// folders it lists at once (S-0676); with none, the look makes its own. The
+// files the look skipped are recorded as the folder's unreadable ones; a
+// fresh snapshot has none, since a look that skipped a file is not trusted.
 func (s *store) itemsOn(dir, cache string, slots chan struct{}) ([]*Item, error) {
 	f := s.folder(dir)
 	if items, ok := f.fresh(); ok {
@@ -235,12 +249,26 @@ func (s *store) itemsOn(dir, cache string, slots chan struct{}) ([]*Item, error)
 		return items, nil // another caller looked while this one waited
 	}
 	mark := f.marks.Load()
-	items, trusted, err := f.lookAll(dir, cache, slots)
+	items, bad, trusted, err := f.lookAll(dir, cache, slots)
 	if err != nil {
 		return nil, err
 	}
-	f.keepSnapshot(items, mark, trusted)
+	f.keepSnapshot(items, bad, mark, trusted)
 	return items, nil
+}
+
+// unreadable returns the files the latest look of the folder at dir could not
+// read; none when the store never looked at it.
+func (s *store) unreadable(dir string) []Unreadable {
+	s.mu.Lock()
+	f := s.folders[key(dir)]
+	s.mu.Unlock()
+	if f == nil {
+		return nil
+	}
+	f.smu.Lock()
+	defer f.smu.Unlock()
+	return slices.Clone(f.bad)
 }
 
 // snapshotting reports whether dir keeps a snapshot, so that Get finds its
@@ -253,7 +281,9 @@ func (s *store) snapshotting(dir string) bool {
 }
 
 // find returns a copy of the first item in dir, by file name, whose file name
-// starts with prefix, as a glob of prefix*.md would; nil when none does.
+// starts with prefix, as a glob of prefix*.md would; nil when none does. When
+// only a file the folder could not read has such a name, its error is
+// returned, as a get of that file would.
 func (s *store) find(dir, prefix, cache string) (*Item, error) {
 	items, err := s.items(dir, cache)
 	if err != nil {
@@ -262,6 +292,11 @@ func (s *store) find(dir, prefix, cache string) (*Item, error) {
 	for _, it := range items {
 		if strings.HasPrefix(filepath.Base(it.Path), prefix) {
 			return it.clone(), nil
+		}
+	}
+	for _, u := range s.unreadable(dir) {
+		if strings.HasPrefix(filepath.Base(u.Path), prefix) {
+			return nil, u.Err
 		}
 	}
 	return nil, nil
@@ -317,16 +352,19 @@ func (s *store) listOn(dir, cache string, slots chan struct{}) ([]*Item, error) 
 }
 
 // lookAll looks at every file of dir and returns the kept items, never
-// copied, and whether every one of them was read late enough to be trusted.
-// The caller holds the folder's lock throughout, so
-// that lists at once share one parse of each changed file: it stats every
+// copied, the files it could not stat, read, or parse, and whether the look
+// is trusted: every item read late enough to be trusted and no file skipped.
+// A file that could not be read is left out and the rest are listed
+// (I-0344); only a folder that cannot be read fails the look. The caller
+// holds the folder's lock throughout, so that lists at once share one parse
+// of each changed file: it stats every
 // file, takes the kept item of each whose key still matches, in memory or,
 // on the folder's first list in the process, in its kept items file in the
 // cache folder cache (S-0600), parses the rest on a bounded pool of
 // workers, each parse taking one of slots, keeps what they parsed, and writes
 // the kept items file again when what it holds changed. With no cache, or a
 // cache folder that does not exist, nothing is kept between processes.
-func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool, error) {
+func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, []Unreadable, bool, error) {
 	f.looks++
 	path := keptItemsPath(cache, dir)
 	if !f.loaded && path != "" {
@@ -344,10 +382,10 @@ func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool,
 		for name := range f.files {
 			f.drop(name)
 		}
-		return nil, true, nil
+		return nil, nil, true, nil
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	files := make([]*look, 0, len(entries))
 	for _, e := range entries {
@@ -360,6 +398,7 @@ func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool,
 	parseAll(dir, files, slots)
 	seen := make(map[string]bool, len(files))
 	out := make([]*Item, 0, len(files))
+	var bad []Unreadable
 	trusted := true
 	for _, l := range files {
 		if l.err != nil {
@@ -367,7 +406,9 @@ func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool,
 			if os.IsNotExist(l.err) {
 				continue // removed since the folder was read
 			}
-			return nil, false, l.err
+			bad = append(bad, Unreadable{Path: filepath.Join(dir, l.name), Err: l.err})
+			trusted = false // look again, so that a fix is seen
+			continue
 		}
 		if l.parsed || l.restored {
 			f.keep(dir, l)
@@ -383,7 +424,7 @@ func (f *folder) lookAll(dir, cache string, slots chan struct{}) ([]*Item, bool,
 	}
 	f.disk = nil // every file now has its entry in memory, or is gone
 	f.writeKept(path, dir)
-	return out, trusted, nil
+	return out, bad, trusted, nil
 }
 
 // lookup stats name and gives it the kept item when the key still matches;

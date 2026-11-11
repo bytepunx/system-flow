@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -150,8 +151,10 @@ func (r *Repo) ItemDir(typ string, archived bool) string {
 // process last read them are read again (S-0156), and a process's first list
 // of a folder parses only the files that changed since a process last kept
 // it in the cache folder (S-0600). The folders are listed at once, each under
-// its own lock, sharing one bound of parses at once (S-0676); an error is the
-// first folder's, in the order current before archived and Types.
+// its own lock, sharing one bound of parses at once (S-0676). A file that
+// cannot be read or does not parse is left out and the rest are listed
+// (I-0344); Unreadable names it. An error is a folder that cannot be read,
+// the first such folder's, in the order current before archived and Types.
 func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	type folderList struct {
 		dir      string
@@ -187,6 +190,20 @@ func (r *Repo) List(includeArchive bool) ([]*Item, error) {
 	}
 	sort.Slice(items, func(i, j int) bool { return lessID(items[i].ID, items[j].ID) })
 	return items, nil
+}
+
+// Unreadable returns, sorted by path, the item files the latest list of each
+// item folder, the archive's among them, left out because they could not be
+// read or did not parse. A folder this process never listed reports none.
+func (r *Repo) Unreadable() []Unreadable {
+	var out []Unreadable
+	for _, archived := range []bool{false, true} {
+		for _, typ := range Types {
+			out = append(out, parsed.unreadable(r.ItemDir(typ, archived))...)
+		}
+	}
+	slices.SortFunc(out, func(a, b Unreadable) int { return strings.Compare(a.Path, b.Path) })
+	return out
 }
 
 // Generation counts, in this process, the changes to the items List reads,

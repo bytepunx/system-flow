@@ -400,25 +400,120 @@ func TestAColdListParsesOnABoundedPool(t *testing.T) {
 	}
 }
 
-// A damaged item fails the list with the error its parse gives, as it did
-// before the pool.
-func TestAListOfADamagedItemFailsWithItsParseError(t *testing.T) {
-	r := newProject(t)
-	mustCreate(t, r, Epic, "Epic", "")
-	for range 10 {
-		mustCreate(t, r, Story, "Story", "E-0001")
-	}
-	damaged := mustCreate(t, r, Story, "Damaged", "E-0001").Path
-	if err := os.WriteFile(damaged, []byte("---\nid: [unclosed\n---\n# no\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, want := ReadItem(damaged)
-	if want == nil {
-		t.Fatal("the damaged item parses")
-	}
-	_, err := r.List(false)
-	if err == nil || err.Error() != want.Error() {
-		t.Errorf("list of a damaged item: %v, want %v", err, want)
+// I-0344: a story file that does not parse, one with no front matter and one
+// with a YAML error, is left out of the list and named by Unreadable with the
+// error its parse gives; every other item lists, gets, and NextID still skips
+// its number. Once the files are fixed the next list has them and Unreadable
+// is empty, with the snapshot off and on.
+func TestAListLeavesOutTheFilesThatDoNotParse(t *testing.T) {
+	for _, snapshot := range []bool{false, true} {
+		name := "no snapshot"
+		if snapshot {
+			name = "snapshot"
+		}
+		t.Run(name, func(t *testing.T) {
+			r := newProject(t)
+			mustCreate(t, r, Epic, "Epic", "")
+			var paths []string
+			for range 5 {
+				paths = append(paths, mustCreate(t, r, Story, "Story", "E-0001").Path)
+			}
+			if snapshot {
+				snapshotting(t, r)
+			}
+			age(t, r, time.Now().Add(-time.Hour))
+			ItemsChanged(r.Root)
+			listed(t, r, true)
+
+			yamlError, placeholder := paths[2], paths[4] // S-0003, and S-0005, the highest
+			originals := map[string][]byte{}
+			for path, damage := range map[string]string{
+				yamlError:   "---\nid: [unclosed\n---\n# no\n",
+				placeholder: "PLACEHOLDER",
+			} {
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				originals[path] = data
+				if err := os.WriteFile(path, []byte(damage), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				ItemChanged(r.Root, rel(t, r, path))
+			}
+			var want []Unreadable
+			for _, path := range []string{yamlError, placeholder} {
+				_, err := ReadItem(path)
+				if err == nil {
+					t.Fatalf("%s parses", path)
+				}
+				want = append(want, Unreadable{Path: path, Err: err})
+			}
+
+			dir := r.ItemDir(Story, false)
+			for range 2 { // the second list looks again, since the first skipped files
+				before := looks(dir)
+				items, err := r.List(false)
+				if err != nil {
+					t.Fatalf("a list with files that do not parse: %v", err)
+				}
+				var ids []string
+				for _, it := range items {
+					ids = append(ids, it.ID)
+				}
+				if got := strings.Join(ids, " "); got != "E-0001 S-0001 S-0002 S-0004" {
+					t.Errorf("listed %s, want every item but the two that do not parse", got)
+				}
+				if looks(dir) == before {
+					t.Error("a folder whose look skipped files was not looked at again")
+				}
+				got := r.Unreadable()
+				if len(got) != len(want) {
+					t.Fatalf("unreadable %v, want %v", got, want)
+				}
+				for i := range want {
+					if got[i].Path != want[i].Path || got[i].Err == nil || got[i].Err.Error() != want[i].Err.Error() {
+						t.Errorf("unreadable %d is %s: %v, want %s: %v", i, got[i].Path, got[i].Err, want[i].Path, want[i].Err)
+					}
+				}
+			}
+			if got, err := r.Get("S-0004"); err != nil || got.ID != "S-0004" {
+				t.Errorf("another story gets as %v, %v", got, err)
+			}
+			if _, err := r.Get("S-0005"); err == nil || err.Error() != want[1].Err.Error() {
+				t.Errorf("the story that does not parse gets %v, want %v", err, want[1].Err)
+			}
+			if got, err := r.NextID(Story); err != nil || got != "S-0006" {
+				t.Errorf("next story ID is %s, %v, want S-0006 past the file that does not parse", got, err)
+			}
+
+			for path, data := range originals {
+				if err := os.WriteFile(path, data, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				ItemChanged(r.Root, rel(t, r, path))
+			}
+			if got := listed(t, r, false); got["S-0003"] == nil || got["S-0005"] == nil {
+				t.Errorf("the fixed stories are not listed: %v", got)
+			}
+			if got := r.Unreadable(); len(got) != 0 {
+				t.Errorf("unreadable after the fix: %v", got)
+			}
+			if !snapshot {
+				return
+			}
+			age(t, r, time.Now().Add(-time.Hour))
+			ItemsChanged(r.Root)
+			listed(t, r, false)
+			before := looks(dir)
+			listed(t, r, false)
+			if got := looks(dir) - before; got != 0 {
+				t.Errorf("a fixed folder of trusted files looked at again %d times", got)
+			}
+			if got := r.Unreadable(); len(got) != 0 {
+				t.Errorf("unreadable from a fresh snapshot: %v", got)
+			}
+		})
 	}
 }
 
