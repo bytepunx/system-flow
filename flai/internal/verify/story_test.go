@@ -189,6 +189,34 @@ func TestVerifyAnswersTheCheckFindingsOutsideTheStoryAsNotes(t *testing.T) {
 	}
 }
 
+// I-0344: a close-out stopped at its check, "flai check could not run:
+// …T-3079-…md: no front matter", while another story's agent had a task file
+// written as PLACEHOLDER. The check now runs to its verdict: the file is one
+// item.unreadable outside the story, a note, and the close-out passes.
+func TestVerifyPassesTheCheckWhileAnotherStorysTaskFileDoesNotParse(t *testing.T) {
+	f := newVerifyFixture(t)
+	const rel = "wip/kanban/tasks/T-009-another-storys-task.md"
+	if err := os.WriteFile(filepath.Join(f.root, rel), []byte("PLACEHOLDER"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Passed || rep.Steps[3].Name != "check" || rep.Steps[3].State != Passed || len(rep.Steps[3].Findings) != 0 {
+		t.Fatalf("the close-out stopped on another story's task file that does not parse: %+v", rep)
+	}
+	var notes []Note
+	for _, n := range rep.Notes {
+		if n.Path == rel {
+			notes = append(notes, n)
+		}
+	}
+	if len(notes) != 1 || notes[0].Rule != "item.unreadable" || notes[0].Level != "error" || !strings.Contains(notes[0].Message, "does not parse: no front matter") {
+		t.Errorf("notes on %s: %+v, want one item.unreadable", rel, notes)
+	}
+}
+
 func TestVerifyStopsAtTheFirstStepThatFails(t *testing.T) {
 	notReachedAfter := func(i int) []string {
 		all := []string{"rebase", "sync", "narrative", "check", "go-test", "integration", "smoke"}

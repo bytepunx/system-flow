@@ -2,6 +2,7 @@ package check
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,13 +22,18 @@ func (c *checker) workItems() {
 	c.oneItems(c.items)
 }
 
-// indexItems reports duplicate IDs, fills byID and the children index, and
-// picks a write's items: what the rules after it read.
+// indexItems reports duplicate IDs and the item files the list left out
+// (unreadable), fills byID and the children index, and picks a write's
+// items: what the rules after it read.
 func (c *checker) indexItems() {
 	seen := map[string]string{}
 	if c.children == nil {
 		c.children = map[string][]*workitem.Item{}
 	}
+	if c.unread == nil {
+		c.unread = newUnreadSet(c.repo.Unreadable())
+	}
+	c.unreadable()
 	for _, it := range c.items {
 		if prev, dup := seen[it.ID]; dup {
 			c.add(Error, "item.duplicate-id", it.Path, keyLine(it.Path, "id"), "%s is also defined in %s", it.ID, prev)
@@ -39,6 +45,66 @@ func (c *checker) indexItems() {
 	}
 	if c.write != nil {
 		c.write.pick(c)
+	}
+}
+
+// unreadSet is the item files a list left out because they could not be
+// read or did not parse (workitem.Repo.Unreadable, I-0344): the files, their
+// cleaned paths, and the canonical IDs their file names give.
+type unreadSet struct {
+	files []workitem.Unreadable
+	paths map[string]bool
+	ids   map[string]bool
+}
+
+// itemFileID is the ID an item file's name starts with, E-, S-, or T- and
+// its digits, for a file whose front matter cannot say.
+var itemFileID = regexp.MustCompile(`^([EST]-\d{3,})(?:-.*)?\.md$`)
+
+// fileID is the ID the file name of path gives, or "".
+func fileID(path string) string {
+	if m := itemFileID.FindStringSubmatch(filepath.Base(path)); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+func newUnreadSet(files []workitem.Unreadable) *unreadSet {
+	s := &unreadSet{files: files, paths: map[string]bool{}, ids: map[string]bool{}}
+	for _, f := range files {
+		s.paths[filepath.Clean(f.Path)] = true
+		if id := fileID(f.Path); id != "" {
+			s.ids[workitem.CanonicalID(id)] = true
+		}
+	}
+	return s
+}
+
+func (s *unreadSet) empty() bool { return s == nil || len(s.files) == 0 }
+
+// names reports whether id, in any zero padding, is the ID of a file that
+// did not read: a rule that finds no item of that ID passes over it, since
+// the file's own item.unreadable is what to fix (I-0344).
+func (s *unreadSet) names(id string) bool {
+	return s != nil && s.ids[workitem.CanonicalID(id)]
+}
+
+// unreadable reports item.unreadable, an error, once on each item file the
+// list left out because it could not be read or did not parse, as a file
+// written for a moment with no front matter (I-0344); a write's run reports
+// only the files it names. The file is in no other rule's items.
+func (c *checker) unreadable() {
+	for _, u := range c.unread.files {
+		if c.write != nil && !c.write.paths[filepath.Clean(u.Path)] {
+			continue
+		}
+		var pe *fs.PathError
+		if errors.As(u.Err, &pe) {
+			c.add(Error, "item.unreadable", u.Path, 1, "cannot be read: %s: %v; flai leaves it out of every list of items until it reads: make it readable or remove it", pe.Op, pe.Err)
+			continue
+		}
+		msg := strings.TrimPrefix(u.Err.Error(), u.Path+": ")
+		c.add(Error, "item.unreadable", u.Path, 1, "does not parse: %s; flai leaves it out of every list of items until it parses: fix its front matter or remove it", msg)
 	}
 }
 
@@ -80,6 +146,8 @@ func (c *checker) oneItem(it *workitem.Item) {
 	if it.Parent != "" {
 		parent, ok := c.byID[it.Parent]
 		switch {
+		case !ok && c.unread.names(it.Parent):
+			// the parent's file does not parse: its item.unreadable is the finding
 		case !ok:
 			c.add(Error, "item.parent-missing", p, keyLine(p, "parent"), "parent %s does not exist", it.Parent)
 		case parent.Type != map[string]string{workitem.Story: workitem.Epic, workitem.Task: workitem.Story}[it.Type]:
@@ -360,7 +428,8 @@ func (c *checker) named(id string) *workitem.Item {
 // story until someone edits it (S-0130, ADR-0046). A task's after: names
 // tasks of its own story, and is reported the same way under task.after,
 // with an entry that names a task of another story (S-0176). The archive is
-// not edited and is not reported.
+// not edited and is not reported. An entry whose item file does not parse is
+// passed over: that file's item.unreadable is the finding (I-0344).
 func (c *checker) after() {
 	for _, it := range c.items {
 		if it.Archived || (it.Type != workitem.Story && it.Type != workitem.Task) {
@@ -369,6 +438,8 @@ func (c *checker) after() {
 		p, rule := it.Path, it.Type+".after"
 		for _, e := range it.After {
 			switch other := c.named(e); {
+			case other == nil && c.unread.names(e):
+				// its file does not parse: its item.unreadable is the finding
 			case other == nil:
 				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, which does not exist; fix it or clear it (flai edit %s --clear-after)", e, it.ID)
 			case other.ID == it.ID:
@@ -625,6 +696,8 @@ func (c *checker) narratives() {
 		active[want] = true
 		story, ok := c.byID[want]
 		switch {
+		case !ok && c.unread.names(want):
+			// the story's file does not parse: its item.unreadable is the finding
 		case !ok:
 			c.add(Warning, "narrative.orphan", path, 1, "no story %s exists", want)
 		case story.Archived:
@@ -725,6 +798,9 @@ func (c *checker) board() {
 	}
 	for _, id := range b.Order {
 		it, ok := c.byID[id]
+		if !ok && c.unread.names(id) {
+			continue // its file does not parse: its item.unreadable is the finding
+		}
 		if !ok || it.Archived {
 			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is not on the board", id)
 		} else if it.Status != workitem.Ready && it.Status != workitem.Backlog {

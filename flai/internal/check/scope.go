@@ -55,7 +55,13 @@ import (
 // story, by the story in its Stories, not by the paths changed: only that
 // story's tasks clear the first, only the stories that name the hub the
 // second, and only that story's Notes or after the third; on the story itself
-// all three are kept, advisory (S-0468, ADR-0188, I-0152, S-0551).
+// all three are kept, advisory (S-0468, ADR-0188, I-0152, S-0551). An
+// item.unreadable, an item file that does not parse and so names no parent,
+// is inside by its path, a changed one, or by its file name: the story's own
+// ID, or a task's ID the story's body lists under its tasks, as
+// item.parent-list reads it; on any other file it is outside, a note, so a
+// file another story's agent has half written never stops a close-out
+// (I-0344).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	return ScopeToStories(res, repo, []string{story}, changed)
 }
@@ -143,6 +149,24 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 		}
 		return false
 	}
+	// owns reports whether the file of an item.unreadable, which names no
+	// parent, is one of the stories' by its file name: a story's own, or a
+	// task one of them lists in its body (I-0344).
+	owns := func(path string) bool {
+		id := fileID(path)
+		if id == "" {
+			return false
+		}
+		for _, st := range sts {
+			switch {
+			case workitem.CanonicalID(id) == workitem.CanonicalID(st.ID):
+				return true
+			case workitem.TypeOfID(id) == workitem.Task && (strings.Contains(st.Body, "- "+id+" ") || strings.Contains(st.Body, id+"\n")):
+				return true
+			}
+		}
+		return false
+	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
@@ -152,7 +176,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 			res.drop(f)
 			continue
 		}
-		if !f.Outside && !f.unchecked && (f.Rule == "wip.overlap" || !inside(f.Path)) {
+		if !f.Outside && !f.unchecked && (f.Rule == "wip.overlap" || (!inside(f.Path) && (f.Rule != "item.unreadable" || !owns(f.Path)))) {
 			f.Outside = true
 			res.Outside++
 			switch {

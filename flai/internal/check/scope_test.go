@@ -156,6 +156,24 @@ func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 		{name: "an error on another story's file", rule: "item.parent-missing", path: "S-006-six.md", setup: func(t *testing.T, root string) {
 			addStory(t, root, "S-006", "E-009", "")
 		}},
+		// I-0344: an item file that does not parse names no parent, so it is
+		// the story's by its file name or by the story's diff, and otherwise
+		// outside it, a note that does not stop the close-out.
+		{name: "another story's task file that does not parse", rule: "item.unreadable", path: "T-009-placeholder.md", setup: func(t *testing.T, root string) {
+			addStory(t, root, "S-006", "E-001", "")
+			edit(t, root, "wip/kanban/stories/S-006-six.md", "## Tasks\n", "## Tasks\n- T-009 Placeholder\n")
+			writePlaceholder(t, root, "wip/kanban/tasks/T-009-placeholder.md")
+		}},
+		{name: "a task file that does not parse in the story's diff", rule: "item.unreadable", path: "T-009-placeholder.md",
+			changed: []string{"wip/kanban/tasks/T-009-placeholder.md"}, fails: true, setup: func(t *testing.T, root string) {
+				writePlaceholder(t, root, "wip/kanban/tasks/T-009-placeholder.md")
+			}},
+		{name: "the story's own task file that does not parse", rule: "item.unreadable", path: "T-003-t3.md", fails: true, setup: func(t *testing.T, root string) {
+			writePlaceholder(t, root, "wip/kanban/tasks/T-003-t3.md")
+		}},
+		{name: "a file that does not parse under the story's own ID", rule: "item.unreadable", path: "S-004-stray.md", fails: true, setup: func(t *testing.T, root string) {
+			writePlaceholder(t, root, "wip/kanban/stories/S-004-stray.md")
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := scopeProject(t)
@@ -1141,4 +1159,13 @@ func TestScopedCheckNotesAMissingLayerOutsideTheStory(t *testing.T) {
 		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings), whole.Warnings)
 	}
 	assertCountsMatch(t, scoped)
+}
+
+// writePlaceholder writes PLACEHOLDER, with no front matter, at rel: the
+// work item file another story's agent had written for a moment (I-0344).
+func writePlaceholder(t *testing.T, root, rel string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(root, rel), []byte("PLACEHOLDER"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }

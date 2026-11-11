@@ -125,3 +125,82 @@ func TestItemsMatchesRunOnTheItemsGiven(t *testing.T) {
 		t.Errorf("Items findings differ from Run's on the items given:\ngot  %q\nwant %q", got, want)
 	}
 }
+
+// I-0344: a task file another story's agent had written for a moment as
+// PLACEHOLDER, with no front matter, made Run fail with the list's parse
+// error, so flai check could not run and a close-out stopped at it. Run now
+// reports each file that does not parse as one item.unreadable on its path,
+// an error, and checks every other item as before: the forecasts broken on
+// both stories are still found. A rule that looks the file's ID up passes
+// over it, so a story under the epic that does not parse gets no
+// item.parent-missing and a task whose after names the task that does not
+// parse no task.after, and the markdown lint's trailing space on the epic's
+// file is left out with its count.
+func TestRunReportsAnItemFileThatDoesNotParseOnceAndChecksTheRest(t *testing.T) {
+	repo, given, other := itemsProject(t)
+	epic := mustItem(t, repo, workitem.Epic, "Lost", "")
+	child := mustItem(t, repo, workitem.Story, "Child", epic.ID)
+	broken := mustItem(t, repo, workitem.Task, "Broken", other.ID)
+	waiter, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Waiter", Parent: other.ID, After: []string{broken.ID}, Owner: "t", Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed(t, repo, broken.ID) // the folders are listed, and kept, before the damage
+	for path, doc := range map[string]string{broken.Path: "PLACEHOLDER", epic.Path: "PLACEHOLDER \n"} {
+		if err := os.WriteFile(path, []byte(doc), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		rel, _ := filepath.Rel(repo.Root, path)
+		workitem.ItemChanged(repo.Root, rel)
+	}
+
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatalf("flai check could not run: %v", err)
+	}
+	on := map[string][]Finding{}
+	for _, f := range res.Findings {
+		on[filepath.Base(f.Path)] = append(on[filepath.Base(f.Path)], f)
+	}
+	for _, path := range []string{broken.Path, epic.Path} {
+		got := on[filepath.Base(path)]
+		want := "does not parse: no front matter; flai leaves it out of every list of items until it parses: fix its front matter or remove it"
+		if len(got) != 1 || got[0].Rule != "item.unreadable" || got[0].Level != Error || got[0].Line != 1 || got[0].Message != want {
+			t.Errorf("findings on %s: %+v, want one item.unreadable %q", filepath.Base(path), got, want)
+			continue
+		}
+		if rel, _ := filepath.Rel(repo.Root, path); got[0].Path != rel {
+			t.Errorf("item.unreadable on %s, want the path relative as other item findings give it, %s", got[0].Path, rel)
+		}
+	}
+	for _, it := range []*workitem.Item{given, other} {
+		found := false
+		for _, f := range on[filepath.Base(it.Path)] {
+			found = found || (f.Rule == "item.front-matter" && strings.Contains(f.Message, "forecast.delivery"))
+		}
+		if !found {
+			t.Errorf("%s's bad forecast is no longer found: %+v", it.ID, on[filepath.Base(it.Path)])
+		}
+	}
+	for _, it := range []*workitem.Item{child, waiter} {
+		for _, f := range on[filepath.Base(it.Path)] {
+			if f.Rule == "item.parent-missing" || f.Rule == "task.after" {
+				t.Errorf("%s gets %s for an ID whose file does not parse: %+v", it.ID, f.Rule, f)
+			}
+		}
+	}
+	if all, _ := repo.List(true); res.Items != len(all) || res.Items != 5 {
+		t.Errorf("Items = %d, want the 5 items that parse", res.Items)
+	}
+	errs, warns := 0, 0
+	for _, f := range res.Findings {
+		if f.Level == Error {
+			errs++
+		} else {
+			warns++
+		}
+	}
+	if res.Errors != errs || res.Warnings != warns {
+		t.Errorf("counts %d errors, %d warnings; the findings give %d, %d", res.Errors, res.Warnings, errs, warns)
+	}
+}

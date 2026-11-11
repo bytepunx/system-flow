@@ -88,6 +88,10 @@ type checker struct {
 	children map[string][]*workitem.Item
 	res      *Result
 	vocab    map[string]bool // topics a story can have (ADR-0047)
+	// unread is the item files the list left out because they did not read
+	// or parse (I-0344); indexItems reports them and fills it when nil, and
+	// the rules that look an item up by ID pass over one it names.
+	unread *unreadSet
 	// write narrows the rules that read files to what a work item write
 	// touches (RunItemWrite); nil runs them over the whole repository.
 	write *writeScope
@@ -144,12 +148,18 @@ var sequence = []rule{
 // indexItems' place, so the findings and counts are those of workItems run
 // whole (S-0677). The rules only read, but for what each adds to its own
 // Result; the topic vocabulary they share is worked out before.
+//
+// An item file the list leaves out because it does not read or parse is one
+// item.unreadable finding on its path, and every other item is checked as
+// before (I-0344): the rules that look an item up pass over the ID it names,
+// and the markdown lint's findings on it are left out.
 func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	items, err := repo.List(true)
 	if err != nil {
 		return nil, err
 	}
-	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, children: map[string][]*workitem.Item{}, res: &Result{Items: len(items)}}
+	c := &checker{repo: repo, now: now.UTC(), items: items, byID: map[string]*workitem.Item{}, children: map[string][]*workitem.Item{}, res: &Result{Items: len(items)},
+		unread: newUnreadSet(repo.Unreadable())}
 	c.vocab = Vocabulary(repo, items)
 	// slots holds each rule's Results in merge order: one for a rule, and for
 	// the first the index's then one per chunk of items.
@@ -192,8 +202,33 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 			c.res.absorb(r)
 		}
 	}
+	c.res.dropLintOnUnread(c.repo, c.unread)
 	sortFindings(c.res.Findings)
 	return c.res, nil
+}
+
+// dropLintOnUnread leaves out the markdown lint's findings on the item files
+// in unread, and takes back their counts: a file with no front matter breaks
+// the lint's rules too, and its item.unreadable says what to fix (I-0344). A
+// merge conflict marker stays, since it is what keeps the file from parsing.
+func (r *Result) dropLintOnUnread(repo *workitem.Repo, unread *unreadSet) {
+	if unread.empty() {
+		return
+	}
+	kept := r.Findings[:0]
+	for _, f := range r.Findings {
+		path := f.Path
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(repo.Root, path)
+		}
+		if strings.HasPrefix(f.Rule, "markdown.MD") && unread.paths[filepath.Clean(path)] {
+			r.drop(f)
+			continue
+		}
+		kept = append(kept, f)
+	}
+	clear(r.Findings[len(kept):])
+	r.Findings = kept
 }
 
 // itemChunk is how many items one job of Run's per-item rules checks: small
