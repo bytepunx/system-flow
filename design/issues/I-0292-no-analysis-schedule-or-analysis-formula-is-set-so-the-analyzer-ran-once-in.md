@@ -2,11 +2,11 @@
 id: I-0292
 title: No analysis.schedule or analysis.formula is set, so the analyzer ran once in thirty days
 class: impression
-status: open
+status: closed
 count: 1
 first_reported: 2026-11-07T08:17:36Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-10T08:49:03Z
+updated: 2026-11-11T02:26:17Z
 usage:
   strategic:
     - kind: analyzer
@@ -46,3 +46,4 @@ flai stats strategic[] analyzer: activities 1, last_run 2026-10-15T22:49:08Z; sy
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0692 remediates this issue, created from it at 2026-11-10T08:49:03Z.
+Closed 2026-11-11T02:26:17Z: S-0692: flai manifest set now writes analysis.formula, refusing a formula no file defines or one with an input that has no default (T-3031). This project's manifest now sets analysis.schedule to `0 6 * * 1` and analysis.formula to analysis-cadence (T-3037), as the operator confirmed on TH-1065. So the analysis schedule makes an analysis-cadence instance every Monday at 06:00 UTC while the analyze host action is on.
