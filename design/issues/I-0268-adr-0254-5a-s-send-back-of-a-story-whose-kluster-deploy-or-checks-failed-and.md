@@ -2,12 +2,12 @@
 id: I-0268
 title: "ADR-0254 §5a's send-back of a story whose kluster deploy or checks failed, and its kluster acceptance blocker, are not built"
 class: impression
-status: open
+status: closed
 count: 2
 cost: 10m
 first_reported: 2026-11-07T03:22:56Z
 last_reported: 2026-11-07T08:17:36Z
-updated: 2026-11-10T08:54:25Z
+updated: 2026-11-11T14:31:30Z
 usage:
   strategic:
     - kind: analyzer
@@ -51,3 +51,4 @@ ADR-0254 § 5a and its Consequences (S-0579 adds the kluster blocker) are accept
 Found by the analysis in [2026-11-07-all.md](../analysis/2026-11-07-all.md).
 
 Story S-0694 remediates this issue, created from it at 2026-11-10T08:54:25Z.
+Closed 2026-11-11T14:31:30Z: Fixed by S-0694, which builds ADR-0254 §5a. A failed kluster deploy, or a checks run against the namespace that does not pass, now sends the story back from review to in-progress on its failure thread. flai serve keeps the namespace for diagnosis, starts the story's agent on the thread, and deploys it again in place once it is back in review (serve/kluster.go sendBack, agents_restart.go startKlusterSentBack). While the kluster host action is on, every acceptance is refused with the blocker kluster until kluster.AcceptGate passes at the branch's head, and flai accept --without-kluster is the operator's way past it (preview/accept.go klusterGate, cmd/accept.go). The merge queue lists such a story ineligible with the reason kluster (mergequeue ComputeWith). Tests: TestFailingChecksAgainstTheNamespaceSendTheStoryBack and the send-back tests in serve/kluster_test.go, the kluster send-back start in serve/agents_test.go, cmd/accept_kluster_test.go, preview/accept_test.go, TestTheKlusterGateHoldsAStoryOutOfTheQueue, and the batch's kluster case in TestRunBatchDoesNothingWhenThereIsNothingToBuild.
