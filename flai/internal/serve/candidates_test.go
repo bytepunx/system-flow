@@ -155,6 +155,57 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 	})
 }
 
+// I-0267: a candidate's connection that the dashboard leaves quiet for longer
+// than a ping's tick and timeout stays open, and import.run is answered on it.
+// The test dashboard once read only inside Ask, so it answered no ping, and the
+// client closed the connection, which Ask then read as "failed to read frame
+// header: EOF". A loaded host made the default 4 s ping do what 300 ms does here.
+func TestACandidateLeftQuietPastItsPingsAnswersImportRun(t *testing.T) {
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	harbour, key := scratchProject(t, "harbour")
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: harbour, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	folder := t.TempDir()
+	repoAt(t, filepath.Join(folder, "widget"), false)
+	importRun := func(context.Context, hostapi.Run) (hostapi.Ran, error) {
+		return hostapi.Ran{Stdout: []byte(`{"key":"widget","commit":{"committed":true,"commit":"abc1234"}}`)}, nil
+	}
+	const ping = 300 * time.Millisecond
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
+			ImportRoots: func() []string { return []string{folder} }, ScanEvery: time.Hour, ImportRun: importRun,
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: ping, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+
+	var offered *channeltest.Conn
+	for range 2 {
+		if c := dash.Wait(t); c.Kind == channel.KindCandidate {
+			offered = c
+		}
+	}
+	if offered == nil {
+		t.Fatal("no candidate offered")
+	}
+	time.Sleep(4 * ping) // quiet past a ping's tick and its timeout, more than once
+	res, e := offered.Ask(t, "import.run", `{"project":"import-widget","request_id":"req-00000001"}`)
+	if e != nil || !strings.Contains(string(res), "abc1234") {
+		t.Fatalf("import.run after a quiet spell: %s %+v", res, e)
+	}
+}
+
 // holdAnswer is a log handler that holds a request's answer, which the
 // channel logs just before it writes it, until until reports true or ten
 // seconds pass.
