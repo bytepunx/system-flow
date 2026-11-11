@@ -2,12 +2,12 @@
 id: I-0313
 title: agent.status with 13 projects at once is not under 200 ms
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 1s
 first_reported: 2026-11-08T02:32:22Z
 last_reported: 2026-11-08T02:32:22Z
-updated: 2026-11-10T08:34:55Z
+updated: 2026-11-11T06:08:04Z
 ---
 
 # I-0313 agent.status with 13 projects at once is not under 200 ms
@@ -24,3 +24,4 @@ S-0603 fixed cause 12 of design/system/server-performance.md: agents.json is kep
 ## Remediation
 
 Story S-0678 remediates this issue, created from it at 2026-11-10T08:34:55Z.
+Closed 2026-11-11T06:08:04Z: S-0678 fixed it, on top of S-0602's kept threads and conversations. The trial judge now keeps its merge answers across calls by commit pair and reads the branch heads with one git for-each-ref (T-3008), and agent.activity is timed by its parts (T-3004). With 13 projects at once, all 65 calls answered under 200 ms in each of 17 runs at loads of 4 to 13; the slowest call took 87 to 125 ms, against 159 to 211 ms before. This repository's call fell from 150-168 ms to 88-90 ms. What is left is about 90 ms of CPU, which a loaded host makes wait for a core (design/system/server-performance.md, § Cause 12 again).
