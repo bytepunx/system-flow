@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-11-10
+updated: 2026-11-11
 status: draft
 ---
 
@@ -59,6 +59,16 @@ scripts/flai.sh serve enable merge-queue
 Without it, every close-out that changes `flai/` runs both tiers, about twelve minutes a round, which is longer than an agent's ten-minute tool call. `flai verify` then prints, before its outcome, the tiers it ran and the condition that is off (S-0466).
 
 Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2, GoReleaser, ShellCheck, and markdownlint-cli2 into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2. `scripts/lint-md.sh` runs the installed markdownlint-cli2 when it is the version the script pins, and starts it through `npx` otherwise, about 0.7 to 0.9 s slower a run; its first line says which it ran.
+
+### Race detector
+
+A close-out's Go tests run on one core and without the race detector, so several close-outs at once do not saturate the host (S-0722, [workflow](../../design/system/workflow.md#what-a-close-outs-go-tests-run-s-0722)). The race detector is the `race` tier of `system-flow.yaml`, a manual tier like `gateway`: it runs the whole Go suite under `-race` on every core, only when you name it.
+
+```sh
+flai test race                # or make race, or scripts/integration.sh --race
+```
+
+`make flai-test` runs it too. No close-out, `flai test --all`, or merge queue batch does, so a data race in your change is not caught before review. Run it after a change to concurrent code, such as goroutines, locks, channels, or shared caches, and before a release.
 
 ### Gateway checks
 

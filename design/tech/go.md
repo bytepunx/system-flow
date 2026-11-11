@@ -1,6 +1,6 @@
 ---
 title: Go
-updated: 2026-10-28
+updated: 2026-11-11
 status: active
 topics: [go]
 ---
@@ -27,7 +27,7 @@ topics: [go]
 |------|---------|-----|
 | `golangci-lint` | v2.5 | Lint, config in `flai/.golangci.yaml` in v2 format. A v1 binary cannot read it; install v2 with `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0` |
 | GoReleaser | v2 | Cross-platform release builds on tag `flai/v*` |
-| `go test` with `-race` | built in | Tests, standard library `testing` only, no assertion framework |
+| `go test` | built in | Tests, standard library `testing` only, no assertion framework. The close-out runs them at `GOMAXPROCS=1` with `-p 1` and without `-race`; `-race` runs in the manual `race` tier, `flai test race`, and in `make flai-test` (S-0722) |
 
 ## Considered
 

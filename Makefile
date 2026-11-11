@@ -1,4 +1,4 @@
-.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md shellcheck mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-e2e flaiover-image agent-images litellm litellm-stop litellm-status help
+.PHONY: check flai flai-reference test integration smoke race install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md shellcheck mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-e2e flaiover-image agent-images litellm litellm-stop litellm-status help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -9,11 +9,14 @@ flai: ## Build bin/flai from source
 flai-reference: ## Regenerate docs/users/flai-reference.md and the flag index in docs/operators/settings.md from the command help
 	scripts/flai-reference.sh
 
-test: ## Behavior tests (fast, run on every iteration)
+test: ## Behavior tests (fast, run on every iteration), Go on one core without -race
 	scripts/test.sh
 
-integration: ## Integration tests (real git, monorepo round-trip), after test
+integration: ## Integration tests (real git, monorepo round-trip), after test, on one core without -race as a close-out runs them
 	scripts/integration.sh
+
+race: ## The full Go suite under -race on every core, the manual race tier; make flai-test runs it too
+	scripts/integration.sh --race
 
 smoke: ## Smoke tests (template render and check, repo check, markdown lint, installer), after integration
 	scripts/smoke.sh
@@ -33,7 +36,7 @@ shellcheck: ## ShellCheck every script in scripts/, following what each sources
 mdlint-fixtures: ## Regenerate what markdownlint-cli2 reports on flai's markdown lint fixtures
 	scripts/mdlint-fixtures.sh
 
-flai-test: ## Lint, flaiover unit tests, then the full Go tests once (integration) and smoke
+flai-test: ## Lint, flaiover unit tests, then the full Go tests once under -race (race) and smoke
 	scripts/flai-test.sh
 
 flai-snapshot: ## GoReleaser snapshot build into flai/dist

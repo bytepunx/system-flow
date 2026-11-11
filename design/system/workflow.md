@@ -137,6 +137,21 @@ Once a batch is verified, `flai serve` ends it in acceptances or a send-back, wi
 - **A batch that failed** is bisected. Main counts as passing. Each step verifies main with the batch's first stories, at the last one's rebased head in the batch, and halves again, until it finds the first story with which the batch fails. That story is sent back to in-progress ([Transitions](#transitions-and-who-makes-them)). The stories before it land as above. Those after it stay enqueued for the next batch.
 - **Main moving** other than by the batch's own landing, as by a landing by hand, drops the batch, and the next batch is built from the new main. A verified batch is not dropped when main moved from the commit it expects only by commits that change paths under the `wip` folder none of its stories change, such as flai's replans: it lands over them without being verified again. A main that does not descend from that commit, a commit that changes a path outside `wip/`, a `wip` path a story of the batch changes, or a git read that fails still drops it. The commit the batch expects does not move, so a commit outside `wip/` after a `wip`-only one still drops it ([ADR-0282](../adrs/0282-a-verified-merge-queue-batch-lands-over-main-s-commits-that-change-only-wip.md)). A landing that fails drops the batch too, and the stories not landed are batched again. Every drop is logged as a `dropped` event, which `flai stats` counts per week ([metrics.md](metrics.md#merge-queue-s-0404)).
 
+### What a close-out's Go tests run (S-0722)
+
+In this repository a close-out's Go tests run on one core and without the race detector. The `go-test` tier runs the changed packages and their importers, and `scripts/integration.sh`, the `integration` tier, runs the whole suite; the batch runs `integration` again. Both run `go test -p 1` at `GOMAXPROCS=1`: one package at a time, and the go command, the compiler, and each test binary on one thread of Go code. The commands are in [project-manifest.md](project-manifest.md) and [scripts/README.md](../../scripts/README.md).
+
+One core is by design. More than one story usually closes out at once, and three close-outs under `-race` on every core took the 24-core host to a load of 84. Measured on this host for the whole suite:
+
+| Run | Wall | User CPU | Cores |
+|-----|------|----------|-------|
+| Before: `-race`, every core | 304 s | 2495 s | mean 9.6, peak 20 |
+| After: one core, three runs | 507 to 626 s | 305 to 397 s | mean 0.8 |
+
+A node process the components tests start, such as Vite, can burst past one core for a few seconds; `GOMAXPROCS` does not bound it.
+
+The race detector is the manual `race` tier, `scripts/integration.sh --race`: the whole suite under `-race` on every core. It runs only by name, `flai test race`, and in `make flai-test`, never for paths, under `--all`, in a close-out, or in the batch. So a close-out no longer catches a data race. Run `flai test race` after a change to concurrent code, such as goroutines, locks, channels, or shared caches, and before a release.
+
 ## Blocking
 
 When an agent cannot proceed it appends an open `blocked` interval with a reason, writes the question in the narrative under `## Open questions`, and moves on to another task or story if one is available. When the block clears, the interval is closed. The item never leaves its column because of a block.

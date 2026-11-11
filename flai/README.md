@@ -4,7 +4,8 @@ The system-flow CLI. Design: [design/system/flai-cli.md](../design/system/flai-c
 
 ```bash
 go build -o flai .              # local build
-go test -race ./...             # tests
+go test ./...                   # tests
+go test -race ./...             # tests under the race detector, as flai test race runs them
 golangci-lint run               # lint (golangci-lint v2)
 go run . version
 ```
