@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-11T01:39:51Z
+updated: 2026-11-11T01:40:45Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0667](S-0667.md) | A docker run from a story's agent's shell mounts the main checkout as an empty folder, so a hand call in the agent image cannot read the project | review | agent-S-0667 | 2026-11-10T19:29:32Z |
 | [S-0675](S-0675.md) | The merge queue builds one-story batches and runs three verifications per story landed | review | agent-S-0675 | 2026-11-10T20:20:12Z |
 | [S-0677](S-0677.md) | A whole flai check takes 3.3 to 4.9 s on a loaded host after S-0601, not under 2 s: the item list, workItems alone, and the digest rule are its critical path | review | system-flow | 2026-11-10T20:15:07Z |
 | [S-0679](S-0679.md) | flai check finds `item.heading` outside the story at close-out | review | agent-S-0679 | 2026-11-10T20:01:14Z |
