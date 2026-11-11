@@ -392,8 +392,11 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 // continued over the stops the issue files, the ADR index, the issue
 // summary, and the shared markdown files merged by sections settle, as flai
 // stream sync continues it (ADR-0175), and one they settle is a rebase that
-// finished. After a rebase that finished, the story's own changelog lines are
-// put back under the batch's top "## Unreleased" (ADR-0257). A stop they do not settle is aborted, and answers the story's
+// finished. After a rebase that finished having written a generated file
+// again at a stop, the generated files are written again at the rebased
+// head and what differs is committed there (ADR-0286); then the story's own
+// changelog lines are put back under the batch's top "## Unreleased"
+// (ADR-0257). A stop they do not settle is aborted, and answers the story's
 // outcome by where its paths conflict, as unsettled decides with before,
 // the stories kept ahead of it, and the paths that stop conflicted on; a
 // rebase git failed without stopping answers it left out. The batch's
@@ -418,6 +421,11 @@ func (b *build) rebase(e Entry, onto string, before []ahead) (rebased, error) {
 		if len(settled.Merged)+len(settled.Regenerated) > 0 {
 			b.d.Log.Info("merge queue batch settled a story's stops by merging and writing files again", "component", "mergequeue",
 				"batch", b.id, "story", e.Story, "merged", settled.Merged, "regenerated", settled.Regenerated)
+		}
+		if len(settled.Regenerated) > 0 {
+			if err := b.regenerateAtHead(e, files); err != nil {
+				return rebased{}, err
+			}
 		}
 		if err := b.settleChangelogs(e, onto, strings.TrimSpace(from)); err != nil {
 			return rebased{}, err
@@ -450,6 +458,29 @@ func (b *build) rebase(e Entry, onto string, before []ahead) (rebased, error) {
 		return rebased{}, b.notBack(e, err)
 	}
 	return rebased{out: b.unsettled(e, settled.Conflicts, files, before), paths: settled.Conflicts}, nil
+}
+
+// regenerateAtHead writes files' generated files again at e's rebased head
+// in the batch's worktree, after a rebase that wrote one again at a stop, as
+// flai stream sync does (ADR-0286). It commits what differs on the rebased
+// copy, never on e's own branch. One that fails with nothing left to commit
+// is logged and the batch goes on; files written but not committed are an
+// error, and the queue builds the batch again.
+func (b *build) regenerateAtHead(e Entry, files storygit.Files) error {
+	committed, err := storygit.RegenerateAtHead(b.d.Runner, b.path, files, e.Story)
+	if err != nil && len(committed) == 0 {
+		b.d.Log.Warn("merge queue batch did not write the generated files again at a story's rebased head", "component", "mergequeue",
+			"batch", b.id, "story", e.Story, "err", err)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("build merge queue batch %s: %w; remove the worktree %s, and the queue builds the batch again", b.id, err, b.path)
+	}
+	if len(committed) > 0 {
+		b.d.Log.Info("merge queue batch wrote the generated files again at a story's rebased head", "component", "mergequeue",
+			"batch", b.id, "story", e.Story, "regenerated_at_head", committed)
+	}
+	return nil
 }
 
 // settleChangelogs puts e's own changelog lines back under the top

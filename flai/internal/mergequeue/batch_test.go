@@ -666,6 +666,79 @@ func TestTheBatchMergesTheIssuesTheSummaryAndTheADRIndexItStopsOn(t *testing.T) 
 	untouched(t, repo, map[string]string{a: headA, b: headB})
 }
 
+// I-0266, ADR-0286 §5: a story whose first commit bumps I-0001 and writes
+// the issue summary again stops the batch's rebase on them, as main bumped
+// it meanwhile, and its second commit, which adds I-0002 and leaves the
+// summary alone, replays cleanly over the summary written at that stop; the
+// batch writes the generated files again at the story's rebased head and
+// commits the summary there, so the batch's summary has I-0002's row, and
+// the story's own branch does not move.
+func TestTheBatchWritesTheGeneratedFilesAgainAtTheRebasedHeadAfterAStopOnThem(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	sharedRecords(t, repo)
+	bump := func(r *workitem.Repo, story, note string, at time.Time) {
+		is, err := issues.Get(r, "I-0001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := issues.Bump(is, story, "", note, at); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := issues.WriteSummary(r, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a, _ := readyStoryChanging(t, repo, "A", t0.Add(time.Hour), func(id, _ string) {
+		bump(issues.RepoFor(repo, id), id, "Again in "+id+".", t0.Add(time.Hour))
+	})
+	wt := repo.WorktreePath(a)
+	added, err := issues.New(issues.RepoFor(repo, a), issues.NewOptions{Title: "Later friction", Class: "efficiency", Now: t0.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, wt, "add", "-A")
+	runGit(t, wt, "commit", "-q", "-m", a+"'s issue")
+	headA := runGit(t, wt, "rev-parse", "HEAD")
+	if err := verify.SaveReport(repo, verify.Report{Story: a, Commit: headA, Passed: true}); err != nil {
+		t.Fatal(err)
+	}
+	bump(repo, "", "Again on main.", t0.Add(90*time.Minute))
+	runGit(t, repo.MainRoot, "add", "-A")
+	runGit(t, repo.MainRoot, "commit", "-q", "-m", "docs: main bumps I-0001")
+	enqueue(t, repo, a)
+	var logged bytes.Buffer
+	d := deps(proc, t1)
+	d.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a}) || len(st.Batch.LeftOut) != 0 || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, outcomes %+v; want %s kept", st.Batch, st.Outcomes, a)
+	}
+	regenerated := "docs: [" + a + "] write the generated files again at the branch's head"
+	if got, want := subjects(t, repo, st.Batch.Branch), []string{regenerated, a + "'s issue", a + "'s change", "docs: main bumps I-0001", "docs: issues and ADRs", "init"}; !slices.Equal(got, want) {
+		t.Errorf("the batch's branch has %v, want %v", got, want)
+	}
+	summary := runGit(t, repo.MainRoot, "show", st.Batch.Branch+":design/issues/summary.md")
+	for _, says := range []string{"[I-0001]", "[" + added.ID + "]", "| 3 |"} {
+		if !strings.Contains(summary, says) {
+			t.Errorf("the summary on the batch does not have %q:\n%s", says, summary)
+		}
+	}
+	if got := runGit(t, repo.MainRoot, "show", "--name-only", "--format=", st.Batch.Branch); got != "design/issues/summary.md" {
+		t.Errorf("the commit at the batch's head changed %q, want the summary alone", got)
+	}
+	bwt := filepath.Join(repo.MainRoot, filepath.FromSlash(st.Batch.Worktree))
+	if storygit.RebaseInProgress(execx.System{}, bwt) || runGit(t, bwt, "status", "--porcelain") != "" {
+		t.Error("the batch's worktree is left with a rebase or changes")
+	}
+	for _, says := range []string{"component=mergequeue", "story=" + a, "regenerated_at_head=[design/issues/summary.md]"} {
+		if !strings.Contains(logged.String(), says) {
+			t.Errorf("the log does not say %q:\n%s", says, logged.String())
+		}
+	}
+	untouched(t, repo, map[string]string{a: headA})
+}
+
 // S-0401 criterion 1: a stop on a path the merge steps do not settle beside
 // one they do is still aborted and the story left out, with the stop's
 // paths, and the batch's worktree is left clean on its branch.
