@@ -228,7 +228,8 @@ func RoleAgent(name, item string) string {
 
 // SentBack is a send back of a story from review to in-progress, which flai
 // makes on a failing required check or a requested change on its pull
-// request (ADR-0167), as the story's agent is told it.
+// request (ADR-0167), and on the other failures its fields name, as the
+// story's agent is told it.
 type SentBack struct {
 	Thread string // the thread flai serve opened on the story for it
 	What   string // what failed, as the move's reason names it
@@ -241,12 +242,20 @@ type SentBack struct {
 	// Acceptance is set when an acceptance, whoever made it, sent the story
 	// back over a rebase it could not settle (ADR-0248).
 	Acceptance bool
+	// Kluster is set when flai serve sent the story back because its deploy
+	// into its kluster namespace, or its checks run against it, failed
+	// (ADR-0254 §5a).
+	Kluster bool
 }
 
 // then is what follows the agent's fix of a story sent back on thread: the
-// push of its pull request, from the merge queue its batching again, or from
-// an acceptance its acceptance again.
+// push of its pull request, from the merge queue its batching again, from an
+// acceptance its acceptance again, or from its kluster namespace its deploy
+// again in place.
 func (b *SentBack) then(story string) string {
+	if b.Kluster {
+		return fmt.Sprintf("flai serve deploys %[1]s again in place once it is back in review, at a new commit or the same one, and resolves %[2]s once that deploy and its checks pass. When the cause is outside the story, such as the cluster's services, say so on %[2]s rather than change the branch for it", story, b.Thread)
+	}
 	if b.Acceptance {
 		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review, and it is accepted again", story, b.Thread)
 	}

@@ -494,7 +494,12 @@ func TestAProjectsDeploysRunOneAtATimeInReviewOrder(t *testing.T) {
 	}
 }
 
-func TestAFailedDeployOpensOneThreadMovesNothingAndAPassResolvesIt(t *testing.T) {
+// ADR-0254 §5a: a failed deploy opens one thread, sends the story back to
+// in-progress as flai with a reason naming the job, the step, and the
+// commit, and keeps the send back for the agent's start; a look while it is
+// in progress tries nothing again. A failure at its next head in review adds
+// to the one thread and sends it back again, and a pass resolves it.
+func TestAFailedDeployOpensOneThreadSendsTheStoryBackAndAPassResolvesIt(t *testing.T) {
 	lab := newKlusterLab(t, klusterBlock)
 	story := lab.inReview("Broken", klHeadA)
 	ns, _ := kluster.StoryNamespace(story)
@@ -508,41 +513,155 @@ func TestAFailedDeployOpensOneThreadMovesNothingAndAPassResolvesIt(t *testing.T)
 
 	lab.round()
 	ths := lab.threadsOn(story)
-	if len(ths) != 1 {
-		t.Fatalf("threads after a failed deploy = %d, want 1", len(ths))
+	if len(ths) != 1 || !ths[0].Open() {
+		t.Fatalf("threads after a failed deploy = %d, want 1 open", len(ths))
 	}
-	for _, want := range []string{"deploy step", "exit code 3", log, klHeadA, ns} {
+	for _, want := range []string{"deploy step", "exit code 3", log, klHeadA, ns, "sent " + story + " back to in-progress", "keeps its namespace"} {
 		if !strings.Contains(ths[0].Body, want) {
 			t.Errorf("the failure thread does not name %q:\n%s", want, ths[0].Body)
 		}
 	}
-	if got := lab.status(story); got != workitem.Review {
-		t.Fatalf("the story is %s after a failed deploy, want it left in review", got)
-	}
-	if journal := lab.entries(); journal[len(journal)-1].Outcome != "failed" {
-		t.Errorf("the journal's last entry is %+v, want the failure", journal[len(journal)-1])
+	lab.sentBackBy(story, ths[0].ID, "flai serve's kluster deploy of "+story+" failed at the deploy step, at commit "+short(klHeadA))
+	if journal := lab.entries(); journal[len(journal)-1].Outcome != "done" || !strings.Contains(journal[len(journal)-1].Detail, "sent "+story+" back to in-progress on "+ths[0].ID) {
+		t.Errorf("the journal's last entry is %+v, want the send back", journal[len(journal)-1])
 	}
 
+	n := len(lab.kluster.all())
 	lab.round()
-	if got := lab.kluster.deploys(); len(got) != 1 {
-		t.Fatalf("a failed head was tried again: %v", got)
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a look at the sent back story ran %v, want nothing: no deploy, and no teardown", got)
 	}
 	if ths := lab.threadsOn(story); len(ths) != 1 || len(ths[0].Entries()) != 1 {
 		t.Fatalf("a second look at the failed head changed the threads: %d", len(ths))
 	}
 
 	lab.git.set(story, klHeadB)
+	lab.move(story, workitem.Review)
 	lab.round()
 	ths = lab.threadsOn(story)
 	if len(ths) != 1 || len(ths[0].Entries()) != 2 || !ths[0].Open() {
 		t.Fatalf("a failure at a new head should add an entry to the one open thread; threads %d", len(ths))
 	}
+	lab.sentBackBy(story, ths[0].ID, "flai serve's kluster deploy of "+story+" failed at the deploy step, at commit "+short(klHeadB))
 
 	lab.git.set(story, klHeadC)
+	lab.move(story, workitem.Review)
 	lab.round()
 	ths = lab.threadsOn(story)
 	if len(ths) != 1 || ths[0].Open() {
 		t.Fatalf("a passing deploy should resolve the failure thread; threads %d", len(ths))
+	}
+	if got := lab.status(story); got != workitem.Review {
+		t.Fatalf("the story is %s after its deploy passed, want it left in review", got)
+	}
+	if tr, _ := readKlusterTried(lab.root, ns); tr.SentBack != nil {
+		t.Errorf("the passing deploy kept the old send back: %+v", tr.SentBack)
+	}
+}
+
+// sentBackBy fails the test unless story stands in progress, moved there by
+// flai as its newest move, and what the pass tried for its namespace keeps
+// the send back on thread for reason.
+func (lab *klusterLab) sentBackBy(story, thread, reason string) {
+	lab.t.Helper()
+	it, err := lab.repo.Get(story)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	if last := it.Transitions[len(it.Transitions)-1]; it.Status != workitem.InProgress || last.By != sendBackBy {
+		lab.t.Fatalf("%s is %s, last moved by %s; want it sent back to in-progress by %s", story, it.Status, last.By, sendBackBy)
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	tr, ok := readKlusterTried(lab.root, ns)
+	if !ok || tr.SentBack == nil || tr.SentBack.Thread != thread || tr.SentBack.Reason != reason || !klusterKept(it, tr) {
+		lab.t.Fatalf("the send back kept for %s is %+v, want one on %s for %q that keeps the story", ns, tr.SentBack, thread, reason)
+	}
+}
+
+// ADR-0254 §5a: a story sent back after a failed deploy keeps its
+// namespace while it stands in progress, however many looks pass, and is torn
+// down once it is cancelled, its failure thread resolved.
+func TestASentBackStoryKeepsItsNamespaceUntilItIsCancelled(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	story := lab.inReview("Kept", klHeadA)
+	ns, _ := kluster.StoryNamespace(story)
+	lab.kluster.fail = func(string, string) error {
+		return &kluster.StepError{Namespace: ns, Step: kluster.StepDeploy, ExitCode: 1, Err: errors.New("exit status 1")}
+	}
+	lab.round()
+	if got := lab.status(story); got != workitem.InProgress {
+		t.Fatalf("the story is %s after a failed deploy, want it sent back to in-progress", got)
+	}
+	n := len(lab.kluster.all())
+	lab.round()
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("looks at a sent back story ran %v, want its namespace kept", got)
+	}
+	if _, ok, _ := kluster.ReadRecord(lab.root, ns); !ok {
+		t.Fatalf("the sent back story's namespace %s has no record", ns)
+	}
+
+	lab.move(story, workitem.Cancelled)
+	lab.round()
+	if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
+		t.Fatalf("calls once the sent back story was cancelled = %v, want one teardown", got)
+	}
+	if _, ok := readKlusterTried(lab.root, ns); ok {
+		t.Errorf("what flai serve tried for %s is kept after its teardown passed", ns)
+	}
+	if ths := lab.threadsOn(story); len(ths) != 1 || ths[0].Open() {
+		t.Errorf("the cancelled story's deploy failure thread should be resolved by its teardown")
+	}
+}
+
+// ADR-0254 §5a: a sent back story that returns to review is deployed again
+// in place, at the same head or a new one, with no teardown between, and a
+// pass resolves the thread. Once it has passed, a move back to in-progress
+// by its agent is no send back: it is torn down.
+func TestASentBackStorysReturnToReviewDeploysAgainInPlace(t *testing.T) {
+	for _, c := range []struct{ name, head string }{{"same head", klHeadA}, {"new head", klHeadB}} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newKlusterLab(t, klusterBlock)
+			story := lab.inReview("Returns", klHeadA)
+			ns, _ := kluster.StoryNamespace(story)
+			failing := true
+			lab.kluster.fail = func(string, string) error {
+				if failing {
+					return &kluster.StepError{Namespace: ns, Step: kluster.StepBuild, ExitCode: 2, Err: errors.New("exit status 2")}
+				}
+				return nil
+			}
+			lab.round()
+			if got := lab.status(story); got != workitem.InProgress {
+				t.Fatalf("the story is %s after a failed deploy, want it sent back", got)
+			}
+			failing = false
+			n := len(lab.kluster.all())
+			lab.git.set(story, c.head)
+			lab.move(story, workitem.Review)
+			lab.round()
+			if got := lab.kluster.since(n); strings.Join(got, ";") != "absent;deploy "+story+" "+c.head {
+				t.Fatalf("calls once the story was back in review = %v, want one deploy at %s and no teardown", got, short(c.head))
+			}
+			if ths := lab.threadsOn(story); len(ths) != 1 || ths[0].Open() {
+				t.Fatalf("the deploy that passed should resolve the failure thread")
+			}
+			if got := lab.status(story); got != workitem.Review {
+				t.Fatalf("the story is %s after its deploy passed, want it in review", got)
+			}
+			n = len(lab.kluster.all())
+			lab.round()
+			if got := lab.kluster.since(n); len(got) != 0 {
+				t.Fatalf("a look after the deploy in place ran %v", got)
+			}
+
+			lab.move(story, workitem.InProgress)
+			lab.round()
+			if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
+				t.Fatalf("calls once its agent moved it back to in-progress = %v, want one teardown", got)
+			}
+		})
 	}
 }
 
@@ -747,14 +866,24 @@ func TestAStoryNeverDeployedIsNotTornDown(t *testing.T) {
 	if _, ok := readKlusterTried(lab.root, ns); !ok {
 		t.Fatalf("a refused deploy left no record of what flai serve tried")
 	}
-	lab.move(refused, workitem.InProgress)
+	if got := lab.status(refused); got != workitem.InProgress {
+		t.Fatalf("the refused story is %s, want it sent back to in-progress", got)
+	}
 	n := len(lab.kluster.all())
 	lab.round()
 	if got := lab.kluster.since(n); len(got) != 0 {
 		t.Fatalf("stories with no deployment were torn down: %v", got)
 	}
+	if tr, ok := readKlusterTried(lab.root, ns); !ok || tr.SentBack == nil {
+		t.Errorf("what flai serve tried for %s is not kept while its send back holds it: %+v", ns, tr)
+	}
+	lab.move(refused, workitem.Cancelled)
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a cancelled story with no deployment was torn down: %v", got)
+	}
 	if _, ok := readKlusterTried(lab.root, ns); ok {
-		t.Errorf("what flai serve tried for %s is kept though it left review with nothing deployed", ns)
+		t.Errorf("what flai serve tried for %s is kept though it was cancelled with nothing deployed", ns)
 	}
 }
 
@@ -1005,11 +1134,55 @@ func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testi
 	passing, _ := nsCheck(t, 0)
 	lab.withChecks(passing)
 	lab.git.set(story, klHeadB)
+	lab.move(story, workitem.Review) // the failed run sent it back (ADR-0254 §5a)
 	lab.round()
 	if r, _, _ = kluster.ReadRecord(lab.root, ns); r.Commit != klHeadB || r.ChecksCommit != klHeadB || r.ChecksOutcome != kluster.OutcomePassed {
 		t.Fatalf("the passed run at the new head is kept in the record: %+v", r)
 	}
 	if ok, reason, err := kluster.AcceptGate(lab.root, story, klHeadB, true); !ok || err != nil {
 		t.Errorf("the gate after the passed run: %v %q %v", ok, reason, err)
+	}
+}
+
+// ADR-0254 §5a, §8: a checks run against the namespace that fails sends the
+// story back as a failed deploy does, and keeps its namespace; back in review
+// at the same head, it is deployed and checked again in place, and a passing
+// run resolves the checks' thread.
+func TestFailingChecksAgainstTheNamespaceSendTheStoryBack(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	failing, _ := nsCheck(t, 3)
+	lab.withChecks(failing)
+	story := lab.inReview("Failing", klHeadA)
+
+	lab.round()
+	ths := lab.titled(story, checksFailureTitle(story))
+	if len(ths) != 1 || !ths[0].Open() {
+		t.Fatalf("checks failure threads = %d, want one open", len(ths))
+	}
+	for _, want := range []string{"ended failed", "golden", klHeadA, "sent " + story + " back to in-progress"} {
+		if !strings.Contains(ths[0].Body, want) {
+			t.Errorf("the thread does not name %q:\n%s", want, ths[0].Body)
+		}
+	}
+	lab.sentBackBy(story, ths[0].ID, "flai serve's checks of "+story+" against its kluster namespace ended failed, at the check golden, at commit "+short(klHeadA))
+
+	n := len(lab.kluster.all())
+	lab.round()
+	if got := lab.kluster.since(n); len(got) != 0 {
+		t.Fatalf("a look at the story the checks sent back ran %v, want its namespace kept", got)
+	}
+
+	passing, _ := nsCheck(t, 0)
+	lab.withChecks(passing)
+	lab.move(story, workitem.Review)
+	lab.round()
+	if got := lab.kluster.since(n); strings.Join(got, ";") != "absent;deploy "+story+" "+klHeadA {
+		t.Fatalf("calls once the story was back in review at the same head = %v, want one deploy in place", got)
+	}
+	if ths := lab.titled(story, checksFailureTitle(story)); len(ths) != 1 || ths[0].Open() {
+		t.Fatalf("the passing checks run should resolve the checks failure thread")
+	}
+	if got := lab.status(story); got != workitem.Review {
+		t.Errorf("the story is %s after its checks passed, want it in review", got)
 	}
 }

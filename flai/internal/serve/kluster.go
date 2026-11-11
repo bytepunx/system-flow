@@ -38,15 +38,26 @@ import (
 // A deploy that finds the cluster absent brings it up first. A job refused
 // because another holds the project's kluster lock, a flai kluster run from a
 // shell say, is no failure: the next look queues it again. A deploy that
-// fails opens one thread on the story naming the step, its exit code, the
-// commit, and the log, adds an entry to that thread when a later head fails
-// too, and moves nothing; a deploy that passes resolves it. A head tried
-// once, passed or failed, is not tried again, so a failure is not retried
-// every minute.
+// fails, or a checks run against the namespace that does not pass, opens one
+// thread on the story naming the job, the step, its exit code, the commit,
+// and the log, or adds an entry to the one open, and sends the story back
+// from review to in-progress, as flai, with a reason naming the job, the step,
+// and the commit (ADR-0254 §5a), as a failing required check does (ADR-0167):
+// unless the action went off meanwhile, or the story is no longer in review
+// at that head. The send back is kept with what the pass tried, naming the
+// thread, so that the story's agent is started on it once
+// (startKlusterSentBack), and the story keeps its namespace while it stands
+// in progress where the send back put it. Back in review, at a new head or
+// the same one, it is deployed again in place; a deploy that passes resolves
+// the deploy's thread, and a checks run that passes the checks'. A head tried
+// once, passed or failed, is not tried again until the story returns to
+// review after a send back, so a failure is not retried every minute.
 //
 // A story that leaves review, for any column but review, is torn down when
 // its namespace has a record: teardown, then its namespace deleted (ADR-0254
-// §5). A story accepted while the pass looks is torn down too, and main is
+// §5), unless a send back keeps it; cancelled or accepted, it is torn down
+// all the same, and its failure threads resolved. A story accepted while the
+// pass looks is torn down too, and main is
 // then promoted into the default namespace; the acceptances seen at one look,
 // or while a promotion waits, promote once, at main's newest head. An
 // acceptance from before the pass started, or while the action was off,
@@ -54,7 +65,8 @@ import (
 // moves again, and a promotion that fails is not tried again until the next
 // acceptance. A failed teardown opens one thread on the story, or on the
 // manifest once the story is archived; a failed promotion opens one on the
-// manifest, since it has no one story. Neither moves anything.
+// manifest, since it has no one story. Neither moves anything: neither has a
+// story in review to send back.
 
 // klusterEvery is how often the pass looks at the stories in review.
 const klusterEvery = time.Minute
@@ -173,13 +185,42 @@ type klusterJob struct {
 // klusterTried is what the pass last did for a story's namespace, kept in
 // klusterTriedPath, so that a head is tried once whether a record was written
 // or the deploy was refused before it, and a failed teardown is tried again
-// only once the story has moved to another column than Teardown names.
+// only once the story has moved to another column than Teardown names. It
+// keeps too the send back a failure at Head made of the story, if one did.
 type klusterTried struct {
-	Story    string    `json:"story"`
-	Head     string    `json:"head,omitempty"`
-	Outcome  string    `json:"outcome,omitempty"`
-	Teardown string    `json:"teardown,omitempty"` // the story's column when a teardown failed
-	At       time.Time `json:"at"`
+	Story    string           `json:"story"`
+	Head     string           `json:"head,omitempty"`
+	Outcome  string           `json:"outcome,omitempty"`
+	Teardown string           `json:"teardown,omitempty"` // the story's column when a teardown failed
+	SentBack *klusterSentBack `json:"sent_back,omitempty"`
+	At       time.Time        `json:"at"`
+}
+
+// klusterSentBack is the pass's send back of a story from review to
+// in-progress after its deploy or its checks run failed (ADR-0254 §5a): the
+// head it failed at, the thread it opened or added to, the move's reason,
+// and the move's time, to the second, as the story's transition keeps it.
+// The next deploy the story's return to review queues writes what the pass
+// tried afresh, without it.
+type klusterSentBack struct {
+	Head   string    `json:"head"`
+	Thread string    `json:"thread"`
+	Reason string    `json:"reason"`
+	At     time.Time `json:"at"`
+}
+
+// klusterKept is whether it stands where the send back t records put it:
+// in progress, not archived, its newest move a move to in-progress by flai at
+// or after the send back. Such a story keeps its namespace, and its agent is
+// started on the send back's thread; once it moves on, to review, cancelled,
+// or anywhere else, or someone else moves it back to in-progress, it is not.
+func klusterKept(it *workitem.Item, t klusterTried) bool {
+	if t.SentBack == nil || it.Status != workitem.InProgress || it.Archived || len(it.Transitions) == 0 {
+		return false
+	}
+	last := it.Transitions[len(it.Transitions)-1]
+	at, err := time.Parse(workitem.TimeFormat, last.At)
+	return err == nil && last.To == workitem.InProgress && last.By == sendBackBy && !at.Before(t.SentBack.At)
 }
 
 // klusterTriedPath is where the pass keeps what it last did for namespace ns.
@@ -353,7 +394,8 @@ func (p *klusterPass) look(ctx context.Context) {
 }
 
 // lookReview queues a deploy of each story in review whose namespace was
-// neither deployed nor tried at its branch's head, and names them.
+// neither deployed nor tried at its branch's head, or that is back in review
+// after a send back, at whatever head, and names them.
 func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string) []string {
 	git := gitOf(p.o)
 	var queued []string
@@ -373,11 +415,15 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 			p.o.Logger.Debug("story in review has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID)
 			continue
 		}
-		if r, ok, _ := kluster.ReadRecord(root, ns); ok && r.Commit == head {
-			continue
-		}
-		if t, ok := readKlusterTried(root, ns); ok && t.Head == head {
-			continue
+		// back from a send back, it is deployed again in place, at a new head or
+		// the same one: its deploy writes what was tried afresh
+		if t, tried := readKlusterTried(root, ns); !tried || t.SentBack == nil {
+			if r, ok, _ := kluster.ReadRecord(root, ns); ok && r.Commit == head {
+				continue
+			}
+			if tried && t.Head == head {
+				continue
+			}
 		}
 		if p.enqueue(klusterJob{kind: klusterDeploy, story: it.ID, head: head}) {
 			queued = append(queued, klusterDeploy+" "+it.ID)
@@ -387,9 +433,10 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 }
 
 // lookLeft queues a teardown of each story namespace with a record whose
-// story is no longer in review, unless a teardown already failed while the
-// story stood where it stands, and forgets what the pass tried for one with
-// no record; it names the teardowns queued.
+// story is no longer in review, unless a send back keeps it (klusterKept) or
+// a teardown already failed while the story stood where it stands, and
+// forgets what the pass tried for one with no record that no send back
+// keeps; it names the teardowns queued.
 func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -428,6 +475,9 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 				}
 			}
 			continue
+		}
+		if tried && klusterKept(it, t) {
+			continue // sent back: its agent and the operator look at what failed
 		}
 		_, deployed, _ := kluster.ReadRecord(root, ns)
 		if !deployed {
@@ -639,8 +689,8 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 // passed, in the same job, while the checks host action is on and the
 // project names checks. A run that ends keeps its outcome at j.head in the
 // namespace's record, which an acceptance reads (ADR-0254 §5a); one that
-// does not pass opens one thread on the story and moves nothing, and one that
-// passes resolves it.
+// does not pass opens one thread on the story and sends it back to
+// in-progress, as a failed deploy does, and one that passes resolves it.
 func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) {
 	if p.o.Checks == nil {
 		return
@@ -686,7 +736,8 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 	check := failedCheck(run)
 	p.journal("failed", fmt.Sprintf("checks of %s against %s at %s %s at %s", j.story, ns, short(j.head), run.Outcome, check))
 	p.o.Logger.Warn("kluster checks failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "check", check, "log", run.Log)
-	p.report(repo, j.story, checksFailureTitle(j.story), checksFailureText(j, ns, run))
+	reason := fmt.Sprintf("flai serve's checks of %s against its kluster namespace ended %s, at %s, at commit %s", j.story, run.Outcome, check, short(j.head))
+	p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(unsent string) string { return checksFailureText(j, ns, run, unsent) })
 }
 
 // failedCheck names the check a run that did not pass ended at.
@@ -702,15 +753,26 @@ func checksFailureTitle(story string) string {
 }
 
 // checksFailureText names the outcome, the check it ended at, the namespace,
-// the commit, and the log, and says what happens next.
-func checksFailureText(j klusterJob, ns string, run ChecksRun) string {
+// the commit, and the log, and says what flai serve did with the story, as
+// heldText does for unsent, and what happens next.
+func checksFailureText(j klusterJob, ns string, run ChecksRun, unsent string) string {
 	log := "no log"
 	if run.Log != "" {
 		log = "`" + run.Log + "`"
 	}
-	return fmt.Sprintf("flai serve's checks of %s against its namespace `%s` at %s ended %s, at %s. Their log is %s.\n\n"+
-		"%s stays in review: flai serve moves nothing. It deploys and checks again at the story's next head, and resolves this thread once a checks run there passes. flai checks status %s shows the run.",
-		j.story, ns, j.head, run.Outcome, failedCheck(run), log, j.story, j.story)
+	return fmt.Sprintf("flai serve's checks of %s against its namespace `%s` at %s ended %s, at %s. Their log is %s.\n\n%s flai checks status %s shows the run.",
+		j.story, ns, j.head, run.Outcome, failedCheck(run), log, heldText(j.story, unsent, "a checks run against it passes"), j.story)
+}
+
+// heldText says what flai serve did with story after a failure in its
+// namespace: sent it back to in-progress, keeping its namespace, or, with
+// unsent, why it did not; and when it resolves the thread, once what passes
+// says passes.
+func heldText(story, unsent, passes string) string {
+	if unsent != "" {
+		return fmt.Sprintf("flai serve did not send %[1]s back to in-progress: %[2]s. It deploys again at the story's next head in review, and resolves this thread once %[3]s.", story, unsent, passes)
+	}
+	return fmt.Sprintf("flai serve sent %[1]s back to in-progress, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place, and resolves this thread once %[2]s. Cancelling or accepting %[1]s tears the namespace down.", story, passes)
 }
 
 // deployOnce brings the cluster up when it is absent, then deploys j's story
@@ -784,9 +846,67 @@ func (p *klusterPass) up(ctx context.Context, root string, m manifest.Manifest) 
 }
 
 // failed opens the story's deploy failure thread, or adds the new failure to
-// the one open.
+// the one open, and sends the story back to in-progress.
 func (p *klusterPass) failed(repo *workitem.Repo, j klusterJob, ns string, f klusterFailure) {
-	p.report(repo, j.story, klusterFailureTitle(j.story), klusterFailureText(j, ns, f))
+	reason := fmt.Sprintf("flai serve's kluster %s of %s failed %s, at commit %s", j.kind, j.story, f.where(), short(j.head))
+	p.sendBack(repo, j, ns, klusterFailureTitle(j.story), reason, func(unsent string) string { return klusterFailureText(j, ns, f, unsent) })
+}
+
+// sendBack opens the thread titled title on j's story, or adds to the one
+// open, with what text says for why the story was not sent back, empty when
+// it was; then, once the thread is open, moves the story from review to
+// in-progress as flai for reason, and keeps the send back with what the
+// pass tried for namespace ns (ADR-0254 §5a). It moves nothing when the
+// kluster action went off meanwhile, or the story is no longer in review at
+// j.head, and the thread says so.
+func (p *klusterPass) sendBack(repo *workitem.Repo, j klusterJob, ns, title, reason string, text func(unsent string) string) {
+	fresh, it, unsent := p.inReviewAt(j)
+	th := p.report(repo, j.story, title, text(unsent))
+	if unsent != "" {
+		p.o.Logger.Info("story not sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "commit", j.head, "why", unsent)
+		return
+	}
+	if th == nil {
+		return // no thread to send it back on: report warned of it
+	}
+	now := p.o.Now()
+	if _, err := fresh.Transition(it, workitem.InProgress, sendBackBy, reason, now); err != nil {
+		p.o.Logger.Warn("story not sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "err", err.Error())
+		return
+	}
+	root := mainCheckout(fresh)
+	t, _ := readKlusterTried(root, ns)
+	t.Story = j.story
+	t.SentBack = &klusterSentBack{Head: j.head, Thread: th.ID, Reason: reason, At: now.UTC().Truncate(time.Second)}
+	if err := writeKlusterTried(root, ns, t); err != nil {
+		p.o.Logger.Warn("kluster send back not recorded, so the story's namespace is not kept and its agent not started for it", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "err", err.Error())
+	}
+	p.journal("done", fmt.Sprintf("sent %s back to in-progress on %s: %s", j.story, th.ID, reason))
+	p.o.Logger.Info("story sent back to in-progress after its kluster failure", "component", "serve", "root", p.e.Root, "story", j.story, "thread", th.ID, "reason", reason)
+}
+
+// inReviewAt reads the project and j's story again, and answers them with an
+// empty why when the story may be sent back: the kluster action is still on,
+// and the story still in review at j.head. Otherwise why says, in a thread's
+// words, why it is not sent back.
+func (p *klusterPass) inReviewAt(j klusterJob) (repo *workitem.Repo, it *workitem.Item, why string) {
+	repo, err := workitem.Open(p.e.Root)
+	if err != nil {
+		return nil, nil, "flai serve could not read the project again to move it (" + err.Error() + ")"
+	}
+	if !p.on(repo.Manifest) {
+		return nil, nil, "the kluster host action was turned off meanwhile"
+	}
+	if it, err = repo.Get(j.story); err != nil {
+		return nil, nil, "flai serve could not read the story again to move it (" + err.Error() + ")"
+	}
+	if it.Status != workitem.Review || it.Archived {
+		return nil, nil, fmt.Sprintf("it is %s now, no longer in review", it.Status)
+	}
+	if head, err := kluster.StoryHead(gitOf(p.o), mainCheckout(repo), j.story); err != nil || head != j.head {
+		return nil, nil, fmt.Sprintf("its branch is no longer at %s", short(j.head))
+	}
+	return repo, it, ""
 }
 
 // passed resolves the story's deploy failure thread, if one is open.
@@ -795,9 +915,10 @@ func (p *klusterPass) passed(repo *workitem.Repo, j klusterJob, ns string) {
 }
 
 // teardown tears j's story down, from its worktree or the main checkout when
-// it is gone, unless it is back in review, and settles its teardown failure
-// thread. A failure is kept with the story's column, so that it is tried
-// again only once the story moves.
+// it is gone, unless it is back in review or a send back keeps it, and
+// settles its teardown failure thread; a story done or cancelled has its
+// deploy and checks failure threads resolved too. A failure is kept with the
+// story's column, so that it is tried again only once the story moves.
 func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klusterJob) {
 	it, err := repo.Get(j.story)
 	if err != nil {
@@ -809,6 +930,9 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 	}
 	root := mainCheckout(repo)
 	ns, _ := kluster.StoryNamespace(j.story)
+	if t, ok := readKlusterTried(root, ns); ok && klusterKept(it, t) {
+		return // sent back since it was queued: it keeps its namespace
+	}
 	dir := ""
 	if info, err := os.Stat(repo.WorktreePath(j.story)); err == nil && info.IsDir() {
 		dir = repo.WorktreePath(j.story)
@@ -841,6 +965,11 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		why := fmt.Sprintf("flai serve tore down %s's namespace %s.", j.story, ns)
 		p.clear(repo, j.story, teardownFailureTitle(j.story), why)
 		p.clear(repo, manifest.File, teardownFailureTitle(j.story), why)
+		if it.Status == workitem.Done || it.Status == workitem.Cancelled {
+			why = fmt.Sprintf("%s is %s, and flai serve tore down its namespace %s.", j.story, it.Status, ns)
+			p.clear(repo, j.story, klusterFailureTitle(j.story), why)
+			p.clear(repo, j.story, checksFailureTitle(j.story), why)
+		}
 	}
 }
 
@@ -890,18 +1019,21 @@ func (p *klusterPass) promote(ctx context.Context, repo *workitem.Repo) {
 }
 
 // report opens the thread titled title on on, an item or a path, or adds text
-// to the one open.
-func (p *klusterPass) report(repo *workitem.Repo, on, title, text string) {
+// to the one open, and answers the thread; nil when none could be opened.
+func (p *klusterPass) report(repo *workitem.Repo, on, title, text string) *threads.Thread {
 	now := p.o.Now()
 	if th := klusterThread(repo, on, title); th != nil {
 		if _, err := threads.Reply(repo, th.ID, forgeAuthor, text, now); err != nil {
 			p.o.Logger.Warn("kluster failure not written on its thread", "component", "serve", "root", p.e.Root, "on", on, "thread", th.ID, "err", err.Error())
 		}
-		return
+		return th
 	}
-	if _, err := threads.New(repo, threads.NewOptions{Title: title, On: on, Author: forgeAuthor, Text: text, Now: now}); err != nil {
+	th, err := threads.New(repo, threads.NewOptions{Title: title, On: on, Author: forgeAuthor, Text: text, Now: now})
+	if err != nil {
 		p.o.Logger.Warn("kluster failure thread not opened", "component", "serve", "root", p.e.Root, "on", on, "err", err.Error())
+		return nil
 	}
+	return th
 }
 
 // clear resolves the thread titled title on on, if one is open, saying why.
@@ -945,12 +1077,12 @@ func klusterFailureTitle(story string) string {
 }
 
 // klusterFailureText names the job, the step, its exit code, the commit, the
-// log, and the error, and says what happens next.
-func klusterFailureText(j klusterJob, ns string, f klusterFailure) string {
+// log, and the error, and says what flai serve did with the story, as
+// heldText does for unsent, and what happens next.
+func klusterFailureText(j klusterJob, ns string, f klusterFailure, unsent string) string {
 	exit, log := f.said()
-	return fmt.Sprintf("flai serve's %s of %s into the namespace `%s` at %s failed %s, with %s. Its log is %s.\n\n```text\n%s\n```\n\n"+
-		"%s stays in review: flai serve moves nothing. It deploys again at the story's next head, and resolves this thread once a deploy passes. flai kluster deployments shows the namespace's record.",
-		j.kind, j.story, ns, j.head, f.where(), exit, log, f.err, j.story)
+	return fmt.Sprintf("flai serve's %s of %s into the namespace `%s` at %s failed %s, with %s. Its log is %s.\n\n```text\n%s\n```\n\n%s flai kluster deployments shows the namespace's record.",
+		j.kind, j.story, ns, j.head, f.where(), exit, log, f.err, heldText(j.story, unsent, "a deploy passes"))
 }
 
 func teardownFailureTitle(story string) string {

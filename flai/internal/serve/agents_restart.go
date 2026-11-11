@@ -111,6 +111,44 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 	}
 	l.startQueueSentBack(ctx, cfg, repo, st)
 	l.startAcceptSentBack(ctx, cfg, repo, st)
+	l.startKlusterSentBack(ctx, cfg, repo, st)
+}
+
+// startKlusterSentBack starts the agent of each story flai serve's kluster
+// pass sent back to in-progress because its deploy, or its checks run against
+// its namespace, failed (ADR-0254 §5a), as startSentBack does a forge's: one
+// the send back kept with what the pass tried still stands where it put it
+// (klusterKept), not blocked, with the thread flai serve opened for it still
+// open, whose last run started before the send back and has ended, told of
+// the thread and what failed, in its last run's session where it has one.
+// The send back names its thread, so no thread is matched by its title.
+func (l *launcher) startKlusterSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo, st AgentState) {
+	root := mainCheckout(repo)
+	for _, ns := range slices.Sorted(maps.Keys(klusterTriedNamespaces(root))) {
+		t, ok := readKlusterTried(root, ns)
+		if !ok || t.SentBack == nil {
+			continue
+		}
+		it, err := repo.Get(t.Story)
+		if err != nil || it.Type != workitem.Story || !klusterKept(it, t) || it.IsBlocked() || !openThread(repo, t.SentBack.Thread) {
+			continue
+		}
+		run := st.Stories[it.ID]
+		if run == nil || run.live() || run.Stopped != "" || !startedBefore(run, t.SentBack.At) {
+			continue
+		}
+		agent := cfg.storyAgent(repo, it) // the default under it, ADR-0251, and the built-in, ADR-0261
+		if cfg.refuseHarness(it.ID, agent) != nil {
+			continue
+		}
+		s := readyStory{ID: it.ID, Agent: agent, SentBack: &harness.SentBack{Thread: t.SentBack.Thread, What: t.SentBack.Reason, Kluster: true}}
+		if run.Session != "" {
+			s.Resume, s.SentBack.Resumed = run, true
+		}
+		if l.start(ctx, cfg, s) {
+			l.log("agent started for a send back", "story", it.ID, "thread", t.SentBack.Thread, "resumed", s.SentBack.Resumed)
+		}
+	}
 }
 
 // startQueueSentBack starts the agent of each story the merge queue sent back

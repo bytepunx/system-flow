@@ -27,6 +27,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -3640,6 +3641,118 @@ func TestAStoryAnAcceptanceSentBackWaitsForItsLiveRun(t *testing.T) {
 	lab.l.look(ctx, false)
 	waitFor(t, "it is started for the send back once its run ended", func() bool { return lab.run(id).SentBack == th.ID })
 	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+}
+
+// klusterSendBack has flai serve's kluster pass deploy story, in review with
+// its branch at klHeadA, into the lab's kluster: the deploy fails at its
+// deploy step or, with checks, passes and a checks run against the namespace
+// fails. The pass sends the story back; it answers the thread it opened.
+func (lab *agentLab) klusterSendBack(story string, checks bool) *threads.Thread {
+	lab.t.Helper()
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + klusterBlock
+	config := filepath.Join(lab.root, "integration", "kluster.yaml")
+	for _, err := range []error{
+		os.WriteFile(filepath.Join(lab.root, "system-flow.yaml"), []byte(m), 0o644),
+		os.MkdirAll(filepath.Dir(config), 0o755),
+		os.WriteFile(config, []byte("name: t-int\nprovider: k3d\n"), 0o644),
+		os.MkdirAll(lab.repo.WorktreePath(story), 0o755),
+	} {
+		if err != nil {
+			lab.t.Fatal(err)
+		}
+	}
+	fake := &fakeKluster{}
+	title := checksFailureTitle(story)
+	if !checks {
+		title = klusterFailureTitle(story)
+		fake.fail = func(string, string) error {
+			return &kluster.StepError{Step: kluster.StepDeploy, ExitCode: 3, Err: errors.New("exit status 3")}
+		}
+	}
+	o := Options{Logger: slog.New(slog.DiscardHandler), Git: &klusterHeads{heads: map[string]string{story: klHeadA}}, Kluster: fake, Now: time.Now,
+		Host: hostapi.Host{Enabled: func(action, root string) bool { return action == hostapi.ActionKluster && root == lab.root }}}
+	if checks {
+		cfg, _ := nsCheck(lab.t, 3)
+		o.Dir = Dir(lab.t.TempDir())
+		o.Checks = func(*workitem.Repo) (ChecksConfig, error) { return cfg, nil }
+	}
+	pass := newKlusterPass(o, Entry{Key: "t", Name: "t", Root: lab.root}, &sync.WaitGroup{})
+	pass.look(context.Background())
+	pass.drain(context.Background())
+	th := klusterThread(lab.repo, story, title)
+	if th == nil {
+		lab.t.Fatalf("the kluster pass opened no thread titled %q on %s", title, story)
+	}
+	return th
+}
+
+// ADR-0254 §5a: a story flai serve's kluster pass sent back to in-progress,
+// as flai, after its deploy or its checks run against its namespace failed,
+// gets its agent started once, in its last session, told the thread, what
+// failed, and that flai serve deploys it again in place; a second look starts
+// no second agent.
+func TestAStoryTheKlusterSentBackGetsItsAgentOnce(t *testing.T) {
+	for _, c := range []struct {
+		name   string
+		checks bool
+		what   string
+	}{
+		{"deploy", false, "flai serve's kluster deploy of %s failed at the deploy step, at commit " + short(klHeadA)},
+		{"checks", true, "flai serve's checks of %s against its kluster namespace ended failed, at the check golden, at commit " + short(klHeadA)},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			ctx := context.Background()
+			lab.cfg.Command = nil
+			lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+			lab.hold()
+			id := lab.readyWith("Sent back by the kluster", &manifest.Agent{Harness: harness.ClaudeCode})
+			lab.l.look(ctx, false)
+			waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+			first := lab.run(id)
+			lab.move(id, workitem.InProgress)
+			lab.move(id, workitem.Review)
+			lab.release(id)
+			waitFor(t, "it ends in review", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+			lab.endedAgo(id, 3*time.Minute)
+			_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+			th := lab.klusterSendBack(id, c.checks)
+			st, err := lab.repo.Get(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if last := st.Transitions[len(st.Transitions)-1]; st.Status != workitem.InProgress || last.By != sendBackBy {
+				t.Fatalf("%s is %s, last moved by %s; want it sent back to in-progress by %s", id, st.Status, last.By, sendBackBy)
+			}
+			lab.l.look(ctx, false)
+			waitFor(t, "it runs for the send back", func() bool { r := lab.run(id); return r.live() && r.SentBack == th.ID })
+			again := lab.run(id)
+			if again.Agent != first.Agent || again.Session != first.Session || again.AutoRestarts != 0 {
+				t.Errorf("the same agent, in its session, spending no restart: %+v, first %+v", again, first)
+			}
+			out := filepath.Join(lab.outDir, id+".txt")
+			waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
+			got, _ := os.ReadFile(out)
+			for _, want := range []string{
+				"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": " + fmt.Sprintf(c.what, id),
+				"move " + id + " to review again; flai serve deploys " + id + " again in place once it is back in review",
+				"--resume " + first.Session,
+			} {
+				if !strings.Contains(string(got), want) {
+					t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+				}
+			}
+
+			// a second look starts no second agent for the same send back
+			lab.l.look(ctx, false)
+			if r := lab.run(id); !r.same(again) || lab.startedCount() != 2 {
+				t.Fatalf("started twice for one send back: %+v, journal %+v", r, lab.entries())
+			}
+			lab.release(id)
+			waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+		})
+	}
 }
 
 // blocks are story's blocked intervals as it stands on disk.

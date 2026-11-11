@@ -332,33 +332,6 @@ func TestThePassRunsNoChecksWithChecksOffOrAfterAFailedDeploy(t *testing.T) {
 	})
 }
 
-func TestFailingChecksAgainstTheNamespaceOpenOneThreadAndMoveNothing(t *testing.T) {
-	lab := newKlusterLab(t, klusterBlock)
-	cfg, _ := nsCheck(t, 3)
-	lab.withChecks(cfg)
-	story := lab.inReview("Failing", klHeadA)
-
-	lab.round()
-	ths := lab.titled(story, checksFailureTitle(story))
-	if len(ths) != 1 || !ths[0].Open() {
-		t.Fatalf("checks failure threads = %d, want one open", len(ths))
-	}
-	body := ths[0].Entries()[0].Text
-	for _, want := range []string{"failed", "golden", klHeadA, ".log"} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the thread does not name %q:\n%s", want, body)
-		}
-	}
-	if got := lab.status(story); got != workitem.Review {
-		t.Errorf("the story moved to %s, want it left in review", got)
-	}
-
-	lab.round()
-	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
-		t.Errorf("a second look opened another thread: %d", len(got))
-	}
-}
-
 // fakeDockerClient writes a docker client into a folder of its own that
 // records its arguments, one a line, in argv beside it, and the value of
 // FLAI_KLUSTER_NAMESPACE it was given in env, then runs body.
