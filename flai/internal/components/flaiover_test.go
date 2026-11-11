@@ -15,6 +15,7 @@ package components
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -84,12 +85,27 @@ func TestEveryListedFlaioverComponentCompilesInTheHarness(t *testing.T) {
 	base := strings.TrimSuffix(s.URL(), HarnessPath)
 	client := &http.Client{Transport: &http.Transport{Proxy: nil}}
 	t.Cleanup(client.CloseIdleConnections)
+	// get fetches the path rel and fails the test, saying so, when the answer
+	// is not this vite's, which a compile failure must never be taken for
+	// (I-0342).
+	get := func(rel string) (int, string) {
+		t.Helper()
+		status, body, token := fetch(t, client, base+"/"+rel)
+		if token != s.Token() {
+			state := "vite still runs"
+			if closed(s.Done()) {
+				state = "vite has exited: " + fmt.Sprint(s.Err())
+			}
+			t.Fatalf("GET %s was answered %d by another server on vite's port %d, not by this vite (its %s header is %q, and this vite's is %q); %s\n%s%s", rel, status, s.Port(), HarnessHeader, token, s.Token(), state, body, vite())
+		}
+		return status, body
+	}
 
-	if status, body := fetch(t, client, base+"/"+settings.Setup); status != http.StatusOK {
+	if status, body := get(settings.Setup); status != http.StatusOK {
 		t.Fatalf("the setup %s does not compile: %d\n%s%s", settings.Setup, status, body, vite())
 	}
 	for _, c := range comps {
-		if status, body := fetch(t, client, base+"/"+c.Path); status != http.StatusOK {
+		if status, body := get(c.Path); status != http.StatusOK {
 			t.Errorf("%s does not compile for the harness: %d\n%s", c.Path, status, body)
 		}
 	}
@@ -100,14 +116,14 @@ func TestEveryListedFlaioverComponentCompilesInTheHarness(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(broken)), []byte("<p>{#if open}</p>\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if status, body := fetch(t, client, base+"/"+broken); status == http.StatusOK {
+	if status, body := get(broken); status == http.StatusOK {
 		t.Errorf("a component that does not compile was answered 200:\n%s%s", body, vite())
 	}
 }
 
-// fetch is the status and body of a GET of u, failing the test only when
-// the request cannot be made.
-func fetch(t *testing.T, client *http.Client, u string) (int, string) {
+// fetch is the status, body, and HarnessHeader of a GET of u, failing the
+// test only when the request cannot be made.
+func fetch(t *testing.T, client *http.Client, u string) (int, string, string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -124,7 +140,7 @@ func fetch(t *testing.T, client *http.Client, u string) (int, string) {
 	if err != nil {
 		t.Fatalf("GET %s: %v", u, err)
 	}
-	return resp.StatusCode, string(body)
+	return resp.StatusCode, string(body), resp.Header.Get(HarnessHeader)
 }
 
 // copySource copies the sub-project at src to dst, leaving out what an
