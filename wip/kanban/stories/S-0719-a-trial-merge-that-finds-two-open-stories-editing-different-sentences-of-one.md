@@ -6,7 +6,7 @@ title: A trial merge that finds two open stories editing different sentences of 
 status: ready
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T08:58:19Z
+updated: 2026-11-11T09:01:05Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
@@ -40,15 +40,15 @@ usage:
           cache_write: 490422
           cost: 5.2219
     - kind: orchestrator
-      seconds: 43
+      seconds: 57
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 107
-          cache_read: 452209
-          cache_write: 66520
-          cost: 0.1448
+          input: 16
+          output: 121
+          cache_read: 515702
+          cache_write: 78386
+          cost: 0.1658
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-11T08:54:09Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T11:10:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702 and S-0706."
+  delivery: 2026-11-11T11:29:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706 and S-0710."
   by: flai
-  at: 2026-11-11T08:58:19Z
+  at: 2026-11-11T09:01:05Z
 finalized:
   by: alex
   at: 2026-11-11T08:50:48Z

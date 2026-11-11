@@ -3,11 +3,14 @@ id: S-0699
 type: story
 nature: improvement
 title: A story's prime pack came in 22 parts, most of each part the same topic sources list, so reading every part as the start prompt asks would take about 590 KB of context
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:55:29Z
-updated: 2026-11-11T08:59:51Z
-transitions: []
+updated: 2026-11-11T09:01:05Z
+transitions:
+  - to: ready
+    at: 2026-11-11T08:59:53Z
+    by: alex
 tags: [flai, cli, go]
 touches: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
 agent:
@@ -25,10 +28,10 @@ cost_of_delay:
   at: 2026-11-10T10:31:38Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T21:13:00Z
-  basis: "Its own forecast of 1h30m; 16th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0719, S-0724, S-0716, S-0689, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-11T13:20:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716 and S-0689."
   by: flai
-  at: 2026-11-11T08:58:19Z
+  at: 2026-11-11T09:01:05Z
 finalized:
   by: alex
   at: 2026-11-11T08:59:51Z

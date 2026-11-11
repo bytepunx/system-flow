@@ -6,7 +6,7 @@ title: A go build in a story's worktree stamps vcs.revision of the main checkout
 status: ready
 owner: alex
 created: 2026-11-11T08:46:42Z
-updated: 2026-11-11T08:58:19Z
+updated: 2026-11-11T09:01:05Z
 transitions:
   - to: ready
     at: 2026-11-11T08:57:35Z
@@ -33,6 +33,16 @@ usage:
           cache_read: 475818
           cache_write: 10774
           cost: 0.2045
+    - kind: orchestrator
+      seconds: 14
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 13
+          cache_read: 63493
+          cache_write: 11866
+          cost: 0.021
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -43,10 +53,10 @@ cost_of_delay:
   at: 2026-11-11T08:55:22Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T11:28:00Z
-  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706 and S-0719."
+  delivery: 2026-11-11T11:53:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0710 and S-0719."
   by: flai
-  at: 2026-11-11T08:58:19Z
+  at: 2026-11-11T09:01:05Z
 finalized:
   by: alex
   at: 2026-11-11T08:50:05Z
