@@ -6,7 +6,7 @@ title: "TestARepositoryIsOfferedImportedAndThenServed fails the close-out's inte
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:40Z
-updated: 2026-11-11T08:47:48Z
+updated: 2026-11-11T08:48:03Z
 transitions: []
 tags: [flai, tests]
 touches: [flai/internal/serve/candidates_test.go, flai/internal/channel/channeltest/dashboard.go, design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md]
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:08Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T21:20:00Z
+  delivery: 2026-11-11T21:21:00Z
   basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0699 and S-0701."
   by: flai
-  at: 2026-11-11T08:47:48Z
+  at: 2026-11-11T08:48:03Z
 ---
 # S-0703 TestARepositoryIsOfferedImportedAndThenServed fails the close-out's integration tier with "failed to read frame header: EOF" under host load, on a branch that does not touch flai/internal/serve
 
