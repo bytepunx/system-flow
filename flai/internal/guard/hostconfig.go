@@ -13,12 +13,17 @@ import (
 // file. Every session flai serve starts and every sub-agent is refused each
 // flai serve, flai config, and flai template command that writes it or turns
 // a host action on or off, whatever its role or permissions; the reads stay
-// open to this rule, and the operator's own session is not held.
+// open to this rule, and the operator's own session is not held. The host's
+// budget state is held to the same rule: flai serve budget clear lifts a
+// usage limit's hold on every project the host serves, which no agent the
+// hold holds may lift for itself (S-0720).
 
 // hostWrites are, for each flai serve sub-command that has its own, the
-// sub-commands of it that write the host configuration in every form.
+// sub-commands of it that write the host configuration, or the host's budget
+// state, in every form.
 var hostWrites = map[string][]string{
 	"agent":      {"set", "clear"},
+	"budget":     {"clear"},
 	"checks":     {"set", "timeout", "clear"},
 	"components": {"idle", "max-servers"},
 	"notify":     {"set", "clear"},

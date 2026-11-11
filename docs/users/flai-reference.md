@@ -3840,6 +3840,7 @@ Subcommands:
 
 - [actions](#flai-serve-actions): The host actions there are, what each lets a dashboard do, and where each is enabled
 - [agent](#flai-serve-agent): What flai serve starts when a story becomes ready: each story's harness, or your command
+- [budget](#flai-serve-budget): The budget states that hold starts on this host after a usage limit, and how long each holds
 - [checks](#flai-serve-checks): The named commands a story in review is checked with, on this host
 - [components](#flai-serve-components): How long flai serve keeps a component dev server nobody looks at, and how many it runs, on this host
 - [disable](#flai-serve-disable): Stop flai serve performing a host action for this project
@@ -3966,6 +3967,8 @@ The container harness runs an inner harness, claude-code, in a Docker container,
 
 The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
 
+A change of the program, the arguments, or the login a harness runs with lifts the hold of the old one's budget state: the state kept under the harness and its old program and login, and one kept under the harness's name alone from before S-0720, are cleared, journaled, and sent as a notice like any other clear, so that the next start goes. A change of anything else clears nothing.
+
 A harness's entry is the project's in the working directory, or of --project &lt;root&gt;, and every project's, the host-wide fallback a project that sets none of its own reads, only with --all-projects (ADR-0261). A project's entry replaces the host-wide entry of that harness whole: the first change for a project starts from the entry it reads, and --reset for a project removes its entry, so that it reads every project's again.
 
 Examples:
@@ -4061,6 +4064,8 @@ flai serve agent set [--name] [--auto-restarts <n>] [--project <root> | --all-pr
 Sets what you give and leaves the rest as it was: the command, as an argument list after --; the name the sessions work under; and, with --auto-restarts, how many times flai serve restarts a story's agent on its own after it ends with its story in progress, 2 when unset and 0 for never (ADR-0108). Past that, flai serve opens a thread on the story for you.
 
 The command and the name are the project's in the working directory, or of --project &lt;root&gt;; with --all-projects they are every project's, the host-wide fallback a project that sets none of its own reads (ADR-0261). The restart limit is host-wide whichever you give.
+
+A change of the command's program or arguments lifts the hold of the old one's budget state, as flai serve agent harness does for a harness's.
 
 Flags:
 
@@ -4172,6 +4177,51 @@ Flags:
 |------|---------|
 | `--all` | every story flai serve has kept a log for |
 | `--write` | record what the logs say in the items' usage |
+
+#### flai serve budget
+
+The budget states that hold starts on this host after a usage limit, and how long each holds.
+
+```text
+flai serve budget
+```
+
+When a run ends on its harness's usage limit, flai serve sets a budget state for the account the run went through, and holds every start on it, on every project it serves on this host, until the limit resets. The account is the provider the run named, or else its harness, the program the harness runs, and the login the host gives it, such as claude-code meclod, so that a limit on one Claude login holds no start on another. A state set by an older flai is kept under the harness alone, such as claude-code, and holds every start on that harness until it clears.
+
+A state holds until the reset the API reported, or else a backoff that starts at 5m and doubles up to 1h. Then one start goes through as the probe and every other waits while it runs: its end on anything but the limit clears the state, and its end on the limit holds it again.
+
+This command lists each state: its key, the limit and status the harness named, when it was set, until when it holds, whether it holds a start now, and the probe that runs, with what it works and where. flai serve budget clear &lt;key&gt; lifts one now, and with no key every one, so that the next start on it goes; each clear is journalled (flai serve journal) and sent through the channel flai serve notify sets. A change of a harness's program, its arguments, or its login with flai serve agent harness clears the state of the old one on its own.
+
+Examples:
+
+```bash
+flai serve budget
+flai serve budget --json
+flai serve budget clear 'claude-code meclod'
+flai serve budget clear
+```
+
+Subcommands:
+
+- [clear](#flai-serve-budget-clear): Clear one budget state by its key, or every one, so that the next start on it goes
+
+##### flai serve budget clear
+
+Clear one budget state by its key, or every one, so that the next start on it goes.
+
+```text
+flai serve budget clear [<key>]
+```
+
+Removes the budget state kept under key, as flai serve budget lists it, or every state when no key is given, so that flai serve holds no start on it and the next start goes. A key with more than one word is one argument: quote it, as flai serve budget clear 'claude-code meclod'. Each state cleared is journalled, with method serve.budget, and its notice is sent through the channel flai serve notify sets, when one is set. A budget state's file that does not parse is replaced with none by a clear with no key.
+
+Examples:
+
+```bash
+flai serve budget clear 'claude-code meclod'
+flai serve budget clear anthropic --json
+flai serve budget clear
+```
 
 #### flai serve checks
 

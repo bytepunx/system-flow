@@ -135,6 +135,7 @@ var flagReads = map[string]struct {
 var serveReads = map[string][]string{
 	"actions":    nil,
 	"agent":      {"", "show", "harness", "provider"},
+	"budget":     {""},
 	"checks":     {"show"},
 	"components": {"show"},
 	"forge":      nil,

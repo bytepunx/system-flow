@@ -79,6 +79,9 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 		"serve agent provider litellm --spend-key-env M",
 		"serve agent provider litellm --model opus=x",
 		"serve agent provider litellm --reset",
+		// S-0720: a clear of the budget state lifts every project's hold
+		"serve budget clear",
+		"serve budget clear 'claude-code meclod'",
 		"serve checks set --name lint -- make lint",
 		"serve checks timeout 30",
 		"serve checks clear lint",
@@ -122,6 +125,8 @@ func TestTheHostConfigurationIsTheOperators(t *testing.T) {
 		"flai serve agent provider",
 		"flai serve agent provider litellm",
 		"flai serve agent provider --json",
+		"flai serve budget",
+		"flai serve budget --json",
 		"flai serve checks show",
 		"flai serve components show",
 		"flai serve forge",
