@@ -55,37 +55,35 @@ func UndoneRecordPath(cacheDir, story string) string {
 }
 
 // FindUndone is the paths where the branch checked out in the worktree at dir,
-// rebased onto main, removes lines main added since oldBase, the branch's
-// merge base with main before the rebase. It finds none when oldBase is main's
-// head, since main then added nothing the branch did not already have.
-func FindUndone(r execx.Runner, dir, main, oldBase string) ([]Undone, error) {
+// rebased onto onto, the main branch's commit the rebase took, removes lines
+// main added between oldBase, the branch's merge base with main before the
+// rebase, and onto. A commit main gains after onto is not counted, so a line
+// only it adds is none the branch removes (I-0338). It finds none when oldBase
+// is onto, since main then added nothing the branch did not already have.
+func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 	found := []Undone{}
-	head, err := r.Run(dir, "git", "rev-parse", main)
-	if err != nil {
-		return nil, fmt.Errorf("read the head of %s in %s: %w", main, dir, err)
-	}
-	if head == oldBase {
+	if onto == oldBase {
 		return found, nil
 	}
-	mains, err := nameOnly(r, dir, nameOnlyArgs(oldBase, main)...)
+	mains, err := nameOnly(r, dir, nameOnlyArgs(oldBase, onto)...)
 	if err != nil {
-		return nil, fmt.Errorf("list the paths %s changed since %s: %w", main, oldBase, err)
+		return nil, fmt.Errorf("list the paths the main branch changed between %s and %s: %w", oldBase, onto, err)
 	}
-	branch, err := nameOnly(r, dir, nameOnlyArgs(main, "HEAD")...)
+	branch, err := nameOnly(r, dir, nameOnlyArgs(onto, "HEAD")...)
 	if err != nil {
-		return nil, fmt.Errorf("list the paths the branch in %s changes against %s: %w", dir, main, err)
+		return nil, fmt.Errorf("list the paths the branch in %s changes against %s: %w", dir, onto, err)
 	}
 	for _, p := range mains {
 		if !slices.Contains(branch, p) {
 			continue
 		}
-		out, err := r.Run(dir, "git", diffArgs(oldBase, main, p)...)
+		out, err := r.Run(dir, "git", diffArgs(oldBase, onto, p)...)
 		if err != nil {
-			return nil, fmt.Errorf("read what %s added to %s since %s: %w", main, p, oldBase, err)
+			return nil, fmt.Errorf("read what the main branch added to %s between %s and %s: %w", p, oldBase, onto, err)
 		}
 		added, _ := diffLines(out)
-		if out, err = r.Run(dir, "git", diffArgs(main, "HEAD", p)...); err != nil {
-			return nil, fmt.Errorf("read what the branch in %s removes from %s against %s: %w", dir, p, main, err)
+		if out, err = r.Run(dir, "git", diffArgs(onto, "HEAD", p)...); err != nil {
+			return nil, fmt.Errorf("read what the branch in %s removes from %s against %s: %w", dir, p, onto, err)
 		}
 		_, removed := diffLines(out)
 		if lines := undoneLines(added, removed); len(lines) > 0 {
@@ -159,16 +157,18 @@ func withRecordedUndone(o SyncOptions, res *SyncResult) {
 }
 
 // checkUndone sets res.UndoesMain to what the branch rebased in the worktree
-// at dir undoes of main since oldBase, and adds it to the story's record,
-// found at o.Now, leaving out the files flai writes itself. A check or a
-// record that fails is logged and the sync stands; an empty oldBase, which
-// could not be read, checks nothing.
-func checkUndone(o SyncOptions, dir, oldBase string, res *SyncResult) {
+// at dir onto onto, the main branch's commit the rebase took, undoes of what
+// main changed between oldBase and onto, and adds it to the story's record,
+// found at o.Now, leaving out the files flai writes itself. A commit main
+// gains during the sync is not counted (I-0338). A check or a record that
+// fails is logged and the sync stands; an empty oldBase, which could not be
+// read, checks nothing.
+func checkUndone(o SyncOptions, dir, onto, oldBase string, res *SyncResult) {
 	if oldBase == "" {
 		return
 	}
 	id := o.Story.ID
-	found, err := FindUndone(o.Runner, dir, res.Base, oldBase)
+	found, err := FindUndone(o.Runner, dir, onto, oldBase)
 	if err != nil {
 		o.Log.Warn("what the rebased branch undoes of the main branch not checked; the sync stands", "component", "git", "story", id, "err", err)
 		return

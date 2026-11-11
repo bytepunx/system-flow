@@ -60,14 +60,14 @@ func TestDiffLinesReadsHunksAndSkipsHeaders(t *testing.T) {
 	}
 }
 
-// undoneGit scripts the check of the worktree wt, rebased onto main from
-// old, where main changed mainPaths and the branch changes branchPaths
-// against it.
-func undoneGit(head, old string, mainPaths, branchPaths []string) scriptedGit {
+// undoneGit scripts the check of the worktree wt, rebased onto the commit
+// onto from old, where main changed mainPaths between them and the branch
+// changes branchPaths against onto. It scripts no read of main's name, so a
+// check that reads main again fails.
+func undoneGit(onto, old string, mainPaths, branchPaths []string) scriptedGit {
 	g := scriptedGit{}
-	g.script(head, "rev-parse", "main")
-	g.script(strings.Join(mainPaths, "\n"), nameOnlyArgs(old, "main")...)
-	g.script(strings.Join(branchPaths, "\n"), nameOnlyArgs("main", "HEAD")...)
+	g.script(strings.Join(mainPaths, "\n"), nameOnlyArgs(old, onto)...)
+	g.script(strings.Join(branchPaths, "\n"), nameOnlyArgs(onto, "HEAD")...)
 	return g
 }
 
@@ -75,17 +75,17 @@ func undoneGit(head, old string, mainPaths, branchPaths []string) scriptedGit {
 // with them; one where it removes only its own lines, or keeps main's, is
 // not; a path the branch deletes removes every line main added.
 func TestFindUndone(t *testing.T) {
-	g := undoneGit("h1", "b0", []string{"gone.md", "keeps.md", "own.md", "undone.md", "mainonly.md"}, []string{"gone.md", "keeps.md", "own.md", "undone.md"})
-	g.script("@@ -1 +1,2 @@\n line\n+two", diffArgs("b0", "main", "undone.md")...)
-	g.script("@@ -2 +1,0 @@\n-two", diffArgs("main", "HEAD", "undone.md")...)
-	g.script("@@ -0,0 +1 @@\n+main's", diffArgs("b0", "main", "own.md")...)
-	g.script("@@ -3 +3 @@\n-branch's old\n+branch's new", diffArgs("main", "HEAD", "own.md")...)
-	g.script("@@ -0,0 +1 @@\n+kept", diffArgs("b0", "main", "keeps.md")...)
-	g.script("@@ -2,0 +2 @@\n+more", diffArgs("main", "HEAD", "keeps.md")...)
-	g.script("@@ -1 +1,2 @@\n+a\n+b", diffArgs("b0", "main", "gone.md")...)
-	g.script("diff --git a/gone.md b/gone.md\ndeleted file mode 100644\n--- a/gone.md\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-a\n-b\n-c", diffArgs("main", "HEAD", "gone.md")...)
+	g := undoneGit("c1", "b0", []string{"gone.md", "keeps.md", "own.md", "undone.md", "mainonly.md"}, []string{"gone.md", "keeps.md", "own.md", "undone.md"})
+	g.script("@@ -1 +1,2 @@\n line\n+two", diffArgs("b0", "c1", "undone.md")...)
+	g.script("@@ -2 +1,0 @@\n-two", diffArgs("c1", "HEAD", "undone.md")...)
+	g.script("@@ -0,0 +1 @@\n+main's", diffArgs("b0", "c1", "own.md")...)
+	g.script("@@ -3 +3 @@\n-branch's old\n+branch's new", diffArgs("c1", "HEAD", "own.md")...)
+	g.script("@@ -0,0 +1 @@\n+kept", diffArgs("b0", "c1", "keeps.md")...)
+	g.script("@@ -2,0 +2 @@\n+more", diffArgs("c1", "HEAD", "keeps.md")...)
+	g.script("@@ -1 +1,2 @@\n+a\n+b", diffArgs("b0", "c1", "gone.md")...)
+	g.script("diff --git a/gone.md b/gone.md\ndeleted file mode 100644\n--- a/gone.md\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-a\n-b\n-c", diffArgs("c1", "HEAD", "gone.md")...)
 
-	got, err := FindUndone(g, "/wt", "main", "b0")
+	got, err := FindUndone(g, "/wt", "c1", "b0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,11 +95,74 @@ func TestFindUndone(t *testing.T) {
 	}
 }
 
-// A rebase whose old base is main's head has nothing to check.
+// A rebase whose old base is the commit it took has nothing to check.
 func TestFindUndoneChecksNothingWhenMainHasNotMoved(t *testing.T) {
-	got, err := FindUndone(undoneGit("b0", "b0", nil, nil), "/wt", "main", "b0")
+	got, err := FindUndone(scriptedGit{}, "/wt", "b0", "b0")
 	if err != nil || got == nil || len(got) != 0 {
 		t.Errorf("found %+v, %v", got, err)
+	}
+}
+
+// I-0338: main gains a commit, c2, while the sync runs, after the rebase
+// took c1. The check diffs against c1 alone, so the line only c2 adds, which
+// the rebased branch lacks, is none the branch removes; reading main again
+// would see c2 and report the path.
+func TestFindUndoneDiffsAgainstTheCommitTheRebaseTookNotMainsNewerHead(t *testing.T) {
+	g := undoneGit("c1", "b0", []string{"a.md"}, []string{"a.md"})
+	g.script("@@ -1 +1,2 @@\n line\n+main's", diffArgs("b0", "c1", "a.md")...)
+	g.script("@@ -3,0 +4 @@\n+branch's", diffArgs("c1", "HEAD", "a.md")...)
+	// main as it is once c2 lands: what a check reading main's name would see
+	g.script("c2", "rev-parse", "main")
+	g.script("a.md", nameOnlyArgs("b0", "main")...)
+	g.script("a.md", nameOnlyArgs("main", "HEAD")...)
+	g.script("@@ -1 +1,3 @@\n line\n+main's\n+c2's", diffArgs("b0", "main", "a.md")...)
+	g.script("@@ -3 +2,0 @@\n-c2's\n@@ -3,0 +4 @@\n+branch's", diffArgs("main", "HEAD", "a.md")...)
+
+	got, err := FindUndone(g, "/wt", "c1", "b0")
+	if err != nil || got == nil || len(got) != 0 {
+		t.Errorf("found %+v, %v; want nothing undone against the commit the rebase took", got, err)
+	}
+}
+
+// I-0338, I-0335: Rebase reads main's head once, as c1, and rebases onto,
+// checks, settles, and folds against c1, so main gaining c2 meanwhile, which
+// a read of main's name would see, reports nothing undone; the answer still
+// names the branch.
+func TestRebaseChecksAndFoldsAgainstTheCommitItRebasedOnto(t *testing.T) {
+	repo, g := undoneRepo(t)
+	if err := os.MkdirAll(repo.WorktreePath("S-0001"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	g.script("", "status", "--porcelain")
+	g.script("c1", "rev-parse", "--verify", "main^{commit}")
+	g.script("b0", "merge-base", "c1", "HEAD")
+	g.script("h0", "rev-parse", "HEAD")
+	g.script("", "rebase", "c1")
+	g.script("", nameOnlyArgs("b0", "h0")...)
+	for k, v := range undoneGit("c1", "b0", []string{"a.md"}, []string{"a.md"}) {
+		g[k] = v
+	}
+	g.script("@@ -1 +1,2 @@\n line\n+main's", diffArgs("b0", "c1", "a.md")...)
+	g.script("@@ -3,0 +4 @@\n+branch's", diffArgs("c1", "HEAD", "a.md")...)
+	// main once c2 lands, which the rebased branch lacks
+	g.script("c2", "rev-parse", "main")
+	g.script("a.md", nameOnlyArgs("b0", "main")...)
+	g.script("a.md", nameOnlyArgs("main", "HEAD")...)
+	g.script("@@ -1 +1,3 @@\n line\n+main's\n+c2's", diffArgs("b0", "main", "a.md")...)
+	g.script("@@ -3 +2,0 @@\n-c2's\n@@ -3,0 +4 @@\n+branch's", diffArgs("main", "HEAD", "a.md")...)
+	var foldedOnto string
+	o := SyncOptions{Runner: g, Repo: repo, Story: &workitem.Item{ID: "S-0001"}, Now: time.Now()}
+	o.Files.Fold = func(base string) ([]Folded, []string, error) {
+		foldedOnto = base
+		return nil, nil, nil
+	}
+
+	res, err := Rebase(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || res.Base != "main" || len(res.UndoesMain) != 0 || foldedOnto != "c1" {
+		t.Errorf("synced %v, base %q, undoes %+v, folded onto %q; want main, nothing undone, folded onto c1", res.Synced, res.Base, res.UndoesMain, foldedOnto)
 	}
 }
 

@@ -472,7 +472,10 @@ func Sync(o SyncOptions) (SyncResult, error) {
 // puts the branch's own changelog lines back under the main branch's top
 // "## Unreleased", committing that on the branch (ADR-0257), then finds the
 // paths where the branch now undoes the main branch's change and records them
-// for the story (ADR-0155). It writes no line of the conflict
+// for the story (ADR-0155). It takes the main branch's head once, as a
+// commit, and rebases onto, checks, settles, and folds against that commit,
+// so a commit main gains while it runs is none of the branch's (I-0338,
+// I-0335). It writes no line of the conflict
 // log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
@@ -502,8 +505,14 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		res.Continue = fmt.Sprintf("commit them on %s (or stash them), then run %s again", res.Branch, again(o))
 		return res, nil
 	}
+	// I-0338: main's head, read once, so that every step below reads the
+	// same main as the rebase, however main moves meanwhile
+	onto, err := o.Runner.Run(path, "git", "rev-parse", "--verify", base+"^{commit}")
+	if err != nil {
+		return res, fmt.Errorf("read the head of %s in %s to rebase %s onto: %w; check that %s names a commit there, then run %s again", base, res.Worktree, res.Branch, err, base, again(o))
+	}
 	// ADR-0155: where the branch left main, to find what the rebase undoes
-	oldBase, err := o.Runner.Run(path, "git", "merge-base", base, "HEAD")
+	oldBase, err := o.Runner.Run(path, "git", "merge-base", onto, "HEAD")
 	if err != nil {
 		o.Log.Warn("the branch's base not read, so what the rebase undoes of the main branch is not checked", "component", "git", "story", id, "err", err)
 		oldBase = ""
@@ -514,7 +523,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		o.Log.Warn("the branch's head not read, so its changelog lines are not put back under Unreleased", "component", "git", "story", id, "err", err)
 		oldHead = ""
 	}
-	if _, rerr := o.Runner.Run(path, "git", "rebase", base); rerr != nil {
+	if _, rerr := o.Runner.Run(path, "git", "rebase", onto); rerr != nil {
 		if !RebaseInProgress(o.Runner, path) {
 			return res, rerr
 		}
@@ -541,11 +550,11 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	if err := regenerateAtHead(o, path, &res); err != nil {
 		return res, err
 	}
-	if err := settleChangelogs(o, path, oldBase, oldHead, &res); err != nil {
+	if err := settleChangelogs(o, path, onto, oldBase, oldHead, &res); err != nil {
 		return res, err
 	}
-	checkUndone(o, path, oldBase, &res)
-	if err := fold(o, path, &res); err != nil {
+	checkUndone(o, path, onto, oldBase, &res)
+	if err := fold(o, path, onto, &res); err != nil {
 		return res, err
 	}
 	return res, fix(o, path, &res)
@@ -666,12 +675,13 @@ func differsFromHead(dir string, f GeneratedFile, head string) (changed, present
 }
 
 // settleChangelogs runs SettleChangelogs after the clean rebase in the
-// story's worktree at path and sets res.Changelogs (ADR-0257). One it could
-// not read for is logged and the sync stands; files it wrote but did not
-// commit are an error saying what to commit.
-func settleChangelogs(o SyncOptions, path, oldBase, oldHead string, res *SyncResult) error {
+// story's worktree at path onto onto, the main branch's commit the rebase
+// took, and sets res.Changelogs (ADR-0257). One it could not read for is
+// logged and the sync stands; files it wrote but did not commit are an error
+// saying what to commit.
+func settleChangelogs(o SyncOptions, path, onto, oldBase, oldHead string, res *SyncResult) error {
 	id := o.Story.ID
-	written, err := SettleChangelogs(o.Runner, path, res.Base, oldBase, oldHead, id)
+	written, err := SettleChangelogs(o.Runner, path, onto, oldBase, oldHead, id)
 	if err != nil && len(written) == 0 {
 		o.Log.Warn("the branch's changelog lines not put back under Unreleased; the sync stands", "component", "git", "story", id, "err", err)
 		return nil
@@ -766,17 +776,17 @@ func showFile(r execx.Runner, dir, rev, p string) (string, bool) {
 }
 
 // fold runs the fold after the clean rebase in the story's worktree at path
-// (ADR-0126): when it folds anything, it writes the generated files again,
-// stages what the fold wrote or deleted and them, commits them on the branch,
-// and sets res.Folded. A fold that fails is logged and the sync stands; a
-// fold whose files are written but not committed is an error saying what to
-// commit.
-func fold(o SyncOptions, path string, res *SyncResult) error {
+// (ADR-0126), against onto, the main branch's commit the rebase took: when it
+// folds anything, it writes the generated files again, stages what the fold
+// wrote or deleted and them, commits them on the branch, and sets res.Folded.
+// A fold that fails is logged and the sync stands; a fold whose files are
+// written but not committed is an error saying what to commit.
+func fold(o SyncOptions, path, onto string, res *SyncResult) error {
 	if o.Files.Fold == nil {
 		return nil
 	}
 	id := o.Story.ID
-	folds, paths, err := o.Files.Fold(res.Base)
+	folds, paths, err := o.Files.Fold(onto)
 	if err != nil {
 		o.Log.Warn("issues not folded after the rebase; the sync stands", "component", "git", "story", id, "err", err)
 		return nil
