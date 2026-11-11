@@ -2,9 +2,9 @@
 id: D-0477
 title: "A story worktree's bin/flai also runs in the Alpine agent image, so scripts/flai-build.sh builds it with CGO_ENABLED=0, scripts/env.sh keeps tool caches in the home when .flai-cache is not writable, and the layer sets GOFLAGS=-buildvcs=false"
 kind: decision
-sources: [S-0510, I-0255, S-0520, S-0686]
+sources: [S-0510, I-0255, S-0520, S-0686, S-0724, I-0348]
 topics: [docker, harness, go, code]
-paths: [scripts/flai-build.sh, scripts/env.sh, flai/images/system-flow/Dockerfile, scripts/flai.sh, scripts/agent-container.sh, scripts/agent-vcs-test.sh]
+paths: [scripts/flai-build.sh, scripts/env.sh, flai/images/system-flow/Dockerfile, scripts/flai.sh, scripts/agent-container.sh, scripts/agent-vcs-test.sh, scripts/flai-build-stamp-test.sh, design/system/release-signing.md]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -38,4 +38,12 @@ The close-out was checked inside `flai-agent-claude-code:local`, as T-2236 says,
 
 So a hand check through `scripts/agent-container.sh` runs the harness image, without the project's layer and its `go`; a story's own flai reaches it only as the worktree's static `bin/flai`.
 
-Sources: S-0510, I-0255, S-0520, S-0686.
+S-0724 (2026-11-11) made `scripts/flai-build.sh` itself build with `-buildvcs=false`. That does not undo the rule above, which concerns the layer's `GOFLAGS`; `scripts/agent-vcs-test.sh` runs its own stamped `go build`, not `flai-build.sh`. From S-0724's Decisions (`wip/archive/agents/S-0724.md`):
+
+```text
+Fix: scripts/flai-build.sh builds with -buildvcs=false and links buildinfo.Commit and Date from git in the tree it builds. Go's VCS lookup takes only a .git folder, so a nested worktree's build cannot be fixed by Go's own stamping. This leaves D-0477's rule intact: that concerns the agent layer's GOFLAGS, and agent-vcs-test.sh runs its own stamped go build, not flai-build.sh (D-0477).
+```
+
+Go's stamp named the main checkout's HEAD for a build in a story's worktree (I-0348). `design/system/release-signing.md` and `scripts/README.md` now record the fix. Keep the layer stamping, and keep `flai-build.sh` linking the commit itself.
+
+Sources: S-0510, I-0255, S-0520, S-0686, S-0724, I-0348.

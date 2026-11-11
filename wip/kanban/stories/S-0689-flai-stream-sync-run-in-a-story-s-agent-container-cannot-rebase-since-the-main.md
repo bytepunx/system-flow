@@ -3,10 +3,10 @@ id: S-0689
 type: story
 nature: remediation
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
-status: review
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T16:13:51Z
+updated: 2026-11-11T18:17:00Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T16:13:51Z
     by: agent-S-0689
+  - to: in-progress
+    at: 2026-11-11T18:17:00Z
+    by: flai
 tags: [flai, git, container]
 topics: [git]
 touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md, flai/internal/taskdone/taskdone.go]
@@ -124,3 +127,4 @@ Forecast: `flai forecast` gave 40m. It is raised to 1h30m for four tasks across 
 Cost of delay: 30 USD a week, as `flai cod` worked it from the operator's input of 12m lost per 168h cycle at 150 USD an hour. It stands: the issue's two instances give no reason to change it.
 
 No `after`: the story reads no other open story's output.
+- 2026-11-11T18:17:00Z: moved to in-progress: the rebase of story/S-0689 onto main stopped on conflicts in design/system/flai-cli.md, which the acceptance of S-0689 by alex cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0689

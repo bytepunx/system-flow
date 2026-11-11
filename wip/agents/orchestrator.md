@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2122.8135
-accrued_seconds: 1550135
-tasks_completed: 3035
-last_run: 2026-11-11T16:16:31Z
+accrued_cost: 2122.9038
+accrued_seconds: 1550161
+tasks_completed: 3036
+last_run: 2026-11-11T18:17:02Z
 ---
 
 # Orchestrator activity
@@ -21277,6 +21277,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 27
 - Cost: 0.1307 USD, estimated
+
+### 2026-11-11T18:17:02Z
+
+- Summary: Release-due S-0719, S-0716, S-0699: release_evaluate met under threshold (count 12 >= 1; value 442.5 of 1000 USD/week; pending S-0686, S-0691, S-0694, S-0696, S-0697, S-0698, S-0699, S-0700, S-0702, S-0710, S-0716, S-0719). Started no publish formula run: its open instance S-0718 is in ready, waiting on the full in-progress limit (3 of 3), and publishes all 12 when an agent pulls it; a second instance would duplicate it.
+- Items: S-0719, S-0716, S-0699, S-0718
+- Seconds: 26
+- Cost: 0.0903 USD, estimated
 
 ## Refusals
 
