@@ -979,3 +979,37 @@ func TestAStoryWhoseDeployFailedGetsNoNamespaceForItsChecks(t *testing.T) {
 		t.Errorf("a story whose deploy failed got %v", env)
 	}
 }
+
+func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	failing, _ := nsCheck(t, 1)
+	lab.withChecks(failing)
+	story := lab.inReview("Checked", klHeadA)
+	ns := strings.ToLower(story)
+
+	lab.round()
+	r, ok, err := kluster.ReadRecord(lab.root, ns)
+	if err != nil || !ok {
+		t.Fatal(ok, err)
+	}
+	if r.Commit != klHeadA || r.Outcome != kluster.OutcomePassed || r.ChecksCommit != klHeadA || r.ChecksOutcome != kluster.OutcomeFailed {
+		t.Fatalf("a failed checks run at the deployed head is kept in the record: %+v", r)
+	}
+	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
+		t.Errorf("the failed run opens one thread, got %d", len(got))
+	}
+	if ok, reason, err := kluster.AcceptGate(lab.root, story, klHeadA, true); ok || err != nil || !strings.Contains(reason, "ended failed") {
+		t.Errorf("the gate after the failed run: %v %q %v", ok, reason, err)
+	}
+
+	passing, _ := nsCheck(t, 0)
+	lab.withChecks(passing)
+	lab.git.set(story, klHeadB)
+	lab.round()
+	if r, _, _ = kluster.ReadRecord(lab.root, ns); r.Commit != klHeadB || r.ChecksCommit != klHeadB || r.ChecksOutcome != kluster.OutcomePassed {
+		t.Fatalf("the passed run at the new head is kept in the record: %+v", r)
+	}
+	if ok, reason, err := kluster.AcceptGate(lab.root, story, klHeadB, true); !ok || err != nil {
+		t.Errorf("the gate after the passed run: %v %q %v", ok, reason, err)
+	}
+}

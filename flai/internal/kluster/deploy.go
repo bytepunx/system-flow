@@ -3,6 +3,7 @@ package kluster
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
@@ -152,10 +154,7 @@ var hexCommit = regexp.MustCompile(`^[0-9a-f]{12,}$`)
 // main for the default namespace, a hyphen, and the commit's first 12 hex
 // digits, such as s-0578-0123456789ab.
 func (t Target) Tag() string {
-	head := t.Commit
-	if len(head) > 12 {
-		head = head[:12]
-	}
+	head := shortCommit(t.Commit)
 	if t.Story == "" {
 		return "main-" + head
 	}
@@ -213,6 +212,12 @@ type Record struct {
 	ExitCode   int    `json:"exit_code,omitempty"`
 	Error      string `json:"error,omitempty"`
 	Steps      []Step `json:"steps"`
+	// ChecksCommit and ChecksOutcome are the commit and the outcome of the
+	// last checks run against the namespace since its deploy: passed, failed,
+	// timed-out, or cancelled. Both are empty until a run ends, and a deploy
+	// clears them (ADR-0254 §5a, §8).
+	ChecksCommit  string `json:"checks_commit,omitempty"`
+	ChecksOutcome string `json:"checks_outcome,omitempty"`
 }
 
 // ReadRecord reads namespace ns's deployment record; ok is false when there
@@ -231,8 +236,37 @@ func ReadRecord(root, ns string) (r Record, ok bool, err error) {
 	return r, true, nil
 }
 
-// writeRecord writes r as its namespace's record, whole or not at all.
+// recordsLockPath is the lock every write of a namespace's record takes, so
+// that a checks outcome kept in a record never overwrites a deploy's write
+// to it, nor a deploy's the outcome's half done.
+func recordsLockPath(root string) string { return filepath.Join(Dir(root), "deployments.lock") }
+
+// recordsLockWait is the most a write of a record waits for another's.
+const recordsLockWait = 10 * time.Second
+
+// lockRecords takes the lock of the records' writes.
+func lockRecords(root string) (unlock func(), err error) {
+	unlock, err = filelock.Lock(recordsLockPath(root), recordsLockWait)
+	if err != nil {
+		return nil, fmt.Errorf("take the lock of the deployment records: %w", err)
+	}
+	return unlock, nil
+}
+
+// writeRecord writes r as its namespace's record, whole or not at all, under
+// the records' lock.
 func writeRecord(root string, r Record) error {
+	unlock, err := lockRecords(root)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	return putRecord(root, r)
+}
+
+// putRecord writes r as its namespace's record, whole or not at all; the
+// caller holds the records' lock.
+func putRecord(root string, r Record) error {
 	path := RecordPath(root, r.Namespace)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("make the folder of the deployment records: %w", err)
@@ -245,6 +279,113 @@ func writeRecord(root string, r Record) error {
 		return fmt.Errorf("write the deployment record of %s: %w", r.Namespace, err)
 	}
 	return nil
+}
+
+// RecordChecks keeps in namespace ns's record the outcome of a checks run
+// against it at commit, which ended outcome. It refuses a namespace with no
+// record, and one deployed again at another commit since the run started,
+// whose record the outcome does not describe.
+func RecordChecks(root, ns, commit, outcome string) error {
+	unlock, err := lockRecords(root)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	r, ok, err := ReadRecord(root, ns)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("the namespace %s has no deployment record to keep its checks run at %s, which ended %s, in; deploy it, then run its checks again", ns, shortCommit(commit), outcome)
+	}
+	if r.Commit != commit {
+		return fmt.Errorf("the namespace %s was deployed again, at %s, while its checks ran at %s, so their outcome %s is not kept; run its checks again at %s", ns, shortCommit(r.Commit), shortCommit(commit), outcome, shortCommit(r.Commit))
+	}
+	r.ChecksCommit, r.ChecksOutcome = commit, outcome
+	return putRecord(root, r)
+}
+
+// StoryHead is the commit at the head of story's branch, refs/heads/story/<ID>,
+// in the checkout root, as git resolves it there: the head a story's deploy
+// deploys and its acceptance is gated at. A branch git cannot resolve is an
+// error, with an empty head.
+func StoryHead(git execx.Runner, root, story string) (string, error) {
+	ref := "refs/heads/story/" + strings.ToUpper(story)
+	out, err := git.Run(root, "git", "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	head := strings.TrimSpace(out)
+	if err != nil || head == "" {
+		return "", fmt.Errorf("resolve the head of %s's branch %s in %s with git rev-parse: %w; open the story's branch with flai stream open %s", story, ref, root, cmp.Or(err, errors.New("no commit")), story)
+	}
+	return head, nil
+}
+
+// AcceptGate says whether story may be accepted while the kluster host action
+// is on for the project run from root (ADR-0254 §5a): ok when its namespace's
+// record says its deploy passed at head, the story branch's head, and, while
+// checksOn says the checks host action is on, a checks run against it passed
+// there too. Otherwise reason names the last job, its commit, and its
+// outcome. Only a record that cannot be read is an error.
+func AcceptGate(root, story, head string, checksOn bool) (ok bool, reason string, err error) {
+	ns, err := StoryNamespace(story)
+	if err != nil {
+		return false, "", err
+	}
+	story = strings.ToUpper(story)
+	if head == "" {
+		return false, fmt.Sprintf("%s has no branch story/%s, so its namespace %s cannot be deployed at its head", story, story, ns), nil
+	}
+	r, found, err := ReadRecord(root, ns)
+	if err != nil {
+		return false, "", err
+	}
+	if !found {
+		return false, fmt.Sprintf("%s's namespace %s was never deployed: no deploy of it is recorded", story, ns), nil
+	}
+	job, outcome := lastJob(root, r)
+	switch {
+	case r.Commit != head:
+		return false, fmt.Sprintf("the last %s of %s's namespace %s was at %s, not at the story's head %s, and it %s", job, story, ns, shortCommit(r.Commit), shortCommit(head), outcome), nil
+	case r.Outcome != OutcomePassed:
+		return false, fmt.Sprintf("the %s of %s's namespace %s at %s %s", job, story, ns, shortCommit(head), outcome), nil
+	case !checksOn:
+		return true, "", nil
+	case r.ChecksCommit != head:
+		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet", story, ns, shortCommit(head)), nil
+	case r.ChecksOutcome != OutcomePassed:
+		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and the checks run against it there ended %s", story, ns, shortCommit(head), r.ChecksOutcome), nil
+	}
+	return true, "", nil
+}
+
+// lastJob names the last job r records, a deploy or a teardown, and its
+// outcome: passed, failed at a step, running, or interrupted when no job runs
+// for its namespace any more.
+func lastJob(root string, r Record) (job, outcome string) {
+	job = "deploy"
+	if r.FailedStep == StepTeardown {
+		job = StepTeardown
+	}
+	switch r.Outcome {
+	case OutcomeFailed:
+		if r.FailedStep == "" {
+			return job, "failed before its first step"
+		}
+		return job, "failed at the " + r.FailedStep + " step"
+	case OutcomeRunning:
+		if j, running := Running(root); running && j.Namespace == r.Namespace {
+			return job, "is still running"
+		}
+		return job, "was interrupted before it recorded its outcome"
+	}
+	return job, r.Outcome
+}
+
+// shortCommit is a commit's first 12 hex digits, as a tag names it.
+func shortCommit(commit string) string {
+	if len(commit) > 12 {
+		return commit[:12]
+	}
+	return commit
 }
 
 // StepError is a step that failed: which, its exit code, and its log.

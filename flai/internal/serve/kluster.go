@@ -368,9 +368,8 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 		if err != nil {
 			continue
 		}
-		out, err := git.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/story/"+it.ID+"^{commit}")
-		head := strings.TrimSpace(out)
-		if err != nil || head == "" {
+		head, err := kluster.StoryHead(git, root, it.ID)
+		if err != nil {
 			p.o.Logger.Debug("story in review has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID)
 			continue
 		}
@@ -622,11 +621,7 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 	if !ok || r.Outcome != kluster.OutcomePassed {
 		return "", nil, nil
 	}
-	head := ""
-	if out, gerr := git.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/story/"+story+"^{commit}"); gerr == nil {
-		head = strings.TrimSpace(out)
-	}
-	if head == "" || head != r.Commit {
+	if head, _ := kluster.StoryHead(git, root, story); head == "" || head != r.Commit {
 		return "", nil, nil // no branch, or deployed at another head
 	}
 	c, err := kluster.New(root, m, kluster.System{})
@@ -642,8 +637,10 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 
 // checks runs j's story's checks against its namespace once its deploy has
 // passed, in the same job, while the checks host action is on and the
-// project names checks; a run that does not pass opens one thread on the
-// story and moves nothing, and one that passes resolves it.
+// project names checks. A run that ends keeps its outcome at j.head in the
+// namespace's record, which an acceptance reads (ADR-0254 §5a); one that
+// does not pass opens one thread on the story and moves nothing, and one that
+// passes resolves it.
 func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) {
 	if p.o.Checks == nil {
 		return
@@ -676,6 +673,9 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 		p.journal("failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(j.head), err))
 		p.o.Logger.Info("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
 		return
+	}
+	if err := kluster.RecordChecks(mainCheckout(repo), ns, j.head, run.Outcome); err != nil {
+		p.o.Logger.Warn("kluster checks outcome not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "err", err.Error())
 	}
 	if run.Outcome == "passed" {
 		p.journal("done", fmt.Sprintf("checks of %s against %s at %s passed", j.story, ns, short(j.head)))

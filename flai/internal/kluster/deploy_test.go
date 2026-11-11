@@ -535,6 +535,133 @@ func TestARedeployAtANewCommitReplacesTheRecord(t *testing.T) {
 	}
 }
 
+func TestTheChecksOutcomeIsKeptInTheRecordUntilTheNextDeploy(t *testing.T) {
+	f := deploySetup(t)
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed); err == nil || !strings.Contains(err.Error(), "no deployment record") {
+		t.Errorf("checks kept for a namespace never deployed: %v", err)
+	}
+	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := RecordChecks(f.root, "s-0578", commitB, OutcomePassed); err == nil || !strings.Contains(err.Error(), "deployed again, at 0123456789ab") {
+		t.Errorf("checks at another commit than the deploy's were kept: %v", err)
+	}
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomeFailed); err != nil {
+		t.Fatal(err)
+	}
+	r, _, err := ReadRecord(f.root, "s-0578")
+	if err != nil || r.ChecksCommit != commitA || r.ChecksOutcome != OutcomeFailed || r.Outcome != OutcomePassed || len(r.Steps) != 3 {
+		t.Errorf("the record keeps the deploy and the checks' outcome: %+v %v", r, err)
+	}
+	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if r, _, _ := ReadRecord(f.root, "s-0578"); r.ChecksCommit != "" || r.ChecksOutcome != "" {
+		t.Errorf("a deploy clears the checks' outcome: %+v", r)
+	}
+}
+
+func TestAcceptGate(t *testing.T) {
+	deployed := Record{Story: "S-0578", Namespace: "s-0578", Commit: commitA, Outcome: OutcomePassed}
+	with := func(edit func(*Record)) *Record {
+		r := deployed
+		edit(&r)
+		return &r
+	}
+	cases := []struct {
+		name     string
+		record   *Record
+		checksOn bool
+		want     []string // the reason holds each; none when the gate passes
+	}{
+		{"deploy and checks passed at the head", with(func(r *Record) { r.ChecksCommit, r.ChecksOutcome = commitA, OutcomePassed }), true, nil},
+		{"checks off", &deployed, false, nil},
+		{"checks off, their failure aside", with(func(r *Record) { r.ChecksCommit, r.ChecksOutcome = commitA, OutcomeFailed }), false, nil},
+		{"no record", nil, true, []string{"s-0578 was never deployed"}},
+		{"deploy at another commit", with(func(r *Record) {
+			r.Commit, r.ChecksCommit, r.ChecksOutcome = commitB, commitB, OutcomePassed
+		}), true, []string{"last deploy", "at fedcba987654", "not at the story's head 0123456789ab", "it passed"}},
+		{"deploy failed", with(func(r *Record) { r.Outcome, r.FailedStep = OutcomeFailed, StepDeploy }), false, []string{"the deploy of S-0578", "at 0123456789ab failed at the deploy step"}},
+		{"deploy failed before its first step", with(func(r *Record) { r.Outcome = OutcomeFailed }), true, []string{"the deploy of S-0578", "failed before its first step"}},
+		{"deploy interrupted", with(func(r *Record) { r.Outcome = OutcomeRunning }), true, []string{"the deploy of S-0578", "was interrupted"}},
+		{"teardown failed", with(func(r *Record) { r.Outcome, r.FailedStep = OutcomeFailed, StepTeardown }), true, []string{"the teardown of S-0578", "failed at the teardown step"}},
+		{"checks failed", with(func(r *Record) { r.ChecksCommit, r.ChecksOutcome = commitA, OutcomeFailed }), true, []string{"deploy of S-0578", "at 0123456789ab passed", "checks run against it there ended failed"}},
+		{"checks timed out", with(func(r *Record) { r.ChecksCommit, r.ChecksOutcome = commitA, "timed-out" }), true, []string{"checks run against it there ended timed-out"}},
+		{"checks not run", &deployed, true, []string{"deploy of S-0578", "at 0123456789ab passed", "no checks run against it has ended there yet"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			if c.record != nil {
+				if err := writeRecord(root, *c.record); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ok, reason, err := AcceptGate(root, "s-0578", commitA, c.checksOn)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ok != (c.want == nil) {
+				t.Fatalf("ok = %v, reason %q", ok, reason)
+			}
+			if ok && reason != "" {
+				t.Errorf("a gate that passes gives the reason %q", reason)
+			}
+			for _, w := range c.want {
+				if !strings.Contains(reason, w) {
+					t.Errorf("reason %q does not say %q", reason, w)
+				}
+			}
+		})
+	}
+}
+
+func TestAcceptGateRefusesAStoryWithNoBranchOrNoID(t *testing.T) {
+	root := t.TempDir()
+	if ok, reason, err := AcceptGate(root, "S-0578", "", true); ok || err != nil || !strings.Contains(reason, "no branch story/S-0578") {
+		t.Errorf("no head: %v %q %v", ok, reason, err)
+	}
+	if _, _, err := AcceptGate(root, "main", commitA, true); err == nil {
+		t.Error("a name that is no story ID was gated")
+	}
+}
+
+// headsGit is an execx.Runner whose git rev-parse answers head, or fails
+// when head is empty, and records the arguments it was given.
+type headsGit struct {
+	head string
+	args []string
+}
+
+func (g *headsGit) Run(_, _ string, args ...string) (string, error) {
+	g.args = args
+	if g.head == "" {
+		return "", errors.New("exit status 1")
+	}
+	return g.head + "\n", nil
+}
+
+func (g *headsGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (g *headsGit) LookPath(name string) (string, error) { return name, nil }
+
+func TestStoryHeadResolvesTheStorysBranch(t *testing.T) {
+	g := &headsGit{head: commitA}
+	head, err := StoryHead(g, "/main", "s-0578")
+	if err != nil || head != commitA {
+		t.Fatalf("head = %q, %v", head, err)
+	}
+	if want := []string{"rev-parse", "--verify", "--quiet", "refs/heads/story/S-0578^{commit}"}; !slices.Equal(g.args, want) {
+		t.Errorf("git %q, want %q", g.args, want)
+	}
+	g.head = ""
+	if _, err := StoryHead(g, "/main", "S-0578"); err == nil || !strings.Contains(err.Error(), "refs/heads/story/S-0578") {
+		t.Errorf("a story with no branch: %v", err)
+	}
+}
+
 func TestTargets(t *testing.T) {
 	tg, err := StoryTarget("s-0042", "/w", commitA)
 	if err != nil || tg.Story != "S-0042" || tg.Namespace != "s-0042" || tg.Prefix != "s0042_" || tg.Tag() != "s-0042-0123456789ab" {
