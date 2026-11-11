@@ -3,10 +3,10 @@ id: S-0696
 type: story
 nature: remediation
 title: "The integration and smoke tiers' when names template/**, but their paths do not select a template-only change, so a story that changes only template/ runs neither at close-out, against what code-quality.md and tooling.md say"
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:54:31Z
-updated: 2026-11-11T08:21:16Z
+updated: 2026-11-11T08:48:36Z
 transitions:
   - to: ready
     at: 2026-11-11T02:30:59Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T08:21:16Z
     by: agent-S-0696
+  - to: done
+    at: 2026-11-11T08:48:36Z
+    by: alex
 tags: [flai, testing, manifest]
 topics: [testing]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go, design/system/project-manifest.md, design/system/devex.md, design/issues/I-0270-the-integration-and-smoke-tiers-when-names-template-but-their-paths-do-not.md, design/issues/summary.md]

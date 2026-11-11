@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2112.9327
-accrued_seconds: 1548234
-tasks_completed: 2952
-last_run: 2026-11-11T08:29:14Z
+accrued_cost: 2113.0754
+accrued_seconds: 1548268
+tasks_completed: 2953
+last_run: 2026-11-11T08:47:57Z
 ---
 
 # Orchestrator activity
@@ -20696,6 +20696,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.2820 USD, estimated
+
+### 2026-11-11T08:47:57Z
+
+- Summary: release-due S-0686: threshold met (count 1 of 1, value 35 of 1000 USD/week, pending S-0686). Started no new publish instance: S-0718, the publish formula's instance from 2026-11-11T01:44Z, is open in ready and publishes everything accepted and unreleased, S-0686 included, when it runs.
+- Items: S-0686, S-0718
+- Seconds: 34
+- Cost: 0.1427 USD, estimated
 
 ## Refusals
 
