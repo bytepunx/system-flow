@@ -6,7 +6,7 @@ title: wait_for_events fails with no front matter while another story's checked 
 status: backlog
 owner: alex
 created: 2026-11-11T01:43:38Z
-updated: 2026-11-11T01:43:38Z
+updated: 2026-11-11T09:01:50Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-11-11T01:43:38Z
+finalized:
+  by: alex
+  at: 2026-11-11T09:01:50Z
 ---
 # S-0717 wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file
 
