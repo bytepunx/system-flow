@@ -260,6 +260,22 @@ ADR-0049 chose 80 KB so that the pack would fit an MCP tool result. It does not:
 
 [ADR-0104](../adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md) (S-0261) refines ADR-0049: the MCP `prime` tool returns the pack in parts of at most 40,000 bytes of JSON each (`context.PartLimit`), and the agent reads every part, calling `prime` again with `part` 2, 3, and on up to `parts`. The pack's content, budget, and order are unchanged, and every brief is still printed (TH-0032). Part 1 carries the header, then conventions and items in the pack's order while they fit; each later part carries the story, its number, and the next ones; the catalog is in the last part. A convention or item too large for any part is split at line boundaries into chunks. `flai prime --part N` prints the same part. The budget still bounds the pack's text, not one result, and a briefed or catalogued document is still read with `doc_get` and its heading.
 
+Later parts never repeat the topic sources: since T-0987 each part after the first carries an empty `topics` list. [I-0261](../issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md)'s first instance took part 1's list for one that every part repeats. What made the packs large was that every brief loads on a pack over its budget ([ADR-0241](../adrs/0241-a-pack-whose-conventions-alone-exceed-its-budget-still-loads-what-is-named-and.md)), that a brief's JSON listed all its other reasons, and that a topic held one claim source per touches entry. S-0699 changed the last two, and left the first as the operator chose on TH-1023:
+
+- T-2992: a topic holds one claim source per item and sub-project, its `paths` counting the touches entries no earlier item reached, and its `via` naming the first.
+- T-3111: a brief's JSON carries the count of its other reasons in `more`, in place of the `also` list. A loaded item keeps its list.
+
+`flai prime --story --json` with the 80 KB budget, measured on 2026-11-11 with flai built from main and from S-0699's branch, in bytes of JSON:
+
+| Story | flai | Pack | Parts | Topics | Sources | Conventions | Named | Briefs | Briefs' `also` |
+|-------|------|------|-------|--------|---------|-------------|-------|--------|----------------|
+| S-0425 | main | 856,274 | 24 | 12,324 | 136 | 108,655 | 364,638 | 353,393 | 138,700 |
+| S-0425 | S-0699 | 707,610 | 21 | 1,794 | 25 | 108,655 | 364,638 | 215,259 | 0 |
+| S-0586 | main | 564,959 | 16 | 12,549 | 130 | 108,655 | 73,884 | 352,674 | 136,003 |
+| S-0586 | S-0699 | 418,540 | 13 | 1,557 | 19 | 108,655 | 73,884 | 217,247 | 0 |
+
+Each pack is about 147 KB and three parts smaller. About 300 briefs, at about 730 bytes each, are still half of S-0586's pack; S-0425's is larger for the documents it names. Narrower topics, or fewer briefs on a pack over its budget, are what would shrink it further; the second reverses ADR-0241.
+
 ## Sub-agents
 
 An agent `flai serve` starts with `claude-code` worked its whole story in one context: every search, test log, and file it read stayed there and was read again from the cache on every later turn. S-0118's run cost 5.18 US dollars with 10.5M cache-read tokens for one Explore sub-agent it spawned on its own. [ADR-0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md) (S-0175) makes sub-agents deliberate: the story's agent hands noisy work and pre-review verification to an explorer and a verifier that can only read, primed for their role, and keeps decisions, edits, and the designer to itself. ADR-0049 rejected a scout that reads more than the agent; these read less. S-0176 tries a third kind, a task sub-agent that works one task of a layer of the story's plan and edits only what that task touches; the story's agent still reviews and commits its work, moves the task, and asks the designer, and the guard still refuses it flai writes and git writes (`delegation.md`).
