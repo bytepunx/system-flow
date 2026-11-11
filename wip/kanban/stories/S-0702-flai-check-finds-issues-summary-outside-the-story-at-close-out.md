@@ -6,7 +6,7 @@ title: "flai check finds `issues.summary` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-10T08:55:37Z
-updated: 2026-11-11T01:42:19Z
+updated: 2026-11-11T01:45:02Z
 transitions: []
 tags: [flai, issues, git]
 topics: [git]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-10T11:07:46Z
 forecast:
   duration: 60m
-  delivery: 2026-11-11T16:24:00Z
-  basis: "Its own forecast of 1h; 24th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0704, S-0678, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700 and S-0701."
+  delivery: 2026-11-11T16:47:00Z
+  basis: "Its own forecast of 1h; 25th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0692, S-0693, S-0694, S-0695, S-0696, S-0697, S-0698, S-0699, S-0700 and S-0701."
   by: flai
-  at: 2026-11-11T01:42:19Z
+  at: 2026-11-11T01:45:02Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:11Z

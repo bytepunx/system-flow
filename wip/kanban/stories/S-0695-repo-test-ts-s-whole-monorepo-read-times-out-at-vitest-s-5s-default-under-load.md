@@ -6,7 +6,7 @@ title: repo.test.ts's whole-monorepo read times out at vitest's 5s default under
 status: backlog
 owner: alex
 created: 2026-11-10T08:54:28Z
-updated: 2026-11-11T01:42:19Z
+updated: 2026-11-11T01:45:02Z
 transitions: []
 tags: [flaiover, testing]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:26Z
 forecast:
   duration: 14m
-  delivery: 2026-11-11T13:03:00Z
-  basis: "Its own forecast of 14m; 17th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0704, S-0678, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689, S-0690, S-0691, S-0692, S-0693 and S-0694."
+  delivery: 2026-11-11T13:29:00Z
+  basis: "Its own forecast of 14m; 18th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0690, S-0691, S-0678, S-0686, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0689, S-0692, S-0693 and S-0694."
   by: flai
-  at: 2026-11-11T01:42:19Z
+  at: 2026-11-11T01:45:02Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:42Z

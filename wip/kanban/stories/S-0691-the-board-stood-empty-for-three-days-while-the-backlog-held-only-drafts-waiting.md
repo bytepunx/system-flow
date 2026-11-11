@@ -3,11 +3,14 @@ id: S-0691
 type: story
 nature: improvement
 title: The board stood empty for three days while the backlog held only drafts waiting on operator decisions nobody asked for again
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T01:42:19Z
-transitions: []
+updated: 2026-11-11T01:45:02Z
+transitions:
+  - to: ready
+    at: 2026-11-11T01:44:32Z
+    by: alex
 tags: [flai]
 topics: [ready, threads]
 touches: [design/adrs, design/adrs/README.md, flai/internal/inbox/starved.go, flai/internal/inbox/starved_test.go, flai/internal/serve/starved.go, flai/internal/serve/starved_test.go, flai/internal/serve/agents_launch.go, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0288-the-board-stood-empty-for-three-days-while-the-backlog-held-only-drafts-waiting.md, design/issues/summary.md]
@@ -58,10 +61,10 @@ cost_of_delay:
   at: 2026-11-10T10:56:15Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T13:06:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0704, S-0678, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689 and S-0690."
+  delivery: 2026-11-11T03:48:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688 and S-0690."
   by: flai
-  at: 2026-11-11T01:42:19Z
+  at: 2026-11-11T01:45:02Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:48Z
