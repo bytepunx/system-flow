@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-11T21:55:29Z
+updated: 2026-11-11T21:55:52Z
 ---
 
 # Active streams
@@ -8,7 +8,6 @@ updated: 2026-11-11T21:55:29Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0693](S-0693.md) | TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier | cancelled | agent-S-0693 | 2026-11-11T05:18:24Z |
-| [S-0707](S-0707.md) | The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's tool-result limit, because each tier's command lists every file it was given | review | agent-S-0707 | 2026-11-11T18:44:33Z |
 | [S-0711](S-0711.md) | sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt | in-progress | agent-S-0711 | 2026-11-11T21:54:58Z |
 | [S-0712](S-0712.md) | flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync | in-progress | agent-S-0712 | 2026-11-11T21:55:01Z |
 | [S-0714](S-0714.md) | TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out with "the setup src/routes/layout.css does not compile: 404, 404 page not found" while the main checkout's flaiover node_modules is intact | review | agent-S-0714 | 2026-11-11T19:10:16Z |
