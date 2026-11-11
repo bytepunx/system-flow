@@ -85,7 +85,10 @@ after it ends with its story in progress, 2 when unset and 0 for never
 The command and the name are the project's in the working directory, or of
 --project <root>; with --all-projects they are every project's, the host-wide
 fallback a project that sets none of its own reads (ADR-0261). The restart
-limit is host-wide whichever you give.`,
+limit is host-wide whichever you give.
+
+A change of the command's program or arguments lifts the hold of the old
+one's budget state, as flai serve agent harness does for a harness's.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			restartsSet := cmd.Flags().Changed("auto-restarts")
@@ -112,6 +115,7 @@ limit is host-wide whichever you give.`,
 			if err != nil {
 				return err
 			}
+			was := a.harnessIdentity(cfg.Agent.ForProject(root), harness.Command)
 			if restartsSet {
 				if cfg.Agent, err = cfg.Agent.WithAutoRestarts(restarts); err != nil {
 					return err
@@ -139,7 +143,13 @@ limit is host-wide whichever you give.`,
 			if err := config.Save(path, cfg); err != nil {
 				return err
 			}
-			return a.showAgentCommand(root)
+			var lifted []budgetLift
+			if len(args) > 0 {
+				if lifted, err = a.liftBudgets(cmd.Context(), cfg.Notify, "flai serve agent set", harness.Command, root, was, a.harnessIdentity(cfg.Agent.ForProject(root), harness.Command)); err != nil {
+					return err
+				}
+			}
+			return a.showAgentCommand(root, lifted...)
 		},
 	}
 	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
@@ -251,8 +261,9 @@ func fromSaid(from string) string {
 // showAgentCommand prints the agent settings that apply to the project at
 // root, or, with root "", to the one in the working directory, each saying
 // whether it is the project's own or every project's (ADR-0261); outside a
-// project, the host-wide ones.
-func (a *app) showAgentCommand(root string) error {
+// project, the host-wide ones; and the budget states the change just made
+// lifted, when it lifted any (S-0720).
+func (a *app) showAgentCommand(root string, lifted ...budgetLift) error {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return err
@@ -307,8 +318,12 @@ func (a *app) showAgentCommand(root string) error {
 			}
 			hosts[harness.Command] = s
 		}
-		return a.printJSON(map[string]any{"command": cmd, "command_from": commandFrom, "name": agent.Name, "name_from": nameFrom,
-			"harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled, "project": here})
+		shownAll := map[string]any{"command": cmd, "command_from": commandFrom, "name": agent.Name, "name_from": nameFrom,
+			"harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled, "project": here}
+		if len(lifted) > 0 {
+			shownAll["budget_cleared"] = lifted
+		}
+		return a.printJSON(shownAll)
 	}
 	if len(agent.Command) == 0 {
 		fmt.Fprintln(a.out, "no command is set, so a story whose agent and project name no harness starts on flai's built-in default, claude-code (ADR-0261); flai serve agent set -- <program> [args...] sets one")
@@ -337,6 +352,9 @@ func (a *app) showAgentCommand(root string) error {
 		} else {
 			fmt.Fprintln(a.out, "the agent action is off for this project; flai serve enable agent turns it on")
 		}
+	}
+	for _, l := range lifted {
+		fmt.Fprintf(a.out, "cleared the budget state of %s: %s; the next start on it is not held\n", l.Key, l.Why)
 	}
 	return nil
 }

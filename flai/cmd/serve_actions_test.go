@@ -3094,3 +3094,158 @@ func onTheHostsCommand(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 }
+
+// holdBudgets writes dir's budget.json with a state held for a day under each
+// of keys, as a run that ended on its usage limit leaves it.
+func holdBudgets(t *testing.T, dir serve.Dir, keys ...string) {
+	t.Helper()
+	states := map[string]serve.Budget{}
+	for _, k := range keys {
+		states[k] = serve.Budget{Provider: k, Limit: "usage_limit_reached", Status: 429, Since: time.Now().UTC(), Until: time.Now().UTC().Add(24 * time.Hour), Backoff: "5m0s"}
+	}
+	data, err := json.Marshal(states)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(string(dir), "budget.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0720: a change of a harness's program, for a project or for every
+// project, lifts the hold of the old program's budget state, and of a state
+// kept under the harness's name alone from before S-0720: it is cleared,
+// journaled under serve.budget with why, said, and sent as a notice. A state
+// of another program on the harness stays, and a change of anything else,
+// such as --guard, clears nothing.
+func TestServeAgentHarnessProgramChangeLiftsTheOldBudget(t *testing.T) {
+	t.Parallel()
+	dir := budgetFolder(t, "")
+	root := tempProject(t)
+	notices := filepath.Join(t.TempDir(), "notices")
+	if _, errOut, code := runIn(t, root, "serve", "notify", "set", "--command", "cat >> '"+notices+"'; echo >> '"+notices+"'"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "rmhclod"); code != 0 {
+		t.Fatal(errOut)
+	}
+	holdBudgets(t, dir, "claude-code rmhclod", "claude-code other")
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "meclod")
+	if code != 0 {
+		t.Fatalf("program change: %d %s", code, errOut)
+	}
+	why := "flai serve agent harness changed the claude-code harness's program from rmhclod to meclod for " + root
+	if !strings.Contains(out, "cleared the budget state of claude-code rmhclod: "+why) {
+		t.Errorf("the clear is said: %s", out)
+	}
+	if got := budgetKeys(t, dir); !slices.Equal(got, []string{"claude-code other"}) {
+		t.Errorf("the old program's state is cleared, another program's stays: %q", got)
+	}
+	entries := budgetJournal(t, dir)
+	if len(entries) != 1 || !strings.Contains(entries[0].Detail, why) || !strings.Contains(entries[0].Detail, "claude-code rmhclod") || entries[0].Root != root {
+		t.Errorf("journaled under serve.budget with why: %+v", entries)
+	}
+	if sent, err := os.ReadFile(notices); err != nil || !strings.Contains(string(sent), `"state":"cleared"`) || !strings.Contains(string(sent), `"provider":"claude-code rmhclod"`) || !strings.Contains(string(sent), why) {
+		t.Errorf("sent as a notice: %v %s", err, sent)
+	}
+	// a change of neither program, arguments, nor login clears nothing
+	holdBudgets(t, dir, "claude-code meclod")
+	if out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--guard", "none"); code != 0 || strings.Contains(out, "cleared the budget state") {
+		t.Fatalf("--guard none: %d %s %s", code, out, errOut)
+	}
+	if got := budgetKeys(t, dir); !slices.Equal(got, []string{"claude-code meclod"}) {
+		t.Errorf("--guard none leaves it held: %q", got)
+	}
+	// the arguments are part of what a change lifts
+	js, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--json", "--", "--permission-mode", "acceptEdits")
+	var shown struct {
+		Cleared []budgetLift `json:"budget_cleared"`
+	}
+	if err := json.Unmarshal([]byte(js), &shown); err != nil || code != 0 {
+		t.Fatalf("--json: %d %v %s %s", code, err, js, errOut)
+	}
+	if len(shown.Cleared) != 1 || shown.Cleared[0].Key != "claude-code meclod" || !strings.Contains(shown.Cleared[0].Why, "arguments from") {
+		t.Errorf("--json says the clear: %+v", shown.Cleared)
+	}
+	if got := budgetKeys(t, dir); len(got) != 0 {
+		t.Errorf("the next start is not held: %q", got)
+	}
+	// a state of the old shape, under the harness's name alone, is cleared
+	// by a change of every project's program, which is said
+	holdBudgets(t, dir, "claude-code", "opencode opencode")
+	if out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--all-projects", "--program", "/usr/local/bin/claude"); code != 0 ||
+		!strings.Contains(out, "cleared the budget state of claude-code: flai serve agent harness changed the claude-code harness's program from claude to /usr/local/bin/claude for every project") {
+		t.Fatalf("--all-projects: %d %s %s", code, out, errOut)
+	}
+	if got := budgetKeys(t, dir); !slices.Equal(got, []string{"opencode opencode"}) {
+		t.Errorf("the old-shape state is cleared, another harness's stays: %q", got)
+	}
+}
+
+// S-0720: a change of the container harness's login lifts the hold of the
+// old login's budget state. Not parallel: it sets HOME for ~/.
+func TestServeAgentHarnessLoginChangeLiftsTheOldBudget(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	rmh, me := filepath.Join(home, ".claude-rmh"), filepath.Join(home, ".claude-me")
+	for _, d := range []string{rmh, me} {
+		if err := os.Mkdir(d, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dir := budgetFolder(t, "")
+	root := tempProject(t)
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--login", "~/.claude-rmh"); code != 0 {
+		t.Fatal(errOut)
+	}
+	old := "container docker login " + rmh
+	holdBudgets(t, dir, old, "container docker login "+me)
+	// the network is not part of what a start runs as
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--network", "flai-agents"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if got := budgetKeys(t, dir); len(got) != 2 {
+		t.Errorf("--network leaves both held: %q", got)
+	}
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "container", "--login", "~/.claude-me")
+	if code != 0 || !strings.Contains(out, "cleared the budget state of "+old+": flai serve agent harness changed the container harness's login from "+rmh+" to "+me) {
+		t.Fatalf("login change: %d %s %s", code, out, errOut)
+	}
+	if got := budgetKeys(t, dir); !slices.Equal(got, []string{"container docker login " + me}) {
+		t.Errorf("the old login's state is cleared: %q", got)
+	}
+	if entries := budgetJournal(t, dir); len(entries) != 1 || !strings.Contains(entries[0].Detail, "login from "+rmh) {
+		t.Errorf("journaled: %+v", entries)
+	}
+}
+
+// S-0720: flai serve agent set lifts the hold of the old command's budget
+// state when it changes the command's program or arguments, and only then.
+func TestServeAgentSetLiftsTheOldCommandsBudget(t *testing.T) {
+	t.Parallel()
+	dir := budgetFolder(t, "")
+	root := tempProject(t)
+	if _, errOut, code := runIn(t, root, "serve", "agent", "set", "--", "run-a", "{story}"); code != 0 {
+		t.Fatal(errOut)
+	}
+	holdBudgets(t, dir, "command run-a")
+	if out, errOut, code := runIn(t, root, "serve", "agent", "set", "--name", "builder"); code != 0 || strings.Contains(out, "cleared the budget state") {
+		t.Fatalf("--name: %d %s %s", code, out, errOut)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "agent", "set", "--", "run-a", "{story}"); code != 0 || strings.Contains(out, "cleared the budget state") {
+		t.Fatalf("the same command: %d %s %s", code, out, errOut)
+	}
+	if got := budgetKeys(t, dir); !slices.Equal(got, []string{"command run-a"}) {
+		t.Errorf("neither changes it, so it stays held: %q", got)
+	}
+	out, errOut, code := runIn(t, root, "serve", "agent", "set", "--", "run-b", "{story}")
+	if code != 0 || !strings.Contains(out, `cleared the budget state of command run-a: flai serve agent set changed the command harness's program from run-a to run-b for `+root) {
+		t.Fatalf("program change: %d %s %s", code, out, errOut)
+	}
+	if got := budgetKeys(t, dir); len(got) != 0 {
+		t.Errorf("the old command's state is cleared: %q", got)
+	}
+	if entries := budgetJournal(t, dir); len(entries) != 1 {
+		t.Errorf("journaled: %+v", entries)
+	}
+}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 // harnessHost is the program and arguments a harness runs with under agent,
@@ -30,6 +32,98 @@ func (a *app) harnessHost(agent config.AgentStart, name string) harness.Host {
 	}
 	h.Images, h.Network, h.Login = maps.Clone(set.Images), set.Network, set.Login
 	return h
+}
+
+// harnessIdentity is what a start on the harness name runs as under agent,
+// as its budget state is keyed (serve.BudgetKey): the command's program and
+// arguments for the command harness, else harnessHost's.
+func (a *app) harnessIdentity(agent config.AgentStart, name string) harness.Host {
+	if name != harness.Command {
+		return a.harnessHost(agent, name)
+	}
+	if len(agent.Command) == 0 {
+		return harness.Host{}
+	}
+	return harness.Host{Program: agent.Command[0], Args: agent.Command[1:]}
+}
+
+// identityChanges says what of the program, the arguments, and the login
+// changed from was to now, such as "program from rmhclod to meclod"; none
+// when none did.
+func identityChanges(was, now harness.Host) []string {
+	var out []string
+	if was.Program != now.Program {
+		out = append(out, fmt.Sprintf("program from %s to %s", orNone(was.Program), orNone(now.Program)))
+	}
+	if !slices.Equal(was.Args, now.Args) {
+		out = append(out, fmt.Sprintf("arguments from %s to %s", orNone(quoteArgs(was.Args)), orNone(quoteArgs(now.Args))))
+	}
+	if was.Login != now.Login {
+		out = append(out, fmt.Sprintf("login from %s to %s", orNone(was.Login), orNone(now.Login)))
+	}
+	return out
+}
+
+// budgetLift is a budget state a change of a harness's identity cleared, and
+// why, as the command that made the change prints it.
+type budgetLift struct {
+	Key string `json:"key"`
+	Why string `json:"why"`
+}
+
+// liftBudgets lifts the hold the old identity of the harness name, was, puts
+// on its starts, once by, such as flai serve agent harness, has saved a
+// change to now for the project at root, or for every project with root ""
+// (S-0720): when the program, the arguments, or the login changed, it clears
+// the state kept under was's key and one kept under the harness's name alone
+// from before S-0720, journals each it removed under serve.budget, and sends
+// its notice through notify when a channel is set, a failure of either
+// warned of, as flai serve budget clear does. A change of nothing of those
+// clears nothing. A clear that fails is an error that says the setting was
+// saved and how to clear by hand.
+func (a *app) liftBudgets(ctx context.Context, notify config.Notify, by, name, root string, was, now harness.Host) ([]budgetLift, error) {
+	changes := identityChanges(was, now)
+	if len(changes) == 0 {
+		return nil, nil
+	}
+	// never no keys: ClearBudgets clears every state with none
+	keys := []string{serve.BudgetKey(name, was)}
+	if keys[0] != name {
+		keys = append(keys, name)
+	}
+	dir := a.serveDir()
+	cleared, err := dir.ClearBudgets(keys)
+	if err != nil {
+		hand := make([]string, len(keys))
+		for i, k := range keys {
+			hand[i] = serve.BudgetClearCommand(k)
+		}
+		return nil, fmt.Errorf("the setting was saved, but the budget state of the %s harness's old program and login was not cleared: %w; clear it by hand with %s",
+			name, err, strings.Join(hand, " and "))
+	}
+	if len(cleared.Removed) == 0 {
+		return nil, nil
+	}
+	scope, project := "every project", ""
+	if root != "" {
+		scope = root
+		registry, err := dir.Projects()
+		if err != nil {
+			a.logger().Warn("budget clear names no project: the registry is not read", "component", "serve", "err", err.Error())
+		}
+		for _, e := range registry {
+			if e.Root == root {
+				project = e.Key
+			}
+		}
+	}
+	why := fmt.Sprintf("%s changed the %s harness's %s for %s", by, name, strings.Join(changes, " and "), scope)
+	a.announceBudgetClears(ctx, cleared.Removed, budgetClearing{why: why, by: by, project: project, root: root}, notify)
+	out := make([]budgetLift, 0, len(cleared.Removed))
+	for _, b := range cleared.Removed {
+		out = append(out, budgetLift{Key: b.Provider, Why: why})
+	}
+	return out, nil
 }
 
 func quoteArgs(args []string) string {
@@ -91,6 +185,13 @@ under ~/; --login "" clears it.
 
 The command harness takes only --guard, --deny-protected, and --reset: its
 program and arguments are set with flai serve agent set.
+
+A change of the program, the arguments, or the login a harness runs with
+lifts the hold of the old one's budget state: the state kept under the
+harness and its old program and login, and one kept under the harness's name
+alone from before S-0720, are cleared, journaled, and sent as a notice like
+any other clear, so that the next start goes. A change of anything else
+clears nothing.
 
 A harness's entry is the project's in the working directory, or of
 --project <root>, and every project's, the host-wide fallback a project that
@@ -160,6 +261,7 @@ removes its entry, so that it reads every project's again.`,
 			if err != nil {
 				return err
 			}
+			was := a.harnessIdentity(cfg.Agent.ForProject(root), name)
 			// a project's first change starts from the entry it reads
 			h := cfg.Agent.ForProject(root).Harnesses[name]
 			if reset {
@@ -208,7 +310,11 @@ removes its entry, so that it reads every project's again.`,
 			if err := config.Save(path, cfg); err != nil {
 				return err
 			}
-			return a.showAgentCommand(root)
+			lifted, err := a.liftBudgets(cmd.Context(), cfg.Notify, "flai serve agent harness", name, root, was, a.harnessIdentity(cfg.Agent.ForProject(root), name))
+			if err != nil {
+				return err
+			}
+			return a.showAgentCommand(root, lifted...)
 		},
 	}
 	c.Flags().StringVar(&project, "project", "", "the main checkout of the project whose harness this is, not the one in the working directory")
