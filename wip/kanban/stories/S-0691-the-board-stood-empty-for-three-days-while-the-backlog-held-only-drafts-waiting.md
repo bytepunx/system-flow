@@ -6,7 +6,7 @@ title: The board stood empty for three days while the backlog held only drafts w
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:02Z
-updated: 2026-11-11T01:41:10Z
+updated: 2026-11-11T01:42:19Z
 transitions: []
 tags: [flai]
 topics: [ready, threads]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-10T10:56:15Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T13:05:00Z
-  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0676, S-0678, S-0674, S-0704, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689 and S-0690."
+  delivery: 2026-11-11T13:06:00Z
+  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0704, S-0678, S-0681, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0686, S-0689 and S-0690."
   by: flai
-  at: 2026-11-11T01:41:10Z
+  at: 2026-11-11T01:42:19Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:48Z

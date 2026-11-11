@@ -6,7 +6,7 @@ title: agent.status with 13 projects at once is not under 200 ms
 status: ready
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-11T01:40:45Z
+updated: 2026-11-11T01:42:19Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:56Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T03:35:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 3, behind S-0676."
+  delivery: 2026-11-11T03:39:00Z
+  basis: "Its own forecast of 1h30m; 1st in the pull order with an in-progress limit of 3, behind S-0674, S-0676 and S-0704."
   by: flai
-  at: 2026-11-11T01:40:45Z
+  at: 2026-11-11T01:42:19Z
 finalized:
   by: alex
   at: 2026-11-10T10:57:53Z
