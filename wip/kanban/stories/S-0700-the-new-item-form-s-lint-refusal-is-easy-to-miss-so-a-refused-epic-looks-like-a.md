@@ -6,7 +6,7 @@ title: The new item form's lint refusal is easy to miss, so a refused epic looks
 status: ready
 owner: alex
 created: 2026-11-10T08:55:31Z
-updated: 2026-11-11T05:07:32Z
+updated: 2026-11-11T05:20:51Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:27Z
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-11-10T10:27:56Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T08:19:00Z
-  basis: "Its own forecast of 45m; 9th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718, S-0696, S-0697 and S-0698."
+  delivery: 2026-11-11T08:33:00Z
+  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0694, S-0681, S-0718, S-0696, S-0697 and S-0698."
   by: flai
-  at: 2026-11-11T05:07:32Z
+  at: 2026-11-11T05:20:51Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:40Z

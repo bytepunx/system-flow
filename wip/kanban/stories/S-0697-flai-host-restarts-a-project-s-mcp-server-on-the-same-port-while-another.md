@@ -6,7 +6,7 @@ title: flai host restarts a project's MCP server on the same port while another 
 status: ready
 owner: alex
 created: 2026-11-10T08:54:33Z
-updated: 2026-11-11T05:07:32Z
+updated: 2026-11-11T05:20:51Z
 transitions:
   - to: ready
     at: 2026-11-11T02:31:09Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:28:31Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T07:34:00Z
-  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0690, S-0691, S-0693, S-0678, S-0686, S-0694, S-0681, S-0718 and S-0696."
+  delivery: 2026-11-11T07:48:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0678, S-0686, S-0691, S-0694, S-0681, S-0718 and S-0696."
   by: flai
-  at: 2026-11-11T05:07:32Z
+  at: 2026-11-11T05:20:51Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:41Z
