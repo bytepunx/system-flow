@@ -6,7 +6,7 @@ title: sendBackReason puts a CI check name and reviewer login unquoted into the 
 status: backlog
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-11T14:38:04Z
+updated: 2026-11-11T14:52:10Z
 transitions: []
 tags: []
 topics: [forge, orchestration]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-11T09:09:25Z
 forecast:
   duration: 1h
-  delivery: 2026-11-12T03:04:00Z
-  basis: "Its own forecast of 1h; 18th in the pull order with an in-progress limit of 3, behind S-0694, S-0719, S-0724, S-0716, S-0689, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707 and S-0709."
+  delivery: 2026-11-12T02:49:00Z
+  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0689, S-0716, S-0719, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707 and S-0709."
   by: flai
-  at: 2026-11-11T14:38:04Z
+  at: 2026-11-11T14:52:10Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:41Z
