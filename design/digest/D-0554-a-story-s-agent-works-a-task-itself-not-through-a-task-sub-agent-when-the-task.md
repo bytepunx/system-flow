@@ -2,7 +2,7 @@
 id: D-0554
 title: A story's agent works a task itself, not through a task sub-agent, when the task is a few lines in a file it has already read, since a hand-off would cost more reading than the edit
 kind: decision
-sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671]
+sources: [S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703]
 topics: [delegation, code, testing]
 paths: [design/conventions/delegation.md]
 date: 2026-11-10
@@ -32,4 +32,10 @@ S-0671, an improvement to `scripts/close-out.sh` and flai serve's close-out job 
 Each task is short, so the story's agent works them itself rather than through task sub-agents: a sub-agent would re-read what this session already holds.
 ```
 
-Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671 (`wip/archive/agents/<story>.md`, Decisions).
+S-0703, a remediation of I-0267 across three tasks of a few lines each, did the same, from its Decisions (`wip/archive/agents/S-0703.md`):
+
+```text
+I work the three tasks myself, with no task sub-agent: each is a few lines in one or two files, so a sub-agent's priming would cost more than the edit.
+```
+
+Sources: S-0649, S-0650, S-0653, S-0651, S-0652, S-0671, S-0703 (`wip/archive/agents/<story>.md`, Decisions).

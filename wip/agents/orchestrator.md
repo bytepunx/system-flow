@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2128.5599
-accrued_seconds: 1551204
-tasks_completed: 3081
-last_run: 2026-11-11T23:27:31Z
+accrued_cost: 2129.2658
+accrued_seconds: 1551360
+tasks_completed: 3087
+last_run: 2026-11-11T23:41:28Z
 ---
 
 # Orchestrator activity
@@ -21599,6 +21599,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1688 USD, estimated
+
+### 2026-11-11T23:39:48Z
+
+- Summary: Accepted S-0703 at 45a069e79f2a (close-out passed at the branch head, verifier matched both criteria to changed files, dry run showed no blockers); I-0267 closed by its fix to the test dashboard.
+- Items: S-0703
+- Seconds: 71
+- Cost: 0.2940 USD, estimated
+
+### 2026-11-11T23:40:07Z
+
+- Summary: Release policy threshold met after S-0703's acceptance (count 1 ≥ 1; value 22.5 of 1000 USD): ran flai formula run publish --ready --autocommit, instance S-0728 moved to ready (commit 1b3f27bea).
+- Items: S-0728, S-0703
+- Seconds: 19
+- Cost: 0.0596 USD, estimated
+
+### 2026-11-11T23:40:24Z
+
+- Summary: Ready-empty: flai promote --candidates lists none; ready holds S-0681 alone (held, no touches), so no order change. Left complete drafts S-0709 and S-0683 (pending recommendations on TH-1014 and TH-1044) and S-0241 (draft by design, TH-0790); incomplete drafts S-0659, S-0723, S-0725, S-0726 wait on planners, which TH-1083's missing image still holds back.
+- Items: S-0681, S-0709, S-0683, S-0241
+- Seconds: 17
+- Cost: 0.0605 USD, estimated
+
+### 2026-11-11T23:40:41Z
+
+- Summary: I accepted S-0703 and started the publish formula. Nothing could be added to the ready column, so I'm done.
+- Items: none
+- Seconds: 17
+- Cost: 0.0861 USD, estimated
+
+### 2026-11-11T23:41:11Z
+
+- Summary: Release due for S-0703 (threshold met: count 1 of 1, value 22.5 USD of 1000; nothing held by epic). Started no second publish run: publish formula instance S-0728 is already in progress (T-3127 done, T-3128 evaluate next) and will release S-0703.
+- Items: S-0703, S-0728
+- Seconds: 15
+- Cost: 0.0615 USD, estimated
+
+### 2026-11-11T23:41:28Z
+
+- Summary: A release is due for S-0703, and the publish run already under way will release it, so I started no second one.
+- Items: none
+- Seconds: 17
+- Cost: 0.1442 USD, estimated
 
 ## Refusals
 
