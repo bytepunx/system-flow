@@ -182,6 +182,8 @@ analysis:
     model: claude-fable-5-1
     config:
       effort: medium
+  schedule: "0 6 * * 1"
+  formula: analysis-cadence
 threads:
   remind_after: 4h
   remind_every: 24h
