@@ -3,10 +3,10 @@ id: S-0719
 type: story
 nature: improvement
 title: A trial merge that finds two open stories editing different sentences of one markdown paragraph is settled only by sending the second story back at acceptance
-status: review
+status: done
 owner: alex
 created: 2026-11-11T02:29:04Z
-updated: 2026-11-11T15:03:59Z
+updated: 2026-11-11T18:16:00Z
 transitions:
   - to: ready
     at: 2026-11-11T08:52:14Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T15:03:41Z
     by: agent-S-0719
+  - to: done
+    at: 2026-11-11T18:16:00Z
+    by: alex
 tags: []
 touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go, design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0346-a-trial-merge-that-finds-two-open-stories-editing-different-sentences-of-one.md, design/issues/summary.md, design/adrs/0287-a-section-merge-merges-a-paragraph-both-sides-change-by-its-sentences-keeping.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:

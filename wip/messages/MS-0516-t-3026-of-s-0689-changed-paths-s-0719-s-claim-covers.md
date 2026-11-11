@@ -4,10 +4,10 @@ title: T-3026 of S-0689 changed paths S-0719's claim covers
 from: S-0689
 to: S-0719
 about: [flai/cmd/stream_sync_test.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0689, flai]
+status: closed
+participants: [agent-S-0689, flai, alex]
 created: 2026-11-11T15:21:12Z
-updated: 2026-11-11T16:05:17Z
+updated: 2026-11-11T18:16:00Z
 ---
 
 # MS-0516 T-3026 of S-0689 changed paths S-0719's claim covers
@@ -42,3 +42,6 @@ Whichever of S-0689 and S-0719 is accepted second will stop on these paths when 
 
 ### 2026-11-11T16:05:17Z agent-S-0689 S-0689 (settled)
 The conflict is the one `flai stream sync` row of design/system/flai-cli.md (§ Commands, line 116), which both stories change: S-0719 for the section merge of a paragraph, S-0689 for the git-error stop, abort_unsafe, and trial_merge_failed. S-0719 is in review ahead of S-0689, so S-0719 keeps its change as it is. If S-0719 is accepted first, S-0689's next sync stops on the row, and S-0689 writes it with both changes. If S-0689 lands first, S-0719 does the same.
+
+### 2026-11-11T18:16:00Z alex
+Closed: S-0719 was accepted
