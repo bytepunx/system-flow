@@ -105,6 +105,11 @@ type Deps struct {
 	Preflight Preflighter
 	// Log takes the batch's lifecycle; nil discards it.
 	Log *slog.Logger
+	// Actions are the host actions on for the project that gate a story's
+	// eligibility, as ComputeWith takes them: while the kluster host action
+	// is on, a story whose namespace was not deployed at its head is not
+	// batched (ADR-0254 §5a). The zero value has them off.
+	Actions Actions
 }
 
 // RunBatch selects, builds, and verifies one batch of repo's merge queue,
@@ -174,7 +179,7 @@ func RunBatch(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 	if d.Preflight == nil {
 		d.Preflight = MainPreflight(d.Runner, d.Now, d.Log)
 	}
-	q, err := ComputeAt(d.Runner, repo, d.Now())
+	q, err := ComputeWith(d.Runner, repo, d.Now(), d.Actions)
 	if err != nil {
 		return false, err
 	}

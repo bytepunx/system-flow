@@ -18,6 +18,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -1176,13 +1177,20 @@ func TestRunBatchDoesNothingWhenThereIsNothingToBuild(t *testing.T) {
 	for _, tc := range []struct {
 		name, mode, state string
 		enqueue           bool
+		kluster           bool
 	}{
 		{name: "a verified batch waits", state: verified},
 		{name: "pull-request acceptance", mode: "pull-request", enqueue: true},
 		{name: "nothing enqueued"},
+		// ADR-0254 §5a: the batch reads Deps.Actions, so a story the kluster
+		// gate holds is not batched
+		{name: "the kluster gate holds the story", enqueue: true, kluster: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := project(t, tc.mode)
+			if tc.kluster {
+				repo.Manifest.Kluster = &manifest.Kluster{Config: "kluster.yaml"}
+			}
 			g := scriptedGit{}
 			s, _ := story(t, repo, "Ready", []bool{true}, t0.Add(time.Hour))
 			passed(t, repo, g, s.ID, "aaaa")
@@ -1197,7 +1205,7 @@ func TestRunBatchDoesNothingWhenThereIsNothingToBuild(t *testing.T) {
 			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
-			}}
+			}, Actions: Actions{Kluster: tc.kluster}}
 			ran, err := RunBatch(context.Background(), d, repo)
 			if ran || err != nil || called {
 				t.Errorf("ran %v, %v, verified %v; want nothing done", ran, err, called)

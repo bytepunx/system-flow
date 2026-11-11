@@ -203,6 +203,14 @@ func (q *queueRuns) release(root string) {
 // wait waits for every pass started to end.
 func (q *queueRuns) wait() { q.wg.Wait() }
 
+// actions are the host actions on for the project that gate a story's
+// eligibility for a batch, read from the host's configuration at this look:
+// the kluster host action, and the checks host action (ADR-0254 §5a).
+func (p *queuePass) actions() mergequeue.Actions {
+	on := func(action string) bool { return p.o.Host.Enabled != nil && p.o.Host.Enabled(action, p.e.Root) }
+	return mergequeue.Actions{Kluster: on(hostapi.ActionKluster), Checks: on(hostapi.ActionChecks)}
+}
+
 // queuePass runs the merge queue of one served project.
 type queuePass struct {
 	o     Options
@@ -359,7 +367,8 @@ func (p *queuePass) look(ctx context.Context) {
 	}
 	defer p.runs.release(p.e.Root)
 	git, started := gitOf(p.o), p.o.Now()
-	d := mergequeue.Deps{Runner: git, Now: p.o.Now, Verify: mergequeue.CheckoutVerifier(git, p.o.Version), Log: p.o.Logger.With("root", p.e.Root)}
+	d := mergequeue.Deps{Runner: git, Now: p.o.Now, Verify: mergequeue.CheckoutVerifier(git, p.o.Version), Log: p.o.Logger.With("root", p.e.Root),
+		Actions: p.actions()}
 	// a story the queue sent back that is in review again at a new commit
 	// has its send back's thread resolved, so that it can be batched again
 	if resolved, err := mergequeue.ResolveSentBack(d, repo); err != nil {

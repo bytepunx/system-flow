@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -671,4 +672,95 @@ func TestTheQueuesGitDoesNotGrowWithTheStoriesInReview(t *testing.T) {
 			t.Errorf("%d in review, none verified: the queue ran %q, want no git", n, calls)
 		}
 	}
+}
+
+// deployed writes the kluster record of story's namespace in repo's main
+// checkout: its deploy at commit with outcome, failed at failedStep when it
+// failed, and its checks' commit and outcome.
+func deployed(t *testing.T, repo *workitem.Repo, story, commit, outcome, failedStep, checksCommit, checksOutcome string) {
+	t.Helper()
+	ns, err := kluster.StoryNamespace(story)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(kluster.Record{Story: story, Namespace: ns, Commit: commit, Outcome: outcome, FailedStep: failedStep, ChecksCommit: checksCommit, ChecksOutcome: checksOutcome})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := kluster.RecordPath(repo.MainRoot, ns)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ADR-0254 §5a: while the kluster host action is on, a story whose
+// namespace was not deployed, or whose checks did not pass, at its branch's
+// head is listed with the reason kluster, naming the last job and its
+// outcome, and left out of every batch, as flai accept --batch would refuse
+// it; once the gate passes, or with the action off, it is eligible.
+func TestTheKlusterGateHoldsAStoryOutOfTheQueue(t *testing.T) {
+	repo := project(t, "")
+	repo.Manifest.Kluster = &manifest.Kluster{Config: "kluster.yaml"}
+	g := scriptedGit{}
+	s, _ := story(t, repo, "Deployed", []bool{true}, t0.Add(time.Hour))
+	passed(t, repo, g, s.ID, "aaaa")
+	writeState(t, repo.CacheDir(), `{"enqueued": [{"story": "`+s.ID+`", "by": "alex", "at": "2026-10-19T07:30:00Z"}]}`)
+	on := Actions{Kluster: true, Checks: true}
+	queue := func(act Actions) Queue {
+		t.Helper()
+		q, err := ComputeWith(g, repo, t0.Add(2*time.Hour), act)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return q
+	}
+	held := func(name string, act Actions, says ...string) {
+		t.Helper()
+		q := queue(act)
+		if len(q.Eligible) != 0 || len(q.Ineligible) != 1 {
+			t.Fatalf("%s: eligible %v, ineligible %v; want %s held", name, ids(q.Eligible), ids(q.Ineligible), s.ID)
+		}
+		e := q.Ineligible[0]
+		if got := kinds(e); !slices.Equal(got, []string{KindKluster}) {
+			t.Fatalf("%s: reasons %v, want only %s", name, got, KindKluster)
+		}
+		for _, w := range append(says, "ADR-0254", "flai kluster deploy "+s.ID) {
+			if !strings.Contains(e.Reasons[0].Text, w) {
+				t.Errorf("%s: reason %q does not say %q", name, e.Reasons[0].Text, w)
+			}
+		}
+		if picks := pick(q, "m1", 4); len(picks) != 0 {
+			t.Errorf("%s: batch %v, want none", name, ids(picks))
+		}
+	}
+	eligible := func(name string, act Actions) {
+		t.Helper()
+		q := queue(act)
+		if !slices.Equal(ids(q.Eligible), []string{s.ID}) || len(q.Ineligible) != 0 {
+			t.Errorf("%s: eligible %v, ineligible %+v; want %s eligible", name, ids(q.Eligible), q.Ineligible, s.ID)
+		}
+		if picks := pick(q, "m1", 4); !slices.Equal(ids(picks), []string{s.ID}) {
+			t.Errorf("%s: batch %v, want %s", name, ids(picks), s.ID)
+		}
+	}
+
+	held("never deployed", on, "was never deployed")
+	eligible("never deployed, the action off", Actions{Checks: true})
+	deployed(t, repo, s.ID, "aaaa", kluster.OutcomeFailed, kluster.StepDeploy, "", "")
+	held("deploy failed", on, "the deploy of "+s.ID, "failed at the deploy step")
+	eligible("deploy failed, the action off", Actions{})
+	deployed(t, repo, s.ID, "9999", kluster.OutcomePassed, "", "9999", kluster.OutcomePassed)
+	held("deployed at an older head", on, "was at 9999, not at the story's head aaaa")
+	deployed(t, repo, s.ID, "aaaa", kluster.OutcomePassed, "", "aaaa", kluster.OutcomeFailed)
+	held("checks failed", on, "checks run against it there ended failed", "and the checks run against it passed")
+	eligible("checks failed, checks off", Actions{Kluster: true})
+	deployed(t, repo, s.ID, "aaaa", kluster.OutcomePassed, "", "aaaa", kluster.OutcomePassed)
+	eligible("deploy and checks passed at the head", on)
+
+	repo.Manifest.Kluster = nil
+	deployed(t, repo, s.ID, "aaaa", kluster.OutcomeFailed, kluster.StepDeploy, "", "")
+	eligible("no kluster: block", on)
 }

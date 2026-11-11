@@ -20,6 +20,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -37,8 +38,9 @@ const (
 	KindCriteriaUnticked = "criteria_unticked" // an acceptance criterion is unticked
 	KindThreadOpen       = "thread_open"       // a thread on the story or one of its tasks is not resolved
 	KindUndoneMain       = "undone_main"       // a path is recorded as undoing main's change (ADR-0155)
-	KindUnreadable       = "unreadable"        // its last flai verify result or its record of undone paths cannot be read
+	KindUnreadable       = "unreadable"        // its last flai verify result, its record of undone paths, or its kluster namespace's record cannot be read
 	KindDirtyMain        = "dirty_main"        // its change would overwrite files the main checkout has not committed outside the shared set (ADR-0178, ADR-0248)
+	KindKluster          = "kluster"           // the kluster host action is on and its namespace was not deployed, or its checks did not pass, at its head (ADR-0254 §5a)
 )
 
 // Queue is the merge queue as it stands: the stories in review that are
@@ -186,6 +188,23 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 // ComputeAt is Compute with its Window as it stands at now, as flai queue
 // reads it with its own clock.
 func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error) {
+	return ComputeWith(r, repo, now, Actions{})
+}
+
+// Actions are the host actions on for the project that gate a story's
+// acceptance, and so its eligibility, as the caller reads them: Kluster, the
+// kluster host action, and Checks, the checks host action (ADR-0254 §5a).
+// The zero value has both off.
+type Actions struct {
+	Kluster bool
+	Checks  bool
+}
+
+// ComputeWith is ComputeAt with the host actions act on for the project:
+// while act.Kluster is on and the manifest has a kluster: block, a story in
+// review is eligible only while kluster.AcceptGate passes it at the head of
+// its branch, with act.Checks, as flai accept --batch refuses it otherwise.
+func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions) (Queue, error) {
 	q := Queue{Mode: repo.Manifest.Acceptance.ModeOrDefault(), Eligible: []Entry{}, Ineligible: []Entry{}, Enqueued: []Enqueued{}, Outcomes: []Outcome{}}
 	if repo.Manifest.Acceptance.PullRequest() {
 		q.Off, q.OffReason = true, OffUnderPullRequest
@@ -253,6 +272,9 @@ func ComputeAt(r execx.Runner, repo *workitem.Repo, now time.Time) (Queue, error
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		if reason := g.dirt.holds(r, repo, it.ID, e.Head); reason != nil {
+			e.Reasons = append(e.Reasons, *reason)
+		}
+		if reason := klusterHolds(repo, act, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		entries = append(entries, e)
@@ -512,6 +534,29 @@ func (d dirt) holds(r execx.Runner, repo *workitem.Repo, story, head string) *Re
 		return nil
 	}
 	return &Reason{Kind: KindDirtyMain, Paths: paths, Command: FreeCommand(paths), Text: HeldBackText(story, paths)}
+}
+
+// klusterHolds is the reason the kluster gate refuses story's acceptance at
+// head, its branch's head, naming the last job of its namespace and its
+// outcome, or nil while act.Kluster is off, the manifest has no kluster:
+// block, its head is not known, as for a story whose flai verify did not
+// pass, which is ineligible already, or the gate passes it (ADR-0254 §5a).
+func klusterHolds(repo *workitem.Repo, act Actions, story, head string) *Reason {
+	if !act.Kluster || repo.Manifest.Kluster == nil || head == "" {
+		return nil
+	}
+	ok, why, err := kluster.AcceptGate(repo.MainRoot, story, head, act.Checks)
+	if err != nil {
+		return &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read the kluster record of %s's namespace to check that it was deployed at %s: %v", story, short(head), err)}
+	}
+	if ok {
+		return nil
+	}
+	what := "its namespace's deploy passed"
+	if act.Checks {
+		what = "its namespace's deploy and the checks run against it passed"
+	}
+	return &Reason{Kind: KindKluster, Text: fmt.Sprintf("%s: while the kluster host action is on, the queue batches %s only once %s at the head of its branch (ADR-0254 §5a); fix what failed and move it to review again so that flai serve deploys it there, or deploy it with flai kluster deploy %s in a shell on the host", why, story, what, story)}
 }
 
 // plural names ids after one or many, with the verb that agrees.

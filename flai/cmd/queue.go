@@ -10,11 +10,25 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// queueActions reads the host actions that gate a story's eligibility for
+// the merge queue of the project whose main checkout is root, from the
+// configuration this flai reads: the kluster host action, and the checks
+// host action while it is on (ADR-0254 §5a).
+func (a *app) queueActions(root string) (mergequeue.Actions, error) {
+	k, err := a.hostActionOn(hostapi.ActionKluster, root)
+	if err != nil || !k {
+		return mergequeue.Actions{}, err
+	}
+	c, err := a.hostActionOn(hostapi.ActionChecks, root)
+	return mergequeue.Actions{Kluster: true, Checks: c}, err
+}
 
 func newQueueCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
@@ -45,7 +59,11 @@ queue does not run, because the forge's required checks gate each story
 			if err != nil {
 				return err
 			}
-			q, err := mergequeue.ComputeAt(a.runner, repo, a.now())
+			act, err := a.queueActions(mainRootOf(repo))
+			if err != nil {
+				return err
+			}
+			q, err := mergequeue.ComputeWith(a.runner, repo, a.now(), act)
 			if err != nil {
 				return err
 			}
