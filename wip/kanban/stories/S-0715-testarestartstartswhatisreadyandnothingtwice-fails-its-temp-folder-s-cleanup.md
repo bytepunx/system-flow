@@ -3,11 +3,14 @@ id: S-0715
 type: story
 nature: remediation
 title: "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cleanup with \"directory not empty\", as I-0048's and I-0233's serve tests did"
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T10:55:22Z
-updated: 2026-11-11T14:52:10Z
-transitions: []
+updated: 2026-11-11T16:15:10Z
+transitions:
+  - to: ready
+    at: 2026-11-11T16:15:02Z
+    by: orchestrator
 tags: []
 topics: [testing]
 touches: [flai/internal/serve/agents_test.go, design/issues/I-0343-testarestartstartswhatisreadyandnothingtwice-fails-its-temp-folder-s-cleanup.md, design/issues/summary.md]
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-11-11T09:04:21Z
 forecast:
   duration: 40m
-  delivery: 2026-11-12T03:34:00Z
-  basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0689, S-0716, S-0719, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707, S-0709, S-0711, S-0712 and S-0714."
+  delivery: 2026-11-11T17:11:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-11-11T14:52:10Z
+  at: 2026-11-11T16:15:10Z
 finalized:
   by: alex
   at: 2026-11-11T09:02:10Z

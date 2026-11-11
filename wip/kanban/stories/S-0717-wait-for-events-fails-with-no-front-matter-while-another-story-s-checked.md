@@ -6,7 +6,7 @@ title: wait_for_events fails with no front matter while another story's checked 
 status: backlog
 owner: alex
 created: 2026-11-11T01:43:38Z
-updated: 2026-11-11T14:52:10Z
+updated: 2026-11-11T16:15:10Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md, design/issues/summary.md]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-11T09:08:16Z
 forecast:
   duration: 1h
-  delivery: 2026-11-12T04:11:00Z
-  basis: "Its own forecast of 1h; 20th in the pull order with an in-progress limit of 3, behind S-0689, S-0716, S-0719, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707, S-0709, S-0711, S-0712, S-0714 and S-0715."
+  delivery: 2026-11-12T03:51:00Z
+  basis: "Its own forecast of 1h; 19th in the pull order with an in-progress limit of 3, behind S-0715, S-0707, S-0714, S-0711, S-0712, S-0720, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703 and S-0709."
   by: flai
-  at: 2026-11-11T14:52:10Z
+  at: 2026-11-11T16:15:10Z
 finalized:
   by: alex
   at: 2026-11-11T09:01:50Z

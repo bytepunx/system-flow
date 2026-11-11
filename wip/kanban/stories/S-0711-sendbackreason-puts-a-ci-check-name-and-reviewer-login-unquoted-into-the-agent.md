@@ -3,11 +3,14 @@ id: S-0711
 type: story
 nature: improvement
 title: sendBackReason puts a CI check name and reviewer login unquoted into the agent's prompt
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T09:56:05Z
-updated: 2026-11-11T14:52:10Z
-transitions: []
+updated: 2026-11-11T16:15:10Z
+transitions:
+  - to: ready
+    at: 2026-11-11T16:15:03Z
+    by: orchestrator
 tags: []
 topics: [forge, orchestration]
 touches: [flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/agents_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0340-sendbackreason-puts-a-ci-check-name-and-reviewer-login-unquoted-into-the-agent.md, design/issues/summary.md]
@@ -51,10 +54,10 @@ cost_of_delay:
   at: 2026-11-11T09:09:25Z
 forecast:
   duration: 1h
-  delivery: 2026-11-12T02:49:00Z
-  basis: "Its own forecast of 1h; 16th in the pull order with an in-progress limit of 3, behind S-0689, S-0716, S-0719, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701, S-0703, S-0707 and S-0709."
+  delivery: 2026-11-11T18:10:00Z
+  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 3, behind S-0715, S-0707 and S-0714."
   by: flai
-  at: 2026-11-11T14:52:10Z
+  at: 2026-11-11T16:15:10Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:41Z

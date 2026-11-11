@@ -3,11 +3,14 @@ id: S-0707
 type: story
 nature: improvement
 title: The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's tool-result limit, because each tier's command lists every file it was given
-status: backlog
+status: ready
 owner: alex
 created: 2026-11-10T09:11:42Z
-updated: 2026-11-11T14:52:10Z
-transitions: []
+updated: 2026-11-11T16:15:10Z
+transitions:
+  - to: ready
+    at: 2026-11-11T16:15:02Z
+    by: orchestrator
 tags: [flai, mcp]
 touches: [flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md, design/issues/summary.md]
 agent:
@@ -46,10 +49,10 @@ cost_of_delay:
   at: 2026-11-10T10:32:46Z
 forecast:
   duration: 45m
-  delivery: 2026-11-12T01:46:00Z
-  basis: "Its own forecast of 45m; 14th in the pull order with an in-progress limit of 3, behind S-0689, S-0716, S-0719, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701 and S-0703."
+  delivery: 2026-11-11T17:11:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0715."
   by: flai
-  at: 2026-11-11T14:52:10Z
+  at: 2026-11-11T16:15:10Z
 finalized:
   by: alex
   at: 2026-11-11T09:05:30Z
