@@ -2,12 +2,12 @@
 id: I-0333
 title: This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-10T08:41:34Z
 last_reported: 2026-11-10T08:41:34Z
-updated: 2026-11-10T08:54:37Z
+updated: 2026-11-11T08:52:58Z
 ---
 
 # I-0333 This repository's board.get takes 300 ms or more in half its calls with 13 boards at once, from the merge queue's git while stories are in review
@@ -24,3 +24,4 @@ S-0636 measured 13 board.get calls at once on the operator's host on 2026-11-09 
 ## Remediation
 
 Story S-0698 remediates this issue, created from it at 2026-11-10T08:54:37Z.
+Closed 2026-11-11T08:52:58Z: S-0698 (T-3000, T-3003): mergequeue.ComputeAt reads every branch head with one git for-each-ref (storygit.ReadHeads) beside the main checkout's one git status, and runs neither until a story in review has a passing flai verify result, so the merge queue's git no longer grows with the stories in review: in this repository 2 processes a board.get where it ran 6, merge.queue 34 ms at the median where it took 50, measured in design/system/server-performance.md (The merge queue's git read once). TestTheQueuesGitDoesNotGrowWithTheStoriesInReview holds it. What is left of the call is undone.read, recorded as I-0349.
