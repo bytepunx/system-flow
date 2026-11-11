@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -310,5 +313,123 @@ func TestTestStopsTheTierWhenTheCallIsCancelled(t *testing.T) {
 		if time.Now().After(deadline) {
 			t.Fatalf("the tier's process %s still runs after the call was cancelled", strings.TrimSpace(string(pid)))
 		}
+	}
+}
+
+// i0260Manifest is testManifest with a tier that, like gofmt's, is given
+// every file it selects as an argument and passes.
+var i0260Manifest = testManifest + `  - name: files
+    command: [sh, -c, "exit 0", sh, "{files}"]
+    paths: ["many/**"]
+`
+
+// I-0260: a tier given many files that passes no longer carries them in the
+// answer, which keeps within ctxpack.PartLimit bytes of JSON: the passing tier
+// gives the number of arguments its command ran with, paths is cut to its
+// first entries and paths_omitted counts the rest, and the tier that fails
+// keeps its command.
+func TestTestAnswersACommandOnlyForTheTierThatFailedAndFitsTheLimit(t *testing.T) {
+	t.Parallel()
+	f, git := testFixture(t)
+	root := f.repo.Root
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(i0260Manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "many"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const files = 1500
+	for i := range files {
+		name := fmt.Sprintf("a-file-whose-name-is-long-enough-to-matter-%04d.txt", i)
+		if err := os.WriteFile(filepath.Join(root, "many", name), []byte("x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git(root, "add", "-A")
+	git(root, "commit", "-q", "-m", "many")
+
+	out, failed := f.call(t, "test", map[string]any{"paths": []string{"many"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	data, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) > ctxpack.PartLimit {
+		t.Errorf("a passing run over %d files answers %d bytes, over %d", files, len(data), ctxpack.PartLimit)
+	}
+	if passed, _ := out["passed"].(bool); !passed {
+		t.Fatalf("the run did not pass: %v", out["tiers"])
+	}
+	tier := out["tiers"].([]any)[0].(map[string]any)
+	if _, ok := tier["command"]; ok {
+		t.Errorf("the passing tier carries its command: %d arguments", len(tier["command"].([]any)))
+	}
+	if args, _ := tier["args"].(float64); int(args) != files+4 {
+		t.Errorf("args = %v, want %d: the command's four words and every file", tier["args"], files+4)
+	}
+	paths, _ := out["paths"].([]any)
+	omitted, _ := out["paths_omitted"].(float64)
+	if len(paths) == 0 || int(omitted) == 0 || len(paths)+int(omitted) != files {
+		t.Errorf("%d paths and %v omitted, want some of each, %d in all", len(paths), out["paths_omitted"], files)
+	}
+
+	out, failed = f.call(t, "test", map[string]any{"paths": []string{"ok", "bad"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	for _, x := range out["tiers"].([]any) {
+		tier := x.(map[string]any)
+		_, has := tier["command"]
+		if want := tier["state"] == "failed"; has != want {
+			t.Errorf("tier %s, %s: command given %v, want %v", tier["name"], tier["state"], has, want)
+		}
+	}
+	if _, ok := out["paths_omitted"]; ok {
+		t.Errorf("a small answer cuts its paths: %v", out)
+	}
+}
+
+// fitTest cuts the paths first and then the failed tier's command, only as
+// far as the limit needs, and leaves a result within it as it is.
+func TestFitTestCutsThePathsThenTheFailedCommand(t *testing.T) {
+	t.Parallel()
+	many := func(prefix string, n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("%s/file-%04d.txt", prefix, i)
+		}
+		return out
+	}
+	one := 1
+	res := verify.Result{Paths: many("p", 2000), Tiers: []verify.TierResult{
+		{Name: "lint", Command: append([]string{"lint"}, many("p", 2000)...), State: verify.Passed},
+		{Name: "test", Command: append([]string{"test"}, many("q", 4000)...), State: verify.Failed, ExitCode: &one, Findings: []verify.Finding{{Message: "it broke"}}},
+		{Name: "smoke", Command: []string{"smoke"}, State: verify.NotReached},
+	}}
+	small := verify.Result{Passed: true, Paths: []string{"a"}, Tiers: []verify.TierResult{{Name: "lint", Command: []string{"lint", "a"}, State: verify.Passed}}}
+	if got := fitTest(small, ctxpack.PartLimit); len(got.Paths) != 1 || got.PathsOmitted != 0 || got.Tiers[0].Args != 2 || got.Tiers[0].Command != nil {
+		t.Errorf("a small result: %+v", got)
+	}
+
+	got := fitTest(res, ctxpack.PartLimit)
+	if size := testSize(got); size > ctxpack.PartLimit {
+		t.Errorf("the answer is %d bytes, over %d", size, ctxpack.PartLimit)
+	}
+	if len(got.Paths) != 0 || got.PathsOmitted != 2000 {
+		t.Errorf("paths %d, omitted %d: the paths go before the failed command", len(got.Paths), got.PathsOmitted)
+	}
+	lint, test, smoke := got.Tiers[0], got.Tiers[1], got.Tiers[2]
+	if lint.Command != nil || lint.Args != 2001 || smoke.Command != nil || smoke.Args != 1 {
+		t.Errorf("the tiers that did not fail: %+v %+v", lint, smoke)
+	}
+	if len(test.Command) == 0 || test.Command[0] != "test" || len(test.Command)+test.CommandOmitted != 4001 || test.CommandOmitted == 0 || test.Findings[0].Message != "it broke" {
+		t.Errorf("the failed tier: %d arguments, %d omitted, findings %v", len(test.Command), test.CommandOmitted, test.Findings)
+	}
+	n := len(test.Command) + 1
+	got.Tiers[1].Command, got.Tiers[1].CommandOmitted = res.Tiers[1].Command[:n], 4001-n
+	if testSize(got) <= ctxpack.PartLimit {
+		t.Errorf("the command was cut to %d arguments, though %d fit", n-1, n)
 	}
 }

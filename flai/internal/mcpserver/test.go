@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,13 +11,104 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const testDescription = "Run the project's test and lint tiers (S-0273): the tiers the manifest's tests declare, those the paths select, cheapest first, stopping at the first that fails. paths are files, folders, or Go package directories relative to the repository root (a folder stands for every file below it); with none, the paths are what the checkout changed against the main branch, its commits and what it has not committed; all runs every tier for the whole checkout, whatever paths says. It runs in story's worktree, as its branch has the manifest and the files, or, with no story, in the project's main checkout; a story with no worktree is refused. Answers passed, the paths the tiers were selected for, and each tier with its command, its state (passed, failed, not-reached, or skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place), its exit code, and its duration; the tier that failed carries its first failures as findings, each a name, a path, a line, and a message, never the whole log, at most max across the run (5 by default; omitted counts the rest). A failing tier is an answer, not an error; a manifest whose tests are not valid, or a path not in the checkout, is refused naming what to fix. Call it between tasks instead of running go test, vitest, golangci-lint, or gofmt by hand and reading their logs. flai test on the command line answers the same, and flai test --json prints this result."
+const testDescription = "Run the project's test and lint tiers (S-0273): the tiers the manifest's tests declare, those the paths select, cheapest first, stopping at the first that fails. paths are files, folders, or Go package directories relative to the repository root (a folder stands for every file below it); with none, the paths are what the checkout changed against the main branch, its commits and what it has not committed; all runs every tier for the whole checkout, whatever paths says. It runs in story's worktree, as its branch has the manifest and the files, or, with no story, in the project's main checkout; a story with no worktree is refused. Answers passed, the paths the tiers were selected for, and each tier with its state (passed, failed, not-reached, or skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place), its exit code, and its duration; the tier that failed carries its command as it ran, and its first failures as findings, each a name, a path, a line, and a message, never the whole log, at most max across the run (5 by default; omitted counts the rest). Every other tier gives args, the number of arguments its command ran with, in place of the command, which lists every file the tier was given. The whole answer fits 40,000 bytes of JSON: when it would not, paths is cut to its first entries, and then the failed tier's command, with paths_omitted and command_omitted counting what was left out. A failing tier is an answer, not an error; a manifest whose tests are not valid, or a path not in the checkout, is refused naming what to fix. Call it between tasks instead of running go test, vitest, golangci-lint, or gofmt by hand and reading their logs. flai test on the command line answers the same, and flai test --json prints this result with every tier's whole command and every path."
+
+// TestOut is the MCP tool test's answer: flai test --json's result with the
+// cuts that keep it within ctxpack.PartLimit bytes of JSON.
+type TestOut struct {
+	Passed bool     `json:"passed"`
+	Paths  []string `json:"paths,omitempty"`
+	// PathsOmitted counts the paths left out to fit the answer.
+	PathsOmitted int        `json:"paths_omitted,omitempty"`
+	Tiers        []TestTier `json:"tiers"`
+}
+
+// TestTier is one tier of TestOut: verify.TierResult with its command only
+// when it failed, and otherwise the number of arguments the command ran with.
+type TestTier struct {
+	Name    string   `json:"name"`
+	Command []string `json:"command,omitempty"`
+	// CommandOmitted counts the failed tier's arguments left out to fit.
+	CommandOmitted int              `json:"command_omitted,omitempty"`
+	Args           int              `json:"args,omitempty"`
+	Dir            string           `json:"dir,omitempty"`
+	State          verify.State     `json:"state"`
+	ExitCode       *int             `json:"exit_code,omitempty"`
+	DurationMS     int64            `json:"duration_ms"`
+	Duration       string           `json:"duration,omitempty"`
+	Findings       []verify.Finding `json:"findings,omitempty"`
+	Omitted        int              `json:"omitted,omitempty"`
+	CoveredBy      string           `json:"covered_by,omitempty"`
+	Log            string           `json:"log,omitempty"`
+}
+
+// fitTest is res as the tool answers it, within limit bytes of JSON where
+// cutting the paths and then the failed tier's command can make it so.
+func fitTest(res verify.Result, limit int) TestOut {
+	out := TestOut{Passed: res.Passed, Paths: res.Paths, Tiers: make([]TestTier, 0, len(res.Tiers))}
+	failed := -1
+	for i, t := range res.Tiers {
+		tier := TestTier{Name: t.Name, Dir: t.Dir, State: t.State, ExitCode: t.ExitCode, DurationMS: t.DurationMS, Duration: t.Duration, Findings: t.Findings, Omitted: t.Omitted, CoveredBy: t.CoveredBy, Log: t.Log}
+		if t.State == verify.Failed {
+			tier.Command = t.Command
+			failed = i
+		} else {
+			tier.Args = len(t.Command)
+		}
+		out.Tiers = append(out.Tiers, tier)
+	}
+	if testSize(out) <= limit {
+		return out
+	}
+	paths := res.Paths
+	n := fitted(len(paths), func(n int) bool {
+		out.Paths, out.PathsOmitted = paths[:n], len(paths)-n
+		return testSize(out) <= limit
+	})
+	out.Paths, out.PathsOmitted = paths[:n], len(paths)-n
+	if testSize(out) <= limit || failed < 0 {
+		return out
+	}
+	command := res.Tiers[failed].Command
+	tier := &out.Tiers[failed]
+	n = fitted(len(command), func(n int) bool {
+		tier.Command, tier.CommandOmitted = command[:n], len(command)-n
+		return testSize(out) <= limit
+	})
+	tier.Command, tier.CommandOmitted = command[:n], len(command)-n
+	return out
+}
+
+// fitted is the largest n from 0 to most for which fits holds, fits being
+// false for every n above the first it is false for; 0 when none fits.
+func fitted(most int, fits func(int) bool) int {
+	lo, hi := 0, most
+	for lo < hi {
+		mid := (lo + hi + 1) / 2
+		if fits(mid) {
+			lo = mid
+		} else {
+			hi = mid - 1
+		}
+	}
+	return lo
+}
+
+// testSize is the bytes of JSON out encodes to.
+func testSize(out TestOut) int {
+	data, err := json.Marshal(out)
+	if err != nil {
+		return 0
+	}
+	return len(data)
+}
 
 // TestIn runs the project's test tiers for paths in a checkout (S-0273).
 type TestIn struct {
@@ -29,15 +121,15 @@ type TestIn struct {
 
 func (in TestIn) project() string { return in.Project }
 
-// test answers what flai test --json prints for the checkout the call names:
-// the story's worktree or the main checkout.
-func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*mcp.CallToolResult, verify.Result, error) {
+// test answers what flai test --json prints for the checkout the call names,
+// the story's worktree or the main checkout, with fitTest's cuts.
+func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*mcp.CallToolResult, TestOut, error) {
 	if in.Max < 0 {
-		return nil, verify.Result{}, fmt.Errorf("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
+		return nil, TestOut{}, fmt.Errorf("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
 	}
 	root, err := s.testRoot(in.Story)
 	if err != nil {
-		return nil, verify.Result{}, err
+		return nil, TestOut{}, err
 	}
 	git := s.runner
 	if git == nil {
@@ -46,13 +138,13 @@ func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*
 	git = execx.Timed(ctx, git)
 	tiers, err := verify.CheckoutTiersFor(root, git, s.version)
 	if err != nil {
-		return nil, verify.Result{}, err
+		return nil, TestOut{}, err
 	}
 	var base string
 	if len(in.Paths) == 0 && !in.All {
 		base, err = storygit.MainBranch(git, projectRoot(s.repo))
 		if err != nil {
-			return nil, verify.Result{}, fmt.Errorf("find the main branch to count the changes against; name the paths to test instead: %w", err)
+			return nil, TestOut{}, fmt.Errorf("find the main branch to count the changes against; name the paths to test instead: %w", err)
 		}
 	}
 	args := make([]string, 0, len(in.Paths))
@@ -61,9 +153,9 @@ func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*
 	}
 	res, err := verify.Test(ctx, verify.Options{Root: root, Tiers: tiers, Args: args, All: in.All, Base: base, Git: git, RunOptions: verify.RunOptions{Max: in.Max}})
 	if err != nil {
-		return nil, verify.Result{}, err
+		return nil, TestOut{}, err
 	}
-	return nil, res, nil
+	return nil, fitTest(res, ctxpack.PartLimit), nil
 }
 
 // testRoot is the checkout a test call runs in: the worktree of the item
