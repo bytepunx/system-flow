@@ -6,7 +6,7 @@ title: flai task done's sync reports undoes_main for paths the story never chang
 status: ready
 owner: alex
 created: 2026-11-10T10:10:59Z
-updated: 2026-11-11T18:16:13Z
+updated: 2026-11-11T18:17:17Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-11T09:06:14Z
 forecast:
   duration: 1h
-  delivery: 2026-11-11T20:24:00Z
-  basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 3, behind S-0715, S-0707, S-0714 and S-0711."
+  delivery: 2026-11-11T20:25:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0689, S-0707, S-0714, S-0715 and S-0711."
   by: flai
-  at: 2026-11-11T18:16:13Z
+  at: 2026-11-11T18:17:17Z
 finalized:
   by: alex
   at: 2026-11-11T09:03:17Z
