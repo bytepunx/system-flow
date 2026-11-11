@@ -6,7 +6,7 @@ title: The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's to
 status: backlog
 owner: alex
 created: 2026-11-10T09:11:42Z
-updated: 2026-11-11T09:01:05Z
+updated: 2026-11-11T09:05:30Z
 transitions: []
 tags: [flai, mcp]
 touches: [flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md, design/issues/summary.md]
@@ -36,7 +36,6 @@ usage:
           cache_read: 51538468
           cache_write: 912167
           cost: 19.2585
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -51,6 +50,9 @@ forecast:
   basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 3, behind S-0694, S-0698, S-0702, S-0706, S-0710, S-0719, S-0724, S-0716, S-0689, S-0699, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663, S-0683, S-0701 and S-0703."
   by: flai
   at: 2026-11-11T09:01:05Z
+finalized:
+  by: alex
+  at: 2026-11-11T09:05:30Z
 ---
 # S-0707 The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's tool-result limit, because each tier's command lists every file it was given
 
