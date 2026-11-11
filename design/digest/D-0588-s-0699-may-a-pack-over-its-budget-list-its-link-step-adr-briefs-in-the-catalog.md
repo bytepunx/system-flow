@@ -6,8 +6,8 @@ sources: [TH-1023]
 topics: [flai, cli, go, code, all]
 paths: [flai/internal/topics/story.go, flai/internal/topics/story_test.go, flai/internal/context/context_test.go, flai/internal/mcpserver/prime_test.go, design/system/agent-context.md, design/issues/I-0261-a-story-s-prime-pack-came-in-22-parts-most-of-each-part-the-same-topic-sources.md, design/issues/summary.md]
 date: 2026-11-11
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/agent-context.md#delivered-in-parts"
 asked_again: []
 cited: [TH-1023, TH-1078]
 ---

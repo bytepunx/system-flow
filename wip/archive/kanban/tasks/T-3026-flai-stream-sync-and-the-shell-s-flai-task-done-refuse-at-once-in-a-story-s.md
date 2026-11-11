@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 21234
-      cache_read: 3749736
-      cache_write: 193244
-      cost: 2.2913
+      input: 42
+      output: 15701
+      cache_read: 3749232
+      cache_write: 174402
+      cost: 2.1572
 ---
 # T-3026 flai stream sync and the shell's flai task done refuse at once in a story's agent container, naming the MCP tools that sync on the host
 

@@ -3,16 +3,19 @@ id: S-0715
 type: story
 nature: remediation
 title: "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cleanup with \"directory not empty\", as I-0048's and I-0233's serve tests did"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T10:55:22Z
-updated: 2026-11-11T18:16:20Z
+updated: 2026-11-11T18:42:16Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:02Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-11T18:16:20Z
+    by: agent-S-0715
+  - to: review
+    at: 2026-11-11T18:42:16Z
     by: agent-S-0715
 tags: []
 topics: [testing]
@@ -23,9 +26,19 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1572
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      work: 53
+  models:
+    - model: claude-opus-5-5
+      input: 114
+      output: 15602
+      cache_read: 13385982
+      cache_write: 280575
+      cost: 5.2343
   strategic:
     - kind: planner
       seconds: 163
@@ -78,8 +91,8 @@ finalized:
 This story remediates [I-0343](../../../design/issues/I-0343-testarestartstartswhatisreadyandnothingtwice-fails-its-temp-folder-s-cleanup.md), "TestARestartStartsWhatIsReadyAndNothingTwice fails its temp folder's cleanup with "directory not empty", as I-0048's and I-0233's serve tests did". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0343 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0343 is closed with `flai issue close I-0343 --reason` saying what fixed it
+- [x] The cause I-0343 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0343 is closed with `flai issue close I-0343 --reason` saying what fixed it
 
 ## Tasks
 - T-3112 The agent lab waits for every launcher it makes before its temp folders go, so the restart test's fresh launcher no longer writes into a folder being removed

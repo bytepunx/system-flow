@@ -3,15 +3,36 @@ id: T-3114
 type: task
 nature: remediation
 title: The components dev server takes its port from outside the host's ephemeral range, so no other process's port 0 listener can be given it
-status: backlog
+status: done
 parent: S-0714
 owner: alex
 created: 2026-11-11T09:05:21Z
-updated: 2026-11-11T09:05:21Z
-transitions: []
+updated: 2026-11-11T18:27:03Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:18:02Z
+    by: agent-S-0714
+  - to: in-progress
+    at: 2026-11-11T18:18:02Z
+    by: agent-S-0714
+  - to: done
+    at: 2026-11-11T18:27:03Z
+    by: agent-S-0714
 stream: S-0714
 tags: [flai, components]
 touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go]
+usage:
+  source: log
+  seconds: 541
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 4166
+      cache_read: 1013710
+      cache_write: 52428
+      cost: 0.619
 ---
 # T-3114 The components dev server takes its port from outside the host's ephemeral range, so no other process's port 0 listener can be given it
 

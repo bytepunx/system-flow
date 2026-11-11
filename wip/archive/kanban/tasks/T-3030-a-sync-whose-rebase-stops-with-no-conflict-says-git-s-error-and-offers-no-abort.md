@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 140
-      output: 57373
-      cache_read: 10131423
-      cache_write: 522127
-      cost: 6.1909
+      input: 114
+      output: 42423
+      cache_read: 10130062
+      cache_write: 471216
+      cost: 5.8286
 ---
 # T-3030 A sync whose rebase stops with no conflict says git's error and offers no abort that cannot restore the branch, and a trial merge that cannot run is reported as not run
 

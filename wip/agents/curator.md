@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 233.1987
-accrued_seconds: 27080
-tasks_completed: 150
-last_run: 2026-11-11T14:53:37Z
+accrued_cost: 237.4740
+accrued_seconds: 27442
+tasks_completed: 152
+last_run: 2026-11-11T18:21:56Z
 ---
 
 # Curator activity
@@ -1211,3 +1211,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 76
 - Cost: 1.4761 USD, estimated
+
+### 2026-11-11T18:18:36Z
+
+- Summary: Wrote none; merged S-0724 and I-0348 into D-0477; absorbed D-0588 into `design/system/agent-context.md` § Delivered in parts; `flai digest compact` compacted nothing.
+- Trigger: accepted S-0724
+- Items: D-0477, D-0572, D-0588
+- Seconds: 171
+- Cost: 1.9999 USD, estimated
+
+### 2026-11-11T18:21:56Z
+
+- Summary: I wrote D-0593 and merged S-0706 and I-0259 into D-0477. No entry was absorbed, and `flai digest compact` compacted none. The harvest since 18:18:36Z found nothing, but S-0719, S-0716, S-0699, S-0705, and S-0706 were accepted while the previous run was going and none of it took them in, so this run did. Their other candidates were plans, progress, or decisions the design now records.
+- Trigger: accepted S-0699, S-0705, S-0706, S-0716, S-0719
+- Items: D-0477, D-0593
+- Seconds: 191
+- Cost: 2.2754 USD, estimated

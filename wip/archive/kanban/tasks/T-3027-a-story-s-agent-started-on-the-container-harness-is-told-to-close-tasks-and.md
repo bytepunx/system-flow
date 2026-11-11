@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 26758
-      cache_read: 4725229
-      cache_write: 243516
-      cost: 2.8874
+      input: 53
+      output: 19786
+      cache_read: 4724594
+      cache_write: 219772
+      cost: 2.7184
 ---
 # T-3027 A story's agent started on the container harness is told to close tasks and sync through the MCP tools task_done and verify, not flai stream sync in its shell
 

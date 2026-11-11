@@ -3,16 +3,37 @@ id: T-3113
 type: task
 nature: remediation
 title: Close I-0343 with what fixed it
-status: backlog
+status: done
 parent: S-0715
 owner: alex
 created: 2026-11-11T09:04:44Z
-updated: 2026-11-11T09:04:44Z
-transitions: []
+updated: 2026-11-11T18:23:51Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:23:41Z
+    by: agent-S-0715
+  - to: in-progress
+    at: 2026-11-11T18:23:42Z
+    by: agent-S-0715
+  - to: done
+    at: 2026-11-11T18:23:51Z
+    by: agent-S-0715
 stream: S-0715
 tags: [issues]
 touches: [design/issues/I-0343-testarestartstartswhatisreadyandnothingtwice-fails-its-temp-folder-s-cleanup.md, design/issues/summary.md]
 after: [T-3112]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 629
+      cache_read: 539811
+      cache_write: 11315
+      cost: 0.2111
 ---
 # T-3113 Close I-0343 with what fixed it
 

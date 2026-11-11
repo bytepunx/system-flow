@@ -3,16 +3,37 @@ id: T-3023
 type: task
 nature: remediation
 title: I-0260 is closed with the reason that the MCP tool test lists a command only for the tier that failed
-status: backlog
+status: done
 parent: S-0707
 owner: alex
 created: 2026-11-10T10:32:24Z
-updated: 2026-11-10T10:32:24Z
-transitions: []
+updated: 2026-11-11T18:34:54Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:34:43Z
+    by: agent-S-0707
+  - to: in-progress
+    at: 2026-11-11T18:34:46Z
+    by: agent-S-0707
+  - to: done
+    at: 2026-11-11T18:34:54Z
+    by: agent-S-0707
 stream: S-0707
 tags: [issues]
 touches: [design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md, design/issues/summary.md]
 after: [T-3019, T-3022]
+usage:
+  source: log
+  seconds: 8
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1358
+      cache_read: 591337
+      cache_write: 15559
+      cost: 0.2699
 ---
 # T-3023 I-0260 is closed with the reason that the MCP tool test lists a command only for the tier that failed
 

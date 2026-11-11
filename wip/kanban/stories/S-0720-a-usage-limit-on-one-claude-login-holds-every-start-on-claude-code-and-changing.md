@@ -3,14 +3,17 @@ id: S-0720
 type: story
 nature: remediation
 title: A usage limit on one Claude login holds every start on claude-code, and changing the harness's program or login does not lift it
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-11T05:05:59Z
-updated: 2026-11-11T18:16:13Z
+updated: 2026-11-11T21:55:05Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T21:55:05Z
+    by: agent-S-0720
 tags: [flai, flaiover, serve, budget]
 touches: [flai/internal/serve/budget.go, flai/cmd/serve_agent.go, design/system/flai-cli.md, flai/internal/serve/budget_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_start.go, flai/internal/serve/notify.go, flai/internal/serve/notify_test.go, flai/cmd/serve.go, flai/cmd/serve_budget.go, flai/cmd/serve_budget_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/components/BudgetBanner.svelte, flaiover/src/lib/components/BudgetBanner.svelte.test.ts, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
 agent:

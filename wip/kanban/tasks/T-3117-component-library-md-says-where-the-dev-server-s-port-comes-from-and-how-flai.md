@@ -3,16 +3,37 @@ id: T-3117
 type: task
 nature: remediation
 title: component-library.md says where the dev server's port comes from and how flai knows the answer is its vite's, and I-0342 is closed
-status: backlog
+status: done
 parent: S-0714
 owner: alex
 created: 2026-11-11T09:05:48Z
-updated: 2026-11-11T09:05:48Z
-transitions: []
+updated: 2026-11-11T19:01:31Z
+transitions:
+  - to: ready
+    at: 2026-11-11T19:01:04Z
+    by: agent-S-0714
+  - to: in-progress
+    at: 2026-11-11T19:01:04Z
+    by: agent-S-0714
+  - to: done
+    at: 2026-11-11T19:01:31Z
+    by: agent-S-0714
 stream: S-0714
 tags: [docs, components, issues]
 touches: [design/system/component-library.md, design/issues/I-0342-testeverylistedflaiovercomponentcompilesintheharness-fails-a-close-out-with-the.md, design/issues/summary.md]
 after: [T-3116]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 3932
+      cache_read: 956816
+      cache_write: 49486
+      cost: 0.5842
 ---
 # T-3117 component-library.md says where the dev server's port comes from and how flai knows the answer is its vite's, and I-0342 is closed
 

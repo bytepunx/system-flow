@@ -3,10 +3,10 @@ id: S-0714
 type: story
 nature: remediation
 title: "TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out with \"the setup src/routes/layout.css does not compile: 404, 404 page not found\" while the main checkout's flaiover node_modules is intact"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T10:54:41Z
-updated: 2026-11-11T18:16:21Z
+updated: 2026-11-11T19:10:26Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:03Z
@@ -14,17 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-11T18:16:21Z
     by: agent-S-0714
+  - to: review
+    at: 2026-11-11T19:10:21Z
+    by: agent-S-0714
 tags: []
-touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/harness/plugin.mjs, flai/internal/components/serve.go, flai/internal/components/flaiover_test.go, design/system/component-library.md, design/issues/I-0342-testeverylistedflaiovercomponentcompilesintheharness-fails-a-close-out-with-the.md, design/issues/summary.md]
+touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/harness/plugin.mjs, flai/internal/components/serve.go, flai/internal/components/flaiover_test.go, design/system/component-library.md, design/issues/I-0342-testeverylistedflaiovercomponentcompilesintheharness-fails-a-close-out-with-the.md, design/issues/summary.md, flai/cmd/components_test.go, flai/internal/serve/components_test.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3261
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 1
+      test_runs: 3
+      work: 41
+  models:
+    - model: claude-opus-5-5
+      input: 158
+      output: 58544
+      cache_read: 14246542
+      cache_write: 736817
+      cost: 8.6992
   strategic:
     - kind: planner
       seconds: 4
@@ -71,8 +86,8 @@ finalized:
 This story remediates [I-0342](../../../design/issues/I-0342-testeverylistedflaiovercomponentcompilesintheharness-fails-a-close-out-with-the.md), "TestEveryListedFlaioverComponentCompilesInTheHarness fails a close-out with "the setup src/routes/layout.css does not compile: 404, 404 page not found" while the main checkout's flaiover node_modules is intact". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0342 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0342 is closed with `flai issue close I-0342 --reason` saying what fixed it
+- [x] The cause I-0342 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0342 is closed with `flai issue close I-0342 --reason` saying what fixed it
 
 ## Tasks
 - T-3114 The components dev server takes its port from outside the host's ephemeral range, so no other process's port 0 listener can be given it

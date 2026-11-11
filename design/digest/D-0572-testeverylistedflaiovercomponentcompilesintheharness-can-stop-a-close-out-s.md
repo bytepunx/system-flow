@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0714]
 ---
 
 # D-0572 TestEveryListedFlaioverComponentCompilesInTheHarness can stop a close-out's integration tier with Go's 404 for flaiover's layout.css while other close-outs run, with node_modules intact; I-0342 records it and the close-out runs it again

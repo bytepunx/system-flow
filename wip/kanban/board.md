@@ -7,9 +7,6 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0711
-  - S-0712
-  - S-0720
   - S-0681
   - S-0718
 ---

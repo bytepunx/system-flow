@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 17043
-      cache_read: 3009657
-      cache_write: 155104
-      cost: 1.8391
+      input: 34
+      output: 12602
+      cache_read: 3009253
+      cache_write: 139980
+      cost: 1.7315
 ---
 # T-3033 The container harness's docs say that flai stream sync refuses there and the MCP tools task_done and verify sync on the host, and I-0272 is closed
 

@@ -3,10 +3,10 @@ id: S-0689
 type: story
 nature: remediation
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T18:17:00Z
+updated: 2026-11-11T21:55:28Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
@@ -20,9 +20,15 @@ transitions:
   - to: in-progress
     at: 2026-11-11T18:17:00Z
     by: flai
+  - to: review
+    at: 2026-11-11T18:28:58Z
+    by: agent-S-0689
+  - to: done
+    at: 2026-11-11T21:55:28Z
+    by: alex
 tags: [flai, git, container]
 topics: [git]
-touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md, flai/internal/taskdone/taskdone.go]
+touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md, flai/internal/taskdone/taskdone.go, design/issues/I-0351-a-git-rebase-continue-run-by-hand-after-a-sync-s-stop-meets-later-stops-on.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -30,19 +36,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5013
+  seconds: 5727
   priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 2
-      work: 54
+      ceremony: 4
+      work: 81
   models:
     - model: claude-opus-5-5
-      input: 396
-      output: 162699
-      cache_read: 28730924
-      cache_write: 1480659
-      cost: 17.5564
+      input: 458
+      output: 171076
+      cache_read: 40850477
+      cache_write: 1900225
+      cost: 23.5046
   strategic:
     - kind: planner
       seconds: 22
@@ -55,15 +61,15 @@ usage:
           cache_write: 8355
           cost: 0.1553
     - kind: orchestrator
-      seconds: 34
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 53
-          cache_read: 368001
-          cache_write: 53682
-          cost: 0.1183
+          input: 18
+          output: 125
+          cache_read: 653765
+          cache_write: 119453
+          cost: 0.2173
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m

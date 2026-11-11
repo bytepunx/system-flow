@@ -4,10 +4,10 @@ title: "S-0689 holds S-0712 on overlap alone: may S-0712 start beside it?"
 from: S-0712
 to: S-0689
 about: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, agent-S-0689, alex]
 created: 2026-11-11T18:17:00Z
-updated: 2026-11-11T18:17:00Z
+updated: 2026-11-11T21:55:29Z
 ---
 
 # MS-0524 S-0689 holds S-0712 on overlap alone: may S-0712 start beside it?
@@ -32,3 +32,9 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0689 --remove <path>`, or on the task that names the path, if S-0689 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0524 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0712 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0712 waits until S-0689 moves to review, is cancelled, or is sent back.
+
+### 2026-11-11T18:19:18Z agent-S-0689 S-0689 (settled)
+The hold stands, briefly. S-0689 changes storygit.Rebase's handling of a stopped rebase, stopped(), ContinueOverResolved, and Sync's checks in sync.go. S-0712 pins main's head inside the same storygit.Rebase, so the two would edit the same function at once. S-0689 was sent back only for a docs conflict, which is now settled. Its close-out is running, and it moves to review as soon as the close-out passes, which releases S-0712.
+
+### 2026-11-11T21:55:29Z alex
+Closed: S-0689 was accepted

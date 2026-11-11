@@ -3,15 +3,36 @@ id: T-3019
 type: task
 nature: remediation
 title: The MCP tool test answers a tier's command only when it failed, and its answer fits 40,000 bytes
-status: backlog
+status: done
 parent: S-0707
 owner: alex
 created: 2026-11-10T10:32:03Z
-updated: 2026-11-10T10:32:03Z
-transitions: []
+updated: 2026-11-11T18:28:58Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:18:40Z
+    by: agent-S-0707
+  - to: in-progress
+    at: 2026-11-11T18:18:43Z
+    by: agent-S-0707
+  - to: done
+    at: 2026-11-11T18:28:58Z
+    by: agent-S-0707
 stream: S-0707
 tags: [flai, mcp]
 touches: [flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go]
+usage:
+  source: log
+  seconds: 615
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 5494
+      cache_read: 2392284
+      cache_write: 62945
+      cost: 1.092
 ---
 # T-3019 The MCP tool test answers a tier's command only when it failed, and its answer fits 40,000 bytes
 

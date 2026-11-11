@@ -3,16 +3,37 @@ id: T-3115
 type: task
 nature: remediation
 title: The harness marks each answer with a token flai gave it, and the dev server's wait takes only an answer that carries it
-status: backlog
+status: done
 parent: S-0714
 owner: alex
 created: 2026-11-11T09:05:31Z
-updated: 2026-11-11T09:05:31Z
-transitions: []
+updated: 2026-11-11T18:54:04Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:27:20Z
+    by: agent-S-0714
+  - to: in-progress
+    at: 2026-11-11T18:27:20Z
+    by: agent-S-0714
+  - to: done
+    at: 2026-11-11T18:54:04Z
+    by: agent-S-0714
 stream: S-0714
 tags: [flai, components]
-touches: [flai/internal/components/harness/plugin.mjs, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/serve.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go]
+touches: [flai/internal/components/harness/plugin.mjs, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/serve.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/cmd/components_test.go, flai/internal/serve/components_test.go]
 after: [T-3114]
+usage:
+  source: log
+  seconds: 1604
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 18730
+      cache_read: 4557872
+      cache_write: 235729
+      cost: 2.7831
 ---
 # T-3115 The harness marks each answer with a token flai gave it, and the dev server's wait takes only an answer that carries it
 

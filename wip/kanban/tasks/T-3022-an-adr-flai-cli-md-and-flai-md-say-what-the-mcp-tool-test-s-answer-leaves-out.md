@@ -3,16 +3,37 @@ id: T-3022
 type: task
 nature: remediation
 title: An ADR, flai-cli.md, and flai.md say what the MCP tool test's answer leaves out
-status: backlog
+status: done
 parent: S-0707
 owner: alex
 created: 2026-11-10T10:32:10Z
-updated: 2026-11-10T10:32:10Z
-transitions: []
+updated: 2026-11-11T18:30:13Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:29:17Z
+    by: agent-S-0707
+  - to: in-progress
+    at: 2026-11-11T18:29:35Z
+    by: agent-S-0707
+  - to: done
+    at: 2026-11-11T18:30:13Z
+    by: agent-S-0707
 stream: S-0707
 tags: [flai, mcp, docs]
-touches: [design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, flai/internal/mcpserver/test.go]
 after: [T-3019]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1989
+      cache_read: 865882
+      cache_write: 22783
+      cost: 0.3952
 ---
 # T-3022 An ADR, flai-cli.md, and flai.md say what the MCP tool test's answer leaves out
 

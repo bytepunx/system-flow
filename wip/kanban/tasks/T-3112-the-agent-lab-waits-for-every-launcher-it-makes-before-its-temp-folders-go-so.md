@@ -3,15 +3,36 @@ id: T-3112
 type: task
 nature: remediation
 title: The agent lab waits for every launcher it makes before its temp folders go, so the restart test's fresh launcher no longer writes into a folder being removed
-status: backlog
+status: done
 parent: S-0715
 owner: alex
 created: 2026-11-11T09:04:38Z
-updated: 2026-11-11T09:04:38Z
-transitions: []
+updated: 2026-11-11T18:23:26Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:18:24Z
+    by: agent-S-0715
+  - to: in-progress
+    at: 2026-11-11T18:18:24Z
+    by: agent-S-0715
+  - to: done
+    at: 2026-11-11T18:23:26Z
+    by: agent-S-0715
 stream: S-0715
 tags: [flai, serve, test]
 touches: [flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 302
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 904
+      cache_read: 775427
+      cache_write: 16253
+      cost: 0.3032
 ---
 # T-3112 The agent lab waits for every launcher it makes before its temp folders go, so the restart test's fresh launcher no longer writes into a folder being removed
 

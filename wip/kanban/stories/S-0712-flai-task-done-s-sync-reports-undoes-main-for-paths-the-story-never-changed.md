@@ -3,14 +3,17 @@ id: S-0712
 type: story
 nature: remediation
 title: flai task done's sync reports undoes_main for paths the story never changed when main gains a commit during the sync
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T10:10:59Z
-updated: 2026-11-11T18:17:17Z
+updated: 2026-11-11T21:55:01Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:04Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-11T21:55:01Z
+    by: agent-S-0712
 tags: [flai, git]
 topics: [git]
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/system/workflow.md, docs/users/flai.md, design/issues/I-0338-flai-task-done-s-sync-reports-undoes-main-for-paths-the-story-never-changed.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/summary.md]

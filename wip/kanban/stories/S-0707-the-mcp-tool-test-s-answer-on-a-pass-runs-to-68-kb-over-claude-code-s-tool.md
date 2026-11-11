@@ -3,10 +3,10 @@ id: S-0707
 type: story
 nature: improvement
 title: The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's tool-result limit, because each tier's command lists every file it was given
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T09:11:42Z
-updated: 2026-11-11T18:16:20Z
+updated: 2026-11-11T18:44:24Z
 transitions:
   - to: ready
     at: 2026-11-11T16:15:02Z
@@ -14,17 +14,31 @@ transitions:
   - to: in-progress
     at: 2026-11-11T18:16:20Z
     by: agent-S-0707
+  - to: review
+    at: 2026-11-11T18:44:24Z
+    by: system-flow
 tags: [flai, mcp]
-touches: [flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, design/adrs, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md, design/issues/summary.md, design/adrs/0288-the-mcp-tool-test-answers-a-tier-s-command-only-for-the-tier-that-failed-gives.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1709
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 5
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 26176
+      cache_read: 11397228
+      cache_write: 299879
+      cost: 5.2024
   strategic:
     - kind: planner
       seconds: 176
@@ -77,8 +91,8 @@ finalized:
 This story remediates [I-0260](../../../design/issues/I-0260-the-mcp-tool-test-s-answer-on-a-pass-runs-to-68-kb-over-claude-code-s-tool.md), "The MCP tool test's answer on a pass runs to 68 KB, over Claude Code's tool-result limit, because each tier's command lists every file it was given". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0260 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0260 is closed with `flai issue close I-0260 --reason` saying what fixed it
+- [x] The cause I-0260 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0260 is closed with `flai issue close I-0260 --reason` saying what fixed it
 
 ## Tasks
 - T-3019 The MCP tool test answers a tier's command only when it failed, and its answer fits 40,000 bytes

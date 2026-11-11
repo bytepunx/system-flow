@@ -3,16 +3,37 @@ id: T-3116
 type: task
 nature: remediation
 title: TestEveryListedFlaioverComponentCompilesInTheHarness checks each answer is its own vite's and says so when another server answered
-status: backlog
+status: done
 parent: S-0714
 owner: alex
 created: 2026-11-11T09:05:39Z
-updated: 2026-11-11T09:05:39Z
-transitions: []
+updated: 2026-11-11T19:00:57Z
+transitions:
+  - to: ready
+    at: 2026-11-11T18:54:18Z
+    by: agent-S-0714
+  - to: in-progress
+    at: 2026-11-11T18:54:18Z
+    by: agent-S-0714
+  - to: done
+    at: 2026-11-11T19:00:57Z
+    by: agent-S-0714
 stream: S-0714
 tags: [flai, components, test]
 touches: [flai/internal/components/flaiover_test.go]
 after: [T-3115]
+usage:
+  source: log
+  seconds: 399
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7701
+      cache_read: 1873951
+      cache_write: 96919
+      cost: 1.1443
 ---
 # T-3116 TestEveryListedFlaioverComponentCompilesInTheHarness checks each answer is its own vite's and says so when another server answered
 

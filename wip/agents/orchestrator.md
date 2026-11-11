@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2123.0497
-accrued_seconds: 1550178
-tasks_completed: 3037
-last_run: 2026-11-11T18:17:19Z
+accrued_cost: 2123.6871
+accrued_seconds: 1550269
+tasks_completed: 3042
+last_run: 2026-11-11T18:30:09Z
 ---
 
 # Orchestrator activity
@@ -21291,6 +21291,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1459 USD, estimated
+
+### 2026-11-11T18:17:54Z
+
+- Summary: Release-due S-0705, S-0706: did not publish. release_evaluate (threshold) now answers not met, count 0 of 1, value 0 of 1000 USD/week: main already has b0c1613ce publish flai 1.86.17, flaiover 0.58.7 (tags flai/v1.86.17, flaiover/v0.58.7), which covers the 14 stories the pack listed. Publish formula instance S-0718 stays in ready; no new instance run.
+- Items: S-0705, S-0706, S-0718
+- Seconds: 28
+- Cost: 0.1226 USD, estimated
+
+### 2026-11-11T18:18:02Z
+
+- Summary: TH-1082 (S-0689 sent back on a rebase conflict in design/system/flai-cli.md): left alone. Its last entry is flai's notice, not a story's agent or a planner, and the thread is for S-0689's agent, which settles the conflict; flai serve resolves it once S-0689 is back in review.
+- Items: S-0689
+- Seconds: 8
+- Cost: 0.0000 USD
+
+### 2026-11-11T18:18:21Z
+
+- Summary: I did nothing for either reason this run: the release was already published, and the thread belongs to S-0689's agent.
+- Items: none
+- Seconds: 19
+- Cost: 0.1893 USD, estimated
+
+### 2026-11-11T18:29:51Z
+
+- Summary: TH-1082 is already resolved by flai serve (S-0689 back in review), nothing to do on it. S-0689 in review: the verify record names 61557a7, not the branch head 4663c68, so asked flai serve for its close-out; it started job S-0689-20261111T182945Z. Left S-0689 in review for a later run to read the verdict and accept.
+- Items: S-0689
+- Seconds: 18
+- Cost: 0.0990 USD, estimated
+
+### 2026-11-11T18:30:09Z
+
+- Summary: I haven't accepted S-0689 yet. A new close-out job for it is running, and a later run will read the verdict and accept it if it passes.
+- Items: none
+- Seconds: 18
+- Cost: 0.2265 USD, estimated
 
 ## Refusals
 
