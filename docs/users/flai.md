@@ -3226,7 +3226,7 @@ A check's state is `pending`, `passed`, or `failed`, then its log and its summar
 When a required check fails, or a reviewer requests changes, flai sends the story back to its agent:
 
 1. `flai serve` opens one thread on the story, titled such as `Pull request #12 of S-0042: the required check ci failed` or `Pull request #12 of S-0042: alex requested changes`. It names the check and links its log, or names the reviewer and links the review. It quotes the check's summary or the review's comment, up to 500 characters.
-2. flai moves the story from review to in-progress, by `flai`, with a reason naming the same, such as `the required check ci failed on 3f2a9c1d0b7e of pull request #12`.
+2. flai moves the story from review to in-progress, by `flai`, with a reason naming the same, such as ``the required check `ci` failed on 3f2a9c1d0b7e of pull request #12``. The reason puts each check's name and each reviewer's login in a code span, on one line, with its control characters dropped, since the agent started in step 3 is told it in its prompt.
 3. With the `agent` host action on, `flai serve` starts the story's agent again: in its last session when it has one, told the thread, or else in a new session told to take the story up. Its inbox lists the thread. This spends none of `agent.auto_restarts`, and the story keeps its place under the in-progress limit. A story whose agent `flai serve` did not start, such as your own session's, gets no agent started beside it; that session's inbox lists the thread.
 4. The agent fixes the branch, closes out, and moves the story to review again. `flai serve` pushes the fix at its next look. It resolves the thread once the story is back in review at a new commit, or once the story is done or cancelled.
 
