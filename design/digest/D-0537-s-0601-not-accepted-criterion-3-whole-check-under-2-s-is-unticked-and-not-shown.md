@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0961]
+cited: [S-0677, TH-0961]
 ---
 
 # D-0537 S-0601 not accepted: criterion 3 (whole check under 2 s) is unticked and not shown: I reworded criterion 3 and ticked it

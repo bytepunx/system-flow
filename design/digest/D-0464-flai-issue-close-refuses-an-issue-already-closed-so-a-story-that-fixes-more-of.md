@@ -9,7 +9,7 @@ date: 2026-11-02
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0675]
 ---
 
 # D-0464 flai issue close refuses an issue already closed, so a story that fixes more of a closed issue records its fix as body text in the issue's ## Remediation, after the close line

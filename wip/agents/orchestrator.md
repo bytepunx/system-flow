@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2102.1177
-accrued_seconds: 1545864
-tasks_completed: 2873
-last_run: 2026-11-10T20:21:43Z
+accrued_cost: 2102.1882
+accrued_seconds: 1545882
+tasks_completed: 2874
+last_run: 2026-11-11T01:40:43Z
 ---
 
 # Orchestrator activity
@@ -20143,6 +20143,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.2554 USD, estimated
+
+### 2026-11-11T01:40:43Z
+
+- Summary: Release due after S-0666's acceptance (policy threshold, met: count 2 at or over 1, value 37.5 USD of 1000, pending S-0665 and S-0666, S-0666 unvalued, nothing held by whole_epics). Did not run the publish formula again: its instance S-0704, made 2026-11-10T08:56:47Z, is in ready, not yet worked, and publishes everything accepted and unreleased when it runs, so it carries S-0666 too; a second instance would duplicate it.
+- Items: S-0666, S-0665, S-0704
+- Seconds: 18
+- Cost: 0.0705 USD, estimated
 
 ## Refusals
 

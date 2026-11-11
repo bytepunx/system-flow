@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1053]
 ---
 
 # D-0578 S-0667: should the zsh brace rule also go into the template's baseline tooling convention: Recommended: answer 1. Put the rule in the baseline through a follow-up story, and move S-0667 to review…

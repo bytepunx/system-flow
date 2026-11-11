@@ -3,10 +3,10 @@ id: S-0675
 type: story
 nature: improvement
 title: The merge queue builds one-story batches and runs three verifications per story landed
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:34:53Z
-updated: 2026-11-10T20:20:13Z
+updated: 2026-11-11T01:41:08Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:32Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-10T20:20:13Z
     by: agent-S-0675
+  - to: done
+    at: 2026-11-11T01:41:08Z
+    by: alex
 tags: [flai, merge-queue]
 topics: [orchestration, metrics]
 touches: [design/adrs, design/adrs/README.md, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/cmd/accept_queue_test.go, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/cmd/stats.go, design/system/workflow.md, design/system/metrics.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0287-the-merge-queue-builds-one-story-batches-and-runs-three-verifications-per-story.md, design/issues/summary.md, flai/cmd/stats_test.go]
