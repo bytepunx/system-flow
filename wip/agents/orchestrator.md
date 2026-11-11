@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2119.6382
-accrued_seconds: 1549587
-tasks_completed: 3012
-last_run: 2026-11-11T14:24:38Z
+accrued_cost: 2120.7191
+accrued_seconds: 1549749
+tasks_completed: 3019
+last_run: 2026-11-11T14:44:55Z
 ---
 
 # Orchestrator activity
@@ -21116,6 +21116,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.1217 USD, estimated
+
+### 2026-11-11T14:38:11Z
+
+- Summary: Accepted S-0710 at 8d436b30e08c under accept_reviews (merge queue off): close-out passed every step, verifier passed both criteria, dry run had no blockers; merged and archived
+- Items: S-0710
+- Seconds: 60
+- Cost: 0.3348 USD, estimated
+
+### 2026-11-11T14:38:31Z
+
+- Summary: Release evaluated after S-0710's acceptance: threshold met (count 8 >= 1; value 302.5 of 1000 USD/week). Started no new publish formula run: its open instance S-0718 is in ready and publishes everything pending, S-0710 included
+- Items: S-0710, S-0718
+- Seconds: 20
+- Cost: 0.0629 USD, estimated
+
+### 2026-11-11T14:38:46Z
+
+- Summary: I accepted S-0710 and merged it to main at commit `8d436b30e08c`. It is archived.
+- Items: none
+- Seconds: 15
+- Cost: 0.1216 USD, estimated
+
+### 2026-11-11T14:39:19Z
+
+- Summary: Release-due S-0710: release_evaluate met under threshold (count 8 >= 1; value 302.5 of 1000 USD/week; pending S-0686, S-0691, S-0696, S-0697, S-0698, S-0700, S-0702, S-0710). Started no publish formula run: its open instance S-0718 is in ready, held only by the full in-progress limit (3 of 3), and publishes all 8 when a story's agent pulls it; a second instance would duplicate it.
+- Items: S-0710, S-0718
+- Seconds: 19
+- Cost: 0.1018 USD, estimated
+
+### 2026-11-11T14:39:33Z
+
+- Summary: I didn't publish a release because one is already queued. The release is due, but S-0718, the publish story already in ready, will release everything when an agent picks it up.
+- Items: none
+- Seconds: 14
+- Cost: 0.0764 USD, estimated
+
+### 2026-11-11T14:44:39Z
+
+- Summary: S-0724 in review: last verify passed at 9e14aa6 but story/S-0724's head is bfab985, so asked flai serve for its close-out (job S-0724-20261111T144432Z); left in review until the verdict is recorded, then verify, dry-run, and accept.
+- Items: S-0724
+- Seconds: 18
+- Cost: 0.1042 USD, estimated
+
+### 2026-11-11T14:44:55Z
+
+- Summary: S-0724 is still in review and not accepted yet. Its close-out is re-running, and I'll verify and accept it once that passes.
+- Items: none
+- Seconds: 16
+- Cost: 0.2792 USD, estimated
 
 ## Refusals
 

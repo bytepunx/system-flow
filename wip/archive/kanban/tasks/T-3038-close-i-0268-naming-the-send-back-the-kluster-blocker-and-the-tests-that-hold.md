@@ -24,16 +24,16 @@ touches: [design/issues/I-0268-adr-0254-5a-s-send-back-of-a-story-whose-kluster-
 after: [T-3035]
 usage:
   source: log
-  seconds: 10
+  seconds: 13
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 40
-      cache_read: 393934
-      cache_write: 1350
-      cost: 0.1463
+      input: 5
+      output: 921
+      cache_read: 391785
+      cache_write: 5827
+      cost: 0.1368
 ---
 # T-3038 Close I-0268, naming the send-back, the kluster blocker, and the tests that hold them
 

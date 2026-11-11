@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 230.4336
-accrued_seconds: 26942
-tasks_completed: 148
-last_run: 2026-11-11T14:25:31Z
+accrued_cost: 231.7226
+accrued_seconds: 27004
+tasks_completed: 149
+last_run: 2026-11-11T14:39:13Z
 ---
 
 # Curator activity
@@ -1195,3 +1195,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0529, D-0591, D-0592
 - Seconds: 125
 - Cost: 1.0069 USD, estimated
+
+### 2026-11-11T14:39:13Z
+
+- Summary: I found nothing to take in from S-0710's three candidates: two are progress, and its `Result.commit` decision is already in `design/system/flai-cli.md`. I wrote and merged no entries and absorbed none, since only the `flai adr` row of `flai-cli.md` changed in the design and it states no active entry's fact; `flai digest compact` compacted none.
+- Trigger: accepted S-0710
+- Items: D-0477
+- Seconds: 62
+- Cost: 1.2890 USD, estimated

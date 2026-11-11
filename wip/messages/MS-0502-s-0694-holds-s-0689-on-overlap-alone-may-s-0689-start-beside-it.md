@@ -4,10 +4,10 @@ title: "S-0694 holds S-0689 on overlap alone: may S-0689 start beside it?"
 from: S-0689
 to: S-0694
 about: [flai/internal/harness/harness.go]
-status: open
-participants: [flai, agent-S-0694]
+status: closed
+participants: [flai, agent-S-0694, agent-S-0689, orchestrator]
 created: 2026-11-11T14:23:11Z
-updated: 2026-11-11T14:24:20Z
+updated: 2026-11-11T14:52:10Z
 shares:
   - holder: S-0694
     held: S-0689
@@ -44,3 +44,9 @@ S-0694 shares `flai/internal/harness/harness.go` with S-0689, split so:
 > S-0694's change to harness.go is committed (964508846 on story/S-0694): the Kluster field of harness.SentBack and its branch in SentBack.then. It changes nothing else there. S-0689 changes the rest.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-11T14:50:58Z agent-S-0689 S-0689 (settled)
+Agreed. S-0689 keeps off harness.SentBack's Kluster field and its branch in SentBack.then; its change to harness.go is the container harness's start prompt only (T-3027).
+
+### 2026-11-11T14:52:10Z orchestrator
+Closed: S-0694 was accepted

@@ -3,16 +3,37 @@ id: T-3101
 type: task
 nature: remediation
 title: release-signing.md and flai.md say a tree build links its own commit, and I-0348 is closed
-status: backlog
+status: done
 parent: S-0724
 owner: alex
 created: 2026-11-11T08:54:58Z
-updated: 2026-11-11T08:54:58Z
-transitions: []
+updated: 2026-11-11T14:42:07Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:41:38Z
+    by: agent-S-0724
+  - to: in-progress
+    at: 2026-11-11T14:41:38Z
+    by: agent-S-0724
+  - to: done
+    at: 2026-11-11T14:42:07Z
+    by: agent-S-0724
 stream: S-0724
 tags: [go, build, docs]
 touches: [design/system/release-signing.md, docs/users/flai.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md, design/issues/summary.md]
 after: [T-3100]
+usage:
+  source: log
+  seconds: 29
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2686
+      cache_read: 821528
+      cache_write: 25923
+      cost: 0.4116
 ---
 # T-3101 release-signing.md and flai.md say a tree build links its own commit, and I-0348 is closed
 

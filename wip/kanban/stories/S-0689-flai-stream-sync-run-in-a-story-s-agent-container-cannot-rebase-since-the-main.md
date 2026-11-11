@@ -3,14 +3,17 @@ id: S-0689
 type: story
 nature: remediation
 title: flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T14:23:13Z
+updated: 2026-11-11T14:50:40Z
 transitions:
   - to: ready
     at: 2026-11-11T08:53:38Z
     by: alex
+  - to: in-progress
+    at: 2026-11-11T14:50:40Z
+    by: agent-S-0689
 tags: [flai, git, container]
 topics: [git]
 touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/branch.go, flai/cmd/branch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/agent-adapters.md, docs/operators/runbooks/agent-container.md, design/issues/I-0272-flai-stream-sync-run-in-a-story-s-agent-container-cannot-rebase-since-the-main.md, design/issues/summary.md]

@@ -3,12 +3,18 @@ id: T-3107
 type: task
 nature: remediation
 title: Repo.List skips a work item file that does not parse and keeps its path and error for the check
-status: backlog
+status: in-progress
 parent: S-0716
 owner: alex
 created: 2026-11-11T08:56:33Z
-updated: 2026-11-11T08:56:33Z
-transitions: []
+updated: 2026-11-11T14:44:56Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:44:56Z
+    by: agent-S-0716
+  - to: in-progress
+    at: 2026-11-11T14:44:56Z
+    by: agent-S-0716
 stream: S-0716
 tags: [flai, workitem]
 touches: [flai/internal/workitem/store.go, flai/internal/workitem/repo.go, flai/internal/workitem/store_test.go]

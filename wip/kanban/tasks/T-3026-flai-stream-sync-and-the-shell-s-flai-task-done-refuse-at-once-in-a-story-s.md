@@ -3,12 +3,18 @@ id: T-3026
 type: task
 nature: remediation
 title: flai stream sync and the shell's flai task done refuse at once in a story's agent container, naming the MCP tools that sync on the host
-status: backlog
+status: in-progress
 parent: S-0689
 owner: alex
 created: 2026-11-10T10:32:53Z
-updated: 2026-11-11T08:55:04Z
-transitions: []
+updated: 2026-11-11T14:52:03Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:52:03Z
+    by: agent-S-0689
+  - to: in-progress
+    at: 2026-11-11T14:52:03Z
+    by: agent-S-0689
 stream: S-0689
 tags: [flai, git, container]
 touches: [flai/cmd/verify.go, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/workitem/repo.go, flai/internal/taskdone/taskdone_test.go, docs/users/flai-reference.md]

@@ -3,10 +3,10 @@ id: S-0724
 type: story
 nature: remediation
 title: A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-11T08:46:42Z
-updated: 2026-11-11T14:36:52Z
+updated: 2026-11-11T14:43:48Z
 transitions:
   - to: ready
     at: 2026-11-11T08:57:35Z
@@ -14,17 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-11-11T14:36:52Z
     by: agent-S-0724
+  - to: review
+    at: 2026-11-11T14:43:42Z
+    by: agent-S-0724
 tags: [go, build, worktree]
-touches: [scripts/flai-build.sh, scripts/flai-build-stamp-test.sh, scripts/smoke.sh, scripts/README.md, design/system/release-signing.md, docs/users/flai.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md, design/issues/summary.md]
+touches: [scripts/flai-build.sh, scripts/flai-build-stamp-test.sh, scripts/smoke.sh, scripts/README.md, design/system/release-signing.md, docs/users/flai.md, design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md, design/issues/summary.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 437
+  priced_by: harness
+  turns:
+    - day: 2026-11-11
+      ceremony: 4
+      hand_edits: 1
+      work: 36
+  models:
+    - model: claude-opus-5-5
+      input: 114
+      output: 26684
+      cache_read: 8161237
+      cache_write: 257526
+      cost: 4.0889
   strategic:
     - kind: planner
       seconds: 8
@@ -37,15 +52,15 @@ usage:
           cache_write: 10774
           cost: 0.2045
     - kind: orchestrator
-      seconds: 16
+      seconds: 34
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 14
-          cache_read: 77399
-          cache_write: 12390
-          cost: 0.025
+          input: 11
+          output: 86
+          cache_read: 369491
+          cache_write: 91458
+          cost: 0.1292
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -71,8 +86,8 @@ finalized:
 This story remediates [I-0348](../../../design/issues/I-0348-a-go-build-in-a-story-s-worktree-stamps-vcs-revision-of-the-main-checkout-s.md), "A go build in a story's worktree stamps vcs.revision of the main checkout's HEAD, so a worktree's bin/flai names the wrong commit". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0348 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0348 is closed with `flai issue close I-0348 --reason` saying what fixed it
+- [x] The cause I-0348 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0348 is closed with `flai issue close I-0348 --reason` saying what fixed it
 
 ## Tasks
 - T-3093 The smoke tier's flai-build-stamp-test.sh reproduces I-0348 in a scratch main checkout with a nested story worktree

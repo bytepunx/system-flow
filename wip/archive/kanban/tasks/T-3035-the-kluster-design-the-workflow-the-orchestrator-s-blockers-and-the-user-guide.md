@@ -29,11 +29,11 @@ usage:
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 529
-      cache_read: 4843239
-      cache_write: 148819
-      cost: 1.848
+      input: 68
+      output: 11626
+      cache_read: 4947921
+      cache_write: 73590
+      cost: 1.7279
 ---
 # T-3035 The kluster design, the workflow, the orchestrator's blockers, and the user guide say a failed deploy sends the story back and blocks its acceptance
 

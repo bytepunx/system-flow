@@ -24,7 +24,7 @@ touches: [flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test
 after: [T-3094]
 usage:
   source: log
-  seconds: 651
+  seconds: 652
   estimated: true
   priced_by: estimate
   models:

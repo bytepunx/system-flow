@@ -29,11 +29,11 @@ usage:
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 471
-      cache_read: 3743959
-      cache_write: 144881
-      cost: 1.4396
+      input: 79
+      output: 5676
+      cache_read: 3779872
+      cache_write: 122807
+      cost: 1.3417
 ---
 # T-3029 The merge queue lists a story the kluster gate refuses as ineligible, with the reason kluster, instead of batching it
 

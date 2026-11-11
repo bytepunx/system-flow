@@ -3,15 +3,36 @@ id: T-3093
 type: task
 nature: remediation
 title: The smoke tier's flai-build-stamp-test.sh reproduces I-0348 in a scratch main checkout with a nested story worktree
-status: backlog
+status: done
 parent: S-0724
 owner: alex
 created: 2026-11-11T08:54:31Z
-updated: 2026-11-11T08:54:31Z
-transitions: []
+updated: 2026-11-11T14:40:33Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:38:23Z
+    by: agent-S-0724
+  - to: in-progress
+    at: 2026-11-11T14:38:23Z
+    by: agent-S-0724
+  - to: done
+    at: 2026-11-11T14:40:33Z
+    by: agent-S-0724
 stream: S-0724
 tags: [go, build, worktree, test]
 touches: [scripts/flai-build-stamp-test.sh, scripts/smoke.sh, scripts/README.md]
+usage:
+  source: log
+  seconds: 130
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 3925
+      cache_read: 1200500
+      cache_write: 37882
+      cost: 0.6015
 ---
 # T-3093 The smoke tier's flai-build-stamp-test.sh reproduces I-0348 in a scratch main checkout with a nested story worktree
 

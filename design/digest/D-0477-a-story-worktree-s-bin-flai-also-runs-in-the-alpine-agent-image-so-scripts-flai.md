@@ -9,7 +9,7 @@ date: 2026-11-03
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0724]
 ---
 
 # D-0477 A story worktree's bin/flai also runs in the Alpine agent image, so scripts/flai-build.sh builds it with CGO_ENABLED=0, scripts/env.sh keeps tool caches in the home when .flai-cache is not writable, and the layer sets GOFLAGS=-buildvcs=false

@@ -3,16 +3,37 @@ id: T-3102
 type: task
 nature: improvement
 title: "Reproduce I-0346 in real git: two stories change different sentences of one paragraph of a design document, and neither sync nor acceptance stops"
-status: backlog
+status: done
 parent: S-0719
 owner: alex
 created: 2026-11-11T08:54:58Z
-updated: 2026-11-11T08:54:58Z
-transitions: []
+updated: 2026-11-11T14:50:41Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:40:26Z
+    by: agent-S-0719
+  - to: in-progress
+    at: 2026-11-11T14:40:26Z
+    by: agent-S-0719
+  - to: done
+    at: 2026-11-11T14:50:41Z
+    by: agent-S-0719
 stream: S-0719
 tags: [flai, go, test]
 touches: [flai/cmd/accept_conflict_test.go, flai/cmd/stream_sync_test.go]
 after: [T-3097]
+usage:
+  source: log
+  seconds: 612
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 279
+      cache_read: 2144660
+      cache_write: 75093
+      cost: 0.8219
 ---
 # T-3102 Reproduce I-0346 in real git: two stories change different sentences of one paragraph of a design document, and neither sync nor acceptance stops
 

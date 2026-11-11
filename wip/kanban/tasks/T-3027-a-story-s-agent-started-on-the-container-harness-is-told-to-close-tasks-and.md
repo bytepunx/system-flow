@@ -3,12 +3,18 @@ id: T-3027
 type: task
 nature: remediation
 title: A story's agent started on the container harness is told to close tasks and sync through the MCP tools task_done and verify, not flai stream sync in its shell
-status: backlog
+status: in-progress
 parent: S-0689
 owner: alex
 created: 2026-11-10T10:33:06Z
-updated: 2026-11-10T10:33:06Z
-transitions: []
+updated: 2026-11-11T14:52:03Z
+transitions:
+  - to: ready
+    at: 2026-11-11T14:52:03Z
+    by: agent-S-0689
+  - to: in-progress
+    at: 2026-11-11T14:52:03Z
+    by: agent-S-0689
 stream: S-0689
 tags: [flai, container]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go]

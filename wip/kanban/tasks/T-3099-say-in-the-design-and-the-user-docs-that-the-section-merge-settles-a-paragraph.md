@@ -24,16 +24,16 @@ touches: [design/system/workflow.md, design/system/agent-coordination.md, design
 after: [T-3094]
 usage:
   source: log
-  seconds: 651
+  seconds: 671
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 223
-      cache_read: 1136580
-      cache_write: 49098
-      cost: 0.439
+      input: 35
+      output: 231
+      cache_read: 1428293
+      cache_write: 55029
+      cost: 0.5492
 ---
 # T-3099 Say in the design and the user docs that the section merge settles a paragraph both sides change in different sentences
 

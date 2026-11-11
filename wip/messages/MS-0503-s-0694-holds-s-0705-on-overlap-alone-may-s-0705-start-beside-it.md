@@ -4,10 +4,10 @@ title: "S-0694 holds S-0705 on overlap alone: may S-0705 start beside it?"
 from: S-0705
 to: S-0694
 about: [flai/internal/harness/harness.go, design/system/strategic-agents.md]
-status: open
-participants: [flai, agent-S-0694]
+status: closed
+participants: [flai, agent-S-0694, orchestrator]
 created: 2026-11-11T14:23:11Z
-updated: 2026-11-11T14:24:21Z
+updated: 2026-11-11T14:52:10Z
 shares:
   - holder: S-0694
     held: S-0705
@@ -44,3 +44,6 @@ S-0694 shares `flai/internal/harness/harness.go`, `design/system/strategic-agent
 > S-0694's change to harness.go is committed (964508846 on story/S-0694): the Kluster field of harness.SentBack and its branch in SentBack.then, nothing else. In strategic-agents.md, S-0694 changes only the orchestrator's acceptance blockers, to add kluster. S-0705 changes the role-file and container-harness passages.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-11T14:52:10Z orchestrator
+Closed: S-0694 was accepted

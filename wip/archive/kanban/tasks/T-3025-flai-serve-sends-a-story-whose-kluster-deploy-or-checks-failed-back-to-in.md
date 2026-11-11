@@ -29,11 +29,11 @@ usage:
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 127
-      output: 609
-      cache_read: 6641060
-      cache_write: 362542
-      cost: 2.5926
+      input: 109
+      output: 3218
+      cache_read: 6672190
+      cache_write: 338454
+      cost: 2.4078
 ---
 # T-3025 flai serve sends a story whose kluster deploy or checks failed back to in-progress, starts its agent, and keeps its namespace
 
