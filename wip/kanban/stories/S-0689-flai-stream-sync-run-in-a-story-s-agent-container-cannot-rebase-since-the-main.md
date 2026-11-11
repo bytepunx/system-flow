@@ -6,7 +6,7 @@ title: flai stream sync run in a story's agent container cannot rebase, since th
 status: backlog
 owner: alex
 created: 2026-11-10T08:49:00Z
-updated: 2026-11-11T08:48:03Z
+updated: 2026-11-11T08:53:19Z
 transitions: []
 tags: [flai, git, container]
 topics: [git]
@@ -16,7 +16,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -31,6 +30,9 @@ forecast:
   basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 3, behind S-0693, S-0698, S-0702, S-0694, S-0705, S-0681, S-0718, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
   by: flai
   at: 2026-11-11T08:48:03Z
+finalized:
+  by: alex
+  at: 2026-11-11T08:53:19Z
 ---
 # S-0689 flai stream sync run in a story's agent container cannot rebase, since the main checkout's .git is read-only, and the git rebase --abort it names leaves HEAD detached
 
