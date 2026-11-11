@@ -6,7 +6,7 @@ title: TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a 
 status: ready
 owner: alex
 created: 2026-11-10T08:49:04Z
-updated: 2026-11-11T01:46:11Z
+updated: 2026-11-11T02:27:14Z
 transitions:
   - to: ready
     at: 2026-11-11T01:45:19Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-11-10T10:29:13Z
 forecast:
   duration: 45m
-  delivery: 2026-11-11T04:28:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692 and S-0690."
+  delivery: 2026-11-11T03:44:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 3, behind S-0690 and S-0692."
   by: flai
-  at: 2026-11-11T01:46:11Z
+  at: 2026-11-11T02:27:14Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:04:43Z

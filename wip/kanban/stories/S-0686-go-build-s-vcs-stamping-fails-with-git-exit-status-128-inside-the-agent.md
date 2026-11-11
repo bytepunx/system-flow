@@ -6,7 +6,7 @@ title: go build's VCS stamping fails with git exit status 128 inside the agent c
 status: ready
 owner: alex
 created: 2026-11-10T08:37:12Z
-updated: 2026-11-11T01:46:11Z
+updated: 2026-11-11T02:27:14Z
 transitions:
   - to: ready
     at: 2026-11-11T01:44:14Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-11-10T10:34:53Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-11T05:56:00Z
-  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0674, S-0676, S-0688, S-0695, S-0692, S-0690, S-0693, S-0691 and S-0678."
+  delivery: 2026-11-11T04:57:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0690, S-0692, S-0693, S-0691 and S-0678."
   by: flai
-  at: 2026-11-11T01:46:11Z
+  at: 2026-11-11T02:27:14Z
 finalized:
   by: orchestrator
   at: 2026-11-10T11:10:11Z
