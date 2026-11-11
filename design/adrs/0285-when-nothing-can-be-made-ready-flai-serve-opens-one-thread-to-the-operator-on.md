@@ -6,6 +6,7 @@ date: 2026-11-11
 supersedes: []
 superseded_by: []
 refines: [ADR-0205, ADR-0211, ADR-0279]
+topics: [cli, orchestration, ready, threads]
 ---
 
 # ADR-0285 When nothing can be made ready, flai serve opens one thread to the operator on the board that lists each backlog story's decision, adds an entry only when the list changes, and resolves it once a story can start
