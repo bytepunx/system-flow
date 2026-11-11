@@ -3,7 +3,10 @@
 # flaiover-install.sh: a flaiover install made from another store, as a bare
 # pnpm add makes it from the default store, then flaiover-install.sh
 # --if-needed with no TTY, which must pass and leave the install on env.sh's
-# store. The packages are local folders, so it needs no network.
+# store. Then reproduces I-0259: one install from flaiover's pnpm-workspace.yaml
+# must hold both a glibc and a musl optional package, and --if-needed must
+# install again once the install configuration is newer than the last install.
+# The packages are local folders, so it needs no network.
 set -eu
 . "$(dirname "$0")/env.sh"
 tmp="$(mktemp -d)"
@@ -40,3 +43,65 @@ if [ ! -d node_modules/dep ] || [ ! -d node_modules/dep2 ]; then
   exit 1
 fi
 echo "flaiover-install-test: an install from another store is made again from env.sh's store"
+
+# I-0259: a worktree's node_modules is shared by the host (glibc) and the
+# Alpine agent container (musl), so one install must hold both libcs' native
+# bindings, and an install made before the setting must be made again. Two
+# local optional packages, one per libc, stand in for rolldown's bindings.
+lib="$tmp/libc"
+mkdir -p "$lib/scripts" "$lib/flaiover" "$lib/gnu" "$lib/musl"
+cp "$ROOT/scripts/env.sh" "$ROOT/scripts/flaiover-install.sh" "$lib/scripts/"
+printf '{"name":"bind-gnu","version":"1.0.0","libc":["glibc"]}\n' >"$lib/gnu/package.json"
+printf '{"name":"bind-musl","version":"1.0.0","libc":["musl"]}\n' >"$lib/musl/package.json"
+printf '{"name":"fixture","private":true,"optionalDependencies":{"bind-gnu":"file:../gnu","bind-musl":"file:../musl"}}\n' >"$lib/flaiover/package.json"
+cd "$lib/flaiover"
+# pnpm's resolution skips an optional package for another libc, as it skips
+# rolldown's; a frozen install links local folders whatever their libc, so
+# each check resolves afresh
+resolve() {
+  rm -rf node_modules pnpm-lock.yaml
+  if ! out="$(pnpm install --no-frozen-lockfile </dev/null 2>&1)"; then
+    printf '%s\n' "$out"
+    echo "flaiover-install-test: the libc fixture's install failed"
+    exit 1
+  fi
+}
+resolve
+if [ -d node_modules/bind-gnu ] && [ -d node_modules/bind-musl ]; then
+  echo "flaiover-install-test: both libc variants landed without supportedArchitectures, so the fixture shows nothing"
+  exit 1
+fi
+cp "$ROOT/flaiover/pnpm-workspace.yaml" pnpm-workspace.yaml
+resolve
+if [ ! -d node_modules/bind-gnu ] || [ ! -d node_modules/bind-musl ]; then
+  ls node_modules
+  echo "flaiover-install-test: flaiover/pnpm-workspace.yaml does not install both the glibc and the musl variant (I-0259)"
+  exit 1
+fi
+# --if-needed installs again once the lockfile or the install configuration is
+# newer than its stamp, and skips otherwise
+installs() {
+  if ! out="$("$lib/scripts/flaiover-install.sh" --if-needed </dev/null 2>&1)"; then
+    printf '%s\n' "$out"
+    echo "flaiover-install-test: flaiover-install.sh --if-needed failed in the libc fixture"
+    exit 1
+  fi
+  case "$out" in *"installing flaiover's dependencies"*) return 0 ;; esac
+  return 1
+}
+sleep 1
+touch node_modules/.modules.yaml
+if installs; then
+  echo "flaiover-install-test: --if-needed installed again with nothing newer than the last install"
+  exit 1
+fi
+for f in pnpm-workspace.yaml package.json; do
+  sleep 1
+  touch "$f"
+  installs || { echo "flaiover-install-test: --if-needed skipped the install after $f changed (I-0259)"; exit 1; }
+  if installs; then
+    echo "flaiover-install-test: --if-needed installed again right after installing for $f"
+    exit 1
+  fi
+done
+echo "flaiover-install-test: one install holds both libc variants, and a newer install configuration installs again"
