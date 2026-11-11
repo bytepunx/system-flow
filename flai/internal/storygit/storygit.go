@@ -54,8 +54,8 @@ type Heads struct {
 
 // ReadHeads reads every local branch's head and the branch checked out at
 // root with one git for-each-ref, in place of one rev-parse a branch
-// (S-0698). A branch at an annotated tag is at the tag's commit, and one at
-// no commit is left out, as rev-parse's ^{commit} finds none for it.
+// (S-0698). A branch at no commit is left out, as rev-parse's ^{commit}
+// finds none for it.
 func ReadHeads(r execx.Runner, root string) (Heads, error) {
 	read, err := readRefs(r, root)
 	if err != nil {

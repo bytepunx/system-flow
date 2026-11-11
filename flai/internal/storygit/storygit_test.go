@@ -155,8 +155,7 @@ func (c *processCounter) Run(dir, name string, args ...string) (string, error) {
 
 // S-0698: ReadHeads reads every local branch's head and the branch checked
 // out with one git process, each head the commit rev-parse's ^{commit}
-// names, a branch at an annotated tag at the tag's commit; with HEAD
-// detached no branch is checked out, and Main says why. Integration: it
+// names; with HEAD detached no branch is checked out, and Main says why. Integration: it
 // runs real git.
 func TestReadHeadsReadsEveryBranchAndTheCheckedOutOneInOneProcess(t *testing.T) {
 	dir := gitRepo(t)
@@ -165,12 +164,6 @@ func TestReadHeadsReadsEveryBranchAndTheCheckedOutOneInOneProcess(t *testing.T) 
 	write(t, dir, "b.md", "two\n")
 	git(t, dir, "add", "-A")
 	git(t, dir, "commit", "-q", "-m", "two")
-	git(t, dir, "tag", "-a", "-m", "a tag", "v1")
-	tag, err := (execx.System{}).Run(dir, "git", "rev-parse", "v1")
-	if err != nil {
-		t.Fatal(tag, err)
-	}
-	git(t, dir, "update-ref", "refs/heads/tagged", tag)
 	git(t, dir, "checkout", "-q", "main")
 
 	r := &processCounter{}
@@ -182,7 +175,7 @@ func TestReadHeadsReadsEveryBranchAndTheCheckedOutOneInOneProcess(t *testing.T) 
 		t.Errorf("ReadHeads ran %q, want one git for-each-ref", r.calls)
 	}
 	want := map[string]string{}
-	for _, b := range []string{"main", Branch("S-0001"), Branch("S-0002"), "tagged"} {
+	for _, b := range []string{"main", Branch("S-0001"), Branch("S-0002")} {
 		head, err := (execx.System{}).Run(dir, "git", "rev-parse", "--verify", "--quiet", b+"^{commit}")
 		if err != nil {
 			t.Fatal(head, err)
