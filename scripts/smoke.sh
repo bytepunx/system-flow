@@ -2,7 +2,9 @@
 # Smoke tests: end-to-end. Render the template and check it; check this repository
 # and its CI pins (scripts/ci-pins.sh, S-0630); check without Docker that
 # agent-container.sh runs the manifest's layer image (I-0279) and that
-# agent-image.sh builds with no login when the credential helper fails (I-0339).
+# agent-image.sh builds with no login when the credential helper fails (I-0339);
+# and check that flai-build.sh stamps a story worktree's bin/flai with the
+# worktree's own commit, not the main checkout's (I-0348).
 # Under flai verify, in a close-out or a merge queue batch, the repository check
 # and the markdown lint run here: TestMonorepoIsClean, in the integration tier,
 # skips there, and so does TestRepositoryLintsClean unless the stories change
@@ -95,6 +97,9 @@ echo "smoke: agent-image.sh builds with no login when the credential helper fail
 
 echo "smoke: go build stamps a story's worktree in the agent image with the harness's safe.directory (I-0255)"
 "$ROOT/scripts/agent-vcs-test.sh"
+
+echo "smoke: flai-build.sh stamps a story worktree's bin/flai with the worktree's own commit (I-0348)"
+"$ROOT/scripts/flai-build-stamp-test.sh"
 
 if has markdown:all; then
   echo "smoke: markdown lint: skipped, the markdown tier linted every file in this run"
