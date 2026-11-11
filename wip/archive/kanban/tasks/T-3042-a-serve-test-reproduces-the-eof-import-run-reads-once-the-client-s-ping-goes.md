@@ -26,7 +26,7 @@ usage:
   source: log
   seconds: 5
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models: []
 ---
 # T-3042 A serve test reproduces the EOF import.run reads once the client's ping goes unanswered by the test dashboard

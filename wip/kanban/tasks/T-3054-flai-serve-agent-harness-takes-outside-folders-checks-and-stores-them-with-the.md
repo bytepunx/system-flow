@@ -3,11 +3,11 @@ id: T-3054
 type: task
 nature: improvement
 title: flai serve agent harness takes --outside folders, checks and stores them with the harness's settings, and shows them
-status: in-progress
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:09Z
-updated: 2026-11-11T23:10:01Z
+updated: 2026-11-11T23:35:32Z
 transitions:
   - to: ready
     at: 2026-11-11T23:10:01Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T23:10:01Z
     by: agent-S-0701
+  - to: done
+    at: 2026-11-11T23:35:32Z
+    by: agent-S-0701
 stream: S-0701
 tags: [serve, config]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/cmd/serve_settings.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go]
 after: [T-3048]
+usage:
+  source: log
+  seconds: 1527
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 668
+      cache_read: 6527847
+      cache_write: 226588
+      cost: 2.5088
 ---
 # T-3054 flai serve agent harness takes --outside folders, checks and stores them with the harness's settings, and shows them
 

@@ -3,12 +3,18 @@ id: T-3059
 type: task
 nature: improvement
 title: The claude-code adapter passes the start request's outside folders as --add-dir, and Monitor joins the default --allowedTools
-status: backlog
+status: in-progress
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:24Z
-updated: 2026-11-10T10:35:24Z
-transitions: []
+updated: 2026-11-11T23:36:01Z
+transitions:
+  - to: ready
+    at: 2026-11-11T23:36:01Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-11T23:36:01Z
+    by: agent-S-0701
 stream: S-0701
 tags: [harness, serve]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, docs/users/flai-reference.md]

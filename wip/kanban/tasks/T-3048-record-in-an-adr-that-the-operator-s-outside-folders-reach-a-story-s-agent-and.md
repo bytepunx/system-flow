@@ -23,7 +23,7 @@ tags: [adr, design]
 touches: [design/adrs/README.md, design/system/agent-adapters.md, design/adrs/0289-flai-serve-gives-a-story-s-agent-and-its-sub-agents-the-outside-folders-the.md]
 usage:
   source: log
-  seconds: 183
+  seconds: 186
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 258
       cache_read: 1616339
       cache_write: 84809
-      cost: 0.6317
+      cost: 0.6319
 ---
 # T-3048 Record in an ADR that the operator's outside folders reach a story's agent and its sub-agents as --add-dir and container mounts, and that Monitor joins the default tools
 

@@ -24,16 +24,16 @@ touches: [design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fai
 after: [T-3042, T-3044]
 usage:
   source: log
-  seconds: 89
+  seconds: 91
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 32
-      cache_read: 464715
-      cache_write: 2652
-      cost: 0.1735
+      output: 562
+      cache_read: 461629
+      cache_write: 5737
+      cost: 0.1495
 ---
 # T-3047 The candidate tests pass repeatedly under load, and I-0267 is closed with what fixed it
 

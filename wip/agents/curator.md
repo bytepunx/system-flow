@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 242.6723
-accrued_seconds: 28021
-tasks_completed: 155
-last_run: 2026-11-11T22:18:41Z
+accrued_cost: 245.0613
+accrued_seconds: 28412
+tasks_completed: 157
+last_run: 2026-11-11T23:29:13Z
 ---
 
 # Curator activity
@@ -1251,3 +1251,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 50
 - Cost: 0.9900 USD, estimated
+
+### 2026-11-11T23:28:33Z
+
+- Summary: Nothing to take in: all 10 candidates since 2026-11-11T22:18:41Z are S-0720 decisions that ADR-0290 and design/system/flai-cli.md already state; wrote, merged, and absorbed none (D-0420 and D-0394 checked, neither stated by the design), and `flai digest compact` compacted none and recorded citers on 1 entry.
+- Trigger: accepted S-0720
+- Items: D-0589
+- Seconds: 360
+- Cost: 1.5300 USD, estimated
+
+### 2026-11-11T23:29:13Z
+
+- Summary: I found nothing to take in. I wrote, merged and absorbed no entries, and `flai digest compact` compacted none. `flai digest harvest --since 2026-11-11T23:28:33Z` returned no candidates, and no design, docs or ADR file has changed since the last run's absorption pass, so all 218 active entries stay active.
+- Trigger: accepted S-0727
+- Items: none
+- Seconds: 31
+- Cost: 0.8590 USD, estimated

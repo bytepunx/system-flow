@@ -3,10 +3,10 @@ id: S-0703
 type: story
 nature: remediation
 title: "TestARepositoryIsOfferedImportedAndThenServed fails the close-out's integration tier with \"failed to read frame header: EOF\" under host load, on a branch that does not touch flai/internal/serve"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:55:40Z
-updated: 2026-11-11T23:19:43Z
+updated: 2026-11-11T23:39:43Z
 transitions:
   - to: ready
     at: 2026-11-11T23:05:09Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-11T23:05:22Z
     by: agent-S-0703
+  - to: review
+    at: 2026-11-11T23:38:01Z
+    by: agent-S-0703
+  - to: done
+    at: 2026-11-11T23:39:43Z
+    by: orchestrator
 tags: [flai, tests]
-touches: [flai/internal/serve/candidates_test.go, flai/internal/channel/channeltest/dashboard.go, design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md, flai/internal/hostapi/components_test.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/serve/candidates_test.go, flai/internal/channel/channeltest/dashboard.go, design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md, flai/internal/hostapi/components_test.go, flai/internal/serve/serve_test.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 859
-  estimated: true
-  priced_by: estimate
+  seconds: 1982
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      ceremony: 3
+      ceremony: 5
       test_runs: 3
-      work: 23
+      work: 77
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 468
-      cache_read: 5346485
-      cache_write: 219670
-      cost: 2.0669
+      input: 176
+      output: 23517
+      cache_read: 19311639
+      cache_write: 240018
+      cost: 6.2535
   strategic:
     - kind: planner
       seconds: 56
@@ -126,3 +131,12 @@ Figures:
 - Forecast: flai's 6m comes from size 2 (2 criteria, 0 touches) at 160 s per unit. Raised to 1h30m. Three tasks, two Go files, repeated runs of the serve package under load with `-race`, and a close-out whose integration tier ran 8 to 20 minutes on recent stories. The delivery is flai's queue estimate, moved by the longer duration.
 - Cost of delay: 22.50 USD a week, flai's value from the operator's input of 9m lost per 168h cycle at 150 USD an hour. It stands. The one instance predates S-0560's fix, so the rate may be lower, but the input is the operator's.
 - No `after`: the story reads nothing another open story writes.
+
+### Accepted by the orchestrator
+
+- Verified: 45a069e79f2a7a38dfe982361474984539577917
+- At: 2026-11-11T23:39:43Z
+
+Verdict: meets both criteria; no convention breaks found.
+- 1: flai/internal/channel/channeltest/dashboard.go, flai/internal/serve/candidates_test.go, flai/internal/serve/serve_test.go, flai/internal/hostapi/components_test.go
+- 2: design/issues/I-0267-testarepositoryisofferedimportedandthenserved-fails-the-close-out-s-integration.md, design/issues/summary.md

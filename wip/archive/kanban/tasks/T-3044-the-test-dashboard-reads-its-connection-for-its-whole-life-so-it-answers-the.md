@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 317
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 14
-      output: 84
-      cache_read: 1515319
-      cache_write: 10938
-      cost: 0.5667
+      output: 1836
+      cache_read: 1507521
+      cache_write: 18736
+      cost: 0.4882
 ---
 # T-3044 The test dashboard reads its connection for its whole life, so it answers the client's pings
 

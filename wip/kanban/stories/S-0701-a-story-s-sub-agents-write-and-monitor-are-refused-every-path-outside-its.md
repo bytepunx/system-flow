@@ -6,7 +6,7 @@ title: A story's sub-agents, Write, and Monitor are refused every path outside i
 status: in-progress
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-11T23:05:21Z
+updated: 2026-11-11T23:35:32Z
 transitions:
   - to: ready
     at: 2026-11-11T23:05:09Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-11-11T23:05:21Z
     by: agent-S-0701
 tags: [harness, serve, docker]
-touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md]
+touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md, flai/cmd/serve_settings.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,19 +23,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 259
+  seconds: 1812
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-11
-      work: 15
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 408
-      cache_read: 2717418
-      cache_write: 281976
-      cost: 1.1138
+      input: 176
+      output: 1086
+      cache_read: 9468420
+      cache_write: 512234
+      cost: 3.7071
   strategic:
     - kind: orchestrator
       seconds: 64
