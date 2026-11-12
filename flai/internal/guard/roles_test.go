@@ -127,7 +127,7 @@ func TestADefinedRoleIsHeldToItsFile(t *testing.T) {
 		refused string
 	}{
 		{roleTool("item_new", Args{Type: "story"}), "the role reviewer cannot call item_new: its role file lists no such call. Ask the operator with thread_open on the item if it needs doing (" + reviewerPath + ", ADR-0207).", "item_new"},
-		{roleTool("item_move", Args{ID: "S-0001", To: "review"}), "the role reviewer cannot move S-0001 to review: it may make it only under to-backlog (on a call, a move to backlog and nowhere else; on a trigger, only a move to backlog), or to-ready (a move to ready and nowhere else).", "item_move S-0001 review"},
+		{roleTool("item_move", Args{ID: "S-0001", To: "review"}), "the role reviewer cannot move S-0001 to review: it may make it only under to-backlog (" + condAllows(t, "to-backlog") + "), or to-ready (" + condAllows(t, "to-ready") + ").", "item_move S-0001 review"},
 		{roleShell("flai board && flai move S-0001 review"), `the role reviewer cannot run "flai move S-0001 review": it may make it only under to-backlog`, "flai move S-0001 review"},
 		{roleTool("thread_reply", Args{ID: "TH-0001", Recommendation: true}), "the role reviewer cannot call thread_reply: it may make it only under own-thread", "thread_reply TH-0001 recommendation"},
 		{roleTool("thread_reply", Args{ID: "TH-0002"}), "the role reviewer cannot call thread_reply: it may make it only under own-thread", "thread_reply TH-0002"},
@@ -872,4 +872,16 @@ func TestEveryAgentReadsTheRolesButNoneRunsOneOrWritesItsDefinition(t *testing.T
 			}
 		}
 	}
+}
+
+// condAllows is what the condition name allows, as internal/roles says it,
+// so that a test of the guard's refusal follows a rewording of the condition
+// rather than copying its words (I-0229).
+func condAllows(t *testing.T, name string) string {
+	t.Helper()
+	c, ok := roles.Condition(name)
+	if !ok {
+		t.Fatalf("internal/roles defines no condition %q", name)
+	}
+	return c.Allows
 }
