@@ -2,12 +2,12 @@
 id: I-0229
 title: "Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words"
 class: defect
-status: open
+status: closed
 count: 4
 cost: 17m
 first_reported: 2026-10-29T03:27:16Z
 last_reported: 2026-11-10T11:28:58Z
-updated: 2026-11-10T11:28:58Z
+updated: 2026-11-12T16:34:45Z
 ---
 
 # I-0229 Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words
@@ -36,3 +36,4 @@ S-0666's close-out (job S-0666-20261110T112451Z, at 7a284e2) stopped at integrat
 ## Remediation
 
 Story S-0683 remediates this issue, created from it at 2026-11-10T08:37:08Z.
+Closed 2026-11-12T16:34:45Z: S-0683 (ADR-0291): every acceptance but the merge queue's landing is now refused, with the blocker verify_behind_main, while the paths main brought in since the story's last passing flai verify send back a tier that verify ran (verifyBehindMainGate in flai/internal/preview/accept.go, with verify.MainPathsSince and verify.StaleTiers). TestAnAcceptanceIsRefusedWhileMainOutranTheStorysVerify in flai/cmd reproduces this issue with real git. TestADefinedRoleIsHeldToItsFile now reads the conditions' Allows from internal/roles instead of copying them.
