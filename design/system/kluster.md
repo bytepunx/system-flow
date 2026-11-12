@@ -1,6 +1,6 @@
 ---
 title: Running a project's kluster
-updated: 2026-11-07
+updated: 2026-11-12
 status: active
 topics: [kluster, deployment, manifest]
 ---
@@ -8,6 +8,8 @@ topics: [kluster, deployment, manifest]
 # Running a project's kluster
 
 How flai runs a project's local Kubernetes cluster, made by `bytepunx/kluster`, so that each story in review is deployed into a namespace of its own over the project's shared infrastructure, checked there, and promoted to the default namespace on acceptance. [ADR-0254](../adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md) decides it and gives the reasons. [S-0575's results](../experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md) show it working by hand on authstar, with the times of each step. [ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md) refines it (S-0586): turning kluster on gives a project with no block one that names only its config, `deploy` is optional, and the dashboard's Klusters page holds the whole setup. [ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md) refines both (S-0595): a block may list components, each built as its own step with its own log, a job's record lists every step before the first runs, `kluster.log` reads a step's log from an offset, and the Deployments page holds the deploy setup, the builds, and the live logs in an in-page rail.
+
+[ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) refines ADR-0254 for a story in progress (S-0659): its agent asks flai serve to deploy, check, and tear down its own story's namespace before review, the namespace lives from its first deploy until acceptance or cancellation, `kluster.agent_namespaces` bounds how many stories in progress hold one, and the namespace's record at the story's head is the evidence the move to review, the close-out, and an acceptance read. None of it is built yet. [Deploys a story's agent asks for](#deploys-a-storys-agent-asks-for-adr-0292) describes it, and each part not built names the story that builds it: S-0660, S-0661, S-0662, or S-0663.
 
 system-flow itself runs no cluster. This is what flai does for a project that names one in its manifest, behind the `kluster` host action.
 
@@ -68,6 +70,7 @@ kluster:
 | `deploy` | no | none: the cluster comes up and goes down, and flai deploys nothing | Makes the namespace's settings in the shared services, applies the project's manifests into the namespace, and waits for their rollouts |
 | `teardown` | no | none: flai deletes only the namespace | Removes what `deploy` made outside the namespace |
 | `timeout` | no | `30m` | The most one job may take, a Go duration |
+| `agent_namespaces` | no | `2` | The most stories in progress that hold a namespace at once, from deploys their agents asked for; `0` turns deploys before review off. Stories in review do not count. Decided by [ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §4, not built yet (S-0660) |
 
 A project that builds several images names one build per component instead of `build` ([ADR-0263](../adrs/0263-a-kluster-block-may-list-components-each-built-as-its-own-step-with-its-own-log.md)):
 
@@ -94,10 +97,11 @@ Each command is an argument list, run as it stands, never through a shell, as th
 
 | Namespace | Who deploys into it | Name | Prefix |
 |-----------|---------------------|------|--------|
-| A story's | The story, while in review | Its ID in lower case, with the zero padding: `s-0576` | `s0576_`: the namespace without hyphens, then an underscore |
+| A story's | The story, while in review; and, decided by ADR-0292 and not built yet (S-0660), while in progress when its agent asks | Its ID in lower case, with the zero padding: `s-0576` | `s0576_`: the namespace without hyphens, then an underscore |
 | The default | Main, on each acceptance | `kluster.namespace`, such as `authstar` | Empty, so main keeps the names the profile made |
 
 - `flai check` reports a default namespace that is not a DNS label, or that has a story namespace's form, `s-` and digits.
+- Today a story's namespace lives while the story is in review, and while a send-back keeps it. Decided by ADR-0292 and not built yet (S-0660), it lives from its first deploy, in progress or in review, until the story is accepted, cancelled, or moved back to ready or backlog, and `kluster.agent_namespaces` bounds how many stories in progress hold one.
 - The prefix is for the names a namespace makes in shared services, such as databases: `s0576_tower`.
 - What a story owns in the shared services is the project's to make and remove: its RabbitMQ vhost and user, its databases, its signet bundles and policies, its keys and tokens, and its tenant where the project has tenants, as authstar has. `deploy` makes them from the namespace and the prefix, and `teardown` removes them. flai does not know them.
 - A project's Kubernetes manifests and scripts take the namespace as a parameter, with the default namespace as its default, and never name it as a constant. authstar's manifests still name `authstar`, which S-0575 renamed with `sed`; that is authstar's to change.
@@ -129,27 +133,85 @@ Every command, and a checks run against a namespace, gets these variables. No pl
 
 - `FLAI_KLUSTER_STATE` is where `deploy` keeps what the checks need, such as a namespace's operator tokens. It is git-ignored, holds only values that work against the local cluster, and is deleted after the teardown.
 - flai gives no shared service's address. The project's scripts know their profile's.
+- A story's agent will get the same variables for its own namespace from `flai kluster env` and `flai kluster exec`, but for `FLAI_KLUSTER_IMAGES`, and with `KUBECONFIG` a kubeconfig held to the namespace in place of flai's ([ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §2, not built yet: S-0660).
 
 ## What happens when
 
-While the `kluster` host action is on for a project with a `kluster:` block that names a `deploy`, `flai serve` runs these jobs, with no model. With no `deploy` it runs only the teardowns:
+While the `kluster` host action is on for a project with a `kluster:` block that names a `deploy`, `flai serve` runs these jobs, with no model. With no `deploy` it runs only the teardowns. The table is [ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §3's, which replaces ADR-0254 §5's; its last column says what is built and, for each row that is not, what flai does until the story named builds it:
 
-| When | Job | Where it runs |
-|------|-----|---------------|
-| A story enters review | Deploy into its namespace | The story's worktree, at its head |
-| A story in review gets a new head | Deploy again, in place | The story's worktree, at its new head |
-| A story leaves review for in-progress or cancelled, not by acceptance or a failure | Teardown | The story's worktree, or the main checkout when it is gone |
-| A story is sent back by a failed deploy or checks run | None: its namespace stays for diagnosis | Nowhere |
-| A story sent back returns to review | Deploy again, in place, at its head | The story's worktree |
-| A story sent back is cancelled, or moves anywhere but review | Teardown | The story's worktree, or the main checkout when it is gone |
-| A story is accepted | Teardown of its namespace, then a promotion | The teardown as above; the promotion in `.flai-cache/kluster/main` |
-| A deploy finds the cluster absent | Bring the cluster up first | The main checkout |
+| When | Job | Where it runs | Built |
+|------|-----|---------------|-------|
+| The agent asks for a deploy, its story in progress with no namespace, under `kluster.agent_namespaces` | Deploy: the namespace is made | The story's worktree, at its head | S-0660; until then `flai guard` refuses agents every deploy |
+| The agent asks for a deploy, its story's namespace there | Deploy again, in place | The story's worktree, at its head | S-0660 |
+| The agent asks for a checks run | Checks run against the namespace as deployed | The story's worktree | S-0661 |
+| The agent asks for a teardown | Teardown | The story's worktree | S-0660 |
+| A story in progress gains commits, and its agent asks nothing | None: the namespace stays at the commit it was deployed at | Nowhere | Yes |
+| A story enters review, its namespace's deploy passed at its head, and its checks too while `checks` is on | None: those stand as the review's | Nowhere | S-0660; until then a story enters review undeployed, sent back ones aside |
+| A story enters review otherwise: no namespace, another commit, or a failure | Deploy, then checks, or the checks run alone when only it has not passed at the head | The story's worktree, at its head | Yes, the deploy and its checks; the checks run alone, S-0661 |
+| A story in review gets a new head | Deploy again, in place | The story's worktree, at its new head | Yes |
+| A story leaves review for in-progress, sent back by a failure or by anyone | None: the namespace stays | Nowhere | Sent back by a failure, yes; by anyone else, S-0660, and until then a teardown |
+| A story moves back to ready or backlog | Teardown | The story's worktree, or the main checkout when it is gone | Yes |
+| A story is cancelled, from any column | Teardown | The story's worktree, or the main checkout when it is gone | Yes |
+| A story is accepted | Teardown of its namespace, then a promotion | The teardown as above; the promotion in `.flai-cache/kluster/main` | Yes |
+| A job finds the cluster absent | Bring the cluster up first | The main checkout | Yes, for a review deploy; for a request, S-0660 |
+
+- **At the head**, decided by ADR-0292 §3 and not built yet (S-0662): a record is at the head when its commit is the head, or when every commit from the record's commit to the head changes only paths under the manifest's `design`, `docs`, and `wip` folders. It will hold for the review row above, for the acceptance gate, and for what the move to review and the close-out report. Today the record's commit must be the head.
+- **A send-back needs no case of its own** once a namespace stays while its story is in progress (S-0660). Until then the pass keeps a sent-back namespace only while its story stands where the send-back put it, as [flai serve (S-0579)](#flai-serve-s-0579) says.
 
 - A promotion builds, loads, and deploys main's head into the default namespace. There `deploy` replaces what the profile deployed. Promotions queued behind one another run once, at main's newest head.
 - Jobs run one at a time per project, in the order their causes came.
 - A story never deployed is not torn down.
 - `flai serve` never takes the cluster down.
-- The close-out and `flai verify` do not use the cluster: they run before review, when the story has no namespace.
+- The close-out and `flai verify` do not use the cluster: they run before review, when the story has no namespace. Once its agent can deploy it before review, the close-out gains a `kluster` step that reads the namespace's record and runs nothing ([deploys a story's agent asks for](#deploys-a-storys-agent-asks-for-adr-0292), S-0662).
+
+## Deploys a story's agent asks for (ADR-0292)
+
+[ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) decides it and gives the reasons. None of this section is built yet; each part names the story that builds it. Until then `flai guard` refuses every agent the `flai kluster` commands that write, and a story's namespace is made only in review.
+
+### The requests (S-0660, S-0661)
+
+A story's agent asks flai serve for a job on its own story's namespace, as it asks for the close-out ([ADR-0229](../adrs/0229-the-close-out-runs-as-a-flai-serve-job-the-story-s-agent-asks-for-with-the.md)):
+
+| Request | MCP tool | On the host | Built by |
+|---------|----------|-------------|----------|
+| Deploy at the branch's head: build, load, deploy, then the checks while `checks` is on | `kluster_deploy` | `flai kluster deploy S-nnnn --job` | S-0660 |
+| Run the checks again against the namespace as deployed | `kluster_checks` | `flai checks run S-nnnn --job` | S-0661 |
+| Tear the namespace down | `kluster_teardown` | `flai kluster teardown S-nnnn --job` | S-0660 |
+
+- Each writes `S-nnnn.<kind>.request.json` under `.flai-cache/kluster/requests/` and waits at most ten seconds. flai serve looks for requests every second, beside the close-out jobs, queues each in the project's one job queue, and answers the job's id and the number of jobs ahead. A request it does not take in ten seconds is withdrawn, and the agent is told flai serve is not running; it cannot run the job itself.
+- A request is for the session's own story, `FLAI_STORY` or the story in `agent-S-nnnn`, and refused for any other. The story is in progress: one in review is answered with the review's job, or with its record when that passed at the head, and one in any other column is refused.
+- A request is refused while the worktree has uncommitted changes to tracked files, naming them. The job records the head it built.
+- It is refused while the `kluster` host action is off or the manifest has no `kluster:` block, naming `flai serve enable kluster` as the operator's. With no `deploy`, `kluster_deploy` and `kluster_checks` are refused, saying deploys are not set up yet. `kluster_checks` is refused while the `checks` host action is off, and before the namespace has a record that passed.
+- A request while a job of the story waits or runs is answered with that job. A deploy request at a newer head takes the place of the one waiting. A request always runs: the pass's rule that a head is tried once does not hold it back.
+- A deploy builds every component, as a review deploy does.
+
+### The limit (S-0660)
+
+- `kluster.agent_namespaces`, default 2, is the most stories in progress that hold a namespace at once. 0 turns deploys before review off. `flai manifest set kluster.agent_namespaces` writes it, the setup form shows it under `settings`, and `flai check` reports a value that is not a whole number of 0 or more as `manifest.kluster`.
+- Stories in review do not count, and their deploys are never refused for the limit.
+- The limit makes no namespace and tears none down: a story sent back from review keeps its namespace whatever the count. A request for a story whose namespace is there is never over it.
+- A deploy request for a story with no namespace, over the limit, is refused at once, naming the limit and each story in progress that holds a namespace, with its last deploy's commit and time. It is not queued.
+
+### What the agent runs against its namespace (S-0660, S-0661)
+
+- The project's checks, through flai serve: the checks run after a passing deploy, or the one `kluster_checks` asks for, is the review's, with the namespace's variables and flai's whole kubeconfig, in the queue (S-0661).
+- Its own commands: `flai kluster env S-nnnn` prints the namespace's variables, as `export` lines or `--json`, and `flai kluster exec S-nnnn -- <command>` runs a command with them in the worktree, for the agent's own story while its namespace has a record, a failed one too (S-0660).
+- In what `env` and `exec` give, `KUBECONFIG` is `.flai-cache/kluster/agents/s-nnnn.kubeconfig`: each deploy makes it after the deploy step passes, from a ServiceAccount `flai-agent` in the namespace bound by a RoleBinding to the `edit` ClusterRole, with a token from `kubectl create token` valid for 24 hours. The API server refuses it anything outside the namespace. The teardown deletes it (S-0660).
+- `flai kluster log S-nnnn --step <step>` prints a step's log as `kluster.log` reads it; with `flai kluster deployments` and `flai kluster status` it is open to every agent for its own story (S-0660).
+- `flai guard` refuses every agent and sub-agent `flai kluster up`, `down`, and `promote`; `deploy` and `teardown` without `--job`; requests, `env`, `exec`, and `log` for another story's namespace or the default one; the `kluster` program but `status`; and a shell line naming `.flai-cache/kluster/kubeconfig` (S-0660, S-0661).
+
+### Waiting and failures (S-0660)
+
+- When a job an agent asked for ends, flai serve appends a `kluster` event to `.flai-cache/events.jsonl`, with the story as its ID and fields `job`, `kind` (`deploy`, `checks`, or `teardown`), `commit`, `outcome` (`passed`, `failed`, `refused`, or `interrupted`), `failed_step`, `exit_code`, and `log`. The inbox reports it to the story's agent and to readers with no story of their own. The agent holds `wait_for_events` for it, which answers it no `end` while a job of its story waits or runs.
+- A job waits for those ahead of it, each bounded by `kluster.timeout`, then runs within it. A deploy and its checks run are one job. A job still waiting or running when flai serve stops ends `interrupted` when it starts again.
+- A failure before review is the agent's: flai serve opens no thread, moves nothing, and starts no agent. The namespace stays as the failure left it. The failure reaches the operator only when the agent says on a thread on its story that the cause is outside the story, or at review, where [a failed deploy holds the story](#a-failed-deploy-holds-the-story).
+
+### What is recorded and read (S-0660, S-0662)
+
+- The namespace's record holds a deploy the agent asked for as it holds a review's, and gains `asked_by`, the agent or `flai serve`, and `checks_log`. A checks run the agent asks for writes `checks_commit`, `checks_outcome`, and `checks_log`. What the agent runs with `exec` is not recorded (S-0660, S-0661).
+- The move to review reads the record and says what was deployed and checked at the head, or why not, and refuses nothing (S-0662).
+- The close-out gains a step, `kluster`, that reads the record and runs nothing. It passes when the action is off, the block has no `deploy`, or `kluster.agent_namespaces` is 0, reports the record against the head otherwise, and fails only on a deploy or checks run that failed at the head (S-0662).
+- An acceptance reads the record through the `kluster` blocker, with at the head as above. A deploy and checks run the agent asked for that passed at the head lift it without a review deploy (S-0662). The review page shows the record (S-0662), and the Deployments page shows the namespaces of stories in progress (S-0663).
 
 ## A failed deploy holds the story
 
@@ -157,7 +219,8 @@ This is ADR-0254 §5a's, built by S-0694. S-0579 built the thread alone: a failu
 
 - A story's failed deploy, or a checks run against its namespace that does not pass, is recorded. `flai serve` opens one thread on the story, naming the job, the step, the commit, and the log, and sends the story back to in-progress, starting its agent. The agent fixes the change, or says on the thread that the cause is outside the story.
 - A story that is no longer in review at the failed head, or whose action went off meanwhile, is not sent back. The thread says why.
-- A story sent back keeps its namespace, as the failure left it, while it stands in progress where the send-back put it. Back in review, at a new head or the same one, it is deployed again in place. Cancelled, accepted, or moved on by anyone else, it is torn down.
+- A story sent back keeps its namespace, as the failure left it, while it stands in progress where the send-back put it. Back in review, at a new head or the same one, it is deployed again in place. Cancelled, accepted, or moved on by anyone else, it is torn down. Once S-0660 keeps every namespace while its story is in progress, only cancellation, acceptance, or a move back to ready or backlog tears it down, and a deploy and checks run the agent asks for that pass at the head resolve the send-back's threads ([ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §3).
+- This holds for failures in review. A deploy or checks run the agent asked for that fails before review sends nothing back and opens no thread: it is the agent's to fix, as [waiting and failures](#waiting-and-failures-s-0660) says (S-0660).
 - While the action is on, every acceptance of a story is refused with the blocker `kluster`, unless the story's namespace was deployed at its head and, while `checks` is on, its checks run against it passed there. This holds for the operator's acceptance, the dashboard's, the orchestrator's, and the merge queue's landing. The blocker names the namespace's last job, its commit, and its outcome.
 - The merge queue lists a story the gate refuses as ineligible, with the reason `kluster`, and does not batch it. The orchestrator's enqueue is not refused for it: the queue waits for the gate, so a story may be enqueued before its deploy has run.
 - `flai accept --without-kluster`, and `flai move S-nnnn done --without-kluster`, land the story anyway, by hand and outside the merge queue. It is the operator's alone, refused with `--by orchestrator` and `--batch`, and recorded under `### Accepted without the kluster gate` in the story's Notes.
@@ -174,7 +237,7 @@ This is ADR-0254 §5a's, built by S-0694. S-0579 built the thread alone: a failu
 - The operator turns it on from the Klusters page's setup, its toggle on the dashboard's Features page, or `flai serve enable kluster`. All three run `flai serve enable kluster`. For a project with no `kluster:` block it writes the block and `kluster.yaml` shown in [the `kluster:` block](#the-kluster-block), and commits those two files alone, with the dashboard's trailer, unless the project sets `dashboard.autocommit: false`. It says what it wrote and the commit. `--all-projects` writes no block ([ADR-0259](../adrs/0259-enabling-kluster-on-a-project-with-no-kluster-block-writes-one-naming-only-its.md)). The dashboard's toggle needs the `settings` host action, which is turned on only in a shell ([ADR-0039](../adrs/0039-a-settings-host-action-turned-on-only-in-a-shell-lets-the-dashboard-change-the.md)).
 - While it is on, the Deployments page starts and stops each service's port-forward, which `flai serve` runs bound to `0.0.0.0`, as [the Deployments page](#the-deployments-page) says.
 - `flai kluster up`, `down`, `status`, `deploy`, `teardown`, and `promote` work from the operator's shell whatever the action says.
-- `flai guard` refuses every agent and sub-agent the `flai kluster` commands that write. `flai kluster status` is a read any agent may run.
+- `flai guard` refuses every agent and sub-agent the `flai kluster` commands that write. `flai kluster status` is a read any agent may run. ADR-0292 changes this, not built yet (S-0660, S-0661): a story's agent asks for deploys, checks runs, and teardowns of its own namespace through the requests above, the host action still gating each, and runs `env`, `exec`, and `log` for it, while the guard keeps refusing everything else that writes, as [what the agent runs against its namespace](#what-the-agent-runs-against-its-namespace-s-0660-s-0661) lists.
 
 ## What the review checks see
 
@@ -183,6 +246,7 @@ This is ADR-0254 §5a's, built by S-0694. S-0579 built the thread alone: a failu
 - A checks run for a story with no namespace deployed at its head gets none of them.
 - Checks runs against the cluster run one at a time per project, after the job queue.
 - With `checks` off, a story is deployed and nothing is checked against it.
+- Before review, decided by ADR-0292 and not built yet (S-0661): the checks run after a deploy the agent asked for, or one it asks for with `kluster_checks`, is this same run, with the same variables, recorded in the namespace's record. A story that enters review with its deploy and checks passed at its head is not checked again there.
 
 ## The Ops pages in the dashboard
 
@@ -261,6 +325,7 @@ What S-0578 built, in `flai/internal/kluster/deploy.go`, for the commands above 
 
 - The pass finds acceptances with the curate scheduler's `news` and `accepted`, from its own start. So an acceptance made before `flai serve` started, or while the action was off, promotes nothing.
 - A namespace whose story flai cannot find is left as it is.
+- ADR-0292 changes the looks, not built yet (S-0660): a namespace whose story is in progress is not torn down, the pass queues no deploy for a story that enters review with its record passed at its head, and the agent's requests join the queue as jobs of their own ([deploys a story's agent asks for](#deploys-a-storys-agent-asks-for-adr-0292)).
 
 **The worker.** One worker per project runs the queue in order, one job at a time. A look never waits for a job. Each job runs through `KlusterRunner`: `SystemKluster` calls `Cluster.Deploy`, `Teardown`, `Promote`, `Status`, and `Up` from `flai/internal/kluster`, as the commands do, and the tests give their own (`Options.Kluster`).
 
@@ -305,7 +370,7 @@ Each entry names the job, the step (or "before its first step" for a refusal), i
 - **The agent.** With the `agent` host action on, `flai serve` starts the story's agent once per send-back, while the thread is open, its last run having started before the send-back and ended, as for a story the forge sent back (`startKlusterSentBack` in `serve/agents_restart.go`). It resumes the last run's session where it has one. `harness.SentBack.Kluster` tells the agent that `flai serve` deploys the story again in place once it is back in review, resolves the thread once that deploy and its checks pass, and that a cause outside the story is said on the thread.
 - **Back in review.** The story is deployed again in place, at a new head or the same one. A deploy that passes resolves the deploy's thread, and a checks run that passes the checks'. A story cancelled or accepted is torn down, and its failure threads are resolved.
 
-**The acceptance gate (S-0694).** `kluster.AcceptGate(root, story, head, checksOn)` passes only when the namespace's record says its deploy passed at `head`, the story branch's head (`kluster.StoryHead`), and, with `checksOn`, that a checks run against it passed there. Otherwise it names the last job, its commit, and its outcome: never deployed, at another commit, failed at a step, still running, interrupted, or deployed with no checks run ended there yet. While the `kluster` host action is on and the manifest has a `kluster:` block, `preview.AcceptWith` turns its reason into the blocker `kluster`, for every acceptance of a story with a branch that is not a resumed one: `flai accept` and `flai move S-nnnn done`, the dashboard's `accept.preview` and `accept.run`, `--by orchestrator`, among its `orchestrator_blockers`, and the queue's landing, `--batch`. `--dry-run --json` gives `kluster_blocker` and `kluster_why`. `--without-kluster` lifts it for the operator by hand, outside the merge queue, and writes `### Accepted without the kluster gate`, with `- Why:`, `- By:`, and `- At:`, under the story's Notes; it is refused with `--by orchestrator` and with `--batch`, and changes nothing while the action is off or the gate passes ([flai-cli.md](flai-cli.md#commands)).
+**The acceptance gate (S-0694).** `kluster.AcceptGate(root, story, head, checksOn)` passes only when the namespace's record says its deploy passed at `head`, the story branch's head (`kluster.StoryHead`), and, with `checksOn`, that a checks run against it passed there. Otherwise it names the last job, its commit, and its outcome: never deployed, at another commit, failed at a step, still running, interrupted, or deployed with no checks run ended there yet. While the `kluster` host action is on and the manifest has a `kluster:` block, `preview.AcceptWith` turns its reason into the blocker `kluster`, for every acceptance of a story with a branch that is not a resumed one: `flai accept` and `flai move S-nnnn done`, the dashboard's `accept.preview` and `accept.run`, `--by orchestrator`, among its `orchestrator_blockers`, and the queue's landing, `--batch`. `--dry-run --json` gives `kluster_blocker` and `kluster_why`. `--without-kluster` lifts it for the operator by hand, outside the merge queue, and writes `### Accepted without the kluster gate`, with `- Why:`, `- By:`, and `- At:`, under the story's Notes; it is refused with `--by orchestrator` and with `--batch`, and changes nothing while the action is off or the gate passes ([flai-cli.md](flai-cli.md#commands)). ADR-0292 widens `head` to a record at the head as [what happens when](#what-happens-when) defines it, so a close-out's commit of issue records does not undo the evidence, not built yet (S-0662).
 
 **The merge queue (S-0694).** While the `kluster` host action is on and the manifest has a `kluster:` block, `mergequeue.ComputeWith` lists a story in review that the gate refuses as ineligible, with the reason kind `kluster` naming what failed, and the queue does not batch it. `flai serve`'s queue pass and `flai queue` read the `kluster` and `checks` host actions for it. The orchestrator's enqueue, `queue_add`, is not refused for the gate: the queue waits for it, so the orchestrator may enqueue a story whose deploy has not run yet.
 
