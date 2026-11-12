@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2131.2856
-accrued_seconds: 1551753
-tasks_completed: 3102
-last_run: 2026-11-12T03:41:33Z
+accrued_cost: 2131.4823
+accrued_seconds: 1551779
+tasks_completed: 3104
+last_run: 2026-11-12T03:42:41Z
 ---
 
 # Orchestrator activity
@@ -21746,6 +21746,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.1860 USD, estimated
+
+### 2026-11-12T03:42:24Z
+
+- Summary: Release-due for S-0712: no publish. release_evaluate (threshold, 1000 USD/week or 1 story) now answers not met, count 0, value 0 USD/week: publish instance S-0729 (T-3134 done) already released the batch S-0712 joined.
+- Items: S-0712, S-0729
+- Seconds: 9
+- Cost: 0.0550 USD, estimated
+
+### 2026-11-12T03:42:41Z
+
+- Summary: I didn't publish for S-0712: its batch has already been released, so there was nothing left to publish.
+- Items: none
+- Seconds: 17
+- Cost: 0.1417 USD, estimated
 
 ## Refusals
 

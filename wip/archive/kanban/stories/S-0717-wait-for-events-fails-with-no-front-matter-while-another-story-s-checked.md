@@ -3,10 +3,10 @@ id: S-0717
 type: story
 nature: remediation
 title: wait_for_events fails with no front matter while another story's checked creation holds a PLACEHOLDER task file
-status: review
+status: done
 owner: alex
 created: 2026-11-11T01:43:38Z
-updated: 2026-11-11T23:02:55Z
+updated: 2026-11-12T03:43:37Z
 transitions:
   - to: ready
     at: 2026-11-11T22:31:08Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-11T23:02:49Z
     by: agent-S-0717
+  - to: done
+    at: 2026-11-12T03:43:37Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, design/issues/I-0345-wait-for-events-fails-with-no-front-matter-while-another-story-s-checked.md, design/issues/summary.md, design/issues/I-0352-a-story-s-agent-can-overwrite-a-work-item-file-whole-with-write-front-matter.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
 after: [S-0716]
