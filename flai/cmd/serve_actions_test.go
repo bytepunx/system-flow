@@ -3031,7 +3031,7 @@ func TestServeMCPBind(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return cfg.MCP.Bind
+		return strings.Join(cfg.MCP.Bind, " ")
 	}
 	if out, err := run(false, "show"); err != nil || !strings.Contains(out, "bind: 127.0.0.1 (default)") {
 		t.Errorf("unset: %v %q", err, out)
@@ -3056,7 +3056,7 @@ func TestServeMCPBind(t *testing.T) {
 		{[]string{"bind", "[::1]"}, "is bracketed"},
 		{[]string{"bind", "http://example.com"}, "names a port, or is no IP address"},
 		{[]string{"bind", "not a host"}, "is not a host name"},
-		{[]string{"bind", " "}, "mcp.bind needs an address"},
+		{[]string{"bind", " "}, "an address is empty"},
 		{[]string{"bind"}, "accepts 1 arg"},
 	} {
 		if _, err := run(false, bad.args...); err == nil || !strings.Contains(err.Error(), bad.want) {

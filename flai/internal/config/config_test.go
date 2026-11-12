@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -860,11 +861,11 @@ func TestNotify(t *testing.T) {
 }
 
 // S-0506: mcp.bind is the address flai host starts each project's MCP
-// server on, 127.0.0.1 unset; an IP address or a host name, with no port.
+// server on, its first address, auto taken as 127.0.0.1 (S-0732); an IP address or a host name, with no port.
 func TestMCPBind(t *testing.T) {
 	c := Default()
-	if got := c.MCPBind(); got != "127.0.0.1" {
-		t.Errorf("unset: %q, want 127.0.0.1", got)
+	if got := c.MCPBind(); got != DefaultMCPBind {
+		t.Errorf("unset: %q, want %q", got, DefaultMCPBind)
 	}
 	if data, _ := json.Marshal(c); strings.Contains(string(data), `"mcp"`) {
 		t.Errorf("unset is not written: %s", data)
@@ -879,7 +880,7 @@ func TestMCPBind(t *testing.T) {
 			t.Errorf("WithMCPBind(%q) binds %q", good, set.MCPBind())
 		}
 	}
-	if c.MCP.Bind != "" {
+	if c.MCP.Bind != nil {
 		t.Errorf("WithMCPBind leaves the receiver alone: %q", c.MCP.Bind)
 	}
 	for _, bad := range []string{"", "  ", "127.0.0.1:4243", "[::1]", "[::1]:4243", "http://0.0.0.0", "a b", "-bad.example", "bad..example", "host:port"} {
@@ -917,6 +918,125 @@ func TestMCPBind(t *testing.T) {
 		if strings.HasPrefix(k, "mcp") {
 			t.Error("flai config set cannot reach mcp: only flai serve mcp does")
 		}
+	}
+}
+
+// S-0732: mcp.bind holds one address, written as a string as before, or
+// several, written as an array; unset it is auto and not written.
+func TestMCPBindsReadAndWrite(t *testing.T) {
+	roundTrip := func(t *testing.T, file string) (Config, string) {
+		t.Helper()
+		cfg, err := Parse([]byte(file))
+		if err != nil {
+			t.Fatalf("Parse(%s): %v", file, err)
+		}
+		path := filepath.Join(t.TempDir(), "config.json")
+		if err := Save(path, cfg); err != nil {
+			t.Fatal(err)
+		}
+		saved, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg, string(saved)
+	}
+	t.Run("one address", func(t *testing.T) {
+		cfg, saved := roundTrip(t, `{"mcp":{"bind":"172.17.0.1"}}`)
+		if got := cfg.MCPBinds(); !slices.Equal(got, []string{"172.17.0.1"}) {
+			t.Errorf("MCPBinds() = %q", got)
+		}
+		if !strings.Contains(saved, `"bind": "172.17.0.1"`) {
+			t.Errorf("one address is written back as a string: %s", saved)
+		}
+	})
+	t.Run("several", func(t *testing.T) {
+		cfg, saved := roundTrip(t, `{"mcp":{"bind":["127.0.0.1","172.17.0.1"]}}`)
+		if got := cfg.MCPBinds(); !slices.Equal(got, []string{"127.0.0.1", "172.17.0.1"}) {
+			t.Errorf("MCPBinds() = %q", got)
+		}
+		if !strings.Contains(saved, "\"bind\": [\n      \"127.0.0.1\",\n      \"172.17.0.1\"\n    ]") {
+			t.Errorf("several are written back as an array: %s", saved)
+		}
+		back, err := Parse([]byte(saved))
+		if err != nil || !slices.Equal(back.MCPBinds(), cfg.MCPBinds()) {
+			t.Errorf("an array reads back: %q, %v", back.MCPBinds(), err)
+		}
+	})
+	for name, file := range map[string]string{"absent": `{}`, "empty string": `{"mcp":{"bind":""}}`, "empty array": `{"mcp":{"bind":[]}}`, "null": `{"mcp":{"bind":null}}`} {
+		t.Run("unset, "+name, func(t *testing.T) {
+			cfg, saved := roundTrip(t, file)
+			if got := cfg.MCPBinds(); !slices.Equal(got, []string{MCPBindAuto}) {
+				t.Errorf("MCPBinds() = %q, want [auto]", got)
+			}
+			if strings.Contains(saved, `"mcp"`) {
+				t.Errorf("unset is not written: %s", saved)
+			}
+		})
+	}
+	t.Run("a copy", func(t *testing.T) {
+		cfg, _ := roundTrip(t, `{"mcp":{"bind":["10.0.0.5","10.0.0.6"]}}`)
+		cfg.MCPBinds()[0] = "changed"
+		if cfg.MCP.Bind[0] != "10.0.0.5" {
+			t.Errorf("MCPBinds hands out its backing slice: %q", cfg.MCP.Bind)
+		}
+	})
+	for name, file := range map[string]string{
+		"port in an array":     `{"mcp":{"bind":["127.0.0.1","10.0.0.5:4243"]}}`,
+		"brackets in an array": `{"mcp":{"bind":["[::1]"]}}`,
+		"empty in an array":    `{"mcp":{"bind":["127.0.0.1",""]}}`,
+		"twice in an array":    `{"mcp":{"bind":["127.0.0.1","127.0.0.1"]}}`,
+		"not lower-case auto":  `{"mcp":{"bind":"AUTO"}}`,
+		"a number":             `{"mcp":{"bind":4243}}`,
+		"numbers in an array":  `{"mcp":{"bind":[4243]}}`,
+	} {
+		t.Run("refused, "+name, func(t *testing.T) {
+			if _, err := Parse([]byte(file)); err == nil || !strings.Contains(err.Error(), "mcp.bind") {
+				t.Errorf("Parse(%s) is not refused naming mcp.bind: %v", file, err)
+			}
+		})
+	}
+}
+
+// S-0732: WithMCPBind takes several addresses, auto among them, dropping
+// exact duplicates in first order and refusing a bad entry by name.
+func TestWithMCPBindSeveral(t *testing.T) {
+	c := Default()
+	for _, tc := range []struct {
+		in   []string
+		want []string
+	}{
+		{[]string{"127.0.0.1", " 172.17.0.1 "}, []string{"127.0.0.1", "172.17.0.1"}},
+		{[]string{MCPBindAuto}, []string{MCPBindAuto}},
+		{[]string{MCPBindAuto, "10.0.0.5"}, []string{MCPBindAuto, "10.0.0.5"}},
+		{[]string{"10.0.0.5", "127.0.0.1", "10.0.0.5", " 127.0.0.1"}, []string{"10.0.0.5", "127.0.0.1"}},
+	} {
+		set, err := c.WithMCPBind(tc.in...)
+		if err != nil {
+			t.Errorf("WithMCPBind(%q): %v", tc.in, err)
+			continue
+		}
+		if got := set.MCPBinds(); !slices.Equal(got, tc.want) {
+			t.Errorf("WithMCPBind(%q) binds %q, want %q", tc.in, got, tc.want)
+		}
+	}
+	for _, tc := range []struct {
+		in   []string
+		name string
+	}{
+		{nil, "flai serve mcp clear"},
+		{[]string{"127.0.0.1", " "}, "flai serve mcp clear"},
+		{[]string{"127.0.0.1", "10.0.0.5:4243"}, "10.0.0.5:4243"},
+		{[]string{MCPBindAuto, "[::1]"}, "[::1]"},
+		{[]string{"Auto"}, "Auto"},
+	} {
+		if _, err := c.WithMCPBind(tc.in...); err == nil {
+			t.Errorf("WithMCPBind(%q) is accepted", tc.in)
+		} else if !strings.Contains(err.Error(), "mcp.bind") || !strings.Contains(err.Error(), tc.name) {
+			t.Errorf("WithMCPBind(%q) does not name mcp.bind and %q: %v", tc.in, tc.name, err)
+		}
+	}
+	if c.MCP.Bind != nil {
+		t.Errorf("WithMCPBind leaves the receiver alone: %q", c.MCP.Bind)
 	}
 }
 

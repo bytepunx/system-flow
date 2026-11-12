@@ -126,7 +126,7 @@ func (a *app) mcpBind() string {
 // mcpBindOf is cfg's mcp.bind as flai host uses it, and whether it is set,
 // for what shows the host's settings.
 func mcpBindOf(cfg config.Config) (string, bool) {
-	return cfg.MCPBind(), cfg.MCP.Bind != ""
+	return cfg.MCPBind(), len(cfg.MCP.Bind) > 0
 }
 
 // flai serve mcp: the host's say about the HTTP MCP server flai host starts

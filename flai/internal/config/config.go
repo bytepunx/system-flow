@@ -84,58 +84,157 @@ type Config struct {
 	MCP MCPHost `json:"mcp,omitzero"`
 }
 
-// DefaultMCPBind is the address flai host starts each project's MCP server
-// on when mcp.bind is unset: this machine only.
+// DefaultMCPBind is the loopback address, this machine only, that
+// MCPBindAuto always includes.
 const DefaultMCPBind = "127.0.0.1"
+
+// MCPBindAuto is the mcp.bind value that leaves the choice to flai: at each
+// server start flai host listens on DefaultMCPBind and, where the host's
+// Docker engine routes host.docker.internal to a network's gateway rather
+// than to loopback, on the gateway of the network the container harness
+// runs on. Written beside explicit addresses, it adds them to its own.
+const MCPBindAuto = "auto"
+
+// DefaultMCPBinds is what an unset mcp.bind resolves to: MCPBindAuto, the
+// plan's assumption pending the operator's confirmation on TH-1099, kept
+// here alone so that it changes in one place.
+func DefaultMCPBinds() []string {
+	return []string{MCPBindAuto}
+}
 
 // MCPHost is the host's say about each project's HTTP MCP server.
 type MCPHost struct {
-	// Bind is the address, an IP address or a host name without a port, that
-	// flai host starts each project's flai mcp http on, keeping the port it
-	// picks for the project; DefaultMCPBind when empty. An address a
-	// container reaches lets an agent in one call the server; the bearer
-	// token and the Origin refusal guard it wherever it listens.
-	Bind string `json:"bind,omitempty"`
+	// Bind is the addresses, each an IP address or a host name without a
+	// port, or MCPBindAuto, that flai host starts each project's flai mcp
+	// http on, keeping the port it picks for the project; DefaultMCPBinds
+	// when empty. An address a container reaches lets an agent in one call
+	// the server; the bearer token and the Origin refusal guard it wherever
+	// it listens.
+	Bind MCPBinds `json:"bind,omitempty"`
 }
 
-// MCPBind is the address flai host starts each project's MCP server on:
-// mcp.bind, or DefaultMCPBind when it is unset.
+// MCPBinds is the addresses of mcp.bind, written as one JSON string when it
+// holds one and as a JSON array of strings when it holds several.
+type MCPBinds []string
+
+// UnmarshalJSON reads mcp.bind as one address, a JSON string, empty for
+// unset, or as several, a JSON array of strings; null and [] are unset.
+func (b *MCPBinds) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) > 0 && trimmed[0] == '"' {
+		var one string
+		if err := json.Unmarshal(trimmed, &one); err != nil {
+			return fmt.Errorf("read mcp.bind as an address: %w", err)
+		}
+		*b = nil
+		if one != "" {
+			*b = MCPBinds{one}
+		}
+		return nil
+	}
+	var several []string
+	if err := json.Unmarshal(trimmed, &several); err != nil {
+		return fmt.Errorf("read mcp.bind: %s is neither an address nor a list of addresses; write a string such as \"127.0.0.1\" or a list such as [\"auto\", \"10.0.0.5\"], or set it with flai serve mcp bind", trimmed)
+	}
+	*b = nil
+	if len(several) > 0 {
+		*b = MCPBinds(several)
+	}
+	return nil
+}
+
+// MarshalJSON writes mcp.bind as a JSON string when it holds one address,
+// as configurations with one address have always been written, and as a
+// JSON array otherwise.
+func (b MCPBinds) MarshalJSON() ([]byte, error) {
+	if len(b) == 1 {
+		return json.Marshal(b[0])
+	}
+	return json.Marshal([]string(b))
+}
+
+// MCPBinds is the addresses flai host starts each project's MCP server on:
+// mcp.bind as written, or DefaultMCPBinds when it is unset. MCPBindAuto
+// among them is left for flai host to resolve at each start.
+func (c Config) MCPBinds() []string {
+	if len(c.MCP.Bind) == 0 {
+		return DefaultMCPBinds()
+	}
+	return slices.Clone([]string(c.MCP.Bind))
+}
+
+// MCPBind is the first of MCPBinds, with MCPBindAuto taken as
+// DefaultMCPBind, the one address it always includes, for a caller that
+// starts the MCP server on one address only.
 func (c Config) MCPBind() string {
-	if c.MCP.Bind == "" {
-		return DefaultMCPBind
+	if bind := c.MCPBinds()[0]; bind != MCPBindAuto {
+		return bind
 	}
-	return c.MCP.Bind
+	return DefaultMCPBind
 }
 
-// WithMCPBind returns the configuration with mcp.bind set to addr, refusing
-// one that is not an IP address or a host name, or that names a port.
-func (c Config) WithMCPBind(addr string) (Config, error) {
-	addr = strings.TrimSpace(addr)
-	if addr == "" {
-		return c, errors.New("mcp.bind needs an address, such as 127.0.0.1 or 0.0.0.0; flai serve mcp clear goes back to " + DefaultMCPBind)
+// WithMCPBind returns the configuration with mcp.bind set to addrs, each
+// trimmed and exact duplicates dropped, keeping the first order. It refuses
+// no address, an empty one, and one that is neither MCPBindAuto nor an IP
+// address or a host name, or that names a port. MCPBindAuto beside explicit
+// addresses adds them to its own.
+func (c Config) WithMCPBind(addrs ...string) (Config, error) {
+	if len(addrs) == 0 {
+		return c, errors.New("set mcp.bind: no address given; give one or several, such as 127.0.0.1, 0.0.0.0, or " + MCPBindAuto + ", or run flai serve mcp clear to go back to " + strings.Join(DefaultMCPBinds(), " "))
 	}
-	if err := checkMCPBind(addr); err != nil {
-		return c, err
+	var binds MCPBinds
+	for _, addr := range addrs {
+		addr = strings.TrimSpace(addr)
+		if addr == "" {
+			return c, errors.New("set mcp.bind: an address is empty; give an address such as 127.0.0.1, 0.0.0.0, or " + MCPBindAuto + ", or run flai serve mcp clear to go back to " + strings.Join(DefaultMCPBinds(), " "))
+		}
+		if err := checkMCPBind(addr); err != nil {
+			return c, err
+		}
+		if !slices.Contains(binds, addr) {
+			binds = append(binds, addr)
+		}
 	}
-	c.MCP.Bind = addr
+	c.MCP.Bind = binds
 	return c, nil
 }
 
 // WithoutMCPBind returns the configuration with mcp.bind unset, so that flai
-// host starts each project's MCP server on DefaultMCPBind.
+// host starts each project's MCP server on DefaultMCPBinds.
 func (c Config) WithoutMCPBind() Config {
-	c.MCP.Bind = ""
+	c.MCP.Bind = nil
 	return c
 }
 
-// checkMCPBind refuses an mcp.bind that is neither an IP address nor a host
-// name, or that names a port; empty is unset and passes.
+// checkMCPBinds refuses an mcp.bind that holds an empty address, an address
+// twice, or one checkMCPBind refuses; unset passes.
+func checkMCPBinds(binds MCPBinds) error {
+	for i, addr := range binds {
+		if addr == "" {
+			return errors.New("mcp.bind holds an empty address; remove it, or set mcp.bind with flai serve mcp bind and one address or several")
+		}
+		if slices.Contains(binds[:i], addr) {
+			return fmt.Errorf("mcp.bind holds %q twice; remove one, or set mcp.bind with flai serve mcp bind and one address or several", addr)
+		}
+		if err := checkMCPBind(addr); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkMCPBind refuses an mcp.bind address that is neither MCPBindAuto nor
+// an IP address or a host name, or that names a port; empty is unset and
+// passes.
 func checkMCPBind(addr string) error {
-	if addr == "" {
+	if addr == "" || addr == MCPBindAuto {
 		return nil
 	}
+	if strings.EqualFold(addr, MCPBindAuto) {
+		return fmt.Errorf("mcp.bind %q is not %q: write it in lower case, with flai serve mcp bind %s", addr, MCPBindAuto, MCPBindAuto)
+	}
 	if why := badBindAddress(addr); why != "" {
-		return fmt.Errorf("mcp.bind %q %s; give an IP address or a host name without a port, such as 127.0.0.1, 0.0.0.0, or 172.17.0.1, with flai serve mcp bind <address>", addr, why)
+		return fmt.Errorf("mcp.bind %q %s; give an IP address or a host name without a port, such as 127.0.0.1, 0.0.0.0, or 172.17.0.1, or %s, with flai serve mcp bind and one address or several", addr, why, MCPBindAuto)
 	}
 	return nil
 }
@@ -1075,8 +1174,8 @@ func Load(path string) (cfg Config, created bool, err error) {
 // agent.projects entry checkProjects refuses, an agent.providers entry that
 // is not whole or sets a value flai refuses, a forges entry checkForges
 // refuses, a dashboard.allowed_hosts entry that is not a host name with an
-// optional port, a notify channel checkNotify refuses, and an mcp.bind that is no IP address or host name or names a
-// port.
+// optional port, a notify channel checkNotify refuses, and an mcp.bind
+// checkMCPBinds refuses.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -1107,7 +1206,7 @@ func Parse(data []byte) (Config, error) {
 	if err := checkNotify(cfg.Notify); err != nil {
 		return Config{}, err
 	}
-	if err := checkMCPBind(cfg.MCP.Bind); err != nil {
+	if err := checkMCPBinds(cfg.MCP.Bind); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
