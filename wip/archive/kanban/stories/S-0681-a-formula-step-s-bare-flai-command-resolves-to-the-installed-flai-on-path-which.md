@@ -3,10 +3,10 @@ id: S-0681
 type: story
 nature: improvement
 title: A formula step's bare flai command resolves to the installed flai on PATH, which can be older than the flags the formula's steps use
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:37:05Z
-updated: 2026-11-12T00:56:30Z
+updated: 2026-11-12T03:44:12Z
 transitions:
   - to: ready
     at: 2026-11-10T10:58:14Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-12T00:56:30Z
     by: agent-S-0681
+  - to: done
+    at: 2026-11-12T03:44:12Z
+    by: alex
 tags: []
 touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/users/flai.md, flai/cmd/formula.go, flai/cmd/formula_test.go, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md, design/issues/summary.md]
 agent:
