@@ -158,6 +158,17 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	}
 
 	now := opt.Now.UTC().Format(TimeFormat)
+	// A closed item is never blocked (I-0347): a block left open at done or
+	// cancelled is reported by every check after it and counted to now by
+	// flai stats, so the closing move ends it, and says so.
+	if to == Done || to == Cancelled {
+		for i := range it.Blocked {
+			if it.Blocked[i].Until == "" {
+				it.Blocked[i].Until = now
+				warnings = append(warnings, fmt.Sprintf("%s was blocked (%s); the move to %s closed its blocked interval", it.ID, it.Blocked[i].Reason, to))
+			}
+		}
+	}
 	it.Transitions = append(it.Transitions, Transition{To: to, At: now, By: orDefault(opt.By, "agent")})
 	it.Status = to
 	it.Updated = now

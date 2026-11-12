@@ -1,8 +1,10 @@
 package workitem
 
 import (
+	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // storyInProgress makes S-0001 with criteria as its acceptance criteria and
@@ -80,6 +82,68 @@ func TestMoveTaskToReviewDoesNotWarnOfCriteria(t *testing.T) {
 	}
 	if w := criteriaWarning(warnings); w != "" {
 		t.Errorf("a task has no criteria to tick, yet: %q", w)
+	}
+}
+
+// I-0347: S-0678 was blocked, went to review, and was accepted with the
+// interval open, so every close-out after it reported item.blocked-closed. A
+// move to done or cancelled closes the interval at the move and warns.
+func TestAClosingMoveClosesTheOpenBlockedInterval(t *testing.T) {
+	for _, to := range []string{Done, Cancelled} {
+		t.Run(to, func(t *testing.T) {
+			r := newProject(t)
+			s := storyInProgress(t, r, "- [x] one\n")
+			task, err := r.Get("T-0001")
+			if err != nil {
+				t.Fatal(err)
+			}
+			mustMove(t, r, task, Ready, "")
+			mustMove(t, r, task, InProgress, "")
+			mustMove(t, r, task, Done, "")
+			if err := BlockItem(s, "pause for urgent fix", t0); err != nil {
+				t.Fatal(err)
+			}
+			items, _ := r.List(false)
+			if to == Done {
+				if _, err := r.Move(s, Review, MoveOptions{Now: t0.Add(time.Minute), Items: items}); err != nil {
+					t.Fatal(err)
+				}
+				if !s.IsBlocked() {
+					t.Fatal("a move to review must leave the block open")
+				}
+			}
+			at := t0.Add(2 * time.Minute)
+			warnings, err := r.Move(s, to, MoveOptions{Now: at, Items: items, Reason: "dropped"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if s.IsBlocked() {
+				t.Fatalf("%s left the blocked interval open: %+v", to, s.Blocked)
+			}
+			if got, want := s.Blocked[0].Until, at.UTC().Format(TimeFormat); got != want {
+				t.Errorf("until = %q, want the move's time %q", got, want)
+			}
+			want := "S-0001 was blocked (pause for urgent fix); the move to " + to + " closed its blocked interval"
+			if !slices.Contains(warnings, want) {
+				t.Errorf("warnings %q lack %q", warnings, want)
+			}
+		})
+	}
+}
+
+// A closing move of an item that is not blocked says nothing of blocks.
+func TestAClosingMoveOfAnUnblockedItemDoesNotWarnOfABlock(t *testing.T) {
+	r := newProject(t)
+	s := storyInProgress(t, r, "- [ ] one\n")
+	items, _ := r.List(false)
+	warnings, err := r.Move(s, Cancelled, MoveOptions{Now: t0, Items: items, Reason: "dropped"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "blocked") {
+			t.Errorf("unexpected warning %q", w)
+		}
 	}
 }
 
