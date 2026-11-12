@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0726 `git.md` and `work-management.md` say to resolve each path a sync's stop lists, `git add` it, and run `flai stream sync` again, call `flai task done` again, or ask for the close-out again, which continues the rebase and settles the stops after it, instead of running `git rebase --continue` (patch, ADR-0294, I-0351).
+
 ## 1.1.34 - 2026-11-11
 
 - S-0674 Declared touches match what a story changes in 16 percent of completed stories, so claims mislead the pull hold, the trial merge, and the conversations (patch).
