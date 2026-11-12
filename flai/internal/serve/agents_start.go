@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,47 +69,65 @@ type MCPAsker interface {
 // mcpEnv is what a run of adapter, the harness name, is handed of the HTTP
 // MCP server of the project at root: its URL and token, as MCPURLEnv and
 // MCPTokenEnv, when the adapter asks for them (MCPAsker), and nothing
-// otherwise. It refuses a start that asks while the server is not running
-// at now or its token cannot be read, saying what to run and never the
-// token; now is read only for an adapter that asks.
-func mcpEnv(adapter harness.Adapter, name, root string, now func() time.Time) ([]string, error) {
+// otherwise, with the addresses the server listens on, host:port, which the
+// run is not handed and the container harness checks (containerReachable).
+// It refuses a start that asks while the server is not running at now or
+// its token cannot be read, saying what to run and never the token; now is
+// read only for an adapter that asks.
+func mcpEnv(adapter harness.Adapter, name, root string, now func() time.Time) (env, addrs []string, err error) {
 	if asker, ok := adapter.(MCPAsker); !ok || !asker.MCPOverHTTP() {
-		return nil, nil
+		return nil, nil, nil
 	}
 	repo, err := workitem.Open(root)
 	if err != nil {
-		return nil, fmt.Errorf("open the project at %s for its HTTP MCP server, which harness %s reaches flai through: %w", root, name, err)
+		return nil, nil, fmt.Errorf("open the project at %s for its HTTP MCP server, which harness %s reaches flai through: %w", root, name, err)
 	}
-	url, ok := mcpServerURL(repo.CacheDir(), now())
+	server, ok := mcpServerAt(repo.CacheDir(), now())
 	if !ok {
-		return nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the project's is not running: flai host starts it for every project flai serve serves, or run flai mcp start in the project, and start the agent again", name)
+		return nil, nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the project's is not running: flai host starts it for every project flai serve serves, or run flai mcp start in the project, and start the agent again", name)
 	}
 	data, err := os.ReadFile(filepath.Join(repo.CacheDir(), MCPTokenFile))
 	token := strings.TrimSpace(string(data))
 	if err != nil || token == "" {
-		return nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the server's token in %s cannot be read: run flai mcp token in the project, and start the agent again", name, filepath.Join(repo.CacheDir(), MCPTokenFile))
+		return nil, nil, fmt.Errorf("harness %s reaches flai's MCP server over HTTP, and the server's token in %s cannot be read: run flai mcp token in the project, and start the agent again", name, filepath.Join(repo.CacheDir(), MCPTokenFile))
 	}
-	return []string{MCPURLEnv + "=" + url, MCPTokenEnv + "=" + token}, nil
+	return []string{MCPURLEnv + "=" + server.URL, MCPTokenEnv + "=" + token}, server.Addrs, nil
 }
 
-// mcpServerURL is the URL the HTTP MCP server whose state is in cache says it
-// listens at, the address flai host gave it, and whether it is running: its
+// mcpServer is what the HTTP MCP server's state says of where it listens:
+// the URL it is reached at, on its loopback listener when it has one, and
+// every address it listens on, host:port.
+type mcpServer struct {
+	URL   string
+	Addrs []string
+}
+
+// mcpServerAt is where the HTTP MCP server whose state is in cache says it
+// listens, at the addresses flai host gave it, and whether it is running: its
 // state was rewritten within MCPStaleAfter of now and its process is alive.
-func mcpServerURL(cache string, now time.Time) (string, bool) {
+// A state with no addrs, an older server's, listens at its URL's host alone.
+func mcpServerAt(cache string, now time.Time) (mcpServer, bool) {
 	var st struct {
-		PID     int    `json:"pid"`
-		URL     string `json:"url"`
-		Updated string `json:"updated"`
+		PID     int      `json:"pid"`
+		URL     string   `json:"url"`
+		Addrs   []string `json:"addrs"`
+		Updated string   `json:"updated"`
 	}
 	data, err := os.ReadFile(filepath.Join(cache, MCPStateFile))
 	if err != nil || json.Unmarshal(data, &st) != nil || st.URL == "" {
-		return "", false
+		return mcpServer{}, false
 	}
 	updated, err := time.Parse(time.RFC3339, st.Updated)
 	if err != nil || now.Sub(updated) > MCPStaleAfter {
-		return "", false
+		return mcpServer{}, false
 	}
-	return st.URL, Alive(st.PID)
+	addrs := st.Addrs
+	if len(addrs) == 0 {
+		if u, err := url.Parse(st.URL); err == nil && u.Host != "" {
+			addrs = []string{u.Host}
+		}
+	}
+	return mcpServer{URL: st.URL, Addrs: addrs}, Alive(st.PID)
 }
 
 // withoutForgeTokens is env without the variables each forge's token is
@@ -388,9 +407,10 @@ func (r *AgentRun) startedSaid() string {
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
-// the adapter is asked, containerReachable once the MCP server's URL is
-// known, refusing a loopback bind a native engine's bridge cannot reach
-// (S-0619, I-0254), and containerReady once the adapter has taken the start.
+// the adapter is asked, containerReachable once the MCP server's URL and
+// addresses are known, refusing a server that listens on no address a native
+// engine's bridge reaches (S-0619, I-0254, S-0732), and containerReady once
+// the adapter has taken the start.
 // The keys and the token go to spawnWith's env and nowhere else, not run, a log
 // line, the journal, or an error, so that a secret flai serve holds reaches
 // the child alone. A refusal is the start's
@@ -445,13 +465,13 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	if err != nil {
 		return harness.Start{}, nil, err
 	}
-	mcp, err := mcpEnv(adapter, name, l.entry.Root, l.now)
+	mcp, listens, err := mcpEnv(adapter, name, l.entry.Root, l.now)
 	if err != nil {
 		return harness.Start{}, nil, err
 	}
 	if name == harness.Container {
 		if len(mcp) > 0 {
-			if err := l.containerReachable(cfg, mcp, host.Network); err != nil {
+			if err := l.containerReachable(cfg, mcp, listens, host.Network); err != nil {
 				return harness.Start{}, nil, err
 			}
 		}

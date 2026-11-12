@@ -377,32 +377,58 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 	}
 }
 
-// I-0254, S-0619: on a native Linux engine, which routes host.docker.internal
-// to the bridge's gateway, a container start whose MCP server listens on
-// loopback is refused before the agent's container runs, naming the bind
-// that reaches it and the host's network as the other way; before S-0619 it
-// started and its agent's first MCP call failed. The gateway docker cannot
-// name is named by the command that names it.
+// mcpListens rewrites the state of lab's HTTP MCP server, as containerOn
+// wrote it, at its loopback URL, to say it listens on addrs too, as flai mcp
+// http writes them since S-0732.
+func mcpListens(lab *agentLab, addrs ...string) {
+	lab.t.Helper()
+	listens, err := json.Marshal(addrs)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	state := fmt.Sprintf(`{"pid": %d, "url": "http://127.0.0.1:4299/mcp", "addrs": %s, "updated": %q}`, os.Getpid(), listens, time.Now().UTC().Format(time.RFC3339))
+	if err := os.WriteFile(filepath.Join(lab.root, ".flai-cache", MCPStateFile), []byte(state), 0o600); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// I-0254, S-0619, S-0732: on a native Linux engine, which routes
+// host.docker.internal to the bridge's gateway, a container start whose MCP
+// server listens on no address the container reaches, neither the gateway
+// nor every address, is refused before the agent's container runs, naming
+// the automatic bind first, then the gateway's beside loopback, and the
+// host's network as the other way; before S-0619 it started and its agent's
+// first MCP call failed. An older server's state, with no addrs, listens at
+// its URL's host alone. The gateway docker cannot name is named by the
+// command that names it.
 func TestAContainerStartANativeEnginesBridgeCannotReachIsRefused(t *testing.T) {
 	ctx := context.Background()
 	for _, c := range []struct {
 		name    string
 		network string
+		addrs   []string // none: an older server's state, with no addrs
 		files   []string
 		says    []string
 	}{
-		{name: "bridge", files: []string{"native-engine"}, says: []string{
-			"listens on 127.0.0.1", "(Ubuntu 24.04.1 LTS)", "host.docker.internal", `network "bridge"`,
-			"flai serve mcp bind 172.17.0.1, then flai host restart mcp", "flai serve agent harness container --network host"}},
-		{name: "a network of its own", network: "agents", files: []string{"native-engine"}, says: []string{`network "agents"`, "flai serve mcp bind 172.17.0.1"}},
+		{name: "bridge, an older server", files: []string{"native-engine"}, says: []string{
+			"listens on 127.0.0.1:4299,", "(Ubuntu 24.04.1 LTS)", "host.docker.internal", `network "bridge", 172.17.0.1,`,
+			"flai serve mcp bind auto", "flai serve mcp bind 127.0.0.1 172.17.0.1, then flai host restart mcp", "flai serve agent harness container --network host"}},
+		{name: "bridge, loopback alone", addrs: []string{"127.0.0.1:4299"}, files: []string{"native-engine"}, says: []string{
+			"listens on 127.0.0.1:4299,", `network "bridge", 172.17.0.1,`, "flai serve mcp bind auto", "flai serve mcp bind 127.0.0.1 172.17.0.1"}},
+		{name: "an address that is not the gateway", addrs: []string{"127.0.0.1:4299", "10.0.0.5:4299"}, files: []string{"native-engine"}, says: []string{
+			"listens on 127.0.0.1:4299, 10.0.0.5:4299,", "flai serve mcp bind auto"}},
+		{name: "a network of its own", network: "agents", files: []string{"native-engine"}, says: []string{`network "agents"`, "flai serve mcp bind 127.0.0.1 172.17.0.1"}},
 		{name: "gateway unreadable", files: []string{"native-engine", "network-fails"}, says: []string{
-			"flai serve mcp bind the gateway docker network inspect bridge names"}},
+			"flai serve mcp bind 127.0.0.1 the gateway docker network inspect bridge names"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab, _ := containerLab(t)
 			host := lab.cfg.Harnesses[harness.Container]
 			host.Network = c.network
 			lab.cfg.Harnesses[harness.Container] = host
+			if c.addrs != nil {
+				mcpListens(lab, c.addrs...)
+			}
 			for _, f := range c.files {
 				if err := os.WriteFile(filepath.Join(lab.outDir, f), nil, 0o644); err != nil {
 					t.Fatal(err)
@@ -419,8 +445,58 @@ func TestAContainerStartANativeEnginesBridgeCannotReachIsRefused(t *testing.T) {
 					t.Errorf("the refusal does not say %q: %s", s, r.Why)
 				}
 			}
+			// the automatic bind is the first way named, then the gateway's
+			// beside loopback, then the host's network
+			auto, both, hostNet := strings.Index(r.Why, "flai serve mcp bind auto"), strings.Index(r.Why, "flai serve mcp bind 127.0.0.1 "), strings.Index(r.Why, "--network host")
+			if auto < 0 || both < auto || hostNet < both || strings.Index(r.Why, "flai serve mcp bind") != auto {
+				t.Errorf("the refusal does not name flai serve mcp bind auto first: %s", r.Why)
+			}
 			if _, err := os.Stat(filepath.Join(lab.outDir, id+".stdin")); err == nil {
 				t.Error("the agent's container was run")
+			}
+		})
+	}
+}
+
+// S-0732: a container start whose MCP server listens, beside loopback, on an
+// address the container reaches starts with neither flai serve mcp bind
+// <gateway> nor the host's network: on a native engine, the network's
+// gateway, which the engine routes host.docker.internal to, or every address
+// (0.0.0.0 or ::); on Docker Desktop, loopback alone. The agent is handed
+// the URL at host.docker.internal on the server's port. Before S-0732 a
+// native engine's start was refused whenever the URL was on loopback.
+func TestAContainerStartPassesWhenTheServerListensWhereTheContainerReaches(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name   string
+		addrs  []string
+		native bool
+	}{
+		{name: "loopback and the gateway", addrs: []string{"127.0.0.1:4299", "172.17.0.1:4299"}, native: true},
+		{name: "every IPv4 address", addrs: []string{"0.0.0.0:4299"}, native: true},
+		{name: "every address", addrs: []string{"[::]:4299"}, native: true},
+		{name: "docker desktop, loopback alone", addrs: []string{"127.0.0.1:4299"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab, token := containerLab(t)
+			mcpListens(lab, c.addrs...)
+			if c.native {
+				if err := os.WriteFile(filepath.Join(lab.outDir, "native-engine"), nil, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			id := containerStory(lab, "Reaches the server", &manifest.Agent{Harness: harness.Container})
+			lab.l.look(ctx, false)
+			waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+			if r := lab.run(id); r.Error != "" || r.PID == 0 || strings.Contains(r.Why, "cannot reach flai's MCP server") {
+				t.Fatalf("run: %+v", r)
+			}
+			got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+			if !strings.Contains(string(got), "mcp: http://host.docker.internal:4299/mcp "+token+"\n") {
+				t.Errorf("the agent is not handed the server at host.docker.internal:\n%s", got)
+			}
+			if args, _, _ := strings.Cut(string(got), "\n"); strings.Contains(args, "--network host") {
+				t.Errorf("the container runs on the host's network: %s", args)
 			}
 		})
 	}

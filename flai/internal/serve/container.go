@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
@@ -27,8 +28,9 @@ import (
 // that cannot succeed, each refusal saying what to do: docker not on PATH,
 // the inner harness's image not on this host, and, through the adapter, a
 // login the inner harness needs and the host has not set, and, once the HTTP
-// MCP server's URL is known, a URL on loopback that a native engine's bridge
-// cannot reach (containerReachable, S-0619, I-0254). It reads the inner
+// MCP server's URL and addresses are known, a server on loopback that listens
+// on no address a native engine's bridge reaches (containerReachable, S-0619,
+// I-0254, S-0732). It reads the inner
 // harness's version from the image and records it on the run; a Claude Code
 // version with no record of ADR-0106's check through the agent's provider is
 // checked inside the image, beside the start (S-0618), and one whose check
@@ -312,32 +314,34 @@ func containerMCP(mcp []string, network string) []string {
 }
 
 // containerReachable refuses the start of an agent on the container harness
-// whose HTTP MCP server, as mcp, mcpEnv's variables, names it, listens on
-// loopback while the container joins network, a network other than the
-// host's ("" is bridge, as the adapter runs it), on an engine other than
-// Docker Desktop (S-0619, I-0254). Such an engine routes host.docker.internal
-// to the network's gateway, a bridge address the server does not answer, so
-// the agent's first MCP call would fail; Docker Desktop forwards the gateway
-// to the host's loopback, where it answers (S-0505, S-0506). The refusal says
-// to bind the server to the gateway, which it names, or to run the container
-// on the host's network. An engine docker info cannot name is warned of and
-// the start goes on: the check never refuses on a guess.
-func (l *launcher) containerReachable(cfg AgentConfig, mcp []string, network string) error {
+// whose HTTP MCP server, as mcp, mcpEnv's variables, names it at a loopback
+// URL and listens at addrs, host:port, on none the container reaches, while
+// the container joins network, a network other than the host's ("" is
+// bridge, as the adapter runs it), on an engine other than Docker Desktop
+// (S-0619, I-0254, S-0732). Such an engine routes host.docker.internal to the
+// network's gateway, so the server must listen there, or on every address,
+// for the agent's first MCP call to succeed; Docker Desktop forwards the
+// gateway to the host's loopback, where it answers (S-0505, S-0506). The
+// refusal says to bind the server with auto, which listens on loopback and
+// that gateway, or to the gateway, which it names, beside loopback, or to run
+// the container on the host's network. An engine docker info cannot name is
+// warned of and the start goes on: the check never refuses on a guess.
+func (l *launcher) containerReachable(cfg AgentConfig, mcp, addrs []string, network string) error {
 	if network == "host" {
 		return nil
 	}
 	if network == "" {
 		network = "bridge"
 	}
-	bind := ""
+	onLoopback := false
 	for _, kv := range mcp {
 		if name, value, _ := strings.Cut(kv, "="); name == MCPURLEnv {
 			if u, err := url.Parse(value); err == nil && loopbackHost(u.Hostname()) {
-				bind = u.Hostname()
+				onLoopback = true
 			}
 		}
 	}
-	if bind == "" {
+	if !onLoopback || slices.ContainsFunc(addrs, func(addr string) bool { return unspecifiedHost(listenHost(addr)) }) {
 		return nil
 	}
 	engine, ok := l.containerEngine(cfg)
@@ -347,8 +351,36 @@ func (l *launcher) containerReachable(cfg AgentConfig, mcp []string, network str
 	gateway, err := NetworkGateway(l.docker, l.entry.Root, containerProgram(cfg), network)
 	if err != nil {
 		gateway = "the gateway docker network inspect " + network + " names"
+	} else if slices.ContainsFunc(addrs, func(addr string) bool { return sameHost(listenHost(addr), gateway) }) {
+		return nil
 	}
-	return fmt.Errorf("the agent's container cannot reach flai's MCP server: the server listens on %[1]s, and this Docker engine (%[2]s) routes %[3]s to the gateway of the network %[4]q, %[5]s, which a server on %[1]s does not answer: bind the server there with flai serve mcp bind %[5]s, then flai host restart mcp, or run the container on the host's network with flai serve agent harness container --network host, and start the agent again", bind, engine, containerHost, network, gateway)
+	return fmt.Errorf("the agent's container cannot reach flai's MCP server: the server listens on %[1]s, and this Docker engine (%[2]s) routes %[3]s to the gateway of the network %[4]q, %[5]s, which the server does not listen on: listen there with flai serve mcp bind auto, the default, which on this engine listens on %[6]s and that gateway (a server that started before the engine changed resolves it again when it restarts), then flai host restart mcp; or with flai serve mcp bind %[6]s %[5]s, then flai host restart mcp; or run the container on the host's network with flai serve agent harness container --network host; and start the agent again", strings.Join(addrs, ", "), engine, containerHost, network, gateway, mcpLoopback)
+}
+
+// listenHost is the host of addr, an address a server listens on as
+// host:port, or addr itself when it has no port.
+func listenHost(addr string) string {
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		return host
+	}
+	return addr
+}
+
+// unspecifiedHost says whether host is the unspecified address, 0.0.0.0 or
+// ::, on which a server listens at every address of the machine.
+func unspecifiedHost(host string) bool {
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsUnspecified()
+}
+
+// sameHost says whether a and b name one address, compared as IPs when both
+// are, so that two spellings of one IPv6 address agree.
+func sameHost(a, b string) bool {
+	ipA, ipB := net.ParseIP(a), net.ParseIP(b)
+	if ipA != nil && ipB != nil {
+		return ipA.Equal(ipB)
+	}
+	return a == b
 }
 
 // containerEngine is the operating system docker info names for the engine
