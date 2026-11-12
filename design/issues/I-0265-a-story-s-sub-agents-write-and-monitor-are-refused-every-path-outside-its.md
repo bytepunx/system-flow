@@ -2,12 +2,12 @@
 id: I-0265
 title: A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 13m
 first_reported: 2026-11-06T23:16:17Z
 last_reported: 2026-11-07T09:46:30Z
-updated: 2026-11-10T08:55:34Z
+updated: 2026-11-12T00:32:47Z
 ---
 
 # I-0265 A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
@@ -28,3 +28,4 @@ S-0586's explorer was refused every read of /home/alex/git/bytepunx/kluster, the
 ## Remediation
 
 Story S-0701 remediates this issue, created from it at 2026-11-10T08:55:34Z.
+Closed 2026-11-12T00:32:47Z: S-0701 fixed it (ADR-0289). The operator now names folders outside the project per harness with flai serve agent harness <name> --outside <dir>, which flai guard refuses to every agent. flai serve puts them in every start request: the claude-code adapter passes each as --add-dir, which a story's sub-agents inherit (checked with one scratch claude -p on Claude Code 2.1.322), and the container harness mounts each at its own path and pilot passes it on as --add-dir. Monitor joins the default --allowedTools Bash,Monitor,mcp__flai. The start prompt names the granted folders and says Read, Grep, Glob, Edit, and Write are refused on any other path outside the project. TestClaudeCodeAddsTheOperatorsOutsideFolders, TestAStorysAgentGetsTheOutsideFoldersOfItsHarness, TestTheContainerMountsTheOutsideFoldersAtTheirOwnPaths, and TestTheOutsideFoldersReachTheInnerHarnessAsAddDir reproduce the cause.
