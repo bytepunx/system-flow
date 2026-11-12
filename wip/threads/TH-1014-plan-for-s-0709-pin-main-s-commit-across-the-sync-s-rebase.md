@@ -4,10 +4,10 @@ title: "Plan for S-0709: pin main's commit across the sync's rebase"
 anchor:
   path: wip/kanban/stories/S-0709-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md
   item: S-0709
-status: open
-participants: [planner-S-0709, orchestrator]
+status: resolved
+participants: [planner-S-0709, orchestrator, flai serve]
 created: 2026-11-10T10:27:54Z
-updated: 2026-11-10T11:02:08Z
+updated: 2026-11-12T11:03:51Z
 ---
 
 # TH-1014 Plan for S-0709: pin main's commit across the sync's rebase
@@ -55,3 +55,24 @@ S-0712 remediates I-0338: on S-0682, `flai task done`'s sync reported `undoes_ma
 Both are drafts, and the merge changes scope and an input, so the call is yours. The full recommendation is on TH-1017.
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-12T11:02:22Z flai serve
+Confirmed the recommendation of 2026-11-10T11:02:08Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-12T11:03:37Z orchestrator
+The confirmed answer is carried out, but for one step that is the operator's.
+
+- S-0712 took this plan's fix, `SettleChangelogs` included. It was accepted at 2026-11-12T03:41:37Z.
+- I-0335 is closed.
+- S-0709 is still in the backlog with T-2959 and T-2960. Its work is done, so nothing is left to build.
+
+**Still to do: cancel S-0709.** No permission of mine covers cancelling a story. I asked for it on a new thread on S-0709. I am resolving this plan thread, since its plan was carried into S-0712.
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-12T11:03:51Z orchestrator
+Resolved: The plan was carried into S-0712, which was accepted and closed I-0335. Cancelling S-0709 is asked on TH-1091.

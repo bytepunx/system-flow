@@ -7,7 +7,7 @@ status: backlog
 parent: S-0659
 owner: alex
 created: 2026-11-10T08:21:00Z
-updated: 2026-11-10T08:21:00Z
+updated: 2026-11-12T15:54:10Z
 transitions: []
 stream: S-0659
 tags: [cli]
@@ -22,7 +22,8 @@ Edit `design/system/kluster.md` to say what T-2860's ADR decides, with a link to
 
 - § The namespaces: a story's namespace lives from its first deploy, in progress or review, until acceptance or cancellation, and the limit on how many live at once.
 - § The `kluster:` block: the key that sets that limit, and its default.
-- § What happens when: the table the ADR puts in place of ADR-0254 §5's.
+- § What happens when: the table the ADR puts in place of ADR-0254 §5's, with the send-back rows S-0694 added.
+- § A failed deploy holds the story: how a failure of a deploy the agent asked for differs from a failure in review, which S-0694 built.
 - § The `kluster` host action and § flai serve (S-0579): how the agent asks, how it waits, and what `flai guard` still refuses.
 - § What the review checks see: the agent's checks runs and its own commands with the namespace's variables, and what is recorded before review.
 

@@ -3,10 +3,10 @@ id: TH-1089
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-12T03:45:07Z
-updated: 2026-11-12T03:45:07Z
+updated: 2026-11-12T04:10:45Z
 ---
 
 # TH-1089 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -34,3 +34,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0725 The container harness's design and operator docs still say the close-out and the permission_prompt check do not run in the image, and that the orchestrator's verify and accept run inside its container: a draft; finalize it.
 - S-0726 A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself: a draft; finalize it.
 - S-0730 A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it: a draft; finalize it.
+
+### 2026-11-12T04:10:45Z flai serve
+Resolved: S-0683 Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words can be promoted from the backlog, so the board is no longer starved.

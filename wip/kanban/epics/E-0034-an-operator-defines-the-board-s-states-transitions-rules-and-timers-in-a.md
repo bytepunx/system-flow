@@ -6,7 +6,7 @@ title: An operator defines the board's states, transitions, rules, and timers in
 status: backlog
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-10T07:55:17Z
+updated: 2026-11-12T16:04:18Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, template]
@@ -16,15 +16,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 20
+      seconds: 45
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 7
-          cache_read: 227338
-          cache_write: 1251
-          cost: 0.0646
+          input: 11
+          output: 53
+          cache_read: 458306
+          cache_write: 23465
+          cost: 0.1366
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 
@@ -50,6 +50,25 @@ The timers are what makes time tracking flexible. Every state change is already 
 Done when an operator adds a state between `in-progress` and `review` with a rule and a timer of its own, in the workflow file alone, and the board, the moves, the check, the agents' pull, the acceptance, and the charts all follow it with no change to flai or flaiover.
 
 ## Stories
+- S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
+- S-0737 flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed
+- S-0738 The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning
+- S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
+- S-0741 flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
+- S-0742 flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
+- S-0743 flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
+- S-0744 flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
+- S-0746 The MCP tools, story start, task done, the sync, item edits, and the inbox act on a state's kind and who may make a transition instead of a state's name
+- S-0747 The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name
+- S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
+- S-0749 The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
+- S-0750 flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
+- S-0752 flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
+- S-0753 The dashboard's board draws the columns, their kinds, and the moves between them from what flai gives, and holds no list of states of its own
+- S-0754 The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
+- S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
+- S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
+- S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
 
 ## Notes
 

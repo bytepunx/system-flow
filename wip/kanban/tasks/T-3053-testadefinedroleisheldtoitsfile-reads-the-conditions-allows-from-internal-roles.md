@@ -3,15 +3,36 @@ id: T-3053
 type: task
 nature: remediation
 title: TestADefinedRoleIsHeldToItsFile reads the conditions' Allows from internal/roles instead of copying them
-status: backlog
+status: done
 parent: S-0683
 owner: alex
 created: 2026-11-10T10:35:09Z
-updated: 2026-11-10T10:35:09Z
-transitions: []
+updated: 2026-11-12T15:54:15Z
+transitions:
+  - to: ready
+    at: 2026-11-12T15:52:57Z
+    by: agent-S-0683
+  - to: in-progress
+    at: 2026-11-12T15:52:57Z
+    by: agent-S-0683
+  - to: done
+    at: 2026-11-12T15:54:15Z
+    by: agent-S-0683
 stream: S-0683
 tags: [flai, tests]
 touches: [flai/internal/guard/roles_test.go]
+usage:
+  source: log
+  seconds: 61
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 46
+      cache_read: 516756
+      cache_write: 2168
+      cost: 0.193
 ---
 # T-3053 TestADefinedRoleIsHeldToItsFile reads the conditions' Allows from internal/roles instead of copying them
 

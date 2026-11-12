@@ -3,11 +3,17 @@ id: E-0035
 type: epic
 nature: feature
 title: A story's agent builds and deploys the story from its worktree into its kluster namespace and checks it there, so criteria that need the running system are ticked before review
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:09:06Z
-updated: 2026-11-10T09:35:46Z
-transitions: []
+updated: 2026-11-12T16:00:03Z
+transitions:
+  - to: ready
+    at: 2026-11-12T15:59:54Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-11-12T16:00:03Z
+    by: agent-S-0659
 tags: [cli, dashboard]
 usage:
   source: sum
@@ -15,25 +21,31 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 387
+      seconds: 468
       estimated: true
       models:
+        - model: claude-haiku-5-5
+          input: 66
+          output: 189
+          cache_read: 2487345
+          cache_write: 136497
+          cost: 0.1793
         - model: claude-opus-5-5
-          input: 114
-          output: 37560
-          cache_read: 3826452
-          cache_write: 292869
-          cost: 3.6018
+          input: 183
+          output: 45937
+          cache_read: 8264583
+          cache_write: 385267
+          cost: 5.2397
     - kind: orchestrator
-      seconds: 1000
+      seconds: 1137
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 168
-          output: 1186
-          cache_read: 6659792
-          cache_write: 752811
-          cost: 2.011
+          input: 194
+          output: 1407
+          cache_read: 7899381
+          cache_write: 884612
+          cost: 2.4013
         - model: claude-sonnet-5-5
           input: 24
           output: 2543
@@ -86,3 +98,5 @@ Done when a story in a project with a kluster, such as authstar, is deployed and
 - Jobs still run one at a time per project. A deploy asked by an agent waits behind the queue, so the ADR says how the agent waits and for how long.
 - ADR-0254 §5a's send-back of a failed deploy in review, the `kluster` blocker on acceptance, and `flai accept --without-kluster` are still not built. This epic does not build them, but a deploy and checks run that passed at the head before review is the evidence that blocker would read.
 - Out of scope: a cluster per story, deploying uncommitted work, and letting an agent bring the cluster down, promote, or act on another story's namespace.
+- 2026-11-12T15:59:54Z: moved to ready: follows S-0659, which moved to ready
+- 2026-11-12T16:00:03Z: moved to in-progress: follows S-0659, which moved to in-progress

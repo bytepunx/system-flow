@@ -3,23 +3,45 @@ id: S-0709
 type: story
 nature: improvement
 title: flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T09:55:57Z
-updated: 2026-11-12T04:10:47Z
-transitions: []
+updated: 2026-11-12T16:04:39Z
+transitions:
+  - to: ready
+    at: 2026-11-12T15:50:00Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-12T15:50:09Z
+    by: agent-S-0709
+blocked:
+  - from: 2026-11-12T15:58:45Z
+    until: 2026-11-12T16:03:43Z
+    reason: awaiting the operator on TH-1091
+  - from: 2026-11-12T16:04:39Z
+    reason: awaiting the operator on TH-1101
 tags: [cli]
 topics: [git]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/undone_test.go, docs/users/flai.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/summary.md]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/undone_test.go, docs/users/flai.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/summary.md, design/issues/I-0353-flai-serve-restarts-a-story-s-agent-saying-the-designer-answered-when-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 560
+  priced_by: harness
+  turns:
+    - day: 2026-11-12
+      work: 14
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 6602
+      cache_read: 1062677
+      cache_write: 70650
+      cost: 0.9099
   strategic:
     - kind: planner
       seconds: 202
@@ -38,15 +60,15 @@ usage:
           cache_write: 3123026
           cost: 11.0893
     - kind: orchestrator
-      seconds: 21
+      seconds: 124
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 48
-          cache_read: 227713
-          cache_write: 12046
-          cost: 0.0675
+          input: 25
+          output: 194
+          cache_read: 961423
+          cache_write: 99480
+          cost: 0.3011
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

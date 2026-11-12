@@ -3,15 +3,36 @@ id: T-3051
 type: task
 nature: remediation
 title: "ADR: an acceptance waits for a verify over main's new paths"
-status: backlog
+status: done
 parent: S-0683
 owner: alex
 created: 2026-11-10T10:35:04Z
-updated: 2026-11-10T10:35:04Z
-transitions: []
+updated: 2026-11-12T15:53:59Z
+transitions:
+  - to: ready
+    at: 2026-11-12T15:52:56Z
+    by: agent-S-0683
+  - to: in-progress
+    at: 2026-11-12T15:52:57Z
+    by: agent-S-0683
+  - to: done
+    at: 2026-11-12T15:53:59Z
+    by: agent-S-0683
 stream: S-0683
 tags: [adr, acceptance]
-touches: [design/adrs/0279-an-acceptance-waits-for-a-verify-over-main-s-new-paths.md, design/adrs/README.md]
+touches: [design/adrs/0291-every-acceptance-but-the-merge-queue-s-landing-waits-for-a-flai-verify-over.md, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 61
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 46
+      cache_read: 516756
+      cache_write: 2168
+      cost: 0.193
 ---
 # T-3051 ADR: an acceptance waits for a verify over main's new paths
 

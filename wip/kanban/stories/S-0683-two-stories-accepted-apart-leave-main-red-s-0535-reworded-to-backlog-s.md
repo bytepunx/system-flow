@@ -3,11 +3,17 @@ id: S-0683
 type: story
 nature: remediation
 title: "Two stories accepted apart leave main red: S-0535 reworded to-backlog's condition, and S-0416's TestADefinedRoleIsHeldToItsFile still expects the old words"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T08:37:08Z
-updated: 2026-11-12T04:10:44Z
-transitions: []
+updated: 2026-11-12T15:49:38Z
+transitions:
+  - to: ready
+    at: 2026-11-12T15:49:24Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-12T15:49:38Z
+    by: agent-S-0683
 tags: [flai, acceptance]
 topics: [review, code]
 touches: [design/adrs, design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept.go, flai/cmd/accept_stale_verify_test.go, flai/internal/guard/roles_test.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0229-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s-condition-and-s-0416-s-testadefinedroleisheldtoitsfile-still-expects-the-old-words.md, design/issues/summary.md]
@@ -17,20 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 267
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-12
+      ceremony: 2
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 394
+      cache_read: 4926810
+      cache_write: 247875
+      cost: 1.9242
   strategic:
     - kind: orchestrator
-      seconds: 14
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 24
-          cache_read: 149741
-          cache_write: 10048
-          cost: 0.0452
+          input: 16
+          output: 150
+          cache_read: 482224
+          cache_write: 67580
+          cost: 0.1561
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m

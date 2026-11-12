@@ -4,10 +4,10 @@ title: "Plan for S-0683: a hand acceptance waits for a verify over main's new pa
 anchor:
   path: wip/kanban/stories/S-0683-two-stories-accepted-apart-leave-main-red-s-0535-reworded-to-backlog-s.md
   item: S-0683
-status: open
-participants: [planner-S-0683, orchestrator]
+status: resolved
+participants: [planner-S-0683, orchestrator, flai serve]
 created: 2026-11-10T10:36:22Z
-updated: 2026-11-10T11:02:59Z
+updated: 2026-11-12T11:05:03Z
 ---
 
 # TH-1044 Plan for S-0683: a hand acceptance waits for a verify over main's new paths; six tasks in four layers
@@ -57,3 +57,22 @@ The story asks for a fix to be proposed before it is built. Here is the proposal
 It adds a blocker to your own acceptance, mine, and the board's. That is a decision not yet recorded, so it is yours to confirm.
 
 Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md
+
+### 2026-11-12T11:03:37Z flai serve
+Confirmed the recommendation of 2026-11-10T11:02:59Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
+
+Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md
+
+### 2026-11-12T11:04:52Z orchestrator
+**Approved:** S-0683's plan stands as confirmed, with no override flag.
+
+- flai serve confirmed the recommendation of 2026-11-10T11:02:59Z after `confirm_after` (48h), so the proposal is the answer.
+- The six tasks and four layers, the touches, the 2h forecast, and the 45 USD a week value fit the story. Nothing changes.
+- One note for the story's agent: T-3051 names `design/adrs/0279-...` in its touches. `flai adr new` assigns the number when the ADR is written; widen the touches if it lands on another number.
+
+Resolving this thread. S-0683 stays in the backlog until `flai promote --candidates` lists it.
+
+Source: design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md
+
+### 2026-11-12T11:05:03Z orchestrator
+Resolved: S-0683's plan approved: flai serve confirmed the orchestrator's recommendation after confirm_after (48h); six tasks in four layers, touches, 2h forecast, and 45 USD a week value fit the story.

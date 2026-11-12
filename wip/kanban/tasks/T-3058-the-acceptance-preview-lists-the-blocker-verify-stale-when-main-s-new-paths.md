@@ -3,12 +3,18 @@ id: T-3058
 type: task
 nature: remediation
 title: The acceptance preview lists the blocker verify_stale when main's new paths send back a tier the story's last verify ran
-status: backlog
+status: in-progress
 parent: S-0683
 owner: alex
 created: 2026-11-10T10:35:22Z
-updated: 2026-11-10T10:35:22Z
-transitions: []
+updated: 2026-11-12T16:01:23Z
+transitions:
+  - to: ready
+    at: 2026-11-12T16:01:23Z
+    by: agent-S-0683
+  - to: in-progress
+    at: 2026-11-12T16:01:23Z
+    by: agent-S-0683
 stream: S-0683
 tags: [flai, acceptance]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
