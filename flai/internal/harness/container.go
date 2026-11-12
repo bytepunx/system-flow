@@ -150,7 +150,8 @@ func ContainerCache(root, subject string) string {
 // the main checkout's .flai-cache/items-checked.lock read-write, made on the
 // host when absent, so the record step's confirmation under the checked-write
 // lock excludes a checked write on the host (withCheckedLock); its cache
-// folder; and the operator's login read-only, mounted in that
+// folder; the operator's outside folders read-write, each at its own path
+// (outsideArgs, ADR-0289); and the operator's login read-only, mounted in that
 // order and nothing else; the variables of
 // containerEnv and the provider's key passed by name alone, the values in the
 // docker client's environment; and pilot's start request on standard input,
@@ -160,8 +161,10 @@ func ContainerCache(root, subject string) string {
 // request that is neither a story's agent's nor a strategic agent's
 // (containerSubject), the operator's arguments, an
 // inner harness with no image, a login the inner harness needs and the host
-// has not set, a worktree whose git or main checkout it cannot mount, and
-// what the inner harness itself refuses of the request, as pilot would.
+// has not set, a worktree whose git or main checkout it cannot mount, an
+// outside folder outsideArgs refuses, and what the inner harness itself
+// refuses of the request, as pilot would. pilot's start request keeps the
+// outside folders, so that the inner harness passes each as --add-dir.
 func (container) Start(r Request, host Host) (Start, error) {
 	if err := containerSubject(r); err != nil {
 		return Start{}, err
@@ -197,6 +200,10 @@ func (container) Start(r Request, host Host) (Start, error) {
 	if err := mountable(r.Root, worktree, cache, host.Login); err != nil {
 		return Start{}, err
 	}
+	outArgs, err := outsideArgs(r.Root, r.Outside)
+	if err != nil {
+		return Start{}, err
+	}
 	gitMounts, err := storygit.GitMounts(worktree)
 	if err != nil {
 		return Start{}, fmt.Errorf("the story's worktree %s has no git for the container: %w", worktree, err)
@@ -226,6 +233,7 @@ func (container) Start(r Request, host Host) (Start, error) {
 	argv = append(argv, gitArgs...)
 	argv = append(argv, mainArgs...)
 	argv = append(argv, "-v", cache+":"+cache)
+	argv = append(argv, outArgs...)
 	return containerStart(argv, containerEnv, safeMain(mainMounts), r, host, image, cache, stdin)
 }
 
@@ -337,7 +345,9 @@ func createLockFile(path string) error {
 // main checkout read-write at its host path as the working directory, the
 // checkout's .git/hooks and .git/config read-only over it, so that nothing in
 // the container can name a command git runs on the host (ADR-0281), the
-// role's cache folder, and the operator's login read-only, and nothing else; it passes the variables of
+// role's cache folder, the operator's outside folders read-write at their
+// own paths, as a story's agent's are (outsideArgs, ADR-0289 §8), and the
+// operator's login read-only, and nothing else; it passes the variables of
 // roleContainerEnv by name, FLAI_ROLE's value in the docker client's
 // environment, as the claude-code adapter's is on the host; and it names the
 // container and the cache folder for the role, a defined role's by its name
@@ -346,6 +356,10 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 	subject := ContainerSubject(r)
 	cache := ContainerCache(r.Root, subject)
 	if err := mountable(r.Root, r.Root, cache, host.Login); err != nil {
+		return Start{}, err
+	}
+	outArgs, err := outsideArgs(r.Root, r.Outside)
+	if err != nil {
 		return Start{}, err
 	}
 	stdin, err := pilotStdin(pilotRequest(r, inner, r.Root, cache))
@@ -359,6 +373,7 @@ func roleStart(r Request, host Host, inner, image string) (Start, error) {
 		"-v", hooks+":"+hooks+":ro",
 		"-v", config+":"+config+":ro",
 		"-v", cache+":"+cache)
+	argv = append(argv, outArgs...)
 	st, err := containerStart(argv, roleContainerEnv, nil, r, host, image, cache, stdin)
 	if err != nil {
 		return Start{}, err
@@ -692,15 +707,73 @@ func mountable(root, worktree, cache, login string) error {
 	if !filepath.IsAbs(login) {
 		return fmt.Errorf("the login %q is not an absolute path: set it with flai serve agent harness container --login <path>", login)
 	}
-	never := []string{root, "/var/run/docker.sock", "/run/docker.sock"}
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		never = append(never, home, filepath.Join(home, ".flai"))
-	}
 	login = filepath.Clean(login)
-	for _, p := range never {
-		if p = filepath.Clean(p); p == login || strings.HasPrefix(p, login+string(filepath.Separator)) || login == string(filepath.Separator) {
-			return fmt.Errorf("the login %s mounts %s, which a container never mounts: set the folder of the operator's login alone with flai serve agent harness container --login <path>", login, p)
-		}
+	if p, ok := holdsNever(login, neverMounted(root)); ok {
+		return fmt.Errorf("the login %s mounts %s, which a container never mounts: set the folder of the operator's login alone with flai serve agent harness container --login <path>", login, p)
 	}
 	return nil
+}
+
+// neverMounted are the paths no mount of a container may reach, cleaned: the
+// main checkout at root, both Docker sockets, and the home and its ~/.flai
+// when the home is known.
+func neverMounted(root string) []string {
+	never := []string{filepath.Clean(root), "/var/run/docker.sock", "/run/docker.sock"}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		never = append(never, filepath.Clean(home), filepath.Join(home, ".flai"))
+	}
+	return never
+}
+
+// holdsNever is the first of never that dir, a cleaned absolute path, is or
+// holds, and whether there is one; the root folder holds them all.
+func holdsNever(dir string, never []string) (string, bool) {
+	for _, p := range never {
+		if p == dir || strings.HasPrefix(p, dir+string(filepath.Separator)) || dir == string(filepath.Separator) {
+			return p, true
+		}
+	}
+	return "", false
+}
+
+// outsideArgs are docker's -v of each of the operator's outside folders
+// (ADR-0289 §4), read-write at its own host path, so that the inner
+// harness's --add-dir of it, which pilot's start request carries, names the
+// same folder in the container; a folder given twice is mounted once. It
+// refuses a folder that is not an absolute path; one that holds a colon,
+// which a mount cannot carry; one that is or holds the main checkout, the
+// home, ~/.flai, or a Docker socket (neverMounted), as mountable refuses the
+// login; and one under the main checkout, whose mounts Start fixes, or under
+// ~/.flai, which no container mounts.
+func outsideArgs(root string, outside []string) ([]string, error) {
+	const fix = "name another with flai serve agent harness container --outside <dir>, or clear them with --outside \"\""
+	never := neverMounted(root)
+	within := []string{filepath.Clean(root)}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		within = append(within, filepath.Join(home, ".flai"))
+	}
+	var args []string
+	seen := map[string]bool{}
+	for _, dir := range outside {
+		if !filepath.IsAbs(dir) {
+			return nil, fmt.Errorf("the outside folder %q is not an absolute path, which a mount needs: %s", dir, fix)
+		}
+		if strings.Contains(dir, ":") {
+			return nil, fmt.Errorf("the outside folder %q holds a colon, which a mount cannot carry: %s", dir, fix)
+		}
+		dir = filepath.Clean(dir)
+		if p, ok := holdsNever(dir, never); ok {
+			return nil, fmt.Errorf("the outside folder %s mounts %s, which a container never mounts: %s", dir, p, fix)
+		}
+		for _, p := range within {
+			if strings.HasPrefix(dir, p+string(filepath.Separator)) {
+				return nil, fmt.Errorf("the outside folder %s is under %s, which a container mounts only as flai fixes it, or never: %s", dir, p, fix)
+			}
+		}
+		if !seen[dir] {
+			seen[dir] = true
+			args = append(args, "-v", dir+":"+dir)
+		}
+	}
+	return args, nil
 }

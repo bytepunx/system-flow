@@ -2,6 +2,8 @@ package pilot
 
 import (
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -234,6 +236,57 @@ func TestCheckRefusesARoleNamePilotCannotRun(t *testing.T) {
 				t.Errorf("refused with %q, want it to say %q", err, c.want)
 			}
 		})
+	}
+}
+
+// ADR-0289, I-0265: the operator's outside folders in the start request are
+// read and kept, pass the check, and reach the inner claude's arguments as
+// --add-dir, in their order, through Main as the container runs it, with the
+// empty Host pilot starts the inner harness with.
+func TestTheOutsideFoldersReachTheInnerHarnessAsAddDir(t *testing.T) {
+	dir := fake(t)
+	cache := t.TempDir()
+	outside := []string{filepath.Join(t.TempDir(), "kluster"), filepath.Join(t.TempDir(), "scratch")}
+	in := `{"Story":"S-0507","Name":"agent-S-0507","inner":"claude-code","mcp_url_env":"FLAI_MCP_URL","mcp_token_env":"FLAI_MCP_TOKEN",` +
+		`"cache":"` + filepath.ToSlash(cache) + `","outside":["` + filepath.ToSlash(outside[0]) + `","` + filepath.ToSlash(outside[1]) + `"]}`
+	req, err := Read(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(req.Outside, outside) {
+		t.Fatalf("read outside %q, want %q", req.Outside, outside)
+	}
+	if err := Check(req, env, isDirOnly(cache)); err != nil {
+		t.Fatal(err)
+	}
+	r := run(t, t.Context(), req, environ(dir), nil)
+	if r.code != 0 {
+		t.Fatalf("pilot exited %d; stderr: %s", r.code, r.stderr)
+	}
+	args := argv(t, dir)
+	var dirs []string
+	for i, a := range args {
+		if a == "--add-dir" && i+1 < len(args) {
+			dirs = append(dirs, args[i+1])
+		}
+	}
+	if !slices.Equal(dirs, outside) {
+		t.Errorf("the inner claude's --add-dir are %q, want the outside folders %q; argv %q", dirs, outside, args)
+	}
+}
+
+// ADR-0289: an outside folder that is not an absolute path is refused, since
+// the container mounts each at its own host path.
+func TestCheckRefusesAnOutsideFolderThatIsNotAbsolute(t *testing.T) {
+	cache := t.TempDir()
+	for _, dir := range []string{"kluster", "../kluster", "--dangerously-skip-permissions", ""} {
+		req := valid(cache)
+		req.Outside = []string{cache, dir}
+		err := Check(req, env, isDirOnly(cache))
+		oneLineWithoutSecrets(t, err)
+		if want := "outside folder " + strconv.Quote(dir) + " is not an absolute path"; err != nil && !strings.Contains(err.Error(), want) {
+			t.Errorf("%q: refused with %q, want it to say %q", dir, err, want)
+		}
 	}
 }
 

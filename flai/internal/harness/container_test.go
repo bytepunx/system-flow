@@ -385,6 +385,112 @@ func TestTheContainerRefusesWhatItCannotRun(t *testing.T) {
 	}
 }
 
+// ADR-0289, I-0265: the operator's outside folders are mounted read-write,
+// each at its own host path, after the cache and before the login, for a
+// story's agent and a strategic agent alike, a folder given twice once; and
+// pilot's start request keeps them, so that the inner claude-code passes each
+// as --add-dir in the container.
+func TestTheContainerMountsTheOutsideFoldersAtTheirOwnPaths(t *testing.T) {
+	kluster, scratch := filepath.Join(t.TempDir(), "kluster"), filepath.Join(t.TempDir(), "scratch")
+	rr, _ := roleReq(t, "plan")
+	sr, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	sr.Outside = []string{kluster, scratch + "/", kluster}
+	rr.Item, rr.Outside = "E-0029", sr.Outside
+	for _, c := range []struct {
+		name  string
+		r     harness.Request
+		cache string
+	}{
+		{"story", sr, filepath.Join(sr.Root, ".flai-cache", "agents", "S-0508")},
+		{"planner", rr, filepath.Join(rr.Root, ".flai-cache", "agents", "plan")},
+	} {
+		st, err := harness.Adapters[harness.Container].Start(c.r, host)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		var vs []string
+		for i, arg := range st.Argv {
+			if i > 0 && st.Argv[i-1] == "-v" {
+				vs = append(vs, arg)
+			}
+		}
+		want := []string{c.cache + ":" + c.cache, kluster + ":" + kluster, scratch + ":" + scratch, host.Login + ":/run/claude-login:ro"}
+		if len(vs) < len(want) || !slices.Equal(vs[len(vs)-len(want):], want) {
+			t.Errorf("%s: mounts %q, want them to end %q", c.name, vs, want)
+		}
+		if got := st.Container.Mounts; !slices.Contains(got, harness.ContainerMount{Host: kluster, Path: kluster}) || !slices.Contains(got, harness.ContainerMount{Host: scratch, Path: scratch}) {
+			t.Errorf("%s: the record's mounts %+v lack the outside folders read-write", c.name, got)
+		}
+		pr, err := pilot.Read(bytes.NewReader(st.Stdin))
+		if err != nil {
+			t.Fatalf("%s: pilot reads %s: %v", c.name, st.Stdin, err)
+		}
+		if !slices.Equal(pr.Outside, c.r.Outside) {
+			t.Errorf("%s: pilot's request has outside %q, want %q", c.name, pr.Outside, c.r.Outside)
+		}
+		env := map[string]string{"FLAI_MCP_URL": "http://host.docker.internal:4243/mcp", "FLAI_MCP_TOKEN": "t"}
+		if err := pilot.Check(pr, func(n string) string { return env[n] }, func(p string) bool { return p == c.cache }); err != nil {
+			t.Errorf("%s: pilot refuses %s: %v", c.name, st.Stdin, err)
+		}
+		inner, err := harness.Adapters[pr.Inner].Start(pr, harness.Host{})
+		if err != nil {
+			t.Fatalf("%s: the inner harness refuses the request pilot reads: %v", c.name, err)
+		}
+		if i := slices.Index(inner.Argv, "--add-dir"); i < 0 || i+1 >= len(inner.Argv) || inner.Argv[i+1] != kluster {
+			t.Errorf("%s: the inner start has no --add-dir %s: %q", c.name, kluster, inner.Argv)
+		}
+	}
+}
+
+// ADR-0289 §4: an outside folder that is, holds, or lies under what a
+// container never mounts, or whose mounts flai fixes, is refused, naming the
+// folder and how to name another or clear them, for a story's agent and a
+// strategic agent alike; so are one that is not absolute and one with a
+// colon. A folder in the home is mounted.
+func TestTheContainerRefusesAnOutsideFolderItNeverMounts(t *testing.T) {
+	const fix = `flai serve agent harness container --outside <dir>, or clear them with --outside ""`
+	for _, c := range []struct {
+		name string
+		dir  func(r harness.Request, home string) string
+		says string
+	}{
+		{"the folder that holds the main checkout", func(r harness.Request, _ string) string { return filepath.Dir(r.Root) }, "which a container never mounts"},
+		{"the main checkout", func(r harness.Request, _ string) string { return r.Root }, "which a container never mounts"},
+		{"a folder under the main checkout", func(r harness.Request, _ string) string { return filepath.Join(r.Root, ".git") }, "is under " + "%root"},
+		{"the home", func(_ harness.Request, home string) string { return home }, "which a container never mounts"},
+		{"~/.flai", func(_ harness.Request, home string) string { return filepath.Join(home, ".flai") }, "which a container never mounts"},
+		{"a folder under ~/.flai", func(_ harness.Request, home string) string { return filepath.Join(home, ".flai", "serve") }, "is under %home/.flai"},
+		{"the folder of the Docker socket", func(harness.Request, string) string { return "/var/run" }, "mounts /var/run/docker.sock"},
+		{"the root", func(harness.Request, string) string { return "/" }, "which a container never mounts"},
+		{"a relative folder", func(harness.Request, string) string { return "kluster" }, "is not an absolute path"},
+		{"a colon", func(harness.Request, string) string { return "/srv/a:b" }, "holds a colon"},
+	} {
+		// roleReq sets a home of its own, so the story's, which the start
+		// reads, comes after it.
+		rr, _ := roleReq(t, "plan")
+		rr.Item = "E-0029"
+		sr, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+		home := filepath.Dir(host.Login)
+		for _, r := range []harness.Request{sr, rr} {
+			dir := c.dir(r, home)
+			r.Outside = []string{filepath.Join(home, "git", "kluster"), dir}
+			says := strings.NewReplacer("%root", r.Root, "%home", home).Replace(c.says)
+			st, err := harness.Adapters[harness.Container].Start(r, host)
+			if err == nil || !strings.Contains(err.Error(), says) || !strings.Contains(err.Error(), fix) || !strings.Contains(err.Error(), "the outside folder") {
+				t.Errorf("%s, %s: %v, want %q and %q", c.name, harness.ContainerSubject(r), err, says, fix)
+			}
+			if st.Argv != nil {
+				t.Errorf("%s, %s: start %q, want none", c.name, harness.ContainerSubject(r), st.Argv)
+			}
+		}
+	}
+	r, host := containerReq(t, &manifest.Agent{Harness: harness.Container})
+	r.Outside = []string{filepath.Join(filepath.Dir(host.Login), "git", "kluster")}
+	if _, err := harness.Adapters[harness.Container].Start(r, host); err != nil {
+		t.Errorf("a folder in the home: %v", err)
+	}
+}
+
 // I-0215: a worktree whose registration is absent fails the start with the
 // reason, naming the registration, rather than starting a container whose
 // worktree is not a git repository; one whose registration names a path with

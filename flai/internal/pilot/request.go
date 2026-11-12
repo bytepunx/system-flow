@@ -121,9 +121,12 @@ func kind(c byte) string {
 // image (I-0224), that names a Role, an Item, or a role_name, since a probe is
 // never a strategic agent's run; or a role_name, the name of a role the
 // project defines (S-0705), with no Role, with a Story, or that is not a
-// role's kebab-case name, which names its file and so must hold no path. It
-// reports the first refusal, in one line, naming the field and the variable
-// but never a variable's value.
+// role's kebab-case name, which names its file and so must hold no path; or
+// an outside folder, one the operator grants the agent (ADR-0289), that is
+// not an absolute path, since the container mounts each at its own host path
+// and the inner harness passes it on as --add-dir. It reports the first
+// refusal, in one line, naming the field and the variable but never a
+// variable's value.
 func Check(req harness.Request, getenv func(string) string, isDir func(string) bool) error {
 	names := innerNames()
 	switch {
@@ -159,6 +162,11 @@ func Check(req harness.Request, getenv func(string) string, isDir func(string) b
 	for _, v := range []struct{ field, name string }{{"mcp_url_env", req.MCPURLEnv}, {"mcp_token_env", req.MCPTokenEnv}, {"mcp_host_env", req.MCPHostEnv}} {
 		if v.name != "" && getenv(v.name) == "" {
 			return fmt.Errorf("the start request's %s names the variable %s, which is unset or empty in pilot's environment; pass it to the container, or name the variable that holds it", v.field, strconv.Quote(v.name))
+		}
+	}
+	for _, dir := range req.Outside {
+		if !filepath.IsAbs(dir) {
+			return fmt.Errorf("the start request's outside folder %s is not an absolute path; set outside to the absolute paths the container mounts the operator's outside folders at, as flai serve agent harness container --outside <dir> keeps them", strconv.Quote(dir))
 		}
 	}
 	return nil
