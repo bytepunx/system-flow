@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 249.0328
-accrued_seconds: 28671
-tasks_completed: 160
-last_run: 2026-11-12T03:40:22Z
+accrued_cost: 250.1643
+accrued_seconds: 28886
+tasks_completed: 161
+last_run: 2026-11-12T03:45:26Z
 ---
 
 # Curator activity
@@ -1291,3 +1291,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0288, D-0290, D-0505
 - Seconds: 90
 - Cost: 1.3759 USD, estimated
+
+### 2026-11-12T03:45:26Z
+
+- Summary: I wrote no new entries this run. Merged S-0712's fold decision into D-0590, then absorbed D-0590 (by `design/system/workflow.md`), D-0589 and D-0480 (by ADR-0289), and D-0559 (by `design/system/strategic-agents.md` § Working an instance), and `flai digest compact` compacted none.
+- Trigger: accepted S-0712
+- Items: D-0480, D-0559, D-0589, D-0590
+- Seconds: 215
+- Cost: 1.1315 USD, estimated

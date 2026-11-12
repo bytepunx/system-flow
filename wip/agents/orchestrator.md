@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2131.7677
-accrued_seconds: 1551867
-tasks_completed: 3105
-last_run: 2026-11-12T03:45:06Z
+accrued_cost: 2132.1849
+accrued_seconds: 1551941
+tasks_completed: 3109
+last_run: 2026-11-12T03:46:34Z
 ---
 
 # Orchestrator activity
@@ -21767,6 +21767,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0729
 - Seconds: 88
 - Cost: 0.2854 USD, estimated
+
+### 2026-11-12T03:45:14Z
+
+- Summary: Started the publish formula as S-0731 (commit 3b9d34dd4), because the release policy is met under threshold: 3 accepted stories unreleased (S-0681, S-0701, S-0717), at or over the count threshold of 1, worth 77.5 USD/week. Then ordered ready by throughput: S-0731 is first.
+- Items: S-0731, S-0681, S-0701, S-0717
+- Seconds: 8
+- Cost: 0.0280 USD, estimated
+
+### 2026-11-12T03:45:39Z
+
+- Summary: I left S-0729 in review: its close-out stopped at the sync step, so it has no passing run at its branch's head and I did not accept it. I started a new release as S-0731.
+- Items: none
+- Seconds: 25
+- Cost: 0.0764 USD, estimated
+
+### 2026-11-12T03:46:13Z
+
+- Summary: Release due for S-0681, S-0701, S-0717 (threshold met: count 3 at or over 1; value 77.5 USD/week under 1000): no new publish formula run, since S-0731, a publish instance made at 03:44:58Z for this batch, is already in progress with agent-S-0731. TH-1087 is resolved and TH-1089 is a flai serve notice, so both left alone.
+- Items: S-0681, S-0701, S-0717, S-0731
+- Seconds: 20
+- Cost: 0.0753 USD, estimated
+
+### 2026-11-12T03:46:34Z
+
+- Summary: I didn't start a new publish run: one is already under way for this batch, so a second would publish the same stories twice.
+- Items: none
+- Seconds: 21
+- Cost: 0.2375 USD, estimated
 
 ## Refusals
 
