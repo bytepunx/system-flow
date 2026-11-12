@@ -2,12 +2,12 @@
 id: I-0351
 title: A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-11-11T18:18:50Z
 last_reported: 2026-11-11T18:18:50Z
-updated: 2026-11-11T21:55:30Z
+updated: 2026-11-12T19:26:36Z
 ---
 
 # I-0351 A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself
@@ -24,3 +24,4 @@ S-0689, sent back on TH-1082. flai stream sync S-0689 stopped on design/system/f
 ## Remediation
 
 Story S-0726 remediates this issue, created from it at 2026-11-11T21:55:30Z.
+Closed 2026-11-12T19:26:36Z: S-0726 (ADR-0294): flai stream sync, and flai task done called again, now continue a rebase whose stop the agent resolved and staged, settling the later stops on issue files and design/issues/summary.md as the sync's own rebase does and running the steps after a clean rebase; no advice tells an agent to run git rebase --continue any more. TestSyncContinuesARebaseWhoseStopTheAgentResolvedAndSettlesTheStopsAfterIt reproduces I-0351's case.
