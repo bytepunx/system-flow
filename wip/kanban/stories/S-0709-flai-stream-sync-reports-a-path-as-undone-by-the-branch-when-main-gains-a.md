@@ -6,7 +6,7 @@ title: flai stream sync reports a path as undone by the branch when main gains a
 status: backlog
 owner: alex
 created: 2026-11-10T09:55:57Z
-updated: 2026-11-12T03:38:48Z
+updated: 2026-11-12T03:41:37Z
 transitions: []
 tags: [cli]
 topics: [git]
@@ -38,15 +38,15 @@ usage:
           cache_write: 3123026
           cost: 11.0893
     - kind: orchestrator
-      seconds: 14
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 37
-          cache_read: 165562
-          cache_write: 2974
-          cost: 0.0473
+          input: 6
+          output: 48
+          cache_read: 227713
+          cache_write: 12046
+          cost: 0.0675
 draft: true
 cost_of_delay:
   inputs:
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-10T10:27:00Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-12T12:32:00Z
-  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
+  delivery: 2026-11-12T12:35:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0729, S-0241, S-0659, S-0660, S-0661, S-0662, S-0663 and S-0683."
   by: flai
-  at: 2026-11-12T03:38:48Z
+  at: 2026-11-12T03:41:37Z
 ---
 # S-0709 flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs
 
