@@ -163,16 +163,6 @@ func (c Config) MCPBinds() []string {
 	return slices.Clone([]string(c.MCP.Bind))
 }
 
-// MCPBind is the first of MCPBinds, with MCPBindAuto taken as
-// DefaultMCPBind, the one address it always includes, for a caller that
-// starts the MCP server on one address only.
-func (c Config) MCPBind() string {
-	if bind := c.MCPBinds()[0]; bind != MCPBindAuto {
-		return bind
-	}
-	return DefaultMCPBind
-}
-
 // WithMCPBind returns the configuration with mcp.bind set to addrs, each
 // trimmed and exact duplicates dropped, keeping the first order. It refuses
 // no address, an empty one, and one that is neither MCPBindAuto nor an IP

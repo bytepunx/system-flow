@@ -23,41 +23,88 @@ import (
 // remembered address looks for a free one.
 const mcpPorts = 20
 
-// mcpAddrFor is the address the project's server listens on, on bind, the
-// host's mcp.bind: the port it used last, so an agent's configuration
-// survives a restart, else the first free port from mcpDefaultAddr's that is
-// not among taken, since flai host starts one for every project flai serve
-// serves and they cannot all have the one default (S-0096, S-0106). A
+// mcpAddrsFor is the addresses the project's server listens on, one on each
+// of hosts, what the host's mcp.bind resolves to, all on one port: the port
+// it used last, so an agent's configuration survives a restart, else the
+// first port from mcpDefaultAddr's that is free on every host and not among
+// taken, since flai host starts one for every project flai serve serves and
+// they cannot all have the one default (S-0096, S-0106, S-0732). A
 // remembered port that is among taken, given to another project already, is
 // not given twice: two projects that remembered the same port both got it,
 // and one failed to listen on every start (S-0110). A new port also leaves
 // out avoid, the ports other projects remember while their servers are not
 // running yet, so that one move does not push the next project off its port.
-// Nor is a remembered port that cannot be listened on: flai host asks only
-// when the project's own server is not running, so another process holds it,
-// and the server would fail to listen on it at every start (I-0271).
-// taken and avoid hold addresses and are compared by port alone, whatever
-// host each names, so that a change of mcp.bind moves no project off its
-// port.
-func mcpAddrFor(repo *workitem.Repo, bind string, taken, avoid map[string]bool) (string, error) {
+// Nor is a remembered port that cannot be listened on on every host: flai
+// host asks only when the project's own server is not running, so another
+// process holds it, and the server would fail to listen on it at every start
+// (I-0271). taken and avoid hold addresses and are compared by port alone,
+// whatever host each names, so that a change of mcp.bind moves no project
+// off its port.
+func mcpAddrsFor(repo *workitem.Repo, hosts []string, taken, avoid map[string]bool) ([]string, error) {
 	takenPorts, avoidPorts := portsOf(taken), portsOf(avoid)
-	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] {
-		if addr := net.JoinHostPort(bind, port); freePort(addr) {
-			return addr, nil
-		}
+	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] && freeOnAll(hosts, port) {
+		return onPort(hosts, port), nil
 	}
 	first, err := strconv.Atoi(portOf(mcpDefaultAddr))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for p := first; p < first+mcpPorts; p++ {
 		port := strconv.Itoa(p)
-		addr := net.JoinHostPort(bind, port)
-		if !takenPorts[port] && !avoidPorts[port] && freePort(addr) {
-			return addr, nil
+		if !takenPorts[port] && !avoidPorts[port] && freeOnAll(hosts, port) {
+			return onPort(hosts, port), nil
 		}
 	}
-	return "", fmt.Errorf("no port between %d and %d is free to listen on at %s for flai mcp http; give the project one with flai mcp start --addr, or, if this machine has no such address, set another with flai serve mcp bind", first, first+mcpPorts-1, bind)
+	return nil, fmt.Errorf("no port between %d and %d is free to listen on at %s for flai mcp http; give the project one with flai mcp start --addr, or, if this machine has no such address, set another with flai serve mcp bind", first, first+mcpPorts-1, strings.Join(hosts, ", "))
+}
+
+// onPort is hosts' addresses, each on port.
+func onPort(hosts []string, port string) []string {
+	addrs := make([]string, len(hosts))
+	for i, h := range hosts {
+		addrs[i] = net.JoinHostPort(h, port)
+	}
+	return addrs
+}
+
+// freeOnAll says whether port can be listened on now on every one of hosts.
+func freeOnAll(hosts []string, port string) bool {
+	for _, addr := range onPort(hosts, port) {
+		if !freePort(addr) {
+			return false
+		}
+	}
+	return true
+}
+
+// unlistenable is a host this machine cannot listen on at any port, and why.
+type unlistenable struct {
+	host string
+	err  error
+}
+
+// listenableHosts is hosts split into those this machine can listen on, on
+// a port the kernel picks, and those it cannot at all, such as the gateway
+// of a Docker network whose bridge is down. It fails, naming them, when
+// none can be.
+func listenableHosts(hosts []string) ([]string, []unlistenable, error) {
+	var kept []string
+	var dropped []unlistenable
+	for _, h := range hosts {
+		if err := listenErr(net.JoinHostPort(h, "0")); err != nil {
+			dropped = append(dropped, unlistenable{host: h, err: err})
+			continue
+		}
+		kept = append(kept, h)
+	}
+	if len(kept) > 0 {
+		return kept, dropped, nil
+	}
+	why := make([]string, len(dropped))
+	for i, d := range dropped {
+		why[i] = d.err.Error()
+	}
+	return nil, dropped, fmt.Errorf("flai mcp http cannot listen on %s on this machine (%s); set another address with flai serve mcp bind", strings.Join(hosts, ", "), strings.Join(why, "; "))
 }
 
 // portOf is the port of addr, a host and a port, or "" when it names none.
@@ -112,18 +159,6 @@ func rememberedMCPAddr(repo *workitem.Repo) string {
 		return ""
 	}
 	return strings.TrimSpace(string(data))
-}
-
-// mcpBind is the host's mcp.bind, the address flai host starts each
-// project's MCP server on, read from the configuration at every look;
-// config.DefaultMCPBind when it is unset or the configuration is not
-// readable.
-func (a *app) mcpBind() string {
-	cfg, _, err := a.loadConfig()
-	if err != nil {
-		return config.DefaultMCPBind
-	}
-	return cfg.MCPBind()
 }
 
 // mcpListen is the addresses the host's mcp.bind resolves to now, each auto

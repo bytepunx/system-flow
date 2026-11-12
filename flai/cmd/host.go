@@ -558,7 +558,7 @@ type hostLauncher struct {
 	dir    string
 
 	mu        sync.Mutex
-	taken     map[string]string // the MCP address given to each root, so two never share one
+	taken     map[string]string // the first MCP address given to each root, whose port two never share
 	installed string            // where the last upgrade installed flai
 	ver       string
 	verAt     time.Time
@@ -609,35 +609,49 @@ func (l *hostLauncher) mcp(root string) (host.Spec, error) {
 	if st, alive := readMCPState(repo, time.Now()); alive {
 		return host.Spec{External: st.PID}, nil
 	}
-	addr, err := l.mcpAddr(repo)
+	addrs, err := l.mcpAddrs(repo)
 	if err != nil {
 		return host.Spec{}, err
 	}
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		return host.Spec{}, err
 	}
-	return host.Spec{Path: l.exe, Args: l.withConfig("mcp", "http", "--addr", addr), Dir: repo.MainRoot,
+	return host.Spec{Path: l.exe, Args: l.withConfig(addrArgs(addrs)...), Dir: repo.MainRoot,
 		Log: mcpFile(repo, mcpLogFile), Env: []string{"LOG_FORMAT=json"}, Version: l.version()}, nil
 }
 
-// mcpAddr is mcpAddrFor on the host's mcp.bind, read at every start so
-// that a change takes effect at a server's next start, with the ports
-// already given to other projects left out: two starting at once must not
-// pick the same free port. A project keeps the port it was given while the
-// host runs, on the bind address as it is now, while that port can be
-// listened on: the host asks only when the project's own server is not
+// mcpAddrs is mcpAddrsFor on what the host's mcp.bind resolves to, resolved
+// at every start so that a change, of the setting or of what auto finds,
+// takes effect at a server's next start, less any address this machine
+// cannot listen on at all while another remains, and with the ports already
+// given to other projects left out: two starting at once must not pick the
+// same free port. A project keeps the port it was given while the host runs,
+// on the addresses as they are now, while that port can be listened on on
+// every one of them: the host asks only when the project's own server is not
 // running, so a port that cannot be is another process's, and the project
-// moves to a free one rather than fail on it at every start (I-0271).
-func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
-	bind := l.a.mcpBind()
+// moves to one free on all of them rather than fail on it at every start
+// (I-0271).
+func (l *hostLauncher) mcpAddrs(repo *workitem.Repo) ([]string, error) {
+	log := l.a.logger()
+	hosts, err := l.a.mcpListen()
+	if err != nil {
+		log.Warn("mcp auto resolved to loopback alone", "component", "host", "root", repo.MainRoot, "err", err)
+	}
+	hosts, dropped, err := listenableHosts(hosts)
+	if err != nil {
+		return nil, err
+	}
+	for _, d := range dropped {
+		log.Warn("mcp address dropped: this machine cannot listen on it", "component", "host", "root", repo.MainRoot, "addr", d.host, "err", d.err)
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	held := ""
 	if addr, ok := l.taken[repo.MainRoot]; ok {
-		addr = net.JoinHostPort(bind, portOf(addr))
-		if freePort(addr) {
-			l.taken[repo.MainRoot] = addr
-			return addr, nil
+		if port := portOf(addr); freeOnAll(hosts, port) {
+			addrs := onPort(hosts, port)
+			l.taken[repo.MainRoot] = addrs[0]
+			return addrs, nil
 		}
 		held = addr
 		delete(l.taken, repo.MainRoot)
@@ -661,25 +675,25 @@ func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 			}
 		}
 	}
-	addr, err := mcpAddrFor(repo, bind, others, remembered)
+	addrs, err := mcpAddrsFor(repo, hosts, others, remembered)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	was := held
 	if was == "" {
 		was = rememberedMCPAddr(repo)
 	}
-	if was != "" && portOf(was) != portOf(addr) {
+	if was != "" && portOf(was) != portOf(addrs[0]) {
 		// the server remembers the new one when it starts; an agent given the
 		// old one must be given this
 		if portsOf(others)[portOf(was)] {
-			l.a.logger().Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
+			log.Warn("mcp address moved: another project the host runs has it", "component", "host", "root", repo.MainRoot, "from", was, "to", addrs[0])
 		} else {
-			l.a.logger().Warn("mcp address moved: another process holds it", "component", "host", "root", repo.MainRoot, "from", was, "to", addr)
+			log.Warn("mcp address moved: another process holds it", "component", "host", "root", repo.MainRoot, "from", was, "to", addrs[0])
 		}
 	}
-	l.taken[repo.MainRoot] = addr
-	return addr, nil
+	l.taken[repo.MainRoot] = addrs[0]
+	return addrs, nil
 }
 
 // flaiRaw runs this flai with --json and answers the JSON it prints.
@@ -780,10 +794,15 @@ func (m hostMCP) Keep(roots []string) error {
 
 // freePort says whether addr can be listened on now.
 func freePort(addr string) bool {
+	return listenErr(addr) == nil
+}
+
+// listenErr is why addr cannot be listened on now, or nil when it can.
+func listenErr(addr string) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		return false
+		return err
 	}
 	_ = ln.Close()
-	return true
+	return nil
 }

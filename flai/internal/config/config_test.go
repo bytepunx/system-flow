@@ -860,12 +860,13 @@ func TestNotify(t *testing.T) {
 	}
 }
 
-// S-0506: mcp.bind is the address flai host starts each project's MCP
-// server on, its first address, auto taken as 127.0.0.1 (S-0732); an IP address or a host name, with no port.
+// S-0506: mcp.bind is the addresses flai host starts each project's MCP
+// server on, auto when unset (S-0732); each an IP address or a host name,
+// with no port.
 func TestMCPBind(t *testing.T) {
 	c := Default()
-	if got := c.MCPBind(); got != DefaultMCPBind {
-		t.Errorf("unset: %q, want %q", got, DefaultMCPBind)
+	if got := c.MCPBinds(); !slices.Equal(got, DefaultMCPBinds()) {
+		t.Errorf("unset: %q, want %q", got, DefaultMCPBinds())
 	}
 	if data, _ := json.Marshal(c); strings.Contains(string(data), `"mcp"`) {
 		t.Errorf("unset is not written: %s", data)
@@ -876,8 +877,8 @@ func TestMCPBind(t *testing.T) {
 			t.Errorf("WithMCPBind(%q): %v", good, err)
 			continue
 		}
-		if set.MCPBind() != strings.TrimSpace(good) {
-			t.Errorf("WithMCPBind(%q) binds %q", good, set.MCPBind())
+		if got := set.MCPBinds(); !slices.Equal(got, []string{strings.TrimSpace(good)}) {
+			t.Errorf("WithMCPBind(%q) binds %q", good, got)
 		}
 	}
 	if c.MCP.Bind != nil {
@@ -902,14 +903,14 @@ func TestMCPBind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if back.MCPBind() != "0.0.0.0" {
-		t.Errorf("round trip: %q", back.MCPBind())
+	if got := back.MCPBinds(); !slices.Equal(got, []string{"0.0.0.0"}) {
+		t.Errorf("round trip: %q", got)
 	}
 	if file, _ := os.ReadFile(path); !strings.Contains(string(file), `"bind": "0.0.0.0"`) || !strings.Contains(string(file), `"mcp": {`) {
 		t.Errorf("written as mcp.bind: %s", file)
 	}
-	if cleared := back.WithoutMCPBind(); cleared.MCPBind() != DefaultMCPBind || back.MCPBind() != "0.0.0.0" {
-		t.Errorf("WithoutMCPBind clears a copy: %q, %q", cleared.MCPBind(), back.MCPBind())
+	if cleared := back.WithoutMCPBind(); !slices.Equal(cleared.MCPBinds(), DefaultMCPBinds()) || !slices.Equal(back.MCPBinds(), []string{"0.0.0.0"}) {
+		t.Errorf("WithoutMCPBind clears a copy: %q, %q", cleared.MCPBinds(), back.MCPBinds())
 	}
 	if _, err := Parse([]byte(`{"mcp":{"bind":"127.0.0.1:4243"}}`)); err == nil || !strings.Contains(err.Error(), "mcp.bind") {
 		t.Errorf("a file with a port in mcp.bind is refused: %v", err)
