@@ -2977,15 +2977,15 @@ Serve MCP over Streamable HTTP in the foreground, on this machine only unless --
 flai mcp http [flags]
 ```
 
-The same server as flai mcp, over HTTP at /mcp, for agents that cannot start a process here (ADR-0030). It listens on 127.0.0.1:4243 unless --addr says otherwise, and that address is remembered for this project. Every request carries the token in .flai-cache/mcp.token as a bearer header; a request from a browser (one with an Origin header) is refused. The token is the gate, whatever Host a request names, so an agent in a container may dial host.docker.internal (ADR-0216). The agent is named by the X-Flai-Agent header, else by the client's own name.
+The same server as flai mcp, over HTTP at /mcp, for agents that cannot start a process here (ADR-0030). It listens on 127.0.0.1:4243 unless --addr says otherwise. --addr may be given more than once, every address on the same port, such as loopback for clients here and a Docker network's gateway for agents in containers; the loopback one (else the first) is remembered for this project and named as the server's URL. Every request carries the token in .flai-cache/mcp.token as a bearer header; a request from a browser (one with an Origin header) is refused. The token is the gate, whatever Host a request names, so an agent in a container may dial host.docker.internal (ADR-0216). The agent is named by the X-Flai-Agent header, else by the client's own name.
 
-An address beyond this machine is allowed and warned about: the token travels in every request, and TLS is a proxy's or a tunnel's job, not flai's.
+An address beyond this machine is allowed and warned about: the token travels in every request, and TLS is a proxy's or a tunnel's job, not flai's. A Docker network's gateway, which only the host and its containers reach, is not.
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--addr` string | address to listen on (default the last one used here, else 127.0.0.1:4243) |
+| `--addr` stringArray | address to listen on, repeatable, every one on the same port (default the last one used here, else 127.0.0.1:4243) |
 | `--idle` duration | a session with no request for this long ends (default `30m0s`) |
 | `--max-sessions` int | MCP sessions at once (default `16`) |
 
@@ -3001,7 +3001,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--addr` string | address to listen on (default the last one used here, else 127.0.0.1:4243) |
+| `--addr` stringArray | address to listen on, repeatable, every one on the same port (default the last one used here, else 127.0.0.1:4243) |
 | `--idle` duration | a session with no request for this long ends (default `30m0s`) |
 | `--max-sessions` int | MCP sessions at once (default `16`) |
 
@@ -3850,7 +3850,7 @@ Subcommands:
 - [forge](#flai-serve-forge): Set the environment variable a forge's token is read from, such as GITHUB\_TOKEN for github
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
-- [mcp](#flai-serve-mcp): The address flai host starts each project's HTTP MCP server on, on this host
+- [mcp](#flai-serve-mcp): The addresses flai host starts each project's HTTP MCP server on, on this host
 - [notify](#flai-serve-notify): The channel flai serve reminds you through of a thread that awaits you, on this host
 - [orchestrate](#flai-serve-orchestrate): Stop the project's orchestrator and hold it stopped, or start it again
 - [project](#flai-serve-project): The projects flai serve serves on the dashboard: add, remove, and list them, and why one is not showing
@@ -4498,20 +4498,25 @@ Flags:
 
 #### flai serve mcp
 
-The address flai host starts each project's HTTP MCP server on, on this host.
+The addresses flai host starts each project's HTTP MCP server on, on this host.
 
 ```text
 flai serve mcp
 ```
 
-flai host starts a flai mcp http for every project flai serve serves, each on a port of its own that it keeps across restarts, and on mcp.bind, 127.0.0.1 by default, so that only this machine reaches it. flai serve mcp bind sets another address, an IP address or a host name without a port, such as 0.0.0.0 or Docker's bridge gateway, 172.17.0.1, so that an agent in a container reaches the server through the host gateway; flai serve mcp clear goes back to 127.0.0.1. It is for every project on this host, and each server listens on it from its next start: flai host restart mcp starts them again now.
+flai host starts a flai mcp http for every project flai serve serves, each on a port of its own that it keeps across restarts, listening on every address mcp.bind holds, all on that one port.
 
-Wherever it listens, the server refuses a request without the bearer token flai mcp token prints and one with an Origin header, and it warns in its log when it listens beyond this machine, since flai does not encrypt the token.
+mcp.bind holds one address or several, each an IP address or a host name without a port, or auto; unset is auto. auto listens on 127.0.0.1 and, where the host's Docker engine routes host.docker.internal to a network's gateway rather than to loopback (a native engine, not Docker Desktop), also on the gateway of the network the container harness runs on (flai serve agent harness container --network), so that an agent in a container reaches the server. flai resolves auto at each server start: flai host restart mcp resolves it again, and flai serve mcp show says what it resolves to now.
+
+flai serve mcp bind sets the addresses, such as 0.0.0.0, or Docker's bridge gateway, 172.17.0.1, beside 127.0.0.1; flai serve mcp clear goes back to auto. It is for every project on this host, and each server listens on it from its next start: flai host restart mcp starts them again now.
+
+Wherever it listens, the server refuses a request without the bearer token flai mcp token prints and one with an Origin header, and it warns in its log of an address beyond this machine that is not a container network's gateway, since flai does not encrypt the token.
 
 Examples:
 
 ```bash
-flai serve mcp bind 0.0.0.0
+flai serve mcp bind auto
+flai serve mcp bind 127.0.0.1 172.17.0.1
 flai host restart mcp
 flai serve mcp show --json
 flai serve mcp clear
@@ -4519,32 +4524,55 @@ flai serve mcp clear
 
 Subcommands:
 
-- [bind](#flai-serve-mcp-bind): Start each project's MCP server on this address, an IP address or a host name without a port (default 127.0.0.1)
-- [clear](#flai-serve-mcp-clear): Unset mcp.bind, so that each project's MCP server listens on 127.0.0.1 again
-- [show](#flai-serve-mcp-show): Print the address flai host starts each project's MCP server on
+- [bind](#flai-serve-mcp-bind): Start each project's MCP server on these addresses, each an IP address or a host name without a port, or auto (default auto)
+- [clear](#flai-serve-mcp-clear): Unset mcp.bind, so that each project's MCP server listens on auto again, the default
+- [show](#flai-serve-mcp-show): Print the addresses mcp.bind holds and, for auto, what it resolves to now
 
 ##### flai serve mcp bind
 
-Start each project's MCP server on this address, an IP address or a host name without a port (default 127.0.0.1).
+Start each project's MCP server on these addresses, each an IP address or a host name without a port, or auto (default auto).
 
 ```text
-flai serve mcp bind <address>
+flai serve mcp bind <address> [<address>...]
+```
+
+Sets mcp.bind to the addresses given, each an IP address or a host name without a port, or auto, which listens on 127.0.0.1 and, under a native Docker engine, on the gateway of the network the container harness runs on. Every address listens on the project's one port, from each server's next start: flai host restart mcp starts them again now. An address that is refused, with a port or that is no IP address or host name, leaves mcp.bind as it was, whichever of the addresses it is.
+
+Examples:
+
+```bash
+flai serve mcp bind auto
+flai serve mcp bind 127.0.0.1 172.17.0.1
+flai serve mcp bind auto 10.0.0.5
 ```
 
 ##### flai serve mcp clear
 
-Unset mcp.bind, so that each project's MCP server listens on 127.0.0.1 again.
+Unset mcp.bind, so that each project's MCP server listens on auto again, the default.
 
 ```text
 flai serve mcp clear
 ```
 
+Examples:
+
+```bash
+flai serve mcp clear
+```
+
 ##### flai serve mcp show
 
-Print the address flai host starts each project's MCP server on.
+Print the addresses mcp.bind holds and, for auto, what it resolves to now.
 
 ```text
 flai serve mcp show
+```
+
+Examples:
+
+```bash
+flai serve mcp show
+flai serve mcp show --json
 ```
 
 #### flai serve notify
@@ -4704,7 +4732,7 @@ Print this host's settings as the dashboard's settings page has them for the pro
 flai serve settings
 ```
 
-Prints what the dashboard's settings page is given for the project in the working directory: the host actions, here and everywhere; the agent, its harnesses and providers; the checks; the folders named for import; the projects flai serve serves; planning; and the project's HTTP MCP server, whether it runs and the address flai host starts it on, mcp.bind or 127.0.0.1 by default, which flai serve mcp bind sets. --json prints every field as the dashboard gets it. It prints no token and no variable's value.
+Prints what the dashboard's settings page is given for the project in the working directory: the host actions, here and everywhere; the agent, its harnesses and providers; the checks; the folders named for import; the projects flai serve serves; planning; and the project's HTTP MCP server, whether it runs, the addresses flai host starts it on, mcp.bind, auto by default, which flai serve mcp bind sets, and, while it runs, the addresses it listens on (flai serve mcp show says what auto resolves to now). --json prints every field as the dashboard gets it. It prints no token and no variable's value.
 
 Examples:
 

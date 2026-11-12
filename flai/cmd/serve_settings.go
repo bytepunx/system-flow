@@ -24,9 +24,10 @@ func newServeSettingsCmd(a *app) *cobra.Command {
 working directory: the host actions, here and everywhere; the agent, its
 harnesses and providers; the checks; the folders named for import; the
 projects flai serve serves; planning; and the project's HTTP MCP server,
-whether it runs and the address flai host starts it on, mcp.bind or ` + config.DefaultMCPBind + `
-by default, which flai serve mcp bind sets. --json prints every field as
-the dashboard gets it. It prints no token and no variable's value.`,
+whether it runs, the addresses flai host starts it on, mcp.bind, ` + mcpDefaultBinds + ` by
+default, which flai serve mcp bind sets, and, while it runs, the
+addresses it listens on (flai serve mcp show says what ` + config.MCPBindAuto + ` resolves to now). --json prints every field as the dashboard
+gets it. It prints no token and no variable's value.`,
 		Example: `  flai serve settings
   flai serve settings --json`,
 		Args: cobra.NoArgs,
@@ -120,8 +121,7 @@ type hostSettingsView struct {
 		Running bool   `json:"running"`
 		URL     string `json:"url"`
 		PID     int    `json:"pid"`
-		Bind    string `json:"bind"`
-		BindSet bool   `json:"bind_set"`
+		mcpBindView
 	} `json:"mcp"`
 }
 
@@ -210,11 +210,15 @@ func writeHostSettings(w io.Writer, name, root string, v hostSettingsView) {
 		if m.Running {
 			state = fmt.Sprintf("running at %s (pid %d)", m.URL, m.PID)
 		}
-		bind := m.Bind + " (default; flai serve mcp bind <address> sets another)"
+		binds := strings.Join(m.Binds, " ")
+		line := fmt.Sprintf("mcp: %s; bind %s (default; flai serve mcp bind <address> [<address>...] sets others)", state, binds)
 		if m.BindSet {
-			bind = m.Bind + " (set; flai serve mcp clear goes back to the default)"
+			line = fmt.Sprintf("mcp: %s; bind %s (set; flai serve mcp clear goes back to the default, %s)", state, binds, mcpDefaultBinds)
 		}
-		fmt.Fprintf(w, "mcp: %s; bind %s\n", state, bind)
+		if len(m.Listen) > 0 {
+			line += "; listening on " + strings.Join(m.Listen, " ")
+		}
+		fmt.Fprintln(w, line)
 	}
 }
 

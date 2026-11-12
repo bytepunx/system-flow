@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -123,32 +126,103 @@ func (a *app) mcpBind() string {
 	return cfg.MCPBind()
 }
 
-// mcpBindOf is cfg's mcp.bind as flai host uses it, and whether it is set,
-// for what shows the host's settings.
-func mcpBindOf(cfg config.Config) (string, bool) {
-	return cfg.MCPBind(), len(cfg.MCP.Bind) > 0
+// mcpListen is the addresses the host's mcp.bind resolves to now, each auto
+// expanded for the container harness's Docker program and network as the
+// operator set them, for flai host to listen on at each server start. On a
+// configuration it cannot load it is config.DefaultMCPBind alone, with the
+// error; when docker cannot say what auto needs, it is the addresses
+// serve.ResolveMCPBinds still gives, with what docker could not say.
+func (a *app) mcpListen() ([]string, error) {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return []string{config.DefaultMCPBind}, err
+	}
+	return a.mcpListenOf(cfg)
 }
 
+// mcpListenOf is mcpListen for cfg. Docker is asked from the working
+// directory, as flai's other calls to docker are: the host's configuration
+// belongs to no project.
+func (a *app) mcpListenOf(cfg config.Config) ([]string, error) {
+	h := a.harnessHost(cfg.Agent, harness.Container)
+	return serve.ResolveMCPBinds(a.runner, "", h.Program, h.Network, cfg.MCPBinds())
+}
+
+// mcpBindView is mcp.bind as what shows the host's settings gives it: Bind,
+// its first address as written, and BindSet, whether it is set, as they were
+// while it held one address (S-0506); Binds, its addresses as written, or
+// config.DefaultMCPBinds when unset; Listen, what they resolve to now for
+// flai serve mcp show, or what the running server listens on for the
+// settings, which ask docker nothing; and ListenError, what docker could
+// not say for auto, when it could not.
+type mcpBindView struct {
+	Bind        string   `json:"bind"`
+	BindSet     bool     `json:"bind_set"`
+	Binds       []string `json:"binds"`
+	Listen      []string `json:"listen,omitempty"`
+	ListenError string   `json:"listen_error,omitempty"`
+}
+
+// mcpBindOf is cfg's mcp.bind as written, as mcpBindView gives it, without
+// Listen: what shows every setting asks docker nothing.
+func mcpBindOf(cfg config.Config) mcpBindView {
+	binds := cfg.MCPBinds()
+	return mcpBindView{Bind: binds[0], BindSet: len(cfg.MCP.Bind) > 0, Binds: binds}
+}
+
+// mcpBindResolved is mcpBindOf with Listen what its addresses resolve to
+// now, for flai serve mcp show.
+func (a *app) mcpBindResolved(cfg config.Config) mcpBindView {
+	v := mcpBindOf(cfg)
+	listen, err := a.mcpListenOf(cfg)
+	v.Listen = nonNil(listen)
+	if err != nil {
+		v.ListenError = err.Error()
+	}
+	return v
+}
+
+// holdsAuto is whether v's addresses hold config.MCPBindAuto, so that what
+// they resolve to now is worth saying.
+func (v mcpBindView) holdsAuto() bool {
+	return slices.Contains(v.Binds, config.MCPBindAuto)
+}
+
+// mcpDefaultBinds is config.DefaultMCPBinds as the help and the summaries
+// write it.
+var mcpDefaultBinds = strings.Join(config.DefaultMCPBinds(), " ")
+
 // flai serve mcp: the host's say about the HTTP MCP server flai host starts
-// for each project it serves (S-0506).
+// for each project it serves (S-0506), on one address or several, or auto
+// (S-0732).
 func newServeMCPCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "mcp",
-		Short: "The address flai host starts each project's HTTP MCP server on, on this host",
+		Short: "The addresses flai host starts each project's HTTP MCP server on, on this host",
 		Long: `flai host starts a flai mcp http for every project flai serve serves, each on
-a port of its own that it keeps across restarts, and on mcp.bind, ` + config.DefaultMCPBind + ` by
-default, so that only this machine reaches it. flai serve mcp bind sets
-another address, an IP address or a host name without a port, such as
-0.0.0.0 or Docker's bridge gateway, 172.17.0.1, so that an agent in a
-container reaches the server through the host gateway; flai serve mcp clear
-goes back to ` + config.DefaultMCPBind + `. It is for every project on this host, and each
-server listens on it from its next start: flai host restart mcp starts them
-again now.
+a port of its own that it keeps across restarts, listening on every address
+mcp.bind holds, all on that one port.
+
+mcp.bind holds one address or several, each an IP address or a host name
+without a port, or ` + config.MCPBindAuto + `; unset is ` + mcpDefaultBinds + `. ` + config.MCPBindAuto + ` listens on ` + config.DefaultMCPBind + ` and, where the
+host's Docker engine routes host.docker.internal to a network's gateway
+rather than to loopback (a native engine, not Docker Desktop), also on the
+gateway of the network the container harness runs on (flai serve agent
+harness container --network), so that an agent in a container reaches the
+server. flai resolves ` + config.MCPBindAuto + ` at each server start: flai host restart mcp
+resolves it again, and flai serve mcp show says what it resolves to now.
+
+flai serve mcp bind sets the addresses, such as 0.0.0.0, or Docker's bridge
+gateway, 172.17.0.1, beside ` + config.DefaultMCPBind + `; flai serve mcp clear goes back to
+` + mcpDefaultBinds + `. It is for every project on this host, and each server listens on
+it from its next start: flai host restart mcp starts them again now.
 
 Wherever it listens, the server refuses a request without the bearer token
 flai mcp token prints and one with an Origin header, and it warns in its log
-when it listens beyond this machine, since flai does not encrypt the token.`,
-		Example: `  flai serve mcp bind 0.0.0.0
+of an address beyond this machine that is not a container network's
+gateway, since flai does not encrypt the token.`,
+		Example: `  flai serve mcp bind auto
+  flai serve mcp bind 127.0.0.1 172.17.0.1
   flai host restart mcp
   flai serve mcp show --json
   flai serve mcp clear`,
@@ -156,15 +230,25 @@ when it listens beyond this machine, since flai does not encrypt the token.`,
 		RunE: func(*cobra.Command, []string) error { return a.showMCPSettings() },
 	}
 	bind := &cobra.Command{
-		Use:   "bind <address>",
-		Short: "Start each project's MCP server on this address, an IP address or a host name without a port (default " + config.DefaultMCPBind + ")",
-		Args:  cobra.ExactArgs(1),
+		Use:   "bind <address> [<address>...]",
+		Short: "Start each project's MCP server on these addresses, each an IP address or a host name without a port, or " + config.MCPBindAuto + " (default " + mcpDefaultBinds + ")",
+		Long: `Sets mcp.bind to the addresses given, each an IP address or a host name
+without a port, or ` + config.MCPBindAuto + `, which listens on ` + config.DefaultMCPBind + ` and, under a native
+Docker engine, on the gateway of the network the container harness runs on.
+Every address listens on the project's one port, from each server's next
+start: flai host restart mcp starts them again now. An address that is
+refused, with a port or that is no IP address or host name, leaves mcp.bind
+as it was, whichever of the addresses it is.`,
+		Example: `  flai serve mcp bind auto
+  flai serve mcp bind 127.0.0.1 172.17.0.1
+  flai serve mcp bind ` + config.MCPBindAuto + ` 10.0.0.5`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
 			}
-			if cfg, err = cfg.WithMCPBind(args[0]); err != nil {
+			if cfg, err = cfg.WithMCPBind(args...); err != nil {
 				return err
 			}
 			if err := config.Save(path, cfg); err != nil {
@@ -174,9 +258,10 @@ when it listens beyond this machine, since flai does not encrypt the token.`,
 		},
 	}
 	clear := &cobra.Command{
-		Use:   "clear",
-		Short: "Unset mcp.bind, so that each project's MCP server listens on " + config.DefaultMCPBind + " again",
-		Args:  cobra.NoArgs,
+		Use:     "clear",
+		Short:   "Unset mcp.bind, so that each project's MCP server listens on " + mcpDefaultBinds + " again, the default",
+		Example: `  flai serve mcp clear`,
+		Args:    cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
 			cfg, path, err := a.loadConfig()
 			if err != nil {
@@ -188,27 +273,46 @@ when it listens beyond this machine, since flai does not encrypt the token.`,
 			return a.showMCPSettings()
 		},
 	}
-	c.AddCommand(bind, clear,
-		&cobra.Command{Use: "show", Short: "Print the address flai host starts each project's MCP server on", Args: cobra.NoArgs,
-			RunE: func(*cobra.Command, []string) error { return a.showMCPSettings() }},
-	)
+	show := &cobra.Command{
+		Use:   "show",
+		Short: "Print the addresses mcp.bind holds and, for " + config.MCPBindAuto + ", what it resolves to now",
+		Example: `  flai serve mcp show
+  flai serve mcp show --json`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error { return a.showMCPSettings() },
+	}
+	c.AddCommand(bind, clear, show)
 	return c
 }
 
-// showMCPSettings prints mcp.bind as flai host uses it, and whether it is set.
+// showMCPSettings prints mcp.bind as flai host uses it, whether it is set,
+// and what it resolves to now.
 func (a *app) showMCPSettings() error {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return err
 	}
-	bind, set := mcpBindOf(cfg)
+	v := a.mcpBindResolved(cfg)
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"bind": bind, "bind_set": set})
+		return a.printJSON(v)
 	}
-	if set {
-		fmt.Fprintf(a.out, "bind: %s: flai host starts each project's MCP server on this address, from its next start (flai host restart mcp); flai serve mcp clear goes back to %s\n", bind, config.DefaultMCPBind)
-	} else {
-		fmt.Fprintf(a.out, "bind: %s (default): flai host starts each project's MCP server on this machine only; flai serve mcp bind <address> sets another\n", bind)
-	}
+	writeMCPBind(a.out, v)
 	return nil
+}
+
+// writeMCPBind writes the summary of v: the addresses as written, what they
+// resolve to now when they hold auto, and what docker could not say.
+func writeMCPBind(w io.Writer, v mcpBindView) {
+	binds := strings.Join(v.Binds, " ")
+	if v.BindSet {
+		fmt.Fprintf(w, "bind: %s: flai host starts each project's MCP server on these addresses, on its one port, from its next start (flai host restart mcp); flai serve mcp clear goes back to %s\n", binds, mcpDefaultBinds)
+	} else {
+		fmt.Fprintf(w, "bind: %s (default): flai host starts each project's MCP server on what %s resolves to; flai serve mcp bind <address> [<address>...] sets others\n", binds, config.MCPBindAuto)
+	}
+	if v.holdsAuto() {
+		fmt.Fprintf(w, "listen: %s: what they resolve to now; flai host resolves %s again at each server start\n", strings.Join(v.Listen, " "), config.MCPBindAuto)
+	}
+	if v.ListenError != "" {
+		fmt.Fprintf(w, "note: %s\n", v.ListenError)
+	}
 }

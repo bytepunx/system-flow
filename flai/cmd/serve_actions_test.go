@@ -409,7 +409,7 @@ func TestServeMergeQueueAction(t *testing.T) {
 	}
 	listed := func() map[string]any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -469,7 +469,7 @@ func TestServeFormulaAction(t *testing.T) {
 	}
 	listed := func() map[string]any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1618,7 +1618,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, rec := perf.Start(context.Background())
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(ctx, mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(ctx, mainRootOf(repo)))
 	// S-0605: settings.get says where its time goes
 	phases := map[string]int{}
 	for _, ph := range rec.Phases() {
@@ -1630,7 +1630,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,Monitor,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":[],"ask_capable":false,"deny_protected":false,"guard":"","guard_capable":false,"program":"","set":false}`,
-		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["` + importRoot + `"]`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"bind":"127.0.0.1","bind_set":false,"running":false}`,
+		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["` + importRoot + `"]`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"bind":"auto","bind_set":false,"binds":["auto"],"running":false}`,
 		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":"`, `"unserved":[]}`} {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("settings lack %s:\n%s", want, got)
@@ -1659,7 +1659,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), mainRootOf(repo)))
 	for _, want := range []string{
 		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,Monitor,mcp__flai"],"ask_capable":true,"deny_protected":false,"from":"project","guard":"none","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"from":"project","guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
@@ -1669,7 +1669,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 		}
 	}
 	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude")
-	got, _ = json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
+	got, _ = json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), mainRootOf(repo)))
 	if want := `"guard":"none","guard_capable":true,"program":"/opt/claude","set":true}`; !strings.Contains(string(got), want) {
 		t.Errorf("a program beside the guard is set: want %s in\n%s", want, got)
 	}
@@ -1699,7 +1699,7 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
+		got, _ := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), mainRootOf(repo)))
 		if strings.Contains(string(got), key) || strings.Contains(string(got), masterKey) {
 			t.Errorf("a key is in the settings: %s", got)
 		}
@@ -1843,7 +1843,7 @@ func TestSettingsShowThePlanningTriggers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := &app{configPath: configOf(t), errOut: &bytes.Buffer{}, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
+	a := &app{configPath: configOf(t), errOut: &bytes.Buffer{}, runner: desktopDocker, clock: func() time.Time { return time.Date(2026, 10, 4, 9, 30, 0, 0, time.UTC) }}
 	planning := func() string {
 		t.Helper()
 		got, _ := json.Marshal(a.hostSettings(context.Background(), mainRootOf(repo)).(map[string]any)["planning"])
@@ -2120,7 +2120,7 @@ func TestAutoPublishIsTheShellsAlone(t *testing.T) {
 	if cfg, _, _ := (&app{configPath: configOf(t)}).loadConfig(); !cfg.ActionEnabled("auto-publish", mainRootOf(repo)) {
 		t.Error("the refusal left auto-publish as the shell set it")
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-publish") || !strings.Contains(string(got), `"name":"push"`) {
 		t.Errorf("the settings page is told of auto-publish: %s", got)
 	}
@@ -2153,7 +2153,7 @@ func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
 	if code == 0 || !strings.Contains(out, "flai serve disable auto-upgrade") {
 		t.Errorf("settings.action refuses auto-upgrade, naming what to run: %d %s", code, out)
 	}
-	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
+	got, _ := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-upgrade") {
 		t.Errorf("the settings page is told of auto-upgrade: %s", got)
 	}
@@ -2564,7 +2564,7 @@ func TestServeSettingsShowTheAllowedHosts(t *testing.T) {
 	root := tempProject(t)
 	allowed := func() any {
 		t.Helper()
-		got, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
+		got, err := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), root))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2691,7 +2691,7 @@ func TestServeEnableTakesADefinedRolesAction(t *testing.T) {
 	if !(&app{configPath: configOf(t)}).agentConfig(root).RoleActions["review"] {
 		t.Error("enabled, flai serve is not told")
 	}
-	settings, err := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), root))
+	settings, err := json.Marshal((&app{configPath: configOf(t), runner: desktopDocker}).hostSettings(context.Background(), root))
 	if err != nil || !strings.Contains(string(settings), `"here":true,"means":"start the role reviewer`) || !strings.Contains(string(settings), `"name":"review"`) {
 		t.Errorf("the settings page does not list review on: %s %v", settings, err)
 	}
@@ -3004,26 +3004,18 @@ func TestServeStatusShowsEachHeldProvider(t *testing.T) {
 	}
 }
 
-// S-0506: flai serve mcp bind keeps the address flai host starts each
-// project's MCP server on, show prints it, with --json too, and the
-// loopback default when it is unset, clear unsets it, and an address with a
+// S-0506, S-0732: flai serve mcp bind keeps the address flai host starts
+// each project's MCP server on, show prints it, with --json too, and auto,
+// the default, when it is unset, clear unsets it, and an address with a
 // port or one that is no IP address or host name is refused, changing
-// nothing.
+// nothing. One address is written as a string, as before.
 func TestServeMCPBind(t *testing.T) {
 	t.Parallel()
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfgPath)
 	run := func(asJSON bool, args ...string) (string, error) {
 		t.Helper()
-		var out bytes.Buffer
-		a := &app{configPath: cfgPath, out: &out, errOut: &bytes.Buffer{}, cwd: t.TempDir(), jsonOut: asJSON}
-		c := newServeMCPCmd(a)
-		c.SetArgs(args)
-		c.SetOut(&out)
-		c.SetErr(&bytes.Buffer{})
-		c.SilenceUsage, c.SilenceErrors = true, true
-		err := c.Execute()
-		return out.String(), err
+		return runServeMCP(t, cfgPath, desktopDocker, asJSON, args...)
 	}
 	saved := func() string {
 		t.Helper()
@@ -3033,17 +3025,20 @@ func TestServeMCPBind(t *testing.T) {
 		}
 		return strings.Join(cfg.MCP.Bind, " ")
 	}
-	if out, err := run(false, "show"); err != nil || !strings.Contains(out, "bind: 127.0.0.1 (default)") {
+	if out, err := run(false, "show"); err != nil || !strings.Contains(out, "bind: auto (default)") || !strings.Contains(out, "\nlisten: 127.0.0.1: ") {
 		t.Errorf("unset: %v %q", err, out)
 	}
-	if js, err := run(true); err != nil || !strings.Contains(js, `"bind": "127.0.0.1"`) || !strings.Contains(js, `"bind_set": false`) {
+	if js, err := run(true); err != nil || !strings.Contains(js, `"bind": "auto"`) || !strings.Contains(js, `"bind_set": false`) {
 		t.Errorf("unset, --json: %v %s", err, js)
 	}
-	if out, err := run(false, "bind", "0.0.0.0"); err != nil || !strings.HasPrefix(out, "bind: 0.0.0.0: ") {
+	if out, err := run(false, "bind", "0.0.0.0"); err != nil || !strings.HasPrefix(out, "bind: 0.0.0.0: ") || strings.Contains(out, "listen:") {
 		t.Fatalf("bind: %v %q", err, out)
 	}
 	if got := saved(); got != "0.0.0.0" {
 		t.Errorf("saved: %q", got)
+	}
+	if data, _ := os.ReadFile(cfgPath); !strings.Contains(string(data), `"bind": "0.0.0.0"`) {
+		t.Errorf("one address is written as a string: %s", data)
 	}
 	if js, err := run(true, "show"); err != nil || !strings.Contains(js, `"bind": "0.0.0.0"`) || !strings.Contains(js, `"bind_set": true`) {
 		t.Errorf("--json: %v %s", err, js)
@@ -3057,7 +3052,8 @@ func TestServeMCPBind(t *testing.T) {
 		{[]string{"bind", "http://example.com"}, "names a port, or is no IP address"},
 		{[]string{"bind", "not a host"}, "is not a host name"},
 		{[]string{"bind", " "}, "an address is empty"},
-		{[]string{"bind"}, "accepts 1 arg"},
+		{[]string{"bind", "127.0.0.1", "AUTO"}, "write it in lower case"},
+		{[]string{"bind"}, "requires at least 1 arg"},
 	} {
 		if _, err := run(false, bad.args...); err == nil || !strings.Contains(err.Error(), bad.want) {
 			t.Errorf("%q is refused, saying why: %v", bad.args, err)
@@ -3066,7 +3062,7 @@ func TestServeMCPBind(t *testing.T) {
 	if got := saved(); got != "0.0.0.0" {
 		t.Errorf("a refused address changes nothing: %q", got)
 	}
-	if out, err := run(false, "clear"); err != nil || !strings.Contains(out, "bind: 127.0.0.1 (default)") || saved() != "" {
+	if out, err := run(false, "clear"); err != nil || !strings.Contains(out, "bind: auto (default)") || saved() != "" {
 		t.Errorf("clear: %v %q %q", err, out, saved())
 	}
 	if data, _ := os.ReadFile(cfgPath); strings.Contains(string(data), `"mcp"`) {

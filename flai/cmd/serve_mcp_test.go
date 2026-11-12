@@ -3,17 +3,25 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -346,5 +354,169 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 	}
 	if got, err := mcpAddrFor(repo, "127.0.0.1", nil, nil); err != nil || got == mine {
 		t.Errorf("mcpAddrFor, with the remembered %s held: %q %v", mine, got, err)
+	}
+}
+
+// mcpDocker is a docker for what resolves mcp.bind's auto: docker info names
+// engine, and fails when it is empty, as without a running Docker; network
+// inspect names the gateway 172.17.0.1 for any network. calls records each
+// call's arguments, so a test can see which network it asked about.
+type mcpDocker struct {
+	engine string
+	calls  *[]string
+}
+
+// desktopDocker is a Docker Desktop engine, under which auto is loopback
+// alone, for a test that shows the settings without looking at Docker.
+var desktopDocker = mcpDocker{engine: serve.DockerDesktop}
+
+func (d mcpDocker) Run(_, _ string, args ...string) (string, error) {
+	if d.calls != nil {
+		*d.calls = append(*d.calls, strings.Join(args, " "))
+	}
+	switch {
+	case len(args) > 0 && args[0] == "info":
+		if d.engine == "" {
+			return "Cannot connect to the Docker daemon", errors.New("exit status 1")
+		}
+		return d.engine + "\n", nil
+	case len(args) > 1 && args[0] == "network" && args[1] == "inspect":
+		return "172.17.0.1 \n", nil
+	}
+	return "", fmt.Errorf("mcpDocker: no answer for docker %s", strings.Join(args, " "))
+}
+
+func (d mcpDocker) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return d.Run(dir, name, args...)
+}
+
+func (d mcpDocker) LookPath(name string) (string, error) { return name, nil }
+
+// runServeMCP runs flai serve mcp with args on the configuration at cfgPath
+// and docker, as JSON when asJSON.
+func runServeMCP(t *testing.T, cfgPath string, docker execx.Runner, asJSON bool, args ...string) (string, error) {
+	t.Helper()
+	var out bytes.Buffer
+	a := &app{configPath: cfgPath, out: &out, errOut: &bytes.Buffer{}, cwd: t.TempDir(), jsonOut: asJSON, runner: docker}
+	c := newServeMCPCmd(a)
+	c.SetArgs(args)
+	c.SetOut(&out)
+	c.SetErr(&bytes.Buffer{})
+	c.SilenceUsage, c.SilenceErrors = true, true
+	err := c.Execute()
+	return out.String(), err
+}
+
+// showMCPJSON is flai serve mcp show --json read back.
+func showMCPJSON(t *testing.T, cfgPath string, docker execx.Runner) mcpBindView {
+	t.Helper()
+	js, err := runServeMCP(t, cfgPath, docker, true, "show")
+	if err != nil {
+		t.Fatalf("show --json: %v", err)
+	}
+	var v mcpBindView
+	if err := json.Unmarshal([]byte(js), &v); err != nil {
+		t.Fatalf("show --json is not JSON: %v\n%s", err, js)
+	}
+	return v
+}
+
+// S-0732: flai serve mcp bind takes several addresses and saves them as a
+// list, show prints them as written, --json gives them as binds and listen,
+// and an address it refuses among several leaves mcp.bind as it was.
+func TestServeMCPBindTakesSeveralAddresses(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	out, err := runServeMCP(t, cfgPath, desktopDocker, false, "bind", "127.0.0.1", "172.17.0.1")
+	if err != nil || !strings.HasPrefix(out, "bind: 127.0.0.1 172.17.0.1: ") || strings.Contains(out, "listen:") {
+		t.Fatalf("bind two: %v %q", err, out)
+	}
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"bind": [`) {
+		t.Errorf("two addresses are saved as a list: %s", data)
+	}
+	want := mcpBindView{Bind: "127.0.0.1", BindSet: true, Binds: []string{"127.0.0.1", "172.17.0.1"}, Listen: []string{"127.0.0.1", "172.17.0.1"}}
+	if got := showMCPJSON(t, cfgPath, desktopDocker); !reflect.DeepEqual(got, want) {
+		t.Errorf("--json: %+v, want %+v", got, want)
+	}
+	if _, err := runServeMCP(t, cfgPath, desktopDocker, false, "bind", "10.0.0.5", "0.0.0.0:4243"); err == nil || !strings.Contains(err.Error(), "names a port") {
+		t.Errorf("an address with a port among several is refused: %v", err)
+	}
+	if _, err := runServeMCP(t, cfgPath, desktopDocker, false, "bind"); err == nil || !strings.Contains(err.Error(), "requires at least 1 arg") {
+		t.Errorf("no address is refused: %v", err)
+	}
+	if got := showMCPJSON(t, cfgPath, desktopDocker); !reflect.DeepEqual(got.Binds, want.Binds) {
+		t.Errorf("a refusal changes nothing: %v", got.Binds)
+	}
+}
+
+// S-0732: auto, set or by default, resolves under a native Docker engine to
+// 127.0.0.1 and the gateway of the network the container harness runs on,
+// which show prints beside the addresses as written; under Docker Desktop to
+// 127.0.0.1 alone; and, when docker cannot name its engine, to 127.0.0.1
+// alone with a note saying what it could not say.
+func TestServeMCPShowSaysWhatAutoResolvesTo(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	native := mcpDocker{engine: "Ubuntu 24.04 LTS"}
+	out, err := runServeMCP(t, cfgPath, native, false, "show")
+	if err != nil || !strings.Contains(out, "bind: auto (default): ") || !strings.Contains(out, "\nlisten: 127.0.0.1 172.17.0.1: ") || strings.Contains(out, "note:") {
+		t.Errorf("unset, native engine: %v %q", err, out)
+	}
+	if out, err := runServeMCP(t, cfgPath, native, false, "bind", "auto", "10.0.0.5"); err != nil || !strings.HasPrefix(out, "bind: auto 10.0.0.5: ") || !strings.Contains(out, "\nlisten: 127.0.0.1 172.17.0.1 10.0.0.5: ") {
+		t.Errorf("auto beside an address: %v %q", err, out)
+	}
+	want := mcpBindView{Bind: "auto", BindSet: true, Binds: []string{"auto", "10.0.0.5"}, Listen: []string{"127.0.0.1", "172.17.0.1", "10.0.0.5"}}
+	if got := showMCPJSON(t, cfgPath, native); !reflect.DeepEqual(got, want) {
+		t.Errorf("--json: %+v, want %+v", got, want)
+	}
+	if out, err := runServeMCP(t, cfgPath, desktopDocker, false, "bind", "auto"); err != nil || !strings.HasPrefix(out, "bind: auto: ") || !strings.Contains(out, "\nlisten: 127.0.0.1: ") {
+		t.Errorf("auto under Docker Desktop: %v %q", err, out)
+	}
+	if data, _ := os.ReadFile(cfgPath); !strings.Contains(string(data), `"bind": "auto"`) {
+		t.Errorf("one address is saved as a string, as before: %s", data)
+	}
+	out, err = runServeMCP(t, cfgPath, mcpDocker{}, false, "show")
+	if err != nil || !strings.Contains(out, "\nlisten: 127.0.0.1: ") || !strings.Contains(out, "\nnote: auto listens on 127.0.0.1 alone: ") || !strings.Contains(out, "Cannot connect to the Docker daemon") {
+		t.Errorf("docker cannot say: %v %q", err, out)
+	}
+	if got := showMCPJSON(t, cfgPath, mcpDocker{}); !strings.Contains(got.ListenError, "could not name the Docker engine") || !reflect.DeepEqual(got.Listen, []string{"127.0.0.1"}) {
+		t.Errorf("--json, docker cannot say: %+v", got)
+	}
+}
+
+// S-0732: mcpListen asks docker about the network the operator gave the
+// container harness, and on a configuration it cannot load it is 127.0.0.1
+// with the error.
+func TestMCPListen(t *testing.T) {
+	t.Parallel()
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	useConfig(t, cfgPath)
+	cfg, _, err := config.Load(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Agent.Harnesses = map[string]config.HarnessHost{harness.Container: {Network: "flai-net"}}
+	if err := config.Save(cfgPath, cfg); err != nil {
+		t.Fatal(err)
+	}
+	var calls []string
+	a := &app{configPath: cfgPath, errOut: &bytes.Buffer{}, runner: mcpDocker{engine: "Ubuntu 24.04 LTS", calls: &calls}}
+	if got, err := a.mcpListen(); err != nil || !reflect.DeepEqual(got, []string{"127.0.0.1", "172.17.0.1"}) {
+		t.Errorf("auto: %v %v", got, err)
+	}
+	if !slices.ContainsFunc(calls, func(c string) bool { return strings.HasPrefix(c, "network inspect flai-net ") }) {
+		t.Errorf("the container harness's network is asked about: %q", calls)
+	}
+	if err := os.WriteFile(cfgPath, []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := a.mcpListen(); err == nil || !reflect.DeepEqual(got, []string{config.DefaultMCPBind}) {
+		t.Errorf("an unreadable configuration: %v %v", got, err)
 	}
 }

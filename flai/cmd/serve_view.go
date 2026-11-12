@@ -159,12 +159,14 @@ func (a *app) hostSettings(ctx context.Context, root string) any {
 		out["manifest_checks"] = repo.Manifest.Checks
 		out["planning"] = planningTriggers(repo.Manifest.Planning, cfg.ActionEnabled(hostapi.ActionPlan, root), a.now())
 		out["strategic"] = strategicSettings(root, repo.Manifest, cfg.ActionEnabled(hostapi.ActionSettings, root))
-		// bind is the address flai host starts the server on, mcp.bind or the
-		// loopback default, with bind_set saying which (S-0506)
-		bind, set := mcpBindOf(cfg)
-		mcp := map[string]any{"running": false, "bind": bind, "bind_set": set}
+		// bind is mcp.bind's first address as written, with bind_set saying
+		// whether it is set (S-0506); binds is its addresses as written, or
+		// the default, and listen what the running server listens on, from
+		// its state, so that the settings ask docker nothing (S-0732)
+		b := mcpBindOf(cfg)
+		mcp := map[string]any{"running": false, "bind": b.Bind, "bind_set": b.BindSet, "binds": b.Binds}
 		if st, running := readMCPState(repo, a.now()); running {
-			mcp["running"], mcp["url"], mcp["pid"] = true, st.URL, st.PID
+			mcp["running"], mcp["url"], mcp["pid"], mcp["listen"] = true, st.URL, st.PID, st.listening()
 		}
 		out["mcp"] = mcp
 	}
