@@ -7,18 +7,39 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-12T15:59:52Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [cli, kluster]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/kluster/deploy.go, flai/internal/forge/state.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/forge/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
 after: [S-0737]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 11
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 13
+          cache_read: 108314
+          cache_write: 18020
+          cost: 0.0361
 draft: true
+forecast:
+  duration: 45m
+  delivery: 2026-11-13T06:09:00Z
+  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741 and S-0742."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0743 flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
 
@@ -36,6 +57,22 @@ What flai serve does around review follows the workflow. A story is deployed int
 
 ## Tasks
 
+- T-3218 A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
+- T-3219 The forge pass pushes, reads, and sends back a story by the state the acceptance leaves from and the send-back effect
+- T-3220 The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
+
 ## Notes
 
 - `serve/kluster.go` holds 16 of serve's references, `forgestatus.go` 6, `mergequeue.go` 5; `mergequeue` holds 7.
+
+### Planning
+
+- Touches, all files:
+  - Layout: the files of `serve`, `mergequeue`, `kluster`, and `forge` that name a state, with their tests.
+  - Co-change: `flai/internal/mergequeue/batch_test.go` (25% in `flai touches suggest`), `state_test.go`, and `kluster/deploy_test.go`.
+  - Left out from `flai touches suggest`: `serve/serve.go`, `cmd/queue.go`, and `mergequeue/land.go` and `log.go` (5% to 13%). None names a state.
+  - S-0660, under E-0035, also changes `serve/kluster.go`; the trial merge judges that.
+- `after`: S-0737. The deploy, push, eligibility, and send back read the acceptance and send-back transitions and the kinds from the workflow S-0737 gives, and the tests use its test hook.
+- Tasks: T-3218 (kluster), T-3219 (forge), and T-3220 (merge queue), one layer: no two share a path.
+- Forecast 45m, `flai forecast`'s rate for size 25, up from its 40m for the first draft's 22 once the co-change tests were added.
+- Cost of delay: not set yet, pending TH-1097, as on S-0736.

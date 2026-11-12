@@ -7,18 +7,39 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:01:16Z
-updated: 2026-11-12T16:02:48Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [docker]
-touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md]
-after: [S-0733, S-0740, S-0745]
+touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md]
+after: [S-0740, S-0745]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 10
+          cache_read: 93148
+          cache_write: 17092
+          cost: 0.0314
 draft: true
+forecast:
+  duration: 50m
+  delivery: 2026-11-13T08:33:00Z
+  basis: "Its own forecast of 50m; 25th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741, S-0742, S-0743, S-0744, S-0745, S-0746, S-0747, S-0748, S-0749 and S-0750."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0751 flai serve brings a missing or stale agent image back as a host job that holds the start, in place of refusing it
 
@@ -46,4 +67,21 @@ After this story, a start that finds its image missing or stale starts the ensur
 
 ## Notes
 
-Proposed slice 4a of E-0036. The dashboard's view of the job, and its retry, are the next story in the plan's order. The switch that turns the automatic job off, and the operator's own build command, are the one after.
+Proposed slice 4a of E-0036. The dashboard's view of the job, and its retry, are S-0757. The switch that turns the automatic job off, and the operator's own build command, are S-0759.
+
+### Planning
+
+- Touches:
+  - `flai/internal/serve/imagejob.go`, `imagejob_test.go`: new files of the job, modelled on the close-out job (`verifyjob.go`).
+  - `flai/internal/serve/container.go`, `container_test.go`, `agents_start.go`, `agents.go`: layout. `containerAllowed` and `containerImage` (lines 108 to 143) refuse today; `startOf` (line 398) and the failed run (around line 179) are in `agents_start.go`; `AgentRun` (lines 206 to 216) is in `agents.go`.
+  - `flai/internal/serve/verifyjob_container.go`, `verifyjob_test.go`, `checks.go`: layout. The close-out container (line 115) and the checks container (line 250) are the first criterion's other two paths.
+  - `flai/internal/check/image.go`, `image_test.go`: the "not built" warning (lines 86 to 88), named in the last criterion.
+  - `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/operators/runbooks/agent-container.md`: named in the last criterion.
+  - Left out from `flai touches suggest`: `docs/operators/index.md` (25%), `docs/users/flai-reference.md` (22%, no command changes), and the dashboard's documents, which are S-0757's.
+- `after`:
+  - S-0733 is not named, though this story reads the ADR's rule for strategic agents and the job's limits: it waits for S-0733 through S-0740 and S-0735, which names it.
+  - S-0740: the job runs that story's `agentimage.Ensure`.
+  - S-0745: `Ensure` builds the layer, which the first and fifth criteria need.
+- Tasks, in four layers: T-3177 writes the job; T-3178 changes `containerImage` to request it; T-3179 makes the close-out and the checks wait, building on T-3178's new `containerImage`; T-3180 renames the finding and describes the job.
+- Forecast 50m: `flai forecast` gives 37m (109 s per unit over 118 done large feature stories, size 20). Raised: a concurrent runner with joined and queued requests, tested under `-race`, and four start paths changed. Delivery is as flai gives it.
+- Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.

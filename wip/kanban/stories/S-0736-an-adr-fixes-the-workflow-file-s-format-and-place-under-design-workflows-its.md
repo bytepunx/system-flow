@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-12T15:58:31Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [cli, template, conventions]
@@ -17,7 +17,28 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 4
+          output: 16
+          cache_read: 108315
+          cache_write: 18020
+          cost: 0.0361
 draft: true
+forecast:
+  duration: 45m
+  delivery: 2026-11-13T03:44:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734 and S-0735."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
 
@@ -39,7 +60,24 @@ Before any code reads a workflow file, one accepted ADR settles what the file is
 
 ## Tasks
 
+- T-3187 Write the ADR, proposed, that fixes the workflow file's format, kinds, effects, rules, timers, and migration
+- T-3193 Settle the ADR's open choices with the operator, accept it, and mark ADR-0003 and ADR-0004 superseded or refined by it
+- T-3200 workflow.md, work-hierarchy.md § States, and the workflows README describe the workflow file and link the accepted ADR
+
 ## Notes
 
 - The epic's Notes list what the ADR decides. The rules are a vocabulary flai implements, as a role file's conditions are (`flai/internal/roles/conditions.go`), not an expression language.
 - No other story of E-0034 starts before this one is accepted.
+
+### Planning
+
+- Touches, all files:
+  - `design/adrs/README.md`: co-change. `flai adr new` and `flai adr accept` write the index again.
+  - `design/adrs/0003-work-item-hierarchy.md`, `design/adrs/0004-workflow-states-and-transitions.md`: design (criterion 8). They change only by `superseded_by`.
+  - `design/system/workflow.md`, `design/system/work-hierarchy.md`, `design/workflows/README.md`: design (criterion 9).
+  - No folder touch on `design/adrs`. The ADR's file takes the number `flai adr new` gives it when the story runs.
+  - Left out from `flai touches suggest`: `flai-cli.md`, the user and operator guides, `flaiover-dashboard.md`, and the template. They describe what is built, and the stories that build it change them.
+- No `after`: the story reads no other story's output. Every other E-0034 story builds on this ADR, most through S-0737.
+- Tasks: T-3187 (the ADR, proposed), then T-3193 (the operator's answers, the acceptance, ADR-0003 and ADR-0004), then T-3200 (the design). One task per layer: each reads the one before.
+- Forecast 45m, up from the 28m `flai forecast` gives for size 15. The ADR settles as much as ADR-0207 did (32 KB, eight decisions), and T-3193 waits on the operator in the middle. The wait is wall time, not agent time, but the ADR's rewrite after the answers is agent time.
+- Cost of delay: not set yet. E-0034 has no inputs and neither does this story, so `flai cod` refuses it. I asked on TH-1097 and recommended `time_lost_per_cycle: 2h` on the epic. Once the operator answers, the value is this story's share by forecast.

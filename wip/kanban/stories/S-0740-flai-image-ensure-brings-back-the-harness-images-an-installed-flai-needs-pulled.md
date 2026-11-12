@@ -7,18 +7,39 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-12T15:59:57Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [docker, release, security]
 touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]
-after: [S-0733, S-0734, S-0735]
+after: [S-0734, S-0735]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 10
+          cache_read: 93148
+          cache_write: 17093
+          cost: 0.0314
 draft: true
+forecast:
+  duration: 1h
+  delivery: 2026-11-13T05:26:00Z
+  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738 and S-0739."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0740 flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries
 
@@ -47,4 +68,23 @@ After this story, `flai image ensure` makes each missing or stale harness image 
 
 ## Notes
 
-Proposed slice 3b of E-0036. It builds only the harness images. The project's layer is the next story in the plan's order, since its build arguments need a manifest change of their own.
+Proposed slice 3b of E-0036. It builds only the harness images. The project's layer is S-0745, since its build arguments need a manifest change of their own.
+
+A story's container has no Docker socket (ADR-0203), so its agent tests over a fake docker, and a real pull and build are the operator's to run on the host once the story is in review.
+
+### Planning
+
+- Touches:
+  - `flai/images/embed.go`: design. The second criterion names it; `go:embed` cannot reach a parent folder, so the package sits beside the Dockerfiles. `flai/images` is protected for a container's agent (`flai/internal/protected/protected.go`, lines 75 to 78).
+  - `flai/internal/agentimage/pull.go`, `build.go`, `ensure.go`, and their tests: new files in S-0735's package.
+  - `flai/internal/dashboard/digests.go`, `digests_test.go`, `resolve.go`: layout. The signed digest list's parser and resolver live there (`Parse` at line 92, `Verify` at 125, `Resolve` at 94, `FetchList` at 182), and the pull reuses them.
+  - `flai/cmd/image.go`, `image_test.go`: S-0735's command gains `ensure` and `build`.
+  - `docs/users/flai.md`, `docs/users/flai-reference.md`, `docs/operators/runbooks/agent-container.md`, `design/system/flai-cli.md`: named in the last criterion.
+  - Left out from `flai touches suggest`: `docs/operators/index.md` (23%), `docs/operators/settings.md` (22%), and the dashboard's documents. No setting or page changes here.
+- `after`:
+  - S-0733 is not named, though this story reads the ADR's choice of pull and build, the step limit, the retry count, and what a development tree runs: it waits for S-0733 through S-0735, which names it.
+  - S-0734: the pull reads the digest list's format and the release's Linux `pilot`, which that story publishes.
+  - S-0735: `ensure` reads `flai/internal/agentimage`'s status and extends `flai/cmd/image.go`.
+- Tasks, in three layers: T-3168 (embed) and T-3169 (pull) share no file and run together; T-3170 (build) waits for T-3168's embedded Dockerfiles; T-3171 chooses between T-3169 and T-3170; T-3172 describes it.
+- Forecast 1h: `flai forecast` gives 42m (109 s per unit over 118 done large feature stories, size 23). Raised: two new mechanisms, a verified pull and a host build with a silent-step limit and network retries, each tested over a fake docker. Delivery is as flai gives it.
+- Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.

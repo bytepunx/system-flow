@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:58:14Z
-updated: 2026-11-12T15:58:56Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [docker]
@@ -18,7 +18,28 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 8
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 8
+          cache_read: 61935
+          cache_write: 11102
+          cost: 0.0208
 draft: true
+forecast:
+  duration: 33m
+  delivery: 2026-11-13T03:41:00Z
+  basis: "Its own forecast of 33m; 9th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733 and S-0734."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0735 flai image status says which agent images a project's agents need, and whether each is on the host and current for the flai that runs it
 
@@ -47,3 +68,17 @@ After this story one package, `flai/internal/agentimage`, decides which images a
 Proposed slice 3a of E-0036. The command's name is this plan's assumption, `flai image`, since `flai agent` already sets the project's default agent (`flai/cmd/agent.go`). S-0733's ADR may name it otherwise, and the story's agent follows the ADR.
 
 The strategic roles go through `startOf` and `containerImageHost` too (`flai/internal/serve/agents_start.go`, lines 398 to 424), so today the project's layer applies to them as well. Whether it should is S-0733's ADR's point 6; this story keeps what the ADR decides.
+
+### Planning
+
+- Touches:
+  - `flai/internal/agentimage/agentimage.go`, `status.go`, `status_test.go`: new files of the package the first two criteria describe.
+  - `flai/cmd/image.go`, `image_test.go`: the new command. `flai/cmd/root.go` registers commands (line 152).
+  - `flai/internal/serve/container.go`, `container_test.go`: layout. `containerImageHost` (lines 76 to 102) and `containerImage` (lines 120 to 143) are where the image is decided and refused today. The close-out (`verifyjob_container.go`, line 115) and the checks (`checks.go`, line 250) call `containerImage` unchanged, so they are not touched.
+  - `flai/internal/check/image.go`, `image_test.go`: layout (`AgentImage`, lines 43 to 89).
+  - `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`: named in the last criterion.
+  - Left out from `flai touches suggest`: `docs/operators/index.md` (22%), `docs/operators/settings.md` (21%), and the dashboard's documents. This story adds no setting and no page.
+- `after` S-0733: this story reads the ADR's label, its staleness rule, and the command's name.
+- Tasks, in three layers: T-3164 writes the package; T-3165 (the command) and T-3166 (the start and the check) both call it and share no file, so they run together; T-3167 describes both.
+- Forecast 33m stands as `flai forecast` gives it (109 s per unit over 118 done large feature stories, size 18). Most of the work is a move of code that exists, with its tests kept. Delivery is as flai gives it.
+- Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.

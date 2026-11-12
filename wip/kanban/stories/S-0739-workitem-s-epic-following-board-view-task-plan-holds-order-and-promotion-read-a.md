@@ -7,18 +7,39 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:07Z
-updated: 2026-11-12T15:59:07Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [cli, planning]
-touches: [flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go, flai/internal/workitem/item.go]
+touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go]
 after: [S-0737]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 14
+          cache_read: 108314
+          cache_write: 18020
+          cost: 0.0361
 draft: true
+forecast:
+  duration: 45m
+  delivery: 2026-11-13T05:14:00Z
+  basis: "Its own forecast of 45m; 13th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737 and S-0738."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
 
@@ -36,6 +57,20 @@ The `workitem` package stops naming states. An epic follows its stories (ADR-007
 
 ## Tasks
 
+- T-3203 The board view gives the workflow's columns in order with each one's kind and WIP limit, with a shared test workflow that renames a state and adds one
+- T-3206 An epic follows its stories by the kinds of their states
+- T-3208 The task plan, the holds, the pull order, and the plan candidates read a state's kind
+- T-3210 Promotion, finalizing, the change feed, shares, the policy order, and the narrative's checks read a state's kind
+
 ## Notes
 
 - These files hold about 80 of the package's references to a state's name (`follow.go` 18, `taskplan.go` 11, `boardview.go` 10, `plancandidates.go` 8, `hold.go` 7, `order.go` 7). `item.go` keeps the constants for the baseline's names.
+
+### Planning
+
+- Touches, all files, from layout: a count of each file's references to a state's name in `flai/internal/workitem`, plus the test files beside them and `workflow_fixture_test.go`, a new test file for the workflow the package's tests share. `item.go` was dropped from the first draft's touches: the constants stay.
+- Left out from `flai touches suggest`: `mcpserver/server.go`, `check/check.go`, `cmd/board.go`, `cmd/edit.go`, and `itemedit` (12% to 19%). Each is another story's under E-0034.
+- `after`: S-0737. This story reads the kinds, WIP limits, and order from the workflow `Repo` carries from S-0737 on, and its tests open a repository with another workflow through S-0737's test hook.
+- Tasks: T-3203 (the board view and the shared fixture) first; then T-3206, T-3208, and T-3210 together, since each uses the fixture and none shares a path with another.
+- Forecast 45m, as `flai forecast`'s rate gives it for size 25 once the touches were settled (it gave 44m for 24). The rewrite is mechanical, but `follow.go` and `taskplan.go` carry logic that must give the same epics and layers.
+- Cost of delay: not set yet, pending TH-1097, as on S-0736.

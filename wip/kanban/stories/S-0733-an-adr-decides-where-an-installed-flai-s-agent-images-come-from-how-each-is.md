@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:54:40Z
-updated: 2026-11-12T16:04:53Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli]
 topics: [release, docker, security]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 25m
-  delivery: 2026-11-13T00:10:00Z
-  basis: "Its own forecast of 25m; 10th in the pull order with an in-progress limit of 3, behind S-0659, S-0683, S-0709, S-0723, S-0732, S-0726, S-0241, S-0660, S-0661, S-0662, S-0663 and S-0730."
+  delivery: 2026-11-13T03:03:00Z
+  basis: "Its own forecast of 25m; 7th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663 and S-0730."
   by: flai
-  at: 2026-11-12T16:04:53Z
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0733 An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery
 
@@ -60,13 +60,17 @@ An ADR refining ADR-0212 settles how the stories after it work, so that they bui
 
 Proposed slice 1 of E-0036. The epic's § Open questions for planning are this ADR's to settle with the operator.
 
+The sixth criterion's premise needs checking: the strategic roles go through `startOf` and `containerImageHost` too (`flai/internal/serve/agents_start.go`, lines 398 to 424), so today the project's layer applies to them as well. The ADR says whether it should.
+
 ### Planning
 
 - Touches:
   - `design/adrs/README.md`: layout. `flai adr new` and `flai adr accept` write the index again. The new ADR's file takes the number `flai adr new` gives it when the story runs, and `flai adr new --commit` adds it to the story's touches, so there is no folder touch on `design/adrs`.
   - `design/system/flai-cli.md`: design. § The container harness (S-0508) is where the image is decided today (`containerImageHost`), and the last criterion has the decided design described there.
   - ADR-0212 is refined, not superseded, so its file is not touched.
-  - Left out: `design/tech/docker.md`, `design/system/release-signing.md`, `design/system/project-manifest.md`, and `docs/operators/`. They describe what is built, and the stories after this one change them as they build it.
+  - Left out from `flai touches suggest`: `docs/users/flai.md` (53%), `docs/operators/index.md`, and the other hub documents. They describe what is built, and the stories after this one change them as they build it.
 - Topics `docker`, `release`, and `security` select `design/tech/docker.md`, `design/system/release-signing.md`, and the signing ADRs, which the decision rests on.
 - No `after`: the story reads no other story's output.
-- Forecast and cost of delay: see the figures below and their reasons, written once `flai forecast` and `flai cod` have run.
+- Tasks, in three layers: T-3149 writes the ADR; T-3151 describes it in `flai-cli.md`, since it links the ADR by its number; T-3152 asks the operator and accepts, since it confirms both together.
+- Forecast 25m: `flai forecast` gives 20m (116 s per unit over 5 done medium feature stories, size 10). Raised 5m: the ADR answers seven questions, read against ADR-0203, ADR-0212, and the signing design, against six for S-0659's comparable ADR. The wait on the operator in T-3152 is wall time, not agent time. Delivery is as flai gives it.
+- Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.

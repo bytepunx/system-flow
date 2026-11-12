@@ -7,18 +7,39 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-12T16:00:56Z
+updated: 2026-11-12T21:10:09Z
 transitions: []
 tags: [cli, template]
 topics: [docker, manifest]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl]
-after: [S-0733, S-0740]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl]
+after: [S-0740]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 10
+          cache_read: 93148
+          cache_write: 17093
+          cost: 0.0314
 draft: true
+forecast:
+  duration: 40m
+  delivery: 2026-11-13T06:48:00Z
+  basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741, S-0742, S-0743 and S-0744."
+  by: flai
+  at: 2026-11-12T21:10:09Z
 ---
 # S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project
 
@@ -44,4 +65,21 @@ After this story `flai image ensure` builds the layer over the harness image it 
 
 ## Notes
 
-Proposed slice 3c of E-0036. This repository's own layer moves onto these arguments in the plan's last story, so `scripts/agent-image.sh` is left as it is here.
+Proposed slice 3c of E-0036. This repository's own layer moves onto these arguments in S-0760, so `scripts/agent-image.sh` is left as it is here.
+
+### Planning
+
+- Touches:
+  - `flai/internal/manifest/manifest.go`, `manifest_test.go`: layout (`Layer` and `LayerImage`, lines 577 to 591).
+  - `flai/internal/agentimage/layer.go`, `layer_test.go`: new files of the layer's build.
+  - `flai/internal/agentimage/status.go`, `status_test.go`: S-0735's status learns the layer's staleness (third criterion).
+  - `flai/internal/agentimage/ensure.go`, `ensure_test.go`, `flai/cmd/image.go`, `image_test.go`: S-0740's `ensure` and `build` gain the layer (second and fourth criteria).
+  - `flai/internal/check/image.go`, `image_test.go`: layout (`layerLine`, lines 91 to 119) for a malformed argument.
+  - `design/system/project-manifest.md`, `docs/operators/settings.md`, `docs/users/flai.md`, `docs/operators/runbooks/agent-container.md`, `template/root/system-flow.yaml.tmpl`: named in the last criterion. `TestSettingsIndex` fails on a manifest key with no row.
+  - `design/system/flai-cli.md` (co-change, 61%) describes the layer image in § The project's layer image, and `docs/users/flai-reference.md` (31%) gains `--layer`.
+- `after`:
+  - S-0733 is not named, though this story reads the ADR's shape for the layer's arguments and its label: it waits for S-0733 through S-0740 and S-0735, which names it.
+  - S-0740: the layer is built through that story's runner (step limit, retry, log) and its `ensure` and `build`.
+- Tasks, in four layers, one after another: T-3173 (the key) → T-3174 (the build, which reads `LayerArgs`) → T-3175 (`ensure` and `--layer`, which call it) → T-3176 (the documents).
+- Forecast 40m: `flai forecast` gives 33m on the 13 touches the story declared when it ran (109 s per unit over 118 done large feature stories, size 18). Raised for the 19 its tasks name. Delivery is as flai gives it.
+- Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.
