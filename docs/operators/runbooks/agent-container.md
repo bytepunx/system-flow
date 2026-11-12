@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-11
+updated: 2026-11-12
 status: active
 ---
 
@@ -90,6 +90,19 @@ The script and pilot write these to `.flai-cache/agents/S-nnnn/`, which is git-i
 
 Nothing else is mounted. The Docker socket is never mounted, so the agent cannot start containers or reach the host's Docker. The two git mounts are [ADR-0246](../../../design/adrs/0246-a-container-that-runs-a-story-s-agent-mounts-the-main-checkout-s-git-read-only.md)'s: git in the worktree reads its history and refreshes its index, so `git status`, `diff`, `log`, and `show` work, and a `git commit`, `stash`, or new branch is refused by git on the read-only objects and refs. Commits are the host's, through `task_done` and the close-out. So are syncs: with `FLAI_STORY` set and the container's flai config in the story's `.flai-cache/agents/S-nnnn`, as here, `flai stream sync` and the shell's `flai task done` refuse before any git call, naming the MCP tools `task_done` and `verify`, which sync on the host. The script refuses to start when the story's registration, `.git/worktrees/S-nnnn`, is missing, and names its path.
 
+#### Outside folders
+
+The script mounts no folder outside the project. Under `flai serve`, the container harness mounts each folder you grant with `flai serve agent harness container --outside <dir>` ([ADR-0289](../../../design/adrs/0289-flai-serve-gives-a-story-s-agent-and-its-sub-agents-the-outside-folders-the.md), [the operators guide](../index.md)). It mounts each read-write at its own host path, after the agent folder and before the login. A story's agent's container and a strategic agent's container both get them. pilot passes each to the inner `claude` as `--add-dir`, so the agent and its sub-agents may read and write there. The setting itself refuses your home folder, `~/.flai` and any folder under or holding it, and any folder that holds the project or that the project holds. At the start, the container harness also refuses a folder that:
+
+| Refused | Why |
+|---------|-----|
+| is not an absolute path | a mount needs one |
+| holds a colon | a `-v` mount cannot carry it |
+| is or holds the main checkout, your home, `~/.flai`, `/var/run/docker.sock`, or `/run/docker.sock` | a container never mounts them; `/` holds them all |
+| lies under the main checkout or `~/.flai` | the checkout's mounts are the ones flai fixes, and `~/.flai` is never mounted |
+
+A refused folder refuses the start, with an error that names the folder and says to grant another or clear them with `--outside ""`. A folder given twice is mounted once.
+
 The worktree's `flaiover/node_modules` is inside the worktree mount, so the container and the host share it: a flaiover tier run in either installs it for both. It holds the native bindings of both libcs, glibc for the host and musl for the Alpine image, since `flaiover/pnpm-workspace.yaml` sets pnpm's `supportedArchitectures` ([I-0259](../../../design/issues/I-0259-a-story-worktree-s-flaiover-node-modules-installed-inside-the-alpine-agent.md), S-0706). An install made before that setting holds only the libc it was made on. The next `scripts/flaiover-install.sh --if-needed` replaces it, since that script installs again whenever `pnpm-workspace.yaml` is newer than the install, and so does `make flaiover-install`.
 
 #### A mount you type by hand in zsh
@@ -109,6 +122,7 @@ Under `flai serve`, a story whose agent runs on `harness: container` is closed o
 | `.flai-cache/verify` of the main checkout | read-write | read-write |
 | `.flai-cache/items-checked.lock` of the main checkout | read-write | read-write |
 | `.flai-cache/agents/S-nnnn` | read-write | not mounted |
+| each outside folder you grant, at its own path | read-write | not mounted |
 | the login | read-only | not mounted |
 
 The close-out's container is `flai-closeout-S-nnnn-<stamp>`, with `-r2` and `-r3` when main moved and it ran again, and runs `flai verify S-nnnn --record-issues`. Each check's is `flai-check-S-nnnn-<stamp>-<n>`. Neither gets the MCP server's URL or token, a provider's key, or `host.docker.internal`. The close-out's commit, its sync check, and its sync run on the host through git and `flai serve`'s own flai, with the main checkout's hooks only. `docker ps --filter name=flai-closeout-` and `--filter name=flai-check-` list them while they run.

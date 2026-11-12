@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-11
+updated: 2026-11-12
 status: active
 ---
 
@@ -3967,7 +3967,7 @@ The container harness runs an inner harness, claude-code, in a Docker container,
 
 --outside grants a folder outside the project that a story's agent and its sub-agents may read and write, on every harness: the claude-code harness passes it as --add-dir and the container harness mounts it at its own path (ADR-0289). Repeat it once per folder; the folders given replace the list, and --outside "" clears it. Each must be an existing folder, given absolute or under ~/, and is kept absolute. It refuses your home folder, ~/.flai and any folder under or holding it, and any folder that holds the project or that the project holds; with --all-projects, every project this host knows.
 
-The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
+The command harness takes only --guard, --deny-protected, --outside, and --reset: its program and arguments are set with flai serve agent set.
 
 A change of the program, the arguments, or the login a harness runs with lifts the hold of the old one's budget state: the state kept under the harness and its old program and login, and one kept under the harness's name alone from before S-0720, are cleared, journaled, and sent as a notice like any other clear, so that the next start goes. A change of anything else clears nothing.
 

@@ -1286,7 +1286,7 @@ func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 // S-0701, ADR-0289 §6, I-0265: a story's start prompt names the folders
 // outside the project the operator grants, after the work and before the
 // delegation, and says that every other outside path is refused Read, Grep,
-// Glob, Write, and Monitor, so that work there goes through Bash with its files
+// Glob, Edit, and Write, so that work there goes through Bash with its files
 // under bin/<story>/; the agent names the folders to a sub-agent beside the
 // worktree's path. With none granted, the refusal stands alone, and a
 // sub-agent is given the worktree's path only.
@@ -1294,7 +1294,7 @@ func TestThePromptNamesTheOutsideFolders(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	r.Outside = []string{"/srv/other", "/tmp/scratch"}
 	p := mustPrompt(t, r)
-	para := "\n\nThe operator grants you and your sub-agents these folders outside the project: `/srv/other`, `/tmp/scratch`. You and your sub-agents may read and write there. Read, Grep, Glob, Write, and Monitor are refused on any other path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
+	para := "\n\nThe operator grants you and your sub-agents these folders outside the project: `/srv/other`, `/tmp/scratch`. You and your sub-agents may read and write there. Read, Grep, Glob, Edit, and Write are refused on any other path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
 	if !strings.Contains(p, "never by editing the narrative."+para+"\n\nKeep your own context for decisions and edits") {
 		t.Errorf("the prompt does not name the outside folders after the work and before the delegation:\n%s", p)
 	}
@@ -1304,7 +1304,7 @@ func TestThePromptNamesTheOutsideFolders(t *testing.T) {
 
 	r.Outside = nil
 	none := mustPrompt(t, r)
-	refusal := "\n\nThe operator grants you and your sub-agents no folder outside the project. Read, Grep, Glob, Write, and Monitor are refused on any path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
+	refusal := "\n\nThe operator grants you and your sub-agents no folder outside the project. Read, Grep, Glob, Edit, and Write are refused on any path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
 	if !strings.Contains(none, "never by editing the narrative."+refusal+"\n\nKeep your own context for decisions and edits") {
 		t.Errorf("the prompt with no outside folders does not say every outside path is refused:\n%s", none)
 	}

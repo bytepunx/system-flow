@@ -194,8 +194,8 @@ or under ~/, and is kept absolute. It refuses your home folder, ~/.flai and
 any folder under or holding it, and any folder that holds the project or
 that the project holds; with --all-projects, every project this host knows.
 
-The command harness takes only --guard, --deny-protected, and --reset: its
-program and arguments are set with flai serve agent set.
+The command harness takes only --guard, --deny-protected, --outside, and
+--reset: its program and arguments are set with flai serve agent set.
 
 A change of the program, the arguments, or the login a harness runs with
 lifts the hold of the old one's budget state: the state kept under the
@@ -250,7 +250,7 @@ removes its entry, so that it reads every project's again.`,
 				return fmt.Errorf("there is no harness %q to set; there are: %s", name, strings.Join(known, ", "))
 			}
 			if name == harness.Command && (program != "" || dash >= 0) {
-				return fmt.Errorf("the command's program and arguments are set with flai serve agent set -- <program> [args...]; flai serve agent harness command takes only --guard, --deny-protected, and --reset")
+				return fmt.Errorf("the command's program and arguments are set with flai serve agent set -- <program> [args...]; flai serve agent harness command takes only --guard, --deny-protected, --outside, and --reset")
 			}
 			if containerSet && name != config.ContainerHarness {
 				return fmt.Errorf("--image, --network, and --login are the %s harness's, which %s is not; set them with flai serve agent harness %s", config.ContainerHarness, name, config.ContainerHarness)

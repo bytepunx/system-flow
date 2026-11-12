@@ -664,7 +664,7 @@ Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where t
 
 // outside tells a story's agent, as a paragraph of its own, which folders
 // outside the project the operator grants it and its sub-agents, from
-// Request.Outside (ADR-0289 §6), and that Read, Grep, Glob, Write, and Monitor
+// Request.Outside (ADR-0289 §6), and that Read, Grep, Glob, Edit, and Write
 // are refused on any other path outside the project, so that such work is the
 // agent's own, through Bash, with its files under the worktree's git-ignored
 // bin/<story>/ (D-0480, I-0265). With no folders granted, it says so and
@@ -673,7 +673,7 @@ func outside(r Request) string {
 	if len(r.Outside) == 0 {
 		return fmt.Sprintf(`
 
-The operator grants you and your sub-agents no folder outside the project. Read, Grep, Glob, Write, and Monitor are refused on any path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/%[1]s/.`, r.Story)
+The operator grants you and your sub-agents no folder outside the project. Read, Grep, Glob, Edit, and Write are refused on any path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/%[1]s/.`, r.Story)
 	}
 	dirs := make([]string, len(r.Outside))
 	for i, d := range r.Outside {
@@ -681,7 +681,7 @@ The operator grants you and your sub-agents no folder outside the project. Read,
 	}
 	return fmt.Sprintf(`
 
-The operator grants you and your sub-agents these folders outside the project: %[2]s. You and your sub-agents may read and write there. Read, Grep, Glob, Write, and Monitor are refused on any other path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/%[1]s/.`, r.Story, strings.Join(dirs, ", "))
+The operator grants you and your sub-agents these folders outside the project: %[2]s. You and your sub-agents may read and write there. Read, Grep, Glob, Edit, and Write are refused on any other path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/%[1]s/.`, r.Story, strings.Join(dirs, ", "))
 }
 
 // inContainer says the agent runs inside the container harness's container:
