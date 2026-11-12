@@ -3,12 +3,18 @@ id: T-3134
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0729
 owner: alex
 created: 2026-11-12T03:39:40Z
-updated: 2026-11-12T03:39:40Z
-transitions: []
+updated: 2026-11-12T03:41:47Z
+transitions:
+  - to: ready
+    at: 2026-11-12T03:41:47Z
+    by: agent-S-0729
+  - to: in-progress
+    at: 2026-11-12T03:41:47Z
+    by: agent-S-0729
 stream: S-0729
 tags: []
 after: [T-3133]
