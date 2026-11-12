@@ -774,6 +774,12 @@ flai unblock T-0001
 
 Blocked items keep their column; the interval is recorded so blocked time shows in the charts.
 
+Moving an item to `done` or `cancelled`, by `flai move` or `flai accept`, closes its open blocked interval at the move and warns that it did (S-0723). An item closed with its interval still open, by a flai older than that, is reported by `flai check` as `item.blocked-closed`. Run `flai unblock` on it, archived or not: on a done or cancelled item it closes the interval at the item's close rather than now, so `flai stats` counts no blocked time after it.
+
+```bash
+flai unblock S-0678   # S-0678 unblocked at its close, 2026-11-11T06:15:07Z
+```
+
 `flai serve` blocks a story itself when the story's agent ends its session on an open question to you (S-0498, [ADR-0205](../../design/adrs/0205-flai-serve-reminds-the-operator-of-a-thread-that-awaits-them-past-threads.md)). The reason is `awaiting the operator on TH-nnnn`, naming the thread, so `flai board` shows which stories wait on you and on what, and `flai stats` counts the wait as blocked time. When your answer starts the agent again, `flai serve` closes that interval first. A block the agent or you wrote with `flai block` stays open until `flai unblock`. A story whose agent no longer waits on the thread, such as one you sent back to ready or restarted by hand, is unblocked at the next look. An agent that ended waiting only on another story's reply blocks nothing. The story keeps its column and still counts to the in-progress limit.
 
 ### The board
