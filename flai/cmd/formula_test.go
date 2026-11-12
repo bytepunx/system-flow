@@ -376,6 +376,41 @@ func TestFormulaStepStop(t *testing.T) {
 	}
 }
 
+// S-0681 (I-0332): where the manifest names flai.command (ADR-0201), flai
+// formula run writes a flai step's task, and the flai formula stop its stop
+// exits name, with that command, the flai the tree builds, in place of the
+// bare flai, which resolves to the installed flai on PATH and can be older
+// than the flags the formula's steps use. A script step keeps its script.
+func TestFormulaStepNamesTheManifestsFlaiCommand(t *testing.T) {
+	t.Parallel()
+	stops := strings.Replace(releaseCheck, "    run: {flai: release --evaluate}\n    after: [test]\n", "    run: {flai: release --evaluate}\n    after: [test]\n    in: main\n    stop: [2]\n", 1)
+	stops = strings.Replace(stops, "    run: {script: scripts/test.sh --short}\n", "    run: {script: scripts/test.sh --short}\n    stop: [3]\n", 1)
+	if stops == releaseCheck {
+		t.Fatal("the fixture did not change")
+	}
+	root := formulaProject(t, map[string]string{"release-check.md": stops})
+	manifest := filepath.Join(root, "system-flow.yaml")
+	data, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifest, append(data, "flai:\n  command: scripts/flai.sh\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if js, errOut, code := runIn(t, root, "formula", "run", "release-check", "--input", "version=1.4.0", "--json"); code != 0 {
+		t.Fatalf("formula run: %d %s %s", code, js, errOut)
+	}
+	checkout := codeSpan(root)
+	for id, want := range map[string]string{
+		"T-0001": "## Work\n\nRun `scripts/test.sh --short` from the repository root.\n\n## Done when\n\n`scripts/test.sh --short` exits 0, or exits 3, which stops the run: record it with `scripts/flai.sh formula stop S-0001 --step test --exit 3`, giving it the step's output.\n",
+		"T-0002": "## Work\n\nRun `scripts/flai.sh release --evaluate` from the project's main checkout, " + checkout + ", not from this story's worktree.\n\n## Done when\n\n`scripts/flai.sh release --evaluate` exits 0 in the main checkout, or exits 2, which stops the run: record it with `scripts/flai.sh formula stop S-0001 --step evaluate --exit 2`, giving it the step's output.\n",
+	} {
+		if task := itemFile(t, root, id); !strings.Contains(task, want) {
+			t.Errorf("%s lacks %q:\n%s", id, want, task)
+		}
+	}
+}
+
 // S-0423: a step in main runs in the main checkout of a story worktree, the
 // one its .git file names when it is not mounted here, or the project root.
 func TestFormulaMainCheckout(t *testing.T) {

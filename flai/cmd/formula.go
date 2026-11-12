@@ -346,7 +346,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		}
 		res, err := itemnew.Create(repo, a.runner, itemnew.Options{New: workitem.NewOptions{
 			Type: workitem.Task, Title: s.Title, Nature: f.Nature, Parent: story.Item.ID, Owner: owner, After: after[s.ID], Now: now,
-			Body: fillSections(taskBody, formulaTaskSections(s, formulaMainCheckout(repo), story.Item.ID)),
+			Body: fillSections(taskBody, formulaTaskSections(s, formulaMainCheckout(repo), story.Item.ID, formulaFlai(repo))),
 		}})
 		if err != nil {
 			err = undo(fmt.Errorf("making the task for step %s of formula %s, so the story %s and the tasks made before it were removed: %w", s.ID, f.Name, story.Item.ID, err))
@@ -576,13 +576,15 @@ func formulaStorySections(f formulas.Formula, values map[string]string) [][2]str
 // from the project's main checkout, main, an absolute path, rather than the
 // instance's worktree, and its Work says so. A step with stop (S-0621,
 // ADR-0271 §1) says in Done when which exits stop the run of the instance
-// story, and the flai formula stop that records them.
-func formulaTaskSections(s formulas.Step, main, story string) [][2]string {
+// story, and the flai formula stop that records them. flai is the program a
+// flai step's command and that flai formula stop run with, as formulaFlai
+// names it (S-0681).
+func formulaTaskSections(s formulas.Step, main, story, flai string) [][2]string {
 	there := " from the project's main checkout, " + codeSpan(main) + ", not from this story's worktree"
 	var work, done string
 	switch s.Kind() {
 	case formulas.KindFlai, formulas.KindScript:
-		line := codeSpan("flai " + s.Run.Flai)
+		line := codeSpan(flai + " " + s.Run.Flai)
 		work = "Run " + line + "."
 		if s.Kind() == formulas.KindScript {
 			line = codeSpan(s.Run.Script)
@@ -592,7 +594,7 @@ func formulaTaskSections(s formulas.Step, main, story string) [][2]string {
 		if s.InMain() {
 			work, done = "Run "+line+there+".", done+" in the main checkout"
 		}
-		done += stopsRun(s, story) + "."
+		done += stopsRun(s, story, flai) + "."
 	case formulas.KindRole:
 		quoted := strings.Split(strings.TrimSpace(s.Run.Prompt), "\n")
 		for i, l := range quoted {
@@ -611,8 +613,9 @@ func formulaTaskSections(s formulas.Step, main, story string) [][2]string {
 // nothing for a step with none, else that each stops the run, recorded with
 // flai formula stop on story with the step's output, for exit 2:
 // ", or exits 2, which stops the run: record it with `flai formula stop
-// S-nnnn --step <id> --exit 2`, giving it the step's output".
-func stopsRun(s formulas.Step, story string) string {
+// S-nnnn --step <id> --exit 2`, giving it the step's output", flai being the
+// program it runs with.
+func stopsRun(s formulas.Step, story, flai string) string {
 	if len(s.Stop) == 0 {
 		return ""
 	}
@@ -623,7 +626,18 @@ func stopsRun(s formulas.Step, story string) string {
 		stops = "each of which stops the run"
 	}
 	return fmt.Sprintf(", or exits %s, %s: record it with %s, giving it the step's output",
-		joinExits(s.Stop, " or "), stops, codeSpan("flai formula stop "+story+" --step "+s.ID+" --exit "+exit))
+		joinExits(s.Stop, " or "), stops, codeSpan(flai+" formula stop "+story+" --step "+s.ID+" --exit "+exit))
+}
+
+// formulaFlai is the program a step's task names for its flai command: the
+// manifest's flai.command, the flai the tree builds (ADR-0201), where it
+// names one, else flai. A bare flai is the one on PATH, which can be older
+// than the flags the formula's steps use (S-0681, I-0332).
+func formulaFlai(repo *workitem.Repo) string {
+	if command := strings.TrimSpace(repo.Manifest.Flai.Command); command != "" {
+		return command
+	}
+	return "flai"
 }
 
 // joinExits are exits as decimal numbers joined by sep.
