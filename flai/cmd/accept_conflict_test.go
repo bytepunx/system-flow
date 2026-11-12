@@ -559,17 +559,20 @@ func TestASendBackOverARebaseFoundInProgressLeavesItToTheAgent(t *testing.T) {
 		"The acceptance of S-0001 by alex found a rebase of `story/S-0001` already in progress in `.flai-cache/worktrees/S-0001`, which it did not start and left as it was",
 		"- `cli/x.go`",
 		"This thread is for S-0001's agent, which settles the conflicts; the operator does not.",
-		"or run `git rebase --abort` and then `flai stream sync S-0001`",
+		"`git add` it, and run `flai stream sync S-0001`, which continues the rebase, or run `git rebase --abort` and then `flai stream sync S-0001`",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the thread text lacks %q:\n%s", want, text)
 		}
 	}
-	if strings.Contains(text, "aborted") {
-		t.Errorf("the thread text says flai aborted a rebase it did not start:\n%s", text)
+	// ADR-0294: the sync continues a resolved stop, so no one is told to
+	if strings.Contains(text, "aborted") || strings.Contains(text, "rebase --continue") {
+		t.Errorf("the thread text says flai aborted a rebase it did not start, or to continue it by hand:\n%s", text)
 	}
 	stop.Found = false
-	if text := sentBackText("S-0001", "story/S-0001", "the acceptance of S-0001 by alex", stop); !strings.Contains(text, "flai aborted the rebase, so `story/S-0001` and `main` are as they were") {
-		t.Errorf("the thread text of a stop the acceptance made does not say the rebase was aborted:\n%s", text)
+	text = sentBackText("S-0001", "story/S-0001", "the acceptance of S-0001 by alex", stop)
+	if !strings.Contains(text, "flai aborted the rebase, so `story/S-0001` and `main` are as they were") ||
+		!strings.Contains(text, "`git add` it, and run `flai stream sync S-0001` again, which continues the rebase") || strings.Contains(text, "rebase --continue") {
+		t.Errorf("the thread text of a stop the acceptance made does not say the rebase was aborted and how the sync continues it:\n%s", text)
 	}
 }

@@ -180,15 +180,25 @@ func newStreamSyncCmd(a *app) *cobra.Command {
 		Long: `Rebases story/<story-id> onto the branch checked out in the main checkout,
 inside its worktree (ADR-0069). It never stashes: a worktree with uncommitted
 changes is refused, touching nothing, and each uncommitted path is named, so
-commit each task on the story branch before you sync. A worktree with a rebase
-already in progress is refused too.
+commit each task on the story branch before you sync.
 
 Conflicts stop the rebase inside the worktree. Each conflicting path is listed
-on a line of its own, with how to continue (resolve each path, git add it, run
-git rebase --continue in the worktree, and sync again) and how to abort (git
-rebase --abort in the worktree, which puts the branch back as it was before
-the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
-rebase_in_progress, continue, and abort, with ok false.
+on a line of its own, with how to continue (resolve each path, git add it, and
+sync again) and how to abort (git rebase --abort in the worktree, which puts
+the branch back as it was before the sync). It exits non-zero; with --json it
+prints uncommitted, conflicts, rebase_in_progress, continue, and abort, with
+ok false.
+
+Run again on a worktree whose rebase of the story branch waits on a stop you
+resolved and staged, sync continues that rebase (ADR-0294): it settles each
+later stop as its own rebase does, and runs every step below that follows a
+clean rebase, against the main branch's commit the rebase was onto; a commit
+the main branch gained since is taken by the next sync. The report says it continued the rebase; with --json, resumed is true.
+A stop not resolved and staged, with a path still unmerged, a staged file
+holding a conflict marker, or a tracked file changed and not staged, is
+refused, touching nothing, naming those paths; so is a rebase that is not the
+story branch's own, or whose state does not record where it started, which
+git rebase --abort and a fresh sync clear.
 
 A stop whose only conflicting paths are generated files, which today are
 design/issues/summary.md and the ADR index, design/adrs/README.md, and issue
@@ -202,8 +212,8 @@ both sides changed some other way, its title or description, say, is not
 merged: the stop is left for you. A stop where other paths conflict too is
 left for you, and lists them all, the generated files included; once the
 others are resolved, flai issue summary and flai adr index run in the
-worktree write them. flai accept syncs the same way. A
-rebase already in progress is never continued for you.
+worktree write them. flai accept syncs the same way, but refuses a rebase
+already in progress rather than continue it.
 
 Once the rebase is clean, each open issue the branch added whose title an open
 issue on the main branch has too is folded into that issue: its instances,
@@ -297,11 +307,11 @@ so does the MCP tool verify's close-out.`,
 				return stop
 			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
+				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true, "resumed": res.Resumed,
 					"merged": res.Merged, "regenerated_at_head": res.RegeneratedAtHead, "changelogs": res.Changelogs, "folded": res.Folded, "fixed": res.Fixed,
 					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "trial_merge_failed": res.TrialMergeFailed, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
 			}
-			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)
+			fmt.Fprintln(a.out, rebasedLine(res))
 			printSyncChecks(a.out, it, res)
 			return nil
 		},

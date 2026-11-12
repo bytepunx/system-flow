@@ -95,6 +95,7 @@ func TestAsTester(t *testing.T) {
 		testSyncListsPathsChangedOutsideANarrowedClaim,
 		testSyncRefusesUncommittedChanges,
 		testSyncConflictListsPathsAndHowToContinueOrAbort,
+		testSyncRunAgainContinuesAResolvedStopAndSettlesTheStopsAfterIt,
 		testSyncOnAReadOnlyGitDirNamesGitsErrorAndTheWayBack,
 		testSyncOnAReadOnlyGitDirSaysTheTrialMergeDidNotRun,
 		testSyncRegeneratesTheIssueSummaryWhenTheRebaseStopsOnItAlone,
@@ -590,7 +591,7 @@ func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 	steps := []string{
 		"\n  docs/guide.md\n",
 		"\n  docs/more.md\n",
-		"To continue: in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync S-0001 again\n",
+		"To continue: in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, then run flai stream sync S-0001 again\n",
 		"To abort: in .flai-cache/worktrees/S-0001, run git rebase --abort, which puts story/S-0001 back as it was before the sync\n",
 	}
 	type result struct {
@@ -610,7 +611,7 @@ func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 		}
 		if code == 0 || res.OK || !res.InProgress || strings.Join(res.Conflicts, ",") != "docs/guide.md,docs/more.md" ||
 			res.Uncommitted == nil || len(res.Uncommitted) != 0 ||
-			!strings.Contains(res.Continue, "git rebase --continue") || !strings.Contains(res.Abort, "git rebase --abort") {
+			!strings.Contains(res.Continue, "git add it, then run flai stream sync S-0001 again") || strings.Contains(res.Continue, "rebase --continue") || !strings.Contains(res.Abort, "git rebase --abort") {
 			t.Errorf("json: %d %+v", code, res)
 		}
 	}
@@ -637,7 +638,7 @@ func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 	if code == 0 {
 		t.Fatalf("sync during a rebase succeeded: %s", out)
 	}
-	for _, want := range append([]string{"story/S-0001 was not synced: a rebase is already in progress in .flai-cache/worktrees/S-0001, with conflicts in 2 paths:\n"}, steps...) {
+	for _, want := range append([]string{"story/S-0001 was not synced: a rebase is already in progress in .flai-cache/worktrees/S-0001, with 2 paths unresolved:\n"}, steps...) {
 		if !strings.Contains(out, want) {
 			t.Errorf("in-progress report lacks %q:\n%s", want, out)
 		}
@@ -658,6 +659,83 @@ func testSyncConflictListsPathsAndHowToContinueOrAbort(t *testing.T) {
 	syncJSON()
 	if !inProgress() {
 		t.Fatal("the --json sync did not stop on the conflicts")
+	}
+}
+
+// I-0351, ADR-0294: S-0002's first commit changes docs/guide.md, as main
+// does, which no merge of flai's settles, and its second bumps the issue
+// S-0001 bumped on main. The sync stops on docs/guide.md alone; once the
+// agent resolves and stages it, flai stream sync run again continues the
+// rebase, merges the issue file by its instances and writes the summary
+// again at the stop on them, and ends clean, saying it continued the rebase.
+func testSyncRunAgainContinuesAResolvedStopAndSettlesTheStopsAfterIt(t *testing.T) {
+	root := syncProject(t)
+	if _, errOut, code := runInAt(t, root, issueClock, "issue", "new", "Shared friction", "--class", "efficiency"); code != 0 {
+		t.Fatal(errOut)
+	}
+	gitIn(t, root, "add", "design")
+	gitIn(t, root, "commit", "-q", "-m", "docs: record shared friction")
+	a := openSyncStory(t, root, 1, "design,docs")
+	b := openSyncStory(t, root, 2, "design,docs")
+	commitIn(t, b, "docs/guide.md", "branch's line\n")
+	for i, wt := range []string{a, b} {
+		id := fmt.Sprintf("S-%04d", i+1)
+		if _, errOut, code := runInAt(t, wt, issueClock.Add(time.Duration(i+1)*time.Hour), "issue", "bump", "I-0001", "--story", id, "--note", "Again in "+id+"."); code != 0 {
+			t.Fatal(errOut)
+		}
+		gitIn(t, wt, "add", "-A")
+		gitIn(t, wt, "commit", "-q", "-m", "chore: bump I-0001 in "+id)
+	}
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("main's line\n"), 0o644)
+	gitIn(t, root, "commit", "-q", "-am", "docs: guide on main")
+	at := issueClock.Add(4 * time.Hour)
+
+	out, errOut, code := runInAt(t, b, at, "stream", "sync", "S-0002")
+	if code == 0 || !strings.Contains(out, "stopped on conflicts in 1 path:\n  docs/guide.md\n") {
+		t.Fatalf("the first sync: %d %s %s", code, out, errOut)
+	}
+	_ = os.WriteFile(filepath.Join(b, "docs", "guide.md"), []byte("main's line\nbranch's line\n"), 0o644)
+	gitIn(t, b, "add", "docs/guide.md")
+
+	js, errOut, code := runInAt(t, b, at, "--json", "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("the sync of the resolved stop: %d %s %s", code, js, errOut)
+	}
+	var res struct {
+		OK      bool     `json:"ok"`
+		Resumed bool     `json:"resumed"`
+		Merged  []string `json:"merged"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	if !res.OK || !res.Resumed || strings.Join(res.Merged, ",") != "design/issues/I-0001-shared-friction.md" {
+		t.Errorf("sync --json: %s", js)
+	}
+	if storygit.RebaseInProgress(execx.System{}, b) {
+		t.Fatal("a rebase still waits")
+	}
+	if st := gitIn(t, b, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	if got := gitIn(t, b, "show", "HEAD:docs/guide.md"); got != "main's line\nbranch's line" {
+		t.Errorf("docs/guide.md on the branch: %q", got)
+	}
+	is := issuesIn(t, b)["I-0001-shared-friction.md"]
+	if is == nil || is.Count != 3 {
+		t.Fatalf("the merged issue: %+v", is)
+	}
+	hasInstances(t, is, 0, 1, 2)
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	if !strings.Contains(summary, "[I-0001]") || strings.Contains(summary, strings.Repeat("<", 7)) {
+		t.Errorf("the summary is not written from the merged issue:\n%s", summary)
+	}
+
+	// a plain sync now has nothing to continue
+	out, errOut, code = runInAt(t, b, at, "stream", "sync", "S-0002")
+	if code != 0 || !strings.Contains(out, "story/S-0002 is rebased onto main\n") || strings.Contains(out, "continued") {
+		t.Errorf("the sync after: %d %s %s", code, out, errOut)
 	}
 }
 
@@ -717,7 +795,7 @@ func testSyncOnAReadOnlyGitDirNamesGitsErrorAndTheWayBack(t *testing.T) {
 	}
 	for _, want := range []string{
 		"story/S-0001 was not synced: the rebase onto main stopped with no path in conflict; git said: ",
-		"\nTo continue: in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again\n",
+		"\nTo continue: in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run flai stream sync S-0001 again\n",
 		"\nTo abort: in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001: git cannot update refs/heads/story/S-0001 there (",
 		"), so the abort alone leaves HEAD detached; story/S-0001 stays at its head " + head[:12] + "\n",
 	} {

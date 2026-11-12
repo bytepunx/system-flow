@@ -98,7 +98,7 @@ func (s *syncStopped) headline(paths string) string {
 	b := storyBranch(s.Story)
 	switch {
 	case s.Found && paths != "":
-		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s, with conflicts in %s", b, s.Worktree, paths)
+		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s, with %s unresolved", b, s.Worktree, paths)
 	case s.Found:
 		return fmt.Sprintf("%s was not synced: a rebase is already in progress in %s", b, s.Worktree)
 	case s.RebaseInProgress && s.Said != "":
@@ -112,18 +112,19 @@ func (s *syncStopped) headline(paths string) string {
 }
 
 // Error is one short line, for the error a command exits with: why, the
-// paths (at most ten), and the next step. A stop with nothing to resolve, or
-// whose abort alone would leave HEAD detached, gives its steps in full
-// (I-0272).
+// paths (at most ten), and the next step. A stop with nothing to resolve, one
+// whose abort alone would leave HEAD detached (I-0272), and a rebase the sync
+// found and refused, which it may not be able to continue (ADR-0294), give
+// their steps in full.
 func (s *syncStopped) Error() string {
 	msg := s.headline(workitem.Shorten(s.paths(), 10))
 	switch {
 	case !s.RebaseInProgress:
 		return msg + fmt.Sprintf("; commit them on %s, then sync again", storyBranch(s.Story))
-	case s.Said != "" || s.AbortUnsafe:
+	case s.Said != "" || s.AbortUnsafe || s.Found:
 		return msg + "; " + s.Continue + "; to abort: " + s.Abort
 	}
-	return msg + fmt.Sprintf("; resolve them and git rebase --continue, or git rebase --abort, in %s", s.Worktree)
+	return msg + fmt.Sprintf("; in %s, resolve them, git add them, and run flai stream sync %s again, or git rebase --abort", s.Worktree, s.Story)
 }
 
 // Report is why, each path on a line of its own, and the steps to continue

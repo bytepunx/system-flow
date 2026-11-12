@@ -70,9 +70,14 @@ fails stops the run; the steps after it are not done.
 
 The agent is FLAI_AGENT and the session FLAI_SESSION.
 
-While a rebase is unfinished in the worktree, the commit and the sync refuse.
-Resolve each conflicting path there, git add it, run git rebase --continue,
-and call flai task done again. git rebase --abort undoes the rebase instead.
+After a sync's stop, resolve each conflicting path in the worktree, git add
+it, and call flai task done again: while the rebase of the story's branch
+waits on a stop resolved and staged, the commit step commits nothing and the
+sync step continues the rebase (ADR-0294). The commit step refuses a stop
+not resolved and staged, with a path unmerged, a staged file holding a
+conflict marker, or a tracked file changed and not staged, naming the paths,
+and a rebase the sync cannot continue, which git rebase --abort clears. git
+rebase --abort undoes the rebase instead.
 
 Running the task's tests with flai test, fixing what they find, and ticking
 criteria with flai criteria tick stay the agent's. Close a fix by calling
@@ -173,7 +178,7 @@ func (a *app) printTaskDone(res taskdone.Result) {
 	if s := res.Sync; s != nil {
 		switch {
 		case s.Synced:
-			fmt.Fprintf(w, "sync: %s is rebased onto %s\n", s.Branch, s.Base)
+			fmt.Fprintln(w, "sync: "+rebasedLine(*s))
 			printSyncChecks(w, &workitem.Item{ID: res.Story}, *s)
 		case s.Stopped == storygit.StopUncommitted && res.Stopped != taskdone.StepSync:
 			// refused for the paths left alone, which stops nothing (ADR-0128)

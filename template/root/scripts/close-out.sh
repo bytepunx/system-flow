@@ -135,7 +135,7 @@ while :; do
   [ "$round" -lt "$rounds" ] || exit "$rc"
   round=$((round + 1))
   step="flai stream sync"
-  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run git rebase --continue there, and run this again"
+  hint="; resolve each conflicting path flai stream sync lists above in the worktree, git add it, run flai stream sync $story again, which continues the rebase, and run this again"
   echo "close-out: main moved during the run; flai stream sync $story (round $round of $rounds)"
   flai stream sync "$story"
 done

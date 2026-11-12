@@ -235,7 +235,7 @@ func TestRunStopsAtARefusedSyncBeforeTheMove(t *testing.T) {
 	if res.Sync == nil || res.Sync.Stopped != storygit.StopConflicts || strings.Join(res.Sync.Conflicts, ",") != "README.md" || !strings.Contains(res.Sync.Continue, "flai task done T-003 again") {
 		t.Errorf("sync: %+v", res.Sync)
 	}
-	if !strings.Contains(res.Error, "README.md") || !strings.Contains(res.Error, "git rebase --continue") {
+	if !strings.Contains(res.Error, "README.md") || !strings.Contains(res.Error, "git add it, then run flai task done T-003 again") || strings.Contains(res.Error, "rebase --continue") {
 		t.Errorf("error: %s", res.Error)
 	}
 	if res.Move != nil || res.Log != nil || res.Touches != nil || res.Check != nil || res.Inbox != nil {
@@ -264,11 +264,68 @@ func TestRunStopsAtARefusedSyncBeforeTheMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Stopped != StepCommit || res.ExitCode() != 1 || res.Commit != nil || res.Told != nil || res.Sync != nil || !strings.Contains(res.Error, "git rebase --continue") {
+	if res.Stopped != StepCommit || res.ExitCode() != 1 || res.Commit != nil || res.Told != nil || res.Sync != nil ||
+		!strings.Contains(res.Error, "on README.md: resolve each of them, git add it, then run flai task done T-003 again") || strings.Contains(res.Error, "rebase --continue") {
 		t.Errorf("with the rebase unfinished: stopped %q: %s", res.Stopped, res.Error)
 	}
 	if st := get(t, repo, "T-003").Status; st != workitem.InProgress {
 		t.Errorf("T-003 is %s", st)
+	}
+	if !storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Fatal("the refused call touched the rebase")
+	}
+}
+
+// ADR-0294, I-0351: called again once the stop is resolved and staged, the
+// commit step commits nothing and the sync step continues the rebase, so the
+// task closes with the resolution on the branch and no rebase left waiting;
+// a resolution not staged is refused at the commit step, naming its path.
+func TestRunContinuesARebaseWhoseStopIsResolvedAndStaged(t *testing.T) {
+	repo, wt := project(t)
+	write(t, repo.Root, "README.md", "# good\n\nChanged on main.\n")
+	git(t, repo.Root, "commit", "-q", "-am", "docs: main's readme")
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 the readme"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepSync || res.Sync == nil || res.Sync.Stopped != storygit.StopConflicts {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	// main's line kept, so the branch undoes nothing of main's (ADR-0155)
+	resolved := "# good\n\nChanged on main.\n\nChanged on the story's branch.\n"
+	write(t, wt, "README.md", resolved)
+
+	res, err = Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepCommit || !strings.Contains(res.Error, "on README.md: resolve each of them, git add it") || res.Sync != nil {
+		t.Fatalf("with the resolution not staged: stopped %q: %s", res.Stopped, res.Error)
+	}
+
+	git(t, wt, "add", "README.md")
+	res, err = Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit != nil {
+		t.Fatalf("with the resolution staged: stopped %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	if res.Sync == nil || !res.Sync.Resumed || !res.Sync.Synced || res.Sync.Stopped != "" {
+		t.Errorf("sync: %+v", res.Sync)
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Error("a rebase still waits")
+	}
+	if got := git(t, wt, "show", "HEAD:README.md"); got != strings.TrimSpace(resolved) {
+		t.Errorf("README.md on the branch: %q", got)
+	}
+	if ahead := git(t, wt, "rev-list", "--count", "main..HEAD"); ahead != "1" {
+		t.Errorf("the branch is %s commits ahead of main", ahead)
+	}
+	if res.Move == nil || res.Move.State != workitem.Done || get(t, repo, "T-003").Status != workitem.Done {
+		t.Errorf("move: %+v", res.Move)
 	}
 }
 

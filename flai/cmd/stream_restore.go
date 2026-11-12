@@ -193,7 +193,7 @@ func (a *app) restoreRefusal(repo *workitem.Repo, it *workitem.Item, worktree st
 	}
 	rel := relPath(repo.MainRoot, worktree)
 	if storygit.RebaseInProgress(a.runner, worktree) {
-		return refuse("a rebase is unfinished in %s; finish it with git rebase --continue there, or undo it with git rebase --abort, then restore", rel), nil
+		return refuse("a rebase is unfinished in %s; resolve each conflicting path there, git add it, and finish it with flai stream sync %s, which continues it, or undo it with git rebase --abort, then restore", rel, it.ID), nil
 	}
 	head, err := a.runner.Run(worktree, "git", "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {

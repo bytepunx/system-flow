@@ -297,7 +297,7 @@ func TestTaskDoneAnswersARefusedSync(t *testing.T) {
 	if failed != "" {
 		t.Fatalf("a stop is a tool error: %s", failed)
 	}
-	if out["stopped"] != taskdone.StepSync || !strings.Contains(out["error"].(string), "git rebase --continue") {
+	if e := out["error"].(string); out["stopped"] != taskdone.StepSync || !strings.Contains(e, "git add it, then run flai task done T-003 again") || strings.Contains(e, "rebase --continue") {
 		t.Fatalf("stopped at %v: %v", out["stopped"], out["error"])
 	}
 	if c, _ := field(out, "sync.conflicts").([]any); len(c) != 1 || c[0] != "README.md" {

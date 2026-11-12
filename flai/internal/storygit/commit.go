@@ -70,7 +70,7 @@ func CommitPaths(o CommitOptions) (*Commit, error) {
 		if c := Conflicts(o.Runner, o.Dir); len(c) > 0 {
 			waiting = " on " + strings.Join(c, ", ")
 		}
-		return nil, fmt.Errorf("a rebase is unfinished in %s%s: resolve each conflicting path, git add it, and run git rebase --continue there, or undo it with git rebase --abort; then run the command again", o.Dir, waiting)
+		return nil, fmt.Errorf("a rebase is unfinished in %s%s: resolve each conflicting path, git add it, and finish the rebase with flai stream sync %s, which continues it, or undo it with git rebase --abort; then run the command again", o.Dir, waiting, id)
 	}
 	if len(o.Paths) == 0 {
 		return nil, nil

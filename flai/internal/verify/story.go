@@ -784,7 +784,7 @@ func (v *storyRun) rebase() []Finding {
 	if !storygit.RebaseInProgress(v.opts.Git, v.worktree) {
 		return nil
 	}
-	return []Finding{{Name: StepRebase, Message: "a rebase is in progress; finish it with git rebase --continue, or undo it with git rebase --abort, then verify again"}}
+	return []Finding{{Name: StepRebase, Message: fmt.Sprintf("a rebase is in progress; resolve each conflicting path, git add it, and finish it with flai stream sync %s, which continues it, or undo it with git rebase --abort, then verify again", v.story)}}
 }
 
 // sync finds that the story's branch lacks commits of the main branch,

@@ -208,7 +208,9 @@ func testTaskDoneClosesATaskAndAnswersTextAndJSON(t *testing.T) {
 
 // A sync that stops on a conflict with the main branch stops the run with
 // exit 3, the paths, and how to continue, before the move. Called again with
-// the rebase unfinished, the commit step refuses, with exit 1.
+// the rebase unfinished, the commit step refuses, with exit 1, naming the
+// path; called once it is resolved and staged, the sync continues the rebase
+// and the task closes (ADR-0294).
 func testTaskDoneStopsAtARefusedSync(t *testing.T) {
 	root, wt := taskDoneProject(t)
 	writeIn(t, root, "README.md", "# good\n\nChanged on main.\n")
@@ -223,7 +225,7 @@ func testTaskDoneStopsAtARefusedSync(t *testing.T) {
 		"commit: ",
 		"sync: story/S-004 was not synced: the rebase onto main stopped on conflicts in 1 path:\n  README.md\n",
 		"To continue: ",
-		"git rebase --continue",
+		"git add it, then run flai task done T-003 again",
 		"To abort: ",
 		"stopped at sync: ",
 	} {
@@ -251,8 +253,21 @@ func testTaskDoneStopsAtARefusedSync(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &res); err != nil {
 		t.Fatalf("%v: %s", err, out)
 	}
-	if res.Stopped != taskdone.StepCommit || res.Sync != nil || !strings.Contains(res.Error, "git rebase --continue") {
+	if res.Stopped != taskdone.StepCommit || res.Sync != nil || !strings.Contains(res.Error, "on README.md: resolve each of them, git add it, then run flai task done T-003 again") {
 		t.Errorf("json: stopped %q: %s", res.Stopped, res.Error)
+	}
+	if strings.Contains(out, "rebase --continue") {
+		t.Errorf("task done tells the agent to continue the rebase by hand:\n%s", out)
+	}
+
+	writeIn(t, wt, "README.md", "# good\n\nChanged on main.\n\nChanged on the story's branch.\n")
+	gitIn(t, wt, "add", "README.md")
+	out, errOut, code = taskDone(t, wt, "T-003")
+	if code != 0 || !strings.Contains(out, "sync: story/S-004 is rebased onto main: the sync continued the rebase whose stop you resolved\n") {
+		t.Fatalf("task done with the stop resolved: %d\n%s\n%s", code, out, errOut)
+	}
+	if st := taskStatus(t, root); st != workitem.Done {
+		t.Errorf("T-003 is %s", st)
 	}
 }
 

@@ -242,7 +242,7 @@ func TestVerifyStopsAtTheFirstStepThatFails(t *testing.T) {
 		{name: "a rebase left unfinished", stopped: 0, setup: func(t *testing.T, f *verifyFixture) {
 			dir := t.TempDir()
 			f.git.out["rev-parse --git-path rebase-merge"] = dir
-		}, want: Finding{Name: "rebase", Message: "a rebase is in progress; finish it with git rebase --continue, or undo it with git rebase --abort, then verify again"}},
+		}, want: Finding{Name: "rebase", Message: "a rebase is in progress; resolve each conflicting path, git add it, and finish it with flai stream sync S-004, which continues it, or undo it with git rebase --abort, then verify again"}},
 		{name: "a branch behind main", stopped: 1, setup: func(_ *testing.T, f *verifyFixture) {
 			f.git.out["diff --no-renames --name-only HEAD...main"] = "flai/go.mod\nwip/kanban/board.md"
 			f.git.out["rev-list --abbrev-commit HEAD..main"] = "c3c3c3c\nb2b2b2b\na1a1a1a"

@@ -1141,7 +1141,7 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 		cycle := []string{
 			`When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change`,
 			"it commits on story/S-0104, runs flai stream sync S-0104, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails",
-			"When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again",
+			"When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, then call it again, which continues the rebase",
 			"when the check stops, fix what it found and call it again",
 			"Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again",
 			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then ask flai serve for the close-out with the flai MCP tool verify",

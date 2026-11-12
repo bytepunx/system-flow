@@ -60,7 +60,7 @@ func (a *app) beginStoryCommit(repo *workitem.Repo, flag string, autocommit bool
 		return nil, fmt.Errorf("%s has %s checked out, not %s: --commit commits on the story's branch, so nothing was written; run the command in %s's worktree (flai stream open %s opens it), or leave --commit out", repo.Root, head, branch, id, id)
 	}
 	if storygit.RebaseInProgress(a.runner, repo.Root) {
-		return nil, fmt.Errorf("a rebase is unfinished in %s, so --commit cannot commit on %s and nothing was written: finish it with git rebase --continue, or undo it with git rebase --abort, then run the command again", repo.Root, branch)
+		return nil, fmt.Errorf("a rebase is unfinished in %s, so --commit cannot commit on %s and nothing was written: resolve each conflicting path, git add it, and finish it with flai stream sync %s, which continues it, or undo it with git rebase --abort, then run the command again", repo.Root, branch, id)
 	}
 	return &storyCommit{repo: repo, story: id, trailers: trailers}, nil
 }

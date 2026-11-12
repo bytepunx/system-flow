@@ -31,7 +31,7 @@ func TestSyncStoppedOnGitsErrorNamesItAndTheWayBack(t *testing.T) {
 	t.Parallel()
 	const (
 		said  = "error: insufficient permission for adding an object to repository database .git/objects"
-		cont  = "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again"
+		cont  = "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run flai stream sync S-0001 again"
 		abort = "in .flai-cache/worktrees/S-0001, run git rebase --abort and then git symbolic-ref HEAD refs/heads/story/S-0001: git cannot update refs/heads/story/S-0001 there (fatal: cannot lock ref), so the abort alone leaves HEAD detached"
 	)
 	stop := syncStoppedFrom(storygit.SyncResult{
@@ -52,7 +52,7 @@ func TestSyncStoppedOnGitsErrorNamesItAndTheWayBack(t *testing.T) {
 		Stopped: storygit.StopConflicts, Uncommitted: []string{}, Conflicts: []string{"docs/guide.md"},
 		Continue: "resolve", Abort: "abort",
 	})
-	if want := "story/S-0001 was not synced: the rebase onto main stopped on conflicts in docs/guide.md; resolve them and git rebase --continue, or git rebase --abort, in .flai-cache/worktrees/S-0001"; conflicts.Error() != want {
+	if want := "story/S-0001 was not synced: the rebase onto main stopped on conflicts in docs/guide.md; in .flai-cache/worktrees/S-0001, resolve them, git add them, and run flai stream sync S-0001 again, or git rebase --abort"; conflicts.Error() != want {
 		t.Errorf("error:\n%s\nwant:\n%s", conflicts.Error(), want)
 	}
 }
@@ -147,15 +147,16 @@ func testStoryBranchLifecycle(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("branch's line\n"), 0o644)
 	gitIn(t, wt, "commit", "-q", "-am", "docs: [S-0001] guide on branch")
 	_, errOut, code = runIn(t, wt, "stream", "sync", "S-0001")
-	if code == 0 || !strings.Contains(errOut, "conflicts in docs/guide.md") || !strings.Contains(errOut, "rebase --continue") {
+	if code == 0 || !strings.Contains(errOut, "conflicts in docs/guide.md") || !strings.Contains(errOut, "run flai stream sync S-0001 again") || strings.Contains(errOut, "rebase --continue") {
 		t.Fatalf("conflict: %d %s", code, errOut)
 	}
-	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("resolved\n"), 0o644)
+	// resolved and staged, the stop is continued by the sync run again, whose
+	// undone check (ADR-0155) now runs too, so the resolution keeps main's
+	// line (ADR-0294)
+	_ = os.WriteFile(filepath.Join(wt, "docs", "guide.md"), []byte("main's line\nbranch's line\n"), 0o644)
 	gitIn(t, wt, "add", "docs/guide.md")
-	c := exec.Command("git", "-c", "core.editor=true", "rebase", "--continue")
-	c.Dir = wt
-	if out, err := c.CombinedOutput(); err != nil {
-		t.Fatalf("rebase --continue: %v %s", err, out)
+	if out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001"); code != 0 || !strings.Contains(out, "the sync continued the rebase") {
+		t.Fatalf("sync of the resolved stop: %d %s %s", code, out, errOut)
 	}
 
 	// accept: rebase, fast-forward into main, remove worktree and branch
@@ -194,7 +195,7 @@ func testStoryBranchLifecycle(t *testing.T) {
 	if !strings.Contains(log, "[S-0001] new doc") || !strings.Contains(log, "accept and archive") {
 		t.Errorf("main should contain the branch commits and the acceptance: %s", log)
 	}
-	if guide, _ := os.ReadFile(filepath.Join(root, "docs", "guide.md")); string(guide) != "resolved\n" {
+	if guide, _ := os.ReadFile(filepath.Join(root, "docs", "guide.md")); string(guide) != "main's line\nbranch's line\n" {
 		t.Errorf("guide after accept: %q", guide)
 	}
 	if _, err := os.Stat(filepath.Join(root, "wip/archive/kanban/stories/S-0001-branchy.md")); err != nil {

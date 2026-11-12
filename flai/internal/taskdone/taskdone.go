@@ -401,15 +401,14 @@ func (r *run) git(args ...string) (string, error) { return r.o.Runner.Run(r.wt, 
 // and leaves in Result.Left, uncommitted, those only another open task
 // covers (ADR-0128); everything else in the worktree, staged or not, stays
 // as it was. Nothing to commit leaves Result.Commit nil and needs no
-// message. It refuses while a rebase is unfinished, as the sync does.
+// message. While a rebase of the story's branch waits on a stop the agent
+// resolved and staged, it commits nothing and leaves the rebase to the sync
+// step, which continues it (ADR-0294); any other rebase in progress it
+// refuses, as the sync does.
 func (r *run) commit() error {
 	r.res.Left = []string{}
 	if storygit.RebaseInProgress(r.o.Runner, r.wt) {
-		waiting := ""
-		if c := storygit.Conflicts(r.o.Runner, r.wt); len(c) > 0 {
-			waiting = " on " + strings.Join(c, ", ")
-		}
-		return fmt.Errorf("a rebase is unfinished in %s%s: resolve each conflicting path, git add it, and run git rebase --continue there, or undo it with git rebase --abort; then run %s again", r.rel(r.wt), waiting, r.again())
+		return r.waitingRebase()
 	}
 	changed, untracked, err := r.changed()
 	if err != nil {
@@ -459,6 +458,23 @@ func (r *run) commit() error {
 		return fmt.Errorf("read the commit just made in %s: %w", r.rel(r.wt), err)
 	}
 	r.res.Commit = &Commit{Hash: strings.TrimSpace(hash), Subject: subject(r.o.Message), Paths: paths}
+	return nil
+}
+
+// waitingRebase is the commit step's answer to a rebase waiting in the
+// worktree: nil, committing nothing, when it is the story's branch's own and
+// its stop is resolved and staged, so that the sync step continues it
+// (ADR-0294); otherwise a refusal naming the paths left unresolved, or why
+// the sync cannot continue it at all.
+func (r *run) waitingRebase() error {
+	unresolved, err := storygit.ResolvedStop(r.o.Runner, r.wt, storygit.Branch(r.story.ID))
+	switch {
+	case err != nil:
+		return fmt.Errorf("a rebase is unfinished in %s that the sync cannot continue: %w; undo it with git rebase --abort there, then run %s again", r.rel(r.wt), err, r.again())
+	case len(unresolved) > 0:
+		return fmt.Errorf("a rebase is unfinished in %s on %s: resolve each of them, git add it, then run %s again, which continues the rebase; or undo it with git rebase --abort there", r.rel(r.wt), strings.Join(unresolved, ", "), r.again())
+	}
+	r.logger.Info("a resolved rebase waits; nothing committed, the sync continues it", "component", "taskdone", "task", r.task.ID)
 	return nil
 }
 
@@ -609,7 +625,7 @@ func (r *run) sync() error {
 func rebaseStopped(res storygit.SyncResult) error {
 	switch res.Stopped {
 	case storygit.StopRebaseInProgress:
-		return fmt.Errorf("the sync refused %s: a rebase waits there on %s; %s, or %s", res.Worktree, orNothing(res.Conflicts), res.Continue, res.Abort)
+		return fmt.Errorf("the sync refused %s: a rebase waits there, unresolved on %s; %s, or %s", res.Worktree, orNothing(res.Conflicts), res.Continue, res.Abort)
 	case storygit.StopGitError:
 		return fmt.Errorf("the rebase of %s onto %s stopped with no path in conflict; git said: %s; %s; to abort: %s", res.Branch, res.Base, res.RebaseError, res.Continue, res.Abort)
 	}

@@ -695,7 +695,8 @@ func (r Request) inContainer() bool { return r.Inner != "" }
 
 // closeTasks tells a story's agent how it closes each task: with flai task
 // done in the worktree, or the MCP tool task_done, which syncs as flai stream
-// sync does, resolving a sync's conflicts with git rebase --continue. In the
+// sync does, resolving a sync's conflicts with git add and calling it again,
+// whose sync continues the rebase (ADR-0294). In the
 // container (Request.inContainer), whose main checkout's .git is read-only
 // (ADR-0246), only task_done, whose commit and sync run on the host, closes a
 // task, and a sync's conflicts go to the designer, since neither git add nor
@@ -704,7 +705,7 @@ func closeTasks(r Request) string {
 	if r.inContainer() {
 		return fmt.Sprintf(`When a task is done, close it with the flai MCP tool task_done, with its docs and work-item updates in the change: it commits on story/%[1]s, syncs %[1]s's branch, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. Its commit and its sync run on the host. When the sync stops on conflicts, ask the designer with the flai MCP tool thread_open on %[1]s, naming each path it lists, and go on with the work that does not wait on the answer; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling task_done again. You run in a container, where the main checkout's .git is read-only: flai stream sync, the shell's flai task done, and git rebase cannot write there, so never run them, and never start a rebase or merge by hand.`, r.Story)
 	}
-	return fmt.Sprintf(`When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[1]s, runs flai stream sync %[1]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand.`, r.Story)
+	return fmt.Sprintf(`When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[1]s, runs flai stream sync %[1]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, then call it again, which continues the rebase; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand.`, r.Story)
 }
 
 // probe is what a trial of an agent image is asked: to read, report, and end.

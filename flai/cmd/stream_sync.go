@@ -23,6 +23,16 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 	}
 }
 
+// rebasedLine says that the sync rebased the branch onto the main branch,
+// and that it did so by continuing the rebase whose stop the agent resolved
+// and staged, when it did (ADR-0294).
+func rebasedLine(res storygit.SyncResult) string {
+	if res.Resumed {
+		return fmt.Sprintf("%s is rebased onto %s: the sync continued the rebase whose stop you resolved", res.Branch, res.Base)
+	}
+	return fmt.Sprintf("%s is rebased onto %s", res.Branch, res.Base)
+}
+
 // mergedWhat is what a merge of p kept from both sides: an issue file's
 // instances (ADR-0126), and a shared markdown file's sections (ADR-0175).
 func mergedWhat(p string) string {

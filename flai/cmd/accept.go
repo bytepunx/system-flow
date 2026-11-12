@@ -828,16 +828,16 @@ func sentBackText(story, branch, who string, stop *syncStopped) string {
 	if stop.Found {
 		fmt.Fprintf(&b, "flai moved %s back to in-progress. "+
 			"This thread is for %s's agent, which settles the conflicts; the operator does not. "+
-			"In its worktree, resolve each path that still conflicts, `git add` it, and run `git rebase --continue`, or run `git rebase --abort` and then `flai stream sync %s`; "+
+			"In its worktree, resolve each path that still conflicts, `git add` it, and run `flai stream sync %s`, which continues the rebase, or run `git rebase --abort` and then `flai stream sync %s`; "+
 			"then close out and move %s to review again. flai serve resolves this thread once %s is back in review.",
-			story, story, story, story, story)
+			story, story, story, story, story, story)
 		return b.String()
 	}
 	fmt.Fprintf(&b, "flai aborted the rebase, so `%s` and `%s` are as they were, and moved %s back to in-progress. "+
 		"This thread is for %s's agent, which settles the conflicts; the operator does not. "+
-		"In its worktree, run `flai stream sync %s`, resolve each path it stops on, `git add` it, and run `git rebase --continue`; "+
+		"In its worktree, run `flai stream sync %s`, resolve each path it stops on, `git add` it, and run `flai stream sync %s` again, which continues the rebase; "+
 		"then close out and move %s to review again. flai serve resolves this thread once %s is back in review.",
-		branch, stop.Base, story, story, story, story, story)
+		branch, stop.Base, story, story, story, story, story, story)
 	return b.String()
 }
 
