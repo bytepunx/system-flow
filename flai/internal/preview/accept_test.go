@@ -633,7 +633,7 @@ func TestStepsUndoneTakesATaskAStopCancelled(t *testing.T) {
 
 // ADR-0291, I-0229: a story whose last passing flai verify ran go-test over a
 // main that has since reworded flai/internal/roles, which go-test selects, is
-// refused with verify_stale by the operator's acceptance, the orchestrator's,
+// refused with verify_behind_main by the operator's acceptance, the orchestrator's,
 // and a hand acceptance while the queue batches, among the acceptance's
 // blockers and not the orchestrator's own; not by the queue's landing, nor
 // when main brought in only wip paths, nor when the verify did not pass. A
@@ -682,11 +682,11 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if b := res.VerifyStaleBlocker; b == nil || b.Code != BlockVerifyStale || !strings.HasPrefix(b.Message, want) || !slices.Contains(res.Blockers, b.Message) || !slices.Equal(res.StaleTiers, []string{"go-test"}) {
-			t.Errorf("%s must list verify_stale naming go-test:\n%+v %q\n%q", name, res.VerifyStaleBlocker, res.StaleTiers, res.Blockers)
+		if b := res.VerifyBehindMainBlocker; b == nil || b.Code != BlockVerifyBehindMain || !strings.HasPrefix(b.Message, want) || !slices.Contains(res.Blockers, b.Message) || !slices.Equal(res.StaleTiers, []string{"go-test"}) {
+			t.Errorf("%s must list verify_behind_main naming go-test:\n%+v %q\n%q", name, res.VerifyBehindMainBlocker, res.StaleTiers, res.Blockers)
 		}
-		if slices.ContainsFunc(res.OrchestratorBlockers, func(b Blocker) bool { return b.Code == BlockVerifyStale }) {
-			t.Errorf("%s: verify_stale is not among the orchestrator's own blockers, which its enqueue vouches with: %+v", name, res.OrchestratorBlockers)
+		if slices.ContainsFunc(res.OrchestratorBlockers, func(b Blocker) bool { return b.Code == BlockVerifyBehindMain }) {
+			t.Errorf("%s: verify_behind_main is not among the orchestrator's own blockers, which its enqueue vouches with: %+v", name, res.OrchestratorBlockers)
 		}
 	}
 	stale := func(name string, opts AcceptOptions) {
@@ -695,8 +695,10 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if res.VerifyStaleBlocker != nil || res.StaleTiers != nil || slices.ContainsFunc(res.Blockers, func(b string) bool { return strings.Contains(b, "verify_stale") || strings.Contains(b, "ADR-0291") }) {
-			t.Errorf("%s is not refused on verify_stale: %+v %q %q", name, res.VerifyStaleBlocker, res.StaleTiers, res.Blockers)
+		if res.VerifyBehindMainBlocker != nil || res.StaleTiers != nil || slices.ContainsFunc(res.Blockers, func(b string) bool {
+			return strings.Contains(b, "verify_behind_main") || strings.Contains(b, "ADR-0291")
+		}) {
+			t.Errorf("%s is not refused on verify_behind_main: %+v %q %q", name, res.VerifyBehindMainBlocker, res.StaleTiers, res.Blockers)
 		}
 	}
 	stale("the queue's landing", AcceptOptions{QueueBatches: true, Batch: "20261112-160000"})
@@ -712,7 +714,7 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if b := res.VerifyStaleBlocker; b == nil || !strings.Contains(b.Message, "cannot list what changed from "+forgeOther+" to main") {
+	if b := res.VerifyBehindMainBlocker; b == nil || !strings.Contains(b.Message, "cannot list what changed from "+forgeOther+" to main") {
 		t.Errorf("a main whose paths cannot be listed is the blocker, naming why: %+v", b)
 	}
 }

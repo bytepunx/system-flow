@@ -270,6 +270,20 @@ head names them, who accepted, and when under ### Accepted without the queue
 tiers in its Notes. It is refused with --by orchestrator and with --batch, and
 changes nothing while the queue does not batch or the tiers ran.
 
+A story's verify covers the main branch it ran over, not the one it would
+land on (ADR-0291, I-0229): every acceptance of a story with a branch but the
+merge queue's landing, by hand, from the dashboard, and --by orchestrator
+alike, is refused, before anything is merged, while the paths the main branch
+brought in since the story's last passing flai verify, but for the wip paths
+its branch does not change, select a tier that verify ran. The refusal is the
+blocker verify_behind_main, naming the tiers, where that verify ran over main, and
+the paths; --dry-run lists it, with --json under verify_behind_main_blocker, and
+stale_tiers names the tiers. Ask for the story's close-out again, with the
+MCP tool verify or flai verify <id> --job, which syncs the branch onto the
+main branch and runs again only the tiers its new paths send back, and
+accept it once that passes. No flag overrides it, and --batch is not held by
+it: the batch ran every tier over the main branch it lands on.
+
 While the kluster host action is on for the project and its system-flow.yaml
 has a kluster: block, a change the cluster has not run is not shipped
 (ADR-0254 §5a): every acceptance of a story with a branch, by hand, from the

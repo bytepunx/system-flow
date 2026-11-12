@@ -131,11 +131,11 @@ type Acceptance struct {
 	KlusterBlocker *Blocker `json:"kluster_blocker,omitempty"`
 	// StaleTiers are the tiers the story's last passing flai verify ran that
 	// the paths the main branch brought in since send back, and
-	// VerifyStaleBlocker the blocker verify_stale they bring, also in
+	// VerifyBehindMainBlocker the blocker verify_behind_main they bring, also in
 	// Blockers, in every acceptance but the merge queue's landing (ADR-0291);
 	// empty and nil when main brought in nothing they select.
-	StaleTiers         []string `json:"stale_tiers,omitempty"`
-	VerifyStaleBlocker *Blocker `json:"verify_stale_blocker,omitempty"`
+	StaleTiers              []string `json:"stale_tiers,omitempty"`
+	VerifyBehindMainBlocker *Blocker `json:"verify_behind_main_blocker,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -184,10 +184,10 @@ const (
 // (ADR-0221).
 const BlockQueueTiers = "queue_tiers"
 
-// BlockVerifyStale is the code of the blocker of every acceptance but the
+// BlockVerifyBehindMain is the code of the blocker of every acceptance but the
 // merge queue's landing for a story whose last passing flai verify ran over a
 // main that has since brought in paths sending back a tier it ran (ADR-0291).
-const BlockVerifyStale = "verify_stale"
+const BlockVerifyBehindMain = "verify_behind_main"
 
 // BlockKluster is the code of the blocker of every acceptance of a story,
 // while the kluster host action is on, whose namespace was not deployed at
@@ -395,7 +395,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	queueTiersGate(r, repo, it, res, opts)
 	// a verify main has outrun since does not vouch for the head the
 	// acceptance lands, whoever accepts but the queue (ADR-0291)
-	verifyStaleGate(r, repo, it, res, opts)
+	verifyBehindMainGate(r, repo, it, res, opts)
 	// the queue's landing takes the batch's verification of the story's
 	// rebased head (ADR-0176); for the orchestrator, in place of its own
 	var landing []string
@@ -528,28 +528,28 @@ func QueueTiersBlocker(id, why string) Blocker {
 	return Blocker{Code: BlockQueueTiers, Message: fmt.Sprintf("%s's tiers marked queue have not run at its head: %s; while the merge queue batches, a hand acceptance waits for them: run flai verify %s --all, which reuses the tiers its last run passed at the same patch, enqueue it with flai queue add %s, or, as the operator in a shell, accept it with flai accept %s --without-queue-tiers (ADR-0221)", id, why, id, id, id)}
 }
 
-// verifyStaleGate sets on res the tiers story it's last passing flai verify
+// verifyBehindMainGate sets on res the tiers story it's last passing flai verify
 // ran that the paths the main branch brought in since send back, and the
-// blocker verify_stale they bring (ADR-0291). It gates a story with a branch,
+// blocker verify_behind_main they bring (ADR-0291). It gates a story with a branch,
 // not done already, in every acceptance but the merge queue's landing, whose
 // batch ran every tier over the main it lands on. The blocker is among the
 // acceptance's blockers, not the orchestrator's own: the orchestrator's
 // enqueue vouches with those alone, and the batch runs every tier.
-func verifyStaleGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
+func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
 		return
 	}
 	var why string
-	res.StaleTiers, why = verifyStale(r, repo, it.ID)
+	res.StaleTiers, why = verifyBehindMain(r, repo, it.ID)
 	if why == "" {
 		return
 	}
-	b := VerifyStaleBlocker(it.ID, why)
-	res.VerifyStaleBlocker = &b
+	b := VerifyBehindMainBlocker(it.ID, why)
+	res.VerifyBehindMainBlocker = &b
 	res.Blockers = append(res.Blockers, b.Message)
 }
 
-// verifyStale is, for story id's last flai verify report, the tiers it ran
+// verifyBehindMain is, for story id's last flai verify report, the tiers it ran
 // that the paths the main branch brought in since its merge base send back,
 // with the tiers its worktree's manifest declares, or the main checkout's when
 // it has no worktree, selected over the main checkout, and why they are stale,
@@ -557,7 +557,7 @@ func verifyStaleGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res
 // pass, or main brought in nothing that sends a tier back. A report, a main,
 // or tiers that cannot be read is why, naming the error, so the gate never
 // opens unread.
-func verifyStale(r execx.Runner, repo *workitem.Repo, id string) ([]string, string) {
+func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string) ([]string, string) {
 	rep, ok, err := verify.LastReport(repo, id)
 	if err != nil {
 		return nil, fmt.Sprintf("cannot %v", err)
@@ -612,12 +612,12 @@ func firstPaths(paths []string, n int) string {
 	return fmt.Sprintf("%s, and %d more", strings.Join(paths[:n], ", "), len(paths)-n)
 }
 
-// VerifyStaleBlocker is why story id cannot be accepted while the main branch
+// VerifyBehindMainBlocker is why story id cannot be accepted while the main branch
 // has brought in, since its last passing flai verify, paths that send back a
 // tier that verify ran, for the reason why gives, naming the way out
 // (ADR-0291).
-func VerifyStaleBlocker(id, why string) Blocker {
-	return Blocker{Code: BlockVerifyStale, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291)", id, why, id, id)}
+func VerifyBehindMainBlocker(id, why string) Blocker {
+	return Blocker{Code: BlockVerifyBehindMain, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291)", id, why, id, id)}
 }
 
 // klusterGate sets on res why story it is not accepted yet while the kluster
