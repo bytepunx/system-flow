@@ -40,6 +40,14 @@ func Uncommitted(r execx.Runner, dir string) ([]string, error) {
 // RebaseInProgress reports whether a rebase has stopped in the worktree at
 // dir and waits to be continued or aborted.
 func RebaseInProgress(r execx.Runner, dir string) bool {
+	_, ok := rebaseStateDir(r, dir)
+	return ok
+}
+
+// rebaseStateDir is the folder in the worktree at dir's git directory where
+// the rebase waiting there keeps its state, rebase-merge or rebase-apply;
+// ok is false when no rebase waits.
+func rebaseStateDir(r execx.Runner, dir string) (string, bool) {
 	for _, state := range []string{"rebase-merge", "rebase-apply"} {
 		p, err := r.Run(dir, "git", "rev-parse", "--git-path", state)
 		if err != nil || p == "" {
@@ -49,10 +57,97 @@ func RebaseInProgress(r execx.Runner, dir string) bool {
 			p = filepath.Join(dir, p)
 		}
 		if _, err := os.Stat(p); err == nil {
-			return true
+			return p, true
 		}
 	}
-	return false
+	return "", false
+}
+
+// waitingRebase is what a rebase waiting in a worktree recorded when it
+// started, read from its state in the worktree's git directory (ADR-0294).
+type waitingRebase struct {
+	onto    string // the commit it rebases onto
+	oldHead string // the branch's head before it, orig-head
+}
+
+// readWaitingRebase reads the rebase waiting in the worktree at dir and
+// checks that it is a rebase of branch: its state's head-name is
+// refs/heads/<branch>, and it holds onto and orig-head (ADR-0294). The error
+// says what it is instead.
+func readWaitingRebase(r execx.Runner, dir, branch string) (waitingRebase, error) {
+	state, ok := rebaseStateDir(r, dir)
+	if !ok {
+		return waitingRebase{}, fmt.Errorf("no rebase waits in %s", dir)
+	}
+	read := func(name string) string {
+		data, err := os.ReadFile(filepath.Join(state, name))
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(data))
+	}
+	if head := read("head-name"); head != "refs/heads/"+branch {
+		if head == "" {
+			head = "a branch its state does not name"
+		}
+		return waitingRebase{}, fmt.Errorf("the rebase waiting there is of %s, not of %s", head, branch)
+	}
+	w := waitingRebase{onto: read("onto"), oldHead: read("orig-head")}
+	var lacks []string
+	if w.onto == "" {
+		lacks = append(lacks, "the commit it rebases onto")
+	}
+	if w.oldHead == "" {
+		lacks = append(lacks, "the branch's head before it")
+	}
+	if len(lacks) > 0 {
+		return waitingRebase{}, fmt.Errorf("the rebase waiting there does not record %s in %s", strings.Join(lacks, " or "), state)
+	}
+	return w, nil
+}
+
+// ResolvedStop answers what keeps the stop of the rebase of branch waiting in
+// the worktree at dir from being resolved and staged, so that flai stream
+// sync may continue it (ADR-0294): the paths left unmerged, the staged files
+// that hold a conflict marker, and the tracked files changed and not staged,
+// sorted, none when the stop is resolved. An error says why the sync cannot
+// continue the rebase whatever is staged: none waits, it is not branch's own,
+// its state lacks what the sync reads, or git cannot read the worktree.
+func ResolvedStop(r execx.Runner, dir, branch string) (unresolved []string, err error) {
+	if _, err := readWaitingRebase(r, dir, branch); err != nil {
+		return nil, err
+	}
+	return unresolvedPaths(r, dir)
+}
+
+// leftoverMarker is a line git diff --check prints for a staged line that
+// opens, divides, or closes a conflict, which names the path.
+var leftoverMarker = regexp.MustCompile(`^(.+):\d+: leftover conflict marker$`)
+
+// unresolvedPaths is the paths in the worktree at dir that keep a rebase's
+// stop unresolved: unmerged, staged with a conflict marker, or tracked and
+// changed but not staged, sorted and each once.
+func unresolvedPaths(r execx.Runner, dir string) ([]string, error) {
+	unstaged, err := nameOnly(r, dir, "-c", "core.quotePath=false", "diff", "--name-only")
+	if err != nil {
+		return nil, fmt.Errorf("list the unmerged and unstaged paths in %s: %w", dir, err)
+	}
+	// git diff --check exits non-zero for whitespace errors too, so only the
+	// lines naming a conflict marker count; an exit that is not git's verdict
+	// on the diff, as one where git cannot read the index, is an error
+	out, err := r.Run(dir, "git", "-c", "core.quotePath=false", "diff", "--cached", "--check", "--no-color")
+	var exit *exec.ExitError
+	if err != nil && (!errors.As(err, &exit) || exit.ExitCode() > 2) {
+		return nil, fmt.Errorf("check the staged files in %s for conflict markers: %w", dir, err)
+	}
+	paths := unstaged // git diff --name-only names the unmerged paths too
+	for _, l := range strings.Split(out, "\n") {
+		if m := leftoverMarker.FindStringSubmatch(strings.TrimSpace(l)); m != nil {
+			paths = append(paths, m[1])
+		}
+	}
+	sort.Strings(paths)
+	return slices.Compact(paths), nil
 }
 
 // ContinueRebase continues the rebase stopped in the worktree at dir once
@@ -131,7 +226,8 @@ const (
 	// nothing.
 	StopUncommitted = "uncommitted"
 	// StopRebaseInProgress refuses a worktree where a rebase already waits,
-	// touching nothing.
+	// touching nothing: one whose stop is not resolved and staged, one that is
+	// not the branch's own, or any, for Rebase without Resume (ADR-0294).
 	StopRebaseInProgress = "rebase-in-progress"
 	// StopConflicts is this sync's rebase, stopped on conflicts and left in
 	// progress for the agent.
@@ -317,6 +413,11 @@ type SyncOptions struct {
 	// Again is the command a stop tells the agent to run once it is
 	// resolved; flai stream sync <story> when empty.
 	Again string
+	// Resume continues a rebase of the story's branch found waiting on a stop
+	// the agent resolved and staged, as Sync sets it (ADR-0294); without it,
+	// as flai accept and the merge queue call Rebase, a rebase in progress is
+	// refused.
+	Resume bool
 	// Log takes what Sync does and what it could not; nil discards it.
 	Log *slog.Logger
 }
@@ -345,7 +446,10 @@ type SyncResult struct {
 	Base     string `json:"base"`
 	Worktree string `json:"worktree"` // relative to the main checkout
 	Synced   bool   `json:"synced"`
-	Stopped  string `json:"stopped,omitempty"` // StopUncommitted, StopRebaseInProgress, StopConflicts, or StopGitError
+	// Resumed is whether this sync continued a rebase it found waiting on a
+	// stop the agent resolved and staged, rather than starting one (ADR-0294).
+	Resumed bool   `json:"resumed"`
+	Stopped string `json:"stopped,omitempty"` // StopUncommitted, StopRebaseInProgress, StopConflicts, or StopGitError
 	// Uncommitted is the worktree's uncommitted paths, when they refused it.
 	Uncommitted []string `json:"uncommitted"`
 	// Conflicts is the paths the waiting rebase stopped on.
@@ -405,8 +509,10 @@ func (s SyncResult) RebaseInProgress() bool {
 
 // Sync rebases the story's branch onto the main branch inside its worktree,
 // without stashing (ADR-0069), as flai stream sync does. It refuses, touching
-// nothing, a worktree with uncommitted changes or with a rebase already in
-// progress. A stop whose conflicts are all generated files, files flai
+// nothing, a worktree with uncommitted changes. A rebase of the branch found
+// waiting on a stop the agent resolved and staged it continues, as Rebase
+// with Resume does, and refuses, touching nothing, one whose stop is not
+// (ADR-0294). A stop whose conflicts are all generated files, files flai
 // merges, and markdown files inside the manifest's claims.shared it merges
 // by sections it resolves and continues (ADR-0098, ADR-0126, ADR-0175); on
 // any other conflict, or a shared file the section merge does not settle,
@@ -438,6 +544,7 @@ func Sync(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
 	}
+	o.Resume = true
 	res, err := Rebase(o)
 	if err == nil && res.Stopped == StopConflicts {
 		recordConflict(o, Conflict{Story: o.Story.ID, Where: WhereSync, Paths: res.Conflicts})
@@ -475,8 +582,13 @@ func Sync(o SyncOptions) (SyncResult, error) {
 // for the story (ADR-0155). It takes the main branch's head once, as a
 // commit, and rebases onto, checks, settles, and folds against that commit,
 // so a commit main gains while it runs is none of the branch's (I-0338,
-// I-0335). It writes no line of the conflict
-// log, which its caller writes with where the stop was met.
+// I-0335). A rebase already waiting in the worktree it refuses, touching
+// nothing, unless o.Resume is set, as Sync sets it: then it continues one of
+// the branch whose stop the agent resolved and staged, settles the stops
+// after it as its own rebase does, and runs the same steps after the clean
+// rebase, against the commit that rebase is onto and from the branch's head
+// before it, both read from git's rebase state (ADR-0294). It writes no line
+// of the conflict log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -494,6 +606,9 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	}
 	res.Base = base
 	if RebaseInProgress(o.Runner, path) {
+		if o.Resume {
+			return resume(o, path, res)
+		}
 		return stopped(o, res, StopRebaseInProgress, Conflicts(o.Runner, path), ""), nil
 	}
 	dirty, err := Uncommitted(o.Runner, path)
@@ -524,26 +639,81 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		oldHead = ""
 	}
 	if _, rerr := o.Runner.Run(path, "git", "rebase", onto); rerr != nil {
-		if !RebaseInProgress(o.Runner, path) {
-			return res, rerr
-		}
-		s, err := continueOverGenerated(o, path, &res)
-		if err != nil {
+		if waits, err := settleStops(o, path, rerr, &res); waits || err != nil {
 			return res, err
 		}
-		switch {
-		case s.Waits && len(s.Conflicts) > 0:
-			return stopped(o, res, StopConflicts, s.Conflicts, ""), nil
-		case s.Waits:
-			// I-0272: nothing conflicts, so git's error is what stopped it,
-			// the rebase's own when no continue stopped it since
-			said := s.Said
-			if said == "" {
-				said = gitSaid(rerr)
-			}
-			return stopped(o, res, StopGitError, nil, said), nil
+	}
+	return afterClean(o, path, onto, oldBase, oldHead, res)
+}
+
+// resume continues the rebase of the story's branch found waiting in its
+// worktree at path once the agent resolved and staged its stop, and settles
+// it as Rebase settles its own (ADR-0294). A stop not resolved, a rebase not
+// the branch's own, or one whose state lacks onto or orig-head is refused,
+// touching nothing, naming the paths or what is wrong.
+func resume(o SyncOptions, path string, res SyncResult) (SyncResult, error) {
+	w, err := readWaitingRebase(o.Runner, path, res.Branch)
+	if err != nil {
+		res = stopped(o, res, StopRebaseInProgress, Conflicts(o.Runner, path), "")
+		res.Continue = fmt.Sprintf("in %s, %s, so the sync cannot continue it: run git rebase --abort there, then run %s again to rebase afresh", res.Worktree, err, again(o))
+		return res, nil
+	}
+	unresolved, err := unresolvedPaths(o.Runner, path)
+	if err != nil {
+		return res, err
+	}
+	if len(unresolved) > 0 {
+		return stopped(o, res, StopRebaseInProgress, unresolved, ""), nil
+	}
+	// ADR-0155, ADR-0257: where the branch left main and its head, as they
+	// were when the rebase started
+	oldBase, err := o.Runner.Run(path, "git", "merge-base", w.onto, w.oldHead)
+	if err != nil {
+		o.Log.Warn("the branch's base not read, so what the rebase undoes of the main branch is not checked", "component", "git", "story", o.Story.ID, "err", err)
+		oldBase = ""
+	}
+	res.Resumed = true
+	o.Log.Info("rebase resolved by the agent continued", "component", "git", "story", o.Story.ID, "onto", w.onto)
+	if rerr := ContinueRebase(o.Runner, path); rerr != nil {
+		if waits, err := settleStops(o, path, rerr, &res); waits || err != nil {
+			return res, err
 		}
 	}
+	return afterClean(o, path, w.onto, oldBase, w.oldHead, res)
+}
+
+// settleStops settles, with continueOverGenerated, the rebase in the story's
+// worktree at path that stopped with rerr, git's error, and answers whether
+// it is left waiting for the agent, *res then saying why. An error is a
+// rebase git failed without stopping, or a continue that did.
+func settleStops(o SyncOptions, path string, rerr error, res *SyncResult) (waits bool, err error) {
+	if !RebaseInProgress(o.Runner, path) {
+		return false, rerr
+	}
+	s, err := continueOverGenerated(o, path, res)
+	if err != nil {
+		return false, err
+	}
+	switch {
+	case s.Waits && len(s.Conflicts) > 0:
+		*res = stopped(o, *res, StopConflicts, s.Conflicts, "")
+	case s.Waits:
+		// I-0272: nothing conflicts, so git's error is what stopped it, the
+		// rebase's own when no continue stopped it since
+		said := s.Said
+		if said == "" {
+			said = gitSaid(rerr)
+		}
+		*res = stopped(o, *res, StopGitError, nil, said)
+	}
+	return s.Waits, nil
+}
+
+// afterClean runs the steps after a clean rebase of the story's branch in its
+// worktree at path onto onto, the main branch's commit the rebase took, from
+// oldBase and oldHead, the branch's base and head before it, whether the sync
+// started the rebase or continued it (ADR-0294).
+func afterClean(o SyncOptions, path, onto, oldBase, oldHead string, res SyncResult) (SyncResult, error) {
 	res.Synced = true
 	// first, so that every step after it reads the generated files as the
 	// head's own files render them, and the fold finds them current
@@ -563,11 +733,13 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 // regenerateAtHead runs RegenerateAtHead in the story's worktree at path
 // once a rebase that wrote a generated file again at a stop finished, and
 // sets res.RegeneratedAtHead (ADR-0286). A rebase that wrote none at a stop
-// writes nothing. One that fails with nothing left to commit is logged and
-// the sync stands; files written but not committed are an error saying what
-// to commit.
+// writes nothing; one the sync continued may have, at a stop before the
+// agent's or in the agent's resolution, so it always writes them
+// (ADR-0294). One that fails with nothing left to commit is logged and the
+// sync stands; files written but not committed are an error saying what to
+// commit.
 func regenerateAtHead(o SyncOptions, path string, res *SyncResult) error {
-	if len(res.Regenerated) == 0 {
+	if len(res.Regenerated) == 0 && !res.Resumed {
 		return nil
 	}
 	id := o.Story.ID
@@ -845,7 +1017,8 @@ func again(o SyncOptions) string {
 
 // stopped is res with the rebase waiting in the worktree, why, its
 // conflicts, what git said when it stopped it with none (StopGitError), and
-// how to continue or abort it. Before it offers git rebase --abort it checks
+// how to continue or abort it: the sync run again continues a stop resolved
+// and staged (ADR-0294). Before it offers git rebase --abort it checks
 // that git can update the branch's ref, which the abort must to put the
 // branch back; when git cannot, the abort leaves HEAD detached, so Abort
 // names git symbolic-ref after it, and AbortUnsafe why (I-0272).
@@ -856,12 +1029,12 @@ func stopped(o SyncOptions, res SyncResult, why string, conflicts []string, said
 	}
 	switch {
 	case len(res.Conflicts) > 0:
-		res.Continue = fmt.Sprintf("in %s, resolve each conflicting path, git add it, and run git rebase --continue; then run %s again", res.Worktree, again(o))
+		res.Continue = fmt.Sprintf("in %s, resolve each conflicting path, git add it, then run %s again", res.Worktree, again(o))
 	case why == StopGitError:
 		res.RebaseError = said
-		res.Continue = fmt.Sprintf("in %s nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run %s again", res.Worktree, again(o))
+		res.Continue = fmt.Sprintf("in %s nothing conflicts, so there is nothing to resolve: once what git said is cleared, run %s again", res.Worktree, again(o))
 	default:
-		res.Continue = fmt.Sprintf("in %s, git add the resolved paths and run git rebase --continue; then run %s again", res.Worktree, again(o))
+		res.Continue = fmt.Sprintf("in %s, git add the resolved paths, then run %s again", res.Worktree, again(o))
 	}
 	res.Abort = fmt.Sprintf("in %s, run git rebase --abort, which puts %s back as it was before the sync", res.Worktree, res.Branch)
 	head, unsafe := branchUnmovable(o.Runner, o.Repo.WorktreePath(o.Story.ID), res.Branch)

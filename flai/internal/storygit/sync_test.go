@@ -317,7 +317,7 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	if res.Synced || res.Stopped != StopConflicts || !res.RebaseInProgress() || strings.Join(res.Conflicts, ",") != "docs/guide.md" || len(res.Uncommitted) != 0 {
 		t.Fatalf("result: %+v", res)
 	}
-	if want := "in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, and run git rebase --continue; then run flai stream sync S-0001 again"; res.Continue != want {
+	if want := "in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, then run flai stream sync S-0001 again"; res.Continue != want {
 		t.Errorf("continue: %q", res.Continue)
 	}
 	if want := "in .flai-cache/worktrees/S-0001, run git rebase --abort, which puts story/S-0001 back as it was before the sync"; res.Abort != want {
@@ -349,6 +349,250 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, stop) {
 		t.Errorf("conflict log after the refused sync: %+v, want %+v", got, stop)
 	}
+}
+
+// The issue file and the summary I-0351's stops were on, as this package's
+// tests stand them in for the issues package's, which imports it.
+const (
+	issueFile   = "design/issues/I-0001-a-friction.md"
+	issuesIndex = "design/issues/summary.md"
+)
+
+// issueFiles is what a sync resolves itself in the worktree wt in I-0351's
+// case: an issue file merged by its instances, each a line beginning "- ",
+// ours and then those of theirs ours lacks, and the summary written from the
+// issue files, each with its instances.
+func issueFiles(t *testing.T, wt string) Files {
+	t.Helper()
+	isIssue := func(p string) bool { return strings.HasPrefix(p, "design/issues/I-") }
+	summary := GeneratedFile{Path: issuesIndex, From: isIssue, Regenerate: func() error {
+		dir := filepath.Join(wt, "design", "issues")
+		names, err := filepath.Glob(filepath.Join(dir, "I-*.md"))
+		if err != nil {
+			return err
+		}
+		var b strings.Builder
+		for _, n := range names {
+			data, err := os.ReadFile(n)
+			if err != nil {
+				return err
+			}
+			var instances []string
+			for _, l := range strings.Split(string(data), "\n") {
+				if i, ok := strings.CutPrefix(l, "- "); ok {
+					instances = append(instances, i)
+				}
+			}
+			fmt.Fprintf(&b, "%s: %s\n", filepath.Base(n), strings.Join(instances, ", "))
+		}
+		return os.WriteFile(filepath.Join(dir, "summary.md"), []byte(b.String()), 0o644)
+	}}
+	return Files{Generated: []GeneratedFile{summary}, Merged: MergedFiles{Match: isIssue, Merge: func(p string) error {
+		_, ours, theirs, err := Stages(execx.System{}, wt, p)
+		if err != nil {
+			return err
+		}
+		merged := ours
+		for _, l := range strings.SplitAfter(theirs, "\n") {
+			if strings.HasPrefix(l, "- ") && !strings.Contains(ours, l) {
+				merged += l
+			}
+		}
+		return os.WriteFile(filepath.Join(wt, filepath.FromSlash(p)), []byte(merged), 0o644)
+	}}}
+}
+
+// i0351 is I-0351's case, stopped: main and the branch both change the same
+// line of docs/tool.txt, which no merge of flai's settles, in the branch's
+// first commit, and both add an instance to one issue file, and so change
+// the summary, in its second. The first sync stops on docs/tool.txt alone,
+// and the second commit waits behind it.
+func i0351(t *testing.T) (*workitem.Repo, string, SyncOptions) {
+	t.Helper()
+	repo := syncProject(t)
+	r := repo.MainRoot
+	commitFiles(t, r, "docs: base", "docs/tool.txt", issueFile, issuesIndex)
+	write(t, r, issueFile, md("# I-0001 A friction", "", "- base"))
+	write(t, r, issuesIndex, "I-0001-a-friction.md: base\n")
+	git(t, r, "commit", "-q", "-am", "docs: the issue")
+	story, wt := openStory(t, repo, "S-0001", "docs", "design")
+	write(t, wt, "docs/tool.txt", "the branch's tool\n")
+	git(t, wt, "commit", "-q", "-am", "feat: [S-0001] the branch's tool")
+	write(t, wt, issueFile, md("# I-0001 A friction", "", "- base", "- branch"))
+	write(t, wt, issuesIndex, "I-0001-a-friction.md: base, branch\n")
+	git(t, wt, "commit", "-q", "-am", "docs: [S-0001] an instance")
+	write(t, r, "docs/tool.txt", "main's tool\n")
+	write(t, r, issueFile, md("# I-0001 A friction", "", "- base", "- main"))
+	write(t, r, issuesIndex, "I-0001-a-friction.md: base, main\n")
+	git(t, r, "commit", "-q", "-am", "docs: main's tool and instance")
+	o := syncOptions(repo, story)
+	o.Files = issueFiles(t, wt)
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StopConflicts || res.Resumed || strings.Join(res.Conflicts, ",") != "docs/tool.txt" {
+		t.Fatalf("the first sync: %+v", res)
+	}
+	return repo, wt, o
+}
+
+// I-0351, ADR-0294: once the agent resolves and stages the stop the sync
+// left, the sync run again continues the rebase, merges the issue file and
+// writes the summary again at the later stop on them, as its own rebase
+// does, and finishes it, with no rebase left waiting and nothing to commit.
+// git diff --check's whitespace errors are no conflict marker.
+func TestSyncContinuesARebaseWhoseStopTheAgentResolvedAndSettlesTheStopsAfterIt(t *testing.T) {
+	repo, wt, o := i0351(t)
+	r := execx.System{}
+	write(t, wt, "docs/tool.txt", "main's and the branch's tool \n")
+	git(t, wt, "add", "docs/tool.txt")
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || !res.Resumed || res.Stopped != "" || len(res.Conflicts) != 0 {
+		t.Fatalf("the second sync: %+v", res)
+	}
+	if strings.Join(res.Merged, ",") != issueFile || strings.Join(res.Regenerated, ",") != issuesIndex {
+		t.Errorf("merged %v and regenerated %v, want %s and %s", res.Merged, res.Regenerated, issueFile, issuesIndex)
+	}
+	if RebaseInProgress(r, wt) {
+		t.Fatal("a rebase still waits")
+	}
+	if got, _ := r.Run(wt, "git", "show", "HEAD:"+issueFile); got+"\n" != md("# I-0001 A friction", "", "- base", "- main", "- branch") {
+		t.Errorf("the issue file is not merged by its instances:\n%s", got)
+	}
+	if got, _ := r.Run(wt, "git", "show", "HEAD:"+issuesIndex); got != "I-0001-a-friction.md: base, main, branch" {
+		t.Errorf("the summary is not written from the merged issue: %q", got)
+	}
+	if got, _ := r.Run(wt, "git", "log", "--format=%s", "main..HEAD"); got != "docs: [S-0001] an instance\nfeat: [S-0001] the branch's tool" {
+		t.Errorf("the branch's commits:\n%s", got)
+	}
+	if st, _ := Uncommitted(r, wt); len(st) != 0 {
+		t.Errorf("the worktree is not clean: %v", st)
+	}
+	// the stop the agent resolved is the first sync's line, and none is added
+	if got := conflictLog(t, repo.CacheDir()); len(got) != 1 {
+		t.Errorf("conflict log: %+v, want the first sync's stop alone", got)
+	}
+	if data, _ := json.Marshal(res); !strings.Contains(string(data), `"resumed":true`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// ADR-0294 §1: a sync run again on a stop the agent has not resolved and
+// staged, a path left unmerged, one staged with its conflict markers, or a
+// tracked file changed and not staged, is refused as before, touching
+// nothing, naming the path.
+func TestSyncRefusesAStopNotResolvedAndStagedNamingThePath(t *testing.T) {
+	_, wt, o := i0351(t)
+	r := execx.System{}
+	head, _ := r.Run(wt, "git", "rev-parse", "HEAD")
+	refused := func(what, path string) {
+		t.Helper()
+		res, err := Sync(o)
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		if res.Synced || res.Resumed || res.Stopped != StopRebaseInProgress || strings.Join(res.Conflicts, ",") != path || res.Abort == "" {
+			t.Fatalf("%s: %+v", what, res)
+		}
+		if want := "in .flai-cache/worktrees/S-0001, resolve each conflicting path, git add it, then run flai stream sync S-0001 again"; res.Continue != want {
+			t.Errorf("%s: continue %q, want %q", what, res.Continue, want)
+		}
+		if now, _ := r.Run(wt, "git", "rev-parse", "HEAD"); now != head || !RebaseInProgress(r, wt) {
+			t.Errorf("%s: the refused sync touched the rebase: HEAD %s, was %s", what, now, head)
+		}
+	}
+
+	refused("unmerged", "docs/tool.txt")
+	git(t, wt, "add", "docs/tool.txt")
+	refused("staged with its markers", "docs/tool.txt")
+	if got, _ := r.Run(wt, "git", "diff", "--cached", "--name-only"); got != "docs/tool.txt" {
+		t.Errorf("the refused sync changed what is staged: %q", got)
+	}
+	write(t, wt, "docs/tool.txt", "main's and the branch's tool\n")
+	git(t, wt, "add", "docs/tool.txt")
+	write(t, wt, "docs/guide.md", "changed and not staged\n")
+	refused("a tracked file not staged", "docs/guide.md")
+	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "guide.md")); string(got) != "changed and not staged\n" {
+		t.Errorf("the refused sync changed the unstaged file: %q", got)
+	}
+}
+
+// ADR-0294 §5: Rebase without Resume, as flai accept and the merge queue run
+// it, refuses a rebase in progress whose stop is resolved and staged,
+// touching nothing, and says to run the sync again; ResolvedStop finds it
+// resolved, and the unresolved stop's path before it.
+func TestRebaseAloneRefusesAResolvedStop(t *testing.T) {
+	_, wt, o := i0351(t)
+	r := execx.System{}
+	if got, err := ResolvedStop(r, wt, "story/S-0001"); err != nil || strings.Join(got, ",") != "docs/tool.txt" {
+		t.Errorf("ResolvedStop on the unmerged stop: %v %v", got, err)
+	}
+	write(t, wt, "docs/tool.txt", "main's and the branch's tool\n")
+	git(t, wt, "add", "docs/tool.txt")
+	if got, err := ResolvedStop(r, wt, "story/S-0001"); err != nil || len(got) != 0 {
+		t.Errorf("ResolvedStop on the resolved stop: %v %v", got, err)
+	}
+	head, _ := r.Run(wt, "git", "rev-parse", "HEAD")
+	o.Resume = false
+
+	res, err := Rebase(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Synced || res.Resumed || res.Stopped != StopRebaseInProgress || len(res.Conflicts) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if want := "in .flai-cache/worktrees/S-0001, git add the resolved paths, then run flai stream sync S-0001 again"; res.Continue != want {
+		t.Errorf("continue %q, want %q", res.Continue, want)
+	}
+	if now, _ := r.Run(wt, "git", "rev-parse", "HEAD"); now != head || !RebaseInProgress(r, wt) {
+		t.Errorf("the refused rebase touched the stop: HEAD %s, was %s", now, head)
+	}
+}
+
+// ADR-0294 §1, §3: a rebase waiting in the worktree that is not of the
+// story's branch, or whose state lacks orig-head, is refused, touching
+// nothing, naming git rebase --abort and a fresh sync.
+func TestSyncRefusesARebaseItCannotContinueAsTheBranchsOwn(t *testing.T) {
+	_, wt, o := i0351(t)
+	r := execx.System{}
+	write(t, wt, "docs/tool.txt", "main's and the branch's tool\n")
+	git(t, wt, "add", "docs/tool.txt")
+	state, ok := rebaseStateDir(r, wt)
+	if !ok {
+		t.Fatal("no rebase waits")
+	}
+	refused := func(what, why string) {
+		t.Helper()
+		res, err := Sync(o)
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		if res.Synced || res.Resumed || res.Stopped != StopRebaseInProgress || !RebaseInProgress(r, wt) {
+			t.Fatalf("%s: %+v", what, res)
+		}
+		want := "run git rebase --abort there, then run flai stream sync S-0001 again to rebase afresh"
+		if !strings.Contains(res.Continue, why) || !strings.HasSuffix(res.Continue, want) {
+			t.Errorf("%s: continue %q, want it to say %q and end %q", what, res.Continue, why, want)
+		}
+		if _, err := ResolvedStop(r, wt, "story/S-0001"); err == nil || !strings.Contains(err.Error(), why) {
+			t.Errorf("%s: ResolvedStop: %v, want %q", what, err, why)
+		}
+	}
+
+	write(t, state, "head-name", "refs/heads/another\n")
+	refused("another branch's", "the rebase waiting there is of refs/heads/another, not of story/S-0001")
+	write(t, state, "head-name", "refs/heads/story/S-0001\n")
+	if err := os.Remove(filepath.Join(state, "orig-head")); err != nil {
+		t.Fatal(err)
+	}
+	refused("no orig-head", "does not record the branch's head before it")
 }
 
 // readOnlyCommonDir makes the main checkout's .git read-only but for
@@ -397,7 +641,7 @@ func TestSyncOnAReadOnlyCommonDirStopsOnGitsErrorAndKeepsTheBranch(t *testing.T)
 	if !strings.Contains(res.RebaseError, "error: ") || !strings.Contains(strings.ToLower(res.RebaseError), "permission") {
 		t.Errorf("the stop should name git's own error: %q", res.RebaseError)
 	}
-	if want := "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run git rebase --continue there, then run flai stream sync S-0001 again"; res.Continue != want {
+	if want := "in .flai-cache/worktrees/S-0001 nothing conflicts, so there is nothing to resolve: once what git said is cleared, run flai stream sync S-0001 again"; res.Continue != want {
 		t.Errorf("continue: %q, want %q", res.Continue, want)
 	}
 	if !strings.Contains(res.AbortUnsafe, "refs/heads/story/S-0001") {
