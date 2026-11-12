@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -22,7 +24,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/mcphttp"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -46,14 +50,18 @@ const (
 )
 
 // mcpState is what a running server says about itself, rewritten while it
-// runs so that a file left by a killed process is known to be stale.
+// runs so that a file left by a killed process is known to be stale. Addr
+// and URL name its loopback listener when it has one, else its first, so
+// that a reader of one address finds it as before; Addrs is every address
+// it listens on, as bound.
 type mcpState struct {
-	PID     int    `json:"pid"`
-	Addr    string `json:"addr"`
-	URL     string `json:"url"`
-	Started string `json:"started"`
-	Updated string `json:"updated"`
-	Version string `json:"version"`
+	PID     int      `json:"pid"`
+	Addr    string   `json:"addr"`
+	URL     string   `json:"url"`
+	Addrs   []string `json:"addrs,omitempty"`
+	Started string   `json:"started"`
+	Updated string   `json:"updated"`
+	Version string   `json:"version"`
 	// ExitWith is the process it goes with (--exit-with), flai serve's when
 	// flai serve started it: a restart with a new token keeps it (S-0105).
 	ExitWith int `json:"exit_with,omitempty"`
@@ -133,6 +141,125 @@ func mcpURL(addr net.Addr) string {
 	return "http://" + net.JoinHostPort(host, port) + mcpPath
 }
 
+// samePort refuses addresses that are not host:port or whose ports differ:
+// the server listens on one port, at every address it is given.
+func samePort(addrs []string) error {
+	port := ""
+	for _, addr := range addrs {
+		_, p, err := net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("cannot listen on %s: %w; give each --addr as host:port, such as %s", addr, err, mcpDefaultAddr)
+		}
+		if port != "" && p != port {
+			return fmt.Errorf("the addresses %s name different ports (%s and %s): the server listens on one port at every address, so give each --addr the same port", strings.Join(addrs, ", "), port, p)
+		}
+		port = p
+	}
+	return nil
+}
+
+// primaryAddr is the address mcpState's Addr names among addrs: the first
+// loopback one, else the first.
+func primaryAddr(addrs []string) int {
+	if i := slices.IndexFunc(addrs, loopback); i >= 0 {
+		return i
+	}
+	return 0
+}
+
+// listenMCP listens on every address, on one port: with port 0 the first
+// listener picks it and the others listen on the same. A failure on any
+// address closes those opened and names the address.
+func listenMCP(addrs []string) ([]net.Listener, error) {
+	if len(addrs) == 0 {
+		return nil, errors.New("no address to listen on; give one with --addr")
+	}
+	if err := samePort(addrs); err != nil {
+		return nil, err
+	}
+	var lns []net.Listener
+	port := ""
+	for _, addr := range addrs {
+		if host, p, _ := net.SplitHostPort(addr); port != "" && p == "0" {
+			addr = net.JoinHostPort(host, port)
+		}
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			closeListeners(lns)
+			return nil, fmt.Errorf("cannot listen on %s: %w; another project's server may hold it, so choose another with --addr", addr, err)
+		}
+		lns = append(lns, ln)
+		if port == "" {
+			_, port, _ = net.SplitHostPort(ln.Addr().String())
+		}
+	}
+	return lns, nil
+}
+
+func closeListeners(lns []net.Listener) {
+	for _, ln := range lns {
+		_ = ln.Close()
+	}
+}
+
+// logReach says, for each address that is not loopback, whether it reaches
+// beyond this machine, warned about, or is a Docker network's gateway, where
+// only the host and its containers reach it. Docker is asked for the
+// gateways, from dir, only when some address is neither loopback nor
+// unspecified; when it cannot answer, every such address is warned about.
+func (a *app) logReach(log *slog.Logger, dir string, addrs []string) {
+	var gateways []string
+	for _, addr := range addrs {
+		if !loopback(addr) && !unspecified(addr) {
+			gateways = a.containerGateways(log, dir)
+			break
+		}
+	}
+	for _, addr := range addrs {
+		switch {
+		case loopback(addr):
+		case !unspecified(addr) && isGateway(addr, gateways):
+			log.Info("listening on a container network's gateway: the host and its containers reach it", "addr", addr)
+		default:
+			log.Warn("listening beyond this machine: the token travels in every request and flai does not encrypt it, so put a proxy or tunnel that terminates TLS in front", "addr", addr)
+		}
+	}
+}
+
+// containerGateways is every Docker network's gateway, as the container
+// harness's docker client names them; none, logged at debug, when it cannot.
+func (a *app) containerGateways(log *slog.Logger, dir string) []string {
+	program := a.harnessHost(config.AgentStart{}, harness.Container).Program
+	if cfg, _, err := a.loadConfig(); err == nil {
+		program = a.harnessHost(cfg.Agent, harness.Container).Program
+	} else {
+		log.Debug("could not read the config for the container harness's docker client", "program", program, "err", err.Error())
+	}
+	gateways, err := serve.ContainerGateways(a.runner, dir, program)
+	if err != nil {
+		log.Debug("could not ask docker for its networks' gateways", "program", program, "err", err.Error())
+	}
+	return gateways
+}
+
+func unspecified(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return host == "" || ip != nil && ip.IsUnspecified()
+}
+
+func isGateway(addr string, gateways []string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	ip := net.ParseIP(host)
+	if err != nil || ip == nil {
+		return false
+	}
+	return slices.ContainsFunc(gateways, func(g string) bool { return ip.Equal(net.ParseIP(g)) })
+}
+
 // mcpHTTPOptions are the options of the server an agent reaches over HTTP:
 // permission_prompt holds a write at most mcpserver.HTTPPermissionHold, below
 // the 60 seconds after which Claude Code drops a call there (ADR-0215), and
@@ -176,8 +303,9 @@ func (a *app) mcpHTTPRole(root, agent string) string {
 	return ""
 }
 
-// serveMCPHTTP runs the server until ctx ends.
-func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string, maxSessions int, idle time.Duration, exitWith int) error {
+// serveMCPHTTP runs the server on every address in addrs, one port, until
+// ctx ends.
+func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addrs []string, maxSessions int, idle time.Duration, exitWith int) error {
 	if st, alive := readMCPState(repo, time.Now()); alive {
 		return fmt.Errorf("flai mcp is already serving this project at %s (pid %d); flai mcp stop ends it", st.URL, st.PID)
 	}
@@ -186,13 +314,16 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		return err
 	}
 	log := a.logger().With("component", "mcp")
-	ln, err := net.Listen("tcp", addr)
+	lns, err := listenMCP(addrs)
 	if err != nil {
-		return fmt.Errorf("cannot listen on %s: %w; another project's server may hold it, so choose another with --addr", addr, err)
+		return err
 	}
-	if !loopback(addr) {
-		log.Warn("listening beyond this machine: the token travels in every request and flai does not encrypt it, so put a proxy or tunnel that terminates TLS in front", "addr", addr)
+	bound := make([]string, len(lns))
+	for i, ln := range lns {
+		bound[i] = ln.Addr().String()
 	}
+	a.logReach(log, repo.MainRoot, bound)
+	primary := lns[primaryAddr(bound)]
 	closing := make(chan struct{})
 	installed := a.mcpInstalled()
 	handler := mcphttp.Handler(mcphttp.Options{
@@ -214,26 +345,29 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 	// mcpserver.HTTPLongestWait (ADR-0244).
 	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
-	st := mcpState{PID: os.Getpid(), Addr: ln.Addr().String(), URL: mcpURL(ln.Addr()), Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version, ExitWith: exitWith}
+	st := mcpState{PID: os.Getpid(), Addr: primary.Addr().String(), URL: mcpURL(primary.Addr()), Addrs: bound, Started: time.Now().UTC().Format(time.RFC3339), Version: buildinfo.Version, ExitWith: exitWith}
 	beat := func() error {
 		st.Updated = time.Now().UTC().Format(time.RFC3339)
 		return writeMCPState(repo, st)
 	}
 	if err := beat(); err != nil {
-		_ = ln.Close()
+		closeListeners(lns)
 		return err
 	}
 	defer func() { _ = os.Remove(mcpFile(repo, mcpStateFile)) }()
-	log.Info("mcp server started", "url", st.URL, "root", repo.Root, "project", repo.Manifest.Key)
+	log.Info("mcp server started", "url", st.URL, "addrs", bound, "root", repo.Root, "project", repo.Manifest.Key)
 	fmt.Fprintf(a.errOut, "flai mcp serving %s at %s\n  token: %s (flai mcp token prints it)\n", repo.Manifest.Name, st.URL, mcpFile(repo, mcpTokenFile))
 
-	failed := make(chan error, 1)
-	go func() { failed <- srv.Serve(ln) }()
+	failed := make(chan error, len(lns))
+	for _, ln := range lns {
+		go func() { failed <- srv.Serve(ln) }()
+	}
 	tick := time.NewTicker(mcpStateEvery)
 	defer tick.Stop()
 	for {
 		select {
 		case err := <-failed:
+			_ = srv.Close() // the other listeners with it
 			return err
 		case <-tick.C:
 			if err := beat(); err != nil {
@@ -326,24 +460,25 @@ func mcpClientConfig(url string) string {
 }
 
 func newMCPHTTPCmds(a *app) []*cobra.Command {
-	var addr string
+	var addrs []string
 	var maxSessions int
 	var idle time.Duration
 	var exitWith int
 	flags := func(c *cobra.Command) {
-		c.Flags().StringVar(&addr, "addr", "", "address to listen on (default the last one used here, else "+mcpDefaultAddr+")")
+		c.Flags().StringArrayVar(&addrs, "addr", nil, "address to listen on, repeatable, every one on the same port (default the last one used here, else "+mcpDefaultAddr+")")
 		c.Flags().IntVar(&maxSessions, "max-sessions", 16, "MCP sessions at once")
 		c.Flags().DurationVar(&idle, "idle", 30*time.Minute, "a session with no request for this long ends")
 	}
-	// The address sticks, so an agent's configuration keeps working across restarts.
-	resolve := func(repo *workitem.Repo) string {
-		if addr != "" {
-			return addr
+	// The address sticks, so an agent's configuration keeps working across
+	// restarts: the one mcpState's Addr names, when several are given.
+	resolve := func(repo *workitem.Repo) ([]string, error) {
+		if len(addrs) > 0 {
+			return addrs, samePort(addrs)
 		}
 		if data, err := os.ReadFile(mcpFile(repo, mcpAddrFile)); err == nil && strings.TrimSpace(string(data)) != "" {
-			return strings.TrimSpace(string(data))
+			return []string{strings.TrimSpace(string(data))}, nil
 		}
-		return mcpDefaultAddr
+		return []string{mcpDefaultAddr}, nil
 	}
 	remember := func(repo *workitem.Repo, addr string) {
 		_ = os.MkdirAll(repo.CacheDir(), 0o700)
@@ -355,7 +490,10 @@ func newMCPHTTPCmds(a *app) []*cobra.Command {
 		Short: "Serve MCP over Streamable HTTP in the foreground, on this machine only unless --addr says otherwise",
 		Long: `The same server as flai mcp, over HTTP at /mcp, for agents that cannot start
 a process here (ADR-0030). It listens on ` + mcpDefaultAddr + ` unless --addr says
-otherwise, and that address is remembered for this project. Every request
+otherwise. --addr may be given more than once, every address on the same port,
+such as loopback for clients here and a Docker network's gateway for agents in
+containers; the loopback one (else the first) is remembered for this project
+and named as the server's URL. Every request
 carries the token in .flai-cache/mcp.token as a bearer header; a request from
 a browser (one with an Origin header) is refused. The token is the gate,
 whatever Host a request names, so an agent in a container may dial
@@ -363,7 +501,8 @@ host.docker.internal (ADR-0216). The agent is named by the X-Flai-Agent
 header, else by the client's own name.
 
 An address beyond this machine is allowed and warned about: the token travels
-in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
+in every request, and TLS is a proxy's or a tunnel's job, not flai's. A Docker
+network's gateway, which only the host and its containers reach, is not.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			repo, err := a.httpMCPProject()
@@ -375,8 +514,11 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 			if exitWith > 0 {
 				ctx = exitWithProcess(ctx, exitWith)
 			}
-			listen := resolve(repo)
-			remember(repo, listen)
+			listen, err := resolve(repo)
+			if err != nil {
+				return err
+			}
+			remember(repo, listen[primaryAddr(listen)])
 			return a.serveMCPHTTP(ctx, repo, listen, maxSessions, idle, exitWith)
 		},
 	}
@@ -398,8 +540,11 @@ in every request, and TLS is a proxy's or a tunnel's job, not flai's.`,
 			st, alive := readMCPState(repo, time.Now())
 			started := false
 			if !alive {
-				listen := resolve(repo)
-				args := []string{"mcp", "http", "--addr", listen, "--max-sessions", fmt.Sprint(maxSessions), "--idle", idle.String()}
+				listen, err := resolve(repo)
+				if err != nil {
+					return err
+				}
+				args := append(addrArgs(listen), "--max-sessions", fmt.Sprint(maxSessions), "--idle", idle.String())
 				if a.configPath != "" {
 					args = append(args, "--config", a.configPath)
 				}
@@ -567,17 +712,35 @@ func (a *app) awaitMCPRestart(repo *workitem.Repo, pid int) error {
 	return fmt.Errorf("flai host did not start the MCP server again; flai host status says why")
 }
 
+// listening is every address the server st was listens on: Addrs, or, in a
+// state written before S-0732, Addr alone.
+func (st mcpState) listening() []string {
+	if len(st.Addrs) == 0 {
+		return []string{st.Addr}
+	}
+	return st.Addrs
+}
+
 // restartArgs start again, with a new token, the server that st was. One
 // flai serve started goes on going with it, so that it stays flai serve's
 // to supervise and to stop (S-0105: a rotation from the dashboard left one
 // running after flai serve had gone).
 func restartArgs(st mcpState, configPath string) []string {
-	args := []string{"mcp", "http", "--addr", st.Addr}
+	args := addrArgs(st.listening())
 	if st.ExitWith > 0 && serve.Alive(st.ExitWith) {
 		args = append(args, "--exit-with", strconv.Itoa(st.ExitWith))
 	}
 	if configPath != "" {
 		args = append(args, "--config", configPath)
+	}
+	return args
+}
+
+// addrArgs start flai mcp http on every address in addrs.
+func addrArgs(addrs []string) []string {
+	args := []string{"mcp", "http"}
+	for _, addr := range addrs {
+		args = append(args, "--addr", addr)
 	}
 	return args
 }

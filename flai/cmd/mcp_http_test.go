@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -639,5 +643,298 @@ func TestMCPOverHTTPKnowsTheOrchestratorByFlaiServesRun(t *testing.T) {
 	<-waited
 	if a.mcpHTTPRole("/p", "orchestrator") != "" {
 		t.Error("once the process flai serve started has gone, its name is no longer the orchestrator")
+	}
+}
+
+// needSecondLoopback skips t where 127.0.0.2, loopback on Linux, cannot be
+// listened on, as on macOS without an alias.
+func needSecondLoopback(t *testing.T) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.2:0")
+	if err != nil {
+		t.Skipf("127.0.0.2 cannot be listened on here: %v", err)
+	}
+	_ = ln.Close()
+}
+
+// gatewayDocker answers docker network ls and network inspect as an engine
+// whose networks have gateways, or fails every call; it records each call.
+type gatewayDocker struct {
+	networks, gateways string
+	fail               bool
+	calls              []string
+}
+
+func (d *gatewayDocker) Run(_, name string, args ...string) (string, error) {
+	d.calls = append(d.calls, name+" "+strings.Join(args, " "))
+	if d.fail {
+		return "Cannot connect to the Docker daemon", errors.New("exit status 1")
+	}
+	if len(args) > 1 && args[0] == "network" && args[1] == "ls" {
+		return d.networks, nil
+	}
+	if len(args) > 1 && args[0] == "network" && args[1] == "inspect" {
+		return d.gateways, nil
+	}
+	return "", fmt.Errorf("gatewayDocker does not answer %s %s", name, strings.Join(args, " "))
+}
+
+func (d *gatewayDocker) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return d.Run(dir, name, args...)
+}
+
+func (d *gatewayDocker) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
+
+// S-0732: flai mcp http listens on every --addr, on one port, so that a
+// client here reaches it on loopback and an agent in a container on its
+// network's gateway. Every address answers, the state records them all as
+// bound, and addr and url name the loopback one, as older readers expect.
+func TestMCPOverHTTPListensOnEveryAddress(t *testing.T) {
+	t.Parallel()
+	needSecondLoopback(t)
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _, err := mcpToken(repo, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	docker := &gatewayDocker{}
+	var out, errOut bytes.Buffer
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: root, runner: docker}
+	server := newRootCmdWith(a)
+	server.SetArgs([]string{"mcp", "http", "--addr", "127.0.0.1:0", "--addr", "127.0.0.2:0"})
+	served := make(chan error, 1)
+	go func() { served <- server.ExecuteContext(ctx) }()
+	var st mcpState
+	for alive := false; !alive; {
+		select {
+		case err := <-served:
+			t.Fatalf("the server stopped: %v %s", err, errOut.String())
+		case <-ctx.Done():
+			t.Fatal("the server never said it was up")
+		case <-time.After(20 * time.Millisecond):
+		}
+		st, alive = readMCPState(repo, time.Now())
+	}
+
+	if len(st.Addrs) != 2 {
+		t.Fatalf("the state records both addresses as bound: %+v", st)
+	}
+	host0, port0, _ := net.SplitHostPort(st.Addrs[0])
+	host1, port1, _ := net.SplitHostPort(st.Addrs[1])
+	if host0 != "127.0.0.1" || host1 != "127.0.0.2" || port0 != port1 || port0 == "0" {
+		t.Errorf("both addresses on one port the first listener picked: %v", st.Addrs)
+	}
+	if st.Addr != st.Addrs[0] || st.URL != "http://"+st.Addrs[0]+"/mcp" {
+		t.Errorf("addr and url name the first loopback listener: %+v", st)
+	}
+	if data, _ := os.ReadFile(filepath.Join(root, ".flai-cache", "mcp-http.addr")); strings.TrimSpace(string(data)) != "127.0.0.1:0" {
+		t.Errorf("the remembered address is the one addr names: %q", data)
+	}
+	if len(docker.calls) != 0 {
+		t.Errorf("docker is not asked for gateways when every address is loopback: %v", docker.calls)
+	}
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+	for _, addr := range st.Addrs {
+		url := "http://" + addr + "/mcp"
+		res, err := http.Get(url)
+		if err != nil {
+			t.Fatalf("%s: %v", addr, err)
+		}
+		_ = res.Body.Close()
+		if res.StatusCode != http.StatusUnauthorized || res.Header.Get("X-Flai-Project-Key") != "t" {
+			t.Errorf("%s answers a request without the token with 401: %d %v", addr, res.StatusCode, res.Header)
+		}
+		cs, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: url, HTTPClient: &http.Client{Transport: mcpBearer{token, "both"}}, DisableStandaloneSSE: true}, &mcp.ClientSessionOptions{ProtocolVersion: "2025-11-25"})
+		if err != nil {
+			t.Fatalf("connect at %s: %v", addr, err)
+		}
+		if tools := mcpToolDescriptions(ctx, t, cs); len(tools) == 0 {
+			t.Errorf("%s serves no tools", addr)
+		}
+		_ = cs.Close()
+	}
+
+	cancel()
+	select {
+	case err := <-served:
+		if err != nil {
+			t.Errorf("a stop is not a failure: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the server did not stop")
+	}
+	for _, addr := range st.Addrs {
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			t.Errorf("a stop closes every listener, but %s is still held: %v", addr, err)
+			continue
+		}
+		_ = ln.Close()
+	}
+}
+
+// S-0732: a listen failure on any address closes those already opened and
+// names the address that failed.
+func TestMCPListenFailureClosesWhatItOpened(t *testing.T) {
+	t.Parallel()
+	needSecondLoopback(t)
+	held, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = held.Close() }()
+	_, port, _ := net.SplitHostPort(held.Addr().String())
+	first, taken := net.JoinHostPort("127.0.0.2", port), net.JoinHostPort("127.0.0.1", port)
+	lns, err := listenMCP([]string{first, taken})
+	if err == nil {
+		closeListeners(lns)
+		t.Fatal("a held address is a failure")
+	}
+	if !strings.Contains(err.Error(), taken) || !strings.Contains(err.Error(), "--addr") {
+		t.Errorf("the failure names the address and what to do: %v", err)
+	}
+	ln, err := net.Listen("tcp", first)
+	if err != nil {
+		t.Fatalf("the address opened before the failure is closed again: %v", err)
+	}
+	_ = ln.Close()
+}
+
+// S-0732: the server listens on one port, so addresses whose ports differ
+// are refused before anything listens or is remembered.
+func TestMCPOverHTTPRefusesAddressesOnDifferentPorts(t *testing.T) {
+	t.Parallel()
+	root := tempProject(t)
+	_, errOut, code := runIn(t, root, "mcp", "http", "--addr", "127.0.0.1:4243", "--addr", "127.0.0.2:4244")
+	if code == 0 || !strings.Contains(errOut, "different ports") || !strings.Contains(errOut, "same port") {
+		t.Errorf("addresses on different ports are refused, saying what to do: %d %s", code, errOut)
+	}
+	for _, name := range []string{"mcp-http.addr", "mcp-http.json"} {
+		if _, err := os.Stat(filepath.Join(root, ".flai-cache", name)); !os.IsNotExist(err) {
+			t.Errorf("a refused start leaves no %s: %v", name, err)
+		}
+	}
+	for _, c := range []struct {
+		addrs []string
+		ok    bool
+	}{
+		{[]string{"127.0.0.1:4243"}, true},
+		{[]string{"127.0.0.1:4243", "172.17.0.1:4243", "[::1]:4243"}, true},
+		{[]string{"127.0.0.1:0", "127.0.0.2:0"}, true},
+		{[]string{"127.0.0.1:0", "127.0.0.2:4243"}, false},
+		{[]string{"127.0.0.1"}, false},
+	} {
+		if err := samePort(c.addrs); (err == nil) != c.ok {
+			t.Errorf("samePort(%v) = %v, want ok %v", c.addrs, err, c.ok)
+		}
+	}
+}
+
+// reachLog is what logReach logs for addrs with docker, each line's level
+// and addr, at debug and above.
+func reachLog(t *testing.T, docker *gatewayDocker, addrs []string) (warned, gateways []string, debug int) {
+	t.Helper()
+	var buf bytes.Buffer
+	a := &app{configPath: configOf(t), out: &bytes.Buffer{}, errOut: &bytes.Buffer{}, runner: docker, log: slog.New(slog.NewJSONHandler(&bytes.Buffer{}, nil))}
+	log := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})).With("component", "mcp")
+	a.logReach(log, t.TempDir(), addrs)
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var e struct {
+			Level     string `json:"level"`
+			Component string `json:"component"`
+			Addr      string `json:"addr"`
+			Err       string `json:"err"`
+		}
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			t.Fatalf("not a JSON line: %s", line)
+		}
+		if e.Component != "mcp" {
+			t.Errorf("the line is not component mcp's: %s", line)
+		}
+		switch e.Level {
+		case "WARN":
+			warned = append(warned, e.Addr)
+		case "INFO":
+			gateways = append(gateways, e.Addr)
+		case "DEBUG":
+			if e.Err != "" {
+				debug++
+			}
+		}
+	}
+	return warned, gateways, debug
+}
+
+// S-0732: the warning for listening beyond this machine is logged for each
+// address that is neither loopback nor a Docker network's gateway, and a
+// gateway gets an info line instead; docker is asked only when an address
+// could be a gateway, and when it cannot answer, every such address is
+// warned about and why is logged at debug.
+func TestMCPWarnsOnlyBeyondLoopbackAndTheContainerGateways(t *testing.T) {
+	t.Parallel()
+	answers := func() *gatewayDocker {
+		return &gatewayDocker{networks: "bridge\nflai\nhost\n", gateways: "172.17.0.1 \n172.18.0.1 \n\n"}
+	}
+	docker := answers()
+	warned, gateways, _ := reachLog(t, docker, []string{"127.0.0.1:4243", "172.17.0.1:4243", "203.0.113.7:4243", "[::]:4243", "172.18.0.1:4243"})
+	if !slices.Equal(warned, []string{"203.0.113.7:4243", "[::]:4243"}) {
+		t.Errorf("warned of %v, want the address beyond this machine and the unspecified one", warned)
+	}
+	if !slices.Equal(gateways, []string{"172.17.0.1:4243", "172.18.0.1:4243"}) {
+		t.Errorf("the gateways get an info line: %v", gateways)
+	}
+	if len(docker.calls) == 0 || !strings.HasPrefix(docker.calls[0], "docker network ls") {
+		t.Errorf("the container harness's docker client is asked for the networks: %v", docker.calls)
+	}
+
+	for _, addrs := range [][]string{{"127.0.0.1:4243", "[::1]:4243", "localhost:4243"}, {"127.0.0.1:4243", "0.0.0.0:4243"}} {
+		docker := answers()
+		warned, _, _ := reachLog(t, docker, addrs)
+		if len(docker.calls) != 0 {
+			t.Errorf("for %v no address could be a gateway, yet docker was asked: %v", addrs, docker.calls)
+		}
+		if want := slices.DeleteFunc(slices.Clone(addrs), loopback); !slices.Equal(warned, want) {
+			t.Errorf("for %v warned of %v, want %v", addrs, warned, want)
+		}
+	}
+
+	down := &gatewayDocker{fail: true}
+	warned, gateways, debug := reachLog(t, down, []string{"127.0.0.1:4243", "172.17.0.1:4243"})
+	if !slices.Equal(warned, []string{"172.17.0.1:4243"}) || len(gateways) != 0 {
+		t.Errorf("when docker cannot answer, the address is warned about as before: warned %v, gateways %v", warned, gateways)
+	}
+	if debug == 0 {
+		t.Error("why docker could not answer is logged at debug")
+	}
+}
+
+// S-0732: a rotated server starts again on every address it listened on,
+// and one whose state predates Addrs on its one Addr; the address the state
+// names is the loopback one.
+func TestARotatedServerListensOnEveryAddressAgain(t *testing.T) {
+	t.Parallel()
+	st := mcpState{Addr: "127.0.0.1:4247", Addrs: []string{"172.17.0.1:4247", "127.0.0.1:4247"}}
+	if got := strings.Join(restartArgs(st, ""), " "); got != "mcp http --addr 172.17.0.1:4247 --addr 127.0.0.1:4247" {
+		t.Errorf("several: %s", got)
+	}
+	st.Addrs = nil
+	if got := strings.Join(restartArgs(st, ""), " "); got != "mcp http --addr 127.0.0.1:4247" {
+		t.Errorf("an older state's one address: %s", got)
+	}
+	if got := primaryAddr([]string{"172.17.0.1:4247", "127.0.0.1:4247"}); got != 1 {
+		t.Errorf("the state names the loopback address, not the first: %d", got)
+	}
+	if got := primaryAddr([]string{"172.17.0.1:4247", "203.0.113.7:4247"}); got != 0 {
+		t.Errorf("with no loopback address, the first: %d", got)
 	}
 }
