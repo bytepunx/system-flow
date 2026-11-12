@@ -6,6 +6,7 @@ date: 2026-11-12
 supersedes: []
 superseded_by: []
 refines: [ADR-0254]
+topics: [kluster, deployment, manifest]
 ---
 
 # ADR-0292 A story's agent asks flai serve to deploy, check, and tear down its own story's kluster namespace while the story is in progress, through MCP tools and --job flags behind the kluster host action, and waits for a kluster event; the namespace lives from its first deploy until acceptance or cancellation, kluster.agent_namespaces bounds how many stories in progress hold one, and the namespace's record at the story's head is what the move to review, the close-out, and an acceptance read
