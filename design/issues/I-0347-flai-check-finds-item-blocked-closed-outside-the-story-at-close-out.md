@@ -2,11 +2,11 @@
 id: I-0347
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 34
 first_reported: 2026-11-11T07:11:49Z
 last_reported: 2026-11-12T16:35:12Z
-updated: 2026-11-12T16:35:12Z
+updated: 2026-11-12T17:06:25Z
 ---
 
 # I-0347 flai check finds `item.blocked-closed` outside the story at close-out
@@ -189,3 +189,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0723 remediates this issue, created from it at 2026-11-11T07:23:14Z.
+Closed 2026-11-12T17:06:25Z: S-0723: Repo.Move now closes an open blocked interval on a move to done or cancelled and warns (T-3141), so no item closes blocked again; flai unblock on a closed item, archived ones included, closes an interval left open at the item's close, and item.blocked-closed names it (T-3142). Every instance named the archived S-0678; it clears once the operator runs flai unblock S-0678 in the main checkout with a flai that has S-0723.
