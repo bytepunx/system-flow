@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 186
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 258
-      cache_read: 1616339
-      cache_write: 84809
-      cost: 0.6319
+      input: 29
+      output: 8669
+      cache_read: 1660209
+      cache_write: 74597
+      cost: 0.9375
 ---
 # T-3048 Record in an ADR that the operator's outside folders reach a story's agent and its sub-agents as --add-dir and container mounts, and that Monitor joins the default tools
 

@@ -3,16 +3,37 @@ id: T-3063
 type: task
 nature: improvement
 title: The container harness mounts each outside folder at its own path and carries them to pilot, refusing what mountable refuses
-status: backlog
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:37Z
-updated: 2026-11-10T10:35:37Z
-transitions: []
+updated: 2026-11-12T00:21:11Z
+transitions:
+  - to: ready
+    at: 2026-11-12T00:05:46Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-12T00:05:46Z
+    by: agent-S-0701
+  - to: done
+    at: 2026-11-12T00:21:11Z
+    by: agent-S-0701
 stream: S-0701
 tags: [harness, docker]
 touches: [flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go]
 after: [T-3059]
+usage:
+  source: log
+  seconds: 925
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 12133
+      cache_read: 2323658
+      cache_write: 104408
+      cost: 1.3121
 ---
 # T-3063 The container harness mounts each outside folder at its own path and carries them to pilot, refusing what mountable refuses
 

@@ -3,10 +3,10 @@ id: S-0701
 type: story
 nature: improvement
 title: A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-11T23:35:32Z
+updated: 2026-11-12T00:41:03Z
 transitions:
   - to: ready
     at: 2026-11-11T23:05:09Z
@@ -14,8 +14,11 @@ transitions:
   - to: in-progress
     at: 2026-11-11T23:05:21Z
     by: agent-S-0701
+  - to: review
+    at: 2026-11-12T00:41:03Z
+    by: agent-S-0701
 tags: [harness, serve, docker]
-touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md, flai/cmd/serve_settings.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go]
+touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md, flai/cmd/serve_settings.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, design/system/flai-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,30 +26,32 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1812
-  estimated: true
-  priced_by: estimate
+  seconds: 5762
+  priced_by: harness
   turns:
     - day: 2026-11-11
-      work: 34
+      work: 36
+    - day: 2026-11-12
+      ceremony: 2
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 176
-      output: 1086
-      cache_read: 9468420
-      cache_write: 512234
-      cost: 3.7071
+      input: 502
+      output: 148682
+      cache_read: 28475549
+      cache_write: 1279478
+      cost: 16.0797
   strategic:
     - kind: orchestrator
-      seconds: 64
+      seconds: 108
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 129
-          cache_read: 680430
-          cache_write: 73658
-          cost: 0.2116
+          input: 36
+          output: 212
+          cache_read: 1402399
+          cache_write: 157551
+          cost: 0.4399
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 26m
@@ -72,8 +77,8 @@ finalized:
 This story remediates [I-0265](../../../design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md), "A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0265 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0265 is closed with `flai issue close I-0265 --reason` saying what fixed it
+- [x] The cause I-0265 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0265 is closed with `flai issue close I-0265 --reason` saying what fixed it
 
 ## Tasks
 - T-3048 Record in an ADR that the operator's outside folders reach a story's agent and its sub-agents as --add-dir and container mounts, and that Monitor joins the default tools

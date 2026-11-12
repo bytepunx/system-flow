@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 246.5827
-accrued_seconds: 28529
-tasks_completed: 158
-last_run: 2026-11-11T23:41:46Z
+accrued_cost: 247.6569
+accrued_seconds: 28581
+tasks_completed: 159
+last_run: 2026-11-11T23:45:14Z
 ---
 
 # Curator activity
@@ -1275,3 +1275,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0550, D-0554, D-0597
 - Seconds: 117
 - Cost: 1.5214 USD, estimated
+
+### 2026-11-11T23:45:14Z
+
+- Summary: I found nothing to take in, so I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The only candidate since the last run, S-0728's decision that a formula instance's steps are worked in order by the story's agent and not by sub-agents, is already in `design/system/strategic-agents.md` § Working an instance (S-0422) and ADR-0239. The design, convention, and ADR files are unchanged since the last absorption pass, so the 219 active entries, D-0597 and D-0554 among them, stay active.
+- Trigger: accepted S-0728
+- Items: none
+- Seconds: 52
+- Cost: 1.0742 USD, estimated

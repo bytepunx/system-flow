@@ -3,11 +3,11 @@ id: T-3059
 type: task
 nature: improvement
 title: The claude-code adapter passes the start request's outside folders as --add-dir, and Monitor joins the default --allowedTools
-status: in-progress
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:24Z
-updated: 2026-11-11T23:36:01Z
+updated: 2026-11-12T00:05:29Z
 transitions:
   - to: ready
     at: 2026-11-11T23:36:01Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-11T23:36:01Z
     by: agent-S-0701
+  - to: done
+    at: 2026-11-12T00:05:29Z
+    by: agent-S-0701
 stream: S-0701
 tags: [harness, serve]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, docs/users/flai-reference.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, docs/users/flai-reference.md, flai/cmd/serve_actions_test.go]
 after: [T-3054]
+usage:
+  source: log
+  seconds: 1768
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 32081
+      cache_read: 6144183
+      cache_write: 276074
+      cost: 3.4695
 ---
 # T-3059 The claude-code adapter passes the start request's outside folders as --add-dir, and Monitor joins the default --allowedTools
 

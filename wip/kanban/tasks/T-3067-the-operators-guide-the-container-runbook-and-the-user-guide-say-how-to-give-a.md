@@ -3,16 +3,37 @@ id: T-3067
 type: task
 nature: improvement
 title: The operators guide, the container runbook, and the user guide say how to give a story's agent outside folders, and that Monitor is allowed
-status: backlog
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:51Z
-updated: 2026-11-10T10:35:51Z
-transitions: []
+updated: 2026-11-12T00:32:27Z
+transitions:
+  - to: ready
+    at: 2026-11-12T00:21:31Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-12T00:21:31Z
+    by: agent-S-0701
+  - to: done
+    at: 2026-11-12T00:32:27Z
+    by: agent-S-0701
 stream: S-0701
 tags: [docs]
-touches: [docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, docs/operators/settings.md]
+touches: [docs/operators/index.md, docs/operators/runbooks/agent-container.md, docs/users/flai.md, docs/operators/settings.md, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai-reference.md, flai/cmd/serve_harness.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-3063, T-3064]
+usage:
+  source: log
+  seconds: 656
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 23299
+      cache_read: 4462258
+      cache_write: 200500
+      cost: 2.5198
 ---
 # T-3067 The operators guide, the container runbook, and the user guide say how to give a story's agent outside folders, and that Monitor is allowed
 

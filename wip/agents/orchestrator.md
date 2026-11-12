@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2129.2658
-accrued_seconds: 1551360
-tasks_completed: 3087
-last_run: 2026-11-11T23:41:28Z
+accrued_cost: 2130.6297
+accrued_seconds: 1551629
+tasks_completed: 3097
+last_run: 2026-11-12T00:57:45Z
 ---
 
 # Orchestrator activity
@@ -21641,6 +21641,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1442 USD, estimated
+
+### 2026-11-11T23:44:21Z
+
+- Summary: Accepted S-0728, the publish formula's instance, at 45d9d08 (close-out re-run at head passed; verifier pass; T-3127, T-3128, T-3129 done with exit 0; it published flai 1.86.20 for S-0703)
+- Items: S-0728
+- Seconds: 82
+- Cost: 0.2892 USD, estimated
+
+### 2026-11-11T23:44:36Z
+
+- Summary: No publish after S-0728's acceptance: release_evaluate threshold not met (count 0 of 1, 0 of 1000 USD/week; nothing pending). Ready-empty: flai promote --candidates lists none; ready holds S-0681 alone (held, no touches), so no order change. Left complete drafts S-0709 and S-0683 (pending recommendations on TH-1014, TH-1044) and S-0241 (draft by design, TH-0790); incomplete drafts S-0659, S-0723, S-0725, S-0726 wait on planners, held back by TH-1083's missing image. No thread awaiting the operator is mine to answer.
+- Items: S-0728, S-0681, S-0709, S-0683, S-0241
+- Seconds: 15
+- Cost: 0.0497 USD, estimated
+
+### 2026-11-11T23:45:05Z
+
+- Summary: I accepted S-0728, the publish formula's instance, and published nothing more because nothing accepted is waiting for a release.
+- Items: none
+- Seconds: 29
+- Cost: 0.0663 USD, estimated
+
+### 2026-11-12T00:42:22Z
+
+- Summary: review:S-0701: last verify passed at 5eca74d, not the head of story/S-0701 (9a7f25d); asked flai serve for its close-out with verify, which started job S-0701-20261112T004158Z; left S-0701 in review for a later run to read the verdict and accept
+- Items: S-0701
+- Seconds: 44
+- Cost: 0.2283 USD, estimated
+
+### 2026-11-12T00:42:31Z
+
+- Summary: thread:TH-1085 (board starved, a flai serve notice, not mine to answer): nothing changed since last run. flai promote --candidates lists none (all held by S-0681's no-touches claim); left complete drafts S-0709 and S-0683 (pending recommendations on TH-1014, TH-1044) and S-0241 (draft by design, TH-0790); incomplete drafts S-0659, S-0723, S-0725, S-0726 wait on planners, which TH-1083's missing image flai-agent-sf-claude-code:local still holds back, so no plan retried
+- Items: S-0709, S-0683, S-0241, S-0659, S-0723, S-0725, S-0726, S-0681
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-11-12T00:42:51Z
+
+- Summary: I didn't accept S-0701 in this run, and the board is still starved. Neither can move until a verify job finishes and you clear a few things.
+- Items: none
+- Seconds: 20
+- Cost: 0.2044 USD, estimated
+
+### 2026-11-12T00:43:47Z
+
+- Summary: Left TH-1086 to the operator: it is a flai serve notice, which answer_threads excludes; upgrading the host's flai (flai host upgrade --version 1.86.20, once 1.86.20 is published) changes the host and is the operator's.
+- Items: TH-1086
+- Seconds: 13
+- Cost: 0.0648 USD, estimated
+
+### 2026-11-12T00:44:04Z
+
+- Summary: I didn't reply on TH-1086 and changed nothing. The thread is a notice from `flai serve`, and orchestrators don't answer those. The fix is a host upgrade, which only the operator can do.
+- Items: none
+- Seconds: 17
+- Cost: 0.1264 USD, estimated
+
+### 2026-11-12T00:57:25Z
+
+- Summary: S-0681 in review: last verify passed at 128d60512c3f, but story/S-0681's head is dfa6d3298d9e (close-out commit); asked flai serve for its close-out (job S-0681-20261112T005720Z) and left the story in review for a later run to read the verdict and accept
+- Items: S-0681
+- Seconds: 20
+- Cost: 0.1115 USD, estimated
+
+### 2026-11-12T00:57:45Z
+
+- Summary: I haven't accepted S-0681 yet: its new close-out is still running, and the story stays in review until it finishes.
+- Items: none
+- Seconds: 20
+- Cost: 0.2233 USD, estimated
 
 ## Refusals
 

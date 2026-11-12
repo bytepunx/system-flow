@@ -24,16 +24,16 @@ touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, f
 after: [T-3048]
 usage:
   source: log
-  seconds: 1527
+  seconds: 1531
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 668
-      cache_read: 6527847
-      cache_write: 226588
-      cost: 2.5088
+      input: 116
+      output: 34418
+      cache_read: 6591815
+      cache_write: 296187
+      cost: 3.7223
 ---
 # T-3054 flai serve agent harness takes --outside folders, checks and stores them with the harness's settings, and shows them
 

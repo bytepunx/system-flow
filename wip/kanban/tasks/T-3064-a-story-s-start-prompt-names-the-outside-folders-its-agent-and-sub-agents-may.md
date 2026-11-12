@@ -3,16 +3,37 @@ id: T-3064
 type: task
 nature: improvement
 title: A story's start prompt names the outside folders its agent and sub-agents may reach, and says every other outside path is refused
-status: backlog
+status: done
 parent: S-0701
 owner: alex
 created: 2026-11-10T10:35:42Z
-updated: 2026-11-10T10:35:42Z
-transitions: []
+updated: 2026-11-12T00:21:25Z
+transitions:
+  - to: ready
+    at: 2026-11-12T00:05:46Z
+    by: agent-S-0701
+  - to: in-progress
+    at: 2026-11-12T00:05:46Z
+    by: agent-S-0701
+  - to: done
+    at: 2026-11-12T00:21:25Z
+    by: agent-S-0701
 stream: S-0701
 tags: [harness]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-3059]
+usage:
+  source: log
+  seconds: 939
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 9261
+      cache_read: 1773622
+      cache_write: 79693
+      cost: 1.0015
 ---
 # T-3064 A story's start prompt names the outside folders its agent and sub-agents may reach, and says every other outside path is refused
 
