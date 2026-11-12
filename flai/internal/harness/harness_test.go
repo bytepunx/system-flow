@@ -1283,6 +1283,45 @@ func TestAnInstancesPromptSaysHowItsStepsAreWorked(t *testing.T) {
 	}
 }
 
+// S-0701, ADR-0289 §6, I-0265: a story's start prompt names the folders
+// outside the project the operator grants, after the work and before the
+// delegation, and says that every other outside path is refused Read, Grep,
+// Glob, Write, and Monitor, so that work there goes through Bash with its files
+// under bin/<story>/; the agent names the folders to a sub-agent beside the
+// worktree's path. With none granted, the refusal stands alone, and a
+// sub-agent is given the worktree's path only.
+func TestThePromptNamesTheOutsideFolders(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Outside = []string{"/srv/other", "/tmp/scratch"}
+	p := mustPrompt(t, r)
+	para := "\n\nThe operator grants you and your sub-agents these folders outside the project: `/srv/other`, `/tmp/scratch`. You and your sub-agents may read and write there. Read, Grep, Glob, Write, and Monitor are refused on any other path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
+	if !strings.Contains(p, "never by editing the narrative."+para+"\n\nKeep your own context for decisions and edits") {
+		t.Errorf("the prompt does not name the outside folders after the work and before the delegation:\n%s", p)
+	}
+	if w := "give it the worktree's path and the folders outside the project the operator grants, S-0104 and the task's ID,"; !strings.Contains(p, w) {
+		t.Errorf("prompt lacks %q:\n%s", w, p)
+	}
+
+	r.Outside = nil
+	none := mustPrompt(t, r)
+	refusal := "\n\nThe operator grants you and your sub-agents no folder outside the project. Read, Grep, Glob, Write, and Monitor are refused on any path outside the project. Do work on such a path yourself, not through a sub-agent. Do it with Bash, and keep the files it writes under the worktree's git-ignored bin/S-0104/."
+	if !strings.Contains(none, "never by editing the narrative."+refusal+"\n\nKeep your own context for decisions and edits") {
+		t.Errorf("the prompt with no outside folders does not say every outside path is refused:\n%s", none)
+	}
+	if strings.Contains(none, "`/srv/other`") || strings.Contains(none, "folders outside the project the operator grants") {
+		t.Errorf("the prompt with no outside folders names some:\n%s", none)
+	}
+	if w := "give it the worktree's path, S-0104 and the task's ID,"; !strings.Contains(none, w) {
+		t.Errorf("prompt lacks %q:\n%s", w, none)
+	}
+
+	in := r
+	in.Formula = "release"
+	if p := mustPrompt(t, in); !strings.Contains(p, "Invent no step, and change no step's words."+refusal+"\n\n") {
+		t.Errorf("an instance's prompt does not tell the outside folders after its paragraph:\n%s", p)
+	}
+}
+
 // S-0422, T-1776: the agent of a formula's instance started again on the
 // answer to its question is told, after the answer, that when it asked
 // because a step failed it unblocks that step's task, runs the step again as
