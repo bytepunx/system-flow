@@ -199,7 +199,7 @@ func (c *checker) oneItem(it *workitem.Item) {
 		}
 	}
 	if it.Closed() && it.IsBlocked() {
-		c.add(Warning, "item.blocked-closed", p, keyLine(p, "blocked"), "%s item still has an open blocked interval", it.Status)
+		c.add(Warning, "item.blocked-closed", p, keyLine(p, "blocked"), "%s item still has an open blocked interval; close it at the item's close with flai unblock %s", it.Status, it.ID)
 	}
 	for _, h := range requiredHeadings[it.Type] {
 		if !strings.Contains(it.Body, "\n"+h+"\n") && !strings.Contains(it.Body, "\n"+h+" ") {

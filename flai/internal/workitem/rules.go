@@ -222,17 +222,30 @@ func BlockItem(it *Item, reason string, now time.Time) error {
 	return nil
 }
 
-// UnblockItem closes the open interval.
+// UnblockItem closes the open interval: at now, or, on a done or cancelled
+// item, at the item's close, since it was not blocked after it (I-0347).
 func UnblockItem(it *Item, now time.Time) error {
 	for i := range it.Blocked {
 		if it.Blocked[i].Until == "" {
-			ts := now.UTC().Format(TimeFormat)
-			it.Blocked[i].Until = ts
-			it.Updated = ts
+			it.Blocked[i].Until = unblockAt(it, it.Blocked[i], now)
+			it.Updated = now.UTC().Format(TimeFormat)
 			return nil
 		}
 	}
 	return fmt.Errorf("%s is not blocked", it.ID)
+}
+
+// unblockAt is when UnblockItem closes the open interval b of it: now, or
+// the close of a done or cancelled item, never before the interval began.
+func unblockAt(it *Item, b Block, now time.Time) string {
+	at := now.UTC()
+	if closed := it.CompletedAt(); !closed.IsZero() {
+		at = closed.UTC()
+		if from, err := time.Parse(TimeFormat, b.From); err == nil && from.After(at) {
+			at = from.UTC()
+		}
+	}
+	return at.Format(TimeFormat)
 }
 
 var (

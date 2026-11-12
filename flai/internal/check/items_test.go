@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -202,5 +203,37 @@ func TestRunReportsAnItemFileThatDoesNotParseOnceAndChecksTheRest(t *testing.T) 
 	}
 	if res.Errors != errs || res.Warnings != warns {
 		t.Errorf("counts %d errors, %d warnings; the findings give %d, %d", res.Errors, res.Warnings, errs, warns)
+	}
+}
+
+// I-0347: item.blocked-closed names the command that clears it, and once
+// flai unblock has closed the interval at the item's close it is not found.
+func TestBlockedClosedNamesFlaiUnblockAndUnblockClearsIt(t *testing.T) {
+	repo := overlapProject(t)
+	epic := mustItem(t, repo, workitem.Epic, "E", "")
+	s := mustItem(t, repo, workitem.Story, "S", epic.ID)
+	closedAt := now.Add(time.Hour).Format(workitem.TimeFormat)
+	s.Blocked = []workitem.Block{{From: now.Format(workitem.TimeFormat), Reason: "pause for urgent fix"}}
+	s.Transitions = append(s.Transitions, workitem.Transition{To: workitem.Cancelled, At: closedAt, By: "t"})
+	s.Status, s.Updated = workitem.Cancelled, closedAt
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	got := findings(t, repo, "item.blocked-closed")
+	want := "cancelled item still has an open blocked interval; close it at the item's close with flai unblock " + s.ID
+	if len(got) != 1 || got[0].Message != want {
+		t.Fatalf("item.blocked-closed = %+v, want one saying %q", got, want)
+	}
+	if err := workitem.UnblockItem(s, now.Add(48*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if s.Blocked[0].Until != closedAt {
+		t.Errorf("until = %q, want the item's close %q", s.Blocked[0].Until, closedAt)
+	}
+	if got := findings(t, repo, "item.blocked-closed"); len(got) != 0 {
+		t.Errorf("after flai unblock, still %+v", got)
 	}
 }

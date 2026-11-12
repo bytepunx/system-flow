@@ -147,6 +147,34 @@ func TestAClosingMoveOfAnUnblockedItemDoesNotWarnOfABlock(t *testing.T) {
 	}
 }
 
+// I-0347: an interval left open on a closed item, as S-0678's was, closes at
+// the item's close, not at now, and never before the interval began.
+func TestUnblockOnAClosedItemClosesAtItsClose(t *testing.T) {
+	closed := t0.Add(time.Hour)
+	for _, c := range []struct {
+		name, from, want string
+	}{
+		{"before the close", t0.Format(TimeFormat), closed.Format(TimeFormat)},
+		{"after the close", closed.Add(time.Minute).Format(TimeFormat), closed.Add(time.Minute).Format(TimeFormat)},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			it := &Item{ID: "S-0001", Status: Done,
+				Transitions: []Transition{{To: Review, At: t0.Format(TimeFormat)}, {To: Done, At: closed.Format(TimeFormat)}},
+				Blocked:     []Block{{From: c.from, Reason: "pause for urgent fix"}}}
+			later := t0.Add(48 * time.Hour)
+			if err := UnblockItem(it, later); err != nil {
+				t.Fatal(err)
+			}
+			if it.IsBlocked() || it.Blocked[0].Until != c.want {
+				t.Errorf("until = %q, want %q", it.Blocked[0].Until, c.want)
+			}
+			if it.Updated != later.Format(TimeFormat) {
+				t.Errorf("updated = %q, want the write's time", it.Updated)
+			}
+		})
+	}
+}
+
 func TestUncheckedCount(t *testing.T) {
 	for _, c := range []struct {
 		body string

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -206,6 +207,7 @@ func newUnblockCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unblock <id>",
 		Short: "Close the open blocked interval on an item",
+		Long:  "Close the open blocked interval on an item, at now. On a done or cancelled item, archived ones included, it closes an interval left open at the item's close (I-0347).",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -216,14 +218,20 @@ func newUnblockCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			open := slices.IndexFunc(it.Blocked, func(b workitem.Block) bool { return b.Until == "" })
 			if err := workitem.UnblockItem(it, a.now()); err != nil {
 				return err
 			}
 			if err := repo.Save(it); err != nil {
 				return err
 			}
+			until := it.Blocked[open].Until
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"id": it.ID, "blocked": false})
+				return a.printJSON(map[string]any{"id": it.ID, "blocked": false, "until": until})
+			}
+			if it.Closed() {
+				fmt.Fprintf(a.out, "%s unblocked at its close, %s\n", it.ID, until)
+				return nil
 			}
 			fmt.Fprintf(a.out, "%s unblocked\n", it.ID)
 			return nil

@@ -5725,6 +5725,8 @@ Close the open blocked interval on an item.
 flai unblock <id>
 ```
 
+Close the open blocked interval on an item, at now. On a done or cancelled item, archived ones included, it closes an interval left open at the item's close (I-0347).
+
 ### flai upgrade
 
 Bring this project to the latest template version.
