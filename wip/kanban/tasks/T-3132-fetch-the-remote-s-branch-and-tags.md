@@ -3,14 +3,35 @@ id: T-3132
 type: task
 nature: improvement
 title: Fetch the remote's branch and tags
-status: backlog
+status: done
 parent: S-0729
 owner: alex
 created: 2026-11-12T03:39:40Z
-updated: 2026-11-12T03:39:40Z
-transitions: []
+updated: 2026-11-12T03:40:54Z
+transitions:
+  - to: ready
+    at: 2026-11-12T03:40:35Z
+    by: agent-S-0729
+  - to: in-progress
+    at: 2026-11-12T03:40:35Z
+    by: agent-S-0729
+  - to: done
+    at: 2026-11-12T03:40:54Z
+    by: agent-S-0729
 stream: S-0729
 tags: []
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 63
+      cache_read: 625735
+      cache_write: 4480
+      cost: 0.2342
 ---
 # T-3132 Fetch the remote's branch and tags
 

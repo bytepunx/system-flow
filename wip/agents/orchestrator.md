@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2130.6297
-accrued_seconds: 1551629
-tasks_completed: 3097
-last_run: 2026-11-12T00:57:45Z
+accrued_cost: 2131.0996
+accrued_seconds: 1551733
+tasks_completed: 3101
+last_run: 2026-11-12T03:41:13Z
 ---
 
 # Orchestrator activity
@@ -21711,6 +21711,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2233 USD, estimated
+
+### 2026-11-12T03:39:47Z
+
+- Summary: Release due after S-0711's acceptance: threshold policy met (count 1 at or over threshold 1; value 2.5 USD/week vs 1000), no held_by_epic; ran flai formula run publish --ready --autocommit, instance S-0729 in ready (tasks T-3132, T-3133, T-3134), commit 2aad911eb.
+- Items: S-0711, S-0729
+- Seconds: 24
+- Cost: 0.0880 USD, estimated
+
+### 2026-11-12T03:40:04Z
+
+- Summary: Ordered the ready column by throughput after S-0729 entered ready: S-0729 alone at rank 1 (no forecast duration).
+- Items: S-0729
+- Seconds: 17
+- Cost: 0.0443 USD, estimated
+
+### 2026-11-12T03:40:18Z
+
+- Summary: I started the release for S-0711 through the publish formula. Its instance is S-0729, and its story agent, agent-S-0729, is already running it.
+- Items: none
+- Seconds: 14
+- Cost: 0.1962 USD, estimated
+
+### 2026-11-12T03:41:13Z
+
+- Summary: thread:TH-1085 (resolved by flai serve when S-0729 started) and thread:TH-1087 (board starved, a flai serve notice, not mine to answer): nothing changed. flai promote --candidates lists none. Left complete drafts S-0709 and S-0683 (pending recommendations on TH-1014, TH-1044) and S-0241 (draft by design, TH-0790). Incomplete drafts S-0659, S-0723, S-0725, S-0726 wait on planners, which TH-1083's missing image flai-agent-sf-claude-code:local (still absent) holds back, so no plan retried.
+- Items: S-0709, S-0683, S-0241, S-0659, S-0723, S-0725, S-0726
+- Seconds: 49
+- Cost: 0.1414 USD, estimated
 
 ## Refusals
 
