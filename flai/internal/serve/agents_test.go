@@ -656,6 +656,68 @@ func TestAStorysHarnessIsStartedWithItsModel(t *testing.T) {
 	}
 }
 
+// I-0265, ADR-0289: the start request of a story's agent carries the
+// operator's outside folders for the harness it runs on, and no other
+// harness's, so that claude-code passes each as --add-dir after flai's
+// permission handler and before the operator's arguments; a strategic
+// agent's start request carries them too. On the container harness they are
+// the container entry's, which it mounts, carried in pilot's start request.
+func TestAStorysAgentGetsTheOutsideFoldersOfItsHarness(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.Command = nil
+	lab.cfg.Flai = "/usr/local/bin/flai"
+	lab.cfg.Harnesses = map[string]harness.Host{
+		harness.ClaudeCode: {Program: lab.stub, Args: []string{"--permission-mode", "acceptEdits"}, Outside: []string{"/srv/other-repo", "/home/me/src/kluster"}},
+		harness.OpenCode:   {Outside: []string{"/srv/opencode-only"}},
+	}
+	id := lab.readyWith("Reads another repository", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	if want := "--permission-prompt-tool mcp__flai__permission_prompt --add-dir /srv/other-repo --add-dir /home/me/src/kluster --permission-mode acceptEdits"; !strings.Contains(string(got), want) {
+		t.Errorf("the harness was given\n%s\nwithout %q", got, want)
+	}
+	if strings.Contains(string(got), "/srv/opencode-only") {
+		t.Errorf("another harness's folder was given:\n%s", got)
+	}
+
+	// a strategic agent's start builds its request in the same place
+	agent := &manifest.Agent{Harness: harness.ClaudeCode}
+	name, adapter, err := harness.For(agent, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _, err := lab.l.startOf(lab.cfg, &AgentRun{}, adapter, name, harness.Request{Role: conventions.RolePlan, Item: lab.epic.ID, Root: lab.root, Project: "t", Agent: agent, Name: "planner-" + lab.epic.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i := slices.Index(st.Argv, "--add-dir"); i < 0 || !slices.Equal(st.Argv[i:i+4], []string{"--add-dir", "/srv/other-repo", "--add-dir", "/home/me/src/kluster"}) {
+		t.Errorf("the planner was not given the folders: %q", st.Argv)
+	}
+}
+
+// I-0265, ADR-0289: a story's agent on the container harness running
+// claude-code inside gets the container entry's outside folders in pilot's
+// start request, not the claude-code entry's.
+func TestAContainerStartRequestCarriesTheContainersOutsideFolders(t *testing.T) {
+	lab, _ := containerLab(t)
+	ctx := context.Background()
+	c := lab.cfg.Harnesses[harness.Container]
+	c.Outside = []string{"/srv/mounted"}
+	lab.cfg.Harnesses[harness.Container] = c
+	lab.cfg.Harnesses[harness.ClaudeCode] = harness.Host{Outside: []string{"/srv/host-only"}}
+	id := containerStory(lab, "Reads another repository in a container", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	if r := lab.run(id); r.Error != "" {
+		t.Fatalf("run: %+v", r)
+	}
+	if req := lab.pilotRequest(id); !slices.Equal(req.Outside, []string{"/srv/mounted"}) {
+		t.Errorf("the start request's outside folders %q, want the container entry's", req.Outside)
+	}
+}
+
 // S-0116, ADR-0043: someone attending holds nothing back. A fresh MCP cursor
 // and a narrative written now do not keep a ready story from its agent while
 // the in-progress limit has room.

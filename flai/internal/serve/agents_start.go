@@ -382,8 +382,9 @@ func (r *AgentRun) startedSaid() string {
 // (mcpEnv, S-0506), the URL's host the container's own name for the host
 // when the container harness's network is not the host's (S-0508), and the
 // container's image the project's layer when its manifest names one
-// (containerImageHost, S-0510), and the host's deny_protected for the
-// harness given to the adapter, which writes its deny rules (ADR-0260): every
+// (containerImageHost, S-0510), the host's deny_protected for the
+// harness given to the adapter, which writes its deny rules (ADR-0260), and
+// the harness's outside folders put in req (ADR-0289): every
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
@@ -426,6 +427,11 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 		}
 		host = h
 	}
+	// The operator's outside folders for the harness the agent runs on go in
+	// the request, which pilot hands the inner harness in a container too
+	// (ADR-0289): on the container harness, its own entry's, the folders it
+	// mounts.
+	req.Outside = slices.Clone(host.Outside)
 	spec, err := adapter.Start(req, host)
 	if err != nil {
 		return harness.Start{}, nil, err

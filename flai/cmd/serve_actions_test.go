@@ -805,7 +805,7 @@ func TestServeAgentHarness(t *testing.T) {
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "agent", "harness")
-	if !strings.Contains(out, `harness claude-code: "claude" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,mcp__flai"`) {
+	if !strings.Contains(out, `harness claude-code: "claude" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,Monitor,mcp__flai"`) {
 		t.Errorf("the defaults: %s", out)
 	}
 	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude", "--", "--permission-mode", "bypassPermissions")
@@ -1628,7 +1628,7 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 		t.Errorf("phases %v, want %v", phases, want)
 	}
 	for _, want := range []string{`"here":true,"means":"change this project's host settings`, `"here":false,"means":"publish when you press Publish`, `"name":"builder"`,
-		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
+		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,Monitor,mcp__flai"],"ask_capable":true,"deny_protected":false,"guard":"","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":[],"ask_capable":false,"deny_protected":false,"guard":"","guard_capable":false,"program":"","set":false}`,
 		`{"name":"unit","command":["go","test","./..."]}`, `"timeout_minutes":15`, `"import_roots":["` + importRoot + `"]`, `"default_agent":{"harness":"claude-code","model":"claude-haiku-4-5"}`, `"mcp":{"bind":"127.0.0.1","bind_set":false,"running":false}`,
 		`"projects":{"running":false,"served":[{"key":"harbour","name":"Harbour","root":"/p/harbour","from":"registry","state":"unavailable","reason":"`, `"unserved":[]}`} {
@@ -1661,7 +1661,7 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 	}
 	got, _ := json.Marshal((&app{configPath: configOf(t)}).hostSettings(context.Background(), mainRootOf(repo)))
 	for _, want := range []string{
-		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,mcp__flai"],"ask_capable":true,"deny_protected":false,"from":"project","guard":"none","guard_capable":true,"program":"claude","set":false}`,
+		`"claude-code":{"args":["--permission-mode","acceptEdits","--allowedTools","Bash,Monitor,mcp__flai"],"ask_capable":true,"deny_protected":false,"from":"project","guard":"none","guard_capable":true,"program":"claude","set":false}`,
 		`"command":{"args":["{story}"],"ask_capable":false,"deny_protected":true,"from":"project","guard":"none","guard_capable":false,"program":"run-agent","set":false}`,
 	} {
 		if !strings.Contains(string(got), want) {
@@ -3088,7 +3088,7 @@ func TestServeAgentSettingsArePerProject(t *testing.T) {
 	if out, errOut, code := runIn(t, a, "serve", "agent", "set", "--name", "builder", "--", "run-a", "{story}"); code != 0 || !strings.Contains(out, `command: "run-a" "{story}" (this project)`) || !strings.Contains(out, "name: builder (this project)") {
 		t.Fatalf("set in project a: %d %s %s", code, out, errOut)
 	}
-	if out, errOut, code := runIn(t, a, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude-a"); code != 0 || !strings.Contains(out, `harness claude-code: "/opt/claude-a" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,mcp__flai" (this project)`) {
+	if out, errOut, code := runIn(t, a, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude-a"); code != 0 || !strings.Contains(out, `harness claude-code: "/opt/claude-a" "--permission-mode" "acceptEdits" "--allowedTools" "Bash,Monitor,mcp__flai" (this project)`) {
 		t.Fatalf("harness in project a: %d %s %s", code, out, errOut)
 	}
 	if got := cfgOf(a); strings.Join(got.Command, " ") != "run-a {story}" || got.Name != "builder" || got.Harnesses["claude-code"].Program != "/opt/claude-a" {

@@ -54,7 +54,7 @@ func TestClaudeCodeRunsHeadlessWithTheStorysModelAndFlaisMCP(t *testing.T) {
 		t.Fatalf("program and prompt: %q", argv[:3])
 	}
 	for flag, want := range map[string]string{"--model": "claude-opus-5-5", "--effort": "high", "--max-budget-usd": "12.50",
-		"--output-format": "stream-json", "--permission-mode": "acceptEdits", "--allowedTools": "Bash,mcp__flai", "--name": "flow S-0104"} {
+		"--output-format": "stream-json", "--permission-mode": "acceptEdits", "--allowedTools": "Bash,Monitor,mcp__flai", "--name": "flow S-0104"} {
 		if got := after(argv, flag); got != want {
 			t.Errorf("%s = %q, want %q (%q)", flag, got, want, argv)
 		}
@@ -108,6 +108,51 @@ func TestClaudeCodeAsksFlaisPermissionPrompt(t *testing.T) {
 		}
 		if i, j := slices.Index(st.Argv, "--permission-prompt-tool"), slices.Index(st.Argv, "--permission-mode"); i < 0 || j < i {
 			t.Errorf("host %v: the handler comes before the operator's arguments: %q", host, st.Argv)
+		}
+	}
+}
+
+// I-0265, ADR-0289: a story's agent, and a strategic agent, started with the
+// operator's outside folders in its request get each as --add-dir, in order,
+// after flai's permission handler and before the operator's arguments, so
+// that its sub-agents, which inherit the session's added folders, read and
+// write there; a folder in the host alone is not passed, since pilot starts
+// the inner harness with an empty Host, and a folder that is not absolute
+// is refused. The default arguments allow Monitor, which runs a shell
+// command as Bash does.
+func TestClaudeCodeAddsTheOperatorsOutsideFolders(t *testing.T) {
+	a := &manifest.Agent{Harness: ClaudeCode}
+	if def := (claudeCode{}).DefaultHost(); !slices.Equal(def.Args, []string{"--permission-mode", "acceptEdits", "--allowedTools", "Bash,Monitor,mcp__flai"}) {
+		t.Errorf("default arguments %q do not allow Monitor", def.Args)
+	}
+	outside := []string{"/srv/other-repo", "/home/me/src/kluster"}
+	story := req(a)
+	story.Outside = outside
+	planner := Request{Role: "plan", Item: "E-0016", Root: "/p/flow", Project: "flow", Agent: a, Name: "planner-E-0016", Flai: "/usr/local/bin/flai", Outside: outside}
+	want := []string{"--permission-prompt-tool", PermissionPromptTool, "--add-dir", "/srv/other-repo", "--add-dir", "/home/me/src/kluster", "--permission-mode", "acceptEdits", "--allowedTools", "Bash,Monitor,mcp__flai"}
+	for what, r := range map[string]Request{"story": story, "planner": planner} {
+		st, err := (claudeCode{}).Start(r, Host{})
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		i := slices.Index(st.Argv, "--permission-prompt-tool")
+		if i < 0 || !slices.Equal(st.Argv[i:], want) {
+			t.Errorf("%s: argv ends %q, want %q", what, st.Argv[max(i, 0):], want)
+		}
+	}
+	// the request's folders, not the host's
+	st, err := (claudeCode{}).Start(req(a), Host{Outside: outside})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(st.Argv, "--add-dir") {
+		t.Errorf("a folder in the host alone is passed: %q", st.Argv)
+	}
+	for _, bad := range []string{"relative/dir", "--dangerously-skip-permissions"} {
+		r := req(a)
+		r.Outside = []string{bad}
+		if _, err := (claudeCode{}).Start(r, Host{}); err == nil || !strings.Contains(err.Error(), "is not an absolute path") {
+			t.Errorf("outside %q: %v", bad, err)
 		}
 	}
 }

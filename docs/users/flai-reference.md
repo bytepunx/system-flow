@@ -3889,7 +3889,7 @@ Examples:
 
 ```bash
 flai serve agent harness claude-code
-flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
+flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,Monitor,mcp__flai
 flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
 flai serve agent set --all-projects --name builder
 flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
@@ -3955,7 +3955,7 @@ Set the program a harness is, the arguments that say what its agent may do, and 
 flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--image <inner>=<image>]... [--network <name>] [--login <path>] [--outside <dir>]... [--reset] [--project <root> | --all-projects] [-- args...] [flags]
 ```
 
-A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
+A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,Monitor,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
 
 On a harness that cannot run flai guard, a story whose agent has roles is refused (ADR-0131). --guard none lifts that: the story's sub-agents run unguarded, so a sub-agent could move items, write threads, or commit, which only the story's agent should. --guard "" puts the refusal back; no other value is taken.
 

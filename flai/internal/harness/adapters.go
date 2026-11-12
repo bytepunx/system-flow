@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -32,10 +33,11 @@ type claudeCode struct{}
 const PermissionPromptTool = "mcp__flai__permission_prompt"
 
 // DefaultHost is the operator's default for claude-code: edits in the
-// project, any shell command (git, flai, the project's tests), and flai's
-// MCP tools; nothing else without asking, and headless there is no one to ask.
+// project, any shell command (git, flai, the project's tests), Monitor, which
+// runs a shell command as Bash does (ADR-0289), and flai's MCP tools; nothing
+// else without asking, and headless there is no one to ask.
 func (claudeCode) DefaultHost() Host {
-	return Host{Program: "claude", Args: []string{"--permission-mode", "acceptEdits", "--allowedTools", "Bash,mcp__flai"}}
+	return Host{Program: "claude", Args: []string{"--permission-mode", "acceptEdits", "--allowedTools", "Bash,Monitor,mcp__flai"}}
 }
 
 // Capabilities are all of them: claude resumes a session, runs flai guard as
@@ -57,7 +59,8 @@ var claudeCodeTakes = map[string]option{
 
 // Start runs claude -p with the prompt, the story's model and options, flai's
 // MCP server, flai's permission_prompt as its permission handler
-// (PermissionPromptTool), and the operator's arguments last, so the handler
+// (PermissionPromptTool), the operator's outside folders as --add-dir
+// (ADR-0289), and the operator's arguments last, so the handler
 // applies with the default host arguments and with the operator's own. A
 // planner's session runs as the project's planner definition (S-0208), an
 // orchestrator's as its orchestrator definition (S-0218), an analyzer's as
@@ -143,7 +146,11 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	case r.Role != "":
 		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
-	argv = append(argv, permissionArgs(host)...)
+	dirs, err := addDirs(r.Outside)
+	if err != nil {
+		return Start{}, err
+	}
+	argv = append(argv, permissionArgs(host, dirs)...)
 	return Start{Harness: ClaudeCode, Argv: argv, Env: env, EnvFrom: from, Files: files}, nil
 }
 
@@ -281,7 +288,7 @@ func ClaudeCodeCheck(host Host, flai string, mcpArgs []string, model, prompt str
 		return nil, err
 	}
 	argv := append(headless(host.Program, prompt, mcp), "--model", model)
-	return append(argv, permissionArgs(host)...), nil
+	return append(argv, permissionArgs(host, nil)...), nil
 }
 
 // headless is how every claude -p flai runs begins: the prompt, its events
@@ -301,11 +308,30 @@ func mcpConfig(flai string, args []string) (string, error) {
 }
 
 // permissionArgs are what a claude-code session may do: flai's
-// permission_prompt as its handler (PermissionPromptTool), then the
+// permission_prompt as its handler (PermissionPromptTool), then the folders
+// outside the project it may reach, dirs as addDirs gives them, then the
 // operator's arguments, so that the handler applies with the default host
 // arguments and with the operator's own.
-func permissionArgs(host Host) []string {
-	return append([]string{"--permission-prompt-tool", PermissionPromptTool}, host.Args...)
+func permissionArgs(host Host, dirs []string) []string {
+	return slices.Concat([]string{"--permission-prompt-tool", PermissionPromptTool}, dirs, host.Args)
+}
+
+// addDirs are the --add-dir arguments of the operator's outside folders, one
+// --add-dir <folder> each, in their order (ADR-0289): a sub-agent the session
+// starts inherits the session's added folders, so a story's explorer reads
+// where its agent may. A folder that is not an absolute path is refused, as
+// a hand-written start request may hold one: a relative folder would be
+// read against wherever claude runs, and one that begins with a dash would
+// read as a flag of its own.
+func addDirs(outside []string) ([]string, error) {
+	var out []string
+	for _, dir := range outside {
+		if !filepath.IsAbs(dir) {
+			return nil, fmt.Errorf("the outside folder %q is not an absolute path; grant it again with flai serve agent harness <name> --outside <dir>, which keeps it absolute", dir)
+		}
+		out = append(out, "--add-dir", dir)
+	}
+	return out, nil
 }
 
 // claudeCodeRoles are the sub-agent definitions, in the project's

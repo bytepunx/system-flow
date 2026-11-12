@@ -206,6 +206,14 @@ type Request struct {
 	// refuses a Host that is not loopback as DNS rebinding, and a container
 	// dials host.docker.internal. Optional.
 	MCPHostEnv string `json:"mcp_host_env,omitempty"`
+	// Outside are the folders outside the project the operator grants the
+	// agent and its sub-agents on its harness, each absolute, from the host's
+	// outside setting for it (ADR-0289): the claude-code adapter passes each
+	// as --add-dir. flai serve fills them for every start, a story's agent's
+	// and a strategic agent's alike, and pilot's start request carries them,
+	// since pilot starts the inner harness with an empty Host. None when the
+	// operator grants none.
+	Outside []string `json:"outside,omitempty"`
 	// Cache is the folder mounted in the container where the harness keeps
 	// its configuration, its sessions, and its MCP file, so that a later
 	// container resumes the session (S-0507); empty on the host.
@@ -336,6 +344,11 @@ type Host struct {
 	// Login is the folder of the operator's login to the inner harness, which
 	// the container harness mounts read-only at ContainerLogin.
 	Login string
+	// Outside are the operator's outside folders for the harness (ADR-0289),
+	// which flai serve copies into Request.Outside for each start; an adapter
+	// reads the request's, never these, so that a start in a container, whose
+	// Host is empty, gets them too.
+	Outside []string
 	// DenyProtected is the operator's say that their arguments deny the
 	// harness's protected paths (ADR-0131), from the host's deny_protected
 	// for it: the opencode adapter then writes a deny rule for each into

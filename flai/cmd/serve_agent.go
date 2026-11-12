@@ -60,7 +60,7 @@ such as agent-S-0104), FLAI_STORY, and FLAI_SESSION. Its output goes to a log
 beside flai serve's state, and every start and failure is in flai serve
 journal.`,
 		Example: `  flai serve agent harness claude-code
-  flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,mcp__flai
+  flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permission-mode acceptEdits --allowedTools Bash,Monitor,mcp__flai
   flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
   flai serve agent set --all-projects --name builder
   flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
@@ -450,7 +450,8 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		hosts[name] = a.harnessHost(agent, name)
 	}
 	if len(agent.Command) > 0 {
-		hosts[harness.Command] = harness.Host{Program: agent.Command[0], Args: agent.Command[1:]}
+		// the command's outside folders are its harness entry's (ADR-0289)
+		hosts[harness.Command] = harness.Host{Program: agent.Command[0], Args: agent.Command[1:], Outside: slices.Clone(agent.Harnesses[harness.Command].Outside)}
 	}
 	lifts := map[string]serve.HarnessLifts{}
 	for name, set := range agent.Harnesses {

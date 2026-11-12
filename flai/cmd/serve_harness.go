@@ -18,9 +18,10 @@ import (
 
 // harnessHost is the program and arguments a harness runs with under agent,
 // the settings that apply to a project (ADR-0261): the operator's where set,
-// the adapter's defaults where not (S-0104); and the
+// the adapter's defaults where not (S-0104); the
 // container harness's images, network, and login as the operator sets them,
-// whose defaults the adapter applies (S-0508).
+// whose defaults the adapter applies (S-0508); and the harness's outside
+// folders (ADR-0289).
 func (a *app) harnessHost(agent config.AgentStart, name string) harness.Host {
 	h := harness.Adapters[name].DefaultHost()
 	set := agent.Harnesses[name]
@@ -31,6 +32,7 @@ func (a *app) harnessHost(agent config.AgentStart, name string) harness.Host {
 		h.Args = *set.Args
 	}
 	h.Images, h.Network, h.Login = maps.Clone(set.Images), set.Network, set.Login
+	h.Outside = slices.Clone(set.Outside)
 	return h
 }
 
@@ -151,7 +153,7 @@ func newServeAgentHarnessCmd(a *app) *cobra.Command {
 		Long: `A story names its harness, such as claude-code; you say here what that is on
 this host. --program is what is run, and the arguments after -- replace the
 adapter's defaults, which say what the agent may do (for claude-code:
---permission-mode acceptEdits --allowedTools Bash,mcp__flai). "--" with
+--permission-mode acceptEdits --allowedTools Bash,Monitor,mcp__flai). "--" with
 nothing after it runs it with none. --reset goes back to the defaults and
 clears --guard and --deny-protected. With no name, every harness is shown.
 
