@@ -311,10 +311,6 @@ func containerMCP(mcp []string, network string) []string {
 	return out
 }
 
-// dockerDesktop is what docker info says of the operating system of Docker
-// Desktop's engine, which forwards the host gateway to the host's loopback.
-const dockerDesktop = "Docker Desktop"
-
 // containerReachable refuses the start of an agent on the container harness
 // whose HTTP MCP server, as mcp, mcpEnv's variables, names it, listens on
 // loopback while the container joins network, a network other than the
@@ -345,13 +341,12 @@ func (l *launcher) containerReachable(cfg AgentConfig, mcp []string, network str
 		return nil
 	}
 	engine, ok := l.containerEngine(cfg)
-	if !ok || engine == dockerDesktop {
+	if !ok || engine == DockerDesktop {
 		return nil
 	}
-	gateway := "the gateway docker network inspect " + network + " names"
-	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "network", "inspect", network, "--format", "{{range .IPAM.Config}}{{.Gateway}} {{end}}")
-	if fields := strings.Fields(out); err == nil && len(fields) > 0 {
-		gateway = fields[0]
+	gateway, err := NetworkGateway(l.docker, l.entry.Root, containerProgram(cfg), network)
+	if err != nil {
+		gateway = "the gateway docker network inspect " + network + " names"
 	}
 	return fmt.Errorf("the agent's container cannot reach flai's MCP server: the server listens on %[1]s, and this Docker engine (%[2]s) routes %[3]s to the gateway of the network %[4]q, %[5]s, which a server on %[1]s does not answer: bind the server there with flai serve mcp bind %[5]s, then flai host restart mcp, or run the container on the host's network with flai serve agent harness container --network host, and start the agent again", bind, engine, containerHost, network, gateway)
 }
@@ -366,10 +361,9 @@ func (l *launcher) containerEngine(cfg AgentConfig) (string, bool) {
 	if l.engine != "" {
 		return l.engine, true
 	}
-	out, err := l.docker.Run(l.entry.Root, containerProgram(cfg), "info", "--format", "{{.OperatingSystem}}")
-	engine := strings.TrimSpace(out)
-	if err != nil || engine == "" {
-		l.warn("container engine unreadable", "err", dockerSaid(out, err))
+	engine, err := DockerEngine(l.docker, l.entry.Root, containerProgram(cfg))
+	if err != nil {
+		l.warn("container engine unreadable", "err", err.Error())
 		return "", false
 	}
 	l.engine = engine
