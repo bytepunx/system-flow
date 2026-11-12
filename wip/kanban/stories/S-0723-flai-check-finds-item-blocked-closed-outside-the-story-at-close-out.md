@@ -6,7 +6,7 @@ title: "flai check finds `item.blocked-closed` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-11T07:23:14Z
-updated: 2026-11-11T07:23:14Z
+updated: 2026-11-12T07:06:11Z
 transitions: []
 tags: []
 agent:
@@ -29,7 +29,9 @@ usage:
           cache_read: 62150
           cache_write: 9071
           cost: 0.0202
-draft: true
+finalized:
+  by: alex
+  at: 2026-11-12T07:06:11Z
 ---
 # S-0723 flai check finds `item.blocked-closed` outside the story at close-out
 
