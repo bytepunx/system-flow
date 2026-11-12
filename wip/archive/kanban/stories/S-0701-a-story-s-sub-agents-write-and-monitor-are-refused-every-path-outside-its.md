@@ -3,10 +3,10 @@ id: S-0701
 type: story
 nature: improvement
 title: A story's sub-agents, Write, and Monitor are refused every path outside its worktree, though an experiment story may be written to work outside the repository
-status: review
+status: done
 owner: alex
 created: 2026-11-10T08:55:34Z
-updated: 2026-11-12T00:41:03Z
+updated: 2026-11-12T03:43:58Z
 transitions:
   - to: ready
     at: 2026-11-11T23:05:09Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-12T00:41:03Z
     by: agent-S-0701
+  - to: done
+    at: 2026-11-12T03:43:58Z
+    by: alex
 tags: [harness, serve, docker]
 touches: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md, flai/cmd/serve_settings.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, design/system/flai-cli.md]
 agent:
