@@ -3,10 +3,10 @@ id: S-0729
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-12T03:39:40Z
-updated: 2026-11-12T03:43:08Z
+updated: 2026-11-12T03:45:20Z
 transitions:
   - to: ready
     at: 2026-11-12T03:39:41Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-12T03:43:03Z
     by: agent-S-0729
+  - to: done
+    at: 2026-11-12T03:45:20Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0729-publish-what-is-accepted-and-not-yet-released.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
@@ -41,15 +44,15 @@ usage:
       cost: 2.3564
   strategic:
     - kind: orchestrator
-      seconds: 33
+      seconds: 121
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 79
-          cache_read: 341899
-          cache_write: 66269
-          cost: 0.1158
+          input: 36
+          output: 187
+          cache_read: 1274283
+          cache_write: 139433
+          cost: 0.4012
 formula: publish
 ---
 # S-0729 Publish what is accepted and not yet released

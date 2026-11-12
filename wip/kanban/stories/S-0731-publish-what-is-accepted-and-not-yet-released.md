@@ -3,14 +3,17 @@ id: S-0731
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-12T03:44:58Z
-updated: 2026-11-12T03:44:59Z
+updated: 2026-11-12T03:45:07Z
 transitions:
   - to: ready
     at: 2026-11-12T03:44:59Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-12T03:45:07Z
+    by: agent-S-0731
 tags: []
 touches: [wip/kanban/stories/S-0731-publish-what-is-accepted-and-not-yet-released.md]
 agent:

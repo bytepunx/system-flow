@@ -6,8 +6,8 @@ sources: [S-0575, I-0265]
 topics: [kluster, testing, deployment, delegation]
 paths: [design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/experiments/S-0575-two-builds-of-authstar-run-side-by-side-in-one-kluster-each-in-a-namespace.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0289-flai-serve-gives-a-story-s-agent-and-its-sub-agents-the-outside-folders-the.md#decision"
 asked_again: []
 cited: [S-0701, T-3048, T-3064, TH-1025]
 ---

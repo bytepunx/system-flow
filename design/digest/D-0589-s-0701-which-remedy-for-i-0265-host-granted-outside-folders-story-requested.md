@@ -6,8 +6,8 @@ sources: [TH-1025]
 topics: [flai, cli, go, code, all]
 paths: [design/adrs, design/adrs/README.md, design/system/agent-adapters.md, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_agent.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_test.go, flai/internal/harness/container.go, flai/internal/harness/container_test.go, flai/internal/pilot/request.go, flai/internal/pilot/request_test.go, docs/operators/index.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, design/issues/I-0265-a-story-s-sub-agents-write-and-monitor-are-refused-every-path-outside-its.md, design/issues/summary.md]
 date: 2026-11-11
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0289-flai-serve-gives-a-story-s-agent-and-its-sub-agents-the-outside-folders-the.md#decision"
 asked_again: []
 cited: [S-0701, TH-1025]
 ---

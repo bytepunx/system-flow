@@ -6,8 +6,8 @@ sources: [S-0658, I-0332, S-0704]
 topics: [formulas, release, flai]
 paths: [design/workflows/formulas/publish.md, scripts/flai.sh, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md]
 date: 2026-11-10
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/strategic-agents.md#working-an-instance-s-0422"
 asked_again: []
 cited: []
 ---
