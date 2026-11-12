@@ -2,12 +2,12 @@
 id: I-0332
 title: A formula step's bare flai command resolves to the installed flai on PATH, which can be older than the flags the formula's steps use
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 3m
 first_reported: 2026-11-10T08:28:53Z
 last_reported: 2026-11-10T08:28:53Z
-updated: 2026-11-10T08:37:05Z
+updated: 2026-11-12T00:46:58Z
 ---
 
 # I-0332 A formula step's bare flai command resolves to the installed flai on PATH, which can be older than the flags the formula's steps use
@@ -24,3 +24,4 @@ S-0658, the publish formula's instance: its evaluate step names `flai release --
 ## Remediation
 
 Story S-0681 remediates this issue, created from it at 2026-11-10T08:37:05Z.
+Closed 2026-11-12T00:46:58Z: S-0681: where the manifest names flai.command (ADR-0201), flai formula run writes a flai step's task, and its flai formula stop, with that command, such as scripts/flai.sh release --evaluate, so the step runs the flai the tree builds rather than an older installed flai on PATH; TestFormulaStepNamesTheManifestsFlaiCommand in flai/cmd covers it
