@@ -630,3 +630,89 @@ func TestStepsUndoneTakesATaskAStopCancelled(t *testing.T) {
 		t.Errorf("a skipped step whose stopping step's task is not done is unevidenced: %+v", got)
 	}
 }
+
+// ADR-0291, I-0229: a story whose last passing flai verify ran go-test over a
+// main that has since reworded flai/internal/roles, which go-test selects, is
+// refused with verify_stale by the operator's acceptance, the orchestrator's,
+// and a hand acceptance while the queue batches, among the acceptance's
+// blockers and not the orchestrator's own; not by the queue's landing, nor
+// when main brought in only wip paths, nor when the verify did not pass. A
+// main whose paths cannot be listed is the blocker too.
+func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
+	at := time.Date(2026, 11, 12, 16, 0, 0, 0, time.UTC)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repo, s := forgeRepo(t, "local", at)
+	f, err := os.OpenFile(filepath.Join(repo.MainRoot, "system-flow.yaml"), os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("tests:\n  - name: go-test\n    command: [go-test, \"{files}\"]\n    paths: [\"flai/**/*.go\"]\n  - name: markdown\n    command: [lint-md, \"{files}\"]\n    paths: [\"**/*.md\"]\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	diff := "diff --no-renames --name-only " + forgeOther + " main"
+	answers := gitAnswers{
+		"rev-parse --is-inside-work-tree":                        "true",
+		"rev-parse --verify --quiet refs/heads/story/" + s.ID:    forgeHead,
+		"rev-parse --verify --quiet story/" + s.ID + "^{commit}": forgeHead,
+		"rev-parse --abbrev-ref HEAD":                            "main",
+		diff:                                                     "flai/internal/roles/conditions.go\nwip/kanban/stories/S-0099.md",
+	}
+	git := withGit{answers}
+	report := func(passed bool) {
+		t.Helper()
+		rep := verify.Report{Story: s.ID, Commit: forgeHead, MergeBase: forgeOther, Passed: passed, Paths: []string{"flai/internal/guard/roles_test.go"}, Steps: []verify.Step{
+			{Name: "go-test", Tier: true, State: verify.Passed},
+			{Name: "markdown", Tier: true, State: verify.Passed},
+		}}
+		if err := verify.SaveReport(repo, rep); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report(true)
+	want := s.ID + "'s verify does not cover the main branch it would land on: its last flai verify, at abc1234, ran over main at 0123456, and the 1 path main brought in since send back go-test, which that verify ran: flai/internal/roles/conditions.go; ask for its close-out again"
+	for name, opts := range map[string]AcceptOptions{
+		"the operator's acceptance":        {},
+		"the orchestrator's acceptance":    {Orchestrator: true},
+		"a hand acceptance past the queue": {QueueBatches: true, WithoutQueueTiers: true},
+	} {
+		res, err := AcceptWith(git, repo, s, "alex", at, log, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b := res.VerifyStaleBlocker; b == nil || b.Code != BlockVerifyStale || !strings.HasPrefix(b.Message, want) || !slices.Contains(res.Blockers, b.Message) || !slices.Equal(res.StaleTiers, []string{"go-test"}) {
+			t.Errorf("%s must list verify_stale naming go-test:\n%+v %q\n%q", name, res.VerifyStaleBlocker, res.StaleTiers, res.Blockers)
+		}
+		if slices.ContainsFunc(res.OrchestratorBlockers, func(b Blocker) bool { return b.Code == BlockVerifyStale }) {
+			t.Errorf("%s: verify_stale is not among the orchestrator's own blockers, which its enqueue vouches with: %+v", name, res.OrchestratorBlockers)
+		}
+	}
+	stale := func(name string, opts AcceptOptions) {
+		t.Helper()
+		res, err := AcceptWith(git, repo, s, "alex", at, log, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.VerifyStaleBlocker != nil || res.StaleTiers != nil || slices.ContainsFunc(res.Blockers, func(b string) bool { return strings.Contains(b, "verify_stale") || strings.Contains(b, "ADR-0291") }) {
+			t.Errorf("%s is not refused on verify_stale: %+v %q %q", name, res.VerifyStaleBlocker, res.StaleTiers, res.Blockers)
+		}
+	}
+	stale("the queue's landing", AcceptOptions{QueueBatches: true, Batch: "20261112-160000"})
+	answers[diff] = "wip/kanban/stories/S-0099.md"
+	stale("a main that brought in only wip paths", AcceptOptions{})
+	answers[diff] = "flai/internal/roles/conditions.go"
+	report(false)
+	stale("a verify that did not pass", AcceptOptions{})
+
+	report(true)
+	delete(answers, diff)
+	res, err := AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := res.VerifyStaleBlocker; b == nil || !strings.Contains(b.Message, "cannot list what changed from "+forgeOther+" to main") {
+		t.Errorf("a main whose paths cannot be listed is the blocker, naming why: %+v", b)
+	}
+}

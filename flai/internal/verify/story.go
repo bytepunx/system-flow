@@ -601,6 +601,72 @@ func QueueTiersNotRun(rep Report, ok bool, head string, tiers []Tier) (names []s
 	return nil, ""
 }
 
+// MainPathsSince are the paths the main branch, at the commit or branch main,
+// brought in since a story's report rep ran: what changed from the report's
+// merge base to main, read in the checkout at dir, but for the paths under
+// wip, the wip folder with a trailing slash, that the report's branch does not
+// change, which no tier's result reads (ADR-0135, ADR-0291). A report that
+// recorded no merge base is taken from its base commit, else from where its
+// commit and main meet now. A report that recorded none of the three, and a
+// diff git cannot make, are errors.
+func MainPathsSince(r execx.Runner, dir string, rep Report, main, wip string) ([]string, error) {
+	from := rep.MergeBase
+	if from == "" {
+		from = rep.BaseCommit
+	}
+	if from == "" && rep.Commit != "" {
+		out, err := r.Run(dir, "git", "merge-base", rep.Commit, main)
+		if err != nil {
+			return nil, fmt.Errorf("find where %s's last flai verify, at %s, left %s, since its report records no merge base: %w", rep.Story, shortHash(rep.Commit), main, err)
+		}
+		from = strings.TrimSpace(out)
+	}
+	if from == "" {
+		return nil, fmt.Errorf("tell what %s brought in since %s's last flai verify: its report records no merge base, base commit, or commit", main, rep.Story)
+	}
+	paths, err := BetweenPaths(r, dir, from, main)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, p := range paths {
+		if !strings.HasPrefix(p, wip) || slices.Contains(rep.Paths, p) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// StaleTiers are the tiers a story's report rep ran, passed or reused, that
+// mainPaths, the paths the main branch brought in since it ran
+// (MainPathsSince), send back, in the report's order: each tier the paths
+// select among tiers as a story's own paths select its tiers (SelectStory,
+// {importers} included), and each tier the report ran in place of one they
+// select, as the tier that covered it. A tier the report skipped, left to the
+// merge queue, or did not reach is not named: it ran nothing to be stale
+// (ADR-0156, ADR-0291).
+func StaleTiers(fsys fs.FS, tiers []Tier, rep Report, mainPaths []string) []string {
+	if len(mainPaths) == 0 {
+		return nil
+	}
+	back := map[string]bool{}
+	for _, s := range SelectStory(fsys, tiers, mainPaths) {
+		back[s.Tier.Name] = true
+	}
+	for _, s := range rep.Steps {
+		if s.Tier && s.State == Skipped && s.CoveredBy != "" && back[s.Name] {
+			back[s.CoveredBy] = true
+		}
+	}
+	var names []string
+	for _, s := range rep.Steps {
+		if s.Tier && (s.State == Passed || s.State == Reused) && back[s.Name] && !slices.Contains(names, s.Name) {
+			names = append(names, s.Name)
+		}
+	}
+	return names
+}
+
 // queuedStep is a selected tier left to the merge queue's batch as a step:
 // queued, whatever the steps before it did, since the batch runs it
 // (ADR-0174).

@@ -129,6 +129,13 @@ type Acceptance struct {
 	// operator's --without-kluster.
 	KlusterWhy     string   `json:"kluster_why,omitempty"`
 	KlusterBlocker *Blocker `json:"kluster_blocker,omitempty"`
+	// StaleTiers are the tiers the story's last passing flai verify ran that
+	// the paths the main branch brought in since send back, and
+	// VerifyStaleBlocker the blocker verify_stale they bring, also in
+	// Blockers, in every acceptance but the merge queue's landing (ADR-0291);
+	// empty and nil when main brought in nothing they select.
+	StaleTiers         []string `json:"stale_tiers,omitempty"`
+	VerifyStaleBlocker *Blocker `json:"verify_stale_blocker,omitempty"`
 }
 
 // RemoteMerge is the merge of a story's pull request on the forge under
@@ -176,6 +183,11 @@ const (
 // queue did not run at its branch's head while the merge queue batches
 // (ADR-0221).
 const BlockQueueTiers = "queue_tiers"
+
+// BlockVerifyStale is the code of the blocker of every acceptance but the
+// merge queue's landing for a story whose last passing flai verify ran over a
+// main that has since brought in paths sending back a tier it ran (ADR-0291).
+const BlockVerifyStale = "verify_stale"
 
 // BlockKluster is the code of the blocker of every acceptance of a story,
 // while the kluster host action is on, whose namespace was not deployed at
@@ -381,6 +393,9 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	// while the merge queue batches, the operator's acceptance waits for the
 	// tiers it leaves to the batch to run at the story's head (ADR-0221)
 	queueTiersGate(r, repo, it, res, opts)
+	// a verify main has outrun since does not vouch for the head the
+	// acceptance lands, whoever accepts but the queue (ADR-0291)
+	verifyStaleGate(r, repo, it, res, opts)
 	// the queue's landing takes the batch's verification of the story's
 	// rebased head (ADR-0176); for the orchestrator, in place of its own
 	var landing []string
@@ -511,6 +526,98 @@ func queueTiersNotRun(r execx.Runner, repo *workitem.Repo, id, branch string) ([
 // the reason why gives, naming the ways out (ADR-0221).
 func QueueTiersBlocker(id, why string) Blocker {
 	return Blocker{Code: BlockQueueTiers, Message: fmt.Sprintf("%s's tiers marked queue have not run at its head: %s; while the merge queue batches, a hand acceptance waits for them: run flai verify %s --all, which reuses the tiers its last run passed at the same patch, enqueue it with flai queue add %s, or, as the operator in a shell, accept it with flai accept %s --without-queue-tiers (ADR-0221)", id, why, id, id, id)}
+}
+
+// verifyStaleGate sets on res the tiers story it's last passing flai verify
+// ran that the paths the main branch brought in since send back, and the
+// blocker verify_stale they bring (ADR-0291). It gates a story with a branch,
+// not done already, in every acceptance but the merge queue's landing, whose
+// batch ran every tier over the main it lands on. The blocker is among the
+// acceptance's blockers, not the orchestrator's own: the orchestrator's
+// enqueue vouches with those alone, and the batch runs every tier.
+func verifyStaleGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
+	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
+		return
+	}
+	var why string
+	res.StaleTiers, why = verifyStale(r, repo, it.ID)
+	if why == "" {
+		return
+	}
+	b := VerifyStaleBlocker(it.ID, why)
+	res.VerifyStaleBlocker = &b
+	res.Blockers = append(res.Blockers, b.Message)
+}
+
+// verifyStale is, for story id's last flai verify report, the tiers it ran
+// that the paths the main branch brought in since its merge base send back,
+// with the tiers its worktree's manifest declares, or the main checkout's when
+// it has no worktree, selected over the main checkout, and why they are stale,
+// as a sentence fragment; nothing when there is no report, the report did not
+// pass, or main brought in nothing that sends a tier back. A report, a main,
+// or tiers that cannot be read is why, naming the error, so the gate never
+// opens unread.
+func verifyStale(r execx.Runner, repo *workitem.Repo, id string) ([]string, string) {
+	rep, ok, err := verify.LastReport(repo, id)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot %v", err)
+	}
+	if !ok || !rep.Passed {
+		return nil, ""
+	}
+	main, err := storygit.MainBranch(r, repo.MainRoot)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot find the main branch to tell what it brought in since its last flai verify: %v", err)
+	}
+	wip, err := filepath.Rel(repo.MainRoot, repo.WipDir())
+	if err != nil {
+		return nil, fmt.Sprintf("cannot tell which paths are under the wip folder %s: %v", repo.WipDir(), err)
+	}
+	paths, err := verify.MainPathsSince(r, repo.MainRoot, rep, main, filepath.ToSlash(wip)+"/")
+	if err != nil {
+		return nil, fmt.Sprintf("cannot %v", err)
+	}
+	if len(paths) == 0 {
+		return nil, ""
+	}
+	root := repo.WorktreePath(id)
+	if _, err := os.Stat(root); err != nil {
+		root = repo.MainRoot
+	}
+	tiers, err := verify.CheckoutTiers(root)
+	if err != nil {
+		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
+	}
+	names := verify.StaleTiers(os.DirFS(repo.MainRoot), tiers, rep, paths)
+	if len(names) == 0 {
+		return nil, ""
+	}
+	from := rep.MergeBase
+	if from == "" {
+		from = rep.BaseCommit
+	}
+	n := fmt.Sprintf("%d paths", len(paths))
+	if len(paths) == 1 {
+		n = "1 path"
+	}
+	return names, fmt.Sprintf("its last flai verify, at %s, ran over %s at %s, and the %s %s brought in since send back %s, which that verify ran: %s",
+		shortSHA(rep.Commit), main, shortSHA(from), n, main, strings.Join(names, ", "), firstPaths(paths, 3))
+}
+
+// firstPaths is the first n of paths joined, and how many more there are.
+func firstPaths(paths []string, n int) string {
+	if len(paths) <= n {
+		return strings.Join(paths, ", ")
+	}
+	return fmt.Sprintf("%s, and %d more", strings.Join(paths[:n], ", "), len(paths)-n)
+}
+
+// VerifyStaleBlocker is why story id cannot be accepted while the main branch
+// has brought in, since its last passing flai verify, paths that send back a
+// tier that verify ran, for the reason why gives, naming the way out
+// (ADR-0291).
+func VerifyStaleBlocker(id, why string) Blocker {
+	return Blocker{Code: BlockVerifyStale, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291)", id, why, id, id)}
 }
 
 // klusterGate sets on res why story it is not accepted yet while the kluster

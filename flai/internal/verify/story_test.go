@@ -1778,3 +1778,81 @@ func TestVerifyTellsTheTiersTheCheckAndTheTiersThatPassed(t *testing.T) {
 		t.Errorf("the batch told %q\nwant %q", got, want)
 	}
 }
+
+// ADR-0291: the paths main brought in since a report's merge base, or its
+// base commit when it recorded none, leave out wip paths the branch does not
+// change; a report with neither, and a diff git cannot make, are errors.
+func TestMainPathsSince(t *testing.T) {
+	git := &fakeGit{
+		out: map[string]string{
+			"diff --no-renames --name-only mb main":   "wip/kanban/stories/S-0002.md\nwip/agents/S-0001.md\nflai/internal/roles/conditions.go\ndocs/users/flai.md",
+			"diff --no-renames --name-only base main": "flai/a.go",
+		},
+		err: map[string]error{"diff --no-renames --name-only gone main": errors.New("bad revision")},
+	}
+	rep := Report{Story: "S-0001", MergeBase: "mb", BaseCommit: "base", Paths: []string{"wip/agents/S-0001.md", "flai/internal/guard/roles_test.go"}}
+	got, err := MainPathsSince(git, "/repo", rep, "main", "wip/")
+	if want := []string{"docs/users/flai.md", "flai/internal/roles/conditions.go", "wip/agents/S-0001.md"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("from the merge base: %q, %v; want %q", got, err, want)
+	}
+	rep.MergeBase = ""
+	if got, err := MainPathsSince(git, "/repo", rep, "main", "wip/"); err != nil || !reflect.DeepEqual(got, []string{"flai/a.go"}) {
+		t.Errorf("from the base commit: %q, %v; want flai/a.go", got, err)
+	}
+	rep.BaseCommit, rep.Commit = "", "head"
+	git.out["merge-base head main"] = "met\n"
+	git.out["diff --no-renames --name-only met main"] = "flai/b.go"
+	if got, err := MainPathsSince(git, "/repo", rep, "main", "wip/"); err != nil || !reflect.DeepEqual(got, []string{"flai/b.go"}) {
+		t.Errorf("from where its commit and main meet: %q, %v; want flai/b.go", got, err)
+	}
+	rep.Commit = ""
+	if _, err := MainPathsSince(git, "/repo", rep, "main", "wip/"); err == nil || !strings.Contains(err.Error(), "records no merge base") {
+		t.Errorf("with none, error %v; want one saying the report records no merge base", err)
+	}
+	rep.MergeBase = "gone"
+	if _, err := MainPathsSince(git, "/repo", rep, "main", "wip/"); err == nil || !strings.Contains(err.Error(), "bad revision") {
+		t.Errorf("with a diff git cannot make, error %v; want git's", err)
+	}
+}
+
+// ADR-0291: the tiers a report ran, passed or reused, that main's new paths
+// select are stale, and so is the tier a report ran in place of one they
+// select; a tier left to the queue, failed, or skipped ran nothing to be
+// stale. I-0229: main reworded flai/internal/roles, and the guard's report had
+// run go-test, so go-test is stale.
+func TestStaleTiers(t *testing.T) {
+	tier := func(name string, state State) Step { return Step{Name: name, Tier: true, State: state} }
+	ran := Report{Steps: []Step{
+		{Name: StepCheck, State: Passed},
+		tier("go-test", Passed), tier("markdown", Passed), tier("integration", Reused), tier("smoke", Passed),
+	}}
+	fsys := fstest.MapFS{"flai/go.mod": {Data: []byte("module x\n")}, "flai/a.go": {Data: []byte("package x\n")}, "flai/internal/roles/conditions.go": {Data: []byte("package roles\n")}}
+	for _, tc := range []struct {
+		name  string
+		rep   Report
+		paths []string
+		want  []string
+	}{
+		{"main brought in nothing", ran, nil, nil},
+		{"I-0229: main changed a package", ran, []string{"flai/internal/roles/conditions.go"}, []string{"go-test", "integration", "smoke"}},
+		{"main changed only documents", ran, []string{"docs/users/flai.md"}, []string{"markdown", "smoke"}},
+		{"a tier left to the queue or failed", Report{Steps: []Step{tier("go-test", Failed), tier("integration", Queued), tier("smoke", Queued)}}, []string{"flai/a.go"}, nil},
+		{"a tier main does not select", Report{Steps: []Step{tier("markdown", Passed)}}, []string{"flai/a.go"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := StaleTiers(fsys, storyTiers, tc.rep, tc.paths); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("StaleTiers = %q; want %q", got, tc.want)
+			}
+		})
+	}
+	t.Run("the tier that covered one main selects", func(t *testing.T) {
+		tiers := []Tier{
+			{Name: "vet", Paths: []string{"flai/**/*.go"}, Command: []string{"vet"}},
+			{Name: "full", Paths: []string{"flaiover/**"}, Command: []string{"full"}},
+		}
+		rep := Report{Steps: []Step{{Name: "vet", Tier: true, State: Skipped, CoveredBy: "full"}, tier("full", Passed)}}
+		if got := StaleTiers(fstest.MapFS{}, tiers, rep, []string{"flai/a.go"}); !reflect.DeepEqual(got, []string{"full"}) {
+			t.Errorf("StaleTiers = %q; want full, which ran in place of vet", got)
+		}
+	})
+}
