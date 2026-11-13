@@ -2,7 +2,7 @@
 id: D-0492
 title: "A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags"
 kind: decision
-sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309, S-0777]
+sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309, S-0777, S-0779, I-0372]
 topics: [testing, go, flai]
 paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release, flai/internal/channel, flai/cmd]
 date: 2026-11-07
@@ -32,4 +32,6 @@ S-0651, which remediated I-0309 (D-0557), confined the load further, to a single
 
 S-0777, which fixed eight kluster tests that failed on macOS's symlinked temp dir (D-0616), made the exception for a flag `flai test` cannot pass either, an environment variable: "The suite runs by hand with go test, against the rule that tests run through flai test, because flai test cannot set TMPDIR; it is the reproduction the story needs (D-0492). They ran with FLAI_STORY and FLAI_STARTED_BY unset, so that this session's variables did not reach the tests; flai guard refuses unsetting FLAI_AGENT, which was left as set. Pass or fail of each change was judged with flai test." (wip/archive/agents/S-0777.md, Decisions). So a hand run under `flai serve` unsets `FLAI_STORY` and `FLAI_STARTED_BY` for the tests, and leaves `FLAI_AGENT`, which the guard keeps; its TMPDIR lives under `/tmp` (D-0617).
 
-Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309; S-0777 (wip/archive/agents/S-0777.md, Decisions).
+S-0779, which remediated I-0372 (D-0618), made it a seventh time, citing this entry: "T-3333's stress run calls `go test` by hand, as D-0492 records for load-dependent remediations: `flai test` takes no `-count` or `-run`. Pass or fail of each change was judged with `flai test`." Its fifty-count `-run 'MCP|TheHost'` race run passed beside the whole `flai/cmd` package looping under race as the load: 2050 passes in 779 s (I-0372). Its first two load runs each caught a test no planned task covered, so a stress run is worth making before the fix is called done, not only after (wip/archive/agents/S-0779.md, Decisions).
+
+Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309; S-0777 (wip/archive/agents/S-0777.md, Decisions); S-0779 (wip/archive/agents/S-0779.md, Decisions); I-0372.

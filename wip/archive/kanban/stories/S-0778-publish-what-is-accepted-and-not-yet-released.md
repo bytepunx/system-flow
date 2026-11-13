@@ -3,10 +3,10 @@ id: S-0778
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-13T20:23:36Z
-updated: 2026-11-13T20:27:15Z
+updated: 2026-11-13T22:47:29Z
 transitions:
   - to: ready
     at: 2026-11-13T20:23:37Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-13T20:27:15Z
     by: system-flow
+  - to: done
+    at: 2026-11-13T22:47:29Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0778-publish-what-is-accepted-and-not-yet-released.md]
 agent:

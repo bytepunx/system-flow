@@ -4,10 +4,10 @@ title: "S-0778 cannot be accepted: its branch is 1 commit behind main and the cl
 anchor:
   path: wip/kanban/stories/S-0778-publish-what-is-accepted-and-not-yet-released.md
   item: S-0778
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-13T20:29:44Z
-updated: 2026-11-13T20:29:44Z
+updated: 2026-11-13T22:47:29Z
 ---
 
 # TH-1180 S-0778 cannot be accepted: its branch is 1 commit behind main and the close-out stops at sync
@@ -29,3 +29,6 @@ sync: the branch does not contain main, 1 commit behind it, which changes paths 
 ```
 
 The three criteria and their tasks, T-3326, T-3327, and T-3328, are done. Nothing else is missing.
+
+### 2026-11-13T22:47:29Z alex
+Resolved: S-0778 was accepted
