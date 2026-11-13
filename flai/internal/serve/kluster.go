@@ -214,6 +214,20 @@ func (j klusterJob) asker() string {
 	return forgeAuthor
 }
 
+// refuseOverLimit refuses the deploy request in file for kluster.agent_namespaces,
+// limit, with the reason format and args make, as refuse does, and keeps the
+// refusal under the project's .flai-cache/kluster, so that flai kluster
+// deployments and the Deployments page list it (S-0663). A refusal it cannot
+// keep is logged, and refused all the same.
+func (p *klusterPass) refuseOverLimit(file kluster.Request, limit int, format string, args ...any) (kluster.Answer, bool) {
+	why := fmt.Sprintf(format, args...)
+	r := kluster.Refusal{Story: file.Story, By: file.By, At: p.o.Now().UTC(), Limit: limit, Reason: why}
+	if err := kluster.KeepRefusal(p.klusterRequestRoot(), r); err != nil {
+		p.o.Logger.Warn("kluster refusal for the limit not kept", "component", "serve", "root", p.e.Root, "story", file.Story, "by", file.By, "err", err.Error())
+	}
+	return p.refuse(file, why), false
+}
+
 // klusterTried is what the pass last did for a story's namespace, kept in
 // klusterTriedPath, so that a head is tried once whether a record was written
 // or the deploy was refused before it, and a failed teardown is tried again
@@ -1015,7 +1029,7 @@ func (p *klusterPass) runChecks(ctx context.Context, repo *workitem.Repo, j klus
 		p.o.Logger.Info("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
 		return nil, err
 	}
-	if err := kluster.RecordChecks(mainCheckout(repo), ns, commit, run.Outcome, run.Log); err != nil {
+	if err := kluster.RecordChecks(mainCheckout(repo), ns, commit, run.Outcome, run.Log, run.AskedBy); err != nil {
 		p.o.Logger.Warn("kluster checks outcome not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "outcome", run.Outcome, "err", err.Error())
 	}
 	if run.Outcome == kluster.OutcomePassed {

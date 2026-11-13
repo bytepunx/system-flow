@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -484,20 +485,38 @@ standard error.`,
 }
 
 func newKlusterDeploymentsCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var withLimit bool
+	c := &cobra.Command{
 		Use:   "deployments",
-		Short: "List each namespace's deployment, the default namespace's first",
+		Short: "List each namespace's deployment, the default namespace's first, and the story namespaces against the limit",
 		Long: `Lists the deployments flai recorded under .flai-cache/kluster/deployments:
 the default namespace's first, then each story's by its number. Each row
-gives the namespace, the story, the commit, the outcome, and when it ended. A
-namespace a job acts on now shows that job; a record a job left running
-when it ended without its outcome shows interrupted. --json prints them as an
-array of records, each with default and, while a job runs on it, job. It only
-reads, so any agent may run it.`,
+gives the namespace, the story, its column on the board, the commit, whether
+that is the story branch's head (yes, no, or - when it is not known), the
+deploy's outcome, the last checks run's outcome and who asked for it, who
+asked for the deploy (the story's agent, flai serve for the review pass, or -
+for a shell), and when it ended. A namespace a job acts on now shows that
+job; a record a job left running when it ended without its outcome shows
+interrupted.
+
+A line under the table counts the stories in progress that hold a namespace,
+by a record or by a deploy their agent asked for that waits or runs, against
+kluster.agent_namespaces, and names the last deploy request refused for it.
+
+--json prints an array of records, each with default, log, column, head,
+head_error, at_head, checks_asked_by, and, while a job runs on it, job.
+--json --with-limit prints one object instead: deployments, that array;
+live and holding, the count and the stories; limit; and refusals, the
+requests refused for the limit, newest first, each with story, by, at,
+limit, and reason. It only reads, so any agent may run it.`,
 		Example: `  flai kluster deployments
-  flai kluster deployments --json`,
+  flai kluster deployments --json
+  flai kluster deployments --json --with-limit`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if withLimit && !a.jsonOut {
+				return errors.New("--with-limit shapes --json's output; give --json with it, or leave it out: the table always ends with the count against the limit")
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -506,37 +525,105 @@ reads, so any agent may run it.`,
 			if _, err := kluster.New(root, repo.Manifest, kluster.System{}); err != nil {
 				return err
 			}
-			list, err := kluster.Deployments(root, repo.Manifest.KlusterNamespace())
+			l, err := kluster.List(root, kluster.ListOptions{
+				DefaultNamespace: repo.Manifest.KlusterNamespace(),
+				Limit:            repo.Manifest.KlusterAgentNamespaces(),
+				Column: func(story string) string {
+					if it, err := repo.Get(story); err == nil {
+						return it.Status
+					}
+					return ""
+				},
+				Git: a.runner,
+			})
 			if err != nil {
 				return err
 			}
-			if a.jsonOut {
-				return a.printJSON(list)
+			switch {
+			case a.jsonOut && withLimit:
+				return a.printJSON(l)
+			case a.jsonOut:
+				return a.printJSON(l.Deployments)
 			}
-			if len(list) == 0 {
-				fmt.Fprintln(a.out, "no deployments")
-				return nil
+			if err := a.printDeployments(l.Deployments); err != nil {
+				return err
 			}
-			tw := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(tw, "NAMESPACE\tSTORY\tCOMMIT\tOUTCOME\tENDED")
-			for _, d := range list {
-				story := d.Story
-				if d.Default {
-					story = "(main)"
-				}
-				outcome := d.Outcome
-				if d.Job != nil {
-					outcome = d.Job.Kind + " running"
-				}
-				ended := "-"
-				if !d.EndedAt.IsZero() {
-					ended = d.EndedAt.UTC().Format(time.RFC3339)
-				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", d.Namespace, story, short12(d.Commit), outcome, ended)
-			}
-			return tw.Flush()
+			fmt.Fprintln(a.out, limitLine(l))
+			return nil
 		},
 	}
+	c.Flags().BoolVar(&withLimit, "with-limit", false, "with --json, print one object: the deployments, the stories in progress that hold a namespace against kluster.agent_namespaces, and the requests refused for it")
+	return c
+}
+
+// printDeployments prints list as flai kluster deployments' table, or no
+// deployments.
+func (a *app) printDeployments(list []kluster.Deployment) error {
+	if len(list) == 0 {
+		fmt.Fprintln(a.out, "no deployments")
+		return nil
+	}
+	tw := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "NAMESPACE\tSTORY\tCOLUMN\tCOMMIT\tHEAD\tOUTCOME\tCHECKS\tBY\tENDED")
+	for _, d := range list {
+		story := d.Story
+		if d.Default {
+			story = "(main)"
+		}
+		outcome := d.Outcome
+		if d.Job != nil {
+			outcome = d.Job.Kind + " running"
+		}
+		ended := "-"
+		if !d.EndedAt.IsZero() {
+			ended = d.EndedAt.UTC().Format(time.RFC3339)
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", d.Namespace, story, cmp.Or(d.Column, "-"), short12(d.Commit), atHead(d), outcome, checksCell(d), cmp.Or(d.AskedBy, "-"), ended)
+	}
+	return tw.Flush()
+}
+
+// atHead says whether d's commit is its story branch's head: yes, no, or -
+// when the head is not known, as for the default namespace.
+func atHead(d kluster.Deployment) string {
+	switch {
+	case d.Head == "":
+		return "-"
+	case d.AtHead:
+		return "yes"
+	}
+	return "no"
+}
+
+// checksCell is d's last checks run's outcome and who asked for it, or -.
+func checksCell(d kluster.Deployment) string {
+	switch {
+	case d.ChecksOutcome == "":
+		return "-"
+	case d.ChecksAskedBy == "":
+		return d.ChecksOutcome
+	}
+	return d.ChecksOutcome + " by " + d.ChecksAskedBy
+}
+
+// limitLine counts l's story namespaces against the limit and names the
+// last request refused for it.
+func limitLine(l kluster.Listing) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "story namespaces live: %d of %d, kluster.agent_namespaces", l.Live, l.Limit)
+	if len(l.Holding) > 0 {
+		b.WriteString(" (" + strings.Join(l.Holding, ", ") + ")")
+	}
+	if l.Limit == 0 {
+		b.WriteString("; deploys before review are off")
+	}
+	if len(l.Refusals) == 0 {
+		b.WriteString("; no request refused for the limit")
+		return b.String()
+	}
+	r := l.Refusals[0]
+	fmt.Fprintf(&b, "; last refused: %s's deploy, asked by %s at %s", r.Story, cmp.Or(r.By, "-"), r.At.UTC().Format(time.RFC3339))
+	return b.String()
 }
 
 func newKlusterLogCmd(a *app) *cobra.Command {

@@ -2799,7 +2799,7 @@ flai kluster down --yes
 Subcommands:
 
 - [deploy](#flai-kluster-deploy): Build a story's images, load them into the cluster, and deploy it into its namespace
-- [deployments](#flai-kluster-deployments): List each namespace's deployment, the default namespace's first
+- [deployments](#flai-kluster-deployments): List each namespace's deployment, the default namespace's first, and the story namespaces against the limit
 - [down](#flai-kluster-down): Take the project's cluster down with kluster down
 - [env](#flai-kluster-env): Print a story's namespace's variables and kubeconfig, as export lines or JSON
 - [exec](#flai-kluster-exec): Run a command in a story's worktree with its namespace's variables and kubeconfig
@@ -2855,20 +2855,31 @@ Flags:
 
 #### flai kluster deployments
 
-List each namespace's deployment, the default namespace's first.
+List each namespace's deployment, the default namespace's first, and the story namespaces against the limit.
 
 ```text
-flai kluster deployments
+flai kluster deployments [flags]
 ```
 
-Lists the deployments flai recorded under .flai-cache/kluster/deployments: the default namespace's first, then each story's by its number. Each row gives the namespace, the story, the commit, the outcome, and when it ended. A namespace a job acts on now shows that job; a record a job left running when it ended without its outcome shows interrupted. --json prints them as an array of records, each with default and, while a job runs on it, job. It only reads, so any agent may run it.
+Lists the deployments flai recorded under .flai-cache/kluster/deployments: the default namespace's first, then each story's by its number. Each row gives the namespace, the story, its column on the board, the commit, whether that is the story branch's head (yes, no, or - when it is not known), the deploy's outcome, the last checks run's outcome and who asked for it, who asked for the deploy (the story's agent, flai serve for the review pass, or - for a shell), and when it ended. A namespace a job acts on now shows that job; a record a job left running when it ended without its outcome shows interrupted.
+
+A line under the table counts the stories in progress that hold a namespace, by a record or by a deploy their agent asked for that waits or runs, against kluster.agent\_namespaces, and names the last deploy request refused for it.
+
+--json prints an array of records, each with default, log, column, head, head\_error, at\_head, checks\_asked\_by, and, while a job runs on it, job. --json --with-limit prints one object instead: deployments, that array; live and holding, the count and the stories; limit; and refusals, the requests refused for the limit, newest first, each with story, by, at, limit, and reason. It only reads, so any agent may run it.
 
 Examples:
 
 ```bash
 flai kluster deployments
 flai kluster deployments --json
+flai kluster deployments --json --with-limit
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--with-limit` | with --json, print one object: the deployments, the stories in progress that hold a namespace against kluster.agent\_namespaces, and the requests refused for it |
 
 #### flai kluster down
 

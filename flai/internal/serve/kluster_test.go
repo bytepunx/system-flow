@@ -1250,8 +1250,8 @@ func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testi
 	if err != nil || !ok {
 		t.Fatal(ok, err)
 	}
-	if r.Commit != klHeadA || r.Outcome != kluster.OutcomePassed || r.ChecksCommit != klHeadA || r.ChecksOutcome != kluster.OutcomeFailed {
-		t.Fatalf("a failed checks run at the deployed head is kept in the record: %+v", r)
+	if r.Commit != klHeadA || r.Outcome != kluster.OutcomePassed || r.ChecksCommit != klHeadA || r.ChecksOutcome != kluster.OutcomeFailed || r.ChecksAskedBy != forgeAuthor {
+		t.Fatalf("a failed checks run at the deployed head is kept in the record, asked for by flai serve: %+v", r)
 	}
 	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
 		t.Errorf("the failed run opens one thread, got %d", len(got))
@@ -1313,5 +1313,51 @@ func TestFailingChecksAgainstTheNamespaceSendTheStoryBack(t *testing.T) {
 	}
 	if got := lab.status(story); got != workitem.Review {
 		t.Errorf("the story is %s after its checks passed, want it in review", got)
+	}
+}
+
+// S-0663: a deploy request refused for kluster.agent_namespaces is kept
+// under the project's .flai-cache/kluster, the newest first and only the
+// newest kluster.RefusalsKept, and kluster.List lists it with the stories in
+// progress that hold a namespace against the limit.
+func TestARefusalForTheLimitIsKeptAndListed(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	one := lab.inProgress("One", klHeadA)
+	two := lab.inProgress("Two", klHeadB)
+	three := lab.inProgress("Three", klHeadC)
+	lab.ask(one, kluster.KindDeploy, "agent-"+one)
+	lab.ask(two, kluster.KindDeploy, "agent-"+two)
+	lab.drain()
+
+	for i := range kluster.RefusalsKept + 1 {
+		lab.tick()
+		a, queued := lab.pass.refuseOverLimit(kluster.Request{Story: three, Kind: kluster.KindDeploy, By: "agent-" + three}, 2, "%s refused, time %d", three, i)
+		if !a.Refused() || queued || a.Reason != fmt.Sprintf("%s refused, time %d", three, i) || a.Story != three || a.Kind != kluster.KindDeploy {
+			t.Fatalf("the refusal's answer = %+v, %v", a, queued)
+		}
+	}
+	column := func(story string) string {
+		it, err := lab.repo.Get(story)
+		if err != nil {
+			return ""
+		}
+		return it.Status
+	}
+	l, err := kluster.List(lab.root, kluster.ListOptions{Limit: 2, Column: column})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l.Live != 2 || l.Limit != 2 || strings.Join(l.Holding, ",") != one+","+two {
+		t.Errorf("the count against the limit = %d of %d, %q, want 2 of 2, %s and %s", l.Live, l.Limit, l.Holding, one, two)
+	}
+	if len(l.Refusals) != kluster.RefusalsKept {
+		t.Fatalf("refusals kept = %d, want the newest %d", len(l.Refusals), kluster.RefusalsKept)
+	}
+	newest := l.Refusals[0]
+	if newest.Story != three || newest.By != "agent-"+three || newest.Limit != 2 || !newest.At.Equal(lab.opts.Now().UTC()) || newest.Reason != fmt.Sprintf("%s refused, time %d", three, kluster.RefusalsKept) {
+		t.Errorf("the newest refusal = %+v", newest)
+	}
+	if oldest := l.Refusals[len(l.Refusals)-1]; oldest.Reason != fmt.Sprintf("%s refused, time 1", three) {
+		t.Errorf("the oldest kept = %+v, want the first dropped", oldest)
 	}
 }

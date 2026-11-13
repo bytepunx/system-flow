@@ -251,6 +251,7 @@ users:
 case "$*" in
   "rev-parse HEAD"|"rev-parse --verify main^{commit}") echo "git $(pwd) $*" >> "$FAKE_LOG"; echo "$FAKE_HEAD"; exit 0 ;;
   "rev-parse --abbrev-ref HEAD") echo main; exit 0 ;;
+  "rev-parse --verify --quiet refs/heads/story/"*) [ -n "$FAKE_STORY_HEAD" ] && { echo "$FAKE_STORY_HEAD"; exit 0; }; exit 1 ;;
   "worktree prune") exit 0 ;;
   "worktree add --detach --force "*) echo "git $*" >> "$FAKE_LOG"; mkdir -p "$5"; echo "gitdir: x" > "$5/.git"; cp -R scripts "$5/"; exit 0 ;;
   "-C "*) echo "git $*" >> "$FAKE_LOG"; exit 0 ;;
@@ -313,6 +314,7 @@ func deployProject(t *testing.T, status string) (root, log string) {
 		}
 	}
 	t.Setenv("FAKE_HEAD", klusterHead)
+	t.Setenv("FAKE_STORY_HEAD", "")
 	t.Setenv("FAKE_DEPLOY_EXIT", "")
 	return root, log
 }
@@ -448,7 +450,7 @@ func TestKlusterTeardown(t *testing.T) {
 func TestKlusterPromoteAndDeployments(t *testing.T) {
 	root, log := deployProject(t, "in-progress")
 	out, errOut, code := runKluster(t, root, false, "", "kluster", "deployments")
-	if code != 0 || strings.TrimSpace(out) != "no deployments" {
+	if code != 0 || strings.TrimSpace(out) != "no deployments\nstory namespaces live: 0 of 2, kluster.agent_namespaces; no request refused for the limit" {
 		t.Fatalf("no deployments: %d %s %s", code, out, errOut)
 	}
 	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json")
@@ -472,13 +474,100 @@ func TestKlusterPromoteAndDeployments(t *testing.T) {
 		t.Fatalf("deployments: %d %s %s", code, out, errOut)
 	}
 	lines := strings.Split(strings.TrimSpace(out), "\n")
-	if len(lines) != 3 || !strings.HasPrefix(lines[0], "NAMESPACE") || !strings.HasPrefix(lines[1], "demo ") || !strings.Contains(lines[1], "(main)") || !strings.HasPrefix(lines[2], "s-0007 ") || !strings.Contains(lines[2], "0123456789ab") || !strings.Contains(lines[2], "passed") {
+	if len(lines) != 4 || !strings.HasPrefix(lines[0], "NAMESPACE") || !strings.HasPrefix(lines[1], "demo ") || !strings.Contains(lines[1], "(main)") || !strings.HasPrefix(lines[2], "s-0007 ") || !strings.Contains(lines[2], "0123456789ab") || !strings.Contains(lines[2], "passed") {
 		t.Errorf("deployments lists the default namespace first:\n%s", out)
 	}
 	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json")
 	var list []map[string]any
 	if code != 0 || json.Unmarshal([]byte(out), &list) != nil || len(list) != 2 || list[0]["namespace"] != "demo" || list[0]["default"] != true || list[1]["story"] != "S-0007" {
 		t.Errorf("deployments --json: %d %s", code, out)
+	}
+}
+
+// S-0663: flai kluster deployments gives each story namespace its story's
+// column, whether its commit is the branch's head, its checks run and who
+// asked for it and for the deploy, and a line counting the story namespaces
+// against kluster.agent_namespaces with the last request refused for it;
+// --json keeps the array of records, with the new fields on each, and --json
+// --with-limit prints them with the count, the limit, and the refusals.
+func TestKlusterDeploymentsListsColumnHeadChecksAndTheLimit(t *testing.T) {
+	root, _ := deployProject(t, "in-progress")
+	if _, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007"); code != 0 {
+		t.Fatalf("deploy: %s", errOut)
+	}
+	checksLog := filepath.Join(root, "checks", "S-0007.log")
+	if err := kluster.RecordChecks(root, "s-0007", klusterHead, kluster.OutcomePassed, checksLog, "agent-S-0007"); err != nil {
+		t.Fatal(err)
+	}
+	r, _, err := kluster.ReadRecord(root, "s-0007")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.AskedBy = "agent-S-0007"
+	data, _ := json.Marshal(r)
+	if err := os.WriteFile(kluster.RecordPath(root, "s-0007"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	refusedAt := time.Date(2026, 11, 13, 9, 0, 0, 0, time.UTC)
+	if err := kluster.KeepRefusal(root, kluster.Refusal{Story: "S-0009", By: "agent-S-0009", At: refusedAt, Limit: 2, Reason: "S-0009 has no namespace yet"}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_STORY_HEAD", klusterHead)
+
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deployments")
+	if code != 0 {
+		t.Fatalf("deployments: %d %s %s", code, out, errOut)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) != 3 || strings.Join(strings.Fields(lines[0]), " ") != "NAMESPACE STORY COLUMN COMMIT HEAD OUTCOME CHECKS BY ENDED" {
+		t.Fatalf("the table and the line under it:\n%s", out)
+	}
+	if got, want := strings.Join(strings.Fields(lines[1])[:9], " "), "s-0007 S-0007 in-progress 0123456789ab yes passed passed by agent-S-0007"; got != want {
+		t.Errorf("S-0007's row = %q, want it to start %q", lines[1], want)
+	}
+	if f := strings.Fields(lines[1]); len(f) < 10 || f[9] != "agent-S-0007" {
+		t.Errorf("S-0007's row names who asked for the deploy: %q", lines[1])
+	}
+	if want := "story namespaces live: 1 of 2, kluster.agent_namespaces (S-0007); last refused: S-0009's deploy, asked by agent-S-0009 at 2026-11-13T09:00:00Z"; lines[2] != want {
+		t.Errorf("the line under the table = %q, want %q", lines[2], want)
+	}
+
+	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json")
+	var list []map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &list) != nil || len(list) != 1 {
+		t.Fatalf("deployments --json is still an array of records: %d %s", code, out)
+	}
+	row := list[0]
+	for k, want := range map[string]any{"story": "S-0007", "namespace": "s-0007", "commit": klusterHead, "outcome": "passed", "default": false, "column": "in-progress", "head": klusterHead, "at_head": true,
+		"asked_by": "agent-S-0007", "log": kluster.LogDir(root, "s-0007"), "checks_commit": klusterHead, "checks_outcome": "passed", "checks_log": checksLog, "checks_asked_by": "agent-S-0007"} {
+		if row[k] != want {
+			t.Errorf("--json's %s = %v, want %v", k, row[k], want)
+		}
+	}
+
+	out, _, code = runKluster(t, root, false, "", "kluster", "deployments", "--json", "--with-limit")
+	var l struct {
+		Deployments []map[string]any `json:"deployments"`
+		Live        int              `json:"live"`
+		Holding     []string         `json:"holding"`
+		Limit       int              `json:"limit"`
+		Refusals    []map[string]any `json:"refusals"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &l) != nil {
+		t.Fatalf("--json --with-limit: %d %s", code, out)
+	}
+	if len(l.Deployments) != 1 || l.Deployments[0]["column"] != "in-progress" || l.Live != 1 || l.Limit != 2 || !slices.Equal(l.Holding, []string{"S-0007"}) ||
+		len(l.Refusals) != 1 || l.Refusals[0]["story"] != "S-0009" || l.Refusals[0]["by"] != "agent-S-0009" || l.Refusals[0]["at"] != "2026-11-13T09:00:00Z" || l.Refusals[0]["limit"] != float64(2) {
+		t.Errorf("--json --with-limit: %s", out)
+	}
+
+	t.Setenv("FAKE_STORY_HEAD", strings.Repeat("f", 40))
+	out, _, _ = runKluster(t, root, false, "", "kluster", "deployments")
+	if f := strings.Fields(strings.Split(out, "\n")[1]); len(f) < 5 || f[4] != "no" {
+		t.Errorf("a deploy behind the branch's head shows no under HEAD:\n%s", out)
+	}
+	if _, errOut, code := runKluster(t, root, false, "", "kluster", "deployments", "--with-limit"); code == 0 || !strings.Contains(errOut, "give --json with it") {
+		t.Errorf("--with-limit without --json: %d %s", code, errOut)
 	}
 }
 

@@ -563,6 +563,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--verified` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move), [flai queue add](../users/flai-reference.md#flai-queue-add) |
 | `--version` | [flai host upgrade](../users/flai-reference.md#flai-host-upgrade), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--wait` | [flai checks run](../users/flai-reference.md#flai-checks-run), [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai kluster deploy](../users/flai-reference.md#flai-kluster-deploy), [flai kluster teardown](../users/flai-reference.md#flai-kluster-teardown) |
+| `--with-limit` | [flai kluster deployments](../users/flai-reference.md#flai-kluster-deployments) |
 | `--without-kluster` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--without-queue-tiers` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--write` | [flai design css](../users/flai-reference.md#flai-design-css), [flai role definition](../users/flai-reference.md#flai-role-definition), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |

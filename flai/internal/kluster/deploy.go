@@ -219,6 +219,10 @@ type Record struct {
 	ChecksCommit  string `json:"checks_commit,omitempty"`
 	ChecksOutcome string `json:"checks_outcome,omitempty"`
 	ChecksLog     string `json:"checks_log,omitempty"`
+	// ChecksAskedBy is who asked for that checks run: the story's agent, or
+	// flai serve for the review pass; empty for a run from a shell or the
+	// dashboard, and in a record written before it was kept (S-0663).
+	ChecksAskedBy string `json:"checks_asked_by,omitempty"`
 	// AskedBy is who asked for the record's last job: the story's agent that
 	// asked flai serve, or flai serve for the review pass; empty for a job run
 	// in a shell, and in a record written before it was kept (ADR-0292 §6).
@@ -287,10 +291,11 @@ func putRecord(root string, r Record) error {
 }
 
 // RecordChecks keeps in namespace ns's record the outcome of a checks run
-// against it at commit, which ended outcome, and its log. It refuses a
-// namespace with no record, and one deployed again at another commit since
-// the run started, whose record the outcome does not describe.
-func RecordChecks(root, ns, commit, outcome, log string) error {
+// against it at commit, which ended outcome, its log, and by, who asked for
+// it. It refuses a namespace with no record, and one deployed again at
+// another commit since the run started, whose record the outcome does not
+// describe.
+func RecordChecks(root, ns, commit, outcome, log, by string) error {
 	unlock, err := lockRecords(root)
 	if err != nil {
 		return err
@@ -306,7 +311,7 @@ func RecordChecks(root, ns, commit, outcome, log string) error {
 	if r.Commit != commit {
 		return fmt.Errorf("the namespace %s was deployed again, at %s, while its checks ran at %s, so their outcome %s is not kept; run its checks again at %s", ns, shortCommit(r.Commit), shortCommit(commit), outcome, shortCommit(r.Commit))
 	}
-	r.ChecksCommit, r.ChecksOutcome, r.ChecksLog = commit, outcome, log
+	r.ChecksCommit, r.ChecksOutcome, r.ChecksLog, r.ChecksAskedBy = commit, outcome, log, by
 	return putRecord(root, r)
 }
 
@@ -1016,18 +1021,35 @@ func (c Cluster) checkoutMain(ctx context.Context, branch string, out io.Writer)
 const OutcomeInterrupted = "interrupted"
 
 // Deployment is a namespace's record as the list shows it: whether it is the
-// default namespace, and the job running against it now, if any.
+// default namespace, the job running against it now, if any, and where its
+// last job's output is; and, as List fills them for a story's namespace, the
+// story's column and its branch's head.
 type Deployment struct {
 	Record
 	Default bool `json:"default"`
 	Job     *Job `json:"job,omitempty"`
+	// Log is where the last job's output is, as List fills it: the log of
+	// the step it failed at, else the folder of its steps' logs; empty from
+	// Deployments (S-0663).
+	Log string `json:"log,omitempty"`
+	// Column is the story's column on the board, such as in-progress or
+	// review; empty for the default namespace, for a story the board does not
+	// hold, and from Deployments (S-0663).
+	Column string `json:"column,omitempty"`
+	// Head is the story branch's head now, and HeadError why it could not be
+	// resolved; AtHead says whether Commit is Head. All are empty, and AtHead
+	// false, for the default namespace and from Deployments (S-0663).
+	Head      string `json:"head,omitempty"`
+	HeadError string `json:"head_error,omitempty"`
+	AtHead    bool   `json:"at_head"`
 }
 
 // Deployments lists the namespaces' records kept under root, the default
 // namespace, defaultNS, first, then the stories' by their number, then any
 // other by name. A record whose namespace a running job acts on carries that
 // job; a record that still says running while no job runs for its namespace
-// is shown interrupted. None is an empty list.
+// is shown interrupted. None is an empty list. List gives each story's
+// column and head besides.
 func Deployments(root, defaultNS string) ([]Deployment, error) {
 	entries, err := os.ReadDir(filepath.Join(Dir(root), "deployments"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -1097,4 +1119,197 @@ func storyNumber(ns string) int {
 		return -1
 	}
 	return n
+}
+
+// lastLog is where r's last job's output is: the log of the step it failed
+// at, else the folder of its steps' logs under root.
+func lastLog(root string, r Record) string {
+	if r.FailedStep != "" {
+		for i := len(r.Steps) - 1; i >= 0; i-- {
+			if s := r.Steps[i]; s.Name == r.FailedStep && s.Log != "" {
+				return s.Log
+			}
+		}
+	}
+	return LogDir(root, r.Namespace)
+}
+
+// inProgress is the column of a story whose namespace counts against
+// kluster.agent_namespaces (ADR-0292 §4).
+const inProgress = "in-progress"
+
+// ListOptions is what List needs beyond the records under the root.
+type ListOptions struct {
+	// DefaultNamespace is the namespace main is promoted into.
+	DefaultNamespace string
+	// Limit is kluster.agent_namespaces, the most stories in progress that
+	// hold a namespace at once.
+	Limit int
+	// Column is a story's column on the board, empty for one the board does
+	// not hold; nil leaves every column empty and counts no namespace.
+	Column func(story string) string
+	// Git resolves a story branch's head in the root; nil leaves every head
+	// empty.
+	Git execx.Runner
+}
+
+// Listing is the list of the namespaces flai kluster deployments and the
+// Deployments page show (S-0663): each namespace's record with its story's
+// column and head, the stories in progress that hold a namespace against
+// the limit, and the deploy requests refused for it, newest first.
+type Listing struct {
+	Deployments []Deployment `json:"deployments"`
+	// Live is how many stories in progress hold a namespace, Holding which,
+	// by their number: a story with a record, or with a deploy its agent
+	// asked for that waits or runs (ADR-0292 §4).
+	Live    int      `json:"live"`
+	Holding []string `json:"holding"`
+	// Limit is kluster.agent_namespaces.
+	Limit int `json:"limit"`
+	// Refusals are the deploy requests refused for the limit, newest first,
+	// at most RefusalsKept.
+	Refusals []Refusal `json:"refusals"`
+}
+
+// List lists the namespaces' records kept under root, as Deployments does,
+// each story's with its column and its branch's head, and counts the stories
+// in progress that hold a namespace against o.Limit: those with a record, and
+// those with no record yet whose agent asked for a deploy that waits or runs.
+// An asked-for job left by a flai serve that stopped counts until the next
+// flai serve ends it interrupted.
+func List(root string, o ListOptions) (Listing, error) {
+	list, err := Deployments(root, o.DefaultNamespace)
+	if err != nil {
+		return Listing{}, err
+	}
+	column := o.Column
+	if column == nil {
+		column = func(string) string { return "" }
+	}
+	out := Listing{Deployments: list, Holding: []string{}, Limit: o.Limit}
+	recorded := map[string]bool{}
+	for i := range list {
+		d := &list[i]
+		d.Log = lastLog(root, d.Record)
+		if d.Story == "" {
+			continue
+		}
+		story := strings.ToUpper(d.Story)
+		recorded[story] = true
+		d.Column = column(story)
+		if d.Column == inProgress {
+			out.Holding = append(out.Holding, story)
+		}
+		if o.Git == nil {
+			continue
+		}
+		if head, err := StoryHead(o.Git, root, story); err != nil {
+			d.HeadError = err.Error()
+		} else {
+			d.Head, d.AtHead = head, head == d.Commit
+		}
+	}
+	asked, err := askedDeploys(root)
+	if err != nil {
+		return Listing{}, err
+	}
+	for _, story := range asked {
+		if !recorded[story] && column(story) == inProgress {
+			out.Holding = append(out.Holding, story)
+		}
+	}
+	slices.SortFunc(out.Holding, func(a, b string) int {
+		return cmp.Or(storyNumber(a)-storyNumber(b), strings.Compare(a, b))
+	})
+	out.Live = len(out.Holding)
+	if out.Refusals, err = Refusals(root); err != nil {
+		return Listing{}, err
+	}
+	return out, nil
+}
+
+// askedDeploys are the stories whose agent asked for a deploy that waits or
+// runs, as their job states under root say.
+func askedDeploys(root string) ([]string, error) {
+	paths, err := filepath.Glob(filepath.Join(RequestsDir(root), "*"+JobSuffix))
+	if err != nil {
+		return nil, fmt.Errorf("list the kluster jobs stories' agents asked for under %s: %w", RequestsDir(root), err)
+	}
+	var out []string
+	for _, path := range paths {
+		story := strings.TrimSuffix(filepath.Base(path), JobSuffix)
+		j, ok, err := ReadAskedJob(root, story)
+		if err != nil {
+			return nil, err
+		}
+		if ok && j.Kind == KindDeploy && !j.Ended() {
+			out = append(out, strings.ToUpper(j.Story))
+		}
+	}
+	return out, nil
+}
+
+// Refusal is a deploy request flai serve refused because kluster.agent_namespaces
+// stories in progress held a namespace already (ADR-0292 §4, S-0663).
+type Refusal struct {
+	Story string `json:"story"`
+	// By is the agent that asked.
+	By string    `json:"by"`
+	At time.Time `json:"at"`
+	// Limit is kluster.agent_namespaces when it was refused.
+	Limit int `json:"limit"`
+	// Reason is the refusal's words, naming the stories that held one.
+	Reason string `json:"reason"`
+}
+
+// RefusalsKept is how many refusals for the limit flai keeps, the newest.
+const RefusalsKept = 10
+
+// RefusalsPath is the file of the refusals for the limit kept under root.
+func RefusalsPath(root string) string { return filepath.Join(Dir(root), "refusals.json") }
+
+func refusalsLockPath(root string) string { return filepath.Join(Dir(root), "refusals.lock") }
+
+// KeepRefusal keeps r among the refusals for the limit under root, the
+// newest first, dropping all but the RefusalsKept newest; the file is
+// written whole or not at all.
+func KeepRefusal(root string, r Refusal) error {
+	unlock, err := filelock.Lock(refusalsLockPath(root), recordsLockWait)
+	if err != nil {
+		return fmt.Errorf("take the lock of the kluster refusals: %w", err)
+	}
+	defer unlock()
+	kept, err := Refusals(root)
+	if err != nil {
+		return err
+	}
+	kept = append([]Refusal{r}, kept...)
+	if len(kept) > RefusalsKept {
+		kept = kept[:RefusalsKept]
+	}
+	data, err := json.MarshalIndent(kept, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode the kluster refusals: %w", err)
+	}
+	if err := atomicfile.WriteFile(RefusalsPath(root), append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write the kluster refusals %s: %w; check that the project's .flai-cache is writable", RefusalsPath(root), err)
+	}
+	return nil
+}
+
+// Refusals are the refusals for the limit kept under root, the newest first;
+// none is an empty list.
+func Refusals(root string) ([]Refusal, error) {
+	data, err := os.ReadFile(RefusalsPath(root))
+	if errors.Is(err, os.ErrNotExist) {
+		return []Refusal{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read the kluster refusals: %w", err)
+	}
+	out := []Refusal{}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, fmt.Errorf("read the kluster refusals %s: %w; delete it, and the next refusal writes it again", RefusalsPath(root), err)
+	}
+	return out, nil
 }

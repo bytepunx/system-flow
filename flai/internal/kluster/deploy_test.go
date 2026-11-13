@@ -579,26 +579,26 @@ func TestARedeployAtANewCommitReplacesTheRecord(t *testing.T) {
 func TestTheChecksOutcomeIsKeptInTheRecordUntilTheNextDeploy(t *testing.T) {
 	f := deploySetup(t)
 	log := filepath.Join(f.root, "checks", "S-0578.log")
-	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed, log); err == nil || !strings.Contains(err.Error(), "no deployment record") {
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed, log, "agent-S-0578"); err == nil || !strings.Contains(err.Error(), "no deployment record") {
 		t.Errorf("checks kept for a namespace never deployed: %v", err)
 	}
 	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := RecordChecks(f.root, "s-0578", commitB, OutcomePassed, log); err == nil || !strings.Contains(err.Error(), "deployed again, at 0123456789ab") {
+	if err := RecordChecks(f.root, "s-0578", commitB, OutcomePassed, log, "agent-S-0578"); err == nil || !strings.Contains(err.Error(), "deployed again, at 0123456789ab") {
 		t.Errorf("checks at another commit than the deploy's were kept: %v", err)
 	}
-	if err := RecordChecks(f.root, "s-0578", commitA, OutcomeFailed, log); err != nil {
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomeFailed, log, "agent-S-0578"); err != nil {
 		t.Fatal(err)
 	}
 	r, _, err := ReadRecord(f.root, "s-0578")
-	if err != nil || r.ChecksCommit != commitA || r.ChecksOutcome != OutcomeFailed || r.ChecksLog != log || r.Outcome != OutcomePassed || len(r.Steps) != 3 {
+	if err != nil || r.ChecksCommit != commitA || r.ChecksOutcome != OutcomeFailed || r.ChecksLog != log || r.ChecksAskedBy != "agent-S-0578" || r.Outcome != OutcomePassed || len(r.Steps) != 3 {
 		t.Errorf("the record keeps the deploy and the checks' outcome: %+v %v", r, err)
 	}
 	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
-	if r, _, _ := ReadRecord(f.root, "s-0578"); r.ChecksCommit != "" || r.ChecksOutcome != "" || r.ChecksLog != "" {
+	if r, _, _ := ReadRecord(f.root, "s-0578"); r.ChecksCommit != "" || r.ChecksOutcome != "" || r.ChecksLog != "" || r.ChecksAskedBy != "" {
 		t.Errorf("a deploy clears the checks' outcome: %+v", r)
 	}
 }
@@ -1157,5 +1157,129 @@ func TestATeardownNamesWhoAsked(t *testing.T) {
 	}
 	if kept, _, _ := ReadRecord(f.root, "s-0578"); kept.AskedBy != "agent-S-0578" || kept.FailedStep != StepTeardown {
 		t.Errorf("the record a failed teardown keeps names who asked: %+v", kept)
+	}
+}
+
+// branchGit is an execx.Runner whose git rev-parse answers the head heads
+// gives a story branch's ref, and fails for one it does not name.
+type branchGit map[string]string
+
+func (g branchGit) Run(_, _ string, args ...string) (string, error) {
+	ref := strings.TrimSuffix(args[len(args)-1], "^{commit}")
+	if head, ok := g[ref]; ok {
+		return head + "\n", nil
+	}
+	return "", errors.New("exit status 1")
+}
+
+func (g branchGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (g branchGit) LookPath(name string) (string, error) { return name, nil }
+
+// S-0663: List gives each story namespace its story's column, its branch's
+// head and whether the record's commit is it, its last deploy and checks run
+// with their outcomes, logs, and who asked, and counts against the limit the
+// stories in progress with a record or a waiting asked-for deploy, never one
+// in review or one whose deploy ended; it lists the refusals kept, newest
+// first.
+func TestListGivesEachStoryNamespaceItsColumnHeadAndTheCountAgainstTheLimit(t *testing.T) {
+	f := teardownSetup(t)
+	if _, err := f.c.DeployBy(context.Background(), f.m, "agent-S-0578", "S-0578", "in-progress", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	checksLog := filepath.Join(f.root, "checks", "S-0578.log")
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed, checksLog, "agent-S-0578"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.c.DeployBy(context.Background(), f.m, "flai serve", "S-0012", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_FAIL", "deploy")
+	if _, err := f.c.DeployBy(context.Background(), f.m, "agent-S-1000", "S-1000", "in-progress", f.worktree, commitA, &bytes.Buffer{}); err == nil {
+		t.Fatal("S-1000's deploy fails at deploy")
+	}
+	t.Setenv("FAKE_FAIL", "")
+	queued := time.Date(2026, 11, 13, 9, 0, 0, 0, time.UTC)
+	for _, j := range []AskedJob{
+		{ID: "S-0020-deploy", Kind: KindDeploy, Story: "S-0020", By: "agent-S-0020", QueuedAt: queued},
+		{ID: "S-0030-deploy", Kind: KindDeploy, Story: "S-0030", By: "agent-S-0030", QueuedAt: queued, EndedAt: queued.Add(time.Minute), Outcome: OutcomeFailed},
+		{ID: "S-0040-deploy", Kind: KindDeploy, Story: "S-0040", By: "agent-S-0040", QueuedAt: queued},
+		{ID: "S-0050-checks", Kind: KindChecks, Story: "S-0050", By: "agent-S-0050", QueuedAt: queued},
+	} {
+		if err := WriteAskedJob(f.root, j); err != nil {
+			t.Fatal(err)
+		}
+	}
+	refused := Refusal{Story: "S-0060", By: "agent-S-0060", At: queued, Limit: 2, Reason: "S-0060 has no namespace yet"}
+	if err := KeepRefusal(f.root, refused); err != nil {
+		t.Fatal(err)
+	}
+	columns := map[string]string{"S-0578": "in-progress", "S-0012": "review", "S-1000": "in-progress", "S-0020": "in-progress", "S-0030": "in-progress", "S-0040": "review", "S-0050": "in-progress", "S-0060": "in-progress"}
+	git := branchGit{"refs/heads/story/S-0578": commitA, "refs/heads/story/S-1000": commitB}
+
+	l, err := List(f.root, ListOptions{DefaultNamespace: "authstar", Limit: 2, Column: func(s string) string { return columns[s] }, Git: git})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(l.Deployments) != 3 {
+		t.Fatalf("deployments = %+v, want S-0012's, S-0578's, and S-1000's", l.Deployments)
+	}
+	byNS := map[string]Deployment{}
+	for _, d := range l.Deployments {
+		byNS[d.Namespace] = d
+	}
+	if d := byNS["s-0578"]; d.Column != "in-progress" || d.Head != commitA || !d.AtHead || d.HeadError != "" || d.Outcome != OutcomePassed || d.AskedBy != "agent-S-0578" || d.Log != LogDir(f.root, "s-0578") ||
+		d.ChecksCommit != commitA || d.ChecksOutcome != OutcomePassed || d.ChecksLog != checksLog || d.ChecksAskedBy != "agent-S-0578" {
+		t.Errorf("S-0578, in progress, deployed and checked at its head: %+v", d)
+	}
+	if d := byNS["s-1000"]; d.Column != "in-progress" || d.Head != commitB || d.AtHead || d.Outcome != OutcomeFailed || d.AskedBy != "agent-S-1000" || d.Log != LogPath(f.root, "s-1000", StepDeploy) || d.ChecksOutcome != "" {
+		t.Errorf("S-1000, in progress, its deploy failed behind its head: %+v", d)
+	}
+	if d := byNS["s-0012"]; d.Column != "review" || d.Head != "" || d.AtHead || !strings.Contains(d.HeadError, "refs/heads/story/S-0012") || d.AskedBy != "flai serve" {
+		t.Errorf("S-0012, in review, with no branch: %+v", d)
+	}
+	if l.Live != 3 || l.Limit != 2 || !slices.Equal(l.Holding, []string{"S-0020", "S-0578", "S-1000"}) {
+		t.Errorf("held = %d of %d, %q, want S-0020's waiting deploy, S-0578, and S-1000 of 2", l.Live, l.Limit, l.Holding)
+	}
+	if len(l.Refusals) != 1 || l.Refusals[0].Story != refused.Story || l.Refusals[0].By != refused.By || !l.Refusals[0].At.Equal(refused.At) || l.Refusals[0].Limit != 2 || l.Refusals[0].Reason != refused.Reason {
+		t.Errorf("refusals = %+v, want %+v", l.Refusals, refused)
+	}
+
+	bare, err := List(f.root, ListOptions{DefaultNamespace: "authstar", Limit: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bare.Live != 0 || len(bare.Holding) != 0 || bare.Holding == nil || bare.Deployments[0].Column != "" || bare.Deployments[0].Head != "" {
+		t.Errorf("with no columns and no git, nothing is counted or resolved: %+v", bare)
+	}
+}
+
+// S-0663: KeepRefusal keeps the newest RefusalsKept refusals, newest first;
+// none kept is an empty list.
+func TestKeepRefusalKeepsTheNewest(t *testing.T) {
+	root := t.TempDir()
+	if got, err := Refusals(root); err != nil || got == nil || len(got) != 0 {
+		t.Fatalf("none kept: %v %v", got, err)
+	}
+	at := time.Date(2026, 11, 13, 9, 0, 0, 0, time.UTC)
+	for i := range RefusalsKept + 2 {
+		if err := KeepRefusal(root, Refusal{Story: "S-0001", By: "agent-S-0001", At: at.Add(time.Duration(i) * time.Minute), Limit: 1, Reason: strconv.Itoa(i)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := Refusals(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != RefusalsKept || got[0].Reason != strconv.Itoa(RefusalsKept+1) || got[len(got)-1].Reason != "2" {
+		t.Errorf("kept = %+v, want the newest %d, newest first", got, RefusalsKept)
+	}
+	if err := os.WriteFile(RefusalsPath(root), []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Refusals(root); err == nil || !strings.Contains(err.Error(), "delete it") {
+		t.Errorf("a file that does not parse: %v", err)
 	}
 }

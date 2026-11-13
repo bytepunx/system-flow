@@ -179,7 +179,9 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 	if kind == kluster.KindDeploy && !recorded {
 		limit := m.KlusterAgentNamespaces()
 		if holders := p.holders(repo, root, story); len(holders) >= limit {
-			return refuse("%s has no namespace yet, and %s in progress hold one already, the most kluster.agent_namespaces allows (%d): %s. A namespace frees only when its story is accepted, cancelled, moved back to ready or backlog, or torn down, so nothing is queued: go on with the work that needs no namespace and ask again later, or say in %s's Notes which criteria you could not verify against a running system and why; the review's deploy checks them",
+			asker := file
+			asker.By = req.By
+			return p.refuseOverLimit(asker, limit,"%s has no namespace yet, and %s in progress hold one already, the most kluster.agent_namespaces allows (%d): %s. A namespace frees only when its story is accepted, cancelled, moved back to ready or backlog, or torn down, so nothing is queued: go on with the work that needs no namespace and ask again later, or say in %s's Notes which criteria you could not verify against a running system and why; the review's deploy checks them",
 				story, countStories(len(holders)), limit, strings.Join(holders, "; "), story)
 		}
 	}
