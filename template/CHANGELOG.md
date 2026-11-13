@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0761 A close-out records no `item.blocked-closed` outside the story (patch, ADR-0296, I-0354): the close-out rule in `work-management.md` says that an `item.blocked-closed` outside the story, a done or cancelled item whose blocked interval was left open at its close, is left out of a close-out's check and recorded in no issue, since only `flai unblock` on that item in the main checkout closes it, and the main checkout's check still reports it.
+
 ## 1.1.35 - 2026-11-13
 
 - S-0726 A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself (patch).
