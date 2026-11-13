@@ -1602,6 +1602,90 @@ func TestSyncFindsNothingUndoneOnABranchThatKeepsMainsChanges(t *testing.T) {
 	}
 }
 
+// The table I-0360's stop was on, as one long row on one line: in
+// notes/table.md, a markdown file outside the design and docs folders, so
+// that no section merge settles the stop (ADR-0175, ADR-0276).
+const (
+	i0360Path   = "notes/table.md"
+	i0360Head   = "| Issue | What | State |\n|-------|------|-------|\n"
+	i0360Base   = "| I-0360 | The sync counts a line main added as undone. | open |"
+	i0360Branch = "| I-0360 | The sync counts a line main added as undone. The branch adds its sentence. | open |"
+	i0360Main   = "| I-0360 | The sync counts a line main added as undone. | closed |"
+)
+
+// i0360 is I-0360's case, stopped: notes/table.md's one row, which the
+// branch extends with a sentence and main changes another word of, after the
+// branch left main. The sync stops on it, and returns the story, its
+// worktree, and the branch's base before the sync.
+func i0360(t *testing.T) (*workitem.Repo, *workitem.Item, string, string) {
+	t.Helper()
+	repo := syncProject(t)
+	r := repo.MainRoot
+	if err := os.MkdirAll(filepath.Join(r, "notes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, r, i0360Path, i0360Head+i0360Base+"\n")
+	git(t, r, "add", "-A")
+	git(t, r, "commit", "-q", "-m", "docs: the table")
+	story, wt := openStory(t, repo, "S-0001", "notes")
+	oldBase, _ := (execx.System{}).Run(wt, "git", "rev-parse", "HEAD")
+	write(t, wt, i0360Path, i0360Head+i0360Branch+"\n")
+	git(t, wt, "commit", "-q", "-am", "docs: [S-0001] the branch's sentence")
+	write(t, r, i0360Path, i0360Head+i0360Main+"\n")
+	git(t, r, "commit", "-q", "-am", "docs: [S-0002] main closes the row")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StopConflicts || strings.Join(res.Conflicts, ",") != i0360Path {
+		t.Fatalf("the first sync: %+v", res)
+	}
+	return repo, story, wt, oldBase
+}
+
+// I-0360, ADR-0294: a stop on one long markdown table row, resolved as
+// S-0761 resolved it, main's row with the branch's sentence added, keeps
+// every word of main's row, so the sync that resumes the rebase
+// reports nothing undone and records nothing. Resolved with the branch's row
+// alone, which drops main's word, the path is still undone and recorded.
+func TestSyncFindsNothingUndoneWhenAResolvedStopKeepsMainsMarkdownRowsWords(t *testing.T) {
+	for _, c := range []struct {
+		name, resolved string
+		undone         bool
+	}{
+		{"main's row with the branch's sentence", "| I-0360 | The sync counts a line main added as undone. The branch adds its sentence. | closed |", false},
+		{"the branch's row alone", i0360Branch, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			repo, story, wt, oldBase := i0360(t)
+			write(t, wt, i0360Path, i0360Head+c.resolved+"\n")
+			git(t, wt, "add", i0360Path)
+
+			res, err := Sync(syncOptions(repo, story))
+			if err != nil || !res.Synced || !res.Resumed || res.Stopped != "" {
+				t.Fatalf("the resumed sync: %+v %v", res, err)
+			}
+			if RebaseInProgress(execx.System{}, wt) {
+				t.Fatal("a rebase still waits")
+			}
+			want := []Undone{}
+			if c.undone {
+				want = []Undone{{Path: i0360Path, Lines: []string{i0360Main}, OldBase: oldBase}}
+			}
+			if !reflect.DeepEqual(res.UndoesMain, want) {
+				t.Errorf("undoes main: %+v, want %+v", res.UndoesMain, want)
+			}
+			if _, err := os.Stat(UndoneRecordPath(repo.CacheDir(), "S-0001")); errors.Is(err, os.ErrNotExist) == c.undone {
+				t.Errorf("record written is %v, want %v: %v", !c.undone, c.undone, err)
+			}
+			if got, err := RecordedUndone(execx.System{}, repo, "S-0001"); err != nil || !reflect.DeepEqual(got, want) {
+				t.Errorf("recorded: %+v %v, want %+v", got, err, want)
+			}
+		})
+	}
+}
+
 // gainingRunner is the real runner, running gain once, right after the
 // sync's first git rebase onto a base returns: main gaining commits while
 // the sync runs (I-0338, I-0335).
