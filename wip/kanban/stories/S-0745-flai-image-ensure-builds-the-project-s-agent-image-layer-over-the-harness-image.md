@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-13T07:23:41Z
+updated: 2026-11-13T07:27:59Z
 transitions: []
 tags: [cli, template]
 topics: [docker, manifest]
@@ -33,13 +33,15 @@ usage:
           cache_read: 93148
           cache_write: 17093
           cost: 0.0314
-draft: true
 forecast:
   duration: 40m
   delivery: 2026-11-13T17:02:00Z
   basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741, S-0742, S-0743 and S-0744."
   by: flai
   at: 2026-11-13T07:23:41Z
+finalized:
+  by: alex
+  at: 2026-11-13T07:27:59Z
 ---
 # S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project
 
