@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -20,19 +19,23 @@ func TestProfilesAreOfferedOnLoopbackOnly(t *testing.T) {
 		t.Errorf("an address beyond this machine: %s", logs.String())
 	}
 
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := ln.Addr().String()
-	_ = ln.Close()
-	t.Setenv(pprofEnv, addr)
+	// the kernel picks the port as servePprof listens, and the log names it: a
+	// port the test closed and handed over could be taken first (I-0372)
+	logs.Reset()
+	t.Setenv(pprofEnv, "127.0.0.1:0")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	servePprof(ctx, log)
+	_, url, found := strings.Cut(logs.String(), "url=")
+	url, _, _ = strings.Cut(url, " ")
+	url = strings.Trim(strings.TrimSpace(url), `"`)
+	if !found || !strings.HasPrefix(url, "http://127.0.0.1:") || strings.HasPrefix(url, "http://127.0.0.1:0/") {
+		t.Fatalf("the log names the address profiles are offered at: %s", logs.String())
+	}
 	var res *http.Response
+	var err error
 	for range 50 {
-		if res, err = http.Get("http://" + addr + "/debug/pprof/cmdline"); err == nil {
+		if res, err = http.Get(url + "cmdline"); err == nil {
 			break
 		}
 		time.Sleep(20 * time.Millisecond)
