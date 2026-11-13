@@ -12,15 +12,22 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
 
-// Mode is what Ensure does with each harness image: pull it first, or build it without the pull.
+// Mode is what Ensure does with the images: make the harness images, pulling
+// or building them, then the project's layer over them, or build the layer alone.
 type Mode string
 
 // The modes of Ensure.
 const (
-	// ModeEnsure makes each missing or stale harness image: it pulls it, or builds it when the pull cannot run.
+	// ModeEnsure makes each missing or stale harness image: it pulls it, or
+	// builds it when the pull cannot run; then it builds each layer that is
+	// missing or stale or whose harness image it made.
 	ModeEnsure Mode = "ensure"
-	// ModeBuild builds each harness image, current or not, without the pull.
+	// ModeBuild builds each harness image, current or not, without the pull,
+	// then each layer over it.
 	ModeBuild Mode = "build"
+	// ModeLayer builds each layer, current or not, over the harness image
+	// already on this host, and leaves every harness image as it is.
+	ModeLayer Mode = "layer"
 )
 
 // Way is how Ensure left an image.
@@ -32,42 +39,54 @@ const (
 	WayPulled Way = "pulled"
 	// WayBuilt is a harness image built on this host; Outcome.Built.From says from what.
 	WayBuilt Way = "built"
-	// WayCurrent is a harness image already current, left as it is.
+	// WayLayered is the project's layer built over its harness image; Outcome.Layered says what it made.
+	WayLayered Way = "layered"
+	// WayCurrent is an image already current, left as it is.
 	WayCurrent Way = "current"
+	// WayLeft is a harness image ModeLayer leaves as it is, current or not.
+	WayLeft Way = "left"
 	// WayOwn is the operator's own image, which flai never makes.
 	WayOwn Way = "own"
-	// WayNotBuilt is the project's layer, which flai does not build yet.
-	WayNotBuilt Way = "not built"
 )
 
 // Ensurer makes the harness images through Pull and Build (Puller.Pull and
-// Builder.Build, or fakes), saying what it does on Out (discarded when nil).
+// Builder.Build, or fakes), and the project's layer over them through Layer
+// (Builder.Layer, or a fake) in the project at Root, the layer's build
+// context, saying what it does on Out (discarded when nil).
 type Ensurer struct {
 	Pull  func(ctx context.Context, image, version string, tags []string) (Pulled, error)
 	Build func(ctx context.Context, inner string, src BuildSource, tags []string) (Built, error)
+	Layer func(ctx context.Context, root string, img Image, base string) (Layered, error)
+	Root  string
 	Out   io.Writer
 }
 
 // Outcome is what Ensure did with one image: the image, the way it took,
-// what the pull made when it pulled, what the build made when it built, and
-// why the pull failed when the build stood in for it ("" when it did not).
+// what the pull made when it pulled, what the build made when it built, what
+// the layer's build made when it built the layer, and why the pull failed
+// when the build stood in for it ("" when it did not).
 type Outcome struct {
 	Image    Image
 	Way      Way
 	Pulled   Pulled
 	Built    Built
+	Layered  Layered
 	FellBack string
 }
 
-// Ensure makes each harness image of statuses as mode asks, for flai
-// src.Version, from the development tree src.Tree when it names one, which
-// is never pulled for (ADR-0295 §1, §3). It leaves a current image in
-// ModeEnsure, the operator's own image always, and the project's layer,
-// which it does not build. A pull refused because its list or image does
-// not verify stops it with no build in its place.
+// Ensure makes the images of statuses as mode asks, for flai src.Version,
+// from the development tree src.Tree when it names one, which is never
+// pulled for (ADR-0295 §1, §3): each harness image first, then each layer
+// over the harness image of its inner harness among statuses (§4, §7). It
+// leaves a current harness image in ModeEnsure and the operator's own image
+// always, and builds a layer when it is missing or stale or its harness
+// image was pulled or built in this run, and in ModeBuild and ModeLayer
+// always. A pull refused because its list or image does not verify stops it
+// with no build in its place; any failure stops it before the layers, and a
+// layer whose harness image is not on this host stops it, naming that image.
 func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src BuildSource) ([]Outcome, error) {
-	if mode != ModeEnsure && mode != ModeBuild {
-		return nil, fmt.Errorf("make the agent images in the mode %q: there is no such mode; name %s or %s", mode, ModeEnsure, ModeBuild)
+	if mode != ModeEnsure && mode != ModeBuild && mode != ModeLayer {
+		return nil, fmt.Errorf("make the agent images in the mode %q: there is no such mode; name %s, %s, or %s", mode, ModeEnsure, ModeBuild, ModeLayer)
 	}
 	out := e.Out
 	if out == nil {
@@ -86,8 +105,27 @@ func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src B
 		}
 	}
 	outcomes := make([]Outcome, 0, len(statuses))
+	bases := map[string]baseRun{}
 	for _, s := range statuses {
+		if s.Kind == KindLayer {
+			continue
+		}
 		o, err := e.one(ctx, mode, s, src, out)
+		if err != nil {
+			return outcomes, err
+		}
+		outcomes = append(outcomes, o)
+		bases[s.Inner] = baseRun{status: s, way: o.Way}
+	}
+	for _, s := range statuses {
+		if s.Kind != KindLayer {
+			continue
+		}
+		b, ok := bases[s.Inner]
+		if !ok {
+			return outcomes, fmt.Errorf("build the layer image %s: no harness image of %s is among the agent images, so there is none to build it over; name the images Needed gives, which hold the harness image under each layer", s.Ref, s.Inner)
+		}
+		o, err := e.layer(ctx, mode, s, b, out)
 		if err != nil {
 			return outcomes, err
 		}
@@ -97,27 +135,46 @@ func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src B
 	return outcomes, nil
 }
 
+// baseRun is the harness image a layer builds over: its status before Ensure
+// ran and the way Ensure left it.
+type baseRun struct {
+	status Status
+	way    Way
+}
+
+// renewed reports whether Ensure pulled or built b in this run.
+func (b baseRun) renewed() bool {
+	return b.way == WayPulled || b.way == WayBuilt
+}
+
 // makes reports whether s is an image flai makes: a harness image of flai's default.
 func makes(s Status) bool {
 	return s.Kind == KindHarness && s.Source == SourceDefault
 }
 
-// acts reports whether mode makes the image s: any in ModeBuild, else one missing or stale.
+// acts reports whether mode makes the harness image s: any in ModeBuild,
+// one missing or stale in ModeEnsure, none in ModeLayer.
 func acts(mode Mode, s Status) bool {
-	return mode == ModeBuild || s.State != StateCurrent
+	switch mode {
+	case ModeBuild:
+		return true
+	case ModeEnsure:
+		return s.State != StateCurrent
+	}
+	return false
 }
 
-// one makes the image s as mode asks, saying on out what it does before it does it.
+// one makes the harness image s as mode asks, saying on out what it does before it does it.
 func (e Ensurer) one(ctx context.Context, mode Mode, s Status, src BuildSource, out io.Writer) (Outcome, error) {
 	o := Outcome{Image: s.Image}
 	switch {
-	case s.Kind == KindLayer:
-		fmt.Fprintf(out, "agent image: %s, the project's layer from %s, is %s; flai does not build a project's layer yet, so the project's own build makes it\n", s.Ref, s.Dockerfile, s.State)
-		o.Way = WayNotBuilt
-		return o, nil
 	case s.Source == SourceHost:
 		fmt.Fprintf(out, "agent image: %s is the operator's own (flai serve agent harness container --image %s=%s), which flai never pulls, builds, or judges; left as it is\n", s.Ref, s.Inner, s.Ref)
 		o.Way = WayOwn
+		return o, nil
+	case mode == ModeLayer:
+		fmt.Fprintf(out, "agent image: %s %s; left as it is, as only the project's layer is built\n", s.Ref, stateWords(s))
+		o.Way = WayLeft
 		return o, nil
 	case !acts(mode, s):
 		fmt.Fprintf(out, "agent image: %s is current for flai %s; nothing to do\n", s.Ref, shown(src.Version))
@@ -149,6 +206,37 @@ func (e Ensurer) one(ctx context.Context, mode Mode, s Status, src BuildSource, 
 	if berr != nil {
 		return o, fmt.Errorf("make the agent image %s: its pull failed (%w), and the build on this host that stands in for it failed too: %w", s.Ref, err, berr)
 	}
+	return o, nil
+}
+
+// layer builds the layer image s as mode asks over b, the harness image of
+// its inner harness, saying on out what it does before it does it: it
+// refuses when b is not on this host, and leaves a current layer over a
+// harness image this run did not make in ModeEnsure.
+func (e Ensurer) layer(ctx context.Context, mode Mode, s Status, b baseRun, out io.Writer) (Outcome, error) {
+	o := Outcome{Image: s.Image}
+	h := b.status
+	if !h.Present && !b.renewed() {
+		if h.Source == SourceHost {
+			return o, fmt.Errorf("build the layer image %s: the harness image %s it builds over, the operator's own (flai serve agent harness container --image %s=%s), is not on this host, and flai never makes it; pull or build %s on this host, or name another image, then run it again", s.Ref, h.Ref, h.Inner, h.Ref, h.Ref)
+		}
+		return o, fmt.Errorf("build the layer image %s: the harness image %s it builds over is not on this host; run flai image ensure first, then build the layer again", s.Ref, h.Ref)
+	}
+	switch {
+	case mode == ModeEnsure && s.State == StateCurrent && !b.renewed():
+		fmt.Fprintf(out, "agent image: %s, the project's layer from %s, is current over %s; nothing to do\n", s.Ref, s.Dockerfile, h.Ref)
+		o.Way = WayCurrent
+		return o, nil
+	case b.renewed():
+		fmt.Fprintf(out, "agent image: %s, the project's layer from %s, %s; building it over %s, which was just %s\n", s.Ref, s.Dockerfile, stateWords(s), h.Ref, b.way)
+	default:
+		fmt.Fprintf(out, "agent image: %s, the project's layer from %s, %s; building it over %s\n", s.Ref, s.Dockerfile, stateWords(s), h.Ref)
+	}
+	layered, err := e.Layer(ctx, e.Root, s.Image, h.Ref)
+	if err != nil {
+		return o, err
+	}
+	o.Way, o.Layered = WayLayered, layered
 	return o, nil
 }
 
@@ -194,12 +282,14 @@ func summarize(out io.Writer, outcomes []Outcome, src BuildSource) {
 			if o.FellBack != "" {
 				said += ", as its pull failed"
 			}
+		case WayLayered:
+			said = "the project's layer, built over " + o.Layered.Base + " (" + o.Layered.BaseID + ") from " + o.Image.Dockerfile + ", labelled with its recipe " + o.Layered.Recipe
 		case WayCurrent:
 			said = "current, left as it is"
+		case WayLeft:
+			said = "left as it is, as only the project's layer was built"
 		case WayOwn:
 			said = "the operator's own, left as it is"
-		case WayNotBuilt:
-			said = "the project's layer, not built by flai"
 		}
 		fmt.Fprintf(out, "agent image: %s: %s\n", o.Image.Ref, said)
 	}

@@ -287,20 +287,51 @@ func TestImageStatusNoDocker(t *testing.T) {
 }
 
 // imageSteps records each docker step flai image ensure or build runs, with
-// the folder it runs in, and writes a line of output for it.
+// the folder it runs in, and writes a line of output for it. With docker
+// set, a build puts its image there under each of its tags, as docker
+// would: with the labels of the image its BASE names, then its own.
 type imageSteps struct {
-	mu   sync.Mutex
-	dirs []string
-	args [][]string
+	mu     sync.Mutex
+	dirs   []string
+	args   [][]string
+	docker *imageDocker
 }
 
 func (s *imageSteps) exec(_ context.Context, dir string, _ []string, out io.Writer, program string, args ...string) error {
 	s.mu.Lock()
 	s.dirs = append(s.dirs, dir)
 	s.args = append(s.args, append([]string{program}, args...))
+	n := len(s.args)
+	if s.docker != nil && len(args) > 0 && args[0] == "build" {
+		s.docker.built(args[1:])
+	}
 	s.mu.Unlock()
-	_, err := fmt.Fprintf(out, "step output %d\n", len(s.args))
+	_, err := fmt.Fprintf(out, "step output %d\n", n)
 	return err
+}
+
+// built puts the image docker build with args makes into d under each of its tags.
+func (d *imageDocker) built(args []string) {
+	labels := map[string]string{}
+	var tags []string
+	for i := 0; i+1 < len(args); i++ {
+		switch args[i] {
+		case "--build-arg":
+			if b, ok := strings.CutPrefix(args[i+1], "BASE="); ok {
+				for k, v := range d.images[b].Labels {
+					labels[k] = v
+				}
+			}
+		case "--label":
+			k, v, _ := strings.Cut(args[i+1], "=")
+			labels[k] = v
+		case "-t":
+			tags = append(tags, args[i+1])
+		}
+	}
+	for _, tag := range tags {
+		d.images[tag] = agentimage.Info{ID: "sha256:built-" + tag, Labels: labels}
+	}
 }
 
 // useImageExec makes s run flai image ensure's and build's docker steps
@@ -447,5 +478,148 @@ func TestImageEnsureRefusesADevelopmentFlaiWithNoTree(t *testing.T) {
 	}
 	if strings.Contains(out, "step output") {
 		t.Errorf("a docker step ran:\n%s", out)
+	}
+}
+
+const imageArgsYAML = imageLayerYAML + "    args:\n      GO: \"1.25\"\n"
+
+// imageLayerStep is the docker build of the layer over the harness image
+// with the build argument GO=1.25, labelled with recipe and baseID.
+func imageLayerStep(recipe, baseID string) []string {
+	return []string{"docker", "build", "-f", filepath.FromSlash(imageLayerFile),
+		"--build-arg", "BASE=" + imageHarnessRef, "--build-arg", "GO=1.25",
+		"--label", agentimage.LabelRecipe + "=" + recipe, "--label", agentimage.LabelBase + "=" + baseID,
+		"-t", imageLayerRef, "."}
+}
+
+// S-0745: flai image ensure builds a missing layer over the current harness
+// image, which it leaves as it is, in the main checkout with the manifest's
+// build arguments and BASE set to the harness image, labelled with its
+// recipe and base; the status after it reports the layer current, and it
+// exits 0.
+func TestImageEnsureBuildsTheLayer(t *testing.T) {
+	root, cfg := imageProject(t, imageArgsYAML)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := mainRootOf(repo)
+	images := currentImages()
+	delete(images, imageLayerRef)
+	d := &imageDocker{images: images}
+	steps := &imageSteps{docker: d}
+	useImageExec(t, steps)
+	out, code, err := runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC), "ensure")
+	if code != 0 || err != nil {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	recipe := agentimage.Recipe([]byte(imageLayerText), "", map[string]string{"GO": "1.25"})
+	if want := [][]string{imageLayerStep(recipe, imageBaseID)}; !reflect.DeepEqual(steps.args, want) {
+		t.Fatalf("docker steps %v, want %v", steps.args, want)
+	}
+	if steps.dirs[0] != main {
+		t.Errorf("the layer was built in %s, not the main checkout %s", steps.dirs[0], main)
+	}
+	for _, want := range []string{
+		"agent image: " + imageHarnessRef + " is current for flai ",
+		imageLayerRef + ", the project's layer from " + imageLayerFile + ", is missing; building it over " + imageHarnessRef + "\n",
+		"claude-code harness " + imageHarnessRef + " (default): current\n",
+		"claude-code layer " + imageLayerRef + " (layer from " + imageLayerFile + "): current\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+
+	// a changed argument makes the layer stale, and ensure builds it again
+	cfgYAML := strings.Replace(imageArgsYAML, `"1.25"`, `"1.26"`, 1)
+	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + cfgYAML
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	statusOut, code, _ := runImageStatus(t, root, cfg, d)
+	if code == 0 || !strings.Contains(statusOut, "claude-code layer "+imageLayerRef+" (layer from "+imageLayerFile+"): stale: built from another Dockerfile or other build arguments") {
+		t.Errorf("status after the argument changed: exit %d\n%s", code, statusOut)
+	}
+	out, code, err = runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 12, 1, 0, 0, time.UTC), "ensure")
+	if code != 0 || err != nil || len(steps.args) != 2 || !strings.Contains(strings.Join(steps.args[1], " "), "--build-arg GO=1.26") {
+		t.Errorf("exit %d, %v, steps %v\n%s", code, err, steps.args, out)
+	}
+}
+
+// S-0745: flai image build --layer builds the layer alone, current as it
+// is, over the harness image on this host, and neither pulls nor builds the
+// harness image.
+func TestImageBuildLayerBuildsTheLayerAlone(t *testing.T) {
+	root, cfg := imageProject(t, imageArgsYAML)
+	d := &imageDocker{images: currentImages()}
+	steps := &imageSteps{docker: d}
+	useImageExec(t, steps)
+	out, code, err := runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 13, 0, 0, 0, time.UTC), "build", "--layer")
+	if code != 0 || err != nil {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	recipe := agentimage.Recipe([]byte(imageLayerText), "", map[string]string{"GO": "1.25"})
+	if want := [][]string{imageLayerStep(recipe, imageBaseID)}; !reflect.DeepEqual(steps.args, want) {
+		t.Fatalf("docker steps %v, want %v", steps.args, want)
+	}
+	for _, want := range []string{
+		"agent image: " + imageHarnessRef + " is current; left as it is, as only the project's layer is built\n",
+		"claude-code layer " + imageLayerRef + " (layer from " + imageLayerFile + "): current\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+}
+
+// S-0745: flai image build --layer with no harness image on this host
+// builds nothing and fails, naming the harness image and flai image ensure.
+func TestImageBuildLayerRefusesWithNoHarnessImage(t *testing.T) {
+	root, cfg := imageProject(t, imageLayerYAML)
+	d := &imageDocker{images: map[string]agentimage.Info{}}
+	steps := &imageSteps{docker: d}
+	useImageExec(t, steps)
+	out, code, err := runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 14, 0, 0, 0, time.UTC), "build", "--layer")
+	if code == 0 || err == nil || !strings.Contains(err.Error(), "the harness image "+imageHarnessRef+" it builds over is not on this host") || !strings.Contains(err.Error(), "run flai image ensure first") {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if len(steps.args) != 0 {
+		t.Errorf("docker steps %v", steps.args)
+	}
+}
+
+// S-0745: flai image build --layer under a manifest that names no layer
+// fails saying so, and runs no docker step.
+func TestImageBuildLayerRefusesWithNoLayer(t *testing.T) {
+	root, cfg := imageProject(t, "")
+	d := &imageDocker{images: currentImages()}
+	steps := &imageSteps{docker: d}
+	useImageExec(t, steps)
+	out, code, err := runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 15, 0, 0, 0, time.UTC), "build", "--layer")
+	if code == 0 || err == nil || !strings.Contains(err.Error(), "system-flow.yaml names no agent.image.layer") {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if len(steps.args) != 0 || len(d.asked) != 0 {
+		t.Errorf("docker steps %v, asked %v", steps.args, d.asked)
+	}
+}
+
+// S-0745: a layer still stale after flai image build --layer, here because
+// the harness image under it was built for another flai, fails the command
+// after the status, counting the layer.
+func TestImageBuildLayerFailsWhenTheLayerIsStillStale(t *testing.T) {
+	root, cfg := imageProject(t, imageLayerYAML)
+	images := currentImages()
+	images[imageHarnessRef] = agentimage.Info{ID: imageBaseID, Labels: map[string]string{agentimage.LabelFlai: "1.0.0"}}
+	d := &imageDocker{images: images}
+	steps := &imageSteps{docker: d}
+	useImageExec(t, steps)
+	out, code, err := runImageMake(t, root, cfg, d, time.Date(2026, 11, 13, 16, 0, 0, 0, time.UTC), "build", "--layer")
+	if code != 1 || err == nil || !strings.Contains(err.Error(), "1 agent image flai makes is still missing or stale after flai image build --layer") {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if len(steps.args) != 1 {
+		t.Errorf("docker steps %v", steps.args)
 	}
 }

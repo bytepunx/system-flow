@@ -2400,35 +2400,44 @@ Flags:
 
 The agent images a project's container agents run in.
 
-An agent on the container harness runs in an image: its inner harness's, the host's own when flai serve agent harness container --image &lt;inner&gt;=&lt;image&gt; names one, else flai's default, and the project's layer over it when system-flow.yaml names agent.image.layer (ADR-0295). flai image status says which images the project's agents need and whether each is on this host and current for the project's flai. flai image ensure makes each harness image that is missing or stale, pulling it by the digest its release's signed list names, else building it on this host; flai image build builds them without the pull.
+An agent on the container harness runs in an image: its inner harness's, the host's own when flai serve agent harness container --image &lt;inner&gt;=&lt;image&gt; names one, else flai's default, and the project's layer over it when system-flow.yaml names agent.image.layer (ADR-0295). flai image status says which images the project's agents need and whether each is on this host and current for the project's flai. flai image ensure makes each harness image that is missing or stale, pulling it by the digest its release's signed list names, else building it on this host, then builds the project's layer over its harness image when the layer is missing or stale or its harness image was just made, with agent.image.args as build arguments and BASE set to the harness image; flai image build builds them all without the pull, and flai image build --layer builds the layer alone.
 
 Subcommands:
 
-- [build](#flai-image-build): Build the harness images on this host, current or not, without the pull
-- [ensure](#flai-image-ensure): Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host
+- [build](#flai-image-build): Build the agent images on this host, current or not, without the pull, or with --layer the project's layer alone
+- [ensure](#flai-image-ensure): Make each agent image the project's agents need that is missing or stale: pull a harness image by its signed digest, else build it on this host, then build the project's layer over it
 - [status](#flai-image-status): Say which agent images the project's agents need, and whether each is on this host and current for its flai
 
 #### flai image build
 
-Build the harness images on this host, current or not, without the pull.
+Build the agent images on this host, current or not, without the pull, or with --layer the project's layer alone.
 
 ```text
-flai image build
+flai image build [flags]
 ```
 
-flai image build builds on this host, without the pull, each harness image of flai's default the agents of the project in the working directory need, or, when they need none, the default image of each inner harness the host names no image of its own for (claude-code's), current or not.
+flai image build builds on this host, without the pull, each harness image of flai's default the agents of the project in the working directory need, or, when they need none, the default image of each inner harness the host names no image of its own for (claude-code's), current or not, then the project's layer over its harness image when system-flow.yaml names agent.image.layer.
 
-A released flai builds them from the Dockerfiles it carries and its release's Linux flai and pilot, checked against the release's signed checksums.txt; a development flai builds them from the development tree's own flai/images/bedrock/Dockerfile and flai/images/&lt;inner&gt;/Dockerfile and source, when the main checkout holds them. It tags, logs, stops, and retries as flai image ensure does, prints the images' status after it, and does not build the project's layer.
+A released flai builds the harness images from the Dockerfiles it carries and its release's Linux flai and pilot, checked against the release's signed checksums.txt; a development flai builds them from the development tree's own flai/images/bedrock/Dockerfile and flai/images/&lt;inner&gt;/Dockerfile and source, when the main checkout holds them. It builds the layer as flai image ensure does, with agent.image.args as build arguments and BASE set to the harness image, labelled with its recipe and base. It tags, logs, stops, and retries as flai image ensure does, prints the images' status after it, and exits non-zero when an image it makes is still missing or stale.
+
+With --layer it builds only the project's layer, one per inner harness the agents need, current or not, over the harness image already on this host, and pulls or builds no harness image, as scripts/agent-image.sh --layer does. It refuses when system-flow.yaml names no agent.image.layer, and when the harness image is not on this host, naming it and flai image ensure, which makes it.
 
 Examples:
 
 ```bash
 flai image build
+flai image build --layer
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--layer` | build only the project's layer (agent.image.layer), current or not, over the harness image already on this host, and no harness image |
 
 #### flai image ensure
 
-Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host.
+Make each agent image the project's agents need that is missing or stale: pull a harness image by its signed digest, else build it on this host, then build the project's layer over it.
 
 ```text
 flai image ensure
@@ -2451,9 +2460,11 @@ tree       for a development flai, from the development tree's own
            and source, never pulled for
 ```
 
-Each harness image is tagged with the name a start runs it by and with flai-agent-&lt;inner&gt;:&lt;version&gt;. A current image is left as it is, the operator's own image (--image) is never touched, and the project's layer (agent.image.layer) is not built: the project's own build makes it.
+Each harness image is tagged with the name a start runs it by and with flai-agent-&lt;inner&gt;:&lt;version&gt;. A current image is left as it is, and the operator's own image (--image) is never touched.
 
-Every docker step's output streams here and to a log file under .flai-cache/agent-images/ in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped; a step that fails on the network (a connection reset, a timeout, a DNS or TLS failure, a registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the images' status is printed as flai image status prints it, and it exits non-zero when a harness image flai makes is still missing or stale.
+After the harness images it builds the project's layer, when system-flow.yaml names agent.image.layer, over the harness image of its inner harness, the operator's own when --image names one, else flai's default: when the layer is missing or stale, or when that harness image was just pulled or built. It builds it from the layer's Dockerfile with the main checkout as the context, BASE set to the harness image and each of agent.image.args passed as a build argument, tags it flai-agent-&lt;key&gt;-&lt;inner&gt;:local, and labels it with its recipe, over the Dockerfile and the arguments, and the ID of the harness image under it, so that flai image status reports it stale when the Dockerfile, an argument, or its base changes. A layer whose harness image is not on this host is not built: it fails naming the harness image.
+
+Every docker step's output streams here and to a log file under .flai-cache/agent-images/ in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped; a step that fails on the network (a connection reset, a timeout, a DNS or TLS failure, a registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the images' status is printed as flai image status prints it, and it exits non-zero when a harness image or a layer flai makes is still missing or stale.
 
 Examples:
 

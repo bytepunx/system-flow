@@ -460,6 +460,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--kind` | [flai digest harvest](../users/flai-reference.md#flai-digest-harvest), [flai digest new](../users/flai-reference.md#flai-digest-new), [flai subproject add](../users/flai-reference.md#flai-subproject-add), [flai subproject set](../users/flai-reference.md#flai-subproject-set) |
 | `--last` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
+| `--layer` | [flai image build](../users/flai-reference.md#flai-image-build) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
 | `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search), [flai promote](../users/flai-reference.md#flai-promote), [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
 | `--list` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |

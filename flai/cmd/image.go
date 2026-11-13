@@ -33,8 +33,11 @@ system-flow.yaml names agent.image.layer (ADR-0295). flai image status says
 which images the project's agents need and whether each is on this host and
 current for the project's flai. flai image ensure makes each harness image
 that is missing or stale, pulling it by the digest its release's signed list
-names, else building it on this host; flai image build builds them without the
-pull.`,
+names, else building it on this host, then builds the project's layer over its
+harness image when the layer is missing or stale or its harness image was just
+made, with agent.image.args as build arguments and BASE set to the harness
+image; flai image build builds them all without the pull, and flai image build
+--layer builds the layer alone.`,
 		Args: cobra.NoArgs,
 	}
 	c.AddCommand(&cobra.Command{
@@ -62,7 +65,7 @@ It exits non-zero when any image is missing or stale, after the list.`,
 	})
 	c.AddCommand(&cobra.Command{
 		Use:   "ensure",
-		Short: "Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host",
+		Short: "Make each agent image the project's agents need that is missing or stale: pull a harness image by its signed digest, else build it on this host, then build the project's layer over it",
 		Long: `flai image ensure makes each harness image the agents of the project in the
 working directory need, as flai image status lists them, that is missing or
 stale for the project's flai. It takes one of three ways, and says which:
@@ -81,9 +84,20 @@ stale for the project's flai. It takes one of three ways, and says which:
              and source, never pulled for
 
 Each harness image is tagged with the name a start runs it by and with
-flai-agent-<inner>:<version>. A current image is left as it is, the operator's
-own image (--image) is never touched, and the project's layer
-(agent.image.layer) is not built: the project's own build makes it.
+flai-agent-<inner>:<version>. A current image is left as it is, and the
+operator's own image (--image) is never touched.
+
+After the harness images it builds the project's layer, when system-flow.yaml
+names agent.image.layer, over the harness image of its inner harness, the
+operator's own when --image names one, else flai's default: when the layer is
+missing or stale, or when that harness image was just pulled or built. It
+builds it from the layer's Dockerfile with the main checkout as the context,
+BASE set to the harness image and each of agent.image.args passed as a build
+argument, tags it flai-agent-<key>-<inner>:local, and labels it with its
+recipe, over the Dockerfile and the arguments, and the ID of the harness image
+under it, so that flai image status reports it stale when the Dockerfile, an
+argument, or its base changes. A layer whose harness image is not on this host
+is not built: it fails naming the harness image.
 
 Every docker step's output streams here and to a log file under
 .flai-cache/agent-images/ in the main checkout, which the first and last lines
@@ -91,34 +105,50 @@ name. A step that writes nothing for 10 minutes is stopped; a step that fails
 on the network (a connection reset, a timeout, a DNS or TLS failure, a
 registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the
 images' status is printed as flai image status prints it, and it exits
-non-zero when a harness image flai makes is still missing or stale.`,
+non-zero when a harness image or a layer flai makes is still missing or stale.`,
 		Example: `  flai image ensure`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return a.imageMake(cmd.Context(), agentimage.ModeEnsure)
 		},
 	})
-	c.AddCommand(&cobra.Command{
+	var layerOnly bool
+	build := &cobra.Command{
 		Use:   "build",
-		Short: "Build the harness images on this host, current or not, without the pull",
+		Short: "Build the agent images on this host, current or not, without the pull, or with --layer the project's layer alone",
 		Long: `flai image build builds on this host, without the pull, each harness image of
 flai's default the agents of the project in the working directory need, or,
 when they need none, the default image of each inner harness the host names
-no image of its own for (claude-code's), current or not.
+no image of its own for (claude-code's), current or not, then the project's
+layer over its harness image when system-flow.yaml names agent.image.layer.
 
-A released flai builds them from the Dockerfiles it carries and its release's
-Linux flai and pilot, checked against the release's signed checksums.txt; a
-development flai builds them from the development tree's own
+A released flai builds the harness images from the Dockerfiles it carries and
+its release's Linux flai and pilot, checked against the release's signed
+checksums.txt; a development flai builds them from the development tree's own
 flai/images/bedrock/Dockerfile and flai/images/<inner>/Dockerfile and source,
-when the main checkout holds them. It tags, logs, stops, and retries as flai
-image ensure does, prints the images' status after it, and does not build the
-project's layer.`,
-		Example: `  flai image build`,
-		Args:    cobra.NoArgs,
+when the main checkout holds them. It builds the layer as flai image ensure
+does, with agent.image.args as build arguments and BASE set to the harness
+image, labelled with its recipe and base. It tags, logs, stops, and retries as
+flai image ensure does, prints the images' status after it, and exits
+non-zero when an image it makes is still missing or stale.
+
+With --layer it builds only the project's layer, one per inner harness the
+agents need, current or not, over the harness image already on this host, and
+pulls or builds no harness image, as scripts/agent-image.sh --layer does. It
+refuses when system-flow.yaml names no agent.image.layer, and when the harness
+image is not on this host, naming it and flai image ensure, which makes it.`,
+		Example: `  flai image build
+  flai image build --layer`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			if layerOnly {
+				return a.imageMake(cmd.Context(), agentimage.ModeLayer)
+			}
 			return a.imageMake(cmd.Context(), agentimage.ModeBuild)
 		},
-	})
+	}
+	build.Flags().BoolVar(&layerOnly, "layer", false, "build only the project's layer (agent.image.layer), current or not, over the harness image already on this host, and no harness image")
+	c.AddCommand(build)
 	return c
 }
 
@@ -126,12 +156,13 @@ project's layer.`,
 // that replace it restore it and do not run in parallel.
 var imageExec agentimage.Exec = agentimage.SystemExec
 
-// imageMake is flai image ensure, with agentimage.ModeEnsure, and flai image
-// build, with agentimage.ModeBuild: it makes the harness images of the
-// project in the working directory as mode asks, writing what it does to
-// the output and to a log under the main checkout's .flai-cache, prints
-// their status after it, and fails when one flai makes is still missing or
-// stale.
+// imageMake is flai image ensure, with agentimage.ModeEnsure, flai image
+// build, with agentimage.ModeBuild, and flai image build --layer, with
+// agentimage.ModeLayer: it makes the agent images of the project in the
+// working directory as mode asks, the harness images and then the project's
+// layer over them, writing what it does to the output and to a log under the
+// main checkout's .flai-cache, prints their status after it, and fails when
+// one it makes is still missing or stale.
 func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -143,6 +174,9 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
 		return err
+	}
+	if mode == agentimage.ModeLayer && repo.Manifest.Layer() == "" {
+		return fmt.Errorf("build the project's layer image: %s names no agent.image.layer, so there is no layer to build; name its Dockerfile under agent.image.layer, or run flai image build for the harness images", manifest.File)
 	}
 	root := mainRootOf(repo)
 	agents, err := projectAgents(repo)
@@ -199,7 +233,7 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 	releases.Token = a.githubToken()
 	puller := agentimage.Puller{Releases: releases, CacheDir: string(a.serveDir()), Run: runner, Inspect: inspect}
 	builder := agentimage.Builder{Releases: releases, Run: runner, Inspect: inspect, Arch: agentimage.EngineArch(a.runner, program)}
-	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Out: w}
+	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Layer: builder.Layer, Root: root, Out: w}
 	_, ensureErr := ensurer.Ensure(ctx, mode, statuses, src)
 
 	after, checkErr := agentimage.Check(root, needed, inspect, flai)
@@ -214,18 +248,36 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 	}
 	bad := 0
 	for _, s := range after {
-		if s.Kind == agentimage.KindHarness && s.Source == agentimage.SourceDefault && (s.State == agentimage.StateMissing || s.State == agentimage.StateStale) {
+		if imageMade(mode, s) && (s.State == agentimage.StateMissing || s.State == agentimage.StateStale) {
 			bad++
 		}
 	}
 	if bad == 0 {
 		return nil
 	}
-	noun := "harness images flai makes are"
+	noun := "agent images flai makes are"
 	if bad == 1 {
-		noun = "harness image flai makes is"
+		noun = "agent image flai makes is"
 	}
-	return &exitError{code: 1, msg: fmt.Sprintf("%d %s still missing or stale after flai image %s: read why in the log %s, then run it again", bad, noun, mode, logPath)}
+	return &exitError{code: 1, msg: fmt.Sprintf("%d %s still missing or stale after %s: read why in the log %s, then run it again", bad, noun, imageCommand(mode), logPath)}
+}
+
+// imageMade reports whether flai image makes s in mode: the project's layer
+// always, and a harness image of flai's default unless mode builds the layer alone.
+func imageMade(mode agentimage.Mode, s agentimage.Status) bool {
+	if s.Kind == agentimage.KindLayer {
+		return true
+	}
+	return mode != agentimage.ModeLayer && s.Kind == agentimage.KindHarness && s.Source == agentimage.SourceDefault
+}
+
+// imageCommand is the command that runs mode: flai image ensure, flai image
+// build, or flai image build --layer.
+func imageCommand(mode agentimage.Mode) string {
+	if mode == agentimage.ModeLayer {
+		return "flai image build --layer"
+	}
+	return "flai image " + string(mode)
 }
 
 // buildImages are the images flai image build makes of needed, what the
