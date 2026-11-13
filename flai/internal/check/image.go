@@ -98,12 +98,15 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 		add(false, "agent.image.layer names "+layer+", which is not a file: fix the path in "+manifest.File+" or add the Dockerfile, then build its image with `make agent-images`")
 		return
 	}
+	// The main checkout, as flai serve and flai image status judge the images
+	// from it: the layer's Dockerfile, the project's flai, and the host's
+	// images there, so a check in a story's worktree judges them the same.
+	main := repo.MainRoot
+	if main == "" {
+		main = repo.Root
+	}
 	var host map[string]string
 	if probe.HostImages != nil {
-		main := repo.MainRoot
-		if main == "" {
-			main = repo.Root
-		}
 		host = probe.HostImages(main)
 	}
 	images := agentimage.Needed(repo.Manifest, agentimage.Agents(repo.Manifest), host)
@@ -116,9 +119,9 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 		return info, present, err
 	}
 	flai := func() (string, error) {
-		return agentimage.ProjectFlai(repo.Root, repo.Manifest, probe.Runner, buildinfo.Get().Version)
+		return agentimage.ProjectFlai(main, repo.Manifest, probe.Runner, buildinfo.Get().Version)
 	}
-	statuses, err := agentimage.Check(repo.Root, images, inspect, flai)
+	statuses, err := agentimage.Check(main, images, inspect, flai)
 	image := repo.Manifest.LayerImage(harness.ClaudeCode)
 	switch {
 	case errors.Is(inspectErr, ErrNoDocker):

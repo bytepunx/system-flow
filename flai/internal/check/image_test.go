@@ -158,6 +158,34 @@ func TestAgentImage(t *testing.T) {
 	}
 }
 
+// S-0735: a check in a story's worktree judges the layer by the main
+// checkout's Dockerfile, as flai serve's start and flai image status do, so
+// a worktree whose Dockerfile differs from main's still finds main's image
+// current.
+func TestAgentImageJudgesTheLayerFromTheMainCheckout(t *testing.T) {
+	const image = "flai-agent-smp-claude-code:local"
+	main := imageRepo(t, "images/agent/Dockerfile", true)
+	repo := imageRepo(t, "images/agent/Dockerfile", true)
+	repo.MainRoot = main.Root
+	if err := os.WriteFile(filepath.Join(repo.Root, "images", "agent", "Dockerfile"), []byte(layerDockerfile+"RUN true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	recipe := agentimage.Recipe([]byte(layerDockerfile), "", nil)
+	images := map[string]agentimage.Info{
+		harness.DefaultImages[harness.ClaudeCode]: {ID: "sha256:harness", Labels: map[string]string{agentimage.LabelFlai: "dev"}},
+		image: {ID: "sha256:layer", Labels: map[string]string{agentimage.LabelFlai: "dev", agentimage.LabelRecipe: recipe, agentimage.LabelBase: "sha256:harness"}},
+	}
+	probe := ImageProbe{Inspect: func(ref string) (agentimage.Info, bool, error) {
+		info, ok := images[ref]
+		return info, ok, nil
+	}}
+	res := &Result{}
+	AgentImage(res, repo, probe)
+	if len(res.Findings) != 0 {
+		t.Errorf("the layer built from the main checkout's Dockerfile should be current: %+v", res.Findings)
+	}
+}
+
 // imageRunner answers LookPath and docker image inspect as a host does that
 // has docker or not, and has the image or not, or whose daemon is down.
 type imageRunner struct {
