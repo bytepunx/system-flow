@@ -616,7 +616,7 @@ The project's build, deploy, and teardown scripts are the project's code. The Kl
 - The host journal records each job's start and its end, done or failed, under the action `kluster`, with the story, the namespace, the commit, and the step that failed.
 - `flai serve` never takes the cluster down. Turning the action off starts no job and tears nothing down.
 
-**Checks against the namespace.** A checks run for a story whose namespace was deployed and passed at the story's head gets the namespace's variables in each check's environment: `KUBECONFIG`, `FLAI_KLUSTER_CONTEXT`, `FLAI_KLUSTER_NAMESPACE`, and the rest that [kluster.md](../../design/system/kluster.md#the-steps-and-their-variables) lists. This holds whether `flai checks run`, the review page, or `flai serve` starts the run. `flai checks run` then says so on standard error, and the run's log starts with the namespace. With the `checks` host action on and checks named, `flai serve` runs the story's checks itself after each deploy that passes, in the same job. Any other run gets no variables and runs as before.
+**Checks against the namespace.** A checks run for a story whose namespace was deployed and passed at the story's head gets the namespace's variables in each check's environment: `KUBECONFIG`, `FLAI_KLUSTER_CONTEXT`, `FLAI_KLUSTER_NAMESPACE`, and the rest that [kluster.md](../../design/system/kluster.md#the-steps-and-their-variables) lists. This holds whether `flai checks run`, the review page, or `flai serve` starts the run. `flai checks run` then says so on standard error, and the run's log starts with the namespace. With the `checks` host action on and checks named, `flai serve` runs the story's checks itself after each deploy that passes, in the same job. A story's agent may also ask for its own story's checks run alone while the story is in progress, with `flai checks run S-nnnn --job` or the MCP tool `kluster_checks`: `flai serve` runs it in the same queue, after the jobs ahead of it, records who asked in the checks status, and opens no thread when it fails ([kluster.md](../../design/system/kluster.md#the-requests-s-0660-s-0661)). Any other run gets no variables and runs as before.
 
 **When something fails.** Nothing is moved: the story stays where it is. `flai serve` opens one thread, written by `flai serve`, and adds an entry to it when the next attempt fails too:
 
@@ -824,7 +824,7 @@ A formula is a process you repeat, written down as one file, `design/workflows/f
 ```markdown
 ---
 title: "Release check for {{version}}"
-updated: 2026-11-02
+updated: 2026-11-13
 status: active
 name: release-check
 description: "Check that main is ready to publish as {{version}}."
