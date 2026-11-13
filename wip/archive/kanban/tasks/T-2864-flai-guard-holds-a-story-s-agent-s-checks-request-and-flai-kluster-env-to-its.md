@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 980
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 297
-      cache_read: 3292073
-      cache_write: 248964
-      cost: 1.3229
+      input: 46
+      output: 18341
+      cache_read: 3499757
+      cache_write: 104734
+      cost: 1.6931
 ---
 # T-2864 flai guard holds a story's agent's checks request and flai kluster env to its own story's namespace, refusing every sub-agent the request
 

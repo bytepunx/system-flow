@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 930
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 623
-      cache_read: 7591376
-      cache_write: 202616
-      cost: 2.9116
+      input: 100
+      output: 40369
+      cache_read: 7703113
+      cache_write: 230525
+      cost: 3.7265
 ---
 # T-2863 flai serve's kluster pass runs the checks a story's agent asks for against its namespace at the head, after the job queue, records who asked, and opens no thread on a failure
 

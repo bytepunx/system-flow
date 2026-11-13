@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2157.0571
-accrued_seconds: 1557710
-tasks_completed: 3307
-last_run: 2026-11-13T13:19:18Z
+accrued_cost: 2157.4749
+accrued_seconds: 1557910
+tasks_completed: 3310
+last_run: 2026-11-13T13:23:19Z
 ---
 
 # Orchestrator activity
@@ -23183,6 +23183,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.2154 USD, estimated
+
+### 2026-11-13T13:22:35Z
+
+- Summary: review:S-0770: accepted the publish instance at 8fb630e2 under accept_reviews (close-out passed at the branch head; verifier pass; T-3297, T-3298, T-3299 done; flai/v1.91.0 tagged); dry run had no blockers.
+- Items: S-0770
+- Seconds: 156
+- Cost: 0.2450 USD, estimated
+
+### 2026-11-13T13:22:56Z
+
+- Summary: After S-0770: release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, so no publish. ready-empty: promote_candidates lists none; ordered ready by throughput (S-0760 32m first … S-0662 2h30m), all 6 held on after. promote --drafts: S-0241 is complete but stays a draft (TH-0790); the 19 E-0034 drafts lack only a value, pending the operator's epic inputs (TH-1097), so I started no planner for them. E-0036 not replanned: alex's TH-1158 entry settles S-0740's acceptance and asks no plan change. S-0730 left out by flai plan. TH-1160 is a flai serve notice, left alone.
+- Items: S-0770, S-0241, E-0034, E-0036, S-0730
+- Seconds: 21
+- Cost: 0.0868 USD, estimated
+
+### 2026-11-13T13:23:19Z
+
+- Summary: I accepted S-0770, the publish instance. The other two reasons needed nothing from me: no story can be promoted, and TH-1160 is a flai serve notice.
+- Items: none
+- Seconds: 23
+- Cost: 0.0860 USD, estimated
 
 ## Refusals
 

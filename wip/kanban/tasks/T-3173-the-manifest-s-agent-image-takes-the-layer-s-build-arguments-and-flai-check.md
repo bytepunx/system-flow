@@ -7,7 +7,7 @@ status: in-progress
 parent: S-0745
 owner: alex
 created: 2026-11-12T16:00:24Z
-updated: 2026-11-13T13:17:52Z
+updated: 2026-11-13T13:38:01Z
 transitions:
   - to: ready
     at: 2026-11-13T13:17:51Z
@@ -17,7 +17,7 @@ transitions:
     by: system-flow
 stream: S-0745
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/store_test.go, docs/operators/settings.md]
 ---
 # T-3173 The manifest's agent.image takes the layer's build arguments, and flai check refuses a malformed one
 

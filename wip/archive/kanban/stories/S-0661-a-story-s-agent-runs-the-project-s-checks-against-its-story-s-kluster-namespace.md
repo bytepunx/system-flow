@@ -3,11 +3,11 @@ id: S-0661
 type: story
 nature: feature
 title: A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-13T13:14:14Z
+updated: 2026-11-13T13:41:11Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:16Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:39:49Z
     by: agent-S-0661
+  - to: review
+    at: 2026-11-13T13:39:32Z
+    by: agent-S-0661
+  - to: done
+    at: 2026-11-13T13:41:11Z
+    by: orchestrator
 tags: [cli]
 topics: [kluster, deployment]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, docs/operators/settings.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, docs/operators/settings.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, docs/operators/index.md, design/issues/I-0362-flai-serve-s-review-pass-deploys-again-a-story-in-review-whose-deploy-passed-at.md, design/issues/summary.md]
 after: [S-0660, S-0763]
 agent:
   harness: claude-code
@@ -26,21 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2068
-  estimated: true
-  priced_by: estimate
+  seconds: 3608
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 2
-      hand_edits: 1
-      work: 44
+      ceremony: 4
+      hand_edits: 2
+      work: 60
   models:
     - model: claude-opus-5-5
-      input: 360
-      output: 2079
-      cache_read: 24408007
-      cache_write: 977141
-      cost: 9.4833
+      input: 520
+      output: 209242
+      cache_read: 39927039
+      cache_write: 1194863
+      cost: 19.3154
   strategic:
     - kind: planner
       seconds: 20
@@ -90,14 +95,14 @@ A story's agent runs the project's checks against its story's namespace before r
 
 ## Acceptance criteria
 
-- [ ] A story's agent runs the project's checks against its own story's namespace, deployed at its branch's head, with one flai command and one MCP tool, and gets each check's result and log
-- [ ] The run gets the namespace's variables, `KUBECONFIG` and `FLAI_KLUSTER_NAMESPACE` among them, as a checks run in review does, and is refused when the namespace is not deployed at the head, saying to deploy first
-- [ ] The agent gets the same variables for a command of its own, such as a request to a service in its namespace, in the way the ADR decides
-- [ ] `flai guard` refuses an agent's command against another story's namespace or the default namespace, as far as the ADR says it can tell
-- [ ] Checks runs against the cluster still run one at a time per project, after the job queue
-- [ ] A failed run asked for by the agent opens no thread to the operator
-- [ ] The run is recorded with its commit, its outcome, and who asked, where the next story reads it
-- [ ] `design/system/kluster.md`, `docs/users/flai.md`, and its reference say all of it
+- [x] A story's agent runs the project's checks against its own story's namespace, deployed at its branch's head, with one flai command and one MCP tool, and gets each check's result and log
+- [x] The run gets the namespace's variables, `KUBECONFIG` and `FLAI_KLUSTER_NAMESPACE` among them, as a checks run in review does, and is refused when the namespace is not deployed at the head, saying to deploy first
+- [x] The agent gets the same variables for a command of its own, such as a request to a service in its namespace, in the way the ADR decides
+- [x] `flai guard` refuses an agent's command against another story's namespace or the default namespace, as far as the ADR says it can tell
+- [x] Checks runs against the cluster still run one at a time per project, after the job queue
+- [x] A failed run asked for by the agent opens no thread to the operator
+- [x] The run is recorded with its commit, its outcome, and who asked, where the next story reads it
+- [x] `design/system/kluster.md`, `docs/users/flai.md`, and its reference say all of it
 
 ## Tasks
 - T-2863 flai serve's kluster pass runs the checks a story's agent asks for against its namespace at the head, after the job queue, records who asked, and opens no thread on a failure
@@ -109,6 +114,8 @@ A story's agent runs the project's checks against its story's namespace before r
 ## Notes
 
 - `KlusterEnv` in `flai/internal/serve/kluster.go` decides the variables for every checks run today.
+- Verification: criteria 1 to 7 are verified by the tests on the branch, which fake `kluster`, the checks, and flai serve's answer, as S-0579's and S-0660's do. system-flow runs no cluster, so no run against a live namespace was made here. The close-out passed at `d096da359`.
+- ADR-0292 §3's checks run alone for a story entering review, when only its checks have not passed at the head, is not built: the review pass still deploys again. I-0362 records it.
 
 ### Planning
 
@@ -137,3 +144,18 @@ No folder touch.
 Forecast: `flai forecast` gives 53m from size 29 (8 criteria, 21 touches). Raised to 1h15m: S-0578 and S-0579, the nearest kluster stories, took 61m and 51m of agent time, and this one adds a guard rule and an MCP tool to a serve pass. The delivery, 2026-11-10T16:49:00Z, is the start flai's play-out of the pull order gives (11th, in-progress limit 5) plus 1h15m.
 
 Cost of delay: 986.84 USD a week, as `flai cod S-0661` works it out: S-0661's share of the operator's `revenue_per_week: 1250` on E-0035 (TH-0980, after the orchestrator's recommendation from D-0479), split by forecast duration between the epic's two open stories without inputs of their own, S-0661 (1h15m) and S-0659. Not adjusted: the split follows the operator's input and flai's rule, and S-0660 and S-0662, which carry their own inputs, take no share of it.
+
+### Accepted by the orchestrator
+
+- Verified: d096da3591b544d68f76e2d01dcd26c079e6aa9c
+- At: 2026-11-13T13:41:11Z
+
+Verdict: pass — all 8 criteria met at d096da359; close-out passed (gofmt, vet, golangci-lint, markdown, integration, smoke); every changed file under touches.
+- 1: flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/kluster_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go
+- 2: flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go
+- 3: flai/cmd/kluster.go, flai/cmd/kluster_test.go
+- 4: flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go
+- 5: flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests_test.go
+- 6: flai/internal/serve/kluster.go, flai/internal/serve/checks.go, flai/internal/serve/kluster_requests_test.go
+- 7: flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster.go
+- 8: design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md

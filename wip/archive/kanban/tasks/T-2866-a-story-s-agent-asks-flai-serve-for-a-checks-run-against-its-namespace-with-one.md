@@ -24,16 +24,16 @@ touches: [flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/k
 after: [T-2863, T-2865]
 usage:
   source: log
-  seconds: 710
+  seconds: 714
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 419
-      cache_read: 4200676
-      cache_write: 131574
-      cost: 1.6185
+      input: 56
+      output: 22439
+      cache_read: 4281745
+      cache_write: 128136
+      cost: 2.0714
 ---
 # T-2866 A story's agent asks flai serve for a checks run against its namespace with one flai command and one MCP tool, and gets each check's result and log
 

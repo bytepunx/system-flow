@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 274.7691
-accrued_seconds: 30823
-tasks_completed: 180
-last_run: 2026-11-13T13:17:56Z
+accrued_cost: 276.1073
+accrued_seconds: 30903
+tasks_completed: 181
+last_run: 2026-11-13T13:23:50Z
 ---
 
 # Curator activity
@@ -1451,3 +1451,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0587, D-0607, D-0608
 - Seconds: 116
 - Cost: 1.6515 USD, estimated
+
+### 2026-11-13T13:23:50Z
+
+- Summary: I merged S-0770 into D-0559, wrote no entries, absorbed none, and `flai digest compact` compacted none. S-0770's only candidate, publish formula steps running flai as `scripts/flai.sh` in the main checkout, is already D-0559's fact. No design changed since the last run, and ADR-0295 does not state D-0587, D-0607, or D-0608.
+- Trigger: accepted S-0770
+- Items: D-0559
+- Seconds: 80
+- Cost: 1.3382 USD, estimated

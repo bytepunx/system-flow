@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1026
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 460
-      cache_read: 5402589
-      cache_write: 128390
-      cost: 2.0662
+      input: 71
+      output: 28648
+      cache_read: 5466495
+      cache_write: 163591
+      cost: 2.6445
 ---
 # T-2865 flai kluster env prints a story's agent its own namespace's variables, with the namespace's own kubeconfig, while the namespace has a record
 
