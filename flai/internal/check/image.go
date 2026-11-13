@@ -66,7 +66,9 @@ func HostImages(main string) map[string]string {
 // each image the project's agents need (agentimage.Needed: the harness
 // images and the layer built over claude-code's) that is not on this host or
 // is stale (ADR-0295), a warning --strict passes over, since only building
-// it clears it, which no story branch does; each names flai image status.
+// it clears it, which no story branch does; each says that flai serve makes
+// it itself at the next start that needs it (ADR-0295 §5, S-0751), and names
+// flai image ensure and flai image status.
 // Each name agent.image.args gives that no ARG of the layer declares is a
 // warning on its line, which a story can fix.
 // The host's own images, named with --image, are never judged. When docker
@@ -163,17 +165,17 @@ func imageFinding(s agentimage.Status, layer string) string {
 	case agentimage.StateMissing:
 		switch {
 		case s.Kind == agentimage.KindLayer:
-			return what + " is not built on this host, so flai serve cannot run the project's agents in it: see `flai image status`, and build it with `flai image ensure`, or `flai image build --layer` over the harness image already built"
+			return what + " is not built on this host: flai serve builds it itself at the next start that needs it, or build it now with `flai image ensure`, or `flai image build --layer` over the harness image already built; see `flai image status`"
 		case s.Source == agentimage.SourceHost:
 			return what + " is not on this host: see `flai image status`, and build it, or name another with `flai serve agent harness container --image " + s.Inner + "=<image>`"
 		}
-		return what + " is not built on this host, so flai serve cannot run the project's agents in it, nor build a layer over it: see `flai image status`, and build it with `flai image ensure`"
+		return what + " is not built on this host: flai serve pulls or builds it itself at the next start that needs it, or make it now with `flai image ensure`; see `flai image status`"
 	case agentimage.StateStale:
 		why := make([]string, 0, len(s.Reasons))
 		for _, r := range s.Reasons {
 			why = append(why, r.Message)
 		}
-		return what + " is stale: " + strings.Join(why, "; ") + "; see `flai image status`, and rebuild it with `flai image ensure`"
+		return what + " is stale: " + strings.Join(why, "; ") + "; flai serve renews it itself at the next start that needs it, or renew it now with `flai image ensure`; see `flai image status`"
 	}
 	return ""
 }

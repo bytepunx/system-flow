@@ -540,8 +540,8 @@ The start is refused, as a start that failed, when one of these holds:
 | Refused when | Fix |
 |--------------|-----|
 | `docker` is not on `flai serve`'s `PATH` | Install Docker, or name its client with `flai serve agent harness container --program <path>` |
-| The inner harness's image is not on this host | `flai image status` says which images are missing; `flai image ensure` makes them, `make agent-images` in system-flow's repository builds them, or `flai serve agent harness container --image <inner>=<image>` names your own |
-| The project's layer image, which `agent.image.layer` names, is not on this host | `flai image status` says which images are missing; `flai image ensure` builds it, or `flai image build --layer` over the harness image already built; in system-flow's repository `make agent-images` or `scripts/agent-image.sh --layer` builds it too |
+| The image you named with `--image` is not on this host | Pull or build it yourself, or name another with `flai serve agent harness container --image <inner>=<image>`; flai never makes or judges your own image |
+| An image of flai's, the inner harness's or the project's layer, is not on this host, and no image job can make it: a start outside `flai serve`'s run, such as one by hand | `flai image ensure` in the project; `flai image status` says which images are missing |
 | `system-flow.yaml` cannot be read | Mend it; `flai check` says what is wrong |
 | No login is set, for `claude-code` | `flai serve agent harness container --login ~/.claude` |
 | The login is not an absolute path, or is or holds your home, `~/.flai`, the project, or the Docker socket | `--login` with the folder of your login alone |
@@ -552,7 +552,27 @@ The start is refused, as a start that failed, when one of these holds:
 | The project is not a git repository, so the story has no worktree | Run its agent on another harness |
 | The worktree's `.git` file, its registration `.git/worktrees/<story>`, or the registration's `commondir` is missing; the message names the path | `git worktree repair <worktree>` from the main checkout, or `git worktree prune` and `flai stream open <story>` to make it again |
 
-A stale image does not refuse the start: `flai serve` warns of it in its log as `container agent image stale`, with why, and starts the agent.
+An image of flai's that is missing or stale does not refuse a start in `flai serve`: it holds the start and makes the image (S-0751, [ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)):
+
+| When | What happens |
+|------|--------------|
+| The inner harness's image is missing or stale | `flai serve` holds the start, and its image job pulls or builds the image on the host, as `flai image ensure` does. The start goes on once the job passes. |
+| The project's layer image, which `agent.image.layer` names, is missing or stale | The job builds the layer over the harness image, pulling or building that first when it is missing or stale. The start goes on once the job passes. |
+| The job fails | Each start held for it fails once, with the job's error, below. The next start that needs the image asks for a new job; a failed job is never reused. |
+
+The job is `flai serve`'s, on the host, one at a time across every project it serves. A start whose images a running or queued job of the project makes joins that job; any other waits its turn behind it. Each job keeps its record, `<id>.job.json`, and its log, `<id>.log`, in `~/.flai/serve/image-jobs/`. The log holds every docker step's output and, at its end, the images' status as `flai image status` prints it. A step that writes nothing for 10 minutes is stopped and fails the job, and a step that fails on the network is tried twice more, after 30 seconds and then 2 minutes. The journal records the job's start and its end, as action `image`: the end says `passed` or `failed`, how long it took, which way each image took, and the log's path. No consent is asked. An upgrade of flai makes the images stale, and the first start after it renews them the same way.
+
+While it waits, the run's entry in `agents.json` has `image_held: true` and `image_job`, the job's id, and its `why` names the images missing or stale, the job, and its log. A held story counts as started against the in-progress limit. The activity shows the run as waiting. Held starts go on in the order they were held. `flai serve agent stop` drops the hold, and the agent is not started when the job ends. `flai serve agent restart` of a held run is refused, naming the job and its log. A run still held when `flai serve` stops fails at the next look after it starts again: start the agent again.
+
+A failed job fails each held start with its error, the job's id a UTC stamp and a counter, `at <step>` left out when no docker step failed:
+
+```text
+the image job <id>, which makes <images> for <project root>, failed at <step>: <cause>; read its log ~/.flai/serve/image-jobs/<id>.log, mend what it names, and run flai image ensure in the project to see it again
+```
+
+Read the log, mend what it names, then run `flai image ensure` in the project to see the failure again or to make the images by hand. The next start asks for a new job.
+
+Outside `flai serve`'s run there is no job. A missing image refuses, as above. A stale one does not: the log warns `container agent image stale`, with why, and the agent starts.
 
 `flai image status` lists the images the project's agents need and says whether each is on this host and current (S-0735, [ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)). It takes the harness image of each inner harness that an agent on the `container` harness runs: the project's default agent, the strategic agents, the roles your project defines, and the agents of its stories in ready, in progress, and review. It adds the layer's image, and claude-code's harness image under it, when `agent.image.layer` names one. Each line names the inner harness, the kind (`harness` or `layer`), the image, where its name came from (`default`, `host` for `--image`, or `layer`), and its state:
 
@@ -599,8 +619,8 @@ An argument you do not name keeps its default. flai sets `BASE` itself, to the h
 |------|---------|
 | The Dockerfile is not a file | A warning, which fails `--strict` |
 | `agent.image.args` names an argument no `ARG` of the layer's Dockerfile declares | A warning on the argument's line, which fails `--strict` |
-| An image the project's agents need, the layer's or a harness image, is not built on this host | A warning `--strict` passes over, naming `flai image status` and `flai image ensure` |
-| Such an image is stale | A warning `--strict` passes over, saying why and naming `flai image status` |
+| An image the project's agents need, the layer's or a harness image, is not built on this host | A warning `--strict` passes over, saying that `flai serve` makes it itself at the next start that needs it, and naming `flai image ensure` and `flai image status` |
+| Such an image is stale | A warning `--strict` passes over, saying why, that `flai serve` renews it at the next start that needs it, and naming `flai image ensure` and `flai image status` |
 | `docker` is not on `PATH` or cannot say, or the project's flai cannot say its version | A warning `--strict` passes over, saying the images went unchecked |
 | The manifest names no layer | Nothing |
 
@@ -627,7 +647,9 @@ Neither mounts the login or the cache folder, nor gets the MCP server's URL or t
 
 | When | What happens |
 |------|--------------|
-| `docker` is not on `PATH`, or the image is not on this host | The close-out ends `failed`, and each check fails, naming the fix the start's refusal names; nothing runs on the host instead |
+| `docker` is not on `PATH` | The close-out ends `failed`, and each check fails, naming the fix the start's refusal names; nothing runs on the host instead |
+| The image is missing or stale, under `flai serve` | The close-out and each check ask for the image job, as a start does, and join the one running for the project. Their output says they wait for it, naming the job and its log. The close-out's verdict comes after the job. A failed job fails the close-out at its container check, and each check, with the job's error |
+| The image is not on this host, outside `flai serve`, as for `flai checks` in your shell | Each check fails, naming `flai image ensure`; nothing runs on the host instead |
 | The worktree's `.git` file, or its registration's `commondir`, no longer points at the main checkout | The close-out is refused, naming `git worktree repair` |
 | The check is cancelled or runs out of time | `docker stop` on its container's name, then the run ends |
 | A kluster check | It gets the `FLAI_KLUSTER_*` variables and `KUBECONFIG`, but not the kubeconfig or the state under the main checkout's `.flai-cache`, which is not mounted, so it cannot reach the cluster through them |
@@ -642,7 +664,7 @@ The planner, the orchestrator, the analyzer, the curator, and a role your projec
 flai manifest set planning.agent='{"harness":"container","config":{"inner":"claude-code"}}'
 ```
 
-`analysis.agent`, `digest.agent`, and `roles.<name>.agent` take the same; `orchestration.agent` is set by hand in `system-flow.yaml`, with `harness: container` under it. The host's settings are the same as a story's: image, network, and login. These agents work in the main checkout, not a worktree, so their container mounts other things:
+`analysis.agent`, `digest.agent`, and `roles.<name>.agent` take the same; `orchestration.agent` is set by hand in `system-flow.yaml`, with `harness: container` under it. The host's settings are the same as a story's: image, network, and login. These agents run on the harness image, never the project's layer, and a start waits only for that image's job ([ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)). These agents work in the main checkout, not a worktree, so their container mounts other things:
 
 | Host path | In the container | Mode | For |
 |-----------|------------------|------|-----|

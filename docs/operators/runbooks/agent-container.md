@@ -61,7 +61,13 @@ GHCR makes a package created from a private repository private. A pull with no l
 
 ## Build
 
-With Docker running, the way back for an agent image that is missing or stale, a harness image or the project's layer, is:
+`flai serve` brings an agent image back by itself (S-0751). A start that finds a harness image or the project's layer missing or stale is held while `flai serve`'s image job makes it on the host. That holds for a story's agent, a strategic agent, the close-out's container, and the checks' container. One job runs at a time, and it does what `flai image ensure` does, below. Each job keeps its record and its log, `<id>.job.json` and `<id>.log`, in `~/.flai/serve/image-jobs/`. The host journal records its start and its end as action `image`, and a held run's `image_job` in `~/.flai/serve/agents.json` names it. When the job fails, each held start fails once, naming the cause, the failing step, and the log; the next start asks for a new job. The user guide has the rest ([In a container](../../users/flai.md#in-a-container-the-container-harness)).
+
+Run `flai image ensure` yourself, with Docker running, when:
+
+- no `flai serve` runs the start, as for this runbook's scripts or a start by hand, which refuses a missing image rather than make it;
+- a job failed: mend what its log names, then run it to see the failure again or to make the images;
+- you want the images before the first start needs them.
 
 ```bash
 flai image ensure
@@ -85,7 +91,7 @@ flai image build --layer
 
 It refuses when the harness image is not on this host, naming it and `flai image ensure`, and when the manifest names no layer.
 
-`make agent-images` is this repository's own build of all three images, from its tree. From the repository root:
+`make agent-images` is this repository's own build of all three images, from its tree. It is not how a missing image comes back: the image job or `flai image ensure` does that. From the repository root:
 
 ```bash
 make agent-images
@@ -98,7 +104,7 @@ Before it builds, the script asks the credential helper your Docker configuratio
 ## What the run needs on the host
 
 - Docker. S-0505 ran on Docker Desktop with WSL2 integration; a native Docker Engine host was not tried. There the MCP server must also listen on the bridge's gateway, since the engine routes `host.docker.internal` to it. `mcp.bind`'s default, `auto`, does so at each server start, and `flai serve` refuses its own container starts while the server does not ([ADR-0293](../../../design/adrs/0293-mcp-bind-holds-one-address-or-several-or-auto-the-default-which-flai-host.md)), but this script makes no such check.
-- The images, made as above.
+- The images, made as above with `flai image ensure`, or `make agent-images` in this repository: the scripts run outside `flai serve`, so no image job makes them.
 - The story started, so that its worktree exists: `flai story start S-nnnn`.
 - The project's HTTP MCP server running: `flai host` runs one for every project `flai serve` serves, or start it with `flai mcp start` ([MCP over HTTP](../index.md#mcp-over-http)). `flai mcp status` says where it listens.
 - `flai mcp token` answering the server's bearer token. The script reads it with the installed `flai` on `PATH`, not this tree's `bin/flai`; set `FLAI_BIN` to use another.

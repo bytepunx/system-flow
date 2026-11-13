@@ -49,10 +49,11 @@ const layerDockerfile = "ARG BASE\nFROM ${BASE}\n"
 
 // S-0510, S-0735, ADR-0295, ADR-0255: a manifest that names a layer gets an
 // agent.image finding for each image its agents need that is not built on
-// this host or is stale, each naming flai image status, and a note when
-// docker cannot be asked; all of them advisory and unchecked, inside the
-// manifest and the layer, since only the host clears them. A layer that is
-// not a file is a plain warning. The host's own images are never judged.
+// this host or is stale, each saying that flai serve makes it itself at the
+// next start that needs it and naming flai image ensure and flai image
+// status, and a note when docker cannot be asked; all of them advisory and
+// unchecked, inside the manifest and the layer, since only the host clears
+// them. A layer that is not a file is a plain warning. The host's own images are never judged.
 func TestAgentImage(t *testing.T) {
 	const layer = "images/agent/Dockerfile"
 	const image = "flai-agent-smp-claude-code:local"
@@ -75,13 +76,13 @@ func TestAgentImage(t *testing.T) {
 		{name: "no layer"},
 		{name: "current", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current, image: layered("sha256:harness")}},
 		{name: "not built", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current},
-			want: [][]string{{image, layer, "not built", "flai image status", "flai image ensure", "flai image build --layer"}}, advisory: true},
+			want: [][]string{{image, layer, "not built", "flai serve builds it itself at the next start that needs it", "flai image status", "flai image ensure", "flai image build --layer"}}, advisory: true},
 		{name: "stale layer", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current, image: {ID: "sha256:layer", Labels: map[string]string{agentimage.LabelFlai: "dev", agentimage.LabelRecipe: "sha256:other", agentimage.LabelBase: "sha256:harness"}}},
-			want: [][]string{{image, layer, "is stale", "built from another Dockerfile", "flai image status", "rebuild it with `flai image ensure`"}}, advisory: true},
+			want: [][]string{{image, layer, "is stale", "built from another Dockerfile", "flai serve renews it itself at the next start that needs it", "renew it now with `flai image ensure`", "flai image status"}}, advisory: true},
 		{name: "stale harness image", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: {ID: "sha256:harness", Labels: map[string]string{agentimage.LabelFlai: "1.2.3"}}, image: layered("sha256:harness")},
-			want: [][]string{{"harness image " + harnessImage, "is stale", "built for flai 1.2.3", "flai image status", "flai image ensure"}}, advisory: true},
+			want: [][]string{{"harness image " + harnessImage, "is stale", "built for flai 1.2.3", "flai serve renews it", "flai image status", "flai image ensure"}}, advisory: true},
 		{name: "harness image not built", layer: layer, dockerfile: true, images: map[string]agentimage.Info{image: layered("sha256:harness")},
-			want: [][]string{{"harness image " + harnessImage, "not built", "flai image status", "flai image ensure"}, {image, "is stale", "not on this host", "flai image status"}}, advisory: true},
+			want: [][]string{{"harness image " + harnessImage, "not built", "flai serve pulls or builds it itself at the next start that needs it", "flai image status", "flai image ensure"}, {image, "is stale", "not on this host", "flai image status"}}, advisory: true},
 		{name: "the host's own image", layer: layer, dockerfile: true, host: map[string]string{harness.ClaudeCode: "mine:1"}, images: map[string]agentimage.Info{"mine:1": {ID: "sha256:mine"}, image: layered("sha256:mine")}},
 		{name: "Dockerfile missing", layer: layer, want: [][]string{{layer, "not a file", manifest.File, "flai image ensure"}}},
 		{name: "docker not on PATH", layer: layer, dockerfile: true, err: fmt.Errorf("inspect it: %w", ErrNoDocker), want: [][]string{{image, "not checked", "docker is not on PATH"}}, advisory: true},
