@@ -40,10 +40,15 @@ esac
 
 // klusterProject is a project whose system-flow.yaml has a kluster: block
 // naming integration/kluster.yaml, with the fake kluster first on PATH and
-// nothing else of the host's; it returns the root and the fake's log.
+// nothing else of the host's; it returns the root and the fake's log. The
+// root is resolved, as the fakes' $(pwd) prints it where the temporary
+// folder is a symbolic link, as on macOS (S-0777).
 func klusterProject(t *testing.T, status string) (root, log string) {
 	t.Helper()
-	root = tempProject(t)
+	root, err := filepath.EvalSymlinks(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
 	m := filepath.Join(root, "system-flow.yaml")
 	b, _ := os.ReadFile(m)
 	b = append(b, []byte("kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n")...)
