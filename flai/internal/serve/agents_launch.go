@@ -84,6 +84,20 @@ type launcher struct {
 	// look; nil is no channel. A starved board's thread says when there is
 	// none (ADR-0285).
 	notify func() config.Notify
+	// imageJobs is Options.imageJobs, flai serve's image jobs, which make the
+	// agent images a container start finds missing or stale (ADR-0295 §5);
+	// nil, outside flai serve's run, asks for none, and such a start is
+	// refused as before.
+	imageJobs *imageJobRunner
+	// imageHolds are the starts, of story agents and strategic ones, this
+	// launcher holds for their image jobs, in the order they were held, which
+	// is the order they go on in (holdImage, S-0751); holdsMu guards them.
+	// imageAfter is the job whose end the start being made again goes on
+	// from, under the launcher's lock, nil otherwise: it asks for no other
+	// job (containerAllowed).
+	holdsMu    sync.Mutex
+	imageHolds []*imageHold
+	imageAfter *imageJob
 }
 
 // told records a run in the host's state and tells changed.
@@ -124,7 +138,7 @@ func (l *launcher) ended(run *AgentRun) (first bool) {
 }
 
 func newLauncher(o Options, e Entry) *launcher {
-	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck, notify: o.Notify,
+	return &launcher{dir: o.Dir, entry: e, config: o.Agent, record: o.Host.Record, now: o.Now, waiting: map[int]bool{}, again: make(chan struct{}, 1), git: gitOf(o), docker: dockerOf(o), imageCheck: o.imageCheck, notify: o.Notify, imageJobs: o.imageJobs,
 		log: func(msg string, args ...any) {
 			o.Logger.Info(msg, append([]any{"component", "serve", "project", e.Key}, args...)...)
 		},
@@ -654,6 +668,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	// restart from starting a story twice is its run in serve/agents.json,
 	// not what happened to be ready when flai serve began (S-0112).
 	l.settleOrphans()
+	// a start held for its image job that the budget state held once the
+	// job ended is made again (S-0751)
+	l.goOnDue(ctx)
 	l.measureDone(l.dir.AgentStates()[l.entry.Root])
 	l.resolveAcceptSentBack(repo)
 	l.holding = nil
@@ -696,6 +713,12 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 		case run.live():
 			reserved++ // started, and not in progress yet: it has its agent
 			holds.Open(s.item, agentStarted)
+		case run.imageHeld():
+			// started, and waiting for its image job to go on (S-0751): it
+			// has its agent, as one started has
+			reserved++
+			holds.Open(s.item, agentStarted)
+			sk.add(s.ID+"'s agent waits for the image job "+run.ImageJob+" that makes its agent images, and starts once it passes", s)
 		case harness.Elsewhere(s.Agent):
 			// its agent runs elsewhere, which no command on the host changes,
 			// and is no failure (ADR-0242)
@@ -865,6 +888,18 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 	return err == nil && started.Before(entered.Truncate(time.Second))
 }
 
+// strategicRuns are the newest run of each strategic agent st records: each
+// item's planner's, the orchestrator's, the analyzer's, the curator's, and
+// each defined role's on each item.
+func (s AgentState) strategicRuns() []*AgentRun {
+	out := slices.Collect(maps.Values(s.Plans))
+	out = append(out, s.Orchestrator, s.Analyzer, s.Curator)
+	for _, runs := range s.Roles {
+		out = append(out, slices.Collect(maps.Values(runs))...)
+	}
+	return slices.DeleteFunc(out, func(r *AgentRun) bool { return r == nil })
+}
+
 // settleOrphans ends the runs whose process is gone while no launcher waits
 // for it: flai serve was restarted while they ran, or a command started them
 // on the operator's word and handed them over (S-0115, S-0116). A process
@@ -872,10 +907,16 @@ func startedBefore(run *AgentRun, entered time.Time) bool {
 // is gone too (S-0170). A planner's run is settled the same way, and its
 // activity logged (S-0208), and so are the orchestrator's (S-0218), the
 // analyzer's (S-0223), the curator's (S-0431), and each defined role's
-// (S-0417).
+// (S-0417). A run, a story's or a strategic agent's, whose start waits for
+// an image job that no start in this flai serve holds, as after a restart
+// while it waited, fails (heldOrphan, S-0751).
 func (l *launcher) settleOrphans() {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for _, run := range st.Stories {
+		if run.imageHeld() && !heldHere(l.entry.Root, run) {
+			l.heldOrphan(run)
+			continue
+		}
 		if !run.live() || l.waiting[run.PID] || run.running() {
 			continue
 		}
@@ -890,6 +931,11 @@ func (l *launcher) settleOrphans() {
 			continue
 		}
 		l.planEnded(run, nil)
+	}
+	for _, run := range st.strategicRuns() {
+		if run.imageHeld() && !heldHere(l.entry.Root, run) {
+			l.heldOrphan(run)
+		}
 	}
 	if run := st.Orchestrator; run.live() && !l.waiting[run.PID] && !run.running() {
 		l.orchestrateEnded(run, nil)

@@ -159,7 +159,8 @@ there does.`,
 			host, stopComponents := a.serveHost(ctx)
 			defer stopComponents()
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: host, Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
-				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned, ForgeToken: a.serveForgeToken, Notify: a.serveNotify, Checks: a.checksConfig})
+				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned, ForgeToken: a.serveForgeToken, Notify: a.serveNotify, Checks: a.checksConfig,
+				ImageEnsure: a.imageEnsure})
 		},
 	}
 	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")

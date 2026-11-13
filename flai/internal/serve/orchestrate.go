@@ -2,6 +2,7 @@ package serve
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -133,7 +134,10 @@ func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
 // first look once the state no longer holds starts the next. A start the
 // budget state holds otherwise, as when another role's run set it, records
 // nothing, so it is not a failure orchestrateRetry counts, and the next look
-// tries again. A run going past orchestration.run_timeout is stopped
+// tries again. A start held for its image job waits for it, and is made
+// again once it ends; a start that failed with its image job waits for a
+// reason queued after it, which asks for another job (S-0751). A run going
+// past orchestration.run_timeout is stopped
 // (stopOverdue). While the action is off it keeps up with the events and the
 // schedule and queues nothing, and stops the run going, which also lifts the
 // hold.
@@ -171,6 +175,15 @@ func (r *orchestrator) look(ctx context.Context) {
 		r.stopOverdue(repo.Manifest.Orchestration, run, now)
 		return
 	case run != nil && run.Held:
+		return
+	case run.imageHeld():
+		// its start waits for its image job, and is made again once the job
+		// ends (S-0751)
+		return
+	case run != nil && run.Outcome == OutcomeFailed && run.ImageJob != "" && !q.queuedSince(run.Ended):
+		// its start failed with its image job: only a reason that came after
+		// asks for another, so that the failure is not tried again every
+		// orchestrateRetry (S-0751)
 		return
 	case run != nil && run.UsageLimited:
 		if _, held := r.starter.budgetHolds(runBudgetKey(run)); held {
@@ -353,6 +366,22 @@ func (r *orchestrator) unhold() {
 	}
 }
 
+// queuedSince reports whether q holds a reason queued after at, an RFC 3339
+// time; one whose time cannot be read counts as after.
+func (q reasonQueue) queuedSince(at string) bool {
+	since, err := time.Parse(time.RFC3339, at)
+	if err != nil {
+		return true
+	}
+	for _, r := range q.Reasons {
+		queued, err := time.Parse(time.RFC3339, r.Queued)
+		if err != nil || queued.After(since) {
+			return true
+		}
+	}
+	return false
+}
+
 // due says whether orchestrateRetry has passed since run ended; a run whose
 // end cannot be read is due.
 func (r *orchestrator) due(run *AgentRun) bool {
@@ -493,6 +522,15 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
 		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue, Reasons: reasonLines(reasons), PrimeReasons: primeReasons(reasons)})
+	if w := (*imageWait)(nil); errors.As(err, &w) {
+		// held for its image job, with what started it, and made again once
+		// the job ends (holdImage, S-0751): no failure is recorded
+		l.holdImage(ctx, run, w, func(ctx context.Context) bool {
+			_, held := l.orchestrate(ctx, cfg, agent, "", queue, reasons)
+			return held != nil
+		})
+		return said, nil
+	}
 	if err != nil {
 		return refuse(err)
 	}

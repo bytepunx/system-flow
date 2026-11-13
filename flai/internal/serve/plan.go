@@ -202,6 +202,15 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	askedOn, _ := orchestratorAsked(trigger)
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RolePlan, Item: item, AskedOn: askedOn, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
 		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
+	if w := (*imageWait)(nil); errors.As(err, &w) {
+		// held for its image job, with what started it, and made again once
+		// the job ends (holdImage, S-0751): no failure is recorded
+		l.holdImage(ctx, run, w, func(ctx context.Context) bool {
+			_, held := l.plan(ctx, cfg, item, agent, trigger)
+			return held != nil
+		})
+		return true, nil
+	}
 	if err != nil {
 		return fail(err)
 	}

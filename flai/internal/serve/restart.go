@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/filelock"
@@ -110,7 +111,8 @@ func heldRefusal(story string, b Budget, now time.Time) error {
 // and returns the run with Queued set: flai serve starts it when there is
 // room, as it starts a story that enters ready (S-0118). It is refused while
 // the agent action is off for the project, when the story is in another
-// state, while its agent runs or waits for an answer, when one is already
+// state, while its agent runs, waits for an answer, or its start waits for
+// its image job (S-0751), when one is already
 // queued, when its agent runs elsewhere (harness none, ADR-0242), when
 // nothing can start it, and while the host's budget state holds
 // its provider (S-0534), with nothing queued.
@@ -145,6 +147,8 @@ func Restart(ctx context.Context, o Options, e Entry, story string) (*AgentRun, 
 		return nil, refused("%s's agent is running (pid %d, started %s)", it.ID, run.PID, run.Started)
 	case run.Outcome == OutcomeAsked:
 		return nil, refused("%s's agent is %s; flai serve starts it again when that comes", it.ID, run.awaits())
+	case run.imageHeld():
+		return nil, refused("%s's agent's start waits for the image job %s, which makes its agent images, its log %s: flai serve starts the agent once the job passes; stop it with flai serve agent stop %s to start it otherwise", it.ID, run.ImageJob, filepath.Join(o.Dir.imageJobsDir(), run.ImageJob+imageJobLogSuffix), it.ID)
 	case run.Queued != "" && it.Status == workitem.Ready:
 		return nil, refused("another agent for %s is already queued (since %s); flai serve starts it when there is room", it.ID, run.Queued)
 	}

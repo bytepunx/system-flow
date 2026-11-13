@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -329,9 +330,12 @@ func TestContainerMCPNamesTheHostOffTheHostNetwork(t *testing.T) {
 
 // S-0508: flai serve refuses a container start that cannot succeed before
 // anything runs, saying what to do: docker not on PATH, the inner harness's
-// image not on this host, naming flai image status (S-0735), a docker that
-// cannot say whether it is, no login for an inner harness that needs one, and
-// no worktree to mount in a project git is not in use in.
+// image not on this host when no image job can make it, outside flai serve's
+// run, naming flai image ensure and flai image status (S-0735, S-0751), a
+// docker that cannot say whether it is, no login for an inner harness that
+// needs one, and no worktree to mount in a project git is not in use in. With
+// an image job, a missing image is made, not refused
+// (TestContainerStartWaitsForTheImageJobThatMakesAMissingImage).
 func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 	ctx := context.Background()
 	for _, c := range []struct {
@@ -345,11 +349,11 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 			lab.cfg.Harnesses[harness.Container] = harness.Host{Program: filepath.Join(t.TempDir(), "docker"), Login: lab.cfg.Harnesses[harness.Container].Login}
 		}, says: []string{"not on flai serve's PATH", "flai serve agent harness container --program"}},
 		{name: "no image", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644) },
-			says: []string{"flai-agent-claude-code:local", "not on this host", "flai image status", "make agent-images", "--image claude-code=<image>"}},
+			says: []string{"flai-agent-claude-code:local", "not on this host", "flai image status", "flai image ensure", "--image claude-code=<image>"}},
 		{name: "no layer image", set: func(lab *agentLab) {
 			layerManifest(lab)
 			_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
-		}, says: []string{"flai-agent-t-claude-code:local", "not on this host", "agent.image.layer in system-flow.yaml", "flai image status", "make agent-images", "scripts/agent-image.sh --layer"}},
+		}, says: []string{"flai-agent-t-claude-code:local", "not on this host", "agent.image.layer in system-flow.yaml", "flai image status", "flai image ensure"}},
 		{name: "docker cannot say", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "inspect-fails"), nil, 0o644) },
 			says: []string{"flai-agent-claude-code:local", "Cannot connect to the Docker daemon", "start Docker"}},
 		{name: "no login", set: func(lab *agentLab) { lab.cfg.Harnesses[harness.Container] = harness.Host{} },
@@ -779,9 +783,10 @@ func (lab *agentLab) journaled(start string) {
 // container's name, and its mounts in agents.json, for a story's agent and a
 // strategic agent's, so that a run that used the project's layer image can be
 // shown to have done so once --rm has removed its container, and its journal
-// start entry names the image and the container. Before S-0665 the record and
-// the entry named only docker. A run on another harness records none of them
-// and logs its start as before.
+// start entry names the image and the container: the layer for the story's
+// agent, the harness image for the strategic one (ADR-0295 §6). Before S-0665
+// the record and the entry named only docker. A run on another harness records
+// none of them and logs its start as before.
 func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 	const layer = "flai-agent-t-claude-code:local"
 	ctx := context.Background()
@@ -807,8 +812,9 @@ func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 		data, _ := os.ReadFile(filepath.Join(lab.outDir, conventions.RolePlan+".txt"))
 		return strings.Contains(string(data), "config: ")
 	})
-	lab.recordedContainer(conventions.RolePlan, plan, layer)
-	lab.journaled("started docker (container, image " + layer + ", container " + harness.ContainerName(conventions.RolePlan, plan.Session) + ") to plan " + epic + " as ")
+	harnessImage := harness.DefaultImages[harness.ClaudeCode]
+	lab.recordedContainer(conventions.RolePlan, plan, harnessImage)
+	lab.journaled("started docker (container, image " + harnessImage + ", container " + harness.ContainerName(conventions.RolePlan, plan.Session) + ") to plan " + epic + " as ")
 
 	host := lab.ready("On the host")
 	lab.l.look(ctx, false)
@@ -823,7 +829,8 @@ func TestAContainerRunRecordsItsImageContainerAndMounts(t *testing.T) {
 // S-0510: containerImageHost decides the container's image: the project's layer
 // for an inner harness with a harness image, else the host's, else the
 // default, in a copy of the host's images; an inner harness with no harness
-// image gets no layer, and is the adapter's to refuse. A manifest that cannot
+// image gets no layer, and is the adapter's to refuse, and a strategic agent
+// gets the harness image under a layer (ADR-0295 §6). A manifest that cannot
 // be read refuses.
 func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T) {
 	lab := newAgentLab(t)
@@ -835,6 +842,7 @@ func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T
 		layer     bool
 		cfg       AgentConfig
 		inner     string
+		strategic bool
 		want      string
 		wantLayer bool
 	}{
@@ -843,6 +851,8 @@ func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T
 		{name: "layer over the host's", layer: true, cfg: cfg, inner: harness.ClaudeCode, want: "flai-agent-t-claude-code:local", wantLayer: true},
 		{name: "layer over the default", layer: true, cfg: bare, inner: harness.ClaudeCode, want: "flai-agent-t-claude-code:local", wantLayer: true},
 		{name: "no harness image", layer: true, cfg: bare, inner: harness.Command, want: ""},
+		{name: "a strategic agent under a layer, the host's", layer: true, cfg: cfg, inner: harness.ClaudeCode, strategic: true, want: "host-agent:1"},
+		{name: "a strategic agent under a layer, the default", layer: true, cfg: bare, inner: harness.ClaudeCode, strategic: true, want: harness.DefaultImages[harness.ClaudeCode]},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if c.layer {
@@ -850,7 +860,7 @@ func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T
 			} else {
 				_ = os.WriteFile(filepath.Join(lab.root, manifest.File), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
 			}
-			host, layer, err := containerImageHost(lab.root, c.cfg, c.inner)
+			host, layer, err := containerImageHost(lab.root, c.cfg, c.inner, c.strategic)
 			if err != nil || host.Images[c.inner] != c.want || layer != c.wantLayer || host.Login != c.cfg.host(harness.Container).Login {
 				t.Errorf("containerImageHost = %+v, %v, %v; want image %q, layer %v", host, layer, err, c.want, c.wantLayer)
 			}
@@ -860,7 +870,7 @@ func TestContainerImageHostPutsTheLayerImageInACopyOfTheHostsImages(t *testing.T
 		})
 	}
 	_ = os.WriteFile(filepath.Join(lab.root, manifest.File), []byte("name: [\n"), 0o644)
-	if _, _, err := containerImageHost(lab.root, cfg, harness.ClaudeCode); err == nil || !strings.Contains(err.Error(), "agent image layer") {
+	if _, _, err := containerImageHost(lab.root, cfg, harness.ClaudeCode, false); err == nil || !strings.Contains(err.Error(), "agent image layer") {
 		t.Errorf("an unreadable manifest is not refused: %v", err)
 	}
 }
@@ -1280,5 +1290,476 @@ func TestAStrategicContainerIsRefusedACheckoutWithNoGitConfig(t *testing.T) {
 				t.Errorf("the refusal changed .git/config: %v, then %v", before, after)
 			}
 		})
+	}
+}
+
+// containerEnsure is a fake image job's work for a container lab (S-0751):
+// each call waits for the test's word on gate, is counted with the refs it
+// was given, and then fails with fail when it is set, or makes the images
+// current: it takes away the lab's no-image and labels every image with this
+// flai's version, dev.
+type containerEnsure struct {
+	lab    *agentLab
+	gate   chan struct{}
+	opened sync.Once
+	mu     sync.Mutex
+	fail   error
+	refs   [][]string
+}
+
+func (e *containerEnsure) ensure(_ context.Context, _ string, images []agentimage.Image, log io.Writer) ([]agentimage.Outcome, error) {
+	<-e.gate
+	refs := imageJobRefs(images)
+	e.mu.Lock()
+	e.refs = append(e.refs, refs)
+	fail := e.fail
+	e.mu.Unlock()
+	if fail != nil {
+		return nil, fail
+	}
+	_ = os.Remove(filepath.Join(e.lab.outDir, "no-image"))
+	if err := os.WriteFile(filepath.Join(e.lab.outDir, "image-labels"), []byte(`{"`+agentimage.LabelFlai+`":"dev"}`), 0o644); err != nil {
+		return nil, err
+	}
+	_, _ = fmt.Fprintln(log, "made", strings.Join(refs, " "))
+	return nil, nil
+}
+
+// open lets the calls run, once.
+func (e *containerEnsure) open() { e.opened.Do(func() { close(e.gate) }) }
+
+// calls are the refs each call was given, in order.
+func (e *containerEnsure) calls() [][]string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return slices.Clone(e.refs)
+}
+
+// failWith has the calls from now fail with err, or pass with nil.
+func (e *containerEnsure) failWith(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.fail = err
+}
+
+// containerImageJobs gives lab's launcher, and those made from its options,
+// an image job runner over a containerEnsure, its gate open unless held, and
+// ends it with the test.
+func containerImageJobs(lab *agentLab, held bool) *containerEnsure {
+	e := &containerEnsure{lab: lab, gate: make(chan struct{})}
+	if !held {
+		e.open()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	r := newImageJobRunner(ctx, imageJobOptions{Dir: lab.o.Dir.imageJobsDir(), Ensure: e.ensure, Logger: lab.o.Logger, Record: lab.o.Host.Record})
+	lab.l.imageJobs, lab.o.imageJobs = r, r
+	lab.t.Cleanup(func() {
+		e.open()
+		cancel()
+		r.drain()
+	})
+	return e
+}
+
+// containerLabels labels every image the lab's fake docker inspects with l.
+func containerLabels(lab *agentLab, l map[string]string) {
+	lab.t.Helper()
+	data, err := json.Marshal(l)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab.outDir, "image-labels"), data, 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// heldThenStarted checks that story's run was recorded in agents.json as
+// waiting for its image with its job's id and no process, and that no
+// container ran, then lets the job run and waits for the start to go on and
+// its agent to end, and returns the job's id.
+func heldThenStarted(lab *agentLab, e *containerEnsure, story string) string {
+	t := lab.t
+	t.Helper()
+	held := lab.run(story)
+	if !held.imageHeld() || held.ImageJob == "" || held.PID != 0 || held.Outcome != "" || !strings.Contains(held.Why, held.ImageJob) {
+		t.Fatalf("the start is not held for its image job: %+v", held)
+	}
+	record, _ := os.ReadFile(lab.o.Dir.agents())
+	for _, want := range []string{`"image_held": true`, `"image_job": "` + held.ImageJob + `"`} {
+		if !strings.Contains(string(record), want) {
+			t.Errorf("agents.json lacks %s while the start waits:\n%s", want, record)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(lab.outDir, story+".stdin")); err == nil {
+		t.Fatal("the agent's container ran before its image job passed")
+	}
+	e.open()
+	waitFor(t, story+" went on and ended", func() bool { r := lab.run(story); return r != nil && r.PID != 0 && !r.live() })
+	r := lab.run(story)
+	if r.Error != "" || r.ImageHeld || r.ImageJob != held.ImageJob || r.HarnessVersion != "2.1.312" {
+		t.Errorf("the start that went on: %+v", r)
+	}
+	return held.ImageJob
+}
+
+// S-0751, ADR-0295 §5: a story's start whose agent image is missing asks
+// flai serve's image job to make it, in place of refusing, and waits: its
+// run is recorded in agents.json as waiting for its image, with the job's
+// id, and a look meanwhile starts nothing more and asks for no other job.
+// Once the job passes, the same start goes on, in the image the job made.
+func TestContainerStartWaitsForTheImageJobThatMakesAMissingImage(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	id := containerStory(lab, "Waits for its image", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	held := lab.run(id)
+	if !strings.Contains(held.Why, harness.DefaultImages[harness.ClaudeCode]+" is missing") {
+		t.Errorf("the held run does not say its image is missing: %s", held.Why)
+	}
+	lab.l.look(ctx, false)
+	if again := lab.run(id); again.Started != held.Started || !again.imageHeld() {
+		t.Fatalf("a look while it waited changed the run: %+v", again)
+	}
+	job := heldThenStarted(lab, e, id)
+	if calls := e.calls(); len(calls) != 1 || !slices.Equal(calls[0], []string{harness.DefaultImages[harness.ClaudeCode]}) {
+		t.Errorf("the image job made %v, not the harness image once", calls)
+	}
+	data, err := os.ReadFile(filepath.Join(lab.o.Dir.imageJobsDir(), job+imageJobSuffix))
+	if err != nil || !strings.Contains(string(data), `"outcome": "passed"`) {
+		t.Errorf("the job's record: %s %v", data, err)
+	}
+	if n := lab.logged("agent start waits for its image job"); n != 1 {
+		t.Errorf("the hold was logged %d times:\n%s", n, lab.logText())
+	}
+}
+
+// S-0751, ADR-0295 §5: after a flai upgrade the images carry the version
+// before it, so they are stale, and the first start that finds them so
+// renews them through the same job, then goes on.
+func TestContainerStartAfterAnUpgradeRenewsItsStaleImageThroughTheJob(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	containerLabels(lab, map[string]string{agentimage.LabelFlai: "1.0.0"})
+	e := containerImageJobs(lab, true)
+	id := containerStory(lab, "After an upgrade", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	if why := lab.run(id).Why; !strings.Contains(why, "is stale") || !strings.Contains(why, "built for flai 1.0.0") {
+		t.Errorf("the held run does not say why its image is stale: %s", why)
+	}
+	heldThenStarted(lab, e, id)
+	if n := len(e.calls()); n != 1 {
+		t.Errorf("the image job ran %d times", n)
+	}
+	if n := lab.logged("container agent image stale"); n != 0 {
+		t.Errorf("a stale image the job renewed was only warned of:\n%s", lab.logText())
+	}
+}
+
+// S-0751, ADR-0295 §5: when the image job fails, the held run fails with the
+// job's cause, its failing step, and its log, naming flai image ensure, and
+// not make agent-images; looks after it ask for no other job, and the next
+// start asks for a new one.
+func TestContainerStartWhoseImageJobFailsFailsWithItsCauseOnce(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	const step = "docker pull ghcr.io/bytepunx/flai-agent-claude-code@sha256:fake"
+	e.failWith(&agentimage.StepError{Step: step, Said: "manifest unknown"})
+	id := containerStory(lab, "Its image job fails", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	job := lab.run(id).ImageJob
+	e.open()
+	waitFor(t, "the held run failed", func() bool { r := lab.run(id); return r != nil && r.Outcome == OutcomeFailed })
+	r := lab.run(id)
+	logPath := filepath.Join(lab.o.Dir.imageJobsDir(), job+imageJobLogSuffix)
+	for _, want := range []string{job, step, "manifest unknown", logPath, "flai image ensure"} {
+		if !strings.Contains(r.Error, want) || !strings.Contains(r.Why, want) {
+			t.Errorf("the failed run does not say %q: %+v", want, r)
+		}
+	}
+	if strings.Contains(r.Why, "make agent-images") || r.PID != 0 || r.ImageHeld || r.ImageJob != job {
+		t.Errorf("the failed run: %+v", r)
+	}
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	if n := len(e.calls()); n != 1 || lab.run(id).Started != r.Started {
+		t.Fatalf("looks after the failure asked for %d jobs, run %+v", n, lab.run(id))
+	}
+	e.failWith(nil)
+	lab.l.start(ctx, lab.cfg, readyStory{ID: id, Agent: lab.cfg.startAgent(&manifest.Agent{Harness: harness.Container}), Started: true})
+	waitFor(t, "the new start went on and ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+	if again := lab.run(id); again.Error != "" || again.ImageJob == job || len(e.calls()) != 2 {
+		t.Errorf("the new start did not run a new job: %+v, %d jobs", again, len(e.calls()))
+	}
+}
+
+// S-0751, ADR-0295 §5: two starts that need the same images share one job,
+// the second joining the first's, and both go on, in the order they were
+// held, once it passes.
+func TestContainerStartsNeedingTheSameImagesShareOneJobAndGoOnInOrder(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	first := containerStory(lab, "First to wait", &manifest.Agent{Harness: harness.Container})
+	second := containerStory(lab, "Second to wait", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	a, b := lab.run(first), lab.run(second)
+	if !a.imageHeld() || !b.imageHeld() || a.ImageJob == "" || a.ImageJob != b.ImageJob {
+		t.Fatalf("the starts are not held for one job: %+v\n%+v", a, b)
+	}
+	var order []string
+	for _, line := range strings.Split(lab.logText(), "\n") {
+		if strings.Contains(line, `msg="agent start waits for its image job"`) {
+			for _, id := range []string{first, second} {
+				if strings.Contains(line, "story="+id) {
+					order = append(order, id)
+				}
+			}
+		}
+	}
+	if len(order) != 2 {
+		t.Fatalf("the holds logged: %v\n%s", order, lab.logText())
+	}
+	e.open()
+	for _, id := range order {
+		waitFor(t, id+" went on and ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+	}
+	if n := len(e.calls()); n != 1 {
+		t.Errorf("the two starts ran %d jobs", n)
+	}
+	var started []string
+	for _, entry := range lab.entries() {
+		for _, id := range order {
+			if strings.HasPrefix(entry.Detail, "started docker") && strings.Contains(entry.Detail, " for "+id+" as ") {
+				started = append(started, id)
+			}
+		}
+	}
+	if !slices.Equal(started, order) {
+		t.Errorf("the starts went on in the order %v, not %v", started, order)
+	}
+}
+
+// S-0751, ADR-0295 §7: an image the host names with --image is the
+// operator's own, which flai never makes: one that is missing refuses the
+// start, naming the image, and asks for no job.
+func TestContainerStartOnTheOperatorsOwnMissingImageIsRefusedWithoutAJob(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	host := lab.cfg.Harnesses[harness.Container]
+	host.Images = map[string]string{harness.ClaudeCode: "host-agent:1"}
+	lab.cfg.Harnesses[harness.Container] = host
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, false)
+	id := containerStory(lab, "On the operator's image", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	r := lab.run(id)
+	if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.ImageJob != "" || r.ImageHeld {
+		t.Fatalf("run: %+v", r)
+	}
+	for _, want := range []string{"host-agent:1", "not on this host", "the operator's own", "--image claude-code=<image>"} {
+		if !strings.Contains(r.Why, want) {
+			t.Errorf("the refusal does not say %q: %s", want, r.Why)
+		}
+	}
+	if n := len(e.calls()); n != 0 {
+		t.Errorf("the operator's own image was asked of %d image jobs", n)
+	}
+	if jobs, _ := os.ReadDir(lab.o.Dir.imageJobsDir()); len(jobs) != 0 {
+		t.Errorf("image jobs were recorded: %v", jobs)
+	}
+}
+
+// S-0751, ADR-0295 §6: a strategic agent runs on the harness image alone,
+// never the project's layer, and its start asks the image job for the
+// harness image alone and waits for it, as a story's does: the planner's run
+// is recorded as waiting for its image, a second ask meanwhile records
+// nothing and joins the same job, and once the job passes the planner starts
+// on the harness image, the layer still stale. The held run is kept among no
+// past runs.
+func TestContainerStrategicStartUnderALayerWaitsForTheHarnessImageAlone(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	layerManifest(lab)
+	containerLabels(lab, map[string]string{agentimage.LabelFlai: "1.0.0"})
+	e := containerImageJobs(lab, true)
+	epic := lab.epic.ID
+	if !lab.planInContainer(epic) {
+		t.Fatalf("the planner's held start was not taken as made: %+v", lab.planRun(epic))
+	}
+	held := lab.planRun(epic)
+	if !held.imageHeld() || held.ImageJob == "" || held.Outcome != "" || held.Error != "" || !strings.Contains(held.Why, held.ImageJob) {
+		t.Fatalf("the planner's start is not held for its image job: %+v", held)
+	}
+	lab.planInContainer(epic)
+	if again := lab.planRun(epic); again.Started != held.Started || !again.imageHeld() {
+		t.Fatalf("a second ask while it waited changed the run: %+v", again)
+	}
+	e.open()
+	waitFor(t, "the planner went on", func() bool { r := lab.planRun(epic); return r != nil && r.PID != 0 })
+	harnessImage := harness.DefaultImages[harness.ClaudeCode]
+	if calls := e.calls(); len(calls) != 1 || !slices.Equal(calls[0], []string{harnessImage}) {
+		t.Errorf("the planner's image job made %v, not the harness image alone, once", calls)
+	}
+	plan := lab.planRun(epic)
+	if plan.ImageJob != held.ImageJob || plan.ImageHeld {
+		t.Errorf("the planner that went on: %+v", plan)
+	}
+	lab.roleContainerStarted(conventions.RolePlan, plan)
+	lab.recordedContainer(conventions.RolePlan, plan, harnessImage)
+	if inspected, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-inspected")); strings.Contains(string(inspected), "flai-agent-t-claude-code:local") {
+		t.Errorf("the planner's start judged the layer: %s", inspected)
+	}
+	for _, past := range lab.state().PastPlans {
+		if past.same(held) {
+			t.Errorf("the held run is kept as a past run: %+v", past)
+		}
+	}
+	waitFor(t, "the planner ended", func() bool { return !lab.planRun(epic).live() })
+}
+
+// S-0751, ADR-0295 §5: a strategic start whose image job fails fails once,
+// with the job's cause, its failing step, and its log, and the next ask asks
+// for a new job.
+func TestContainerStrategicStartWhoseImageJobFailsFailsOnce(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	const step = "docker build flai-agent-bedrock"
+	e.failWith(&agentimage.StepError{Step: step, Said: "no space left on device"})
+	epic := lab.epic.ID
+	if !lab.planInContainer(epic) {
+		t.Fatalf("the planner's held start was not taken as made: %+v", lab.planRun(epic))
+	}
+	job := lab.planRun(epic).ImageJob
+	e.open()
+	waitFor(t, "the planner's start failed", func() bool { r := lab.planRun(epic); return r != nil && r.Outcome == OutcomeFailed })
+	r := lab.planRun(epic)
+	for _, want := range []string{job, step, "no space left on device", filepath.Join(lab.o.Dir.imageJobsDir(), job+imageJobLogSuffix), "flai image ensure"} {
+		if !strings.Contains(r.Why, want) {
+			t.Errorf("the failed planner does not say %q: %s", want, r.Why)
+		}
+	}
+	if r.ImageJob != job || r.ImageHeld || r.PID != 0 {
+		t.Errorf("the failed planner: %+v", r)
+	}
+	failed := 0
+	for _, entry := range lab.entries() {
+		if entry.Outcome == "failed" && strings.Contains(entry.Detail, "the planner for "+epic) {
+			failed++
+		}
+	}
+	if failed != 1 || len(e.calls()) != 1 {
+		t.Errorf("the job's failure was recorded %d times, with %d jobs", failed, len(e.calls()))
+	}
+	e.failWith(nil)
+	if !lab.planInContainer(epic) {
+		t.Fatalf("the next ask was not made: %+v", lab.planRun(epic))
+	}
+	waitFor(t, "the next ask went on", func() bool { r := lab.planRun(epic); return r != nil && r.PID != 0 })
+	if n := len(e.calls()); n != 2 || lab.planRun(epic).ImageJob == job {
+		t.Errorf("the next ask did not run a new job: %d jobs, %+v", n, lab.planRun(epic))
+	}
+	waitFor(t, "the planner ended", func() bool { return !lab.planRun(epic).live() })
+}
+
+// heldStory makes a story on the container harness whose agent image is
+// missing, with an image job held, and has the lab's look start it, so that
+// its start waits for the job; it returns the story and the fake ensure.
+func heldStory(lab *agentLab, title string) (string, *containerEnsure) {
+	lab.t.Helper()
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	id := containerStory(lab, title, &manifest.Agent{Harness: harness.Container})
+	lab.l.look(context.Background(), false)
+	if !lab.run(id).imageHeld() {
+		lab.t.Fatalf("the start is not held: %+v", lab.run(id))
+	}
+	return id, e
+}
+
+// S-0751: a story whose start waits for its image job reads as waiting, with
+// the job, not as failed.
+func TestContainerHeldStartReadsAsWaitingForItsImage(t *testing.T) {
+	lab, _ := containerLab(t)
+	id, e := heldStory(lab, "Waiting in the activity")
+	a := Activity(context.Background(), lab.root, lab.state(), false)[id]
+	if a.State != ActivityWaiting || !strings.Contains(a.Why, lab.run(id).ImageJob) || !strings.Contains(a.Why, "agent image") {
+		t.Errorf("the activity of a held start: %+v", a)
+	}
+	e.open()
+	waitFor(t, "it went on and ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+}
+
+// S-0751, ADR-0058: the operator's stop of a story whose start waits for its
+// image job records it stopped, and the start is not made when the job ends.
+func TestContainerStopOfAHeldStartDropsTheHold(t *testing.T) {
+	lab, _ := containerLab(t)
+	id, e := heldStory(lab, "Stopped while it waits")
+	job := lab.run(id).ImageJob
+	out, err := Stop(lab.o, lab.l.entry, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Outcome != OutcomeStopped || out.ImageHeld || out.Ended == "" || out.Stopped == "" {
+		t.Fatalf("the stopped run: %+v", out)
+	}
+	e.open()
+	waitFor(t, "the hold was dropped", func() bool { return lab.logged("held agent start dropped: its run was replaced or stopped") == 1 })
+	if r := lab.run(id); r.Outcome != OutcomeStopped || r.PID != 0 || r.ImageJob != job {
+		t.Errorf("the run after its job passed: %+v", r)
+	}
+	if _, err := os.Stat(filepath.Join(lab.outDir, id+".stdin")); err == nil {
+		t.Error("the stopped start's container ran")
+	}
+}
+
+// S-0751: a restart of a story whose start waits for its image job is
+// refused, naming the job and its log.
+func TestContainerRestartOfAHeldStartIsRefused(t *testing.T) {
+	lab, _ := containerLab(t)
+	id, e := heldStory(lab, "Restarted while it waits")
+	job := lab.run(id).ImageJob
+	_, err := Restart(context.Background(), lab.o, lab.l.entry, id)
+	var no *Refused
+	if !errors.As(err, &no) {
+		t.Fatalf("the restart was not refused: %v", err)
+	}
+	for _, want := range []string{job, filepath.Join(lab.o.Dir.imageJobsDir(), job+imageJobLogSuffix), "flai serve agent stop " + id} {
+		if !strings.Contains(no.Why, want) {
+			t.Errorf("the refusal does not say %q: %s", want, no.Why)
+		}
+	}
+	e.open()
+	waitFor(t, "it went on and ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+}
+
+// S-0751: a story's run recorded as waiting for its image job that no start
+// in this flai serve holds, as after a restart while it waited, fails at the
+// next look, saying to start it again, and is not started again on its own.
+func TestContainerStartHeldByAStoppedServeFailsAtTheNextLook(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	id := containerStory(lab, "Held by a serve that stopped", &manifest.Agent{Harness: harness.Container})
+	const job = "20261113T000000Z-001"
+	started := time.Now().UTC().Format(time.RFC3339)
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Story: id, Agent: "builder-" + id, Started: started, Harness: harness.Container, ImageJob: job, ImageHeld: true})
+	})
+	lab.launcher().look(ctx, false)
+	r := lab.run(id)
+	if r == nil || r.Outcome != OutcomeFailed || r.ImageHeld || r.ImageJob != job || r.PID != 0 || r.Started != started {
+		t.Fatalf("run: %+v", r)
+	}
+	for _, want := range []string{job, "stopped before it went on", "flai serve agent restart " + id} {
+		if !strings.Contains(r.Why, want) {
+			t.Errorf("the failed run does not say %q: %s", want, r.Why)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(lab.outDir, id+".stdin")); err == nil {
+		t.Error("the agent's container ran")
 	}
 }

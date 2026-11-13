@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
@@ -163,7 +164,10 @@ var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS", "F
 // known (S-0534): a start the gate holds records nothing, no run and no
 // failure, and is kept in holding for its caller to say; one it lets through
 // as the probe has its process recorded on the probe once spawned, and frees
-// the probe when it cannot be made.
+// the probe when it cannot be made. A container start that finds its agent
+// images missing or stale is held for the image job that makes them
+// (holdImage, S-0751), and counts as started: its run is recorded as
+// waiting for its image, and goes on, or fails, when the job ends.
 func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
 	now := l.now().UTC()
 	name := cfg.Name
@@ -195,18 +199,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		if probe {
 			l.budgetRelease(run)
 		}
-		run.Error, run.Ended, run.Outcome, run.Why = err.Error(), run.Started, OutcomeFailed, "could not be started: "+err.Error()
-		l.told(run)
-		what := run.Command
-		if what == "" {
-			what = "an agent"
-		}
-		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("%s for %s could not be started: %s", what, story.ID, run.Error)
-		if l.record != nil {
-			l.record(entry)
-		}
-		l.log("agent could not be started", "story", story.ID, "harness", run.Harness, "err", run.Error)
-		appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
+		l.startFailed(run, err, run.Started)
 		return false
 	}
 	if !StoryID.MatchString(story.ID) {
@@ -245,6 +238,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
 		Session: run.Session, Answered: run.Answered, SentBack: story.SentBack, Restart: story.Restart, AutoRestart: auto, AfterLimit: story.AfterLimit, Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
 		Shares: shares, Formula: formulaOf(l.entry.Root, story)})
+	if wait := (*imageWait)(nil); errors.As(err, &wait) {
+		if probe {
+			l.budgetRelease(run) // the start that goes on passes the gate again
+		}
+		l.holdImage(ctx, run, wait, l.storyAgain(cfg, story, run, wait.job))
+		return true
+	}
 	if err != nil {
 		return fail(err)
 	}
@@ -309,6 +309,242 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		l.measureWith(story.ID, cfg.Providers)
 	})
 	return true
+}
+
+// startFailed records run, a story's agent's, as a start that failed with
+// err, ended at ended, journals and logs it, and appends its failed agent
+// event: as start refuses one, and as a start held for its image job fails
+// (S-0751).
+func (l *launcher) startFailed(run *AgentRun, err error, ended string) {
+	run.Error, run.Ended, run.Outcome, run.Why = err.Error(), ended, OutcomeFailed, "could not be started: "+err.Error()
+	l.told(run)
+	what := run.Command
+	if what == "" {
+		what = "an agent"
+	}
+	if l.record != nil {
+		l.record(hostapi.Entry{At: ended, Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: "flai serve",
+			Outcome: "failed", Detail: fmt.Sprintf("%s for %s could not be started: %s", what, run.Story, run.Error)})
+	}
+	l.log("agent could not be started", "story", run.Story, "harness", run.Harness, "err", run.Error)
+	appendAgentEvent(l.entry.Root, run, inbox.AgentFailed, run.Why, l.warn)
+}
+
+// imageHold is a start held for its image job (S-0751), a story's or a
+// strategic agent's: its run as recorded while held, the job, again, which
+// makes the same start again once the job has ended, with the job's end for
+// it to go on from (l.imageAfter), and reports whether the budget state held
+// it then, and whether that hold has been logged.
+type imageHold struct {
+	run        AgentRun
+	job        *imageJob
+	again      func(ctx context.Context) (budgetHeld bool)
+	budgetSaid bool
+}
+
+// heldRuns are the runs held for their image jobs in this process, by
+// heldKey: the runs settleOrphans leaves alone.
+var heldRuns sync.Map
+
+// heldKey is the key of run, of the project at root, in heldRuns.
+func heldKey(root string, run *AgentRun) string {
+	return root + "\x00" + run.slot() + "\x00" + run.Started
+}
+
+// heldHere reports whether run, of the project at root, is held for its image
+// job by a start in this process.
+func heldHere(root string, run *AgentRun) bool {
+	_, ok := heldRuns.Load(heldKey(root, run))
+	return ok
+}
+
+// slot is what r is the newest run of, as AgentState.of finds it: a defined
+// role's on its item, the curator's, the orchestrator's, the analyzer's, its
+// item's planner's, or its story's agent's.
+func (r *AgentRun) slot() string {
+	switch {
+	case r.defined():
+		return "role " + r.RoleName + " " + r.Item
+	case r.curates():
+		return "curator"
+	case r.orchestrates():
+		return "orchestrator"
+	case r.analyzes():
+		return "analyzer"
+	case r.Item != "":
+		return "planner " + r.Item
+	}
+	return "story " + r.Story
+}
+
+// holdImage holds the start of run, which w says waits for an image job
+// (ADR-0295 §5, S-0751), a story's agent's or a strategic agent's: it
+// records run where its kind's runs are recorded as waiting for its image,
+// ImageHeld, with the job's id, and when the job ends makes the start again
+// with again, off the look or the schedule that made it, so that neither it
+// nor any other project waits for the job (goOnHeld). A start for what a
+// start this launcher holds is for already, such as the orchestrator's or a
+// planner's asked again while it waits, records nothing: the held start goes
+// on for both.
+func (l *launcher) holdImage(ctx context.Context, run *AgentRun, w *imageWait, again func(context.Context) bool) {
+	l.holdsMu.Lock()
+	for _, h := range l.imageHolds {
+		if h.run.slot() == run.slot() {
+			l.holdsMu.Unlock()
+			return
+		}
+	}
+	run.ImageJob, run.ImageHeld, run.Why = w.job.ID(), true, "waiting for its agent image: "+w.Error()
+	heldRuns.Store(heldKey(l.entry.Root, run), true)
+	l.imageHolds = append(l.imageHolds, &imageHold{run: *run, job: w.job, again: again})
+	l.holdsMu.Unlock()
+	l.told(run)
+	l.log("agent start waits for its image job", append(run.containerSaid(), "job_id", w.job.ID(), "image", w.image, "log", w.job.Log())...)
+	go func() {
+		select {
+		case <-w.job.Done():
+		case <-ctx.Done():
+		}
+		l.goOnHeld(ctx)
+	}()
+}
+
+// storyAgain is how a story's start, held for job with its run, is made
+// again (holdImage): as start makes it, unless the job passed and the story
+// moved meanwhile, when the run fails, since the start was for the story as
+// it stood; it reports whether the budget state held the start.
+func (l *launcher) storyAgain(cfg AgentConfig, story readyStory, run *AgentRun, job *imageJob) func(context.Context) bool {
+	status := storyStatus(l.entry.Root, story.ID)
+	return func(ctx context.Context) bool {
+		if now := storyStatus(l.entry.Root, story.ID); imageJobEnded(job) == nil && now != status {
+			failed := *run
+			failed.ImageHeld = false
+			l.startFailed(&failed, fmt.Errorf("%s moved from %s to %s while its start waited for the image job %s, which passed, so flai serve did not start its agent: it starts one as it would for any story in %s", story.ID, status, now, job.ID(), now), l.now().UTC().Format(time.RFC3339))
+			return false
+		}
+		l.start(ctx, cfg, story)
+		_, held := l.holding[story.ID]
+		delete(l.holding, story.ID)
+		return held
+	}
+}
+
+// goOnHeld goes on, under the launcher's lock, as a look starts agents,
+// with the starts held for image jobs that have ended (goOnDue).
+func (l *launcher) goOnHeld(ctx context.Context) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.goOnDue(ctx)
+}
+
+// goOnDue goes on with each start held for an image job that has ended, in
+// the order they were held, or with every one once ctx, flai serve's, has
+// ended; one the budget state then holds stays held, and is made again at
+// the next look. The launcher's lock is held.
+func (l *launcher) goOnDue(ctx context.Context) {
+	l.holdsMu.Lock()
+	held := l.imageHolds
+	l.holdsMu.Unlock()
+	var kept []*imageHold
+	for _, h := range held {
+		due := ctx.Err() != nil
+		select {
+		case <-h.job.Done():
+			due = true
+		default:
+		}
+		if !due || l.goOn(ctx, h) {
+			kept = append(kept, h)
+		}
+	}
+	l.holdsMu.Lock()
+	l.imageHolds = append(kept, l.imageHolds[len(held):]...)
+	l.holdsMu.Unlock()
+}
+
+// goOn makes h, a start held for its image job, again once the job has ended
+// or ctx has, the job's end in l.imageAfter: the start goes on when the job
+// passed, its gate and checks made again, and fails with the job's cause,
+// its failing step, and its log when the job failed, or with why when flai
+// serve stopped first. It reports whether the budget state held it, so that
+// it stays held. A run that another start or the operator's stop has
+// replaced since is left as it is. The held run, once the start made again
+// has replaced it, is kept among no past runs, since it never ran; a start
+// that recorded nothing fails it, so that no run stays held with no start to
+// go on.
+func (l *launcher) goOn(ctx context.Context, h *imageHold) (budgetHeld bool) {
+	said := h.run.containerSaid()
+	st := l.dir.AgentStates()[l.entry.Root]
+	if cur := st.of(&h.run); !cur.same(&h.run) || !cur.imageHeld() {
+		heldRuns.Delete(heldKey(l.entry.Root, &h.run))
+		l.dir.updateAgent(l.entry.Root, func(s *AgentState) { dropPast(s, &h.run) })
+		l.log("held agent start dropped: its run was replaced or stopped", append(said, "job_id", h.job.ID())...)
+		return false
+	}
+	l.imageAfter = h.job
+	budgetHeld = h.again(ctx)
+	l.imageAfter = nil
+	if budgetHeld {
+		if !h.budgetSaid {
+			h.budgetSaid = true
+			l.log("held agent start waits for the budget state", append(said, "job_id", h.job.ID())...)
+		}
+		return true
+	}
+	heldRuns.Delete(heldKey(l.entry.Root, &h.run))
+	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
+		if cur := s.of(&h.run); cur.same(&h.run) && cur.imageHeld() {
+			failed := *cur
+			failed.ImageHeld, failed.Ended, failed.Outcome = false, l.now().UTC().Format(time.RFC3339), OutcomeFailed
+			failed.Error = fmt.Sprintf("flai serve did not make the start once the image job %s ended", h.job.ID())
+			failed.Why = "could not be started: " + failed.Error
+			s.put(&failed)
+			return
+		}
+		dropPast(s, &h.run)
+	})
+	return false
+}
+
+// dropPast takes held, a run that waited for its image job and was replaced
+// by the start made again, out of the past runs s keeps of each role.
+func dropPast(s *AgentState, held *AgentRun) {
+	drop := func(past []*AgentRun) []*AgentRun { return slices.DeleteFunc(slices.Clone(past), held.same) }
+	s.PastPlans, s.PastOrchestrators, s.PastAnalyzers, s.PastCurators = drop(s.PastPlans), drop(s.PastOrchestrators), drop(s.PastAnalyzers), drop(s.PastCurators)
+	for name, past := range s.PastRoles {
+		s.PastRoles[name] = drop(past)
+	}
+}
+
+// heldOrphan fails run, a run recorded as waiting for its image job that no
+// start in this process holds, as after flai serve was restarted while it
+// waited (S-0751): a story's as a start that failed, journalled; a strategic
+// agent's recorded so, so that its role starts again at its next reason.
+func (l *launcher) heldOrphan(run *AgentRun) {
+	failed := *run
+	failed.ImageHeld = false
+	err := fmt.Errorf("its start waited for the image job %s, and the flai serve that held it stopped before it went on: start the agent again, which asks for another job if the images are still missing or stale", run.ImageJob)
+	if run.Story != "" {
+		l.startFailed(&failed, fmt.Errorf("%w (flai serve agent restart %s)", err, run.Story), l.now().UTC().Format(time.RFC3339))
+		return
+	}
+	failed.Error, failed.Ended, failed.Outcome, failed.Why = err.Error(), l.now().UTC().Format(time.RFC3339), OutcomeFailed, "could not be started: "+err.Error()
+	l.told(&failed)
+	l.warn("held agent start failed: the flai serve that held it stopped", append(run.containerSaid(), "job_id", run.ImageJob)...)
+}
+
+// storyStatus is the status of story in the project at root, "" when it
+// cannot be read.
+func storyStatus(root, story string) string {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return ""
+	}
+	it, err := repo.Get(story)
+	if err != nil {
+		return ""
+	}
+	return it.Status
 }
 
 // holdStart keeps story, whose agent's start the budget state b held, in
@@ -401,13 +637,15 @@ func (r *AgentRun) startedSaid() string {
 // (mcpEnv, S-0506), the URL's host the container's own name for the host
 // when the container harness's network is not the host's (S-0508), and the
 // container's image the project's layer when its manifest names one
-// (containerImageHost, S-0510), the host's deny_protected for the
+// (containerImageHost, S-0510), but for a strategic agent, which runs on the
+// harness image (ADR-0295 §6), the host's deny_protected for the
 // harness given to the adapter, which writes its deny rules (ADR-0260), and
 // the harness's outside folders put in req (ADR-0289): every
 // start, a story's agent's and a strategic agent's, builds its command here.
 // On the container harness it readies the host for the start too, a story's
 // and a strategic agent's alike (S-0508, S-0509): containerAllowed before
-// the adapter is asked, containerReachable once the MCP server's URL and
+// the adapter is asked, which asks for the image job a missing or stale image
+// needs (S-0751), containerReachable once the MCP server's URL and
 // addresses are known, refusing a server that listens on no address a native
 // engine's bridge reaches (S-0619, I-0254, S-0732), and containerReady once
 // the adapter has taken the start.
@@ -416,8 +654,11 @@ func (r *AgentRun) startedSaid() string {
 // the child alone. A refusal is the start's
 // failure, as an adapter's refusal is.
 func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapter, name string, req harness.Request) (harness.Start, []string, error) {
+	// A strategic agent's container runs the harness image alone, never the
+	// project's layer (ADR-0295 §6).
+	strategic := req.Story == ""
 	if name == harness.Container {
-		if err := l.containerAllowed(cfg, req.Agent); err != nil {
+		if err := l.containerAllowed(cfg, run, req.Agent, strategic); err != nil {
 			return harness.Start{}, nil, err
 		}
 		// The adapter reads a story's worktree's git to mount it (ADR-0246),
@@ -441,7 +682,7 @@ func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapt
 	host := cfg.host(name)
 	host.DenyProtected = cfg.Lifts[name].DenyProtected
 	if name == harness.Container {
-		h, _, err := containerImageHost(l.entry.Root, cfg, innerOf(req.Agent))
+		h, _, err := containerImageHost(l.entry.Root, cfg, innerOf(req.Agent), strategic)
 		if err != nil {
 			return harness.Start{}, nil, err
 		}

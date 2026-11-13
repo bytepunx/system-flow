@@ -362,6 +362,21 @@ type AgentRun struct {
 	Image     string                   `json:"image,omitempty"`
 	Container string                   `json:"container,omitempty"`
 	Mounts    []harness.ContainerMount `json:"mounts,omitempty"`
+	// ImageJob is the id of the image job (ADR-0295 §5) that this run's
+	// start asked for, or joined, to make the agent images it found missing
+	// or stale, as image-jobs/<id>.job.json under flai serve's state folder
+	// keeps it, and ImageHeld marks a story's run whose start waits for that
+	// job: it has no process yet, and goes on once the job passes, or fails
+	// with the job's cause (S-0751). Both are empty on a run whose start
+	// needed no job; ImageJob stays on the run that went on, or failed.
+	ImageJob  string `json:"image_job,omitempty"`
+	ImageHeld bool   `json:"image_held,omitempty"`
+}
+
+// imageHeld is a run whose start waits for its image job (S-0751): not
+// ended, not refused, and with no process yet.
+func (r *AgentRun) imageHeld() bool {
+	return r != nil && r.ImageHeld && r.Ended == "" && r.Error == "" && r.PID == 0
 }
 
 // same says whether r and o are one run: the same start of the same

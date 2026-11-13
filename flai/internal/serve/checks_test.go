@@ -516,7 +516,7 @@ func TestAContainerStorysCheckWithNoImageFailsAndRunsNothingOnTheHost(t *testing
 	if _, err := os.Stat(marker); err == nil {
 		t.Error("the check's program ran on the host")
 	}
-	if log, _ := os.ReadFile(run.Log); !strings.Contains(string(log), "make agent-images") {
+	if log, _ := os.ReadFile(run.Log); !strings.Contains(string(log), "flai image ensure") {
 		t.Errorf("the log does not name the fix:\n%s", log)
 	}
 }

@@ -265,6 +265,10 @@ func runActivity(repo *workitem.Repo, st AgentState, convs *conversations) map[s
 					}
 				}
 			}
+		case run.imageHeld():
+			// its start waits for the image job that makes its agent images
+			// (S-0751): waiting, not failed
+			a.State, a.Why = ActivityWaiting, run.Why
 		case run.Outcome == OutcomeWorked:
 			a.State = ActivityWorked
 		case run.Outcome == OutcomeAsked:

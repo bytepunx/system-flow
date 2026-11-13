@@ -217,41 +217,14 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 		printImageStatus(w, nil)
 		return nil
 	}
-	version, err := agentimage.ProjectFlai(root, repo.Manifest, a.runner, buildinfo.Get().Version)
-	if err != nil {
-		return err
-	}
-	flai := func() (string, error) { return version, nil }
-	inspect := agentimage.Docker(a.runner, program)
-	statuses, err := agentimage.Check(root, needed, inspect, flai)
-	if err != nil {
-		return err
-	}
-	src := a.imageSource(root, version)
-	runner := agentimage.Runner{Program: program, Exec: imageExec, Out: w}
-	releases := a.dashboardReleases()
-	releases.Token = a.githubToken()
-	puller := agentimage.Puller{Releases: releases, CacheDir: string(a.serveDir()), Run: runner, Inspect: inspect}
-	builder := agentimage.Builder{Releases: releases, Run: runner, Inspect: inspect, Arch: agentimage.EngineArch(a.runner, program)}
-	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Layer: builder.Layer, Root: root, Out: w}
-	_, ensureErr := ensurer.Ensure(ctx, mode, statuses, src)
-
-	after, checkErr := agentimage.Check(root, needed, inspect, flai)
-	if checkErr == nil {
+	_, after, err := a.ensureImages(ctx, root, repo.Manifest, program, mode, needed, w)
+	if after != nil {
 		printImageStatus(w, after)
 	}
-	switch {
-	case ensureErr != nil:
-		return ensureErr
-	case checkErr != nil:
-		return checkErr
+	if err != nil {
+		return err
 	}
-	bad := 0
-	for _, s := range after {
-		if imageMade(mode, s) && (s.State == agentimage.StateMissing || s.State == agentimage.StateStale) {
-			bad++
-		}
-	}
+	bad := len(imagesLeft(mode, after))
 	if bad == 0 {
 		return nil
 	}
@@ -260,6 +233,80 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 		noun = "agent image flai makes is"
 	}
 	return &exitError{code: 1, msg: fmt.Sprintf("%d %s still missing or stale after %s: read why in the log %s, then run it again", bad, noun, imageCommand(mode), logPath)}
+}
+
+// ensureImages makes needed, agent images of the project at root whose
+// manifest is m, as mode asks, through the docker client program, writing
+// what it does to w: it judges them against the project's flai, makes those
+// mode makes, and judges them again. It is what it did with each, their
+// statuses after, nil when they could not be judged again, and the first
+// error of the version, the judgements, and the making.
+func (a *app) ensureImages(ctx context.Context, root string, m manifest.Manifest, program string, mode agentimage.Mode, needed []agentimage.Image, w io.Writer) ([]agentimage.Outcome, []agentimage.Status, error) {
+	version, err := agentimage.ProjectFlai(root, m, a.runner, buildinfo.Get().Version)
+	if err != nil {
+		return nil, nil, err
+	}
+	flai := func() (string, error) { return version, nil }
+	inspect := agentimage.Docker(a.runner, program)
+	statuses, err := agentimage.Check(root, needed, inspect, flai)
+	if err != nil {
+		return nil, nil, err
+	}
+	src := a.imageSource(root, version)
+	runner := agentimage.Runner{Program: program, Exec: imageExec, Out: w}
+	releases := a.dashboardReleases()
+	releases.Token = a.githubToken()
+	puller := agentimage.Puller{Releases: releases, CacheDir: string(a.serveDir()), Run: runner, Inspect: inspect}
+	builder := agentimage.Builder{Releases: releases, Run: runner, Inspect: inspect, Arch: agentimage.EngineArch(a.runner, program)}
+	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Layer: builder.Layer, Root: root, Out: w}
+	outcomes, ensureErr := ensurer.Ensure(ctx, mode, statuses, src)
+	after, checkErr := agentimage.Check(root, needed, inspect, flai)
+	if ensureErr != nil {
+		return outcomes, after, ensureErr
+	}
+	return outcomes, after, checkErr
+}
+
+// imageEnsure is the work of flai serve's image job (serve.ImageEnsure,
+// ADR-0295 §5): flai image ensure for images, of the project at root, its
+// main checkout, writing what it does and the images' status after to log.
+// It fails naming each image it makes that is still missing or stale after it.
+func (a *app) imageEnsure(ctx context.Context, root string, images []agentimage.Image, log io.Writer) ([]agentimage.Outcome, error) {
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		return nil, fmt.Errorf("read the %s of the project at %s for its agent images: %w; mend it (flai check says what is wrong), then start the agent again", manifest.File, root, err)
+	}
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	program := a.harnessHost(cfg.Agent.ForProject(root), harness.Container).Program
+	if program == "" {
+		program = "docker"
+	}
+	outcomes, after, err := a.ensureImages(ctx, root, m, program, agentimage.ModeEnsure, images, log)
+	if after != nil {
+		printImageStatus(log, after)
+	}
+	if err != nil {
+		return outcomes, err
+	}
+	if left := imagesLeft(agentimage.ModeEnsure, after); len(left) > 0 {
+		return outcomes, fmt.Errorf("flai image ensure left the agent images %s for %s: read why in the image job's log, mend it, then run flai image ensure in the project", strings.Join(left, ", "), root)
+	}
+	return outcomes, nil
+}
+
+// imagesLeft are the images of after that mode makes and that are still
+// missing or stale, each as its ref and its state.
+func imagesLeft(mode agentimage.Mode, after []agentimage.Status) []string {
+	var left []string
+	for _, s := range after {
+		if imageMade(mode, s) && (s.State == agentimage.StateMissing || s.State == agentimage.StateStale) {
+			left = append(left, s.Ref+" "+string(s.State))
+		}
+	}
+	return left
 }
 
 // imageMade reports whether flai image makes s in mode: the project's layer

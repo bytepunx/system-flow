@@ -26,7 +26,9 @@ import (
 // (Owns): a run whose PID the system has given to another process since is
 // only recorded as stopped. Stop is refused, saying why, for a story flai
 // serve started no agent for, and for one whose agent is not running and not
-// waiting for an answer.
+// waiting for an answer. A run whose start waits for its image job (S-0751)
+// has no process: it is recorded as stopped, and the start is not made when
+// the job ends.
 //
 // The stop is appended to the event log as a stopped agent event, for the
 // run's why, which names the operator's stop and when (S-0532), once: when
@@ -51,7 +53,7 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	switch {
 	case run == nil:
 		return nil, refused("flai serve has started no agent for %s, so there is none to stop", it.ID)
-	case run.live(), run.Outcome == OutcomeAsked:
+	case run.live(), run.Outcome == OutcomeAsked, run.imageHeld():
 	default:
 		return nil, refused("%s's agent is not running: it ended %s, %s", it.ID, run.Ended, outcomeOf(run))
 	}
@@ -67,7 +69,9 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	o.Dir.updateAgent(e.Root, func(s *AgentState) {
 		if cur := s.Stories[it.ID]; cur.same(run) {
 			marked := *cur
-			marked.Stopped = at
+			// a start held for its image job is left by the start made
+			// again once the job ends (S-0751)
+			marked.Stopped, marked.ImageHeld = at, false
 			s.put(&marked)
 		}
 	})
@@ -100,7 +104,7 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 		// the serving flai recorded the end as this stop, and told it
 		told = cur.Outcome == OutcomeStopped
 		ended := *cur
-		ended.Stopped = at
+		ended.Stopped, ended.ImageHeld = at, false
 		if ended.Ended == "" {
 			ended.Ended = now().UTC().Format(time.RFC3339)
 		}
@@ -113,6 +117,8 @@ func Stop(o Options, e Entry, story string) (*AgentRun, error) {
 	}
 	what := "recorded it as stopped: it was " + run.awaits() + ", and is not started again when that comes"
 	switch {
+	case run.imageHeld():
+		what = "recorded it as stopped: its start was waiting for the image job " + run.ImageJob + ", and is not made when the job ends"
 	case killed:
 		what = fmt.Sprintf("killed its process group (pid %d), which had not ended %s after it was asked to", run.PID, o.stopGrace())
 	case signalled:

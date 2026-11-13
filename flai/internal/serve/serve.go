@@ -307,6 +307,18 @@ type Options struct {
 	// its namespace once its deploy passed (S-0579, ADR-0254 §8); nil runs
 	// none.
 	Checks func(repo *workitem.Repo) (ChecksConfig, error)
+	// ImageEnsure is the work of flai serve's image job (ADR-0295 §5): it
+	// makes the agent images a container start finds missing or stale, as
+	// flai image ensure does. Run runs one job at a time with it, for every
+	// project it serves; nil runs none, and such a start is refused, naming
+	// flai image ensure, as outside flai serve's run.
+	ImageEnsure ImageEnsure
+
+	// imageJobs runs the image jobs ImageEnsure does, one at a time across
+	// every served project, which a container start asks for and waits on
+	// (S-0751): Run sets it when ImageEnsure is set, and it ends with Run's
+	// context. Nil, outside Run, runs none.
+	imageJobs *imageJobRunner
 
 	// imageCheck checks inside image, beside the start, the Claude Code
 	// version a container start of a claude-code agent of the project at root
@@ -525,6 +537,14 @@ func Run(ctx context.Context, o Options) error {
 	}
 	if o.Logger == nil {
 		o.Logger = slog.New(slog.DiscardHandler)
+	}
+	// One image job runs at a time for every project served, since builds
+	// compete for the engine and the network (ADR-0295 §5); a job running
+	// when flai serve stops is waited for, last, once its ensure has
+	// returned on the context's end.
+	if o.ImageEnsure != nil {
+		o.imageJobs = newImageJobRunner(ctx, imageJobOptions{Dir: o.Dir.imageJobsDir(), Ensure: o.ImageEnsure, Now: o.Now, Logger: o.Logger, Record: o.Host.Record})
+		defer o.imageJobs.drain()
 	}
 	// A change of the host's budget state is sent through the reminder
 	// channel, read at each change (S-0534, ADR-0205).

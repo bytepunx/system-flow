@@ -829,7 +829,7 @@ func TestAPlannerInAContainerIsRefusedWhatItLacks(t *testing.T) {
 			lab.cfg.Harnesses[harness.Container] = harness.Host{Program: filepath.Join(t.TempDir(), "docker"), Login: lab.cfg.Harnesses[harness.Container].Login}
 		}, says: []string{"not on flai serve's PATH", "flai serve agent harness container --program"}},
 		{name: "no image", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644) },
-			says: []string{"flai-agent-claude-code:local", "No such image", "make agent-images", "--image claude-code=<image>"}},
+			says: []string{"flai-agent-claude-code:local", "No such image", "flai image ensure", "--image claude-code=<image>"}},
 		{name: "no git", set: func(lab *agentLab) { _ = os.RemoveAll(filepath.Join(lab.root, ".git")) },
 			says: []string{"has no .git folder", "run it on another harness"}},
 	} {
