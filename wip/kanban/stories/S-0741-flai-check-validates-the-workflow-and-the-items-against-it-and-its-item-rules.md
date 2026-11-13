@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-13T07:30:41Z
+updated: 2026-11-13T07:53:06Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 29m
-  delivery: 2026-11-13T16:58:00Z
-  basis: "Its own forecast of 29m; 15th in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0735, S-0745, S-0734, S-0751, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738 and S-0739."
+  delivery: 2026-11-13T15:41:00Z
+  basis: "Its own forecast of 29m; 18th in the pull order with an in-progress limit of 3, behind S-0660, S-0760, S-0735, S-0745, S-0759, S-0734, S-0751, S-0757, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738 and S-0739."
   by: flai
-  at: 2026-11-13T07:30:41Z
+  at: 2026-11-13T07:53:06Z
 ---
 # S-0741 flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
 
