@@ -31,7 +31,9 @@ import (
 // the operator's own image not on this host, and, with no image job to make
 // them (ADR-0295 §5, S-0751), an image of flai's not on this host (a stale
 // one is warned of); with one, a start, a story's or a strategic agent's,
-// that finds its images missing or stale waits for the job (holdImage), and,
+// that finds its images missing or stale waits for the job (holdImage),
+// unless the operator turned the project's job off (S-0759), which refuses
+// it naming flai image ensure and the setting, and,
 // through the adapter, a
 // login the inner harness needs and the host has not set, and, once the HTTP
 // MCP server's URL and addresses are known, a server on loopback that listens
@@ -130,7 +132,10 @@ func containerImageOf(root string, cfg AgentConfig, inner string, strategic bool
 // otherwise goes on as one with no image job does. With no image job, outside
 // flai serve's run, a missing image refuses the start, naming flai image
 // ensure, and a stale one is warned of with why, and the start goes on; so
-// does one whose state could not be told.
+// does one whose state could not be told. With the project's image job turned
+// off, flai serve agent image auto off (cfg.ImagesByHand, ADR-0295 §7,
+// S-0759), read at each start, a missing or stale image refuses the start,
+// asking for no job, naming flai image ensure and the setting (byHand).
 func (l *launcher) containerAllowed(cfg AgentConfig, run *AgentRun, agent *manifest.Agent, strategic bool) error {
 	after := l.imageAfter
 	if after != nil {
@@ -160,9 +165,26 @@ func (l *launcher) containerAllowed(cfg AgentConfig, run *AgentRun, agent *manif
 		}
 		return nil
 	}
+	if cfg.ImagesByHand {
+		return judged.byHand(l.entry.Root, image)
+	}
 	j := l.imageJobs.request(imageNeed{Key: l.entry.Key, Root: l.entry.Root, Images: judged.need})
 	run.ImageJob = j.ID()
 	return &imageWait{job: j, image: image, why: judged.why()}
+}
+
+// byHand is the refusal of a start, a close-out, or the checks of the project
+// at root that find the agent images they need, image the one the agent runs
+// in, missing or stale while the operator has turned flai serve's image job
+// off for the project (cfg.ImagesByHand, ADR-0295 §7, S-0759): it asks for no
+// job, names each image and its state, and says to run flai image ensure, or
+// to turn the job back on.
+func (j imageJudgement) byHand(root, image string) error {
+	why := j.why()
+	if why == "" {
+		why = image + " is missing or stale"
+	}
+	return fmt.Errorf("an agent image this start needs is not current (%s), and flai serve makes none for this project, since flai serve agent image auto off turned its image job off: run flai image ensure in the project at %s, which makes them, with the build command flai serve agent image command names when one is set, and flai image status says which are missing or stale; or turn the job back on with flai serve agent image auto on --project %s", why, root, root)
 }
 
 // imageJobEnded is why a start made again once j has ended cannot go on:

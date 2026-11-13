@@ -94,6 +94,12 @@ type AgentConfig struct {
 	// from, as flai serve forge names them (ADR-0165): no agent flai serve
 	// starts gets one (S-0393).
 	ForgeTokenEnvs []string
+	// ImagesByHand is whether the operator has turned flai serve's image job
+	// off for the project, with flai serve agent image auto off (ADR-0295 §7,
+	// S-0759): a container start, a close-out, or the checks that find their
+	// agent images missing or stale then refuse, naming flai image ensure,
+	// rather than ask for a job. false, the default, has the job make them.
+	ImagesByHand bool
 }
 
 // HarnessLifts are what the operator lifts on one harness, taking the risk

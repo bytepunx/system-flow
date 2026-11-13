@@ -320,12 +320,17 @@ func checksContainerFailed(story string, err error, docker execx.Runner) *CheckC
 // asked for, rather than refuse a missing one (ADR-0295 §5). It is then the
 // job to wait for, after which the caller judges the image again with
 // containerImage; with jobs nil, or no image to make, it is containerImage's
-// host and image, or its refusal, naming flai image ensure.
+// host and image, or its refusal, naming flai image ensure. With the
+// project's image job turned off (cfg.ImagesByHand, S-0759) it asks for none
+// and refuses images missing or stale, naming flai image ensure and the
+// setting (imageJudgement.byHand).
 func containerImageAsked(docker execx.Runner, jobs *imageJobRunner, key, root string, cfg AgentConfig, agent *manifest.Agent) (harness.Host, string, *imageWait, error) {
 	host, image, judged, err := containerImageJudged(docker, root, cfg, agent, false)
 	switch {
 	case err != nil:
 		return harness.Host{}, "", nil, err
+	case jobs != nil && len(judged.need) > 0 && cfg.ImagesByHand:
+		return harness.Host{}, "", nil, judged.byHand(root, image)
 	case jobs != nil && len(judged.need) > 0:
 		j := jobs.request(imageNeed{Key: key, Root: root, Images: judged.need})
 		return harness.Host{}, "", &imageWait{job: j, image: image, why: judged.why()}, nil

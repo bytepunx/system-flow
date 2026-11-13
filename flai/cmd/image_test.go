@@ -725,3 +725,49 @@ func TestImageEnsureRunsTheOperatorsBuildCommand(t *testing.T) {
 		t.Errorf("steps %v, output\n%s", steps.args, out)
 	}
 }
+
+// S-0759, ADR-0295 §7: flai serve's image job's work, imageEnsure, reads the
+// host's configuration at each job, so the build command the operator names
+// while flai serve runs is what its next job runs, in place of flai's pull
+// and build, from the main checkout, and every image it made is the
+// command's.
+func TestImageJobWorkRunsTheOperatorsBuildCommand(t *testing.T) {
+	root, cfg := imageProject(t, imageLayerYAML)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := mainRootOf(repo)
+	images := []agentimage.Image{agentimage.Harness(nil, harness.ClaudeCode), agentimage.For(repo.Manifest, nil, harness.ClaudeCode)}
+	d := &imageDocker{images: map[string]agentimage.Info{}}
+	steps := &imageSteps{docker: d}
+	steps.command = func(vars map[string]string) {
+		d.images[vars["FLAI_IMAGE_HARNESS"]] = agentimage.Info{ID: imageBaseID, Labels: map[string]string{agentimage.LabelFlai: vars["FLAI_IMAGE_VERSION"]}}
+		d.images[vars["FLAI_IMAGE_LAYER"]] = agentimage.Info{ID: "sha256:layer", Labels: map[string]string{
+			agentimage.LabelFlai:   vars["FLAI_IMAGE_VERSION"],
+			agentimage.LabelRecipe: vars["FLAI_IMAGE_RECIPE_LAYER"],
+			agentimage.LabelBase:   imageBaseID,
+		}}
+	}
+	useImageExec(t, steps)
+	a := &app{configPath: cfg, cwd: root, runner: d, out: io.Discard, errOut: io.Discard, clock: func() time.Time { return time.Date(2026, 11, 13, 18, 0, 0, 0, time.UTC) }}
+	for i, argv := range [][]string{{"/opt/make-images", "--fast"}, {"/opt/other-images"}} {
+		// the operator names the command while flai serve runs, before the job
+		ensureCommandConfig(t, cfg, main, argv...)
+		d.images = map[string]agentimage.Info{}
+		var log bytes.Buffer
+		outcomes, err := a.imageEnsure(context.Background(), main, images, &log)
+		if err != nil {
+			t.Fatalf("job %d: %v\n%s", i, err, log.String())
+		}
+		if len(steps.args) != i+1 || !reflect.DeepEqual(steps.args[i], argv) || steps.dirs[i] != main {
+			t.Fatalf("job %d ran %v in %v, want %v in %s alone", i, steps.args, steps.dirs, argv, main)
+		}
+		if len(outcomes) != 2 || outcomes[0].Way != agentimage.WayCommand || outcomes[1].Way != agentimage.WayCommand {
+			t.Errorf("job %d's outcomes %+v, want both made by the command", i, outcomes)
+		}
+		if words := agentimage.CommandWords(argv); !strings.Contains(log.String(), "agent image: running the operator's build command "+words) {
+			t.Errorf("job %d's log does not say the command %s ran:\n%s", i, words, log.String())
+		}
+	}
+}

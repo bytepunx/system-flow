@@ -321,6 +321,37 @@ func TestImageJobPasses(t *testing.T) {
 	}
 }
 
+// S-0759, ADR-0295 §7: a job whose ensure ran the operator's build command
+// records, journals, and logs each image as the command's; one whose command
+// exited non-zero fails at the command's step, naming it.
+func TestImageJobRecordsTheOperatorsBuildCommand(t *testing.T) {
+	lab := newImageJobLab(t)
+	j := lab.runner.request(imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0", "p-layer:abc"))
+	lab.nextCall().pass(agentimage.WayCommand)
+	if _, err := imageJobWait(t, j); err != nil {
+		t.Fatal(err)
+	}
+	rec := lab.readImageJob(j.ID())
+	if rec.Outcome != imageJobPassed || len(rec.Ways) != 2 || rec.Ways[0].Way != agentimage.WayCommand || rec.Ways[1].Way != agentimage.WayCommand {
+		t.Fatalf("record %+v, want a passed job whose images the command made", rec)
+	}
+	entries := lab.journal()
+	if want := "flai-agent-claude-code:1.0.0=command, p-layer:abc=command"; len(entries) != 2 || !strings.Contains(entries[1].Detail, want) {
+		t.Errorf("journal %+v, want the end naming %q", entries, want)
+	}
+
+	failed := lab.runner.request(imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0"))
+	lab.nextCall().answer <- imageJobAnswer{err: &agentimage.CommandError{Command: []string{"/opt/make-images", "--fast"}, Inner: "claude-code", Said: "registry unreachable", Err: errors.New("exit status 2")}}
+	_, err := imageJobWait(t, failed)
+	var jobErr *ImageJobError
+	if !errors.As(err, &jobErr) || jobErr.Step != "the build command /opt/make-images --fast" {
+		t.Fatalf("error %#v, want an *ImageJobError at the build command's step", err)
+	}
+	if rec := lab.readImageJob(failed.ID()); rec.Step != jobErr.Step || !strings.Contains(rec.Cause, "registry unreachable") {
+		t.Errorf("record %+v, want the command's step and what it said", rec)
+	}
+}
+
 func TestImageJobFailureCarriesStepCauseAndLog(t *testing.T) {
 	lab := newImageJobLab(t)
 	need := imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0")

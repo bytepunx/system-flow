@@ -714,7 +714,9 @@ func imageJobWays(ways []imageJobWay) string {
 // failedStep is the docker step err names as failing: the
 // *agentimage.StepError or *agentimage.StallError of the last error err
 // joins that holds one, which is the build's when a build stood in for a
-// failed pull; "" when it names none.
+// failed pull, or the operator's build command that exited non-zero
+// (*agentimage.CommandError, S-0759), named as its stall's step is; "" when
+// it names none.
 func failedStep(err error) string {
 	var joined interface{ Unwrap() []error }
 	if errors.As(err, &joined) {
@@ -732,6 +734,10 @@ func failedStep(err error) string {
 	var stall *agentimage.StallError
 	if errors.As(err, &stall) {
 		return stall.Step
+	}
+	var command *agentimage.CommandError
+	if errors.As(err, &command) {
+		return "the build command " + agentimage.CommandWords(command.Command)
 	}
 	return ""
 }

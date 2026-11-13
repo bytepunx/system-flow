@@ -495,5 +495,6 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		AutoApprove:    cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
 		ForgeTokenEnvs: forgeTokens,
 		RoleActions:    defined,
+		ImagesByHand:   !cfg.Agent.AutoImage(root),
 	}
 }

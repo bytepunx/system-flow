@@ -1763,3 +1763,135 @@ func TestContainerStartHeldByAStoppedServeFailsAtTheNextLook(t *testing.T) {
 		t.Error("the agent's container ran")
 	}
 }
+
+// byHandRefusal checks that why, a refusal with the project's image job
+// turned off (S-0759), names each of wants, flai image ensure, and the
+// setting that turns the job back on, and never make agent-images.
+func byHandRefusal(t *testing.T, why string, wants ...string) {
+	t.Helper()
+	for _, want := range append(wants, "flai image ensure", "flai serve agent image auto off", "flai serve agent image auto on") {
+		if !strings.Contains(why, want) {
+			t.Errorf("the refusal does not say %q: %s", want, why)
+		}
+	}
+	if strings.Contains(why, "make agent-images") {
+		t.Errorf("the refusal names make agent-images: %s", why)
+	}
+}
+
+// noImageJob checks that e was asked for no job and none was recorded.
+func noImageJob(lab *agentLab, e *containerEnsure) {
+	lab.t.Helper()
+	if n := len(e.calls()); n != 0 {
+		lab.t.Errorf("%d image jobs ran", n)
+	}
+	if jobs, _ := os.ReadDir(lab.o.Dir.imageJobsDir()); len(jobs) != 0 {
+		lab.t.Errorf("image jobs were recorded: %v", jobs)
+	}
+}
+
+// S-0759, ADR-0295 §7: with the project's image job turned off, a story's
+// start that finds its agent image missing asks for no job and refuses,
+// naming the image, flai image ensure, and the setting; the setting is read
+// at each start, so once the operator turns the job back on the next start
+// is held for it and goes on.
+func TestContainerStartWithTheImageJobOffRefusesAMissingImage(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, true)
+	lab.cfg.ImagesByHand = true
+	agent := &manifest.Agent{Harness: harness.Container}
+	id := containerStory(lab, "Its images are made by hand", agent)
+	lab.l.look(ctx, false)
+	r := lab.run(id)
+	if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.ImageJob != "" || r.ImageHeld {
+		t.Fatalf("run: %+v", r)
+	}
+	byHandRefusal(t, r.Why, harness.DefaultImages[harness.ClaudeCode]+" is missing", "--project "+lab.root)
+	noImageJob(lab, e)
+	if _, err := os.Stat(filepath.Join(lab.outDir, id+".stdin")); err == nil {
+		t.Error("the agent's container ran")
+	}
+
+	lab.cfg.ImagesByHand = false
+	lab.l.start(ctx, lab.cfg, readyStory{ID: id, Agent: lab.cfg.startAgent(agent), Started: true})
+	heldThenStarted(lab, e, id)
+}
+
+// S-0759: with the image job off, an image stale after a flai upgrade
+// refuses the start too, saying why it is stale, rather than being warned of.
+func TestContainerStartWithTheImageJobOffRefusesAStaleImage(t *testing.T) {
+	ctx := context.Background()
+	lab, _ := containerLab(t)
+	containerLabels(lab, map[string]string{agentimage.LabelFlai: "1.0.0"})
+	e := containerImageJobs(lab, false)
+	lab.cfg.ImagesByHand = true
+	id := containerStory(lab, "Stale and made by hand", &manifest.Agent{Harness: harness.Container})
+	lab.l.look(ctx, false)
+	r := lab.run(id)
+	if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.ImageJob != "" || r.ImageHeld {
+		t.Fatalf("run: %+v", r)
+	}
+	byHandRefusal(t, r.Why, harness.DefaultImages[harness.ClaudeCode]+" is stale", "built for flai 1.0.0")
+	noImageJob(lab, e)
+}
+
+// S-0759: with the image job off, a strategic agent's start that finds its
+// harness image missing asks for no job and refuses, as a story's does.
+func TestContainerStrategicStartWithTheImageJobOffRefusesAMissingImage(t *testing.T) {
+	lab, _ := roleContainerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, false)
+	lab.cfg.ImagesByHand = true
+	epic := lab.epic.ID
+	if lab.planInContainer(epic) {
+		t.Fatalf("the planner started: %+v", lab.planRun(epic))
+	}
+	r := lab.planRun(epic)
+	if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.ImageJob != "" || r.ImageHeld {
+		t.Fatalf("run: %+v", r)
+	}
+	byHandRefusal(t, r.Why, harness.DefaultImages[harness.ClaudeCode]+" is missing")
+	noImageJob(lab, e)
+}
+
+// S-0759: with the image job off, a close-out's or flai serve's checks'
+// container, both of which ask through containerImageAsked, asks for no job
+// and refuses a missing image, naming flai image ensure and the setting;
+// with the job on it asks for one and waits.
+func TestContainerImageAskedWithTheImageJobOffRefusesWithoutAJob(t *testing.T) {
+	lab, _ := containerLab(t)
+	_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
+	e := containerImageJobs(lab, false)
+	agent := &manifest.Agent{Harness: harness.Container}
+	cfg := lab.cfg
+	cfg.ImagesByHand = true
+	_, _, wait, err := containerImageAsked(lab.l.docker, lab.o.imageJobs, lab.l.entry.Key, lab.root, cfg, agent)
+	if err == nil || wait != nil {
+		t.Fatalf("asked with the job off: wait %+v, err %v", wait, err)
+	}
+	byHandRefusal(t, err.Error(), harness.DefaultImages[harness.ClaudeCode]+" is missing")
+	noImageJob(lab, e)
+
+	story := containerStory(lab, "Checked by hand", agent)
+	repo, err := workitem.Open(lab.root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := checksContainerOf(repo, story, cfg, lab.l.docker, lab.o.imageJobs, lab.l.entry.Key)
+	if in == nil || in.Err == nil || in.wait != nil {
+		t.Fatalf("the checks' container with the job off: %+v", in)
+	}
+	byHandRefusal(t, in.Err.Error(), "runs in a container, so its checks run there")
+	noImageJob(lab, e)
+
+	cfg.ImagesByHand = false
+	_, _, wait, err = containerImageAsked(lab.l.docker, lab.o.imageJobs, lab.l.entry.Key, lab.root, cfg, agent)
+	if err != nil || wait == nil {
+		t.Fatalf("asked with the job on: wait %+v, err %v", wait, err)
+	}
+	if _, err := imageJobWait(t, wait.job); err != nil {
+		t.Fatal(err)
+	}
+}

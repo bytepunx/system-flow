@@ -63,6 +63,10 @@ func TestServeAgentImageSettings(t *testing.T) {
 	if got := imageSettingOf(a); got.Auto == nil || *got.Auto || len(got.Command) != 3 {
 		t.Errorf("auto off is kept as false beside the command: %+v", got)
 	}
+	// flai serve reads it at each start: a's starts refuse, b's ask for the job
+	if !(&app{configPath: configOf(t)}).agentConfig(a).ImagesByHand || (&app{configPath: configOf(t)}).agentConfig(b).ImagesByHand {
+		t.Error("what flai serve is given: a's images by hand, b's by the job")
+	}
 	if out, _, code := run(a, "auto"); code != 0 || !strings.Contains(out, "image auto: off") {
 		t.Errorf("auto bare prints it: %d %q", code, out)
 	}
@@ -76,6 +80,9 @@ func TestServeAgentImageSettings(t *testing.T) {
 	}
 	if out, errOut, code := run(a, "auto", "on"); code != 0 || !strings.Contains(out, "image auto: on (default)") || imageSettingOf(a).Auto != nil {
 		t.Errorf("auto on removes the key: %d %q %s %+v", code, out, errOut, imageSettingOf(a))
+	}
+	if (&app{configPath: configOf(t)}).agentConfig(a).ImagesByHand {
+		t.Error("auto on gives flai serve the job back")
 	}
 	if out, errOut, code := run(a, "command", "--clear"); code != 0 || !strings.Contains(out, "image command: none, so flai's own pull and build") {
 		t.Errorf("--clear: %d %q %s", code, out, errOut)
