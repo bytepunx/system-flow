@@ -48,6 +48,15 @@ type ChecksRun struct {
 	Started string `json:"started"`
 	Ended   string `json:"ended,omitempty"`
 	Log     string `json:"log,omitempty"`
+	// AskedBy is who asked for the run: the story's agent that asked flai
+	// serve, flai serve for the review pass, or empty for a run from a shell
+	// or the dashboard (ADR-0292 §6).
+	AskedBy string `json:"asked_by,omitempty"`
+	// Namespace and Commit are the kluster namespace the run ran against and
+	// the commit it was deployed at, as its variables name them; empty for a
+	// run with no namespace.
+	Namespace string `json:"namespace,omitempty"`
+	Commit    string `json:"commit,omitempty"`
 }
 
 func (d Dir) checksDir() string                { return filepath.Join(string(d), "checks") }
@@ -131,6 +140,12 @@ func (d Dir) RunChecksWith(ctx context.Context, story, root, worktree string, cf
 // the host then, and a container that cannot run fails the check. With in nil
 // each check runs on the host, in the worktree, as RunChecksWith runs it.
 func (d Dir) RunChecksIn(ctx context.Context, story, root, worktree string, cfg ChecksConfig, env []string, in *CheckContainer, now func() time.Time) (ChecksRun, error) {
+	return d.RunChecksAs(ctx, "", story, root, worktree, cfg, env, in, now)
+}
+
+// RunChecksAs is RunChecksIn for by, who asked for the run, as its AskedBy
+// keeps it.
+func (d Dir) RunChecksAs(ctx context.Context, by, story, root, worktree string, cfg ChecksConfig, env []string, in *CheckContainer, now func() time.Time) (ChecksRun, error) {
 	if existing, ok := d.ChecksState(story); ok && existing.Running && Alive(existing.PID) {
 		return ChecksRun{}, fmt.Errorf("a checks run for %s is already active (pid %d); flai checks status %s says more", story, existing.PID, story)
 	}
@@ -153,15 +168,16 @@ func (d Dir) RunChecksIn(ctx context.Context, story, root, worktree string, cfg 
 	defer func() { _ = logFile.Close() }()
 
 	started := now().UTC()
-	run := ChecksRun{Story: story, Root: root, Running: true, Started: started.Format(time.RFC3339), Log: logPath}
+	run := ChecksRun{Story: story, Root: root, Running: true, Started: started.Format(time.RFC3339), Log: logPath, AskedBy: by,
+		Namespace: envValue(env, "FLAI_KLUSTER_NAMESPACE"), Commit: envValue(env, "FLAI_KLUSTER_COMMIT")}
 	if err := d.writeChecksState(run); err != nil {
 		return ChecksRun{}, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancel()
-	if ns := envValue(env, "FLAI_KLUSTER_NAMESPACE"); ns != "" {
-		fmt.Fprintf(logFile, "=== against the kluster namespace %s ===\n", ns)
+	if run.Namespace != "" {
+		fmt.Fprintf(logFile, "=== against the kluster namespace %s ===\n", run.Namespace)
 	}
 
 	outcome := "passed"

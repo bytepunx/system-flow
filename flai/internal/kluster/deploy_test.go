@@ -578,26 +578,27 @@ func TestARedeployAtANewCommitReplacesTheRecord(t *testing.T) {
 
 func TestTheChecksOutcomeIsKeptInTheRecordUntilTheNextDeploy(t *testing.T) {
 	f := deploySetup(t)
-	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed); err == nil || !strings.Contains(err.Error(), "no deployment record") {
+	log := filepath.Join(f.root, "checks", "S-0578.log")
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomePassed, log); err == nil || !strings.Contains(err.Error(), "no deployment record") {
 		t.Errorf("checks kept for a namespace never deployed: %v", err)
 	}
 	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := RecordChecks(f.root, "s-0578", commitB, OutcomePassed); err == nil || !strings.Contains(err.Error(), "deployed again, at 0123456789ab") {
+	if err := RecordChecks(f.root, "s-0578", commitB, OutcomePassed, log); err == nil || !strings.Contains(err.Error(), "deployed again, at 0123456789ab") {
 		t.Errorf("checks at another commit than the deploy's were kept: %v", err)
 	}
-	if err := RecordChecks(f.root, "s-0578", commitA, OutcomeFailed); err != nil {
+	if err := RecordChecks(f.root, "s-0578", commitA, OutcomeFailed, log); err != nil {
 		t.Fatal(err)
 	}
 	r, _, err := ReadRecord(f.root, "s-0578")
-	if err != nil || r.ChecksCommit != commitA || r.ChecksOutcome != OutcomeFailed || r.Outcome != OutcomePassed || len(r.Steps) != 3 {
+	if err != nil || r.ChecksCommit != commitA || r.ChecksOutcome != OutcomeFailed || r.ChecksLog != log || r.Outcome != OutcomePassed || len(r.Steps) != 3 {
 		t.Errorf("the record keeps the deploy and the checks' outcome: %+v %v", r, err)
 	}
 	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitA, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
-	if r, _, _ := ReadRecord(f.root, "s-0578"); r.ChecksCommit != "" || r.ChecksOutcome != "" {
+	if r, _, _ := ReadRecord(f.root, "s-0578"); r.ChecksCommit != "" || r.ChecksOutcome != "" || r.ChecksLog != "" {
 		t.Errorf("a deploy clears the checks' outcome: %+v", r)
 	}
 }

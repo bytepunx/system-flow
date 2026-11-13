@@ -212,12 +212,13 @@ type Record struct {
 	ExitCode   int    `json:"exit_code,omitempty"`
 	Error      string `json:"error,omitempty"`
 	Steps      []Step `json:"steps"`
-	// ChecksCommit and ChecksOutcome are the commit and the outcome of the
-	// last checks run against the namespace since its deploy: passed, failed,
-	// timed-out, or cancelled. Both are empty until a run ends, and a deploy
-	// clears them (ADR-0254 §5a, §8).
+	// ChecksCommit, ChecksOutcome, and ChecksLog are the commit, the outcome,
+	// and the log of the last checks run against the namespace since its
+	// deploy: passed, failed, timed-out, or cancelled. All are empty until a
+	// run ends, and a deploy clears them (ADR-0254 §5a, §8, ADR-0292 §6).
 	ChecksCommit  string `json:"checks_commit,omitempty"`
 	ChecksOutcome string `json:"checks_outcome,omitempty"`
+	ChecksLog     string `json:"checks_log,omitempty"`
 	// AskedBy is who asked for the record's last job: the story's agent that
 	// asked flai serve, or flai serve for the review pass; empty for a job run
 	// in a shell, and in a record written before it was kept (ADR-0292 §6).
@@ -286,10 +287,10 @@ func putRecord(root string, r Record) error {
 }
 
 // RecordChecks keeps in namespace ns's record the outcome of a checks run
-// against it at commit, which ended outcome. It refuses a namespace with no
-// record, and one deployed again at another commit since the run started,
-// whose record the outcome does not describe.
-func RecordChecks(root, ns, commit, outcome string) error {
+// against it at commit, which ended outcome, and its log. It refuses a
+// namespace with no record, and one deployed again at another commit since
+// the run started, whose record the outcome does not describe.
+func RecordChecks(root, ns, commit, outcome, log string) error {
 	unlock, err := lockRecords(root)
 	if err != nil {
 		return err
@@ -305,7 +306,7 @@ func RecordChecks(root, ns, commit, outcome string) error {
 	if r.Commit != commit {
 		return fmt.Errorf("the namespace %s was deployed again, at %s, while its checks ran at %s, so their outcome %s is not kept; run its checks again at %s", ns, shortCommit(r.Commit), shortCommit(commit), outcome, shortCommit(r.Commit))
 	}
-	r.ChecksCommit, r.ChecksOutcome = commit, outcome
+	r.ChecksCommit, r.ChecksOutcome, r.ChecksLog = commit, outcome, log
 	return putRecord(root, r)
 }
 

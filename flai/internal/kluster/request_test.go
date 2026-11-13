@@ -77,6 +77,26 @@ func TestAskAnswersTheJobFlaiServeQueues(t *testing.T) {
 	}
 }
 
+// ADR-0292 §1: a checks request is asked as a deploy is, in its own file.
+func TestAskAsksForAChecksRun(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	queued := time.Date(2026, 11, 13, 9, 0, 0, 0, time.UTC)
+	got := serve(t, root, func(r Request) Answer {
+		return Answer{Job: JobID(r.Story, r.Kind, queued), Kind: r.Kind, Story: r.Story, Started: true}
+	})
+	a, err := Ask(context.Background(), root, Request{Story: "S-0661", Kind: KindChecks, By: "agent-S-0661"}, quick)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Job != "S-0661-checks-20261113T090000Z" || !a.Started || a.Kind != KindChecks {
+		t.Errorf("the answer: %+v", a)
+	}
+	if req := <-got; req.Kind != KindChecks || req.Story != "S-0661" {
+		t.Errorf("the request flai serve took: %+v", req)
+	}
+}
+
 // ADR-0292 §1: a request while a job of the story waits or runs is answered
 // with that job, which it did not queue.
 func TestAskAnswersAJobAlreadyQueued(t *testing.T) {
@@ -201,6 +221,7 @@ func TestReadAskedJobReadsWhatWriteAskedJobWrote(t *testing.T) {
 		t.Errorf("the job running: %+v", got)
 	}
 	code := 3
+	j.Namespace = "s-0660"
 	j.EndedAt, j.Commit, j.Outcome, j.FailedStep, j.ExitCode, j.Log = queued.Add(2*time.Minute), commitA, OutcomeFailed, StepBuild, &code, LogPath(root, "s-0660", StepBuild)
 	j.Steps = []Step{{Name: StepBuild, Outcome: OutcomeFailed, ExitCode: 3, Log: LogPath(root, "s-0660", StepBuild)}, {Name: StepLoad, Outcome: OutcomeSkipped}, {Name: StepDeploy, Outcome: OutcomeSkipped}}
 	if err := WriteAskedJob(root, j); err != nil {
@@ -209,6 +230,22 @@ func TestReadAskedJobReadsWhatWriteAskedJobWrote(t *testing.T) {
 	got, _, err = ReadAskedJob(root, "S-0660")
 	if err != nil || !got.Ended() || got.Running() || got.Outcome != OutcomeFailed || got.FailedStep != StepBuild || got.ExitCode == nil || *got.ExitCode != 3 || len(got.Steps) != 3 || got.Steps[0].Log != j.Log {
 		t.Errorf("the job ended: %+v %v", got, err)
+	}
+	zero, two := 0, 2
+	checked := AskedJob{ID: JobID("S-0662", KindChecks, queued), Kind: KindChecks, Story: "S-0662", By: "agent-S-0662", Namespace: "s-0662", QueuedAt: queued,
+		EndedAt: queued.Add(time.Minute), Commit: commitA, Outcome: OutcomeFailed, FailedStep: "golden", ExitCode: &two, Log: "/l/S-0662.log",
+		Checks: &ChecksResult{Outcome: OutcomeFailed, Commit: commitA, Log: "/l/S-0662.log", Checks: []Check{
+			{Name: "unit", Outcome: OutcomePassed, ExitCode: &zero, Log: "/l/S-0662.log"}, {Name: "golden", Outcome: OutcomeFailed, ExitCode: &two, Log: "/l/S-0662.log"}}}}
+	if err := WriteAskedJob(root, checked); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(JobFile(root, "S-0662"))
+	if err != nil || !strings.Contains(string(data), `"exit_code": 0`) || !strings.Contains(string(data), `"namespace": "s-0662"`) {
+		t.Errorf("a checks job's state does not keep a passing check's exit code 0 and the namespace:\n%s %v", data, err)
+	}
+	got, _, err = ReadAskedJob(root, "S-0662")
+	if err != nil || got.Checks == nil || got.Checks.Outcome != OutcomeFailed || len(got.Checks.Checks) != 2 || got.Checks.Checks[1].Name != "golden" || *got.Checks.Checks[1].ExitCode != 2 || got.Checks.Checks[0].Log != "/l/S-0662.log" {
+		t.Errorf("a checks job's state: %+v %v", got, err)
 	}
 	if err := os.WriteFile(JobFile(root, "S-0661"), []byte("{"), 0o644); err != nil {
 		t.Fatal(err)

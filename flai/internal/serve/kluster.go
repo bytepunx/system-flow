@@ -54,10 +54,13 @@ import (
 // once, passed or failed, is not tried again until the story returns to
 // review after a send back, so a failure is not retried every minute.
 //
-// A story's agent asks the pass, too, to deploy or tear down its own story's
-// namespace while the story is in progress (ADR-0292, kluster_requests.go):
-// those jobs wait in the same queue, run whatever the tried-once rule says,
-// and end with a kluster event rather than a thread. A story in review whose
+// A story's agent asks the pass, too, to deploy its own story's namespace,
+// run the project's checks against it as deployed, or tear it down, while
+// the story is in progress (ADR-0292, kluster_requests.go): those jobs wait
+// in the same queue, run whatever the tried-once rule says, and end with a
+// kluster event rather than a thread. A checks run an agent asks for is the
+// review's, through the same code, and keeps its outcome in the namespace's
+// record as the review's does. A story in review whose
 // namespace's record passed at its branch's head, its checks too while the
 // checks host action is on, is not deployed again, whoever asked for it.
 //
@@ -86,6 +89,7 @@ const klusterMethod = "serve.kluster"
 // The kinds of job the pass runs.
 const (
 	klusterDeploy   = "deploy"
+	klusterChecks   = "checks"
 	klusterTeardown = "teardown"
 	klusterPromote  = "promote"
 )
@@ -442,11 +446,8 @@ func (p *klusterPass) look(ctx context.Context) {
 // by a checks run against the namespace: the checks host action is on and
 // names checks.
 func (p *klusterPass) checksOn(repo *workitem.Repo) bool {
-	if p.o.Checks == nil {
-		return false
-	}
-	cfg, err := p.o.Checks(repo)
-	return err == nil && cfg.Enabled && len(cfg.Commands) > 0
+	_, why := p.checksConfig(repo)
+	return why == ""
 }
 
 // passedAt reports whether record r says its namespace was deployed at head
@@ -693,6 +694,15 @@ func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJ
 			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress or in review", j.story, it.Status))
 		}
 		return p.deploy(ctx, repo, j, it.Status)
+	case klusterChecks:
+		it, err := repo.Get(j.story)
+		if err != nil {
+			return refusedEnd(fmt.Sprintf("flai serve could not read %s to run its checks (%v)", j.story, err))
+		}
+		if !klusterHolds(it) {
+			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve runs a story's checks against its namespace only while it is in progress or in review", j.story, it.Status))
+		}
+		return p.checksJob(ctx, repo, j)
 	case klusterTeardown:
 		return p.teardown(ctx, repo, j)
 	case klusterPromote:
@@ -714,13 +724,15 @@ type klusterFailure struct {
 // klusterEnd is how a story's job ended, for its state and its kluster event:
 // its outcome, empty when flai serve stopped under it and the next start ends
 // it interrupted; the commit it built or found; why it failed or was refused;
-// and the steps and log of the namespace's record.
+// the steps and log of the namespace's record; and the checks run it ran,
+// nil when none did.
 type klusterEnd struct {
 	outcome string
 	commit  string
 	fail    klusterFailure
 	steps   []kluster.Step
 	log     string
+	checks  *kluster.ChecksResult
 }
 
 // refusedEnd is a job that ran nothing, for why.
@@ -775,14 +787,85 @@ func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j kluster
 	p.journalJob(j, "done", fmt.Sprintf("deployed %s into %s at %s", j.story, ns, short(j.head)))
 	p.o.Logger.Info("kluster deploy passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "by", j.asker())
 	p.passed(repo, j, ns)
-	if run := p.checks(ctx, repo, j, ns); run != nil && run.Outcome != kluster.OutcomePassed {
+	run := p.checks(ctx, repo, j, ns)
+	if run == nil {
+		return end
+	}
+	end.checks = checksResult(*run, j.head)
+	if run.Outcome != kluster.OutcomePassed {
 		end.outcome, end.log = kluster.OutcomeFailed, run.Log
-		end.fail = klusterFailure{step: "checks", exit: -1, log: run.Log, err: fmt.Sprintf("the checks run against the namespace ended %s, at %s", run.Outcome, failedCheck(*run))}
-		if n := len(run.Steps); n > 0 && run.Steps[n-1].Exit != nil {
-			end.fail.exit = *run.Steps[n-1].Exit
-		}
+		end.fail = klusterFailure{step: "checks", exit: failedExit(*run), log: run.Log, err: checksEnded(*run)}
 	}
 	return end
+}
+
+// checksJob runs the checks a story's agent asked for against j's story's
+// namespace as it is deployed (ADR-0292 §1, §2): the review's checks run,
+// with the namespace's variables and flai's whole kubeconfig. It runs nothing
+// and ends refused when the checks host action went off, no checks are named,
+// or the namespace is no longer deployed at the story branch's head with a
+// deploy that passed. A run that does not pass ends the job failed at the
+// check it stopped at, with that check's exit code, and opens no thread.
+func (p *klusterPass) checksJob(ctx context.Context, repo *workitem.Repo, j klusterJob) klusterEnd {
+	ns, _ := kluster.StoryNamespace(j.story)
+	cfg, env, why := p.checksReady(repo, j.story)
+	if why != "" {
+		return refusedEnd(why + ", so flai serve ran no checks for " + j.story + ": " + deployFirst(j.story))
+	}
+	p.startAsked(j)
+	run, err := p.runChecks(ctx, repo, j, ns, cfg, env)
+	switch {
+	case ctx.Err() != nil && (err != nil || run.Outcome == "cancelled"):
+		return klusterEnd{} // flai serve stops: the next start ends it interrupted
+	case err != nil:
+		return refusedEnd(fmt.Sprintf("flai serve could not start the checks of %s against its namespace %s: %v. Ask again once that is put right", j.story, ns, err))
+	}
+	commit := cmp.Or(run.Commit, j.head)
+	end := klusterEnd{outcome: kluster.OutcomePassed, commit: commit, fail: klusterFailure{exit: -1}, log: run.Log, checks: checksResult(*run, commit)}
+	if run.Outcome != kluster.OutcomePassed {
+		step := "checks"
+		if n := len(run.Steps); n > 0 {
+			step = run.Steps[n-1].Name
+		}
+		end.outcome = kluster.OutcomeFailed
+		end.fail = klusterFailure{step: step, exit: failedExit(*run), log: run.Log, err: checksEnded(*run)}
+	}
+	return end
+}
+
+// deployFirst says what a story's agent does when its namespace is not
+// deployed at its head with a deploy that passed.
+func deployFirst(story string) string {
+	return fmt.Sprintf("deploy it first with flai kluster deploy %s --job, or the tool kluster_deploy, which runs the checks once the deploy passes, and ask for a checks run again once its kluster event says it passed", story)
+}
+
+// checksEnded says how a checks run that did not pass ended, and where.
+func checksEnded(run ChecksRun) string {
+	return fmt.Sprintf("the checks run against the namespace ended %s, at %s", run.Outcome, failedCheck(run))
+}
+
+// failedExit is the exit code of the check a run that did not pass stopped
+// at, -1 when it gave none.
+func failedExit(run ChecksRun) int {
+	if n := len(run.Steps); n > 0 && run.Steps[n-1].Exit != nil {
+		return *run.Steps[n-1].Exit
+	}
+	return -1
+}
+
+// checksResult is run, a checks run against a namespace deployed at commit,
+// as a job's state keeps it: each check that ran, passed but for the last of
+// a run that did not pass, which ended as the run did.
+func checksResult(run ChecksRun, commit string) *kluster.ChecksResult {
+	out := &kluster.ChecksResult{Outcome: run.Outcome, Commit: commit, Log: run.Log}
+	for i, step := range run.Steps {
+		c := kluster.Check{Name: step.Name, Outcome: kluster.OutcomePassed, ExitCode: step.Exit, Log: run.Log}
+		if i == len(run.Steps)-1 && run.Outcome != kluster.OutcomePassed {
+			c.Outcome = run.Outcome
+		}
+		out.Checks = append(out.Checks, c)
+	}
+	return out
 }
 
 // KlusterEnv is the environment a checks run for story gets (ADR-0254 §8):
@@ -792,34 +875,52 @@ func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j kluster
 // branch, which git reads in the main checkout. Otherwise it is nil, and so
 // is ns, the namespace. Only what cannot be read is an error.
 func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled func(action, root string) bool) (ns string, env []string, err error) {
+	ns, env, _, err = klusterEnvWhy(repo, story, git, enabled)
+	return ns, env, err
+}
+
+// klusterEnvWhy is KlusterEnv with why, when it gives no variables, in a
+// refusal's words: the action off, no block, no record, a record that did
+// not pass, no branch, or a record at another commit. The review's checks
+// run passes over a story with none silently; a checks run its agent asks
+// for is refused with why.
+func klusterEnvWhy(repo *workitem.Repo, story string, git execx.Runner, enabled func(action, root string) bool) (ns string, env []string, why string, err error) {
 	root, m := mainCheckout(repo), repo.Manifest
-	if m.Kluster == nil || enabled == nil || !enabled(hostapi.ActionKluster, root) {
-		return "", nil, nil
+	switch {
+	case m.Kluster == nil:
+		return "", nil, "the manifest has no kluster: block", nil
+	case enabled == nil || !enabled(hostapi.ActionKluster, root):
+		return "", nil, "the kluster host action is off for this project", nil
 	}
 	story = workitem.CanonicalID(story)
 	ns, err = kluster.StoryNamespace(story)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 	r, ok, err := kluster.ReadRecord(root, ns)
 	if err != nil {
-		return "", nil, fmt.Errorf("read the kluster record of %s's namespace %s, to give its checks the namespace: %w", story, ns, err)
+		return "", nil, "", fmt.Errorf("read the kluster record of %s's namespace %s, to give its checks the namespace: %w", story, ns, err)
 	}
-	if !ok || r.Outcome != kluster.OutcomePassed {
-		return "", nil, nil
-	}
-	if head, _ := kluster.StoryHead(git, root, story); head == "" || head != r.Commit {
-		return "", nil, nil // no branch, or deployed at another head
+	head, _ := kluster.StoryHead(git, root, story)
+	switch {
+	case !ok:
+		return "", nil, fmt.Sprintf("%s's namespace %s was never deployed: it has no record", story, ns), nil
+	case r.Outcome != kluster.OutcomePassed:
+		return "", nil, fmt.Sprintf("the last deploy of %s's namespace %s, at %s, ended %s, not passed", story, ns, orUnresolved(short(r.Commit)), cmp.Or(r.Outcome, "with no outcome")), nil
+	case head == "":
+		return "", nil, fmt.Sprintf("%s has no branch story/%s whose head its namespace %s could be deployed at", story, story, ns), nil
+	case head != r.Commit:
+		return "", nil, fmt.Sprintf("%s's namespace %s was deployed at %s, not at the story branch's head %s", story, ns, short(r.Commit), short(head)), nil
 	}
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 	t, err := kluster.StoryTarget(story, r.Checkout, r.Commit)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
-	return ns, c.Env(t), nil
+	return ns, c.Env(t), "", nil
 }
 
 // checks runs j's story's checks against its namespace once its deploy has
@@ -831,55 +932,96 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 // (ADR-0292 §5), and one that passes resolves it. It answers the run, or nil
 // when none ended.
 func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) *ChecksRun {
-	if p.o.Checks == nil {
+	cfg, env, why := p.checksReady(repo, j.story)
+	if why != "" {
+		// the checks off or none named, or the head moved since the deploy:
+		// the next look deploys it again
+		p.o.Logger.Debug("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "why", why)
 		return nil
+	}
+	run, _ := p.runChecks(ctx, repo, j, ns, cfg, env)
+	return run
+}
+
+// checksReady is the checks configuration and the namespace's variables a
+// checks run for story gets, or why it gets none, in a refusal's words that
+// say what to do: the checks host action off, no checks named, a
+// configuration or a record that cannot be read, or the namespace not
+// deployed at the story branch's head with a deploy that passed.
+func (p *klusterPass) checksReady(repo *workitem.Repo, story string) (cfg ChecksConfig, env []string, why string) {
+	if cfg, why = p.checksConfig(repo); why != "" {
+		return ChecksConfig{}, nil, why
+	}
+	_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled)
+	switch {
+	case err != nil:
+		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", story, "err", err.Error())
+		return ChecksConfig{}, nil, fmt.Sprintf("flai serve could not give the checks %s's namespace (%v)", story, err)
+	case env == nil:
+		return ChecksConfig{}, nil, why
+	}
+	return cfg, env, ""
+}
+
+// checksConfig is the project's checks configuration in repo, or why flai
+// serve runs no checks for it, in a refusal's words naming what the operator
+// does: the checks host action off, no checks named, or checks that cannot
+// be read.
+func (p *klusterPass) checksConfig(repo *workitem.Repo) (ChecksConfig, string) {
+	const off = "the checks host action is off for this project: turning it on with flai serve enable checks is the operator's"
+	if p.o.Checks == nil {
+		return ChecksConfig{}, off
 	}
 	cfg, err := p.o.Checks(repo)
-	if err != nil {
-		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
-		return nil
+	switch {
+	case err != nil:
+		return ChecksConfig{}, fmt.Sprintf("flai serve could not read the project's checks (%v)", err)
+	case !cfg.Enabled:
+		return ChecksConfig{}, off
+	case len(cfg.Commands) == 0:
+		return ChecksConfig{}, "no checks are named for this project: naming them with flai serve checks set, or checks: in the manifest, is the operator's"
 	}
-	if !cfg.Enabled || len(cfg.Commands) == 0 {
-		return nil
-	}
-	_, env, err := KlusterEnv(repo, j.story, gitOf(p.o), p.o.Host.Enabled)
-	if err != nil {
-		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
-		return nil
-	}
-	if env == nil {
-		return nil // the head moved since the deploy: the next look deploys it again
-	}
-	p.journalJob(j, "started", fmt.Sprintf("checks of %s against %s at %s", j.story, ns, short(j.head)))
-	p.o.Logger.Info("kluster checks started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
+	return cfg, ""
+}
+
+// runChecks runs cfg's checks for j's story with env, its namespace ns's
+// variables, for who asked for j, in the story's container when its agent
+// runs in one. It keeps the outcome and the log in the namespace's record at
+// the commit the variables name, resolves the story's checks thread on a
+// pass, and on a failure sends the story back with a thread unless its agent
+// asked for j. It answers the run, or why it could not start one.
+func (p *klusterPass) runChecks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string, cfg ChecksConfig, env []string) (*ChecksRun, error) {
+	commit := cmp.Or(envValue(env, "FLAI_KLUSTER_COMMIT"), j.head)
+	p.journalJob(j, "started", fmt.Sprintf("checks of %s against %s at %s", j.story, ns, short(commit)))
+	p.o.Logger.Info("kluster checks started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "by", j.asker())
 	agents := AgentConfig{}
 	if p.o.Agent != nil {
 		agents = p.o.Agent(p.e.Root)
 	}
 	in := ChecksContainer(repo, j.story, agents, dockerOf(p.o))
-	run, err := p.o.Dir.RunChecksIn(ctx, j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, in, p.o.Now)
+	run, err := p.o.Dir.RunChecksAs(ctx, j.asker(), j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, in, p.o.Now)
 	if err != nil {
-		p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(j.head), err))
+		p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(commit), err))
 		p.o.Logger.Info("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
-		return nil
+		return nil, err
 	}
-	if err := kluster.RecordChecks(mainCheckout(repo), ns, j.head, run.Outcome); err != nil {
-		p.o.Logger.Warn("kluster checks outcome not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "err", err.Error())
+	if err := kluster.RecordChecks(mainCheckout(repo), ns, commit, run.Outcome, run.Log); err != nil {
+		p.o.Logger.Warn("kluster checks outcome not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "outcome", run.Outcome, "err", err.Error())
 	}
 	if run.Outcome == kluster.OutcomePassed {
-		p.journalJob(j, "done", fmt.Sprintf("checks of %s against %s at %s passed", j.story, ns, short(j.head)))
-		p.o.Logger.Info("kluster checks passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
-		p.clear(repo, j.story, checksFailureTitle(j.story), fmt.Sprintf("flai serve's checks of %s against its namespace %s passed at %s.", j.story, ns, short(j.head)))
-		return &run
+		p.journalJob(j, "done", fmt.Sprintf("checks of %s against %s at %s passed", j.story, ns, short(commit)))
+		p.o.Logger.Info("kluster checks passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "by", j.asker())
+		p.clear(repo, j.story, checksFailureTitle(j.story), fmt.Sprintf("flai serve's checks of %s against its namespace %s passed at %s.", j.story, ns, short(commit)))
+		return &run, nil
 	}
 	check := failedCheck(run)
-	p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s %s at %s", j.story, ns, short(j.head), run.Outcome, check))
-	p.o.Logger.Warn("kluster checks failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "check", check, "log", run.Log)
+	p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s %s at %s", j.story, ns, short(commit), run.Outcome, check))
+	p.o.Logger.Warn("kluster checks failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", commit, "outcome", run.Outcome, "check", check, "log", run.Log, "by", j.asker())
 	if !j.asked() {
 		reason := fmt.Sprintf("flai serve's checks of %s against its kluster namespace ended %s, at %s, at commit %s", j.story, run.Outcome, check, short(j.head))
 		p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(unsent string) string { return checksFailureText(j, ns, run, unsent) })
 	}
-	return &run
+	return &run, nil
 }
 
 // failedCheck names the check a run that did not pass ended at.

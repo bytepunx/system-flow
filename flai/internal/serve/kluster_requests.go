@@ -15,9 +15,10 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// A story's agent asking flai serve's kluster pass to deploy or tear down its
-// own story's namespace while the story is in progress (S-0660, ADR-0292 §1,
-// §3 to §5). The agent's MCP tool, or flai kluster deploy --job, writes a
+// A story's agent asking flai serve's kluster pass to deploy its own story's
+// namespace, run the project's checks against it, or tear it down, while the
+// story is in progress (S-0660, S-0661, ADR-0292 §1 to §5). The agent's MCP
+// tool, or flai kluster deploy --job or flai checks run --job, writes a
 // request under .flai-cache/kluster/requests (package kluster, which both
 // sides import); every second, beside the minute's looks, the pass takes each
 // and answers it at once: refused, saying why and what to do, with nothing
@@ -108,10 +109,15 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 		return refuse("the manifest has no kluster: block, so flai serve runs no kluster job for %s: turning the kluster host action on with flai serve enable kluster, which writes one, is the operator's. Say in %s's Notes which criteria you could not verify against a running system, and why", story, story)
 	case !p.on(m):
 		return refuse("the kluster host action is off for this project, so flai serve runs no kluster job for %s: turning it on with flai serve enable kluster is the operator's. Say in %s's Notes which criteria you could not verify against a running system, and why", story, story)
-	case kind != kluster.KindDeploy && kind != kluster.KindTeardown:
-		return refuse("flai serve does not run a kluster %s job for a story's agent; ask for %s or %s", kind, kluster.KindDeploy, kluster.KindTeardown)
-	case kind == kluster.KindDeploy && !klusterDeployable(m):
-		return refuse("deploys are not set up yet for this project: its kluster: block names no deploy command, so flai serve deploys no story. Setting kluster.deploy is the operator's; say in %s's Notes which criteria you could not verify against a running system, and why", story)
+	case kind != kluster.KindDeploy && kind != kluster.KindChecks && kind != kluster.KindTeardown:
+		return refuse("flai serve does not run a kluster %s job for a story's agent; ask for %s, %s, or %s", kind, kluster.KindDeploy, kluster.KindChecks, kluster.KindTeardown)
+	case kind != kluster.KindTeardown && !klusterDeployable(m):
+		return refuse("deploys are not set up yet for this project: its kluster: block names no deploy command, so flai serve deploys no story and runs no checks against a namespace. Setting kluster.deploy is the operator's; say in %s's Notes which criteria you could not verify against a running system, and why", story)
+	}
+	if kind == kluster.KindChecks {
+		if _, why := p.checksConfig(repo); why != "" {
+			return refuse("%s, so flai serve runs no checks against %s's namespace. Say in %s's Notes which criteria you could not verify against a running system, and why", why, story, story)
+		}
 	}
 	it, err := repo.Get(story)
 	if err != nil || it.Type != workitem.Story {
@@ -138,16 +144,16 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 		return refuse("%s has no worktree at %s for flai serve to build in, so nothing is queued: open it with flai stream open %s, and ask again", story, worktree, story)
 	}
 	head := ""
-	if kind == kluster.KindDeploy {
+	if kind != kluster.KindTeardown {
 		if head, err = kluster.StoryHead(gitOf(p.o), root, story); err != nil {
-			return refuse("flai serve could not resolve %s's head to deploy (%v), so nothing is queued", story, err)
+			return refuse("flai serve could not resolve %s's head for its %s (%v), so nothing is queued", story, kind, err)
 		}
 	}
 	// one job per story: the one that runs or waits is answered, but for a
 	// deploy at a newer head, which takes the waiting one's place, as an
 	// asked-for job takes a look's that would not run for a story in progress
 	waiting, ahead, running, found := p.jobOf(story)
-	if found && (running || waiting.kind != kind || (waiting.asked() && head == waiting.head)) {
+	if found && (kind == kluster.KindChecks || running || waiting.kind != kind || (waiting.asked() && head == waiting.head)) {
 		return p.found(file, waiting, ahead), false
 	}
 	dirty, err := dirtyFiles(gitOf(p.o), worktree)
@@ -158,6 +164,17 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 		return refuse("%s's worktree has uncommitted changes to tracked files, and a kluster job builds the committed head only: %s. Commit them, then ask again", story, namedFiles(dirty))
 	case kind == kluster.KindTeardown && !recorded:
 		return refuse("%s's namespace %s has no record, so there is nothing to tear down", story, ns)
+	}
+	if kind == kluster.KindChecks {
+		// not counted against kluster.agent_namespaces: it needs a record
+		// that passed, which a namespace held already has
+		_, env, why, err := klusterEnvWhy(repo, story, gitOf(p.o), p.o.Host.Enabled)
+		switch {
+		case err != nil:
+			return refuse("flai serve could not read whether %s's namespace is deployed at its head (%v), so nothing is queued: ask again, and say so on a thread on %s if it goes on", story, err, story)
+		case env == nil:
+			return refuse("%s, so %s's checks have nothing deployed at its head to run against and nothing is queued: %s", why, story, deployFirst(story))
+		}
 	}
 	if kind == kluster.KindDeploy && !recorded {
 		limit := m.KlusterAgentNamespaces()
@@ -172,13 +189,25 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 		p.o.Logger.Warn("kluster job's state not written", "component", "serve", "root", p.e.Root, "story", story, "job_id", j.id, "err", err.Error())
 	}
 	p.o.Logger.Info("kluster job queued for a story's agent", "component", "serve", "root", p.e.Root, "story", story, "kind", kind, "job_id", j.id, "by", j.by, "commit", head, "ahead", ahead)
-	return kluster.Answer{Job: j.id, Kind: kind, Story: story, Ahead: ahead, Started: true, Log: kluster.LogDir(root, ns)}, true
+	return kluster.Answer{Job: j.id, Kind: kind, Story: story, Ahead: ahead, Started: true, Log: p.logOf(kind, root, ns)}, true
 }
 
-// answerReview answers the deploy request in file for a story in review:
-// with the job of the story that waits or runs, from record when its deploy
-// passed at its branch's head, its checks too while they are on, or saying
-// that the review deploys it; it queues nothing (ADR-0292 §1).
+// logOf is where a job of kind for namespace ns writes its output: the
+// folder of the checks runs' logs for a checks run, the namespace's log
+// folder in root for the rest.
+func (p *klusterPass) logOf(kind, root, ns string) string {
+	if kind == kluster.KindChecks {
+		return p.o.Dir.checksDir()
+	}
+	return kluster.LogDir(root, ns)
+}
+
+// answerReview answers the deploy or checks request in file for a story in
+// review: with the job of the story that waits or runs, from record when its
+// deploy passed at its branch's head, its checks too while they are on, or
+// saying that the review deploys it; it queues nothing (ADR-0292 §1). A
+// checks request answered from the record has its checks run's commit,
+// outcome, and log.
 func (p *klusterPass) answerReview(repo *workitem.Repo, file kluster.Request, record kluster.Record, recorded bool) kluster.Answer {
 	story := file.Story
 	if j, ahead, _, found := p.jobOf(story); found {
@@ -187,11 +216,16 @@ func (p *klusterPass) answerReview(repo *workitem.Repo, file kluster.Request, re
 	root := mainCheckout(repo)
 	ns, _ := kluster.StoryNamespace(story)
 	head, _ := kluster.StoryHead(gitOf(p.o), root, story)
-	if recorded && head != "" && passedAt(record, head, p.checksOn(repo)) {
-		p.o.Logger.Info("kluster request answered from the record", "component", "serve", "root", p.e.Root, "story", story, "by", file.By, "commit", record.Commit)
-		return kluster.Answer{Kind: file.Kind, Story: story, Recorded: true, Commit: record.Commit, Outcome: record.Outcome, Log: kluster.LogDir(root, ns)}
+	checks := file.Kind == kluster.KindChecks
+	if recorded && head != "" && passedAt(record, head, checks || p.checksOn(repo)) {
+		p.o.Logger.Info("kluster request answered from the record", "component", "serve", "root", p.e.Root, "story", story, "kind", file.Kind, "by", file.By, "commit", record.Commit)
+		a := kluster.Answer{Kind: file.Kind, Story: story, Recorded: true, Commit: record.Commit, Outcome: record.Outcome, Log: kluster.LogDir(root, ns)}
+		if checks {
+			a.Commit, a.Outcome, a.Log = record.ChecksCommit, record.ChecksOutcome, record.ChecksLog
+		}
+		return a
 	}
-	return p.refuse(file, fmt.Sprintf("%s is in review, where flai serve deploys it itself at its branch's head on its next look, and again at each new head, so a request for it queues nothing: flai kluster deployments shows its namespace's record, and a deploy that fails there sends it back to in-progress with a thread", story))
+	return p.refuse(file, fmt.Sprintf("%s is in review, where flai serve deploys it itself at its branch's head on its next look, and again at each new head, and runs its checks once the deploy passes, so a request for it queues nothing: flai kluster deployments shows its namespace's record, and a deploy or checks run that fails there sends it back to in-progress with a thread", story))
 }
 
 // found answers the request in file with j, the job of its story that waits
@@ -336,7 +370,8 @@ func isDir(path string) bool {
 // askedState is the state of j, a job a story's agent asked for, as it is
 // queued.
 func askedState(j klusterJob) kluster.AskedJob {
-	return kluster.AskedJob{ID: j.id, Kind: j.kind, Story: j.story, By: j.by, QueuedAt: j.queued}
+	ns, _ := kluster.StoryNamespace(j.story)
+	return kluster.AskedJob{ID: j.id, Kind: j.kind, Story: j.story, By: j.by, Namespace: ns, QueuedAt: j.queued}
 }
 
 // startAsked writes that j, when a story's agent asked for it, has started.
@@ -368,7 +403,7 @@ func (p *klusterPass) endAsked(repo *workitem.Repo, j klusterJob, end klusterEnd
 		s = askedState(j)
 	}
 	s.EndedAt, s.Commit, s.Outcome = p.o.Now().UTC(), cmp.Or(end.commit, j.head), end.outcome
-	s.FailedStep, s.Error, s.Steps, s.Log, s.ExitCode = end.fail.step, end.fail.err, end.steps, end.log, nil
+	s.FailedStep, s.Error, s.Steps, s.Log, s.ExitCode, s.Checks = end.fail.step, end.fail.err, end.steps, end.log, nil, end.checks
 	if end.fail.step != "" {
 		code := end.fail.exit
 		s.ExitCode = &code

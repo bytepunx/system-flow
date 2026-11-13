@@ -1,14 +1,14 @@
 package kluster
 
 // The hand-off of a story's kluster job to flai serve (ADR-0292 §1, §5): the
-// files a story's agent writes to ask flai serve to deploy or tear down its
-// story's namespace, and those flai serve writes to answer it and to keep the
-// job's state, under the project's .flai-cache/kluster/requests, as
-// internal/closeout is for a close-out. The asker, the MCP tool or flai
-// kluster deploy --job, writes S-nnnn.<kind>.request.json; flai serve takes it
-// by renaming it to S-nnnn.<kind>.taken.json and answers in
-// S-nnnn.<kind>.answer.json with the job's id and the jobs ahead of it, or a
-// refusal. The job's state is S-nnnn.job.json, one per story.
+// files a story's agent writes to ask flai serve to deploy its story's
+// namespace, run its checks against it, or tear it down, and those flai serve
+// writes to answer it and to keep the job's state, under the project's
+// .flai-cache/kluster/requests, as internal/closeout is for a close-out. The
+// asker, the MCP tool, flai kluster deploy --job, or flai checks run --job,
+// writes S-nnnn.<kind>.request.json; flai serve takes it by renaming it to
+// S-nnnn.<kind>.taken.json and answers in S-nnnn.<kind>.answer.json with the
+// job's id and the jobs ahead of it, or a refusal. The job's state is S-nnnn.job.json, one per story.
 
 import (
 	"context"
@@ -29,6 +29,9 @@ import (
 const (
 	// KindDeploy builds, loads, and deploys the story at its branch's head.
 	KindDeploy = "deploy"
+	// KindChecks runs the project's checks against the story's namespace as
+	// it is deployed, at the story branch's head.
+	KindChecks = "checks"
 	// KindTeardown tears the story's namespace down.
 	KindTeardown = "teardown"
 )
@@ -49,7 +52,7 @@ const (
 )
 
 // ErrServeNotTaking is a kluster request no flai serve took in time.
-var ErrServeNotTaking = errors.New("flai serve is not running for this project, and a story's agent cannot run a kluster job itself: the operator runs flai kluster deploy or flai kluster teardown in a shell, or starts flai serve, and then you ask again")
+var ErrServeNotTaking = errors.New("flai serve is not running for this project, and a story's agent cannot run a kluster job itself: the operator runs flai kluster deploy, flai checks run, or flai kluster teardown in a shell, or starts flai serve, and then you ask again")
 
 // RequestsDir is where kluster requests, answers, and job states are kept for
 // the project run from root.
@@ -76,7 +79,7 @@ func JobID(story, kind string, queued time.Time) string {
 type Request struct {
 	// Story is the story's ID, zero padded and upper case.
 	Story string `json:"story"`
-	// Kind is KindDeploy or KindTeardown.
+	// Kind is KindDeploy, KindChecks, or KindTeardown.
 	Kind string `json:"kind"`
 	// By is the agent that asks, FLAI_AGENT of the session.
 	By string `json:"by"`
@@ -96,12 +99,14 @@ type Answer struct {
 	// story was waiting or running already and its id is answered.
 	Started bool `json:"started"`
 	// Recorded is an answer from the namespace's record for a story in review
-	// whose deploy passed at its head: Commit and Outcome are the record's,
-	// and nothing is queued.
+	// whose deploy passed at its head, its checks too while they are on:
+	// Commit and Outcome are the record's deploy's, or its checks run's for a
+	// KindChecks request, and nothing is queued.
 	Recorded bool   `json:"recorded,omitempty"`
 	Commit   string `json:"commit,omitempty"`
 	Outcome  string `json:"outcome,omitempty"`
-	// Log is where the job's output is, or the record's logs.
+	// Log is where the job's output is, or the record's logs: for a
+	// KindChecks request answered from the record, its checks run's log.
 	Log string `json:"log,omitempty"`
 	// Reason is why flai serve queued nothing for the request, saying what to
 	// do; "" when it queued a job, found one, or answered from the record.
@@ -124,8 +129,10 @@ type AskedJob struct {
 	Kind  string `json:"kind"`
 	Story string `json:"story"`
 	// By is who asked: the story's agent, or flai serve for the review pass.
-	By       string    `json:"by"`
-	QueuedAt time.Time `json:"queued_at"`
+	By string `json:"by"`
+	// Namespace is the story's namespace the job runs against.
+	Namespace string    `json:"namespace,omitempty"`
+	QueuedAt  time.Time `json:"queued_at"`
 	// StartedAt is when it started, once the jobs ahead of it ended.
 	StartedAt time.Time `json:"started_at,omitzero"`
 	// EndedAt and the rest are set once the job ended: Commit is the head it
@@ -141,7 +148,39 @@ type AskedJob struct {
 	Error      string    `json:"error,omitempty"`
 	Steps      []Step    `json:"steps,omitempty"`
 	// Log is where the job's output is: the log of the step it failed at, or
-	// the folder of its steps' logs.
+	// the folder of its steps' logs; for a KindChecks job, its run's log.
+	Log string `json:"log,omitempty"`
+	// Checks is the checks run against the namespace that the job ran: a
+	// KindChecks job's, or a deploy's once it passed while the checks host
+	// action is on; nil when none ran. A KindChecks job that failed names
+	// the check it failed at as its FailedStep, with that check's ExitCode.
+	Checks *ChecksResult `json:"checks,omitempty"`
+}
+
+// ChecksResult is a checks run against a story's namespace, as its job's
+// state keeps it.
+type ChecksResult struct {
+	// Outcome is OutcomePassed, OutcomeFailed, timed-out, or cancelled.
+	Outcome string `json:"outcome"`
+	// Commit is the head the namespace was deployed at, the one checked.
+	Commit string `json:"commit,omitempty"`
+	// Log is the run's log, every check's output in order.
+	Log string `json:"log,omitempty"`
+	// Checks are the checks that ran, in order: a run stops at the first
+	// that does not pass.
+	Checks []Check `json:"checks,omitempty"`
+}
+
+// Check is one check of a checks run against a story's namespace.
+type Check struct {
+	Name string `json:"name"`
+	// Outcome is OutcomePassed, or how the run ended at this check: failed,
+	// timed-out, or cancelled.
+	Outcome string `json:"outcome"`
+	// ExitCode is the check's exit code, -1 when its program gave none; nil
+	// when it never started.
+	ExitCode *int `json:"exit_code,omitempty"`
+	// Log is the file its output is in, the run's log.
 	Log string `json:"log,omitempty"`
 }
 
@@ -185,10 +224,10 @@ func checkRequest(req Request) (Request, error) {
 	}
 	req.Story = strings.ToUpper(req.Story)
 	switch req.Kind {
-	case KindDeploy, KindTeardown:
+	case KindDeploy, KindChecks, KindTeardown:
 		return req, nil
 	}
-	return req, fmt.Errorf("%q is not a kind of kluster job flai serve runs for %s; ask for %s or %s", req.Kind, req.Story, KindDeploy, KindTeardown)
+	return req, fmt.Errorf("%q is not a kind of kluster job flai serve runs for %s; ask for %s, %s, or %s", req.Kind, req.Story, KindDeploy, KindChecks, KindTeardown)
 }
 
 // Ask asks flai serve for req's kluster job and waits for its answer: the

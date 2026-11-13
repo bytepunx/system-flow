@@ -259,6 +259,28 @@ func TestRunChecksWithGivesEachCheckTheEnvironment(t *testing.T) {
 	}
 }
 
+// ADR-0292 §6: a run keeps who asked for it, and the namespace and commit
+// its variables name, in the story's checks status, where the next story
+// reads it; a run from a shell names no asker, and one with no namespace
+// names none.
+func TestRunChecksAsKeepsWhoAskedTheNamespaceAndTheCommit(t *testing.T) {
+	dir, worktree := checksLab(t)
+	cfg := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "ok", Command: []string{"true"}}}, Timeout: time.Minute}
+	env := []string{"FLAI_KLUSTER_NAMESPACE=s-0005", "FLAI_KLUSTER_COMMIT=" + klHeadA}
+	run, err := dir.RunChecksAs(t.Context(), "agent-S-0005", "S-0005", "/root", worktree, cfg, env, nil, nowFixed)
+	if err != nil || run.AskedBy != "agent-S-0005" || run.Namespace != "s-0005" || run.Commit != klHeadA {
+		t.Fatalf("run: %+v %v", run, err)
+	}
+	kept, ok := dir.ChecksState("S-0005")
+	if !ok || kept.AskedBy != "agent-S-0005" || kept.Namespace != "s-0005" || kept.Commit != klHeadA || kept.Outcome != "passed" {
+		t.Errorf("the checks status = %+v, want who asked, the namespace, and the commit", kept)
+	}
+	run, err = dir.RunChecks("S-0006", "/root", worktree, cfg, nowFixed)
+	if err != nil || run.AskedBy != "" || run.Namespace != "" || run.Commit != "" {
+		t.Errorf("a run from a shell with no namespace: %+v %v", run, err)
+	}
+}
+
 // withChecks has the lab's pass run cfg's checks, with their state in a
 // folder of the test's own, as flai serve's options name them.
 func (lab *klusterLab) withChecks(cfg ChecksConfig) {

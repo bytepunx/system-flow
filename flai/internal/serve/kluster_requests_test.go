@@ -522,3 +522,291 @@ func TestAnAskedJobLeftByAnEarlierServeEndsInterrupted(t *testing.T) {
 		})
 	}
 }
+
+// deployed makes a story in progress at klHeadA whose agent asked for a
+// deploy that passed, its checks with it while the lab's checks are on.
+func (lab *klusterLab) deployed(title string) string {
+	lab.t.Helper()
+	story := lab.inProgress(title, klHeadA)
+	if a := lab.ask(story, kluster.KindDeploy, "agent-"+story); !a.Started {
+		lab.t.Fatalf("the deploy of %s was not queued: %+v", story, a)
+	}
+	lab.drain()
+	if j := lab.asked(story); j.Outcome != kluster.OutcomePassed {
+		lab.t.Fatalf("the deploy of %s = %+v, want it passed", story, j)
+	}
+	return story
+}
+
+// ADR-0292 §1, §2, §6: a checks run a story's agent asks for runs against its
+// namespace as deployed, with its variables, and is recorded with its commit,
+// outcome, log, and who asked, in the namespace's record, the story's checks
+// status, its job state, its kluster event, and the journal; a pass resolves
+// the story's open checks thread, and nothing is deployed again.
+func TestAnAskedChecksRunIsRecordedWithItsCommitOutcomeLogAndAsker(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, out := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.deployed("Checked")
+	agent := "agent-" + story
+	ns, _ := kluster.StoryNamespace(story)
+	lab.pass.report(lab.repo, story, checksFailureTitle(story), "an earlier review's checks failed")
+	_ = os.Remove(out)
+	calls := len(lab.kluster.all())
+	journal := len(lab.entries())
+
+	a := lab.ask(story, kluster.KindChecks, agent)
+	if a.Refused() || !a.Started || a.Job == "" || a.Kind != kluster.KindChecks || a.Ahead != 0 {
+		t.Fatalf("answer = %+v, want a checks job started with none ahead", a)
+	}
+	if j := lab.asked(story); j.ID != a.Job || j.Kind != kluster.KindChecks || !j.Waiting() || j.Namespace != ns {
+		t.Fatalf("the job's state at queue = %+v, want checks job %s waiting against %s", j, a.Job, ns)
+	}
+	lab.drain()
+	if data, _ := os.ReadFile(out); string(data) != ns {
+		t.Fatalf("the checks saw the namespace %q, want %q", data, ns)
+	}
+	if got := lab.kluster.since(calls); len(got) != 0 {
+		t.Errorf("an asked checks run called the kluster: %v", got)
+	}
+	run, ok := lab.opts.Dir.ChecksState(story)
+	if !ok || run.Outcome != kluster.OutcomePassed || run.AskedBy != agent || run.Commit != klHeadA || run.Namespace != ns || run.Log == "" {
+		t.Fatalf("checks status = %+v, want a passed run at %s against %s asked by %s", run, short(klHeadA), ns, agent)
+	}
+	r, _, _ := kluster.ReadRecord(lab.root, ns)
+	if r.ChecksCommit != klHeadA || r.ChecksOutcome != kluster.OutcomePassed || r.ChecksLog != run.Log {
+		t.Errorf("the namespace's record = %+v, want the checks passed at %s with log %s", r, short(klHeadA), run.Log)
+	}
+	j := lab.asked(story)
+	if !j.Ended() || j.StartedAt.IsZero() || j.Outcome != kluster.OutcomePassed || j.Commit != klHeadA || j.Log != run.Log || j.ExitCode != nil || j.Checks == nil {
+		t.Fatalf("the job's state at its end = %+v, want it passed at %s with the run's log", j, short(klHeadA))
+	}
+	if c := j.Checks; c.Outcome != kluster.OutcomePassed || c.Commit != klHeadA || c.Log != run.Log || len(c.Checks) != 1 ||
+		c.Checks[0].Name != "golden" || c.Checks[0].Outcome != kluster.OutcomePassed || c.Checks[0].ExitCode == nil || *c.Checks[0].ExitCode != 0 || c.Checks[0].Log != run.Log {
+		t.Errorf("the job's checks = %+v, want golden passed with exit code 0 and the run's log", c)
+	}
+	evs := lab.klusterEvents()
+	last := evs[len(evs)-1].Fields
+	if last[inbox.FieldJob] != a.Job || last[inbox.FieldKind] != kluster.KindChecks || last[inbox.FieldOutcome] != kluster.OutcomePassed || last[inbox.FieldCommit] != klHeadA || last[inbox.FieldLog] != run.Log {
+		t.Errorf("the checks job's event = %v, want it passed at %s with the run's log", last, short(klHeadA))
+	}
+	entries := lab.entries()[journal:]
+	if len(entries) == 0 {
+		t.Fatal("the checks run kept nothing in the journal")
+	}
+	for _, e := range entries {
+		if e.By != agent || !strings.Contains(e.Detail, "checks of "+story) || !strings.Contains(e.Detail, "asked by "+agent) {
+			t.Errorf("journal entry %+v does not name the checks and who asked", e)
+		}
+	}
+	if ths := lab.titled(story, checksFailureTitle(story)); len(ths) != 1 || ths[0].Open() {
+		t.Errorf("the passing run did not resolve the story's checks thread")
+	}
+}
+
+// ADR-0292 §5: a checks run its agent asked for that fails opens no thread,
+// sends nothing back, and its state and event name the check, its exit code,
+// and the log; its outcome goes in the namespace's record.
+func TestAFailedAskedChecksRunOpensNoThreadAndItsEventNamesTheCheck(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	passing, _ := nsCheck(t, 0)
+	lab.withChecks(passing)
+	story := lab.deployed("Failing")
+	failing, _ := nsCheck(t, 3)
+	lab.withChecks(failing)
+
+	a := lab.ask(story, kluster.KindChecks, klAgent)
+	lab.drain()
+	if ths := lab.titled(story, checksFailureTitle(story)); len(ths) != 0 {
+		t.Fatalf("a failed asked checks run opened %d threads", len(ths))
+	}
+	if got := lab.status(story); got != workitem.InProgress {
+		t.Fatalf("the story is %s after its asked checks run failed, want it left in progress", got)
+	}
+	run, _ := lab.opts.Dir.ChecksState(story)
+	j := lab.asked(story)
+	if j.ID != a.Job || j.Outcome != kluster.OutcomeFailed || j.FailedStep != "golden" || j.ExitCode == nil || *j.ExitCode != 3 || j.Log != run.Log || !strings.Contains(j.Error, "the check golden") {
+		t.Fatalf("the job's state = %+v, want it failed at the check golden with exit code 3 and the run's log", j)
+	}
+	if c := j.Checks; c == nil || c.Outcome != kluster.OutcomeFailed || len(c.Checks) != 1 || c.Checks[0].Outcome != kluster.OutcomeFailed || *c.Checks[0].ExitCode != 3 {
+		t.Errorf("the job's checks = %+v, want golden failed with exit code 3", c)
+	}
+	evs := lab.klusterEvents()
+	f := evs[len(evs)-1].Fields
+	if f[inbox.FieldJob] != a.Job || f[inbox.FieldKind] != kluster.KindChecks || f[inbox.FieldOutcome] != kluster.OutcomeFailed || f[inbox.FieldFailedStep] != "golden" || f[inbox.FieldExitCode] != "3" || f[inbox.FieldLog] != run.Log {
+		t.Fatalf("the event's fields = %v, want the failed check, its exit code, and the log", f)
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	if r, _, _ := kluster.ReadRecord(lab.root, ns); r.ChecksCommit != klHeadA || r.ChecksOutcome != kluster.OutcomeFailed || r.ChecksLog != run.Log {
+		t.Errorf("the namespace's record = %+v, want the failed checks run kept", r)
+	}
+}
+
+// ADR-0292 §1: a checks request flai serve cannot run is refused at once,
+// saying why and what to do, and queues nothing.
+func TestAChecksRequestIsRefusedSayingWhy(t *testing.T) {
+	failingDeploy := func(lab *klusterLab, story string) {
+		ns, _ := kluster.StoryNamespace(story)
+		lab.kluster.fail = func(string, string) error {
+			return &kluster.StepError{Namespace: ns, Step: kluster.StepDeploy, ExitCode: 2, Err: errors.New("exit status 2")}
+		}
+		lab.ask(story, kluster.KindDeploy, klAgent)
+		lab.drain()
+	}
+	passingDeploy := func(lab *klusterLab, story string) {
+		lab.ask(story, kluster.KindDeploy, klAgent)
+		lab.drain()
+	}
+	checks, _ := nsCheck(t, 0)
+	off, none := checks, checks
+	off.Enabled, none.Commands = false, nil
+	for _, c := range []struct {
+		name, block string
+		cfg         ChecksConfig
+		set         func(lab *klusterLab, story string)
+		want        []string
+	}{
+		{"never deployed", klusterBlock, checks, nil, []string{"was never deployed", "deploy it first with flai kluster deploy", "--job", "kluster_deploy"}},
+		{"its deploy failed", klusterBlock, checks, failingDeploy, []string{"ended failed, not passed", "deploy it first", "kluster_deploy"}},
+		{"deployed at another head", klusterBlock, checks, func(lab *klusterLab, s string) {
+			passingDeploy(lab, s)
+			lab.git.set(s, klHeadB)
+		}, []string{"deployed at " + short(klHeadA), "not at the story branch's head " + short(klHeadB), "deploy it first"}},
+		{"checks action off", klusterBlock, off, nil, []string{"checks host action is off", "flai serve enable checks", "operator's"}},
+		{"no checks named", klusterBlock, none, nil, []string{"no checks are named", "flai serve checks set", "operator's"}},
+		{"kluster action off", klusterBlock, checks, func(lab *klusterLab, _ string) { lab.setOn(false) }, []string{"kluster host action is off", "flai serve enable kluster"}},
+		{"no deploy", klusterNoDeploy, checks, nil, []string{"not set up yet", "runs no checks"}},
+		{"another column", klusterBlock, checks, func(lab *klusterLab, s string) {
+			passingDeploy(lab, s)
+			lab.move(s, workitem.Ready)
+		}, []string{"is ready", "only while the story is in progress"}},
+		{"uncommitted changes", klusterBlock, checks, func(lab *klusterLab, s string) {
+			passingDeploy(lab, s)
+			lab.git.setDirty(lab.repo.WorktreePath(s), " M flai/cmd/x.go\n")
+		}, []string{"uncommitted changes", "flai/cmd/x.go", "Commit them"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newKlusterLab(t, c.block)
+			lab.withChecks(c.cfg)
+			story := lab.inProgress("Refused", klHeadA)
+			if c.set != nil {
+				c.set(lab, story)
+			}
+			calls := len(lab.kluster.all())
+			a := lab.ask(story, kluster.KindChecks, klAgent)
+			if !a.Refused() || a.Job != "" || a.Started {
+				t.Fatalf("answer = %+v, want a refusal", a)
+			}
+			for _, w := range c.want {
+				if !strings.Contains(a.Reason, w) {
+					t.Errorf("the refusal does not say %q:\n%s", w, a.Reason)
+				}
+			}
+			if n := lab.queued(); n != 0 {
+				t.Errorf("a refused request queued %d jobs", n)
+			}
+			if j, ok, _ := kluster.ReadAskedJob(lab.root, story); ok && j.Kind == kluster.KindChecks {
+				t.Errorf("a refused request wrote a checks job's state: %+v", j)
+			}
+			lab.drain()
+			if got := lab.kluster.since(calls); len(got) != 0 {
+				t.Errorf("a refused request ran %v", got)
+			}
+		})
+	}
+}
+
+// ADR-0292 §1, §3: a checks request waits in the one queue behind the jobs
+// ahead of it, and runs after them, one at a time.
+func TestAChecksRequestQueuedBehindADeployRunsAfterIt(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, _ := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.deployed("Checked")
+	other := lab.inProgress("Deployed", klHeadB)
+	journal := len(lab.entries())
+
+	if d := lab.ask(other, kluster.KindDeploy, "agent-"+other); !d.Started || d.Ahead != 0 {
+		t.Fatalf("the other story's deploy = %+v, want it started with none ahead", d)
+	}
+	a := lab.ask(story, kluster.KindChecks, klAgent)
+	if !a.Started || a.Ahead != 1 {
+		t.Fatalf("the checks request behind a deploy = %+v, want it started with 1 ahead", a)
+	}
+	lab.drain()
+	var order []string
+	for _, e := range lab.entries()[journal:] {
+		if e.Outcome == "started" {
+			order = append(order, strings.SplitN(e.Detail, " at ", 2)[0])
+		}
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	otherNS, _ := kluster.StoryNamespace(other)
+	want := []string{"deploy of " + other + " into " + otherNS, "checks of " + other + " against " + otherNS, "checks of " + story + " against " + ns}
+	if strings.Join(order, ";") != strings.Join(want, ";") {
+		t.Fatalf("jobs started in the order %v, want %v", order, want)
+	}
+	if j := lab.asked(story); j.ID != a.Job || j.Outcome != kluster.OutcomePassed {
+		t.Errorf("the checks job's state = %+v, want it passed", j)
+	}
+}
+
+// ADR-0292 §1: one job per story: a checks request while a job of the story
+// waits is answered with that job, a deploy's or a checks run's, and queues
+// nothing; a deploy request while its checks run waits is answered with it.
+func TestAChecksRequestWhileAJobOfTheStoryWaitsIsAnsweredWithIt(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, _ := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.deployed("Checked")
+
+	a := lab.ask(story, kluster.KindChecks, klAgent)
+	if !a.Started {
+		t.Fatalf("answer = %+v, want a checks job started", a)
+	}
+	if again := lab.ask(story, kluster.KindChecks, klAgent); again.Started || again.Job != a.Job || again.Refused() {
+		t.Fatalf("a checks request while the checks job waits = %+v, want job %s found", again, a.Job)
+	}
+	if d := lab.ask(story, kluster.KindDeploy, klAgent); d.Started || d.Job != a.Job || d.Refused() {
+		t.Fatalf("a deploy request while the checks job waits = %+v, want job %s found", d, a.Job)
+	}
+	if n := lab.queued(); n != 1 {
+		t.Fatalf("queue holds %d jobs, want the one checks job", n)
+	}
+	lab.drain()
+
+	lab.git.set(story, klHeadB)
+	d := lab.ask(story, kluster.KindDeploy, klAgent)
+	if c := lab.ask(story, kluster.KindChecks, klAgent); c.Started || c.Job != d.Job || c.Refused() {
+		t.Fatalf("a checks request while the deploy waits = %+v, want the deploy's job %s", c, d.Job)
+	}
+	if n := lab.queued(); n != 1 {
+		t.Fatalf("queue holds %d jobs, want the one deploy", n)
+	}
+}
+
+// ADR-0292 §1: a checks request for a story in review whose deploy and checks
+// passed at its head is answered from the record, its checks run's commit,
+// outcome, and log, and queues nothing.
+func TestAChecksRequestForAStoryInReviewIsAnsweredFromTheRecord(t *testing.T) {
+	lab := newKlusterLab(t, klusterBlock)
+	cfg, _ := nsCheck(t, 0)
+	lab.withChecks(cfg)
+	story := lab.inReview("Review", klHeadA)
+	lab.round()
+	ns, _ := kluster.StoryNamespace(story)
+	r, _, _ := kluster.ReadRecord(lab.root, ns)
+	if r.ChecksLog == "" || r.AskedBy != forgeAuthor {
+		t.Fatalf("the review's record = %+v, want its checks log kept and asked by %s", r, forgeAuthor)
+	}
+	if run, _ := lab.opts.Dir.ChecksState(story); run.AskedBy != forgeAuthor || run.Commit != klHeadA || run.Namespace != ns {
+		t.Errorf("the review's checks status = %+v, want it asked by %s at %s against %s", run, forgeAuthor, short(klHeadA), ns)
+	}
+	a := lab.ask(story, kluster.KindChecks, klAgent)
+	if !a.Recorded || a.Commit != klHeadA || a.Outcome != kluster.OutcomePassed || a.Log != r.ChecksLog || a.Job != "" || a.Refused() {
+		t.Fatalf("answer in review = %+v, want the record's checks run", a)
+	}
+	if n := lab.queued(); n != 0 {
+		t.Fatalf("a checks request in review queued %d jobs", n)
+	}
+}
