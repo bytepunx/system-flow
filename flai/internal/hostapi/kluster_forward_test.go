@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // fakeKubectl stands in for kubectl port-forward: each start runs script in
@@ -266,6 +267,68 @@ func TestATeardownStopsItsNamespacesForwards(t *testing.T) {
 	}
 	if got := c.called(); len(got) != 1 || !strings.HasPrefix(got[0], "teardown S-0001") {
 		t.Errorf("the teardown ran: %v", got)
+	}
+}
+
+// S-0663: a forward into a story in progress's namespace starts and stops as
+// one into a story in review's does: neither looks at the story's column.
+func TestAForwardIntoAStoryInProgressStartsAndStopsAsOneInReview(t *testing.T) {
+	kc := fakeForwards(t, forwarding)
+	p, c := forwardBerth(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the heads do not matter to a forward
+	id, head := capstanAt(t, p, map[string]string{})
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: head, StartedAt: t0, Outcome: kluster.OutcomePassed, Steps: passedSteps(kluster.StepDeploy)})
+	c.services = append(c.services, KlusterService{Namespace: "s-0004", Name: "web", Ports: []KlusterPort{{Port: 8080}}})
+	on, journal := true, []Entry{}
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
+	host := klusterHost(&on, &journal, jobs)
+	for i, tc := range []struct{ story, ns, column string }{{"S-0001", "s-0001", workitem.Review}, {id, "s-0004", workitem.InProgress}} {
+		if it, err := repo.Get(tc.story); err != nil || it.Status != tc.column {
+			t.Fatalf("%s is %s: %v", tc.story, tc.column, err)
+		}
+		params := `{"namespace":"` + tc.ns + `","service":"web","port":8080,"request_id":"req-0000000`
+		var w struct {
+			Data KlusterForward `json:"data"`
+		}
+		if e := ask(t, host, p, "kluster.forward.start", params+string(rune('1'+2*i))+`"}`, &w); e != nil {
+			t.Fatalf("%s: %+v", tc.column, e)
+		}
+		if w.Data != (KlusterForward{Namespace: tc.ns, Service: "web", Port: 8080, LocalPort: 41234, Address: "0.0.0.0", StartedAt: t0.UTC().Format(time.RFC3339), Running: true}) {
+			t.Errorf("%s: the forward, on the free port, bound to 0.0.0.0: %+v", tc.column, w.Data)
+		}
+		if got := kc.started(); len(got) != i+1 || !slices.Contains(got[i], tc.ns) || got[i][len(got[i])-1] != "41234:8080" {
+			t.Errorf("%s: kubectl port-forward into %s: %v", tc.column, tc.ns, got)
+		}
+		var d KlusterDeployments
+		if e := ask(t, host, p, "kluster.deployments", `{}`, &d); e != nil {
+			t.Fatal(e)
+		}
+		listed := false
+		for _, row := range d.Deployments {
+			if row.Namespace == tc.ns {
+				listed = row.Column == tc.column && len(row.Access.Forwards) == 1 && row.Access.Forwards[0].Running
+			}
+		}
+		if !listed {
+			t.Errorf("%s: kluster.deployments lists the forward under its namespace: %+v", tc.column, d.Deployments)
+		}
+		if e := ask(t, host, p, "kluster.forward.stop", params+string(rune('2'+2*i))+`"}`, &w); e != nil {
+			t.Fatalf("%s: %+v", tc.column, e)
+		}
+		if w.Data.Running || w.Data.EndedAt == "" {
+			t.Errorf("%s: the forward, stopped: %+v", tc.column, w.Data)
+		}
+		if left := jobs.Forwards(p.Root, tc.ns); len(left) != 0 {
+			t.Errorf("%s: a stopped forward is forgotten: %+v", tc.column, left)
+		}
+	}
+	jobs.Wait()
+	if len(journal) != 4 {
+		t.Errorf("each start and stop is journalled: %+v", journal)
 	}
 }
 

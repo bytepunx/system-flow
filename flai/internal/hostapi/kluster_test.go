@@ -17,6 +17,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -546,7 +547,7 @@ func passedSteps(names ...string) []kluster.Step {
 }
 
 func TestKlusterDeploymentMethodsAreAReadAndWritesUnderTheAction(t *testing.T) {
-	for _, name := range []string{"kluster.deploy", "kluster.teardown", "kluster.promote"} {
+	for _, name := range []string{"kluster.deploy", "kluster.checks", "kluster.teardown", "kluster.promote"} {
 		if sp := klusterSpecs()[name]; sp.action != ActionKluster || sp.reads || sp.do == nil || sp.describe == nil {
 			t.Errorf("%s is a write under the kluster action, answered in flai serve: %+v", name, sp)
 		}
@@ -769,6 +770,7 @@ func TestKlusterDeploymentWritesAreRefusedWhileTheActionIsOff(t *testing.T) {
 		{"kluster.deploy", `{"story":"S-0001","request_id":"req-00000001"}`},
 		{"kluster.teardown", `{"story":"S-0001","request_id":"req-00000002"}`},
 		{"kluster.promote", reqID(3)},
+		{"kluster.checks", `{"story":"S-0001","request_id":"req-00000004"}`},
 	} {
 		e := ask(t, host, p, call.method, call.params, nil)
 		if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable kluster") {
@@ -779,7 +781,7 @@ func TestKlusterDeploymentWritesAreRefusedWhileTheActionIsOff(t *testing.T) {
 	if got := c.called(); len(got) != 0 {
 		t.Errorf("nothing runs while the action is off: %v", got)
 	}
-	if len(journal) != 3 || journal[0].Outcome != "disabled" || journal[0].Action != ActionKluster {
+	if len(journal) != 4 || journal[0].Outcome != "disabled" || journal[0].Action != ActionKluster {
 		t.Errorf("each refusal is journalled as disabled: %+v", journal)
 	}
 }
@@ -790,6 +792,8 @@ func TestKlusterDeployStartsTheStorysDeployFromItsWorktreeAtItsHead(t *testing.T
 	p, heads := berth(t, c)
 	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
 	host := klusterHost(&on, &journal, jobs)
+	// a story in review's deploy runs here, as it did before S-0663
+	asked := fakeAsk(t, kluster.Answer{}, errors.New("a story in review's deploy is not asked of flai serve"))
 
 	var w struct {
 		Data KlusterJob `json:"data"`
@@ -851,6 +855,9 @@ func TestKlusterDeployStartsTheStorysDeployFromItsWorktreeAtItsHead(t *testing.T
 	}
 	if end.Running != nil || end.Last == nil || end.Last.Outcome != "done" || end.Last.Action != "deploy" {
 		t.Errorf("the list once the deploy ended: %+v %+v", end.Running, end.Last)
+	}
+	if got := asked(); len(got) != 0 {
+		t.Errorf("nothing was asked of flai serve: %+v", got)
 	}
 }
 
@@ -918,6 +925,353 @@ func TestKlusterTeardownStartsOnlyForARecordedDeployment(t *testing.T) {
 	jobs.Wait()
 	if got := c.called(); len(got) != 1 || got[0] != "teardown S-0001 "+filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0001") {
 		t.Errorf("the teardown ran in the story's worktree: %v", got)
+	}
+}
+
+// fakeAsk answers every request asked of flai serve's kluster pass with a
+// and err, and keeps what was asked.
+func fakeAsk(t *testing.T, a kluster.Answer, err error) func() []kluster.Request {
+	t.Helper()
+	was := klusterAsk
+	t.Cleanup(func() { klusterAsk = was })
+	var mu sync.Mutex
+	var asked []kluster.Request
+	klusterAsk = func(_ context.Context, _ string, req kluster.Request, _ kluster.Wait) (kluster.Answer, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		asked = append(asked, req)
+		return a, err
+	}
+	return func() []kluster.Request {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(asked)
+	}
+}
+
+// servesRequests stands in for flai serve's kluster pass, taking each
+// request under root's .flai-cache/kluster/requests as kluster.Ask writes it
+// and answering it with answer, and keeps what it took.
+func servesRequests(t *testing.T, root string, answer func(kluster.Request) kluster.Answer) func() []kluster.Request {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	var mu sync.Mutex
+	var took []kluster.Request
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for ctx.Err() == nil {
+			pending, _ := kluster.Pending(root)
+			for _, f := range pending {
+				req, ok, err := kluster.Take(root, f.Story, f.Kind)
+				if err != nil || !ok {
+					continue
+				}
+				mu.Lock()
+				took = append(took, req)
+				mu.Unlock()
+				if err := kluster.WriteAnswer(root, answer(req)); err != nil {
+					t.Error(err)
+				}
+			}
+			select {
+			case <-ctx.Done():
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+	}()
+	t.Cleanup(func() { cancel(); <-done })
+	return func() []kluster.Request {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(took)
+	}
+}
+
+// capstanAt adds to berth's project S-0004 Capstan, in progress, with a
+// worktree at head, its branch's head, and answers its ID and head.
+func capstanAt(t *testing.T, p channel.Project, heads map[string]string) (string, string) {
+	t.Helper()
+	id := inProgress(t, p.Root, "Capstan")
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wt := repo.WorktreePath(id)
+	if err := os.MkdirAll(wt, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	head := strings.Repeat("d", 40)
+	heads["refs/heads/story/"+id], heads[wt] = head, head
+	return id, head
+}
+
+// holdKlusterLock holds the project's kluster lock for j, as a job flai
+// kluster runs in a shell does, until the test ends.
+func holdKlusterLock(t *testing.T, root string, j kluster.Job) {
+	t.Helper()
+	data, err := json.Marshal(j)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(kluster.Dir(root), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(kluster.Dir(root), "job.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	unlock, err := filelock.Lock(filepath.Join(kluster.Dir(root), "job.lock"), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(unlock)
+}
+
+// klusterChecksHost is klusterHost with the checks host action on when
+// checks says so.
+func klusterChecksHost(on, checks *bool, journal *[]Entry, jobs *KlusterJobs) Host {
+	h := klusterHost(on, journal, jobs)
+	h.Enabled = func(action, _ string) bool {
+		return (*on && action == ActionKluster) || (*checks && action == ActionChecks)
+	}
+	return h
+}
+
+// S-0663: the operator's deploy of a story in progress is asked of flai
+// serve's kluster pass, as its agent's is (S-0660), naming the operator as
+// who asks, and is answered at once with the job queued, or the story's job
+// that waits or runs; nothing runs here, and kluster's lock held by another
+// job does not refuse it, since it waits in the pass's queue.
+func TestKlusterDeployOfAStoryInProgressIsAskedOfFlaiServeAsTheOperator(t *testing.T) {
+	on, journal := true, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	id, _ := capstanAt(t, p, heads)
+	holdKlusterLock(t, p.Root, kluster.Job{Kind: KlusterDeploy, Story: "S-0001", Namespace: "s-0001", StartedAt: t0})
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
+	host := klusterHost(&on, &journal, jobs)
+	n := 0
+	took := servesRequests(t, p.Root, func(r kluster.Request) kluster.Answer {
+		n++
+		return kluster.Answer{Job: kluster.JobID(r.Story, r.Kind, t0), Kind: r.Kind, Story: r.Story, Ahead: 1, Started: n == 1, Log: kluster.LogDir(p.Root, "s-0004")}
+	})
+
+	var w struct {
+		Data KlusterAsked `json:"data"`
+	}
+	if e := ask(t, host, p, "kluster.deploy", `{"story":"`+id+`","request_id":"req-00000001"}`, &w); e != nil {
+		t.Fatal(e)
+	}
+	want := KlusterAsked{KlusterJob: KlusterJob{Action: "deploy", Cluster: "harbour", Story: id, Namespace: "s-0004", StartedAt: "2026-09-20T08:00:00Z", Log: ".flai-cache/kluster/logs/s-0004", Logs: ".flai-cache/kluster/logs/s-0004"},
+		Job: id + "-deploy-20260920T080000Z", Ahead: 1, Queued: true, AskedBy: "olive"}
+	if w.Data != want {
+		t.Errorf("kluster.deploy answers the job flai serve queued: %+v, want %+v", w.Data, want)
+	}
+	if got := took(); len(got) != 1 || got[0] != (kluster.Request{Story: id, Kind: kluster.KindDeploy, By: "olive", At: t0}) {
+		t.Errorf("the request names the operator as who asks: %+v", got)
+	}
+	if len(journal) != 1 || journal[0].Outcome != "done" || journal[0].Detail != "kluster deploy of "+id+" in the namespace s-0004, asked by olive: queued in flai serve's kluster queue as "+id+"-deploy-20260920T080000Z with 1 ahead, its output in .flai-cache/kluster/logs/s-0004" {
+		t.Errorf("the request is journalled: %+v", journal)
+	}
+
+	// asked again while it waits: the story's job is answered, not queued
+	var raw map[string]any
+	if e := ask(t, host, p, "kluster.deploy", `{"story":"`+id+`","request_id":"req-00000002"}`, &raw); e != nil {
+		t.Fatal(e)
+	}
+	data, _ := raw["data"].(map[string]any)
+	for _, k := range []string{"action", "cluster", "story", "namespace", "started_at", "log", "logs", "job", "ahead", "queued", "asked_by"} {
+		if _, ok := data[k]; !ok {
+			t.Errorf("the answer has %s: %v", k, data)
+		}
+	}
+	if data["queued"] != false || data["job"] != id+"-deploy-20260920T080000Z" {
+		t.Errorf("the story's job that waits: %v", data)
+	}
+	if len(journal) != 2 || !strings.Contains(journal[1].Detail, "answered with "+id+"'s job "+id+"-deploy-20260920T080000Z, which waits or runs") {
+		t.Errorf("the second request is journalled: %+v", journal)
+	}
+
+	// a story in review's deploy is still refused while the lock is held
+	if e := ask(t, host, p, "kluster.deploy", `{"story":"S-0001","request_id":"req-00000003"}`, nil); e == nil || e.Code != Rule || !strings.Contains(e.Message, "kluster deploy of S-0001 in the namespace s-0001 runs since 2026-09-20T08:00:00Z") {
+		t.Errorf("a review deploy while kluster's lock is held: %+v", e)
+	}
+	jobs.Wait()
+	if got := c.called(); len(got) != 0 {
+		t.Errorf("nothing ran here: %v", got)
+	}
+}
+
+// S-0663, S-0660: flai serve refuses the operator's deploy of a story in
+// progress with no namespace over kluster.agent_namespaces, in its own
+// sentence, which kluster.deploy answers as a rule; nothing is queued.
+func TestKlusterDeployOfAStoryInProgressOverTheLimitIsRefusedInFlaiServesWords(t *testing.T) {
+	on, journal := true, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	id, _ := capstanAt(t, p, heads)
+	reason := id + " has no namespace yet, and 1 story in progress hold one already, the most kluster.agent_namespaces allows (1): S-0005, deployed at eeeeeeeeeeee, started 2026-09-20T08:00:00Z. A namespace frees only when its story is accepted, cancelled, moved back to ready or backlog, or torn down, so nothing is queued"
+	asked := fakeAsk(t, kluster.Answer{Kind: kluster.KindDeploy, Story: id, Reason: reason}, nil)
+	host := klusterHost(&on, &journal, NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }}))
+	e := ask(t, host, p, "kluster.deploy", `{"story":"`+id+`","request_id":"req-00000001"}`, nil)
+	if e == nil || e.Code != Rule || e.Message != reason {
+		t.Errorf("over the limit: %+v", e)
+	}
+	if got := asked(); len(got) != 1 || got[0].By != "olive" || got[0].Kind != kluster.KindDeploy {
+		t.Errorf("the request flai serve refused names the operator: %+v", got)
+	}
+	if len(journal) != 1 || journal[0].Outcome != "failed" || journal[0].Detail != reason {
+		t.Errorf("the refusal is journalled: %+v", journal)
+	}
+	if got := c.called(); len(got) != 0 {
+		t.Errorf("nothing ran: %v", got)
+	}
+}
+
+// S-0663: kluster.checks asks flai serve's kluster pass for a checks run
+// against a story in progress's namespace deployed at its head (S-0661),
+// naming the operator as who asks, and answers the run at once.
+func TestKlusterChecksOfAStoryInProgressIsAskedOfFlaiServeAsTheOperator(t *testing.T) {
+	on, checks, journal := true, true, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	id, head := capstanAt(t, p, heads)
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: head, StartedAt: t0, Outcome: kluster.OutcomePassed, Steps: passedSteps(kluster.StepDeploy)})
+	checksDir := filepath.Join(p.Root, ".flai-cache", "serve", "checks")
+	took := servesRequests(t, p.Root, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: kluster.JobID(r.Story, r.Kind, t0), Kind: r.Kind, Story: r.Story, Started: true, Log: checksDir}
+	})
+	host := klusterChecksHost(&on, &checks, &journal, NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }}))
+	var w struct {
+		Data KlusterAsked `json:"data"`
+	}
+	if e := ask(t, host, p, "kluster.checks", `{"story":"`+strings.ToLower(id)+`","request_id":"req-00000001"}`, &w); e != nil {
+		t.Fatal(e)
+	}
+	want := KlusterAsked{KlusterJob: KlusterJob{Action: "checks", Cluster: "harbour", Story: id, Namespace: "s-0004", StartedAt: "2026-09-20T08:00:00Z", Log: ".flai-cache/serve/checks", Logs: ".flai-cache/kluster/logs/s-0004"},
+		Job: id + "-checks-20260920T080000Z", Queued: true, AskedBy: "olive"}
+	if w.Data != want {
+		t.Errorf("kluster.checks answers the run flai serve queued: %+v, want %+v", w.Data, want)
+	}
+	if got := took(); len(got) != 1 || got[0] != (kluster.Request{Story: id, Kind: kluster.KindChecks, By: "olive", At: t0}) {
+		t.Errorf("the checks request names the operator as who asks: %+v", got)
+	}
+	if len(journal) != 1 || journal[0].Action != ActionKluster || journal[0].Method != "kluster.checks" || journal[0].Outcome != "done" ||
+		!strings.Contains(journal[0].Detail, "kluster checks of "+id+" in the namespace s-0004, asked by olive: queued in flai serve's kluster queue as "+id+"-checks-20260920T080000Z") {
+		t.Errorf("the request is journalled under the kluster action: %+v", journal)
+	}
+	if got := c.called(); len(got) != 0 {
+		t.Errorf("nothing ran here: %v", got)
+	}
+}
+
+// S-0663: kluster.checks refuses in kluster.deploy's order: the kluster host
+// action off, a story that is not an ID, a flai that runs no kluster jobs, no
+// kluster: block, the namespace not deployed at the story branch's head with
+// a deploy that passed, then the checks host action off; flai serve refuses
+// the rest, such as no checks named, in its own words. Only what flai serve
+// refuses is asked of it.
+func TestKlusterChecksRefusesInKlusterDeploysOrder(t *testing.T) {
+	on, checks, journal := true, false, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	id, head := capstanAt(t, p, heads)
+	noChecks := "no checks are named for this project: naming them with flai serve checks set, or checks: in the manifest, is the operator's, so flai serve runs no checks against " + id + "'s namespace"
+	asked := fakeAsk(t, kluster.Answer{Kind: kluster.KindChecks, Story: id, Reason: noChecks}, nil)
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
+	host := klusterChecksHost(&on, &checks, &journal, jobs)
+	checksOf := func(story string, n int) *channel.Error {
+		return ask(t, host, p, "kluster.checks", fmt.Sprintf(`{"story":%q,"request_id":"req-%08d"}`, story, n), nil)
+	}
+	rule := func(what string, e *channel.Error, want ...string) {
+		t.Helper()
+		if e == nil || e.Code != Rule {
+			t.Errorf("%s: %+v", what, e)
+			return
+		}
+		for _, w := range want {
+			if !strings.Contains(e.Message, w) {
+				t.Errorf("%s says %q: %q", what, w, e.Message)
+			}
+		}
+	}
+
+	// the kluster action off comes first, before anything is read
+	on = false
+	if e := checksOf(id, 1); e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable kluster") {
+		t.Errorf("the kluster action off: %+v", e)
+	}
+	on = true
+	if e := checksOf("E-0001", 2); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "is not a story's ID") {
+		t.Errorf("an epic's ID: %+v", e)
+	}
+	none := klusterChecksHost(&on, &checks, &journal, nil)
+	rule("no kluster jobs", ask(t, none, p, "kluster.checks", `{"story":"`+id+`","request_id":"req-00000003"}`, nil), "this flai runs no kluster jobs", "run flai checks run "+id+" --job in a shell on the host while flai serve runs")
+	bare := quayside(t, false, c)
+	rule("no block", ask(t, host, bare, "kluster.checks", `{"story":"`+id+`","request_id":"req-00000004"}`, nil), kluster.ErrNoBlock.Error())
+
+	// nothing deployed at the head to check, which comes before the checks action
+	deployFirst := "so " + id + "'s checks have nothing deployed at its head to run against and nothing is queued: deploy it first, with kluster.deploy or flai kluster deploy " + id
+	rule("never deployed", checksOf(id, 5), id+"'s namespace s-0004 was never deployed: it has no record", deployFirst)
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: head, StartedAt: t0, Outcome: kluster.OutcomeFailed, Steps: []kluster.Step{}})
+	rule("its deploy failed", checksOf(id, 6), "the last deploy of "+id+"'s namespace s-0004, at dddddddddddd, ended failed, not passed", deployFirst)
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: strings.Repeat("e", 40), StartedAt: t0, Outcome: kluster.OutcomePassed, Steps: []kluster.Step{}})
+	rule("deployed at another commit", checksOf(id, 7), id+"'s namespace s-0004 was deployed at eeeeeeeeeeee, not at the story branch's head dddddddddddd", deployFirst)
+	delete(heads, "refs/heads/story/"+id)
+	rule("no branch", checksOf(id, 8), id+" has no branch story/"+id+" whose head its namespace s-0004 could be deployed at", deployFirst)
+	heads["refs/heads/story/"+id] = head
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: head, StartedAt: t0, Outcome: kluster.OutcomePassed, Steps: []kluster.Step{}})
+
+	// deployed at its head: the checks action off, then flai serve's refusals
+	rule("the checks action off", checksOf(id, 9), "the checks host action is off for this project, so flai serve runs no checks against "+id+"'s namespace s-0004", "flai serve enable checks")
+	if got := asked(); len(got) != 0 {
+		t.Errorf("nothing was asked of flai serve while hostapi refused: %+v", got)
+	}
+	checks = true
+	if e := checksOf(id, 10); e == nil || e.Code != Rule || e.Message != noChecks {
+		t.Errorf("no checks named, in flai serve's words: %+v", e)
+	}
+	if got := asked(); len(got) != 1 || got[0].By != "olive" || got[0].Kind != kluster.KindChecks || got[0].Story != id {
+		t.Errorf("the request flai serve refused: %+v", got)
+	}
+	fakeAsk(t, kluster.Answer{}, fmt.Errorf("flai serve did not take the request for %s's checks within 10s, so nothing is queued: %w", id, kluster.ErrServeNotTaking))
+	rule("flai serve not taking it", checksOf(id, 11), "flai serve's kluster pass did not take the request for "+id+"'s checks in time, so nothing is queued")
+	jobs.Wait()
+	if got := c.called(); len(got) != 0 {
+		t.Errorf("nothing ran: %v", got)
+	}
+}
+
+// S-0663: the operator tears down a story in progress's namespace from the
+// page as one in review's: here, in its worktree, with no request.
+func TestKlusterTeardownOfAStoryInProgressStartsInItsWorktree(t *testing.T) {
+	on, journal := true, []Entry{}
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	id, head := capstanAt(t, p, heads)
+	recordAt(t, p.Root, kluster.Record{Story: id, Namespace: "s-0004", Commit: head, StartedAt: t0, Outcome: kluster.OutcomePassed, Steps: passedSteps(kluster.StepDeploy), AskedBy: "agent-" + id})
+	asked := fakeAsk(t, kluster.Answer{}, errors.New("a teardown is not asked of flai serve"))
+	jobs := NewKlusterJobs(context.Background(), KlusterJobsOptions{Now: func() time.Time { return t0 }})
+	host := klusterHost(&on, &journal, jobs)
+	var w struct {
+		Data KlusterJob `json:"data"`
+	}
+	if e := ask(t, host, p, "kluster.teardown", `{"story":"`+id+`","request_id":"req-00000001"}`, &w); e != nil {
+		t.Fatal(e)
+	}
+	want := KlusterJob{Action: "teardown", Cluster: "harbour", Story: id, Namespace: "s-0004", StartedAt: "2026-09-20T08:00:00Z", Log: ".flai-cache/kluster/teardown.log", Logs: ".flai-cache/kluster/logs/s-0004"}
+	if w.Data != want {
+		t.Errorf("kluster.teardown answers the job it started: %+v, want %+v", w.Data, want)
+	}
+	jobs.Wait()
+	if got := c.called(); len(got) != 1 || got[0] != "teardown "+id+" "+filepath.Join(p.Root, ".flai-cache", "worktrees", id) {
+		t.Errorf("the teardown ran in the story's worktree: %v", got)
+	}
+	if got := asked(); len(got) != 0 {
+		t.Errorf("nothing was asked of flai serve: %+v", got)
+	}
+	if len(journal) != 1 || journal[0].Outcome != "done" || !strings.Contains(journal[0].Detail, "started kluster teardown of "+id+" in the namespace s-0004") {
+		t.Errorf("the teardown is journalled: %+v", journal)
 	}
 }
 

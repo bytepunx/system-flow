@@ -25,7 +25,13 @@ package hostapi
 // branch's head, and its last checks run and who asked for each; the stories
 // in progress or in review with no record; and the stories in progress that
 // hold a namespace against kluster.agent_namespaces, with the deploy
-// requests refused for it.
+// requests refused for it. kluster.deploy of a story in progress, and
+// kluster.checks, a write under the kluster host action, do not run the job
+// here: each asks flai serve's kluster pass for it as a story's agent does
+// (S-0660, S-0661), with a kluster request written on the operator's behalf,
+// so that the job waits in the pass's one queue, a deploy counts against
+// kluster.agent_namespaces and is refused over it, and the record names the
+// operator as who asked. A deploy of a story in review runs here as before.
 
 import (
 	"context"
@@ -1296,7 +1302,8 @@ func noDeployJobs(command string) *channel.Error {
 	return &channel.Error{Code: Rule, Message: "this flai runs no kluster jobs: flai serve runs them, so ask through the dashboard flai serve answers, or run " + command + " in a shell on the host"}
 }
 
-// klusterStory reads the story params of kluster.deploy and kluster.teardown.
+// klusterStory reads the story params of kluster.deploy, kluster.checks,
+// and kluster.teardown.
 func klusterStory(raw json.RawMessage) (string, *channel.Error) {
 	in, e := decode[struct {
 		Story string `json:"story"`
@@ -1315,6 +1322,32 @@ func klusterStory(raw json.RawMessage) (string, *channel.Error) {
 // project has no block, its config cannot be read, a deploy cannot start,
 // or kluster's lock is held by a job flai serve did not start here.
 func deployJob(host Host, p channel.Project, command string, deploy bool) (KlusterCluster, manifest.Manifest, *channel.Error) {
+	c, m, e := deployReady(host, p, command, deploy)
+	if e != nil {
+		return nil, m, e
+	}
+	if e := lockFree(p); e != nil {
+		return nil, m, e
+	}
+	return c, m, nil
+}
+
+// lockFree refuses a job as a rule while another holds kluster's lock.
+func lockFree(p channel.Project) *channel.Error {
+	j, ok := kluster.Running(p.Root)
+	if !ok {
+		return nil
+	}
+	what := "the namespace " + j.Namespace
+	if j.Story != "" {
+		what = j.Story + " in the namespace " + j.Namespace
+	}
+	return &channel.Error{Code: Rule, Message: fmt.Sprintf("kluster %s of %s runs since %s; wait for it to end, as kluster.deployments says, then ask again", j.Kind, what, j.StartedAt.UTC().Format(time.RFC3339))}
+}
+
+// deployReady is deployJob before kluster's lock is looked at: a job flai
+// serve's kluster pass queues waits for the lock in its queue.
+func deployReady(host Host, p channel.Project, command string, deploy bool) (KlusterCluster, manifest.Manifest, *channel.Error) {
 	if host.Kluster == nil {
 		return nil, manifest.Manifest{}, noDeployJobs(command)
 	}
@@ -1331,13 +1364,6 @@ func deployJob(host Host, p channel.Project, command string, deploy bool) (Klust
 	}
 	if err := c.Ready(m, deploy); err != nil {
 		return nil, m, &channel.Error{Code: Rule, Message: klusterRelative(p.Root, err.Error())}
-	}
-	if j, ok := kluster.Running(p.Root); ok {
-		what := "the namespace " + j.Namespace
-		if j.Story != "" {
-			what = j.Story + " in the namespace " + j.Namespace
-		}
-		return nil, m, &channel.Error{Code: Rule, Message: fmt.Sprintf("kluster %s of %s runs since %s; wait for it to end, as kluster.deployments says, then ask again", j.Kind, what, j.StartedAt.UTC().Format(time.RFC3339))}
 	}
 	return c, m, nil
 }
@@ -1358,12 +1384,17 @@ func startDeployJob(host Host, p channel.Project, m manifest.Manifest, job Klust
 
 // klusterDeployDo answers kluster.deploy: the story's deploy from its
 // worktree at its head, started, refused as flai kluster deploy refuses it.
+// A story in progress's deploy is asked of flai serve's kluster pass on the
+// operator's behalf instead (S-0663), so that it counts against
+// kluster.agent_namespaces as a story's agent's request does (S-0660): it
+// waits in the pass's queue rather than being refused while kluster's lock
+// is held.
 func klusterDeployDo(ctx context.Context, host Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 	story, e := klusterStory(raw)
 	if e != nil {
 		return nil, e
 	}
-	c, m, e := deployJob(host, p, "flai kluster deploy "+story, true)
+	c, m, e := deployReady(host, p, "flai kluster deploy "+story, true)
 	if e != nil {
 		return nil, e
 	}
@@ -1372,6 +1403,12 @@ func klusterDeployDo(ctx context.Context, host Host, p channel.Project, raw json
 		return nil, failed(fmt.Errorf("cannot read the project's work items to deploy %s: %s", story, hostRelative(p.Root, err.Error())))
 	}
 	it, err := repo.Get(story)
+	queued := err == nil && it.Status == workitem.InProgress
+	if !queued {
+		if e := lockFree(p); e != nil {
+			return nil, e
+		}
+	}
 	if err != nil {
 		return nil, &channel.Error{Code: Rule, Message: hostRelative(p.Root, err.Error())}
 	}
@@ -1381,6 +1418,9 @@ func klusterDeployDo(ctx context.Context, host Host, p channel.Project, raw json
 	wt := repo.WorktreePath(it.ID)
 	if info, err := os.Stat(wt); err != nil || !info.IsDir() {
 		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("%s has no worktree at %s to build and deploy from; open it with flai stream open %s, then deploy again", it.ID, klusterRel(p.Root, wt), it.ID)}
+	}
+	if queued {
+		return askServe(ctx, host, p, c, kluster.KindDeploy, it.ID)
 	}
 	commit, err := klusterHead(ctx, wt, "HEAD")
 	if err != nil {
@@ -1451,6 +1491,163 @@ func klusterPromoteDo(ctx context.Context, host Host, p channel.Project, _ json.
 	})
 }
 
+// klusterAsk asks flai serve's kluster pass for a story's job and waits for
+// its answer; tests replace it.
+var klusterAsk = kluster.Ask
+
+// KlusterAsked is what kluster.deploy of a story in progress and
+// kluster.checks answer (S-0663): the job flai serve's kluster pass queued
+// for the operator's request, or the story's job it found waiting or
+// running, or, for a story in review, the namespace's record. Its KlusterJob
+// fields are a job's as the other writes answer them: StartedAt is when the
+// operator asked, Log where the job's output goes (the namespace's log
+// folder for a deploy, the checks runs' log folder for a checks run), and
+// Logs the namespace's log folder.
+type KlusterAsked struct {
+	KlusterJob
+	// Job is the job's id, such as S-0663-deploy-20261113T073353Z; absent
+	// for an answer from the record.
+	Job string `json:"job,omitempty"`
+	// Ahead is how many jobs of the queue wait or run before it.
+	Ahead int `json:"ahead"`
+	// Queued is whether this request queued the job; false when the story's
+	// job that waits or runs, or the record, is answered.
+	Queued bool `json:"queued"`
+	// Recorded is an answer from the namespace's record for a story in
+	// review whose deploy, or checks run, passed at its head: Commit and
+	// Outcome are the record's, and nothing is queued.
+	Recorded bool   `json:"recorded,omitempty"`
+	Commit   string `json:"commit,omitempty"`
+	Outcome  string `json:"outcome,omitempty"`
+	// AskedBy is who the request names as asking: the operator, as the
+	// journal names who the dashboard acts for.
+	AskedBy string `json:"asked_by"`
+}
+
+// askServe asks flai serve's kluster pass for kind, deploy or checks, of
+// story on the operator's behalf, as a story's agent asks for its own
+// (S-0660, S-0661), and answers the job, refused as the pass refuses it.
+func askServe(ctx context.Context, host Host, p channel.Project, c KlusterCluster, kind, story string) (any, *channel.Error) {
+	by, at := owner(p), host.Kluster.now().UTC()
+	a, err := klusterAsk(ctx, p.Root, kluster.Request{Story: story, Kind: kind, By: by, At: at}, kluster.Wait{})
+	switch {
+	case errors.Is(err, kluster.ErrServeNotTaking):
+		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("flai serve's kluster pass did not take the request for %s's %s in time, so nothing is queued: flai serve's log says why; ask again once it looks at this project", story, kind)}
+	case err != nil:
+		return nil, failed(errors.New(klusterRelative(p.Root, err.Error())))
+	case a.Refused():
+		return nil, &channel.Error{Code: Rule, Message: klusterRelative(p.Root, a.Reason)}
+	}
+	ns, _ := kluster.StoryNamespace(story)
+	log := ""
+	if a.Log != "" {
+		log = klusterRel(p.Root, a.Log)
+	}
+	return written(KlusterAsked{
+		KlusterJob: KlusterJob{Action: kind, Cluster: c.Named().Name, Story: story, Namespace: ns, StartedAt: at.Format(time.RFC3339), Log: log, Logs: klusterRel(p.Root, kluster.LogDir(p.Root, ns))},
+		Job:        a.Job, Ahead: a.Ahead, Queued: a.Started, Recorded: a.Recorded, Commit: a.Commit, Outcome: a.Outcome, AskedBy: by,
+	})
+}
+
+// describeKlusterAsked says for the journal what flai serve answered the
+// operator's request, or, for a deploy of a story in review, which job was
+// started here.
+func describeKlusterAsked(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var a KlusterAsked
+	_ = json.Unmarshal(w.Data, &a)
+	if a.AskedBy == "" {
+		return describeKlusterJob(res, nil)
+	}
+	what := fmt.Sprintf("kluster %s of %s in the namespace %s, asked by %s", a.Action, a.Story, a.Namespace, a.AskedBy)
+	switch {
+	case a.Recorded:
+		return "done", fmt.Sprintf("%s: answered from the namespace's record, %s at %s", what, a.Outcome, a.Commit)
+	case a.Queued:
+		return "done", fmt.Sprintf("%s: queued in flai serve's kluster queue as %s with %d ahead, its output in %s", what, a.Job, a.Ahead, a.Log)
+	}
+	return "done", fmt.Sprintf("%s: answered with %s's job %s, which waits or runs, with %d ahead", what, a.Story, a.Job, a.Ahead)
+}
+
+// notDeployedAtHead says why story's namespace ns, whose record is r when
+// recorded, is not deployed at head, its branch's head, with a deploy that
+// passed, in the words flai serve refuses a checks request with; "" when it
+// is.
+func notDeployedAtHead(story, ns string, r kluster.Record, recorded bool, head string) string {
+	switch {
+	case !recorded:
+		return fmt.Sprintf("%s's namespace %s was never deployed: it has no record", story, ns)
+	case r.Outcome != kluster.OutcomePassed:
+		outcome := r.Outcome
+		if outcome == "" {
+			outcome = "with no outcome"
+		}
+		return fmt.Sprintf("the last deploy of %s's namespace %s, at %s, ended %s, not passed", story, ns, shortCommit(r.Commit), outcome)
+	case head == "":
+		return fmt.Sprintf("%s has no branch story/%s whose head its namespace %s could be deployed at", story, story, ns)
+	case head != r.Commit:
+		return fmt.Sprintf("%s's namespace %s was deployed at %s, not at the story branch's head %s", story, ns, shortCommit(r.Commit), shortCommit(head))
+	}
+	return ""
+}
+
+// shortCommit is commit's first 12 characters, or "a commit not resolved",
+// as flai serve says them.
+func shortCommit(commit string) string {
+	switch {
+	case commit == "":
+		return "a commit not resolved"
+	case len(commit) > 12:
+		return commit[:12]
+	}
+	return commit
+}
+
+// klusterChecksDo answers kluster.checks: the project's checks run against
+// the story's namespace as deployed, asked of flai serve's kluster pass on
+// the operator's behalf (S-0661's path), refused while the namespace is not
+// deployed at the story branch's head with a deploy that passed, or while
+// the checks host action is off.
+func klusterChecksDo(ctx context.Context, host Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+	story, e := klusterStory(raw)
+	if e != nil {
+		return nil, e
+	}
+	if host.Kluster == nil {
+		return nil, &channel.Error{Code: Rule, Message: "this flai runs no kluster jobs: flai serve runs a checks run against a story's namespace, so ask through the dashboard flai serve answers, or run flai checks run " + story + " --job in a shell on the host while flai serve runs"}
+	}
+	m, e := projectManifest(p)
+	if e != nil {
+		return nil, e
+	}
+	if m.Kluster == nil {
+		return nil, &channel.Error{Code: Rule, Message: kluster.ErrNoBlock.Error()}
+	}
+	c, err := openKluster(p.Root, m)
+	if err != nil {
+		return nil, &channel.Error{Code: Rule, Message: klusterRelative(p.Root, err.Error())}
+	}
+	ns, err := kluster.StoryNamespace(story)
+	if err != nil {
+		return nil, bad("%s", err.Error())
+	}
+	r, recorded, err := kluster.ReadRecord(p.Root, ns)
+	if err != nil {
+		return nil, failed(errors.New(klusterRelative(p.Root, err.Error())))
+	}
+	head, _ := storyHead(ctx, p.Root, story)
+	if why := notDeployedAtHead(story, ns, r, recorded, head); why != "" {
+		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("%s, so %s's checks have nothing deployed at its head to run against and nothing is queued: deploy it first, with kluster.deploy or flai kluster deploy %s, which runs the checks once the deploy passes while the checks host action is on", why, story, story)}
+	}
+	if !host.enabled(ActionChecks, p.Root) {
+		return nil, &channel.Error{Code: Rule, Message: fmt.Sprintf("the checks host action is off for this project, so flai serve runs no checks against %s's namespace %s and nothing is queued: turn it on with %s on the host, then ask again", story, ns, EnableCommand(ActionChecks))}
+	}
+	return askServe(ctx, host, p, c, kluster.KindChecks, story)
+}
+
 // dirIsThere says whether path is a folder.
 func dirIsThere(path string) bool {
 	info, err := os.Stat(path)
@@ -1489,8 +1686,12 @@ func klusterSpecs() map[string]spec {
 			_, e := klusterLogIn(raw)
 			return nil, "", e
 		}, do: klusterLogDo},
-		// kluster.deploy: a story's deploy into its namespace, started.
-		"kluster.deploy": {action: ActionKluster, describe: describeKlusterJob, build: story, do: klusterDeployDo},
+		// kluster.deploy: a story's deploy into its namespace, started, or for
+		// a story in progress asked of flai serve's kluster pass (S-0663).
+		"kluster.deploy": {action: ActionKluster, describe: describeKlusterAsked, build: story, do: klusterDeployDo},
+		// kluster.checks: the project's checks run against a story's
+		// namespace as deployed, asked of flai serve's kluster pass (S-0663).
+		"kluster.checks": {action: ActionKluster, describe: describeKlusterAsked, build: story, do: klusterChecksDo},
 		// kluster.teardown: a story's namespace torn down, started.
 		"kluster.teardown": {action: ActionKluster, describe: describeKlusterJob, build: story, do: klusterTeardownDo},
 		// kluster.promote: main's head deployed into the default namespace,

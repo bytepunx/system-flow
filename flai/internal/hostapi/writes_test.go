@@ -1997,6 +1997,38 @@ func TestTheKlusterActionIsSeenAndOffByDefault(t *testing.T) {
 	}
 }
 
+// S-0580, S-0581, S-0586, S-0663: every kluster write, the checks run
+// against a story's namespace among them, is under the kluster host action,
+// and is refused while it is off.
+func TestTheKlusterWritesAreUnderTheKlusterAction(t *testing.T) {
+	writes := map[string]string{
+		"kluster.up":            ActionKluster,
+		"kluster.down":          ActionKluster,
+		"kluster.deploy":        ActionKluster,
+		"kluster.checks":        ActionKluster,
+		"kluster.teardown":      ActionKluster,
+		"kluster.promote":       ActionKluster,
+		"kluster.forward.start": ActionKluster,
+		"kluster.forward.stop":  ActionKluster,
+	}
+	table := klusterSpecs()
+	for name, action := range writes {
+		if sp, ok := table[name]; !ok || sp.action != action || sp.reads || sp.do == nil || sp.describe == nil {
+			t.Errorf("%s is a write under the %s action: %+v", name, action, sp)
+		}
+	}
+	for name, sp := range table {
+		if _, ok := writes[name]; !ok && !sp.reads {
+			t.Errorf("%s is a kluster write this table does not name, with its action", name)
+		}
+	}
+	p := withDocs(t)
+	m := MethodsFor("test", func() time.Time { return t0 }, Host{Enabled: func(string, string) bool { return false }})
+	if _, e := m["kluster.checks"](context.Background(), p, json.RawMessage(`{"story":"S-0001",`+rid+`}`)); e == nil || e.Code != Disabled || !strings.Contains(e.Message, EnableCommand(ActionKluster)) {
+		t.Errorf("kluster.checks with the kluster action off: %+v", e)
+	}
+}
+
 // S-0218: orchestrate is a host action the dashboard sees, as plan is, off
 // until the operator turns it on, and turned on and off from the settings
 // page as the others are; of its own, only the stop and the start ask for

@@ -61,6 +61,7 @@ var hostAPIWrites = []string{
 	"item.order",               // write work items and the board
 	"item.template",            // prints a body, but flai story new is not a guard read
 	"item.unblock",             // write work items and the board
+	"kluster.checks",           // asks flai serve for a checks run against a story's namespace
 	"kluster.deploy",           // change the cluster
 	"kluster.deployments",      // reach the cluster with kubectl, not checked as reads
 	"kluster.down",             // change the cluster
