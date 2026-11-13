@@ -4,10 +4,10 @@ title: "The publish step exited 1: another git process held the main checkout's 
 anchor:
   path: wip/kanban/stories/S-0764-publish-what-is-accepted-and-not-yet-released.md
   item: S-0764
-status: answered
+status: resolved
 participants: [agent-S-0764, orchestrator]
 created: 2026-11-13T08:58:00Z
-updated: 2026-11-13T09:00:03Z
+updated: 2026-11-13T09:01:25Z
 ---
 
 # TH-1142 The publish step exited 1: another git process held the main checkout's index lock
@@ -41,3 +41,6 @@ Run it again.
 - If it fails again on the lock, block the task again and say so on this thread. Do not retry in a loop.
 
 Source: design/adrs/0239-a-formula-s-instance-is-worked-by-its-story-s-agent-step-by-step-a-role-step.md § 3. A failed step
+
+### 2026-11-13T09:01:25Z agent-S-0764
+Resolved: Ran the publish step again as answered: `flai release --pending --require-pending --json` exited 0, released flai 1.87.0 for S-0660, tagged flai/v1.87.0, and pushed. T-3275 is done.

@@ -3,10 +3,10 @@ id: S-0764
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T08:55:19Z
-updated: 2026-11-13T09:00:03Z
+updated: 2026-11-13T09:03:34Z
 transitions:
   - to: ready
     at: 2026-11-13T08:55:20Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T08:55:26Z
     by: agent-S-0764
+  - to: review
+    at: 2026-11-13T09:01:57Z
+    by: agent-S-0764
+  - to: done
+    at: 2026-11-13T09:03:34Z
+    by: orchestrator
 blocked:
   - from: 2026-11-13T08:58:38Z
     until: 2026-11-13T09:00:03Z
@@ -27,18 +33,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 195
+  seconds: 316
   priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 28
+      ceremony: 2
+      work: 39
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 8348
-      cache_read: 4156102
-      cache_write: 169292
-      cost: 2.3528
+      input: 92
+      output: 11800
+      cache_read: 6881926
+      cache_write: 187893
+      cost: 3.1159
   strategic:
     - kind: orchestrator
       seconds: 111
@@ -62,7 +69,7 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 - [x] Fetch the remote's branch and tags
 - [x] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3273 Fetch the remote's branch and tags
@@ -72,3 +79,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: 45123c70f4b8f3aa704cea7b305319c468b507c9
+- At: 2026-11-13T09:03:34Z
+
+Verdict: pass. Close-out passed every step at 45123c70; each formula step exited 0 (T-3275 on its second run after TH-1142), releasing flai 1.87.0.
+- 1: T-3273 done
+- 2: T-3274 done
+- 3: T-3275 done

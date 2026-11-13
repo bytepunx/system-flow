@@ -27,11 +27,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 1531
-      cache_read: 762424
-      cache_write: 31056
-      cost: 0.4316
+      input: 10
+      output: 1324
+      cache_read: 772393
+      cache_write: 21088
+      cost: 0.3497
 ---
 # T-3273 Fetch the remote's branch and tags
 
