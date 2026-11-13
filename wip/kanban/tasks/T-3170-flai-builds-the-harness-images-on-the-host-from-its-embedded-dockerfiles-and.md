@@ -24,7 +24,7 @@ touches: [flai/internal/agentimage/build.go, flai/internal/agentimage/build_test
 after: [T-3168, T-3287]
 usage:
   source: log
-  seconds: 1800
+  seconds: 1814
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 245
       cache_read: 2937846
       cache_write: 235746
-      cost: 1.1846
+      cost: 1.1849
 ---
 # T-3170 flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries checked against the signed checksums, or from a development tree's own
 

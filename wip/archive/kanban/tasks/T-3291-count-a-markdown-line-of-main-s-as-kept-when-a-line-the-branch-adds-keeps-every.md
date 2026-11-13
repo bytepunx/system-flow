@@ -22,9 +22,17 @@ stream: S-0767
 tags: [flai, git]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, design/adrs/0297-a-markdown-line-of-main-s-that-a-rebased-branch-removes-is-not-undone-when-a.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 533
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 4804
+      cache_read: 1564864
+      cache_write: 37979
+      cost: 0.6705
   strategic:
     - kind: orchestrator
       seconds: 4

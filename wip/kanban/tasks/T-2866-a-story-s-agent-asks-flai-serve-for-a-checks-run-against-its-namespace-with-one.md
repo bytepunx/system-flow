@@ -7,12 +7,12 @@ status: backlog
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:24:11Z
-updated: 2026-11-10T08:26:02Z
+updated: 2026-11-13T12:42:04Z
 transitions: []
 stream: S-0661
 tags: [cli]
-touches: [flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_tables.go]
-after: [T-2863]
+touches: [flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go]
+after: [T-2863, T-2865]
 ---
 # T-2866 A story's agent asks flai serve for a checks run against its namespace with one flai command and one MCP tool, and gets each check's result and log
 

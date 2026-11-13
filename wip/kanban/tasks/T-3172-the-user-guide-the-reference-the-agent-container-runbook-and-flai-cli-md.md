@@ -3,16 +3,37 @@ id: T-3172
 type: task
 nature: feature
 title: The user guide, the reference, the agent-container runbook, and flai-cli.md describe flai image ensure and build as the way back for a missing harness image
-status: backlog
+status: done
 parent: S-0740
 owner: alex
 created: 2026-11-12T15:59:57Z
-updated: 2026-11-12T15:59:57Z
-transitions: []
+updated: 2026-11-13T12:45:51Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:42:22Z
+    by: agent-S-0740
+  - to: in-progress
+    at: 2026-11-13T12:42:22Z
+    by: agent-S-0740
+  - to: done
+    at: 2026-11-13T12:45:51Z
+    by: agent-S-0740
 stream: S-0740
 tags: [cli]
-touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]
+touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, design/tech/docker.md]
 after: [T-3171]
+usage:
+  source: log
+  seconds: 203
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 350
+      cache_read: 2823143
+      cache_write: 93390
+      cost: 1.089
 ---
 # T-3172 The user guide, the reference, the agent-container runbook, and flai-cli.md describe flai image ensure and build as the way back for a missing harness image
 

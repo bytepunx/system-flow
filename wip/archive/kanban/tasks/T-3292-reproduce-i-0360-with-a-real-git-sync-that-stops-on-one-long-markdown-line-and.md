@@ -3,11 +3,11 @@ id: T-3292
 type: task
 nature: remediation
 title: Reproduce I-0360 with a real-git sync that stops on one long markdown line and resumes with main's words kept
-status: in-progress
+status: done
 parent: S-0767
 owner: alex
 created: 2026-11-13T11:48:23Z
-updated: 2026-11-13T12:14:44Z
+updated: 2026-11-13T12:40:00Z
 transitions:
   - to: ready
     at: 2026-11-13T12:14:43Z
@@ -15,14 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:14:44Z
     by: agent-S-0767
+  - to: done
+    at: 2026-11-13T12:40:00Z
+    by: agent-S-0767
 stream: S-0767
 tags: [flai, git, test]
 touches: [flai/internal/storygit/sync_test.go]
 after: [T-3291]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1516
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 9736
+      cache_read: 3171336
+      cache_write: 76968
+      cost: 1.3588
   strategic:
     - kind: orchestrator
       seconds: 4

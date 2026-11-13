@@ -3,11 +3,11 @@ id: T-3171
 type: task
 nature: feature
 title: flai image ensure pulls or builds each missing or stale harness image, and flai image build builds without the pull
-status: in-progress
+status: done
 parent: S-0740
 owner: alex
 created: 2026-11-12T15:59:50Z
-updated: 2026-11-13T12:26:13Z
+updated: 2026-11-13T12:42:01Z
 transitions:
   - to: ready
     at: 2026-11-13T12:26:13Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:26:13Z
     by: agent-S-0740
+  - to: done
+    at: 2026-11-13T12:42:01Z
+    by: agent-S-0740
 stream: S-0740
 tags: [cli]
 touches: [flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go]
 after: [T-3169, T-3170]
+usage:
+  source: log
+  seconds: 948
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 199
+      cache_read: 3213438
+      cache_write: 127943
+      cost: 1.2475
 ---
 # T-3171 flai image ensure pulls or builds each missing or stale harness image, and flai image build builds without the pull
 

@@ -32,7 +32,7 @@ usage:
       output: 36
       cache_read: 416404
       cache_write: 1911
-      cost: 0.1561
+      cost: 0.1562
 ---
 # T-3168 The flai binary carries the bedrock and claude-code Dockerfiles through a go:embed package at flai/images
 

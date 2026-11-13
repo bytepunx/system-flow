@@ -24,7 +24,7 @@ touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_te
 after: [T-3287]
 usage:
   source: log
-  seconds: 1800
+  seconds: 1801
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 419
       cache_read: 4978822
       cache_write: 460022
-      cost: 2.0301
+      cost: 2.0307
 ---
 # T-3169 The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
 

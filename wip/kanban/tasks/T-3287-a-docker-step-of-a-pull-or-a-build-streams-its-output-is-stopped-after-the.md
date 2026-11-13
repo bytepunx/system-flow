@@ -32,7 +32,7 @@ usage:
       output: 198
       cache_read: 1789194
       cache_write: 84675
-      cost: 0.6995
+      cost: 0.6997
 ---
 # T-3287 A docker step of a pull or a build streams its output, is stopped after the stall limit, and is tried again on a network failure
 

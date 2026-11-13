@@ -3,10 +3,10 @@ id: S-0767
 type: story
 nature: remediation
 title: flai stream sync reports a rebased branch undoes main's line when both changed one long markdown line and the branch keeps every word of main's
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T11:42:36Z
-updated: 2026-11-13T12:39:24Z
+updated: 2026-11-13T12:53:44Z
 transitions:
   - to: ready
     at: 2026-11-13T12:03:56Z
@@ -14,17 +14,34 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:04:05Z
     by: agent-S-0767
+  - to: review
+    at: 2026-11-13T12:51:48Z
+    by: agent-S-0767
+  - to: done
+    at: 2026-11-13T12:53:44Z
+    by: orchestrator
 tags: []
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/0297-a-markdown-line-a-rebased-branch-changes-keeping-every-word-of-main-s-line-in.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/adrs/0297-a-markdown-line-of-main-s-that-a-rebased-branch-removes-is-not-undone-when-a.md]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/adrs/0297-a-markdown-line-of-main-s-that-a-rebased-branch-removes-is-not-undone-when-a.md, design/issues/I-0360-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-both-changed.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2958
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 1
+      work: 68
+  models:
+    - model: claude-opus-5-5
+      input: 242
+      output: 61956
+      cache_read: 20181330
+      cache_write: 489799
+      cost: 8.647
   strategic:
     - kind: planner
       seconds: 172
@@ -77,8 +94,8 @@ finalized:
 This story remediates [I-0360](../../../design/issues/I-0360-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-both-changed.md), "flai stream sync reports a rebased branch undoes main's line when both changed one long markdown line and the branch keeps every word of main's". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0360 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0360 is closed with `flai issue close I-0360 --reason` saying what fixed it
+- [x] The cause I-0360 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0360 is closed with `flai issue close I-0360 --reason` saying what fixed it
 
 ## Tasks
 - T-3291 Count a markdown line of main's as kept when a line the branch adds keeps every word of it in order
@@ -112,3 +129,12 @@ Figures:
 
 - Forecast 40m, delivery 2026-11-13T23:33:00Z: `flai forecast` gave 23m (136 s per unit of size over 64 done medium remediation stories on claude-opus-5-5, size 10) and delivery 23:16Z, 30th in the pull order. Raised to 40m because the story writes an ADR and edits three long design and docs passages beside the code, and its reproduction drives a real rebase stop and a resumed sync; delivery moved by the same 17m.
 - Cost of delay 25 USD a week, as `flai cod` works it from the operator's input: 10m lost per 168h cycle at 150 USD an hour. It stands: one occurrence so far, and each costs a hand `--keep-removal` or a send-back at acceptance.
+
+### Accepted by the orchestrator
+
+- Verified: f2ce9bc01be52056d53801f32a79c11adff2e330
+- At: 2026-11-13T12:53:44Z
+
+Verdict: pass — both criteria are met at f2ce9bc, and the diff has no breach that should stop acceptance.
+- 1: flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync_test.go, design/adrs/0297-a-markdown-line-of-main-s-that-a-rebased-branch-removes-is-not-undone-when-a.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md
+- 2: design/issues/I-0360-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-both-changed.md, design/issues/summary.md

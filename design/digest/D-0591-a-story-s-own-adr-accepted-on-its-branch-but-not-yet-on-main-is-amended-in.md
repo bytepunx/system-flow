@@ -9,7 +9,7 @@ date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0767]
 ---
 
 # D-0591 A story's own ADR, accepted on its branch but not yet on main, is amended in place when the story's work changes it, rather than refined by a second ADR

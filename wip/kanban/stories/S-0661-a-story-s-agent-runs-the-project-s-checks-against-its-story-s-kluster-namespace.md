@@ -3,15 +3,18 @@ id: S-0661
 type: story
 nature: feature
 title: A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
-status: ready
+status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-13T12:39:39Z
+updated: 2026-11-13T12:42:01Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:16Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T12:39:49Z
+    by: agent-S-0661
 tags: [cli]
 topics: [kluster, deployment]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -85,8 +88,8 @@ A story's agent runs the project's checks against its story's namespace before r
 
 ## Tasks
 - T-2863 flai serve's kluster pass runs the checks a story's agent asks for against its namespace at the head, after the job queue, records who asked, and opens no thread on a failure
-- T-2864 flai guard refuses a story's agent a command against another story's namespace or the default namespace
-- T-2865 flai kluster env gives a story's agent its own namespace's variables for a command of its own, refusing one not deployed at the head
+- T-2864 flai guard holds a story's agent's checks request and flai kluster env to its own story's namespace, refusing every sub-agent the request
+- T-2865 flai kluster env prints a story's agent its own namespace's variables, with the namespace's own kubeconfig, while the namespace has a record
 - T-2866 A story's agent asks flai serve for a checks run against its namespace with one flai command and one MCP tool, and gets each check's result and log
 - T-2867 kluster.md, flai-cli.md, flai.md, and the generated reference say how a story's agent checks its namespace and runs its own commands there
 

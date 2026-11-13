@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T12:25:45Z
+updated: 2026-11-13T12:45:51Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:14Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0740
 tags: [cli]
 topics: [docker, release, security]
-touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/images/embed_test.go, flai/internal/agentimage/run.go, flai/internal/agentimage/run_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve_test.go]
+touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/images/embed_test.go, flai/internal/agentimage/run.go, flai/internal/agentimage/run_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve_test.go, design/tech/docker.md]
 after: [S-0734, S-0735]
 agent:
   harness: claude-code
@@ -26,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2754
+  seconds: 3955
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-13
       ceremony: 1
-      work: 38
+      work: 49
   models:
     - model: claude-opus-5-5
-      input: 198
-      output: 1205
-      cache_read: 13839944
-      cache_write: 1059029
-      cost: 5.5613
+      input: 310
+      output: 1794
+      cache_read: 21019272
+      cache_write: 1310183
+      cost: 8.3371
   strategic:
     - kind: orchestrator
       seconds: 81

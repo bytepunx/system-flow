@@ -3,11 +3,11 @@ id: T-3293
 type: task
 nature: remediation
 title: Record the kept-words rule in an ADR refining ADR-0155, the design, and the user guide, and close I-0360
-status: in-progress
+status: done
 parent: S-0767
 owner: alex
 created: 2026-11-13T11:48:34Z
-updated: 2026-11-13T12:14:44Z
+updated: 2026-11-13T12:40:20Z
 transitions:
   - to: ready
     at: 2026-11-13T12:14:44Z
@@ -15,14 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:14:44Z
     by: agent-S-0767
+  - to: done
+    at: 2026-11-13T12:40:20Z
+    by: agent-S-0767
 stream: S-0767
 tags: [docs, adr]
-touches: [design/adrs/0297-a-markdown-line-a-rebased-branch-changes-keeping-every-word-of-main-s-line-in.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md]
 after: [T-3291]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1536
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 12080
+      cache_read: 3934832
+      cache_write: 95498
+      cost: 1.6859
   strategic:
     - kind: orchestrator
       seconds: 4
