@@ -126,6 +126,76 @@ export type VerifyNote = {
 	line?: number;
 	message: string;
 };
+/** How a record's commit stands to the story branch's head (ADR-0292 §3), as flai judges it. */
+export type KlusterHeadJudgement = {
+	commit: string;
+	head: string;
+	/** The commit counts as the head: it is the head, or only design, docs, and wip changed since. */
+	at_head: boolean;
+	/** The commit is the head itself. */
+	exact?: boolean;
+	/** Paths outside design, docs, and wip that changed since, when that is why it is not at the head. */
+	outside?: string[];
+	/** Why it is not at the head; absent when it is. */
+	why?: string;
+};
+/** One step of a namespace's last job, with its log in the main checkout. */
+export type KlusterEvidenceStep = {
+	name: string;
+	started_at?: string;
+	ended_at?: string;
+	outcome: string;
+	exit_code?: number;
+	log?: string;
+};
+/** A story's namespace's last deploy, or teardown, as its record keeps it. */
+export type KlusterDeployEvidence = {
+	commit: string;
+	/** running, passed, or failed. */
+	outcome: string;
+	failed_step?: string;
+	exit_code?: number;
+	error?: string;
+	/** deploy or teardown. */
+	job: string;
+	/** The outcome in words: "passed", "failed at the build step", "is still running". */
+	said: string;
+	/** Who asked for it: a story's agent or flai serve; absent for one run in a shell. */
+	asked_by?: string;
+	started_at?: string;
+	ended_at?: string;
+	steps?: KlusterEvidenceStep[];
+	head: KlusterHeadJudgement;
+	passed_at_head: boolean;
+};
+/** The last checks run against a story's namespace since its deploy. */
+export type KlusterChecksEvidence = {
+	commit: string;
+	/** passed, failed, timed-out, or cancelled. */
+	outcome: string;
+	log?: string;
+	head: KlusterHeadJudgement;
+	passed_at_head: boolean;
+};
+/**
+ * What a story's kluster namespace shows of its change (ADR-0292 §6): its last deploy and checks
+ * run, and whether each passed at the head of its branch. verify.status reads it on the host and
+ * leaves it out while none applies: the action off, or a block with no deploy.
+ */
+export type KlusterEvidence = {
+	applies: boolean;
+	why?: string;
+	story: string;
+	namespace?: string;
+	/** The story branch's head; absent when the branch cannot be resolved. */
+	head?: string;
+	/** The checks host action is on, so the checks must pass at the head too. */
+	checks_on: boolean;
+	deploy?: KlusterDeployEvidence;
+	checks?: KlusterChecksEvidence;
+	passed: boolean;
+	commands?: { deploy: string; deploy_tool: string; checks: string; checks_tool: string };
+};
 /** flai verify's report for a story, as it stores the last one and verify.status answers it. */
 export type VerifyReport = {
 	story: string;
@@ -139,6 +209,8 @@ export type VerifyReport = {
 	paths?: string[];
 	steps: VerifyStep[];
 	notes?: VerifyNote[];
+	/** The story's kluster namespace, read on the host as the page asks (S-0662). */
+	kluster?: KlusterEvidence;
 };
 
 /** A finding or a note as a page shows it: where, as path:line and a name, and what it says. */
@@ -240,6 +312,131 @@ export function verifyView(report: VerifyReport): VerifyView {
 			where: where(n.path, n.line, n.rule),
 			message: `${n.level}: ${n.message}`
 		}))
+	};
+}
+
+/** A deploy or a checks run of the story's namespace as the review page shows it (S-0662). */
+export type KlusterRunView = {
+	/** A deploy's or teardown's, or a checks run's: their logs are shown in different places. */
+	kind: 'deploy' | 'checks';
+	/** Deploy, Teardown, or Checks. */
+	label: string;
+	/** Its commit, short. */
+	commit: string;
+	/** Its outcome in words. */
+	outcome: string;
+	/** Its outcome's colour: a run that failed or timed out failed. */
+	tone: 'passed' | 'failed' | 'other';
+	/** Who asked for it, in words. */
+	asked: string;
+	/** When it ended, in UTC; empty when it has not or the record does not say. */
+	endedAt: string;
+	atHead: boolean;
+	/** How it stands to the head, in words: at the head, or why not. */
+	head: string;
+	/** Where its log is shown; empty when it has none. */
+	logHref: string;
+	/** What the log link opens. */
+	logLabel: string;
+};
+/** A story's kluster evidence as the review page shows it beside the criteria (S-0662). */
+export type KlusterView = {
+	namespace: string;
+	/** The story branch's head, short; empty when the branch cannot be resolved. */
+	head: string;
+	passed: boolean;
+	/** Whether the namespace passed at the head, in a sentence. */
+	headline: string;
+	deploy: KlusterRunView | null;
+	checks: KlusterRunView | null;
+	/** What the page says in place of a deploy the record lacks. */
+	noDeploy: string;
+	/** What the page says in place of a checks run the record lacks. */
+	noChecks: string;
+};
+
+/** Where the review page shows a checks run's log: its Checks section. */
+export const CHECKS_LOG_HREF = '#review-checks';
+
+const short = (commit: string | undefined) => (commit ?? '').slice(0, 12);
+
+/** How a record's commit stands to the head, in words. */
+function headWords(j: KlusterHeadJudgement): string {
+	if (!j.at_head) return `not at the head: ${j.why ?? 'its commit is not the head'}`;
+	if (j.exact) return 'at the head';
+	return `at the head: from ${short(j.commit)}, followed only by changes under design, docs, and wip`;
+}
+
+const asked = (by: string | undefined) => (by ? `asked by ${by}` : 'who asked is not recorded');
+
+/** A deploy's view: its log is the Deployments page's Logs pane, deploymentsHref#logs. */
+function deployRun(d: KlusterDeployEvidence, deploymentsHref: string): KlusterRunView {
+	return {
+		kind: 'deploy',
+		label: d.job === 'teardown' ? 'Teardown' : 'Deploy',
+		commit: short(d.commit),
+		outcome: d.said || d.outcome,
+		tone: d.outcome === 'passed' ? 'passed' : d.outcome === 'failed' ? 'failed' : 'other',
+		asked: asked(d.asked_by),
+		endedAt: d.ended_at ?? '',
+		atHead: d.head.at_head,
+		head: headWords(d.head),
+		logHref: d.steps?.length ? `${deploymentsHref}#logs` : '',
+		logLabel: d.failed_step ? `the ${d.failed_step} step's log` : "its steps' logs"
+	};
+}
+
+/** A checks run's view: its log is where the review page shows checks logs. */
+function checksRun(c: KlusterChecksEvidence): KlusterRunView {
+	return {
+		kind: 'checks',
+		label: 'Checks',
+		commit: short(c.commit),
+		outcome: c.outcome === 'timed-out' ? 'timed out' : c.outcome,
+		tone:
+			c.outcome === 'passed'
+				? 'passed'
+				: c.outcome === 'failed' || c.outcome === 'timed-out'
+					? 'failed'
+					: 'other',
+		asked: asked(undefined),
+		endedAt: '',
+		atHead: c.head.at_head,
+		head: headWords(c.head),
+		logHref: c.log ? CHECKS_LOG_HREF : '',
+		logLabel: 'its log'
+	};
+}
+
+/**
+ * A story's kluster evidence as the review page shows it beside the criteria (S-0662): the
+ * namespace's last deploy and checks run, each with its commit, outcome, who asked, when it ended,
+ * whether it is at the head and why not, and where its log is. A deploy's log opens the Deployments
+ * page, at deploymentsHref, on its Logs pane; a checks run's opens the page's Checks section. Null
+ * when no evidence applies, and the page shows nothing.
+ */
+export function klusterView(
+	e: KlusterEvidence | undefined | null,
+	deploymentsHref: string
+): KlusterView | null {
+	if (!e?.applies) return null;
+	const head = short(e.head);
+	const what = e.checks_on ? 'deployed and checked' : 'deployed';
+	let headline: string;
+	if (!head) headline = `${e.story} has no branch story/${e.story}, so nothing is at its head`;
+	else if (e.passed) headline = `Its namespace is ${what} at the head ${head}`;
+	else headline = `Its namespace is not ${what} at the head ${head}`;
+	return {
+		namespace: e.namespace ?? '',
+		head,
+		passed: e.passed,
+		headline,
+		deploy: e.deploy ? deployRun(e.deploy, deploymentsHref) : null,
+		checks: e.checks ? checksRun(e.checks) : null,
+		noDeploy: 'No deploy of the namespace is recorded.',
+		noChecks: e.checks_on
+			? 'No checks run against it has ended since its deploy.'
+			: 'The checks host action is off, so no checks run is needed.'
 	};
 }
 

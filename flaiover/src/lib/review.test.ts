@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+	CHECKS_LOG_HREF,
 	criteriaOf,
+	klusterView,
 	patchLines,
 	patchRuns,
 	readNdjson,
 	sectionOf,
 	toggleCriterion,
 	verifyView,
+	type KlusterEvidence,
 	type VerifyReport
 } from './review';
 
@@ -291,5 +294,206 @@ describe('verifyView (S-0270)', () => {
 			steps: [{ name: 'flai', tier: true, state: 'reused', duration_ms: 1500 }]
 		});
 		expect(v.rows[0]).toMatchObject({ label: 'reused', duration: '1.5s', findings: [] });
+	});
+});
+
+describe('klusterView (S-0662)', () => {
+	const HEAD = 'c0ffee000000000000000000000000000000beef';
+	const OLDER = '0dd000000000000000000000000000000000c0de';
+	const atHead = { commit: HEAD, head: HEAD, at_head: true, exact: true };
+	const AT_HEAD: KlusterEvidence = {
+		applies: true,
+		story: 'S-0662',
+		namespace: 's-0662',
+		head: HEAD,
+		checks_on: true,
+		deploy: {
+			commit: HEAD,
+			outcome: 'passed',
+			job: 'deploy',
+			said: 'passed',
+			asked_by: 'agent-S-0662',
+			started_at: '2026-11-13T09:29:00Z',
+			ended_at: '2026-11-13T09:30:00Z',
+			steps: [
+				{ name: 'build', outcome: 'passed', log: '.flai-cache/kluster/logs/s-0662/build.log' },
+				{ name: 'deploy', outcome: 'passed', log: '.flai-cache/kluster/logs/s-0662/deploy.log' }
+			],
+			head: atHead,
+			passed_at_head: true
+		},
+		checks: {
+			commit: HEAD,
+			outcome: 'passed',
+			log: '.flai-cache/checks/S-0662.log',
+			head: atHead,
+			passed_at_head: true
+		},
+		passed: true
+	};
+
+	it('shows a deploy and checks run that passed at the head, each with its log', () => {
+		const v = klusterView(AT_HEAD, '/ops/deployments')!;
+		expect(v).toMatchObject({
+			namespace: 's-0662',
+			head: 'c0ffee000000',
+			passed: true,
+			headline: 'Its namespace is deployed and checked at the head c0ffee000000'
+		});
+		expect(v.deploy).toEqual({
+			kind: 'deploy',
+			label: 'Deploy',
+			commit: 'c0ffee000000',
+			outcome: 'passed',
+			tone: 'passed',
+			asked: 'asked by agent-S-0662',
+			endedAt: '2026-11-13T09:30:00Z',
+			atHead: true,
+			head: 'at the head',
+			logHref: '/ops/deployments#logs',
+			logLabel: "its steps' logs"
+		});
+		expect(v.checks).toEqual({
+			kind: 'checks',
+			label: 'Checks',
+			commit: 'c0ffee000000',
+			outcome: 'passed',
+			tone: 'passed',
+			asked: 'who asked is not recorded',
+			endedAt: '',
+			atHead: true,
+			head: 'at the head',
+			logHref: CHECKS_LOG_HREF,
+			logLabel: 'its log'
+		});
+		expect(CHECKS_LOG_HREF).toBe('#review-checks');
+	});
+
+	it('counts a commit followed only by design, docs, and wip changes as at the head', () => {
+		const since = { commit: OLDER, head: HEAD, at_head: true };
+		const v = klusterView(
+			{
+				...AT_HEAD,
+				deploy: { ...AT_HEAD.deploy!, commit: OLDER, head: since },
+				checks: { ...AT_HEAD.checks!, commit: OLDER, head: since }
+			},
+			'/ops/deployments'
+		)!;
+		expect(v.deploy).toMatchObject({ commit: '0dd000000000', atHead: true });
+		expect(v.deploy!.head).toBe(
+			'at the head: from 0dd000000000, followed only by changes under design, docs, and wip'
+		);
+	});
+
+	it('says why a deploy and checks run at an older commit are not at the head', () => {
+		const why =
+			'1 path outside design, docs, and wip changed from 0dd000000000 to the head c0ffee000000, such as flai/cmd/verify.go';
+		const older = {
+			commit: OLDER,
+			head: HEAD,
+			at_head: false,
+			outside: ['flai/cmd/verify.go'],
+			why
+		};
+		const v = klusterView(
+			{
+				...AT_HEAD,
+				passed: false,
+				deploy: { ...AT_HEAD.deploy!, commit: OLDER, head: older, passed_at_head: false },
+				checks: { ...AT_HEAD.checks!, commit: OLDER, head: older, passed_at_head: false }
+			},
+			'/ops/deployments'
+		)!;
+		expect(v.passed).toBe(false);
+		expect(v.headline).toBe('Its namespace is not deployed and checked at the head c0ffee000000');
+		expect(v.deploy).toMatchObject({ commit: '0dd000000000', tone: 'passed', atHead: false });
+		expect(v.deploy!.head).toBe(`not at the head: ${why}`);
+		expect(v.checks!.head).toBe(`not at the head: ${why}`);
+	});
+
+	it('shows a failed deploy with the failed step’s log, and a failed or timed-out checks run', () => {
+		const v = klusterView(
+			{
+				...AT_HEAD,
+				passed: false,
+				deploy: {
+					...AT_HEAD.deploy!,
+					outcome: 'failed',
+					said: 'failed at the deploy step',
+					failed_step: 'deploy',
+					exit_code: 1,
+					asked_by: undefined,
+					passed_at_head: false
+				},
+				checks: undefined
+			},
+			'/base/ops/deployments'
+		)!;
+		expect(v.deploy).toMatchObject({
+			outcome: 'failed at the deploy step',
+			tone: 'failed',
+			asked: 'who asked is not recorded',
+			logHref: '/base/ops/deployments#logs',
+			logLabel: "the deploy step's log"
+		});
+		expect(v.checks).toBeNull();
+		expect(v.noChecks).toBe('No checks run against it has ended since its deploy.');
+		const timedOut = klusterView(
+			{
+				...AT_HEAD,
+				passed: false,
+				checks: { ...AT_HEAD.checks!, outcome: 'timed-out', passed_at_head: false }
+			},
+			'/ops/deployments'
+		)!;
+		expect(timedOut.checks).toMatchObject({ outcome: 'timed out', tone: 'failed' });
+		const failed = klusterView(
+			{
+				...AT_HEAD,
+				passed: false,
+				checks: { ...AT_HEAD.checks!, outcome: 'failed', log: undefined, passed_at_head: false }
+			},
+			'/ops/deployments'
+		)!;
+		expect(failed.checks).toMatchObject({ outcome: 'failed', tone: 'failed', logHref: '' });
+	});
+
+	it('says when nothing is deployed, the checks action is off, or the story has no branch', () => {
+		const none = klusterView(
+			{ ...AT_HEAD, passed: false, deploy: undefined, checks: undefined },
+			'/ops/deployments'
+		)!;
+		expect(none.deploy).toBeNull();
+		expect(none.noDeploy).toBe('No deploy of the namespace is recorded.');
+		const off = klusterView(
+			{ ...AT_HEAD, checks_on: false, checks: undefined },
+			'/ops/deployments'
+		)!;
+		expect(off.headline).toBe('Its namespace is deployed at the head c0ffee000000');
+		expect(off.noChecks).toBe('The checks host action is off, so no checks run is needed.');
+		const branchless = klusterView(
+			{ ...AT_HEAD, head: undefined, passed: false, deploy: undefined, checks: undefined },
+			'/ops/deployments'
+		)!;
+		expect(branchless.headline).toBe(
+			'S-0662 has no branch story/S-0662, so nothing is at its head'
+		);
+	});
+
+	it('is absent when no evidence applies or the report has none', () => {
+		expect(klusterView(undefined, '/ops/deployments')).toBeNull();
+		expect(klusterView(null, '/ops/deployments')).toBeNull();
+		expect(
+			klusterView(
+				{
+					applies: false,
+					why: 'the kluster host action is off for this project',
+					story: 'S-0662',
+					checks_on: false,
+					passed: false
+				},
+				'/ops/deployments'
+			)
+		).toBeNull();
 	});
 });

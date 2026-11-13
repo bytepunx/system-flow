@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -82,9 +83,10 @@ var good = map[string]struct {
 	"checks.run":    {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
 	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
 	"test.run":      {`{"paths":["flai/internal/verify"," docs "],"all":true,"max":3,` + rid + `}`, "test --all --max=3 --json -- flai/internal/verify docs", ""},
-	// S-0270: flai verify for a story, and its last report
+	// S-0270: flai verify for a story, and its last report, which flai serve
+	// answers in its own process, with no command line (S-0662)
 	"verify.run":    {`{"id":"S-0001","max":3,` + rid + `}`, "verify S-0001 --max=3 --json", ""},
-	"verify.status": {`{"id":"S-0001"}`, "verify S-0001 --last --json", ""},
+	"verify.status": {`{"id":"S-0001"}`, "", ""},
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
@@ -389,6 +391,9 @@ func TestEveryWriteIsCovered(t *testing.T) {
 func TestWritesBecomeTheCommandLinesTheDashboardUsedToRun(t *testing.T) {
 	p := withDocs(t) // owner: olive
 	for name, c := range good {
+		if specs()[name].do != nil {
+			continue // answered in flai serve's process, with no command line; its own test covers it
+		}
 		rec := &recorder{ran: Ran{Stdout: []byte(`{"ok":true}`)}}
 		res, rerr := writeMethods(rec.run, time.Now, hostFor(name))[name](context.Background(), p, json.RawMessage(c.params))
 		if rerr != nil {
@@ -2626,42 +2631,151 @@ func TestVerifyRunAnswersFlaiVerifysReport(t *testing.T) {
 }
 
 // S-0270: verify.status answers the story's stored last report, or null
-// when it has none, whether or not the checks host action is on, and runs
-// flai verify --last, which runs nothing; it records nothing in the journal.
+// when it has none, whether or not the checks host action is on, in flai
+// serve's process, as flai verify --last would, running nothing and
+// recording nothing in the journal. S-0662: its kluster part is read now on
+// the host, from the namespace's record against the story branch's head,
+// whatever the stored report held, and is left out while none applies.
 func TestVerifyStatusAnswersTheLastReportOrNull(t *testing.T) {
 	p := withDocs(t)
 	var journal []Entry
-	host := Host{Record: func(e Entry) { journal = append(journal, e) }}
-	call := func(ran Ran) (*recorder, any, *channel.Error) {
-		rec := &recorder{ran: ran}
+	on := map[string]bool{}
+	host := Host{
+		Enabled: func(action, root string) bool { return on[action] && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	const head, older = "c0ffee000000000000000000000000000000beef", "0dd000000000000000000000000000000000c0de"
+	g := queueGit{"rev-parse --verify --quiet refs/heads/story/S-0001^{commit}": head}
+	g["merge-base --is-ancestor "+older+" "+head] = ""
+	g["diff --name-only --no-renames -z "+older+" "+head] = "flai/cmd/verify.go\x00design/system/kluster.md\x00"
+	was := verifyGit
+	verifyGit = func(context.Context) execx.Runner { return g }
+	t.Cleanup(func() { verifyGit = was })
+	rec := &recorder{}
+	call := func() (Written, *channel.Error) {
+		t.Helper()
 		res, e := writeMethods(rec.run, time.Now, host)["verify.status"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
-		return rec, res, e
+		w, _ := res.(Written)
+		return w, e
+	}
+	// the stored report and its kluster part, as the answer decodes them
+	type answered struct {
+		Story   string            `json:"story"`
+		Commit  string            `json:"commit"`
+		Passed  bool              `json:"passed"`
+		Kluster *kluster.Evidence `json:"kluster"`
+	}
+	decoded := func(w Written) answered {
+		t.Helper()
+		var a answered
+		if err := json.Unmarshal(w.Data, &a); err != nil {
+			t.Fatalf("answer %s: %v", w.Data, err)
+		}
+		return a
 	}
 
-	stored := `{"story":"S-0001","commit":"0123abc","base":"main","ran_at":"2026-10-06T22:00:00Z","passed":true,"steps":[{"name":"rebase","state":"passed","duration_ms":3}]}`
-	rec, res, e := call(Ran{Stdout: []byte(stored)})
-	if e != nil {
-		t.Fatalf("a stored report with checks off: %+v", e)
-	}
-	if got := strings.Join(rec.runs[0].Args, " "); got != "verify S-0001 --last --json" || rec.runs[0].Dir != p.Root {
-		t.Errorf("ran %q in %s, want flai verify --last in the project", got, rec.runs[0].Dir)
-	}
-	if w := res.(Written); string(w.Data) != stored {
-		t.Errorf("a stored report answered %s", w.Data)
+	if w, e := call(); e != nil || string(w.Data) != "null" {
+		t.Errorf("no report: %s, %+v", w.Data, e)
 	}
 
-	if _, res, e := call(Ran{Stdout: []byte("null\n")}); e != nil || string(res.(Written).Data) != "null" {
-		t.Errorf("no report: %+v, %+v", res, e)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, _, e := call(Ran{Stdout: []byte(`["S-0001"]`)}); e == nil || !strings.Contains(e.Message, "neither the last report nor null") {
-		t.Errorf("an answer that is no report: %+v", e)
+	ranAt := time.Date(2026, 10, 6, 22, 0, 0, 0, time.UTC)
+	stale := &kluster.Evidence{Applies: true, Story: "S-0001", Namespace: "s-0001", Passed: true}
+	if err := verify.SaveReport(repo, verify.Report{Story: "S-0001", Commit: head, Base: "main", RanAt: ranAt, Passed: true,
+		Steps: []verify.Step{{Name: "rebase", State: verify.Passed, DurationMS: 3}}, Kluster: stale}); err != nil {
+		t.Fatal(err)
 	}
-	if _, _, e := call(Ran{Exit: 2, Events: []map[string]any{{"level": "FATAL", "err": "read the last verify report of S-0001: unexpected end of JSON input; delete it and verify again"}}}); e == nil ||
-		!strings.Contains(e.Message, "delete it and verify again") {
+	w, e := call()
+	if a := decoded(w); e != nil || a.Story != "S-0001" || a.Commit != head || !a.Passed || a.Kluster != nil {
+		t.Errorf("a stored report with no kluster: block: %s, %+v; want the report without the part it stored", w.Data, e)
+	}
+
+	writeFile := func(rel, content string) {
+		t.Helper()
+		full := filepath.Join(p.Root, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifestPath := filepath.Join(p.Root, "system-flow.yaml")
+	plain, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile("system-flow.yaml", string(plain)+"kluster:\n  config: kluster.yaml\n  deploy: [scripts/deploy.sh]\n")
+	ended := time.Date(2026, 11, 13, 9, 30, 0, 0, time.UTC)
+	record := func(r kluster.Record) {
+		t.Helper()
+		data, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		writeFile(filepath.Join(".flai-cache", "kluster", "deployments", "s-0001.json"), string(data))
+	}
+	steps := []kluster.Step{
+		{Name: "build", Outcome: kluster.OutcomePassed, Log: ".flai-cache/kluster/logs/s-0001/build.log"},
+		{Name: "deploy", Outcome: kluster.OutcomePassed, Log: ".flai-cache/kluster/logs/s-0001/deploy.log"},
+	}
+	record(kluster.Record{Story: "S-0001", Namespace: "s-0001", Commit: head, Outcome: kluster.OutcomePassed, StartedAt: ended.Add(-time.Minute), EndedAt: ended, Steps: steps,
+		ChecksCommit: head, ChecksOutcome: kluster.OutcomePassed, ChecksLog: ".flai-cache/checks/S-0001.log", AskedBy: "agent-S-0001"})
+
+	w, e = call()
+	if a := decoded(w); e != nil || a.Kluster != nil {
+		t.Errorf("with the kluster action off: %s, %+v; want no part", w.Data, e)
+	}
+
+	on[ActionKluster], on[ActionChecks] = true, true
+	w, e = call()
+	a := decoded(w)
+	if e != nil || a.Kluster == nil {
+		t.Fatalf("deployed and checked at the head: %s, %+v; want the kluster part", w.Data, e)
+	}
+	k := a.Kluster
+	if !k.Applies || !k.Passed || !k.ChecksOn || k.Namespace != "s-0001" || k.Head != head || k.Deploy == nil || k.Checks == nil {
+		t.Fatalf("deployed and checked at the head: %+v", k)
+	}
+	if d := k.Deploy; d.Commit != head || d.Outcome != kluster.OutcomePassed || d.AskedBy != "agent-S-0001" || !d.EndedAt.Equal(ended) ||
+		!d.Head.AtHead || !d.Head.Exact || !d.PassedAtHead || len(d.Steps) != 2 || d.Steps[1].Log != ".flai-cache/kluster/logs/s-0001/deploy.log" {
+		t.Errorf("the deploy at the head: %+v", d)
+	}
+	if c := k.Checks; c.Commit != head || c.Outcome != kluster.OutcomePassed || c.Log != ".flai-cache/checks/S-0001.log" || !c.Head.AtHead || !c.PassedAtHead {
+		t.Errorf("the checks run at the head: %+v", c)
+	}
+
+	record(kluster.Record{Story: "S-0001", Namespace: "s-0001", Commit: older, Outcome: kluster.OutcomeFailed, FailedStep: "deploy", ExitCode: 1, Error: "deploy exited 1",
+		StartedAt: ended.Add(-time.Minute), EndedAt: ended, Steps: steps, AskedBy: "flai serve"})
+	w, e = call()
+	if a := decoded(w); e != nil || a.Kluster == nil || a.Kluster.Passed || a.Kluster.Checks != nil {
+		t.Fatalf("a deploy that failed at an older commit: %s, %+v", w.Data, e)
+	} else if d := a.Kluster.Deploy; d.Commit != older || d.Outcome != kluster.OutcomeFailed || d.FailedStep != "deploy" || d.Head.AtHead || d.PassedAtHead ||
+		!slices.Equal(d.Head.Outside, []string{"flai/cmd/verify.go"}) || !strings.Contains(d.Head.Why, "outside design, docs, and wip") {
+		t.Errorf("a deploy that failed at an older commit: %+v", d)
+	}
+
+	writeFile(filepath.Join(".flai-cache", "kluster", "deployments", "s-0001.json"), "{not json")
+	w, e = call()
+	if a := decoded(w); e != nil || a.Kluster != nil || len(w.Warnings) != 1 || !strings.Contains(w.Warnings[0], "no kluster evidence for S-0001") {
+		t.Errorf("a record that cannot be read: %s, warnings %q, %+v; want no part and a warning", w.Data, w.Warnings, e)
+	}
+
+	writeFile("system-flow.yaml", string(plain)+"kluster:\n  config: kluster.yaml\n")
+	w, e = call()
+	if a := decoded(w); e != nil || a.Kluster != nil {
+		t.Errorf("a kluster: block with no deploy: %s, %+v; want no part", w.Data, e)
+	}
+
+	writeFile(filepath.Join(".flai-cache", "verify", "S-0001.json"), "{not json")
+	if _, e := call(); e == nil || !strings.Contains(e.Message, "delete it and verify again") {
 		t.Errorf("a stored report flai cannot read: %+v", e)
 	}
-	if len(journal) != 0 {
-		t.Errorf("a read is journalled: %+v", journal)
+	if len(rec.runs) != 0 || len(journal) != 0 {
+		t.Errorf("a read ran %d commands and journalled %+v", len(rec.runs), journal)
 	}
 }
 

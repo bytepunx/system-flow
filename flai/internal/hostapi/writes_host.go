@@ -1,14 +1,21 @@
 package hostapi
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // hostSpecs are the writes that publish, run the dashboard and the host, and start agents and checks.
@@ -243,20 +250,13 @@ func hostSpecs() map[string]spec {
 			answers: []int{1}, judge: verifyResult, build: verifyArgs},
 		// verify.status: a read of the story's last verification, as flai
 		// verify --last prints it from .flai-cache/verify: the report, or
-		// null when the story has none. It runs nothing, so, as
-		// checks.status, it is not gated.
+		// null when the story has none, with its kluster part read now on
+		// the host (verifyStatus). It runs nothing, so, as checks.status, it
+		// is not gated.
 		"verify.status": {reads: true, judge: verifyStored, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
-			in, e := decode[struct {
-				ID string `json:"id"`
-			}](raw)
-			if e != nil {
-				return nil, "", e
-			}
-			if e := needStory(in.ID); e != nil {
-				return nil, "", e
-			}
-			return []string{"verify", in.ID, "--last"}, "", nil
-		}},
+			_, e := verifyStatusOf(raw)
+			return nil, "", e
+		}, do: verifyStatus},
 		// agent.restart: a new agent for a story whose agent dropped or
 		// failed (S-0116, ADR-0043); flai serve agent restart judges whether
 		// it may, and says why not.
@@ -346,4 +346,57 @@ func hostSpecs() map[string]spec {
 		"orchestrate.stop":  orchestrateNow("stop"),
 		"orchestrate.start": orchestrateNow("start"),
 	}
+}
+
+// verifyGit is the git verify.status judges a namespace's record against
+// the story branch's head with: this host's, timed on ctx.
+var verifyGit = systemGit
+
+// verifyStatusOf is the story verify.status is asked of.
+func verifyStatusOf(raw json.RawMessage) (string, *channel.Error) {
+	in, e := decode[struct {
+		ID string `json:"id"`
+	}](raw)
+	if e != nil {
+		return "", e
+	}
+	return in.ID, needStory(in.ID)
+}
+
+// verifyStatus answers verify.status in flai serve's process, as flai
+// verify --last would: the story's stored report, or null when it has none.
+// Its kluster part is read now, from the namespace's record in the main
+// checkout, against the story branch's head, with the kluster and checks
+// host actions as the host has them (ADR-0292 §6): a close-out in a story's
+// container records none, and the record moves on after a close-out. It is
+// left out while no evidence applies, and, with a warning, while the record
+// cannot be read.
+func verifyStatus(ctx context.Context, host Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+	id, e := verifyStatusOf(raw)
+	if e != nil {
+		return nil, e
+	}
+	return answer(ctx, p, "verify.status", func(_ execx.Runner, repo *workitem.Repo, log *slog.Logger) (any, error) {
+		if err := repo.RequireMain("flai verify"); err != nil {
+			return nil, err
+		}
+		rep, ok, err := verify.LastReport(repo, id)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return json.RawMessage("null"), nil
+		}
+		rep.Kluster = nil
+		klusterOn := host.enabled(ActionKluster, p.Root)
+		checksOn := klusterOn && host.enabled(ActionChecks, p.Root)
+		ev, err := kluster.ReadEvidence(verifyGit(ctx), p.Root, repo.Manifest, rep.Story, klusterOn, checksOn)
+		switch {
+		case err != nil:
+			log.Warn(fmt.Sprintf("the review page shows no kluster evidence for %s: %v; run flai kluster status in the project on the host to see the namespace's record", rep.Story, err))
+		case ev.Applies:
+			rep.Kluster = &ev
+		}
+		return rep, nil
+	})
 }

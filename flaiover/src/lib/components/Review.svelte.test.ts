@@ -1278,6 +1278,179 @@ describe('Review', () => {
 		});
 	});
 
+	describe('the kluster namespace beside the criteria (S-0662)', () => {
+		const HEAD = 'c0ffee000000000000000000000000000000beef';
+		const OLDER = '0dd000000000000000000000000000000000c0de';
+		const atHead = { commit: HEAD, head: HEAD, at_head: true, exact: true };
+		const DEPLOY = {
+			commit: HEAD,
+			outcome: 'passed',
+			job: 'deploy',
+			said: 'passed',
+			asked_by: 'agent-S-0041',
+			started_at: '2026-11-13T09:29:00Z',
+			ended_at: '2026-11-13T09:30:00Z',
+			steps: [
+				{ name: 'deploy', outcome: 'passed', log: '.flai-cache/kluster/logs/s-0041/deploy.log' }
+			],
+			head: atHead,
+			passed_at_head: true
+		};
+		const CHECKS = {
+			commit: HEAD,
+			outcome: 'passed',
+			log: '.flai-cache/checks/S-0041.log',
+			head: atHead,
+			passed_at_head: true
+		};
+		const KLUSTER = {
+			applies: true,
+			story: 'S-0041',
+			namespace: 's-0041',
+			head: HEAD,
+			checks_on: true,
+			deploy: DEPLOY,
+			checks: CHECKS,
+			passed: true
+		};
+		const REPORT = {
+			story: 'S-0041',
+			commit: HEAD,
+			base: 'main',
+			ran_at: '2026-11-13T09:00:00Z',
+			duration_ms: 1000,
+			passed: true,
+			steps: [{ name: 'rebase', state: 'passed', duration_ms: 3 }]
+		};
+		const withKluster = (kluster: unknown) => () => json({ report: { ...REPORT, kluster } });
+		const evidence = () =>
+			document.querySelector('#review-criteria [data-testid="kluster-evidence"]');
+		const runs = () =>
+			[...document.querySelectorAll('[data-testid="kluster-run"]')].map((li) =>
+				(li.textContent ?? '').replace(/\s+/g, ' ').trim()
+			);
+		const hrefOf = (a: Element) => [a.textContent, a.getAttribute('href')];
+		const links = () => [...document.querySelectorAll('[data-testid="kluster-log"]')].map(hrefOf);
+
+		it('shows the deploy and checks run that passed at the head, each linking its log', async () => {
+			backend({ verify: withKluster(KLUSTER) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(evidence()!.textContent).toContain('Namespace s-0041');
+			const headline = document.querySelector('[data-testid="kluster-headline"]')!;
+			expect(headline.textContent!.trim()).toBe(
+				'Its namespace is deployed and checked at the head c0ffee000000.'
+			);
+			expect(headline.className).toContain('text-good');
+			// when it ended, in the local zone: the tests run in New York
+			expect(runs()).toEqual([
+				"Deploy c0ffee000000 passed asked by agent-S-0041, ended 2026-11-13 04:30 EST at the head its steps' logs",
+				'Checks c0ffee000000 passed who asked is not recorded at the head its log'
+			]);
+			expect(links()).toEqual([
+				["its steps' logs", '/ops/deployments#logs'],
+				['its log', '#review-checks']
+			]);
+			expect(document.getElementById('review-checks')).not.toBeNull();
+		});
+
+		it('says why a deploy and checks run at an older commit are not at the head', async () => {
+			const why =
+				'1 path outside design, docs, and wip changed from 0dd000000000 to the head c0ffee000000, such as flai/cmd/verify.go';
+			const older = {
+				commit: OLDER,
+				head: HEAD,
+				at_head: false,
+				outside: ['flai/cmd/verify.go'],
+				why
+			};
+			backend({
+				verify: withKluster({
+					...KLUSTER,
+					passed: false,
+					deploy: { ...DEPLOY, commit: OLDER, head: older, passed_at_head: false },
+					checks: { ...CHECKS, commit: OLDER, head: older, passed_at_head: false }
+				})
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const headline = document.querySelector('[data-testid="kluster-headline"]')!;
+			expect(headline.textContent!.trim()).toBe(
+				'Its namespace is not deployed and checked at the head c0ffee000000.'
+			);
+			expect(headline.className).toContain('text-danger');
+			const [deploy, checks] = runs();
+			expect(deploy).toContain('Deploy 0dd000000000 passed');
+			expect(deploy).toContain(`not at the head: ${why}`);
+			expect(checks).toContain('Checks 0dd000000000 passed');
+			expect(checks).toContain(`not at the head: ${why}`);
+			const paras = [...evidence()!.querySelectorAll('p')];
+			const head = paras.find((p) => p.textContent?.startsWith('not at the head'))!;
+			expect(head.className).toContain('text-warn');
+		});
+
+		it('shows a failed deploy with its failed step’s log, and a checks run that has not ended', async () => {
+			backend({
+				verify: withKluster({
+					...KLUSTER,
+					passed: false,
+					deploy: {
+						...DEPLOY,
+						outcome: 'failed',
+						said: 'failed at the deploy step',
+						failed_step: 'deploy',
+						exit_code: 1,
+						asked_by: 'flai serve',
+						passed_at_head: false
+					},
+					checks: undefined
+				})
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(runs()).toEqual([
+				"Deploy c0ffee000000 failed at the deploy step asked by flai serve, ended 2026-11-13 04:30 EST at the head the deploy step's log"
+			]);
+			const spans = [...evidence()!.querySelectorAll('span')];
+			const outcome = spans.find((s) => s.textContent === 'failed at the deploy step')!;
+			expect(outcome.className).toContain('text-danger');
+			expect(evidence()!.textContent).toContain(
+				'No checks run against it has ended since its deploy.'
+			);
+			expect(links()).toEqual([["the deploy step's log", '/ops/deployments#logs']]);
+		});
+
+		it('links a checks log only while the page shows its Checks section', async () => {
+			backend({ item: { ...STORY, status: 'in-progress' }, verify: withKluster(KLUSTER) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(document.getElementById('review-checks')).toBeNull();
+			expect(runs()[1]).toContain('Checks c0ffee000000 passed');
+			expect(links()).toEqual([["its steps' logs", '/ops/deployments#logs']]);
+		});
+
+		it('shows nothing of a namespace when the report has no kluster part, or there is no report', async () => {
+			backend({ verify: () => json({ report: REPORT }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(document.querySelector('[data-testid="verify-section"]')).not.toBeNull();
+			expect(evidence()).toBeNull();
+			expect(document.body.textContent).not.toContain('Namespace');
+			unmount(c!);
+			document.body.innerHTML = '';
+			backend({ verify: withKluster({ ...KLUSTER, applies: false, why: 'off' }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(evidence()).toBeNull();
+			unmount(c!);
+			document.body.innerHTML = '';
+			backend({});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(evidence()).toBeNull();
+		});
+	});
+
 	describe('the pull request (S-0394)', () => {
 		const PULL_REQUEST = {
 			story: 'S-0041',

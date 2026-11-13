@@ -9,10 +9,13 @@
 	import { resolve } from '$app/paths';
 	import {
 		criteriaOf,
+		klusterView,
 		patchLines,
 		readNdjson,
 		sectionOf,
 		verifyView,
+		type KlusterRunView,
+		type KlusterView,
 		type PatchKind,
 		type VerifyReport,
 		type VerifyView
@@ -183,6 +186,10 @@
 	// and then the section is left out. Nothing here runs it.
 	let verify = $state<VerifyView | null>(null);
 	let verifyError = $state<string | null>(null);
+	// The story's kluster namespace (S-0662): its last deploy and checks run against the head, as
+	// verify.status reads them on the host with the report; null when none applies, and then the
+	// criteria show nothing of it.
+	let kluster = $state<KlusterView | null>(null);
 
 	// The pull request (S-0394): the story's, its required checks and its reviews, as flai serve
 	// last read them from the forge; null when it has none or it cannot be read, and then the
@@ -407,6 +414,7 @@
 		unmade = [];
 		verify = null;
 		verifyError = null;
+		kluster = null;
 		pullRequest = null;
 		catalogue = null;
 		undone = [];
@@ -584,7 +592,9 @@
 	async function loadVerify(target: string) {
 		try {
 			const { report } = await get<{ report: VerifyReport | null }>(`/api/items/${target}/verify`);
-			if (target === id) verify = report ? verifyView(report) : null;
+			if (target !== id) return;
+			verify = report ? verifyView(report) : null;
+			kluster = klusterView(report?.kluster, resolve('/ops/deployments'));
 		} catch (e) {
 			if (target === id) verifyError = e instanceof Error ? e.message : String(e);
 		}
@@ -867,6 +877,58 @@
 	{/each}
 {/snippet}
 
+<!-- A deploy or checks run of the story's namespace (S-0662); a checks log links the Checks section only while the page shows it. -->
+{#snippet klusterRun(run: KlusterRunView)}
+	<li data-testid="kluster-run">
+		<span class="flex flex-wrap items-baseline gap-2">
+			<span class="font-medium">{run.label}</span>
+			<code class="rounded bg-ground px-1 text-ink">{run.commit}</code>
+			<span
+				class={run.tone === 'passed'
+					? 'text-good'
+					: run.tone === 'failed'
+						? 'font-medium text-danger'
+						: 'text-muted'}>{run.outcome}</span
+			>
+			<span class="text-xs text-muted"
+				>{run.asked}{#if run.endedAt}, ended {localTime(run.endedAt)}{/if}</span
+			>
+		</span>
+		<p class="text-xs" class:text-muted={run.atHead} class:text-warn={!run.atHead}>{run.head}</p>
+		{#if run.logHref && (run.kind === 'deploy' || checksShown)}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the Deployments path is resolve()d; the rest is a hash -->
+			<a class="text-xs underline" href={run.logHref} data-testid="kluster-log">{run.logLabel}</a>
+		{/if}
+	</li>
+{/snippet}
+
+<!-- The story's kluster namespace beside the criteria (S-0662): what was deployed and checked, and whether at the head. -->
+{#snippet klusterEvidence(k: KlusterView)}
+	<div class="mt-3 border-t border-line pt-2" data-testid="kluster-evidence">
+		<h3 class="text-xs font-medium text-muted">
+			Namespace <code class="rounded bg-ground px-1 text-ink">{k.namespace}</code>
+		</h3>
+		<p
+			class={k.passed ? 'font-medium text-good' : 'font-medium text-danger'}
+			data-testid="kluster-headline"
+		>
+			{k.headline}.
+		</p>
+		<ul class="mt-1 space-y-1">
+			{#if k.deploy}
+				{@render klusterRun(k.deploy)}
+			{:else}
+				<li class="text-muted">{k.noDeploy}</li>
+			{/if}
+			{#if k.checks}
+				{@render klusterRun(k.checks)}
+			{:else if k.deploy}
+				<li class="text-muted">{k.noChecks}</li>
+			{/if}
+		</ul>
+	</div>
+{/snippet}
+
 <!-- The sections the sidebar scrolls to, in its order (S-0461), given the story loaded. -->
 {#snippet sections(item: Item)}
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -891,6 +953,9 @@
 				</ul>
 			{:else}
 				<p class="text-muted">The story has no acceptance criteria.</p>
+			{/if}
+			{#if kluster}
+				{@render klusterEvidence(kluster)}
 			{/if}
 		</section>
 
