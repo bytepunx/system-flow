@@ -41,9 +41,31 @@ builds:
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Date={{ .Date }}
       - -X "github.com/bytepunx/system-flow/flai/internal/buildinfo.ReleaseStatement={{ envOrDefault "FLAI_RELEASE_STATEMENT" "" }}"
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.ReleaseSignature={{ envOrDefault "FLAI_RELEASE_SIGNATURE" "" }}
+  # pilot, the agent images' entrypoint (ADR-0212), for Linux only: the
+  # release's agent images are built from these two binaries and flai's, and a
+  # host builds them from the same archives when it cannot pull them
+  # (ADR-0295). Its targets are written as block lists so that
+  # scripts/flai-snapshot.sh, which narrows the one-line goos and goarch of
+  # the flai build to the host's, leaves them alone.
+  - id: pilot
+    main: ./pilot
+    binary: pilot
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
 
 archives:
   - id: flai
+    ids: [flai]
     formats: [tar.gz]
     name_template: '{{ .ProjectName }}_{{ if .IsSnapshot }}{{ with index .Env "FLAI_LOCAL_VERSION" }}{{ . }}{{ else }}snapshot{{ end }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
@@ -53,6 +75,15 @@ archives:
       - README.md
       # The license travels with every copy (S-0231): the binary embeds this
       # same file, a copy of LICENSE.md at the repository root.
+      - src: internal/license/LICENSE.md
+        dst: LICENSE.md
+  # pilot_<version>_linux_<arch>.tar.gz, named in checksums.txt beside flai's
+  # archives, so the release's signature covers it too.
+  - id: pilot
+    ids: [pilot]
+    formats: [tar.gz]
+    name_template: '{{ .Binary }}_{{ if .IsSnapshot }}{{ with index .Env "FLAI_LOCAL_VERSION" }}{{ . }}{{ else }}snapshot{{ end }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}_{{ .Os }}_{{ .Arch }}'
+    files:
       - src: internal/license/LICENSE.md
         dst: LICENSE.md
 
