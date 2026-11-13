@@ -7,7 +7,7 @@ status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-13T07:53:06Z
+updated: 2026-11-13T08:22:07Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:16Z
@@ -15,7 +15,7 @@ transitions:
 tags: [cli]
 topics: [kluster, deployment]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
-after: [S-0660, S-0659]
+after: [S-0660, S-0763]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -37,15 +37,15 @@ usage:
           cache_write: 26353
           cost: 0.3513
     - kind: orchestrator
-      seconds: 257
+      seconds: 266
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 213
-          cache_read: 1484011
-          cache_write: 120720
-          cost: 0.4388
+          input: 34
+          output: 242
+          cache_read: 1573547
+          cache_write: 140572
+          cost: 0.4703
         - model: claude-sonnet-5-5
           input: 8
           output: 851
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-11-10T09:41:33Z
 forecast:
   duration: 1h15m
-  delivery: 2026-11-13T11:30:00Z
-  basis: "Its own forecast of 1h15m; 9th in the pull order with an in-progress limit of 3, behind S-0660, S-0760, S-0735, S-0745, S-0759, S-0734, S-0751, S-0757 and S-0740."
+  delivery: 2026-11-13T11:59:00Z
+  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 3, behind S-0660, S-0735, S-0760, S-0761, S-0745, S-0759, S-0751, S-0757 and S-0740."
   by: flai
-  at: 2026-11-13T07:53:06Z
+  at: 2026-11-13T08:22:07Z
 finalized:
   by: orchestrator
   at: 2026-11-10T09:44:44Z
