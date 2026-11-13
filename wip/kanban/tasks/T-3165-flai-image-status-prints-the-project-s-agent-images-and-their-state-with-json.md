@@ -3,16 +3,37 @@ id: T-3165
 type: task
 nature: feature
 title: flai image status prints the project's agent images and their state, with --json, and exits non-zero on one missing or stale
-status: backlog
+status: done
 parent: S-0735
 owner: alex
 created: 2026-11-12T15:58:41Z
-updated: 2026-11-12T15:58:41Z
-transitions: []
+updated: 2026-11-13T08:30:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:03:15Z
+    by: agent-S-0735
+  - to: in-progress
+    at: 2026-11-13T08:03:15Z
+    by: agent-S-0735
+  - to: done
+    at: 2026-11-13T08:30:42Z
+    by: agent-S-0735
 stream: S-0735
 tags: [cli]
 touches: [flai/cmd/image.go, flai/cmd/image_test.go, flai/cmd/root.go]
 after: [T-3164]
+usage:
+  source: log
+  seconds: 1647
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 493
+      cache_read: 5100531
+      cache_write: 118258
+      cost: 1.9438
 ---
 # T-3165 flai image status prints the project's agent images and their state, with --json, and exits non-zero on one missing or stale
 

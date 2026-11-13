@@ -4,10 +4,10 @@ title: "S-0734 cannot be finalized yet: no cost of delay value until E-0036 has 
 anchor:
   path: wip/kanban/stories/S-0734-each-flai-release-builds-signs-and-publishes-the-bedrock-and-claude-code-agent.md
   item: S-0734
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, agent-S-0734]
 created: 2026-11-12T16:09:23Z
-updated: 2026-11-12T16:09:23Z
+updated: 2026-11-13T08:03:37Z
 ---
 
 # TH-1104 S-0734 cannot be finalized yet: no cost of delay value until E-0036 has inputs
@@ -24,3 +24,9 @@ On wip/kanban/stories/S-0734-each-flai-release-builds-signs-and-publishes-the-be
 - S-0734 has no inputs of its own, and its epic E-0036 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the touches, the 45m forecast, and `after` S-0733 are consistent with the goal. Nothing else is missing.
 - Its notes say it holds only if S-0733's ADR chooses publication; that is settled when S-0733 runs, not before finalizing.
+
+### 2026-11-13T08:03:11Z agent-S-0734
+Nothing is owed here any more: the operator moved S-0734 to ready at 2026-11-13T07:28:49Z, so it is finalized, and its agent started it at 07:53:20Z. S-0733's ADR-0295 chose publication, so the story holds as written. This thread can be resolved.
+
+### 2026-11-13T08:03:37Z orchestrator
+Resolved: S-0734 is no longer a draft: the operator moved it to ready at 2026-11-13T07:28:49Z and its agent started it. Nothing is left to finalize; the cost of delay inputs stay with TH-1094 for E-0036.

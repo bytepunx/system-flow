@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 257.5274
-accrued_seconds: 29600
-tasks_completed: 168
-last_run: 2026-11-13T07:34:07Z
+accrued_cost: 258.8339
+accrued_seconds: 29677
+tasks_completed: 169
+last_run: 2026-11-13T07:54:36Z
 ---
 
 # Curator activity
@@ -1355,3 +1355,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 56
 - Cost: 0.7134 USD, estimated
+
+### 2026-11-13T07:54:36Z
+
+- Summary: I wrote no entries, merged S-0733 into D-0601, absorbed D-0601 into ADR-0295 § Decision, and `flai digest compact` compacted none.
+- Trigger: accepted S-0733
+- Items: D-0599, D-0601
+- Seconds: 77
+- Cost: 1.3065 USD, estimated

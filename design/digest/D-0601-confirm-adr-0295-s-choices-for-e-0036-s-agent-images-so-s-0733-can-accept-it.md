@@ -2,12 +2,12 @@
 id: D-0601
 title: "Confirm ADR-0295's choices for E-0036's agent images, so S-0733 can accept it: Recommended for the operator: answer \"as recommended\" on all six. agent-S-0733 then accepts ADR-0295 and moves S-0733 to…"
 kind: answer
-sources: [TH-1139]
+sources: [TH-1139, S-0733]
 topics: [release, docker, security, flai, cli, go, code, all]
 paths: [design/adrs/README.md, design/system/flai-cli.md, design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md]
 date: 2026-11-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md#decision"
 asked_again: []
 cited: []
 ---
@@ -48,3 +48,7 @@ Source: design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-base
 ```
 
 Source: TH-1139.
+
+S-0733's narrative (`wip/archive/agents/S-0733.md`, Decisions) records the outcome: alex confirmed all six of ADR-0295's choices as recommended, and ADR-0295 was accepted as written. The six: pull first, with the build as the fallback; no consent asked; strategic agents on the harness image alone; a development tree's images from the operator's build command, its commit not compared; a 10-minute stall limit and two network retries; the build command in the host configuration only, and the layer's build arguments as the Dockerfile's `ARG` defaults overridden by `agent.image.args`.
+
+Source: S-0733.

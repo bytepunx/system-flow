@@ -3,11 +3,11 @@ id: T-2882
 type: task
 nature: feature
 title: flai guard refuses a sub-agent the request and still refuses every agent kluster up, down, deploy, teardown, and promote
-status: in-progress
+status: done
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:27:24Z
-updated: 2026-11-13T07:33:53Z
+updated: 2026-11-13T08:02:50Z
 transitions:
   - to: ready
     at: 2026-11-13T07:33:53Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:33:53Z
     by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:02:50Z
+    by: agent-S-0660
 stream: S-0660
 tags: [cli]
 touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go]
+usage:
+  source: log
+  seconds: 1737
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 27895
+      cache_read: 4555149
+      cache_write: 142890
+      cost: 2.2946
 ---
 # T-2882 flai guard refuses a sub-agent the request and still refuses every agent kluster up, down, deploy, teardown, and promote
 

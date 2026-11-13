@@ -3,16 +3,37 @@ id: T-2884
 type: task
 nature: feature
 title: flai serve takes a story's request, deploys a story in progress at its head, and keeps its namespace until acceptance, cancellation, or a teardown asked for
-status: backlog
+status: done
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:27:42Z
-updated: 2026-11-13T07:33:44Z
-transitions: []
+updated: 2026-11-13T08:28:26Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:04:06Z
+    by: agent-S-0660
+  - to: in-progress
+    at: 2026-11-13T08:04:06Z
+    by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:28:26Z
+    by: agent-S-0660
 stream: S-0660
 tags: [cli]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go]
 after: [T-2876, T-2879]
+usage:
+  source: log
+  seconds: 1460
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 55515
+      cache_read: 9065523
+      cache_write: 284375
+      cost: 4.5667
 ---
 # T-2884 flai serve takes a story's request, deploys a story in progress at its head, and keeps its namespace until acceptance, cancellation, or a teardown asked for
 

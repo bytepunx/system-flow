@@ -9,7 +9,7 @@ date: 2026-11-13
 status: absorbed
 absorbed_by: "design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md#consequences"
 asked_again: []
-cited: []
+cited: [TH-1138]
 ---
 
 # D-0599 Confirm ADR-0292's choices for deploys a story's agent asks for before review: Recommended: confirm all eight as written

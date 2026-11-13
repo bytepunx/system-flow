@@ -3,16 +3,37 @@ id: T-3166
 type: task
 nature: improvement
 title: The container start and flai check's agent.image take the image and its state from flai/internal/agentimage
-status: backlog
+status: done
 parent: S-0735
 owner: alex
 created: 2026-11-12T15:58:46Z
-updated: 2026-11-12T16:01:26Z
-transitions: []
+updated: 2026-11-13T08:30:10Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:03:15Z
+    by: agent-S-0735
+  - to: in-progress
+    at: 2026-11-13T08:03:16Z
+    by: agent-S-0735
+  - to: done
+    at: 2026-11-13T08:30:10Z
+    by: agent-S-0735
 stream: S-0735
 tags: [cli]
-touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go]
+touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/check/scope_test.go, flai/internal/serve/verifyjob_test.go]
 after: [T-3164]
+usage:
+  source: log
+  seconds: 1614
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 410
+      cache_read: 4284977
+      cache_write: 142403
+      cost: 1.649
 ---
 # T-3166 The container start and flai check's agent.image take the image and its state from flai/internal/agentimage
 

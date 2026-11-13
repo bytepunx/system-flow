@@ -3,15 +3,36 @@ id: T-3159
 type: task
 nature: feature
 title: GoReleaser builds pilot for Linux beside flai and lists it in checksums.txt
-status: backlog
+status: done
 parent: S-0734
 owner: alex
 created: 2026-11-12T15:57:26Z
-updated: 2026-11-12T15:57:26Z
-transitions: []
+updated: 2026-11-13T08:02:37Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:56:23Z
+    by: agent-S-0734
+  - to: in-progress
+    at: 2026-11-13T07:56:23Z
+    by: agent-S-0734
+  - to: done
+    at: 2026-11-13T08:02:37Z
+    by: agent-S-0734
 stream: S-0734
 tags: [cli]
 touches: [flai/.goreleaser.yaml]
+usage:
+  source: log
+  seconds: 374
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 5899
+      cache_read: 1365585
+      cache_write: 37637
+      cost: 0.6572
 ---
 # T-3159 GoReleaser builds pilot for Linux beside flai and lists it in checksums.txt
 

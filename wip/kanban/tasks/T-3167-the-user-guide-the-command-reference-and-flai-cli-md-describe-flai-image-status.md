@@ -3,16 +3,37 @@ id: T-3167
 type: task
 nature: feature
 title: The user guide, the command reference, and flai-cli.md describe flai image status and the one place an agent image is decided
-status: backlog
+status: done
 parent: S-0735
 owner: alex
 created: 2026-11-12T15:58:56Z
-updated: 2026-11-12T15:58:56Z
-transitions: []
+updated: 2026-11-13T08:34:41Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:30:59Z
+    by: agent-S-0735
+  - to: in-progress
+    at: 2026-11-13T08:30:59Z
+    by: agent-S-0735
+  - to: done
+    at: 2026-11-13T08:34:41Z
+    by: agent-S-0735
 stream: S-0735
 tags: [cli]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
 after: [T-3165, T-3166]
+usage:
+  source: log
+  seconds: 216
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 267
+      cache_read: 2724647
+      cache_write: 107035
+      cost: 1.0547
 ---
 # T-3167 The user guide, the command reference, and flai-cli.md describe flai image status and the one place an agent image is decided
 

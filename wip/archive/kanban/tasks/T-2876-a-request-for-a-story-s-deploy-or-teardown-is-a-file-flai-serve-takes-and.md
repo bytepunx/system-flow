@@ -3,11 +3,11 @@ id: T-2876
 type: task
 nature: feature
 title: A request for a story's deploy or teardown is a file flai serve takes and answers, and the namespace's record names who asked
-status: in-progress
+status: done
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:26:49Z
-updated: 2026-11-13T07:33:53Z
+updated: 2026-11-13T08:03:57Z
 transitions:
   - to: ready
     at: 2026-11-13T07:33:53Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:33:53Z
     by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:03:57Z
+    by: agent-S-0660
 stream: S-0660
 tags: [cli]
 touches: [flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
+usage:
+  source: log
+  seconds: 1804
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 92
+      output: 44042
+      cache_read: 7192050
+      cache_write: 225606
+      cost: 3.623
 ---
 # T-2876 A request for a story's deploy or teardown is a file flai serve takes and answers, and the namespace's record names who asked
 

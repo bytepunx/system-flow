@@ -3,16 +3,37 @@ id: T-2887
 type: task
 nature: feature
 title: flai kluster deploy and teardown --job and the MCP tools kluster_deploy and kluster_teardown ask flai serve for the session's own story and print the answer
-status: backlog
+status: done
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:27:58Z
-updated: 2026-11-13T07:33:52Z
-transitions: []
+updated: 2026-11-13T08:28:48Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:04:06Z
+    by: agent-S-0660
+  - to: in-progress
+    at: 2026-11-13T08:04:06Z
+    by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:28:48Z
+    by: agent-S-0660
 stream: S-0660
 tags: [cli]
-touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-2876]
+usage:
+  source: log
+  seconds: 1482
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 137
+      output: 65699
+      cache_read: 10728552
+      cache_write: 336542
+      cost: 5.4045
 ---
 # T-2887 flai kluster deploy and teardown --job and the MCP tools kluster_deploy and kluster_teardown ask flai serve for the session's own story and print the answer
 

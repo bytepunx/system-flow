@@ -3,14 +3,17 @@ id: S-0761
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T08:22:07Z
+updated: 2026-11-13T08:22:11Z
 transitions:
   - to: ready
     at: 2026-11-13T08:22:02Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-13T08:22:11Z
+    by: agent-S-0761
 tags: [flai, check]
 topics: [cli, conventions, template]
 touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -20,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 112
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 331
+      cache_read: 2144779
+      cache_write: 202118
+      cost: 0.8742
   strategic:
     - kind: planner
       seconds: 422
@@ -35,15 +49,15 @@ usage:
           cache_write: 157511
           cost: 2.9395
     - kind: orchestrator
-      seconds: 137
+      seconds: 170
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 39
-          output: 284
-          cache_read: 1851475
-          cache_write: 204187
-          cost: 0.5901
+          input: 55
+          output: 434
+          cache_read: 2389044
+          cache_write: 268677
+          cost: 0.7633
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m

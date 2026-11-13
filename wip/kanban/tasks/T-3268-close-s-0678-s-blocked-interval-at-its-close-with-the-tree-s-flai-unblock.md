@@ -3,15 +3,36 @@ id: T-3268
 type: task
 nature: remediation
 title: Close S-0678's blocked interval at its close with the tree's flai unblock
-status: backlog
+status: done
 parent: S-0761
 owner: alex
 created: 2026-11-13T07:29:30Z
-updated: 2026-11-13T07:29:30Z
-transitions: []
+updated: 2026-11-13T08:24:00Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:23:43Z
+    by: agent-S-0761
+  - to: in-progress
+    at: 2026-11-13T08:23:43Z
+    by: agent-S-0761
+  - to: done
+    at: 2026-11-13T08:24:00Z
+    by: agent-S-0761
 stream: S-0761
 tags: [flai, check]
 touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md]
+usage:
+  source: log
+  seconds: 16
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 7
+      cache_read: 215714
+      cache_write: 776
+      cost: 0.0806
 ---
 # T-3268 Close S-0678's blocked interval at its close with the tree's flai unblock
 

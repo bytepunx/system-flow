@@ -3,15 +3,36 @@ id: T-3161
 type: task
 nature: feature
 title: scripts/agent-image-digests.sh writes the agent images' digest list in the ADR's format, with a test in the smoke tier
-status: backlog
+status: done
 parent: S-0734
 owner: alex
 created: 2026-11-12T15:57:36Z
-updated: 2026-11-12T16:07:54Z
-transitions: []
+updated: 2026-11-13T08:03:02Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:56:24Z
+    by: agent-S-0734
+  - to: in-progress
+    at: 2026-11-13T07:56:24Z
+    by: agent-S-0734
+  - to: done
+    at: 2026-11-13T08:03:02Z
+    by: agent-S-0734
 stream: S-0734
 tags: [cli]
-touches: [scripts/agent-image-digests.sh, scripts/agent-image-digests-test.sh, scripts/smoke.sh, scripts/README.md]
+touches: [scripts/agent-image-digests.sh, scripts/agent-image-digests-test.sh, scripts/smoke.sh, scripts/README.md, scripts/flaiover-digests.sh]
+usage:
+  source: log
+  seconds: 398
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 12469
+      cache_read: 2886611
+      cache_write: 79557
+      cost: 1.3891
 ---
 # T-3161 scripts/agent-image-digests.sh writes the agent images' digest list in the ADR's format, with a test in the smoke tier
 

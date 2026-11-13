@@ -3,15 +3,36 @@ id: T-3160
 type: task
 nature: feature
 title: The bedrock Dockerfile takes flai and pilot already built, both images carry the label that ties them to their flai, and every base is pinned by digest
-status: backlog
+status: done
 parent: S-0734
 owner: alex
 created: 2026-11-12T15:57:32Z
-updated: 2026-11-12T15:57:32Z
-transitions: []
+updated: 2026-11-13T08:02:52Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:56:24Z
+    by: agent-S-0734
+  - to: in-progress
+    at: 2026-11-13T07:56:24Z
+    by: agent-S-0734
+  - to: done
+    at: 2026-11-13T08:02:52Z
+    by: agent-S-0734
 stream: S-0734
 tags: [cli]
 touches: [flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/ci-pins.sh]
+usage:
+  source: log
+  seconds: 388
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 6019
+      cache_read: 1393433
+      cache_write: 38404
+      cost: 0.6706
 ---
 # T-3160 The bedrock Dockerfile takes flai and pilot already built, both images carry the label that ties them to their flai, and every base is pinned by digest
 

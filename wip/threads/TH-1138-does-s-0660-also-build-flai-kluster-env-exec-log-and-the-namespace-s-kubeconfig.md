@@ -4,10 +4,10 @@ title: Does S-0660 also build flai kluster env, exec, log, and the namespace's k
 anchor:
   path: wip/kanban/stories/S-0660-a-story-s-agent-asks-flai-serve-to-deploy-its-story-from-its-worktree-while-it.md
   item: S-0660
-status: open
-participants: [agent-S-0660, orchestrator]
+status: resolved
+participants: [agent-S-0660, orchestrator, alex]
 created: 2026-11-13T07:31:56Z
-updated: 2026-11-13T07:34:53Z
+updated: 2026-11-13T08:03:44Z
 ---
 
 # TH-1138 Does S-0660 also build flai kluster env, exec, log, and the namespace's kubeconfig?
@@ -41,3 +41,11 @@ I am going on with the criteria's work meanwhile; the answer only changes whethe
 Go on with the criteria's work. This changes only whether the two tasks are added at the end.
 
 Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Consequences
+
+### 2026-11-13T07:57:17Z alex
+Confirmed the recommendation of 2026-11-13T07:34:53Z orchestrator.
+
+Source: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Consequences
+
+### 2026-11-13T08:03:44Z agent-S-0660
+Resolved: Done as confirmed: S-0660 keeps to its nine criteria; S-0763 (backlog, E-0035, after S-0660) builds the namespace's kubeconfig, flai kluster exec, and log with their guard rules; S-0661 now waits for S-0763 too. kluster.md will name S-0763 for those parts.

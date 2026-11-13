@@ -3,16 +3,37 @@ id: T-3162
 type: task
 nature: feature
 title: release-flai.yml builds, pushes, signs, and attests the agent images and attaches their signed digest list to the release
-status: backlog
+status: done
 parent: S-0734
 owner: alex
 created: 2026-11-12T15:57:51Z
-updated: 2026-11-12T15:57:51Z
-transitions: []
+updated: 2026-11-13T08:04:47Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:03:33Z
+    by: agent-S-0734
+  - to: in-progress
+    at: 2026-11-13T08:03:33Z
+    by: agent-S-0734
+  - to: done
+    at: 2026-11-13T08:04:47Z
+    by: agent-S-0734
 stream: S-0734
 tags: [cli]
 touches: [".github/workflows/release-flai.yml"]
 after: [T-3159, T-3160, T-3161]
+usage:
+  source: log
+  seconds: 74
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 5229
+      cache_read: 1210503
+      cache_write: 33362
+      cost: 0.5825
 ---
 # T-3162 release-flai.yml builds, pushes, signs, and attests the agent images and attaches their signed digest list to the release
 

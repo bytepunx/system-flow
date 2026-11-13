@@ -3,16 +3,37 @@ id: T-3163
 type: task
 nature: feature
 title: The tech, signing, and agent-container documents say what each flai release publishes of the agent images and where
-status: backlog
+status: done
 parent: S-0734
 owner: alex
 created: 2026-11-12T15:57:57Z
-updated: 2026-11-12T15:57:57Z
-transitions: []
+updated: 2026-11-13T08:08:13Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:04:53Z
+    by: agent-S-0734
+  - to: in-progress
+    at: 2026-11-13T08:04:53Z
+    by: agent-S-0734
+  - to: done
+    at: 2026-11-13T08:08:13Z
+    by: agent-S-0734
 stream: S-0734
 tags: [cli]
-touches: [design/tech/ci.md, design/tech/docker.md, design/system/release-signing.md, docs/operators/runbooks/agent-container.md]
+touches: [design/tech/ci.md, design/tech/docker.md, design/system/release-signing.md, docs/operators/runbooks/agent-container.md, design/tech/go.md, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/operators/runbooks/install.md]
 after: [T-3162]
+usage:
+  source: log
+  seconds: 200
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 14458
+      cache_read: 3347161
+      cache_write: 92251
+      cost: 1.6108
 ---
 # T-3163 The tech, signing, and agent-container documents say what each flai release publishes of the agent images and where
 

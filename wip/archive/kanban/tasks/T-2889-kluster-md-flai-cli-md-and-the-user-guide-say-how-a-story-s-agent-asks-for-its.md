@@ -3,16 +3,37 @@ id: T-2889
 type: task
 nature: feature
 title: kluster.md, flai-cli.md, and the user guide say how a story's agent asks for its deploy and when its namespace goes
-status: backlog
+status: done
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:28:09Z
-updated: 2026-11-10T08:28:09Z
-transitions: []
+updated: 2026-11-13T08:42:01Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:28:59Z
+    by: agent-S-0660
+  - to: in-progress
+    at: 2026-11-13T08:28:59Z
+    by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:42:01Z
+    by: agent-S-0660
 stream: S-0660
 tags: [cli]
 touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-2884, T-2887, T-2882]
+usage:
+  source: log
+  seconds: 782
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 105
+      output: 50048
+      cache_read: 8172820
+      cache_write: 256372
+      cost: 4.117
 ---
 # T-2889 kluster.md, flai-cli.md, and the user guide say how a story's agent asks for its deploy and when its namespace goes
 

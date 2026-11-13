@@ -3,12 +3,18 @@ id: T-3271
 type: task
 nature: improvement
 title: Say in the design, the user guide, and the work-management convention that a close-out leaves out item.blocked-closed
-status: backlog
+status: in-progress
 parent: S-0761
 owner: alex
 created: 2026-11-13T07:29:51Z
-updated: 2026-11-13T07:29:51Z
-transitions: []
+updated: 2026-11-13T08:24:49Z
+transitions:
+  - to: ready
+    at: 2026-11-13T08:24:49Z
+    by: agent-S-0761
+  - to: in-progress
+    at: 2026-11-13T08:24:49Z
+    by: agent-S-0761
 stream: S-0761
 tags: [flai, check, docs]
 touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]

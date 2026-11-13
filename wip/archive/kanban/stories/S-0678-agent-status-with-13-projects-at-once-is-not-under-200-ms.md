@@ -6,7 +6,7 @@ title: agent.status with 13 projects at once is not under 200 ms
 status: done
 owner: alex
 created: 2026-11-10T08:34:55Z
-updated: 2026-11-11T06:15:07Z
+updated: 2026-11-13T08:23:50Z
 transitions:
   - to: ready
     at: 2026-11-10T10:57:56Z
@@ -22,6 +22,7 @@ transitions:
     by: orchestrator
 blocked:
   - from: 2026-11-11T05:26:16Z
+    until: 2026-11-11T06:15:07Z
     reason: pause for urgent fix
 tags: [cli]
 topics: [server-side]

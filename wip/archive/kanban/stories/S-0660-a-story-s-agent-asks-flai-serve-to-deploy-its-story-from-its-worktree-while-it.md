@@ -3,11 +3,11 @@ id: S-0660
 type: story
 nature: feature
 title: A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-13T07:33:55Z
+updated: 2026-11-13T08:54:38Z
 transitions:
   - to: ready
     at: 2026-11-13T07:25:42Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:29:57Z
     by: agent-S-0660
+  - to: review
+    at: 2026-11-13T08:52:43Z
+    by: agent-S-0660
+  - to: done
+    at: 2026-11-13T08:54:38Z
+    by: orchestrator
 tags: [cli]
 topics: [kluster, deployment]
-touches: [flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md]
+touches: [flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md, flai/internal/hostapi/kluster_test.go, flai/internal/inbox/events.go, flai/internal/inbox/events_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, design/issues/I-0356-the-dashboard-s-kluster-setup-form-does-not-show-kluster-agent-namespaces.md, design/issues/I-0357-the-kluster-send-back-s-texts-to-the-agent-do-not-say-it-can-ask-for-its-own.md, design/issues/I-0358-flai-guard-reads-a-subcommand-s-value-flag-before-flai-s-command-as-the-command.md]
 after: [S-0659]
 agent:
   harness: claude-code
@@ -25,9 +31,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4983
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 3
+      work: 67
+  models:
+    - model: claude-opus-5-5
+      input: 694
+      output: 332259
+      cache_read: 54257310
+      cache_write: 1701987
+      cost: 27.332
   strategic:
     - kind: planner
       seconds: 150
@@ -40,15 +57,15 @@ usage:
           cache_write: 84563
           cost: 1.202
     - kind: orchestrator
-      seconds: 326
+      seconds: 336
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 75
-          output: 544
-          cache_read: 2636566
-          cache_write: 399062
-          cost: 0.8359
+          input: 79
+          output: 573
+          cache_read: 2726102
+          cache_write: 418914
+          cost: 0.8674
         - model: claude-sonnet-5-5
           input: 10
           output: 870
@@ -81,15 +98,15 @@ A story's agent asks flai serve to deploy its story from its worktree while the 
 
 ## Acceptance criteria
 
-- [ ] With the `kluster` host action on and a `deploy` set, a story's agent asks for a deploy of its own story in progress with one flai command and one MCP tool, and flai serve builds in the story's worktree at its branch's head, loads, and deploys into `s-nnnn`, as it does for a story in review
-- [ ] The request waits for the job and answers with its outcome, the commit, each step's result, and the log's path; a request that outlasts its wait says the job is still queued or running and how to read it later
-- [ ] A request is refused, with the reason and what to do, for another story, a story not in progress or review, uncommitted changes in the worktree, the action off, no `deploy`, and a request over the limit on story namespaces
-- [ ] `flai guard` still refuses every agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, and refuses a sub-agent the new request
-- [ ] A story in progress keeps its namespace: flai serve tears it down only when the story is accepted or cancelled, or when its agent or the operator asks
-- [ ] A story that enters review at the head already deployed is not deployed again, and one at a new head is deployed in place
-- [ ] A failed deploy asked for by the agent opens no thread to the operator: the agent gets the step, the exit code, and the log
-- [ ] Each job the agent asked for is in the host journal and the namespace's record with who asked
-- [ ] `design/system/kluster.md`, `design/system/flai-cli.md`, and `docs/users/flai.md` and its reference say all of it
+- [x] With the `kluster` host action on and a `deploy` set, a story's agent asks for a deploy of its own story in progress with one flai command and one MCP tool, and flai serve builds in the story's worktree at its branch's head, loads, and deploys into `s-nnnn`, as it does for a story in review
+- [x] The request waits for the job and answers with its outcome, the commit, each step's result, and the log's path; a request that outlasts its wait says the job is still queued or running and how to read it later
+- [x] A request is refused, with the reason and what to do, for another story, a story not in progress or review, uncommitted changes in the worktree, the action off, no `deploy`, and a request over the limit on story namespaces
+- [x] `flai guard` still refuses every agent `flai kluster up`, `down`, `deploy`, `teardown`, and `promote`, and refuses a sub-agent the new request
+- [x] A story in progress keeps its namespace: flai serve tears it down only when the story is accepted or cancelled, or when its agent or the operator asks
+- [x] A story that enters review at the head already deployed is not deployed again, and one at a new head is deployed in place
+- [x] A failed deploy asked for by the agent opens no thread to the operator: the agent gets the step, the exit code, and the log
+- [x] Each job the agent asked for is in the host journal and the namespace's record with who asked
+- [x] `design/system/kluster.md`, `design/system/flai-cli.md`, and `docs/users/flai.md` and its reference say all of it
 
 ## Tasks
 - T-2876 A request for a story's deploy or teardown is a file flai serve takes and answers, and the namespace's record names who asked
@@ -127,3 +144,19 @@ Left out on purpose: `flai/internal/hostapi/kluster.go`, since the request goes 
 Forecast: 1h30m, raised by half from the 1h `flai forecast` gives for size 33, because S-0577 to S-0580, the kluster stories before it, each took 39m to 61m with 6 or 7 criteria, and this one has 9 across six parts of flai. The delivery, 2026-11-10T15:25:00Z, is flai's from that duration and the pull order.
 
 Cost of delay: 1250 USD a week, as `flai cod S-0660` works it out from the operator's `revenue_per_week: 1250` on this story (TH-0979, after the orchestrator's recommendation there, from D-0479). Not adjusted: the operator set the figure on this story directly, and this story is the one that lets a kluster story's agent deploy before review, which is what holds up the signet and authstar releases that revenue waits on.
+
+### Accepted by the orchestrator
+
+- Verified: d663a3512667f32514ef2f622d5f886f7579c865
+- At: 2026-11-13T08:54:38Z
+
+Verdict: pass — the diff meets all nine criteria, and the close-out passed at d663a35, the branch head with no uncommitted changes.
+- 1: flai/cmd/kluster.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/kluster/request.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster.go
+- 2: flai/internal/kluster/request.go, flai/internal/serve/kluster_requests.go, flai/cmd/kluster.go, flai/internal/mcpserver/kluster.go
+- 3: flai/internal/serve/kluster_requests.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/settings.go, flai/internal/serve/kluster_requests_test.go, flai/internal/manifest/manifest_test.go
+- 4: flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go
+- 5: flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_test.go
+- 6: flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/kluster/deploy.go
+- 7: flai/internal/serve/kluster_requests.go, flai/internal/inbox/events.go, flai/internal/inbox/inbox.go
+- 8: flai/internal/kluster/deploy.go, flai/internal/kluster/request.go, flai/internal/serve/kluster_requests.go
+- 9: design/system/kluster.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md

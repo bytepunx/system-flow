@@ -6,7 +6,7 @@ title: A story's agent builds and deploys the story from its worktree into its k
 status: in-progress
 owner: alex
 created: 2026-11-10T08:09:06Z
-updated: 2026-11-12T16:00:03Z
+updated: 2026-11-13T08:03:30Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:54Z
@@ -17,22 +17,22 @@ transitions:
 tags: [cli, dashboard]
 usage:
   source: sum
-  seconds: 640
+  seconds: 5623
   priced_by: harness
   turns:
     - day: 2026-11-12
       ceremony: 2
       work: 31
     - day: 2026-11-13
-      ceremony: 2
-      work: 11
+      ceremony: 5
+      work: 78
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 41676
-      cache_read: 12014694
-      cache_write: 622786
-      cost: 8.2192
+      input: 796
+      output: 373935
+      cache_read: 66272004
+      cache_write: 2324773
+      cost: 35.5512
   strategic:
     - kind: planner
       seconds: 468
@@ -51,15 +51,15 @@ usage:
           cache_write: 385267
           cost: 5.2397
     - kind: orchestrator
-      seconds: 1432
+      seconds: 1455
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 265
-          output: 1896
-          cache_read: 11010254
-          cache_write: 1171017
-          cost: 3.3743
+          input: 276
+          output: 1975
+          cache_read: 11274076
+          cache_write: 1224989
+          cost: 3.4658
         - model: claude-sonnet-5-5
           input: 32
           output: 2604
@@ -103,6 +103,7 @@ Done when a story in a project with a kluster, such as authstar, is deployed and
 - S-0661 A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
 - S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
 - S-0663 The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
+- S-0763 Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
 
 ## Notes
 
