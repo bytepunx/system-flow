@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-13T07:23:41Z
+updated: 2026-11-13T07:29:42Z
 transitions: []
 tags: [cli]
 topics: [cli, kluster]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T16:23:00Z
-  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741 and S-0742."
+  delivery: 2026-11-13T16:22:00Z
+  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662, S-0663, S-0734, S-0735, S-0740, S-0745, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741 and S-0742."
   by: flai
-  at: 2026-11-13T07:23:41Z
+  at: 2026-11-13T07:29:42Z
 ---
 # S-0743 flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
 
