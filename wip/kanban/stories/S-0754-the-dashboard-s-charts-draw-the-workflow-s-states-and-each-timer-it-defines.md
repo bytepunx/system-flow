@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-13T19:45:13Z
+updated: 2026-11-13T20:22:49Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, analysis]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 30m
-  delivery: 2026-11-14T02:02:00Z
-  basis: "Its own forecast of 30m; 19th in the pull order with an in-progress limit of 3, behind S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752 and S-0753."
+  delivery: 2026-11-14T02:40:00Z
+  basis: "Its own forecast of 30m; 17th in the pull order with an in-progress limit of 3, behind S-0730, S-0777, S-0241, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752 and S-0753."
   by: flai
-  at: 2026-11-13T19:45:13Z
+  at: 2026-11-13T20:22:49Z
 ---
 # S-0754 The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
 
