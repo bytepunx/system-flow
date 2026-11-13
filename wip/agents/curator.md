@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 263.2880
-accrued_seconds: 30160
-tasks_completed: 172
-last_run: 2026-11-13T09:19:34Z
+accrued_cost: 264.5503
+accrued_seconds: 30220
+tasks_completed: 173
+last_run: 2026-11-13T09:22:39Z
 ---
 
 # Curator activity
@@ -1387,3 +1387,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0604, D-0605
 - Seconds: 142
 - Cost: 1.6945 USD, estimated
+
+### 2026-11-13T09:22:39Z
+
+- Summary: Nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The one candidate, S-0765's decision to run the publish steps with the installed `flai` on PATH, holds no new fact because the steps ran as their tasks named them, and `design/system/strategic-agents.md` § Working an instance already covers that. No design document changed after 2026-11-13T09:19:34Z, so nothing new could be absorbed.
+- Trigger: accepted S-0765
+- Items: none
+- Seconds: 60
+- Cost: 1.2623 USD, estimated

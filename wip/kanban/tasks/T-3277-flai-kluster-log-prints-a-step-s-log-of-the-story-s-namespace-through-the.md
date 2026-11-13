@@ -19,9 +19,17 @@ stream: S-0763
 tags: [cli]
 touches: [flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2335
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 38698
+      cache_read: 3867035
+      cache_write: 438602
+      cost: 4.0417
   strategic:
     - kind: orchestrator
       seconds: 5

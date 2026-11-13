@@ -19,9 +19,17 @@ stream: S-0763
 tags: [cli]
 touches: [flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2335
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 31002
+      cache_read: 3096588
+      cache_write: 353794
+      cost: 3.2579
   strategic:
     - kind: orchestrator
       seconds: 6

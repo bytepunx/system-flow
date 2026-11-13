@@ -3,10 +3,10 @@ id: S-0761
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T09:19:42Z
+updated: 2026-11-13T09:32:24Z
 transitions:
   - to: ready
     at: 2026-11-13T08:22:02Z
@@ -20,9 +20,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T09:19:42Z
     by: flai
+  - to: review
+    at: 2026-11-13T09:32:24Z
+    by: agent-S-0761
 tags: [flai, check]
 topics: [cli, conventions, template]
-touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0360-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-both-changed.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -30,19 +33,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3243
+  seconds: 4008
   priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 58
+      ceremony: 3
+      work: 91
   models:
     - model: claude-opus-5-5
-      input: 194
-      output: 39008
-      cache_read: 16276606
-      cache_write: 688769
-      cost: 8.3944
+      input: 270
+      output: 50124
+      cache_read: 28418980
+      cache_write: 722847
+      cost: 11.3181
   strategic:
     - kind: planner
       seconds: 422
@@ -55,21 +58,21 @@ usage:
           cache_write: 157511
           cost: 2.9395
     - kind: orchestrator
-      seconds: 219
+      seconds: 344
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 71
-          output: 539
-          cache_read: 2960275
-          cache_write: 339600
-          cost: 0.9486
+          input: 111
+          output: 761
+          cache_read: 4288330
+          cache_write: 462564
+          cost: 1.3675
         - model: claude-sonnet-5-5
-          input: 8
-          output: 886
-          cache_read: 83845
-          cache_write: 27437
-          cost: 0.0864
+          input: 14
+          output: 934
+          cache_read: 127725
+          cache_write: 61585
+          cost: 0.1465
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m

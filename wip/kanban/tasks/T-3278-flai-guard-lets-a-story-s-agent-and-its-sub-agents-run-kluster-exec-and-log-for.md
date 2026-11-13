@@ -19,9 +19,17 @@ stream: S-0763
 tags: [cli]
 touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2335
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 33488
+      cache_read: 3345434
+      cache_write: 381186
+      cost: 3.511
   strategic:
     - kind: orchestrator
       seconds: 5

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 3901
-      cache_read: 1627561
-      cache_write: 68873
-      cost: 0.8394
+      input: 16
+      output: 2910
+      cache_read: 1649754
+      cache_write: 41962
+      cost: 0.657
 ---
 # T-3270 Leave item.blocked-closed outside the story out of a check scoped to a story, with a test that reproduces I-0354
 

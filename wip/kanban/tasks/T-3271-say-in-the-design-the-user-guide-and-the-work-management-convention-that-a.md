@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 2862
-      cache_read: 1194374
-      cache_write: 50542
-      cost: 0.616
+      input: 12
+      output: 2135
+      cache_read: 1210660
+      cache_write: 30794
+      cost: 0.4822
 ---
 # T-3271 Say in the design, the user guide, and the work-management convention that a close-out leaves out item.blocked-closed
 

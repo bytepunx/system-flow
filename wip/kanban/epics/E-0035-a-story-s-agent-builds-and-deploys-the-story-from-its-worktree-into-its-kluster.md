@@ -17,22 +17,23 @@ transitions:
 tags: [cli, dashboard]
 usage:
   source: sum
-  seconds: 5623
+  seconds: 8042
   priced_by: harness
   turns:
     - day: 2026-11-12
       ceremony: 2
       work: 31
     - day: 2026-11-13
-      ceremony: 5
-      work: 78
+      ceremony: 6
+      test_runs: 1
+      work: 101
   models:
     - model: claude-opus-5-5
-      input: 796
-      output: 373935
-      cache_read: 66272004
-      cache_write: 2324773
-      cost: 35.5512
+      input: 1040
+      output: 494318
+      cache_read: 78302670
+      cache_write: 3687867
+      cost: 48.1133
   strategic:
     - kind: planner
       seconds: 996
@@ -51,15 +52,15 @@ usage:
           cache_write: 659164
           cost: 9.8802
     - kind: orchestrator
-      seconds: 1711
+      seconds: 1733
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 331
-          output: 2489
-          cache_read: 13366818
-          cache_write: 1417477
-          cost: 4.1243
+          input: 343
+          output: 2548
+          cache_read: 13684290
+          cache_write: 1441330
+          cost: 4.2229
         - model: claude-sonnet-5-5
           input: 36
           output: 2631
