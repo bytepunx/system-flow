@@ -23,6 +23,8 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -467,6 +469,94 @@ func TestItemGetCarriesTheKeptPullRequest(t *testing.T) {
 	if failed != "" || broken["id"] != f.story.ID || broken["pull_request"] != nil || !strings.Contains(why, "delete it, and flai serve reads the pull request afresh") {
 		t.Errorf("item_get with a corrupt kept state: %v %s", broken, failed)
 	}
+}
+
+// S-0662 criterion 3, ADR-0292 §3, §6: item_get carries what a story's
+// kluster namespace shows at its branch's head, read live: its last deploy
+// and checks run, each with its commit and outcome, and whether they passed
+// there; a task carries none, and neither does a story while the kluster
+// host action is off; evidence that cannot be read is said in kluster_error,
+// and the item is still served.
+func TestItemGetCarriesTheKlusterEvidence(t *testing.T) {
+	t.Parallel()
+	ended := time.Date(2026, 11, 13, 14, 0, 0, 0, time.UTC)
+	record := kluster.Record{
+		Commit: moveKlusterC2, Outcome: kluster.OutcomePassed, AskedBy: "agent-S-0001", EndedAt: ended,
+		ChecksCommit: moveKlusterC2, ChecksOutcome: kluster.OutcomePassed, ChecksLog: "checks.log",
+	}
+	for _, on := range []bool{true, false} {
+		t.Run(fmt.Sprintf("the action on %v", on), func(t *testing.T) {
+			t.Parallel()
+			git := &moveKlusterGit{head: moveKlusterC2}
+			f := setupWith(t, func(o *Options) { o.Runner, o.HostAction = git, moveKlusterActions(on) })
+			git.story = f.story.ID
+			f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
+			moveKlusterRecord(t, projectRoot(f.repo), f.story.ID, record)
+			if got, failed := f.call(t, "item_get", map[string]any{"id": f.task.ID}); failed != "" || got["kluster"] != nil || got["kluster_error"] != nil {
+				t.Errorf("a task carries kluster evidence: %v %s", got, failed)
+			}
+			got := itemGetKluster(t, f, f.story.ID)
+			if !on {
+				if got.Kluster != nil || got.KlusterError != "" {
+					t.Errorf("with the action off item_get carries kluster evidence: %+v %q", got.Kluster, got.KlusterError)
+				}
+				return
+			}
+			e := got.Kluster
+			switch {
+			case got.KlusterError != "":
+				t.Fatalf("kluster_error: %s", got.KlusterError)
+			case e == nil:
+				t.Fatal("deployed and checked at the head, item_get carries no kluster evidence")
+			case !e.Applies || !e.Passed || e.Head != moveKlusterC2 || e.Commands == nil:
+				t.Errorf("kluster = %+v", e)
+			case e.Deploy == nil || e.Deploy.Commit != moveKlusterC2 || e.Deploy.Outcome != kluster.OutcomePassed || e.Deploy.AskedBy != "agent-S-0001" || !e.Deploy.EndedAt.Equal(ended) || !e.Deploy.PassedAtHead:
+				t.Errorf("kluster.deploy = %+v", e.Deploy)
+			case e.Checks == nil || e.Checks.Commit != moveKlusterC2 || e.Checks.Outcome != kluster.OutcomePassed || e.Checks.Log != "checks.log" || !e.Checks.PassedAtHead:
+				t.Errorf("kluster.checks = %+v", e.Checks)
+			}
+		})
+	}
+	t.Run("a record it cannot read", func(t *testing.T) {
+		t.Parallel()
+		git := &moveKlusterGit{head: moveKlusterC2}
+		f := setupWith(t, func(o *Options) { o.Runner, o.HostAction = git, moveKlusterActions(true) })
+		git.story = f.story.ID
+		f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
+		ns, err := kluster.StoryNamespace(f.story.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := kluster.RecordPath(projectRoot(f.repo), ns)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("{not json"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		got := itemGetKluster(t, f, f.story.ID)
+		if got.ID != f.story.ID || got.Kluster != nil || !strings.Contains(got.KlusterError, "read "+f.story.ID+"'s kluster evidence") {
+			t.Errorf("item_get with a corrupt record: %+v %q", got.Kluster, got.KlusterError)
+		}
+	})
+}
+
+// itemGetKluster is item_get of id, with its kluster evidence decoded.
+func itemGetKluster(t *testing.T, f *fixture, id string) ItemOut {
+	t.Helper()
+	res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "item_get", Arguments: map[string]any{"id": id}})
+	if err != nil || res.IsError {
+		t.Fatalf("item_get %s: %v %+v", id, err, res)
+	}
+	data, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out ItemOut
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
 
 func TestDocumentsAndResources(t *testing.T) {

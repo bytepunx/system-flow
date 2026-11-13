@@ -658,6 +658,11 @@ type ItemOut struct {
 	// PullRequestError why its kept state could not be read (ADR-0167).
 	PullRequest      *forge.Status `json:"pull_request,omitempty" jsonschema:"a story's pull request under pull-request acceptance, as flai serve last read it from the forge: its number, url, head_sha, and read_at; checks, each required check's name, state (pending, passed, failed), url (its log), summary, and since; reviews, each review's author, state (approved, changes-requested, commented, dismissed, pending), url, body, and submitted_at; and sent_back, the failures flai sent the story back to in-progress for, each with its thread"`
 	PullRequestError string        `json:"pull_request_error,omitempty" jsonschema:"why the story's kept pull request state could not be read, and what clears it"`
+	// Kluster is what a story's kluster namespace shows at its branch's
+	// head, read live, and KlusterError why it could not be read (ADR-0292
+	// §3, §6).
+	Kluster      *kluster.Evidence `json:"kluster,omitempty" jsonschema:"what a story's kluster namespace shows at its branch's head, while the kluster host action is on and the manifest's kluster: block names a deploy: its namespace and head; deploy, the last deploy, with its commit, outcome, failed_step, asked_by, started_at, ended_at, steps (each with its log), and head, how its commit stands to the head (at_head, why not), and passed_at_head; checks, the last checks run against it, with its commit, outcome, log, head, and passed_at_head; checks_on, whether the checks must pass too; passed, whether all that must pass at the head did; and commands, the CLI commands and MCP tools that deploy and check it"`
+	KlusterError string            `json:"kluster_error,omitempty" jsonschema:"why what the story's kluster namespace shows could not be read"`
 	// Hash is what item_edit takes to refuse a change made meanwhile.
 	Hash string `json:"hash"`
 }
@@ -698,8 +703,30 @@ func (s *server) itemOut(ctx context.Context, it *workitem.Item) (ItemOut, error
 	if it.Type == workitem.Story {
 		out.Plan = workitem.PlanOf(children, it.ID)
 		out.PullRequest, out.PullRequestError = s.keptPullRequest(it.ID)
+		out.Kluster, out.KlusterError = s.klusterEvidence(it.ID)
 	}
 	return out, nil
+}
+
+// klusterEvidence is what story's kluster namespace shows at its branch's
+// head, read live as the move to review reads it, or nil while that does not
+// apply, the project has no kluster: block, or the server has no git;
+// evidence that cannot be read is why, so that the item is still served.
+func (s *server) klusterEvidence(story string) (*kluster.Evidence, string) {
+	if s.repo.Manifest.Kluster == nil || s.runner == nil {
+		return nil, ""
+	}
+	e, err := reviewEvidence(s.runner, s.repo, story, s.hostAction)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("kluster evidence not read", "component", "mcp", "agent", s.agent, "item", story, "err", err.Error())
+		}
+		return nil, err.Error()
+	}
+	if !e.Applies {
+		return nil, ""
+	}
+	return &e, ""
 }
 
 // keptPullRequest is story's pull request as flai serve last read it, without
