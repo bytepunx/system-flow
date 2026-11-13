@@ -40,6 +40,20 @@ func scopeFixture(t *testing.T) string {
 	return root
 }
 
+// untitleOverview takes the title out of root's design/system/overview.md: a
+// doc.title warning outside S-004 that its close-out notes and records.
+func untitleOverview(t *testing.T, root string) {
+	t.Helper()
+	overview := filepath.Join(root, "design", "system", "overview.md")
+	data, err := os.ReadFile(overview)
+	if err != nil || !strings.Contains(string(data), "title: Overview\n") {
+		t.Fatalf("overview.md has no title line: %v", err)
+	}
+	if err := os.WriteFile(overview, []byte(strings.Replace(string(data), "title: Overview\n", "", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // absentMainWorktree is S-004's worktree mounted without its main checkout,
 // as in an agent container (I-0219): the good fixture in a folder S-004
 // whose .git file names a main checkout's git directory that is not there.
@@ -94,16 +108,18 @@ func TestCheckStoryPassesOverFindingsOutsideIt(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := scopeFixture(t)
+	untitleOverview(t, root)
+	const untitled = "design/system/overview.md:1: warning: doc.title: front matter needs a title"
 	out, errOut, code := runIn(t, root, "check", "--strict")
-	if code != 1 || !strings.Contains(out, "warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it\n") {
-		t.Fatalf("unscoped --strict should fail on S-002's branch: %d\n%s%s", code, out, errOut)
+	if code != 1 || !strings.Contains(out, untitled+"\n") {
+		t.Fatalf("unscoped --strict should fail on overview.md's title: %d\n%s%s", code, out, errOut)
 	}
 	out, errOut, code = runIn(t, root, "check", "--strict", "--story", "S-4")
 	if code != 0 {
 		t.Fatalf("scoped to S-004, --strict should pass: %d\n%s%s", code, out, errOut)
 	}
 	for _, want := range []string{
-		"warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it (outside S-004)\n",
+		untitled + " (outside S-004)\n",
 		"10 items checked, 0 errors, 2 warnings; 2 outside S-004, notes the run passes over\n",
 	} {
 		if !strings.Contains(out, want) {
@@ -151,24 +167,18 @@ func TestCheckStoryTakesSeveralStories(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
-	refs := filepath.Join(root, ".git", "refs", "heads", "story")
-	if err := os.MkdirAll(refs, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(refs, "S-002"), []byte("0123456789abcdef0123456789abcdef01234567\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	const unaccepted = "warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	untitleOverview(t, root)
+	const untitled = "design/system/overview.md:1: warning: doc.title: front matter needs a title"
 	out, errOut, code := runIn(t, root, "check", "--strict")
-	if code != 1 || !strings.Contains(out, unaccepted+"\n") {
-		t.Fatalf("unscoped --strict should fail on S-002's branch: %d\n%s%s", code, out, errOut)
+	if code != 1 || !strings.Contains(out, untitled+"\n") {
+		t.Fatalf("unscoped --strict should fail on overview.md's title: %d\n%s%s", code, out, errOut)
 	}
 	for _, args := range [][]string{{"--story", "S-004,S-006"}, {"--story", "S-4", "--story", "S-006"}} {
 		out, errOut, code = runIn(t, root, append([]string{"check", "--strict"}, args...)...)
 		if code != 0 {
 			t.Fatalf("%v: scoped to S-004 and S-006, --strict should pass: %d\n%s%s", args, code, out, errOut)
 		}
-		for _, want := range []string{unaccepted + " (outside S-004, S-006)\n", "; 2 outside S-004, S-006, notes the run passes over\n"} {
+		for _, want := range []string{untitled + " (outside S-004, S-006)\n", "; 2 outside S-004, S-006, notes the run passes over\n"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("%v: output lacks %q:\n%s", args, want, out)
 			}
@@ -298,13 +308,14 @@ func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	root := scopeFixture(t)
-	issue := filepath.Join(root, "design", "issues", "I-0002-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md")
-	finding := "`wip/archive/kanban/stories/S-002-two.md`: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	untitleOverview(t, root)
+	issue := filepath.Join(root, "design", "issues", "I-0001-flai-check-finds-doc-title-outside-the-story-at-close-out.md")
+	finding := "`design/system/overview.md`: front matter needs a title"
 	read := func() string {
 		t.Helper()
 		data, err := os.ReadFile(issue)
 		if err != nil {
-			t.Fatalf("the story.unaccepted issue: %v (files: %v)", err, issueFiles(t, root))
+			t.Fatalf("the doc.title issue: %v (files: %v)", err, issueFiles(t, root))
 		}
 		return string(data)
 	}
@@ -313,24 +324,24 @@ func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("first run: exit %d\n%s%s", code, out, errOut)
 	}
-	if !strings.Contains(out, "recorded story.unaccepted outside S-004 in I-0002 (opened)\n") {
+	if !strings.Contains(out, "recorded doc.title outside S-004 in I-0001 (opened)\n") {
 		t.Errorf("first run should say it opened the issue:\n%s", out)
 	}
 	doc := read()
 	for _, want := range []string{
-		"title: \"flai check finds `story.unaccepted` outside the story at close-out\"\n",
+		"title: \"flai check finds `doc.title` outside the story at close-out\"\n",
 		"class: efficiency\n", "count: 1\n", "Story: S-0004.\n", finding + "\n",
 	} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("first run: issue lacks %q:\n%s", want, doc)
 		}
 	}
-	if summary, err := os.ReadFile(filepath.Join(root, "design", "issues", "summary.md")); err != nil || !strings.Contains(string(summary), "[I-0002]") {
-		t.Errorf("summary.md should list I-0002: %v\n%s", err, summary)
+	if summary, err := os.ReadFile(filepath.Join(root, "design", "issues", "summary.md")); err != nil || !strings.Contains(string(summary), "[I-0001]") {
+		t.Errorf("summary.md should list I-0001: %v\n%s", err, summary)
 	}
 
 	out, errOut, code = runIn(t, root, "check", "--strict", "--story", "S-004", "--record-issues")
-	if code != 0 || !strings.Contains(out, "recorded story.unaccepted outside S-004 in I-0002 (already recorded, count 1)\n") {
+	if code != 0 || !strings.Contains(out, "recorded doc.title outside S-004 in I-0001 (already recorded, count 1)\n") {
 		t.Fatalf("second run: exit %d\n%s%s", code, out, errOut)
 	}
 	if again := read(); again != doc {
@@ -351,9 +362,9 @@ func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
 	if res.Outside != 2 || len(res.Recorded) != 2 {
 		t.Fatalf("json should keep outside and list both rules: %+v", res)
 	}
-	got := res.Recorded[1]
-	if got.Rule != "story.unaccepted" || got.Issue != "I-0002" || got.Outcome != "bumped" || got.Count != 2 ||
-		got.Path != "design/issues/I-0002-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md" {
+	got := res.Recorded[0]
+	if got.Rule != "doc.title" || got.Issue != "I-0001" || got.Outcome != "bumped" || got.Count != 2 ||
+		got.Path != "design/issues/I-0001-flai-check-finds-doc-title-outside-the-story-at-close-out.md" {
 		t.Errorf("another story should bump the issue to 2: %+v", got)
 	}
 	doc = read()
@@ -729,6 +740,45 @@ func TestCheckRecordIssuesLeavesOutBlockedClosedOutsideTheStory(t *testing.T) {
 	}
 	if data, err := os.ReadFile(path); err != nil || string(data) != three {
 		t.Errorf("S-003 should be left as it was: %v\n%s", err, data)
+	}
+}
+
+// I-0371, ADR-0299: a test left the branch story/S-002 of the archived S-002
+// in the main repository; a close-out of S-004, which did not touch it,
+// neither notes the story.unaccepted nor records it in an issue, while the
+// unscoped check still warns on it and fails --strict.
+func TestCheckRecordIssuesLeavesOutAStoryUnacceptedOutsideTheStory(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", nil)
+	refs := filepath.Join(root, ".git", "refs", "heads", "story")
+	if err := os.MkdirAll(refs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refs, "S-002"), []byte("0123456789abcdef0123456789abcdef01234567\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict")
+	if code == 0 || !strings.Contains(out, "warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it\n") {
+		t.Fatalf("unscoped, the run should warn on S-002's unmerged branch and fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "story.unaccepted") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the story.unaccepted should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); len(names) != 0 {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+	if _, err := os.Stat(filepath.Join(refs, "S-002")); err != nil {
+		t.Errorf("the branch story/S-002 should be left as it was: %v", err)
 	}
 }
 

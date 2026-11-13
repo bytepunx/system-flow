@@ -48,10 +48,13 @@ story in progress or in review with no narrative, which only that story's
 agent or the operator opens with flai stream open, an item.blocked-closed
 outside the story, a done or cancelled item with a blocked interval left
 open at its close, which only flai unblock on that item in the main
-checkout closes, the note components.examples gives when it could not check
-examples for want of node or a sub-project's svelte, unless the story
-changes a file under the folder it names, which only installing the tool
-clears, the agent.image findings that the project's image layer
+checkout closes, a story.unaccepted outside the story, another done story
+never archived or with its branch left unmerged, which only flai accept or
+the operator's merge or deletion of the branch in the main checkout clears,
+the note components.examples gives when it could not check examples for
+want of node or a sub-project's svelte, unless the story changes a file
+under the folder it names, which only installing the tool clears, the
+agent.image findings that the project's image layer
 went unchecked for want of docker or is not built, unless the story changes
 system-flow.yaml or the layer's Dockerfile, which only the host's Docker and
 its built image clear, and a markdown or narrative.state finding on the
@@ -239,11 +242,11 @@ func (r recordedIssue) describe() string {
 // does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), a
 // threads.archived (ADR-0137), a narrative.missing on another story with no
 // narrative (ADR-0256), an item.blocked-closed on another item (ADR-0296),
-// the components.examples note for examples left unchecked for want of node
-// or a sub-project's svelte (ADR-0171), and the agent.image findings that the
-// image layer went unchecked for want of docker or is not built (ADR-0255),
-// outside the story, and a markdown or
-// narrative.state finding on another open story's narrative (ADR-0123,
+// a story.unaccepted on another story (ADR-0299), the components.examples
+// note for examples left unchecked for want of node or a sub-project's
+// svelte (ADR-0171), and the agent.image findings that the image layer went
+// unchecked for want of docker or is not built (ADR-0255), outside the
+// story, and a markdown or narrative.state finding on another open story's narrative (ADR-0123,
 // ADR-0125). A finding on an active work item is recorded only when it still
 // holds under the checked-write lock (confirmItemFindings, I-0316).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {

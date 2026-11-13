@@ -59,8 +59,8 @@ func verifyTier(script string) string {
 }
 
 // verifyFixture is scopeFixture, whose S-004 is in progress with its
-// narrative written and whose S-002's branch was never merged, a note
-// outside S-004, with S-004's worktree under .flai-cache/worktrees: a copy
+// narrative written and whose E-001 is behind its stories, a note outside
+// S-004, with S-004's worktree under .flai-cache/worktrees: a copy
 // of the project whose manifest declares the unit tier running script. It
 // answers the project's main checkout and the worktree.
 func verifyFixture(t *testing.T, script string) (root, worktree string) {
@@ -265,7 +265,9 @@ func TestVerifySkipsATierThatASelectedTierCovers(t *testing.T) {
 func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
 	t.Parallel()
 	root, _ := verifyFixture(t, "exit 0")
-	note := "    wip/archive/kanban/stories/S-002-two.md:6: warning: story.unaccepted: S-002 is done but its branch story/S-002 was never merged; merge or delete it\n"
+	// S-002's unmerged branch is left out (ADR-0299); E-001 behind its
+	// stories is the note.
+	note := "    wip/kanban/epics/E-001-epic.md:6: warning: epic.lags-stories: E-001 is "
 
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
 	if code != 0 || !strings.Contains(out, "\noutside S-004, notes that do not fail it:\n") || !strings.Contains(out, note) {
@@ -278,10 +280,10 @@ func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
 	rep := verifyReport(t, root, 0, "S-004")
 	found := false
 	for _, n := range rep.Notes {
-		found = found || n.Rule == "story.unaccepted" && n.Level == "warning" && n.Path == "wip/archive/kanban/stories/S-002-two.md"
+		found = found || n.Rule == "epic.lags-stories" && n.Level == "warning" && n.Path == "wip/kanban/epics/E-001-epic.md"
 	}
 	if !found {
-		t.Errorf("notes %+v lack S-002's branch", rep.Notes)
+		t.Errorf("notes %+v lack E-001 behind its stories", rep.Notes)
 	}
 }
 
@@ -290,7 +292,7 @@ func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
 func TestVerifyRecordIssuesRecordsTheNotesInTheWorktree(t *testing.T) {
 	t.Parallel()
 	root, worktree := verifyFixture(t, "exit 0")
-	finding := "`wip/archive/kanban/stories/S-002-two.md`: S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	finding := "`wip/kanban/epics/E-001-epic.md`: E-001 is "
 
 	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004", "--record-issues")
 	if code != 0 {
@@ -298,21 +300,21 @@ func TestVerifyRecordIssuesRecordsTheNotesInTheWorktree(t *testing.T) {
 	}
 	var issue string
 	for _, name := range issueFiles(t, worktree) {
-		if strings.Contains(name, "story-unaccepted") {
+		if strings.Contains(name, "epic-lags-stories") {
 			issue = filepath.Join(worktree, "design", "issues", name)
 		}
 	}
 	if issue == "" {
-		t.Fatalf("no story.unaccepted issue in the worktree: %v\n%s", issueFiles(t, worktree), out)
+		t.Fatalf("no epic.lags-stories issue in the worktree: %v\n%s", issueFiles(t, worktree), out)
 	}
 	doc, err := os.ReadFile(issue)
-	if err != nil || !strings.Contains(string(doc), finding+"\n") || !strings.Contains(string(doc), "Story: S-0004.\n") {
+	if err != nil || !strings.Contains(string(doc), finding) || !strings.Contains(string(doc), "Story: S-0004.\n") {
 		t.Errorf("issue %v:\n%s", err, doc)
 	}
 	if names := issueFiles(t, root); names != nil {
 		t.Errorf("the main checkout should have no issue written, got %v", names)
 	}
-	if !strings.Contains(out, "\nrecorded story.unaccepted outside S-004 in I-") || !strings.Contains(out, " (opened)\n") ||
+	if !strings.Contains(out, "\nrecorded epic.lags-stories outside S-004 in I-") || !strings.Contains(out, " (opened)\n") ||
 		lastLine(out) != "verify: S-004 passed every step" {
 		t.Errorf("text should say what it recorded, then the outcome:\n%s", out)
 	}
@@ -329,7 +331,7 @@ func TestVerifyRecordIssuesRecordsTheNotesInTheWorktree(t *testing.T) {
 	}
 	already := false
 	for _, r := range res.Recorded {
-		already = already || r.Rule == "story.unaccepted" && r.Outcome == "already recorded"
+		already = already || r.Rule == "epic.lags-stories" && r.Outcome == "already recorded"
 	}
 	if !res.Passed || !already {
 		t.Errorf("an identical run should record nothing again: %s", out)
@@ -1052,7 +1054,7 @@ func TestVerifyAnswersAPassingVerdictFromTheRecordAndSaysSo(t *testing.T) {
 	fail := filepath.Join(t.TempDir(), "fail")
 	root, worktree := verifyFixture(t, `test ! -e "`+fail+`"`)
 	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004", "--record-issues")
-	if code != 0 || !strings.Contains(out, "\nrecorded story.unaccepted outside S-004 in I-") || strings.Contains(out, "the record") {
+	if code != 0 || !strings.Contains(out, "\nrecorded epic.lags-stories outside S-004 in I-") || strings.Contains(out, "the record") {
 		t.Fatalf("the run that records: exit %d\n%s%s", code, out, errOut)
 	}
 	issues := issueFiles(t, worktree)

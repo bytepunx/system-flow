@@ -42,8 +42,14 @@ import (
 // was left open at its close, which only flai unblock on that item, in the
 // main checkout, which no story branch changes, closes (ADR-0296, I-0354);
 // one on the story's own item file or one of its tasks' is inside it. So is
-// the note components.examples gives when it could not check examples for
-// want of node or a sub-project's svelte, unless one of changed is under the
+// a story.unaccepted outside the story: it is on the item file of another
+// done story, never archived or with its story/S-nnnn branch left unmerged; a
+// done story never archived is accepted with flai accept, and a branch left
+// after acceptance is a ref of the main repository that the operator merges
+// or deletes, in the main checkout; no story branch clears either (ADR-0299,
+// I-0371); one on an item file inside the story stays inside it. So is the
+// note components.examples gives when it could not check examples for want
+// of node or a sub-project's svelte, unless one of changed is under the
 // examples folder it names, or a folder of changed holds it: only installing
 // the tool clears it, which no story branch does; when one is, the story's
 // own examples went unchecked, and the note is inside it (ADR-0171, I-0161).
@@ -174,7 +180,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
-			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing" || f.Rule == "item.blocked-closed") && !inside(f.Path)) ||
+			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing" || f.Rule == "item.blocked-closed" || f.Rule == "story.unaccepted") && !inside(f.Path)) ||
 			(f.unchecked && !under(f.Path) && !slices.ContainsFunc(f.inside, under)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)

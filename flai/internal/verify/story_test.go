@@ -157,8 +157,8 @@ func TestVerifyRunsEveryStepAndTheTiersTheBranchSelects(t *testing.T) {
 }
 
 // S-0249: a finding outside the story is a note, not a failure: the
-// fixture's epic is behind its stories, and another story's branch was
-// never merged.
+// fixture's epic is behind its stories. Another story's branch that was
+// never merged is left out, not noted (ADR-0299, I-0371).
 func TestVerifyAnswersTheCheckFindingsOutsideTheStoryAsNotes(t *testing.T) {
 	f := newVerifyFixture(t)
 	refs := filepath.Join(f.root, ".git", "refs", "heads", "story")
@@ -179,10 +179,8 @@ func TestVerifyAnswersTheCheckFindingsOutsideTheStoryAsNotes(t *testing.T) {
 	for _, n := range rep.Notes {
 		rules[n.Rule] = n
 	}
-	unaccepted, ok := rules["story.unaccepted"]
-	if !ok || unaccepted.Level != "warning" || unaccepted.Path != "wip/archive/kanban/stories/S-002-two.md" ||
-		!strings.Contains(unaccepted.Message, "story/S-002 was never merged") {
-		t.Errorf("notes %+v", rep.Notes)
+	if unaccepted, ok := rules["story.unaccepted"]; ok {
+		t.Errorf("S-002's unmerged branch should be left out, got the note %+v", unaccepted)
 	}
 	if _, ok := rules["epic.lags-stories"]; !ok {
 		t.Errorf("notes %+v lack the epic behind its stories", rep.Notes)

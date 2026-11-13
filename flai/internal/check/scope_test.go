@@ -31,6 +31,11 @@ func scopeProject(t *testing.T) string {
 	return root
 }
 
+// unmerged counts the findings a check scoped to S-004 leaves out of a
+// scopeProject beside those a test adds: the story.unaccepted on S-002,
+// outside the story (ADR-0299).
+const unmerged = 1
+
 // edit rewrites a fixture file, failing the test when old is not in it.
 func edit(t *testing.T, root, rel, old, new string) {
 	t.Helper()
@@ -67,39 +72,75 @@ func runScoped(t *testing.T, root string, changed []string) (*Result, *Result) {
 	return whole, scoped
 }
 
-// I-0057: a story's close-out stopped at flai check --strict on
-// story.unaccepted for another, archived story whose branch was never
-// merged. Scoped to the story in progress, the run passes; unscoped, it
-// fails as before.
-func TestScopedCheckPassesOverAnotherStorysUnmergedBranch(t *testing.T) {
-	whole, scoped := runScoped(t, scopeProject(t), nil)
-	var unaccepted *Finding
-	for i, f := range scoped.Findings {
-		if f.Rule == "story.unaccepted" {
-			unaccepted = &scoped.Findings[i]
-		}
-	}
-	if unaccepted == nil || !strings.Contains(unaccepted.Path, "S-002") || !strings.Contains(unaccepted.Message, "story/S-002 was never merged") {
-		t.Fatalf("the fixture should give story.unaccepted on S-002: %+v", scoped.Findings)
+// I-0057, I-0371, ADR-0299: close-outs met story.unaccepted on archived
+// stories they did not touch whose story/S-nnnn branch a test had left in the
+// main repository, and recorded it. Scoped to another story, the check leaves
+// it out and counts it nowhere, and so it does a done story never archived;
+// on an item file the story's branch changes it stays inside it; unscoped,
+// each is reported and fails --strict.
+func TestScopedCheckLeavesOutAStoryUnacceptedOutsideTheStory(t *testing.T) {
+	const rel = "wip/archive/kanban/stories/S-002-two.md"
+	root := scopeProject(t)
+	whole, scoped := runScoped(t, root, nil)
+	want := "S-002 is done but its branch story/S-002 was never merged; merge or delete it"
+	if got := ruleFindings(whole, "story.unaccepted"); len(got) != 1 || got[0].Message != want || got[0].Level != Warning ||
+		!strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Fatalf("unscoped, the run should report S-002's unmerged branch: %+v", whole.Findings)
 	}
 	if whole.OK(true) || !whole.OK(false) {
 		t.Errorf("unscoped, story.unaccepted must fail --strict only: %+v", whole)
 	}
-	if !unaccepted.Outside || unaccepted.Level != Warning {
-		t.Errorf("story.unaccepted on S-002 should be a warning outside S-004: %+v", unaccepted)
+	if got := ruleFindings(scoped, "story.unaccepted"); len(got) != 0 {
+		t.Errorf("scoped to S-004, the story.unaccepted on S-002, which it did not touch, should be left out: %+v", got)
 	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
 	if !scoped.OK(true) {
-		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped)
+		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
 	}
-	// The other finding is E-001's advisory epic.lags-stories: outside too,
-	// and counted once, as outside, not again as advisory.
-	if scoped.Outside != 2 || scoped.Advisory != 0 || scoped.Warnings != whole.Warnings || whole.Advisory != 1 {
-		t.Errorf("outside %d advisory %d warnings %d, want 2, 0, %d", scoped.Outside, scoped.Advisory, scoped.Warnings, whole.Warnings)
+	// The other finding is E-001's advisory epic.lags-stories: outside, and
+	// counted once, as outside, not again as advisory.
+	if scoped.Outside != 1 || scoped.Advisory != 0 || whole.Advisory != 1 {
+		t.Errorf("outside %d advisory %d, want 1, 0; unscoped advisory %d, want 1", scoped.Outside, scoped.Advisory, whole.Advisory)
 	}
 	for _, f := range whole.Findings {
 		if f.Outside {
 			t.Errorf("unscoped, nothing is outside: %+v", f)
 		}
+	}
+
+	// A done story never archived waits for flai accept in the main checkout.
+	data, err := os.ReadFile(filepath.Join(root, rel))
+	if err != nil {
+		t.Fatal(err)
+	}
+	six := strings.NewReplacer("S-002", "S-006", "- T-002 T2\n", "").Replace(string(data))
+	if err := os.WriteFile(filepath.Join(root, "wip/kanban/stories/S-006-six.md"), []byte(six), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	whole, scoped = runScoped(t, root, nil)
+	if got := ruleFindings(whole, "story.unaccepted"); len(got) != 2 {
+		t.Fatalf("unscoped, the run should report S-002's branch and S-006 never accepted: %+v", got)
+	}
+	if got := ruleFindings(scoped, "story.unaccepted"); len(got) != 0 {
+		t.Errorf("scoped to S-004, the story.unaccepted on S-006, never archived, should be left out too: %+v", got)
+	}
+	// Left out: both story.unaccepted, and S-006's item.archive (ADR-0122).
+	if len(scoped.Findings) != len(whole.Findings)-3 || scoped.Warnings != whole.Warnings-3 {
+		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings)-3, whole.Warnings-3)
+	}
+	assertCountsMatch(t, scoped)
+
+	// One on an item file the story's branch changes is the story's own.
+	_, scoped = runScoped(t, root, []string{rel})
+	got := ruleFindings(scoped, "story.unaccepted")
+	if len(got) != 1 || got[0].Outside || !strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Errorf("scoped to S-004, which changes S-002's file, its story.unaccepted should be inside it, and S-006's left out: %+v", got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("scoped to S-004, the story.unaccepted on a file it changes should fail --strict: %+v", scoped.Findings)
 	}
 }
 
@@ -233,8 +274,8 @@ func TestScopedCheckLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
 			outside++
 		}
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	if scoped.Warnings != warnings || scoped.Outside != outside {
 		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", scoped.Warnings, scoped.Outside, warnings, outside)
@@ -285,7 +326,7 @@ func TestScopedCheckLeavesOutAnotherStorysFolderTouchAndAfterHub(t *testing.T) {
 	}
 	// S-007 to S-009 give no reason for their after, so each S-0551
 	// wip.after-reason on them is left out too
-	dropped := 2
+	dropped := 2 + unmerged
 	for _, f := range whole.Findings {
 		if f.Rule == "wip.after-reason" {
 			dropped++
@@ -332,8 +373,8 @@ func TestScopedCheckLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 			outside++
 		}
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	if scoped.Warnings != warnings || scoped.Outside != outside {
 		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", scoped.Warnings, scoped.Outside, warnings, outside)
@@ -388,8 +429,8 @@ func TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 					t.Errorf("scoped to S-004, the board.wip-limit should be left out: %+v", f)
 				}
 			}
-			if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-				t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+			if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+				t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 			}
 			assertCountsMatch(t, scoped)
 			advisory := 0
@@ -426,8 +467,8 @@ func TestScopedCheckLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) {
 	if got := noStoryFindings(scoped); len(got) != 0 {
 		t.Errorf("scoped to S-004, the issues.no-story on an issue it did not touch should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	assertCountsMatch(t, scoped)
 	if !scoped.OK(true) {
@@ -491,8 +532,8 @@ func TestScopedCheckLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T) {
 	if got := archivedFindings(scoped); len(got) != 0 {
 		t.Errorf("scoped to S-004, the threads.archived on a thread it did not touch should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	assertCountsMatch(t, scoped)
 	if !scoped.OK(true) {
@@ -554,8 +595,8 @@ func TestScopedCheckLeavesOutANarrativeMissingOutsideTheStory(t *testing.T) {
 	if got := ruleFindings(scoped, "narrative.missing"); len(got) != 0 {
 		t.Errorf("scoped to S-004, the narrative.missing on S-006, which it did not touch, should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Errors != whole.Errors-1 {
-		t.Errorf("scoped findings %d errors %d, want %d, %d", len(scoped.Findings), scoped.Errors, len(whole.Findings)-1, whole.Errors-1)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Errors != whole.Errors-1 {
+		t.Errorf("scoped findings %d errors %d, want %d, %d", len(scoped.Findings), scoped.Errors, len(whole.Findings)-1-unmerged, whole.Errors-1)
 	}
 	assertCountsMatch(t, scoped)
 	if !scoped.OK(true) {
@@ -599,8 +640,8 @@ func TestScopedCheckLeavesOutBlockedClosedOutsideTheStory(t *testing.T) {
 	if got := ruleFindings(scoped, "item.blocked-closed"); len(got) != 0 {
 		t.Errorf("scoped to S-004, the item.blocked-closed on S-003, which it did not touch, should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	assertCountsMatch(t, scoped)
 	if !scoped.OK(true) {
@@ -702,8 +743,8 @@ func TestScopedCheckLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *testing.T
 				if len(got) != 0 {
 					t.Errorf("scoped to S-004, which changes %v, the note on %s should be left out: %+v", tc.changed, tc.folder, got)
 				}
-				if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-					t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+				if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+					t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 				}
 			} else if len(got) != 1 || got[0].Outside || !got[0].advisory {
 				t.Errorf("scoped to S-004, which changes %v, the note on %s should be inside it, advisory: %+v", tc.changed, tc.folder, got)
@@ -740,8 +781,8 @@ func TestScopedCheckNotesAnExamplesWarningOutsideTheStory(t *testing.T) {
 	if len(got) != 1 || !got[0].Outside || !strings.Contains(got[0].Message, "its width -1 is not a whole number") {
 		t.Errorf("scoped to S-004, the width should be a note outside it: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings) || scoped.Warnings != whole.Warnings {
-		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings), whole.Warnings)
+	if len(scoped.Findings) != len(whole.Findings)-unmerged || scoped.Warnings != whole.Warnings-unmerged {
+		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings)-unmerged, whole.Warnings-unmerged)
 	}
 	assertCountsMatch(t, scoped)
 }
@@ -784,8 +825,8 @@ func TestScopedCheckLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(t *tes
 	if got := codeSpanFindings(scoped); len(got) != 0 {
 		t.Errorf("scoped to S-004, the MD038 on S-006's narrative should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 	}
 	assertCountsMatch(t, scoped)
 }
@@ -864,8 +905,8 @@ func TestScopedCheckLeavesOutNarrativeStateOnAnotherOpenStorysNarrative(t *testi
 	if got := stateFindings(scoped); len(got) != 0 {
 		t.Errorf("scoped to S-004, the narrative.state on S-006's narrative should be left out: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings)-2 || scoped.Warnings != whole.Warnings-2 || scoped.Errors != whole.Errors {
-		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-2, whole.Warnings-2, whole.Errors)
+	if len(scoped.Findings) != len(whole.Findings)-2-unmerged || scoped.Warnings != whole.Warnings-2-unmerged || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-2-unmerged, whole.Warnings-2-unmerged, whole.Errors)
 	}
 	assertCountsMatch(t, scoped)
 
@@ -1014,7 +1055,8 @@ func TestScopeToStoryNamesAStory(t *testing.T) {
 // finding inside the second is counted and fails --strict, and one outside
 // both is a note. A wip.overlap naming one of them is a note too, a
 // narrative.state on the second's narrative stays inside, and one on the
-// narrative of an open story that is neither is left out.
+// narrative of an open story that is neither is left out, as is a
+// story.unaccepted outside both (ADR-0299).
 func TestScopedCheckToTwoStoriesNotesOnlyWhatIsOutsideBoth(t *testing.T) {
 	root := scopeProject(t)
 	edit(t, root, "wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
@@ -1046,8 +1088,8 @@ func TestScopedCheckToTwoStoriesNotesOnlyWhatIsOutsideBoth(t *testing.T) {
 	if got := find("item.heading", "S-006-six.md"); len(got) != 1 || got[0].Outside {
 		t.Errorf("the item.heading on the second story should be inside: %+v", got)
 	}
-	if got := find("story.unaccepted", "S-002-two.md"); len(got) != 1 || !got[0].Outside {
-		t.Errorf("the story.unaccepted on S-002 should be a note outside both: %+v", got)
+	if got := find("story.unaccepted", "S-002-two.md"); len(got) != 0 {
+		t.Errorf("the story.unaccepted on S-002, outside both, should be left out: %+v", got)
 	}
 	if got := find("wip.overlap", ""); len(got) != 1 || !got[0].Outside {
 		t.Errorf("the overlap of S-006 and S-007 names S-006, so it should be a note: %+v", got)
@@ -1164,8 +1206,8 @@ func TestScopedCheckLeavesOutAnAgentImageFindingOnlyTheHostClears(t *testing.T) 
 					if len(got) != 0 {
 						t.Errorf("scoped to S-004, which changes %v, the finding should be left out: %+v", tc.changed, got)
 					}
-					if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
-						t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+					if len(scoped.Findings) != len(whole.Findings)-1-unmerged || scoped.Warnings != whole.Warnings-1-unmerged || scoped.Errors != whole.Errors {
+						t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1-unmerged, whole.Warnings-1-unmerged, whole.Errors)
 					}
 					for _, f := range scoped.Findings {
 						if f.Rule == "agent.image" {
@@ -1206,8 +1248,8 @@ func TestScopedCheckNotesAMissingLayerOutsideTheStory(t *testing.T) {
 	if len(got) != 1 || !got[0].Outside || !strings.Contains(got[0].Message, "not a file") {
 		t.Errorf("scoped to S-004, the missing layer should be a note outside it: %+v", got)
 	}
-	if len(scoped.Findings) != len(whole.Findings) || scoped.Warnings != whole.Warnings {
-		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings), whole.Warnings)
+	if len(scoped.Findings) != len(whole.Findings)-unmerged || scoped.Warnings != whole.Warnings-unmerged {
+		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings)-unmerged, whole.Warnings-unmerged)
 	}
 	assertCountsMatch(t, scoped)
 }
