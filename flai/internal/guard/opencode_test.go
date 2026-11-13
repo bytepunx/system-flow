@@ -37,7 +37,7 @@ func TestOpenCodesReaderMapsAToolCallOntoACall(t *testing.T) {
 		{`{"tool":"edit","sessionID":"ses_1","args":{"filePath":"/w/a.go","oldString":"x","newString":"y"},` + root + `}`,
 			in(Call{Kind: FileWrite, Name: "edit", Path: "/w/a.go"})},
 		{`{"tool":"write","sessionID":"ses_1","args":{"filePath":".claude/settings.json","content":"{}"},` + root + `}`,
-			in(Call{Kind: FileWrite, Name: "write", Path: ".claude/settings.json"})},
+			in(Call{Kind: FileWrite, Name: "write", Path: ".claude/settings.json", Whole: true, Content: "{}"})},
 		{`{"tool":"multiedit","sessionID":"ses_1","args":{"filePath":"b.go"},` + root + `}`,
 			in(Call{Kind: FileWrite, Name: "multiedit", Path: "b.go"})},
 		{`{"tool":"read","sessionID":"ses_1","args":{"filePath":"a.go"},` + root + `}`,

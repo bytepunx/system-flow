@@ -68,12 +68,17 @@ type OpenCodeSession struct {
 
 // openCodeArgs is the part of an OpenCode tool's arguments the guard reads
 // beside a flai tool's Args: bash's command, the file edit and write change,
-// and apply_patch's patch.
+// the content write gives its file, and apply_patch's patch.
 type openCodeArgs struct {
 	Command   string `json:"command"`
 	FilePath  string `json:"filePath"`
+	Content   string `json:"content"`
 	PatchText string `json:"patchText"`
 }
+
+// openCodeWhole is OpenCode's tool that replaces its file whole with the
+// content it gives.
+const openCodeWhole = "write"
 
 // openCode is OpenCode's Reader.
 type openCode struct{}
@@ -135,6 +140,9 @@ func (g Guard) openCodeCall(in OpenCodeInput) (Hook, error) {
 		c.Kind, c.Command = Shell, a.Command
 	case slices.Contains(openCodeFileWrites, in.Tool):
 		c.Kind, c.Path = FileWrite, a.FilePath
+		if in.Tool == openCodeWhole {
+			c.Whole, c.Content = true, a.Content
+		}
 	case slices.Contains(openCodePatches, in.Tool):
 		c.Kind = FileWrite
 		paths := PatchPaths(a.PatchText)

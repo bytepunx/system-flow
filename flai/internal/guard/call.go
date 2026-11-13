@@ -52,6 +52,12 @@ type Call struct {
 	Path    string
 	Tool    string
 	Args    Args
+	// Whole says a FileWrite replaces its file whole, as Claude Code's Write
+	// and OpenCode's write do, and Content is the file's new content as the
+	// call gives it (S-0730). An edit, a patch, or a notebook edit changes
+	// part of its file and carries neither.
+	Whole   bool
+	Content string
 }
 
 // Args are the arguments of a flai tool the guard reads: item_move's item

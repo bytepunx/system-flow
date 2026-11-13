@@ -55,14 +55,20 @@ type Event struct {
 }
 
 // Input is the part of a tool call's input the guard reads: Bash's command;
-// the file Edit or Write changes, or the notebook NotebookEdit does; and a
-// flai tool's Args. UnmarshalJSON fills Args' Fields and CostOfDelay.
+// the file Edit or Write changes, or the notebook NotebookEdit does; the
+// content Write gives its file; and a flai tool's Args. UnmarshalJSON fills
+// Args' Fields and CostOfDelay.
 type Input struct {
 	Command      string `json:"command"`
 	FilePath     string `json:"file_path"`
 	NotebookPath string `json:"notebook_path"`
+	Content      string `json:"content"`
 	Args
 }
+
+// claudeCodeWhole is Claude Code's tool that replaces its file whole with
+// the content it gives.
+const claudeCodeWhole = "Write"
 
 // UnmarshalJSON decodes a tool call's input, the names of its fields, and
 // the keys of its cost_of_delay. A cost_of_delay that is not an object is
@@ -109,8 +115,9 @@ func (g Guard) Decide(e Event) Refusal {
 }
 
 // call is the Call e makes, in g's role and story: Bash runs a command line,
-// fileWrites write their file_path or notebook_path, and a tool of
-// MCPPrefix is a flai tool; a call with an agent ID is a sub-agent's.
+// fileWrites write their file_path or notebook_path, Write replacing it whole
+// with its content, and a tool of MCPPrefix is a flai tool; a call with an
+// agent ID is a sub-agent's.
 func (g Guard) call(e Event) Call {
 	c := Call{Session: e.SessionID, Subagent: e.AgentID != "", Agent: e.AgentType, Role: g.Role, Story: g.Story, Name: e.ToolName}
 	tool, flai := strings.CutPrefix(e.ToolName, MCPPrefix)
@@ -119,6 +126,9 @@ func (g Guard) call(e Event) Call {
 		c.Kind, c.Command = Shell, e.ToolInput.Command
 	case slices.Contains(fileWrites, e.ToolName):
 		c.Kind, c.Path = FileWrite, cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
+		if e.ToolName == claudeCodeWhole {
+			c.Whole, c.Content = true, e.ToolInput.Content
+		}
 	case flai:
 		c.Kind, c.Tool, c.Args = FlaiTool, tool, e.ToolInput.Args
 	}
