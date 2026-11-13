@@ -61,30 +61,35 @@ func TestDiffLinesReadsHunksAndSkipsHeaders(t *testing.T) {
 }
 
 // I-0360: in a markdown file, main's line is kept when a line the branch adds
-// holds every word of it in order, each added line keeping one of main's at
-// most; a dropped, changed, or reordered word, a line with no words, and a
-// file that is not markdown keep the multiset of whole lines.
+// holds every word of it, punctuation at the words' ends left out, in any
+// order, each added line keeping one of main's at most; a dropped or changed
+// word, a line restoring one main removed, a line with no words, and a file
+// that is not markdown keep the multiset of whole lines.
 func TestNotKeptLeavesMainsLinesABranchLineExtends(t *testing.T) {
 	row := "| `flai check` | Validates the repo. |"
 	cases := []struct {
-		name, path          string
-		undone, branchAdded []string
-		want                []string
+		name, path                       string
+		undone, branchAdded, mainRemoved []string
+		want                             []string
 	}{
-		{"extended row", "a.md", []string{row}, []string{"| `flai check` | Validates the repo. It also checks images. |"}, []string{}},
-		{"word inserted inside", "a.md", []string{"one two three"}, []string{"one and two three"}, []string{}},
-		{"upper-case extension", "A.MD", []string{"one two"}, []string{"one two three"}, []string{}},
-		{"word dropped", "a.md", []string{"one two three"}, []string{"one three four"}, []string{"one two three"}},
-		{"word changed", "a.md", []string{"one two"}, []string{"one too"}, []string{"one two"}},
-		{"words reordered", "a.md", []string{"one two"}, []string{"two one"}, []string{"one two"}},
-		{"revert adds nothing", "a.md", []string{"one two"}, nil, []string{"one two"}},
-		{"one added line keeps one", "a.md", []string{"one two", "one two"}, []string{"one two three"}, []string{"one two"}},
-		{"each added line keeps one", "a.md", []string{"a b", "c d"}, []string{"c d e", "a b f"}, []string{}},
-		{"blank line", "a.md", []string{""}, []string{"anything"}, []string{""}},
-		{"not markdown", "a.go", []string{"x := 1"}, []string{"// x := 1"}, []string{"x := 1"}},
+		{"extended row", "a.md", []string{row}, []string{"| `flai check` | Validates the repo. It also checks images. |"}, nil, []string{}},
+		{"word inserted inside", "a.md", []string{"one two three"}, []string{"one and two three"}, nil, []string{}},
+		{"word moved", "a.md", []string{"a, and b, c"}, []string{"a, b, and c, d"}, nil, []string{}},
+		{"bracket dropped", "a.md", []string{"(ADR-0256), ADR-0296)"}, []string{"(ADR-0256, ADR-0296)"}, nil, []string{}},
+		{"upper-case extension", "A.MD", []string{"one two"}, []string{"one two three"}, nil, []string{}},
+		{"word dropped", "a.md", []string{"one two three"}, []string{"one three four"}, nil, []string{"one two three"}},
+		{"word changed", "a.md", []string{"one two"}, []string{"one too"}, nil, []string{"one two"}},
+		{"word once of twice", "a.md", []string{"a a b"}, []string{"a b c"}, nil, []string{"a a b"}},
+		{"revert adds nothing", "a.md", []string{"one two"}, nil, nil, []string{"one two"}},
+		{"restores main's removed line", "a.md", []string{"one two"}, []string{"one two three"}, []string{"one two three"}, []string{"one two"}},
+		{"one added line keeps one", "a.md", []string{"one two", "one two"}, []string{"one two three"}, nil, []string{"one two"}},
+		{"each added line keeps one", "a.md", []string{"a b", "c d"}, []string{"c d e", "a b f"}, nil, []string{}},
+		{"blank line", "a.md", []string{""}, []string{"anything"}, nil, []string{""}},
+		{"punctuation alone", "a.md", []string{"---"}, []string{"anything"}, nil, []string{"---"}},
+		{"not markdown", "a.go", []string{"x := 1"}, []string{"// x := 1"}, nil, []string{"x := 1"}},
 	}
 	for _, c := range cases {
-		if got := notKept(c.path, c.undone, c.branchAdded); !reflect.DeepEqual(got, c.want) {
+		if got := notKept(c.path, c.undone, c.branchAdded, c.mainRemoved); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -112,6 +117,7 @@ func TestUndoneLeavesAMarkdownLineTheBranchExtends(t *testing.T) {
 		t.Fatal(err)
 	}
 	rg.script("@@ -54 +54 @@\n-| `flai check` | main's |\n+| `flai check` | main's and the story's |", diffArgs("main", "story/S-0001", "flai-cli.md")...)
+	rg.script("@@ -54 +54 @@\n-| `flai check` | old |\n+| `flai check` | main's |", diffArgs("b0", "main", "flai-cli.md")...)
 	if got, err := RecordedUndone(rg, repo, "S-0001"); err != nil || len(got) != 0 {
 		t.Errorf("recorded and extended: %+v %v; want nothing still undone", got, err)
 	}

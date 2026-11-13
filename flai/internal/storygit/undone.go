@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -81,12 +82,12 @@ func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read what the main branch added to %s between %s and %s: %w", p, oldBase, onto, err)
 		}
-		added, _ := diffLines(out)
+		added, mainRemoved := diffLines(out)
 		if out, err = r.Run(dir, "git", diffArgs(onto, "HEAD", p)...); err != nil {
 			return nil, fmt.Errorf("read what the branch in %s removes from %s against %s: %w", dir, p, onto, err)
 		}
 		branchAdded, removed := diffLines(out)
-		if lines := notKept(p, undoneLines(added, removed), branchAdded); len(lines) > 0 {
+		if lines := notKept(p, undoneLines(added, removed), branchAdded, mainRemoved); len(lines) > 0 {
 			found = append(found, Undone{Path: p, Lines: lines, OldBase: oldBase})
 		}
 	}
@@ -119,7 +120,15 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 			return nil, fmt.Errorf("check whether %s still undoes %s's change to %s: %w; a story with no branch has nothing to undo, so delete %s", Branch(story), main, e.Path, err, UndoneRecordPath(cacheDir, story))
 		}
 		branchAdded, removed := diffLines(diff)
-		if e.Lines = notKept(e.Path, undoneLines(e.Lines, removed), branchAdded); len(e.Lines) == 0 {
+		lines := undoneLines(e.Lines, removed)
+		var mainRemoved []string
+		if mayKeep(e.Path, lines, branchAdded) {
+			if diff, err = r.Run(repo.MainRoot, "git", diffArgs(e.OldBase, main, e.Path)...); err != nil {
+				return nil, fmt.Errorf("read what %s removed from %s since %s: %w; delete %s and run flai stream sync %s again", main, e.Path, e.OldBase, err, UndoneRecordPath(cacheDir, story), story)
+			}
+			_, mainRemoved = diffLines(diff)
+		}
+		if e.Lines = notKept(e.Path, lines, branchAdded, mainRemoved); len(e.Lines) == 0 {
 			continue
 		}
 		kept = append(kept, e)
@@ -298,51 +307,77 @@ func undoneLines(added, removed []string) []string {
 }
 
 // notKept is the lines of undone, main's lines the branch removes from the
-// file at path, that no line the branch adds keeps (I-0360): in a markdown
-// file, a line of main's whose words, split on white space, the words of an
-// added line hold in the same order is kept, not undone, as when the branch
-// adds a sentence to main's one-line paragraph or table row. Each added line
-// keeps one of main's lines at most, the first it holds in undone's order. A
-// line with no words, and every line of a file that is not markdown, where a
-// line that keeps every word, such as one commented out, can still undo
-// main's change, is kept only by the multiset of whole lines (ADR-0155).
-func notKept(path string, undone, branchAdded []string) []string {
-	if len(undone) == 0 || !strings.EqualFold(filepath.Ext(path), ".md") {
+// file at path, that no line the branch adds keeps (I-0360). In a markdown
+// file, a line of main's is kept, not undone, when a line the branch adds
+// holds every word of it, as a multiset of the words split on white space
+// with the punctuation at each word's ends left out, in any order: so a
+// sentence the branch adds to main's one-line paragraph or table row, or a
+// word it moves or a bracket it drops there, keeps main's line. Each added
+// line keeps one of main's lines at most, the first it holds in undone's
+// order. An added line that is one of mainRemoved, the lines main removed
+// since the branch's old base, keeps none: the branch restores main's old
+// line, which is the revert ADR-0155 catches. A line with no words, and every
+// line of a file that is not markdown, where a line that keeps every word,
+// such as one commented out, can still undo main's change, is kept only by
+// the multiset of whole lines (ADR-0155).
+func notKept(path string, undone, branchAdded, mainRemoved []string) []string {
+	if !mayKeep(path, undone, branchAdded) {
 		return undone
 	}
-	used := make([]bool, len(branchAdded))
+	bags := make([]map[string]int, 0, len(branchAdded))
+	for _, a := range branchAdded {
+		if !slices.Contains(mainRemoved, a) {
+			bags = append(bags, wordBag(a))
+		}
+	}
 	out := []string{}
 	for _, l := range undone {
-		if !keepOnce(strings.Fields(l), branchAdded, used) {
+		if !keepOnce(wordBag(l), bags) {
 			out = append(out, l)
 		}
 	}
 	return out
 }
 
-// keepOnce marks used the first line of added, not used yet, that holds
-// words in order, and reports whether it found one; no words are never kept.
-func keepOnce(words, added []string, used []bool) bool {
+// mayKeep reports whether a line the branch adds to the file at path may
+// keep one of undone: the file is markdown and both are non-empty.
+func mayKeep(path string, undone, branchAdded []string) bool {
+	return len(undone) > 0 && len(branchAdded) > 0 && strings.EqualFold(filepath.Ext(path), ".md")
+}
+
+// keepOnce takes out of bags the first bag that holds every word of words,
+// and reports whether it found one; a line with no words is never kept.
+func keepOnce(words map[string]int, bags []map[string]int) bool {
 	if len(words) == 0 {
 		return false
 	}
-	for i, a := range added {
-		if !used[i] && holdsInOrder(strings.Fields(a), words) {
-			used[i] = true
+	for i, b := range bags {
+		if b != nil && holdsAll(b, words) {
+			bags[i] = nil
 			return true
 		}
 	}
 	return false
 }
 
-// holdsInOrder reports whether words is a subsequence of line: every word of
-// it, in its order, with any words between.
-func holdsInOrder(line, words []string) bool {
-	j := 0
-	for _, w := range line {
-		if j < len(words) && w == words[j] {
-			j++
+// holdsAll reports whether bag holds each word of words at least as often.
+func holdsAll(bag, words map[string]int) bool {
+	for w, n := range words {
+		if bag[w] < n {
+			return false
 		}
 	}
-	return j == len(words)
+	return true
+}
+
+// wordBag is the words of line, split on white space with the punctuation
+// at each word's ends left out, counted; a word of punctuation alone is none.
+func wordBag(line string) map[string]int {
+	bag := map[string]int{}
+	for _, w := range strings.Fields(line) {
+		if w = strings.TrimFunc(w, unicode.IsPunct); w != "" {
+			bag[w]++
+		}
+	}
+	return bag
 }
