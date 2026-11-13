@@ -11,9 +11,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/agentimage"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -527,5 +529,76 @@ func TestAHostHarnessStorysChecksHaveNoContainer(t *testing.T) {
 	lab := newVerifyLab(t, false)
 	if in := ChecksContainer(lab.repo, lab.story, AgentConfig{}, imageDocker{has: true}); in != nil {
 		t.Errorf("a host-harness story's checks run in a container: %+v", in)
+	}
+}
+
+// S-0751 criterion 1, ADR-0295 §5: flai serve's checks of a container story
+// whose image is missing ask for the image job that makes it rather than
+// refuse, wait for it before their first check, and then run in the image it
+// made. Before S-0751 the checks failed, naming make agent-images.
+func TestAContainerStorysCheckWaitsForTheImageJob(t *testing.T) {
+	lab, _ := newContainerLab(t, false)
+	made := &atomic.Bool{}
+	jobs := verifyImageJobs(t, made, nil)
+	program, argvFile, _ := fakeDockerClient(t, "exit 0")
+	cfg := AgentConfig{Harnesses: map[string]harness.Host{harness.Container: {Program: program}}}
+	in := checksContainerOf(reopened(t, lab), lab.story, cfg, madeDocker{made: made}, jobs, "t")
+	if in == nil || in.Err != nil || in.wait == nil {
+		t.Fatalf("the checks of a story with no image do not wait for an image job: %+v", in)
+	}
+	job := in.wait.job
+	checks := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "unit", Command: []string{"true"}}}, Timeout: time.Minute}
+	dir := Dir(filepath.Join(t.TempDir(), "serve"))
+	run, err := dir.RunChecksIn(context.Background(), lab.story, lab.repo.Root, lab.worktree, checks, nil, in, nowFixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Outcome != "passed" || !made.Load() {
+		t.Errorf("the run: %+v, image made %v", run, made.Load())
+	}
+	if _, err := os.Stat(argvFile); err != nil {
+		t.Errorf("the check did not run in its container: %v", err)
+	}
+	log, _ := os.ReadFile(run.Log)
+	for _, want := range []string{"waiting for flai serve's image job " + job.ID(), job.Log(), "the image job " + job.ID() + " passed"} {
+		if !strings.Contains(string(log), want) {
+			t.Errorf("the log lacks %q:\n%s", want, log)
+		}
+	}
+}
+
+// S-0751 criterion 4: checks whose image job fails fail with the job's cause,
+// its failing step, and its log, run nothing on the host, and never name make
+// agent-images.
+func TestAContainerStorysCheckFailsWithTheImageJobsCause(t *testing.T) {
+	lab, _ := newContainerLab(t, false)
+	step := "build flai-agent-claude-code:dev"
+	jobs := verifyImageJobs(t, &atomic.Bool{}, &agentimage.StepError{Step: step, Tries: 1, Said: "no space left on device", Err: errors.New("exit status 1")})
+	in := checksContainerOf(reopened(t, lab), lab.story, AgentConfig{}, imageDocker{has: false}, jobs, "t")
+	if in == nil || in.wait == nil {
+		t.Fatalf("the checks of a story with no image do not wait for an image job: %+v", in)
+	}
+	job := in.wait.job
+	marker := filepath.Join(lab.worktree, "ran-on-the-host")
+	checks := ChecksConfig{Commands: []manifest.NamedCommand{{Name: "unit", Command: []string{"sh", "-c", "touch " + marker}}}, Timeout: time.Minute}
+	dir := Dir(filepath.Join(t.TempDir(), "serve"))
+	run, err := dir.RunChecksIn(context.Background(), lab.story, lab.repo.Root, lab.worktree, checks, nil, in, nowFixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Outcome != "failed" {
+		t.Errorf("the run: %+v", run)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Error("the check's program ran on the host")
+	}
+	log, _ := os.ReadFile(run.Log)
+	for _, want := range []string{job.ID(), step, "no space left on device", job.Log(), "flai image ensure", "nothing runs on the host"} {
+		if !strings.Contains(string(log), want) {
+			t.Errorf("the log lacks %q:\n%s", want, log)
+		}
+	}
+	if strings.Contains(string(log), "make agent-images") {
+		t.Errorf("the log names make agent-images:\n%s", log)
 	}
 }

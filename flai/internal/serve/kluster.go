@@ -1022,7 +1022,7 @@ func (p *klusterPass) runChecks(ctx context.Context, repo *workitem.Repo, j klus
 	if p.o.Agent != nil {
 		agents = p.o.Agent(p.e.Root)
 	}
-	in := ChecksContainer(repo, j.story, agents, dockerOf(p.o))
+	in := checksContainerOf(repo, j.story, agents, dockerOf(p.o), p.o.imageJobs, p.e.Key)
 	run, err := p.o.Dir.RunChecksAs(ctx, j.asker(), j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, in, p.o.Now)
 	if err != nil {
 		p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(commit), err))

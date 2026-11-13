@@ -16,6 +16,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -174,18 +175,25 @@ func (d Dir) RunChecksAs(ctx context.Context, by, story, root, worktree string, 
 		return ChecksRun{}, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
-	defer cancel()
 	if run.Namespace != "" {
 		fmt.Fprintf(logFile, "=== against the kluster namespace %s ===\n", run.Namespace)
 	}
 
 	outcome := "passed"
+	commands := cfg.Commands
 	if in != nil {
 		fmt.Fprintf(logFile, "=== in %s's container ===\n", story)
+		// The wait for the image job is not the checks' own time, so it is
+		// outside their timeout; a cancel ends it as it ends a check.
+		var killedBy string
+		if in, killedBy = in.ready(ctx, d.checksCancel(story), logFile); killedBy != "" {
+			outcome, commands = killedBy, nil
+		}
 	}
+	ctx, cancel := context.WithTimeout(ctx, cfg.Timeout)
+	defer cancel()
 stepLoop:
-	for i, nc := range cfg.Commands {
+	for i, nc := range commands {
 		argv := Substitute(nc.Command, story, worktree)
 		if len(argv) == 0 || strings.TrimSpace(argv[0]) == "" {
 			outcome = "failed"
@@ -241,20 +249,37 @@ stepLoop:
 // container harness run (ADR-0274): the container harness's host and the
 // story's image, or Err, why its container cannot run, which fails each check
 // rather than run it on the host. Docker stops a check's container when the
-// check is cancelled or runs out of time; nil is the system's.
+// check is cancelled or runs out of time; nil is the system's. A container
+// flai serve's checks found their images missing or stale for waits, before
+// its first check, for the image job that makes them (ADR-0295 §5): wait is
+// that job, and again judges the image once more when it has passed.
 type CheckContainer struct {
 	Host   harness.Host
 	Image  string
 	Err    error
 	Docker execx.Runner
+
+	wait  *imageWait
+	story string
+	again func() *CheckContainer
 }
 
 // ChecksContainer is where story's checks run when its agent, resolved as flai
 // serve starts it (ADR-0251, ADR-0261), runs on the container harness: its
 // image, checked through docker as an agent's start checks it, or why it
-// cannot run there. It is nil for a story whose agent runs on any other
-// harness, or that cannot be read, whose checks run on the host as before.
+// cannot run there, a missing image naming flai image ensure. It is nil for a
+// story whose agent runs on any other harness, or that cannot be read, whose
+// checks run on the host as before.
 func ChecksContainer(repo *workitem.Repo, story string, cfg AgentConfig, docker execx.Runner) *CheckContainer {
+	return checksContainerOf(repo, story, cfg, docker, nil, "")
+}
+
+// checksContainerOf is ChecksContainer for flai serve's checks, which, with
+// jobs, ask jobs for the image job that makes the agent images the story's
+// container finds missing or stale, under the project's key, rather than
+// refuse a missing one; the container waits for it before its first check.
+// With jobs nil it is ChecksContainer.
+func checksContainerOf(repo *workitem.Repo, story string, cfg AgentConfig, docker execx.Runner, jobs *imageJobRunner, key string) *CheckContainer {
 	it, err := repo.Get(story)
 	if err != nil {
 		return nil
@@ -263,14 +288,98 @@ func ChecksContainer(repo *workitem.Repo, story string, cfg AgentConfig, docker 
 	if agent == nil || agent.Harness != harness.Container {
 		return nil
 	}
-	host, image, err := containerImage(docker, mainCheckout(repo), cfg, agent)
-	if err == nil && image == "" {
-		err = fmt.Errorf("the container harness has no image for the inner harness %s of %s's agent: name one with flai serve agent harness container --image %s=<image>", innerOf(agent), story, innerOf(agent))
+	root := mainCheckout(repo)
+	made := func(host harness.Host, image string, err error) *CheckContainer {
+		if err == nil && image == "" {
+			err = fmt.Errorf("the container harness has no image for the inner harness %s of %s's agent: name one with flai serve agent harness container --image %s=<image>", innerOf(agent), story, innerOf(agent))
+		}
+		if err != nil {
+			return checksContainerFailed(story, err, docker)
+		}
+		return &CheckContainer{Host: host, Image: image, Docker: docker}
 	}
-	if err != nil {
-		return &CheckContainer{Err: fmt.Errorf("%s's agent runs in a container, so its checks run there and nothing runs on the host: %w", story, err), Docker: docker}
+	host, image, wait, err := containerImageAsked(docker, jobs, key, root, cfg, agent)
+	if err != nil || wait == nil {
+		return made(host, image, err)
 	}
-	return &CheckContainer{Host: host, Image: image, Docker: docker}
+	return &CheckContainer{Docker: docker, wait: wait, story: story, again: func() *CheckContainer {
+		return made(containerImage(docker, root, cfg, agent))
+	}}
+}
+
+// checksContainerFailed is the container of story's checks that cannot run,
+// for err, which fails each check rather than run it on the host.
+func checksContainerFailed(story string, err error, docker execx.Runner) *CheckContainer {
+	return &CheckContainer{Err: fmt.Errorf("%s's agent runs in a container, so its checks run there and nothing runs on the host: %w", story, err), Docker: docker}
+}
+
+// containerImageAsked is containerImage for a close-out or the checks flai
+// serve runs, which, with jobs, ask jobs for the image job that makes the
+// images the container finds missing or stale, under the project's key and
+// its main checkout's root, so that it joins the job a start of the project
+// asked for, rather than refuse a missing one (ADR-0295 §5). It is then the
+// job to wait for, after which the caller judges the image again with
+// containerImage; with jobs nil, or no image to make, it is containerImage's
+// host and image, or its refusal, naming flai image ensure.
+func containerImageAsked(docker execx.Runner, jobs *imageJobRunner, key, root string, cfg AgentConfig, agent *manifest.Agent) (harness.Host, string, *imageWait, error) {
+	host, image, judged, err := containerImageJudged(docker, root, cfg, agent, false)
+	switch {
+	case err != nil:
+		return harness.Host{}, "", nil, err
+	case jobs != nil && len(judged.need) > 0:
+		j := jobs.request(imageNeed{Key: key, Root: root, Images: judged.need})
+		return harness.Host{}, "", &imageWait{job: j, image: image, why: judged.why()}, nil
+	case judged.missing != nil:
+		return harness.Host{}, "", nil, judged.missing
+	}
+	return host, image, nil, nil
+}
+
+// ready is c once the image job it waits for, if any, has ended, writing the
+// wait to out: c judged again when the job passed, and a container whose
+// checks fail with the job's error, which names its cause, its step, and its
+// log, when it failed. It stops waiting when ctx ends or the cancel file
+// appears, and says so as the checks' outcome, cancelled or timed-out; the
+// job goes on for the others that wait for it.
+func (c *CheckContainer) ready(ctx context.Context, cancelFile string, out io.Writer) (*CheckContainer, string) {
+	if c.wait == nil {
+		return c, ""
+	}
+	j := c.wait.job
+	fmt.Fprintf(out, "=== %s: waiting for flai serve's image job %s, which makes them, its log %s ===\n", c.wait.why, j.ID(), j.Log())
+	wctx, stop := context.WithCancel(ctx)
+	defer stop()
+	go func() {
+		ticker := time.NewTicker(300 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-wctx.Done():
+				return
+			case <-ticker.C:
+				if _, err := os.Stat(cancelFile); err == nil {
+					stop()
+					return
+				}
+			}
+		}
+	}()
+	_, err := j.wait(wctx)
+	var failed *ImageJobError
+	switch {
+	case err == nil:
+		fmt.Fprintf(out, "=== the image job %s passed ===\n", j.ID())
+		return c.again(), ""
+	case errors.As(err, &failed):
+		fmt.Fprintf(out, "=== the image job %s did not pass ===\n", j.ID())
+		return checksContainerFailed(c.story, err, c.Docker), ""
+	case errors.Is(ctx.Err(), context.DeadlineExceeded):
+		fmt.Fprintf(out, "=== stopped waiting for the image job %s: %v ===\n", j.ID(), err)
+		return c, "timed-out"
+	default:
+		fmt.Fprintf(out, "=== stopped waiting for the image job %s: %v ===\n", j.ID(), err)
+		return c, "cancelled"
+	}
 }
 
 // run runs one check, argv, in story's container named for id, with env's

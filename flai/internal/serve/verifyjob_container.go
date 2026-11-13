@@ -112,7 +112,7 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 		}
 		return code, nil
 	}
-	host, image, err := containerImage(dockerOf(p.o), root, c.agent.cfg, c.agent.agent)
+	host, image, err := c.image(ctx, out)
 	if err == nil && image == "" {
 		err = fmt.Errorf("the container harness has no image for the inner harness %s of %s's agent: name one with flai serve agent harness container --image %s=<image>", innerOf(c.agent.agent), story, innerOf(c.agent.agent))
 	}
@@ -186,6 +186,30 @@ func (c *containerCloseOut) run(ctx context.Context, out io.Writer) (int, error)
 		return end(1, nil)
 	}
 	return end(0, nil)
+}
+
+// image is the container harness's host and the image the story's close-out
+// runs in. When its agent images are missing or stale and flai serve runs
+// image jobs, it asks for the job that makes them, under the project's main
+// checkout, so that it joins a start's, writes to out that it waits for it,
+// and waits, then judges the image again (ADR-0295 §5): the close-out's
+// verdict, and its verified event, come after the job. A failed job is its
+// error, which names its cause, its step, and its log. With no image jobs a
+// missing image refuses, naming flai image ensure.
+func (c *containerCloseOut) image(ctx context.Context, out io.Writer) (harness.Host, string, error) {
+	p, root, docker := c.p, c.p.e.Root, dockerOf(c.p.o)
+	host, image, wait, err := containerImageAsked(docker, p.o.imageJobs, p.e.Key, root, c.agent.cfg, c.agent.agent)
+	if err != nil || wait == nil {
+		return host, image, err
+	}
+	j := wait.job
+	fmt.Fprintf(out, "close-out: %s: waiting for flai serve's image job %s, which makes them, its log %s\n", wait.why, j.ID(), j.Log())
+	p.o.Logger.Info("close-out waits for an image job", "component", "serve", "root", root, "story", c.story, "job_id", c.story+"-"+c.id, "image_job", j.ID(), "image", wait.image)
+	if _, err := j.wait(ctx); err != nil {
+		return harness.Host{}, "", err
+	}
+	fmt.Fprintf(out, "close-out: the image job %s passed\n", j.ID())
+	return containerImage(docker, root, c.agent.cfg, c.agent.agent)
 }
 
 // commit commits what is outstanding in the worktree on the host with git

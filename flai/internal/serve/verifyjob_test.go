@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -11,9 +12,12 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/agentimage"
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -746,7 +750,8 @@ func TestAContainerStorysCloseOutWithChangesAndNoMessageStopsAtTheCommit(t *test
 
 // ADR-0274 §5: a container story whose image is not on this host is not
 // closed out on the host instead: the job runs nothing, its verdict is
-// failed, and its log and journal say how to build the image.
+// failed, and its log and journal say how to build the image. With no image
+// jobs, outside flai serve's run, that is flai image ensure (ADR-0295).
 func TestAContainerStorysCloseOutWithNoImageFailsAndRunsNothing(t *testing.T) {
 	t.Parallel()
 	lab, fake := newContainerLab(t, false)
@@ -759,11 +764,137 @@ func TestAContainerStorysCloseOutWithNoImageFailsAndRunsNothing(t *testing.T) {
 		t.Errorf("a story with no image ran %q", argvs(calls))
 	}
 	out, _ := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
-	if !strings.Contains(string(out), "nothing runs on the host") || !strings.Contains(string(out), "make agent-images") {
+	if !strings.Contains(string(out), "nothing runs on the host") || !strings.Contains(string(out), "flai image ensure") {
 		t.Errorf("the job's log: %q", out)
 	}
 	entries := lab.journal()
-	if end := entries[len(entries)-1]; end.Verdict != closeout.VerdictFailed || !strings.Contains(end.Detail, "make agent-images") {
+	if end := entries[len(entries)-1]; end.Verdict != closeout.VerdictFailed || !strings.Contains(end.Detail, "flai image ensure") {
+		t.Errorf("the end entry: %+v", end)
+	}
+}
+
+// madeDocker is a docker client on PATH whose image is missing until made is
+// set, as an image job's ensure sets it, and is on the host after, labelled
+// with this flai's version; it runs nothing else.
+type madeDocker struct{ made *atomic.Bool }
+
+func (d madeDocker) Run(dir, name string, args ...string) (string, error) {
+	if len(args) > 1 && args[0] == "image" && args[1] == "inspect" && d.made.Load() {
+		return `{"Id":"sha256:abc","Config":{"Labels":{"` + agentimage.LabelFlai + `":"` + buildinfo.Get().Version + `"}}}` + "\n", nil
+	}
+	return imageDocker{has: false}.Run(dir, name, args...)
+}
+
+func (d madeDocker) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return d.Run(dir, name, args...)
+}
+
+func (madeDocker) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
+
+// verifyImageJobs is an image job runner whose ensure fails with fail, or
+// else sets made, which makes a madeDocker's image; it ends with the test.
+func verifyImageJobs(t *testing.T, made *atomic.Bool, fail error) *imageJobRunner {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	ensure := func(_ context.Context, _ string, images []agentimage.Image, log io.Writer) ([]agentimage.Outcome, error) {
+		_, _ = fmt.Fprintf(log, "fake ensure of %d images\n", len(images))
+		if fail != nil {
+			return nil, fail
+		}
+		made.Store(true)
+		return nil, nil
+	}
+	r := newImageJobRunner(ctx, imageJobOptions{Dir: Dir(t.TempDir()).imageJobsDir(), Ensure: ensure})
+	t.Cleanup(func() {
+		cancel()
+		r.drain()
+	})
+	return r
+}
+
+// newImageJobContainerLab is a container lab whose story's image is missing
+// until its verify pass's image job, whose ensure fails with fail, or else
+// makes it, has run; with the runner and whether the image was made.
+func newImageJobContainerLab(t *testing.T, fail error) (*verifyLab, *fakeCloseOut, *imageJobRunner, *atomic.Bool) {
+	t.Helper()
+	lab, fake := newContainerLab(t, false)
+	made := &atomic.Bool{}
+	jobs := verifyImageJobs(t, made, fail)
+	lab.pass.o.Docker = madeDocker{made: made}
+	lab.pass.o.imageJobs = jobs
+	return lab, fake, jobs, made
+}
+
+// S-0751 criterion 1, ADR-0295 §5: a container story's close-out whose image
+// is missing asks flai serve's image job for it, under the main checkout,
+// rather than refuse; its verify runs in the image the job made, and its
+// verdict, passed, and its verified event come after the job. Its log names
+// the job it waited for. Before S-0751 the close-out failed, naming make
+// agent-images.
+func TestAContainerCloseOutsVerifyWaitsForTheImageJobAndPasses(t *testing.T) {
+	t.Parallel()
+	lab, fake, jobs, made := newImageJobContainerLab(t, nil)
+	var madeAtVerify atomic.Bool
+	fake.answer = func(argv []string, _ io.Writer) int {
+		if argv[0] == "docker" {
+			madeAtVerify.Store(made.Load())
+		}
+		return 0
+	}
+	lab.start()
+	lab.ask(closeout.Request{Message: "close out"})
+	if e := lab.awaitVerified(1); e.To != closeout.VerdictPassed {
+		t.Errorf("the verified event: %+v", e)
+	}
+	last, ok := jobs.lastJob(lab.repo.Root)
+	if !ok || last.Outcome != imageJobPassed {
+		t.Fatalf("the image job of the main checkout: %+v %v, want one passed", last, ok)
+	}
+	if calls := fake.ran(); len(calls) == 0 || calls[0].argv[0] != "docker" || !madeAtVerify.Load() {
+		t.Errorf("the verify did not run in the container once the image was made: %q", argvs(calls))
+	}
+	out, err := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
+	for _, want := range []string{"waiting for flai serve's image job " + last.ID, last.Log, "the image job " + last.ID + " passed"} {
+		if err != nil || !strings.Contains(string(out), want) {
+			t.Errorf("the job's log lacks %q: %q %v", want, out, err)
+		}
+	}
+	if !strings.HasSuffix(string(out), "close-out: "+lab.story+" passed every step; ready to move to review\n") {
+		t.Errorf("the job's log: %q", out)
+	}
+}
+
+// S-0751 criterion 4: a close-out whose image job fails fails, at its first
+// step, with the job's cause, its failing step, and its log, and runs
+// nothing; it names flai image ensure, not make agent-images.
+func TestAContainerCloseOutsVerifyFailsWithTheImageJobsCauseAndLog(t *testing.T) {
+	t.Parallel()
+	step := "pull ghcr.io/bytepunx/flai-agent-claude-code"
+	lab, fake, jobs, _ := newImageJobContainerLab(t, &agentimage.StepError{Step: step, Tries: 1, Said: "no space left on device", Err: errors.New("exit status 1")})
+	lab.start()
+	lab.ask(closeout.Request{Message: "close out"})
+	if e := lab.awaitVerified(1); e.To != closeout.VerdictFailed {
+		t.Errorf("the verified event: %+v", e)
+	}
+	if calls := fake.ran(); len(calls) != 0 {
+		t.Errorf("a close-out whose image job failed ran %q", argvs(calls))
+	}
+	last, ok := jobs.lastJob(lab.repo.Root)
+	if !ok || last.Outcome != imageJobFailed {
+		t.Fatalf("the image job of the main checkout: %+v %v, want one failed", last, ok)
+	}
+	out, _ := os.ReadFile(closeout.LogPath(lab.repo.CacheDir(), lab.story))
+	said := string(out)
+	for _, want := range []string{"stopped at the container check", last.ID, step, "no space left on device", last.Log, "flai image ensure"} {
+		if !strings.Contains(said, want) {
+			t.Errorf("the job's log lacks %q: %q", want, said)
+		}
+	}
+	if strings.Contains(said, "make agent-images") {
+		t.Errorf("the job's log names make agent-images: %q", said)
+	}
+	entries := lab.journal()
+	if end := entries[len(entries)-1]; end.Verdict != closeout.VerdictFailed || !strings.Contains(end.Detail, last.Log) {
 		t.Errorf("the end entry: %+v", end)
 	}
 }
