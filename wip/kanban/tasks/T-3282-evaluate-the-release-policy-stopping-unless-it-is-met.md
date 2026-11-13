@@ -3,15 +3,36 @@ id: T-3282
 type: task
 nature: improvement
 title: Evaluate the release policy, stopping unless it is met
-status: backlog
+status: done
 parent: S-0765
 owner: alex
 created: 2026-11-13T09:17:34Z
-updated: 2026-11-13T09:17:34Z
-transitions: []
+updated: 2026-11-13T09:18:54Z
+transitions:
+  - to: ready
+    at: 2026-11-13T09:18:46Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T09:18:46Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T09:18:54Z
+    by: agent-S-0765
 stream: S-0765
 tags: []
 after: [T-3281]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 325994
+      cache_write: 768
+      cost: 0.1218
 ---
 # T-3282 Evaluate the release policy, stopping unless it is met
 
@@ -24,3 +45,5 @@ Run `flai release --evaluate --require-met --judged ""` from the project's main 
 `flai release --evaluate --require-met --judged ""` exits 0 in the main checkout, or exits 2, which stops the run: record it with `flai formula stop S-0765 --step evaluate --exit 2`, giving it the step's output.
 
 ## Notes
+
+- 2026-11-13: ran in the main checkout and exited 0: the release policy threshold is met, with 1 accepted story not yet released (S-0735, no value, count 1 of 1).

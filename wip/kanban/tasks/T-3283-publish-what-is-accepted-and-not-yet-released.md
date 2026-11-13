@@ -3,12 +3,18 @@ id: T-3283
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0765
 owner: alex
 created: 2026-11-13T09:17:34Z
-updated: 2026-11-13T09:17:34Z
-transitions: []
+updated: 2026-11-13T09:19:01Z
+transitions:
+  - to: ready
+    at: 2026-11-13T09:19:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T09:19:01Z
+    by: system-flow
 stream: S-0765
 tags: []
 after: [T-3282]

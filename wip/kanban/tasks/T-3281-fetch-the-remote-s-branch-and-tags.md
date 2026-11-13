@@ -3,14 +3,35 @@ id: T-3281
 type: task
 nature: improvement
 title: Fetch the remote's branch and tags
-status: backlog
+status: done
 parent: S-0765
 owner: alex
 created: 2026-11-13T09:17:34Z
-updated: 2026-11-13T09:17:34Z
-transitions: []
+updated: 2026-11-13T09:18:18Z
+transitions:
+  - to: ready
+    at: 2026-11-13T09:18:09Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T09:18:09Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T09:18:18Z
+    by: system-flow
 stream: S-0765
 tags: []
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 66
+      cache_read: 315735
+      cache_write: 642
+      cost: 0.1179
 ---
 # T-3281 Fetch the remote's branch and tags
 
@@ -23,3 +44,5 @@ Run `scripts/fetch.sh` from the project's main checkout, `/home/alex/git/bytepun
 `scripts/fetch.sh` exits 0 in the main checkout.
 
 ## Notes
+
+- 2026-11-13: `scripts/fetch.sh` exited 0 in the main checkout (`git fetch --tags`, no output beyond its own line).

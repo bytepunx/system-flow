@@ -50,21 +50,21 @@ usage:
           cache_write: 652148
           cost: 46.0268
     - kind: orchestrator
-      seconds: 403
+      seconds: 494
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 108
-          output: 821
-          cache_read: 3904751
-          cache_write: 442556
-          cost: 1.2463
+          input: 130
+          output: 986
+          cache_read: 4797291
+          cache_write: 522726
+          cost: 1.5268
         - model: claude-sonnet-5-5
-          input: 8
-          output: 49
-          cache_read: 76668
-          cache_write: 44576
-          cost: 0.0931
+          input: 16
+          output: 108
+          cache_read: 157056
+          cache_write: 79686
+          cost: 0.1821
 ---
 # E-0036 Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
 

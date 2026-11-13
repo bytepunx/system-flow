@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2148.6589
-accrued_seconds: 1555862
-tasks_completed: 3243
-last_run: 2026-11-13T09:08:12Z
+accrued_cost: 2149.3041
+accrued_seconds: 1556023
+tasks_completed: 3247
+last_run: 2026-11-13T09:18:51Z
 ---
 
 # Orchestrator activity
@@ -22735,6 +22735,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 16
 - Cost: 0.0726 USD, estimated
+
+### 2026-11-13T09:17:19Z
+
+- Summary: Accepted S-0735 at da762cacb633d68c566f893a1b15cbf7b1c06ff8 (accept_reviews): close-out passed every step at the branch head, verifier matched all five criteria to changed files, dry run had no blockers; S-0761 overlapped on flai/internal/check/scope_test.go.
+- Items: S-0735
+- Seconds: 69
+- Cost: 0.2776 USD, estimated
+
+### 2026-11-13T09:17:40Z
+
+- Summary: Started the publish formula (publish): instance S-0765 in ready, committed 4b886cd69; release policy threshold met, 1 accepted story unreleased (S-0735), count 1 at or over threshold 1, value 0 of 1000.
+- Items: S-0765, S-0735
+- Seconds: 21
+- Cost: 0.0886 USD, estimated
+
+### 2026-11-13T09:18:31Z
+
+- Summary: ready-empty and thread:TH-1145 (a flai serve notice, not mine to answer): ordered ready by throughput after the formula's S-0765 (now in progress); every ready story stays held on after. flai promote --candidates lists none. S-0241 left a draft by design (TH-0790); the 19 E-0034 drafts lack only a value, each with its thread, awaiting the operator's epic inputs on TH-1097, so no planner started for them; E-0036 not replanned (TH-1139 asks no change); S-0730 left out by flai plan. S-0740 now waits only on S-0734 in review.
+- Items: S-0765, S-0241, S-0730, S-0740
+- Seconds: 51
+- Cost: 0.1902 USD, estimated
+
+### 2026-11-13T09:18:51Z
+
+- Summary: I accepted S-0735 and started the release, so S-0765 is now publishing it. The ready column is still stuck, and only the operator can unstick it.
+- Items: none
+- Seconds: 20
+- Cost: 0.0888 USD, estimated
 
 ## Refusals
 
