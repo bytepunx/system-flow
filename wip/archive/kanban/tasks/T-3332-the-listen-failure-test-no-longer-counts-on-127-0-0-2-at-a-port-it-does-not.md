@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 252
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 148
-      cache_read: 1518636
-      cache_write: 7866
-      cost: 0.573
+      input: 12
+      output: 3484
+      cache_read: 1507988
+      cache_write: 18512
+      cost: 0.5194
 ---
 # T-3332 The listen-failure test no longer counts on 127.0.0.2 at a port it does not hold staying free
 

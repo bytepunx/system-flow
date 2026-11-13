@@ -3,10 +3,10 @@ id: S-0779
 type: story
 nature: remediation
 title: flai's MCP address tests no longer count on a port they do not hold staying free
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T20:29:36Z
-updated: 2026-11-13T20:39:59Z
+updated: 2026-11-13T22:46:11Z
 transitions:
   - to: ready
     at: 2026-11-13T20:37:36Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:37:57Z
     by: agent-S-0779
+  - to: review
+    at: 2026-11-13T22:18:02Z
+    by: agent-S-0779
+  - to: done
+    at: 2026-11-13T22:46:11Z
+    by: alex
 tags: [flai]
-touches: [flai/cmd/serve_mcp_test.go, flai/cmd/mcp_http_test.go, flai/cmd/serve_mcp.go, flai/cmd/host.go, design/issues/I-0372-flai-s-mcp-address-tests-fail-now-and-then-when-another-test-takes-a-port-they.md, design/issues/summary.md]
+touches: [flai/cmd/serve_mcp_test.go, flai/cmd/mcp_http_test.go, flai/cmd/serve_mcp.go, flai/cmd/host.go, design/issues/I-0372-flai-s-mcp-address-tests-fail-now-and-then-when-another-test-takes-a-port-they.md, design/issues/summary.md, flai/cmd/host_integration_test.go, flai/cmd/serve_pprof_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +29,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 609
-  estimated: true
-  priced_by: estimate
+  seconds: 6027
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 2
-      hand_edits: 1
-      work: 29
+      ceremony: 4
+      test_runs: 6
+      hand_edits: 3
+      work: 85
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 558
-      cache_read: 6521362
-      cache_write: 246406
-      cost: 2.5404
+      input: 206
+      output: 61982
+      cache_read: 26829667
+      cache_write: 329353
+      cost: 9.2412
   strategic:
     - kind: planner
       seconds: 380
@@ -50,15 +56,15 @@ usage:
           cache_write: 252360
           cost: 4.4292
     - kind: orchestrator
-      seconds: 178
+      seconds: 206
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 369
-          cache_read: 1526524
-          cache_write: 193681
-          cost: 0.5056
+          input: 48
+          output: 466
+          cache_read: 1846238
+          cache_write: 269992
+          cost: 0.6223
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2h
@@ -94,11 +100,11 @@ Both count on a port the test does not hold being free:
 flai did what it should each time: a remembered port another process holds is moved off (I-0271). Only the tests' assumption broke.
 
 ## Acceptance criteria
-- [ ] No test in `flai/cmd` counts on a port it closed, or never held, being free when flai probes or listens on it: the six tests that use `unusedPort` and `TestMCPListenFailureClosesWhatItOpened` decide for themselves which addresses are free or held
-- [ ] `TestTheHostMovesAProjectOffAPortAnotherProcessHolds` still shows what I-0271 fixed: a remembered port another process holds is moved off, the new one kept, and the log says so
-- [ ] At least one test still listens on a real port, so that what `freePort` and `listenMCP` do with the operating system stays covered
-- [ ] `go test -race -count=50 -run 'MCP|TheHost' ./cmd/` passes from `flai/`, run beside the whole package's tests or under like load, and the narrative records the run
-- [ ] An issue records the flake with both occurrences, and is closed with what fixed it
+- [x] No test in `flai/cmd` counts on a port it closed, or never held, being free when flai probes or listens on it: the six tests that use `unusedPort` and `TestMCPListenFailureClosesWhatItOpened` decide for themselves which addresses are free or held
+- [x] `TestTheHostMovesAProjectOffAPortAnotherProcessHolds` still shows what I-0271 fixed: a remembered port another process holds is moved off, the new one kept, and the log says so
+- [x] At least one test still listens on a real port, so that what `freePort` and `listenMCP` do with the operating system stays covered
+- [x] `go test -race -count=50 -run 'MCP|TheHost' ./cmd/` passes from `flai/`, run beside the whole package's tests or under like load, and the narrative records the run
+- [x] An issue records the flake with both occurrences, and is closed with what fixed it
 
 ## Tasks
 - T-3329 Record the MCP port flake as an issue with both occurrences
@@ -106,6 +112,9 @@ flai did what it should each time: a remembered port another process holds is mo
 - T-3331 The address tests say which ports are free and held instead of racing for real ones
 - T-3332 The listen-failure test no longer counts on 127.0.0.2 at a port it does not hold staying free
 - T-3333 Run the MCP and host tests fifty times under race and load, record the run, and close the issue
+- T-3337 The every-address test checks its listeners closed without counting on their ports staying free
+- T-3338 The host integration test tries new ports when another process takes the host's or the project's
+- T-3339 The profiles test lets flai serve pick the port and reads it from the log
 
 ## Notes
 

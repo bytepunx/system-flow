@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2175.3339
-accrued_seconds: 1561851
-tasks_completed: 3434
-last_run: 2026-11-13T20:57:03Z
+accrued_cost: 2176.0141
+accrued_seconds: 1561999
+tasks_completed: 3439
+last_run: 2026-11-13T22:19:28Z
 ---
 
 # Orchestrator activity
@@ -24072,6 +24072,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0780
 - Seconds: 41
 - Cost: 0.1296 USD, estimated
+
+### 2026-11-13T20:58:08Z
+
+- Summary: Accepted S-0780 (publish formula instance that released flai/v1.95.2) at 5ff06e6: close-out passed at the branch head, no blockers in the preview, and the evidence is the steps T-3334, T-3335, and T-3336, all done. Merged, and 4 items archived.
+- Items: S-0780
+- Seconds: 65
+- Cost: 0.1718 USD, estimated
+
+### 2026-11-13T20:58:23Z
+
+- Summary: Did not publish after accepting S-0780: release_evaluate under threshold is not met. 0 stories pending (threshold count 1), value 0 USD (threshold 1000).
+- Items: S-0780
+- Seconds: 15
+- Cost: 0.0287 USD, estimated
+
+### 2026-11-13T20:58:41Z
+
+- Summary: I accepted S-0780 at commit 5ff06e6. That story is the publish run that released `flai/v1.95.2`.
+- Items: none
+- Seconds: 18
+- Cost: 0.1557 USD, estimated
+
+### 2026-11-13T22:19:06Z
+
+- Summary: S-0779 in review: last verify passed at 9699b438, not the branch head aabe82c7 (close-out commit added an issue entry); asked flai serve for its close-out, job S-0779-20261113T221902Z started; story left in review for a later run to read the verdict and accept
+- Items: S-0779
+- Seconds: 28
+- Cost: 0.1167 USD, estimated
+
+### 2026-11-13T22:19:28Z
+
+- Summary: S-0779 is still in review: I did not accept it yet because its last passing verify is not at the branch's current head.
+- Items: none
+- Seconds: 22
+- Cost: 0.2073 USD, estimated
 
 ## Refusals
 

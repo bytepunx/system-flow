@@ -2,7 +2,7 @@
 id: D-0541
 title: A done task's body is refused for edit, so a formula step's agent writes the step's note before it closes the task, or logs it in the narrative after
 kind: decision
-sources: [S-0639, T-2729, S-0729, T-3132, S-0769, S-0773, T-3307]
+sources: [S-0639, T-2729, S-0729, T-3132, S-0769, S-0773, T-3307, S-0780, T-3334]
 topics: [formula, all]
 paths: [design/workflows/formulas/publish.md]
 date: 2026-11-09
@@ -32,4 +32,10 @@ S-0773, a later publish instance, met it once more on its fetch step. From its D
 
 > T-3307 was closed before its exit was written in its Notes, and a done task is not edited: its exit 0 is recorded in the narrative's log entry instead.
 
-So write what a step left, such as its command's exit, in the task's `## Notes` before `task_done` closes it, as S-0639 did for T-2730 and T-2731 and S-0769 did for every step; once the task is done, the narrative's log is the place.
+S-0780 met it a fifth time on its fetch step, T-3334, this time after a first `item_edit` of the Notes was refused for its heading and the task closed before the retry. From its Decisions (`wip/archive/agents/S-0780.md`):
+
+> T-3334's exit, 0 from scripts/fetch.sh (git fetch --tags), is recorded here and in its log entry: the item_edit that would have written it in its Notes was refused for its heading, and the task closed before the retry, after which a closed task takes no edit.
+
+Its next step's note, in T-3335's `## Notes`, took the form that was accepted: a dated list item under the existing heading, `- 2026-11-13: ran in the main checkout and exited 0. ...`.
+
+So write what a step left, such as its command's exit, in the task's `## Notes` before `task_done` closes it, and retry a refused edit before closing, as S-0639 did for T-2730 and T-2731 and S-0769 did for every step; once the task is done, the narrative's log is the place.

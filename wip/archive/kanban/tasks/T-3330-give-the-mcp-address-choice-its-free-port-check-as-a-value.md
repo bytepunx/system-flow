@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 243
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 124
-      cache_read: 1273044
-      cache_write: 6283
-      cost: 0.4802
+      input: 10
+      output: 2920
+      cache_read: 1263810
+      cache_write: 15514
+      cost: 0.4353
 ---
 # T-3330 Give the MCP address choice its free-port check as a value
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 20
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 33
-      cache_read: 311169
-      cache_write: 967
-      cost: 0.1172
+      input: 2
+      output: 712
+      cache_read: 308352
+      cache_write: 3785
+      cost: 0.1062
 ---
 # T-3329 Record the MCP port flake as an issue with both occurrences
 

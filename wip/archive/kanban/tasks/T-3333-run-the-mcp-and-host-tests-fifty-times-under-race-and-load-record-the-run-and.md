@@ -3,11 +3,11 @@ id: T-3333
 type: task
 nature: remediation
 title: Run the MCP and host tests fifty times under race and load, record the run, and close the issue
-status: in-progress
+status: done
 parent: S-0779
 owner: alex
 created: 2026-11-13T20:33:58Z
-updated: 2026-11-13T20:48:23Z
+updated: 2026-11-13T22:05:39Z
 transitions:
   - to: ready
     at: 2026-11-13T20:48:23Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:48:23Z
     by: agent-S-0779
+  - to: done
+    at: 2026-11-13T22:05:39Z
+    by: agent-S-0779
 stream: S-0779
 tags: [flai]
 touches: [design/issues/summary.md]
-after: [T-3329, T-3331, T-3332]
+after: [T-3329, T-3331, T-3332, T-3337, T-3338, T-3339]
+usage:
+  source: log
+  seconds: 4636
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 112
+      output: 33754
+      cache_read: 14610691
+      cache_write: 179356
+      cost: 5.0325
 ---
 # T-3333 Run the MCP and host tests fifty times under race and load, record the run, and close the issue
 

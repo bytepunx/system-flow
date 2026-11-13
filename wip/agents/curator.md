@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 295.6905
-accrued_seconds: 32460
-tasks_completed: 196
-last_run: 2026-11-13T20:53:30Z
+accrued_cost: 296.3241
+accrued_seconds: 32530
+tasks_completed: 197
+last_run: 2026-11-13T20:59:18Z
 ---
 
 # Curator activity
@@ -1579,3 +1579,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0492, D-0616, D-0617
 - Seconds: 128
 - Cost: 1.5347 USD, estimated
+
+### 2026-11-13T20:59:18Z
+
+- Summary: I merged S-0780 (and T-3334) into D-0541, wrote nothing new, absorbed nothing, and `flai digest compact` compacted nothing. S-0780's other decision, the order its tasks ran in, was progress and not kept. Nothing was absorbed because no design, convention or ADR has changed since the last run, and none states D-0541's fact.
+- Trigger: accepted S-0780
+- Items: D-0541
+- Seconds: 70
+- Cost: 0.6336 USD, estimated

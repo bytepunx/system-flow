@@ -24,16 +24,16 @@ touches: [flai/cmd/serve_mcp_test.go]
 after: [T-3330]
 usage:
   source: log
-  seconds: 216
+  seconds: 217
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 124
-      cache_read: 1271604
-      cache_write: 12547
-      cost: 0.482
+      output: 2931
+      cache_read: 1268579
+      cache_write: 15573
+      cost: 0.4369
 ---
 # T-3331 The address tests say which ports are free and held instead of racing for real ones
 
