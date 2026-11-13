@@ -1,7 +1,7 @@
 ---
 id: ADR-0295
 title: "An installed flai pulls its agent images by the digests a signed list on its release names, builds them on the host from the Dockerfiles it carries when the pull fails, and keeps them current through a flai serve host job that holds every start needing them, or runs the operator's own build command in its place"
-status: proposed
+status: accepted
 date: 2026-11-13
 supersedes: []
 superseded_by: []
