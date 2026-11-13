@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-13T22:47:30Z
+updated: 2026-11-13T22:52:07Z
 transitions: []
 tags: [cli]
 topics: [cli, orchestration, planning]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h20m
-  delivery: 2026-11-14T02:18:00Z
-  basis: "Its own forecast of 1h20m; 8th in the pull order with an in-progress limit of 3, behind S-0783, S-0241, S-0736, S-0737, S-0738, S-0739 and S-0741."
+  delivery: 2026-11-14T02:22:00Z
+  basis: "Its own forecast of 1h20m; 7th in the pull order with an in-progress limit of 3, behind S-0241, S-0736, S-0737, S-0738, S-0739 and S-0741."
   by: flai
-  at: 2026-11-13T22:47:30Z
+  at: 2026-11-13T22:52:07Z
 ---
 # S-0742 flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
 
