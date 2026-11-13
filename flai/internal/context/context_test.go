@@ -119,37 +119,11 @@ func TestFilterKeepsTheHeadingAboveAKeptSection(t *testing.T) {
 // gets a pack whose topics encode in under 2 KB, where one claim source per
 // touches entry and topic took about 10 KB.
 func TestAPacksTopicsFoldAStorysTouches(t *testing.T) {
-	root := t.TempDir()
-	write := func(rel, s string) {
-		p := filepath.Join(root, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	write("system-flow.yaml", "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: flai\n    path: flai\n    kind: go\n    tags: [cli]\n")
-	write("design/conventions/README.md", "# Conventions\n\n- [code-quality.md](code-quality.md)\n")
-	write("design/conventions/code-quality.md", quality)
-	for _, d := range []string{"flai", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
-		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	repo, err := workitem.Open(root)
-	if err != nil {
-		t.Fatal(err)
-	}
 	touches := make([]string, 40)
 	for i := range touches {
 		touches[i] = fmt.Sprintf("flai/internal/pkg%02d/file.go", i)
 	}
-	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "A wide story", Owner: "alex", Touches: touches,
-		Now: time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC), Body: "## Goal\n\nBuild it.\n\n## Acceptance criteria\n\n- [ ] built\n"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	repo, story := storyProject(t, "", touches)
 	p, err := ForStory(repo, story.ID, "")
 	if err != nil {
 		t.Fatal(err)
@@ -163,6 +137,128 @@ func TestAPacksTopicsFoldAStorysTouches(t *testing.T) {
 	}
 	if len(data) >= 2048 {
 		t.Errorf("topics encode in %d bytes, want under 2048:\n%s", len(data), data)
+	}
+}
+
+// storyProject is a project of one Go sub-project and one story with
+// touches, whose manifest ends with extra, and that story.
+func storyProject(t *testing.T, extra string, touches []string) (*workitem.Repo, *workitem.Item) {
+	t.Helper()
+	root := t.TempDir()
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("system-flow.yaml", "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nprojects:\n  - name: flai\n    path: flai\n    kind: go\n    tags: [cli]\n"+extra)
+	write("design/conventions/README.md", "# Conventions\n\n- [code-quality.md](code-quality.md)\n")
+	write("design/conventions/code-quality.md", quality)
+	for _, d := range []string{"flai", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "A wide story", Owner: "alex", Touches: touches,
+		Now: time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC), Body: "## Goal\n\nBuild it.\n\n## Acceptance criteria\n\n- [ ] built\n"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return repo, story
+}
+
+// S-0662: a story's pack in a project whose kluster: block names a deploy
+// names its namespace and the commands its agent deploys and checks it
+// with, in the header and in the JSON the MCP prime tool returns.
+func TestAStorysPackInAKlusterProjectNamesTheDeployAndChecksCommands(t *testing.T) {
+	repo, story := storyProject(t, "kluster:\n  config: kluster.yaml\n  deploy: [scripts/kluster-deploy.sh]\n", []string{"flai/main.go"})
+	p, err := ForStory(repo, story.ID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns := strings.ToLower(story.ID)
+	h := p.Header()
+	for _, want := range []string{
+		"kluster: the story's namespace is " + ns + "\n",
+		"  deploy  flai kluster deploy " + story.ID + " --job, or the MCP tool kluster_deploy\n",
+		"  checks  flai checks run " + story.ID + " --job, or the MCP tool kluster_checks\n",
+		"  exec    flai kluster exec " + story.ID + " -- <command>\n",
+		"  env     flai kluster env " + story.ID + "\n",
+		"  log     flai kluster log " + story.ID + " --step <step>\n",
+		"  " + klusterReview + "\n",
+	} {
+		if !strings.Contains(h, want) {
+			t.Errorf("header lacks %q:\n%s", want, h)
+		}
+	}
+	part, err := p.Part(1, PartLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(part)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Kluster map[string]string `json:"kluster"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"namespace":   ns,
+		"deploy":      "flai kluster deploy " + story.ID + " --job",
+		"deploy_tool": "kluster_deploy",
+		"checks":      "flai checks run " + story.ID + " --job",
+		"checks_tool": "kluster_checks",
+		"exec":        "flai kluster exec " + story.ID + " -- <command>",
+		"env":         "flai kluster env " + story.ID,
+		"log":         "flai kluster log " + story.ID + " --step <step>",
+		"review":      klusterReview,
+	}
+	if !reflect.DeepEqual(got.Kluster, want) {
+		t.Errorf("kluster in the JSON %v, want %v", got.Kluster, want)
+	}
+	if !strings.Contains(klusterReview, "flai serve enable kluster") || !strings.Contains(klusterReview, "Notes") {
+		t.Errorf("review sentence %q names neither the host action nor Notes", klusterReview)
+	}
+}
+
+// S-0662: a project with no kluster: block, or one that names no deploy,
+// gets neither the field nor the header's block.
+func TestAStorysPackWithoutAKlusterDeployNamesNoCommands(t *testing.T) {
+	for name, extra := range map[string]string{
+		"no block":  "",
+		"no deploy": "kluster:\n  config: kluster.yaml\n",
+		"deploys before review off": "kluster:\n  config: kluster.yaml\n  deploy: [scripts/deploy.sh]\n  agent_namespaces: 0\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			repo, story := storyProject(t, extra, []string{"flai/main.go"})
+			p, err := ForStory(repo, story.ID, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if p.Kluster != nil {
+				t.Errorf("kluster %+v", p.Kluster)
+			}
+			if h := p.Header(); strings.Contains(h, "kluster") {
+				t.Errorf("header names the kluster:\n%s", h)
+			}
+			data, err := json.Marshal(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(data), `"kluster"`) {
+				t.Errorf("JSON carries a kluster field")
+			}
+		})
 	}
 }
 

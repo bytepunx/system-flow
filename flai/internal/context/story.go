@@ -22,7 +22,10 @@ import (
 // entries its topics or its claim select, ranked against it within their
 // share (ADR-0194), the sections that rank highest to fill the budget, and a
 // catalog of the rest (S-0137, S-0146). budget is a size as ParseSize reads
-// it; empty means the project's prime.budget, else DefaultBudget. flai prime --story and the MCP
+// it; empty means the project's prime.budget, else DefaultBudget. In a
+// project whose kluster: block names a deploy, the pack names the story's
+// namespace and the commands its agent deploys and checks it with, from the
+// manifest alone (S-0662). flai prime --story and the MCP
 // prime tool both call it. An archived story gets the pack it would get
 // today, which is how a pack is replayed.
 func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
@@ -40,6 +43,7 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
+	pack.Kluster = NewKluster(repo.Manifest.Kluster, st.item.ID)
 	query := Query(st.item.Title, st.item.Body)
 	pack.addDesign(Design(st.docs, names, st.sources, BriefOver(size), st.design), query, digestFor(st.digest, names, st.claim, query, true))
 	return pack, nil

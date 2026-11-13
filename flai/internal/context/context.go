@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 )
 
@@ -87,11 +88,68 @@ type Pack struct {
 	// form ForReasons reads them, such as thread:TH-0001 (ADR-0217); empty on
 	// any other pack.
 	Reasons []string `json:"reasons,omitempty"`
+	// Kluster names the story's namespace and the commands its agent deploys
+	// and checks it with, in a project whose kluster: block names a deploy
+	// (S-0662); nil on any other pack.
+	Kluster *Kluster `json:"kluster,omitempty"`
 	// BriefsLeftOut counts the briefs a role pack had no room for.
 	BriefsLeftOut int `json:"briefs_left_out,omitempty"`
 	// agent names a strategic pack's agent, such as "the planner", as its
 	// role resolves (ADR-0207); empty on any other pack.
 	agent string
+}
+
+// Kluster is the story's kluster namespace and the commands its agent
+// deploys, checks, and works in it with (S-0662, ADR-0292), each with the
+// story's ID written in.
+type Kluster struct {
+	Namespace  string `json:"namespace"`   // the story's namespace, its ID in lower case
+	Deploy     string `json:"deploy"`      // the CLI command that asks flai serve to deploy it
+	DeployTool string `json:"deploy_tool"` // the MCP tool that does the same
+	Checks     string `json:"checks"`      // the CLI command that asks flai serve to run the checks against it
+	ChecksTool string `json:"checks_tool"` // the MCP tool that does the same
+	Exec       string `json:"exec"`        // runs one of the agent's own commands against it
+	Env        string `json:"env"`         // prints its variables and kubeconfig
+	Log        string `json:"log"`         // prints a step's log of its last deploy
+	Review     string `json:"review"`      // what the agent does with them before review
+}
+
+// klusterReview is what a story's agent does with its namespace before
+// review, and what gates the requests.
+const klusterReview = "Deploy and check the namespace at the branch's head before review, tick what you verified there, and leave unticked only what you could not verify, with the reason in Notes. The kluster host action gates the requests: the operator turns it on with flai serve enable kluster."
+
+// NewKluster is story's namespace and commands when k names a deploy, and
+// nil when k is nil, names none, or turns deploys before review off.
+func NewKluster(k *manifest.Kluster, story string) *Kluster {
+	if k == nil || len(k.Deploy) == 0 || (k.AgentNamespaces != nil && *k.AgentNamespaces == 0) {
+		// no deploys, or deploys before review turned off (ADR-0292 §4)
+		return nil
+	}
+	return &Kluster{
+		Namespace:  strings.ToLower(story),
+		Deploy:     "flai kluster deploy " + story + " --job",
+		DeployTool: "kluster_deploy",
+		Checks:     "flai checks run " + story + " --job",
+		ChecksTool: "kluster_checks",
+		Exec:       "flai kluster exec " + story + " -- <command>",
+		Env:        "flai kluster env " + story,
+		Log:        "flai kluster log " + story + " --step <step>",
+		Review:     klusterReview,
+	}
+}
+
+// lines is the header's block for k.
+func (k *Kluster) lines() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "kluster: the story's namespace is %s\n", k.Namespace)
+	row := func(what, cmd string) { fmt.Fprintf(&b, "  %-7s %s\n", what, cmd) }
+	row("deploy", k.Deploy+", or the MCP tool "+k.DeployTool)
+	row("checks", k.Checks+", or the MCP tool "+k.ChecksTool)
+	row("exec", k.Exec)
+	row("env", k.Env)
+	row("log", k.Log)
+	fmt.Fprintf(&b, "  %s\n", k.Review)
+	return b.String()
 }
 
 // Catalog is every design, tech, and ADR document the pack does not print
@@ -641,6 +699,9 @@ func (p *Pack) Header() string {
 	}
 	if p.subAgent() {
 		fmt.Fprintf(&b, "role: %s, a sub-agent of the story's agent (ADR-0059): the conventions the role reads, the story's goal and criteria, and briefs while the budget has room; doc_search and doc_get find the rest. Report back to the agent that started you; never move, edit, or create an item, and never write to a thread.\n", p.Role)
+	}
+	if p.Kluster != nil {
+		b.WriteString(p.Kluster.lines())
 	}
 	b.WriteString("topics:\n")
 	width := 0
