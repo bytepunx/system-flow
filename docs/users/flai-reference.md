@@ -2830,7 +2830,7 @@ flai kluster log S-nnnn --step <step> [flags]
 
 Prints the log of one step of the last job in a story's namespace, s-nnnn: .flai-cache/kluster/logs/&lt;namespace&gt;/&lt;step&gt;.log, read from its start to its end in the 64 KB parts the host method kluster.log answers the dashboard's live feed, each ending on a whole character. A step is build, build-&lt;name&gt; for a component, load, deploy, or teardown; flai kluster deployments lists the steps each namespace's last job ran. A log a new job clears while it is read is read again from its start.
 
-It only reads files, so it needs no kluster: block and no flai serve, and any agent may run it; an agent in a container reaches the logs only through it. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's log, as deploy --job is (ADR-0292). A step not of that form is refused, and a log that is not there is said to be absent, exiting 1.
+It only reads files, so it needs no kluster: block and no flai serve, and reads the logs of the checkout it runs in. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's log, as deploy --job is (ADR-0292). A step not of that form is refused, and a log that is not there is said to be absent, exiting 1.
 
 --json prints one object: namespace, step, log (its path from the root), exists, offset (0), next (where the text ends), size, text (the whole log), and outcome, the step's outcome in the namespace's record.
 

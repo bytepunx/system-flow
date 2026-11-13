@@ -1961,7 +1961,7 @@ the deploy step for the namespace s-0578 failed with exit code 3: exit status 3;
 Deploy again at a new commit to update the namespace in place.
 
 - Each step's output is in `.flai-cache/kluster/logs/<namespace>/<step>.log`, cleared at each deploy; a component's build is the step `build-<name>`. The record of each namespace's last job is `.flai-cache/kluster/deployments/<namespace>.json`: its commit, tag, images, outcome, and each step's outcome, times, and log. It lists every step the job will run as `pending` before the first starts, so it says which steps passed, which runs, and which wait; the steps after a failure are `skipped`.
-- `teardown` runs the block's `teardown` command, when it names one, then deletes the namespace with `kubectl delete namespace`. It runs in the story's worktree, or in the main checkout once the worktree is gone. It asks first on a terminal; `--yes` answers, and is needed without a terminal. When it passes, flai removes the namespace's record, state folder, and logs. A story never deployed has nothing to tear down: flai says so and exits 0.
+- `teardown` runs the block's `teardown` command, when it names one, then deletes the namespace with `kubectl delete namespace`. It runs in the story's worktree, or in the main checkout once the worktree is gone. It asks first on a terminal; `--yes` answers, and is needed without a terminal. When it passes, flai removes the namespace's record, state folder, logs, and own kubeconfig. A story never deployed has nothing to tear down: flai says so and exits 0.
 - `promote` puts a worktree of the main branch's head at `.flai-cache/kluster/main` and deploys it, as `deploy` does a story, into the default namespace, `kluster.namespace` or the project's name. The images are tagged `main-` and the commit's first 12 digits.
 - `deployments` lists the records, the default namespace's first, then the stories' by number:
 
@@ -1978,7 +1978,7 @@ With `--json`, `deploy`, `teardown`, and `promote` print the record, and the ste
 
 One job runs at a time per project. A second `deploy`, `teardown`, or `promote` while one runs is refused, naming the job that runs. flai also refuses a story not in progress or in review, a story with no worktree, and a cluster with no kubeconfig: bring it up with `flai kluster up` first.
 
-These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. A story's agent asks flai serve for its own story's deploy and teardown instead, with `--job` ([A story's agent deploys its story before review](#a-storys-agent-deploys-its-story-before-review)). `flai serve enable kluster` turns the host action on, and writes the block first for a project with none ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
+These commands work from your shell whatever the `kluster` host action says. `flai guard` refuses agents `up`, `down`, `deploy`, `teardown`, and `promote`, which change shared infrastructure on your machine; any agent may run `status` and `deployments`. A story's agent asks flai serve for its own story's deploy and teardown instead, with `--job` ([A story's agent deploys its story before review](#a-storys-agent-deploys-its-story-before-review)), and runs `exec` and `log` against its own namespace ([A story's agent works in its namespace](#a-storys-agent-works-in-its-namespace)). `flai serve enable kluster` turns the host action on, and writes the block first for a project with none ([The kluster host action](../operators/index.md#the-kluster-host-action-s-0577)).
 
 ### A story's agent deploys its story before review
 
@@ -2012,6 +2012,24 @@ Without flai serve, the request is withdrawn after ten seconds, and flai says fl
 **The limit.** `kluster.agent_namespaces`, default 2, is the most stories in progress that hold a namespace at once. Stories in review do not count. Set it with `flai manifest set kluster.agent_namespaces=3`; the dashboard's setup form does not show it yet ([settings](../operators/settings.md#project-manifest)).
 
 **How long a namespace lives.** From its first deploy until the story is accepted, cancelled, or moved back to ready or backlog, or its agent or you tear it down. It stays while the story is in progress and in review, whoever moves it between them. A story that enters review with its deploy, and its checks while `checks` is on, passed at its head is not deployed again there.
+
+### A story's agent works in its namespace
+
+Each deploy of a story gives its namespace a kubeconfig of its own, and the story's agent runs commands and reads logs there with it (S-0763, [ADR-0292](../../design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §2):
+
+```bash
+flai kluster exec S-0763 -- kubectl get pods                 # run a command against the namespace
+flai kluster exec S-0763 -- make integration-test            # the project's own tests, with the namespace's variables
+flai kluster log S-0763 --step deploy                        # a step's whole log
+flai kluster log S-0763 --step build-api --json
+```
+
+- **The namespace's kubeconfig.** Once the deploy step of a story's deploy passes, flai makes a ServiceAccount `flai-agent` in the namespace, bound to the cluster's `edit` ClusterRole, and writes `.flai-cache/kluster/agents/s-nnnn.kubeconfig` with a token valid for 24 hours, readable by you alone. It reads and changes what is in the namespace, and the cluster refuses it anything else. Every deploy writes a new one, the default namespace gets none, and the teardown removes it. A failure to write it fails the deploy step, in its log.
+- **`exec`** runs the command in the story's worktree with the namespace's variables, as its deploy gets them at the commit it was deployed at, but `FLAI_KLUSTER_IMAGES` and `FLAI_KLUSTER_COMPONENT`, and with `KUBECONFIG` the namespace's own kubeconfig in place of flai's. Your shell's own `KUBECONFIG` and `FLAI_KLUSTER_*` are replaced. flai exits with the command's exit code. It runs while the namespace has a record, a failed deploy's included, so that you can look at what failed; with no record it says to deploy the story first with `flai kluster deploy S-nnnn --job`.
+- **`log`** prints a step's log of the namespace's last job, `build`, `build-<name>`, `load`, `deploy`, or `teardown`, read as the Deployments page's live feed reads it. A log that is not there exits 1.
+- **Your own story only.** Both act for the session's story alone, as `--job` does, and need neither flai serve nor the `kluster` host action.
+
+`flai guard` lets a story's agent and its sub-agents run `exec` and `log` for their own story, written plainly, with no `$`, backtick, brace, glob, `~`, or backslash before the `--`; the command after it may use the shell freely. It refuses them for another story's namespace or the default one, and every session with no story of its own, such as the planner, the orchestrator, and your own sub-agents. It refuses every agent and sub-agent the `kluster` program but `kluster status`, and any shell line that names flai's kubeconfig for the cluster, `.flai-cache/kluster/kubeconfig`. Your own shell runs them all.
 
 ### When a story's deploy or its checks fail
 

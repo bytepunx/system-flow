@@ -549,8 +549,8 @@ the steps each namespace's last job ran. A log a new job clears while it is
 read is read again from its start.
 
 It only reads files, so it needs no kluster: block and no flai serve, and
-any agent may run it; an agent in a container reaches the logs only through
-it. A session with a story of its own, FLAI_STORY, else the story in an
+reads the logs of the checkout it runs in. A session with a story of its
+own, FLAI_STORY, else the story in an
 agent name of the form agent-S-nnnn, is refused another story's log, as
 deploy --job is (ADR-0292). A step not of that form is refused, and a log
 that is not there is said to be absent, exiting 1.
