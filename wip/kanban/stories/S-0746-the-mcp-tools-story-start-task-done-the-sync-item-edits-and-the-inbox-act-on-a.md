@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:16Z
-updated: 2026-11-13T17:24:09Z
+updated: 2026-11-13T19:45:13Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 42m
-  delivery: 2026-11-13T21:11:00Z
-  basis: "Its own forecast of 42m; 12th in the pull order with an in-progress limit of 3, behind S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743 and S-0744."
+  delivery: 2026-11-13T23:33:00Z
+  basis: "Its own forecast of 42m; 12th in the pull order with an in-progress limit of 3, behind S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743 and S-0744."
   by: flai
-  at: 2026-11-13T17:24:09Z
+  at: 2026-11-13T19:45:13Z
 ---
 # S-0746 The MCP tools, story start, task done, the sync, item edits, and the inbox act on a state's kind and who may make a transition instead of a state's name
 
