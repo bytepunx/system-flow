@@ -3,16 +3,19 @@ id: S-0761
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T08:22:11Z
+updated: 2026-11-13T09:15:59Z
 transitions:
   - to: ready
     at: 2026-11-13T08:22:02Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-13T08:22:11Z
+    by: agent-S-0761
+  - to: review
+    at: 2026-11-13T09:15:59Z
     by: agent-S-0761
 tags: [flai, check]
 topics: [cli, conventions, template]
@@ -24,19 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2153
-  estimated: true
-  priced_by: estimate
+  seconds: 3243
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 26
+      ceremony: 1
+      work: 58
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 912
-      cache_read: 5824832
-      cache_write: 555353
-      cost: 2.3776
+      input: 194
+      output: 39008
+      cache_read: 16276606
+      cache_write: 688769
+      cost: 8.3944
   strategic:
     - kind: planner
       seconds: 422
@@ -83,8 +86,8 @@ finalized:
 This story remediates [I-0354](../../../design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md), "flai check finds `item.blocked-closed` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0354 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0354 is closed with `flai issue close I-0354 --reason` saying what fixed it
+- [x] The cause I-0354 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0354 is closed with `flai issue close I-0354 --reason` saying what fixed it
 
 ## Tasks
 - T-3268 Close S-0678's blocked interval at its close with the tree's flai unblock

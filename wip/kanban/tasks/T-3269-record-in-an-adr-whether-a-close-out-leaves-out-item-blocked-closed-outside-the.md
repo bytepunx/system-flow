@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 60
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 80
-      cache_read: 1344466
-      cache_write: 14238
-      cost: 0.5063
+      input: 16
+      output: 3145
+      cache_read: 1312247
+      cache_write: 55530
+      cost: 0.6768
 ---
 # T-3269 Record in an ADR whether a close-out leaves out item.blocked-closed outside the story
 

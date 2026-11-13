@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1647
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 493
-      cache_read: 5100531
-      cache_write: 118258
-      cost: 1.9438
+      input: 45
+      output: 14669
+      cache_read: 5185754
+      cache_write: 70012
+      cost: 1.7883
 ---
 # T-3165 flai image status prints the project's agent images and their state, with --json, and exits non-zero on one missing or stale
 

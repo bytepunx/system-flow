@@ -3,11 +3,11 @@ id: S-0735
 type: story
 nature: feature
 title: flai image status says which agent images a project's agents need, and whether each is on the host and current for the flai that runs it
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:58:14Z
-updated: 2026-11-13T08:37:07Z
+updated: 2026-11-13T09:17:05Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:04Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:53:33Z
     by: agent-S-0735
+  - to: review
+    at: 2026-11-13T09:15:26Z
+    by: agent-S-0735
+  - to: done
+    at: 2026-11-13T09:17:05Z
+    by: orchestrator
 tags: [cli]
 topics: [docker]
 touches: [flai/internal/agentimage/agentimage.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/cmd/root.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, flai/internal/check/scope_test.go, flai/internal/serve/verifyjob_test.go]
@@ -26,20 +32,25 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2473
-  estimated: true
-  priced_by: estimate
+  seconds: 4934
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 47
+      ceremony: 4
+      work: 144
   models:
     - model: claude-opus-5-5
-      input: 306
-      output: 1649
-      cache_read: 19331776
-      cache_write: 720144
-      cost: 7.4686
+      input: 518
+      output: 168819
+      cache_read: 59681869
+      cache_write: 805758
+      cost: 20.5815
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 7753
+      cache_read: 367690
+      cache_write: 64373
+      cost: 0.2753
   strategic:
     - kind: orchestrator
       seconds: 19
@@ -102,3 +113,15 @@ The strategic roles go through `startOf` and `containerImageHost` too (`flai/int
 - Tasks, in three layers: T-3164 writes the package; T-3165 (the command) and T-3166 (the start and the check) both call it and share no file, so they run together; T-3167 describes both.
 - Forecast 33m stands as `flai forecast` gives it (109 s per unit over 118 done large feature stories, size 18). Most of the work is a move of code that exists, with its tests kept. Delivery is as flai gives it.
 - Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.
+
+### Accepted by the orchestrator
+
+- Verified: da762cacb633d68c566f893a1b15cbf7b1c06ff8
+- At: 2026-11-13T09:17:05Z
+
+Verdict: all five criteria met; close-out passed every step at da762cacb633d68c566f893a1b15cbf7b1c06ff8.
+- 1: flai/internal/agentimage/agentimage.go, flai/internal/agentimage/status_test.go
+- 2: flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go
+- 3: flai/cmd/image.go, flai/cmd/image_test.go, flai/cmd/root.go
+- 4: flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/check/scope_test.go, flai/internal/serve/verifyjob_test.go
+- 5: docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md

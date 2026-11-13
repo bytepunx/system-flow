@@ -3,15 +3,18 @@ id: S-0763
 type: story
 nature: feature
 title: Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
-status: ready
+status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-13T08:03:30Z
-updated: 2026-11-13T09:06:51Z
+updated: 2026-11-13T09:06:55Z
 transitions:
   - to: ready
     at: 2026-11-13T09:06:47Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-13T09:06:55Z
+    by: agent-S-0763
 tags: [cli]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
@@ -43,15 +46,15 @@ usage:
           cache_write: 273897
           cost: 4.6405
     - kind: orchestrator
-      seconds: 72
+      seconds: 104
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 126
-          cache_read: 615140
-          cache_write: 67351
-          cost: 0.1967
+          input: 27
+          output: 217
+          cache_read: 1105393
+          cache_write: 81319
+          cost: 0.3419
 cost_of_delay:
   value: 555.56
   by: planner-S-0763

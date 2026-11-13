@@ -24,16 +24,16 @@ touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/
 after: [T-3269]
 usage:
   source: log
-  seconds: 1992
+  seconds: 1994
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 352
-      cache_read: 1396838
-      cache_write: 288315
-      cost: 0.628
+      input: 19
+      output: 3901
+      cache_read: 1627561
+      cache_write: 68873
+      cost: 0.8394
 ---
 # T-3270 Leave item.blocked-closed outside the story out of a check scoped to a story, with a test that reproduces I-0354
 

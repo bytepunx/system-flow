@@ -3,10 +3,10 @@ id: TH-1143
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-13T09:01:58Z
-updated: 2026-11-13T09:02:02Z
+updated: 2026-11-13T09:04:25Z
 ---
 
 # TH-1143 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -74,3 +74,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts: a draft; finalize it. It waits on TH-1130 S-0756 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
 - S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name: a draft; finalize it. It waits on TH-1131 S-0758 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
 - S-0763 Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace: no cost of delay value.
+
+### 2026-11-13T09:04:25Z flai serve
+Resolved: S-0763 Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace can be promoted from the backlog, so the board is no longer starved.

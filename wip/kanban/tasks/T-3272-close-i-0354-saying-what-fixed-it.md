@@ -3,16 +3,37 @@ id: T-3272
 type: task
 nature: improvement
 title: Close I-0354 saying what fixed it
-status: backlog
+status: done
 parent: S-0761
 owner: alex
 created: 2026-11-13T07:29:58Z
-updated: 2026-11-13T07:29:58Z
-transitions: []
+updated: 2026-11-13T09:06:04Z
+transitions:
+  - to: ready
+    at: 2026-11-13T09:05:52Z
+    by: agent-S-0761
+  - to: in-progress
+    at: 2026-11-13T09:05:52Z
+    by: agent-S-0761
+  - to: done
+    at: 2026-11-13T09:06:04Z
+    by: agent-S-0761
 stream: S-0761
 tags: [flai, issues]
 touches: [design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-3268, T-3270, T-3271]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1332
+      cache_read: 555606
+      cache_write: 23511
+      cost: 0.2865
 ---
 # T-3272 Close I-0354 saying what fixed it
 

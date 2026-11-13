@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2147.5529
-accrued_seconds: 1555570
-tasks_completed: 3234
-last_run: 2026-11-13T09:00:33Z
+accrued_cost: 2148.6589
+accrued_seconds: 1555862
+tasks_completed: 3243
+last_run: 2026-11-13T09:08:12Z
 ---
 
 # Orchestrator activity
@@ -22672,6 +22672,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1182 USD, estimated
+
+### 2026-11-13T09:03:45Z
+
+- Summary: review:S-0764: accepted the publish formula instance at 45123c70 (close-out passed; verifier passed T-3273, T-3274, T-3275 done; it released flai 1.87.0). No blockers in the dry run.
+- Items: S-0764
+- Seconds: 72
+- Cost: 0.2582 USD, estimated
+
+### 2026-11-13T09:04:02Z
+
+- Summary: Not publishing after S-0764's acceptance: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD; nothing accepted is waiting for a release).
+- Items: S-0764
+- Seconds: 17
+- Cost: 0.0636 USD, estimated
+
+### 2026-11-13T09:04:32Z
+
+- Summary: ready and thread:TH-1143: promote_candidates lists none. All 9 ready stories are held on after. The ready column already matches throughput order (S-0760 32m first … S-0662 2h30m), so nothing was applied. S-0241 is complete per flai promote --drafts but stays a draft (TH-0790: it cannot be worked until headless forks exist). The other drafts lack only a cost of delay value, and each has its thread. No planner started: E-0034's 19 stories wait on the operator's epic inputs (TH-1097). E-0036's TH-1139 entry is a confirmation that asks no change to the plan. S-0763's planner is running and S-0730 is unchanged. TH-1143 is a flai serve notice, left alone.
+- Items: S-0241, S-0763, E-0034, E-0036
+- Seconds: 30
+- Cost: 0.0663 USD, estimated
+
+### 2026-11-13T09:05:03Z
+
+- Summary: I accepted S-0764 and did not publish. Nothing could be promoted, and no story in ready can start yet.
+- Items: none
+- Seconds: 31
+- Cost: 0.1052 USD, estimated
+
+### 2026-11-13T09:06:24Z
+
+- Summary: Answered TH-1144, citing design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § 2. What the agent may run against its namespace
+- Items: S-0763
+- Seconds: 51
+- Cost: 0.1489 USD, estimated
+
+### 2026-11-13T09:06:56Z
+
+- Summary: Approved and resolved TH-1144, S-0763's plan. Its five tasks in three layers, T-3276 to T-3280, cover the six criteria within its 17 touches. Corrected the plan's container-log assumption from ADR-0292 §2. Promoted S-0763 to ready, the only promote candidate (rank 1, throughput 1h, ready 9 of 10). Applied the throughput order: S-0763 is 7th of 10.
+- Items: S-0763, T-3276, T-3277, T-3278, T-3279, T-3280
+- Seconds: 32
+- Cost: 0.1453 USD, estimated
+
+### 2026-11-13T09:07:17Z
+
+- Summary: I approved S-0763's plan on TH-1144, resolved the thread, and promoted S-0763 to ready. Its agent pulled it at once, so it is now in progress.
+- Items: none
+- Seconds: 21
+- Cost: 0.1797 USD, estimated
+
+### 2026-11-13T09:07:56Z
+
+- Summary: Reason ready (pull order changed): the ready column's order already matches flai order --by throughput (S-0760 32m, S-0745 40m, S-0759 42m, S-0751 50m, S-0757 50m, S-0740 1h, S-0661 1h15m, S-0663 1h30m, S-0662 2h30m), so nothing was applied; promote --candidates lists none (backlog all drafts or missing figures), ready 9/10, in-progress 3/3.
+- Items: S-0760, S-0745, S-0759, S-0751, S-0757, S-0740, S-0661, S-0663, S-0662
+- Seconds: 22
+- Cost: 0.0662 USD, estimated
+
+### 2026-11-13T09:08:12Z
+
+- Summary: I left the ready column as it was: its pull order already matches what the `throughput` policy gives, so ordering it would have changed nothing.
+- Items: none
+- Seconds: 16
+- Cost: 0.0726 USD, estimated
 
 ## Refusals
 

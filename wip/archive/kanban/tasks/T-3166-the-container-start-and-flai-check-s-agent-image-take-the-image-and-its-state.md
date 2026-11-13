@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1614
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 410
-      cache_read: 4284977
-      cache_write: 142403
-      cost: 1.649
+      input: 38
+      output: 12444
+      cache_read: 4399357
+      cache_write: 59395
+      cost: 1.5171
 ---
 # T-3166 The container start and flai check's agent.image take the image and its state from flai/internal/agentimage
 

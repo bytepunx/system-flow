@@ -13,6 +13,21 @@ stream: S-0763
 tags: [cli]
 touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-3276, T-3277]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 5
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 15
+          cache_read: 81709
+          cache_write: 2328
+          cost: 0.0242
 ---
 # T-3279 flai kluster exec runs a command in the story's worktree with its namespace's variables and its own kubeconfig while the namespace has a record
 

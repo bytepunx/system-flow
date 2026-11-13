@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 17
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 7
-      cache_read: 215714
-      cache_write: 776
-      cost: 0.0807
+      output: 501
+      cache_read: 209087
+      cache_write: 8848
+      cost: 0.1078
 ---
 # T-3268 Close S-0678's blocked interval at its close with the tree's flai unblock
 

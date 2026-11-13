@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 294
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 172
-      cache_read: 1765023
-      cache_write: 85769
-      cost: 0.6894
+      input: 16
+      output: 5202
+      cache_read: 1839085
+      cache_write: 24829
+      cost: 0.6342
 ---
 # T-3164 flai/internal/agentimage lists the images a project's agents need and says whether each is present and current
 

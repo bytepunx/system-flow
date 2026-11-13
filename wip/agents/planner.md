@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1344.9592
-accrued_seconds: 158340
-tasks_completed: 254
-last_run: 2026-11-13T07:34:00Z
+accrued_cost: 1349.7553
+accrued_seconds: 158868
+tasks_completed: 255
+last_run: 2026-11-13T09:04:56Z
 ---
 
 # Planner activity
@@ -2026,3 +2026,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0761, T-3268, T-3269, T-3270, T-3271, T-3272
 - Seconds: 422
 - Cost: 2.9395 USD, estimated
+
+### 2026-11-13T09:04:56Z
+
+- Summary: Planned S-0763: created tasks T-3276, T-3277, T-3278, T-3279 and T-3280 in three layers (none revisited), widened touches from 10 to 17 files, set the forecast to 1h and the cost of delay to 555.56 USD a week, wrote the Planning notes, and opened plan thread TH-1144, which notes that S-0763 is 31st in the pull order behind S-0661, S-0662 and S-0663, all three held until S-0763 is done.
+- Trigger: orchestrator
+- Items: S-0763, T-3276, T-3277, T-3278, T-3279, T-3280
+- Seconds: 528
+- Cost: 4.7961 USD, estimated

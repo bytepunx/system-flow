@@ -24,16 +24,16 @@ touches: [docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-c
 after: [T-3165, T-3166]
 usage:
   source: log
-  seconds: 216
+  seconds: 222
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 267
-      cache_read: 2724647
-      cache_write: 107035
-      cost: 1.0547
+      input: 24
+      output: 7959
+      cache_read: 2813758
+      cache_write: 37988
+      cost: 0.9703
 ---
 # T-3167 The user guide, the command reference, and flai-cli.md describe flai image status and the one place an agent image is decided
 

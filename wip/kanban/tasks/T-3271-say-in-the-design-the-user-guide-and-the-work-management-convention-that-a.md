@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, do
 after: [T-3269]
 usage:
   source: log
-  seconds: 1991
+  seconds: 2013
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 153
-      cache_read: 924021
-      cache_write: 44551
-      cost: 0.3609
+      input: 14
+      output: 2862
+      cache_read: 1194374
+      cache_write: 50542
+      cost: 0.616
 ---
 # T-3271 Say in the design, the user guide, and the work-management convention that a close-out leaves out item.blocked-closed
 

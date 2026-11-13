@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 259.8462
-accrued_seconds: 29862
-tasks_completed: 170
-last_run: 2026-11-13T08:57:49Z
+accrued_cost: 261.5935
+accrued_seconds: 30018
+tasks_completed: 171
+last_run: 2026-11-13T09:06:20Z
 ---
 
 # Curator activity
@@ -1371,3 +1371,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0468, D-0602
 - Seconds: 185
 - Cost: 1.0123 USD, estimated
+
+### 2026-11-13T09:06:20Z
+
+- Summary: I wrote D-0603 (a publish step that failed on a passing git index-lock clash is run once more, never in a loop; from S-0764, TH-1142, I-0359), merged none, absorbed none, and `flai digest compact` compacted none; S-0764's other two notes were progress, and the guard misreads `--topic git --topic <word>` as a git command, so topics went comma-separated.
+- Trigger: accepted S-0764
+- Items: D-0603
+- Seconds: 156
+- Cost: 1.7473 USD, estimated
