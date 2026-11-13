@@ -13,6 +13,7 @@ import ChartLineIcon from '@lucide/svelte/icons/chart-line';
 import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 import ClipboardListIcon from '@lucide/svelte/icons/clipboard-list';
 import ComponentIcon from '@lucide/svelte/icons/component';
+import ContainerIcon from '@lucide/svelte/icons/container';
 import FileTextIcon from '@lucide/svelte/icons/file-text';
 import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 import FolderTreeIcon from '@lucide/svelte/icons/folder-tree';
@@ -96,6 +97,7 @@ export type PageKey =
 	| 'components'
 	| 'klusters'
 	| 'deployments'
+	| 'images'
 	| 'docs-system'
 	| 'conventions'
 	| 'adrs'
@@ -270,6 +272,15 @@ export const SITE_MENU: MenuGroup[] = [
 				icon: RocketIcon,
 				path: '/ops/deployments',
 				href: resolve('/ops/deployments')
+			},
+			// The images the project's agents run in and flai serve's jobs that make them, with
+			// Retry for a failed one through flai (S-0757).
+			{
+				key: 'images',
+				label: 'Agent images',
+				icon: ContainerIcon,
+				path: '/ops/images',
+				href: resolve('/ops/images')
 			}
 		],
 		// The group's own path, which has no page of its own.

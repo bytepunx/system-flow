@@ -7,6 +7,7 @@ vi.mock('$app/paths', () => ({
 }));
 
 import ActivityIcon from '@lucide/svelte/icons/activity';
+import ContainerIcon from '@lucide/svelte/icons/container';
 import InboxIcon from '@lucide/svelte/icons/inbox';
 import ServerCogIcon from '@lucide/svelte/icons/server-cog';
 import RocketIcon from '@lucide/svelte/icons/rocket';
@@ -20,7 +21,7 @@ describe('the nav rail (S-0458)', () => {
 			['Flow', ['Board', 'Inbox', 'Charts', 'Workflow']],
 			['Agents', ['Orchestration', 'Planning', 'Analysis', 'Activity', 'Threads', 'Messages']],
 			['Design', ['System', 'Components']],
-			['Ops', ['Klusters', 'Deployments']],
+			['Ops', ['Klusters', 'Deployments', 'Agent images']],
 			['Documentation', ['System', 'Conventions', 'ADRs', 'Issues', 'Search']],
 			['Configuration', ['Features', 'Agents', 'File System', 'Projects', 'Harnesses', 'Host']]
 		]);
@@ -50,7 +51,7 @@ describe('the nav rail (S-0458)', () => {
 				'/messages'
 			],
 			['/design', '/design/components'],
-			['/ops/klusters', '/ops/deployments'],
+			['/ops/klusters', '/ops/deployments', '/ops/images'],
 			[
 				'/docs/design/system/README.md',
 				'/docs/design/conventions/README.md',
@@ -209,7 +210,7 @@ describe('the nav rail (S-0458)', () => {
 
 	it('gives Ops Deployments after Klusters, at /ops/deployments (S-0581)', () => {
 		const ops = SITE_MENU.find((g) => g.key === 'ops')!;
-		expect(ops.pages.map((p) => p.key)).toEqual(['klusters', 'deployments']);
+		expect(ops.pages.map((p) => p.key)).toEqual(['klusters', 'deployments', 'images']);
 		expect(ops.pages[1]).toMatchObject({
 			key: 'deployments',
 			label: 'Deployments',
@@ -223,6 +224,18 @@ describe('the nav rail (S-0458)', () => {
 			page: 'deployments',
 			child: null
 		});
+	});
+
+	it('gives Ops Agent images after Deployments, at /ops/images (S-0757)', () => {
+		const ops = SITE_MENU.find((g) => g.key === 'ops')!;
+		expect(ops.pages[2]).toMatchObject({
+			key: 'images',
+			label: 'Agent images',
+			icon: ContainerIcon,
+			path: '/ops/images',
+			href: '/ops/images'
+		});
+		expect(locate('/ops/images')).toEqual({ group: 'ops', page: 'images', child: null });
 	});
 
 	it('places each Configuration page at its own path (S-0459)', () => {
