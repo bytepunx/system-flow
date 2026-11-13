@@ -3,12 +3,18 @@ id: T-3336
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0780
 owner: alex
 created: 2026-11-13T20:51:49Z
-updated: 2026-11-13T20:51:49Z
-transitions: []
+updated: 2026-11-13T20:54:02Z
+transitions:
+  - to: ready
+    at: 2026-11-13T20:54:02Z
+    by: agent-S-0780
+  - to: in-progress
+    at: 2026-11-13T20:54:02Z
+    by: agent-S-0780
 stream: S-0780
 tags: []
 after: [T-3335]

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2174.2065
-accrued_seconds: 1561609
-tasks_completed: 3427
-last_run: 2026-11-13T20:47:32Z
+accrued_cost: 2175.2043
+accrued_seconds: 1561810
+tasks_completed: 3433
+last_run: 2026-11-13T20:53:39Z
 ---
 
 # Orchestrator activity
@@ -24023,6 +24023,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 23
 - Cost: 0.0766 USD, estimated
+
+### 2026-11-13T20:51:22Z
+
+- Summary: Accepted S-0777 at fa936242c under accept_reviews: close-out passed (record b60b5fe; head adds only design/issues), verifier matched all 4 criteria to the three kluster test files, dry run had no blockers.
+- Items: S-0777
+- Seconds: 80
+- Cost: 0.3564 USD, estimated
+
+### 2026-11-13T20:51:54Z
+
+- Summary: Started publish formula instance S-0780 (committed 9e5b6308e) after S-0777's acceptance: threshold policy met, count 1 at or over threshold 1 (value 75 USD/week, threshold 1000).
+- Items: S-0780, S-0777
+- Seconds: 32
+- Cost: 0.1238 USD, estimated
+
+### 2026-11-13T20:52:12Z
+
+- Summary: I accepted S-0777, and its acceptance made a release due, so I started a publish formula instance: S-0780.
+- Items: none
+- Seconds: 18
+- Cost: 0.0913 USD, estimated
+
+### 2026-11-13T20:53:07Z
+
+- Summary: Release due on S-0777 (threshold met: count 1 at threshold 1, value 75 USD under 1000): ran no publish formula, since S-0780, the publish instance made at 20:51:49 after S-0777's acceptance, is in progress and covers it
+- Items: S-0777, S-0780
+- Seconds: 39
+- Cost: 0.1321 USD, estimated
+
+### 2026-11-13T20:53:18Z
+
+- Summary: Board starvation TH-1183 (resolved by flai serve) and TH-1184 (last entry flai serve's, left alone): no promote candidates; the only complete draft, S-0241, stays blocked per TH-1165; the 19 E-0034 drafts lack a cost of delay value until the operator decides TH-1097, so I started no planners for them
+- Items: S-0241, S-0736, E-0034
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-13T20:53:39Z
+
+- Summary: All three reasons are handled, but I changed nothing on the board. Nothing could move until you make one cost-of-delay decision.
+- Items: none
+- Seconds: 21
+- Cost: 0.2942 USD, estimated
 
 ## Refusals
 

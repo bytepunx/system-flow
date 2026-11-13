@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 294.1558
-accrued_seconds: 32332
-tasks_completed: 195
-last_run: 2026-11-13T20:25:41Z
+accrued_cost: 295.6905
+accrued_seconds: 32460
+tasks_completed: 196
+last_run: 2026-11-13T20:53:30Z
 ---
 
 # Curator activity
@@ -1571,3 +1571,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0449, D-0468, D-0587, D-0593, D-0605, D-0608, D-0614, D-0615
 - Seconds: 162
 - Cost: 1.0188 USD, estimated
+
+### 2026-11-13T20:53:30Z
+
+- Summary: Of S-0777's five decisions, I wrote D-0616 (resolve a test fixture's temp root with filepath.EvalSymlinks, since macOS's temp dir is a symlink, and reproduce that on Linux with a TMPDIR that is a symlink) and D-0617 (a TMPDIR for a whole go test run lives under /tmp, never inside a git repository). I merged S-0777's hand go test run into D-0492. I absorbed nothing, because no design, convention, or ADR changed since the last run and none states the three. `flai digest compact` compacted nothing. The fifth decision, how its tasks were layered, was progress and not kept.
+- Trigger: accepted S-0777
+- Items: D-0492, D-0616, D-0617
+- Seconds: 128
+- Cost: 1.5347 USD, estimated

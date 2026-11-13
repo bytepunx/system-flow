@@ -2,14 +2,14 @@
 id: D-0492
 title: "A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags"
 kind: decision
-sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309]
+sources: [S-0569, I-0247, S-0560, I-0246, S-0543, S-0617, I-0252, S-0653, I-0314, S-0651, I-0309, S-0777]
 topics: [testing, go, flai]
 paths: [design/conventions/delegation.md, system-flow.yaml, flai/internal/mcpserver, flai/internal/serve, flai/internal/release, flai/internal/channel, flai/cmd]
 date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0617, S-0653]
+cited: [S-0617, S-0653, S-0777, S-0779]
 ---
 
 # D-0492 A remediation of a test that fails only under load reproduces it with go test directly, GOMAXPROCS=2 -race -count=N -run, beside a CPU load taskset pins to the test's CPUs, since flai test takes none of those flags
@@ -30,4 +30,6 @@ A later story that fixes a flaky test can do the same, and record the exception 
 
 S-0651, which remediated I-0309 (D-0557), confined the load further, to a single CPU: "each test binary, built with -race, ran pinned to one CPU with GOMAXPROCS=1 beside 40 busy loops on that CPU, so other agents on the host were not loaded. main's versions came from git archive main into a scratch copy." Main's channel test then failed 5 of 10 runs and its MCP test 1 of 5. A sub-agent cannot run `git archive`, which flai guard refuses it, and copies the worktree instead (D-0527).
 
-Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309.
+S-0777, which fixed eight kluster tests that failed on macOS's symlinked temp dir (D-0616), made the exception for a flag `flai test` cannot pass either, an environment variable: "The suite runs by hand with go test, against the rule that tests run through flai test, because flai test cannot set TMPDIR; it is the reproduction the story needs (D-0492). They ran with FLAI_STORY and FLAI_STARTED_BY unset, so that this session's variables did not reach the tests; flai guard refuses unsetting FLAI_AGENT, which was left as set. Pass or fail of each change was judged with flai test." (wip/archive/agents/S-0777.md, Decisions). So a hand run under `flai serve` unsets `FLAI_STORY` and `FLAI_STARTED_BY` for the tests, and leaves `FLAI_AGENT`, which the guard keeps; its TMPDIR lives under `/tmp` (D-0617).
+
+Sources: S-0569 (wip/archive/agents/S-0569.md, Decisions); I-0247; S-0560 (wip/archive/agents/S-0560.md, Decisions and Log); I-0246; S-0543 (wip/archive/agents/S-0543.md, Decisions); S-0617 (wip/archive/agents/S-0617.md, Decisions); I-0252; S-0653 (wip/archive/agents/S-0653.md, Decisions); I-0314; S-0651 (wip/archive/agents/S-0651.md, Decisions); I-0309; S-0777 (wip/archive/agents/S-0777.md, Decisions).
