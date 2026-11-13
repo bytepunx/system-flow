@@ -7,7 +7,9 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0762
+  - S-0660
+  - S-0661
+  - S-0662
 ---
 
 # Board

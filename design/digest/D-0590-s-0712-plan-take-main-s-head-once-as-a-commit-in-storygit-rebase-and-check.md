@@ -8,7 +8,7 @@ paths: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/i
 date: 2026-11-11
 status: absorbed
 absorbed_by: "design/system/workflow.md#branches-and-collisions-adr-0019"
-asked_again: []
+asked_again: [TH-1101]
 cited: [S-0709, S-0712, TH-1091, TH-1101]
 ---
 

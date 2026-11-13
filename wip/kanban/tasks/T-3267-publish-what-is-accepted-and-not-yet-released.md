@@ -3,12 +3,18 @@ id: T-3267
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0762
 owner: alex
 created: 2026-11-13T07:24:38Z
-updated: 2026-11-13T07:24:38Z
-transitions: []
+updated: 2026-11-13T07:26:31Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:26:31Z
+    by: agent-S-0762
+  - to: in-progress
+    at: 2026-11-13T07:26:31Z
+    by: agent-S-0762
 stream: S-0762
 tags: []
 after: [T-3266]

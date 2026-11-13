@@ -3,12 +3,15 @@ id: S-0661
 type: story
 nature: feature
 title: A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables
-status: backlog
+status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-13T07:23:59Z
-transitions: []
+updated: 2026-11-13T07:26:16Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:26:16Z
+    by: alex
 tags: [cli]
 topics: [kluster, deployment]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

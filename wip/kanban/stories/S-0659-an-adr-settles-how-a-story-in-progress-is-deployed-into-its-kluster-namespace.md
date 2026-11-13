@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:07Z
-updated: 2026-11-12T16:09:00Z
+updated: 2026-11-13T07:26:16Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:54Z
@@ -17,10 +17,11 @@ transitions:
     by: agent-S-0659
 blocked:
   - from: 2026-11-12T16:09:00Z
+    until: 2026-11-13T07:25:04Z
     reason: awaiting the operator on TH-1103
 tags: [cli]
 topics: [kluster, deployment]
-touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
+touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -90,12 +91,12 @@ An ADR settles how a story in progress is deployed into its kluster namespace at
 
 ## Acceptance criteria
 
-- [ ] An accepted ADR says how a story's agent asks for a deploy and a teardown of its own story's namespace, that flai serve runs the job, and that the `kluster` host action gates it
-- [ ] It says what the agent may run against the namespace: the project's checks, its own commands with the namespace's variables, and what `flai guard` refuses, another story's namespace and the default one among them
-- [ ] It says when a namespace is made, deployed again, and torn down across in-progress, review, a send back, acceptance, and cancellation, in a table that replaces ADR-0254 §4's
-- [ ] It sets how many story namespaces may live at once, where the project sets it, and what a request over the limit gets
-- [ ] It says how the agent waits for a job behind the queue, what it is told on a failure, and when a failure reaches the operator
-- [ ] It says what is recorded of a deploy and a checks run before review, and where the move to review, the close-out, and an acceptance read it
+- [x] An accepted ADR says how a story's agent asks for a deploy and a teardown of its own story's namespace, that flai serve runs the job, and that the `kluster` host action gates it
+- [x] It says what the agent may run against the namespace: the project's checks, its own commands with the namespace's variables, and what `flai guard` refuses, another story's namespace and the default one among them
+- [x] It says when a namespace is made, deployed again, and torn down across in-progress, review, a send back, acceptance, and cancellation, in a table that replaces ADR-0254 §4's
+- [x] It sets how many story namespaces may live at once, where the project sets it, and what a request over the limit gets
+- [x] It says how the agent waits for a job behind the queue, what it is told on a failure, and when a failure reaches the operator
+- [x] It says what is recorded of a deploy and a checks run before review, and where the move to review, the close-out, and an acceptance read it
 - [x] ADR-0254 names it in `superseded_by` or the new ADR names the sections it amends, as `design/conventions/decisions.md` has it, and `design/system/kluster.md` describes the design as decided and marks each part not yet built
 
 ## Tasks

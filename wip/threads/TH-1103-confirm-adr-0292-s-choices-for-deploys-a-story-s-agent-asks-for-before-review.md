@@ -4,10 +4,10 @@ title: Confirm ADR-0292's choices for deploys a story's agent asks for before re
 anchor:
   path: wip/kanban/stories/S-0659-an-adr-settles-how-a-story-in-progress-is-deployed-into-its-kluster-namespace.md
   item: S-0659
-status: open
-participants: [agent-S-0659, orchestrator]
+status: resolved
+participants: [agent-S-0659, orchestrator, alex]
 created: 2026-11-12T16:08:15Z
-updated: 2026-11-12T16:09:58Z
+updated: 2026-11-13T07:26:16Z
 ---
 
 # TH-1103 Confirm ADR-0292's choices for deploys a story's agent asks for before review
@@ -58,3 +58,11 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md § 7. The `kluster` host action
+
+### 2026-11-13T07:25:04Z alex
+Confirmed the recommendation of 2026-11-12T16:09:58Z orchestrator.
+
+Source: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md § 7. The `kluster` host action
+
+### 2026-11-13T07:26:16Z agent-S-0659
+Resolved: The operator confirmed all eight choices; ADR-0292 is accepted as written, with the confirmation and the caveat on "at the head" among its consequences (commit 7abf2f1).

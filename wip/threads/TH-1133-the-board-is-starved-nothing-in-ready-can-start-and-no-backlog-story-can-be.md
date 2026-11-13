@@ -3,10 +3,10 @@ id: TH-1133
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-12T19:36:55Z
-updated: 2026-11-13T07:23:42Z
+updated: 2026-11-13T07:24:39Z
 ---
 
 # TH-1133 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -99,3 +99,50 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0759 An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai: a draft; finalize it. It waits on TH-1110 S-0759 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
 - S-0760 This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images: a draft; finalize it. It waits on TH-1111 S-0760 cannot be finalized yet: no cost of delay value until E-0036 has inputs; it also touches paths the container protects.
 - S-0761 flai check finds `item.blocked-closed` outside the story at close-out: a draft; finalize it.
+
+### 2026-11-13T07:24:38Z flai serve
+The list changed. No story in ready can start, no backlog story can be promoted, and 2 in-progress lanes stand idle.
+
+This host has no reminder channel, so without one nothing reminds you of this thread off the dashboard. Set one in a shell on the host with `flai serve notify set --url <webhook>` or `flai serve notify set --command <command>`.
+
+Each backlog story, in the pull order, and the decision it waits on:
+
+- S-0241 Measure planned stories again with forked task sub-agents once a headless session offers forks: a draft; finalize it.
+- S-0660 A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled: held by `after`; the root of its chain is S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once (in-progress).
+- S-0661 A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables: held by `after`; the root of its chain is S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once (in-progress).
+- S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first: held by `after`; the root of its chain is S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once (in-progress).
+- S-0663 The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it: held by `after`; the root of its chain is S-0659 An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once (in-progress).
+- S-0730 A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it: a draft; finalize it.
+- S-0733 An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery: a draft; finalize it. It waits on TH-1102 S-0733 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0734 Each flai release builds, signs, and publishes the bedrock and claude-code agent images with a signed digest list, and ships pilot for Linux: a draft; finalize it. It waits on TH-1104 S-0734 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0735 flai image status says which agent images a project's agents need, and whether each is on the host and current for the flai that runs it: a draft; finalize it. It waits on TH-1105 S-0735 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board: a draft; finalize it. It waits on TH-1113 S-0736 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0737 flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed: a draft; finalize it. It waits on TH-1114 S-0737 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0738 The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning: a draft; finalize it. It waits on TH-1115 S-0738 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name: a draft; finalize it. It waits on TH-1116 S-0739 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0740 flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries: a draft; finalize it. It waits on TH-1106 S-0740 cannot be finalized yet: no cost of delay value until E-0036 has inputs; it also touches a path the container protects.
+- S-0741 flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name: a draft; finalize it. It waits on TH-1117 S-0741 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0742 flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name: a draft; finalize it. It waits on TH-1118 S-0742 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0743 flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done: a draft; finalize it. It waits on TH-1119 S-0743 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0744 flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name: a draft; finalize it. It waits on TH-1120 S-0744 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project: a draft; finalize it. It waits on TH-1107 S-0745 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0746 The MCP tools, story start, task done, the sync, item edits, and the inbox act on a state's kind and who may make a transition instead of a state's name: a draft; finalize it. It waits on TH-1121 S-0746 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0747 The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name: a draft; finalize it. It waits on TH-1122 S-0747 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it: a draft; finalize it. It waits on TH-1123 S-0748 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0749 The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name: a draft; finalize it. It waits on TH-1124 S-0749 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0750 flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today: a draft; finalize it. It waits on TH-1125 S-0750 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0751 flai serve brings a missing or stale agent image back as a host job that holds the start, in place of refusing it: a draft; finalize it. It waits on TH-1108 S-0751 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0752 flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included: a draft; finalize it. It waits on TH-1126 S-0752 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0753 The dashboard's board draws the columns, their kinds, and the moves between them from what flai gives, and holds no list of states of its own: a draft; finalize it. It waits on TH-1127 S-0753 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0754 The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time: a draft; finalize it. It waits on TH-1128 S-0754 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board: a draft; finalize it. It waits on TH-1129 S-0755 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts: a draft; finalize it. It waits on TH-1130 S-0756 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0757 The dashboard shows each agent image job as it runs, its output, and a failure's cause, and offers the operator a retry: a draft; finalize it. It waits on TH-1109 S-0757 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name: a draft; finalize it. It waits on TH-1131 S-0758 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+- S-0759 An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai: a draft; finalize it. It waits on TH-1110 S-0759 cannot be finalized yet: no cost of delay value until E-0036 has inputs.
+- S-0760 This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images: a draft; finalize it. It waits on TH-1111 S-0760 cannot be finalized yet: no cost of delay value until E-0036 has inputs; it also touches paths the container protects.
+- S-0761 flai check finds `item.blocked-closed` outside the story at close-out: a draft; finalize it.
+- S-0762 Publish what is accepted and not yet released: no forecast duration; no cost of delay value.
+
+### 2026-11-13T07:24:39Z flai serve
+Resolved: S-0762 Publish what is accepted and not yet released in ready can start, so the board is no longer starved.

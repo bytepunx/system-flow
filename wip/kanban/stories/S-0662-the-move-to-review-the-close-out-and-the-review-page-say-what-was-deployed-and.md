@@ -3,12 +3,15 @@ id: S-0662
 type: story
 nature: feature
 title: The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
-status: backlog
+status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-13T07:24:20Z
-transitions: []
+updated: 2026-11-13T07:26:30Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:26:30Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
 touches: [flai/internal/kluster/evidence.go, flai/internal/kluster/evidence_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/review_test.go, flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/internal/verify/kluster_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md]

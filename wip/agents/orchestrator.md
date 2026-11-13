@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2141.5248
-accrued_seconds: 1554065
-tasks_completed: 3182
-last_run: 2026-11-12T21:11:18Z
+accrued_cost: 2141.8130
+accrued_seconds: 1554151
+tasks_completed: 3185
+last_run: 2026-11-13T07:25:14Z
 ---
 
 # Orchestrator activity
@@ -22308,6 +22308,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1132 USD, estimated
+
+### 2026-11-13T07:24:42Z
+
+- Summary: Ran the publish formula: instance S-0762 in ready (commit 003bea86e). Policy threshold met: 4 accepted unreleased stories (S-0683, S-0723, S-0726, S-0732), count 4 at or over threshold 1, value 80 USD/week under 1000; none held by whole_epics.
+- Items: S-0762, S-0683, S-0723, S-0726, S-0732
+- Seconds: 54
+- Cost: 0.1459 USD, estimated
+
+### 2026-11-13T07:24:58Z
+
+- Summary: Ordered the ready column by throughput after S-0762 went to ready: flai reported no ready stories to order (S-0762 already pulled). Left TH-1133 alone: it is flai serve's notice, which flai serve resolves once a story can start.
+- Items: S-0762
+- Seconds: 16
+- Cost: 0.0629 USD, estimated
+
+### 2026-11-13T07:25:14Z
+
+- Summary: I ran the publish formula. Its instance, S-0762, is in progress, so the release has started but nothing is published yet.
+- Items: none
+- Seconds: 16
+- Cost: 0.0794 USD, estimated
 
 ## Refusals
 

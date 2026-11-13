@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.35 - 2026-11-13
+
+- S-0726 A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself (patch).
 - S-0726 `git.md` and `work-management.md` say to resolve each path a sync's stop lists, `git add` it, and run `flai stream sync` again, call `flai task done` again, or ask for the close-out again, which continues the rebase and settles the stops after it, instead of running `git rebase --continue` (patch, ADR-0294, I-0351).
 
 ## 1.1.34 - 2026-11-11

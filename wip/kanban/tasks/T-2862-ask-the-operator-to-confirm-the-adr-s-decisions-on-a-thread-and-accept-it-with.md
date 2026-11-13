@@ -3,11 +3,11 @@ id: T-2862
 type: task
 nature: feature
 title: Ask the operator to confirm the ADR's decisions on a thread, and accept it with their answer
-status: ready
+status: done
 parent: S-0659
 owner: alex
 created: 2026-11-10T08:21:19Z
-updated: 2026-11-12T16:08:36Z
+updated: 2026-11-13T07:26:01Z
 transitions:
   - to: ready
     at: 2026-11-12T16:07:59Z
@@ -18,9 +18,15 @@ transitions:
   - to: ready
     at: 2026-11-12T16:08:36Z
     by: agent-S-0659
+  - to: in-progress
+    at: 2026-11-13T07:25:35Z
+    by: agent-S-0659
+  - to: done
+    at: 2026-11-13T07:26:00Z
+    by: agent-S-0659
 stream: S-0659
 tags: [cli]
-touches: [design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md]
+touches: [design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
 after: [T-2861]
 usage:
   source: log
