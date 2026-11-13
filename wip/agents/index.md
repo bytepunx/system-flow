@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-13T22:46:12Z
+updated: 2026-11-13T22:46:51Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0730](S-0730.md) | A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it | review | agent-S-0730 | 2026-11-13T20:44:38Z |
 | [S-0778](S-0778.md) | Publish what is accepted and not yet released | review | agent-S-0778 | 2026-11-13T20:26:40Z |
 
 ## Strategic agents
