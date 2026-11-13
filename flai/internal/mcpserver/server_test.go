@@ -43,7 +43,11 @@ var sessionEnv = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_SESSION", harness.Rea
 // Options (I-0234). It isolates git and gives it an identity once for the
 // package, as gittest.Identity does for one test, so that the tests that run
 // real git need not set the environment themselves and can run in parallel
-// (S-0548).
+// (S-0548). It sets GIT_CEILING_DIRECTORIES to the temporary folder, so that
+// git in a test's project with no git of its own does not find the
+// repository that holds the folder: S-0777's agent ran the tests with TMPDIR
+// in its worktree, and story_start in such a project made story branches in
+// this repository (I-0371).
 func TestMain(m *testing.M) {
 	for _, v := range sessionEnv {
 		if err := os.Unsetenv(v); err != nil {
@@ -56,9 +60,23 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if err := os.Setenv("GIT_CEILING_DIRECTORIES", gitCeiling(os.TempDir())); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	code := m.Run()
 	_ = os.RemoveAll(gitDir)
 	os.Exit(code)
+}
+
+// gitCeiling is GIT_CEILING_DIRECTORIES for a root git must not search up
+// into: the root with its symbolic links resolved, or as it is when they
+// cannot be.
+func gitCeiling(root string) string {
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		return resolved
+	}
+	return filepath.Clean(root)
 }
 
 // gitIdentity is the name and the email the package's tests author and

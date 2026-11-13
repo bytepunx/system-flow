@@ -12,6 +12,7 @@ import (
 	"time"
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
+	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -474,5 +475,42 @@ func testStoryStartPrintsTheStorysThreadsAwaitingItsAgent(t *testing.T) {
 	}
 	if strings.Contains(out, "Question") || strings.Contains(out, "on other items") {
 		t.Errorf("the output tells of the operator's threads:\n%s", out)
+	}
+}
+
+// I-0371: a project with no git of its own, in a temporary folder inside a
+// repository, as S-0777's agent's TMPDIR was inside its worktree, starts a
+// story with no branch or worktree, and the repository gains no story
+// branch, as TestMain's GIT_CEILING_DIRECTORIES at the temporary folder
+// keeps git from searching up into it. Integration: it runs real git.
+func TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	gittest.Identity(t, "t", "t@t")
+	t.Setenv("FLAI_AGENT", "agent-a")
+	t.Setenv("FLAI_SESSION", "s1")
+	t.Setenv("LOG_FORMAT", "json")
+	outer := t.TempDir()
+	writeIn(t, outer, "README.md", "# outer\n")
+	gitIn(t, outer, "init", "-q", "-b", "main")
+	gitIn(t, outer, "add", "-A")
+	gitIn(t, outer, "commit", "-q", "-m", "outer")
+	tmp := filepath.Join(outer, "tmp")
+	if err := os.Mkdir(tmp, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CEILING_DIRECTORIES", gitCeiling(tmp))
+	root := filepath.Join(tmp, "project")
+	if err := os.Rename(storyStartProject(t), root); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
+	if code != 0 || !strings.Contains(out, "no branch or worktree: the project is not a git work tree") {
+		t.Errorf("story start: %d\n%s\n%s", code, out, errOut)
+	}
+	if branches := gitIn(t, outer, "branch", "--list", "story/*"); branches != "" {
+		t.Errorf("the outer repository gained %s", branches)
 	}
 }

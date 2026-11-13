@@ -47,7 +47,11 @@ var noConfig string
 // clear them with t.Setenv, which would keep it from running in parallel
 // (S-0548). For the same reason it points FLAI_CACHE_DIR, the cache_dir a new
 // configuration is written with, at a folder of the run's own, which every
-// test shares, and FLAI_CONFIG at noConfig.
+// test shares, and FLAI_CONFIG at noConfig. It sets GIT_CEILING_DIRECTORIES
+// to the temporary folder, so that git in a test's project with no git of
+// its own does not find the repository that holds the folder: S-0777's agent
+// ran the tests with TMPDIR in its worktree, and flai story start in such a
+// project made story branches in this repository (I-0371).
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
@@ -71,13 +75,23 @@ func testMain(m *testing.M) int {
 			return 1
 		}
 	}
-	for k, v := range map[string]string{config.EnvVar: noConfig, config.CacheEnvVar: filepath.Join(dir, "cache")} {
+	for k, v := range map[string]string{config.EnvVar: noConfig, config.CacheEnvVar: filepath.Join(dir, "cache"), "GIT_CEILING_DIRECTORIES": gitCeiling(os.TempDir())} {
 		if err := os.Setenv(k, v); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
 	}
 	return m.Run()
+}
+
+// gitCeiling is GIT_CEILING_DIRECTORIES for a root git must not search up
+// into: the root with its symbolic links resolved, or as it is when they
+// cannot be.
+func gitCeiling(root string) string {
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		return resolved
+	}
+	return filepath.Clean(root)
 }
 
 // together runs tests as parallel subtests of t, a test that does not run
