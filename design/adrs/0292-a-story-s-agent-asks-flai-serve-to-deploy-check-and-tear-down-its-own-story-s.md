@@ -1,8 +1,8 @@
 ---
 id: ADR-0292
 title: "A story's agent asks flai serve to deploy, check, and tear down its own story's kluster namespace while the story is in progress, through MCP tools and --job flags behind the kluster host action, and waits for a kluster event; the namespace lives from its first deploy until acceptance or cancellation, kluster.agent_namespaces bounds how many stories in progress hold one, and the namespace's record at the story's head is what the move to review, the close-out, and an acceptance read"
-status: proposed
-date: 2026-11-12
+status: accepted
+date: 2026-11-13
 supersedes: []
 superseded_by: []
 refines: [ADR-0254]
@@ -111,6 +111,8 @@ This table replaces ADR-0254 §5's, and the rows `kluster.md` § What happens wh
 - A namespace now outlives a send-back and stays while its story is in progress, up to acceptance or cancellation. Signet keeps a torn-down namespace's bundles and policies, as ADR-0254 says, and they accumulate no faster: one namespace per story still.
 - The namespace's kubeconfig holds a token that works against the local cluster only, which `safety.md` allows. It lasts 24 hours, and a deploy makes a new one. An agent in a container reaches the API server only when its network reaches the host's loopback, where k3d publishes it; S-0660 says how, as [ADR-0269](0269-flai-serve-refuses-a-container-start-whose-http-mcp-server-listens-on-loopback.md) says for the MCP server.
 - The `edit` role reaches only the namespace's Kubernetes objects. A project's own commands that reach a shared service, such as Postgres in the profile's namespace, do so over the cluster's network from a pod in the story's namespace, or through the project's checks, which flai runs with the whole kubeconfig.
+- At the head (3) assumes a project's deploy builds nothing from its `design` or `docs` folders. No project's deploy does today. One that did would count a change there as deployed without deploying it.
+- The operator confirmed all eight of the choices this decision makes on TH-1103, on 2026-11-13: the limit and its default, the refusal over it, one queue, failures before review staying the agent's, the namespace's kubeconfig, the namespace kept until acceptance or cancellation, at the head, and the close-out's `kluster` step.
 
 ## Alternatives considered
 
