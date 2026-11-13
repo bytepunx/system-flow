@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:55Z
-updated: 2026-11-13T16:13:06Z
+updated: 2026-11-13T16:17:57Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 29m
-  delivery: 2026-11-13T18:58:00Z
-  basis: "Its own forecast of 29m; 8th in the pull order with an in-progress limit of 3, behind S-0760, S-0759, S-0757, S-0241, S-0730, S-0736 and S-0737."
+  delivery: 2026-11-13T19:06:00Z
+  basis: "Its own forecast of 29m; 6th in the pull order with an in-progress limit of 3, behind S-0757, S-0759, S-0760, S-0241, S-0730, S-0736 and S-0737."
   by: flai
-  at: 2026-11-13T16:13:06Z
+  at: 2026-11-13T16:17:57Z
 ---
 # S-0738 The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning
 

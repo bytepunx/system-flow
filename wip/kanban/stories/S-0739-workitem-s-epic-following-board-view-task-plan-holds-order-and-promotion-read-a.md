@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:07Z
-updated: 2026-11-13T16:13:06Z
+updated: 2026-11-13T16:17:57Z
 transitions: []
 tags: [cli]
 topics: [cli, planning]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T19:16:00Z
-  basis: "Its own forecast of 45m; 9th in the pull order with an in-progress limit of 3, behind S-0760, S-0759, S-0757, S-0241, S-0730, S-0736, S-0737 and S-0738."
+  delivery: 2026-11-13T19:24:00Z
+  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0757, S-0759, S-0760, S-0241, S-0730, S-0736, S-0737 and S-0738."
   by: flai
-  at: 2026-11-13T16:13:06Z
+  at: 2026-11-13T16:17:57Z
 ---
 # S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
 
