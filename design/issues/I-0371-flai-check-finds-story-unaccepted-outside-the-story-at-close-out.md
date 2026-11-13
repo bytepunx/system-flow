@@ -3,10 +3,10 @@ id: I-0371
 title: "flai check finds `story.unaccepted` outside the story at close-out"
 class: efficiency
 status: open
-count: 6
+count: 7
 first_reported: 2026-11-13T20:26:48Z
-last_reported: 2026-11-13T22:49:46Z
-updated: 2026-11-13T22:49:46Z
+last_reported: 2026-11-13T23:08:51Z
+updated: 2026-11-13T23:08:51Z
 ---
 
 # I-0371 flai check finds `story.unaccepted` outside the story at close-out
@@ -58,6 +58,14 @@ flai check found outside the story:
 
 ### 2026-11-13T22:49:46Z
 Story: S-0783.
+flai check found outside the story:
+`wip/archive/kanban/stories/S-0001-define-the-standard.md`: S-0001 is done but its branch story/S-0001 was never merged; merge or delete it
+`wip/archive/kanban/stories/S-0002-template-prototype.md`: S-0002 is done but its branch story/S-0002 was never merged; merge or delete it
+`wip/archive/kanban/stories/S-0003-publish-template-repo.md`: S-0003 is done but its branch story/S-0003 was never merged; merge or delete it
+`wip/archive/kanban/stories/S-0005-flai-new.md`: S-0005 is done but its branch story/S-0005 was never merged; merge or delete it
+
+### 2026-11-13T23:08:51Z
+Story: S-0782.
 flai check found outside the story:
 `wip/archive/kanban/stories/S-0001-define-the-standard.md`: S-0001 is done but its branch story/S-0001 was never merged; merge or delete it
 `wip/archive/kanban/stories/S-0002-template-prototype.md`: S-0002 is done but its branch story/S-0002 was never merged; merge or delete it
