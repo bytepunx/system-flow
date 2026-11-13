@@ -3,14 +3,17 @@ id: S-0783
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-13T22:47:23Z
-updated: 2026-11-13T22:47:24Z
+updated: 2026-11-13T22:47:32Z
 transitions:
   - to: ready
     at: 2026-11-13T22:47:24Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-13T22:47:32Z
+    by: agent-S-0783
 tags: []
 touches: [wip/kanban/stories/S-0783-publish-what-is-accepted-and-not-yet-released.md]
 agent:

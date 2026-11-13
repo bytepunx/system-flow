@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.40 - 2026-11-13
+
+- S-0730 A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it (patch).
 - S-0730 `tooling.md` says to hand-edit an item's body with `Edit` and never to replace an item file whole with `Write`, and `flai guard` refuses a `Write` whose content is not that item, with its own `id` and `type` in front matter that parses (patch, ADR-0298, I-0352).
 
 ## 1.1.39 - 2026-11-13
