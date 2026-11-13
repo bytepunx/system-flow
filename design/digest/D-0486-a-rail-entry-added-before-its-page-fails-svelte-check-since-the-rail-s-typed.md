@@ -9,7 +9,7 @@ date: 2026-11-07
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0757]
 ---
 
 # D-0486 A rail entry added before its page fails svelte-check, since the rail's typed resolve() needs the route to exist, so the task that adds it adds a placeholder +page.svelte that the page's task replaces

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0759
 owner: alex
 created: 2026-11-12T16:05:58Z
-updated: 2026-11-12T16:05:58Z
+updated: 2026-11-13T16:15:49Z
 transitions: []
 stream: S-0759
 tags: [cli]
@@ -18,17 +18,17 @@ after: [T-3191, T-3194]
 
 ## Work
 
-- `docs/operators/settings.md`: a row under § flai configuration for each new key, near `agent.harnesses.<name>.images.<name>` (line 61), and the flags under § Flags (line 365 on). `TestSettingsIndex` fails on a key or flag with no row.
-- `docs/users/flai.md` § In a container: both settings.
+- `docs/operators/settings.md`: a row under § flai configuration for `agent.projects.<root>.image.command` and `agent.projects.<root>.image.auto`, near `agent.projects`, and the commands' flags under § Flags. `TestSettingsIndex` fails on a key or flag with no row.
+- `docs/users/flai.md` § In a container: both settings, `flai serve agent image command` and `flai serve agent image auto`.
 - `docs/users/flai-reference.md`: `make flai-reference`, never by hand.
-- `docs/operators/runbooks/agent-container.md`: a section, "Your own images", on naming a build command, its variables, its log, and turning the automatic job off, beside `--image`.
-- `design/system/flai-cli.md`: mark the substitution built in the section S-0733 wrote, and bump `updated`.
+- `docs/operators/runbooks/agent-container.md`: a section, "Your own images", on naming a build command, its `FLAI_IMAGE_*` variables, its log, and turning the automatic job off, beside `--image`.
+- `design/system/flai-cli.md`: mark § Where the agent images come from (ADR-0295) › The operator's own machinery built (S-0759), and bump `updated`.
 
-It waits for T-3191 and T-3194, whose flags and behaviour it describes.
+It waits for T-3191 and T-3194, whose commands and behaviour it describes.
 
 ## Done when
 
 - The five files describe both settings as built.
-- `TestSettingsIndex`, `TestFlagIndexIsCurrent`, `TestReferenceIsCurrent`, `flai check --strict`, and the markdown lint pass.
+- `flai test` on the five files passes: `TestSettingsIndex`, `TestFlagIndexIsCurrent`, `TestReferenceIsCurrent`, and the markdown lint.
 
 ## Notes
