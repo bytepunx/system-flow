@@ -420,12 +420,13 @@ export type KlusterCluster = {
 
 /**
  * One job flai serve ran, or runs, for the project's kluster (Go's hostapi.KlusterJob): an up or a
- * down of the cluster (S-0580), or a story's deploy or teardown or main's promotion (S-0581).
+ * down of the cluster (S-0580), a story's deploy or teardown or main's promotion (S-0581), or the
+ * checks run against a story's namespace the operator started (S-0663).
  */
 export type KlusterJob = {
-	action: 'up' | 'down' | 'deploy' | 'teardown' | 'promote';
+	action: 'up' | 'down' | 'deploy' | 'teardown' | 'promote' | 'checks';
 	cluster: string;
-	/** The story a deploy or a teardown is of; absent otherwise. */
+	/** The story a deploy, a teardown, or a checks run is of; absent otherwise. */
 	story?: string;
 	/** The namespace a deploy, a teardown, or a promotion acts on; absent for an up or a down. */
 	namespace?: string;
@@ -664,6 +665,8 @@ export type KlusterLockJob = {
 	namespace: string;
 	started_at: string;
 	pid: number;
+	/** Who asked for it, as the record's asked_by; absent for a job run in a shell. */
+	by?: string;
 };
 
 /** One namespace's deployment as kluster.deployments answers it (Go's hostapi.KlusterDeployment). */
@@ -695,11 +698,50 @@ export type KlusterDeployment = {
 	/** The story branch's head now, or main's for the default namespace. */
 	head?: string;
 	head_error?: string;
+	// What the page shows of each story namespace (S-0663); a host flai older than S-0663 sends
+	// none of these, so each is optional.
+	/** The story's column on the board, in-progress or review; absent for the default namespace. */
+	column?: string;
+	/** Whether commit is the story branch's head; false or absent for the default namespace. */
+	at_head?: boolean;
+	/** Where the last job's output is, from the project's root: its failed step's log, else its logs' folder. */
+	log?: string;
+	/** Who asked for the last job: the story's agent, or flai serve for the review pass; absent from a shell. */
+	asked_by?: string;
+	/** The commit the last checks run since the deploy ran against; absent until one ends. */
+	checks_commit?: string;
+	/** passed, failed, timed-out, or cancelled. */
+	checks_outcome?: string;
+	/** The last checks run's log, from the project's root. */
+	checks_log?: string;
+	/** Who asked for that checks run; absent for a run from a shell or the dashboard. */
+	checks_asked_by?: string;
+	/** The end of that log, at most 4 KB, cut to whole lines. */
+	checks_log_tail?: string;
 	access: KlusterAccess;
 };
 
 /** A story in review with no deployment recorded. */
 export type KlusterReview = { story: string; title: string; head?: string; head_error?: string };
+
+/** A story in progress or in review with no deployment recorded (Go's hostapi.KlusterUndeployed, S-0663). */
+export type KlusterUndeployed = KlusterReview & {
+	/** in-progress or review. */
+	column: string;
+};
+
+/** A deploy flai refused for kluster.agent_namespaces, the limit (Go's kluster.Refusal, S-0663). */
+export type KlusterRefusal = {
+	story: string;
+	/** The agent that asked. */
+	by: string;
+	/** RFC 3339. */
+	at: string;
+	/** kluster.agent_namespaces when it was refused. */
+	limit: number;
+	/** flai's words, naming the stories that held a namespace. */
+	reason: string;
+};
 
 /** What flai's kluster.deployments answers (Go's hostapi.KlusterDeployments, S-0581). */
 export type KlusterDeployments = {
@@ -716,6 +758,18 @@ export type KlusterDeployments = {
 	deployments: KlusterDeployment[];
 	/** The stories in review with no deployment recorded. */
 	review: KlusterReview[];
+	// The stories in progress beside those in review, and the count against the limit (S-0663); a
+	// host flai older than S-0663 sends none of these, so each is optional.
+	/** The stories in progress or in review with no deployment recorded, by ID. */
+	undeployed?: KlusterUndeployed[];
+	/** How many stories in progress hold a namespace. */
+	live?: number;
+	/** Which stories in progress hold one. */
+	holding?: string[];
+	/** kluster.agent_namespaces, the most stories in progress that may hold one; 0 with no block. */
+	limit?: number;
+	/** The deploys refused for the limit, newest first. */
+	refusals?: KlusterRefusal[];
 	/** The deploy, teardown, or promotion that runs now, whoever started it. */
 	running?: KlusterJob;
 	/** The last deploy, teardown, or promotion this flai serve ran. */
@@ -1156,6 +1210,17 @@ export class Repo extends EventEmitter {
 	async klusterDeploy(story: string): Promise<KlusterJob> {
 		const { data } = await upgraded(`deploy ${story}`, () =>
 			this.write<KlusterJob>('kluster.deploy', { story })
+		);
+		return data;
+	}
+
+	/**
+	 * Start the project's checks run against a story's namespace, flai's kluster.checks under the
+	 * kluster host action (S-0663), as klusterDeploy starts a deploy: flai answers the run at once.
+	 */
+	async klusterChecks(story: string): Promise<KlusterJob> {
+		const { data } = await upgraded(`run the checks of ${story}`, () =>
+			this.write<KlusterJob>('kluster.checks', { story })
 		);
 		return data;
 	}

@@ -102,6 +102,48 @@ describe('/api/kluster/forward (S-0586)', () => {
 		expect(body.deployments[0].access.forwards).toEqual([forward()]);
 	});
 
+	it("starts and stops a forward into a story in progress's namespace as into one in review (S-0663)", async () => {
+		const inProgress = (forwards: KlusterForward[]): KlusterDeployments => {
+			const d = deployments(forwards);
+			const [row] = d.deployments;
+			return {
+				...d,
+				deployments: [
+					{
+						...row,
+						story: 'S-0005',
+						namespace: 's-0005',
+						column: 'in-progress',
+						status: 'in-progress',
+						access: { ...row.access, namespace: 's-0005' }
+					}
+				]
+			};
+		};
+		const on = forward({ namespace: 's-0005' });
+		script['kluster.forward.start'] = { data: on };
+		script['kluster.deployments'] = { data: inProgress([on]) };
+		const started = await post({ namespace: 's-0005', service: 'web', port: 8080, on: true });
+		expect(started.status).toBe(200);
+		expect(asks('kluster.forward.start').map((a) => a.params)).toMatchObject([
+			{ namespace: 's-0005', service: 'web', port: 8080 }
+		]);
+		const body = (await started.json()) as KlusterDeployments;
+		expect(body.deployments[0]).toMatchObject({ column: 'in-progress', namespace: 's-0005' });
+		expect(body.deployments[0].access.forwards).toEqual([on]);
+
+		script['kluster.forward.stop'] = { data: { ...on, running: false } };
+		script['kluster.deployments'] = { data: inProgress([]) };
+		const stopped = await post({ namespace: 's-0005', service: 'web', port: 8080, on: false });
+		expect(stopped.status).toBe(200);
+		expect(asks('kluster.forward.stop').map((a) => a.params)).toMatchObject([
+			{ namespace: 's-0005', service: 'web', port: 8080 }
+		]);
+		expect(((await stopped.json()) as KlusterDeployments).deployments[0].access.forwards).toEqual(
+			[]
+		);
+	});
+
 	it('stops a forward with on false', async () => {
 		script['kluster.deployments'] = { data: deployments([]) };
 		const r = await post({ namespace: 's-0586', service: 'web', port: 8080, on: false });

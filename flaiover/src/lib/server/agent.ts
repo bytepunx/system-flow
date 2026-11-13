@@ -163,6 +163,8 @@ export const REQUIRED_METHODS = [
 	'kluster.deploy',
 	'kluster.teardown',
 	'kluster.promote',
+	// S-0663: the checks run against a story's namespace, behind the kluster host action
+	'kluster.checks',
 	// S-0586: the cluster's nodes and pods, and port-forwards behind the kluster host action
 	'kluster.workloads',
 	'kluster.forward.start',

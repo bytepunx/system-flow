@@ -135,6 +135,51 @@ describe('/api/kluster/deployments (S-0581)', () => {
 		expect(asks('kluster.deployments')).toHaveLength(2);
 	});
 
+	it("passes a story in progress's row and the count against the limit through (S-0663)", async () => {
+		const head = 'fedcba9876543210fedcba9876543210fedcba98';
+		const progress = deployment({
+			story: 'S-0005',
+			namespace: 's-0005',
+			title: 'A story in progress',
+			status: 'in-progress',
+			column: 'in-progress',
+			head,
+			at_head: false,
+			asked_by: 'agent-S-0005',
+			log: '.flai-cache/kluster/logs/s-0005',
+			checks_commit: '0123456789abcdef0123456789abcdef01234567',
+			checks_outcome: 'failed',
+			checks_log: '.flai-cache/serve/checks/s-0005-20261113T020000Z.log',
+			checks_asked_by: 'agent-S-0005',
+			checks_log_tail: 'FAIL login\n',
+			access: access('s-0005')
+		});
+		const counted = deployments({
+			deployments: [progress, deployment({ column: 'review', at_head: true })],
+			review: [{ story: 'S-0582', title: 'Another' }],
+			undeployed: [
+				{ story: 'S-0007', title: 'Not yet deployed', head, column: 'in-progress' },
+				{ story: 'S-0582', title: 'Another', column: 'review' }
+			],
+			live: 1,
+			holding: ['S-0005'],
+			limit: 1,
+			refusals: [
+				{
+					story: 'S-0007',
+					by: 'agent-S-0007',
+					at: '2026-11-13T03:00:00Z',
+					limit: 1,
+					reason: 'S-0005 holds the one story namespace kluster.agent_namespaces allows'
+				}
+			]
+		});
+		script['kluster.deployments'] = { data: counted };
+		const r = await get();
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(counted);
+	});
+
 	it('answers an empty cluster, and a running deploy, as flai gives them', async () => {
 		script['kluster.deployments'] = { data: deployments({ deployments: [], review: [] }) };
 		expect(await (await get()).json()).toMatchObject({ deployments: [], review: [] });
