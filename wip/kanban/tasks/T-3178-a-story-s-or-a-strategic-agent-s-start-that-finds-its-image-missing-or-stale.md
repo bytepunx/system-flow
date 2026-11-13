@@ -3,15 +3,21 @@ id: T-3178
 type: task
 nature: feature
 title: A story's or a strategic agent's start that finds its image missing or stale waits on an image job, recorded on its run, in place of refusing
-status: backlog
+status: in-progress
 parent: S-0751
 owner: alex
 created: 2026-11-12T16:01:44Z
-updated: 2026-11-12T16:02:29Z
-transitions: []
+updated: 2026-11-13T15:17:55Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:53:02Z
+    by: agent-S-0751
+  - to: in-progress
+    at: 2026-11-13T14:53:03Z
+    by: agent-S-0751
 stream: S-0751
 tags: [cli]
-touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go]
+touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/serve/agents_launch.go, flai/cmd/serve.go, flai/cmd/image.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/role.go, flai/internal/serve/agents_activity.go, flai/internal/serve/stop.go, flai/internal/serve/restart.go, flai/internal/serve/plan_test.go, flai/internal/serve/checks_test.go]
 after: [T-3177]
 ---
 # T-3178 A story's or a strategic agent's start that finds its image missing or stale waits on an image job, recorded on its run, in place of refusing

@@ -24,7 +24,7 @@ touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.g
 after: [T-2868]
 usage:
   source: log
-  seconds: 717
+  seconds: 719
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 516
       cache_read: 4496377
       cache_write: 255663
-      cost: 1.7763
+      cost: 1.7782
 ---
 # T-2869 kluster.deployments answers each story namespace's column, head, last deploy and checks run, and who asked, the stories in progress not deployed, and the count against the limit
 

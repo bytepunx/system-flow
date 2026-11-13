@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 727
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 157
-      cache_read: 1606013
-      cache_write: 64326
-      cost: 0.6244
+      input: 22
+      output: 8488
+      cache_read: 1630954
+      cache_write: 69843
+      cost: 0.8774
 ---
 # T-2877 The work-management convention tells a story's agent in a kluster project to deploy, check, and tick before review
 

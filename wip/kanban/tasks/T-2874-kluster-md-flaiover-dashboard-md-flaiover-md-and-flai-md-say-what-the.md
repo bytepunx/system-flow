@@ -3,16 +3,37 @@ id: T-2874
 type: task
 nature: feature
 title: kluster.md, flaiover-dashboard.md, flaiover.md, and flai.md say what the Deployments page, kluster.deployments, kluster.checks, and flai kluster deployments do for a story in progress
-status: backlog
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:26:15Z
-updated: 2026-11-10T08:26:15Z
-transitions: []
+updated: 2026-11-13T15:19:19Z
+transitions:
+  - to: ready
+    at: 2026-11-13T15:09:06Z
+    by: agent-S-0663
+  - to: in-progress
+    at: 2026-11-13T15:09:06Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T15:19:19Z
+    by: agent-S-0663
 stream: S-0663
 tags: [dashboard, cli]
 touches: [design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md]
 after: [T-2873]
+usage:
+  source: log
+  seconds: 607
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 654
+      cache_read: 7568149
+      cache_write: 179854
+      cost: 2.8992
 ---
 # T-2874 kluster.md, flaiover-dashboard.md, flaiover.md, and flai.md say what the Deployments page, kluster.deployments, kluster.checks, and flai kluster deployments do for a story in progress
 

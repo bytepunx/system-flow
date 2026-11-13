@@ -3,11 +3,11 @@ id: S-0662
 type: story
 nature: feature
 title: The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-13T14:27:21Z
+updated: 2026-11-13T15:19:55Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:30Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T13:41:31Z
     by: agent-S-0662
+  - to: review
+    at: 2026-11-13T15:18:10Z
+    by: agent-S-0662
+  - to: done
+    at: 2026-11-13T15:19:55Z
+    by: orchestrator
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
-touches: [flai/internal/kluster/evidence.go, flai/internal/kluster/evidence_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/review_test.go, flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/internal/verify/kluster_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/mergequeue/eligible.go, flai/internal/preview/accept.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
+touches: [flai/internal/kluster/evidence.go, flai/internal/kluster/evidence_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/review_test.go, flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/internal/verify/kluster_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/mergequeue/eligible.go, flai/internal/preview/accept.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/folder.go, docs/users/flai-reference.md]
 after: [S-0661]
 agent:
   harness: claude-code
@@ -26,21 +32,27 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2743
-  estimated: true
-  priced_by: estimate
+  seconds: 5814
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      test_runs: 2
+      ceremony: 2
+      test_runs: 4
       hand_edits: 2
-      work: 38
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 494
-      output: 2847
-      cache_read: 26177126
-      cache_write: 2106198
-      cost: 10.5725
+      input: 916
+      output: 354702
+      cache_read: 68152186
+      cache_write: 2918503
+      cost: 36.6618
+    - model: claude-sonnet-5-5
+      input: 20
+      output: 6933
+      cache_read: 475543
+      cache_write: 85220
+      cost: 0.33
   strategic:
     - kind: planner
       seconds: 134
@@ -88,14 +100,14 @@ The move to review, the close-out, and the review page say what was deployed and
 
 ## Acceptance criteria
 
-- [ ] While the `kluster` host action is on and a `deploy` is set, `flai move <story> review` and `item_move` warn when the story's namespace is not deployed at its branch's head, or its checks did not pass there, naming the commands that do both; they do not refuse
-- [ ] Their warning for unticked acceptance criteria says, in such a project, whether the namespace was deployed and checked at the head
-- [ ] The close-out records the namespace's last deploy and checks run, each with its commit and outcome, and `flai verify --last` and the MCP `item_get` show them
-- [ ] The dashboard's review page shows the same beside the criteria, with a link to each log
-- [ ] The orchestrator's acceptance reads the record as evidence for a criterion, as `design/system/strategic-agents.md` says
-- [ ] The work-management convention, in `design/system`, in `design/conventions`, and in `template/`, tells a story's agent in a project with a kluster to deploy, check, and tick before review, and to leave unticked only what it could not verify, with the reason
-- [ ] A story's prime pack in such a project names the deploy and checks commands
-- [ ] `docs/users/flai.md` and `docs/users/flaiover.md` say all of it
+- [x] While the `kluster` host action is on and a `deploy` is set, `flai move <story> review` and `item_move` warn when the story's namespace is not deployed at its branch's head, or its checks did not pass there, naming the commands that do both; they do not refuse
+- [x] Their warning for unticked acceptance criteria says, in such a project, whether the namespace was deployed and checked at the head
+- [x] The close-out records the namespace's last deploy and checks run, each with its commit and outcome, and `flai verify --last` and the MCP `item_get` show them
+- [x] The dashboard's review page shows the same beside the criteria, with a link to each log
+- [x] The orchestrator's acceptance reads the record as evidence for a criterion, as `design/system/strategic-agents.md` says
+- [x] The work-management convention, in `design/system`, in `design/conventions`, and in `template/`, tells a story's agent in a project with a kluster to deploy, check, and tick before review, and to leave unticked only what it could not verify, with the reason
+- [x] A story's prime pack in such a project names the deploy and checks commands
+- [x] `docs/users/flai.md` and `docs/users/flaiover.md` say all of it
 
 ## Tasks
 - T-2875 kluster.Evidence reads a story namespace's last deploy and checks run and says whether both passed at the branch's head
@@ -142,3 +154,18 @@ Left out on purpose:
 **Forecast.** `flai forecast` gives 1h27m: 109 s a unit over 118 large feature stories, size 48 (8 criteria, 40 touches). Raised to 2h30m: nine tasks in four layers, and three of them read record shapes that S-0659, S-0660, and S-0661 have not written yet. S-0628, of a like spread, was planned at 2h with six tasks. The delivery, 2026-11-10T19:37:00Z, is flai's play-out of the pull order (11th, in-progress limit 5), 18:34, plus the 1h03m added.
 
 **Cost of delay.** 30 USD a week, as `flai cod S-0662` works it out from the operator's `penalty_per_week: 30` on this story (alex, 2026-11-10T09:39:38Z; TH-0983). Not adjusted: the operator set the input on this story directly, which takes S-0662 out of the share of E-0035's `revenue_per_week: 1250`, and a penalty fits a story that saves review time and earns no revenue of its own.
+
+### Accepted by the orchestrator
+
+- Verified: 854c06c64e626982ae60a4a0c5dbcdfd37c01890
+- At: 2026-11-13T15:19:55Z
+
+Verdict: pass at 854c06c64e626982ae60a4a0c5dbcdfd37c01890
+- 1: flai/internal/kluster/evidence.go, flai/cmd/move.go, flai/internal/mcpserver/server.go, flai/cmd/move_test.go, flai/internal/mcpserver/review_test.go
+- 2: flai/internal/mcpserver/server.go, flai/internal/mcpserver/review_test.go, flai/cmd/move_test.go
+- 3: flai/internal/verify/kluster.go, flai/internal/verify/story.go, flai/cmd/verify.go, flai/internal/mcpserver/server.go, flai/internal/verify/kluster_test.go, flai/cmd/verify_test.go, flai/internal/mcpserver/server_test.go
+- 4: flai/internal/hostapi/writes_host.go, flaiover/src/lib/review.ts, flaiover/src/lib/components/Review.svelte, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte.test.ts
+- 5: design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/preview/orchestrator.go, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/evidence_test.go, flai/cmd/accept_orchestrator_test.go
+- 6: design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, template/CHANGELOG.md
+- 7: flai/internal/context/context.go, flai/internal/context/story.go, flai/internal/context/context_test.go
+- 8: docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md

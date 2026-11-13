@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 739
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 277
-      cache_read: 2288187
-      cache_write: 79093
-      cost: 0.8849
+      input: 31
+      output: 12030
+      cache_read: 2311463
+      cache_write: 98985
+      cost: 1.2434
 ---
 # T-2878 A story's prime pack in a kluster project names the deploy and checks commands
 

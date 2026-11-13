@@ -3,11 +3,11 @@ id: T-2886
 type: task
 nature: feature
 title: The dashboard's review page shows the namespace's last deploy and checks run beside the criteria, with a link to each log
-status: in-progress
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:48Z
-updated: 2026-11-13T14:27:55Z
+updated: 2026-11-13T14:51:48Z
 transitions:
   - to: ready
     at: 2026-11-13T14:27:55Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T14:27:55Z
     by: agent-S-0662
+  - to: done
+    at: 2026-11-13T14:51:48Z
+    by: agent-S-0662
 stream: S-0662
 tags: [dashboard]
 touches: [flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
 after: [T-2881]
+usage:
+  source: log
+  seconds: 1433
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 167
+      output: 64630
+      cache_read: 12417920
+      cache_write: 531777
+      cost: 6.6801
 ---
 # T-2886 The dashboard's review page shows the namespace's last deploy and checks run beside the criteria, with a link to each log
 

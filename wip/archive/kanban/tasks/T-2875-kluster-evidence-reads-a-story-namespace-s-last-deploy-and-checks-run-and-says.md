@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 700
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 287
-      cache_read: 1828261
-      cache_write: 157074
-      cost: 0.7422
+      input: 26
+      output: 10089
+      cache_read: 1938538
+      cache_write: 83015
+      cost: 1.0428
 ---
 # T-2875 kluster.Evidence reads a story namespace's last deploy and checks run and says whether both passed at the branch's head
 

@@ -3,11 +3,11 @@ id: T-2870
 type: task
 nature: feature
 title: The operator deploys, checks, and tears down a story in progress through kluster.deploy, a new kluster.checks, and kluster.teardown, and forwards into its namespace
-status: in-progress
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:25:08Z
-updated: 2026-11-13T14:25:24Z
+updated: 2026-11-13T14:44:55Z
 transitions:
   - to: ready
     at: 2026-11-13T14:25:23Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T14:25:24Z
     by: agent-S-0663
+  - to: done
+    at: 2026-11-13T14:44:55Z
+    by: agent-S-0663
 stream: S-0663
 tags: [cli, dashboard]
-touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/guardreads_test.go]
 after: [T-2869]
+usage:
+  source: log
+  seconds: 1171
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 132
+      output: 823
+      cache_read: 10736298
+      cache_write: 239585
+      cost: 4.1069
 ---
 # T-2870 The operator deploys, checks, and tears down a story in progress through kluster.deploy, a new kluster.checks, and kluster.teardown, and forwards into its namespace
 

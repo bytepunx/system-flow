@@ -3,15 +3,36 @@ id: T-3177
 type: task
 nature: feature
 title: flai serve runs the image ensure as a host job, one at a time, that held starts wait on and that the journal records
-status: backlog
+status: done
 parent: S-0751
 owner: alex
 created: 2026-11-12T16:01:38Z
-updated: 2026-11-12T16:01:38Z
-transitions: []
+updated: 2026-11-13T14:52:48Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:39:32Z
+    by: agent-S-0751
+  - to: in-progress
+    at: 2026-11-13T14:39:32Z
+    by: agent-S-0751
+  - to: done
+    at: 2026-11-13T14:52:48Z
+    by: agent-S-0751
 stream: S-0751
 tags: [cli]
 touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go]
+usage:
+  source: log
+  seconds: 795
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 311
+      cache_read: 3038304
+      cache_write: 127200
+      cost: 1.1838
 ---
 # T-3177 flai serve runs the image ensure as a host job, one at a time, that held starts wait on and that the journal records
 

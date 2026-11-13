@@ -24,16 +24,16 @@ touches: [flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/serve
 after: [T-2875]
 usage:
   source: log
-  seconds: 1842
+  seconds: 1849
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 411
-      cache_read: 3276213
-      cache_write: 233568
-      cost: 1.312
+      input: 48
+      output: 18467
+      cache_read: 3548192
+      cache_write: 151945
+      cost: 1.9087
 ---
 # T-2880 flai move to review and item_move warn when the namespace was not deployed and checked at the head, and the unticked-criteria warning says which
 

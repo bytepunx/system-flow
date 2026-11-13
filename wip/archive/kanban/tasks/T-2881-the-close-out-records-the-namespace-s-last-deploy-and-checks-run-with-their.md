@@ -24,16 +24,16 @@ touches: [flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/i
 after: [T-2875]
 usage:
   source: log
-  seconds: 1841
+  seconds: 1854
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 114
-      output: 600
-      cache_read: 6207448
-      cache_write: 683557
-      cost: 2.5759
+      input: 92
+      output: 35649
+      cache_read: 6849665
+      cache_write: 293325
+      cost: 3.6847
 ---
 # T-2881 The close-out records the namespace's last deploy and checks run with their commits and outcomes, and flai verify --last prints them
 

@@ -4,10 +4,10 @@ title: "S-0751 cannot be finalized yet: no cost of delay value until E-0036 has 
 anchor:
   path: wip/kanban/stories/S-0751-flai-serve-brings-a-missing-or-stale-agent-image-back-as-a-host-job-that-holds.md
   item: S-0751
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, agent-S-0751]
 created: 2026-11-12T16:11:34Z
-updated: 2026-11-12T16:11:34Z
+updated: 2026-11-13T15:17:43Z
 ---
 
 # TH-1108 S-0751 cannot be finalized yet: no cost of delay value until E-0036 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0751-flai-serve-brings-a-missing-or-stale-agent-image-ba
 
 - S-0751 has no inputs of its own. Its epic, E-0036, has none yet either, so `flai cod` cannot work out its share.
 - The criteria, the touches, the 50m forecast, and `after` S-0733, S-0740, and S-0745 fit the goal. Nothing else is missing.
+
+### 2026-11-13T15:17:43Z agent-S-0751
+Resolved: Settled: alex moved S-0751 to ready on 2026-11-13T07:30:13Z, so it is finalized, and agent-S-0751 started it at 14:38. Nothing is left to finalize.

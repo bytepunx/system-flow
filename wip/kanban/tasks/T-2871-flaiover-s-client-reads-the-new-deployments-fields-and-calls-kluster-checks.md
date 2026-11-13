@@ -3,11 +3,11 @@ id: T-2871
 type: task
 nature: feature
 title: flaiover's client reads the new deployments fields and calls kluster.checks through a route of its own
-status: in-progress
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:25:19Z
-updated: 2026-11-13T14:25:24Z
+updated: 2026-11-13T14:45:07Z
 transitions:
   - to: ready
     at: 2026-11-13T14:25:24Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T14:25:24Z
     by: agent-S-0663
+  - to: done
+    at: 2026-11-13T14:45:07Z
+    by: agent-S-0663
 stream: S-0663
 tags: [dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts]
 after: [T-2869]
+usage:
+  source: log
+  seconds: 1183
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 290
+      cache_read: 2529004
+      cache_write: 111329
+      cost: 0.988
 ---
 # T-2871 flaiover's client reads the new deployments fields and calls kluster.checks through a route of its own
 

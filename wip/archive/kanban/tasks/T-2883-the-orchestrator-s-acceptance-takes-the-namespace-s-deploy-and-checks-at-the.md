@@ -24,16 +24,16 @@ touches: [flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_
 after: [T-2875, T-2877]
 usage:
   source: log
-  seconds: 1841
+  seconds: 1859
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 345
-      cache_read: 3944779
-      cache_write: 411693
-      cost: 1.6284
+      input: 64
+      output: 24693
+      cache_read: 4744590
+      cache_write: 203179
+      cost: 2.5523
 ---
 # T-2883 The orchestrator's acceptance takes the namespace's deploy and checks at the verified commit as evidence for a criterion
 

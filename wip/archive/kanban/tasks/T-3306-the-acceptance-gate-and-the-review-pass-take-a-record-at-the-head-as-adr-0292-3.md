@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1841
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 389
-      cache_read: 2925431
-      cache_write: 196722
-      cost: 1.1671
+      input: 41
+      output: 15866
+      cache_read: 3048544
+      cache_write: 130549
+      cost: 1.6399
 ---
 # T-3306 The acceptance gate and the review pass take a record at the head as ADR-0292 §3 widens it
 

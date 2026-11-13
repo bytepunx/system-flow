@@ -3,11 +3,11 @@ id: T-2885
 type: task
 nature: feature
 title: The MCP item_get shows a story's last deploy and checks run in its namespace, with their commits and outcomes
-status: in-progress
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:43Z
-updated: 2026-11-13T14:27:53Z
+updated: 2026-11-13T14:51:39Z
 transitions:
   - to: ready
     at: 2026-11-13T14:27:52Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T14:27:53Z
     by: agent-S-0662
+  - to: done
+    at: 2026-11-13T14:51:39Z
+    by: agent-S-0662
 stream: S-0662
 tags: [cli]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go]
 after: [T-2880, T-2881]
+usage:
+  source: log
+  seconds: 1426
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 6555
+      cache_read: 1259538
+      cache_write: 53938
+      cost: 0.6776
 ---
 # T-2885 The MCP item_get shows a story's last deploy and checks run in its namespace, with their commits and outcomes
 

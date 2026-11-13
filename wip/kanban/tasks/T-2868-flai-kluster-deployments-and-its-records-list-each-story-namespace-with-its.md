@@ -32,7 +32,7 @@ usage:
       output: 694
       cache_read: 8839209
       cache_write: 198148
-      cost: 3.378
+      cost: 3.3816
 ---
 # T-2868 flai kluster deployments and its records list each story namespace with its column, head, last deploy and checks run, who asked, and the count against the limit
 

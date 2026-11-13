@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 278.4880
-accrued_seconds: 31067
-tasks_completed: 183
-last_run: 2026-11-13T14:38:18Z
+accrued_cost: 279.5746
+accrued_seconds: 31114
+tasks_completed: 184
+last_run: 2026-11-13T14:39:46Z
 ---
 
 # Curator activity
@@ -1475,3 +1475,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0476, D-0609
 - Seconds: 98
 - Cost: 1.0481 USD, estimated
+
+### 2026-11-13T14:39:46Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The only candidate, S-0771's note that its plan follows `publish.md`'s three steps (fetch, then evaluate, then publish, each in the main checkout), is already stated in ADR-0240 under "Decision". No design document changed since the last run, and none states the facts of D-0476 or D-0609, so both stay active.
+- Trigger: accepted S-0771
+- Items: none
+- Seconds: 47
+- Cost: 1.0866 USD, estimated

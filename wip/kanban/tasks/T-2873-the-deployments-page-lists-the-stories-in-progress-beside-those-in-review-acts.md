@@ -3,16 +3,37 @@ id: T-2873
 type: task
 nature: feature
 title: The Deployments page lists the stories in progress beside those in review, acts on them through DeploymentRow, and shows the count against the limit and the refused request
-status: backlog
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:25:53Z
-updated: 2026-11-10T08:26:34Z
-transitions: []
+updated: 2026-11-13T15:07:48Z
+transitions:
+  - to: ready
+    at: 2026-11-13T15:01:10Z
+    by: agent-S-0663
+  - to: in-progress
+    at: 2026-11-13T15:01:10Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T15:07:48Z
+    by: agent-S-0663
 stream: S-0663
 tags: [dashboard]
 touches: [flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts]
 after: [T-2870, T-2872]
+usage:
+  source: log
+  seconds: 398
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 333
+      cache_read: 3759106
+      cache_write: 131912
+      cost: 1.456
 ---
 # T-2873 The Deployments page lists the stories in progress beside those in review, acts on them through DeploymentRow, and shows the count against the limit and the refused request
 

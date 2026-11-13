@@ -3,16 +3,37 @@ id: T-2872
 type: task
 nature: feature
 title: DeploymentRow shows one story namespace's column, commit and head, last deploy and checks run, and who asked, with its actions and its examples
-status: backlog
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:25:31Z
-updated: 2026-11-10T08:25:31Z
-transitions: []
+updated: 2026-11-13T15:00:19Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:51:14Z
+    by: agent-S-0663
+  - to: in-progress
+    at: 2026-11-13T14:51:15Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T15:00:19Z
+    by: agent-S-0663
 stream: S-0663
 tags: [dashboard]
 touches: [flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, design/components/flaiover/src/lib/components/DeploymentRow.examples.json]
 after: [T-2871]
+usage:
+  source: log
+  seconds: 544
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 427
+      cache_read: 4342069
+      cache_write: 132347
+      cost: 1.6743
 ---
 # T-2872 DeploymentRow shows one story namespace's column, commit and head, last deploy and checks run, and who asked, with its actions and its examples
 
