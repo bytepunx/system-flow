@@ -3,11 +3,11 @@ id: T-3286
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 parent: S-0766
 owner: alex
 created: 2026-11-13T11:40:39Z
-updated: 2026-11-13T11:42:30Z
+updated: 2026-11-13T11:42:38Z
 transitions:
   - to: ready
     at: 2026-11-13T11:42:17Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T11:42:17Z
     by: agent-S-0766
+  - to: done
+    at: 2026-11-13T11:42:38Z
+    by: agent-S-0766
 stream: S-0766
 tags: []
 after: [T-3285]
+usage:
+  source: log
+  seconds: 21
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 737
+      cache_read: 341362
+      cache_write: 15395
+      cost: 0.2062
 ---
 # T-3286 Publish what is accepted and not yet released
 

@@ -3,10 +3,10 @@ id: S-0766
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T11:40:39Z
-updated: 2026-11-13T11:40:48Z
+updated: 2026-11-13T11:45:13Z
 transitions:
   - to: ready
     at: 2026-11-13T11:40:40Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T11:40:48Z
     by: agent-S-0766
+  - to: review
+    at: 2026-11-13T11:43:19Z
+    by: agent-S-0766
+  - to: done
+    at: 2026-11-13T11:45:13Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0766-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,20 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 83
-  estimated: true
-  priced_by: estimate
+  seconds: 159
+  priced_by: harness
   turns:
     - day: 2026-11-13
+      ceremony: 1
       hand_edits: 1
-      work: 15
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 248
-      cache_read: 1864497
-      cache_write: 155470
-      cost: 0.7536
+      input: 58
+      output: 8890
+      cache_read: 4119617
+      cache_write: 185786
+      cost: 2.4882
   strategic:
     - kind: orchestrator
       seconds: 35
@@ -58,9 +64,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3284 Fetch the remote's branch and tags
@@ -70,3 +76,6 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+- 2026-11-13: published flai 1.88.0 → 1.89.0 (minor), tag `flai/v1.89.0`, for S-0734. No other component was released and the template was not published. Branch and tag pushed to `origin`.
+- S-0761 was accepted at 11:42:31Z, after step 3 ran: it is not in this release and waits for the next publish.

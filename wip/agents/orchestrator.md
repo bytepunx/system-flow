@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2151.8795
-accrued_seconds: 1556584
-tasks_completed: 3269
-last_run: 2026-11-13T11:42:18Z
+accrued_cost: 2152.1921
+accrued_seconds: 1556662
+tasks_completed: 3273
+last_run: 2026-11-13T11:44:12Z
 ---
 
 # Orchestrator activity
@@ -22917,6 +22917,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: TH-1151, S-0766
 - Seconds: 15
 - Cost: 0.0823 USD, estimated
+
+### 2026-11-13T11:42:35Z
+
+- Summary: TH-1151 needed nothing from me, because `flai serve` had already resolved it. At 11:40:40Z the publish story S-0766 got into in-progress, so the board was no longer starved.
+- Items: none
+- Seconds: 17
+- Cost: 0.0838 USD, estimated
+
+### 2026-11-13T11:43:37Z
+
+- Summary: Ran flai formula run publish --ready --autocommit for S-0761 (accepted after S-0766's publish step): instance S-0768 moved to ready, commit 1c6a59451. Policy threshold met: count 1 at or over 1, value 2.5 USD under 1000.
+- Items: S-0768, S-0761
+- Seconds: 26
+- Cost: 0.1287 USD, estimated
+
+### 2026-11-13T11:43:55Z
+
+- Summary: Applied flai order --by throughput after S-0768 entered ready: order S-0760 32m, S-0745 40m, S-0759 42m, S-0751 50m, S-0757 50m, S-0661 1h15m, S-0663 1h30m, S-0662 2h30m (S-0768 not listed in ready by then).
+- Items: S-0768
+- Seconds: 18
+- Cost: 0.0534 USD, estimated
+
+### 2026-11-13T11:44:12Z
+
+- Summary: I started the release for S-0761: the publish formula made story S-0768. That story's agent has picked it up, so nothing is released yet.
+- Items: none
+- Seconds: 17
+- Cost: 0.0467 USD, estimated
 
 ## Refusals
 

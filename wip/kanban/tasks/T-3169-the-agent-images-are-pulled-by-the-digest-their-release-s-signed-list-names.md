@@ -7,11 +7,12 @@ status: backlog
 parent: S-0740
 owner: alex
 created: 2026-11-12T15:59:26Z
-updated: 2026-11-12T15:59:26Z
+updated: 2026-11-13T11:43:39Z
 transitions: []
 stream: S-0740
 tags: [cli]
-touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go]
+touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go]
+after: [T-3287]
 ---
 # T-3169 The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
 

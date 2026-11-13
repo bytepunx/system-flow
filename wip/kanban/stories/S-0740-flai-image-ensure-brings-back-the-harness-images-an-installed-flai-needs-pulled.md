@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T11:39:55Z
+updated: 2026-11-13T11:44:32Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:14Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0740
 tags: [cli]
 topics: [docker, release, security]
-touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]
+touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/images/embed_test.go]
 after: [S-0734, S-0735]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 280
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      ceremony: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 344
+      cache_read: 3612303
+      cache_write: 265837
+      cost: 1.447
   strategic:
     - kind: orchestrator
       seconds: 31
@@ -70,9 +82,10 @@ After this story, `flai image ensure` makes each missing or stale harness image 
 ## Tasks
 - T-3168 The flai binary carries the bedrock and claude-code Dockerfiles through a go:embed package at flai/images
 - T-3169 The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
-- T-3170 flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries, with a limit on a silent step and a retry on the network
+- T-3170 flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries checked against the signed checksums, or from a development tree's own
 - T-3171 flai image ensure pulls or builds each missing or stale harness image, and flai image build builds without the pull
 - T-3172 The user guide, the reference, the agent-container runbook, and flai-cli.md describe flai image ensure and build as the way back for a missing harness image
+- T-3287 A docker step of a pull or a build streams its output, is stopped after the stall limit, and is tried again on a network failure
 
 ## Notes
 
