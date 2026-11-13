@@ -3,10 +3,10 @@ id: S-0773
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T15:20:30Z
-updated: 2026-11-13T15:21:24Z
+updated: 2026-11-13T15:25:41Z
 transitions:
   - to: ready
     at: 2026-11-13T15:20:32Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T15:21:24Z
     by: agent-S-0773
+  - to: review
+    at: 2026-11-13T15:24:15Z
+    by: agent-S-0773
+  - to: done
+    at: 2026-11-13T15:25:41Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0773-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,19 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 111
-  estimated: true
-  priced_by: estimate
+  seconds: 189
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 17
+      ceremony: 2
+      work: 27
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 350
-      cache_read: 1941591
-      cache_write: 152359
-      cost: 0.7837
+      input: 62
+      output: 8619
+      cache_read: 4229001
+      cache_write: 165564
+      cost: 2.3429
   strategic:
     - kind: orchestrator
       seconds: 47
@@ -57,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3307 Fetch the remote's branch and tags
@@ -69,3 +75,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: a34dfb428f53edd128cdb0518643fa25e5d0a502
+- At: 2026-11-13T15:25:41Z
+
+Verdict: pass at a34dfb428f53edd128cdb0518643fa25e5d0a502
+- 1: T-3307 done
+- 2: T-3308 done
+- 3: T-3309 done

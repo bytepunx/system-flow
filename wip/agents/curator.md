@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 281.3025
-accrued_seconds: 31250
-tasks_completed: 185
-last_run: 2026-11-13T15:22:18Z
+accrued_cost: 282.5424
+accrued_seconds: 31328
+tasks_completed: 186
+last_run: 2026-11-13T15:23:59Z
 ---
 
 # Curator activity
@@ -1491,3 +1491,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0470, D-0609
 - Seconds: 136
 - Cost: 1.7279 USD, estimated
+
+### 2026-11-13T15:23:59Z
+
+- Summary: I wrote D-0610 from S-0772, TH-1161 and S-0771, and merged, absorbed, and compacted nothing. D-0610 records that a duplicate publish formula instance is worked as started, stops cleanly at its evaluate step, and is accepted as a stopped instance rather than cancelled. S-0772's other candidate was a plan note. No design document states D-0603, D-0604, D-0607 or D-0610, so they stay active.
+- Trigger: accepted S-0772
+- Items: D-0610
+- Seconds: 78
+- Cost: 1.2399 USD, estimated
