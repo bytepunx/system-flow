@@ -2,12 +2,12 @@
 id: I-0352
 title: A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it
 class: impression
-status: open
+status: closed
 count: 1
 cost: 1m
 first_reported: 2026-11-11T22:53:06Z
 last_reported: 2026-11-11T22:53:06Z
-updated: 2026-11-12T03:43:39Z
+updated: 2026-11-13T20:21:27Z
 ---
 
 # I-0352 A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it
@@ -24,3 +24,4 @@ Found by T-3120. On 2026-11-10 at 11:03:59.967Z S-0665's agent overwrote the mai
 ## Remediation
 
 Story S-0730 remediates this issue, created from it at 2026-11-12T03:43:39Z.
+Closed 2026-11-13T20:21:27Z: S-0730: flai guard now reads the content of a Claude Code Write or an OpenCode write and refuses one that replaces an epic, story, or task file whole with content that is not that item: no front matter, front matter that does not parse, or another id or type than the file's name and folder give. It points the caller to Edit and flai edit (flai/internal/guard/items.go, ADR-0298). TestTheGuardRefusesAWriteThatReplacesAWorkItemWithWhatIsNotIt reproduces the Write of PLACEHOLDER over T-3079.
