@@ -6,7 +6,7 @@ title: "flai check finds `item.blocked-closed` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T07:29:36Z
+updated: 2026-11-13T07:29:51Z
 transitions: []
 tags: [flai, check]
 topics: [cli, conventions, template]
@@ -48,6 +48,8 @@ This story remediates [I-0354](../../../design/issues/I-0354-flai-check-finds-it
 ## Tasks
 - T-3268 Close S-0678's blocked interval at its close with the tree's flai unblock
 - T-3269 Record in an ADR whether a close-out leaves out item.blocked-closed outside the story
+- T-3270 Leave item.blocked-closed outside the story out of a check scoped to a story, with a test that reproduces I-0354
+- T-3271 Say in the design, the user guide, and the work-management convention that a close-out leaves out item.blocked-closed
 
 ## Notes
 

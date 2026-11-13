@@ -3,12 +3,18 @@ id: T-3149
 type: task
 nature: feature
 title: Write the ADR, proposed, refining ADR-0212 on where an installed flai's agent images come from and how flai keeps them
-status: backlog
+status: in-progress
 parent: S-0733
 owner: alex
 created: 2026-11-12T15:55:01Z
-updated: 2026-11-12T15:55:28Z
-transitions: []
+updated: 2026-11-13T07:29:48Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:29:48Z
+    by: agent-S-0733
+  - to: in-progress
+    at: 2026-11-13T07:29:48Z
+    by: agent-S-0733
 stream: S-0733
 tags: [cli]
 touches: [design/adrs/README.md]

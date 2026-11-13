@@ -3,10 +3,10 @@ id: S-0762
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: review
+status: done
 owner: alex
 created: 2026-11-13T07:24:38Z
-updated: 2026-11-13T07:27:20Z
+updated: 2026-11-13T07:29:50Z
 transitions:
   - to: ready
     at: 2026-11-13T07:24:39Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-13T07:27:20Z
     by: agent-S-0762
+  - to: done
+    at: 2026-11-13T07:29:50Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0762-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -80,3 +83,13 @@ Published 2026-11-13 by T-3267, pushed:
 |-----------|------|----|----------------|-------|
 | flai | 1.86.22 | 1.86.23 | `flai/v1.86.23` | S-0683, S-0723, S-0726, S-0732 |
 | template | 1.1.34 | 1.1.35 | `template/template.yaml`, template repository v1.1.35 at 2c78d45 | S-0726 |
+
+### Accepted by the orchestrator
+
+- Verified: a84b3003d0222e4ff2544abf68e57d2237cc3ef9
+- At: 2026-11-13T07:29:50Z
+
+Verdict: met at a84b3003d0222e4ff2544abf68e57d2237cc3ef9
+- 1: T-3265 done
+- 2: T-3266 done
+- 3: T-3267 done
