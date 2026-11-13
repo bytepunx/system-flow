@@ -43,6 +43,12 @@ agent:
     effort: high
   image:
     layer: flai/images/system-flow/Dockerfile
+    args:
+      GO_VERSION: "1.26.0"
+      GOLANGCI_LINT_VERSION: v2.5.0
+      SHELLCHECK_VERSION: v0.10.0
+      PNPM_VERSION: "10.34.5"
+      GORELEASER_VERSION: v2.18.1
 planning:
   hour_rate: 150
   agent:

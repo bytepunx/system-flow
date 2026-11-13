@@ -4,9 +4,10 @@
 # flai/go.mod's version with gcc and musl-dev for -race, golangci-lint v2 built with that Go,
 # ShellCheck, pnpm on the base image's Node 24, and for the smoke tier's install test curl, openssl,
 # and GoReleaser (I-0281). Build it after the harness image, and check it:
-#   scripts/agent-image.sh --layer      (make agent-images builds all three)
+#   flai image build --layer            (or scripts/agent-image.sh --layer; make agent-images builds all three)
 #   scripts/agent-image.sh --check      (runs the smoke tier inside it)
-# which passes BASE, GO_VERSION from flai/go.mod, and the versions scripts/install-tools.sh pins.
+# Both pass BASE, the harness image, and the build arguments system-flow.yaml names under
+# agent.image.args (S-0760). The ARG defaults below are the same pins; keep the two in step.
 # No login state and no key, as the base has none; it keeps the base's entrypoint, pilot.
 
 ARG BASE=flai-agent-claude-code:local
