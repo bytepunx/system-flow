@@ -3,12 +3,18 @@ id: T-3296
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0769
 owner: alex
 created: 2026-11-13T12:40:07Z
-updated: 2026-11-13T12:40:07Z
-transitions: []
+updated: 2026-11-13T12:54:30Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:54:30Z
+    by: agent-S-0769
+  - to: in-progress
+    at: 2026-11-13T12:54:30Z
+    by: agent-S-0769
 stream: S-0769
 tags: []
 after: [T-3295]
