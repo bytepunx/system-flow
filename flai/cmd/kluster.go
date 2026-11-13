@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -46,7 +47,8 @@ deployments lists what each namespace holds. Each job logs its steps under
 prints, and records its outcome under .flai-cache/kluster/deployments, and
 one job runs at a time per project. flai kluster exec S-nnnn -- <command>
 runs a command in the story's worktree with its namespace's variables and
-the namespace's own kubeconfig, while the namespace has a record.
+the namespace's own kubeconfig, while the namespace has a record, and flai
+kluster env S-nnnn prints those variables, as export lines or JSON.
 
 They work from your shell whatever the kluster host action says. flai guard
 refuses every agent and sub-agent up, down, deploy, teardown, and promote,
@@ -72,13 +74,14 @@ how to install kluster.`,
   flai kluster deployments
   flai kluster log S-0578 --step deploy
   flai kluster exec S-0578 -- kubectl get pods
+  eval "$(flai kluster env S-0578)"
   flai kluster teardown S-0578 --yes
   flai kluster promote
   flai kluster down --yes`,
 		Args: cobra.NoArgs,
 	}
 	c.AddCommand(newKlusterUpCmd(a), newKlusterDownCmd(a), newKlusterStatusCmd(a),
-		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a), newKlusterLogCmd(a), newKlusterExecCmd(a))
+		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a), newKlusterLogCmd(a), newKlusterExecCmd(a), newKlusterEnvCmd(a))
 	return c
 }
 
@@ -647,38 +650,133 @@ as deploy --job is. The command goes after --, and with none it is refused.`,
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			story := workitem.CanonicalID(args[0])
-			ns, err := kluster.StoryNamespace(story)
+			e, err := a.klusterAgentEnv(args[0])
 			if err != nil {
 				return err
 			}
-			if own := sessionStory(); own != "" && workitem.CanonicalID(own) != story {
-				return fmt.Errorf("this session works %s, and a story's agent runs commands against its own story's namespace alone (ADR-0292), so nothing was run for %s; run them for %s, or leave %s's namespace to its own agent", workitem.CanonicalID(own), story, workitem.CanonicalID(own), story)
-			}
-			repo, err := a.project()
-			if err != nil {
-				return err
-			}
-			c, err := kluster.New(mainRootOf(repo), repo.Manifest, kluster.System{})
-			if err != nil {
-				return err
-			}
-			vars, err := c.AgentEnv(story)
-			if errors.Is(err, kluster.ErrNotDeployed) {
-				return fmt.Errorf("%s's namespace %s has no record under .flai-cache/kluster/deployments, so there are no variables or kubeconfig to run with; deploy it first with flai kluster deploy %s --job", story, ns, story)
-			}
-			if err != nil {
-				return err
-			}
-			wt := repo.WorktreePath(story)
+			wt := e.repo.WorktreePath(e.story)
 			if !dirExists(wt) {
-				return fmt.Errorf("%s has no worktree at %s to run in; open it with flai stream open %s, then run again", story, wt, story)
+				return fmt.Errorf("%s has no worktree at %s to run in; open it with flai stream open %s, then run again", e.story, wt, e.story)
 			}
-			if kc := kluster.AgentKubeconfigPath(c.Root, story); !fileExists(kc) {
-				fmt.Fprintf(a.errOut, "flai: %s's namespace %s has no kubeconfig at %s yet, as its deploy step has not passed; KUBECONFIG names it all the same\n", story, ns, kc)
-			}
-			return a.execIn(cmd, wt, klusterExecEnv(os.Environ(), vars), args[1:])
+			a.warnNoAgentKubeconfig(e)
+			return a.execIn(cmd, wt, klusterExecEnv(os.Environ(), e.vars), args[1:])
 		},
+	}
+}
+
+func newKlusterEnvCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "env S-nnnn",
+		Short: "Print a story's namespace's variables and kubeconfig, as export lines or JSON",
+		Long: `Prints the variables of a story's namespace, s-nnnn, the ones flai kluster
+exec runs a command with (design/system/kluster.md, ADR-0292 §2): FLAI_STORY,
+FLAI_KLUSTER_NAME, FLAI_KLUSTER_NAMESPACE, FLAI_KLUSTER_PREFIX,
+FLAI_KLUSTER_COMMIT and FLAI_KLUSTER_TAG at the commit the namespace's record
+names, FLAI_KLUSTER_STATE, FLAI_KLUSTER_CONTEXT, and KUBECONFIG, the
+namespace's own kubeconfig, .flai-cache/kluster/agents/s-nnnn.kubeconfig, not
+flai's for the cluster, so the API server refuses a command run with it
+anything outside the namespace. FLAI_KLUSTER_IMAGES and FLAI_KLUSTER_COMPONENT,
+which only a build gets, are not among them.
+
+It prints one line a variable, sorted by name, of the form
+export NAME='value', each value quoted for sh and zsh, so that
+eval "$(flai kluster env S-nnnn)" sets them in the shell, for a command of
+the agent's own such as a request to a service in its namespace. flai guard
+refuses a story's agent a line with $ around it, as one not written plainly,
+so an agent writes them to a file and sources it on the same line,
+flai kluster env S-nnnn > /tmp/s-nnnn.env && . /tmp/s-nnnn.env && <command>,
+or runs the command with flai kluster exec. --json prints one object of each
+variable's name and value.
+
+It prints while the namespace has a record under
+.flai-cache/kluster/deployments, a failed one included, for diagnosis: a
+deploy that failed before its kubeconfig was written is said to have none on
+standard error, and the variables are printed all the same. A story with no
+record is refused, saying to deploy it first with flai kluster deploy S-nnnn
+--job. It needs no worktree, runs neither kluster nor flai serve, and so
+needs no kluster on PATH. A session with a story of its own, FLAI_STORY, else
+the story in an agent name of the form agent-S-nnnn, is refused another
+story's namespace, as exec is.`,
+		Example: `  flai kluster env S-0578
+  eval "$(flai kluster env S-0578)"
+  flai kluster env S-0578 > /tmp/s-0578.env && . /tmp/s-0578.env && kubectl get pods
+  flai kluster env S-0578 --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			e, err := a.klusterAgentEnv(args[0])
+			if err != nil {
+				return err
+			}
+			a.warnNoAgentKubeconfig(e)
+			vars := make(map[string]string, len(e.vars))
+			for _, v := range e.vars {
+				k, val, _ := strings.Cut(v, "=")
+				vars[k] = val
+			}
+			if a.jsonOut {
+				return a.printJSON(vars)
+			}
+			for _, k := range slices.Sorted(maps.Keys(vars)) {
+				fmt.Fprintf(a.out, "export %s=%s\n", k, shellQuote(vars[k]))
+			}
+			return nil
+		},
+	}
+}
+
+// shellQuote is v in single quotes for sh and zsh, each single quote in it
+// written as a quote that closes the string, a backslash-escaped quote, and
+// a quote that opens it again.
+func shellQuote(v string) string {
+	return "'" + strings.ReplaceAll(v, "'", `'\''`) + "'"
+}
+
+// klusterAgent is a story's namespace as flai kluster exec and env give it
+// to the story's agent: the story, its namespace, the project, the cluster,
+// and the namespace's variables at its record's commit.
+type klusterAgent struct {
+	story   string
+	ns      string
+	repo    *workitem.Repo
+	cluster kluster.Cluster
+	vars    []string
+}
+
+// klusterAgentEnv reads the namespace of the story arg names and its
+// variables (Cluster.AgentEnv), refusing a session with a story of its own
+// another story's namespace, and a namespace with no record.
+func (a *app) klusterAgentEnv(arg string) (klusterAgent, error) {
+	story := workitem.CanonicalID(arg)
+	ns, err := kluster.StoryNamespace(story)
+	if err != nil {
+		return klusterAgent{}, err
+	}
+	if own := sessionStory(); own != "" && workitem.CanonicalID(own) != story {
+		return klusterAgent{}, fmt.Errorf("this session works %s, and a story's agent runs commands against its own story's namespace alone (ADR-0292), so nothing was run for %s; run them for %s, or leave %s's namespace to its own agent", workitem.CanonicalID(own), story, workitem.CanonicalID(own), story)
+	}
+	repo, err := a.project()
+	if err != nil {
+		return klusterAgent{}, err
+	}
+	c, err := kluster.New(mainRootOf(repo), repo.Manifest, kluster.System{})
+	if err != nil {
+		return klusterAgent{}, err
+	}
+	vars, err := c.AgentEnv(story)
+	if errors.Is(err, kluster.ErrNotDeployed) {
+		return klusterAgent{}, fmt.Errorf("%s's namespace %s has no record under .flai-cache/kluster/deployments, so there are no variables or kubeconfig to run with; deploy it first with flai kluster deploy %s --job", story, ns, story)
+	}
+	if err != nil {
+		return klusterAgent{}, err
+	}
+	return klusterAgent{story: story, ns: ns, repo: repo, cluster: c, vars: vars}, nil
+}
+
+// warnNoAgentKubeconfig says on standard error that e's namespace has no
+// kubeconfig of its own yet, when it has none.
+func (a *app) warnNoAgentKubeconfig(e klusterAgent) {
+	if kc := kluster.AgentKubeconfigPath(e.cluster.Root, e.story); !fileExists(kc) {
+		fmt.Fprintf(a.errOut, "flai: %s's namespace %s has no kubeconfig at %s yet, as its deploy step has not passed; KUBECONFIG names it all the same\n", e.story, e.ns, kc)
 	}
 }
 

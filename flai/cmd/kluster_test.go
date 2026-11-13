@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -972,4 +973,143 @@ func TestKlusterExecRefusals(t *testing.T) {
 	if _, err := os.Stat(marker); err == nil {
 		t.Errorf("a refusal runs nothing")
 	}
+}
+
+// envNames are the names of flai kluster env's export lines, in order.
+func envNames(t *testing.T, out string) []string {
+	t.Helper()
+	var names []string
+	for _, l := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
+		rest, ok := strings.CutPrefix(l, "export ")
+		name, _, eq := strings.Cut(rest, "=")
+		if !ok || !eq {
+			t.Fatalf("not an export line: %q in\n%s", l, out)
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
+// S-0661 criterion 3, ADR-0292 §2: flai kluster env prints exec's variables,
+// with KUBECONFIG the namespace's own, as export lines sorted by name that
+// eval sets in the shell, or as one JSON object; it needs no worktree, and
+// the operator's shell prints them for the story given.
+func TestKlusterEnvPrintsTheNamespacesVariables(t *testing.T) {
+	root, wt := execProject(t, kluster.OutcomePassed, true)
+	if err := os.RemoveAll(wt); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code := runKlusterExit(t, root, "kluster", "env", "S-7")
+	if code != 0 {
+		t.Fatalf("env: %d %s %s", code, out, errOut)
+	}
+	agentKC := kluster.AgentKubeconfigPath(root, "S-0007")
+	lines := strings.Split(out, "\n")
+	for _, want := range []string{
+		"export FLAI_STORY='S-0007'",
+		"export FLAI_KLUSTER_NAME='demo-integration'",
+		"export FLAI_KLUSTER_NAMESPACE='s-0007'",
+		"export FLAI_KLUSTER_PREFIX='s0007_'",
+		"export FLAI_KLUSTER_COMMIT='" + klusterHead + "'",
+		"export FLAI_KLUSTER_TAG='s-0007-0123456789ab'",
+		"export FLAI_KLUSTER_STATE='" + kluster.StatePath(root, "s-0007") + "'",
+		"export FLAI_KLUSTER_CONTEXT='k3d-demo-integration'",
+		"export KUBECONFIG='" + agentKC + "'",
+	} {
+		if !slices.Contains(lines, want) {
+			t.Errorf("env prints %q:\n%s", want, out)
+		}
+	}
+	names := envNames(t, out)
+	if len(names) != 9 || !slices.IsSorted(names) {
+		t.Errorf("env prints the nine variables sorted by name: %v", names)
+	}
+	for _, not := range []string{"FLAI_KLUSTER_IMAGES", "FLAI_KLUSTER_COMPONENT", "/elsewhere", "'" + kluster.KubeconfigPath(root) + "'"} {
+		if strings.Contains(out, not) {
+			t.Errorf("env does not print %q:\n%s", not, out)
+		}
+	}
+	if strings.Contains(errOut, "has no kubeconfig") {
+		t.Errorf("a namespace with its kubeconfig says nothing of it: %s", errOut)
+	}
+	sh := exec.Command("sh", "-c", `eval "$1"; echo "$KUBECONFIG"; echo "$FLAI_KLUSTER_NAMESPACE"`, "sh", out)
+	if got, err := sh.Output(); err != nil || string(got) != agentKC+"\ns-0007\n" {
+		t.Errorf("eval sets the variables in place of the shell's: %v %q", err, got)
+	}
+
+	out, errOut, code = runKlusterExit(t, root, "kluster", "env", "S-0007", "--json")
+	var vars map[string]string
+	if code != 0 || json.Unmarshal([]byte(out), &vars) != nil {
+		t.Fatalf("env --json: %d %s %s", code, out, errOut)
+	}
+	if len(vars) != 9 || vars["KUBECONFIG"] != agentKC || vars["FLAI_KLUSTER_NAMESPACE"] != "s-0007" || vars["FLAI_KLUSTER_COMMIT"] != klusterHead {
+		t.Errorf("env --json prints the nine variables by name: %v", vars)
+	}
+
+	t.Setenv("FLAI_AGENT", "alex")
+	if out, errOut, code := runKlusterExit(t, root, "kluster", "env", "S-0007"); code != 0 || !strings.Contains(out, "export FLAI_KLUSTER_NAMESPACE='s-0007'\n") {
+		t.Errorf("the operator's shell prints the story given: %d %q %s", code, out, errOut)
+	}
+}
+
+// S-0661 criterion 3: a value is single-quoted so that sh, and zsh where the
+// host has it, read it back as it is, a ' and what a shell expands in it
+// included.
+func TestKlusterEnvQuotesForTheShell(t *testing.T) {
+	values := []string{"", "plain", "it's", "''", `a "b" $HOME ` + "`id`" + ` \n *`, "two\nlines"}
+	shells := []string{"sh"}
+	if _, err := exec.LookPath("zsh"); err == nil {
+		shells = append(shells, "zsh")
+	}
+	for _, v := range values {
+		for _, s := range shells {
+			got, err := exec.Command(s, "-c", `eval "$1"; printf %s "$V"`, s, "export V="+shellQuote(v)).Output()
+			if err != nil || string(got) != v {
+				t.Errorf("%s reads %s back as %q: %v %q", s, shellQuote(v), v, err, got)
+			}
+		}
+	}
+	if got := shellQuote("it's"); got != `'it'\''s'` {
+		t.Errorf("a ' is written as '\\'': %s", got)
+	}
+}
+
+// S-0661 criterion 3: a namespace whose record failed before its kubeconfig
+// was written prints its variables all the same, and says on standard error
+// that the kubeconfig is not there yet.
+func TestKlusterEnvPrintsForAFailedRecord(t *testing.T) {
+	root, _ := execProject(t, kluster.OutcomeFailed, false)
+	kc := kluster.AgentKubeconfigPath(root, "S-0007")
+	out, errOut, code := runKlusterExit(t, root, "kluster", "env", "S-0007")
+	if code != 0 || !strings.Contains(out, "export KUBECONFIG='"+kc+"'\n") {
+		t.Fatalf("a failed record prints: %d %q %s", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "S-0007's namespace s-0007 has no kubeconfig at "+kc) {
+		t.Errorf("a missing kubeconfig is said: %s", errOut)
+	}
+}
+
+// S-0661 criterion 3, ADR-0292 §2: another story than the session's, not a
+// story, and a namespace with no record are refused, and nothing is printed.
+func TestKlusterEnvRefusals(t *testing.T) {
+	root, _ := execProject(t, kluster.OutcomePassed, true)
+	check := func(name string, want []string, args ...string) {
+		t.Helper()
+		out, errOut, code := runKlusterExit(t, root, append([]string{"kluster", "env"}, args...)...)
+		if code == 0 || out != "" {
+			t.Errorf("%s: %d %q %s", name, code, out, errOut)
+		}
+		for _, w := range want {
+			if !strings.Contains(errOut, w) {
+				t.Errorf("%s says %q: %s", name, w, errOut)
+			}
+		}
+	}
+	check("another story", []string{"this session works S-0007", "nothing was run for S-0008"}, "S-0008")
+	check("an epic", []string{"is not a story ID"}, "E-0001")
+	check("two stories", []string{"accepts 1 arg"}, "S-0007", "S-0008")
+	if err := os.Remove(kluster.RecordPath(root, "s-0007")); err != nil {
+		t.Fatal(err)
+	}
+	check("no record", []string{"S-0007's namespace s-0007 has no record", "flai kluster deploy S-0007 --job"}, "S-0007")
 }

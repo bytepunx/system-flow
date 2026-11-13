@@ -2741,7 +2741,7 @@ A project names its local Kubernetes cluster in the kluster: block of its system
 
 flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it.
 
-flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs, which flai kluster log S-nnnn --step &lt;step&gt; prints, and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project. flai kluster exec S-nnnn -- &lt;command&gt; runs a command in the story's worktree with its namespace's variables and the namespace's own kubeconfig, while the namespace has a record.
+flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs, which flai kluster log S-nnnn --step &lt;step&gt; prints, and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project. flai kluster exec S-nnnn -- &lt;command&gt; runs a command in the story's worktree with its namespace's variables and the namespace's own kubeconfig, while the namespace has a record, and flai kluster env S-nnnn prints those variables, as export lines or JSON.
 
 They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them. exec and log reach a story's namespace without changing the cluster's shared infrastructure, and flai guard lets a story's agent and its sub-agents run them for their own story alone (ADR-0292 §2). A story's agent asks flai serve for its own story's deploy or teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the MCP tools kluster\_deploy and kluster\_teardown, which run nothing themselves (ADR-0292).
 
@@ -2757,6 +2757,7 @@ flai kluster deploy S-0578
 flai kluster deployments
 flai kluster log S-0578 --step deploy
 flai kluster exec S-0578 -- kubectl get pods
+eval "$(flai kluster env S-0578)"
 flai kluster teardown S-0578 --yes
 flai kluster promote
 flai kluster down --yes
@@ -2767,6 +2768,7 @@ Subcommands:
 - [deploy](#flai-kluster-deploy): Build a story's images, load them into the cluster, and deploy it into its namespace
 - [deployments](#flai-kluster-deployments): List each namespace's deployment, the default namespace's first
 - [down](#flai-kluster-down): Take the project's cluster down with kluster down
+- [env](#flai-kluster-env): Print a story's namespace's variables and kubeconfig, as export lines or JSON
 - [exec](#flai-kluster-exec): Run a command in a story's worktree with its namespace's variables and kubeconfig
 - [log](#flai-kluster-log): Print a step's log of a story's namespace, as the dashboard's live feed reads it
 - [promote](#flai-kluster-promote): Deploy main's head into the default namespace
@@ -2850,6 +2852,29 @@ Examples:
 ```bash
 flai kluster down
 flai kluster down --yes
+```
+
+#### flai kluster env
+
+Print a story's namespace's variables and kubeconfig, as export lines or JSON.
+
+```text
+flai kluster env S-nnnn
+```
+
+Prints the variables of a story's namespace, s-nnnn, the ones flai kluster exec runs a command with (design/system/kluster.md, ADR-0292 §2): FLAI\_STORY, FLAI\_KLUSTER\_NAME, FLAI\_KLUSTER\_NAMESPACE, FLAI\_KLUSTER\_PREFIX, FLAI\_KLUSTER\_COMMIT and FLAI\_KLUSTER\_TAG at the commit the namespace's record names, FLAI\_KLUSTER\_STATE, FLAI\_KLUSTER\_CONTEXT, and KUBECONFIG, the namespace's own kubeconfig, .flai-cache/kluster/agents/s-nnnn.kubeconfig, not flai's for the cluster, so the API server refuses a command run with it anything outside the namespace. FLAI\_KLUSTER\_IMAGES and FLAI\_KLUSTER\_COMPONENT, which only a build gets, are not among them.
+
+It prints one line a variable, sorted by name, of the form export NAME='value', each value quoted for sh and zsh, so that eval "$(flai kluster env S-nnnn)" sets them in the shell, for a command of the agent's own such as a request to a service in its namespace. flai guard refuses a story's agent a line with $ around it, as one not written plainly, so an agent writes them to a file and sources it on the same line, flai kluster env S-nnnn &gt; /tmp/s-nnnn.env && . /tmp/s-nnnn.env && &lt;command&gt;, or runs the command with flai kluster exec. --json prints one object of each variable's name and value.
+
+It prints while the namespace has a record under .flai-cache/kluster/deployments, a failed one included, for diagnosis: a deploy that failed before its kubeconfig was written is said to have none on standard error, and the variables are printed all the same. A story with no record is refused, saying to deploy it first with flai kluster deploy S-nnnn --job. It needs no worktree, runs neither kluster nor flai serve, and so needs no kluster on PATH. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's namespace, as exec is.
+
+Examples:
+
+```bash
+flai kluster env S-0578
+eval "$(flai kluster env S-0578)"
+flai kluster env S-0578 > /tmp/s-0578.env && . /tmp/s-0578.env && kubectl get pods
+flai kluster env S-0578 --json
 ```
 
 #### flai kluster exec
