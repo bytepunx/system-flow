@@ -3,10 +3,10 @@ id: S-0730
 type: story
 nature: improvement
 title: A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it
-status: review
+status: done
 owner: alex
 created: 2026-11-12T03:43:39Z
-updated: 2026-11-13T20:44:41Z
+updated: 2026-11-13T22:46:50Z
 transitions:
   - to: ready
     at: 2026-11-13T19:57:17Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-13T20:44:41Z
     by: agent-S-0730
+  - to: done
+    at: 2026-11-13T22:46:50Z
+    by: alex
 tags: [flai, template]
 topics: [guard]
 touches: [flai/internal/guard/call.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/items.go, flai/internal/guard/items_test.go, design/system/agent-adapters.md, docs/users/flai.md, design/conventions/tooling.md, template/root/design/conventions/tooling.md, template/CHANGELOG.md, design/issues/I-0352-a-story-s-agent-can-overwrite-a-work-item-file-whole-with-write-front-matter.md, design/issues/summary.md, design/issues/I-0365-flai-test-reports-a-go-test-failure-in-flai-cmd-that-names-no-test-and-the-same.md, design/adrs/0298-flai-guard-refuses-a-write-that-replaces-a-work-item-file-whole-with-content.md, design/adrs/README.md]
