@@ -1343,7 +1343,7 @@ flai criteria untick S-0282 2
 
 A story's acceptance criteria are the checkboxes under its `## Acceptance criteria` heading. `flai criteria` names them by number, from 1, in the order they appear, as `list` prints them. `tick` and `untick` change those boxes and nothing else in the file, with the checks `flai edit` makes: a closed or archived item is refused (exit 4), as is a finding the change introduces inside the story ([Changing an item after it was made](#changing-an-item-after-it-was-made)), a change made meanwhile is a conflict with `--hash` (exit 3), and a number with no box is refused and nothing is written. Agents connected over MCP are told the criteria changed.
 
-The story's agent ticks a criterion once it has verified it, never by editing the file, and leaves one it cannot verify unticked with the reason in the story's notes. A task sub-agent says which criteria its task meets; the story's agent ticks them after its review. `flai move` to review warns when a criterion is unticked, and the move to done refuses one ([ADR-0089](../../design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md)). The MCP tool `criteria_tick` and the dashboard's `POST /api/items/<id>/criteria` make the same change.
+The story's agent ticks a criterion once it has verified it, never by editing the file, and leaves one it cannot verify unticked with the reason in the story's notes. A task sub-agent says which criteria its task meets; the story's agent ticks them after its review. `flai move` to review warns when a criterion is unticked, and the move to done refuses one ([ADR-0089](../../design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md)). In a project with a kluster, that warning also says whether the story's namespace was deployed and checked at its head ([What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review)). The MCP tool `criteria_tick` and the dashboard's `POST /api/items/<id>/criteria` make the same change.
 
 ### Serving agents over MCP
 
@@ -1368,7 +1368,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why, a story with tasks with their counts in `tasks`; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `message_send`, `message_reply`, `message_get`, `message_escalate`, `message_share` | Start a conversation with another open story's agent (`to`, `text`, `about`), answer one (`id`, `text`, and `settled` for a reply that asks nothing, S-0372), read one (`id`), and ask the operator on a thread when the two do not agree (`id`, `reason`, S-0332, [ADR-0121](../../design/adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md)), as `flai message send`, `reply`, `show`, and `escalate` do; `message_share` shares paths with a ready story your story holds (`id`, `paths`, `split`, S-0334, [ADR-0134](../../design/adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md)), as `flai message share` does; `message_escalate` answers `thread` and `conversation`, and the others answer the conversation as `flai message show --json` prints it (S-0331, [ADR-0120](../../design/adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)). Send, reply, escalate, and share write as the session's own story, `FLAI_STORY`, else the story in an `agent-S-nnnn` name, else the story branch checked out; no argument names another, and a session with none is refused with nothing written. `message_get` needs no story. `flai guard` refuses a sub-agent `message_send`, `message_reply`, `message_escalate`, and `message_share` ([Messages between stories](#messages-between-stories)) |
-| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`, and a story's `pull_request` once `flai serve` has read it (see [Checks, reviews, and the send back](#checks-reviews-and-the-send-back)); transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
+| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`, and a story's `pull_request` once `flai serve` has read it (see [Checks, reviews, and the send back](#checks-reviews-and-the-send-back)), and, in a project with a kluster, a story's `kluster`, what its namespace shows at its head, with `kluster_error` when that cannot be read (see [What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review)); transition it with the workflow rules, and, in such a project, a move to review warns as `flai move` does. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it, or that gives a `body`, is checked as `flai story new --body-stdin` is: a finding the item introduces, such as a missing section or a markdown lint rule, refuses it and leaves nothing), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. `draft` makes a story a draft, and `draft: false` is refused. `cost_of_delay` and `forecast` set the keys given; `clear_cost_of_delay` and `clear_forecast` remove them, and to remove one amount the agent clears the cost of delay and gives the keys to keep. Neither commits: the agent commits with its work |
 | `criteria_tick` | Tick and untick a story's acceptance criteria by number, `tick` and `untick` naming them as `flai criteria list` does, with the `hash` from `item_get`; returns the criteria after. Nothing is committed. Sub-agents, the planner, and the orchestrator are refused it ([Ticking acceptance criteria](#ticking-acceptance-criteria)) |
 | `stream_state` | Write a story's narrative's `## Current state`, `## Next steps`, and `## Context`, and append to its `## Decisions` and `## Open questions`, as `flai stream state` does: `story`, with at least one of `current`, `next`, `context`, `decisions`, and `questions`; an empty one leaves its section as it is. `decisions` and `questions` are lists, each entry one bullet, a question dated today and placed above the threads block. This is how an agent in a container, whose `wip/` is read-only, records them. Nothing else in the narrative changes, and nothing is logged or committed. Returns `story`, `path`, `written`, `updated`, and `changed`. A story not in progress or in review, one with no narrative, and text the markdown lint rejects are tool errors ([Agent narratives](#agent-narratives)) |
@@ -2042,7 +2042,7 @@ Without flai serve, the request is withdrawn after ten seconds, and flai says fl
 
 **The limit.** `kluster.agent_namespaces`, default 2, is the most stories in progress that hold a namespace at once. Stories in review do not count. Set it with `flai manifest set kluster.agent_namespaces=3`; the dashboard's setup form does not show it yet ([settings](../operators/settings.md#project-manifest)).
 
-**How long a namespace lives.** From its first deploy until the story is accepted, cancelled, or moved back to ready or backlog, or its agent or you tear it down. It stays while the story is in progress and in review, whoever moves it between them. A story that enters review with its deploy, and its checks while `checks` is on, passed at its head is not deployed again there.
+**How long a namespace lives.** From its first deploy until the story is accepted, cancelled, or moved back to ready or backlog, or its agent or you tear it down. It stays while the story is in progress and in review, whoever moves it between them. A story that enters review with its deploy, and its checks while `checks` is on, passed at its head is not deployed again there. At its head includes a deploy followed only by commits under `design/`, `docs/`, and `wip/`, such as the issues the close-out commits ([What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review)).
 
 ### A story's agent checks its story before review
 
@@ -2091,6 +2091,53 @@ flai kluster env S-0763 > /tmp/s-0763.env && . /tmp/s-0763.env && kubectl get sv
 
 `flai guard` lets a story's agent and its sub-agents run `env`, `exec`, and `log` for their own story, written plainly, with no `$`, backtick, brace, glob, `~`, or backslash before the `--`; the command after it may use the shell freely. It refuses them for another story's namespace or the default one, and every session with no story of its own, such as the planner, the orchestrator, and your own sub-agents. It refuses every agent and sub-agent the `kluster` program but `kluster status`, and any shell line that names flai's kubeconfig for the cluster, `.flai-cache/kluster/kubeconfig`. Your own shell runs them all.
 
+### What flai says of the namespace before review
+
+In a project whose `kluster:` block names a `deploy`, a story's agent deploys the story at its branch's head, runs the checks against its namespace, and ticks each criterion it verified there before the close-out and the move to review. It leaves unticked only what it could not verify, with the reason in the story's Notes (S-0662, [ADR-0292](../../design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §6). flai reads the namespace's record at each step after, and refuses nothing for it until the acceptance.
+
+**At the head.** A deploy or checks run stands at the story's head when its commit is the head, or when every file that changed between them is under `design/`, `docs/`, or `wip/` (the folders your manifest's layout names for them). So the issues the close-out commits do not undo a deploy. A rebase or reset since the deploy, or any other change, puts it behind the head, and flai says which files.
+
+**The pack.** A story's pack names its namespace and the commands for it, in its header and in the MCP `prime` answer, while `kluster.agent_namespaces` is not 0:
+
+```text
+kluster: the story's namespace is s-0662
+  deploy  flai kluster deploy S-0662 --job, or the MCP tool kluster_deploy
+  checks  flai checks run S-0662 --job, or the MCP tool kluster_checks
+  exec    flai kluster exec S-0662 -- <command>
+  env     flai kluster env S-0662
+  log     flai kluster log S-0662 --step <step>
+```
+
+and a line saying to deploy and check before review. It comes from the manifest alone; the `kluster` host action still gates the requests.
+
+**The move to review.** While the `kluster` host action is on, `flai move S-nnnn review` and the MCP `item_move` read the record after the move:
+
+- When the namespace is not deployed at the head, or its checks did not pass there while `checks` is on, they warn, saying what stands and naming `flai kluster deploy S-nnnn --job` and `kluster_deploy`, and `flai checks run S-nnnn --job` and `kluster_checks` with `checks` on. The move is made all the same: the review deploys what has not passed at the head.
+- The warning of unticked acceptance criteria adds whether the namespace was deployed and checked at the head.
+- A record or host configuration flai cannot read is a warning too.
+
+**The close-out.** `flai verify` runs a step `kluster` after `check`, in a project with a `kluster:` block. It runs nothing on the cluster:
+
+| The step | When |
+|----------|------|
+| Passes with a note, and records nothing | The `kluster` host action is off, the block names no `deploy`, `kluster.agent_namespaces` is 0, or the record cannot be read here, as in a close-out in the story's container, which does not mount the main checkout's `.flai-cache/kluster` |
+| Records the deploy and checks run and passes | Otherwise, with a note saying what stands at the head and, when something has not passed there, the command to run. Not deploying, a deploy behind the head, and a cancelled checks run are no failure |
+| Fails | The deploy failed at the head, or, while `checks` is on, the checks run failed or timed out there. It names the error, `flai kluster log S-nnnn --step <step>` or the checks log, and the deploy command |
+
+`flai verify S-nnnn --last` prints what the step recorded after the verdict, and `--json` carries it as `kluster`:
+
+```text
+kluster: S-0662's namespace s-0662 is deployed and checked at the head 4f1c2a9e0b7d
+    deploy at 4f1c2a9: passed, asked by agent-S-0662, ended 2026-11-13T07:51:46Z, at the head
+    checks at 4f1c2a9: passed, log /home/you/.flai/serve/checks/S-0662-20261113T074902Z.log, at the head
+```
+
+A deploy line names its exit code and the failed step's log when it failed, and `asked in a shell` when no agent asked. A record behind the head says `not at the head:` and why. A checks line says `checks: none ended since the deploy` when none has.
+
+**What the agent and you read.** The MCP `item_get` gives a story `kluster`: the namespace, its head, the last deploy with its commit, outcome, failed step, who asked, its times, and its steps' logs, the last checks run with its commit, outcome, and log, whether each passed at the head, `passed`, and the commands. It reads the record live, on the host, beside `pull_request`, and `kluster_error` says why it could not. The dashboard's review page shows the same under the acceptance criteria ([Reviewing a story](flaiover.md#reviewing-a-story)). The record keeps no asker or end time for a checks run; `flai checks status S-nnnn` has who asked.
+
+**The orchestrator's acceptance.** The orchestrator may name the record as a criterion's evidence in place of files ([When the orchestrator accepts](#when-the-orchestrator-accepts)).
+
 ### When a story's deploy or its checks fail
 
 While the `kluster` host action is on and the block names a `deploy`, `flai serve` deploys each story that enters review into its namespace, and deploys it again in place at each new head. With the `checks` host action on, it then runs the checks against that namespace ([kluster.md](../../design/system/kluster.md#what-happens-when)).
@@ -2103,7 +2150,7 @@ A deploy that fails, or a checks run that does not pass, sends the story back (S
 - With the `agent` host action on, it starts the story's agent once on the thread. The agent fixes the change, or says on the thread that the cause is outside the story, such as the cluster's shared services.
 - Once the story is back in review, at a new commit or the same one, it is deployed again in place, unless a deploy its agent asked for passed at its head, its checks too while `checks` is on. A deploy that passes resolves the deploy's thread, and a checks run that passes the checks', whether the agent or the review asked for them. Cancelling or accepting the story tears its namespace down and resolves its threads.
 
-While the action is on, the story's acceptance waits for this. Every acceptance of a story, yours, the dashboard's, the orchestrator's, and the merge queue's, is refused with the blocker `kluster` until its namespace was deployed at its branch's head and, while `checks` is on, the checks run against it passed there. The blocker names the namespace's last job, its commit, and its outcome. `flai accept --dry-run` lists it, and with `--json` it is in `kluster_blocker`, with `kluster_why`. The merge queue lists such a story as not eligible, with the reason `kluster`, and does not batch it; the orchestrator may still enqueue it, and the queue waits for the deploy.
+While the action is on, the story's acceptance waits for this. Every acceptance of a story, yours, the dashboard's, the orchestrator's, and the merge queue's, is refused with the blocker `kluster` until its namespace was deployed at its branch's head and, while `checks` is on, the checks run against it passed there, at its head as [What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review) says. The blocker names the namespace's last job, its commit, and its outcome. `flai accept --dry-run` lists it, and with `--json` it is in `kluster_blocker`, with `kluster_why`. The merge queue lists such a story as not eligible, with the reason `kluster`, and does not batch it; the orchestrator may still enqueue it, and the queue waits for the deploy.
 
 When the cause is outside the story, land it anyway:
 
@@ -2213,6 +2260,7 @@ The steps run in this order, and the run stops at the first that fails. The step
 | `sync` | The story's branch contains the main branch, but for commits that change only `wip/` paths the branch does not change; otherwise run `flai stream sync` |
 | `narrative` | The narrative's `## Current state` and `## Next steps` are written; otherwise write them with `flai stream state` |
 | `check` | `flai check --strict`, scoped to the story, finds nothing in it ([Check the repository](#check-the-repository)) |
+| `kluster` | Only in a project whose `system-flow.yaml` has a `kluster:` block. It runs nothing, and passes unless the story's namespace's deploy, or its checks run, failed at the story's head ([What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review)) |
 | each tier | A test or lint tier that what the branch changed against the main branch selects passes |
 
 The tiers are those `flai test` would run for the files the branch changed, and each `all_only` tier whose `paths` select one of those files, or that has no `paths` ([Run the tests for what changed](#run-the-tests-for-what-changed)). A `manual` tier never runs here, nor in the merge queue's batch: run it with `flai test <tier>` (S-0548). In this repository a change under `flai/` runs integration and smoke too, a change under `template/` the template's render and check, and a change under `flaiover/` its lint, type check, and unit tests. A story that changes only documents runs the markdown lint. A tier that another selected tier covers is not run, as in `flai test`: a change to flai's Go code selects `go-test` and `integration`, and `integration` runs the whole Go suite, so the step reads `skipped tier go-test: covered by integration`. A skipped tier never fails the run, and it stays `skipped` after a step before it failed. The tiers run with `CLOSE_OUT_STORY` set to the story, so the checks inside them count only what is the story's. They run with `FLAI_ROLE=verify` too, whatever role ran `flai verify`, so the orchestrator verifying a story in review does not have the story's tests refused as the orchestrator (S-0311).
@@ -2238,7 +2286,7 @@ verify: S-0037 stopped at go-test (exit 1)
 
 With `--json` the answer is the report: `story`, the `commit` and `base` it verified, the `base_commit` the main branch had, the `merge_base` where the branch left it and the `patch` id of the branch's own change, the `fingerprint` of its tiers, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, a tier's `command` and `exit_code`, a reused tier's `reused_from`, and a skipped tier's `covered_by`; a tier left to the merge queue has `state` `queued`, and a `queue` tier that ran has `ran_for`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
 
-Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
+Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. In a project with a kluster, `--last` ends with what the `kluster` step read of the story's namespace, and `--json` carries it as `kluster`. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
 
 `--sync-only` runs the `rebase` and `sync` steps and nothing else. It prints them and exits as a full run does, and it stores no report, so the stored one stays the last full run's. The close-out's last check, after its commit, is `flai verify S-0037 --sync-only`, so the close-out and `flai verify` agree on whether the branch contains the main branch. `--sync-only` is refused with `--last`, which runs nothing, and with `--record-issues`, since it runs no check.
 
@@ -3488,6 +3536,16 @@ Verdict: pass, tests and lint clean
 - 2: `docs/users/flai.md` (the new section)
 ```
 
+In a project with a kluster, while the `kluster` host action is on and the block names a `deploy`, an item may name the story's namespace's record in place of files, for a criterion the running system shows met (S-0662):
+
+```markdown
+Verdict: pass, deployed and checked in s-0031
+- 1: `flai/cmd/accept.go`
+- 2: kluster deploy and checks passed at 4f1c2a9 (the golden path)
+```
+
+With the `checks` host action off, it reads `kluster deploy passed at <commit>`. flai takes it only when the record shows the deploy, and while `checks` is on the checks run, passed at the story branch's head, as [What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review) defines it; that head is the `--verified` commit; and `<commit>` is the record's or stands at the head the same way. The rules are in [strategic-agents.md](../../design/system/strategic-agents.md#accepting-a-story-s-0221).
+
 A formula's instance may change no file, so its evidence names each step's task and its done transition in place of files, one item per criterion ([A story from a formula](#a-story-from-a-formula)):
 
 ```markdown
@@ -3508,7 +3566,7 @@ The preview adds these blockers to an acceptance by the orchestrator, and `flai 
 | `thread_open` | A thread on the story or one of its tasks is not resolved, and someone besides the orchestrator opened it or wrote on it |
 | `own_thread_open` | A thread on the story or one of its tasks that the orchestrator opened and nobody else wrote on is not resolved. The orchestrator resolves it with a reason once its concern is gone |
 | `dirty_main` | The story's change would overwrite an uncommitted or untracked file of the main checkout outside `wip/`, `design/`, and the shared paths, which every acceptance commits. The message names the files and the command that sets them aside, `git stash push -- <files>`; commit them or run it. Since S-0566 it blocks your acceptance by hand and the dashboard's too ([ADR-0248](../../design/adrs/0248-every-acceptance-commits-the-main-checkout-s-uncommitted-files-under-wip-design.md)) |
-| `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes. For a formula's instance, its item names no task of the story, or one that is not done, or, given as `skipped`, one not cancelled by a stop |
+| `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes, or it names the kluster record and the record does not show the criterion met at the verified head; the message says what the record says. For a formula's instance, its item names no task of the story, or one that is not done, or, given as `skipped`, one not cancelled by a stop |
 | `protected_paths` | The branch changes a path Claude Code protects, which only you accept |
 | `not_story` | The item is an epic, which is yours to accept |
 | `kluster` | The `kluster` host action is on, and the story's namespace was not deployed at its branch's head or, while `checks` is on, its checks did not pass there. It blocks every acceptance; the orchestrator never passes `--without-kluster`, and its enqueue is not refused for it ([When a story's deploy or its checks fail](#when-a-storys-deploy-or-its-checks-fail)) |
@@ -3536,7 +3594,7 @@ What it leaves for you to read:
 |------|-------|
 | Who accepted | The story's done transition, `by: orchestrator` |
 | The commit verified, when, and the evidence | The story's `## Notes`, under `### Accepted by the orchestrator`, with `- Verified: <commit>` and `- At: <time>`, in the acceptance commit and so in the archive. A story the queue landed adds `- Batch: <id>` and `- Enqueued verified: <commit>`, the commit the orchestrator's verifier checked, and the evidence it enqueued the story with |
-| The same, for a script | `--json`: `by`, `verified`, and `evidence` (`verdict`, `criteria` as `{n, files}`, `text`). The text output adds a line naming the commit and where the evidence is |
+| The same, for a script | `--json`: `by`, `verified`, and `evidence` (`verdict`, `criteria` as `{n, files}`, with `kluster`, the commit, for an item naming the kluster record, `text`). The text output adds a line naming the commit and where the evidence is |
 | The decision | `wip/agents/orchestrator.md`, under `## Log` |
 | On the dashboard | The story's page says who accepted it and links the evidence ([flaiover.md](flaiover.md#reviewing-a-story)) |
 

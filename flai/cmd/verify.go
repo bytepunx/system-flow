@@ -58,6 +58,12 @@ after it are not reached:
              does not change, which a note under the step names
   narrative  the narrative's Current state and Next steps are written
   check      flai check --strict, scoped to the story, passes
+  kluster    while the main checkout's system-flow.yaml has a kluster: block,
+             the kluster host action is on, a deploy is named, and
+             kluster.agent_namespaces is not 0, no deploy or checks run of
+             the story's namespace failed at the branch's head, as its record
+             says; it runs nothing, records what it read in the report, and
+             --last prints it (ADR-0292 §6)
   <tier>     each test and lint tier of the worktree's system-flow.yaml that
              what the branch changed against the main branch selects, run
              with CLOSE_OUT_STORY set to the story and FLAI_ROLE=verify,

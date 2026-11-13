@@ -144,12 +144,16 @@ func moveKlusterActions(on bool) HostAction {
 	}
 }
 
+// deploysBeforeReviewOff names the case whose kluster.agent_namespaces is 0,
+// which says nothing of the namespace: the review deploys it (ADR-0292 §4).
+const deploysBeforeReviewOff = "deploys before review off"
+
 // S-0662 criteria 1 and 2, ADR-0292 §6: item_move to review reads the
 // story's namespace's record against its branch's head, in the words flai
 // move says: a warning naming the commands that deploy and check when it
 // was not deployed and checked there, what stands added to the warning of
 // unticked criteria, nothing while the kluster host action is off or it
-// passed at the head, and never a refusal.
+// passed at the head or deploys before review are off, and never a refusal.
 func TestItemMoveToReviewSaysWhatTheKlusterNamespaceShowsAtItsHead(t *testing.T) {
 	t.Parallel()
 	c1, c2 := moveKlusterC1[:12], moveKlusterC2[:12]
@@ -163,6 +167,7 @@ func TestItemMoveToReviewSaysWhatTheKlusterNamespaceShowsAtItsHead(t *testing.T)
 		warns  bool   // a warning of its own says it
 	}{
 		{"the action off", false, kluster.Record{Commit: moveKlusterC1, Outcome: kluster.OutcomeFailed}, moveKlusterC2, "", false},
+		{deploysBeforeReviewOff, true, kluster.Record{Commit: moveKlusterC1, Outcome: kluster.OutcomeFailed}, moveKlusterC2, "", false},
 		{"deployed and checked at the head", true, passed, moveKlusterC2, "'s namespace %s is deployed and checked at the head " + c2, false},
 		{"deployed and checked before a docs commit", true, passed, moveKlusterC3, "'s namespace %s is deployed and checked at the head " + moveKlusterC3[:12] + " (at " + c2, false},
 		{"not deployed", true, kluster.Record{}, moveKlusterC2, "'s namespace %s is not deployed at the head " + c2 + ": no deploy of it is recorded", true},
@@ -190,6 +195,10 @@ func TestItemMoveToReviewSaysWhatTheKlusterNamespaceShowsAtItsHead(t *testing.T)
 					says = id + strings.Replace(c.says, "%s", ns, 1)
 				}
 				f.repo.Manifest.Kluster = &manifest.Kluster{Deploy: []string{"scripts/kluster-deploy.sh"}}
+				if c.name == deploysBeforeReviewOff {
+					zero := 0
+					f.repo.Manifest.Kluster.AgentNamespaces = &zero
+				}
 				moveKlusterRecord(t, projectRoot(f.repo), id, c.record)
 				if unticked {
 					data, err := os.ReadFile(f.story.Path)

@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-11-11
+updated: 2026-11-13
 status: active
 ---
 
@@ -223,7 +223,7 @@ Below them, a list of the page's sections sits at the left. Click an entry to sc
 
 | Section | What it holds |
 |---------|---------------|
-| Criteria | The acceptance criteria, with which are ticked and how many |
+| Criteria | The acceptance criteria, with which are ticked and how many. In a project with a kluster, the story's namespace under them |
 | State | The narrative's current state and next steps, as the agent left them, with a link to the whole narrative |
 | Threads | The threads on the story, where you can ask before deciding |
 | Changes | What the story's branch changes against main, file by file. Under its entry, one entry per changed file, by its file name: click one to open that file's changes and scroll to them. A link copied from that entry opens the page at the same file |
@@ -233,6 +233,15 @@ Below them, a list of the page's sections sits at the left. Click an entry to sc
 | Verification | The story's last `flai verify`. Not shown when the story has none |
 
 **Changes.** Each file is a line with its path and the lines added and removed. Click the line, which has an arrow at its start, to open the file's changes below it, and again to close them. A removed line has `-` in the margin and a dim red background, an added line `+` and a dim green one, and lines removed or added one after another share one brighter outline, so a block that was replaced reads as two blocks, the old above the new. Large patches are cut and marked; the rest is a `git diff` away. A story that was not worked on a branch says so instead. When the branch changes a component, the section names the components first, with **Open in Components**, which shows them from the story's worktree ([A story's components](#a-storys-components)).
+
+**The namespace.** In a project whose kluster deploys stories, while the `kluster` host action is on, the Criteria section shows under the criteria what the story's namespace, such as `s-0662`, shows at the head of its branch (S-0662). Its agent deploys and checks it there before review, and ticks what it verified there ([What flai says of the namespace before review](flai.md#what-flai-says-of-the-namespace-before-review)). flai on the host reads the namespace's record each time the page loads the story.
+
+- A line says whether the namespace is deployed, and checked while the `checks` host action is on, at the head, green when it is and red when it is not.
+- A row for the last deploy, or teardown, and one for the last checks run. Each shows its commit, its outcome, who asked for the deploy and when it ended, and whether it stands at the head: `at the head`, at the head with only changes under design, docs, and wip since, or `not at the head` with flai's reason, in yellow. The record does not keep who asked for a checks run, and the row says so.
+- The deploy's row links its steps' logs, or the failed step's, on the Deployments page's **Logs**. That page opens at its own default namespace, the running job's or main's, so choose the story's namespace there when it is not shown. The checks row links its log in this page's **Checks** section, while the page shows that section.
+- With no deploy recorded, or no checks run since the deploy, the part says so.
+
+Nothing shows when the action is off, the project's `kluster:` block names no deploy command, the story has no stored `flai verify`, or flai cannot read the record.
 
 **Release plan.** Accepting cuts no release by itself (S-0087); publishing what has accumulated is a step of its own, from the done column.
 

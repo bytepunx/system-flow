@@ -172,6 +172,11 @@ branch may change nothing, each item is "- <n>: T-nnnn done" instead,
 naming the done task of the criterion's step (S-0422, ADR-0239), or
 "- <n>: T-nnnn skipped" for a step a stop skipped, naming its task that
 flai formula stop cancelled, with the stopping step's task done (ADR-0271).
+While the kluster host action is on and the manifest's kluster: block names
+a deploy, an item may be "- <n>: kluster deploy and checks passed at
+<commit>", or "kluster deploy passed" with the checks host action off,
+which stands when the story's namespace passed there at the branch's head,
+the commit --verified names, as kluster.AtHead judges it (ADR-0292, S-0662).
 An instance whose branch is gone is accepted when --verified names the
 commit its close-out passed at and that commit is on the main branch; any
 other story with no branch is the operator's.

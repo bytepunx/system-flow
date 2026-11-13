@@ -830,10 +830,16 @@ const untickedWarning = " goes to review with unticked acceptance criteria ("
 // and check it unless it was deployed and checked at the head, and the same
 // sentence added to the warning of unticked acceptance criteria. It refuses
 // nothing, as the move is made: a host action or a record it cannot read is
-// a warning too. Any other move, and a project without a kluster: block or
-// without git, keeps warnings as they are.
+// a warning too. Nothing is said while kluster.agent_namespaces is 0, as
+// no story's agent deploys before review then. Any other move, and a
+// project without a kluster: block or without git, keeps warnings as they
+// are.
 func ReviewWarnings(git execx.Runner, repo *workitem.Repo, it *workitem.Item, warnings []string, on HostAction) []string {
 	if it.Type != workitem.Story || it.Status != workitem.Review || repo.Manifest.Kluster == nil || git == nil {
+		return warnings
+	}
+	if repo.Manifest.KlusterAgentNamespaces() == 0 {
+		// deploys before review are off (ADR-0292 §4): the review deploys it
 		return warnings
 	}
 	e, err := reviewEvidence(git, repo, it.ID, on)
