@@ -1994,18 +1994,21 @@ Deploy again at a new commit to update the namespace in place.
 - Each step's output is in `.flai-cache/kluster/logs/<namespace>/<step>.log`, cleared at each deploy; a component's build is the step `build-<name>`. The record of each namespace's last job is `.flai-cache/kluster/deployments/<namespace>.json`: its commit, tag, images, outcome, and each step's outcome, times, and log. It lists every step the job will run as `pending` before the first starts, so it says which steps passed, which runs, and which wait; the steps after a failure are `skipped`.
 - `teardown` runs the block's `teardown` command, when it names one, then deletes the namespace with `kubectl delete namespace`. It runs in the story's worktree, or in the main checkout once the worktree is gone. It asks first on a terminal; `--yes` answers, and is needed without a terminal. When it passes, flai removes the namespace's record, state folder, logs, and own kubeconfig. A story never deployed has nothing to tear down: flai says so and exits 0.
 - `promote` puts a worktree of the main branch's head at `.flai-cache/kluster/main` and deploys it, as `deploy` does a story, into the default namespace, `kluster.namespace` or the project's name. The images are tagged `main-` and the commit's first 12 digits.
-- `deployments` lists the records, the default namespace's first, then the stories' by number:
+- `deployments` lists the records, the default namespace's first, then the stories' by number, and ends with a line that counts the story namespaces against the limit:
 
 ```text
-NAMESPACE  STORY   COMMIT        OUTCOME         ENDED
-authstar   (main)  9b1e4f7a2c3d  passed          2026-11-07T01:12:40Z
-s-0578     S-0578  3f2a9c0d41b7  deploy running  -
-s-0581     S-0581  0c7d2e9f1a4b  failed          2026-11-07T00:58:02Z
+NAMESPACE  STORY   COLUMN       COMMIT        HEAD  OUTCOME         CHECKS                BY            ENDED
+authstar   (main)  -            9b1e4f7a2c3d  -     passed          -                     -             2026-11-07T01:12:40Z
+s-0578     S-0578  in-progress  3f2a9c0d41b7  yes   deploy running  -                     agent-S-0578  -
+s-0581     S-0581  review       0c7d2e9f1a4b  no    passed          passed by flai serve  flai serve    2026-11-07T00:58:02Z
+story namespaces live: 1 of 2, kluster.agent_namespaces (S-0578); no request refused for the limit
 ```
 
-A namespace a job acts on now shows that job. A record left `running` by a job that ended without its outcome shows `interrupted`.
+Each row gives the story's column on the board, and whether the commit deployed is the story branch's head: `yes`, `no`, or `-` when it is not known, as for main. `CHECKS` is the last checks run's outcome and who asked for it. `BY` is who asked for the namespace's last job: the story's agent, flai serve for the review, the project's owner for one asked from the Deployments page, or `-` for a shell. A namespace a job acts on now shows that job. A record left `running` by a job that ended without its outcome shows `interrupted`.
 
-With `--json`, `deploy`, `teardown`, and `promote` print the record, and the step lines go to standard error; `deployments` prints an array of records, each with `default` and, while a job runs on it, `job`.
+The last line counts the stories in progress that hold a namespace, by a record or by a deploy their agent asked for that waits or runs, against `kluster.agent_namespaces`, and names them. Stories in review do not count. When the limit is 0 it adds that deploys before review are off. When flai serve refused a deploy for the limit, the line ends with the newest refusal instead, such as `; last refused: S-0590's deploy, asked by agent-S-0590 at 2026-11-07T01:20:00Z`. flai serve keeps the 10 newest refusals in `.flai-cache/kluster/refusals.json`.
+
+With `--json`, `deploy`, `teardown`, and `promote` print the record, and the step lines go to standard error; `deployments` prints an array of records, each with `default`, `log`, `column`, `head`, `head_error`, `at_head`, `checks_asked_by`, and, while a job runs on it, `job`. `--json --with-limit` prints one object instead: `deployments`, that array; `live` and `holding`, the count and the stories; `limit`; and `refusals`, the refusals kept, newest first, each with `story`, `by`, `at`, `limit`, and `reason`. `--with-limit` without `--json` is refused, since the table always ends with the count.
 
 One job runs at a time per project. A second `deploy`, `teardown`, or `promote` while one runs is refused, naming the job that runs. flai also refuses a story not in progress or in review, a story with no worktree, and a cluster with no kubeconfig: bring it up with `flai kluster up` first.
 
@@ -2040,7 +2043,7 @@ flai serve refuses a request at once, with the reason and what to do, and queues
 
 Without flai serve, the request is withdrawn after ten seconds, and flai says flai serve is not running. `flai guard` lets a story's agent run the request for its own story, written plainly, with no `$`, backtick, brace, glob, `~`, or backslash on the line. It refuses every sub-agent the request, by command and by tool.
 
-**The limit.** `kluster.agent_namespaces`, default 2, is the most stories in progress that hold a namespace at once. Stories in review do not count. Set it with `flai manifest set kluster.agent_namespaces=3`; the dashboard's setup form does not show it yet ([settings](../operators/settings.md#project-manifest)).
+**The limit.** `kluster.agent_namespaces`, default 2, is the most stories in progress that hold a namespace at once. Stories in review do not count. `flai kluster deployments` and the dashboard's Deployments page show how many are live, which stories hold them, and the newest deploy refused for the limit ([Deployments](flaiover.md#deployments)). Set it with `flai manifest set kluster.agent_namespaces=3`; the dashboard's setup form does not show it yet ([settings](../operators/settings.md#project-manifest)).
 
 **How long a namespace lives.** From its first deploy until the story is accepted, cancelled, or moved back to ready or backlog, or its agent or you tear it down. It stays while the story is in progress and in review, whoever moves it between them. A story that enters review with its deploy, and its checks while `checks` is on, passed at its head is not deployed again there. At its head includes a deploy followed only by commits under `design/`, `docs/`, and `wip/`, such as the issues the close-out commits ([What flai says of the namespace before review](#what-flai-says-of-the-namespace-before-review)).
 

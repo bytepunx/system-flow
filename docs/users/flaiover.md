@@ -872,9 +872,9 @@ While the `settings` host action is off, one notice says so and what it allows, 
 
 ### Deployments
 
-Deployments, at `/ops/deployments`, shows what runs on the project's kluster: main in the default namespace, and each story in a namespace of its own, such as `s-0581`. From here you set up how the project builds and deploys, deploy a story, tear one down, promote main, and watch each build and step as it runs, through flai on the host. The page acts only while the `kluster` host action is on.
+Deployments, at `/ops/deployments`, shows what runs on the project's kluster: main in the default namespace, and each story in a namespace of its own, such as `s-0581`. From here you set up how the project builds and deploys, deploy a story in progress or in review, run its checks, tear its namespace down, promote main, and watch each build and step as it runs, through flai on the host. The page acts only while the `kluster` host action is on.
 
-At the top, badges say whether kluster is on, the cluster's name, whether deploys are set up, and whether a job runs. A running job has **Follow it**, which opens its logs. Below, a rail on the page's left holds five sections. The address keeps the one you chose, such as `/ops/deployments#build`, so a link or the back button returns to it.
+At the top, badges say whether kluster is on, the cluster's name, how many story namespaces stories in progress hold against the limit, such as `1 of 2 story namespaces`, whether deploys are set up, and whether a job runs. The limit's badge takes the warning colour while a deploy refused for the limit is listed, and says `deploys before review off` when the limit is 0. A running job has **Follow it**, which opens its logs. Below, a rail on the page's left holds five sections. The address keeps the one you chose, such as `/ops/deployments#build`, so a link or the back button returns to it.
 
 | Section | What it holds |
 |---------|---------------|
@@ -884,24 +884,28 @@ At the top, badges say whether kluster is on, the cluster's name, whether deploy
 | **Access** | How to reach each namespace for a demo, below |
 | **Setup** | The form that sets what the project builds and how it deploys, the one the Klusters page's step 4 shows |
 
-**Overview.** Main's row comes first, then each story's, then the stories in review that are not deployed yet. Each row shows:
+**Overview.** Main's row comes first, then each story's, in progress and in review alike, then the stories in progress or in review that are not deployed yet, each with its column. Each story's row shows:
 
 | Field | What it says |
 |-------|--------------|
-| Story | The story's ID and title, linking its page; `main` for the default namespace |
+| Story | The story's ID and title, linking its page, and its column: in progress or in review |
 | Namespace | The Kubernetes namespace it runs in |
-| Commit | The commit deployed, and whether the branch has moved on since |
-| Deployed | When the deploy ended |
-| Outcome | How it ended, and the step that failed |
-| Steps | A badge per step, each build, load, and deploy, with its state: pending, running, passed, failed, or skipped. A build's badge opens **Build**, any other **Logs** |
+| Commit | The commit deployed, and whether it is the branch's head: at its head, or behind its head, with the head |
+| Last deploy | How it ended and the step that failed, when it ended, and who asked: the story's agent, flai serve for the review, the project's owner for one asked from this page, or a shell. **Its log** opens **Logs** at the step that failed |
+| Last checks | How the last checks run against the namespace ended, the commit it ran at, and who asked. Open **Its log** for the log's path and its end. Without a run since the deploy, it says none |
+| Steps | A badge per step, each build, load, and deploy, with its state: pending, running, passed, failed, or skipped. A build's badge opens **Build**, any other **Logs**, at that step |
 
-**Deploy, Teardown, and Promote.** **Deploy** builds a story in review from its worktree and deploys it into its namespace. It shows for a story that is not deployed, is deployed at an older commit, or whose deploy failed. **Teardown** removes a story's namespace and what its deploy made, so it first asks: choose **Tear it down** or **Keep it**. **Promote** deploys main's newest commit into the default namespace. flai serve runs one at a time on the host, in the background, and each takes minutes. While one runs, the page says so and checks again every few seconds; the buttons wait until it ends. When flai refuses, such as while another job runs, the page shows flai's sentence word for word.
+Main's row shows `main`, the namespace, the commit, when it was deployed, how it ended, and its steps.
+
+**The limit.** Stories in progress may hold at most `kluster.agent_namespaces` namespaces at once, 2 by default; stories in review do not count. Above the rows, Overview says how many are live and which stories hold them, such as "1 of 2 story namespaces live for stories in progress: S-0663. Stories in review do not count." When the limit is 0, it says deploys before review are off. When flai refused a deploy for the limit, it names the newest: the story, who asked, and when, with flai's reason under it. A flai on the host older than the page shows neither the line nor the badge.
+
+**Deploy, Run checks, Teardown, and Promote.** **Deploy** builds a story in progress or in review from its worktree, at its head, and deploys it into its namespace. It shows for a story that is not deployed, is deployed at a commit other than its head, or whose deploy failed or was interrupted. For a story in progress, flai serve queues the deploy as it does one the story's agent asks for: it counts against the limit, and flai refuses it while the limit is reached and the story has no namespace yet, saying which stories hold one. **Run checks** runs the project's checks against a namespace deployed at its head with a deploy that passed. flai serve queues it the same way, and flai refuses it while the `checks` host action is off. **Teardown** removes a story's namespace and what its deploy made, so it first asks on the row: choose **Tear it down** or **Keep it**. **Promote** deploys main's newest commit into the default namespace. flai serve runs one at a time on the host, in the background, and each takes minutes. While one runs, the page says so and checks again every few seconds; the buttons wait until it ends. When flai refuses, such as while another job runs, the page shows flai's sentence word for word.
 
 **Build.** Choose a namespace; the running job's comes first. Each build is a panel: one for the project's build command, or one per component, so a project that builds three images shows three. Each panel shows its state, pending, running, passed, failed, or skipped, and how long it took. A line above them counts them, such as "3 builds: 1 passed, 1 running, 1 waiting". Open a panel to follow its log as it is written: it keeps to the end unless you scroll up, and keeps the newest 256 KB. The load of the images into the cluster comes after the builds, with the images it loaded. When one build fails, the deploy stops, and the builds after it say skipped.
 
-**Access.** Each namespace lists its services, each with the host it answers on inside the cluster and its ports. **Start** on a port asks flai serve to forward it: flai runs `kubectl port-forward` on the host, bound to `0.0.0.0` on a free port, and the page links the forward at the host you reached the dashboard on and that port. **Stop** ends it. A forward that ended on its own shows the end of its output. While any forward runs, the page says once that it is reachable by anything that can reach the host's network, with no sign-in of its own. Forwards end when flai serve stops; a teardown from this page stops its namespace's forwards first. When flai cannot list the services, such as when `kubectl` is not installed on the host, the page says why.
+**Access.** Each namespace, a story's in progress or in review alike, lists its services, each with the host it answers on inside the cluster and its ports. **Start** on a port asks flai serve to forward it: flai runs `kubectl port-forward` on the host, bound to `0.0.0.0` on a free port, and the page links the forward at the host you reached the dashboard on and that port. **Stop** ends it. A forward that ended on its own shows the end of its output. While any forward runs, the page says once that it is reachable by anything that can reach the host's network, with no sign-in of its own. Forwards end when flai serve stops; a teardown from this page stops its namespace's forwards first. When flai cannot list the services, such as when `kubectl` is not installed on the host, the page says why.
 
-**When it cannot act.** While the host action is off the page says so and links the Klusters page's setup. With no `kluster:` block yet it shows only that notice. With no deploy command set, **Deploy** and **Promote** give way to **Set up deploys**, which opens **Setup**; **Teardown** stays. A flai on the host older than the page says to upgrade it. With nothing deployed and no story in review, the page says so, and offers **Promote**.
+**When it cannot act.** While the host action is off the page says so and links the Klusters page's setup. With no `kluster:` block yet it shows only that notice. With no deploy command set, **Deploy** and **Promote** give way to **Set up deploys**, which opens **Setup**; **Run checks** and **Teardown** stay. A flai on the host older than the page says to upgrade it. With nothing deployed and no story in progress or in review, the page says so, and offers **Promote**.
 
 ## Theme
 
