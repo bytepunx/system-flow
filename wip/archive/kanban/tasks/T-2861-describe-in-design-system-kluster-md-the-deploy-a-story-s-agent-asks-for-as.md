@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 9540
-      cache_read: 1983803
-      cache_write: 76165
-      cost: 1.1969
+      input: 17
+      output: 6793
+      cache_read: 1958452
+      cache_write: 101517
+      cost: 1.3398
 ---
 # T-2861 Describe in design/system/kluster.md the deploy a story's agent asks for as decided, marking each part not yet built
 

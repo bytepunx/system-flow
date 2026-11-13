@@ -3,12 +3,15 @@ id: S-0663
 type: story
 nature: feature
 title: The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
-status: backlog
+status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-13T07:23:41Z
-transitions: []
+updated: 2026-11-13T07:29:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:26:40Z
+    by: alex
 tags: [dashboard]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md]
@@ -59,10 +62,10 @@ cost_of_delay:
   at: 2026-11-10T09:41:12Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-13T12:20:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661 and S-0662."
+  delivery: 2026-11-13T12:26:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661 and S-0662."
   by: flai
-  at: 2026-11-13T07:23:41Z
+  at: 2026-11-13T07:29:42Z
 finalized:
   by: orchestrator
   at: 2026-11-10T09:44:45Z

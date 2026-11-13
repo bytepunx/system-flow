@@ -3,12 +3,15 @@ id: S-0734
 type: story
 nature: feature
 title: Each flai release builds, signs, and publishes the bedrock and claude-code agent images with a signed digest list, and ships pilot for Linux
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:57:16Z
-updated: 2026-11-13T07:28:47Z
-transitions: []
+updated: 2026-11-13T07:29:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:28:49Z
+    by: alex
 tags: [cli, ci]
 topics: [release, docker, security]
 touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/images/bedrock/Dockerfile, flai/images/claude-code/Dockerfile, scripts/agent-image-digests.sh, scripts/agent-image-digests-test.sh, scripts/smoke.sh, scripts/README.md, scripts/ci-pins.sh, design/tech/ci.md, design/tech/docker.md, design/system/release-signing.md, docs/operators/runbooks/agent-container.md]
@@ -20,10 +23,10 @@ agent:
     effort: high
 forecast:
   duration: 45m
-  delivery: 2026-11-13T14:09:00Z
-  basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730 and S-0733."
+  delivery: 2026-11-13T11:41:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662 and S-0663."
   by: flai
-  at: 2026-11-13T07:23:41Z
+  at: 2026-11-13T07:29:42Z
 finalized:
   by: alex
   at: 2026-11-13T07:28:47Z

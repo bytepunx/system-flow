@@ -3,12 +3,18 @@ id: S-0733
 type: story
 nature: feature
 title: An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery
-status: backlog
+status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:54:40Z
-updated: 2026-11-13T07:28:33Z
-transitions: []
+updated: 2026-11-13T07:28:50Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:28:41Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-13T07:28:50Z
+    by: agent-S-0733
 tags: [cli]
 topics: [release, docker, security]
 touches: [design/adrs/README.md, design/system/flai-cli.md]

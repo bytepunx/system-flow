@@ -3,11 +3,17 @@ id: E-0036
 type: epic
 nature: improvement
 title: Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-12T04:19:48Z
-updated: 2026-11-12T16:06:26Z
-transitions: []
+updated: 2026-11-13T07:28:50Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:28:41Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-13T07:28:50Z
+    by: agent-S-0733
 tags: [cli]
 topics: [release]
 usage:
@@ -88,3 +94,5 @@ The rebuild with `make agent-images` took three runs. The first hung for four ho
 - Pull, build, or both (slice 1). Publication fits ADR-0203 and the dashboard's existing path, and makes recovery a pull of seconds rather than a build of minutes; a host with no access to the registry needs the build.
 - Whether the automatic ensure in slice 4 needs the operator's consent the first time, since it uses the network and several minutes, or only reports that it runs.
 - Whether the strategic agents, which never get the project's layer, wait for the layer's build or start as soon as the harness image is there.
+- 2026-11-13T07:28:41Z: moved to ready: follows S-0733, which moved to ready
+- 2026-11-13T07:28:50Z: moved to in-progress: follows S-0733, which moved to in-progress

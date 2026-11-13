@@ -3,12 +3,15 @@ id: S-0745
 type: story
 nature: feature
 title: flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-13T07:27:59Z
-transitions: []
+updated: 2026-11-13T07:29:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:29:34Z
+    by: alex
 tags: [cli, template]
 topics: [docker, manifest]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0314
 forecast:
   duration: 40m
-  delivery: 2026-11-13T17:02:00Z
-  basis: "Its own forecast of 40m; 19th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741, S-0742, S-0743 and S-0744."
+  delivery: 2026-11-13T14:08:00Z
+  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662, S-0663, S-0734, S-0735 and S-0740."
   by: flai
-  at: 2026-11-13T07:23:41Z
+  at: 2026-11-13T07:29:42Z
 finalized:
   by: alex
   at: 2026-11-13T07:27:59Z

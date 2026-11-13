@@ -3,12 +3,15 @@ id: S-0735
 type: story
 nature: feature
 title: flai image status says which agent images a project's agents need, and whether each is on the host and current for the flai that runs it
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:58:14Z
-updated: 2026-11-13T07:29:02Z
-transitions: []
+updated: 2026-11-13T07:29:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:29:04Z
+    by: alex
 tags: [cli]
 topics: [docker]
 touches: [flai/internal/agentimage/agentimage.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/cmd/root.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0208
 forecast:
   duration: 33m
-  delivery: 2026-11-13T13:56:00Z
-  basis: "Its own forecast of 33m; 9th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733 and S-0734."
+  delivery: 2026-11-13T12:12:00Z
+  basis: "Its own forecast of 33m; 6th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662, S-0663 and S-0734."
   by: flai
-  at: 2026-11-13T07:24:20Z
+  at: 2026-11-13T07:29:42Z
 finalized:
   by: alex
   at: 2026-11-13T07:29:02Z

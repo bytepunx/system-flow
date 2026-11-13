@@ -3,11 +3,11 @@ id: S-0659
 type: story
 nature: feature
 title: "An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once"
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:07Z
-updated: 2026-11-13T07:26:16Z
+updated: 2026-11-13T07:29:40Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:54Z
@@ -15,13 +15,19 @@ transitions:
   - to: in-progress
     at: 2026-11-12T16:00:03Z
     by: agent-S-0659
+  - to: review
+    at: 2026-11-13T07:26:47Z
+    by: agent-S-0659
+  - to: done
+    at: 2026-11-13T07:29:40Z
+    by: orchestrator
 blocked:
   - from: 2026-11-12T16:09:00Z
     until: 2026-11-13T07:25:04Z
     reason: awaiting the operator on TH-1103
 tags: [cli]
 topics: [kluster, deployment]
-touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
+touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -29,19 +35,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 540
+  seconds: 640
   priced_by: harness
   turns:
     - day: 2026-11-12
       ceremony: 2
       work: 31
+    - day: 2026-11-13
+      ceremony: 2
+      work: 11
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 37173
-      cache_read: 7730094
-      cache_write: 296783
-      cost: 4.664
+      input: 102
+      output: 41676
+      cache_read: 12014694
+      cache_write: 622786
+      cost: 8.2192
   strategic:
     - kind: planner
       seconds: 81
@@ -123,3 +132,17 @@ An ADR settles how a story in progress is deployed into its kluster namespace at
 - Forecast 20m stands as `flai forecast` gives it, delivery 2026-11-12T19:38Z. S-0576, which wrote ADR-0254 and its design, took 710 s of agent time; this ADR amends four of its sections and edits the same design, so a little more is fair. The wait on the operator in T-2862 is wall time, not agent time.
 - Cost of delay 263.16 USD a week, as `flai cod` gives it: S-0659's share by forecast (20m of 1h35m) of E-0035's `revenue_per_week: 1250`, which the operator confirmed on TH-0982. No adjustment: the story is E-0035's design story and its share is fair.
 - Assumptions: the limit on story namespaces is set in the manifest's `kluster:` block; the third criterion's "ADR-0254 §4's" table means §5's, the only table of when a namespace is deployed and torn down (§4 is the variables).
+
+### Accepted by the orchestrator
+
+- Verified: df3e026279382bd0e2473609b90e931412d221bd
+- At: 2026-11-13T07:29:40Z
+
+Verdict: met at df3e026279382bd0e2473609b90e931412d221bd
+- 1: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 2: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 3: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 4: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 5: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 6: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/system/kluster.md
+- 7: design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md, design/adrs/README.md, design/system/kluster.md

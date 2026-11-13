@@ -30,16 +30,16 @@ touches: [design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serv
 after: [T-2861]
 usage:
   source: log
-  seconds: 37
+  seconds: 62
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 4261
-      cache_read: 886098
-      cache_write: 34020
-      cost: 0.5346
+      input: 15
+      output: 6195
+      cache_read: 1785866
+      cache_write: 92571
+      cost: 1.2217
 ---
 # T-2862 Ask the operator to confirm the ADR's decisions on a thread, and accept it with their answer
 

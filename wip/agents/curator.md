@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 253.9764
-accrued_seconds: 29294
-tasks_completed: 165
-last_run: 2026-11-13T07:25:29Z
+accrued_cost: 254.5519
+accrued_seconds: 29355
+tasks_completed: 166
+last_run: 2026-11-13T07:26:40Z
 ---
 
 # Curator activity
@@ -1331,3 +1331,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0297, D-0300, D-0306, D-0590, D-0599
 - Seconds: 130
 - Cost: 1.0819 USD, estimated
+
+### 2026-11-13T07:26:40Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. Harvest since 2026-11-13T07:25:29Z was empty; the S-0723, S-0726, and S-0732 decisions are progress notes or are stated in ADR-0293, ADR-0294, and `design/system/workflow.md`, and TH-1103 is already D-0599.
+- Trigger: accepted S-0723, S-0726, S-0732
+- Items: none
+- Seconds: 61
+- Cost: 0.5755 USD, estimated

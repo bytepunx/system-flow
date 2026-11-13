@@ -3,12 +3,15 @@ id: S-0740
 type: story
 nature: feature
 title: flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T07:29:13Z
-transitions: []
+updated: 2026-11-13T07:29:42Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:29:14Z
+    by: alex
 tags: [cli]
 topics: [docker, release, security]
 touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0314
 forecast:
   duration: 1h
-  delivery: 2026-11-13T15:41:00Z
-  basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738 and S-0739."
+  delivery: 2026-11-13T13:22:00Z
+  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662, S-0663, S-0734 and S-0735."
   by: flai
-  at: 2026-11-13T07:24:20Z
+  at: 2026-11-13T07:29:42Z
 finalized:
   by: alex
   at: 2026-11-13T07:29:13Z

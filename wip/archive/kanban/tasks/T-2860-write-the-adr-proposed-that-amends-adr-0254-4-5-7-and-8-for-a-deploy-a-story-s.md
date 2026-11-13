@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 6324
-      cache_read: 1315016
-      cache_write: 50488
-      cost: 0.7934
+      input: 11
+      output: 4503
+      cache_read: 1298212
+      cache_write: 67293
+      cost: 0.8881
 ---
 # T-2860 Write the ADR, proposed, that amends ADR-0254 §4, §5, §7, and §8 for a deploy a story's agent asks for while its story is in progress
 
