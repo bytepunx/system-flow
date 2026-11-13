@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-13T11:45:14Z
+updated: 2026-11-13T11:45:34Z
 ---
 
 # Active streams
@@ -9,7 +9,7 @@ updated: 2026-11-13T11:45:14Z
 |--------|-------|--------|------------|---------|
 | [S-0740](S-0740.md) | flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries | in-progress | agent-S-0740 | 2026-11-13T11:44:32Z |
 | [S-0763](S-0763.md) | Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace | in-progress | agent-S-0763 | 2026-11-13T09:08:01Z |
-| [S-0768](S-0768.md) | Publish what is accepted and not yet released | in-progress | agent-S-0768 | 2026-11-13T11:45:11Z |
+| [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | agent-S-0768 | 2026-11-13T11:45:11Z |
 
 ## Strategic agents
 
