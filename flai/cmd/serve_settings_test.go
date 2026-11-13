@@ -72,3 +72,43 @@ func TestServeSettings(t *testing.T) {
 		t.Errorf("outside a project it says what to do: %d %s", code, errOut)
 	}
 }
+
+// S-0759, ADR-0295 point 7: flai serve settings shows the project's image
+// build command and whether flai serve makes its images by itself, as text
+// and in the agent block of its JSON.
+func TestServeSettingsShowImageSettings(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	settings := func(args ...string) (string, string, int) {
+		t.Helper()
+		return runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: mcpDocker{engine: "Ubuntu 24.04 LTS"}}, append([]string{"serve", "settings"}, args...)...)
+	}
+	imageOf := func() map[string]any {
+		t.Helper()
+		js, errOut, code := settings("--json")
+		var got struct {
+			Agent struct {
+				Image map[string]any `json:"image"`
+			} `json:"agent"`
+		}
+		if err := json.Unmarshal([]byte(js), &got); err != nil || code != 0 {
+			t.Fatalf("--json: %d %v %s %s", code, err, js, errOut)
+		}
+		return got.Agent.Image
+	}
+	if out, errOut, code := settings(); code != 0 || !strings.Contains(out, "  image: command none, flai's own pull and build, auto on\n") {
+		t.Errorf("text, nothing set: %d %q %s", code, out, errOut)
+	}
+	if got := imageOf(); !reflect.DeepEqual(got, map[string]any{"command": []any{}, "auto": true, "auto_set": false}) {
+		t.Errorf("--json, nothing set: %v", got)
+	}
+	runIn(t, root, "serve", "agent", "image", "command", "--", "scripts/agent-image.sh", "--layer")
+	runIn(t, root, "serve", "agent", "image", "auto", "off")
+	if out, errOut, code := settings(); code != 0 || !strings.Contains(out, "  image: command scripts/agent-image.sh --layer, auto off\n") {
+		t.Errorf("text: %d %q %s", code, out, errOut)
+	}
+	if got := imageOf(); !reflect.DeepEqual(got, map[string]any{"command": []any{"scripts/agent-image.sh", "--layer"}, "auto": false, "auto_set": true}) {
+		t.Errorf("--json: %v", got)
+	}
+}

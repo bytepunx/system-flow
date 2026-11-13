@@ -134,7 +134,7 @@ var flagReads = map[string]struct {
 // finds (ADR-0220).
 var serveReads = map[string][]string{
 	"actions":    nil,
-	"agent":      {"", "show", "harness", "provider"},
+	"agent":      {"", "show", "harness", "image", "provider"},
 	"budget":     {""},
 	"checks":     {"show"},
 	"components": {"show"},

@@ -22,7 +22,9 @@ func newServeSettingsCmd(a *app) *cobra.Command {
 		Short: "Print this host's settings as the dashboard's settings page has them for the project in this folder",
 		Long: `Prints what the dashboard's settings page is given for the project in the
 working directory: the host actions, here and everywhere; the agent, its
-harnesses and providers; the checks; the folders named for import; the
+harnesses and providers, and how the project's agent images are made, your
+build command or flai's own pull and build, and whether flai serve makes them
+by itself; the checks; the folders named for import; the
 projects flai serve serves; planning; and the project's HTTP MCP server,
 whether it runs, the addresses flai host starts it on, mcp.bind, ` + mcpDefaultBinds + ` by
 default, which flai serve mcp bind sets, and, while it runs, the
@@ -42,7 +44,8 @@ func (a *app) showHostSettings() error {
 	if err != nil {
 		return err
 	}
-	settings := a.hostSettings(context.Background(), mainRootOf(repo))
+	root := mainRootOf(repo)
+	settings := a.hostSettings(context.Background(), root)
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return err
@@ -57,7 +60,7 @@ func (a *app) showHostSettings() error {
 	if a.jsonOut {
 		return a.printJSON(settings)
 	}
-	writeHostSettings(a.out, repo.Manifest.Name, mainRootOf(repo), view)
+	writeHostSettings(a.out, repo.Manifest.Name, root, view)
 	return nil
 }
 
@@ -88,6 +91,10 @@ type hostSettingsView struct {
 			KeyEnv string `json:"key_env"`
 			KeySet bool   `json:"key_set"`
 		} `json:"providers"`
+		Image struct {
+			Command []string `json:"command"`
+			Auto    bool     `json:"auto"`
+		} `json:"image"`
 	} `json:"agent"`
 	DefaultAgent *struct {
 		Harness  string `json:"harness"`
@@ -175,6 +182,11 @@ func writeHostSettings(w io.Writer, name, root string, v hostSettingsView) {
 		}
 		fmt.Fprintf(w, "  provider %s: %s, key %s %s\n", n, p.API, orNone(p.KeyEnv), key)
 	}
+	imageCommand := "none, flai's own pull and build"
+	if len(v.Agent.Image.Command) > 0 {
+		imageCommand = strings.Join(v.Agent.Image.Command, " ")
+	}
+	fmt.Fprintf(w, "  image: command %s, auto %s\n", imageCommand, onOff(v.Agent.Image.Auto))
 	if d := v.DefaultAgent; d != nil && (d.Harness != "" || d.Model != "" || d.Provider != "") {
 		fmt.Fprintf(w, "default agent: %s\n", strings.Join(nonEmpty(d.Harness, d.Model, d.Provider), " "))
 	}

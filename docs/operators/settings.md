@@ -404,7 +404,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--cat` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--check` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--class` | [flai issue new](../users/flai-reference.md#flai-issue-new) |
-| `--clear` | [flai touches](../users/flai-reference.md#flai-touches) |
+| `--clear` | [flai serve agent image command](../users/flai-reference.md#flai-serve-agent-image-command), [flai touches](../users/flai-reference.md#flai-touches) |
 | `--clear-after` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-agent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--clear-cost-of-delay` | [flai edit](../users/flai-reference.md#flai-edit) |
@@ -502,7 +502,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--port` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--print-body` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--program` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
-| `--project` | [flai components list](../users/flai-reference.md#flai-components-list), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design init](../users/flai-reference.md#flai-design-init), [flai serve agent clear](../users/flai-reference.md#flai-serve-agent-clear), [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness), [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set) |
+| `--project` | [flai components list](../users/flai-reference.md#flai-components-list), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design init](../users/flai-reference.md#flai-design-init), [flai serve agent clear](../users/flai-reference.md#flai-serve-agent-clear), [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness), [flai serve agent image](../users/flai-reference.md#flai-serve-agent-image), [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set) |
 | `--provider` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |

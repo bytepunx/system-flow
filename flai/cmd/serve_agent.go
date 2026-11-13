@@ -53,7 +53,10 @@ project (ADR-0261): set, clear, and harness write those of the project in the
 working directory, or of --project <root>, and those of every project, the
 host-wide fallback a project that sets none of its own reads, only with
 --all-projects. A harness a project sets replaces the host-wide entry of that
-harness whole. The providers and the restart limit are host-wide.
+harness whole. The providers and the restart limit are host-wide. flai serve
+agent image names a project's own build command for its agent images, in
+place of flai's pull and build, and turns its automatic image job on or off;
+those are each project's own, with no --all-projects (ADR-0295).
 
 Every session's environment carries FLAI_AGENT (your --name and the story,
 such as agent-S-0104), FLAI_STORY, and FLAI_SESSION. Its output goes to a log
@@ -64,6 +67,7 @@ journal.`,
   flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
   flai serve agent set --all-projects --name builder
   flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
+  flai serve agent image command -- scripts/agent-image.sh
   flai serve agent show
   flai serve enable agent
   flai serve agent clear`,
@@ -190,8 +194,8 @@ harnesses, the providers, and the restart limit stay.`,
 		}}
 	clear.Flags().StringVar(&clearProject, "project", "", "the main checkout of the project whose command and name to remove, not the one in the working directory")
 	clear.Flags().BoolVar(&clearAll, "all-projects", false, "every project's command and name, the host-wide fallback")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentProviderCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
-		&cobra.Command{Use: "show", Short: "Print the command, the harnesses, and whether the action is enabled, for the project here", Args: cobra.NoArgs,
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentImageCmd(a), newServeAgentProviderCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
+		&cobra.Command{Use: "show", Short: "Print the command, the harnesses, the image settings, and whether the action is enabled, for the project here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand("") }},
 		clear,
 	)
@@ -321,6 +325,10 @@ func (a *app) showAgentCommand(root string, lifted ...budgetLift) error {
 		}
 		shownAll := map[string]any{"command": cmd, "command_from": commandFrom, "name": agent.Name, "name_from": nameFrom,
 			"harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled, "project": here}
+		if here != "" {
+			// how the project's agent images are made, its own only (ADR-0295)
+			shownAll["image"] = agentImageShown(cfg.Agent, here)
+		}
 		if len(lifted) > 0 {
 			shownAll["budget_cleared"] = lifted
 		}
@@ -345,6 +353,10 @@ func (a *app) showAgentCommand(root string, lifted ...budgetLift) error {
 		if name == config.ContainerHarness {
 			printContainer(a, agent.Harnesses[name])
 		}
+	}
+	if here != "" {
+		printImageCommand(a, cfg.Agent, here)
+		printImageAuto(a, cfg.Agent, here)
 	}
 	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress, on every project; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
 	if here != "" {

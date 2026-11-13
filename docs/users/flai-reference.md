@@ -2418,7 +2418,7 @@ flai image build [flags]
 
 flai image build builds on this host, without the pull, each harness image of flai's default the agents of the project in the working directory need, or, when they need none, the default image of each inner harness the host names no image of its own for (claude-code's), current or not, then the project's layer over its harness image when system-flow.yaml names agent.image.layer.
 
-A released flai builds the harness images from the Dockerfiles it carries and its release's Linux flai and pilot, checked against the release's signed checksums.txt; a development flai builds them from the development tree's own flai/images/bedrock/Dockerfile and flai/images/&lt;inner&gt;/Dockerfile and source, when the main checkout holds them. It builds the layer as flai image ensure does, with agent.image.args as build arguments and BASE set to the harness image, labelled with its recipe and base. It tags, logs, stops, and retries as flai image ensure does, prints the images' status after it, and exits non-zero when an image it makes is still missing or stale.
+A released flai builds the harness images from the Dockerfiles it carries and its release's Linux flai and pilot, checked against the release's signed checksums.txt; a development flai builds them from the development tree's own flai/images/bedrock/Dockerfile and flai/images/&lt;inner&gt;/Dockerfile and source, when the main checkout holds them. It builds the layer as flai image ensure does, with agent.image.args as build arguments and BASE set to the harness image, labelled with its recipe and base. It tags, logs, stops, and retries as flai image ensure does, prints the images' status after it, and exits non-zero when an image it makes is still missing or stale. With the operator's build command named, it runs that command as flai image ensure does, current or not, with FLAI\_IMAGE\_STALE naming every image, or with --layer the layer alone, since the operator's machinery owns the layer too.
 
 With --layer it builds only the project's layer, one per inner harness the agents need, current or not, over the harness image already on this host, and pulls or builds no harness image, as scripts/agent-image.sh --layer does. It refuses when system-flow.yaml names no agent.image.layer, and when the harness image is not on this host, naming it and flai image ensure, which makes it.
 
@@ -2463,6 +2463,8 @@ tree       for a development flai, from the development tree's own
 Each harness image is tagged with the name a start runs it by and with flai-agent-&lt;inner&gt;:&lt;version&gt;. A current image is left as it is, and the operator's own image (--image) is never touched.
 
 After the harness images it builds the project's layer, when system-flow.yaml names agent.image.layer, over the harness image of its inner harness, the operator's own when --image names one, else flai's default: when the layer is missing or stale, or when that harness image was just pulled or built. It builds it from the layer's Dockerfile with the main checkout as the context, BASE set to the harness image and each of agent.image.args passed as a build argument, tags it flai-agent-&lt;key&gt;-&lt;inner&gt;:local, and labels it with its recipe, over the Dockerfile and the arguments, and the ID of the harness image under it, so that flai image status reports it stale when the Dockerfile, an argument, or its base changes. A layer whose harness image is not on this host is not built: it fails naming the harness image.
+
+With a build command of the operator's own named for the project in the host's configuration (flai serve agent image command), it runs that command in the main checkout, with no shell, in place of the pull, the build, and the layer's build, once per inner harness whose images are missing or stale, with FLAI\_IMAGE\_VERSION, FLAI\_IMAGE\_INNER, the tags FLAI\_IMAGE\_BEDROCK, FLAI\_IMAGE\_HARNESS, and FLAI\_IMAGE\_LAYER, the recipe labels FLAI\_IMAGE\_RECIPE\_BEDROCK, FLAI\_IMAGE\_RECIPE\_HARNESS, and FLAI\_IMAGE\_RECIPE\_LAYER, and FLAI\_IMAGE\_STALE, which of bedrock, harness, and layer to make, added to its environment. Its exit is the outcome: a non-zero exit fails, and so does an image still missing or stale after it. It is logged and stopped as a docker step is, and never tried again.
 
 Every docker step's output streams here and to a log file under .flai-cache/agent-images/ in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped; a step that fails on the network (a connection reset, a timeout, a DNS or TLS failure, a registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the images' status is printed as flai image status prints it, and it exits non-zero when a harness image or a layer flai makes is still missing or stale.
 
@@ -4133,7 +4135,7 @@ A story that names no harness, or names "command", is started with your command,
 
 A story whose agent and project name no harness, on a project with no command, is started with flai's built-in default agent, claude-code with the harness's own default model (ADR-0261).
 
-The command, the name, and each harness's program and arguments are kept per project (ADR-0261): set, clear, and harness write those of the project in the working directory, or of --project &lt;root&gt;, and those of every project, the host-wide fallback a project that sets none of its own reads, only with --all-projects. A harness a project sets replaces the host-wide entry of that harness whole. The providers and the restart limit are host-wide.
+The command, the name, and each harness's program and arguments are kept per project (ADR-0261): set, clear, and harness write those of the project in the working directory, or of --project &lt;root&gt;, and those of every project, the host-wide fallback a project that sets none of its own reads, only with --all-projects. A harness a project sets replaces the host-wide entry of that harness whole. The providers and the restart limit are host-wide. flai serve agent image names a project's own build command for its agent images, in place of flai's pull and build, and turns its automatic image job on or off; those are each project's own, with no --all-projects (ADR-0295).
 
 Every session's environment carries FLAI\_AGENT (your --name and the story, such as agent-S-0104), FLAI\_STORY, and FLAI\_SESSION. Its output goes to a log beside flai serve's state, and every start and failure is in flai serve journal.
 
@@ -4145,6 +4147,7 @@ flai serve agent harness claude-code --program /opt/claude/bin/claude -- --permi
 flai serve agent set -- /home/me/bin/start-agent {story} --model {model}
 flai serve agent set --all-projects --name builder
 flai serve agent harness claude-code --project /home/me/src/other --program /opt/claude/bin/claude
+flai serve agent image command -- scripts/agent-image.sh
 flai serve agent show
 flai serve enable agent
 flai serve agent clear
@@ -4155,10 +4158,11 @@ Subcommands:
 - [clear](#flai-serve-agent-clear): Remove the command and the name; the harnesses, the providers, and the restart limit stay
 - [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
 - [harness](#flai-serve-agent-harness): Set the program a harness is, the arguments that say what its agent may do, and what you lift on it
+- [image](#flai-serve-agent-image): How the project's agent images are made: your build command in place of flai's, and whether flai serve makes them by itself
 - [provider](#flai-serve-agent-provider): Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own
-- [show](#flai-serve-agent-show): Print the command, the harnesses, and whether the action is enabled, for the project here
+- [show](#flai-serve-agent-show): Print the command, the harnesses, the image settings, and whether the action is enabled, for the project here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
 - [stop](#flai-serve-agent-stop): Stop a story's agent: end its process and everything it started
 - [stream](#flai-serve-agent-stream): Print what a story's agent said and did, from the log flai serve gave it
@@ -4260,6 +4264,98 @@ Flags:
 | `--project` string | the main checkout of the project whose harness this is, not the one in the working directory |
 | `--reset` | go back to the adapter's program and arguments, and lift nothing |
 
+##### flai serve agent image
+
+How the project's agent images are made: your build command in place of flai's, and whether flai serve makes them by itself.
+
+```text
+flai serve agent image [--project <root>]
+```
+
+Prints how the agent images of the project in the working directory, or of --project &lt;root&gt;, are made on this host (ADR-0295): the build command you named for it, or flai's own pull and build, and whether flai serve makes a missing or stale image by itself.
+
+flai serve agent image command names your build command, which flai runs in place of its own pull and build. flai serve agent image auto off turns the automatic image job off for the project. Both are kept in the host's configuration, as agent.projects.&lt;root&gt;.image, and are the project's own: a project's manifest never names them, and there is no --all-projects.
+
+Examples:
+
+```bash
+flai serve agent image
+flai serve agent image command -- scripts/agent-image.sh
+flai serve agent image command --clear
+flai serve agent image auto off
+flai serve agent image auto on --project /home/me/src/other
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--project` string | the main checkout of the project whose image settings these are, not the one in the working directory |
+
+Subcommands:
+
+- [auto](#flai-serve-agent-image-auto): Whether flai serve makes the project's missing or stale agent images by itself; off leaves them to you
+- [command](#flai-serve-agent-image-command): Name your build command for the project's agent images, which flai runs in place of its own pull and build
+
+###### flai serve agent image auto
+
+Whether flai serve makes the project's missing or stale agent images by itself; off leaves them to you.
+
+```text
+flai serve agent image auto [on|off] [--project <root>]
+```
+
+Turns the automatic image job on or off for the project, of the working directory or of --project &lt;root&gt;. On, the default, flai serve makes a missing or stale agent image by itself, with your build command when one is named, and holds the starts that need it until it is made. Off, a start refuses a missing or stale image, naming it and flai image ensure, which still runs by hand. With no argument it prints on or off.
+
+It is kept in the host's configuration as agent.projects.&lt;root&gt;.image.auto: off is stored as false, and on removes it, the default (ADR-0295).
+
+Examples:
+
+```bash
+flai serve agent image auto off
+flai serve agent image auto on
+flai serve agent image auto
+```
+
+Flags from `flai serve agent image`:
+
+| Flag | Meaning |
+|------|---------|
+| `--project` string | the main checkout of the project whose image settings these are, not the one in the working directory |
+
+###### flai serve agent image command
+
+Name your build command for the project's agent images, which flai runs in place of its own pull and build.
+
+```text
+flai serve agent image command [--project <root>] [--clear] [-- <program> [args...]] [flags]
+```
+
+Names the build command of the project's agent images, as an argument list after --. flai image ensure and flai serve's image job then run it in place of flai's own pull and build: with your rights, in the project's main checkout, never through a shell, with the FLAI\_IMAGE\_\* variables saying what the images must be (FLAI\_IMAGE\_VERSION, FLAI\_IMAGE\_INNER, the tags in FLAI\_IMAGE\_BEDROCK, FLAI\_IMAGE\_HARNESS, and FLAI\_IMAGE\_LAYER, the recipes in FLAI\_IMAGE\_RECIPE\_\*, and the images missing or stale in FLAI\_IMAGE\_STALE). flai checks the images and their labels after it, and a non-zero exit, or an image missing or with other labels, fails the run.
+
+--clear removes it, so that flai's own pull and build make the images again. With neither, it prints the command set, or says that flai's own pull and build make them. It writes the project's own setting, of the working directory or of --project &lt;root&gt;, kept in the host's configuration as agent.projects.&lt;root&gt;.image.command (ADR-0295).
+
+Examples:
+
+```bash
+flai serve agent image command -- scripts/agent-image.sh
+flai serve agent image command --project /home/me/src/other -- /home/me/bin/build-images --push
+flai serve agent image command
+flai serve agent image command --clear
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--clear` | remove the command, so that flai's own pull and build make the images again |
+
+Flags from `flai serve agent image`:
+
+| Flag | Meaning |
+|------|---------|
+| `--project` string | the main checkout of the project whose image settings these are, not the one in the working directory |
+
 ##### flai serve agent provider
 
 Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key.
@@ -4335,7 +4431,7 @@ Flags:
 
 ##### flai serve agent show
 
-Print the command, the harnesses, and whether the action is enabled, for the project here.
+Print the command, the harnesses, the image settings, and whether the action is enabled, for the project here.
 
 ```text
 flai serve agent show
@@ -4982,7 +5078,7 @@ Print this host's settings as the dashboard's settings page has them for the pro
 flai serve settings
 ```
 
-Prints what the dashboard's settings page is given for the project in the working directory: the host actions, here and everywhere; the agent, its harnesses and providers; the checks; the folders named for import; the projects flai serve serves; planning; and the project's HTTP MCP server, whether it runs, the addresses flai host starts it on, mcp.bind, auto by default, which flai serve mcp bind sets, and, while it runs, the addresses it listens on (flai serve mcp show says what auto resolves to now). --json prints every field as the dashboard gets it. It prints no token and no variable's value.
+Prints what the dashboard's settings page is given for the project in the working directory: the host actions, here and everywhere; the agent, its harnesses and providers, and how the project's agent images are made, your build command or flai's own pull and build, and whether flai serve makes them by itself; the checks; the folders named for import; the projects flai serve serves; planning; and the project's HTTP MCP server, whether it runs, the addresses flai host starts it on, mcp.bind, auto by default, which flai serve mcp bind sets, and, while it runs, the addresses it listens on (flai serve mcp show says what auto resolves to now). --json prints every field as the dashboard gets it. It prints no token and no variable's value.
 
 Examples:
 
