@@ -6,7 +6,7 @@ title: "flai check finds `item.blocked-closed` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T07:23:41Z
+updated: 2026-11-13T07:27:32Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,24 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 8
+          cache_read: 32556
+          cache_write: 104
+          cost: 0.0094
+finalized:
+  by: alex
+  at: 2026-11-13T07:27:32Z
 ---
 # S-0761 flai check finds `item.blocked-closed` outside the story at close-out
 
