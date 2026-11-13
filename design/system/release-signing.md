@@ -1,6 +1,6 @@
 ---
 title: Signing releases and verifying the peer
-updated: 2026-11-11
+updated: 2026-11-13
 status: active
 topics: [cli, dashboard, release, security]
 ---
@@ -16,7 +16,8 @@ Every statement about this repository comes from its files, read on 2026-10-02. 
 ### How flai is released
 
 - `release-flai.yml` runs GoReleaser on a tag `flai/v*` with `--clean --skip=validate`, under `permissions: contents: write` (since S-0630 granted on its `goreleaser` job, with `id-token` and `attestations`, over a top-level `contents: read`), and publishes to the GitHub release of `bytepunx/system-flow` named `flai vX.Y.Z`.
-- `flai/.goreleaser.yaml` builds `flai` for linux, darwin, and windows on amd64 and arm64 with `CGO_ENABLED=0`, `-trimpath`, and `-s -w`, and sets `buildinfo.Version`, `Commit`, and `Date` by `ldflags`. It archives each build as `flai_<version>_<os>_<arch>.tar.gz` (`.zip` on windows) and writes `checksums.txt`, SHA-256 of every archive. When this was written it had no `signs`, no `sboms`, and no `docker_signs` section, and nothing was signed. Since S-0232 its `signs` section signs `checksums.txt` into `checksums.txt.sig`, and the release publishes the key's public half as `cosign.pub`.
+- `flai/.goreleaser.yaml` builds `flai` for linux, darwin, and windows on amd64 and arm64 with `CGO_ENABLED=0`, `-trimpath`, and `-s -w`, and sets `buildinfo.Version`, `Commit`, and `Date` by `ldflags`. It archives each build as `flai_<version>_<os>_<arch>.tar.gz` (`.zip` on windows) and writes `checksums.txt`, SHA-256 of every archive. When this was written it had no `signs`, no `sboms`, and no `docker_signs` section, and nothing was signed. Since S-0232 its `signs` section signs `checksums.txt` into `checksums.txt.sig`, and the release publishes the key's public half as `cosign.pub`. Since S-0734 it also builds `pilot` for linux/amd64 and linux/arm64 into `pilot_<version>_linux_<arch>.tar.gz`, named in the same `checksums.txt`.
+- Since S-0734 the same tag publishes the agent images, `ghcr.io/bytepunx/flai-agent-bedrock` and `ghcr.io/bytepunx/flai-agent-claude-code`, built from the release's own Linux archives, with their signed digest lists on `flai vX.Y.Z` ([The digest list](#the-digest-list), [ADR-0295](../adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)).
 - `flai version` prints the three build values and the Go version. A build from this tree by `scripts/flai.sh` has no version. `scripts/flai-build.sh` links the tree's commit and commit time into `Commit` and `Date` by `ldflags`, from git run in the tree, and builds with `-buildvcs=false`: Go's VCS lookup takes only a `.git` folder for a repository's root, so it stamped a build in a story's worktree, whose `.git` is a file, with the main checkout's HEAD (I-0348). Any other build without `ldflags` still falls back to `debug.ReadBuildInfo` for the commit and date (`flai/internal/buildinfo/buildinfo.go`).
 
 ### How flaiover is released
@@ -154,6 +155,8 @@ A consequence either way: `latest` is pushed on every merge to `main`, and `sha-
 ### The digest list
 
 On a `flaiover/v*` tag, `release-flaiover.yml` writes `flaiover_<version>.digests`, signs it as flai's `checksums.txt` is signed, into `flaiover_<version>.digests.sig`, and uploads both to the `flaiover vX.Y.Z` release. On the same tag it signs the image with `cosign sign --key` and attests it with `actions/attest`, both by the index digest and not by each platform's manifest (no `--recursive`); the attestation waits on the plan or the visibility, as [GitHub artifact attestations](#github-artifact-attestations) says. Builds of `main` get no list, no signature, and no attestation.
+
+On a `flai/v*` tag, `release-flai.yml` does the same for the two agent images ([ADR-0295](../adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)). Its `agent-images-release` job writes one list per image, since the format holds one repository: `flai-agent-bedrock_<version>.digests` and `flai-agent-claude-code_<version>.digests`, with `scripts/agent-image-digests.sh`, which runs `scripts/flaiover-digests.sh` for each. Their references are `ghcr.io/bytepunx/flai-agent-bedrock:<version>` and `ghcr.io/bytepunx/flai-agent-claude-code:<version>`, the flai version without its `v`. It signs each list into `.digests.sig` with the release key and the same `cosign sign-blob` flags, no Rekor entry, and adds the lists and signatures to the `flai vX.Y.Z` release, beside `checksums.txt`. It signs each image with `cosign sign --key` by its index digest, and attests it by the same digest when the repository is public, as flaiover's is. Nothing reads these lists yet: `flai image ensure` (S-0740) will pull by their digests.
 
 The file is plain text, UTF-8, LF line ends, with a final newline, and no blank lines or comments. Each line is three fields separated by one space: the digest, the reference it was pushed under, and what it is.
 

@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-11-12
+updated: 2026-11-13
 status: active
 ---
 
@@ -1096,7 +1096,7 @@ For the servers `flai host` starts, `mcp.bind` sets the addresses once for every
 
 ### An agent in a container: pilot (S-0507)
 
-An agent in one of flai's agent images reaches this server over HTTP. The images are built locally, in system-flow's own repository, and nothing publishes them yet ([docker.md](../../design/tech/docker.md)). Their entrypoint is pilot, a second program built from flai's source and shipped only in the images: an installed flai has no pilot. pilot reads one start request on standard input, which names the story, the agent, the harness to run, and the variables that hold this server's URL, token, and Host, and runs that harness. How it works is in [flai-cli.md](../../design/system/flai-cli.md#pilot-the-agent-images-entrypoint-s-0507).
+An agent in one of flai's agent images reaches this server over HTTP. The images are built locally, in system-flow's own repository; each flai release also publishes signed images to GHCR, which flai does not pull yet ([docker.md](../../design/tech/docker.md)). Their entrypoint is pilot, a second program built from flai's source, which each flai release ships for Linux beside flai. pilot reads one start request on standard input, which names the story, the agent, the harness to run, and the variables that hold this server's URL, token, and Host, and runs that harness. How it works is in [flai-cli.md](../../design/system/flai-cli.md#pilot-the-agent-images-entrypoint-s-0507).
 
 | | |
 |-|-|

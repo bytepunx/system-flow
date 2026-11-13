@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-11-12
+updated: 2026-11-13
 status: active
 ---
 
@@ -93,7 +93,7 @@ Only if a story's agent is to run on the `container` harness ([In a container](.
    make agent-images     # flai-agent-bedrock:local and flai-agent-claude-code:local, then the project's layer
    ```
 
-   They are built on this machine, from the checked-out tree; nothing publishes them ([Run a story's agent in a container](agent-container.md#build)). When the checkout's `system-flow.yaml` names a Dockerfile under `agent.image.layer`, the same command builds it last, over `flai-agent-claude-code:local`, as `flai-agent-<key>-claude-code:local` ([settings](../settings.md#project-manifest)). In system-flow's repository that is `flai-agent-sf-claude-code:local`, with the tools its tests run, about 1.56 GB; its first build also downloads the Go and ShellCheck images, golangci-lint's source, and flai's modules. After a change to the layer alone, rebuild just it:
+   They are built on this machine, from the checked-out tree ([Run a story's agent in a container](agent-container.md#build)). Each flai release also publishes signed images to GHCR, which flai does not pull yet ([the published images](agent-container.md#the-published-images)). When the checkout's `system-flow.yaml` names a Dockerfile under `agent.image.layer`, the same command builds it last, over `flai-agent-claude-code:local`, as `flai-agent-<key>-claude-code:local` ([settings](../settings.md#project-manifest)). In system-flow's repository that is `flai-agent-sf-claude-code:local`, with the tools its tests run, about 1.56 GB; its first build also downloads the Go and ShellCheck images, golangci-lint's source, and flai's modules. After a change to the layer alone, rebuild just it:
 
    ```bash
    scripts/agent-image.sh --layer     # over the flai-agent-claude-code:local already built

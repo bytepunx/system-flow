@@ -1,6 +1,6 @@
 ---
 title: Go
-updated: 2026-11-11
+updated: 2026-11-13
 status: active
 topics: [go]
 ---
@@ -11,7 +11,7 @@ topics: [go]
 |-|-|
 | Version | 1.26 (toolchain pinned in `flai/go.mod`) |
 | Used in | `flai` |
-| Binaries | Two from the one module. `flai`, built from `flai/` and released by GoReleaser. `pilot`, the agent images' entrypoint, built from `flai/pilot` with `go build ./pilot` in `flai/`, only into the bedrock image (`flai/images/bedrock/Dockerfile`), never by GoReleaser ([ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md), S-0507) |
+| Binaries | Two from the one module. `flai`, built from `flai/` and released by GoReleaser. `pilot`, the agent images' entrypoint, built from `flai/pilot`, for Linux only ([ADR-0212](../adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md), S-0507). GoReleaser builds it for linux/amd64 and linux/arm64 into `pilot_<version>_linux_<arch>.tar.gz`, named in the release's `checksums.txt`, and the published bedrock image holds the release's pilot; the bedrock Dockerfile's `tree` target still builds it from the tree with `go build ./pilot` in `flai/` (`flai/images/bedrock/Dockerfile`, [ADR-0295](../adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)) |
 | Decision | [ADR 0006](../adrs/0006-go-for-the-cli.md) |
 
 ## Why

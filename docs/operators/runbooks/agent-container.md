@@ -1,6 +1,6 @@
 ---
 title: "Runbook: run a story's agent in a container"
-updated: 2026-11-12
+updated: 2026-11-13
 status: active
 ---
 
@@ -10,7 +10,7 @@ Building the agent images and running one story's Claude Code agent in a contain
 
 ## The images
 
-Two images, and a third when the project names a layer, built on this machine from this repository's tree:
+Two images, and a third when the project names a layer. This runbook runs the ones built on this machine from this repository's tree:
 
 | Image | What it holds |
 |-------|---------------|
@@ -18,7 +18,46 @@ Two images, and a third when the project names a layer, built on this machine fr
 | `flai-agent-claude-code:local` | Claude Code from npm, at the version the Dockerfile pins, with Node and ripgrep, on the bedrock image. Auto-update is off: a new Claude Code is a rebuild. Dockerfile: `flai/images/claude-code/Dockerfile`. |
 | `flai-agent-<key>-claude-code:local` | The project's layer, on the claude-code image, when `system-flow.yaml` names its Dockerfile under `agent.image.layer`. This repository's is `flai-agent-sf-claude-code:local`, from `flai/images/system-flow/Dockerfile`: Go, golangci-lint, ShellCheck, and pnpm, the tools the close-out's tiers need ([docker.md](../../../design/tech/docker.md)). `go build` in it stamps VCS information, as on the host: for a story's worktree Go runs git in the main checkout, which git accepts only through the `safe.directory` the container is given, so a container started without it fails with `error obtaining VCS status: exit status 128` (I-0255). `scripts/agent-vcs-test.sh` checks it. |
 
-They are local: nothing pushes them, and no registry publishes them. They are not stamped and not signed, unlike flai's releases ([release-key.md](release-key.md)). None holds a login, a key, or a token: the agent's credentials reach the container when it runs. The first two hold no Go, golangci-lint, pnpm, or markdownlint, so an agent in them cannot run this repository's close-out tiers that need them; the layer image holds the tiers' tools.
+These are local: nothing pushes them. They are not stamped and not signed, unlike flai's releases ([release-key.md](release-key.md)). None holds a login, a key, or a token: the agent's credentials reach the container when it runs. The first two hold no Go, golangci-lint, pnpm, or markdownlint, so an agent in them cannot run this repository's close-out tiers that need them; the layer image holds the tiers' tools.
+
+### The published images
+
+Each flai release, from the tag `flai/vX.Y.Z`, also publishes the first two images to GHCR, for linux/amd64 and linux/arm64, tagged with the version without its `v` ([ADR-0295](../../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)):
+
+| Image | What it holds |
+|-------|---------------|
+| `ghcr.io/bytepunx/flai-agent-bedrock:X.Y.Z` | The bedrock image, with the release's own `flai` and `pilot` for Linux in place of a tree build. |
+| `ghcr.io/bytepunx/flai-agent-claude-code:X.Y.Z` | The claude-code image, built over that bedrock image by its digest. |
+
+Both carry the labels `dev.system-flow.flai`, the release's version, and `dev.system-flow.commit`, its commit. Each is signed with the release key by its index digest. The GitHub release `flai vX.Y.Z` holds one digest list per image, `flai-agent-bedrock_X.Y.Z.digests` and `flai-agent-claude-code_X.Y.Z.digests`, each with its signature `.digests.sig`, in the format of [release-signing.md](../../../design/system/release-signing.md#the-digest-list), beside `cosign.pub`. Compare the key's fingerprint with [release-key.md](release-key.md#current-key) first.
+
+Verify a list with cosign:
+
+```bash
+gh release download flai/vX.Y.Z --repo bytepunx/system-flow \
+  --pattern 'flai-agent-*.digests*' --pattern cosign.pub
+cosign verify-blob --key cosign.pub --signature flai-agent-bedrock_X.Y.Z.digests.sig \
+  --insecure-ignore-tlog flai-agent-bedrock_X.Y.Z.digests
+```
+
+or with openssl:
+
+```bash
+openssl base64 -d -A -in flai-agent-bedrock_X.Y.Z.digests.sig -out flai-agent-bedrock_X.Y.Z.digests.der
+openssl dgst -sha256 -verify cosign.pub -signature flai-agent-bedrock_X.Y.Z.digests.der flai-agent-bedrock_X.Y.Z.digests
+```
+
+Verify an image by the `index` digest its list names:
+
+```bash
+cosign verify --key cosign.pub --insecure-ignore-tlog=true ghcr.io/bytepunx/flai-agent-bedrock@sha256:<index digest>
+```
+
+The same commands with `claude-code` in place of `bedrock` check the other image.
+
+GHCR makes a package created from a private repository private. A pull with no login needs both packages public, so after the first flai release that publishes them, set each one's visibility to public: on GitHub, Packages, `flai-agent-bedrock`, then Package settings, Change visibility; then the same for `flai-agent-claude-code`. Once a package is public it stays so for every later release.
+
+flai does not pull these images yet. The container harness, and the scripts below, still run the `:local` images built on this machine, until `flai image ensure` (S-0740) pulls the published ones by the digests a verified list names.
 
 ## Build
 
