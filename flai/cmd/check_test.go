@@ -691,6 +691,47 @@ func TestCheckRecordIssuesLeavesOutANarrativeMissingOutsideTheStory(t *testing.T
 	}
 }
 
+// I-0354, ADR-0296: the archived S-003 was cancelled with a blocked interval
+// left open; a close-out of S-004, which did not touch it, neither notes the
+// item.blocked-closed nor records it in an issue, while the unscoped check
+// still warns on it and fails --strict.
+func TestCheckRecordIssuesLeavesOutBlockedClosedOutsideTheStory(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", nil)
+	path := filepath.Join(root, "wip", "archive", "kanban", "stories", "S-003-three.md")
+	data, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(data), "tags: []\n") {
+		t.Fatalf("S-003 has no tags line: %v", err)
+	}
+	three := strings.Replace(string(data), "tags: []\n", "blocked:\n  - from: 2026-08-20T10:00:00Z\n    reason: pause for urgent fix\ntags: []\n", 1)
+	if err := os.WriteFile(path, []byte(three), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict")
+	if code == 0 || !strings.Contains(out, "warning: item.blocked-closed: cancelled item still has an open blocked interval; close it at the item's close with flai unblock S-003") {
+		t.Fatalf("unscoped, the run should warn on S-003's open blocked interval and fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{configPath: configOf(t), cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "item.blocked-closed") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the item.blocked-closed should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); len(names) != 0 {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+	if data, err := os.ReadFile(path); err != nil || string(data) != three {
+		t.Errorf("S-003 should be left as it was: %v\n%s", err, data)
+	}
+}
+
 // I-0161, ADR-0171: a close-out on a host or in a worktree that cannot read
 // a component's props, here a PATH without node, neither notes nor records
 // the components.examples note for examples the story did not change, while

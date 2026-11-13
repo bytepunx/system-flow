@@ -37,13 +37,17 @@ import (
 // narrative, which only that story's agent or the operator opens, with flai
 // stream open in the main checkout, which no story branch changes (ADR-0256,
 // I-0235); one on the story's own item file is inside it, an error, as
-// before. So is the note components.examples gives
-// when it could not check examples for want of node or a sub-project's
-// svelte, unless one of changed is under the examples folder it names, or a
-// folder of changed holds it: only installing the tool clears it, which no
-// story branch does; when one is, the story's own examples went unchecked,
-// and the note is inside it (ADR-0171, I-0161). So are the agent.image
-// findings only the host clears, docker not on PATH, docker unable to say,
+// before. So is an item.blocked-closed outside the story: it is on the file
+// of a done or cancelled item, archived ones included, whose blocked interval
+// was left open at its close, which only flai unblock on that item, in the
+// main checkout, which no story branch changes, closes (ADR-0296, I-0354);
+// one on the story's own item file or one of its tasks' is inside it. So is
+// the note components.examples gives when it could not check examples for
+// want of node or a sub-project's svelte, unless one of changed is under the
+// examples folder it names, or a folder of changed holds it: only installing
+// the tool clears it, which no story branch does; when one is, the story's
+// own examples went unchecked, and the note is inside it (ADR-0171, I-0161).
+// So are the agent.image findings only the host clears, docker not on PATH, docker unable to say,
 // and the layer's image not built, unless one of changed is system-flow.yaml
 // or the layer's Dockerfile, or a folder of changed holds either: only
 // installing or starting Docker, or building the image, clears them, which no
@@ -170,7 +174,7 @@ func ScopeToStories(res *Result, repo *workitem.Repo, stories []string, changed 
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if ((f.Rule == "wip.overlap" || f.Rule == "touches.folder" || f.Rule == "wip.after-hub" || f.Rule == "wip.after-reason") && !namesStory(f, ids)) ||
-			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing") && !inside(f.Path)) ||
+			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived" || f.Rule == "narrative.missing" || f.Rule == "item.blocked-closed") && !inside(f.Path)) ||
 			(f.unchecked && !under(f.Path) && !slices.ContainsFunc(f.inside, under)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)

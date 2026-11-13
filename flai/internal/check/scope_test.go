@@ -581,6 +581,52 @@ func TestScopedCheckLeavesOutANarrativeMissingOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0354, ADR-0296: close-outs met item.blocked-closed on items they did not
+// touch, closed with a blocked interval left open, and recorded it. Scoped to
+// another story, the check leaves it out and counts it nowhere; on a done task
+// of the scoped story it stays inside it; unscoped, it is reported.
+func TestScopedCheckLeavesOutBlockedClosedOutsideTheStory(t *testing.T) {
+	const rel = "wip/archive/kanban/stories/S-003-three.md"
+	const openBlock = "blocked:\n  - from: 2026-08-20T10:00:00Z\n    reason: pause for urgent fix\ntags: []\n"
+	root := scopeProject(t)
+	edit(t, root, rel, "tags: []\n", openBlock)
+	whole, scoped := runScoped(t, root, nil)
+	want := "cancelled item still has an open blocked interval; close it at the item's close with flai unblock S-003"
+	if got := ruleFindings(whole, "item.blocked-closed"); len(got) != 1 || got[0].Message != want ||
+		!strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Fatalf("unscoped, the run should report S-003's item.blocked-closed: %+v", whole.Findings)
+	}
+	if got := ruleFindings(scoped, "item.blocked-closed"); len(got) != 0 {
+		t.Errorf("scoped to S-004, the item.blocked-closed on S-003, which it did not touch, should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
+	if !scoped.OK(true) {
+		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+	}
+
+	// A done task of S-004 with an open interval is the story's own.
+	const task = "wip/archive/kanban/tasks/T-005-t5.md"
+	data, err := os.ReadFile(filepath.Join(root, "wip/archive/kanban/tasks/T-001-t1.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t5 := strings.NewReplacer("T-001", "T-005", "T1", "T5", "S-001", "S-004", "tags: []\n", openBlock).Replace(string(data))
+	if err := os.WriteFile(filepath.Join(root, task), []byte(t5), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, scoped = runScoped(t, root, nil)
+	got := ruleFindings(scoped, "item.blocked-closed")
+	if len(got) != 1 || got[0].Outside || !strings.HasSuffix(filepath.ToSlash(got[0].Path), task) {
+		t.Errorf("scoped to S-004, the item.blocked-closed on its task T-005 should be inside it, and S-003's left out: %+v", got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("scoped to S-004, the item.blocked-closed on its own task should fail --strict: %+v", scoped.Findings)
+	}
+}
+
 // ruleFindings is res's findings of rule.
 func ruleFindings(res *Result, rule string) []Finding {
 	var out []Finding
