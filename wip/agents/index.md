@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-13T11:39:47Z
+updated: 2026-11-13T11:40:40Z
 ---
 
 # Active streams
@@ -9,6 +9,7 @@ updated: 2026-11-13T11:39:47Z
 |--------|-------|--------|------------|---------|
 | [S-0693](S-0693.md) | TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier | cancelled | agent-S-0693 | 2026-11-11T05:18:24Z |
 | [S-0709](S-0709.md) | flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs | cancelled | agent-S-0709 | 2026-11-12T16:04:29Z |
+| [S-0740](S-0740.md) | flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries | in-progress | agent-S-0740 | 2026-11-13T11:39:55Z |
 | [S-0761](S-0761.md) | flai check finds `item.blocked-closed` outside the story at close-out | review | agent-S-0761 | 2026-11-13T09:32:26Z |
 | [S-0763](S-0763.md) | Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace | in-progress | agent-S-0763 | 2026-11-13T09:08:01Z |
 
