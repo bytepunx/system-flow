@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2165.0424
-accrued_seconds: 1559570
-tasks_completed: 3367
-last_run: 2026-11-13T17:21:23Z
+accrued_cost: 2165.2978
+accrued_seconds: 1559651
+tasks_completed: 3370
+last_run: 2026-11-13T17:22:59Z
 ---
 
 # Orchestrator activity
@@ -23603,6 +23603,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.0910 USD, estimated
+
+### 2026-11-13T17:22:31Z
+
+- Summary: release-due S-0757: release_evaluate met under threshold (count 1 at or over threshold 1, value 0 under 1000; S-0757 unvalued); the publish formula's instance S-0776, made at 17:20:42Z after S-0757's acceptance, is already in progress (T-3316), so no second flai formula run publish
+- Items: S-0757, S-0776
+- Seconds: 53
+- Cost: 0.1309 USD, estimated
+
+### 2026-11-13T17:22:42Z
+
+- Summary: TH-1167 (resolved by flai serve when S-0776 started) and TH-1169 (open): both are flai serve notices, left alone under answer_threads autonomous. Starvation cause per flai promote --drafts: 19 E-0034 drafts lack a cost of delay value pending the operator on TH-1097; S-0241 is held by TH-1165; S-0730 lacks touches, forecast, and value; S-0760 is held after S-0759. No draft is finalizable and no candidate can be promoted
+- Items: S-0730, S-0241, S-0760
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-11-13T17:22:59Z
+
+- Summary: I took no new action this run. S-0757's release is already being published, and nothing on the board can start until you decide on E-0034's cost of delay.
+- Items: none
+- Seconds: 17
+- Cost: 0.1245 USD, estimated
 
 ## Refusals
 
