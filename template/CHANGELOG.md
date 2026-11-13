@@ -6,6 +6,7 @@
 
 - S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project (patch).
 - S-0745 The commented agent.image block of system-flow.yaml names the layer's build arguments, agent.image.args, which flai image ensure builds the layer with (patch, ADR-0295).
+- S-0662 `strategic-agents.md` and the orchestrator's role let its evidence name a story's kluster record for a criterion, `- <n>: kluster deploy and checks passed at <commit>`, which `flai accept --by orchestrator` takes only when the namespace's deploy and, while the checks host action is on, its checks run passed at the verified head and the commit is the record's or at that head, and otherwise refuses with `criterion_unevidenced`, naming the criterion and what the record says (minor, ADR-0292).
 - S-0662 `work-management.md` tells a story's agent in a project whose `kluster:` block names a `deploy` to deploy its story at the branch's head with `flai kluster deploy S-nnnn --job`, run the checks with `flai checks run S-nnnn --job`, run its own commands with `flai kluster exec`, and tick each criterion it verified there before the close-out and the move to review, leaving unticked only what it could not verify, with the reason (minor, ADR-0292).
 
 ## 1.1.36 - 2026-11-13

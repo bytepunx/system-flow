@@ -1269,12 +1269,16 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			// its Notes, and finishing it writes none (ADR-0189)
 			return opts, none, nil
 		}
-		item := "- <n>: <files>"
-		if it.Formula != "" {
+		forms := "one - <n>: <files> item per criterion"
+		switch k := repo.Manifest.Kluster; {
+		case it.Formula != "":
 			// a formula's instance is evidenced by its steps' tasks (S-0422)
-			item = "- <n>: T-nnnn done"
+			forms = "one - <n>: T-nnnn done item per criterion"
+		case klusterOn && k != nil && len(k.Deploy) > 0:
+			// the story's namespace shows a criterion met (S-0662)
+			forms += ", or - <n>: kluster deploy and checks passed at <commit> for one its namespace's deploy and checks at the verified head show"
 		}
-		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one %s item per criterion (ADR-0093)", it.ID, item)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and %s (ADR-0093)", it.ID, forms)
 	}
 	text, err := a.readEvidence(o)
 	if err != nil {

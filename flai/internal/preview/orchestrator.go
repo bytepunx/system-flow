@@ -11,6 +11,8 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -24,8 +26,9 @@ import (
 // thread on the story or its tasks is open, and the orchestrator's evidence,
 // when given, names for each criterion a file the branch changes, or, for a
 // formula's instance, whose steps may change nothing, the done task of the
-// criterion's step (S-0422); and the branch changes no path Claude Code
-// protects, which the operator alone accepts (ADR-0106). Each failing
+// criterion's step (S-0422), or the story's kluster record, when its
+// namespace's deploy and checks passed at the verified head (S-0662); and the
+// branch changes no path Claude Code protects, which the operator alone accepts (ADR-0106). Each failing
 // condition is a blocker of the preview, beside those of any acceptance.
 
 // Codes of the blockers an acceptance by the orchestrator adds.
@@ -36,7 +39,7 @@ const (
 	BlockOutsideTouches       = "outside_touches"       // the branch changes a file under none of the touches
 	BlockThreadOpen           = "thread_open"           // a thread on the story or a task is not resolved
 	BlockOwnThreadOpen        = "own_thread_open"       // a thread the orchestrator opened and alone wrote on is not resolved (ADR-0189)
-	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion, or, for a formula's instance, no done task of its step
+	BlockCriterionUnevidenced = "criterion_unevidenced" // the evidence names no changed file for a criterion, no kluster record that passed at the verified head, or, for a formula's instance, no done task of its step
 	BlockProtectedPaths       = "protected_paths"       // the branch changes a path Claude Code protects, which the operator accepts (ADR-0106)
 )
 
@@ -94,10 +97,14 @@ type Evidence struct {
 }
 
 // CriterionEvidence is one list item of the evidence: the files that meet
-// acceptance criterion N.
+// acceptance criterion N, or, in place of files, the commit of the story's
+// kluster record it names (S-0662).
 type CriterionEvidence struct {
 	N     int      `json:"n"`
 	Files []string `json:"files"`
+	// Kluster is the commit an item "- <n>: kluster deploy and checks passed
+	// at <commit>" names; "" for an item naming files.
+	Kluster string `json:"kluster,omitempty"`
 }
 
 var (
@@ -113,12 +120,19 @@ var (
 	// stopCancel is the line flai formula stop leaves in the Notes of each
 	// step task it cancels (ADR-0271 §2), with the stopping step and the exit
 	stopCancel = regexp.MustCompile(`moved to cancelled: step (\S+) stopped the run with exit (\d+)`)
+	// klusterLine is evidence for a criterion that the story's namespace
+	// shows it, in place of files: "kluster deploy and checks passed at
+	// <commit>", or "kluster deploy passed at <commit>" while the checks host
+	// action is off, a note may follow (ADR-0292 §6, S-0662)
+	klusterLine = regexp.MustCompile("(?i)^kluster\\s+deploy(?:\\s+and\\s+checks)?\\s+passed\\s+at\\s+`?([0-9a-f]{7,40})\\b`?")
 )
 
 // ParseEvidence reads an orchestrator's evidence: one "Verdict: <verdict>"
 // line, and one list item "- <n>: <files>" per criterion. Files are the
 // backtick-quoted spans of the item when it has any, so a note may follow
-// them; otherwise they are the item's text split on commas. It is an error
+// them; otherwise they are the item's text split on commas. An item "- <n>:
+// kluster deploy and checks passed at <commit>" names no files but the
+// commit of the story's kluster record (S-0662). It is an error
 // when there is no Verdict line or it is empty, when there are two, when no
 // criterion is listed, or when a criterion is listed twice.
 func ParseEvidence(text string) (*Evidence, error) {
@@ -147,6 +161,10 @@ func ParseEvidence(text string) (*Evidence, error) {
 			return nil, fmt.Errorf("the evidence lists criterion %d twice: name all the files that meet it in one item \"- %d: <files>\"", n, n)
 		}
 		listed[n] = true
+		if k := klusterLine.FindStringSubmatch(strings.TrimSpace(m[2])); k != nil {
+			ev.Criteria = append(ev.Criteria, CriterionEvidence{N: n, Files: []string{}, Kluster: k[1]})
+			continue
+		}
 		ev.Criteria = append(ev.Criteria, CriterionEvidence{N: n, Files: evidenceFiles(m[2])})
 	}
 	switch {
@@ -290,9 +308,11 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 		}
 	}
 
-	// 5. the evidence, when given, names a changed file for every criterion;
-	// for a formula's instance, whose steps may change no file, the task of
-	// the criterion's step, done (S-0422)
+	// 5. the evidence, when given, names a changed file for every criterion,
+	// or the story's kluster record, judged at the verified head: the story
+	// branch's, which the queue's landing rebased a copy of (S-0662); for a
+	// formula's instance, whose steps may change no file, the task of the
+	// criterion's step, done (S-0422)
 	switch {
 	case opts.Evidence == nil:
 	case it.Formula != "" && listErr != nil:
@@ -300,7 +320,12 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	case it.Formula != "":
 		blockers = append(blockers, stepsUndone(it, criteria, opts.Evidence, tasks)...)
 	case diff != nil:
-		blockers = append(blockers, unevidenced(criteria, opts.Evidence, changed)...)
+		at := verified
+		if opts.Batch != "" {
+			at = ""
+		}
+		kl := klusterJudgeOf(r, repo.MainRoot, repo.Manifest, it.ID, at, opts.KlusterOn, opts.ChecksOn)
+		blockers = append(blockers, unevidenced(criteria, opts.Evidence, changed, kl)...)
 	}
 
 	// 6. the branch changes no path Claude Code protects
@@ -371,21 +396,29 @@ func verifiedOnMain(r execx.Runner, repo *workitem.Repo, id, given string, add f
 }
 
 // unevidenced is a blocker for each criterion the evidence has no item for,
-// or whose item names no file in changed.
-func unevidenced(criteria []itemedit.Criterion, ev *Evidence, changed []string) []Blocker {
+// whose item names no file in changed, or whose item names the story's
+// kluster record at a commit kl says is no evidence, saying why.
+func unevidenced(criteria []itemedit.Criterion, ev *Evidence, changed []string, kl klusterJudge) []Blocker {
 	isChanged := map[string]bool{}
 	for _, p := range changed {
 		isChanged[p] = true
 	}
 	byN := map[int][]string{}
+	klusterAt := map[int]string{}
 	listed := map[int]bool{}
 	for _, c := range ev.Criteria {
-		byN[c.N], listed[c.N] = c.Files, true
+		byN[c.N], klusterAt[c.N], listed[c.N] = c.Files, c.Kluster, true
 	}
 	var out []Blocker
 	for _, c := range criteria {
 		if !listed[c.N] {
 			out = append(out, Blocker{Code: BlockCriterionUnevidenced, Message: fmt.Sprintf("the evidence has no item for acceptance criterion %d (%s): add \"- %d: <files>\" naming the changed files that meet it", c.N, c.Text, c.N)})
+			continue
+		}
+		if at := klusterAt[c.N]; at != "" {
+			if why := kl(at); why != "" {
+				out = append(out, Blocker{Code: BlockCriterionUnevidenced, Message: fmt.Sprintf("the evidence for acceptance criterion %d (%s) names the kluster record at %s, but %s", c.N, c.Text, at, why)})
+			}
 			continue
 		}
 		met := false
@@ -404,6 +437,66 @@ func unevidenced(criteria []itemedit.Criterion, ev *Evidence, changed []string) 
 		}
 	}
 	return out
+}
+
+// klusterJudge is why the story's kluster record is no evidence for a
+// criterion whose item names it at a commit, or "" when it is (S-0662).
+type klusterJudge func(named string) string
+
+// klusterJudgeOf judges the kluster record of story in the main checkout
+// root, with m its manifest and git r, as kluster.ReadEvidence reads it
+// with klusterOn and checksOn, the host actions, reading it once, on the
+// first item that names it. verified is the commit the acceptance verified,
+// "" to judge at the story branch's head alone.
+func klusterJudgeOf(r execx.Runner, root string, m manifest.Manifest, story, verified string, klusterOn, checksOn bool) klusterJudge {
+	var (
+		ev   kluster.Evidence
+		err  error
+		read bool
+	)
+	return func(named string) string {
+		if !read {
+			ev, err = kluster.ReadEvidence(r, root, m, story, klusterOn, checksOn)
+			read = true
+		}
+		if err != nil {
+			return fmt.Sprintf("its record cannot be read: %v", err)
+		}
+		return klusterRecordWhy(r, root, m, ev, verified, named)
+	}
+}
+
+// klusterRecordWhy is why ev, a story's kluster evidence, is no evidence for
+// a criterion whose item names it at named, or "" when it is (ADR-0292 §6,
+// S-0662): it is when ev applies, its deploy passed at the story branch's
+// head, as kluster.AtHead widens it, and, while the checks host action is
+// on, its checks run did too, the head is verified, the commit the
+// acceptance verified when that is not "", and named is the deploy's or the
+// checks run's commit, or a commit at the head the same way.
+func klusterRecordWhy(r execx.Runner, root string, m manifest.Manifest, ev kluster.Evidence, verified, named string) string {
+	switch {
+	case !ev.Applies:
+		return ev.Summary() + ", so name the changed files that meet it"
+	case !ev.Passed:
+		return "the record says " + ev.Summary()
+	case verified != "" && verified != ev.Head:
+		return fmt.Sprintf("the record is judged at the head of story/%s, %s, which is not the commit the acceptance verified, %s", ev.Story, short(ev.Head), short(verified))
+	}
+	full, err := r.Run(root, "git", "rev-parse", "--verify", "--quiet", named+"^{commit}")
+	if full = strings.TrimSpace(full); err != nil || full == "" {
+		return fmt.Sprintf("%s names no commit in this repository: name the commit of the record's deploy, %s", named, short(ev.Deploy.Commit))
+	}
+	if full == ev.Deploy.Commit || ev.Checks != nil && full == ev.Checks.Commit {
+		return ""
+	}
+	j, err := kluster.AtHead(r, root, m, full, ev.Head)
+	switch {
+	case err != nil:
+		return fmt.Sprintf("cannot tell whether %s stands at the head %s: %v", short(full), short(ev.Head), err)
+	case !j.AtHead:
+		return fmt.Sprintf("%s is not the commit of the record's deploy, %s, nor at the head %s: %s", short(full), short(ev.Deploy.Commit), short(ev.Head), j.Why)
+	}
+	return ""
 }
 
 // stepsUndone is a blocker for each criterion of it, a formula's instance,

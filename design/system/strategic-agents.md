@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-11-12
+updated: 2026-11-13
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -711,7 +711,7 @@ Two more were the orchestrator's alone under ADR-0189 and are every acceptance's
 
 The merge queue's landing, `--batch`, commits the shared set and leaves the rest the same way, and alone leaves a stopped rebase in the worktree: the queue sends a story back before its batch is built ([ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)).
 
-The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.
+The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. In a project whose `kluster` host action is on and whose `kluster:` block names a `deploy`, an item may name the story's kluster record in place of files, `- <n>: kluster deploy and checks passed at <commit>`, or `- <n>: kluster deploy passed at <commit>` while the `checks` host action is off, a note after it, for a criterion the story's namespace shows met ([ADR-0292](../adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md) §6, S-0662). flai takes it only when the record, read as `kluster.ReadEvidence` reads it, says the deploy and, while `checks` is on, the checks run against it passed at the story branch's head, at the head as §3 widens it; that head is the commit the acceptance verified, the story branch's for the queue's landing; and `<commit>` is the record's commit or at that head the same way. Otherwise `criterion_unevidenced` names the criterion and what the record says, or, with the action off or no `deploy`, why the record is no evidence. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion, nor a kluster record it takes. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.
 
 A story the orchestrator enqueued in the merge queue is accepted as the orchestrator by the queue's landing, with no turn of its own ([ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md), [workflow.md](workflow.md#what-waits-on-an-acceptance-s-0296)). `flai serve` runs `flai accept <S-nnnn> --by orchestrator --batch <id>`:
 

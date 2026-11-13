@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -470,4 +471,70 @@ func TestTheOrchestratorInARolesContainerRefusesToAcceptByHand(t *testing.T) {
 	if last := acceptedS0001(t, root).Transitions; last[len(last)-1].To != workitem.Done {
 		t.Errorf("the story is done: %+v", last)
 	}
+}
+
+// acceptKlusterEvidence is the orchestrator's evidence for S-0001's one
+// criterion naming its kluster record at commit, as a file.
+func acceptKlusterEvidence(t *testing.T, commit string) (text, path string) {
+	t.Helper()
+	text = "Verdict: pass\n- 1: kluster deploy and checks passed at " + commit + " — the feature answers on s-0001"
+	return text, evidenceFile(t, text+"\n")
+}
+
+// acceptKlusterPassedAt writes S-0001's record of a deploy and a checks run
+// that passed at commit.
+func acceptKlusterPassedAt(t *testing.T, root, commit string) {
+	t.Helper()
+	writeS0001Deploy(t, root, kluster.Record{Commit: commit, Outcome: kluster.OutcomePassed, ChecksCommit: commit, ChecksOutcome: kluster.OutcomePassed})
+}
+
+// S-0662, ADR-0292 §6: in a kluster project the orchestrator's evidence for a
+// criterion may name the story's kluster record in place of changed files;
+// with the deploy and the checks run passed at the head it verified, flai
+// lands the story and writes that evidence in its Notes. The refusal of an
+// acceptance without evidence names the form.
+func TestTheOrchestratorAcceptsOnTheKlusterRecordAtTheVerifiedHead(t *testing.T) {
+	t.Parallel()
+	root, head := klusterStoryInReview(t)
+	klusterOn(t, root, true)
+	acceptKlusterPassedAt(t, root, head)
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head)
+	if code == 0 || !strings.Contains(errOut, "a Verdict: line and one - <n>: <files> item per criterion, or - <n>: kluster deploy and checks passed at <commit> for one its namespace's deploy and checks at the verified head show (ADR-0093)") {
+		t.Errorf("an acceptance without evidence in a kluster project must name the kluster form: %d\n%s", code, errOut)
+	}
+	evidence, file := acceptKlusterEvidence(t, head[:12])
+	if out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", file); code != 0 {
+		t.Fatalf("the orchestrator's acceptance on the kluster record: %d %s\n%s", code, errOut, out)
+	}
+	if story := acceptedS0001(t, root); !story.Archived || story.Status != workitem.Done || !strings.Contains(story.Body, evidence) {
+		t.Errorf("the story is accepted with the evidence in its Notes: %s %v\n%s", story.Status, story.Archived, story.Body)
+	}
+}
+
+// S-0662: an item naming the kluster record is refused, before anything is
+// merged, when it names a commit that is neither the record's nor at the
+// head, and when the kluster host action is off, each naming the criterion
+// and what the record says.
+func TestTheOrchestratorRefusesAKlusterRecordThatDoesNotMatch(t *testing.T) {
+	t.Parallel()
+	root, head := klusterStoryInReview(t)
+	klusterOn(t, root, true)
+	acceptKlusterPassedAt(t, root, head)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	older := gitIn(t, root, "rev-parse", "story/S-0001~1")
+	_, file := acceptKlusterEvidence(t, older[:12])
+	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", file)
+	want := "the evidence for acceptance criterion 1 (the feature ships) names the kluster record at " + older[:12] + ", but " + older[:12] + " is not the commit of the record's deploy, " + head[:12] + ", nor at the head " + head[:12] + ": "
+	if code == 0 || !strings.Contains(errOut, want) || !strings.Contains(errOut, "cli/feature.go") {
+		t.Errorf("a kluster item at another commit must be refused, naming the criterion and the record: %d\n%s", code, errOut)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+
+	useConfig(t, filepath.Join(t.TempDir(), "off.json"))
+	_, file = acceptKlusterEvidence(t, head[:12])
+	_, errOut, code = runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", file)
+	if code == 0 || !strings.Contains(errOut, "names the kluster record at "+head[:12]+", but no kluster evidence applies to S-0001: the kluster host action is off for this project, so name the changed files that meet it") {
+		t.Errorf("a kluster item with the action off must be refused, saying why: %d\n%s", code, errOut)
+	}
+	assertNothingAccepted(t, root, mainBefore)
 }
