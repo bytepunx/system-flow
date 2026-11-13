@@ -3,15 +3,36 @@ id: T-3212
 type: task
 nature: improvement
 title: The template's operators guide and manifest tell a new project that flai supplies its agent images, and how it names a layer and its arguments
-status: backlog
+status: done
 parent: S-0760
 owner: alex
 created: 2026-11-12T16:06:49Z
-updated: 2026-11-12T16:06:49Z
-transitions: []
+updated: 2026-11-13T20:00:45Z
+transitions:
+  - to: ready
+    at: 2026-11-13T19:48:13Z
+    by: agent-S-0760
+  - to: in-progress
+    at: 2026-11-13T19:48:13Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T20:00:45Z
+    by: agent-S-0760
 stream: S-0760
 tags: [template]
 touches: [template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 752
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 13677
+      cache_read: 2693664
+      cache_write: 68336
+      cost: 1.2591
 ---
 # T-3212 The template's operators guide and manifest tell a new project that flai supplies its agent images, and how it names a layer and its arguments
 

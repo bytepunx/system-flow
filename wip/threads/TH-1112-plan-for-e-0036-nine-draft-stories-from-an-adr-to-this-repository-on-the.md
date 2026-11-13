@@ -4,10 +4,10 @@ title: "Plan for E-0036: nine draft stories from an ADR to this repository on th
 anchor:
   path: wip/kanban/epics/E-0036-any-project-using-flai-gets-its-agent-images-from-flai-which-supplies-rebuilds.md
   item: E-0036
-status: open
-participants: [planner-E-0036, orchestrator]
+status: resolved
+participants: [planner-E-0036, orchestrator, alex]
 created: 2026-11-12T16:12:05Z
-updated: 2026-11-12T16:14:34Z
+updated: 2026-11-13T20:22:48Z
 ---
 
 # TH-1112 Plan for E-0036: nine draft stories from an ADR to this repository on the general path
@@ -86,3 +86,6 @@ S-0740, S-0745, S-0751, and S-0759 read S-0733's ADR too. They wait for it throu
 **Know before they run:** S-0740 and S-0760 write paths the container protects (`flai/images`, `scripts/agent-image.sh`). Run their agents on the host, or make those changes yourself (TH-1106, TH-1111).
 
 Source: design/conventions/strategic-agents.md § As the orchestrator
+
+### 2026-11-13T20:22:48Z alex
+Resolved: S-0760 was accepted

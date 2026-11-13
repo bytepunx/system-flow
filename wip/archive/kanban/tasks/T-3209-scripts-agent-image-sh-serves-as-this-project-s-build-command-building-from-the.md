@@ -3,15 +3,36 @@ id: T-3209
 type: task
 nature: improvement
 title: scripts/agent-image.sh serves as this project's build command, building from the tree the one image flai asks for, and make agent-images still builds all three
-status: backlog
+status: done
 parent: S-0760
 owner: alex
 created: 2026-11-12T16:06:44Z
-updated: 2026-11-12T16:06:55Z
-transitions: []
+updated: 2026-11-13T20:00:25Z
+transitions:
+  - to: ready
+    at: 2026-11-13T19:48:12Z
+    by: agent-S-0760
+  - to: in-progress
+    at: 2026-11-13T19:48:12Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T20:00:25Z
+    by: agent-S-0760
 stream: S-0760
 tags: [cli]
-touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile]
+touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, scripts/README.md]
+usage:
+  source: log
+  seconds: 733
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 28903
+      cache_read: 5692497
+      cache_write: 144413
+      cost: 2.6608
 ---
 # T-3209 scripts/agent-image.sh serves as this project's build command, building from the tree the one image flai asks for, and make agent-images still builds all three
 

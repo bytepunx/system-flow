@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 291.9049
-accrued_seconds: 32037
-tasks_completed: 193
-last_run: 2026-11-13T17:26:27Z
+accrued_cost: 293.1370
+accrued_seconds: 32170
+tasks_completed: 194
+last_run: 2026-11-13T19:47:33Z
 ---
 
 # Curator activity
@@ -1555,3 +1555,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0613
 - Seconds: 133
 - Cost: 1.5248 USD, estimated
+
+### 2026-11-13T19:47:33Z
+
+- Summary: I wrote D-0614 and merged, absorbed, and compacted none: of S-0759's ten candidates, nine were already in `design/system/flai-cli.md` § "Where the agent images come from (ADR-0295)" or were progress notes, and D-0614 records the tenth, that ADR-0295 §3's failing image job for a development flai with no build command was left for S-0760.
+- Trigger: accepted S-0759
+- Items: D-0614
+- Seconds: 133
+- Cost: 1.2321 USD, estimated

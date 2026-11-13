@@ -3,15 +3,36 @@ id: T-3207
 type: task
 nature: improvement
 title: system-flow.yaml names this repository's layer build arguments the general way, and flai image build --layer builds the layer as scripts/agent-image.sh does
-status: backlog
+status: done
 parent: S-0760
 owner: alex
 created: 2026-11-12T16:06:38Z
-updated: 2026-11-12T16:06:38Z
-transitions: []
+updated: 2026-11-13T19:48:32Z
+transitions:
+  - to: ready
+    at: 2026-11-13T19:48:12Z
+    by: agent-S-0760
+  - to: in-progress
+    at: 2026-11-13T19:48:12Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T19:48:32Z
+    by: agent-S-0760
 stream: S-0760
 tags: [cli]
 touches: [system-flow.yaml, flai/images/system-flow/Dockerfile]
+usage:
+  source: log
+  seconds: 20
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1301
+      cache_read: 256282
+      cache_write: 6502
+      cost: 0.1198
 ---
 # T-3207 system-flow.yaml names this repository's layer build arguments the general way, and flai image build --layer builds the layer as scripts/agent-image.sh does
 

@@ -3,16 +3,37 @@ id: T-3214
 type: task
 nature: improvement
 title: The operator runbooks, the operators guide, agent-adapters.md, and docker.md say how any project gets its agent images after E-0036, and what is this repository's own
-status: backlog
+status: done
 parent: S-0760
 owner: alex
 created: 2026-11-12T16:07:00Z
-updated: 2026-11-12T16:08:04Z
-transitions: []
+updated: 2026-11-13T20:06:59Z
+transitions:
+  - to: ready
+    at: 2026-11-13T20:00:59Z
+    by: agent-S-0760
+  - to: in-progress
+    at: 2026-11-13T20:00:59Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T20:06:59Z
+    by: agent-S-0760
 stream: S-0760
 tags: [cli]
-touches: [docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md]
+touches: [docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, design/system/flai-cli.md, design/system/project-manifest.md, flai/images/system-flow/Dockerfile]
 after: [T-3207, T-3209]
+usage:
+  source: log
+  seconds: 360
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 27087
+      cache_read: 5334796
+      cache_write: 135339
+      cost: 2.4936
 ---
 # T-3214 The operator runbooks, the operators guide, agent-adapters.md, and docker.md say how any project gets its agent images after E-0036, and what is this repository's own
 

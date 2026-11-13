@@ -3,10 +3,10 @@ id: E-0036
 type: epic
 nature: improvement
 title: Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-12T04:19:48Z
-updated: 2026-11-13T11:48:51Z
+updated: 2026-11-13T20:22:48Z
 transitions:
   - to: ready
     at: 2026-11-13T07:28:41Z
@@ -14,25 +14,31 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:28:50Z
     by: agent-S-0733
+  - to: review
+    at: 2026-11-13T20:20:33Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T20:22:48Z
+    by: alex
 tags: [cli]
 topics: [release]
 usage:
   source: sum
-  seconds: 33079
+  seconds: 35193
   priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 29
+      ceremony: 30
       test_runs: 1
-      hand_edits: 1
-      work: 592
+      hand_edits: 3
+      work: 652
   models:
     - model: claude-opus-5-5
-      input: 3234
-      output: 1302628
-      cache_read: 282779376
-      cache_write: 7931858
-      cost: 130.9454
+      input: 3576
+      output: 1429033
+      cache_read: 307674735
+      cache_write: 8563430
+      cost: 142.5821
     - model: claude-sonnet-5-5
       input: 18
       output: 7753
@@ -51,21 +57,21 @@ usage:
           cache_write: 652148
           cost: 46.0268
     - kind: orchestrator
-      seconds: 1136
+      seconds: 1320
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 299
-          output: 2352
-          cache_read: 10573857
-          cache_write: 1178713
-          cost: 3.3975
+          input: 362
+          output: 2800
+          cache_read: 12691467
+          cache_write: 1412435
+          cost: 4.086
         - model: claude-sonnet-5-5
-          input: 40
-          output: 276
-          cache_read: 340825
-          cache_write: 219561
-          cost: 0.4336
+          input: 44
+          output: 550
+          cache_read: 381984
+          cache_write: 233164
+          cost: 0.4764
 cost_of_delay:
   inputs:
     revenue_per_week: 300
@@ -127,3 +133,5 @@ The rebuild with `make agent-images` took three runs. The first hung for four ho
 - Whether the strategic agents, which never get the project's layer, wait for the layer's build or start as soon as the harness image is there.
 - 2026-11-13T07:28:41Z: moved to ready: follows S-0733, which moved to ready
 - 2026-11-13T07:28:50Z: moved to in-progress: follows S-0733, which moved to in-progress
+- 2026-11-13T20:20:33Z: moved to review: follows S-0760, which moved to review
+- 2026-11-13T20:22:48Z: moved to done: follows S-0760, which moved to done

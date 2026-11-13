@@ -3,18 +3,27 @@ id: S-0760
 type: story
 nature: improvement
 title: This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images
-status: ready
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:06:26Z
-updated: 2026-11-13T19:45:13Z
+updated: 2026-11-13T20:22:48Z
 transitions:
   - to: ready
     at: 2026-11-13T07:31:21Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T19:45:33Z
+    by: agent-S-0760
+  - to: review
+    at: 2026-11-13T20:20:33Z
+    by: agent-S-0760
+  - to: done
+    at: 2026-11-13T20:22:48Z
+    by: alex
 tags: [cli, template]
 topics: [docker, template]
-touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, system-flow.yaml, flai/images/system-flow/Dockerfile, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, system-flow.yaml, flai/images/system-flow/Dockerfile, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, scripts/README.md, design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md, design/issues/summary.md, design/system/flai-cli.md, design/system/project-manifest.md]
 after: [S-0745, S-0759]
 agent:
   harness: claude-code
@@ -22,20 +31,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2114
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 1
+      hand_edits: 2
+      work: 60
+  models:
+    - model: claude-opus-5-5
+      input: 342
+      output: 126405
+      cache_read: 24895359
+      cache_write: 631572
+      cost: 11.6367
   strategic:
     - kind: orchestrator
-      seconds: 48
+      seconds: 195
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 78
-          cache_read: 488536
-          cache_write: 26761
-          cost: 0.1497
+          input: 63
+          output: 442
+          cache_read: 2283773
+          cache_write: 173270
+          cost: 0.7184
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 274
+          cache_read: 41159
+          cache_write: 13603
+          cost: 0.0428
 forecast:
   duration: 32m
   delivery: 2026-11-13T20:32:00Z
@@ -62,11 +89,11 @@ The documents say what is true, and the template's documents tell a new project 
 
 ## Acceptance criteria
 
-- [ ] `system-flow.yaml`'s `agent.image` names the layer's build arguments in the shape S-0745 gives, written with the flai command that sets it. `flai image build --layer` builds `flai-agent-sf-claude-code:local` with the same arguments `scripts/agent-image.sh --layer` passes today
-- [ ] `scripts/agent-image.sh` works as the host's build command for this project: it reads the variables S-0759 passes, builds the one image asked for from the tree, and keeps `--tag`, `--layer`, and `--check`. `scripts/agent-image-test.sh` covers the variables, and `make agent-images` still builds all three
-- [ ] `docs/operators/runbooks/agent-container.md` and `docs/operators/runbooks/install.md` § Agents in containers give `flai image ensure`, and the automatic job, as the way to get images in any project. `make agent-images` and the build command are this repository's own
-- [ ] `docs/operators/index.md` § The image, `design/system/agent-adapters.md` § A container harness of flai's own, and `design/tech/docker.md` § Agent images say what is built after E-0036: where the images come from, the label, the job, and the substitution. None of them says that only this repository can build the images
-- [ ] The template's operators guide (`template/root/docs/operators/index.md.tmpl`) and the commented `agent:` block of `template/root/system-flow.yaml.tmpl` say that a new project on the `container` harness gets its images from flai, and how it names a layer and its arguments. `template/CHANGELOG.md` records it under `## Unreleased`
+- [x] `system-flow.yaml`'s `agent.image` names the layer's build arguments in the shape S-0745 gives, written by hand since no flai command writes `agent.image.args` (TH-1172, I-0364) and checked with `flai check`. `flai image build --layer` builds `flai-agent-sf-claude-code:local` with the same arguments `scripts/agent-image.sh --layer` passes today
+- [x] `scripts/agent-image.sh` works as the host's build command for this project: it reads the variables S-0759 passes, builds the one image asked for from the tree, and keeps `--tag`, `--layer`, and `--check`. `scripts/agent-image-test.sh` covers the variables, and `make agent-images` still builds all three
+- [x] `docs/operators/runbooks/agent-container.md` and `docs/operators/runbooks/install.md` § Agents in containers give `flai image ensure`, and the automatic job, as the way to get images in any project. `make agent-images` and the build command are this repository's own
+- [x] `docs/operators/index.md` § The image, `design/system/agent-adapters.md` § A container harness of flai's own, and `design/tech/docker.md` § Agent images say what is built after E-0036: where the images come from, the label, the job, and the substitution. None of them says that only this repository can build the images
+- [x] The template's operators guide (`template/root/docs/operators/index.md.tmpl`) and the commented `agent:` block of `template/root/system-flow.yaml.tmpl` say that a new project on the `container` harness gets its images from flai, and how it names a layer and its arguments. `template/CHANGELOG.md` records it under `## Unreleased`
 
 ## Tasks
 - T-3207 system-flow.yaml names this repository's layer build arguments the general way, and flai image build --layer builds the layer as scripts/agent-image.sh does
@@ -80,10 +107,15 @@ Proposed slice 6 of E-0036, its last. It is an improvement: it changes how this 
 
 Naming `scripts/agent-image.sh` as the host's build command is the operator's to do, once, on the host: `flai guard` refuses it to agents (S-0759). T-3209 records the command for them.
 
+### As delivered
+
+- Criterion 4: `docs/operators/index.md` § The image is about the dashboard's image and says nothing of agent images. The agent images' account is in the guide's **In a container** passage, which § The image's criterion was meant to reach.
+- For the operator, once, on the host: `flai serve agent image command --project /home/alex/git/bytepunx/system-flow -- scripts/agent-image.sh` names this repository's build command; `flai guard` refuses it to agents. Until then, flai's own tree build runs for this development flai, with the same result. The images on this host are labelled `1.86.12` with no recipe, so `flai image status` reports them stale: `make agent-images` or the image job renews them. No image was rebuilt in this story (D-0587).
+
 ### Planning
 
 - Touches:
-  - `system-flow.yaml`, `flai/images/system-flow/Dockerfile`: the first criterion. The manifest's key is written with flai's command, never by hand.
+  - `system-flow.yaml`, `flai/images/system-flow/Dockerfile`: the first criterion. No flai command writes `agent.image.args`, so the key is a hand edit checked with `flai check`, as the operator confirmed on TH-1172; I-0364 records the missing command.
   - `scripts/agent-image.sh`, `scripts/agent-image-test.sh`, `Makefile`: the second criterion (`agent-images`, `Makefile` lines 69 to 70).
   - `docs/operators/runbooks/agent-container.md`, `docs/operators/runbooks/install.md`, `docs/operators/index.md`, `design/system/agent-adapters.md`, `design/tech/docker.md`: named in the third and fourth criteria.
   - `docs/users/flai.md` (co-change, 49%) still names `make agent-images` at line 501.

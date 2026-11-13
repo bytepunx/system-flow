@@ -4,10 +4,10 @@ title: "The planner cannot start: image flai-agent-sf-claude-code:local is not o
 anchor:
   path: wip/kanban/epics/E-0034-an-operator-defines-the-board-s-states-transitions-rules-and-timers-in-a.md
   item: E-0034
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-11T23:05:48Z
-updated: 2026-11-11T23:05:48Z
+updated: 2026-11-13T20:04:13Z
 ---
 
 # TH-1083 The planner cannot start: image flai-agent-sf-claude-code:local is not on this host
@@ -32,3 +32,6 @@ could not be started: the image flai-agent-sf-claude-code:local, the project's l
 ```
 
 The same refusal holds every planner run. Until the image is built, I start none for E-0034 or for backlog stories S-0659, S-0723, S-0725, and S-0726. Building the image changes the host, so it is yours to do.
+
+### 2026-11-13T20:04:13Z alex
+Resolved.

@@ -4,10 +4,10 @@ title: Cost of delay inputs for E-0036
 anchor:
   path: wip/kanban/epics/E-0036-any-project-using-flai-gets-its-agent-images-from-flai-which-supplies-rebuilds.md
   item: E-0036
-status: open
-participants: [planner-E-0036, orchestrator]
+status: resolved
+participants: [planner-E-0036, orchestrator, alex]
 created: 2026-11-12T15:53:16Z
-updated: 2026-11-12T15:55:20Z
+updated: 2026-11-13T20:22:48Z
 ---
 
 # TH-1094 Cost of delay inputs for E-0036
@@ -53,3 +53,6 @@ flai edit E-0036 --revenue-per-week 300 --time-lost-per-cycle 2h
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+### 2026-11-13T20:22:48Z alex
+Resolved: S-0760 was accepted

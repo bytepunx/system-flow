@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1351.9660
-accrued_seconds: 159040
-tasks_completed: 256
-last_run: 2026-11-13T11:48:52Z
+accrued_cost: 1356.5871
+accrued_seconds: 159623
+tasks_completed: 258
+last_run: 2026-11-13T20:05:34Z
 ---
 
 # Planner activity
@@ -2042,3 +2042,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0767, T-3291, T-3292, T-3293
 - Seconds: 172
 - Cost: 2.2107 USD, estimated
+
+### 2026-11-13T19:55:19Z
+
+- Summary: Planned S-0730 (still a draft in backlog): 14 file touches, a 45m forecast (flai's 27m, raised), a 2.50 USD/week cost of delay value from flai's input, `### Planning` notes, and plan thread TH-1173; created tasks T-3319 (layer 1), T-3320 (layer 2), T-3321 and T-3322 (layer 3), revised none, and found no "asked" thread or operator entry on S-0730.
+- Trigger: asked
+- Items: S-0730, T-3319, T-3320, T-3321, T-3322
+- Seconds: 278
+- Cost: 1.6829 USD, estimated
+
+### 2026-11-13T20:05:34Z
+
+- Summary: I planned S-0777 and created three tasks, T-3323, T-3324 and T-3325, all in the backlog with no findings from `flai check --strict`; I revisited no existing tasks. alex finalized the story during the run, so I changed only the `### Planning` part of its Notes and left the rest of its text as it was.
+- Trigger: orchestrator
+- Items: S-0777, T-3323, T-3324, T-3325
+- Seconds: 305
+- Cost: 2.9382 USD, estimated

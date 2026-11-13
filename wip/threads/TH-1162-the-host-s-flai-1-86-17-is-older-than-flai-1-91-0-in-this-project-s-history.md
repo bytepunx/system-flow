@@ -3,10 +3,10 @@ id: TH-1162
 title: The host's flai 1.86.17 is older than flai 1.91.0 in this project's history
 anchor:
   path: system-flow.yaml
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, alex]
 created: 2026-11-13T14:20:39Z
-updated: 2026-11-13T14:20:39Z
+updated: 2026-11-13T20:05:34Z
 ---
 
 # TH-1162 The host's flai 1.86.17 is older than flai 1.91.0 in this project's history
@@ -23,3 +23,6 @@ auto-upgrade is on for this project, and flai serve first asked flai host for fl
 Upgrade it in a shell on the host with: flai host upgrade --version 1.91.0.
 
 flai serve asks once for each release: a newer one asks again.
+
+### 2026-11-13T20:05:34Z alex
+Resolved.
