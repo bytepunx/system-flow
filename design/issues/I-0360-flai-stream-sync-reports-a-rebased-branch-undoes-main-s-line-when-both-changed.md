@@ -2,12 +2,12 @@
 id: I-0360
 title: flai stream sync reports a rebased branch undoes main's line when both changed one long markdown line and the branch keeps every word of main's
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-11-13T09:21:49Z
 last_reported: 2026-11-13T09:21:49Z
-updated: 2026-11-13T11:42:36Z
+updated: 2026-11-13T12:40:09Z
 ---
 
 # I-0360 flai stream sync reports a rebased branch undoes main's line when both changed one long markdown line and the branch keeps every word of main's
@@ -24,3 +24,4 @@ S-0761's acceptance was sent back (TH-1147) because its rebase stopped on `desig
 ## Remediation
 
 Story S-0767 remediates this issue, created from it at 2026-11-13T11:42:36Z.
+Closed 2026-11-13T12:40:09Z: Fixed by S-0767 (ADR-0297, refining ADR-0155). In a markdown path, storygit.FindUndone and RecordedUndone now count a line of main's as kept, not undone, when a line the branch adds holds every word of it. Words are compared as a multiset, with the punctuation at each word's ends left out, in any order. So S-0761's resolved flai check row, which moved one of main's words and dropped a bracket, is no longer reported, and its record drops out. A branch line that restores a line main removed keeps nothing, so ADR-0155's replayed revert is still caught. Code paths keep the whole-line compare. TestSyncFindsNothingUndoneWhenAResolvedStopKeepsMainsMarkdownRowsWords reproduces the stop and the resumed sync with real git.
