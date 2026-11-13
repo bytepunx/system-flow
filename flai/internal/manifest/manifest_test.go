@@ -2337,8 +2337,44 @@ func TestKlusterBlock(t *testing.T) {
 
 	t.Run("none", func(t *testing.T) {
 		m := load(t, "demo", "")
-		if m.Kluster != nil || m.KlusterNamespace() != "" || m.KlusterTimeout() != 0 || m.KlusterErrors(fsys) != nil {
-			t.Fatalf("no block: %+v, namespace %q, timeout %v", m.Kluster, m.KlusterNamespace(), m.KlusterTimeout())
+		if m.Kluster != nil || m.KlusterNamespace() != "" || m.KlusterTimeout() != 0 || m.KlusterAgentNamespaces() != 0 || m.KlusterErrors(fsys) != nil {
+			t.Fatalf("no block: %+v, namespace %q, timeout %v, agent namespaces %d", m.Kluster, m.KlusterNamespace(), m.KlusterTimeout(), m.KlusterAgentNamespaces())
+		}
+	})
+	// S-0660, ADR-0292 §4: kluster.agent_namespaces reads 2 when absent and
+	// its value when set, 0 included; a negative number, a fraction, or text
+	// loads and is a finding naming the key, and reads as the default.
+	t.Run("agent namespaces", func(t *testing.T) {
+		block := "kluster:\n  config: integration/kluster.yaml\n"
+		m := load(t, "demo", block)
+		if m.Kluster.AgentNamespaces != nil || m.KlusterAgentNamespaces() != 2 || DefaultKlusterAgentNamespaces != 2 {
+			t.Errorf("absent: %v, reads %d", m.Kluster.AgentNamespaces, m.KlusterAgentNamespaces())
+		}
+		for written, want := range map[string]int{"0": 0, "3": 3, "2.0": 2} {
+			m := load(t, "demo", block+"  agent_namespaces: "+written+"\n")
+			if n := m.Kluster.AgentNamespaces; n == nil || *n != want || m.KlusterAgentNamespaces() != want {
+				t.Errorf("%s: field %v, reads %d, want %d", written, n, m.KlusterAgentNamespaces(), want)
+			}
+			if errs := m.KlusterErrors(fsys); len(errs) != 0 {
+				t.Errorf("%s is valid: %v", written, errs)
+			}
+		}
+		for written, want := range map[string]string{
+			"-1":     "kluster.agent_namespaces -1 is not a whole number of 0 or more; write the most stories in progress that may hold a namespace at once, such as 2, 0 to turn deploys before review off, or remove it for 2",
+			"1.5":    "kluster.agent_namespaces 1.5 is not a whole number;",
+			`"two"`:  `kluster.agent_namespaces "two" is not a whole number;`,
+			"two":    `kluster.agent_namespaces "two" is not a whole number;`,
+			"[2]":    "kluster.agent_namespaces [2] is not a whole number;",
+			"1.0e30": "kluster.agent_namespaces 1e+30 is too large to count;",
+		} {
+			m := load(t, "demo", block+"  agent_namespaces: "+written+"\n")
+			errs := m.KlusterErrors(fsys)
+			if len(errs) != 1 || !strings.HasPrefix(errs[0], want) {
+				t.Errorf("%s: errors = %q, want one beginning %q", written, errs, want)
+			}
+			if got := m.KlusterAgentNamespaces(); got != DefaultKlusterAgentNamespaces {
+				t.Errorf("%s reads %d, want the default", written, got)
+			}
 		}
 	})
 	t.Run("full", func(t *testing.T) {
@@ -2448,6 +2484,8 @@ func TestKlusterErrors(t *testing.T) {
 		{"build with no program", func(k *Kluster) { k.Build = []string{" ", "--all"} }, "", "kluster.build has no program first"},
 		{"timeout not a duration", func(k *Kluster) { k.Timeout = "soon" }, "", `kluster.timeout "soon" is not a duration`},
 		{"timeout zero", func(k *Kluster) { k.Timeout = "0s" }, "", `kluster.timeout "0s" is not above zero`},
+		// S-0660, ADR-0292 §4
+		{"agent namespaces negative", func(k *Kluster) { n := -1; k.AgentNamespaces = &n }, "", "kluster.agent_namespaces -1 is not a whole number of 0 or more"},
 		// S-0595, ADR-0263: the components
 		{"components and build", func(k *Kluster) {
 			k.Build = []string{"scripts/build.sh"}

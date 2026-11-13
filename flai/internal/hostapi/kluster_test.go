@@ -869,7 +869,7 @@ func settingKeys(values []manifest.SettingValue) []string {
 	return out
 }
 
-var klusterSettingKeys = []string{"kluster.config", "kluster.namespace", "kluster.build", "kluster.components", "kluster.deploy", "kluster.teardown", "kluster.timeout"}
+var klusterSettingKeys = []string{"kluster.config", "kluster.namespace", "kluster.build", "kluster.components", "kluster.deploy", "kluster.teardown", "kluster.timeout", "kluster.agent_namespaces"}
 
 // S-0586: with no block, kluster.status still lists the block's keys with
 // their defaults, the host's tools, and whether settings is on, so the

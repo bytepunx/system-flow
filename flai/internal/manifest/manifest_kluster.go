@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"math"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +42,12 @@ type Kluster struct {
 	// Timeout is the most one job may take, a Go duration; empty means
 	// DefaultKlusterTimeout.
 	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	// AgentNamespaces is the most stories in progress that hold a namespace
+	// at once from deploys their agents asked for, a whole number of 0 or
+	// more, where 0 turns deploys before review off; stories in review do not
+	// count (ADR-0292 §4). Nil means DefaultKlusterAgentNamespaces
+	// (Manifest.KlusterAgentNamespaces).
+	AgentNamespaces *int `yaml:"agent_namespaces,omitempty" json:"agent_namespaces,omitempty"`
 
 	// problems are what the block, as written, says that its fields cannot
 	// hold: a key that names nothing, or a value of the wrong kind, one
@@ -59,7 +67,7 @@ type KlusterComponent struct {
 
 // The keys of the kluster: block, in the order they are listed to the
 // operator.
-var klusterKeys = []string{"config", "namespace", "build", "components", "deploy", "teardown", "timeout"}
+var klusterKeys = []string{"config", "namespace", "build", "components", "deploy", "teardown", "timeout", "agent_namespaces"}
 
 // The keys of a component of the kluster: block.
 var klusterComponentKeys = []string{"name", "build"}
@@ -67,6 +75,10 @@ var klusterComponentKeys = []string{"name", "build"}
 // DefaultKlusterTimeout is the most one kluster job may take when
 // kluster.timeout is not set.
 const DefaultKlusterTimeout = 30 * time.Minute
+
+// DefaultKlusterAgentNamespaces is the most stories in progress that hold a
+// namespace at once when kluster.agent_namespaces is not set (ADR-0292 §4).
+const DefaultKlusterAgentNamespaces = 2
 
 // DefaultKlusterProvider is the provider a kluster config names when it names
 // none, and the only one flai runs (ADR-0254 §1).
@@ -127,6 +139,7 @@ func (k *Kluster) UnmarshalYAML(unmarshal func(any) error) error {
 	default:
 		k.problems = append(k.problems, fmt.Sprintf("kluster.timeout %v is not a duration; write one with its unit, such as 30m or 1h", v))
 	}
+	k.agentNamespaces(block["agent_namespaces"])
 	for _, key := range slices.Sorted(maps.Keys(block)) {
 		if !slices.Contains(klusterKeys, key) {
 			k.problems = append(k.problems, fmt.Sprintf("kluster has no key %q; write one of %s, or remove it", key, strings.Join(klusterKeys, ", ")))
@@ -171,6 +184,65 @@ func (k *Kluster) components(value any, argv func(field, example string, value a
 		}
 		k.Components = append(k.Components, c)
 	}
+}
+
+// agentNamespacesAdvice is what each kluster.agent_namespaces finding asks
+// for.
+var agentNamespacesAdvice = fmt.Sprintf("write the most stories in progress that may hold a namespace at once, such as %d, 0 to turn deploys before review off, or remove it for %d", DefaultKlusterAgentNamespaces, DefaultKlusterAgentNamespaces)
+
+// agentNamespaces reads kluster.agent_namespaces leniently into
+// k.AgentNamespaces: a value that is not a whole number, such as 1.5 or text,
+// or one too large to count, adds a problem instead. Whether it is 0 or
+// more is KlusterErrors' to say.
+func (k *Kluster) agentNamespaces(value any) {
+	var n int
+	switch v := value.(type) {
+	case nil:
+		return
+	case int:
+		n = v
+	case int64:
+		n = int(v)
+	case uint64:
+		if v > math.MaxInt {
+			k.problems = append(k.problems, fmt.Sprintf("kluster.agent_namespaces %d is too large to count; %s", v, agentNamespacesAdvice))
+			return
+		}
+		n = int(v)
+	case float64:
+		switch {
+		case v != math.Trunc(v):
+			k.problems = append(k.problems, fmt.Sprintf("kluster.agent_namespaces %s is not a whole number; %s", strconv.FormatFloat(v, 'f', -1, 64), agentNamespacesAdvice))
+			return
+		case v < math.MinInt || v > math.MaxInt:
+			k.problems = append(k.problems, fmt.Sprintf("kluster.agent_namespaces %s is too large to count; %s", strconv.FormatFloat(v, 'g', -1, 64), agentNamespacesAdvice))
+			return
+		}
+		n = int(v)
+	case string:
+		k.problems = append(k.problems, fmt.Sprintf("kluster.agent_namespaces %q is not a whole number; %s", v, agentNamespacesAdvice))
+		return
+	default:
+		k.problems = append(k.problems, fmt.Sprintf("kluster.agent_namespaces %v is not a whole number; %s", v, agentNamespacesAdvice))
+		return
+	}
+	k.AgentNamespaces = &n
+}
+
+// KlusterAgentNamespaces is the most stories in progress that may hold a
+// kluster namespace at once from deploys their agents asked for
+// (ADR-0292 §4): kluster.agent_namespaces, or DefaultKlusterAgentNamespaces
+// when it is not set or not valid, which KlusterErrors reports; 0 means
+// deploys before review are off. Zero when the manifest has no kluster:
+// block, as there is no cluster to deploy into.
+func (m Manifest) KlusterAgentNamespaces() int {
+	if m.Kluster == nil {
+		return 0
+	}
+	if n := m.Kluster.AgentNamespaces; n != nil && *n >= 0 {
+		return *n
+	}
+	return DefaultKlusterAgentNamespaces
 }
 
 // TimeoutDuration is kluster.timeout as a duration, DefaultKlusterTimeout
@@ -329,6 +401,9 @@ func (m Manifest) KlusterErrors(fsys fs.FS) []string {
 	errs = append(errs, k.componentErrors()...)
 	if _, err := k.TimeoutDuration(); err != nil {
 		errs = append(errs, err.Error())
+	}
+	if n := k.AgentNamespaces; n != nil && *n < 0 {
+		errs = append(errs, fmt.Sprintf("kluster.agent_namespaces %d is not a whole number of 0 or more; %s", *n, agentNamespacesAdvice))
 	}
 	return errs
 }

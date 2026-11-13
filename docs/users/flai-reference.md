@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-11-12
+updated: 2026-11-13
 status: active
 ---
 
@@ -2898,6 +2898,7 @@ kluster.components (components)
 kluster.deploy (command)
 kluster.teardown (command)
 kluster.timeout (duration; default 30m)
+kluster.agent_namespaces (number, whole; default 2)
 tests (tests)
 ```
 

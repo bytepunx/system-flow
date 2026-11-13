@@ -23,7 +23,8 @@ import (
 // operator is reminded of a thread that awaits them (ADR-0205); the
 // project's test tiers (S-0273); how a story is accepted (S-0392); and the
 // most stories a batch of the merge queue holds (S-0399) and how long it
-// waits for a batch to fill (S-0552); and the kluster: block's keys (S-0586).
+// waits for a batch to fill (S-0552); and the kluster: block's keys (S-0586),
+// among them how many stories in progress may hold a namespace (ADR-0292).
 // The catalog says
 // of each its kind, its values, its default, and what it does; whether a value is allowed is always the manifest's own
 // validation (Planning.Errors, Orchestration.Errors, Analysis.Errors,
@@ -294,6 +295,14 @@ func buildCatalog() []Setting {
 		Setting{Key: "kluster.timeout", Kind: KindDuration, Default: durationText(DefaultKlusterTimeout),
 			Meaning: "The most one kluster job, a deploy, a teardown, or a promotion, may take; more than zero.",
 			get:     func(m Manifest) (any, bool) { return klusterText(m, func(k *Kluster) string { return k.Timeout }) }},
+		Setting{Key: "kluster.agent_namespaces", Kind: KindNumber, Whole: true, Default: strconv.Itoa(DefaultKlusterAgentNamespaces),
+			Meaning: "The most stories in progress that hold a kluster namespace at once from deploys their agents asked for, a whole number of 0 or more; a request over it is refused naming the stories that hold one, stories in review do not count, and 0 turns deploys before review off.",
+			get: func(m Manifest) (any, bool) {
+				if m.Kluster == nil {
+					return nil, false
+				}
+				return count(m.Kluster.AgentNamespaces)
+			}},
 		Setting{Key: "tests", Kind: KindTests,
 			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {

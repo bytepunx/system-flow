@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -1382,6 +1383,51 @@ func TestEditSettingsWritesTheKlusterBlock(t *testing.T) {
 	}
 }
 
+// S-0660, ADR-0292 §4: kluster.agent_namespaces is a whole number in the
+// catalog with its default 2, written into the block, 0 included, read back
+// as set, and unset to the block as it was.
+func TestEditSettingsWritesKlusterAgentNamespaces(t *testing.T) {
+	if s, ok := SettingFor("kluster.agent_namespaces"); !ok || s.Kind != KindNumber || !s.Whole || s.Default != "2" {
+		t.Fatalf("kluster.agent_namespaces in the catalog: %+v, %v", s, ok)
+	}
+	value := func(m Manifest) SettingValue {
+		t.Helper()
+		for _, v := range m.SettingValues() {
+			if v.Key == "kluster.agent_namespaces" {
+				return v
+			}
+		}
+		t.Fatal("kluster.agent_namespaces has no value")
+		return SettingValue{}
+	}
+	if v := value(loaded(t, []byte(klusterFixture))); v.Set || v.Value != nil {
+		t.Errorf("absent: %+v", v)
+	}
+	for _, n := range []string{"3", "0"} {
+		out, err := EditSettings([]byte(klusterFixture), []Assignment{{"kluster.agent_namespaces", n}}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := strings.Replace(klusterFixture, "  timeout: 45m\n", "  timeout: 45m\n  agent_namespaces: "+n+"\n", 1); string(out) != want {
+			t.Fatalf("set %s:\n%s\nwant:\n%s", n, out, want)
+		}
+		m := loaded(t, out)
+		if got := strconv.Itoa(m.KlusterAgentNamespaces()); got != n {
+			t.Errorf("set %s reads %s", n, got)
+		}
+		if v := value(m); !v.Set || v.Value != m.KlusterAgentNamespaces() {
+			t.Errorf("set %s: %+v", n, v)
+		}
+		unset, err := EditSettings(out, nil, []string{"kluster.agent_namespaces"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(unset) != klusterFixture {
+			t.Errorf("unset %s:\n%s", n, unset)
+		}
+	}
+}
+
 // S-0595, ADR-0263: kluster.components is written as a block list, one
 // component an item with its name and its build, reads back as given, and []
 // removes it; a component that is not of its kind, or that the block's
@@ -1490,6 +1536,9 @@ func TestEditSettingsRefusesBadKlusterValues(t *testing.T) {
 		{"namespace not a label", klusterFixture, []Assignment{{"kluster.namespace", "Auth_Star"}}, "kluster.namespace", "is not a DNS label"},
 		{"namespace story form", klusterFixture, []Assignment{{"kluster.namespace", "s-0042"}}, "kluster.namespace", "has a story namespace's form"},
 		{"timeout", klusterFixture, []Assignment{{"kluster.timeout", "soon"}}, "kluster.timeout", "is not a duration"},
+		{"agent namespaces negative", klusterFixture, []Assignment{{"kluster.agent_namespaces", "-1"}}, "kluster.agent_namespaces", "-1 is not a whole number of 0 or more"},
+		{"agent namespaces fraction", klusterFixture, []Assignment{{"kluster.agent_namespaces", "1.5"}}, "kluster.agent_namespaces", `"1.5" is not a whole number`},
+		{"agent namespaces text", klusterFixture, []Assignment{{"kluster.agent_namespaces", "two"}}, "kluster.agent_namespaces", `"two" is not a whole number`},
 		{"config outside", klusterFixture, []Assignment{{"kluster.config", "../kluster.yaml"}}, "kluster.config", "leaves the repository"},
 		{"deploy with no block", settingsFixture, []Assignment{{"kluster.deploy", `["scripts/kluster-deploy.sh"]`}}, "kluster.config", "is required"},
 	} {
