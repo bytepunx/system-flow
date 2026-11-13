@@ -39,10 +39,11 @@ const mcpPorts = 20
 // process holds it, and the server would fail to listen on it at every start
 // (I-0271). taken and avoid hold addresses and are compared by port alone,
 // whatever host each names, so that a change of mcp.bind moves no project
-// off its port.
-func mcpAddrsFor(repo *workitem.Repo, hosts []string, taken, avoid map[string]bool) ([]string, error) {
+// off its port. free says whether an address can be listened on now:
+// freePort, but for a test that says which addresses are held.
+func mcpAddrsFor(repo *workitem.Repo, hosts []string, taken, avoid map[string]bool, free func(addr string) bool) ([]string, error) {
 	takenPorts, avoidPorts := portsOf(taken), portsOf(avoid)
-	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] && freeOnAll(hosts, port) {
+	if port := portOf(rememberedMCPAddr(repo)); port != "" && !takenPorts[port] && freeOnAll(hosts, port, free) {
 		return onPort(hosts, port), nil
 	}
 	first, err := strconv.Atoi(portOf(mcpDefaultAddr))
@@ -51,7 +52,7 @@ func mcpAddrsFor(repo *workitem.Repo, hosts []string, taken, avoid map[string]bo
 	}
 	for p := first; p < first+mcpPorts; p++ {
 		port := strconv.Itoa(p)
-		if !takenPorts[port] && !avoidPorts[port] && freeOnAll(hosts, port) {
+		if !takenPorts[port] && !avoidPorts[port] && freeOnAll(hosts, port, free) {
 			return onPort(hosts, port), nil
 		}
 	}
@@ -67,10 +68,11 @@ func onPort(hosts []string, port string) []string {
 	return addrs
 }
 
-// freeOnAll says whether port can be listened on now on every one of hosts.
-func freeOnAll(hosts []string, port string) bool {
+// freeOnAll says whether port can be listened on now on every one of hosts,
+// as free says of each address.
+func freeOnAll(hosts []string, port string, free func(addr string) bool) bool {
 	for _, addr := range onPort(hosts, port) {
-		if !freePort(addr) {
+		if !free(addr) {
 			return false
 		}
 	}

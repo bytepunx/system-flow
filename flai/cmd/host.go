@@ -556,6 +556,7 @@ type hostLauncher struct {
 	exe    string
 	config string
 	dir    string
+	free   func(addr string) bool // whether an address can be listened on now; freePort when nil
 
 	mu        sync.Mutex
 	taken     map[string]string // the first MCP address given to each root, whose port two never share
@@ -648,7 +649,7 @@ func (l *hostLauncher) mcpAddrs(repo *workitem.Repo) ([]string, error) {
 	defer l.mu.Unlock()
 	held := ""
 	if addr, ok := l.taken[repo.MainRoot]; ok {
-		if port := portOf(addr); freeOnAll(hosts, port) {
+		if port := portOf(addr); freeOnAll(hosts, port, l.freeCheck()) {
 			addrs := onPort(hosts, port)
 			l.taken[repo.MainRoot] = addrs[0]
 			return addrs, nil
@@ -675,7 +676,7 @@ func (l *hostLauncher) mcpAddrs(repo *workitem.Repo) ([]string, error) {
 			}
 		}
 	}
-	addrs, err := mcpAddrsFor(repo, hosts, others, remembered)
+	addrs, err := mcpAddrsFor(repo, hosts, others, remembered, l.freeCheck())
 	if err != nil {
 		return nil, err
 	}
@@ -790,6 +791,16 @@ func (m hostMCP) Keep(roots []string) error {
 	defer cancel()
 	_, err := m.c.KeepMCP(ctx, roots)
 	return err
+}
+
+// freeCheck is how the launcher asks whether an address can be listened on
+// now: its free, set by a test that says which addresses are held, else
+// freePort.
+func (l *hostLauncher) freeCheck() func(addr string) bool {
+	if l.free != nil {
+		return l.free
+	}
+	return freePort
 }
 
 // freePort says whether addr can be listened on now.

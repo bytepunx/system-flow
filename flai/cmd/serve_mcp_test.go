@@ -37,7 +37,7 @@ func TestMCPAddrsForAProjectFlaiServeStarts(t *testing.T) {
 		t.Fatal(err)
 	}
 	mcpAddrFor := func(taken, avoid map[string]bool) (string, error) {
-		return oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, taken, avoid))
+		return oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, taken, avoid, freePort))
 	}
 	inRange := func(addr string) bool {
 		host, port, err := net.SplitHostPort(addr)
@@ -201,7 +201,7 @@ func TestMCPAddrsForListensOnTheBindAddress(t *testing.T) {
 		t.Fatal(err)
 	}
 	mcpAddrFor := func(bind string, taken, avoid map[string]bool) (string, error) {
-		return oneAddr(mcpAddrsFor(repo, []string{bind}, taken, avoid))
+		return oneAddr(mcpAddrsFor(repo, []string{bind}, taken, avoid, freePort))
 	}
 	first, err := mcpAddrFor("0.0.0.0", nil, nil)
 	if host, _, _ := net.SplitHostPort(first); err != nil || host != "0.0.0.0" {
@@ -537,7 +537,7 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 	if got, err := oneAddr(fresh.mcpAddrs(repo)); err != nil || got == mine {
 		t.Errorf("a new host, with the remembered %s held: %q %v", mine, got, err)
 	}
-	if got, err := oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, nil, nil)); err != nil || got == mine {
+	if got, err := oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, nil, nil, freePort)); err != nil || got == mine {
 		t.Errorf("mcpAddrsFor, with the remembered %s held: %q %v", mine, got, err)
 	}
 }
