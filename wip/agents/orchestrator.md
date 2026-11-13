@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2176.0141
-accrued_seconds: 1561999
-tasks_completed: 3439
-last_run: 2026-11-13T22:19:28Z
+accrued_cost: 2177.0423
+accrued_seconds: 1562221
+tasks_completed: 3445
+last_run: 2026-11-13T22:50:36Z
 ---
 
 # Orchestrator activity
@@ -24107,6 +24107,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 22
 - Cost: 0.2073 USD, estimated
+
+### 2026-11-13T22:48:17Z
+
+- Summary: Release due (threshold, count 2 ≥ 1, value 302.5 USD < 1000; S-0730, S-0779): ran flai formula run publish --ready --autocommit, making publish instance S-0783 (T-3340..T-3342), moved to ready, committed dd06eaaec.
+- Items: S-0783, S-0779, S-0730
+- Seconds: 89
+- Cost: 0.2916 USD, estimated
+
+### 2026-11-13T22:48:30Z
+
+- Summary: TH-1184 (board starved, a flai serve notice: not answered). Started the planner for S-0781 (flai plan --candidates: no touches, forecast, cost of delay, or tasks). Left E-0034's 19 drafts unplanned: their only gap is a cost of delay value that waits on the operator's E-0034 inputs (TH-1097, operator-only recommendation pending); a story planner on S-0736 already reached the same end (TH-1181). Did not plan E-0034 again: alex's TH-1083 entry was a confirmation that changes nothing. S-0241 stays a draft (blocked, TH-1165). S-0782 waits for the next run, one planner at a time. Nothing to promote: promote_candidates empty.
+- Items: S-0781, S-0782, S-0241, S-0736
+- Seconds: 13
+- Cost: 0.0297 USD, estimated
+
+### 2026-11-13T22:48:52Z
+
+- Summary: S-0778 moved to done by alex: release_evaluate not met (threshold, count 0 < 1, value 0 USD), so no further publish; instance S-0783 is in progress with agent-S-0783. TH-1185, a new flai serve starvation notice, left alone.
+- Items: S-0778, S-0783
+- Seconds: 22
+- Cost: 0.0924 USD, estimated
+
+### 2026-11-13T22:49:16Z
+
+- Summary: I started a publish run for S-0730 and S-0779, and the planner for S-0781. Nothing else could move: no backlog story can be promoted yet, and the main fix for the empty board is your answer on TH-1097.
+- Items: none
+- Seconds: 24
+- Cost: 0.0751 USD, estimated
+
+### 2026-11-13T22:50:14Z
+
+- Summary: release-due S-0730: release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, nothing pending (S-0783's publish instance already ran its evaluate step), so nothing published. TH-1184 is resolved and TH-1185 is a flai serve notice: left alone. Started planner-S-0782 under plan_backlog_stories: flai plan --candidates lists it with no touches, forecast duration, cost of delay value, or tasks. S-0781's planner already runs. Started no planner for the 19 E-0034 stories, whose value waits on the operator's epic inputs (TH-1097), nor for E-0034 itself: alex's TH-1083 entry ("Resolved.") asks for no change to the plan. promote_candidates and finalize: S-0241 stays a draft (TH-1165); S-0781 and S-0782 are incomplete until their planners finish.
+- Items: S-0730, S-0782, S-0781, E-0034
+- Seconds: 52
+- Cost: 0.2132 USD, estimated
+
+### 2026-11-13T22:50:36Z
+
+- Summary: Nothing was released, and I started the planner for S-0782.
+- Items: none
+- Seconds: 22
+- Cost: 0.3262 USD, estimated
 
 ## Refusals
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 296.3241
-accrued_seconds: 32530
-tasks_completed: 197
-last_run: 2026-11-13T20:59:18Z
+accrued_cost: 299.2463
+accrued_seconds: 32741
+tasks_completed: 199
+last_run: 2026-11-13T22:50:11Z
 ---
 
 # Curator activity
@@ -1587,3 +1587,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0541
 - Seconds: 70
 - Cost: 0.6336 USD, estimated
+
+### 2026-11-13T22:48:55Z
+
+- Summary: I wrote D-0618, merged S-0779 into D-0492 and S-0779 and S-0730 into D-0554, absorbed nothing (since the last run the only design change, S-0730's guard rule for a Write that replaces a work item file, already in ADR-0298, states no active entry), and `flai digest compact` compacted none.
+- Trigger: accepted S-0779
+- Items: D-0492, D-0554, D-0618
+- Seconds: 156
+- Cost: 1.9058 USD, estimated
+
+### 2026-11-13T22:50:11Z
+
+- Summary: I found nothing to take in: `flai digest harvest --since 2026-11-13T22:48:55Z` listed no candidates, so I wrote and merged no entries; I absorbed none, since no design, convention or ADR changed after the last run and no design document states D-0618's or D-0554's fact; and `flai digest compact` compacted none.
+- Trigger: accepted S-0730, S-0778
+- Items: none
+- Seconds: 55
+- Cost: 1.0164 USD, estimated

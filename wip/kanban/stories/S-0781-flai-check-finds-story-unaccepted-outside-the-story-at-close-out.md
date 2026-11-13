@@ -14,6 +14,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 17
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 38
+          cache_read: 183457
+          cache_write: 22473
+          cost: 0.0607
 draft: true
 ---
 # S-0781 flai check finds `story.unaccepted` outside the story at close-out
