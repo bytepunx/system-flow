@@ -1130,3 +1130,98 @@ func TestAgentSettingsPerProject(t *testing.T) {
 		t.Errorf("and on save: %v", err)
 	}
 }
+
+// TestProjectImageSettings: the operator's build command and the automatic
+// image job's switch are kept per project under agent.projects.<root>.image
+// (ADR-0295 point 7): absent, the command is nil and the job on; set, they
+// round-trip through a save and a load and apply to that project alone; an
+// entry holding only them is kept and one cleared of them is removed; an
+// empty program and a NUL byte are refused, naming the key and the command
+// that sets it; and a configuration that names neither round-trips byte for
+// byte.
+func TestProjectImageSettings(t *testing.T) {
+	a, b := filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
+	var host AgentStart
+	if host.ImageCommand(a) != nil || !host.AutoImage(a) {
+		t.Errorf("absent: no command and the job on: %v %v", host.ImageCommand(a), host.AutoImage(a))
+	}
+	off := false
+	set, err := host.WithProject(a, ProjectAgent{Image: ProjectImage{Command: []string{"scripts/agent-image.sh", "--layer"}, Auto: &off}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := set.ImageCommand(a); !reflect.DeepEqual(got, []string{"scripts/agent-image.sh", "--layer"}) || set.AutoImage(a) {
+		t.Errorf("set: %v %v", got, set.AutoImage(a))
+	}
+	set.ImageCommand(a)[0] = "changed"
+	if set.Projects[a].Image.Command[0] != "scripts/agent-image.sh" {
+		t.Errorf("ImageCommand copies: %v", set.Projects[a].Image.Command)
+	}
+	if set.ImageCommand(b) != nil || !set.AutoImage(b) {
+		t.Errorf("another project is unchanged: %v %v", set.ImageCommand(b), set.AutoImage(b))
+	}
+	c := Default()
+	c.Agent = set
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"image": {`) || !strings.Contains(string(data), `"auto": false`) {
+		t.Errorf("written as agent.projects.<root>.image: %s", data)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(back.Agent.Projects, set.Projects) {
+		t.Errorf("round trip: %+v", back.Agent.Projects)
+	}
+	cleared, err := set.WithProject(a, ProjectAgent{})
+	if err != nil || cleared.Projects != nil {
+		t.Errorf("an entry cleared of its image settings is removed: %+v %v", cleared.Projects, err)
+	}
+	for _, c := range []struct {
+		cmd  []string
+		want string
+	}{
+		{[]string{" ", "x"}, `agent.projects["` + a + `"].image.command has an empty program: set it with flai serve agent image command --project ` + a},
+		{[]string{"build", "a\x00b"}, `agent.projects["` + a + `"].image.command has a word holding a NUL byte`},
+	} {
+		if _, err := host.WithProject(a, ProjectAgent{Image: ProjectImage{Command: c.cmd}}); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q: %v, want %q", c.cmd, err, c.want)
+		}
+	}
+	plain := Default()
+	plain.Agent, err = AgentStart{}.WithProject(a, ProjectAgent{Name: "builder"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, plain); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(before), `"image": {`) {
+		t.Errorf("an entry with no image settings writes none: %s", before)
+	}
+	again, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, again); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("a configuration naming neither round-trips unchanged:\n%s\n---\n%s", before, after)
+	}
+}

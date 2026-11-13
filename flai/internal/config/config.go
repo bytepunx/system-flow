@@ -362,15 +362,50 @@ type ProjectAgent struct {
 	// Harnesses are the project's entries for the harnesses it sets, each
 	// replacing the host-wide entry of that harness whole.
 	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
+	// Image is how the project's agent images are made on this host
+	// (ADR-0295 point 7): the operator's own build command in place of flai's
+	// pull and build, and whether flai serve makes a missing or stale image by
+	// itself. Only the operator sets it, never the manifest.
+	Image ProjectImage `json:"image,omitzero"`
 }
+
+// ProjectImage is the operator's say about how a project's agent images are
+// made (ADR-0295 point 7).
+type ProjectImage struct {
+	// Command is the operator's build command, the program and its
+	// arguments, run with no shell in place of flai's own pull and build;
+	// nil leaves flai's own.
+	Command []string `json:"command,omitempty"`
+	// Auto is whether flai serve runs the image job for a start that finds
+	// an image missing or stale; nil means on. Read it through AutoImage.
+	Auto *bool `json:"auto,omitempty"`
+}
+
+// IsZero reports whether the image settings set nothing.
+func (i ProjectImage) IsZero() bool { return len(i.Command) == 0 && i.Auto == nil }
 
 // IsZero reports whether the entry sets nothing.
 func (p ProjectAgent) IsZero() bool {
-	return len(p.Command) == 0 && p.Name == "" && len(p.Harnesses) == 0
+	return len(p.Command) == 0 && p.Name == "" && len(p.Harnesses) == 0 && p.Image.IsZero()
 }
 
 // Project is the project at root's own entry, empty when it sets nothing.
 func (a AgentStart) Project(root string) ProjectAgent { return a.Projects[root] }
+
+// ImageCommand is the operator's build command for the project at root's
+// agent images (ADR-0295 point 7), a copy, nil when flai's own pull and build
+// make them.
+func (a AgentStart) ImageCommand(root string) []string {
+	return slices.Clone(a.Projects[root].Image.Command)
+}
+
+// AutoImage reports whether flai serve makes the project at root's missing or
+// stale agent images by itself, holding the starts that need them (ADR-0295
+// points 5 and 7): true unless the operator turned it off.
+func (a AgentStart) AutoImage(root string) bool {
+	auto := a.Projects[root].Image.Auto
+	return auto == nil || *auto
+}
 
 // ForProject is the agent settings that apply to the project at root
 // (ADR-0261): its own command and name where it sets them, else the
@@ -449,6 +484,14 @@ func checkProjects(projects map[string]ProjectAgent) error {
 		}
 		if len(p.Command) > 0 && strings.TrimSpace(p.Command[0]) == "" {
 			errs = append(errs, fmt.Sprintf("%s.command has an empty program: set it with flai serve agent set --project %s -- <program> [args...], or clear it with flai serve agent clear --project %s", key, root, root))
+		}
+		if cmd := p.Image.Command; len(cmd) > 0 {
+			fix := fmt.Sprintf("set it with flai serve agent image command --project %s -- <program> [args...], or clear it with flai serve agent image command --project %s --clear", root, root)
+			if strings.TrimSpace(cmd[0]) == "" {
+				errs = append(errs, fmt.Sprintf("%s.image.command has an empty program: %s", key, fix))
+			} else if slices.ContainsFunc(cmd, func(w string) bool { return strings.ContainsRune(w, 0) }) {
+				errs = append(errs, fmt.Sprintf("%s.image.command has a word holding a NUL byte, which no program can take: %s", key, fix))
+			}
 		}
 		if err := checkHarnesses(p.Harnesses); err != nil {
 			errs = append(errs, key+": "+err.Error())
