@@ -3,14 +3,17 @@ id: S-0776
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-13T17:20:42Z
-updated: 2026-11-13T17:20:43Z
+updated: 2026-11-13T17:20:53Z
 transitions:
   - to: ready
     at: 2026-11-13T17:20:43Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-13T17:20:53Z
+    by: agent-S-0776
 tags: []
 touches: [wip/kanban/stories/S-0776-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -18,6 +21,32 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 84
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 213
+      cache_read: 1810106
+      cache_write: 148837
+      cost: 0.7341
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 59
+          cache_read: 317510
+          cache_write: 3112
+          cost: 0.0936
 formula: publish
 ---
 # S-0776 Publish what is accepted and not yet released

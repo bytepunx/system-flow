@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2164.5371
-accrued_seconds: 1559446
-tasks_completed: 3363
-last_run: 2026-11-13T17:18:33Z
+accrued_cost: 2165.0424
+accrued_seconds: 1559570
+tasks_completed: 3367
+last_run: 2026-11-13T17:21:23Z
 ---
 
 # Orchestrator activity
@@ -23575,6 +23575,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.1191 USD, estimated
+
+### 2026-11-13T17:20:24Z
+
+- Summary: Accepted S-0757 at 9343de9b3080b1c410d65f6ff431c061fe53a2c0 under accept_reviews: flai verify passed every tier at the branch head, the verifier matched all 6 criteria to changed files, and the dry run showed no blockers. Merged, 7 items archived, MS-0562 closed. The overlap goes to S-0759 (in progress) on flai/internal/serve/imagejob.go and imagejob_test.go.
+- Items: S-0757
+- Seconds: 65
+- Cost: 0.2271 USD, estimated
+
+### 2026-11-13T17:20:46Z
+
+- Summary: Ran the publish formula after S-0757's acceptance. Policy threshold met: count 1 at or over the threshold of 1 (value 0 of 1000, S-0757 unvalued). The instance S-0776 is in ready with steps T-3316, T-3317, T-3318, committed 805be51ff.
+- Items: S-0776, S-0757
+- Seconds: 22
+- Cost: 0.0930 USD, estimated
+
+### 2026-11-13T17:21:03Z
+
+- Summary: Applied flai order --by throughput to the ready column after S-0776 entered it. The order flai gave: 1 S-0760 (forecast 32m). S-0776 is not in flai's ordered list.
+- Items: S-0760, S-0776
+- Seconds: 17
+- Cost: 0.0942 USD, estimated
+
+### 2026-11-13T17:21:23Z
+
+- Summary: I accepted S-0757 as the orchestrator at commit `9343de9b3080b1c410d65f6ff431c061fe53a2c0`, and the release it made due is now in progress.
+- Items: none
+- Seconds: 20
+- Cost: 0.0910 USD, estimated
 
 ## Refusals
 
