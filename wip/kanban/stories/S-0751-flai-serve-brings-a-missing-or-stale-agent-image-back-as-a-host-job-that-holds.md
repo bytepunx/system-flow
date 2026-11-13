@@ -3,15 +3,18 @@ id: S-0751
 type: story
 nature: feature
 title: flai serve brings a missing or stale agent image back as a host job that holds the start, in place of refusing it
-status: ready
+status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:01:16Z
-updated: 2026-11-13T14:36:34Z
+updated: 2026-11-13T14:38:04Z
 transitions:
   - to: ready
     at: 2026-11-13T07:30:13Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T14:38:04Z
+    by: agent-S-0751
 tags: [cli]
 topics: [docker]
 touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md]

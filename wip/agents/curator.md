@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 277.4399
-accrued_seconds: 30969
-tasks_completed: 182
-last_run: 2026-11-13T13:42:23Z
+accrued_cost: 278.4880
+accrued_seconds: 31067
+tasks_completed: 183
+last_run: 2026-11-13T14:38:18Z
 ---
 
 # Curator activity
@@ -1467,3 +1467,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 66
 - Cost: 1.3326 USD, estimated
+
+### 2026-11-13T14:38:18Z
+
+- Summary: I wrote D-0609, merged S-0745 into D-0476, absorbed none, and `flai digest compact` compacted none; S-0745's other five candidates were plan notes or facts `design/system/flai-cli.md`, `project-manifest.md`, and the guides already state.
+- Trigger: accepted S-0745
+- Items: D-0476, D-0609
+- Seconds: 98
+- Cost: 1.0481 USD, estimated
