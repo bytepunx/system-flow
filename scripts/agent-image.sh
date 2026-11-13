@@ -1,10 +1,28 @@
 #!/usr/bin/env sh
-# Build the agent images locally from the repo root, in order: flai-agent-bedrock:local (flai from
-# this tree, git, tini), then flai-agent-claude-code:local on top of it, then, when system-flow.yaml
-# names one under agent.image.layer, the project's own layer over the claude-code image, tagged
-# flai-agent-<project key>-claude-code:local (S-0510). Not stamped, not signed.
-# --layer builds the project's layer alone, over the harness image already built, and fails when
-# the manifest names none.
+# Build this repository's agent images from the tree, in order: bedrock (flai and pilot compiled from
+# this tree, git, tini) at its tree target, the claude-code harness image over it, then the project's
+# layer, the Dockerfile system-flow.yaml names under agent.image.layer, over the harness image, with
+# the build arguments the manifest names under agent.image.args (S-0510, S-0760). Not stamped, not
+# signed. Each image is labelled as flai's own tree build labels it (ADR-0295 §2): its flai version,
+# through bedrock's FLAI_VERSION; dev.system-flow.recipe, its recipe as flai computes it, from its
+# Dockerfile, target, and build arguments; and above bedrock dev.system-flow.base, the ID of the image
+# it was built over; so that flai image status judges the images current.
+#
+# It is this repository's build command for its agent images (ADR-0295 §7, S-0759):
+#   flai serve agent image command --project <main checkout> -- scripts/agent-image.sh
+# flai runs it in the main checkout with the FLAI_IMAGE_* variables, and it builds exactly the images
+# FLAI_IMAGE_STALE names, of bedrock, harness, and layer: each with the tag FLAI_IMAGE_BEDROCK,
+# FLAI_IMAGE_HARNESS, or FLAI_IMAGE_LAYER gives and the recipe label FLAI_IMAGE_RECIPE_BEDROCK,
+# _HARNESS, or _LAYER gives (the recipe it computes itself when that is empty), flai built at
+# FLAI_IMAGE_VERSION. The harness image is tagged flai-agent-claude-code:<version> too, as flai's own
+# build tags it. An empty FLAI_IMAGE_STALE builds nothing. It refuses, naming the variable, an inner
+# harness other than claude-code in FLAI_IMAGE_INNER, and an image asked whose tag is empty.
+# With no FLAI_IMAGE_STALE, as make agent-images runs it, it builds all three for this tree's flai, a
+# development build, version dev: flai-agent-bedrock:dev, also tagged flai-agent-bedrock:local, then
+# flai-agent-claude-code:local, also tagged :dev, then, when the manifest names a layer,
+# flai-agent-<project key>-claude-code:local.
+# --layer builds the project's layer alone, over flai-agent-claude-code:local already built, labelled
+# the same way, and fails when the manifest names none.
 # --tag prints the image a story's agent runs in, and builds nothing: the layer's tag when the
 # manifest names a layer, else the harness image's (S-0670). scripts/agent-container.sh runs it.
 # --check [S-nnnn] checks the layer's image already built, and builds nothing: it fails when the
@@ -19,9 +37,12 @@
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"
-BEDROCK="flai-agent-bedrock:local"
 INNER="claude-code"
 HARNESS="flai-agent-$INNER:local"
+BEDROCK_FILE="flai/images/bedrock/Dockerfile"
+HARNESS_FILE="flai/images/$INNER/Dockerfile"
+LABEL_RECIPE="dev.system-flow.recipe"
+LABEL_BASE="dev.system-flow.base"
 
 # The Dockerfile agent.image.layer names, relative to the root, read from the manifest as flai
 # writes it (two-space indents); empty when it names none.
@@ -35,9 +56,21 @@ manifest_layer() {
   ' system-flow.yaml
 }
 
-# pinned is the default scripts/install-tools.sh gives the version variable $1, NAME="${NAME:-v}".
-pinned() {
-  grep "^$1=" scripts/install-tools.sh | sed 's/.*:-\(.*\)}".*/\1/'
+# manifest_args prints the build arguments agent.image.args gives the layer, one NAME=value a line,
+# their quotes stripped, read from the manifest as flai writes it (four-space, then six-space
+# indents); nothing when it names none.
+manifest_args() {
+  awk '
+    /^[^ #]/ { agent = ($0 ~ /^agent:/); image = 0; args = 0; next }
+    agent && /^  [^ #]/ { image = ($0 ~ /^  image:/); args = 0; next }
+    agent && image && /^    [^ #]/ { args = ($0 ~ /^    args:/); next }
+    agent && image && args && /^      [^ #]/ {
+      line = $0; sub(/^      /, "", line); sub(/[ ]+#.*$/, "", line)
+      name = line; sub(/:.*$/, "", name)
+      value = line; sub(/^[^:]*:[ ]*/, "", value); gsub(/["'\'']/, "", value)
+      print name "=" value
+    }
+  ' system-flow.yaml
 }
 
 # layer_tag prints the layer's tag, flai-agent-<key>-claude-code:local, the manifest's key in lower
@@ -46,6 +79,36 @@ layer_tag() {
   key="$(sed -n 's/^key:[ ]*//p' system-flow.yaml | tr -d "\"'" | tr '[:upper:]' '[:lower:]')"
   [ -n "$key" ] || { echo "agent-image: system-flow.yaml names no key, which the layer's tag needs" >&2; exit 1; }
   echo "flai-agent-$key-$INNER:local"
+}
+
+# recipe prints the recipe of the Dockerfile $1 built at the target $2 ("" for none) with the build
+# arguments on standard input, one NAME=value a line, as flai computes it (agentimage.Recipe): the
+# sha256 of the Dockerfile's bytes, then "\n--target=<target>\n", then NAME=value and a newline for
+# each argument, by name in byte order, BASE and FLAI_VERSION left out. Bedrock's FLAI_COMMIT and
+# FLAI_DATE are not given it, as flai's tree build leaves them out of the recipe (D-0608).
+recipe() {
+  {
+    cat "$1"
+    printf '\n--target=%s\n' "$2"
+    awk -F= 'NF && $1 != "BASE" && $1 != "FLAI_VERSION"' | LC_ALL=C sort -t= -k1,1
+  } | sha256_hex | sed 's/^/sha256:/'
+}
+
+# sha256_hex prints the sha256 of standard input in hex.
+sha256_hex() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum
+  else
+    shasum -a 256
+  fi | cut -d' ' -f1
+}
+
+# image_id prints the ID of the image $1 on this host, which an image built over it is labelled
+# with, and fails when docker has none.
+image_id() {
+  id="$(docker image inspect --format '{{.Id}}' "$1" 2>/dev/null)" || id=""
+  [ -n "$id" ] || { echo "agent-image: docker has no image $1 on this host to build over; build it first" >&2; exit 1; }
+  echo "$id"
 }
 
 # credentials_or_anonymous points DOCKER_CONFIG at a scratch configuration with no login when the
@@ -90,23 +153,122 @@ credentials_or_anonymous() {
   echo "agent-image: the credential helper $helper, which $config names in credsStore, $why; building with no login, from a scratch Docker configuration, since the base images are public. $config is unchanged" >&2
 }
 
-# build_layer builds the manifest's layer over the harness image, with Go at flai/go.mod's version
-# and the tool versions scripts/install-tools.sh pins as build arguments.
+# build_bedrock builds bedrock's tree target from this tree, flai at the version $1, labelled with
+# the recipe $2, or the one computed when it is empty, and tagged with each of the rest.
+build_bedrock() {
+  version="$1"
+  want="$2"
+  shift 2
+  [ -n "$want" ] || want="$(recipe "$BEDROCK_FILE" tree </dev/null)"
+  commit="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  # The commit's date, not the clock's, so an unchanged tree rebuilds from the cache.
+  date="$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo)"
+  echo "building $* from this tree, flai $version at commit $commit"
+  # Each tag becomes -t <tag>: the loop walks the tags as they were, shifting each off in turn.
+  for tag; do
+    set -- "$@" -t "$tag"
+    shift
+  done
+  docker build -f "$BEDROCK_FILE" --target tree --build-arg "FLAI_VERSION=$version" \
+    --build-arg "FLAI_COMMIT=$commit" --build-arg "FLAI_DATE=$date" \
+    --label "$LABEL_RECIPE=$want" "$@" .
+}
+
+# build_harness builds the harness image over the bedrock image $1, labelled with the recipe $2, or
+# the one computed when it is empty, and with bedrock's ID, and tagged with each of the rest.
+build_harness() {
+  bedrock="$1"
+  want="$2"
+  shift 2
+  [ -n "$want" ] || want="$(recipe "$HARNESS_FILE" "" </dev/null)"
+  base_id="$(image_id "$bedrock")"
+  echo "building $* over $bedrock ($base_id)"
+  for tag; do
+    set -- "$@" -t "$tag"
+    shift
+  done
+  docker build -f "$HARNESS_FILE" --build-arg "BASE=$bedrock" \
+    --label "$LABEL_RECIPE=$want" --label "$LABEL_BASE=$base_id" "$@" .
+}
+
+# build_layer builds the layer, the Dockerfile $1, tagged $2, over the harness image $3, with the
+# build arguments agent.image.args gives, labelled with the recipe $4, or the one computed when it
+# is empty, and with the harness image's ID.
 build_layer() {
-  layer="$1"
-  [ -f "$layer" ] || { echo "agent-image: agent.image.layer names $layer, which is not a file; fix the path in system-flow.yaml" >&2; exit 1; }
-  tag="$(layer_tag)"
-  go_version="$(sed -n 's/^go //p' flai/go.mod)"
-  golangci="$(pinned GOLANGCI_LINT_VERSION)"
-  shellcheck="$(pinned SHELLCHECK_VERSION)"
-  pnpm="$(pinned PNPM_VERSION)"
-  goreleaser="$(pinned GORELEASER_VERSION)"
-  echo "building $tag from $layer over $HARNESS"
-  docker build -f "$layer" -t "$tag" --build-arg "BASE=$HARNESS" \
-    --build-arg "GO_VERSION=$go_version" --build-arg "GOLANGCI_LINT_VERSION=$golangci" \
-    --build-arg "SHELLCHECK_VERSION=$shellcheck" --build-arg "PNPM_VERSION=$pnpm" \
-    --build-arg "GORELEASER_VERSION=$goreleaser" .
+  file="$1"
+  tag="$2"
+  base="$3"
+  want="$4"
+  [ -f "$file" ] || { echo "agent-image: agent.image.layer names $file, which is not a file; fix the path in system-flow.yaml" >&2; exit 1; }
+  args="$(manifest_args | LC_ALL=C sort -t= -k1,1)"
+  [ -n "$want" ] || want="$(printf '%s\n' "$args" | recipe "$file" "")"
+  base_id="$(image_id "$base")"
+  set -- build -f "$file" --build-arg "BASE=$base"
+  while IFS= read -r arg; do
+    [ -z "$arg" ] || set -- "$@" --build-arg "$arg"
+  done <<EOF
+$args
+EOF
+  shown="$(printf '%s\n' "$args" | tr '\n' ' ')"
+  shown="${shown% }"
+  echo "building $tag from $file over $base ($base_id) with the build arguments ${shown:-none}"
+  docker "$@" --label "$LABEL_RECIPE=$want" --label "$LABEL_BASE=$base_id" -t "$tag" .
   echo "built $tag"
+}
+
+# make_images builds the images FLAI_IMAGE_STALE names, in order, as the FLAI_IMAGE_* variables
+# say them (ADR-0295 §7), bedrock also tagged BEDROCK_ALSO when it is set.
+make_images() {
+  want_bedrock=0
+  want_harness=0
+  want_layer=0
+  # shellcheck disable=SC2086 # FLAI_IMAGE_STALE splits into one word per image
+  for part in $FLAI_IMAGE_STALE; do
+    case "$part" in
+      bedrock) want_bedrock=1 ;;
+      harness) want_harness=1 ;;
+      layer) want_layer=1 ;;
+      *) echo "agent-image: FLAI_IMAGE_STALE names $part, which is none of bedrock, harness, and layer" >&2; exit 2 ;;
+    esac
+  done
+  if [ "$want_bedrock$want_harness$want_layer" = 000 ]; then
+    echo "agent-image: FLAI_IMAGE_STALE names no image, so there is none to build"
+    return 0
+  fi
+  [ "${FLAI_IMAGE_INNER:-}" = "$INNER" ] || { echo "agent-image: FLAI_IMAGE_INNER is ${FLAI_IMAGE_INNER:-empty}, but this script builds the images of $INNER alone" >&2; exit 1; }
+  version="${FLAI_IMAGE_VERSION:-}"
+  bedrock_tag="${FLAI_IMAGE_BEDROCK:-}"
+  harness_tag="${FLAI_IMAGE_HARNESS:-}"
+  layer_ref="${FLAI_IMAGE_LAYER:-}"
+  if [ "$want_bedrock$want_harness" != 00 ]; then
+    [ -n "$version" ] || { echo "agent-image: FLAI_IMAGE_VERSION is empty, but FLAI_IMAGE_STALE asks for bedrock or the harness image, which need the flai version" >&2; exit 1; }
+    [ -n "$bedrock_tag" ] || { echo "agent-image: FLAI_IMAGE_BEDROCK is empty, but FLAI_IMAGE_STALE asks for bedrock or the harness image over it" >&2; exit 1; }
+  fi
+  if [ "$want_harness$want_layer" != 00 ]; then
+    [ -n "$harness_tag" ] || { echo "agent-image: FLAI_IMAGE_HARNESS is empty, but FLAI_IMAGE_STALE asks for the harness image or the layer over it" >&2; exit 1; }
+  fi
+  if [ "$want_layer" = 1 ]; then
+    [ -n "$layer_ref" ] || { echo "agent-image: FLAI_IMAGE_LAYER is empty, but FLAI_IMAGE_STALE asks for the layer" >&2; exit 1; }
+    [ -n "$layer" ] || { echo "agent-image: FLAI_IMAGE_STALE asks for the layer, but system-flow.yaml names no agent.image.layer" >&2; exit 1; }
+  fi
+  credentials_or_anonymous
+  if [ "$want_bedrock" = 1 ]; then
+    build_bedrock "$version" "${FLAI_IMAGE_RECIPE_BEDROCK:-}" "$bedrock_tag" ${BEDROCK_ALSO:+"$BEDROCK_ALSO"}
+    echo "built $bedrock_tag"
+  fi
+  if [ "$want_harness" = 1 ]; then
+    # flai's own build tags the harness image flai-agent-<inner>:<version> too (HarnessTags).
+    own="flai-agent-$INNER:$version"
+    if [ "$own" = "$harness_tag" ]; then
+      build_harness "$bedrock_tag" "${FLAI_IMAGE_RECIPE_HARNESS:-}" "$harness_tag"
+    else
+      build_harness "$bedrock_tag" "${FLAI_IMAGE_RECIPE_HARNESS:-}" "$harness_tag" "$own"
+    fi
+    echo "built $harness_tag"
+  fi
+  if [ "$want_layer" = 1 ]; then
+    build_layer "$layer" "$layer_ref" "$harness_tag" "${FLAI_IMAGE_RECIPE_LAYER:-}"
+  fi
 }
 
 # The tools the manifest's test tiers run, which the layer's image must hold on its own PATH: the
@@ -188,23 +350,29 @@ if [ "${1:-}" = "--tag" ]; then
 fi
 if [ "${1:-}" = "--layer" ]; then
   [ -n "$layer" ] || { echo "agent-image: system-flow.yaml names no agent.image.layer, so there is no layer to build" >&2; exit 1; }
+  tag="$(layer_tag)"
   credentials_or_anonymous
-  build_layer "$layer"
+  build_layer "$layer" "$tag" "$HARNESS" ""
   exit 0
 fi
-[ "$#" -eq 0 ] || { echo "usage: scripts/agent-image.sh [--layer | --tag | --check [S-nnnn]]" >&2; exit 2; }
-COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-VERSION="$(git describe --tags --match 'flai/v*' --abbrev=0 2>/dev/null | sed 's|flai/v||' || echo dev)"
-# The commit's date, not the clock's, so an unchanged tree rebuilds from the cache.
-DATE="$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo)"
-credentials_or_anonymous
-echo "building $BEDROCK"
-docker build -f flai/images/bedrock/Dockerfile -t "$BEDROCK" \
-  --build-arg "FLAI_VERSION=${VERSION:-dev}" --build-arg "FLAI_COMMIT=$COMMIT" \
-  --build-arg "FLAI_DATE=$DATE" .
-echo "building $HARNESS"
-docker build -f flai/images/claude-code/Dockerfile -t "$HARNESS" --build-arg "BASE=$BEDROCK" .
-echo "built $BEDROCK and $HARNESS"
-if [ -n "$layer" ]; then
-  build_layer "$layer"
+[ "$#" -eq 0 ] || { echo "usage: scripts/agent-image.sh [--layer | --tag | --check [S-nnnn]], or with no argument as flai's build command, with the FLAI_IMAGE_* variables" >&2; exit 2; }
+if [ -z "${FLAI_IMAGE_STALE+set}" ]; then
+  # By hand, or make agent-images: all three, for this tree's flai, a development build. The
+  # recipes are left empty, so that each build computes its own.
+  FLAI_IMAGE_VERSION="dev"
+  FLAI_IMAGE_INNER="$INNER"
+  FLAI_IMAGE_BEDROCK="flai-agent-bedrock:dev"
+  FLAI_IMAGE_HARNESS="$HARNESS"
+  FLAI_IMAGE_LAYER=""
+  FLAI_IMAGE_RECIPE_BEDROCK=""
+  FLAI_IMAGE_RECIPE_HARNESS=""
+  FLAI_IMAGE_RECIPE_LAYER=""
+  FLAI_IMAGE_STALE="bedrock harness"
+  if [ -n "$layer" ]; then
+    FLAI_IMAGE_LAYER="$(layer_tag)"
+    FLAI_IMAGE_STALE="$FLAI_IMAGE_STALE layer"
+  fi
+  # Today's name for bedrock, which the claude-code Dockerfile's BASE defaults to.
+  BEDROCK_ALSO="flai-agent-bedrock:local"
 fi
+make_images

@@ -66,7 +66,7 @@ flaiover-e2e: ## flaiover end-to-end tests: the built server in Playwright's Chr
 flaiover-image: ## Build the flaiover image as flaiover:local
 	scripts/flaiover-image.sh
 
-agent-images: ## Build the agent images as flai-agent-bedrock:local and flai-agent-claude-code:local, then the manifest's agent.image.layer over them
+agent-images: ## Build the agent images from this tree for flai dev, labelled as flai labels them: flai-agent-bedrock:dev (and :local), flai-agent-claude-code:local, then the manifest's agent.image.layer over it
 	scripts/agent-image.sh
 
 litellm: ## Start the local LiteLLM proxy in Docker and write its key file (needs ANTHROPIC_API_KEY the first time)
