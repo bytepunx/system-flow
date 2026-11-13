@@ -3,10 +3,10 @@ id: S-0723
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-11-11T07:23:14Z
-updated: 2026-11-12T17:16:55Z
+updated: 2026-11-13T07:23:40Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:55Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-12T17:16:55Z
     by: agent-S-0723
+  - to: done
+    at: 2026-11-13T07:23:40Z
+    by: alex
 tags: []
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, design/system/workflow.md, docs/users/flai.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md, docs/users/flai-reference.md]
 agent:

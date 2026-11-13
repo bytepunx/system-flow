@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:58:14Z
-updated: 2026-11-13T07:23:13Z
+updated: 2026-11-13T07:23:41Z
 transitions: []
 tags: [cli]
 topics: [docker]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 33m
-  delivery: 2026-11-13T13:54:00Z
+  delivery: 2026-11-13T13:55:00Z
   basis: "Its own forecast of 33m; 9th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733 and S-0734."
   by: flai
-  at: 2026-11-13T07:23:13Z
+  at: 2026-11-13T07:23:41Z
 ---
 # S-0735 flai image status says which agent images a project's agents need, and whether each is on the host and current for the flai that runs it
 
