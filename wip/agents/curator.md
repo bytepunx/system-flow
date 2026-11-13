@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 254.5519
-accrued_seconds: 29355
-tasks_completed: 166
-last_run: 2026-11-13T07:26:40Z
+accrued_cost: 257.5274
+accrued_seconds: 29600
+tasks_completed: 168
+last_run: 2026-11-13T07:34:07Z
 ---
 
 # Curator activity
@@ -1339,3 +1339,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 61
 - Cost: 0.5755 USD, estimated
+
+### 2026-11-13T07:32:57Z
+
+- Summary: Wrote D-0600; merged S-0659 into D-0599 and S-0762 into D-0559; absorbed D-0599 (by ADR-0292 § Consequences) and D-0585 (by `design/system/project-manifest.md`); `flai digest compact` compacted none; left the other four S-0659 candidates out as plan progress or facts ADR-0292 already records.
+- Trigger: accepted S-0659
+- Items: D-0559, D-0585, D-0599, D-0600
+- Seconds: 189
+- Cost: 2.2621 USD, estimated
+
+### 2026-11-13T07:34:07Z
+
+- Summary: Nothing to take in: the harvest since 2026-11-13T07:32:57Z was empty, I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none, because no design document changed after the last run and D-0482 and D-0487 are still not stated by any design document.
+- Trigger: accepted S-0762
+- Items: none
+- Seconds: 56
+- Cost: 0.7134 USD, estimated

@@ -3,16 +3,37 @@ id: T-3152
 type: task
 nature: feature
 title: Ask the operator to confirm the ADR's choices on a thread, and accept the ADR with their answer
-status: backlog
+status: done
 parent: S-0733
 owner: alex
 created: 2026-11-12T15:55:13Z
-updated: 2026-11-12T15:55:21Z
-transitions: []
+updated: 2026-11-13T07:50:18Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:38:53Z
+    by: agent-S-0733
+  - to: in-progress
+    at: 2026-11-13T07:38:54Z
+    by: agent-S-0733
+  - to: done
+    at: 2026-11-13T07:50:18Z
+    by: agent-S-0733
 stream: S-0733
 tags: [cli]
-touches: [design/adrs/README.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md]
 after: [T-3149, T-3151]
+usage:
+  source: log
+  seconds: 62
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 9293
+      cache_read: 1992132
+      cache_write: 73183
+      cost: 1.1021
 ---
 # T-3152 Ask the operator to confirm the ADR's choices on a thread, and accept the ADR with their answer
 

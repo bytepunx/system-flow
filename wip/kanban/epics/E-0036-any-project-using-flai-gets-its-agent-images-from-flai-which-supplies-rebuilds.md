@@ -18,8 +18,19 @@ tags: [cli]
 topics: [release]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 733
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 5
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 146
+      output: 55532
+      cache_read: 11904290
+      cache_write: 437319
+      cost: 6.586
   strategic:
     - kind: planner
       seconds: 5945
@@ -32,15 +43,15 @@ usage:
           cache_write: 652148
           cost: 46.0268
     - kind: orchestrator
-      seconds: 154
+      seconds: 244
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 214
-          cache_read: 1665554
-          cache_write: 202110
-          cost: 0.5327
+          input: 60
+          output: 388
+          cache_read: 2449827
+          cache_write: 296634
+          cost: 0.7854
 ---
 # E-0036 Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
 

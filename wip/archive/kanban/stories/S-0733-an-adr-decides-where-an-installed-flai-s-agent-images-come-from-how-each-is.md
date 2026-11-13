@@ -3,11 +3,11 @@ id: S-0733
 type: story
 nature: feature
 title: An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:54:40Z
-updated: 2026-11-13T07:28:50Z
+updated: 2026-11-13T07:53:04Z
 transitions:
   - to: ready
     at: 2026-11-13T07:28:41Z
@@ -15,14 +15,50 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:28:50Z
     by: agent-S-0733
+  - to: review
+    at: 2026-11-13T07:51:09Z
+    by: agent-S-0733
+  - to: done
+    at: 2026-11-13T07:53:04Z
+    by: orchestrator
+blocked:
+  - from: 2026-11-13T07:39:41Z
+    until: 2026-11-13T07:49:56Z
+    reason: awaiting the operator on TH-1139
 tags: [cli]
 topics: [release, docker, security]
-touches: [design/adrs/README.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 733
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 5
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 146
+      output: 55532
+      cache_read: 11904290
+      cache_write: 437319
+      cost: 6.586
+  strategic:
+    - kind: orchestrator
+      seconds: 71
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 22
+          output: 165
+          cache_read: 565559
+          cache_write: 89085
+          cost: 0.1882
 forecast:
   duration: 25m
   delivery: 2026-11-13T13:17:00Z
@@ -50,14 +86,14 @@ An ADR refining ADR-0212 settles how the stories after it work, so that they bui
 
 ## Acceptance criteria
 
-- [ ] An accepted ADR, refining ADR-0212, decides where an installed flai's bedrock and claude-code images come from: pulled by a digest a signed list names, as `flai dashboard` pulls flaiover; built on the host from Dockerfiles flai carries, with `flai` and `pilot` for Linux from the release; or pulled first with the build as the fallback. It names the registry, the image names, and the signed list
-- [ ] It says how an image is tied to the flai that runs it, by the `dev.system-flow.flai` label or another, and what makes an image stale: another flai version, another Dockerfile, or another base
-- [ ] It says what a development tree such as this repository runs, where the images must hold the tree's flai rather than a release's
-- [ ] It says how the project's layer (`agent.image.layer`) gets its build arguments in any project, in place of `scripts/agent-image.sh` reading `flai/go.mod` and `scripts/install-tools.sh`
-- [ ] It says what `flai serve` does when a start finds an image missing or stale: a host job, one at a time, that holds the start, and shows its output in the dashboard. It says whether the first automatic build needs the operator's consent. It sets a limit on a build step with no progress, and a retry of a step that fails on the network
-- [ ] It says whether a strategic agent, which never gets the project's layer, waits for the layer's build or starts once the harness image is there
-- [ ] It says where an operator names a build command of their own, which flai runs in place of its own (host configuration or a protected path, never the manifest alone), and how an operator turns the automatic build off
-- [ ] `design/system/flai-cli.md` describes the decided design under § Internal structure, links the ADR, and marks each part not yet built with the story that builds it
+- [x] An accepted ADR, refining ADR-0212, decides where an installed flai's bedrock and claude-code images come from: pulled by a digest a signed list names, as `flai dashboard` pulls flaiover; built on the host from Dockerfiles flai carries, with `flai` and `pilot` for Linux from the release; or pulled first with the build as the fallback. It names the registry, the image names, and the signed list
+- [x] It says how an image is tied to the flai that runs it, by the `dev.system-flow.flai` label or another, and what makes an image stale: another flai version, another Dockerfile, or another base
+- [x] It says what a development tree such as this repository runs, where the images must hold the tree's flai rather than a release's
+- [x] It says how the project's layer (`agent.image.layer`) gets its build arguments in any project, in place of `scripts/agent-image.sh` reading `flai/go.mod` and `scripts/install-tools.sh`
+- [x] It says what `flai serve` does when a start finds an image missing or stale: a host job, one at a time, that holds the start, and shows its output in the dashboard. It says whether the first automatic build needs the operator's consent. It sets a limit on a build step with no progress, and a retry of a step that fails on the network
+- [x] It says whether a strategic agent, which never gets the project's layer, waits for the layer's build or starts once the harness image is there
+- [x] It says where an operator names a build command of their own, which flai runs in place of its own (host configuration or a protected path, never the manifest alone), and how an operator turns the automatic build off
+- [x] `design/system/flai-cli.md` describes the decided design under § Internal structure, links the ADR, and marks each part not yet built with the story that builds it
 
 ## Tasks
 - T-3149 Write the ADR, proposed, refining ADR-0212 on where an installed flai's agent images come from and how flai keeps them
@@ -82,3 +118,18 @@ The sixth criterion's premise needs checking: the strategic roles go through `st
 - Tasks, in three layers: T-3149 writes the ADR; T-3151 describes it in `flai-cli.md`, since it links the ADR by its number; T-3152 asks the operator and accepts, since it confirms both together.
 - Forecast 25m: `flai forecast` gives 20m (116 s per unit over 5 done medium feature stories, size 10). Raised 5m: the ADR answers seven questions, read against ADR-0203, ADR-0212, and the signing design, against six for S-0659's comparable ADR. The wait on the operator in T-3152 is wall time, not agent time. Delivery is as flai gives it.
 - Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.
+
+### Accepted by the orchestrator
+
+- Verified: 54cf7edf533de478fcb25534f66099cddc5b4ce7
+- At: 2026-11-13T07:53:04Z
+
+Verdict: accept — all 8 criteria are met by the accepted ADR-0295, its README row and the new flai-cli.md section, with no convention break, and the close-out passed at 54cf7edf533de478fcb25534f66099cddc5b4ce7.
+- 1: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md, design/adrs/README.md
+- 2: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 3: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 4: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 5: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 6: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 7: design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md
+- 8: design/system/flai-cli.md

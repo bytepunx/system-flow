@@ -51,21 +51,21 @@ usage:
           cache_write: 385267
           cost: 5.2397
     - kind: orchestrator
-      seconds: 1220
+      seconds: 1432
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 218
-          output: 1575
-          cache_read: 8812329
-          cache_write: 977378
-          cost: 2.688
+          input: 265
+          output: 1896
+          cache_read: 11010254
+          cache_write: 1171017
+          cost: 3.3743
         - model: claude-sonnet-5-5
-          input: 24
-          output: 2543
-          cache_read: 232771
-          cache_write: 110824
-          cost: 0.2584
+          input: 32
+          output: 2604
+          cache_read: 312909
+          cache_write: 159613
+          cost: 0.3573
 cost_of_delay:
   inputs:
     revenue_per_week: 1250

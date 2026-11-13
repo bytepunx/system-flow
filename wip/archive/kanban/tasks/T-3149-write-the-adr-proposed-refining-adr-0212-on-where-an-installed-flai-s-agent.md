@@ -3,11 +3,11 @@ id: T-3149
 type: task
 nature: feature
 title: Write the ADR, proposed, refining ADR-0212 on where an installed flai's agent images come from and how flai keeps them
-status: in-progress
+status: done
 parent: S-0733
 owner: alex
 created: 2026-11-12T15:55:01Z
-updated: 2026-11-13T07:29:48Z
+updated: 2026-11-13T07:37:45Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:48Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T07:29:48Z
     by: agent-S-0733
+  - to: done
+    at: 2026-11-13T07:37:45Z
+    by: agent-S-0733
 stream: S-0733
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md]
+usage:
+  source: log
+  seconds: 477
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 18063
+      cache_read: 3872214
+      cache_write: 142251
+      cost: 2.1423
 ---
 # T-3149 Write the ADR, proposed, refining ADR-0212 on where an installed flai's agent images come from and how flai keeps them
 

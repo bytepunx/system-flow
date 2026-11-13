@@ -6,7 +6,7 @@ title: "flai check finds `item.blocked-closed` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T07:32:52Z
+updated: 2026-11-13T07:33:44Z
 transitions: []
 tags: [flai, check]
 topics: [cli, conventions, template]
@@ -21,21 +21,34 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 70
+    - kind: planner
+      seconds: 422
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 107
-          cache_read: 838251
-          cache_write: 141639
-          cost: 0.2812
+          input: 98
+          output: 28758
+          cache_read: 5519178
+          cache_write: 157511
+          cost: 2.9395
+    - kind: orchestrator
+      seconds: 137
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 39
+          output: 284
+          cache_read: 1851475
+          cache_write: 204187
+          cost: 0.5901
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
     by: orchestrator
     at: 2026-11-13T07:32:21Z
+  value: 2.5
+  by: planner-S-0761
+  at: 2026-11-13T07:33:44Z
 forecast:
   duration: 33m
   delivery: 2026-11-13T21:23:00Z
@@ -78,11 +91,11 @@ Tasks and layers:
 
 | Layer | Task | Waits for |
 |-------|------|-----------|
-| 1 | Repair S-0678 | nothing |
-| 1 | The ADR | nothing |
-| 2 | The scoped check leaves the finding out, with tests | the ADR, for its number and decision |
-| 2 | The design, guide, convention, and changelog say so | the ADR, for its number and decision |
-| 3 | Close I-0354 | the four before it: the reason names the repair and the ADR |
+| 1 | T-3268 Repair S-0678 | nothing |
+| 1 | T-3269 The ADR | nothing |
+| 2 | T-3270 The scoped check leaves the finding out, with tests | T-3269, for its number and decision |
+| 2 | T-3271 The design, guide, convention, and changelog say so | T-3269, for its number and decision |
+| 3 | T-3272 Close I-0354 | T-3268, T-3270, T-3271: the reason names the repair and the ADR |
 
 Touches, and where each came from:
 
@@ -101,4 +114,6 @@ The folder touch `design/adrs` stays: the ADR's file name comes from the title i
 
 No `after`: the story reads only S-0723's output, and S-0723 is done.
 
-Forecast and cost of delay: written below once worked out.
+Forecast 33m stands as `flai forecast` gives it, at size 18 from 2 criteria and 16 touches. S-0555, the same fix for `narrative.missing` with four tasks, took 40m. S-0366, for `threads.archived`, took 17m. This story adds a one-command repair task, so a figure between the two fits.
+
+Cost of delay 2.50 USD a week stands as `flai cod` gives it. The input, `time_lost_per_cycle: 1m`, is the one recommended on TH-1137 and set by the orchestrator, as TH-1096 set it for S-0723 on the same finding. At 150 USD an hour and one 168h cycle a week, that is 2.50 USD.

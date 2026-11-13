@@ -6,8 +6,8 @@ sources: [S-0722, I-0227]
 topics: [go, testing, flai, code]
 paths: [system-flow.yaml, scripts/integration.sh, scripts/test.sh, flai/cmd, flai/internal/mcpserver, flai/internal/guard]
 date: 2026-11-11
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: design/system/project-manifest.md
 asked_again: []
 cited: []
 ---

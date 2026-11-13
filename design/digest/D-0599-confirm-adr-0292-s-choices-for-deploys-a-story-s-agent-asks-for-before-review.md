@@ -2,12 +2,12 @@
 id: D-0599
 title: "Confirm ADR-0292's choices for deploys a story's agent asks for before review: Recommended: confirm all eight as written"
 kind: answer
-sources: [TH-1103]
+sources: [TH-1103, S-0659]
 topics: [kluster, deployment, flai, cli, go, code, all]
 paths: [design/system/kluster.md, design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
 date: 2026-11-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md#consequences"
 asked_again: []
 cited: []
 ---
@@ -48,4 +48,10 @@ For the operator alone: flai serve does not confirm this after orchestration.per
 Source: design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md § 7. The `kluster` host action
 ```
 
-Source: TH-1103.
+S-0659 accepted ADR-0292 on that answer, with no choice changed. From its Decisions (`wip/archive/agents/S-0659.md`):
+
+```text
+The operator confirmed all eight of ADR-0292's choices on TH-1103 (2026-11-13). The orchestrator's caveat on "at the head" (a deploy that builds from design or docs) is recorded as a consequence in the ADR; no choice changed.
+```
+
+Sources: TH-1103; S-0659 (`wip/archive/agents/S-0659.md`, Decisions).

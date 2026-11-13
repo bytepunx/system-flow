@@ -7,32 +7,33 @@ status: backlog
 parent: S-0660
 owner: alex
 created: 2026-11-10T08:27:42Z
-updated: 2026-11-10T08:27:42Z
+updated: 2026-11-13T07:33:44Z
 transitions: []
 stream: S-0660
 tags: [cli]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go]
 after: [T-2876, T-2879]
 ---
 # T-2884 flai serve takes a story's request, deploys a story in progress at its head, and keeps its namespace until acceptance, cancellation, or a teardown asked for
 
 ## Work
 
-In `flai/internal/serve/kluster.go`, the kluster pass takes each request T-2876 defines and answers it:
+ADR-0292 §1, §3, §4, and §5, in flai serve's kluster pass. Put the request handling in a new `flai/internal/serve/kluster_requests.go` and change the looks in `kluster.go`:
 
-- It refuses, with the reason and what to do, a story not in progress or in review, a worktree with uncommitted changes, the `kluster` host action off, no `deploy` in the block, and a deploy that would make more story namespaces live than T-2879's limit allows. A story whose namespace already lives does not count against itself.
-- It queues the deploy behind the other jobs, in the story's worktree at its branch's head, as `lookReview` does for a story in review. `SystemKluster.Deploy` stops hard-coding `workitem.Review`, and `run` stops refusing a story in progress.
-- A teardown asked for runs `teardown` and deletes the namespace.
-- `lookLeft` no longer tears down a story in progress. A namespace goes only when the story is accepted or cancelled, or when its agent or the operator asks.
-- `lookReview` does not deploy a story whose record holds its head already, and deploys it in place at a new head.
-- A failed job someone asked for skips `failed` and `report`, so it opens no thread. The answer gives the step, the exit code, and the log.
-- The journal entry and the namespace's record name who asked.
+- **Take requests every second**, beside the pass's minute looks, while the pass runs for the project: each `S-nnnn.<kind>.request.json` T-2876 defines is taken and answered at once.
+- **Refuse**, with the reason and what to do, and queue nothing: the `kluster` host action off or no `kluster:` block (naming `flai serve enable kluster` as the operator's); no `deploy`, for a deploy (deploys not set up yet); a story not in progress or in review; a story with no worktree; uncommitted changes to tracked files in the worktree, naming them; a teardown of a story with no record; and a deploy for a story with no namespace while `kluster.agent_namespaces` stories in progress hold one, naming the limit and each holder with its last deploy's commit and time. A story whose namespace is there never counts against itself, and stories in review never count.
+- **A story in review** is answered with the review's job when one waits or runs, or with its record when it passed at its head, and queues nothing more.
+- **Queue** a deploy at the worktree's head, or a teardown, in the pass's one queue, answering the job's id and the jobs ahead. While a job of the story waits or runs, answer that job; a deploy at a newer head takes the waiting one's place. An asked-for job always runs: the tried-once rule does not hold it back. Write the job's state at queue, start, and end, and at its end append the `kluster` event with `inbox.AppendEvent`. A job waiting or running when flai serve stopped ends `interrupted` at the next start, with its event.
+- **Deploy a story in progress**: `run` and `deploy` stop requiring review for an asked-for job; the deploy builds every component and records who asked.
+- **No thread for an asked-for failure**: an asked-for deploy or teardown that fails opens no thread, moves nothing, and starts no agent; its job state and event carry the step, the exit code, and the log.
+- **Keep the namespace**: `lookLeft` tears down no namespace whose story is in progress, whoever moved it there; ready, backlog, cancelled, and accepted still tear it down. `lookReview` queues no deploy for a story whose record passed at its branch's head (with `checks` on, its checks too), and deploys in place at a new head.
+- **The journal** entries of an asked-for job name who asked.
 
-It waits for T-2876, whose request and answer it reads, and for T-2879, whose limit it enforces.
+It waits for T-2876, whose files and event it writes, and T-2879, whose limit it reads.
 
 ## Done when
 
-- `flai/internal/serve/kluster_test.go` covers a story in progress deployed on request at its head; each refusal; a namespace kept while the story is in progress and torn down on acceptance, on cancellation, and on a teardown asked for; review at the deployed head with no new deploy, and at a new head deployed in place; a failed asked-for deploy with no thread; and the journal and the record naming who asked.
-- `go test ./internal/serve/...` passes.
+- Tests cover a story in progress deployed on request at its head; each refusal; a request while a job waits answered with it; the limit refusing a third story and never a story already holding one; a namespace kept while its story is in progress and torn down on a move to ready, on cancellation, on acceptance, and on a teardown asked for; review at the deployed head with no new deploy, and at a new head deployed in place; a failed asked-for deploy with no thread and its event; and the journal and the record naming who asked.
+- `flai test` on the changed paths passes.
 
 ## Notes

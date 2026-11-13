@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2142.3417
-accrued_seconds: 1554286
-tasks_completed: 3189
-last_run: 2026-11-13T07:27:45Z
+accrued_cost: 2144.9144
+accrued_seconds: 1554892
+tasks_completed: 3210
+last_run: 2026-11-13T07:51:05Z
 ---
 
 # Orchestrator activity
@@ -22357,6 +22357,153 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 28
 - Cost: 0.1365 USD, estimated
+
+### 2026-11-13T07:29:52Z
+
+- Summary: Accepted S-0659 at df3e026 under accept_reviews: close-out passed at the branch head, verifier matched all 7 criteria to ADR-0292, design/adrs/README.md, and design/system/kluster.md, no blockers in the preview.
+- Items: S-0659
+- Seconds: 117
+- Cost: 0.4502 USD, estimated
+
+### 2026-11-13T07:30:07Z
+
+- Summary: Accepted S-0762, the publish formula's instance, at a84b300 under accept_reviews: close-out passed at the branch head, evidence T-3265, T-3266, T-3267 done (flai 1.86.23, template 1.1.35 published).
+- Items: S-0762
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-13T07:30:24Z
+
+- Summary: Did not publish after S-0659 and S-0762: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD; nothing accepted awaits a release).
+- Items: S-0659, S-0762
+- Seconds: 17
+- Cost: 0.0725 USD, estimated
+
+### 2026-11-13T07:30:55Z
+
+- Summary: TH-1134 is a flai serve notice, so I left it alone. Ordered ready by throughput after it changed: S-0735 33m first, then S-0745 40m, S-0734 45m, S-0751 50m, S-0740 1h, S-0661 1h15m, S-0663 1h30m, S-0662 2h30m. promote_candidates lists none. S-0241 is complete but stays a draft, held by TH-0790 until forks work headless. S-0761's planner is still running. No new planner: the E-0034 stories still wait on the operator's inputs (TH-1097).
+- Items: S-0735, S-0745, S-0734, S-0751, S-0740, S-0661, S-0663, S-0662, S-0241
+- Seconds: 31
+- Cost: 0.1157 USD, estimated
+
+### 2026-11-13T07:31:13Z
+
+- Summary: I accepted both stories in review. Nothing was published, because nothing accepted is waiting for a release.
+- Items: none
+- Seconds: 18
+- Cost: 0.1096 USD, estimated
+
+### 2026-11-13T07:32:30Z
+
+- Summary: Answered TH-1137, citing design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+- Items: S-0761
+- Seconds: 66
+- Cost: 0.2718 USD, estimated
+
+### 2026-11-13T07:32:57Z
+
+- Summary: Approved planner-S-0761's plan on TH-1137 (five tasks in three layers, 16 touches, flai forecast 33m) and set S-0761's first cost of delay input, time_lost_per_cycle 1m, as the planner recommended and as TH-1096 settled for S-0723; resolved TH-1137 under plan_backlog_stories.
+- Items: S-0761, TH-1137
+- Seconds: 27
+- Cost: 0.1471 USD, estimated
+
+### 2026-11-13T07:33:07Z
+
+- Summary: Resolved my own TH-1102 on S-0733 as moot: alex finalized S-0733 and it is in progress, as agent-S-0733 reported.
+- Items: S-0733, TH-1102
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-13T07:33:17Z
+
+- Summary: Ordered the ready column with flai order --by throughput --apply after the pull order changed: S-0760 (32m), S-0735 (33m), S-0745 (40m), S-0759 (42m), S-0734 (45m), S-0751 (50m), S-0757 (50m), S-0740 (1h), S-0661 (1h15m), S-0663 (1h30m), S-0662 (2h30m). Promoted nothing: ready is 11 of 10 and promote_candidates lists none. Left TH-1134, TH-1135 (resolved) and TH-1136 (flai serve's notice) alone.
+- Items: S-0760, S-0735, S-0745, S-0759, S-0734, S-0751, S-0757, S-0740, S-0661, S-0663, S-0662
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-13T07:33:40Z
+
+- Summary: I acted on all six reasons. `wait_for_events` says my reasons are done, so I'm ending this run.
+- Items: none
+- Seconds: 23
+- Cost: 0.3265 USD, estimated
+
+### 2026-11-13T07:34:53Z
+
+- Summary: Recommended an answer on TH-1138, citing design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md § Consequences
+- Items: S-0660
+- Seconds: 59
+- Cost: 0.1943 USD, estimated
+
+### 2026-11-13T07:35:11Z
+
+- Summary: TH-1138 (S-0660 scope): recommended keeping S-0660 to its nine criteria and moving the namespace kubeconfig, flai kluster exec and log to a new E-0035 backlog story that S-0661 waits on; env stays with S-0661 (T-2865). Posted as a recommendation because it changes scope; source ADR-0292 Consequences, D-0599 choice 5.
+- Items: S-0660, S-0661, TH-1138
+- Seconds: 18
+- Cost: 0.0657 USD, estimated
+
+### 2026-11-13T07:35:21Z
+
+- Summary: Ready column: applied flai order --by throughput; the order is unchanged, S-0760 (32m) first through S-0662 (2h30m). Did not promote S-0761, the only candidate (rank 1, 33m), because ready is 11/10, over its limit. TH-1136 needs nothing: flai serve opened it and resolved it once S-0761 could be promoted.
+- Items: S-0760, S-0761, S-0662, TH-1136
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-13T07:35:42Z
+
+- Summary: All three reasons are handled. Nothing moved forward except the TH-1138 recommendation, which now waits on you.
+- Items: none
+- Seconds: 21
+- Cost: 0.2161 USD, estimated
+
+### 2026-11-13T07:36:36Z
+
+- Summary: Reviewed the planner's run on S-0761 (T-3268–T-3272, value 2.50 USD/week from time_lost_per_cycle 1m): plan thread TH-1137 already approved and resolved, so nothing to settle. Not promoted: S-0761 is in backlog and ready is over its limit (11 of 10).
+- Items: S-0761
+- Seconds: 40
+- Cost: 0.1618 USD, estimated
+
+### 2026-11-13T07:36:52Z
+
+- Summary: S-0761's plan needed nothing from me this run.
+- Items: none
+- Seconds: 16
+- Cost: 0.0795 USD, estimated
+
+### 2026-11-13T07:40:25Z
+
+- Summary: Recommended an answer on TH-1139, citing design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md § Decision
+- Items: S-0733
+- Seconds: 41
+- Cost: 0.1034 USD, estimated
+
+### 2026-11-13T07:40:40Z
+
+- Summary: Recommended "as recommended" on TH-1139 (ADR-0295's six agent-image choices for S-0733), operator_only because it allows automatic pulls and builds on the host and needs public GHCR packages; answer_threads autonomous, but an undecided architecture decision is the operator's; source ADR-0203 § Decision
+- Items: S-0733
+- Seconds: 15
+- Cost: 0.0222 USD, estimated
+
+### 2026-11-13T07:40:58Z
+
+- Summary: I posted a recommendation on TH-1139, and it now waits for you. I did not answer the thread, because its six choices for ADR-0295 are an architecture decision nobody has made yet.
+- Items: none
+- Seconds: 18
+- Cost: 0.0881 USD, estimated
+
+### 2026-11-13T07:50:46Z
+
+- Summary: TH-1139 (S-0733): no action. The operator confirmed the recommendation on all six ADR-0295 choices (D-0601), agent-S-0733 accepted the ADR on story/S-0733 (2727377) and resolved the thread. No cost of delay input or other orchestrator action is owed.
+- Items: S-0733, TH-1139
+- Seconds: 15
+- Cost: 0.0626 USD, estimated
+
+### 2026-11-13T07:51:05Z
+
+- Summary: I took no action on TH-1139, because it was already settled before this run started.
+- Items: none
+- Seconds: 19
+- Cost: 0.0856 USD, estimated
 
 ## Refusals
 

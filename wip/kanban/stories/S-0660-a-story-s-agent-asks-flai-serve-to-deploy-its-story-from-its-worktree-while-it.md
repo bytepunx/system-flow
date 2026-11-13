@@ -3,18 +3,21 @@ id: S-0660
 type: story
 nature: feature
 title: A story's agent asks flai serve to deploy its story from its worktree while it is in progress, and the namespace stays until the story is accepted or cancelled
-status: ready
+status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:08Z
-updated: 2026-11-13T07:29:51Z
+updated: 2026-11-13T07:33:55Z
 transitions:
   - to: ready
     at: 2026-11-13T07:25:42Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T07:29:57Z
+    by: agent-S-0660
 tags: [cli]
 topics: [kluster, deployment]
-touches: [flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/manifest/manifest_kluster.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0355-a-sub-agent-s-flai-kluster-status-falls-through-to-the-guard-s-generic-refusal.md, design/issues/summary.md]
 after: [S-0659]
 agent:
   harness: claude-code
@@ -37,15 +40,15 @@ usage:
           cache_write: 84563
           cost: 1.202
     - kind: orchestrator
-      seconds: 258
+      seconds: 326
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 57
-          output: 425
-          cache_read: 1932204
-          cache_write: 312121
-          cost: 0.6087
+          input: 75
+          output: 544
+          cache_read: 2636566
+          cache_write: 399062
+          cost: 0.8359
         - model: claude-sonnet-5-5
           input: 10
           output: 870
@@ -93,7 +96,7 @@ A story's agent asks flai serve to deploy its story from its worktree while the 
 - T-2879 The kluster block sets how many story namespaces may live at once
 - T-2882 flai guard refuses a sub-agent the request and still refuses every agent kluster up, down, deploy, teardown, and promote
 - T-2884 flai serve takes a story's request, deploys a story in progress at its head, and keeps its namespace until acceptance, cancellation, or a teardown asked for
-- T-2887 A flai kluster subcommand and an MCP tool ask flai serve for the session's own story's deploy or teardown and print the answer
+- T-2887 flai kluster deploy and teardown --job and the MCP tools kluster_deploy and kluster_teardown ask flai serve for the session's own story and print the answer
 - T-2889 kluster.md, flai-cli.md, and the user guide say how a story's agent asks for its deploy and when its namespace goes
 
 ## Notes

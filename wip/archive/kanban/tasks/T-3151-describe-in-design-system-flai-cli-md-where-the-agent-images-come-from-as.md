@@ -3,16 +3,37 @@ id: T-3151
 type: task
 nature: feature
 title: Describe in design/system/flai-cli.md where the agent images come from as decided, marking each part not yet built
-status: backlog
+status: done
 parent: S-0733
 owner: alex
 created: 2026-11-12T15:55:09Z
-updated: 2026-11-12T15:55:09Z
-transitions: []
+updated: 2026-11-13T07:38:43Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:37:54Z
+    by: agent-S-0733
+  - to: in-progress
+    at: 2026-11-13T07:37:54Z
+    by: agent-S-0733
+  - to: done
+    at: 2026-11-13T07:38:43Z
+    by: agent-S-0733
 stream: S-0733
 tags: [cli]
 touches: [design/system/flai-cli.md]
 after: [T-3149]
+usage:
+  source: log
+  seconds: 49
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 4902
+      cache_read: 1050838
+      cache_write: 38604
+      cost: 0.5814
 ---
 # T-3151 Describe in design/system/flai-cli.md where the agent images come from as decided, marking each part not yet built
 
