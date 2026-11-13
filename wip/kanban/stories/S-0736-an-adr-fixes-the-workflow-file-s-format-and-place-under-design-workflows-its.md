@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-13T20:22:49Z
+updated: 2026-11-13T20:51:17Z
 transitions: []
 tags: [cli]
 topics: [cli, template, conventions]
@@ -22,23 +22,39 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 12
+    - kind: planner
+      seconds: 31
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 16
-          cache_read: 108315
-          cache_write: 18020
-          cost: 0.0361
+          input: 5
+          output: 577
+          cache_read: 190240
+          cache_write: 4297
+          cost: 0.084
+    - kind: orchestrator
+      seconds: 127
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 31
+          output: 202
+          cache_read: 1116577
+          cache_write: 177969
+          cost: 0.3795
+        - model: claude-sonnet-5-5
+          input: 1
+          output: 10
+          cache_read: 4685
+          cache_write: 10565
+          cost: 0.0119
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T21:17:00Z
-  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0730, S-0777 and S-0241."
+  delivery: 2026-11-13T21:42:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0779 and S-0241."
   by: flai
-  at: 2026-11-13T20:22:49Z
+  at: 2026-11-13T20:51:17Z
 ---
 # S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
 
@@ -71,13 +87,13 @@ Before any code reads a workflow file, one accepted ADR settles what the file is
 
 ### Planning
 
-- Touches, all files:
+- Touches, all files, checked again on 2026-11-13 against `flai touches suggest`:
   - `design/adrs/README.md`: co-change. `flai adr new` and `flai adr accept` write the index again.
   - `design/adrs/0003-work-item-hierarchy.md`, `design/adrs/0004-workflow-states-and-transitions.md`: design (criterion 8). They change only by `superseded_by`.
   - `design/system/workflow.md`, `design/system/work-hierarchy.md`, `design/workflows/README.md`: design (criterion 9).
   - No folder touch on `design/adrs`. The ADR's file takes the number `flai adr new` gives it when the story runs.
-  - Left out from `flai touches suggest`: `flai-cli.md`, the user and operator guides, `flaiover-dashboard.md`, and the template. They describe what is built, and the stories that build it change them.
+  - Left out from `flai touches suggest`: `flai-cli.md`, the user and operator guides, `flaiover-dashboard.md`, `metrics.md`, and the template. They describe what is built, and the stories that build it change them. Criterion 5 leaves `metrics.md` to S-0750.
 - No `after`: the story reads no other story's output. Every other E-0034 story builds on this ADR, most through S-0737.
-- Tasks: T-3187 (the ADR, proposed), then T-3193 (the operator's answers, the acceptance, ADR-0003 and ADR-0004), then T-3200 (the design). One task per layer: each reads the one before.
-- Forecast 45m, up from the 28m `flai forecast` gives for size 15. The ADR settles as much as ADR-0207 did (32 KB, eight decisions), and T-3193 waits on the operator in the middle. The wait is wall time, not agent time, but the ADR's rewrite after the answers is agent time.
-- Cost of delay: not set yet. E-0034 has no inputs and neither does this story, so `flai cod` refuses it. I asked on TH-1097 and recommended `time_lost_per_cycle: 2h` on the epic. Once the operator answers, the value is this story's share by forecast.
+- Tasks: T-3187 (the ADR, proposed), then T-3193 (the operator's answers, the acceptance, ADR-0003 and ADR-0004), then T-3200 (the design). One task per layer: each reads the one before. All three still fit the outcome, so none was changed.
+- Forecast 45m, kept over the 28m `flai forecast` gives for size 15 (110 s per unit, 131 done feature stories). The ADR settles as much as ADR-0207 did (32 KB, eight decisions), and T-3193 waits on the operator in the middle. The wait is wall time, not agent time, but rewriting the ADR after the answers is agent time. The delivery is the one flai's replan writes from the pull order.
+- Cost of delay: not set yet. E-0034 has no inputs and neither does this story, so `flai cod` still refuses it on 2026-11-13. TH-1097 asks for them, with `time_lost_per_cycle: 2h` on the epic recommended, and the orchestrator's recommendation there is the operator's alone. Once the operator answers, the value is this story's share by forecast.
