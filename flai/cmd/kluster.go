@@ -40,13 +40,14 @@ them into the cluster, and runs the deploy command in the story's own
 namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster
 promote deploys main's head into the default namespace; flai kluster
 deployments lists what each namespace holds. Each job logs its steps under
-.flai-cache/kluster/logs and records its outcome under
-.flai-cache/kluster/deployments, and one job runs at a time per project.
+.flai-cache/kluster/logs, which flai kluster log S-nnnn --step <step>
+prints, and records its outcome under .flai-cache/kluster/deployments, and
+one job runs at a time per project.
 
 They work from your shell whatever the kluster host action says. flai guard
 refuses every agent and sub-agent up, down, deploy, teardown, and promote,
-which change shared infrastructure on your machine; status and deployments
-read, and any agent may run them. A story's agent asks flai serve for its
+which change shared infrastructure on your machine; status, deployments,
+and log read, and any agent may run them. A story's agent asks flai serve for its
 own story's deploy or teardown instead, with flai kluster deploy or teardown
 S-nnnn --job, or the MCP tools kluster_deploy and kluster_teardown, which run
 nothing themselves (ADR-0292).
@@ -62,13 +63,14 @@ how to install kluster.`,
   flai kluster status --json
   flai kluster deploy S-0578
   flai kluster deployments
+  flai kluster log S-0578 --step deploy
   flai kluster teardown S-0578 --yes
   flai kluster promote
   flai kluster down --yes`,
 		Args: cobra.NoArgs,
 	}
 	c.AddCommand(newKlusterUpCmd(a), newKlusterDownCmd(a), newKlusterStatusCmd(a),
-		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a))
+		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a), newKlusterLogCmd(a))
 	return c
 }
 
@@ -522,6 +524,93 @@ reads, so any agent may run it.`,
 			}
 			return tw.Flush()
 		},
+	}
+}
+
+func newKlusterLogCmd(a *app) *cobra.Command {
+	var step string
+	c := &cobra.Command{
+		Use:   "log S-nnnn --step <step>",
+		Short: "Print a step's log of a story's namespace, as the dashboard's live feed reads it",
+		Long: `Prints the log of one step of the last job in a story's namespace, s-nnnn:
+.flai-cache/kluster/logs/<namespace>/<step>.log, read from its start to its
+end in the 64 KB parts the host method kluster.log answers the dashboard's
+live feed, each ending on a whole character. A step is build, build-<name>
+for a component, load, deploy, or teardown; flai kluster deployments lists
+the steps each namespace's last job ran. A log a new job clears while it is
+read is read again from its start.
+
+It only reads files, so it needs no kluster: block and no flai serve, and
+any agent may run it; an agent in a container reaches the logs only through
+it. A session with a story of its own, FLAI_STORY, else the story in an
+agent name of the form agent-S-nnnn, is refused another story's log, as
+deploy --job is (ADR-0292). A step not of that form is refused, and a log
+that is not there is said to be absent, exiting 1.
+
+--json prints one object: namespace, step, log (its path from the root),
+exists, offset (0), next (where the text ends), size, text (the whole log),
+and outcome, the step's outcome in the namespace's record.`,
+		Example: `  flai kluster log S-0578 --step deploy
+  flai kluster log S-0578 --step build-api
+  flai kluster log S-0578 --step deploy --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			story := workitem.CanonicalID(args[0])
+			ns, err := kluster.StoryNamespace(story)
+			if err != nil {
+				return err
+			}
+			if !kluster.IsStep(step) {
+				return fmt.Errorf("%q is not a step; give --step one flai kluster deployments lists under %s's namespace, such as build, build-api, load, deploy, or teardown", step, story)
+			}
+			if own := sessionStory(); own != "" && workitem.CanonicalID(own) != story {
+				return fmt.Errorf("this session works %s, and a story's agent reads its own story's kluster logs alone (ADR-0292), so nothing was read for %s; read %s's, or leave %s's namespace to its own agent", workitem.CanonicalID(own), story, workitem.CanonicalID(own), story)
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			l, err := readWholeLog(mainRootOf(repo), ns, step)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				if err := a.printJSON(l); err != nil {
+					return err
+				}
+			} else {
+				fmt.Fprint(a.out, l.Text)
+			}
+			if !l.Exists {
+				return fmt.Errorf("%s's namespace %s has no %s log at %s: no job of it ran that step, or a teardown removed its logs; flai kluster deployments lists the steps its last job ran", story, ns, step, l.Log)
+			}
+			return nil
+		},
+	}
+	c.Flags().StringVar(&step, "step", "", "the step whose log to print: build, build-<name>, load, deploy, or teardown")
+	return c
+}
+
+// readWholeLog reads namespace ns's step log under root from 0 to its end in
+// kluster.ReadLog's parts, as one part holding the whole text; a log a new
+// job clears while it is read is read again from 0.
+func readWholeLog(root, ns, step string) (kluster.LogPart, error) {
+	var text strings.Builder
+	var offset int64
+	for {
+		part, err := kluster.ReadLog(root, ns, step, offset)
+		if err != nil {
+			return kluster.LogPart{}, err
+		}
+		if part.Reset {
+			text.Reset()
+		}
+		text.WriteString(part.Text)
+		if part.Text == "" || part.Next >= part.Size {
+			part.Offset, part.Reset, part.Text = 0, false, text.String()
+			return part, nil
+		}
+		offset = part.Next
 	}
 }
 

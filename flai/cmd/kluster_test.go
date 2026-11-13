@@ -218,6 +218,31 @@ esac
 `
 	fakeKubectl = `#!/bin/sh
 echo "kubectl $*" >> "$FAKE_LOG"
+case "$*" in
+  *" create token "*) echo fake-token ;;
+  *" apply "*) cat > /dev/null ;;
+esac
+`
+	// klusterKubeconfig is flai's kubeconfig of demo-integration, with fake
+	// credentials, so a deploy can make the namespace's own kubeconfig.
+	klusterKubeconfig = `apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    certificate-authority-data: RkFLRS1DQQ==
+    server: https://0.0.0.0:6550
+  name: k3d-demo-integration
+contexts:
+- context:
+    cluster: k3d-demo-integration
+    user: admin@k3d-demo-integration
+  name: k3d-demo-integration
+current-context: k3d-demo-integration
+users:
+- name: admin@k3d-demo-integration
+  user:
+    client-certificate-data: RkFLRS1DRVJU
+    client-key-data: RkFLRS1LRVk=
 `
 	fakeGit = `#!/bin/sh
 case "$*" in
@@ -262,7 +287,7 @@ func deployProject(t *testing.T, status string) (root, log string) {
 	}
 	files := map[string]string{
 		"system-flow.yaml":               string(b),
-		".flai-cache/kluster/kubeconfig": "apiVersion: v1\n",
+		".flai-cache/kluster/kubeconfig": klusterKubeconfig,
 		"wip/kanban/stories/S-0007-demo.md": "---\nid: S-0007\ntitle: Demo\ntype: story\nnature: feature\nstatus: " + status +
 			"\ncreated: 2026-11-07T00:00:00Z\nupdated: 2026-11-07T00:00:00Z\ntransitions:\n  - {to: " + status + ", at: 2026-11-07T00:00:00Z, by: alex}\n---\n\n# S-0007 Demo\n",
 	}
@@ -702,5 +727,81 @@ func TestKlusterJobJSON(t *testing.T) {
 	var bare map[string]any
 	if code != 0 || json.Unmarshal([]byte(out), &bare) != nil || bare["job"] != nil || bare["ended"] != nil || bare["answer"] == nil {
 		t.Errorf("--json without --wait prints the answer alone: %d %s", code, out)
+	}
+}
+
+// logStory writes text as S-0007's step log under root, and a record of its
+// namespace listing the step as passed.
+func logStory(t *testing.T, root, step, text string) {
+	t.Helper()
+	r := kluster.Record{Story: "S-0007", Namespace: "s-0007", Outcome: kluster.OutcomePassed, StartedAt: queuedAt, Steps: []kluster.Step{{Name: step, Outcome: kluster.OutcomePassed, Log: kluster.LogPath(root, "s-0007", step)}}}
+	b, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFiles(t, root, map[string]string{
+		".flai-cache/kluster/logs/s-0007/" + step + ".log": text,
+		".flai-cache/kluster/deployments/s-0007.json":      string(b),
+	})
+	if _, ok, err := kluster.ReadRecord(root, "s-0007"); !ok || err != nil {
+		t.Fatalf("the record is not where kluster reads it: %v", err)
+	}
+}
+
+// S-0763 criterion 4, ADR-0292 §2: flai kluster log prints a step's whole
+// log, read from 0 in kluster.log's 64 KB parts, with no kluster: block and
+// no flai serve; --json prints kluster.log's fields with the whole text.
+func TestKlusterLogPrintsAStepsLog(t *testing.T) {
+	root := jobProject(t)
+	text := "a" + strings.Repeat("é", kluster.LogChunk) + "deployed\n"
+	logStory(t, root, kluster.StepDeploy, text)
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "log", "S-7", "--step", "deploy")
+	if code != 0 || out != text {
+		t.Fatalf("log: %d, %d bytes of %d, %s", code, len(out), len(text), errOut)
+	}
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "log", "S-0007", "--step", "deploy", "--json")
+	var got kluster.LogPart
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+		t.Fatalf("log --json: %d %s %s", code, out, errOut)
+	}
+	want := kluster.LogPart{Namespace: "s-0007", Step: "deploy", Log: ".flai-cache/kluster/logs/s-0007/deploy.log", Exists: true, Offset: 0, Next: int64(len(text)), Size: int64(len(text)), Text: text, Outcome: kluster.OutcomePassed}
+	if got != want {
+		t.Errorf("log --json: got %+v", got)
+	}
+	t.Setenv("FLAI_AGENT", "alex")
+	writeFiles(t, root, map[string]string{".flai-cache/kluster/logs/s-0008/build-api.log": "built\n"})
+	if out, errOut, code := runKluster(t, root, false, "", "kluster", "log", "S-0008", "--step", "build-api"); code != 0 || out != "built\n" {
+		t.Errorf("the operator's shell reads the story given: %d %q %s", code, out, errOut)
+	}
+}
+
+// S-0763 criterion 4, ADR-0292 §2: a session with a story of its own is
+// refused another story's log; a step kluster.log refuses is refused; a log
+// that is not there is said to be absent, exiting 1.
+func TestKlusterLogRefusals(t *testing.T) {
+	root := jobProject(t)
+	logStory(t, root, kluster.StepDeploy, "deployed\n")
+	writeFiles(t, root, map[string]string{".flai-cache/kluster/logs/s-0008/deploy.log": "theirs\n"})
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "log", "S-0008", "--step", "deploy")
+	if code == 0 || out != "" || !strings.Contains(errOut, "this session works S-0007") || !strings.Contains(errOut, "nothing was read for S-0008") {
+		t.Errorf("another story's log: %d %q %s", code, out, errOut)
+	}
+	for _, args := range [][]string{{"--step", "images"}, {"--step", "build-"}, {"--step", "../../kubeconfig"}, {}} {
+		out, errOut, code := runKluster(t, root, false, "", append([]string{"kluster", "log", "S-0007"}, args...)...)
+		if code == 0 || out != "" || !strings.Contains(errOut, "is not a step") {
+			t.Errorf("%v: %d %q %s", args, code, out, errOut)
+		}
+	}
+	if _, errOut, code := runKluster(t, root, false, "", "kluster", "log", "E-0001", "--step", "deploy"); code == 0 || !strings.Contains(errOut, "is not a story ID") {
+		t.Errorf("an epic: %d %s", code, errOut)
+	}
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "log", "S-0007", "--step", "teardown")
+	if code == 0 || out != "" || !strings.Contains(errOut, "S-0007's namespace s-0007 has no teardown log at .flai-cache/kluster/logs/s-0007/teardown.log") {
+		t.Errorf("an absent log: %d %q %s", code, out, errOut)
+	}
+	out, _, code = runKluster(t, root, false, "", "kluster", "log", "S-0007", "--step", "teardown", "--json")
+	var got kluster.LogPart
+	if code == 0 || json.Unmarshal([]byte(out), &got) != nil || got.Exists || got.Text != "" {
+		t.Errorf("an absent log --json prints exists false and exits 1: %d %s", code, out)
 	}
 }

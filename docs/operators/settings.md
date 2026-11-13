@@ -534,7 +534,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--spend-key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--status` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai digest list](../users/flai-reference.md#flai-digest-list) |
 | `--stdin` | [flai doc lint](../users/flai-reference.md#flai-doc-lint) |
-| `--step` | [flai formula stop](../users/flai-reference.md#flai-formula-stop) |
+| `--step` | [flai formula stop](../users/flai-reference.md#flai-formula-stop), [flai kluster log](../users/flai-reference.md#flai-kluster-log) |
 | `--story` | [flai check](../users/flai-reference.md#flai-check), [flai components serve](../users/flai-reference.md#flai-components-serve), [flai design show](../users/flai-reference.md#flai-design-show), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai doc show](../users/flai-reference.md#flai-doc-show), [flai file save](../users/flai-reference.md#flai-file-save), [flai file show](../users/flai-reference.md#flai-file-show), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai message list](../users/flai-reference.md#flai-message-list), [flai prime](../users/flai-reference.md#flai-prime), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--strict` | [flai check](../users/flai-reference.md#flai-check) |
 | `--supersedes` | [flai adr new](../users/flai-reference.md#flai-adr-new) |

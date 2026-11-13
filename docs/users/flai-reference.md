@@ -2686,9 +2686,9 @@ A project names its local Kubernetes cluster in the kluster: block of its system
 
 flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kluster/kubeconfig, never in ~/.kube/config; flai kluster down takes it down; flai kluster status reports it.
 
-flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project.
+flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs, which flai kluster log S-nnnn --step &lt;step&gt; prints, and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project.
 
-They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them. A story's agent asks flai serve for its own story's deploy or teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the MCP tools kluster\_deploy and kluster\_teardown, which run nothing themselves (ADR-0292).
+They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status, deployments, and log read, and any agent may run them. A story's agent asks flai serve for its own story's deploy or teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the MCP tools kluster\_deploy and kluster\_teardown, which run nothing themselves (ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host action on, from the dashboard's Features page or with flai serve enable kluster, which writes the block and a kluster.yaml for it. A block with no deploy brings the cluster up and down, and deploy and promote refuse it until kluster.deploy is set. A host without kluster on PATH is refused with how to install kluster.
 
@@ -2700,6 +2700,7 @@ flai kluster status
 flai kluster status --json
 flai kluster deploy S-0578
 flai kluster deployments
+flai kluster log S-0578 --step deploy
 flai kluster teardown S-0578 --yes
 flai kluster promote
 flai kluster down --yes
@@ -2710,6 +2711,7 @@ Subcommands:
 - [deploy](#flai-kluster-deploy): Build a story's images, load them into the cluster, and deploy it into its namespace
 - [deployments](#flai-kluster-deployments): List each namespace's deployment, the default namespace's first
 - [down](#flai-kluster-down): Take the project's cluster down with kluster down
+- [log](#flai-kluster-log): Print a step's log of a story's namespace, as the dashboard's live feed reads it
 - [promote](#flai-kluster-promote): Deploy main's head into the default namespace
 - [status](#flai-kluster-status): Report the project's cluster: its name, whether it runs, and its age
 - [teardown](#flai-kluster-teardown): Remove a story's deployment: the teardown command, then its namespace
@@ -2792,6 +2794,34 @@ Examples:
 flai kluster down
 flai kluster down --yes
 ```
+
+#### flai kluster log
+
+Print a step's log of a story's namespace, as the dashboard's live feed reads it.
+
+```text
+flai kluster log S-nnnn --step <step> [flags]
+```
+
+Prints the log of one step of the last job in a story's namespace, s-nnnn: .flai-cache/kluster/logs/&lt;namespace&gt;/&lt;step&gt;.log, read from its start to its end in the 64 KB parts the host method kluster.log answers the dashboard's live feed, each ending on a whole character. A step is build, build-&lt;name&gt; for a component, load, deploy, or teardown; flai kluster deployments lists the steps each namespace's last job ran. A log a new job clears while it is read is read again from its start.
+
+It only reads files, so it needs no kluster: block and no flai serve, and any agent may run it; an agent in a container reaches the logs only through it. A session with a story of its own, FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn, is refused another story's log, as deploy --job is (ADR-0292). A step not of that form is refused, and a log that is not there is said to be absent, exiting 1.
+
+--json prints one object: namespace, step, log (its path from the root), exists, offset (0), next (where the text ends), size, text (the whole log), and outcome, the step's outcome in the namespace's record.
+
+Examples:
+
+```bash
+flai kluster log S-0578 --step deploy
+flai kluster log S-0578 --step build-api
+flai kluster log S-0578 --step deploy --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--step` string | the step whose log to print: build, build-&lt;name&gt;, load, deploy, or teardown |
 
 #### flai kluster promote
 
