@@ -1,6 +1,6 @@
 ---
 title: Tooling
-updated: 2026-11-11
+updated: 2026-11-13
 audience: agent
 order: 90
 status: active
@@ -15,7 +15,7 @@ Use the project's tools for the project's data. The tools keep the standard true
 
 - Create and move work items with `flai`: `flai epic new`, `flai story new --epic`, `flai task new --story`, `flai move`, `flai block`, `flai unblock`. Do not hand-write front matter for something a command creates.
 - Open and log narratives with `flai stream open` and `flai stream log`. Write a narrative's `## Current state` and `## Next steps` with `flai stream state S-nnnn --current "<text>" --next "<text>"`, or the MCP tool `stream_state`, never by editing the file: it replaces the two sections, or the one you give, and leaves the rest alone. The same call records the other summary sections: `--context` replaces `## Context`, each `--decision` appends a bullet to `## Decisions`, and each `--question` appends a dated bullet to `## Open questions`, above the threads block. Use it where `wip/` is read-only, as in a container; where it is writable, those three sections may still be edited by hand. The `## Log` is appended by `flai stream log`.
-- Hand-edit item bodies (goals, criteria, notes) freely. Hand-edit item front matter only for fields no command sets, and run `flai check` afterwards.
+- Hand-edit an item's body (goals, criteria, notes) with `Edit`. Never replace an item file whole with `Write`. `flai guard` refuses a `Write` whose content is not that item, with its own `id` and `type` in front matter that parses ([ADR-0298](../adrs/0298-flai-guard-refuses-a-write-that-replaces-a-work-item-file-whole-with-content.md)). Change an item's fields with `flai edit` or the MCP tool `item_edit`. Hand-edit item front matter only for fields no command sets, and run `flai check` afterwards.
 - Run `flai check --strict` before reporting a story as done and before any commit. Fix what it finds; do not explain it away.
 - flai lints the markdown it writes in `wip/` with the project's markdownlint configuration, because that folder is written in the main checkout, where a story's own lint never runs: `flai check` warns on each finding there (`markdown.MDnnn`), and making an item, a thread entry, or a log entry is refused, with the rule and the line, when it would bring one. Fix what it names; do not work around it. The project's own markdown lint stays the authority for what flai does not check.
 - Use `flai board`, `flai show`, and `flai stats` to answer questions about work state instead of grepping files.
