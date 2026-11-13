@@ -150,6 +150,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	// the same time do not meet on one line.
 	root.AddCommand(newAdrCmd(a))
 	root.AddCommand(newAgentCmd(a))
+	root.AddCommand(newImageCmd(a))
 	root.AddCommand(newServeCmd(a))
 	root.AddCommand(newHostCmd(a))
 	root.AddCommand(newHostAPICmd(a))
