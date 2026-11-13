@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/agentimage"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -1085,9 +1087,12 @@ func TestScopedCheckLeavesOutAnAgentImageFindingOnlyTheHostClears(t *testing.T) 
 		name  string
 		probe ImageProbe
 	}{
-		{"docker not on PATH", func(string) (bool, error) { return false, ErrNoDocker }},
-		{"docker cannot say", func(string) (bool, error) { return false, os.ErrDeadlineExceeded }},
-		{"not built", func(string) (bool, error) { return false, nil }},
+		{"docker not on PATH", ImageProbe{Inspect: func(string) (agentimage.Info, bool, error) { return agentimage.Info{}, false, ErrNoDocker }}},
+		{"docker cannot say", ImageProbe{Inspect: func(string) (agentimage.Info, bool, error) { return agentimage.Info{}, false, os.ErrDeadlineExceeded }}},
+		// The harness image is built; the layer over it is not.
+		{"not built", ImageProbe{Inspect: func(ref string) (agentimage.Info, bool, error) {
+			return agentimage.Info{ID: "sha256:harness", Labels: map[string]string{agentimage.LabelFlai: "dev"}}, ref == harness.DefaultImages[harness.ClaudeCode], nil
+		}}},
 	}
 	for _, p := range probes {
 		for _, tc := range []struct {
@@ -1146,7 +1151,7 @@ func TestScopedCheckLeavesOutAnAgentImageFindingOnlyTheHostClears(t *testing.T) 
 // story that does not change the manifest it stays a note outside the story,
 // as any other finding there does.
 func TestScopedCheckNotesAMissingLayerOutsideTheStory(t *testing.T) {
-	built := func(string) (bool, error) { return true, nil }
+	built := ImageProbe{Inspect: func(string) (agentimage.Info, bool, error) { return agentimage.Info{ID: "sha256:built"}, true, nil }}
 	whole, scoped := runScopedImage(t, scopeProject(t), []string{"flai/main.go"}, false, built)
 	if got := imageFindings(whole); len(got) != 1 || got[0].unchecked || got[0].advisory || !strings.Contains(got[0].Message, "not a file") {
 		t.Fatalf("unscoped, the run should report the missing layer: %+v", got)

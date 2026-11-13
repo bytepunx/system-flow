@@ -7,51 +7,73 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/agentimage"
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// ErrNoDocker is an ImageProbe's answer when docker is not on PATH.
-var ErrNoDocker = errors.New("docker is not on PATH")
+// ErrNoDocker is an ImageProbe's Inspect answer when docker is not on PATH,
+// agentimage's own.
+var ErrNoDocker = agentimage.ErrNoDocker
 
-// ImageProbe reports whether image is built on this host: ErrNoDocker when
-// docker is not on PATH, another error when docker could not say.
-type ImageProbe func(image string) (bool, error)
+// ImageProbe is how AgentImage asks this host about the agent images:
+// Inspect says whether each is here, and its labels; Runner runs the
+// project's flai.command for the flai version they must hold
+// (agentimage.ProjectFlai), and must be set for a manifest that names one;
+// HostImages, when set, is the image the host's container harness names for
+// each inner harness, for the project whose main checkout is main, which is
+// the operator's own and never judged.
+type ImageProbe struct {
+	Inspect    agentimage.Inspector
+	Runner     execx.Runner
+	HostImages func(main string) map[string]string
+}
 
-// DockerImage is the ImageProbe that asks docker image inspect through r.
+// DockerImage is the ImageProbe that asks docker image inspect through r,
+// runs the project's flai through r, and reads the host's images from the
+// configuration file (HostImages).
 func DockerImage(r execx.Runner) ImageProbe {
-	return func(image string) (bool, error) {
-		if _, err := r.LookPath("docker"); err != nil {
-			return false, ErrNoDocker
-		}
-		out, err := r.Run("", "docker", "image", "inspect", "--format", "{{.Id}}", image)
-		if err == nil {
-			return true, nil
-		}
-		// "Error: No such image" or "Error response from daemon: No such
-		// image", by the client's version; anything else, such as a daemon
-		// not running, leaves the image unknown.
-		if strings.Contains(strings.ToLower(out+" "+err.Error()), "no such image") {
-			return false, nil
-		}
-		return false, err
+	return ImageProbe{Inspect: agentimage.Docker(r, "docker"), Runner: r, HostImages: HostImages}
+}
+
+// HostImages is the image the host's container harness names for each inner
+// harness, with flai serve agent harness container --image, for the project
+// whose main checkout is main, the project's own entry over the host-wide
+// one (ADR-0261), as flai serve reads them: from the configuration file
+// FLAI_CONFIG names, else ~/.flai/config.json. A file that is missing or
+// cannot be read or parsed names none, and is never written; flai serve
+// refuses such a file itself.
+func HostImages(main string) map[string]string {
+	data, err := os.ReadFile(config.ResolvePath(""))
+	if err != nil {
+		return nil
 	}
+	cfg, err := config.Parse(data)
+	if err != nil {
+		return nil
+	}
+	return cfg.Agent.ForProject(main).Harnesses[config.ContainerHarness].Images
 }
 
 // AgentImage adds agent.image when system-flow.yaml names a layer under
-// agent.image.layer whose Dockerfile does not exist, a warning, or whose
-// image, built over the claude-code harness image, is not on this host, a
-// warning --strict passes over, since only building it clears it, which no
-// story branch does. When docker is not on PATH or cannot say, it adds a note
-// --strict passes over that the image went unchecked. Those three are marked
-// unchecked, with the manifest and the layer as the paths whose change brings
-// them inside a story, so a check scoped to a story that changes neither
-// leaves them out (ADR-0255, I-0264); the warning for a layer that is not a
-// file is not, since a story can fix it. A manifest naming no layer gets
-// nothing. The caller supplies the probe so this package runs no commands
-// (S-0510).
+// agent.image.layer whose Dockerfile does not exist, a warning, and, for
+// each image the project's agents need (agentimage.Needed: the harness
+// images and the layer built over claude-code's) that is not on this host or
+// is stale (ADR-0295), a warning --strict passes over, since only building
+// it clears it, which no story branch does; each names flai image status.
+// The host's own images, named with --image, are never judged. When docker
+// is not on PATH or cannot say, or the images cannot be judged, it adds a
+// note --strict passes over that the images went unchecked. Those are marked
+// unchecked, with the manifest and the layer as the paths whose change
+// brings them inside a story, so a check scoped to a story that changes
+// neither leaves them out (ADR-0255, I-0264); the warning for a layer that
+// is not a file is not, since a story can fix it. A manifest naming no
+// layer gets nothing. The caller supplies the probe so this package runs no
+// commands (S-0510).
 func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 	layer := repo.Manifest.Layer()
 	if layer == "" {
@@ -76,16 +98,74 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 		add(false, "agent.image.layer names "+layer+", which is not a file: fix the path in "+manifest.File+" or add the Dockerfile, then build its image with `make agent-images`")
 		return
 	}
-	image := repo.Manifest.LayerImage(harness.ClaudeCode)
-	built, err := probe(image)
-	switch {
-	case errors.Is(err, ErrNoDocker):
-		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker is not on PATH; install Docker to check it, and build it with `make agent-images`")
-	case err != nil:
-		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker could not say whether it is built ("+firstLine(err.Error())+"); start Docker to check it")
-	case !built:
-		add(true, "the image "+image+" of agent.image.layer "+layer+" is not built on this host, so flai serve cannot run the project's agents in it: build it with `make agent-images`, or `scripts/agent-image.sh --layer` over the harness image already built")
+	var host map[string]string
+	if probe.HostImages != nil {
+		main := repo.MainRoot
+		if main == "" {
+			main = repo.Root
+		}
+		host = probe.HostImages(main)
 	}
+	images := agentimage.Needed(repo.Manifest, agentimage.Agents(repo.Manifest), host)
+	var inspectErr error
+	inspect := func(ref string) (agentimage.Info, bool, error) {
+		info, present, err := probe.Inspect(ref)
+		if err != nil {
+			inspectErr = err
+		}
+		return info, present, err
+	}
+	flai := func() (string, error) {
+		return agentimage.ProjectFlai(repo.Root, repo.Manifest, probe.Runner, buildinfo.Get().Version)
+	}
+	statuses, err := agentimage.Check(repo.Root, images, inspect, flai)
+	image := repo.Manifest.LayerImage(harness.ClaudeCode)
+	switch {
+	case errors.Is(inspectErr, ErrNoDocker):
+		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker is not on PATH; install Docker to check it, and build it with `make agent-images`")
+		return
+	case inspectErr != nil:
+		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker could not say whether it is built ("+firstLine(inspectErr.Error())+"); start Docker to check it")
+		return
+	case err != nil:
+		add(true, "the images of agent.image.layer "+layer+" are not checked: "+firstLine(err.Error())+"; see `flai image status`")
+		return
+	}
+	for _, s := range statuses {
+		if msg := imageFinding(s, layer); msg != "" {
+			add(true, msg)
+		}
+	}
+}
+
+// imageFinding is what AgentImage says of the agent image s, under the layer
+// agent.image.layer names: that it is not built or is stale, and what to do,
+// or "" for an image that is current or the operator's own.
+func imageFinding(s agentimage.Status, layer string) string {
+	what := "the image " + s.Ref + " of agent.image.layer " + layer
+	switch {
+	case s.Kind == agentimage.KindHarness && s.Source == agentimage.SourceHost:
+		what = "the image " + s.Ref + " the host names for the inner harness " + s.Inner
+	case s.Kind == agentimage.KindHarness:
+		what = "the harness image " + s.Ref + " of the inner harness " + s.Inner
+	}
+	switch s.State {
+	case agentimage.StateMissing:
+		switch {
+		case s.Kind == agentimage.KindLayer:
+			return what + " is not built on this host, so flai serve cannot run the project's agents in it: see `flai image status`, and build it with `make agent-images`, or `scripts/agent-image.sh --layer` over the harness image already built"
+		case s.Source == agentimage.SourceHost:
+			return what + " is not on this host: see `flai image status`, and build it, or name another with `flai serve agent harness container --image " + s.Inner + "=<image>`"
+		}
+		return what + " is not built on this host, so flai serve cannot run the project's agents in it, nor build a layer over it: see `flai image status`, and build it with `make agent-images`"
+	case agentimage.StateStale:
+		why := make([]string, 0, len(s.Reasons))
+		for _, r := range s.Reasons {
+			why = append(why, r.Message)
+		}
+		return what + " is stale: " + strings.Join(why, "; ") + "; see `flai image status`, and rebuild it with `make agent-images`"
+	}
+	return ""
 }
 
 // layerLine returns the 1-based line of layer: under agent: and image: in a

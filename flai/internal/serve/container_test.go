@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/agentimage"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -32,8 +33,11 @@ func containerLab(t *testing.T) (*agentLab, string) {
 // containerOn puts a fake docker first on PATH for lab, sets the container
 // harness's login, and runs the project's HTTP MCP server, as flai host keeps
 // it, at a loopback URL with a token, which it returns. The fake answers
-// image inspect, recording the image in docker-inspected, unless a file
-// no-image is in the lab's output folder; info, recording its arguments in
+// image inspect as --format {{json .}} prints it, with an ID of its own for
+// each image and as its labels the JSON object in a file image-labels in the
+// lab's output folder, else none, recording the image in docker-inspected,
+// unless a file no-image is there, or failing as a daemon that is down when
+// inspect-fails is; info, recording its arguments in
 // docker-info, as Docker Desktop's engine, as a native one when a file
 // native-engine is there, failing when info-fails is; network inspect,
 // recording its arguments in docker-network, naming the gateway 172.17.0.1,
@@ -53,7 +57,7 @@ func containerOn(lab *agentLab) string {
 	fake := "#!/bin/sh\n" +
 		"out=\"" + out + "\"\n" +
 		"case \"$1\" in\n" +
-		"image) echo \"$5\" >> \"$out/docker-inspected\"; [ -f \"$out/no-image\" ] && { echo \"Error: No such image: $5\"; exit 1; }; echo sha256:fake; exit 0 ;;\n" +
+		"image) echo \"$5\" >> \"$out/docker-inspected\"; [ -f \"$out/no-image\" ] && { echo \"Error: No such image: $5\"; exit 1; }; [ -f \"$out/inspect-fails\" ] && { echo \"Cannot connect to the Docker daemon\"; exit 1; }; labels=null; [ -f \"$out/image-labels\" ] && labels=$(cat \"$out/image-labels\"); echo \"{\\\"Id\\\":\\\"sha256:fake-$5\\\",\\\"Config\\\":{\\\"Labels\\\":$labels}}\"; exit 0 ;;\n" +
 		"stop) echo \"$2\" >> \"$out/docker-stopped\"; [ -f \"$out/stop-fails\" ] && { echo \"Error response from daemon: cannot stop\"; exit 1; }; exit 0 ;;\n" +
 		"info) echo \"$*\" >> \"$out/docker-info\"; [ -f \"$out/info-fails\" ] && { echo \"Cannot connect to the Docker daemon\"; exit 1; }; if [ -f \"$out/native-engine\" ]; then echo \"Ubuntu 24.04.1 LTS\"; else echo \"Docker Desktop\"; fi; exit 0 ;;\n" +
 		"network) echo \"$*\" >> \"$out/docker-network\"; [ -f \"$out/network-fails\" ] && { echo \"Error: No such network: $3\"; exit 1; }; echo \"172.17.0.1 \"; exit 0 ;;\n" +
@@ -325,7 +329,8 @@ func TestContainerMCPNamesTheHostOffTheHostNetwork(t *testing.T) {
 
 // S-0508: flai serve refuses a container start that cannot succeed before
 // anything runs, saying what to do: docker not on PATH, the inner harness's
-// image not on this host, no login for an inner harness that needs one, and
+// image not on this host, naming flai image status (S-0735), a docker that
+// cannot say whether it is, no login for an inner harness that needs one, and
 // no worktree to mount in a project git is not in use in.
 func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 	ctx := context.Background()
@@ -340,11 +345,13 @@ func TestAContainerStartIsRefusedWhatItLacks(t *testing.T) {
 			lab.cfg.Harnesses[harness.Container] = harness.Host{Program: filepath.Join(t.TempDir(), "docker"), Login: lab.cfg.Harnesses[harness.Container].Login}
 		}, says: []string{"not on flai serve's PATH", "flai serve agent harness container --program"}},
 		{name: "no image", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644) },
-			says: []string{"flai-agent-claude-code:local", "No such image", "make agent-images", "--image claude-code=<image>"}},
+			says: []string{"flai-agent-claude-code:local", "not on this host", "flai image status", "make agent-images", "--image claude-code=<image>"}},
 		{name: "no layer image", set: func(lab *agentLab) {
 			layerManifest(lab)
 			_ = os.WriteFile(filepath.Join(lab.outDir, "no-image"), nil, 0o644)
-		}, says: []string{"flai-agent-t-claude-code:local", "No such image", "agent.image.layer in system-flow.yaml", "make agent-images", "scripts/agent-image.sh --layer"}},
+		}, says: []string{"flai-agent-t-claude-code:local", "not on this host", "agent.image.layer in system-flow.yaml", "flai image status", "make agent-images", "scripts/agent-image.sh --layer"}},
+		{name: "docker cannot say", set: func(lab *agentLab) { _ = os.WriteFile(filepath.Join(lab.outDir, "inspect-fails"), nil, 0o644) },
+			says: []string{"flai-agent-claude-code:local", "Cannot connect to the Docker daemon", "start Docker"}},
 		{name: "no login", set: func(lab *agentLab) { lab.cfg.Harnesses[harness.Container] = harness.Host{} },
 			says: []string{"flai serve agent harness container --login"}},
 		{name: "no worktree", bare: true, says: []string{"there is none at", "only in a git repository"}},
@@ -569,31 +576,44 @@ func TestLoopbackHost(t *testing.T) {
 }
 
 // layerManifest makes the lab's project name a layer for its agents' image
-// under agent.image.layer.
+// under agent.image.layer, and writes its Dockerfile, which the layer's image
+// is judged by.
 func layerManifest(lab *agentLab) {
 	lab.t.Helper()
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nagent:\n  image:\n    layer: images/agent/Dockerfile\n"
 	if err := os.WriteFile(filepath.Join(lab.root, manifest.File), []byte(m), 0o644); err != nil {
 		lab.t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(lab.root, "images", "agent"), 0o755); err != nil {
+		lab.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lab.root, "images", "agent", "Dockerfile"), []byte(layerDockerfile), 0o644); err != nil {
+		lab.t.Fatal(err)
+	}
 }
+
+// layerDockerfile is the Dockerfile layerManifest writes.
+const layerDockerfile = "ARG BASE\nFROM ${BASE}\n"
 
 // S-0510: a story's agent on the container harness runs in the project's
 // layer image, flai-agent-<key>-claude-code:local, when the manifest names
 // agent.image.layer, in place of the host's image and the default: the image
 // checked to be on this host, the one claude --version is read from, and the
-// one docker runs are the same. With no layer the host's image still wins
-// over the default. The host's images are never changed.
+// one docker runs are the same; under a layer the harness image it is built
+// over is inspected too, before it, for the layer's base (S-0735). With no
+// layer the host's image still wins over the default. The host's images are
+// never changed.
 func TestTheProjectsLayerImageRunsItsContainerAgents(t *testing.T) {
 	ctx := context.Background()
 	const hostImage = "host-agent:1"
 	for _, c := range []struct {
-		name  string
-		layer bool
-		want  string
+		name      string
+		layer     bool
+		want      string
+		inspected string
 	}{
-		{name: "layer", layer: true, want: "flai-agent-t-claude-code:local"},
-		{name: "no layer", want: hostImage},
+		{name: "layer", layer: true, want: "flai-agent-t-claude-code:local", inspected: hostImage + "\nflai-agent-t-claude-code:local\n"},
+		{name: "no layer", want: hostImage, inspected: hostImage + "\n"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab, _ := containerLab(t)
@@ -619,8 +639,8 @@ func TestTheProjectsLayerImageRunsItsContainerAgents(t *testing.T) {
 					t.Errorf("docker run names %s, not only %s: %s", other, c.want, args)
 				}
 			}
-			if inspected, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-inspected")); string(inspected) != c.want+"\n" {
-				t.Errorf("docker image inspect was of %q, not %s", inspected, c.want)
+			if inspected, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-inspected")); string(inspected) != c.inspected {
+				t.Errorf("docker image inspect was of %q, not %q", inspected, c.inspected)
 			}
 			if versioned, _ := os.ReadFile(filepath.Join(lab.outDir, "docker-versioned")); !strings.Contains(string(versioned), " "+c.want+" --version") {
 				t.Errorf("claude --version was not read from %s: %s", c.want, versioned)
@@ -630,6 +650,76 @@ func TestTheProjectsLayerImageRunsItsContainerAgents(t *testing.T) {
 			}
 		})
 	}
+}
+
+// S-0735, ADR-0295: an agent's container image whose labels are not those
+// the project's flai must run it in is stale, and its start is warned of,
+// with the image and why, naming flai image status, and goes on: flai serve
+// refuses a stale image only once it can rebuild it (S-0751). A current
+// image is not warned of, nor the image the host names with --image, which
+// is the operator's own and never judged. Under a layer the layer is judged
+// by its Dockerfile's recipe and the harness image it is built over.
+func TestAStaleContainerImageIsWarnedOfAndTheStartGoesOn(t *testing.T) {
+	ctx := context.Background()
+	start := func(t *testing.T, lab *agentLab, title string) {
+		t.Helper()
+		id := containerStory(lab, title, &manifest.Agent{Harness: harness.Container})
+		lab.l.look(ctx, false)
+		waitFor(t, title+" ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+		if r := lab.run(id); r.Error != "" || r.PID == 0 {
+			t.Fatalf("run: %+v", r)
+		}
+	}
+	labels := func(t *testing.T, lab *agentLab, l map[string]string) {
+		t.Helper()
+		data, err := json.Marshal(l)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(lab.outDir, "image-labels"), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const stale = "container agent image stale"
+	t.Run("harness image", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		start(t, lab, "In a stale image")
+		log := lab.logText()
+		if n := lab.logged(stale); n != 1 || !strings.Contains(log, "image="+harness.DefaultImages[harness.ClaudeCode]) || !strings.Contains(log, agentimage.LabelFlai+" label") || !strings.Contains(log, "flai image status") {
+			t.Errorf("a stale image was warned of %d times:\n%s", n, log)
+		}
+		labels(t, lab, map[string]string{agentimage.LabelFlai: "dev"})
+		start(t, lab, "In a current image")
+		if n := lab.logged(stale); n != 1 {
+			t.Errorf("a current image was warned of as stale:\n%s", lab.logText())
+		}
+	})
+	t.Run("the host's own image", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		host := lab.cfg.Harnesses[harness.Container]
+		host.Images = map[string]string{harness.ClaudeCode: "host-agent:1"}
+		lab.cfg.Harnesses[harness.Container] = host
+		start(t, lab, "In the operator's image")
+		if n := lab.logged(stale); n != 0 {
+			t.Errorf("the host's --image image, which carries no labels, was judged stale:\n%s", lab.logText())
+		}
+	})
+	t.Run("layer", func(t *testing.T) {
+		lab, _ := containerLab(t)
+		layerManifest(lab)
+		labels(t, lab, map[string]string{agentimage.LabelFlai: "dev"})
+		start(t, lab, "In a stale layer")
+		log := lab.logText()
+		if n := lab.logged(stale); n != 1 || !strings.Contains(log, "image=flai-agent-t-claude-code:local") || !strings.Contains(log, "kind=layer") || !strings.Contains(log, agentimage.LabelRecipe+" label") {
+			t.Errorf("a stale layer was warned of %d times:\n%s", n, log)
+		}
+		labels(t, lab, map[string]string{agentimage.LabelFlai: "dev", agentimage.LabelRecipe: agentimage.Recipe([]byte(layerDockerfile), "", nil),
+			agentimage.LabelBase: "sha256:fake-" + harness.DefaultImages[harness.ClaudeCode]})
+		start(t, lab, "In a current layer")
+		if n := lab.logged(stale); n != 1 {
+			t.Errorf("a current layer was warned of as stale:\n%s", lab.logText())
+		}
+	})
 }
 
 // argMounts are the -v mounts of args, docker run's arguments as the fake

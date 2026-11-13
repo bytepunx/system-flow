@@ -527,7 +527,7 @@ type imageDocker struct{ has bool }
 func (d imageDocker) Run(_, _ string, args ...string) (string, error) {
 	if len(args) > 1 && args[0] == "image" && args[1] == "inspect" {
 		if d.has {
-			return "sha256:abc\n", nil
+			return `{"Id":"sha256:abc","Config":{"Labels":null}}` + "\n", nil
 		}
 		return "Error: No such image: " + args[len(args)-1], errors.New("exit status 1")
 	}
