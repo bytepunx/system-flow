@@ -3,10 +3,10 @@ id: S-0726
 type: story
 nature: improvement
 title: A git rebase --continue run by hand after a sync's stop meets later stops on issue files and summary.md that flai's sync would have merged itself
-status: review
+status: done
 owner: alex
 created: 2026-11-11T21:55:30Z
-updated: 2026-11-12T19:36:54Z
+updated: 2026-11-13T07:23:58Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:56Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-12T19:36:54Z
     by: agent-S-0726
+  - to: done
+    at: 2026-11-13T07:23:58Z
+    by: alex
 tags: [flai, template]
 topics: [sync, git]
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/task_done.go, flai/cmd/storycommit.go, flai/cmd/stream_restore.go, flai/internal/storygit/commit.go, flai/internal/taskdone/taskdone.go, flai/internal/verify/story.go, flai/internal/harness/harness.go, flai/internal/mcpserver/task.go, scripts/close-out.sh, template/root/scripts/close-out.sh, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/workflow.md, design/conventions/git.md, template/root/design/conventions/git.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/adrs/README.md, design/issues/I-0351-a-git-rebase-continue-run-by-hand-after-a-sync-s-stop-meets-later-stops-on.md, design/issues/summary.md, design/adrs/0294-flai-stream-sync-continues-a-rebase-whose-stop-the-agent-resolved-and-staged.md, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/cmd/branch_test.go, flai/cmd/task_done_test.go, flai/internal/harness/harness_test.go, flai/internal/mcpserver/task_test.go, flai/internal/taskdone/taskdone_test.go, flai/internal/verify/story_test.go, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md]
