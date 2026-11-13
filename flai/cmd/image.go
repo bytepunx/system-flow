@@ -99,6 +99,18 @@ under it, so that flai image status reports it stale when the Dockerfile, an
 argument, or its base changes. A layer whose harness image is not on this host
 is not built: it fails naming the harness image.
 
+With a build command of the operator's own named for the project in the
+host's configuration (flai serve agent image command), it runs that command
+in the main checkout, with no shell, in place of the pull, the build, and the
+layer's build, once per inner harness whose images are missing or stale, with
+FLAI_IMAGE_VERSION, FLAI_IMAGE_INNER, the tags FLAI_IMAGE_BEDROCK,
+FLAI_IMAGE_HARNESS, and FLAI_IMAGE_LAYER, the recipe labels
+FLAI_IMAGE_RECIPE_BEDROCK, FLAI_IMAGE_RECIPE_HARNESS, and
+FLAI_IMAGE_RECIPE_LAYER, and FLAI_IMAGE_STALE, which of bedrock, harness, and
+layer to make, added to its environment. Its exit is the outcome: a non-zero
+exit fails, and so does an image still missing or stale after it. It is
+logged and stopped as a docker step is, and never tried again.
+
 Every docker step's output streams here and to a log file under
 .flai-cache/agent-images/ in the main checkout, which the first and last lines
 name. A step that writes nothing for 10 minutes is stopped; a step that fails
@@ -130,7 +142,10 @@ when the main checkout holds them. It builds the layer as flai image ensure
 does, with agent.image.args as build arguments and BASE set to the harness
 image, labelled with its recipe and base. It tags, logs, stops, and retries as
 flai image ensure does, prints the images' status after it, and exits
-non-zero when an image it makes is still missing or stale.
+non-zero when an image it makes is still missing or stale. With the
+operator's build command named, it runs that command as flai image ensure
+does, current or not, with FLAI_IMAGE_STALE naming every image, or with
+--layer the layer alone, since the operator's machinery owns the layer too.
 
 With --layer it builds only the project's layer, one per inner harness the
 agents need, current or not, over the harness image already on this host, and
@@ -217,7 +232,7 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 		printImageStatus(w, nil)
 		return nil
 	}
-	_, after, err := a.ensureImages(ctx, root, repo.Manifest, program, mode, needed, w)
+	_, after, err := a.ensureImages(ctx, root, repo.Manifest, program, cfg.Agent.ImageCommand(root), mode, needed, w)
 	if after != nil {
 		printImageStatus(w, after)
 	}
@@ -236,12 +251,14 @@ func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
 }
 
 // ensureImages makes needed, agent images of the project at root whose
-// manifest is m, as mode asks, through the docker client program, writing
-// what it does to w: it judges them against the project's flai, makes those
-// mode makes, and judges them again. It is what it did with each, their
-// statuses after, nil when they could not be judged again, and the first
-// error of the version, the judgements, and the making.
-func (a *app) ensureImages(ctx context.Context, root string, m manifest.Manifest, program string, mode agentimage.Mode, needed []agentimage.Image, w io.Writer) ([]agentimage.Outcome, []agentimage.Status, error) {
+// manifest is m, as mode asks, through the docker client program, or with
+// command, the operator's build command the host's configuration names for
+// the project (nil for none), in place of flai's pull and build (ADR-0295
+// §7), writing what it does to w: it judges them against the project's flai,
+// makes those mode makes, and judges them again. It is what it did with
+// each, their statuses after, nil when they could not be judged again, and
+// the first error of the version, the judgements, and the making.
+func (a *app) ensureImages(ctx context.Context, root string, m manifest.Manifest, program string, command []string, mode agentimage.Mode, needed []agentimage.Image, w io.Writer) ([]agentimage.Outcome, []agentimage.Status, error) {
 	version, err := agentimage.ProjectFlai(root, m, a.runner, buildinfo.Get().Version)
 	if err != nil {
 		return nil, nil, err
@@ -258,7 +275,7 @@ func (a *app) ensureImages(ctx context.Context, root string, m manifest.Manifest
 	releases.Token = a.githubToken()
 	puller := agentimage.Puller{Releases: releases, CacheDir: string(a.serveDir()), Run: runner, Inspect: inspect}
 	builder := agentimage.Builder{Releases: releases, Run: runner, Inspect: inspect, Arch: agentimage.EngineArch(a.runner, program)}
-	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Layer: builder.Layer, Root: root, Out: w}
+	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Layer: builder.Layer, Root: root, Out: w, Command: command, Run: runner, Inspect: inspect}
 	outcomes, ensureErr := ensurer.Ensure(ctx, mode, statuses, src)
 	after, checkErr := agentimage.Check(root, needed, inspect, flai)
 	if ensureErr != nil {
@@ -269,7 +286,9 @@ func (a *app) ensureImages(ctx context.Context, root string, m manifest.Manifest
 
 // imageEnsure is the work of flai serve's image job (serve.ImageEnsure,
 // ADR-0295 §5): flai image ensure for images, of the project at root, its
-// main checkout, writing what it does and the images' status after to log.
+// main checkout, writing what it does and the images' status after to log,
+// running the operator's build command in place of flai's pull and build
+// when the host's configuration names one for the project (ADR-0295 §7).
 // It fails naming each image it makes that is still missing or stale after it.
 func (a *app) imageEnsure(ctx context.Context, root string, images []agentimage.Image, log io.Writer) ([]agentimage.Outcome, error) {
 	m, err := manifest.Load(filepath.Join(root, manifest.File))
@@ -284,7 +303,7 @@ func (a *app) imageEnsure(ctx context.Context, root string, images []agentimage.
 	if program == "" {
 		program = "docker"
 	}
-	outcomes, after, err := a.ensureImages(ctx, root, m, program, agentimage.ModeEnsure, images, log)
+	outcomes, after, err := a.ensureImages(ctx, root, m, program, cfg.Agent.ImageCommand(root), agentimage.ModeEnsure, images, log)
 	if after != nil {
 		printImageStatus(log, after)
 	}

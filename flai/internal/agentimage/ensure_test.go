@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -510,5 +514,256 @@ func TestLogPath(t *testing.T) {
 	want := filepath.Join("/root", ".flai-cache", "agent-images", "20261113T080807Z.log")
 	if got := LogPath("/root", now); got != want {
 		t.Errorf("LogPath = %q, want %q", got, want)
+	}
+}
+
+// commandFake is the Exec of an Ensurer's build command: it records each
+// run, writes a line, then blocks until its context ends when block is set,
+// else lets make put what the command builds into images, as docker would,
+// from the variables it got, and returns err.
+type commandFake struct {
+	mu     sync.Mutex
+	runs   []commandCall
+	images *fakeImages
+	make   func(env map[string]string, images map[string]Info)
+	err    error
+	block  bool
+}
+
+// commandCall is one run of the build command: its program, folder,
+// variables, and arguments.
+type commandCall struct {
+	program, dir string
+	env          map[string]string
+	args         []string
+}
+
+func (f *commandFake) exec(ctx context.Context, dir string, env []string, out io.Writer, program string, args ...string) error {
+	vars := map[string]string{}
+	for _, kv := range env {
+		k, v, _ := strings.Cut(kv, "=")
+		vars[k] = v
+	}
+	f.mu.Lock()
+	f.runs = append(f.runs, commandCall{program: program, dir: dir, env: vars, args: args})
+	f.mu.Unlock()
+	if _, err := fmt.Fprintln(out, "the operator's machinery at work"); err != nil {
+		return err
+	}
+	if f.block {
+		<-ctx.Done()
+		return ctx.Err()
+	}
+	if f.make != nil {
+		f.make(vars, f.images.images)
+	}
+	return f.err
+}
+
+// makesAll builds what FLAI_IMAGE_STALE names as the variables say: the
+// harness image labelled with the version, and the layer over it labelled
+// with its recipe and the harness image's ID.
+func makesAll(env map[string]string, images map[string]Info) {
+	stale := strings.Fields(env["FLAI_IMAGE_STALE"])
+	if slices.Contains(stale, PartHarness) {
+		images[env["FLAI_IMAGE_HARNESS"]] = Info{ID: "sha256:made-harness", Labels: labels(env["FLAI_IMAGE_VERSION"], env["FLAI_IMAGE_RECIPE_HARNESS"], "")}
+	}
+	if slices.Contains(stale, PartLayer) {
+		base := images[env["FLAI_IMAGE_HARNESS"]].ID
+		images[env["FLAI_IMAGE_LAYER"]] = Info{ID: "sha256:made-layer", Labels: labels(env["FLAI_IMAGE_VERSION"], env["FLAI_IMAGE_RECIPE_LAYER"], base)}
+	}
+}
+
+var ensureCommand = []string{"/opt/make-images", "--fast"}
+
+// commandEnsurer is an Ensurer whose build command is ensureCommand, run by
+// c, in a project at a new root with the layer's Dockerfile, on a host whose
+// images are c.images, with f's pull, build, and layer, which it must not call.
+func commandEnsurer(t *testing.T, f *ensureFake, c *commandFake, out *bytes.Buffer) Ensurer {
+	t.Helper()
+	if c.images == nil {
+		c.images = &fakeImages{images: map[string]Info{}}
+	}
+	e := f.ensurer(out)
+	e.Root = layerRoot(t, commandLayerData)
+	e.Command = ensureCommand
+	e.Run = Runner{Exec: c.exec, Sleep: (&sleeps{}).sleep}
+	e.Inspect = c.images.inspect
+	return e
+}
+
+// S-0759, ADR-0295 §7: with a build command named, a missing harness image
+// and layer are made by the command alone, run once in the root with the
+// variables, and judged again: the images it made are current.
+func TestEnsureRunsTheBuildCommandInPlaceOfThePullAndTheBuild(t *testing.T) {
+	t.Parallel()
+	f := &ensureFake{}
+	c := &commandFake{make: makesAll}
+	var out bytes.Buffer
+	e := commandEnsurer(t, f, c, &out)
+	got, err := e.Ensure(context.Background(), ModeEnsure, []Status{harnessStatus(StateMissing), layerStatus(StateMissing)}, BuildSource{Version: pullV})
+	if err != nil {
+		t.Fatalf("Ensure: %v\n%s", err, out.String())
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("flai's own pull and build ran: %v", f.calls)
+	}
+	if len(c.runs) != 1 {
+		t.Fatalf("the command ran %d times, want once", len(c.runs))
+	}
+	run := c.runs[0]
+	if run.program != ensureCommand[0] || !reflect.DeepEqual(run.args, ensureCommand[1:]) || run.dir != e.Root {
+		t.Errorf("ran %s %v in %s", run.program, run.args, run.dir)
+	}
+	if run.env["FLAI_IMAGE_STALE"] != "bedrock harness layer" || run.env["FLAI_IMAGE_LAYER"] != ensureLayerRef || run.env["FLAI_IMAGE_VERSION"] != pullV {
+		t.Errorf("variables %v", run.env)
+	}
+	if len(got) != 2 || got[0].Way != WayCommand || got[1].Way != WayCommand {
+		t.Errorf("outcomes %+v", got)
+	}
+	after, err := Check(e.Root, []Image{harnessStatus(StateMissing).Image, layerStatus(StateMissing).Image}, c.images.inspect, func() (string, error) { return pullV, nil })
+	if err != nil || after[0].State != StateCurrent || after[1].State != StateCurrent {
+		t.Errorf("after: %+v, %v", after, err)
+	}
+	text := out.String()
+	for _, want := range []string{
+		"agent image: " + ensureRef + " is missing; the operator's build command /opt/make-images --fast makes it, in place of flai's pull and build\n",
+		"agent image: running the operator's build command /opt/make-images --fast in " + e.Root + " for the images of claude-code",
+		"the operator's machinery at work\n",
+		"agent image: " + ensureLayerRef + ": made by the operator's build command /opt/make-images --fast\n",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("output lacks %q:\n%s", want, text)
+		}
+	}
+}
+
+// S-0759: with every image current, ensure mode runs no command.
+func TestEnsureRunsNoBuildCommandWhenAllIsCurrent(t *testing.T) {
+	t.Parallel()
+	f := &ensureFake{}
+	c := &commandFake{make: makesAll}
+	var out bytes.Buffer
+	got, err := commandEnsurer(t, f, c, &out).Ensure(context.Background(), ModeEnsure, []Status{harnessStatus(StateCurrent), layerStatus(StateCurrent)}, BuildSource{Version: pullV})
+	if err != nil || len(c.runs) != 0 || len(f.calls) != 0 || len(got) != 2 || got[0].Way != WayCurrent || got[1].Way != WayCurrent {
+		t.Fatalf("outcomes %+v, %v; runs %v, calls %v", got, err, c.runs, f.calls)
+	}
+}
+
+// S-0759: build mode runs the command, current or not, asking for every
+// image; layer mode asks for the layer alone and leaves, and does not
+// judge, a stale harness image under it.
+func TestEnsureBuildAndLayerModesRunTheBuildCommand(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		mode    Mode
+		harness State
+		stale   string
+		ways    []Way
+	}{
+		{ModeBuild, StateCurrent, "bedrock harness layer", []Way{WayCommand, WayCommand}},
+		{ModeLayer, StateStale, "layer", []Way{WayLeft, WayCommand}},
+	} {
+		f := &ensureFake{}
+		c := &commandFake{make: makesAll, images: &fakeImages{images: map[string]Info{ensureRef: {ID: "sha256:old", Labels: labels("1.0.0", "", "")}}}}
+		var out bytes.Buffer
+		if tc.mode == ModeLayer {
+			c.make = func(env map[string]string, images map[string]Info) {
+				images[env["FLAI_IMAGE_LAYER"]] = Info{ID: "sha256:made-layer", Labels: labels(env["FLAI_IMAGE_VERSION"], env["FLAI_IMAGE_RECIPE_LAYER"], "sha256:old")}
+			}
+		}
+		got, err := commandEnsurer(t, f, c, &out).Ensure(context.Background(), tc.mode, []Status{harnessStatus(tc.harness), layerStatus(StateCurrent)}, BuildSource{Version: pullV})
+		if err != nil {
+			t.Fatalf("%s: %v\n%s", tc.mode, err, out.String())
+		}
+		if len(c.runs) != 1 || c.runs[0].env["FLAI_IMAGE_STALE"] != tc.stale || len(f.calls) != 0 {
+			t.Errorf("%s: runs %+v, calls %v", tc.mode, c.runs, f.calls)
+		}
+		if len(got) != 2 || got[0].Way != tc.ways[0] || got[1].Way != tc.ways[1] {
+			t.Errorf("%s: outcomes %+v", tc.mode, got)
+		}
+	}
+}
+
+// S-0759: a command that exits non-zero fails the run, naming it, and
+// nothing of flai's own runs in its place.
+func TestEnsureFailsWhenTheBuildCommandExitsNonZero(t *testing.T) {
+	t.Parallel()
+	f := &ensureFake{}
+	c := &commandFake{err: errExit}
+	var out bytes.Buffer
+	got, err := commandEnsurer(t, f, c, &out).Ensure(context.Background(), ModeEnsure, []Status{harnessStatus(StateMissing)}, BuildSource{Version: pullV})
+	var failed *CommandError
+	if !errors.As(err, &failed) || !strings.Contains(err.Error(), "/opt/make-images --fast failed for the agent images of claude-code (the operator's machinery at work; exit status 1)") {
+		t.Fatalf("Ensure = %v, want a *CommandError naming the command", err)
+	}
+	if len(got) != 0 || len(f.calls) != 0 || len(c.runs) != 1 {
+		t.Errorf("outcomes %+v, calls %v, runs %d", got, f.calls, len(c.runs))
+	}
+}
+
+// S-0759, ADR-0295 §7: a command that exits 0 but leaves an image missing,
+// or carrying other labels, fails the run, naming the command, the image,
+// and why.
+func TestEnsureFailsWhenTheBuildCommandLeavesAnImageWrong(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		make func(env map[string]string, images map[string]Info)
+		want string
+	}{
+		{"nothing made", nil, ensureRef + " is missing; and " + ensureLayerRef + " is missing"},
+		{"other labels", func(env map[string]string, images map[string]Info) {
+			images[env["FLAI_IMAGE_HARNESS"]] = Info{ID: "sha256:h", Labels: labels("1.0.0", "", "")}
+			images[env["FLAI_IMAGE_LAYER"]] = Info{ID: "sha256:l", Labels: labels(pullV, "sha256:other", "sha256:h")}
+		}, ensureRef + " is stale (built for flai 1.0.0, not " + pullV + "); and " + ensureLayerRef + " is stale (built from another Dockerfile"},
+	} {
+		f := &ensureFake{}
+		c := &commandFake{make: tc.make}
+		var out bytes.Buffer
+		_, err := commandEnsurer(t, f, c, &out).Ensure(context.Background(), ModeEnsure, []Status{harnessStatus(StateMissing), layerStatus(StateMissing)}, BuildSource{Version: pullV})
+		if err == nil || !strings.Contains(err.Error(), "the operator's build command /opt/make-images --fast exited 0 but left the agent images wrong: "+tc.want) || !strings.Contains(err.Error(), "FLAI_IMAGE_* variables") {
+			t.Errorf("%s: %v", tc.name, err)
+		}
+	}
+}
+
+// S-0759, ADR-0295 §5: a command silent past the stall limit is stopped,
+// and the run fails with a *StallError naming it.
+func TestEnsureStopsASilentBuildCommand(t *testing.T) {
+	t.Parallel()
+	f := &ensureFake{}
+	c := &commandFake{block: true}
+	var out bytes.Buffer
+	e := commandEnsurer(t, f, c, &out)
+	e.Run.Stall = 50 * time.Millisecond
+	_, err := e.Ensure(context.Background(), ModeEnsure, []Status{harnessStatus(StateMissing)}, BuildSource{Version: pullV})
+	var stall *StallError
+	if !errors.As(err, &stall) || stall.Step != "the build command /opt/make-images --fast" {
+		t.Fatalf("Ensure = %v, want a *StallError naming the command", err)
+	}
+}
+
+// S-0759, ADR-0295 §3, §7: the operator's own image is never asked made nor
+// judged, the layer over it is, and a development flai with no tree runs
+// the command where its own build would refuse.
+func TestEnsureBuildCommandLeavesTheOperatorsOwnImage(t *testing.T) {
+	t.Parallel()
+	own := Status{Image: Image{Kind: KindHarness, Inner: "claude-code", Ref: "mine:1", Source: SourceHost}, Present: true, State: StateOwn}
+	f := &ensureFake{}
+	c := &commandFake{images: &fakeImages{images: map[string]Info{"mine:1": {ID: "sha256:mine"}}}}
+	c.make = func(env map[string]string, images map[string]Info) {
+		images[env["FLAI_IMAGE_LAYER"]] = Info{ID: "sha256:l", Labels: labels("dev", env["FLAI_IMAGE_RECIPE_LAYER"], "sha256:mine")}
+	}
+	var out bytes.Buffer
+	got, err := commandEnsurer(t, f, c, &out).Ensure(context.Background(), ModeEnsure, []Status{own, layerStatus(StateMissing)}, BuildSource{Version: "dev"})
+	if err != nil {
+		t.Fatalf("Ensure: %v\n%s", err, out.String())
+	}
+	if len(c.runs) != 1 || c.runs[0].env["FLAI_IMAGE_STALE"] != "layer" || c.runs[0].env["FLAI_IMAGE_HARNESS"] != "mine:1" || c.runs[0].env["FLAI_IMAGE_BEDROCK"] != "" {
+		t.Errorf("runs %+v", c.runs)
+	}
+	if len(got) != 2 || got[0].Way != WayOwn || got[1].Way != WayCommand {
+		t.Errorf("outcomes %+v", got)
 	}
 }

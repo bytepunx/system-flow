@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -287,22 +288,35 @@ func TestImageStatusNoDocker(t *testing.T) {
 }
 
 // imageSteps records each docker step flai image ensure or build runs, with
-// the folder it runs in, and writes a line of output for it. With docker
-// set, a build puts its image there under each of its tags, as docker
-// would: with the labels of the image its BASE names, then its own.
+// the folder it runs in and the environment it adds, and writes a line of
+// output for it. With docker set, a build puts its image there under each of
+// its tags, as docker would: with the labels of the image its BASE names,
+// then its own. A step of another program than docker, the operator's build
+// command, runs command, when set, with the variables it was given.
 type imageSteps struct {
-	mu     sync.Mutex
-	dirs   []string
-	args   [][]string
-	docker *imageDocker
+	mu      sync.Mutex
+	dirs    []string
+	args    [][]string
+	envs    [][]string
+	docker  *imageDocker
+	command func(vars map[string]string)
 }
 
-func (s *imageSteps) exec(_ context.Context, dir string, _ []string, out io.Writer, program string, args ...string) error {
+func (s *imageSteps) exec(_ context.Context, dir string, env []string, out io.Writer, program string, args ...string) error {
 	s.mu.Lock()
 	s.dirs = append(s.dirs, dir)
 	s.args = append(s.args, append([]string{program}, args...))
+	s.envs = append(s.envs, env)
 	n := len(s.args)
-	if s.docker != nil && len(args) > 0 && args[0] == "build" {
+	switch {
+	case program != "docker" && s.command != nil:
+		vars := map[string]string{}
+		for _, kv := range env {
+			k, v, _ := strings.Cut(kv, "=")
+			vars[k] = v
+		}
+		s.command(vars)
+	case s.docker != nil && len(args) > 0 && args[0] == "build":
 		s.docker.built(args[1:])
 	}
 	s.mu.Unlock()
@@ -621,5 +635,93 @@ func TestImageBuildLayerFailsWhenTheLayerIsStillStale(t *testing.T) {
 	}
 	if len(steps.args) != 1 {
 		t.Errorf("docker steps %v", steps.args)
+	}
+}
+
+// ensureCommandConfig writes the config file cfgPath naming argv as the
+// operator's build command for the project whose main checkout is main.
+func ensureCommandConfig(t *testing.T, cfgPath, main string, argv ...string) {
+	t.Helper()
+	data, err := json.Marshal(map[string]any{"agent": map[string]any{"projects": map[string]any{main: map[string]any{"image": map[string]any{"command": argv}}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0759, ADR-0295 §7: with the host naming a build command for the
+// project, flai image ensure runs it once in the main checkout in place of
+// its own pull and builds, with the FLAI_IMAGE_* variables, streams its
+// output to the output and the log, and prints the status of the images it
+// made; a command that makes nothing fails the run, naming it.
+func TestImageEnsureRunsTheOperatorsBuildCommand(t *testing.T) {
+	root, cfg := imageProject(t, imageLayerYAML)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := mainRootOf(repo)
+	ensureCommandConfig(t, cfg, main, "/opt/make-images", "--fast")
+	d := &imageDocker{images: map[string]agentimage.Info{}}
+	steps := &imageSteps{docker: d}
+	steps.command = func(vars map[string]string) {
+		d.images[vars["FLAI_IMAGE_HARNESS"]] = agentimage.Info{ID: imageBaseID, Labels: map[string]string{agentimage.LabelFlai: vars["FLAI_IMAGE_VERSION"]}}
+		d.images[vars["FLAI_IMAGE_LAYER"]] = agentimage.Info{ID: "sha256:layer", Labels: map[string]string{
+			agentimage.LabelFlai:   vars["FLAI_IMAGE_VERSION"],
+			agentimage.LabelRecipe: vars["FLAI_IMAGE_RECIPE_LAYER"],
+			agentimage.LabelBase:   imageBaseID,
+		}}
+	}
+	useImageExec(t, steps)
+	now := time.Date(2026, 11, 13, 17, 0, 0, 0, time.UTC)
+	out, code, err := runImageMake(t, root, cfg, d, now, "ensure")
+	if code != 0 || err != nil {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if want := [][]string{{"/opt/make-images", "--fast"}}; !reflect.DeepEqual(steps.args, want) {
+		t.Fatalf("steps %v, want the command alone %v", steps.args, want)
+	}
+	if steps.dirs[0] != main {
+		t.Errorf("the command ran in %s, not the main checkout %s", steps.dirs[0], main)
+	}
+	version := strings.TrimPrefix(buildinfo.Get().Version, "v")
+	for _, want := range []string{
+		"FLAI_IMAGE_VERSION=" + version,
+		"FLAI_IMAGE_INNER=claude-code",
+		"FLAI_IMAGE_HARNESS=" + imageHarnessRef,
+		"FLAI_IMAGE_LAYER=" + imageLayerRef,
+		"FLAI_IMAGE_RECIPE_LAYER=" + agentimage.Recipe([]byte(imageLayerText), "", nil),
+		"FLAI_IMAGE_STALE=bedrock harness layer",
+	} {
+		if !slices.Contains(steps.envs[0], want) {
+			t.Errorf("the command's variables lack %q: %v", want, steps.envs[0])
+		}
+	}
+	for _, want := range []string{
+		"agent image: running the operator's build command /opt/make-images --fast in " + main,
+		"step output 1\n",
+		"agent image: " + imageLayerRef + ": made by the operator's build command /opt/make-images --fast\n",
+		"claude-code harness " + imageHarnessRef + " (default): current\n",
+		"claude-code layer " + imageLayerRef + " (layer from " + imageLayerFile + "): current\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if logged, err := os.ReadFile(agentimage.LogPath(main, now)); err != nil || string(logged) != out {
+		t.Errorf("log = %q, %v; want the output", logged, err)
+	}
+
+	// a command that exits 0 and makes nothing fails the run
+	d.images = map[string]agentimage.Info{}
+	steps.command = nil
+	out, code, err = runImageMake(t, root, cfg, d, now.Add(time.Minute), "ensure")
+	if code == 0 || err == nil || !strings.Contains(err.Error(), "the operator's build command /opt/make-images --fast exited 0 but left the agent images wrong: "+imageHarnessRef+" is missing") {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if !strings.Contains(out, "claude-code harness "+imageHarnessRef+" (default): missing\n") || len(steps.args) != 2 {
+		t.Errorf("steps %v, output\n%s", steps.args, out)
 	}
 }

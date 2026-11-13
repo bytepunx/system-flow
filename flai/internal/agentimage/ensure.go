@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/images"
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
 
 // Mode is what Ensure does with the images: make the harness images, pulling
@@ -26,7 +28,10 @@ const (
 	// then each layer over it.
 	ModeBuild Mode = "build"
 	// ModeLayer builds each layer, current or not, over the harness image
-	// already on this host, and leaves every harness image as it is.
+	// already on this host, and leaves every harness image as it is. With
+	// the operator's build command named, it runs that command, asking it
+	// for the layer alone, since the operator's machinery owns the layer as
+	// well as the harness images (ADR-0295 §7).
 	ModeLayer Mode = "layer"
 )
 
@@ -47,18 +52,29 @@ const (
 	WayLeft Way = "left"
 	// WayOwn is the operator's own image, which flai never makes.
 	WayOwn Way = "own"
+	// WayCommand is an image the operator's build command made, in place of
+	// flai's pull and build (ADR-0295 §7).
+	WayCommand Way = "command"
 )
 
 // Ensurer makes the harness images through Pull and Build (Puller.Pull and
 // Builder.Build, or fakes), and the project's layer over them through Layer
 // (Builder.Layer, or a fake) in the project at Root, the layer's build
 // context, saying what it does on Out (discarded when nil).
+//
+// With Command, the operator's build command from the host's configuration
+// (ADR-0295 §7), nil for none, it runs that command through Run in Root in
+// place of Pull, Build, and Layer, and judges the images again through
+// Inspect (Docker through execx.System with Run's Program when nil).
 type Ensurer struct {
-	Pull  func(ctx context.Context, image, version string, tags []string) (Pulled, error)
-	Build func(ctx context.Context, inner string, src BuildSource, tags []string) (Built, error)
-	Layer func(ctx context.Context, root string, img Image, base string) (Layered, error)
-	Root  string
-	Out   io.Writer
+	Pull    func(ctx context.Context, image, version string, tags []string) (Pulled, error)
+	Build   func(ctx context.Context, inner string, src BuildSource, tags []string) (Built, error)
+	Layer   func(ctx context.Context, root string, img Image, base string) (Layered, error)
+	Root    string
+	Out     io.Writer
+	Command []string
+	Run     Runner
+	Inspect Inspector
 }
 
 // Outcome is what Ensure did with one image: the image, the way it took,
@@ -84,6 +100,8 @@ type Outcome struct {
 // always. A pull refused because its list or image does not verify stops it
 // with no build in its place; any failure stops it before the layers, and a
 // layer whose harness image is not on this host stops it, naming that image.
+// With e.Command it runs the command in their place, as byCommand says, for
+// a development flai too, whose images come from the operator's command (§3).
 func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src BuildSource) ([]Outcome, error) {
 	if mode != ModeEnsure && mode != ModeBuild && mode != ModeLayer {
 		return nil, fmt.Errorf("make the agent images in the mode %q: there is no such mode; name %s, %s, or %s", mode, ModeEnsure, ModeBuild, ModeLayer)
@@ -91,6 +109,14 @@ func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src B
 	out := e.Out
 	if out == nil {
 		out = io.Discard
+	}
+	if len(e.Command) > 0 {
+		outcomes, err := e.byCommand(ctx, mode, statuses, src, out)
+		if err != nil {
+			return outcomes, err
+		}
+		summarize(out, outcomes, src, e.Command)
+		return outcomes, nil
 	}
 	if src.Tree == "" && buildinfo.Development(src.Version) {
 		refs, files := []string{}, []string{images.Path(images.Bedrock)}
@@ -131,8 +157,143 @@ func (e Ensurer) Ensure(ctx context.Context, mode Mode, statuses []Status, src B
 		}
 		outcomes = append(outcomes, o)
 	}
-	summarize(out, outcomes, src)
+	summarize(out, outcomes, src, nil)
 	return outcomes, nil
+}
+
+// byCommand makes the images of statuses as mode asks with the operator's
+// build command e.Command, in place of the pull, the build, and the layer's
+// build (ADR-0295 §7): once for each inner harness among statuses, in their
+// order, that has an image to make, which in ModeEnsure is one missing or
+// stale, in ModeBuild any, and in ModeLayer its layer alone, with
+// FLAI_IMAGE_* naming them (commandImages). The operator's own image (--image)
+// is never asked made. After each run it judges that inner harness's images
+// again with Check, and fails, naming the command, each image, and why, when
+// one it makes is still missing or stale; a non-zero exit or a stall fails it
+// as RunCommand says.
+func (e Ensurer) byCommand(ctx context.Context, mode Mode, statuses []Status, src BuildSource, out io.Writer) ([]Outcome, error) {
+	run := e.Run
+	if run.Out == nil {
+		run.Out = out
+	}
+	var outcomes []Outcome
+	for _, inner := range innersOf(statuses) {
+		var group []Status
+		var h, l *Status
+		for _, s := range statuses {
+			if s.Inner == inner {
+				group = append(group, s)
+			}
+		}
+		for i := range group {
+			if group[i].Kind == KindHarness {
+				h = &group[i]
+			} else {
+				l = &group[i]
+			}
+		}
+		if h == nil {
+			return outcomes, fmt.Errorf("make the layer image %s with the operator's build command: no harness image of %s is among the agent images, so there is none to build it over; name the images Needed gives, which hold the harness image under each layer", l.Ref, inner)
+		}
+		c, err := commandImages(e.Root, mode, *h, l, src)
+		if err != nil {
+			return outcomes, err
+		}
+		made := make([]Outcome, 0, len(group))
+		for _, s := range group {
+			made = append(made, e.commandOutcome(mode, s, c, src, out))
+		}
+		if len(c.Stale) > 0 {
+			if err := RunCommand(ctx, run, e.Root, e.Command, c); err != nil {
+				return outcomes, err
+			}
+			if err := e.judgeCommand(mode, group, src); err != nil {
+				return outcomes, err
+			}
+		}
+		outcomes = append(outcomes, made...)
+	}
+	return outcomes, nil
+}
+
+// commandOutcome is the way byCommand leaves s, given c, what the command
+// is asked to make, saying on out what it does before the command runs.
+func (e Ensurer) commandOutcome(mode Mode, s Status, c CommandImages, src BuildSource, out io.Writer) Outcome {
+	o := Outcome{Image: s.Image}
+	part := PartHarness
+	if s.Kind == KindLayer {
+		part = PartLayer
+	}
+	switch {
+	case s.Source == SourceHost:
+		fmt.Fprintf(out, "agent image: %s is the operator's own (flai serve agent harness container --image %s=%s), which flai never pulls, builds, or judges; left as it is\n", s.Ref, s.Inner, s.Ref)
+		o.Way = WayOwn
+	case slices.Contains(c.Stale, part):
+		fmt.Fprintf(out, "agent image: %s %s; the operator's build command %s makes it, in place of flai's pull and build\n", s.Ref, stateWords(s), CommandWords(e.Command))
+		o.Way = WayCommand
+	case mode == ModeLayer:
+		fmt.Fprintf(out, "agent image: %s %s; left as it is, as only the project's layer is built\n", s.Ref, stateWords(s))
+		o.Way = WayLeft
+	default:
+		fmt.Fprintf(out, "agent image: %s is current for flai %s; nothing to do\n", s.Ref, shown(src.Version))
+		o.Way = WayCurrent
+	}
+	return o
+}
+
+// judgeCommand judges group, one inner harness's images, again after the
+// operator's build command ran, and fails naming the command and each image
+// mode makes (all but the operator's own, and in ModeLayer the layer alone)
+// that is still missing or stale, and why.
+func (e Ensurer) judgeCommand(mode Mode, group []Status, src BuildSource) error {
+	imgs := make([]Image, 0, len(group))
+	for _, s := range group {
+		imgs = append(imgs, s.Image)
+	}
+	after, err := Check(e.Root, imgs, e.inspector(), func() (string, error) { return src.Version, nil })
+	if err != nil {
+		return fmt.Errorf("judge the agent images again after the operator's build command %s: %w", CommandWords(e.Command), err)
+	}
+	var left []string
+	for _, s := range after {
+		if s.Source == SourceHost || (mode == ModeLayer && s.Kind != KindLayer) {
+			continue
+		}
+		switch s.State {
+		case StateMissing:
+			left = append(left, s.Ref+" is missing")
+		case StateStale:
+			left = append(left, s.Ref+" "+stateWords(s))
+		}
+	}
+	if len(left) == 0 {
+		return nil
+	}
+	return fmt.Errorf("the operator's build command %s exited 0 but left the agent images wrong: %s; make it build each with the tag and the labels its FLAI_IMAGE_* variables name, then run it again", CommandWords(e.Command), strings.Join(left, "; and "))
+}
+
+// innersOf are the inner harnesses of statuses, each once, in their order.
+func innersOf(statuses []Status) []string {
+	var inners []string
+	for _, s := range statuses {
+		if !slices.Contains(inners, s.Inner) {
+			inners = append(inners, s.Inner)
+		}
+	}
+	return inners
+}
+
+// inspector is e's Inspect, or Docker through execx.System with its
+// Runner's Program (docker when empty) when it has none.
+func (e Ensurer) inspector() Inspector {
+	if e.Inspect != nil {
+		return e.Inspect
+	}
+	program := e.Run.Program
+	if program == "" {
+		program = "docker"
+	}
+	return Docker(execx.System{}, program)
 }
 
 // baseRun is the harness image a layer builds over: its status before Ensure
@@ -263,8 +424,9 @@ func stateWords(s Status) string {
 	return "is stale (" + strings.Join(reasons, "; ") + ")"
 }
 
-// summarize says on out which way each of outcomes took, src being what a build was made from.
-func summarize(out io.Writer, outcomes []Outcome, src BuildSource) {
+// summarize says on out which way each of outcomes took, src being what a
+// build was made from and command the operator's build command, nil for none.
+func summarize(out io.Writer, outcomes []Outcome, src BuildSource, command []string) {
 	for _, o := range outcomes {
 		var said string
 		switch o.Way {
@@ -290,6 +452,8 @@ func summarize(out io.Writer, outcomes []Outcome, src BuildSource) {
 			said = "left as it is, as only the project's layer was built"
 		case WayOwn:
 			said = "the operator's own, left as it is"
+		case WayCommand:
+			said = "made by the operator's build command " + CommandWords(command)
 		}
 		fmt.Fprintf(out, "agent image: %s: %s\n", o.Image.Ref, said)
 	}
