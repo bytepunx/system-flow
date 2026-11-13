@@ -235,8 +235,8 @@ func TestAStorysPackInAKlusterProjectNamesTheDeployAndChecksCommands(t *testing.
 // gets neither the field nor the header's block.
 func TestAStorysPackWithoutAKlusterDeployNamesNoCommands(t *testing.T) {
 	for name, extra := range map[string]string{
-		"no block":  "",
-		"no deploy": "kluster:\n  config: kluster.yaml\n",
+		"no block":                  "",
+		"no deploy":                 "kluster:\n  config: kluster.yaml\n",
 		"deploys before review off": "kluster:\n  config: kluster.yaml\n  deploy: [scripts/deploy.sh]\n  agent_namespaces: 0\n",
 	} {
 		t.Run(name, func(t *testing.T) {
