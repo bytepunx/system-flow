@@ -205,8 +205,8 @@ var curating = rules{
 
 // flaiValues are the flags that take a value and that flai reads before its
 // command: its own, and --wait, which flai kluster deploy and teardown --job
-// take and cobra reads wherever it stands, so that flai --wait 5m kluster
-// deploy is read as the deploy it runs.
+// and flai checks run --job take and cobra reads wherever it stands, so that
+// flai --wait 5m kluster deploy is read as the deploy it runs.
 var flaiValues = map[string]bool{"--config": true, "--wait": true}
 
 // finalizeValues are the flags flai edit may carry besides --no-draft when it
@@ -329,22 +329,33 @@ const askForKluster = "Ask the operator on a thread with thread_open; flai klust
 // request a story's agent makes for its own story (ADR-0292 §1, §2).
 var klusterRequests = []string{"deploy", "teardown"}
 
-// KlusterDeploy and KlusterTeardown are the MCP tools that make the requests
-// of flai kluster deploy and teardown --job (ADR-0292 §1).
+// checksRuns are the subcommands of flai checks that, with --job, ask flai
+// serve to run the project's checks against a story's namespace as deployed:
+// a request a story's agent makes for its own story (ADR-0292 §1, §2).
+var checksRuns = []string{"run"}
+
+// KlusterDeploy, KlusterChecks, and KlusterTeardown are the MCP tools that
+// make the requests of flai kluster deploy --job, flai checks run --job, and
+// flai kluster teardown --job (ADR-0292 §1).
 const (
 	KlusterDeploy   = "kluster_deploy"
+	KlusterChecks   = "kluster_checks"
 	KlusterTeardown = "kluster_teardown"
 )
 
-// klusterValues are the flags of flai and of a kluster request that take a
-// value, so that the value is not read as the story it names.
+// klusterTools are the MCP tools that ask flai serve for a job on a story's
+// namespace.
+var klusterTools = []string{KlusterDeploy, KlusterChecks, KlusterTeardown}
+
+// klusterValues are the flags of flai and of a request that take a value, so
+// that the value is not read as the story it names.
 var klusterValues = map[string]bool{"--config": true, "--wait": true}
 
 // Why the guard refuses a request a story's agent alone makes, and what to do
 // instead (ADR-0292 §1, §2).
 const (
-	storysRequest = "a request to deploy or tear down a story's namespace, flai kluster deploy or teardown with --job or the MCP tools kluster_deploy and kluster_teardown, is the story's agent's, for its own story alone (ADR-0292)"
-	askOfStory    = "Put the deploy or teardown you need in your final message; the story's agent asks for it."
+	storysRequest = "a request to deploy, check, or tear down a story's namespace, flai kluster deploy or teardown or flai checks run with --job, or the MCP tools kluster_deploy, kluster_checks, and kluster_teardown, is the story's agent's, for its own story alone (ADR-0292)"
+	askOfStory    = "Put the deploy, checks run, or teardown you need in your final message; the story's agent asks for it."
 )
 
 // storyAgent is a name flai serve gives a story's agent, agent-S-nnnn, with
@@ -376,21 +387,22 @@ func (g Guard) ownStory(c Call) string {
 	return ""
 }
 
-// klusterRequest says whether the words after flai, rest, whose subcommand
-// of kluster is sub, ask flai serve for a job rather than run one: deploy or
-// teardown with --job set true, the last of its forms deciding as flags do,
-// and before any --. story is the one story they name, canonical, or "" when
-// they name none or more than one.
-func klusterRequest(sub string, rest []string) (story string, job bool) {
-	if !slices.Contains(klusterRequests, sub) {
-		return "", false
-	}
+// jobRequest reads the words after flai, rest, of a command that asks flai
+// serve for a job with --job: job says --job is set true, the last of its
+// forms deciding as flags do, and before any --; asked says a word that
+// begins --job stands among them, before a -- or after it, such as --job,
+// --job=false, or --job{,=false}, which the shell expands. story is the one
+// story they name after the command and its subcommand, canonical, or ""
+// when they name none or more than one.
+func jobRequest(rest []string) (story string, job, asked bool) {
 	var args []string
 	for i := 0; i < len(rest); i++ {
 		w := rest[i]
+		asked = asked || isJobFlag(w)
 		switch {
 		case w == "--":
 			args = append(args, rest[i+1:]...)
+			asked = asked || slices.ContainsFunc(rest[i+1:], isJobFlag)
 			i = len(rest)
 		case w == "--job":
 			job = true
@@ -405,26 +417,29 @@ func klusterRequest(sub string, rest []string) (story string, job bool) {
 			args = append(args, w)
 		}
 	}
-	// the words left are kluster, the subcommand, and what they name
+	// the words left are the command, the subcommand, and what they name
 	if named := args[min(2, len(args)):]; len(named) == 1 && isStory(named[0]) {
 		story = workitem.CanonicalID(named[0])
 	}
-	return story, job
+	return story, job, asked
 }
 
+// isJobFlag says whether w begins --job, as --job does in each of its forms.
+func isJobFlag(w string) bool { return strings.HasPrefix(w, "--job") }
+
 // klusterBools are flai's own flags that take no value, the ones flai knows
-// between kluster and its subcommand; a subcommand's own, such as --job, it
+// between a command and its subcommand; a subcommand's own, such as --job, it
 // does not know there.
 var klusterBools = []string{"--help", "--json", "--verbose", "--yes", "-h", "-v", "-y"}
 
-// klusterSub is the subcommand of flai kluster among subs which the words
-// after flai, rest, may run, or "" when they run none: given, the first word
-// after kluster's flags, or the one flai would take instead, as it reads a
-// flag it does not know before the subcommand as taking the word after it.
-// ambiguous says the two differ, so that the line makes no request and
-// reaches no namespace.
-func klusterSub(subs []string, given string, rest []string) (sub string, ambiguous bool) {
-	at := slices.Index(rest, "kluster")
+// subcommandOf is the subcommand of flai's command cmd, kluster or checks,
+// among subs which the words after flai, rest, may run, or "" when they run
+// none: given, the first word after cmd's flags, or the one flai would take
+// instead, as it reads a flag it does not know before the subcommand as
+// taking the word after it. ambiguous says the two differ, so that the line
+// makes no request and reaches no namespace.
+func subcommandOf(cmd string, subs []string, given string, rest []string) (sub string, ambiguous bool) {
+	at := slices.Index(rest, cmd)
 	var read string
 	for i := at + 1; at >= 0 && i < len(rest); i++ {
 		w := rest[i]
@@ -450,20 +465,20 @@ func klusterSub(subs []string, given string, rest []string) (sub string, ambiguo
 }
 
 // klusterReaches are the subcommands of flai kluster that reach a story's
-// namespace, exec with its own variables and kubeconfig and log with its
-// steps' logs: the story's agent's and its sub-agents', for their own story
-// alone (ADR-0292 §2).
-var klusterReaches = []string{"exec", "log"}
+// namespace, env with its own variables and kubeconfig printed, exec with them
+// run, and log with its steps' logs: the story's agent's and its sub-agents',
+// for their own story alone (ADR-0292 §2).
+var klusterReaches = []string{"env", "exec", "log"}
 
-// klusterReachValues are the flags that take a value which flai kluster exec
-// and log may be given, flai's own among them, so that the value is not read
-// as the namespace they name.
+// klusterReachValues are the flags that take a value which flai kluster env,
+// exec, and log may be given, flai's own among them, so that the value is not
+// read as the namespace they name.
 var klusterReachValues = map[string]bool{"--config": true, "--step": true, "--wait": true}
 
-// Why the guard refuses flai kluster exec and log, and what to do instead
-// (ADR-0292 §2).
+// Why the guard refuses flai kluster env, exec, and log, and what to do
+// instead (ADR-0292 §2).
 const (
-	reachesOwn    = "flai kluster exec and log reach a story's namespace, and are a story's agent's and its sub-agents', for their own story's namespace alone (ADR-0292 §2)"
+	reachesOwn    = "flai kluster env, exec, and log reach a story's namespace, and are a story's agent's and its sub-agents', for their own story's namespace alone (ADR-0292 §2)"
 	reachesNone   = "Put what you need run against a namespace in your final message."
 	reachesServed = "Ask the operator on a thread with thread_open; flai kluster status and deployments read and are open to you."
 )
@@ -484,7 +499,7 @@ func klusterNamed(rest []string) []string {
 var dashes = regexp.MustCompile(`(^|\s)--(\s|$)`)
 
 // reachesPlainly says whether the command line as written, line, gives the
-// flai kluster exec or log it runs plainly: no character the shell could
+// flai kluster env, exec, or log it runs plainly: no character the shell could
 // expand into another namespace's name stands on it, or, when kluster stands
 // on it once, none stands before its last word --, after kluster, where the
 // command exec runs begins. The shell's parse drops a $ and splits at a
@@ -504,16 +519,19 @@ func reachesPlainly(line string) bool {
 	return at > strings.Index(line, "kluster") && !strings.ContainsAny(line[:at], shellExpands)
 }
 
-// reaching says why c may not run flai kluster exec or log, sub, as the
-// words after flai, rest, give it, or "" when it may: a story's agent and its
-// sub-agents for their own story, written plainly, and the operator's own
+// reaching says why c may not run flai kluster env, exec, or log, sub, as
+// the words after flai, rest, give it, or "" when it may: a story's agent and
+// its sub-agents for their own story, written plainly, and the operator's own
 // session for any. ambiguous says flai could read another subcommand.
 func (g Guard) reaching(c Call, own, sub string, ambiguous bool, rest []string) string {
 	if !c.Subagent && !g.served(c) && own == "" {
 		return ""
 	}
 	form := fmt.Sprintf("flai kluster exec %s -- <command>", own)
-	if sub == "log" {
+	switch sub {
+	case "env":
+		form = fmt.Sprintf("flai kluster env %s", own)
+	case "log":
 		form = fmt.Sprintf("flai kluster log %s --step <step>", own)
 	}
 	named := klusterNamed(rest)
@@ -660,9 +678,9 @@ func (g Guard) klusterLine(c Call) Verdict {
 	return v
 }
 
-// reachOpen widens r, a sub-agent's rules, to let through flai kluster exec
-// and log, which klusterWrite has refused already for any namespace but the
-// sub-agent's story's (ADR-0292 §2).
+// reachOpen widens r, a sub-agent's rules, to let through flai kluster env,
+// exec, and log, which klusterWrite has refused already for any namespace but
+// the sub-agent's story's (ADR-0292 §2).
 func reachOpen(r rules) rules {
 	inner := r.flai
 	r.flai = func(cmd, sub string, rest []string) (string, string) {
@@ -675,29 +693,34 @@ func reachOpen(r rules) rules {
 }
 
 // klustering are the rules that find on c's command line a flai kluster
-// command that writes, or flai kluster exec or log, that c may not run, and
-// no git command: every one that writes for a sub-agent, and for a session
-// flai serve started but a story's agent's request for its own story,
-// written plainly; exec and log, for a sub-agent or a session flai serve
-// started, but for its own story, written plainly; for the operator's own
-// session only a request, exec, or log for a story other than the one in its
-// agent's name. Each says why and what to do.
+// command that writes, flai checks run with --job, or flai kluster env, exec,
+// or log, that c may not run, and no git command: every one that writes or
+// asks for a job for a sub-agent, and for a session flai serve started but a
+// story's agent's request for its own story, written plainly; env, exec, and
+// log, for a sub-agent or a session flai serve started, but for its own
+// story, written plainly; for the operator's own session only a request, env,
+// exec, or log for a story other than the one in its agent's name. Each says
+// why and what to do.
 func (g Guard) klustering(c Call) rules {
 	own := g.ownStory(c)
 	return rules{
 		flai: func(cmd, given string, rest []string) (string, string) {
-			if cmd != "kluster" {
+			switch cmd {
+			case "checks":
+				return g.checking(c, own, given, rest), ""
+			case "kluster":
+			default:
 				return "", ""
 			}
-			if sub, ambiguous := klusterSub(klusterReaches, given, rest); sub != "" {
+			if sub, ambiguous := subcommandOf(cmd, klusterReaches, given, rest); sub != "" {
 				return g.reaching(c, own, sub, ambiguous, rest), ""
 			}
-			sub, ambiguous := klusterSub(klusterWrites, given, rest)
+			sub, ambiguous := subcommandOf(cmd, klusterWrites, given, rest)
 			if sub == "" {
 				return "", ""
 			}
-			story, job := klusterRequest(sub, rest)
-			job = job && !ambiguous
+			story, job, _ := jobRequest(rest)
+			job = job && slices.Contains(klusterRequests, sub) && !ambiguous
 			switch {
 			case c.Subagent && job:
 				return storysRequest + ". " + askOfStory, ""
@@ -717,6 +740,40 @@ func (g Guard) klustering(c Call) rules {
 	}
 }
 
+// checking says why c may not run flai checks run with --job, the request to
+// run the project's checks against a story's namespace as deployed, as the
+// words after flai, rest, give it, or "" when it may: a story's agent for its
+// own story, written plainly, with --job set true, and the operator's own
+// session for any. Every sub-agent and every other session flai serve
+// started is refused it. A line with no --job in any form makes no request
+// and keeps the rules flai checks run has without one.
+func (g Guard) checking(c Call, own, given string, rest []string) string {
+	sub, ambiguous := subcommandOf("checks", checksRuns, given, rest)
+	if sub == "" {
+		return ""
+	}
+	story, job, asked := jobRequest(rest)
+	if !asked || !c.Subagent && !g.served(c) && own == "" {
+		return ""
+	}
+	form := fmt.Sprintf("flai checks run %s --job", own)
+	switch {
+	case c.Subagent:
+		return storysRequest + ". " + askOfStory
+	case own == "":
+		return storysRequest + ", and this session has no story of its own. " + askForKluster
+	case ambiguous:
+		return fmt.Sprintf("%s, and with a flag between checks and run flai could read another subcommand. Write it as %s, in a Bash call of its own, or call %s.", storysRequest, form, KlusterChecks)
+	case strings.ContainsAny(c.Command, shellExpands):
+		return fmt.Sprintf("%s. Write it as %s, in a Bash call of its own, or call %s.", writtenPlainly, form, KlusterChecks)
+	case !job:
+		return fmt.Sprintf("%s, and --job is not set true here: its last form, or one after --, leaves it false, so flai would run the checks in this shell instead of asking for them. Write it as %s, or call %s.", storysRequest, form, KlusterChecks)
+	case story == own:
+		return ""
+	}
+	return fmt.Sprintf("a story's agent asks flai serve to run the checks against its own story's namespace alone, %s, and this names %s (ADR-0292). Ask for your own story's: %s, or %s with no story.", own, cmp.Or(story, "no single story"), form, KlusterChecks)
+}
+
 // forgePush decides on a command line that runs flai forge push, by a
 // sub-agent or in a session flai serve started: the zero Verdict when it runs
 // none or the operator's own session runs it. The orchestrator's refusal
@@ -726,9 +783,10 @@ func (g Guard) forgePush(c Call) Verdict {
 }
 
 // klusterWrite decides on a call that changes the project's kluster (S-0577),
-// asks flai serve to (ADR-0292), or reaches a story's namespace with flai
-// kluster exec or log (ADR-0292 §2): on a command line, as klustering finds
-// it, and on the MCP tools kluster_deploy and kluster_teardown, which every
+// asks flai serve to or to run the checks against a story's namespace
+// (ADR-0292), or reaches a story's namespace with flai kluster env, exec, or
+// log (ADR-0292 §2): on a command line, as klustering finds it, and on the
+// MCP tools kluster_deploy, kluster_checks, and kluster_teardown, which every
 // sub-agent is refused, and a story's agent when they name a story other
 // than its own. The zero Verdict for any other call, and for one the
 // operator's own session makes; the orchestrator's refusal names the call, so
@@ -757,11 +815,12 @@ func (g Guard) klusterWrite(c Call) Verdict {
 	return Verdict{}
 }
 
-// klusterTool decides on a call of kluster_deploy or kluster_teardown: every
-// sub-agent is refused it, and a story's agent when it names a story other
-// than its own; with no story the tool asks for the session's own.
+// klusterTool decides on a call of kluster_deploy, kluster_checks, or
+// kluster_teardown: every sub-agent is refused it, and a story's agent when
+// it names a story other than its own; with no story the tool asks for the
+// session's own.
 func (g Guard) klusterTool(c Call) Verdict {
-	if c.Tool != KlusterDeploy && c.Tool != KlusterTeardown {
+	if !slices.Contains(klusterTools, c.Tool) {
 		return Verdict{}
 	}
 	if c.Subagent {
@@ -771,7 +830,7 @@ func (g Guard) klusterTool(c Call) Verdict {
 	if own == "" || c.Args.Story == "" || workitem.CanonicalID(c.Args.Story) == own {
 		return Verdict{}
 	}
-	return deny(fmt.Sprintf("the story's agent cannot call %s for %s: a story's agent asks flai serve to deploy or tear down its own story's namespace alone, %s (ADR-0292). Call %s with no story, or with story %s.", c.Tool, c.Args.Story, own, c.Tool, own))
+	return deny(fmt.Sprintf("the story's agent cannot call %s for %s: a story's agent asks flai serve to deploy, check, or tear down its own story's namespace alone, %s (ADR-0292). Call %s with no story, or with story %s.", c.Tool, c.Args.Story, own, c.Tool, own))
 }
 
 // klusterCaller names c's caller in a refusal of a flai kluster command.

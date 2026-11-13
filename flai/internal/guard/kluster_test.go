@@ -144,7 +144,7 @@ func TestAStorysAgentRequestsItsOwnStorysNamespace(t *testing.T) {
 				}
 			}
 		}
-		for _, tool := range []string{KlusterDeploy, KlusterTeardown} {
+		for _, tool := range []string{KlusterDeploy, KlusterChecks, KlusterTeardown} {
 			for _, story := range []string{"", "S-0001", "S-1"} {
 				if why := a.guard.Check(klusterTool(tool, story)); why != "" {
 					t.Errorf("%s: %s for %q refused: %s", a.name, tool, story, why)
@@ -169,7 +169,7 @@ func TestAStorysAgentRequestsItsOwnStorysNamespace(t *testing.T) {
 // story's agent's; and every other session flai serve started is refused the
 // command as it is every flai kluster command that writes.
 func TestOnlyTheStorysAgentRequestsANamespace(t *testing.T) {
-	commands := append(append([]string{}, g.Commands...), "kluster")
+	commands := append(append([]string{}, g.Commands...), "checks", "kluster")
 	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "task"; return e }
 	parents := []Guard{
 		{Commands: commands, Story: "S-0001", Served: true},
@@ -185,6 +185,11 @@ func TestOnlyTheStorysAgentRequestsANamespace(t *testing.T) {
 		klusterTool(KlusterDeploy, ""),
 		klusterTool(KlusterTeardown, "S-0001"),
 		klusterTool(KlusterDeploy, "S-0002"),
+		bash("", "flai checks run S-0001 --job"),
+		bash("", "flai checks run S-0002 --job=true --json"),
+		klusterTool(KlusterChecks, ""),
+		klusterTool(KlusterChecks, "S-0001"),
+		klusterTool(KlusterChecks, "S-0002"),
 	}
 	for i, p := range parents {
 		for _, e := range requests {
@@ -212,6 +217,121 @@ func TestOnlyTheStorysAgentRequestsANamespace(t *testing.T) {
 	for _, line := range []string{"flai kluster deploy S-0001 --job", "flai kluster teardown S-0002 --job"} {
 		if why := (Guard{Commands: commands}).Check(bash("", line)); why != "" {
 			t.Errorf("the operator's session: %q refused: %s", line, why)
+		}
+	}
+}
+
+// ADR-0292 §1, §2: a story's agent, served or not, asks flai serve to run the
+// checks against its own story's namespace with flai checks run --job in any
+// flag form, or the MCP tool kluster_checks; a request for another story, for
+// none or two, one not written plainly, one with --job left false, and one
+// flai could read as another subcommand are refused it, with what to ask for
+// instead. flai checks run without --job keeps the rule it had.
+func TestAStorysAgentAsksForItsOwnStorysChecks(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "checks", "kluster")
+	agents := []struct {
+		name  string
+		guard Guard
+	}{
+		{"served", Guard{Commands: commands, Story: "S-0001", Served: true}},
+		{"not served", Guard{Commands: commands, Story: "S-0001"}},
+		{"named agent-S-0001", Guard{Commands: commands, Agent: "agent-S-0001", Served: true}},
+		{"named agent-S-1, not served", Guard{Commands: commands, Agent: "agent-S-1"}},
+	}
+	own := []string{
+		"flai checks run S-0001 --job",
+		"scripts/flai.sh checks run --job S-1",
+		"flai checks run S-0001 --job=true --json",
+		"flai --config c.json checks run S-0001 --job --wait 5m",
+		"flai --wait 5m checks run S-0001 --job",
+		"flai checks run --wait=5m --job s-0001",
+		"flai checks run S-0001 --job=false --job",
+		"cd /w && /home/alex/.flai/bin/flai checks run S-0001 --job=1 2>&1",
+		"bash -c 'flai checks run S-0001 --job --json'",
+		// without --job the rule flai checks run had stands
+		"flai checks run S-0001",
+		"flai checks run S-0002",
+	}
+	refused := []struct{ line, want string }{
+		{"flai checks run S-0002 --job", "and this names S-0002"},
+		{"flai checks run --job", "and this names no single story"},
+		{"flai checks run S-0001 S-0002 --job", "and this names no single story"},
+		{"flai checks run S-0001 --job; flai checks run S-0002 --job", "and this names S-0002"},
+		{"bash -c 'flai checks run S-0002 --job'", "and this names S-0002"},
+		{"flai checks run S-0001 --job $EXTRA", "written plainly"},
+		{"flai checks run \"$FLAI_STORY\" --job", "written plainly"},
+		{"flai checks run S-0001 --job=`echo false`", "written plainly"},
+		{"flai checks run S-0001 --job{,=false}", "written plainly"},
+		{"flai checks run S-0001 --job --jo\\b=false", "written plainly"},
+		{"flai checks run S-0001 --job=false", "--job is not set true"},
+		{"flai checks run S-0001 --job --job=false", "--job is not set true"},
+		{"flai checks run S-0001 --job=no", "--job is not set true"},
+		{"flai checks run S-0001 -- --job", "--job is not set true"},
+		{"flai checks --wait 5m run S-0001 --job", "another subcommand"},
+		{"flai checks --job run S-0001", "another subcommand"},
+	}
+	for _, a := range agents {
+		for _, line := range own {
+			if why := a.guard.Check(bash("", line)); why != "" {
+				t.Errorf("%s: %q refused: %s", a.name, line, why)
+			}
+		}
+		for _, r := range refused {
+			why := a.guard.Check(bash("", r.line))
+			for _, want := range []string{"the story's agent cannot", r.want, "ADR-0292", "flai checks run S-0001 --job", "kluster_checks"} {
+				if !strings.Contains(why, want) {
+					t.Errorf("%s: %q: %q wants %q", a.name, r.line, why, want)
+				}
+			}
+		}
+	}
+	// a sub-agent of the story's agent runs flai kluster env for its own
+	// story, and is refused the request and the tool, its own story's too
+	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "task"; return e }
+	parent := agents[0].guard
+	if why := parent.Check(sub(bash("", "flai kluster env S-0001 --json"))); why != "" {
+		t.Errorf("the sub-agent's env refused: %s", why)
+	}
+	for _, e := range []Event{bash("", "flai checks run S-0001 --job"), bash("", "flai checks run S-0001 --job=false"), klusterTool(KlusterChecks, ""), klusterTool(KlusterChecks, "S-0001")} {
+		why := parent.Check(sub(e))
+		for _, want := range []string{"a sub-agent (task) cannot", "kluster_checks", "is the story's agent's", "final message"} {
+			if !strings.Contains(why, want) {
+				t.Errorf("the sub-agent: %s %q: %q wants %q", e.ToolName, e.ToolInput.Command, why, want)
+			}
+		}
+	}
+	// without --job the sub-agent's flai checks run stays refused, as it was
+	if why := parent.Check(sub(bash("", "flai checks run S-0001"))); why == "" {
+		t.Error("the sub-agent's flai checks run without --job is let through")
+	}
+	// every other session flai serve started is refused the request
+	served := []struct {
+		guard Guard
+		who   string
+	}{
+		{Guard{Commands: commands, Role: RolePlan}, "the planner cannot"},
+		{Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, "the orchestrator cannot"},
+		{Guard{Commands: commands, Role: RoleAnalyze}, "the analyzer cannot"},
+		{Guard{Commands: commands, Served: true}, "a session flai serve started cannot"},
+	}
+	for _, s := range served {
+		why := s.guard.Check(bash("", "flai checks run S-0001 --job"))
+		for _, want := range []string{s.who, "is the story's agent's", "no story of its own", "thread_open"} {
+			if !strings.Contains(why, want) {
+				t.Errorf("%s: %q wants %q", s.who, why, want)
+			}
+		}
+	}
+	// the operator's own session runs the request for any story
+	operator := Guard{Commands: commands}
+	for _, line := range []string{"flai checks run S-0001 --job", "flai checks run S-0002 --job --json", "flai checks run $S --job=false"} {
+		if why := operator.Check(bash("", line)); why != "" {
+			t.Errorf("the operator's session: %q refused: %s", line, why)
+		}
+	}
+	for _, story := range []string{"", "S-0002"} {
+		if why := operator.Check(klusterTool(KlusterChecks, story)); why != "" {
+			t.Errorf("the operator's session: kluster_checks for %q refused: %s", story, why)
 		}
 	}
 }
@@ -328,6 +448,9 @@ func TestAStorysAgentReachesItsOwnNamespace(t *testing.T) {
 		"flai kluster log --step checks S-0001",
 		"flai kluster log S-0001 --step=build --json",
 		"bash -c 'flai kluster log S-0001 --step deploy'",
+		"flai kluster env S-0001",
+		"scripts/flai.sh kluster env s-1 --json",
+		"cd /w && flai --config c.json kluster env S-0001",
 		"KUBECONFIG=.flai-cache/kluster/agents/s-0001.kubeconfig kubectl get pods",
 	}
 	others := []struct{ line, names string }{
@@ -344,6 +467,12 @@ func TestAStorysAgentReachesItsOwnNamespace(t *testing.T) {
 		{"flai kluster log \"$S\" --step deploy", "written plainly"},
 		{"flai kluster exec S-0001 --wait `echo 1 S-0002` -- ls", "written plainly"},
 		{"flai kluster --config exec log S-0001 --step deploy", "another subcommand"},
+		{"flai kluster env S-0002", "names S-0002, not this story's namespace"},
+		{"flai kluster env default --json", "names default, not this story's namespace"},
+		{"flai kluster env", "names no single namespace"},
+		{"flai kluster env S-0001 S-0002", "names no single namespace"},
+		{"bash -c 'flai kluster env S-0002'", "names S-0002"},
+		{"flai kluster env $FLAI_STORY", "written plainly"},
 	}
 	for _, a := range agents {
 		as := func(e Event) Event {
@@ -375,6 +504,10 @@ func TestAStorysAgentReachesItsOwnNamespace(t *testing.T) {
 	if !strings.Contains(why, "Write it as flai kluster exec S-0001 -- <command>") {
 		t.Errorf("exec: %q", why)
 	}
+	why = agents[0].guard.Check(bash("", "flai kluster env S-0002"))
+	if !strings.Contains(why, "Write it as flai kluster env S-0001.") || !strings.Contains(why, "flai kluster env, exec, and log") {
+		t.Errorf("env: %q", why)
+	}
 	// a read-only sub-agent's exec writes no file but under the temporary
 	// folder, as its other commands do (ADR-0141)
 	readOnly := agents[len(agents)-1].guard
@@ -400,7 +533,7 @@ func TestAStorysAgentReachesItsOwnNamespace(t *testing.T) {
 		{"operator's sub-agent", Guard{Commands: commands}, true, "a sub-agent (task) cannot", "final message"},
 	}
 	for _, n := range none {
-		for _, line := range []string{"flai kluster exec S-0001 -- kubectl get pods", "flai kluster log S-0001 --step deploy", "flai kluster exec default -- ls"} {
+		for _, line := range []string{"flai kluster exec S-0001 -- kubectl get pods", "flai kluster log S-0001 --step deploy", "flai kluster exec default -- ls", "flai kluster env S-0001", "flai kluster env default --json"} {
 			e := bash("", line)
 			if n.sub {
 				e = sub(e)
