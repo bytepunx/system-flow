@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 796
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 311
-      cache_read: 3038304
-      cache_write: 127200
-      cost: 1.185
+      input: 35
+      output: 18029
+      cache_read: 3131755
+      cache_write: 76783
+      cost: 1.4369
 ---
 # T-3177 flai serve runs the image ensure as a host job, one at a time, that held starts wait on and that the journal records
 

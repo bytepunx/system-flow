@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2388
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 240
-      output: 1262
-      cache_read: 26084584
-      cache_write: 387922
-      cost: 9.9095
+      input: 293
+      output: 150775
+      cache_read: 26189996
+      cache_write: 642118
+      cost: 12.0168
 ---
 # T-3178 A story's or a strategic agent's start that finds its image missing or stale waits on an image job, recorded on its run, in place of refusing
 

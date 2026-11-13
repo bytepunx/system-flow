@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 588
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 354
-      cache_read: 3297120
-      cache_write: 125038
-      cost: 1.2811
+      input: 38
+      output: 19491
+      cache_read: 3385662
+      cache_write: 83009
+      cost: 1.5534
 ---
 # T-3179 The close-out container and the checks container wait on an image job when their image is missing or stale
 
