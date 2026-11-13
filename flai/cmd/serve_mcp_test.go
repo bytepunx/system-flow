@@ -36,8 +36,16 @@ func TestMCPAddrsForAProjectFlaiServeStarts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// the default range is probed for real, with a port in it the test holds,
+	// so that what freePort does with the operating system stays covered
 	mcpAddrFor := func(taken, avoid map[string]bool) (string, error) {
 		return oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, taken, avoid, freePort))
+	}
+	// a remembered port is one the test says is free, not one it closed and
+	// hopes no parallel test takes (I-0372)
+	var ports heldPorts
+	remembering := func(taken, avoid map[string]bool) (string, error) {
+		return oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, taken, avoid, ports.free))
 	}
 	inRange := func(addr string) bool {
 		host, port, err := net.SplitHostPort(addr)
@@ -70,20 +78,20 @@ func TestMCPAddrsForAProjectFlaiServeStarts(t *testing.T) {
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	mine := "127.0.0.1:" + unusedPort(t)
+	mine := "127.0.0.1:" + rememberedPort
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte(mine+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := mcpAddrFor(nil, nil); got != mine {
+	if got, _ := remembering(nil, nil); got != mine {
 		t.Errorf("remembered: %q", got)
 	}
 	// S-0110: a remembered address another project already has is not given twice
-	moved, err := mcpAddrFor(map[string]bool{mine: true}, nil)
+	moved, err := remembering(map[string]bool{mine: true}, nil)
 	if err != nil || moved == mine || !inRange(moved) {
 		t.Errorf("remembered, and given to another: %q %v", moved, err)
 	}
 	// and the new one is none that another project remembers
-	if again, err := mcpAddrFor(map[string]bool{mine: true}, map[string]bool{moved: true}); err != nil || again == moved || again == mine {
+	if again, err := remembering(map[string]bool{mine: true}, map[string]bool{moved: true}); err != nil || again == moved || again == mine {
 		t.Errorf("remembered by another: %q %v", again, err)
 	}
 }
@@ -147,10 +155,9 @@ func TestTheHostGivesTwoProjectsThatRememberOnePortOneEach(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	var logged bytes.Buffer
-	l := &hostLauncher{a: &app{configPath: configOf(t), log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}}
-	// a port no other test probes: the default range is the live host's and
-	// the parallel tests'
-	shared := "127.0.0.1:" + unusedPort(t)
+	var ports heldPorts
+	l := &hostLauncher{a: &app{configPath: configOf(t), log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}, free: ports.free}
+	shared := "127.0.0.1:" + rememberedPort
 	var repos []*workitem.Repo
 	for i := 0; i < 2; i++ {
 		repo, err := workitem.Open(tempProject(t))
@@ -200,8 +207,9 @@ func TestMCPAddrsForListensOnTheBindAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var ports heldPorts
 	mcpAddrFor := func(bind string, taken, avoid map[string]bool) (string, error) {
-		return oneAddr(mcpAddrsFor(repo, []string{bind}, taken, avoid, freePort))
+		return oneAddr(mcpAddrsFor(repo, []string{bind}, taken, avoid, ports.free))
 	}
 	first, err := mcpAddrFor("0.0.0.0", nil, nil)
 	if host, _, _ := net.SplitHostPort(first); err != nil || host != "0.0.0.0" {
@@ -210,20 +218,15 @@ func TestMCPAddrsForListensOnTheBindAddress(t *testing.T) {
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	port := unusedPort(t)
+	port := rememberedPort
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:"+port+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := mcpAddrFor("0.0.0.0", nil, nil); err != nil || got != "0.0.0.0:"+port {
 		t.Errorf("the remembered port, on the bind address: %q %v", got, err)
 	}
-	// the remembered port must be free to listen on, so only where this
-	// machine has IPv6 loopback
-	if ln, err := net.Listen("tcp", "[::1]:0"); err == nil {
-		_ = ln.Close()
-		if got, err := mcpAddrFor("::1", nil, nil); err != nil || got != "[::1]:"+port {
-			t.Errorf("an IPv6 bind address is bracketed: %q %v", got, err)
-		}
+	if got, err := mcpAddrFor("::1", nil, nil); err != nil || got != "[::1]:"+port {
+		t.Errorf("an IPv6 bind address is bracketed: %q %v", got, err)
 	}
 	moved, err := mcpAddrFor("0.0.0.0", map[string]bool{"127.0.0.1:" + port: true}, nil)
 	if err != nil || moved == "0.0.0.0:"+port {
@@ -242,7 +245,8 @@ func TestTheHostStartsEachProjectsServerOnTheBindAddress(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfgPath)
 	var logged bytes.Buffer
-	l := &hostLauncher{a: &app{configPath: cfgPath, log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}}
+	var ports heldPorts
+	l := &hostLauncher{a: &app{configPath: cfgPath, log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}, free: ports.free}
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +254,7 @@ func TestTheHostStartsEachProjectsServerOnTheBindAddress(t *testing.T) {
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	port := unusedPort(t)
+	port := rememberedPort
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:"+port+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -365,11 +369,11 @@ func needLoopback2(t *testing.T) {
 }
 
 // mcpHostFor is a host launcher on the configuration at cfgPath, with
-// docker, logging as JSON to logged, and a project that remembers a port no
-// other test probes, which it answers.
-func mcpHostFor(t *testing.T, cfgPath string, docker execx.Runner, logged *bytes.Buffer) (*hostLauncher, *workitem.Repo, string) {
+// docker, logging as JSON to logged, asking ports which addresses are free,
+// and a project that remembers rememberedPort, which it answers.
+func mcpHostFor(t *testing.T, cfgPath string, docker execx.Runner, logged *bytes.Buffer, ports *heldPorts) (*hostLauncher, *workitem.Repo, string) {
 	t.Helper()
-	l := &hostLauncher{a: &app{configPath: cfgPath, log: slog.New(slog.NewJSONHandler(logged, nil)), runner: docker}, taken: map[string]string{}}
+	l := &hostLauncher{a: &app{configPath: cfgPath, log: slog.New(slog.NewJSONHandler(logged, nil)), runner: docker}, taken: map[string]string{}, free: ports.free}
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -377,7 +381,7 @@ func mcpHostFor(t *testing.T, cfgPath string, docker execx.Runner, logged *bytes
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	port := unusedPort(t)
+	port := rememberedPort
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte("127.0.0.1:"+port+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -394,16 +398,13 @@ func TestTheHostStartsEachProjectsServerOnEveryBindAddress(t *testing.T) {
 	useConfig(t, cfgPath)
 	setMCPBind(t, cfgPath, "127.0.0.1", "127.0.0.2")
 	var logged bytes.Buffer
-	l, repo, port := mcpHostFor(t, cfgPath, desktopDocker, &logged)
+	var ports heldPorts
+	l, repo, port := mcpHostFor(t, cfgPath, desktopDocker, &logged, &ports)
 	spec, err := l.mcp(repo.MainRoot)
 	if want := []string{"127.0.0.1:" + port, "127.0.0.2:" + port}; err != nil || !slices.Equal(specAddrs(spec.Args), want) {
 		t.Fatalf("the spec listens on %q (%v), want %q: %q", specAddrs(spec.Args), err, want, spec.Args)
 	}
-	holder, err := net.Listen("tcp", "127.0.0.2:"+port)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = holder.Close() }()
+	ports.hold("127.0.0.2:" + port)
 	spec, err = l.mcp(repo.MainRoot)
 	moved := specAddrs(spec.Args)
 	if err != nil || len(moved) != 2 || portOf(moved[0]) == port || portOf(moved[0]) != portOf(moved[1]) ||
@@ -427,7 +428,7 @@ func TestTheHostResolvesAutoAtEachStart(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
 	useConfig(t, cfgPath)
 	var logged bytes.Buffer
-	l, repo, port := mcpHostFor(t, cfgPath, mcpDocker{engine: "Ubuntu 24.04 LTS", gateway: "127.0.0.2"}, &logged)
+	l, repo, port := mcpHostFor(t, cfgPath, mcpDocker{engine: "Ubuntu 24.04 LTS", gateway: "127.0.0.2"}, &logged, &heldPorts{})
 	spec, err := l.mcp(repo.MainRoot)
 	if want := []string{"127.0.0.1:" + port, "127.0.0.2:" + port}; err != nil || !slices.Equal(specAddrs(spec.Args), want) {
 		t.Fatalf("auto on a native engine listens on %q (%v), want %q", specAddrs(spec.Args), err, want)
@@ -461,7 +462,7 @@ func TestTheHostDropsAnAddressThisMachineCannotListenOn(t *testing.T) {
 	useConfig(t, cfgPath)
 	setMCPBind(t, cfgPath, "127.0.0.1", away)
 	var logged bytes.Buffer
-	l, repo, port := mcpHostFor(t, cfgPath, desktopDocker, &logged)
+	l, repo, port := mcpHostFor(t, cfgPath, desktopDocker, &logged, &heldPorts{})
 	spec, err := l.mcp(repo.MainRoot)
 	if want := []string{"127.0.0.1:" + port}; err != nil || !slices.Equal(specAddrs(spec.Args), want) {
 		t.Fatalf("with %s beside loopback, the spec listens on %q (%v), want %q", away, specAddrs(spec.Args), err, want)
@@ -477,18 +478,47 @@ func TestTheHostDropsAnAddressThisMachineCannotListenOn(t *testing.T) {
 	}
 }
 
-// unusedPort is a port the kernel just gave and took back, outside the
-// default range that the live host and the parallel tests probe, so a test
-// can remember it and count on its being free to listen on.
-func unusedPort(t *testing.T) string {
-	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+// rememberedPort is the port a test's project remembers, outside the default
+// range. The test's heldPorts says whether it is free, so no real port is
+// raced for: a port the kernel gave and the test closed again was taken by a
+// parallel test before flai probed it (I-0372).
+const rememberedPort = "4300"
+
+// heldPorts is a free-port check a test controls: every address is free but
+// those the test holds, by host and port as the address names them.
+type heldPorts struct{ held map[string]bool }
+
+// free says whether addr is free, as freePort does of a real one.
+func (p *heldPorts) free(addr string) bool { return !p.held[addr] }
+
+// hold makes addr held, as by another process.
+func (p *heldPorts) hold(addr string) {
+	if p.held == nil {
+		p.held = map[string]bool{}
+	}
+	p.held[addr] = true
+}
+
+// freePort asks the operating system: an address the test holds a listener
+// on is not free while it holds it, and a launcher with no check of its own
+// asks the same way.
+func TestFreePortSaysWhetherAnAddressIsHeld(t *testing.T) {
+	t.Parallel()
+	held, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	port := portOf(ln.Addr().String())
-	_ = ln.Close()
-	return port
+	defer func() { _ = held.Close() }()
+	addr := held.Addr().String()
+	if freePort(addr) {
+		t.Errorf("%s is held by the test, but freePort says it is free", addr)
+	}
+	if (&hostLauncher{}).freeCheck()(addr) {
+		t.Errorf("a launcher with no check of its own says the held %s is free", addr)
+	}
+	if !freePort("127.0.0.1:0") {
+		t.Error("freePort says no port the kernel picks is free")
+	}
 }
 
 // I-0271: another process takes the port a project's server had, or
@@ -500,7 +530,8 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 	t.Parallel()
 	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
 	var logged bytes.Buffer
-	l := &hostLauncher{a: &app{configPath: configOf(t), log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}}
+	var ports heldPorts
+	l := &hostLauncher{a: &app{configPath: configOf(t), log: slog.New(slog.NewTextHandler(&logged, nil)), runner: desktopDocker}, taken: map[string]string{}, free: ports.free}
 	repo, err := workitem.Open(tempProject(t))
 	if err != nil {
 		t.Fatal(err)
@@ -508,7 +539,7 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 	if err := os.MkdirAll(repo.CacheDir(), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	mine := "127.0.0.1:" + unusedPort(t)
+	mine := "127.0.0.1:" + rememberedPort
 	if err := os.WriteFile(mcpFile(repo, mcpAddrFile), []byte(mine+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -516,13 +547,9 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 		t.Fatalf("the first start, on the remembered port: %q %v", got, err)
 	}
 	// the server exited, and another process took its port before the restart
-	holder, err := net.Listen("tcp", mine)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = holder.Close() }()
+	ports.hold(mine)
 	moved, err := oneAddr(l.mcpAddrs(repo))
-	if err != nil || moved == mine || freePort(mine) {
+	if err != nil || moved == mine || !ports.free(moved) {
 		t.Fatalf("the restart, with %s held: %q %v", mine, moved, err)
 	}
 	if !strings.Contains(logged.String(), "mcp address moved: another process holds it") ||
@@ -533,11 +560,11 @@ func TestTheHostMovesAProjectOffAPortAnotherProcessHolds(t *testing.T) {
 		t.Errorf("and the project keeps the new one while it is free: %q %v", again, err)
 	}
 	// a host started again, while the port the server remembers is still held
-	fresh := &hostLauncher{a: l.a, taken: map[string]string{}}
+	fresh := &hostLauncher{a: l.a, taken: map[string]string{}, free: ports.free}
 	if got, err := oneAddr(fresh.mcpAddrs(repo)); err != nil || got == mine {
 		t.Errorf("a new host, with the remembered %s held: %q %v", mine, got, err)
 	}
-	if got, err := oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, nil, nil, freePort)); err != nil || got == mine {
+	if got, err := oneAddr(mcpAddrsFor(repo, []string{"127.0.0.1"}, nil, nil, ports.free)); err != nil || got == mine {
 		t.Errorf("mcpAddrsFor, with the remembered %s held: %q %v", mine, got, err)
 	}
 }
