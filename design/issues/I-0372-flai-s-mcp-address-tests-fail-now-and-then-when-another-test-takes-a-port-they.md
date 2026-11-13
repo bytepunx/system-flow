@@ -2,12 +2,12 @@
 id: I-0372
 title: flai's MCP address tests fail now and then when another test takes a port they closed or never held
 class: defect
-status: open
+status: closed
 count: 4
 cost: 12m
 first_reported: 2026-11-13T20:39:59Z
 last_reported: 2026-11-13T21:51:02Z
-updated: 2026-11-13T21:51:02Z
+updated: 2026-11-13T22:05:35Z
 ---
 
 # I-0372 flai's MCP address tests fail now and then when another test takes a port they closed or never held
@@ -34,3 +34,4 @@ Story: S-0779.
 S-0779's second load run (T-3333), on the host: in the fifty-count `MCP|TheHost` run, TestHostRunsServeAndTheMCPServersAndTakesThemWithIt failed at host_integration_test.go:163 with `flai host already runs on this machine for /tmp/TestHostUpgradeToAVersion.../cfg.json`: it had closed a kernel port and given it to flai host as its address, and a host the whole-package run beside it started took it first. It does the same with the project's MCP address. TestProfilesAreOfferedOnLoopbackOnly hands servePprof a closed port the same way. Fixed in the same story by T-3338 (the scenario tries again on new ports when it loses one) and T-3339 (servePprof picks the port and the test reads it from the log). Not fixed here: closedURL in dashboard_test.go counts on a closed port staying closed, and internal/components' devserver tests take a freePort() and close it; neither is a test of flai/cmd's MCP addresses.
 
 ## Remediation
+Closed 2026-11-13T22:05:35Z: S-0779: flai/cmd's tests now decide for themselves which ports are free and held. mcpAddrsFor and hostLauncher take the free-port check as a value, and the eight address tests give it a fake that holds what they say (T-3330, T-3331). The listen-failure test retries on a new port when 127.0.0.2 is lost (T-3332). The every-address test checks closure by what still accepts (T-3337). The host integration test retries on fresh ports (T-3338), and the profiles test lets servePprof pick its port (T-3339). The fifty-count `MCP|TheHost` race run then passed beside the whole package looping under race: 2050 passes in 779 s (T-3333).
