@@ -10,7 +10,7 @@ Building the agent images and running one story's Claude Code agent in a contain
 
 ## The images
 
-Two images, and a third when the project names a layer. This runbook runs the ones built on this machine from this repository's tree:
+Two images, and a third when the project names a layer. flai pulls or builds them on this host, in any project ([Build](#build)):
 
 | Image | What it holds |
 |-------|---------------|
@@ -18,7 +18,7 @@ Two images, and a third when the project names a layer. This runbook runs the on
 | `flai-agent-claude-code:local` | Claude Code from npm, at the version the Dockerfile pins, with Node and ripgrep, on the bedrock image. Auto-update is off: a new Claude Code is a rebuild. Dockerfile: `flai/images/claude-code/Dockerfile`. |
 | `flai-agent-<key>-claude-code:local` | The project's layer, on the claude-code image, when `system-flow.yaml` names its Dockerfile under `agent.image.layer`. This repository's is `flai-agent-sf-claude-code:local`, from `flai/images/system-flow/Dockerfile`: Go, golangci-lint, ShellCheck, and pnpm, the tools the close-out's tiers need ([docker.md](../../../design/tech/docker.md)). `go build` in it stamps VCS information, as on the host: for a story's worktree Go runs git in the main checkout, which git accepts only through the `safe.directory` the container is given, so a container started without it fails with `error obtaining VCS status: exit status 128` (I-0255). `scripts/agent-vcs-test.sh` checks it. |
 
-These are local: nothing pushes them. They are not stamped and not signed, unlike flai's releases ([release-key.md](release-key.md)). None holds a login, a key, or a token: the agent's credentials reach the container when it runs. The first two hold no Go, golangci-lint, pnpm, or markdownlint, so an agent in them cannot run this repository's close-out tiers that need them; the layer image holds the tiers' tools.
+An image built on this host is local: nothing pushes it. It is not stamped and not signed, unlike the published images below and flai's releases ([release-key.md](release-key.md)). None holds a login, a key, or a token: the agent's credentials reach the container when it runs. The first two hold no Go, golangci-lint, pnpm, or markdownlint, so an agent in them cannot run this repository's close-out tiers that need them; the layer image holds the tiers' tools.
 
 ### The published images
 
@@ -73,7 +73,7 @@ Run `flai image ensure` yourself, with Docker running, when:
 flai image ensure
 ```
 
-It makes each harness image the project's agents need, as `flai image status` lists them, that is missing or stale. A released flai pulls it by the index digest its release's signed list names, and refuses a list or an image that does not verify, building nothing in its place. When the release has no list, the release or the registry cannot be reached and no list is kept, or `docker pull` fails, it builds the image on this host from the Dockerfiles flai carries and the release's Linux `flai` and `pilot`, checked against the release's signed `checksums.txt`. A development flai, such as the one `scripts/flai.sh` builds from this tree, is never pulled for: in this repository it builds from the tree's own Dockerfiles and source, and elsewhere it refuses. Then, when `system-flow.yaml` names `agent.image.layer`, it builds the project's layer over the harness image, in any project, when the layer is missing or stale or its harness image was just pulled or built (S-0745). It says which way each image took, then prints the status lines, and exits non-zero when a harness image or the layer is still missing or stale.
+It makes each harness image the project's agents need, as `flai image status` lists them, that is missing or stale. A released flai pulls it by the index digest its release's signed list names, and refuses a list or an image that does not verify, building nothing in its place. When the release has no list, the release or the registry cannot be reached and no list is kept, or `docker pull` fails, it builds the image on this host from the Dockerfiles flai carries and the release's Linux `flai` and `pilot`, checked against the release's signed `checksums.txt`. A development flai, such as the one `scripts/flai.sh` builds from this tree, is never pulled for: in a checkout of flai's tree, such as this repository, it builds from the tree's own Dockerfiles and source, and elsewhere it refuses, unless you named a build command ([Your own images](#your-own-images)). Then, when `system-flow.yaml` names `agent.image.layer`, it builds the project's layer over the harness image, in any project, when the layer is missing or stale or its harness image was just pulled or built (S-0745). It says which way each image took, then prints the status lines, and exits non-zero when a harness image or the layer is still missing or stale.
 
 The layer's build runs from the project's root:
 
@@ -91,13 +91,37 @@ flai image build --layer
 
 It refuses when the harness image is not on this host, naming it and `flai image ensure`, and when the manifest names no layer.
 
-`make agent-images` is this repository's own build of all three images, from its tree. It is not how a missing image comes back: the image job or `flai image ensure` does that. From the repository root:
+### In this repository
+
+This repository's flai is a development build, the one `scripts/flai.sh` builds and the manifest's `flai.command` runs, so nothing is pulled for it. Its build command is `scripts/agent-image.sh`. Name it once on the host, as [Your own images](#your-own-images) describes:
+
+```bash
+flai serve agent image command --project <main checkout> -- scripts/agent-image.sh
+```
+
+The relative program resolves against the main checkout, where flai runs it. `flai guard` refuses this command to agents, so it is yours to run. Called by flai, the script builds from the tree exactly the images `FLAI_IMAGE_STALE` names, with the tags and recipe labels flai gives and the base labels of the images under them. Until you name it, flai's own build from the tree runs.
+
+To build all three images by hand, from the repository root:
 
 ```bash
 make agent-images
 ```
 
-It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. When the manifest names a layer, it then builds the layer image over them and prints `built flai-agent-<key>-claude-code:local`; `scripts/agent-image.sh --layer` builds the layer alone. The script passes the layer `GO_VERSION` from `flai/go.mod` and the tool pins from `scripts/install-tools.sh`, where flai passes only `agent.image.args`, which this repository does not name yet; S-0760 moves them onto `agent.image.args`, and until then the script stays the way to build this repository's layer with those pins. `scripts/agent-image.sh --tag` prints the image a story's agent runs in and builds nothing. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
+It runs `scripts/agent-image.sh` with no `FLAI_IMAGE_*` variables, and builds the images for flai `dev`:
+
+- `flai-agent-bedrock:dev`, also tagged `flai-agent-bedrock:local`;
+- `flai-agent-claude-code:local`, also tagged `flai-agent-claude-code:dev`;
+- the layer, `flai-agent-sf-claude-code:local`, with the build arguments `agent.image.args` names in `system-flow.yaml`.
+
+Each is labelled as flai labels its own build, so `flai image status` judges them current. flai does not compare a development flai's commit, so a commit rebuilds nothing: build again after a change to flai that the agent should have, or to move Claude Code to another version. An unchanged tree rebuilds from Docker's cache.
+
+The script takes three flags:
+
+| Flag | What it does |
+|------|--------------|
+| `--layer` | Builds the layer alone, over the `flai-agent-claude-code:local` already built |
+| `--tag` | Prints the image a story's agent runs in, and builds nothing |
+| `--check [S-nnnn]` | Checks the layer already built: it holds the tiers' tools, and the smoke tier passes inside it |
 
 Before it builds, the script asks the credential helper your Docker configuration names in `credsStore` (`$DOCKER_CONFIG/config.json`, else `~/.docker/config.json`) to list its logins, and waits ten seconds at most. Docker Desktop's helper, `desktop.exe`, cannot start from WSL while Windows interop is not answering, and a build would then stop at the first base image with `error getting credentials` ([I-0339](../../../design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md)). When the helper is not on `PATH`, fails, or does not answer, the script prints one line naming it and builds with no login, from a scratch Docker configuration that keeps your current context and links the other entries of your configuration's folder, such as `cli-plugins`, `contexts`, and `buildx`. The base images are public, so they pull anonymously. Your `config.json` is not changed, and the scratch configuration is removed when the script ends. A working helper, or none named, leaves the build as it was.
 
@@ -175,7 +199,7 @@ They are not the same thing. Your command makes the images flai would make, with
 ## What the run needs on the host
 
 - Docker. S-0505 ran on Docker Desktop with WSL2 integration; a native Docker Engine host was not tried. There the MCP server must also listen on the bridge's gateway, since the engine routes `host.docker.internal` to it. `mcp.bind`'s default, `auto`, does so at each server start, and `flai serve` refuses its own container starts while the server does not ([ADR-0293](../../../design/adrs/0293-mcp-bind-holds-one-address-or-several-or-auto-the-default-which-flai-host.md)), but this script makes no such check.
-- The images, made as above with `flai image ensure`, or `make agent-images` in this repository: the scripts run outside `flai serve`, so no image job makes them.
+- The images, made as above with `flai image ensure`, in this repository with `make agent-images` too: the scripts run outside `flai serve`, so no image job makes them.
 - The story started, so that its worktree exists: `flai story start S-nnnn`.
 - The project's HTTP MCP server running: `flai host` runs one for every project `flai serve` serves, or start it with `flai mcp start` ([MCP over HTTP](../index.md#mcp-over-http)). `flai mcp status` says where it listens.
 - `flai mcp token` answering the server's bearer token. The script reads it with the installed `flai` on `PATH`, not this tree's `bin/flai`; set `FLAI_BIN` to use another.

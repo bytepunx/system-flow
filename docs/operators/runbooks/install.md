@@ -87,26 +87,16 @@ If the script refuses the release, it says why: `openssl` is missing, the releas
 Only if a story's agent is to run on the `container` harness ([In a container](../../users/flai.md#in-a-container-the-container-harness)). It needs Docker Engine on the `PATH` `flai serve` runs with, the agent images, and your Claude login on this host.
 
 1. Sign in to Claude Code on the host with `claude`, so that `~/.claude/.credentials.json` exists.
-2. Build the images, in a checkout of system-flow's repository, with Docker running:
+2. Get the images. You need do nothing: `flai serve`'s image job makes a missing or stale image before a start that needs it, and holds the start until it ends. To make them before the first start, or for a start outside `flai serve`, run this from the project's root, with Docker running:
 
    ```bash
-   make agent-images     # flai-agent-bedrock:local and flai-agent-claude-code:local, then the project's layer
+   flai image ensure         # pull, else build, the harness images, then the project's layer
+   flai image build --layer  # after a change to the layer alone
    ```
 
-   They are built on this machine, from the checked-out tree ([Run a story's agent in a container](agent-container.md#build)). Each flai release also publishes signed images to GHCR, which flai does not pull yet ([the published images](agent-container.md#the-published-images)). When the checkout's `system-flow.yaml` names a Dockerfile under `agent.image.layer`, the same command builds it last, over `flai-agent-claude-code:local`, as `flai-agent-<key>-claude-code:local` ([settings](../settings.md#project-manifest)). In system-flow's repository that is `flai-agent-sf-claude-code:local`, with the tools its tests run, about 1.56 GB; its first build also downloads the Go and ShellCheck images, golangci-lint's source, and flai's modules. After a change to the layer alone, rebuild just it:
+   A released flai pulls `flai-agent-bedrock` and `flai-agent-claude-code` by the digests its release's signed lists name ([the published images](agent-container.md#the-published-images)). When the pull fails, it builds them on this host from the Dockerfiles it carries. When `system-flow.yaml` names a Dockerfile under `agent.image.layer`, it then builds it over the harness image, with the build arguments `agent.image.args` gives, as `flai-agent-<key>-claude-code:local` ([settings](../settings.md#project-manifest)). To use a build command of your own, or to turn the job off, see [Your own images](agent-container.md#your-own-images). `flai check` warns `agent.image` until the images are built on this host.
 
-   ```bash
-   scripts/agent-image.sh --layer     # over the flai-agent-claude-code:local already built
-   ```
-
-   A project of your own that names a layer has no `make agent-images`. From its root, `flai image ensure` makes the harness images and then builds its layer over them, with the build arguments `agent.image.args` gives, as `flai-agent-<key>-claude-code:local`, the tag `flai serve` looks for; after a change to the layer alone, `flai image build --layer` builds just it ([Run a story's agent in a container](agent-container.md#build)):
-
-   ```bash
-   flai image ensure
-   flai image build --layer
-   ```
-
-   `flai check` warns `agent.image` until the layer's image is built on this host.
+   In system-flow's repository, flai is a development build, so nothing is pulled. Its build command is `scripts/agent-image.sh`, and `make agent-images` builds all three images by hand ([In this repository](agent-container.md#in-this-repository)). Its layer, `flai-agent-sf-claude-code:local`, holds the tools its tests run, about 1.56 GB. Its first build also downloads the Go and ShellCheck images, golangci-lint's source, and flai's modules.
 3. Name the folder of your login, which the container mounts read-only:
 
    ```bash

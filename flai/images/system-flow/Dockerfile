@@ -1,8 +1,8 @@
 # flai-agent-sf-claude-code: this repository's layer over the claude-code harness image (S-0510,
 # ADR-0203), named by system-flow.yaml's agent.image.layer. It carries the tools the manifest's test
 # tiers run, so that flai test and scripts/close-out.sh run inside the agent's container: Go at
-# flai/go.mod's version with gcc and musl-dev for -race, golangci-lint v2 built with that Go,
-# ShellCheck, pnpm on the base image's Node 24, and for the smoke tier's install test curl, openssl,
+# the version agent.image.args names, flai/go.mod's, with gcc and musl-dev for -race, golangci-lint
+# v2 built with that Go, ShellCheck, pnpm on the base image's Node 24, and for the smoke tier's install test curl, openssl,
 # and GoReleaser (I-0281). Build it after the harness image, and check it:
 #   flai image build --layer            (or scripts/agent-image.sh --layer; make agent-images builds all three)
 #   scripts/agent-image.sh --check      (runs the smoke tier inside it)
