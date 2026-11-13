@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/closeout"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -1280,5 +1281,132 @@ func TestPathWithinTheRolesCacheFolders(t *testing.T) {
 		if got := pathWithin(dir, path); got != want {
 			t.Errorf("pathWithin(%s, %s) = %v, want %v", dir, path, got, want)
 		}
+	}
+}
+
+// verifyKlusterGit is verifyGit with S-004's branch at head, which the
+// kluster step judges the namespace's record against.
+type verifyKlusterGit struct {
+	verifyGit
+	head string
+}
+
+func (g verifyKlusterGit) Run(dir, name string, args ...string) (string, error) {
+	if strings.Join(args, " ") == "rev-parse --verify --quiet refs/heads/story/S-004^{commit}" {
+		return g.head + "\n", nil
+	}
+	return g.verifyGit.Run(dir, name, args...)
+}
+
+func (g verifyKlusterGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+// verifyKlusterFixture is verifyFixture whose main checkout's manifest has
+// a kluster: block naming a deploy, with the kluster and checks host actions
+// on for it. It answers the main checkout.
+func verifyKlusterFixture(t *testing.T) string {
+	t.Helper()
+	root, _ := verifyFixture(t, "exit 0")
+	appendFile(t, filepath.Join(root, "system-flow.yaml"), "kluster:\n  config: integration/kluster.yaml\n  deploy: [scripts/deploy.sh]\n")
+	cfg, err := json.Marshal(map[string]any{"host_actions": map[string][]string{"kluster": {root}, "checks": {root}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(configOf(t), cfg, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// verifyKlusterRecord writes S-004's namespace's record under root: a
+// deploy at commit that ended outcome, asked for by its agent, with a checks
+// run at the same commit that ended checks when it is set.
+func verifyKlusterRecord(t *testing.T, root, commit, outcome, checks string) {
+	t.Helper()
+	ended := time.Date(2026, 11, 13, 9, 30, 0, 0, time.UTC)
+	r := kluster.Record{Story: "S-004", Namespace: "s-004", Commit: commit, Outcome: outcome, AskedBy: "agent-S-004",
+		StartedAt: ended.Add(-2 * time.Minute), EndedAt: ended,
+		Steps: []kluster.Step{{Name: kluster.StepDeploy, Outcome: outcome, Log: kluster.LogPath(root, "s-004", kluster.StepDeploy)}}}
+	if outcome == kluster.OutcomeFailed {
+		r.FailedStep, r.ExitCode, r.Error = kluster.StepDeploy, 2, "deploy: exit status 2"
+	}
+	if checks != "" {
+		r.ChecksCommit, r.ChecksOutcome, r.ChecksLog = commit, checks, "/logs/checks.log"
+	}
+	data, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := kluster.RecordPath(root, "s-004")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ADR-0292 §6: in a project whose kluster: block names a deploy, the
+// close-out's kluster step reads the namespace's record against the head and
+// keeps it in the report, which --last prints after the verdict and --json
+// carries; a deploy that failed at the head stops the run there, and one at
+// an older commit passes, not at the head.
+func TestVerifyLastPrintsTheNamespacesDeployAndChecksRun(t *testing.T) {
+	t.Parallel()
+	root := verifyKlusterFixture(t)
+	git := verifyKlusterGit{head: "0123abc4567"}
+	verifyKlusterRecord(t, root, "0123abc4567", kluster.OutcomePassed, kluster.OutcomePassed)
+
+	out, errOut, code := runVerify(t, root, git, "verify", "S-004")
+	if code != 0 || !strings.Contains(out, "\npassed check (") || !strings.Contains(out, "\npassed kluster (") ||
+		!strings.Contains(out, "\n    S-004's namespace s-004 is deployed and checked at the head 0123abc4567\npassed tier unit (") {
+		t.Fatalf("exit %d, want 0 with the kluster step after the check\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runVerify(t, root, git, "verify", "S-004", "--last")
+	want := "verify: S-004 passed every step\n" +
+		"kluster: S-004's namespace s-004 is deployed and checked at the head 0123abc4567\n" +
+		"    deploy at 0123abc: passed, asked by agent-S-004, ended 2026-11-13T09:30:00Z, at the head\n" +
+		"    checks at 0123abc: passed, log /logs/checks.log, at the head\n"
+	if code != 0 || !strings.HasSuffix(out, want) {
+		t.Errorf("--last: exit %d, want it to end\n%s\ngot\n%s%s", code, want, out, errOut)
+	}
+	out, errOut, code = runVerify(t, root, git, "verify", "S-004", "--last", "--json")
+	var last verify.Report
+	if err := json.Unmarshal([]byte(out), &last); err != nil || code != 0 {
+		t.Fatalf("--last --json: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if k := last.Kluster; k == nil || !k.Passed || k.Deploy == nil || k.Deploy.Commit != "0123abc4567" || k.Deploy.Outcome != kluster.OutcomePassed ||
+		k.Deploy.AskedBy != "agent-S-004" || !k.Deploy.Head.AtHead || k.Checks == nil || k.Checks.Outcome != kluster.OutcomePassed || k.Checks.Log != "/logs/checks.log" {
+		t.Errorf("--last --json kluster part %+v", last.Kluster)
+	}
+	if !strings.Contains(out, `"kluster": {`) || !strings.Contains(out, `"checks_on": true`) {
+		t.Errorf("--last --json lacks the kluster part:\n%s", out)
+	}
+
+	verifyKlusterRecord(t, root, "0123abc4567", kluster.OutcomeFailed, "")
+	out, errOut, code = runVerify(t, root, git, "verify", "S-004", "--fresh")
+	if code != 1 || !strings.Contains(out, "\nfailed kluster (") || !strings.Contains(out, "flai kluster log S-004 --step deploy") ||
+		!strings.Contains(out, "\nnot-reached tier unit\n") || lastLine(out) != "verify: S-004 stopped at kluster (failed)" {
+		t.Errorf("failed at the head: exit %d, want 1 stopped at kluster\n%s%s", code, out, errOut)
+	}
+	out, _, _ = runVerify(t, root, git, "verify", "S-004", "--last")
+	want = "verify: S-004 stopped at kluster (failed)\n" +
+		"kluster: S-004's namespace s-004 is not deployed at the head 0123abc4567: its last deploy there failed at the deploy step\n" +
+		"    deploy at 0123abc: failed at the deploy step (exit 2), asked by agent-S-004, ended 2026-11-13T09:30:00Z, log " + kluster.LogPath(root, "s-004", kluster.StepDeploy) + ", at the head\n" +
+		"    checks: none ended since the deploy\n"
+	if !strings.HasSuffix(out, want) {
+		t.Errorf("--last after a failure at the head: want it to end\n%s\ngot\n%s", want, out)
+	}
+
+	verifyKlusterRecord(t, root, "fedcba9876543", kluster.OutcomeFailed, "")
+	out, errOut, code = runVerify(t, root, git, "verify", "S-004", "--fresh")
+	if code != 0 || !strings.Contains(out, "\npassed kluster (") || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("failed at an older commit: exit %d, want 0\n%s%s", code, out, errOut)
+	}
+	out, _, _ = runVerify(t, root, git, "verify", "S-004", "--last")
+	if want := "    deploy at fedcba9: failed at the deploy step (exit 2), asked by agent-S-004, ended 2026-11-13T09:30:00Z, log " + kluster.LogPath(root, "s-004", kluster.StepDeploy) +
+		", not at the head: fedcba987654 is not in the history of the head 0123abc4567: the branch was rebased or reset since\n"; !strings.Contains(out, want) {
+		t.Errorf("--last at an older commit lacks\n%s\n%s", want, out)
 	}
 }

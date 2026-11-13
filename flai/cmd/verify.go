@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -263,6 +264,9 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		opts.QueueOff = a.queueOff(mainRootOf(repo))
 		opts.LeaveToQueue = opts.QueueOff == ""
 	}
+	if !o.syncOnly {
+		opts.KlusterOn, opts.ChecksOn = a.verifyKlusterActions(mainRootOf(repo))
+	}
 	var rep verify.Report
 	stopped := false
 	if o.syncOnly {
@@ -308,6 +312,23 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		return &exitError{code: 1}
 	}
 	return nil
+}
+
+// verifyKlusterActions reports whether the kluster host action is on for the
+// project whose main checkout is root, and the checks host action, in the
+// configuration this flai reads, for the kluster step (ADR-0292 §6). A
+// configuration that cannot be read is warned of and turns both off, which
+// the step passes, as queueOff turns the merge queue off for it.
+func (a *app) verifyKlusterActions(root string) (klusterOn, checksOn bool) {
+	klusterOn, err := a.hostActionOn(hostapi.ActionKluster, root)
+	if err == nil && klusterOn {
+		checksOn, err = a.hostActionOn(hostapi.ActionChecks, root)
+	}
+	if err != nil {
+		a.logger().Warn("configuration unreadable, so the kluster step reads no namespace", "component", "verify", "err", err.Error())
+		return false, false
+	}
+	return klusterOn, checksOn
 }
 
 // storyWorktree is the story's canonical ID and its worktree under
@@ -366,7 +387,68 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 	}
 	fmt.Fprintf(a.out, "last verified %s at %s against %s\n", rep.RanAt.Format(time.RFC3339), shortCommit(rep.Commit), rep.Base)
 	fmt.Fprint(a.out, verifyText(rep, nil, false, maxNotes))
+	if rep.Kluster != nil {
+		fmt.Fprint(a.out, verifyKlusterText(*rep.Kluster))
+	}
 	return nil
+}
+
+// verifyKlusterText is the kluster part of a stored report as flai verify
+// --last prints it after the verdict: a line saying what was deployed and
+// checked at the head, or why not, then the deploy's line, its commit,
+// outcome, who asked, when it ended, and whether it is at the head, and the
+// checks run's, its commit, outcome, log, and the same.
+func verifyKlusterText(e kluster.Evidence) string {
+	var b strings.Builder
+	b.WriteString("kluster: " + e.Summary() + "\n")
+	if d := e.Deploy; d != nil {
+		fmt.Fprintf(&b, "    %s at %s: %s", d.Job, shortCommit(d.Commit), d.Said)
+		if d.ExitCode != 0 {
+			fmt.Fprintf(&b, " (exit %d)", d.ExitCode)
+		}
+		asked := "asked in a shell"
+		if d.AskedBy != "" {
+			asked = "asked by " + d.AskedBy
+		}
+		b.WriteString(", " + asked)
+		if !d.EndedAt.IsZero() {
+			b.WriteString(", ended " + d.EndedAt.UTC().Format(time.RFC3339))
+		}
+		for _, s := range d.Steps {
+			if s.Name == d.FailedStep && s.Log != "" {
+				b.WriteString(", log " + s.Log)
+			}
+		}
+		b.WriteString(", " + verifyKlusterHeadText(d.Head) + "\n")
+	} else {
+		b.WriteString("    deploy: none recorded\n")
+	}
+	switch c := e.Checks; {
+	case c != nil:
+		fmt.Fprintf(&b, "    checks at %s: %s", shortCommit(c.Commit), c.Outcome)
+		if c.Log != "" {
+			b.WriteString(", log " + c.Log)
+		}
+		b.WriteString(", " + verifyKlusterHeadText(c.Head) + "\n")
+	case e.ChecksOn:
+		b.WriteString("    checks: none ended since the deploy\n")
+	default:
+		b.WriteString("    checks: none ended; the checks host action is off\n")
+	}
+	return b.String()
+}
+
+// verifyKlusterHeadText says how a record's commit stands to the head: at
+// it, at it but for changes under the design, docs, and wip folders, or not,
+// and why.
+func verifyKlusterHeadText(j kluster.HeadJudgement) string {
+	switch {
+	case j.Exact:
+		return "at the head"
+	case j.AtHead:
+		return "at the head " + shortCommit(j.Head) + " but for changes under the design, docs, and wip folders"
+	}
+	return "not at the head: " + j.Why
 }
 
 // verifyText is the report as flai verify prints it: a line for each step,

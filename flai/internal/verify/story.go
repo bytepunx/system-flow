@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -31,6 +32,10 @@ const (
 	StepSync      = "sync"
 	StepNarrative = "narrative"
 	StepCheck     = "check"
+	// StepKluster reads the story's kluster namespace's record against its
+	// head and runs nothing; it is a step only while the main checkout's
+	// manifest has a kluster: block (ADR-0292 §6).
+	StepKluster = "kluster"
 )
 
 // StoryEnv names the variable a story's tiers run with set to the story, so
@@ -81,6 +86,10 @@ type StoryOptions struct {
 	// not leave to the queue, with it. "" when the queue can batch, or the
 	// caller asked for every tier (S-0466).
 	QueueOff string
+	// KlusterOn and ChecksOn say whether the kluster and checks host actions
+	// are on for the project, as the kluster step reads the story's
+	// namespace's record under them (ADR-0292 §6).
+	KlusterOn, ChecksOn bool
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -142,6 +151,12 @@ type Report struct {
 	// answered without running any step: RanAt and the durations are those of
 	// the run the record kept (ADR-0229).
 	FromRecord bool `json:"from_record,omitempty"`
+	// Kluster is what the kluster step read of the story's namespace: its
+	// last deploy and checks run, their commits and outcomes, and whether
+	// each is at the head (ADR-0292 §6); nil while none applies, the step was
+	// not reached, or the project has no kluster: block, and in a report
+	// stored before it was kept.
+	Kluster *kluster.Evidence `json:"kluster,omitempty"`
 }
 
 // Step is what one step of Verify did.
@@ -208,7 +223,10 @@ type Note struct {
 // report: no rebase is unfinished, the branch contains Base but for commits
 // that change only wip paths the branch does not change, the narrative's
 // Current state and Next steps are written, flai check --strict scoped to the
-// story passes, and then each tier the branch's changes select (SelectStory)
+// story passes, while the main checkout's manifest has a kluster: block the
+// story's namespace's deploy and checks run did not fail at its head (the
+// kluster step, which runs nothing and keeps what it read as the report's
+// Kluster), and then each tier the branch's changes select (SelectStory)
 // passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
 // step that fails; the steps after it are not reached, but for a tier that
 // another selected tier covers, which is skipped either way. With
@@ -423,10 +441,14 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	// rebase; the steps below find what is wrong with the branch
 	v.mergeBase, v.patch, _ = BranchPatch(v.opts.Git, v.worktree, v.base, v.generated())
 	rep := v.newReport(start)
-	v.runSteps(&rep, append(v.syncSteps(),
+	steps := append(v.syncSteps(),
 		storyStep{StepNarrative, v.narrative},
 		storyStep{StepCheck, func() []Finding { return v.check(&rep) }},
-	))
+	)
+	if s, ok := v.klusterStep(&rep); ok {
+		steps = append(steps, s)
+	}
+	v.runSteps(&rep, steps)
 	selected, queued, fp := v.selection()
 	if !v.opts.LeaveToQueue {
 		rep.QueueOff = queueOffText(selected, v.opts.QueueOff)
