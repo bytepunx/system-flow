@@ -263,6 +263,33 @@ func TestAgentImage(t *testing.T) {
 	if def.Same(&Agent{Harness: "claude-code", Model: "claude-opus-5-5"}) || def.Same(&Agent{Harness: "claude-code", Model: "claude-opus-5-5", Image: &AgentImage{Layer: "other/Dockerfile"}}) {
 		t.Error("Same does not compare images")
 	}
+	// S-0745: the args are compared, and copied rather than shared.
+	withArgs := func(args map[string]string) *Agent {
+		return &Agent{Image: &AgentImage{Layer: "Dockerfile", Args: args}}
+	}
+	for _, c := range []struct {
+		name string
+		a, b map[string]string
+		same bool
+	}{
+		{"the same args", map[string]string{"GO_VERSION": "1.26.0"}, map[string]string{"GO_VERSION": "1.26.0"}, true},
+		{"no args either side", nil, map[string]string{}, true},
+		{"another value", map[string]string{"GO_VERSION": "1.26.0"}, map[string]string{"GO_VERSION": "1.25.0"}, false},
+		{"another name", map[string]string{"GO_VERSION": "1.26.0"}, map[string]string{"GO": "1.26.0"}, false},
+		{"args on one side", map[string]string{"GO_VERSION": "1.26.0"}, nil, false},
+	} {
+		if got := withArgs(c.a).Same(withArgs(c.b)); got != c.same {
+			t.Errorf("%s: Same = %v, want %v", c.name, got, c.same)
+		}
+	}
+	args := withArgs(map[string]string{"GO_VERSION": "1.26.0"})
+	for name, c := range map[string]*Agent{"clone": args.Clone(), "OrBuiltin": args.OrBuiltin()} {
+		c.Image.Args["GO_VERSION"] = "0"
+		if args.Image.Args["GO_VERSION"] != "1.26.0" {
+			t.Errorf("%s shares the args", name)
+		}
+		args.Image.Args["GO_VERSION"] = "1.26.0"
+	}
 	for _, c := range []struct {
 		name string
 		got  *Agent
@@ -300,11 +327,26 @@ func TestAgentImageProblems(t *testing.T) {
 		{"agent", &AgentImage{Layer: `images\Dockerfile`}, `agent image layer "images\\Dockerfile" is not a clean path; write it with forward slashes`},
 		{"agent", &AgentImage{Layer: "images/\nDockerfile"}, "agent image layer spans lines"},
 		{"planning.agent", &AgentImage{Layer: "Dockerfile"}, "planning.agent image is the project's alone; name the layer under agent.image"},
+		// S-0745, ADR-0295: args beside the layer, ARG names other than BASE,
+		// with literal values on one line.
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"GO_VERSION": "1.26.0", "_pnpm2": "10.34.5", "EMPTY": ""}}, ""},
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"GO-VERSION": "1.26.0"}}, `agent image args name "GO-VERSION" is not a Dockerfile ARG name such as GO_VERSION`},
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"2GO": "1"}}, `agent image args name "2GO" is not a Dockerfile ARG name`},
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"BASE": "debian"}}, "agent image args set BASE, which flai sets to the harness image it builds the layer over; leave BASE out of agent.image.args"},
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"GO_VERSION": "1.26.0\nRUN x"}}, "agent image args GO_VERSION spans lines; write its value in agent.image.args as one literal line"},
+		{"agent", &AgentImage{Args: map[string]string{"GO_VERSION": "1.26.0"}}, "agent image args name no layer to build; name its Dockerfile with agent.image.layer"},
+		{"agent", &AgentImage{Layer: "Dockerfile", Args: map[string]string{"Z-1": "", "BASE": "x", "A-1": ""}}, `agent image args set BASE, which flai sets to the harness image it builds the layer over; leave BASE out of agent.image.args; agent image args name "Z-1"`},
+		{"agent", &AgentImage{Layer: "/srv/Dockerfile", Args: map[string]string{"BASE": "x"}}, `agent image layer "/srv/Dockerfile" is an absolute path`},
 	} {
 		got := strings.Join((&Agent{Image: c.layer}).problems(c.what), "; ")
 		if c.want == "" && got != "" || !strings.Contains(got, c.want) {
-			t.Errorf("%s %q: got %q, want %q", c.what, c.layer.Layer, got, c.want)
+			t.Errorf("%s %q %v: got %q, want %q", c.what, c.layer.Layer, c.layer.Args, got, c.want)
 		}
+	}
+	// Each problem is reported by name, in order, the layer's first.
+	got := (&Agent{Image: &AgentImage{Layer: "/srv/Dockerfile", Args: map[string]string{"Z-1": "", "BASE": "x", "A-1": ""}}}).problems("agent")
+	if len(got) != 4 || !strings.Contains(got[0], "absolute path") || !strings.Contains(got[1], `"A-1"`) || !strings.Contains(got[2], "BASE") || !strings.Contains(got[3], `"Z-1"`) {
+		t.Errorf("problems in order: %q", got)
 	}
 }
 
@@ -317,6 +359,7 @@ func TestWriteAgentKeepsTheImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	image := &AgentImage{Layer: "images/agent/Dockerfile"}
+	argsImage := &AgentImage{Layer: "images/agent/Dockerfile", Args: map[string]string{"GO_VERSION": "1.26.0", "PNPM_VERSION": "10.34.5", "NODE": "true"}}
 	for _, c := range []struct {
 		name  string
 		write *Agent
@@ -326,6 +369,8 @@ func TestWriteAgentKeepsTheImage(t *testing.T) {
 		{"an agent set without one", &Agent{Model: "claude-opus-5-5"}, &Agent{Model: "claude-opus-5-5", Image: image}},
 		{"the agent cleared", nil, &Agent{Image: image}},
 		{"another image", &Agent{Harness: "claude-code", Image: &AgentImage{Layer: "Dockerfile"}}, &Agent{Harness: "claude-code", Image: &AgentImage{Layer: "Dockerfile"}}},
+		{"an image with args", &Agent{Image: argsImage}, &Agent{Image: argsImage}},
+		{"an agent set beside args", &Agent{Model: "claude-opus-5-5"}, &Agent{Model: "claude-opus-5-5", Image: argsImage}},
 	} {
 		if err := WriteAgent(path, c.write); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
@@ -336,7 +381,9 @@ func TestWriteAgentKeepsTheImage(t *testing.T) {
 			t.Errorf("%s: read back %+v, %v, from:\n%s", c.name, m.Agent, err, data)
 		}
 	}
-	if err := WriteAgent(path, &Agent{Image: &AgentImage{Layer: "/abs/Dockerfile"}}); err == nil {
-		t.Error("an invalid image was written")
+	for _, bad := range []*AgentImage{{Layer: "/abs/Dockerfile"}, {Layer: "Dockerfile", Args: map[string]string{"BASE": "x"}}} {
+		if err := WriteAgent(path, &Agent{Image: bad}); err == nil {
+			t.Errorf("an invalid image was written: %+v", bad)
+		}
 	}
 }

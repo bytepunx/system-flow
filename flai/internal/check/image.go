@@ -3,8 +3,10 @@ package check
 import (
 	"bufio"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/agentimage"
@@ -65,13 +67,16 @@ func HostImages(main string) map[string]string {
 // images and the layer built over claude-code's) that is not on this host or
 // is stale (ADR-0295), a warning --strict passes over, since only building
 // it clears it, which no story branch does; each names flai image status.
+// Each name agent.image.args gives that no ARG of the layer declares is a
+// warning on its line, which a story can fix.
 // The host's own images, named with --image, are never judged. When docker
 // is not on PATH or cannot say, or the images cannot be judged, it adds a
 // note --strict passes over that the images went unchecked. Those are marked
 // unchecked, with the manifest and the layer as the paths whose change
 // brings them inside a story, so a check scoped to a story that changes
-// neither leaves them out (ADR-0255, I-0264); the warning for a layer that
-// is not a file is not, since a story can fix it. A manifest naming no
+// neither leaves them out (ADR-0255, I-0264); the warnings for a layer that
+// is not a file and for an undeclared arg are not, since a story can fix
+// them. A manifest naming no
 // layer gets nothing. The caller supplies the probe so this package runs no
 // commands (S-0510).
 func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
@@ -94,10 +99,12 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 		}
 	}
 	// The manifest's own check keeps layer a clean path inside the repository.
-	if st, err := os.Stat(filepath.Join(repo.Root, filepath.FromSlash(layer))); err != nil || st.IsDir() {
+	dockerfile := filepath.Join(repo.Root, filepath.FromSlash(layer))
+	if st, err := os.Stat(dockerfile); err != nil || st.IsDir() {
 		add(false, "agent.image.layer names "+layer+", which is not a file: fix the path in "+manifest.File+" or add the Dockerfile, then build its image with `make agent-images`")
 		return
 	}
+	undeclaredArgs(res, mf, layer, dockerfile, repo.Manifest.LayerArgs())
 	// The main checkout, as flai serve and flai image status judge the images
 	// from it: the layer's Dockerfile, the project's flai, and the host's
 	// images there, so a check in a story's worktree judges them the same.
@@ -171,16 +178,123 @@ func imageFinding(s agentimage.Status, layer string) string {
 	return ""
 }
 
+// undeclaredArgs adds an agent.image warning, on its line of the manifest at
+// mf, for each of args the layer's Dockerfile declares with no ARG, which the
+// build would pass to nothing; a story can fix it, so it is not advisory.
+func undeclaredArgs(res *Result, mf, layer, dockerfile string, args map[string]string) {
+	if len(args) == 0 {
+		return
+	}
+	add := func(line int, msg string) {
+		res.Findings = append(res.Findings, Finding{Level: Warning, Rule: "agent.image", Path: manifest.File, Line: line, Message: msg})
+		res.Warnings++
+	}
+	data, err := os.ReadFile(dockerfile)
+	if err != nil {
+		add(layerLine(mf), "agent.image.args are not checked against the layer "+layer+": "+firstLine(err.Error())+"; make the Dockerfile readable")
+		return
+	}
+	declared := dockerfileArgs(data)
+	for _, n := range slices.Sorted(maps.Keys(args)) {
+		if !declared[n] {
+			add(argLine(mf, n), "agent.image.args names "+n+", which no ARG of the layer "+layer+" declares, so its build would not use it: add `ARG "+n+"` to the Dockerfile, or leave "+n+" out of agent.image.args in "+manifest.File)
+		}
+	}
+}
+
+// dockerfileArgs are the names the ARG instructions of a Dockerfile declare,
+// in any stage: ARG NAME and ARG NAME=default, several on one instruction,
+// over continued lines, with comment lines left out.
+func dockerfileArgs(data []byte) map[string]bool {
+	out := map[string]bool{}
+	var logical strings.Builder
+	flush := func() {
+		fields := dockerfileFields(logical.String())
+		logical.Reset()
+		if len(fields) < 2 || !strings.EqualFold(fields[0], "ARG") {
+			return
+		}
+		for _, f := range fields[1:] {
+			name, _, _ := strings.Cut(f, "=")
+			out[name] = true
+		}
+	}
+	for _, l := range strings.Split(string(data), "\n") {
+		l = strings.TrimRight(l, " \t\r")
+		if strings.HasPrefix(strings.TrimSpace(l), "#") {
+			continue
+		}
+		if cont, ok := strings.CutSuffix(l, `\`); ok {
+			logical.WriteString(cont + " ")
+			continue
+		}
+		logical.WriteString(l)
+		flush()
+	}
+	flush()
+	return out
+}
+
+// dockerfileFields splits an instruction at its blanks, keeping a quoted
+// value whole.
+func dockerfileFields(s string) []string {
+	var fields []string
+	var cur strings.Builder
+	var quote rune
+	for _, r := range s {
+		switch {
+		case quote != 0:
+			if r == quote {
+				quote = 0
+			}
+			cur.WriteRune(r)
+		case r == '"' || r == '\'':
+			quote = r
+			cur.WriteRune(r)
+		case r == ' ' || r == '\t':
+			if cur.Len() > 0 {
+				fields = append(fields, cur.String())
+				cur.Reset()
+			}
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	if cur.Len() > 0 {
+		fields = append(fields, cur.String())
+	}
+	return fields
+}
+
 // layerLine returns the 1-based line of layer: under agent: and image: in a
 // manifest as flai writes it, or 1.
 func layerLine(path string) int {
+	layer, _ := imageLines(path, "")
+	return layer
+}
+
+// argLine returns the 1-based line of name's entry under agent.image.args in
+// a manifest as flai writes it, else layerLine's.
+func argLine(path, name string) int {
+	layer, entry := imageLines(path, name)
+	if entry == 0 {
+		return layer
+	}
+	return entry
+}
+
+// imageLines are the 1-based lines of layer: under agent: and image: in the
+// manifest at path, or 1, and of arg's entry under its args:, or 0.
+func imageLines(path, arg string) (layer, entry int) {
+	layer = 1
 	f, err := os.Open(path)
 	if err != nil {
-		return 1
+		return layer, 0
 	}
 	defer func() { _ = f.Close() }()
 	sc := bufio.NewScanner(f)
-	agent, image, n := false, false, 0
+	agent, image, args, foundLayer := false, false, false, false
+	child, n := 0, 0
 	for sc.Scan() {
 		n++
 		l := sc.Text()
@@ -191,14 +305,21 @@ func layerLine(path string) int {
 		indent := len(l) - len(strings.TrimLeft(l, " "))
 		switch {
 		case indent == 0:
-			agent, image = strings.HasPrefix(l, "agent:"), false
+			agent, image, args = strings.HasPrefix(l, "agent:"), false, false
 		case agent && indent == 2:
-			image = strings.HasPrefix(trimmed, "image:")
-		case agent && image && strings.HasPrefix(trimmed, "layer:"):
-			return n
+			image, args, child = strings.HasPrefix(trimmed, "image:"), false, 0
+		case agent && image && (child == 0 || indent <= child):
+			// A key of image itself, at the indent of its first.
+			child = indent
+			args = strings.HasPrefix(trimmed, "args:")
+			if !foundLayer && strings.HasPrefix(trimmed, "layer:") {
+				layer, foundLayer = n, true
+			}
+		case args && arg != "" && entry == 0 && strings.HasPrefix(trimmed, arg+":"):
+			entry = n
 		}
 	}
-	return 1
+	return layer, entry
 }
 
 // firstLine is s up to its first newline.

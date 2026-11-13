@@ -39,13 +39,23 @@ type Agent struct {
 // AgentImage is the project's say about the image its agents run in
 // (S-0510, ADR-0203's one layer a project may add): Layer is a Dockerfile,
 // relative to the repository root, built over the harness's image with the
-// tools the project's test tiers need.
+// tools the project's test tiers need. Args are literal values for the
+// layer's build arguments, each over the default its ARG gives in the
+// Dockerfile, which keeps the pins (ADR-0295); flai sets BASE itself.
 type AgentImage struct {
-	Layer string `yaml:"layer,omitempty" json:"layer,omitempty"`
+	Layer string            `yaml:"layer,omitempty" json:"layer,omitempty"`
+	Args  map[string]string `yaml:"args,omitempty" json:"args,omitempty"`
 }
 
 // exampleLayer is the Dockerfile a problem with agent.image.layer suggests.
 const exampleLayer = "images/agent/Dockerfile"
+
+// BaseArg is the layer's build argument flai sets to the harness image it
+// builds the layer over, which agent.image.args may not name.
+const BaseArg = "BASE"
+
+// argPattern is a Dockerfile ARG name.
+var argPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // Role is the agent for one role of a story's work other than the story's
 // own: what a sub-agent in that role runs (S-0189).
@@ -127,15 +137,25 @@ func (a *Agent) problems(what string) []string {
 
 // problems are what is wrong with the image under the block what: an image
 // only the project's agent names, which names a layer that is a clean path
-// inside the repository on one line.
+// inside the repository on one line, and args only beside a layer, each an
+// ARG name other than BASE with a value on one line.
 func (i *AgentImage) problems(what string) []string {
 	switch {
 	case i == nil:
 		return nil
 	case what != "agent":
 		return []string{fmt.Sprintf("%s image is the project's alone; name the layer under agent.image in %s, or leave it out here", what, File)}
-	case i.Layer == "":
+	case i.Layer == "" && len(i.Args) == 0:
 		return []string{fmt.Sprintf("%s image sets nothing; name a Dockerfile with layer, such as %s, or leave image out", what, exampleLayer)}
+	case i.Layer == "":
+		return []string{fmt.Sprintf("%s image args name no layer to build; name its Dockerfile with %s.image.layer, such as %s, or leave %s.image.args out", what, what, exampleLayer, what)}
+	}
+	return append(i.layerProblems(what), i.argProblems(what)...)
+}
+
+// layerProblems are what is wrong with the layer's path under the block what.
+func (i *AgentImage) layerProblems(what string) []string {
+	switch {
 	case strings.ContainsAny(i.Layer, "\n\r"):
 		return []string{fmt.Sprintf("%s image layer spans lines; a path is one line", what)}
 	case strings.Contains(i.Layer, `\`):
@@ -145,6 +165,22 @@ func (i *AgentImage) problems(what string) []string {
 		return []string{fmt.Sprintf("%s image layer %q %s", what, i.Layer, r)}
 	}
 	return nil
+}
+
+// argProblems are what is wrong with the args under the block what, by name.
+func (i *AgentImage) argProblems(what string) []string {
+	var errs []string
+	for _, n := range sortedKeys(i.Args) {
+		switch {
+		case !argPattern.MatchString(n):
+			errs = append(errs, fmt.Sprintf("%s image args name %q is not a Dockerfile ARG name such as GO_VERSION (letters, digits, _, not starting with a digit); write it in %s.image.args as the layer's ARG names it", what, n, what))
+		case n == BaseArg:
+			errs = append(errs, fmt.Sprintf("%s image args set %s, which flai sets to the harness image it builds the layer over; leave %s out of %s.image.args", what, BaseArg, BaseArg, what))
+		case strings.ContainsAny(i.Args[n], "\n\r"):
+			errs = append(errs, fmt.Sprintf("%s image args %s spans lines; write its value in %s.image.args as one literal line", what, n, what))
+		}
+	}
+	return errs
 }
 
 func validate(what, harness, model string, config map[string]string) []string {
@@ -188,7 +224,17 @@ func sameImage(a, b *AgentImage) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
 	}
-	return *a == *b
+	return a.Layer == b.Layer && maps.Equal(a.Args, b.Args)
+}
+
+// clone is a copy of i that shares no map with it; nil for nil.
+func (i *AgentImage) clone() *AgentImage {
+	if i == nil {
+		return nil
+	}
+	c := *i
+	c.Args = maps.Clone(i.Args)
+	return &c
 }
 
 func sameConfig(a, b map[string]string) bool {
@@ -217,10 +263,7 @@ func (a *Agent) Clone() *Agent {
 			c.Roles[n] = r
 		}
 	}
-	if a.Image != nil {
-		image := *a.Image
-		c.Image = &image
-	}
+	c.Image = a.Image.clone()
 	return &c
 }
 
@@ -299,9 +342,8 @@ func (a *Agent) OrBuiltin() *Agent {
 		return a
 	}
 	out := Builtin().With(a)
-	if a != nil && a.Image != nil {
-		img := *a.Image
-		out.Image = &img
+	if a != nil {
+		out.Image = a.Image.clone()
 	}
 	return out
 }
@@ -490,6 +532,12 @@ func AgentBlock(a *Agent, indent string) string {
 		fmt.Fprintf(&b, "%s  image:\n", indent)
 		if a.Image.Layer != "" {
 			fmt.Fprintf(&b, "%s    layer: %s\n", indent, yamlScalar(a.Image.Layer))
+		}
+		if len(a.Image.Args) > 0 {
+			fmt.Fprintf(&b, "%s    args:\n", indent)
+			for _, n := range sortedKeys(a.Image.Args) {
+				fmt.Fprintf(&b, "%s      %s: %s\n", indent, n, yamlScalar(a.Image.Args[n]))
+			}
 		}
 	}
 	return b.String()

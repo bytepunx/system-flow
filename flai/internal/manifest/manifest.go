@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -580,6 +581,14 @@ func (m Manifest) Layer() string {
 		return ""
 	}
 	return m.Agent.Image.Layer
+}
+
+// LayerArgs is a copy of the build arguments agent.image.args gives the layer, or nil when it names no layer or no args.
+func (m Manifest) LayerArgs() map[string]string {
+	if m.Layer() == "" || len(m.Agent.Image.Args) == 0 {
+		return nil
+	}
+	return maps.Clone(m.Agent.Image.Args)
 }
 
 // LayerImage is the project's layer image for the inner harness, flai-agent-<key>-<inner>:local, or "".

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
@@ -2313,6 +2314,38 @@ func TestAgentImageLayer(t *testing.T) {
 	}
 	if got := strings.Join(loaded(t, []byte(head+"planning:\n  agent:\n    image:\n      layer: Dockerfile\n")).Planning.Errors(), "; "); !strings.Contains(got, "planning.agent image is the project's alone") {
 		t.Errorf("planning.agent naming an image: %q", got)
+	}
+}
+
+// S-0745, ADR-0295: agent.image.args reads from the manifest beside the
+// layer, and LayerArgs is a copy of them, nil without a layer or args, so a
+// manifest naming a layer alone builds with the Dockerfile's own defaults.
+func TestLayerArgs(t *testing.T) {
+	head := "version: 1\nname: demo\nkey: sf\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(head+"agent:\n  image:\n    layer: flai/images/system-flow/Dockerfile\n    args:\n      GO_VERSION: 1.26.0\n      PNPM_VERSION: \"10.34.5\"\n"))
+	if errs := m.Agent.Problems(); len(errs) != 0 {
+		t.Errorf("valid args: %v", errs)
+	}
+	want := map[string]string{"GO_VERSION": "1.26.0", "PNPM_VERSION": "10.34.5"}
+	got := m.LayerArgs()
+	if !maps.Equal(got, want) {
+		t.Fatalf("LayerArgs = %v, want %v", got, want)
+	}
+	got["GO_VERSION"] = "0"
+	if m.Agent.Image.Args["GO_VERSION"] != "1.26.0" {
+		t.Error("LayerArgs shares its map with the manifest")
+	}
+	for _, c := range []struct {
+		name string
+		m    Manifest
+	}{
+		{"a layer and no args", loaded(t, []byte(head+"agent:\n  image:\n    layer: Dockerfile\n"))},
+		{"no agent", loaded(t, []byte(head))},
+		{"args and no layer", Manifest{Agent: &Agent{Image: &AgentImage{Args: want}}}},
+	} {
+		if got := c.m.LayerArgs(); got != nil {
+			t.Errorf("%s: LayerArgs = %v, want nil", c.name, got)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package check
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -289,6 +290,128 @@ func TestHostImages(t *testing.T) {
 	}
 }
 
+// S-0745, ADR-0295: each name agent.image.args gives that no ARG of the
+// layer declares, in any stage, is a plain agent.image warning on its line of
+// the manifest, which a story can fix, so it is neither advisory nor left out
+// of a scoped check; a layer with no args, or with args it declares, gets
+// none.
+func TestAgentImageArgs(t *testing.T) {
+	const layer = "images/agent/Dockerfile"
+	// GO_VERSION's entry is on line 8, PNPM_VERSION's on line 9, NODE's on 10.
+	const mf = "name: sample\nkey: SMP\nagent:\n  image:\n    layer: images/agent/Dockerfile\n    # the pins\n    args:\n      GO_VERSION: 1.26.0\n      PNPM_VERSION: 10.34.5\n      NODE: \"22\"\n"
+	const dockerfile = "# syntax=docker/dockerfile:1\nARG BASE\nFROM ${BASE} AS build\narg GO_VERSION=1.25.0 \\\n# the pnpm pin\n    PNPM_VERSION=\"10 34\"\nFROM build\nARG NODE\n"
+	for _, c := range []struct {
+		name       string
+		args       map[string]string
+		dockerfile string
+		want       map[string]int // the undeclared names, and the line of each
+	}{
+		{name: "no args", dockerfile: "ARG BASE\nFROM ${BASE}\n"},
+		{name: "all declared", args: map[string]string{"GO_VERSION": "1.26.0", "PNPM_VERSION": "10.34.5", "NODE": "22"}, dockerfile: dockerfile},
+		{name: "none declared", args: map[string]string{"GO_VERSION": "1.26.0", "PNPM_VERSION": "10.34.5", "NODE": "22"}, dockerfile: "ARG BASE\nFROM ${BASE}\n# ARG NODE\nRUN echo GO_VERSION\n", want: map[string]int{"GO_VERSION": 8, "PNPM_VERSION": 9, "NODE": 10}},
+		{name: "an arg not in the manifest's file", args: map[string]string{"RUST": "1"}, dockerfile: dockerfile, want: map[string]int{"RUST": 5}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, "images", "agent"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, manifest.File), []byte(mf), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "images", "agent", "Dockerfile"), []byte(c.dockerfile), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			repo := &workitem.Repo{Root: root, Manifest: manifest.Manifest{Name: "sample", Key: "SMP", Agent: &manifest.Agent{Image: &manifest.AgentImage{Layer: layer, Args: c.args}}}}
+			res := &Result{}
+			// Docker is not asked here: its note is advisory, and set aside.
+			AgentImage(res, repo, ImageProbe{Inspect: func(string) (agentimage.Info, bool, error) {
+				return agentimage.Info{}, false, ErrNoDocker
+			}})
+			got := map[string]int{}
+			var order []string
+			for _, f := range res.Findings {
+				if f.advisory {
+					continue
+				}
+				if f.Rule != "agent.image" || f.Level != Warning || f.Path != manifest.File || f.unchecked || f.inside != nil {
+					t.Errorf("finding: %+v", f)
+				}
+				name, _, _ := strings.Cut(strings.TrimPrefix(f.Message, "agent.image.args names "), ",")
+				for _, w := range []string{"no ARG of the layer " + layer, "add `ARG " + name + "`", "leave " + name + " out of agent.image.args"} {
+					if !strings.Contains(f.Message, w) {
+						t.Errorf("message should mention %q: %s", w, f.Message)
+					}
+				}
+				got[name] = f.Line
+				order = append(order, name)
+			}
+			if !maps.Equal(got, c.want) {
+				t.Errorf("undeclared args on lines %v, want %v", got, c.want)
+			}
+			if !slices.IsSorted(order) {
+				t.Errorf("findings not by name: %v", order)
+			}
+			if res.Warnings != len(res.Findings) || res.Advisory != len(res.Findings)-len(c.want) {
+				t.Errorf("counts: %+v", res)
+			}
+		})
+	}
+}
+
+// S-0745: dockerfileArgs reads the names every ARG declares.
+func TestDockerfileArgs(t *testing.T) {
+	for _, c := range []struct {
+		dockerfile string
+		want       []string
+	}{
+		{"", nil},
+		{"ARG BASE\nFROM ${BASE}\n", []string{"BASE"}},
+		{"FROM x\nArg A=1 B C=\"x y\"\n", []string{"A", "B", "C"}},
+		{"ARG A=1 \\\n  # comment\n  B=2\r\nRUN echo C=3\n", []string{"A", "B"}},
+		{"# ARG A\nRUN true # ARG B\nENV D=1\n", nil},
+		{"FROM a AS one\nARG ONE\nFROM b\narg TWO='a b'\n", []string{"ONE", "TWO"}},
+	} {
+		got := slices.Sorted(maps.Keys(dockerfileArgs([]byte(c.dockerfile))))
+		if !slices.Equal(got, c.want) {
+			t.Errorf("dockerfileArgs(%q) = %v, want %v", c.dockerfile, got, c.want)
+		}
+	}
+}
+
+// S-0745, ADR-0295: flai check refuses a malformed agent.image.args as a
+// manifest.agent error, and passes a good one.
+func TestManifestAgentImageArgs(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		args string
+		want string
+	}{
+		{"good", "      GO_VERSION: 1.26.0\n", ""},
+		{"a bad name", "      GO-VERSION: 1.26.0\n", `"GO-VERSION" is not a Dockerfile ARG name`},
+		{"BASE", "      BASE: debian\n", "leave BASE out of agent.image.args"},
+		{"a value on two lines", "      GO_VERSION: |\n        1.26.0\n        RUN x\n", "GO_VERSION spans lines"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			repo := planningProject(t, "agent:\n  image:\n    layer: Dockerfile\n    args:\n"+c.args)
+			got := findings(t, repo, "manifest.agent")
+			if c.want == "" {
+				if len(got) != 0 {
+					t.Errorf("good args refused: %+v", got)
+				}
+				return
+			}
+			if len(got) != 1 || got[0].Level != Error || !strings.Contains(got[0].Message, c.want) || got[0].Line != 8 {
+				t.Errorf("want one error on line 8 saying %q, got %+v", c.want, got)
+			}
+		})
+	}
+	repo := planningProject(t, "agent:\n  image:\n    args:\n      GO_VERSION: 1.26.0\n")
+	if got := findings(t, repo, "manifest.agent"); len(got) != 1 || !strings.Contains(got[0].Message, "args name no layer to build") {
+		t.Errorf("args without a layer: %+v", got)
+	}
+}
+
 func TestLayerLine(t *testing.T) {
 	path := filepath.Join(t.TempDir(), manifest.File)
 	for _, c := range []struct {
@@ -305,6 +428,18 @@ func TestLayerLine(t *testing.T) {
 		if got := layerLine(path); got != c.line {
 			t.Errorf("layerLine(%q) = %d, want %d", c.yaml, got, c.line)
 		}
+	}
+	// S-0745: an arg's line is its entry under args:, else the layer's.
+	if err := os.WriteFile(path, []byte("agent:\n  image:\n    args:\n      layer: x\n      GO: 1\n    layer: Dockerfile\nother:\n  GO: 2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]int{"GO": 5, "NODE": 6} {
+		if got := argLine(path, name); got != want {
+			t.Errorf("argLine(%s) = %d, want %d", name, got, want)
+		}
+	}
+	if got := layerLine(path); got != 6 {
+		t.Errorf("layerLine under args: = %d, want 6", got)
 	}
 	if got := layerLine(filepath.Join(t.TempDir(), "absent.yaml")); got != 1 {
 		t.Errorf("absent file: %d", got)
