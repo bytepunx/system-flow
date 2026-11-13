@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:56Z
-updated: 2026-11-13T16:17:57Z
+updated: 2026-11-13T17:20:20Z
 transitions: []
 tags: [cli]
 topics: [cli, planning]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 42m
-  delivery: 2026-11-13T21:33:00Z
-  basis: "Its own forecast of 42m; 15th in the pull order with an in-progress limit of 3, behind S-0757, S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747 and S-0748."
+  delivery: 2026-11-13T21:49:00Z
+  basis: "Its own forecast of 42m; 15th in the pull order with an in-progress limit of 3, behind S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747 and S-0748."
   by: flai
-  at: 2026-11-13T16:17:57Z
+  at: 2026-11-13T17:20:20Z
 ---
 # S-0749 The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
 

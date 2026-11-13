@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:04Z
-updated: 2026-11-13T16:17:57Z
+updated: 2026-11-13T17:20:20Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h
-  delivery: 2026-11-13T20:43:00Z
-  basis: "Its own forecast of 1h; 11th in the pull order with an in-progress limit of 3, behind S-0757, S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742 and S-0743."
+  delivery: 2026-11-13T20:59:00Z
+  basis: "Its own forecast of 1h; 11th in the pull order with an in-progress limit of 3, behind S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742 and S-0743."
   by: flai
-  at: 2026-11-13T16:17:57Z
+  at: 2026-11-13T17:20:20Z
 ---
 # S-0744 flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
 
