@@ -3,10 +3,10 @@ id: TH-1157
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-13T12:55:06Z
-updated: 2026-11-13T12:55:06Z
+updated: 2026-11-13T13:15:49Z
 ---
 
 # TH-1157 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -43,3 +43,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board: a draft; finalize it. It waits on TH-1129 S-0755 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
 - S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts: a draft; finalize it. It waits on TH-1130 S-0756 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
 - S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name: a draft; finalize it. It waits on TH-1131 S-0758 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs.
+
+### 2026-11-13T13:15:49Z flai serve
+Resolved: S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project in ready can start, so the board is no longer starved.

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 666
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 198
-      cache_read: 1789194
-      cache_write: 84675
-      cost: 0.6997
+      input: 16
+      output: 7389
+      cache_read: 1842055
+      cache_write: 54652
+      cost: 0.8387
 ---
 # T-3287 A docker step of a pull or a build streams its output, is stopped after the stall limit, and is tried again on a network failure
 

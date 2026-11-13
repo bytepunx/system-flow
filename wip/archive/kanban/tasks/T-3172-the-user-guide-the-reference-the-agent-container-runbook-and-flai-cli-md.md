@@ -24,16 +24,16 @@ touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbo
 after: [T-3171]
 usage:
   source: log
-  seconds: 203
+  seconds: 209
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 350
-      cache_read: 2823143
-      cache_write: 93390
-      cost: 1.089
+      input: 25
+      output: 11501
+      cache_read: 2867038
+      cache_write: 85063
+      cost: 1.3054
 ---
 # T-3172 The user guide, the reference, the agent-container runbook, and flai-cli.md describe flai image ensure and build as the way back for a missing harness image
 

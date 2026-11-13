@@ -3,12 +3,18 @@ id: T-2867
 type: task
 nature: feature
 title: kluster.md, flai-cli.md, flai.md, and the generated reference say how a story's agent checks its namespace and runs its own commands there
-status: backlog
+status: in-progress
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:24:25Z
-updated: 2026-11-10T08:24:25Z
-transitions: []
+updated: 2026-11-13T13:14:24Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:14:24Z
+    by: agent-S-0661
+  - to: in-progress
+    at: 2026-11-13T13:14:24Z
+    by: agent-S-0661
 stream: S-0661
 tags: [cli, docs]
 touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

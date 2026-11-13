@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 948
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 199
-      cache_read: 3213438
-      cache_write: 127943
-      cost: 1.2475
+      input: 29
+      output: 13176
+      cache_read: 3284654
+      cache_write: 97453
+      cost: 1.4956
 ---
 # T-3171 flai image ensure pulls or builds each missing or stale harness image, and flai image build builds without the pull
 

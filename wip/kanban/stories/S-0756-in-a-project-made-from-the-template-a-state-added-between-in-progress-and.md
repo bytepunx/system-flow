@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-13T12:56:31Z
+updated: 2026-11-13T13:15:50Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T22:57:00Z
-  basis: "Its own forecast of 45m; 27th in the pull order with an in-progress limit of 3, behind S-0661, S-0740, S-0760, S-0745, S-0759, S-0751, S-0757, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754 and S-0755."
+  delivery: 2026-11-13T23:14:00Z
+  basis: "Its own forecast of 45m; 27th in the pull order with an in-progress limit of 3, behind S-0661, S-0760, S-0745, S-0759, S-0751, S-0757, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754 and S-0755."
   by: flai
-  at: 2026-11-13T12:56:31Z
+  at: 2026-11-13T13:15:50Z
 ---
 # S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
 

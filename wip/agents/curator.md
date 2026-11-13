@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 272.0073
-accrued_seconds: 30658
-tasks_completed: 178
-last_run: 2026-11-13T12:55:05Z
+accrued_cost: 273.1176
+accrued_seconds: 30707
+tasks_completed: 179
+last_run: 2026-11-13T12:57:26Z
 ---
 
 # Curator activity
@@ -1435,3 +1435,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0591
 - Seconds: 67
 - Cost: 1.2726 USD, estimated
+
+### 2026-11-13T12:57:26Z
+
+- Summary: I merged S-0769 into D-0541, wrote no entries, absorbed none, and `flai digest compact` compacted none. S-0769 gave two candidates. The one taken in, writing a step's exit in its task's Notes before `task_done` closes it, was already D-0541's fact. The other, the step layers and no sub-agents, is what ADR-0239 already says. No design changed since the last run, and no design document states D-0541.
+- Trigger: accepted S-0769
+- Items: D-0541
+- Seconds: 49
+- Cost: 1.1103 USD, estimated

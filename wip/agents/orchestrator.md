@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2155.3504
-accrued_seconds: 1557297
-tasks_completed: 3296
-last_run: 2026-11-13T12:55:08Z
+accrued_cost: 2156.2962
+accrued_seconds: 1557554
+tasks_completed: 3302
+last_run: 2026-11-13T13:11:45Z
 ---
 
 # Orchestrator activity
@@ -23106,6 +23106,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 15
 - Cost: 0.1510 USD, estimated
+
+### 2026-11-13T12:56:35Z
+
+- Summary: Accepted S-0769 (publish formula instance; flai/v1.90.0 published) at 79002dbb0e4ce8e6b9a6e116338406321782154c: close-out passed at branch head, no blockers, all three steps T-3294..T-3296 done; archived 4.
+- Items: S-0769
+- Seconds: 54
+- Cost: 0.2166 USD, estimated
+
+### 2026-11-13T12:56:51Z
+
+- Summary: Did not publish after S-0769's acceptance: release_evaluate (threshold) not met, 0 pending stories (count 0/1, value 0/1000 USD).
+- Items: S-0769
+- Seconds: 16
+- Cost: 0.0275 USD, estimated
+
+### 2026-11-13T12:57:18Z
+
+- Summary: ready-empty and thread:TH-1157 (a flai serve notice, left alone): promote_candidates lists none; ready already in throughput order (S-0760 32m first … S-0662 2h30m), all 7 held on after, so nothing applied. promote --drafts: S-0241 complete but stays a draft (TH-0790); the 19 E-0034 drafts lack only a value pending the operator's epic inputs (TH-1097), so no planner started; E-0036 not replanned (TH-1139 only confirms ADR-0295); S-0730 left out by flai plan.
+- Items: S-0241, E-0034, E-0036, S-0730
+- Seconds: 27
+- Cost: 0.0880 USD, estimated
+
+### 2026-11-13T12:57:40Z
+
+- Summary: I accepted S-0769. No release was due, no story could be promoted, and TH-1157 stays with you.
+- Items: none
+- Seconds: 22
+- Cost: 0.0878 USD, estimated
+
+### 2026-11-13T13:11:27Z
+
+- Summary: Verified S-0740 at 94674211 (close-out passed, all 7 criteria matched); left it in review because accept's dry run names protected_paths (flai/images/embed.go, embed_test.go: operator-only, ADR-0106); opened TH-1158 recommending the operator accept it
+- Items: S-0740
+- Seconds: 120
+- Cost: 0.2309 USD, estimated
+
+### 2026-11-13T13:11:45Z
+
+- Summary: I left S-0740 in review: it passed every check, but only you can accept it. It changes `flai/images/embed.go` and `flai/images/embed_test.go`. Claude Code protects those paths, so flai refuses the orchestrator's acceptance (ADR-0106).
+- Items: none
+- Seconds: 18
+- Cost: 0.2950 USD, estimated
 
 ## Refusals
 

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:09Z
-updated: 2026-11-13T12:42:01Z
+updated: 2026-11-13T13:14:14Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:16Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0661
 tags: [cli]
 topics: [kluster, deployment]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_tables.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, docs/operators/settings.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go]
 after: [S-0660, S-0763]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2068
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      ceremony: 2
+      hand_edits: 1
+      work: 44
+  models:
+    - model: claude-opus-5-5
+      input: 360
+      output: 2079
+      cache_read: 24408007
+      cache_write: 977141
+      cost: 9.4833
   strategic:
     - kind: planner
       seconds: 20
@@ -119,6 +132,7 @@ No folder touch.
 
 - S-0660 (declared): T-2863 and T-2866 build on its deploy request in `flai/internal/kluster/request.go` and its MCP tool in `flai/internal/mcpserver/kluster.go`: the hand-off to flai serve, its refusals, and its answer. They refuse with the deploy command it builds.
 - S-0659: criteria 3 and 4 build "in the way the ADR decides". T-2864 reads the ADR's guard rule, and T-2865 reads how the agent gets the variables.
+- S-0763: T-2865's `flai kluster env` reads S-0763's `Cluster.AgentEnv` and the namespace's own kubeconfig, which `flai kluster exec` uses, and T-2864 extends S-0763's guard rule for `exec` and `log` (`klusterReaches`) to `env`.
 
 Forecast: `flai forecast` gives 53m from size 29 (8 criteria, 21 touches). Raised to 1h15m: S-0578 and S-0579, the nearest kluster stories, took 61m and 51m of agent time, and this one adds a guard rule and an MCP tool to a serve pass. The delivery, 2026-11-10T16:49:00Z, is the start flai's play-out of the pull order gives (11th, in-progress limit 5) plus 1h15m.
 

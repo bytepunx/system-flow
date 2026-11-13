@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1814
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 245
-      cache_read: 2937846
-      cache_write: 235746
-      cost: 1.1849
+      input: 28
+      output: 12514
+      cache_read: 3119705
+      cache_write: 92559
+      cost: 1.4205
 ---
 # T-3170 flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries checked against the signed checksums, or from a development tree's own
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 37
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 36
-      cache_read: 416404
-      cache_write: 1911
-      cost: 0.1562
+      input: 4
+      output: 1650
+      cache_read: 411208
+      cache_write: 12200
+      cost: 0.1872
 ---
 # T-3168 The flai binary carries the bedrock and claude-code Dockerfiles through a go:embed package at flai/images
 

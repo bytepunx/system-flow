@@ -3,11 +3,11 @@ id: S-0740
 type: story
 nature: feature
 title: flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T12:45:51Z
+updated: 2026-11-13T13:15:49Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:14Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T11:39:55Z
     by: agent-S-0740
+  - to: review
+    at: 2026-11-13T13:08:35Z
+    by: agent-S-0740
+  - to: done
+    at: 2026-11-13T13:15:49Z
+    by: alex
 tags: [cli]
 topics: [docker, release, security]
 touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/images/embed_test.go, flai/internal/agentimage/run.go, flai/internal/agentimage/run_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve_test.go, design/tech/docker.md]
@@ -26,31 +32,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3955
-  estimated: true
-  priced_by: estimate
+  seconds: 5356
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 49
+      ceremony: 2
+      work: 114
   models:
     - model: claude-opus-5-5
-      input: 310
-      output: 1794
-      cache_read: 21019272
-      cache_write: 1310183
-      cost: 8.3371
+      input: 458
+      output: 207597
+      cache_read: 51751597
+      cache_write: 1535430
+      cost: 23.5635
   strategic:
     - kind: orchestrator
-      seconds: 81
+      seconds: 201
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 210
-          cache_read: 1065425
-          cache_write: 91983
-          cost: 0.3341
+          input: 46
+          output: 339
+          cache_read: 1652015
+          cache_write: 172550
+          cost: 0.5276
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 32
+          cache_read: 13678
+          cache_write: 34623
+          cost: 0.0374
 forecast:
   duration: 1h
   delivery: 2026-11-13T13:32:00Z
@@ -71,13 +82,13 @@ After this story, `flai image ensure` makes each missing or stale harness image 
 
 ## Acceptance criteria
 
-- [ ] `flai image ensure` pulls each missing or stale harness image by the digest that the signed list of the running flai's release names. It refuses a list that does not verify against the release key, and a digest the list does not name, with `flai dashboard`'s refusal kinds. It tags the pulled image with the name the start runs
-- [ ] When the pull cannot run (no registry, no list, or a refusal the ADR lets fall back), it builds the image from the Dockerfiles embedded in the binary (`flai/images/embed.go`). It uses `flai` and `pilot` for Linux from the same release, checked against its signed `checksums.txt`, and says which way it took
-- [ ] `flai image build` builds without trying the pull. In a development tree, as S-0733's ADR names one, both commands build from the tree's own Dockerfiles and source instead of a release's
-- [ ] Each image it makes carries the label S-0735's status reads, and `flai image status` reports it current afterwards
-- [ ] A build step that writes no output for the limit the ADR sets is stopped and reported, and a step that fails on the network (a reset, a timeout, a 5xx) is tried again up to the ADR's count. Each case is shown by a test over a fake docker
-- [ ] The build's output streams to standard output as it runs, and to a log file under `.flai-cache` that the command names
-- [ ] `docs/users/flai.md`, `docs/users/flai-reference.md`, `docs/operators/runbooks/agent-container.md` § Build, and `design/system/flai-cli.md` describe both commands, and the runbook gives `flai image ensure` as the way back before `make agent-images`
+- [x] `flai image ensure` pulls each missing or stale harness image by the digest that the signed list of the running flai's release names. It refuses a list that does not verify against the release key, and a digest the list does not name, with `flai dashboard`'s refusal kinds. It tags the pulled image with the name the start runs
+- [x] When the pull cannot run (no registry, no list, or a refusal the ADR lets fall back), it builds the image from the Dockerfiles embedded in the binary (`flai/images/embed.go`). It uses `flai` and `pilot` for Linux from the same release, checked against its signed `checksums.txt`, and says which way it took
+- [x] `flai image build` builds without trying the pull. In a development tree, as S-0733's ADR names one, both commands build from the tree's own Dockerfiles and source instead of a release's
+- [x] Each image it makes carries the label S-0735's status reads, and `flai image status` reports it current afterwards
+- [x] A build step that writes no output for the limit the ADR sets is stopped and reported, and a step that fails on the network (a reset, a timeout, a 5xx) is tried again up to the ADR's count. Each case is shown by a test over a fake docker
+- [x] The build's output streams to standard output as it runs, and to a log file under `.flai-cache` that the command names
+- [x] `docs/users/flai.md`, `docs/users/flai-reference.md`, `docs/operators/runbooks/agent-container.md` § Build, and `design/system/flai-cli.md` describe both commands, and the runbook gives `flai image ensure` as the way back before `make agent-images`
 
 ## Tasks
 - T-3168 The flai binary carries the bedrock and claude-code Dockerfiles through a go:embed package at flai/images

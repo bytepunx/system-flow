@@ -3,11 +3,11 @@ id: T-2865
 type: task
 nature: feature
 title: flai kluster env prints a story's agent its own namespace's variables, with the namespace's own kubeconfig, while the namespace has a record
-status: in-progress
+status: done
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:23:46Z
-updated: 2026-11-13T12:42:11Z
+updated: 2026-11-13T12:59:17Z
 transitions:
   - to: ready
     at: 2026-11-13T12:42:10Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:42:11Z
     by: agent-S-0661
+  - to: done
+    at: 2026-11-13T12:59:17Z
+    by: agent-S-0661
 stream: S-0661
 tags: [cli]
-touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go]
+touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 1026
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 460
+      cache_read: 5402589
+      cache_write: 128390
+      cost: 2.0662
 ---
 # T-2865 flai kluster env prints a story's agent its own namespace's variables, with the namespace's own kubeconfig, while the namespace has a record
 

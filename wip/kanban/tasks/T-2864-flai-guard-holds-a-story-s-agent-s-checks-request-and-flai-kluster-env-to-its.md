@@ -3,11 +3,11 @@ id: T-2864
 type: task
 nature: feature
 title: flai guard holds a story's agent's checks request and flai kluster env to its own story's namespace, refusing every sub-agent the request
-status: in-progress
+status: done
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:23:35Z
-updated: 2026-11-13T12:42:10Z
+updated: 2026-11-13T12:58:30Z
 transitions:
   - to: ready
     at: 2026-11-13T12:42:10Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:42:10Z
     by: agent-S-0661
+  - to: done
+    at: 2026-11-13T12:58:30Z
+    by: agent-S-0661
 stream: S-0661
 tags: [cli]
-touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/guard_tables.go, flai/internal/guard/kluster_test.go]
+touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/kluster_test.go]
+usage:
+  source: log
+  seconds: 980
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 297
+      cache_read: 3292073
+      cache_write: 248964
+      cost: 1.3229
 ---
 # T-2864 flai guard holds a story's agent's checks request and flai kluster env to its own story's namespace, refusing every sub-agent the request
 

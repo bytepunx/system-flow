@@ -3,16 +3,37 @@ id: T-2866
 type: task
 nature: feature
 title: A story's agent asks flai serve for a checks run against its namespace with one flai command and one MCP tool, and gets each check's result and log
-status: backlog
+status: done
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:24:11Z
-updated: 2026-11-13T12:42:04Z
-transitions: []
+updated: 2026-11-13T13:14:14Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:02:20Z
+    by: agent-S-0661
+  - to: in-progress
+    at: 2026-11-13T13:02:20Z
+    by: agent-S-0661
+  - to: done
+    at: 2026-11-13T13:14:14Z
+    by: agent-S-0661
 stream: S-0661
 tags: [cli]
-touches: [flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/cmd/checks.go, flai/cmd/checks_test.go, flai/internal/mcpserver/kluster.go, flai/internal/mcpserver/kluster_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/cmd/kluster.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-2863, T-2865]
+usage:
+  source: log
+  seconds: 710
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 419
+      cache_read: 4200676
+      cache_write: 131574
+      cost: 1.6185
 ---
 # T-2866 A story's agent asks flai serve for a checks run against its namespace with one flai command and one MCP tool, and gets each check's result and log
 

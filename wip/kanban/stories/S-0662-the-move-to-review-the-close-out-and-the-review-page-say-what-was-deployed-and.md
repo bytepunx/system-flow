@@ -7,7 +7,7 @@ status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-13T12:53:45Z
+updated: 2026-11-13T13:15:50Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:30Z
@@ -56,10 +56,10 @@ cost_of_delay:
   at: 2026-11-10T09:46:48Z
 forecast:
   duration: 2h30m
-  delivery: 2026-11-13T17:29:00Z
-  basis: "Its own forecast of 2h30m; 7th in the pull order with an in-progress limit of 3, behind S-0661, S-0740, S-0769, S-0760, S-0745, S-0759, S-0751, S-0757 and S-0663."
+  delivery: 2026-11-13T17:46:00Z
+  basis: "Its own forecast of 2h30m; 7th in the pull order with an in-progress limit of 3, behind S-0661, S-0760, S-0745, S-0759, S-0751, S-0757 and S-0663."
   by: flai
-  at: 2026-11-13T12:53:45Z
+  at: 2026-11-13T13:15:50Z
 finalized:
   by: orchestrator
   at: 2026-11-10T09:50:14Z

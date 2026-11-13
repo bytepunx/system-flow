@@ -3,11 +3,11 @@ id: T-2863
 type: task
 nature: feature
 title: flai serve's kluster pass runs the checks a story's agent asks for against its namespace at the head, after the job queue, records who asked, and opens no thread on a failure
-status: in-progress
+status: done
 parent: S-0661
 owner: alex
 created: 2026-11-10T08:23:22Z
-updated: 2026-11-13T12:42:10Z
+updated: 2026-11-13T12:57:40Z
 transitions:
   - to: ready
     at: 2026-11-13T12:42:10Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:42:10Z
     by: agent-S-0661
+  - to: done
+    at: 2026-11-13T12:57:40Z
+    by: agent-S-0661
 stream: S-0661
 tags: [cli]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/kluster/request.go, flai/internal/kluster/request_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+usage:
+  source: log
+  seconds: 930
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 108
+      output: 623
+      cache_read: 7591376
+      cache_write: 202616
+      cost: 2.9116
 ---
 # T-2863 flai serve's kluster pass runs the checks a story's agent asks for against its namespace at the head, after the job queue, records who asked, and opens no thread on a failure
 

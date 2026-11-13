@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1801
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 77
-      output: 419
-      cache_read: 4978822
-      cache_write: 460022
-      cost: 2.0307
+      input: 47
+      output: 21447
+      cache_read: 5346502
+      cache_write: 158627
+      cost: 2.4344
 ---
 # T-3169 The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
 
