@@ -6,7 +6,7 @@ title: flai's kluster tests pass on macOS, where the temp dir is a symlink
 status: backlog
 owner: alex
 created: 2026-11-13T19:58:46Z
-updated: 2026-11-13T20:02:24Z
+updated: 2026-11-13T20:02:35Z
 transitions: []
 tags: [flai]
 touches: [flai/cmd/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster_test.go, flai/internal/kluster/agentconfig_test.go]
@@ -30,12 +30,14 @@ usage:
           cache_read: 436814
           cache_write: 67308
           cost: 0.1477
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
     by: alex
     at: 2026-11-13T20:02:24Z
+finalized:
+  by: alex
+  at: 2026-11-13T20:02:35Z
 ---
 # S-0777 flai's kluster tests pass on macOS, where the temp dir is a symlink
 
@@ -64,6 +66,8 @@ The tests are wrong, not flai: nothing in the log shows flai misbehaving on macO
 - [ ] The tests still pass on Linux, with `scripts/flai-test.sh`
 
 ## Tasks
+- T-3323 The kluster package's fixtures resolve their temp folders, so pwd and the expected lines agree on macOS
+- T-3324 flai/cmd's kluster fixtures resolve the project root, so the fake scripts' pwd lines match on macOS
 
 ## Notes
 
