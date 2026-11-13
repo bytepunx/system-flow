@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-13T07:28:47Z
+updated: 2026-11-13T07:29:02Z
 ---
 
 # Active streams
@@ -10,6 +10,7 @@ updated: 2026-11-13T07:28:47Z
 | [S-0659](S-0659.md) | An ADR settles how a story in progress is deployed into its kluster namespace at its agent's request: who asks, what the agent may run, when the namespace goes, and how many live at once | review | agent-S-0659 | 2026-11-13T07:26:53Z |
 | [S-0693](S-0693.md) | TestRepositoryManifestLintsChangedFlaioverFiles skips under -short, so a new tier it must list first fails in the close-out's integration tier | cancelled | agent-S-0693 | 2026-11-11T05:18:24Z |
 | [S-0709](S-0709.md) | flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs | cancelled | agent-S-0709 | 2026-11-12T16:04:29Z |
+| [S-0733](S-0733.md) | An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery | in-progress | agent-S-0733 | 2026-11-13T07:28:50Z |
 | [S-0762](S-0762.md) | Publish what is accepted and not yet released | review | agent-S-0762 | 2026-11-13T07:27:05Z |
 
 ## Strategic agents
