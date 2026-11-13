@@ -1,0 +1,91 @@
+{
+  "examples": [
+    {
+      "name": "An image job waiting its turn",
+      "props": {
+        "job": {
+          "id": "ij-0003",
+          "images": ["flai-agent:1.94.0", "acme-agent:1.94.0"],
+          "state": "queued",
+          "ways": [],
+          "requested": "2026-11-13T10:04:00Z",
+          "log_size": 0
+        }
+      }
+    },
+    {
+      "name": "An image job running",
+      "props": {
+        "job": {
+          "id": "ij-0002",
+          "images": ["flai-agent:1.94.0", "acme-agent:1.94.0"],
+          "state": "running",
+          "ways": [],
+          "step": "agent image: building acme-agent:1.94.0",
+          "requested": "2026-11-13T10:00:00Z",
+          "started": "2026-11-13T10:00:02Z",
+          "log_size": 96
+        }
+      }
+    },
+    {
+      "name": "An image job that passed",
+      "props": {
+        "job": {
+          "id": "ij-0001",
+          "images": ["flai-agent:1.94.0", "acme-agent:1.94.0"],
+          "state": "ended",
+          "ways": [
+            { "image": "flai-agent:1.94.0", "way": "pulled" },
+            { "image": "acme-agent:1.94.0", "way": "layered" }
+          ],
+          "requested": "2026-11-13T09:00:00Z",
+          "started": "2026-11-13T09:00:01Z",
+          "ended": "2026-11-13T09:02:04Z",
+          "outcome": "passed",
+          "duration_ms": 123000,
+          "log_size": 2048
+        }
+      }
+    },
+    {
+      "name": "An image job that failed",
+      "props": {
+        "job": {
+          "id": "ij-0004",
+          "images": ["acme-agent:1.94.0"],
+          "state": "ended",
+          "ways": [],
+          "step": "RUN apt-get install -y git",
+          "requested": "2026-11-13T11:00:00Z",
+          "started": "2026-11-13T11:00:01Z",
+          "ended": "2026-11-13T11:00:39Z",
+          "outcome": "failed",
+          "cause": "docker build exited with status 1",
+          "duration_ms": 38000,
+          "log_size": 512
+        }
+      }
+    },
+    {
+      "name": "An image job that failed, the agent host action off",
+      "props": {
+        "job": {
+          "id": "ij-0004",
+          "images": ["acme-agent:1.94.0"],
+          "state": "ended",
+          "ways": [],
+          "step": "RUN apt-get install -y git",
+          "requested": "2026-11-13T11:00:00Z",
+          "started": "2026-11-13T11:00:01Z",
+          "ended": "2026-11-13T11:00:39Z",
+          "outcome": "failed",
+          "cause": "docker build exited with status 1",
+          "duration_ms": 38000,
+          "log_size": 512
+        },
+        "disabled": true
+      }
+    }
+  ]
+}

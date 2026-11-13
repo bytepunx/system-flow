@@ -1,30 +1,42 @@
+<script module lang="ts">
+	import type { KlusterLog } from '$lib/server/repo';
+
+	/** A read of a log from an offset, as kluster.log answers it and a read prop must. */
+	export type LogPart = Omit<KlusterLog, 'namespace' | 'step' | 'log'>;
+</script>
+
 <script lang="ts">
 	// One step of a kluster job, a build, a load, a deploy, or a teardown, in a namespace (S-0595,
 	// ADR-0263): its name, a badge of its outcome, how long it took, and, opened, its log as flai's
-	// kluster.log reads it through /api/kluster/log. Opened, it reads the log from the start, then from
-	// where the last read stopped, about every second while the step runs, and once more when it ends,
-	// keeping the newest 256 KB and staying scrolled to the end unless the reader scrolled up. A read
-	// that answers from another offset than asked is passed over, but a reset, when a new job cleared
-	// the log, starts the text over. Closed or gone, it reads nothing. A read flai refused or could not
-	// answer is shown word for word, and tried again while the step runs.
+	// kluster.log reads it through /api/kluster/log. Given read, it shows a log that is not a kluster
+	// step's, such as an image job's (S-0757), as read reads it, in a namespace of none. Opened, it
+	// reads the log from the start, then from where the last read stopped, about every second while
+	// the step runs, and once more when it ends, keeping the newest 256 KB and staying scrolled to the
+	// end unless the reader scrolled up. A read that answers from another offset than asked is passed
+	// over, but a reset, when a new job cleared the log, starts the text over. Closed or gone, it
+	// reads nothing. A read flai refused or could not answer is shown word for word, and tried again
+	// while the step runs.
 	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
-	import type { KlusterLog } from '$lib/server/repo';
 
 	let {
-		namespace,
+		namespace = '',
 		step,
 		label = '',
 		outcome = '',
 		startedAt = '',
 		endedAt = '',
 		exitCode,
-		open = $bindable(false)
+		open = $bindable(false),
+		read
 	}: {
-		/** The namespace whose job ran the step, such as s-0595 or the default namespace. */
-		namespace: string;
-		/** The step's name: build, build-<component>, load, deploy, or teardown. */
+		/** The namespace whose job ran the step, such as s-0595 or the default namespace; none with read. */
+		namespace?: string;
+		/**
+		 * The step's name: build, build-<component>, load, deploy, or teardown; with read, what the
+		 * log is of, such as the image job 20261113T093000Z-001. Another starts the log over.
+		 */
 		step: string;
 		/** What the step is called on the page; the step's name when empty. */
 		label?: string;
@@ -36,6 +48,8 @@
 		exitCode?: number;
 		/** Whether the log is open; the reader opens and closes it. */
 		open?: boolean;
+		/** Reads the log from an offset in place of kluster.log; throws a refusal's words. */
+		read?: (offset: number) => Promise<LogPart>;
 	} = $props();
 
 	/** How often a running step's log is read again. */
@@ -49,6 +63,10 @@
 	const which = $derived(step);
 	const opened = $derived(open);
 	const live = $derived(outcome === 'running');
+	// what the log is called to a screen reader: a kluster step's in its namespace, or what read reads
+	const named = $derived(
+		namespace ? `the log of the ${label || step} step in ${namespace}` : `the log of ${step}`
+	);
 
 	let text = $state('');
 	let next = 0;
@@ -78,7 +96,8 @@
 		return untrack(follow);
 	});
 
-	async function read(offset: number): Promise<KlusterLog> {
+	async function readStep(offset: number): Promise<LogPart> {
+		if (read) return read(offset);
 		const query = `namespace=${encodeURIComponent(where)}&step=${encodeURIComponent(which)}&offset=${offset}`;
 		const r = await api(`/api/kluster/log?${query}`);
 		if (!r.ok) {
@@ -88,7 +107,7 @@
 		return r.json();
 	}
 
-	async function append(got: KlusterLog, asked: number) {
+	async function append(got: LogPart, asked: number) {
 		if (got.reset) {
 			text = '';
 			earlier = false;
@@ -117,7 +136,7 @@
 		async function pass() {
 			const asked = next;
 			try {
-				const got = await read(asked);
+				const got = await readStep(asked);
 				if (stopped) return;
 				error = null;
 				exists = got.exists;
@@ -180,16 +199,16 @@
 	<pre
 		bind:this={box}
 		class="mt-1 max-h-72 overflow-auto rounded border border-line bg-ground p-2 font-mono text-xs whitespace-pre-wrap"
-		aria-label={`the log of the ${label || step} step in ${namespace}`}
+		aria-label={named}
 		data-testid="log-feed-text">{#if earlier}… earlier lines are in the log on the host
 		{/if}{text}</pre>
 	{#if !text && !error}
 		<p class="mt-1 text-xs text-muted" data-testid="log-feed-empty">
 			{outcome === 'pending'
-				? 'This step has not started yet.'
+				? `${namespace ? 'This step' : 'It'} has not started yet.`
 				: exists
 					? 'Nothing written yet.'
-					: 'The step has no log.'}
+					: `${namespace ? 'The step' : 'It'} has no log.`}
 		</p>
 	{/if}
 </details>

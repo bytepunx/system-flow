@@ -1,7 +1,8 @@
 // S-0595 (ADR-0263): LogFeed shows a kluster step's name and a badge of its outcome, reads nothing
 // while closed, reads the step's log from the start once opened, then from where it stopped about
 // every second while the step runs, once more when it ends, and no more after; a reset starts the
-// text over, a read from another offset is passed over, and a refusal is shown word for word.
+// text over, a read from another offset is passed over, and a refusal is shown word for word; given
+// read, it reads through read in place of kluster.log (S-0757).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterLog } from '$lib/server/repo';
@@ -9,7 +10,7 @@ import type { KlusterLog } from '$lib/server/repo';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 
-import LogFeed from './LogFeed.svelte';
+import LogFeed, { type LogPart } from './LogFeed.svelte';
 
 const answer = (body: unknown, status = 200) => ({
 	ok: status < 400,
@@ -177,6 +178,32 @@ describe('LogFeed', () => {
 		show({ outcome: 'pending', open: true });
 		await settle();
 		expect(q('log-feed-empty')!.textContent).toContain('has not started');
+	});
+
+	it('reads through read when given, in place of kluster.log, and names the log it shows', async () => {
+		const read = vi
+			.fn<(offset: number) => Promise<LogPart>>()
+			.mockResolvedValueOnce(log({ next: 4, size: 4, text: 'one\n', outcome: 'running' }))
+			.mockResolvedValueOnce(
+				log({ offset: 4, next: 8, size: 8, text: 'two\n', outcome: 'running' })
+			);
+		show({
+			namespace: undefined,
+			step: 'the image job 20261113T093000Z-001',
+			label: 'Output',
+			outcome: 'running',
+			open: true,
+			read
+		});
+		await settle();
+		vi.advanceTimersByTime(1000);
+		await settle();
+		expect(text()).toBe('one\ntwo\n');
+		expect(read.mock.calls.map(([o]) => o)).toEqual([0, 4]);
+		expect(api).not.toHaveBeenCalled();
+		expect(q('log-feed-text')!.getAttribute('aria-label')).toBe(
+			'the log of the image job 20261113T093000Z-001'
+		);
 	});
 
 	it('stops reading once closed', async () => {
