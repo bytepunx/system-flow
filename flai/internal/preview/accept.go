@@ -648,14 +648,16 @@ func klusterGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Ac
 
 // klusterHeld is why story id's namespace does not let it be accepted, as
 // kluster.AcceptGate says it for the head of its branch in the main checkout,
-// with checksOn; "" when it does. A head or a record that cannot be read is
-// why, naming the error, so the gate never opens unread.
+// with checksOn, judging a record's commit at that head with r and the
+// manifest's layout (ADR-0292 §3); "" when it does. A head, a record, or a
+// diff that cannot be read is why, naming the error, so the gate never opens
+// unread.
 func klusterHeld(r execx.Runner, repo *workitem.Repo, id string, checksOn bool) string {
 	head, err := kluster.StoryHead(r, repo.MainRoot, id)
 	if err != nil {
 		return fmt.Sprintf("cannot %v", err)
 	}
-	ok, why, err := kluster.AcceptGate(repo.MainRoot, id, head, checksOn)
+	ok, why, err := kluster.AcceptGate(r, repo.MainRoot, repo.Manifest, id, head, checksOn)
 	switch {
 	case err != nil:
 		return fmt.Sprintf("cannot tell whether its namespace was deployed at its head: %v", err)

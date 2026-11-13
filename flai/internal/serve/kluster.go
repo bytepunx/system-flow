@@ -423,7 +423,7 @@ func (p *klusterPass) look(ctx context.Context) {
 	deployable := klusterDeployable(repo.Manifest)
 	var queued []string
 	if deployable {
-		queued = p.lookReview(ctx, items, root, p.checksOn(repo))
+		queued = p.lookReview(ctx, items, root, repo.Manifest, p.checksOn(repo))
 	}
 	if ctx.Err() != nil {
 		return
@@ -452,7 +452,8 @@ func (p *klusterPass) checksOn(repo *workitem.Repo) bool {
 
 // passedAt reports whether record r says its namespace was deployed at head
 // and passed, and, while checksOn, that a checks run against it passed there
-// too: what a story entering review needs no deploy for (ADR-0292 §3).
+// too, at head exactly: what a request for a story in review is answered
+// from the record for (ADR-0292 §1).
 func passedAt(r kluster.Record, head string, checksOn bool) bool {
 	if r.Commit != head || r.Outcome != kluster.OutcomePassed {
 		return false
@@ -464,8 +465,13 @@ func passedAt(r kluster.Record, head string, checksOn bool) bool {
 // did not pass at its branch's head, its checks too while checksOn, and that
 // the pass did not try at that head, or that is back in review after a send
 // back, at whatever head; and names them. A deploy the agent asked for that
-// passed at the head stands as the review's.
-func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string, checksOn bool) []string {
+// passed at the head stands as the review's. At the head is as the
+// acceptance gate judges it with m's layout (ADR-0292 §3): the head, or a
+// commit followed only by changes under the design, docs, and wip folders,
+// so the issues a close-out commits do not deploy the story again. A record
+// or a diff that cannot be read is not at the head: it is logged, and the
+// story deployed.
+func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string, m manifest.Manifest, checksOn bool) []string {
 	git := gitOf(p.o)
 	var queued []string
 	for _, it := range items {
@@ -484,7 +490,11 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 			p.o.Logger.Debug("story in review has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID)
 			continue
 		}
-		if r, ok, _ := kluster.ReadRecord(root, ns); ok && passedAt(r, head, checksOn) {
+		passed, _, err := kluster.AcceptGate(git, root, m, it.ID, head, checksOn)
+		if err != nil {
+			p.o.Logger.Warn("kluster record not judged at the story's head, so it is deployed again", "component", "serve", "root", p.e.Root, "story", it.ID, "head", head, "err", err.Error())
+		}
+		if passed {
 			continue
 		}
 		// back from a send back, it is deployed again in place, at a new head or

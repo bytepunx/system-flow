@@ -274,7 +274,7 @@ func ComputeWith(r execx.Runner, repo *workitem.Repo, now time.Time, act Actions
 		if reason := g.dirt.holds(r, repo, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
-		if reason := klusterHolds(repo, act, it.ID, e.Head); reason != nil {
+		if reason := klusterHolds(r, repo, act, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		entries = append(entries, e)
@@ -537,17 +537,18 @@ func (d dirt) holds(r execx.Runner, repo *workitem.Repo, story, head string) *Re
 }
 
 // klusterHolds is the reason the kluster gate refuses story's acceptance at
-// head, its branch's head, naming the last job of its namespace and its
-// outcome, or nil while act.Kluster is off, the manifest has no kluster:
-// block, its head is not known, as for a story whose flai verify did not
-// pass, which is ineligible already, or the gate passes it (ADR-0254 §5a).
-func klusterHolds(repo *workitem.Repo, act Actions, story, head string) *Reason {
+// head, its branch's head, as git in r judges a record's commit there
+// (ADR-0292 §3), naming the last job of its namespace and its outcome, or
+// nil while act.Kluster is off, the manifest has no kluster: block, its head
+// is not known, as for a story whose flai verify did not pass, which is
+// ineligible already, or the gate passes it (ADR-0254 §5a).
+func klusterHolds(r execx.Runner, repo *workitem.Repo, act Actions, story, head string) *Reason {
 	if !act.Kluster || repo.Manifest.Kluster == nil || head == "" {
 		return nil
 	}
-	ok, why, err := kluster.AcceptGate(repo.MainRoot, story, head, act.Checks)
+	ok, why, err := kluster.AcceptGate(r, repo.MainRoot, repo.Manifest, story, head, act.Checks)
 	if err != nil {
-		return &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read the kluster record of %s's namespace to check that it was deployed at %s: %v", story, short(head), err)}
+		return &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot tell from the kluster record of %s's namespace whether it was deployed at %s: %v", story, short(head), err)}
 	}
 	if ok {
 		return nil

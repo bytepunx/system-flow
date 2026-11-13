@@ -328,9 +328,13 @@ func StoryHead(git execx.Runner, root, story string) (string, error) {
 // is on for the project run from root (ADR-0254 §5a): ok when its namespace's
 // record says its deploy passed at head, the story branch's head, and, while
 // checksOn says the checks host action is on, a checks run against it passed
-// there too. Otherwise reason names the last job, its commit, and its
-// outcome. Only a record that cannot be read is an error.
-func AcceptGate(root, story, head string, checksOn bool) (ok bool, reason string, err error) {
+// there too. A record's commit is at head as AtHead judges it with git in
+// root and m's layout (ADR-0292 §3): head itself, or a commit followed only
+// by changes under the design, docs, and wip folders. Otherwise reason names
+// the last job, its commit, and its outcome, and for a commit not at head
+// why. Only a record that cannot be read, or a diff git cannot take, is an
+// error.
+func AcceptGate(git execx.Runner, root string, m manifest.Manifest, story, head string, checksOn bool) (ok bool, reason string, err error) {
 	ns, err := StoryNamespace(story)
 	if err != nil {
 		return false, "", err
@@ -346,16 +350,28 @@ func AcceptGate(root, story, head string, checksOn bool) (ok bool, reason string
 	if !found {
 		return false, fmt.Sprintf("%s's namespace %s was never deployed: no deploy of it is recorded", story, ns), nil
 	}
+	deployed, err := AtHead(git, root, m, r.Commit, head)
+	if err != nil {
+		return false, "", err
+	}
+	checked := deployed
+	if checksOn && r.ChecksCommit != r.Commit {
+		if checked, err = AtHead(git, root, m, r.ChecksCommit, head); err != nil {
+			return false, "", err
+		}
+	}
 	job, outcome := lastJob(root, r)
 	switch {
-	case r.Commit != head:
-		return false, fmt.Sprintf("the last %s of %s's namespace %s was at %s, not at the story's head %s, and it %s", job, story, ns, shortCommit(r.Commit), shortCommit(head), outcome), nil
+	case !deployed.AtHead:
+		return false, fmt.Sprintf("the last %s of %s's namespace %s was at %s, not at the story's head %s, and it %s: %s", job, story, ns, shortCommit(r.Commit), shortCommit(head), outcome, deployed.Why), nil
 	case r.Outcome != OutcomePassed:
 		return false, fmt.Sprintf("the %s of %s's namespace %s at %s %s", job, story, ns, shortCommit(head), outcome), nil
 	case !checksOn:
 		return true, "", nil
-	case r.ChecksCommit != head:
+	case r.ChecksCommit == "":
 		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet", story, ns, shortCommit(head)), nil
+	case !checked.AtHead:
+		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and no checks run against it has ended there yet: its last, at %s, ended %s, and %s", story, ns, shortCommit(head), shortCommit(r.ChecksCommit), r.ChecksOutcome, checked.Why), nil
 	case r.ChecksOutcome != OutcomePassed:
 		return false, fmt.Sprintf("the deploy of %s's namespace %s at %s passed, and the checks run against it there ended %s", story, ns, shortCommit(head), r.ChecksOutcome), nil
 	}

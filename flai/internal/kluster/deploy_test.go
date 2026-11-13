@@ -622,7 +622,7 @@ func TestAcceptGate(t *testing.T) {
 		{"no record", nil, true, []string{"s-0578 was never deployed"}},
 		{"deploy at another commit", with(func(r *Record) {
 			r.Commit, r.ChecksCommit, r.ChecksOutcome = commitB, commitB, OutcomePassed
-		}), true, []string{"last deploy", "at fedcba987654", "not at the story's head 0123456789ab", "it passed"}},
+		}), true, []string{"last deploy", "at fedcba987654", "not at the story's head 0123456789ab", "it passed", "not in the history of the head"}},
 		{"deploy failed", with(func(r *Record) { r.Outcome, r.FailedStep = OutcomeFailed, StepDeploy }), false, []string{"the deploy of S-0578", "at 0123456789ab failed at the deploy step"}},
 		{"deploy failed before its first step", with(func(r *Record) { r.Outcome = OutcomeFailed }), true, []string{"the deploy of S-0578", "failed before its first step"}},
 		{"deploy interrupted", with(func(r *Record) { r.Outcome = OutcomeRunning }), true, []string{"the deploy of S-0578", "was interrupted"}},
@@ -639,7 +639,7 @@ func TestAcceptGate(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			ok, reason, err := AcceptGate(root, "s-0578", commitA, c.checksOn)
+			ok, reason, err := AcceptGate(newGraphGit(""), root, evManifest(), "s-0578", commitA, c.checksOn)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -660,11 +660,56 @@ func TestAcceptGate(t *testing.T) {
 
 func TestAcceptGateRefusesAStoryWithNoBranchOrNoID(t *testing.T) {
 	root := t.TempDir()
-	if ok, reason, err := AcceptGate(root, "S-0578", "", true); ok || err != nil || !strings.Contains(reason, "no branch story/S-0578") {
+	if ok, reason, err := AcceptGate(newGraphGit(""), root, evManifest(), "S-0578", "", true); ok || err != nil || !strings.Contains(reason, "no branch story/S-0578") {
 		t.Errorf("no head: %v %q %v", ok, reason, err)
 	}
-	if _, _, err := AcceptGate(root, "main", commitA, true); err == nil {
+	if _, _, err := AcceptGate(newGraphGit(""), root, evManifest(), "main", commitA, true); err == nil {
 		t.Error("a name that is no story ID was gated")
+	}
+}
+
+// ADR-0292 §3: the gate takes a deploy and a checks run at a commit followed
+// only by changes under the design, docs, and wip folders, such as the
+// issues a close-out commits, as at the head; one followed by a change
+// outside them is not, and the reason says which path; a diff git cannot
+// take is an error.
+func TestAcceptGateTakesARecordFollowedOnlyByDesignDocsAndWipAsAtTheHead(t *testing.T) {
+	cases := []struct {
+		name             string
+		commit, checksAt string
+		head             string
+		want             []string // the reason holds each; none when the gate passes
+	}{
+		{"deploy and checks at the head", evC3, evC3, evC3, nil},
+		{"deploy and checks followed by design/issues", evC2, evC2, evC3, nil},
+		{"deploy followed by a code commit", evC2, evC2, evC4, []string{"last deploy", "not at the story's head 444444444444", "it passed", "flai/internal/kluster/deploy.go"}},
+		{"checks at an older commit followed by code", evC3, evC1, evC3, []string{"no checks run against it has ended there yet", "its last, at 111111111111, ended passed", "flai/internal/kluster/evidence.go"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			evRecord(t, root, c.commit, OutcomePassed, c.checksAt, OutcomePassed)
+			ok, reason, err := AcceptGate(newGraphGit(c.head), root, evManifest(), "S-0662", c.head, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ok != (c.want == nil) {
+				t.Fatalf("ok = %v, reason %q", ok, reason)
+			}
+			for _, w := range c.want {
+				if !strings.Contains(reason, w) {
+					t.Errorf("reason %q does not say %q", reason, w)
+				}
+			}
+		})
+	}
+
+	root := t.TempDir()
+	evRecord(t, root, evC2, OutcomePassed, evC2, OutcomePassed)
+	git := newGraphGit(evC3)
+	git.diffErr = errors.New("exit status 128")
+	if ok, _, err := AcceptGate(git, root, evManifest(), "S-0662", evC3, true); ok || err == nil || !strings.Contains(err.Error(), "exit status 128") {
+		t.Errorf("a diff git cannot take: ok %v, err %v", ok, err)
 	}
 }
 

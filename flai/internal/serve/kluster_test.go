@@ -171,11 +171,57 @@ func (f *fakeKluster) all() []string {
 
 // klusterHeads answers git rev-parse of a story's branch from heads, by
 // story, and git status in a folder from dirty, by folder: clean when it
-// names none.
+// names none. Once history sets parent, it answers merge-base --is-ancestor
+// by walking parent, and diff --name-only with the files each commit after
+// the first up to the second changed, or diffErr.
 type klusterHeads struct {
-	mu    sync.Mutex
-	heads map[string]string
-	dirty map[string]string
+	mu      sync.Mutex
+	heads   map[string]string
+	dirty   map[string]string
+	parent  map[string]string
+	files   map[string][]string
+	diffErr error
+}
+
+// history makes each commit's parent the one before it in commits, oldest
+// first, and each commit change files[commit].
+func (g *klusterHeads) history(files map[string][]string, commits ...string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.parent, g.files = map[string]string{}, files
+	for i := 1; i < len(commits); i++ {
+		g.parent[commits[i]] = commits[i-1]
+	}
+}
+
+// ancestry answers merge-base --is-ancestor and diff --name-only from the
+// history, ok false for any other git command or with no history set.
+func (g *klusterHeads) ancestry(args []string) (out string, ok bool, err error) {
+	switch {
+	case g.parent == nil || len(args) < 4:
+		return "", false, nil
+	case args[0] == "merge-base" && args[1] == "--is-ancestor":
+		for c := args[3]; c != ""; c = g.parent[c] {
+			if c == args[2] {
+				return "", true, nil
+			}
+		}
+		return "", true, errors.New("exit status 1")
+	case args[0] == "diff" && args[1] == "--name-only":
+		if g.diffErr != nil {
+			return "", true, g.diffErr
+		}
+		from, to := args[len(args)-2], args[len(args)-1]
+		var paths []string
+		for c := to; c != "" && c != from; c = g.parent[c] {
+			paths = append(paths, g.files[c]...)
+		}
+		if len(paths) == 0 {
+			return "", true, nil
+		}
+		return strings.Join(paths, "\x00") + "\x00", true, nil
+	}
+	return "", false, nil
 }
 
 // setDirty makes git status in dir answer out.
@@ -199,6 +245,9 @@ func (g *klusterHeads) Run(dir, name string, args ...string) (string, error) {
 	defer g.mu.Unlock()
 	if name == "git" && len(args) > 0 && args[0] == "status" {
 		return g.dirty[dir], nil
+	}
+	if out, ok, err := g.ancestry(args); name == "git" && ok {
+		return out, err
 	}
 	if name == "git" && len(args) == 3 && args[0] == "rev-parse" && args[1] == "--abbrev-ref" && args[2] == "HEAD" {
 		return "main", nil
@@ -473,6 +522,52 @@ func TestAStoryDeployedFromAShellAtItsHeadIsNotDeployedAgain(t *testing.T) {
 	lab.round()
 	if got := lab.kluster.all(); len(got) != 0 {
 		t.Fatalf("a story whose record is at its head was deployed again: %v", got)
+	}
+}
+
+// ADR-0292 §3: a story in review whose record passed at a commit followed
+// only by wip and design commits, its checks too while they are on, is not
+// deployed again; a code commit after it is deployed, and so is a head whose
+// diff git cannot take, as not at the head.
+func TestAStoryWhoseRecordPassedBeforeOnlyWipAndDesignCommitsIsNotDeployedAgain(t *testing.T) {
+	const deployed, closeOut, code = klHeadA, klHeadB, klHeadC
+	files := map[string][]string{
+		closeOut: {"wip/agents/S-0001-x.md", "design/issues/I-0001-x.md"},
+		code:     {"flai/main.go"},
+	}
+	for _, checks := range []bool{false, true} {
+		t.Run(fmt.Sprintf("checks %v", checks), func(t *testing.T) {
+			lab := newKlusterLab(t, klusterBlock)
+			if checks {
+				cfg, _ := nsCheck(t, 0)
+				lab.withChecks(cfg)
+			}
+			lab.git.history(files, deployed, closeOut, code)
+			story := lab.inReview("Closed out", closeOut)
+			writeFakeRecord(lab.root, kluster.Record{Story: story, Commit: deployed, Outcome: kluster.OutcomePassed, ChecksCommit: deployed, ChecksOutcome: kluster.OutcomePassed})
+
+			lab.round()
+			if got := lab.kluster.deploys(); len(got) != 0 {
+				t.Fatalf("a story whose record passed before only wip and design commits was deployed again: %v", got)
+			}
+
+			lab.git.set(story, code)
+			lab.round()
+			want := "deploy " + story + " " + code
+			if got := lab.kluster.deploys(); strings.Join(got, ";") != want {
+				t.Fatalf("deploys after a code commit = %v, want %s", got, want)
+			}
+		})
+	}
+
+	lab := newKlusterLab(t, klusterBlock)
+	lab.git.history(files, deployed, closeOut)
+	lab.git.diffErr = errors.New("exit status 128")
+	story := lab.inReview("Unreadable", closeOut)
+	writeFakeRecord(lab.root, kluster.Record{Story: story, Commit: deployed, Outcome: kluster.OutcomePassed})
+	lab.round()
+	if got, want := strings.Join(lab.kluster.deploys(), ";"), "deploy "+story+" "+closeOut; got != want {
+		t.Fatalf("a head whose diff git cannot take: deploys %q, want %q", got, want)
 	}
 }
 
@@ -1161,7 +1256,7 @@ func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testi
 	if got := lab.titled(story, checksFailureTitle(story)); len(got) != 1 {
 		t.Errorf("the failed run opens one thread, got %d", len(got))
 	}
-	if ok, reason, err := kluster.AcceptGate(lab.root, story, klHeadA, true); ok || err != nil || !strings.Contains(reason, "ended failed") {
+	if ok, reason, err := kluster.AcceptGate(lab.git, lab.root, lab.repo.Manifest, story, klHeadA, true); ok || err != nil || !strings.Contains(reason, "ended failed") {
 		t.Errorf("the gate after the failed run: %v %q %v", ok, reason, err)
 	}
 
@@ -1173,7 +1268,7 @@ func TestAChecksRunAgainstANamespaceKeepsItsOutcomeAndCommitInTheRecord(t *testi
 	if r, _, _ = kluster.ReadRecord(lab.root, ns); r.Commit != klHeadB || r.ChecksCommit != klHeadB || r.ChecksOutcome != kluster.OutcomePassed {
 		t.Fatalf("the passed run at the new head is kept in the record: %+v", r)
 	}
-	if ok, reason, err := kluster.AcceptGate(lab.root, story, klHeadB, true); !ok || err != nil {
+	if ok, reason, err := kluster.AcceptGate(lab.git, lab.root, lab.repo.Manifest, story, klHeadB, true); !ok || err != nil {
 		t.Errorf("the gate after the passed run: %v %q %v", ok, reason, err)
 	}
 }
