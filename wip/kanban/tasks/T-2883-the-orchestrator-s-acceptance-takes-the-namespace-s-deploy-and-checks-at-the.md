@@ -3,16 +3,37 @@ id: T-2883
 type: task
 nature: feature
 title: The orchestrator's acceptance takes the namespace's deploy and checks at the verified commit as evidence for a criterion
-status: backlog
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:33Z
-updated: 2026-11-10T08:27:33Z
-transitions: []
+updated: 2026-11-13T14:27:31Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:56:32Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T13:56:32Z
+    by: agent-S-0662
+  - to: done
+    at: 2026-11-13T14:27:31Z
+    by: agent-S-0662
 stream: S-0662
 tags: [cli, template]
 touches: [flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, design/system/strategic-agents.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md]
 after: [T-2875, T-2877]
+usage:
+  source: log
+  seconds: 1841
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 345
+      cache_read: 3944779
+      cache_write: 411693
+      cost: 1.6284
 ---
 # T-2883 The orchestrator's acceptance takes the namespace's deploy and checks at the verified commit as evidence for a criterion
 

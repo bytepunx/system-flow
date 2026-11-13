@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2157.4749
-accrued_seconds: 1557910
-tasks_completed: 3310
-last_run: 2026-11-13T13:23:19Z
+accrued_cost: 2158.5286
+accrued_seconds: 1558149
+tasks_completed: 3321
+last_run: 2026-11-13T14:21:41Z
 ---
 
 # Orchestrator activity
@@ -23204,6 +23204,83 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 23
 - Cost: 0.0860 USD, estimated
+
+### 2026-11-13T13:41:23Z
+
+- Summary: Accepted S-0661 at d096da359 under accept_reviews: close-out passed at the branch head, verifier matched all 8 criteria to changed files, dry run had no blockers; merged, archived 6, overlap with S-0745 on docs/operators/settings.md reported to it.
+- Items: S-0661
+- Seconds: 70
+- Cost: 0.1996 USD, estimated
+
+### 2026-11-13T13:41:44Z
+
+- Summary: Release due after S-0661's acceptance under threshold policy (count 1 >= 1; value 986.84 < 1000): ran flai formula run publish --ready --autocommit, instance S-0771 in ready (committed f64fbefd8).
+- Items: S-0771, S-0661
+- Seconds: 21
+- Cost: 0.0484 USD, estimated
+
+### 2026-11-13T13:42:00Z
+
+- Summary: Ordered ready by throughput after S-0771 entered it: S-0760 32m, S-0759 42m, S-0751 50m, S-0757 50m, S-0771 last (no forecast duration).
+- Items: S-0771
+- Seconds: 16
+- Cost: 0.0488 USD, estimated
+
+### 2026-11-13T13:42:19Z
+
+- Summary: I accepted S-0661 and started a release, which is now waiting in the ready column as story S-0771.
+- Items: none
+- Seconds: 19
+- Cost: 0.1330 USD, estimated
+
+### 2026-11-13T13:42:47Z
+
+- Summary: Release due after S-0661's acceptance: release_evaluate met under threshold (count 1 >= 1; value 986.84 of 1000 USD); ran flai formula run publish --ready --autocommit, instance S-0772 in ready (commit 17d68ecb7).
+- Items: S-0661, S-0772
+- Seconds: 12
+- Cost: 0.0436 USD, estimated
+
+### 2026-11-13T13:43:13Z
+
+- Summary: Applied flai order --by throughput after S-0772 entered ready (S-0771 and S-0772 last, no forecast duration); found S-0772 duplicates publish instance S-0771 for the same batch, opened TH-1161 asking the operator to cancel S-0772 (cancelling is outside my permissions).
+- Items: S-0771, S-0772
+- Seconds: 26
+- Cost: 0.0672 USD, estimated
+
+### 2026-11-13T13:43:30Z
+
+- Summary: I started a publish run, S-0772, for S-0661, but another publish story, S-0771, was already open for the same release. S-0772 is a duplicate, and I've asked you on TH-1161 to cancel it.
+- Items: none
+- Seconds: 17
+- Cost: 0.1046 USD, estimated
+
+### 2026-11-13T14:13:53Z
+
+- Summary: Resolved my thread TH-1107 on S-0745: its finalization concern is gone, since the operator moved S-0745 to ready and it is in progress; E-0036's cost of delay inputs still wait on the operator on TH-1094.
+- Items: S-0745, TH-1107
+- Seconds: 16
+- Cost: 0.0619 USD, estimated
+
+### 2026-11-13T14:14:10Z
+
+- Summary: I resolved TH-1107, so this run's only reason is done and I'm ending.
+- Items: none
+- Seconds: 17
+- Cost: 0.1387 USD, estimated
+
+### 2026-11-13T14:21:25Z
+
+- Summary: Left TH-1162 (host flai 1.86.17 behind 1.91.0) to the operator: its only entry is flai serve's notice, which answer_threads excludes, and a host upgrade is the operator's alone; 1.91.0 is not yet published, so flai host upgrade --version 1.91.0 waits on its release.
+- Items: TH-1162
+- Seconds: 9
+- Cost: 0.0505 USD, estimated
+
+### 2026-11-13T14:21:41Z
+
+- Summary: I did not reply to TH-1162; it needs you.
+- Items: none
+- Seconds: 16
+- Cost: 0.1574 USD, estimated
 
 ## Refusals
 

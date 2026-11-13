@@ -3,16 +3,37 @@ id: T-2869
 type: task
 nature: feature
 title: kluster.deployments answers each story namespace's column, head, last deploy and checks run, and who asked, the stories in progress not deployed, and the count against the limit
-status: backlog
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:24:53Z
-updated: 2026-11-10T08:24:53Z
-transitions: []
+updated: 2026-11-13T14:21:03Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:09:04Z
+    by: agent-S-0663
+  - to: in-progress
+    at: 2026-11-13T14:09:04Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T14:21:03Z
+    by: agent-S-0663
 stream: S-0663
 tags: [cli, dashboard]
 touches: [flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go]
 after: [T-2868]
+usage:
+  source: log
+  seconds: 717
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 516
+      cache_read: 4496377
+      cache_write: 255663
+      cost: 1.7763
 ---
 # T-2869 kluster.deployments answers each story namespace's column, head, last deploy and checks run, and who asked, the stories in progress not deployed, and the count against the limit
 

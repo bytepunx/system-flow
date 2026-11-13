@@ -3,18 +3,21 @@ id: S-0662
 type: story
 nature: feature
 title: The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first
-status: ready
+status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:10Z
-updated: 2026-11-13T13:41:12Z
+updated: 2026-11-13T14:27:21Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:30Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T13:41:31Z
+    by: agent-S-0662
 tags: [cli, dashboard, template]
 topics: [kluster, deployment, review]
-touches: [flai/internal/kluster/evidence.go, flai/internal/kluster/evidence_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/review_test.go, flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/internal/verify/kluster_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [flai/internal/kluster/evidence.go, flai/internal/kluster/evidence_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/review_test.go, flai/internal/verify/story.go, flai/internal/verify/kluster.go, flai/internal/verify/kluster_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flai/internal/preview/orchestrator.go, flai/internal/preview/evidence_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, flai/internal/roles/baseline/orchestrator.md, template/CHANGELOG.md, design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/mergequeue/eligible.go, flai/internal/preview/accept.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 after: [S-0661]
 agent:
   harness: claude-code
@@ -22,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2743
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      test_runs: 2
+      hand_edits: 2
+      work: 38
+  models:
+    - model: claude-opus-5-5
+      input: 494
+      output: 2847
+      cache_read: 26177126
+      cache_write: 2106198
+      cost: 10.5725
   strategic:
     - kind: planner
       seconds: 134
@@ -91,6 +107,7 @@ The move to review, the close-out, and the review page say what was deployed and
 - T-2885 The MCP item_get shows a story's last deploy and checks run in its namespace, with their commits and outcomes
 - T-2886 The dashboard's review page shows the namespace's last deploy and checks run beside the criteria, with a link to each log
 - T-2888 kluster.md, flai-cli.md, flaiover-dashboard.md, and the users' guides say what the move, the close-out, the review page, and the pack say of the namespace
+- T-3306 The acceptance gate and the review pass take a record at the head as ADR-0292 §3 widens it
 
 ## Notes
 

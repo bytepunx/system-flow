@@ -3,16 +3,37 @@ id: T-2880
 type: task
 nature: feature
 title: flai move to review and item_move warn when the namespace was not deployed and checked at the head, and the unticked-criteria warning says which
-status: backlog
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:15Z
-updated: 2026-11-10T08:27:15Z
-transitions: []
+updated: 2026-11-13T14:27:20Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:56:31Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T13:56:31Z
+    by: agent-S-0662
+  - to: done
+    at: 2026-11-13T14:27:20Z
+    by: agent-S-0662
 stream: S-0662
 tags: [cli]
-touches: [flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/review_test.go]
+touches: [flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/review_test.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 after: [T-2875]
+usage:
+  source: log
+  seconds: 1842
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 411
+      cache_read: 3276213
+      cache_write: 233568
+      cost: 1.312
 ---
 # T-2880 flai move to review and item_move warn when the namespace was not deployed and checked at the head, and the unticked-criteria warning says which
 

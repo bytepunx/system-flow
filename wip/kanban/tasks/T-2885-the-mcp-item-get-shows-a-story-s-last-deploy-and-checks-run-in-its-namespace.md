@@ -3,12 +3,18 @@ id: T-2885
 type: task
 nature: feature
 title: The MCP item_get shows a story's last deploy and checks run in its namespace, with their commits and outcomes
-status: backlog
+status: in-progress
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:43Z
-updated: 2026-11-10T08:27:43Z
-transitions: []
+updated: 2026-11-13T14:27:53Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:27:52Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T14:27:53Z
+    by: agent-S-0662
 stream: S-0662
 tags: [cli]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]

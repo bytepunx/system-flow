@@ -3,12 +3,18 @@ id: T-2886
 type: task
 nature: feature
 title: The dashboard's review page shows the namespace's last deploy and checks run beside the criteria, with a link to each log
-status: backlog
+status: in-progress
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:27:48Z
-updated: 2026-11-10T08:27:48Z
-transitions: []
+updated: 2026-11-13T14:27:55Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:27:55Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T14:27:55Z
+    by: agent-S-0662
 stream: S-0662
 tags: [dashboard]
 touches: [flai/internal/hostapi/writes_host.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]

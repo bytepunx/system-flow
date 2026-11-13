@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 276.1073
-accrued_seconds: 30903
-tasks_completed: 181
-last_run: 2026-11-13T13:23:50Z
+accrued_cost: 277.4399
+accrued_seconds: 30969
+tasks_completed: 182
+last_run: 2026-11-13T13:42:23Z
 ---
 
 # Curator activity
@@ -1459,3 +1459,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0559
 - Seconds: 80
 - Cost: 1.3382 USD, estimated
+
+### 2026-11-13T13:42:23Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. All six candidates came from S-0661. Its one durable fact, that the guard refuses `eval "$(flai kluster env S-nnnn)"` to a story's agent and the agent writes the variables to a file under `/tmp` and sources it instead, is already in `design/system/kluster.md` under "What the agent runs against its namespace". The other five are task rewrites and plan notes, or restate ADR-0292 §2. No design document changed in this run states the fact of D-0482 or D-0487, so both stay active.
+- Trigger: accepted S-0661
+- Items: none
+- Seconds: 66
+- Cost: 1.3326 USD, estimated

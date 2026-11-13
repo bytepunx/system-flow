@@ -3,18 +3,21 @@ id: S-0663
 type: story
 nature: feature
 title: The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
-status: ready
+status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-13T13:41:12Z
+updated: 2026-11-13T14:02:19Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:40Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T13:41:24Z
+    by: agent-S-0663
 tags: [dashboard]
 topics: [kluster, deployment]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/settings.md, flai/internal/serve/kluster_requests.go]
 after: [S-0660, S-0661]
 agent:
   harness: claude-code
@@ -22,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2384
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-13
+      ceremony: 2
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 250
+      output: 1511
+      cache_read: 16497662
+      cache_write: 724974
+      cost: 6.4377
   strategic:
     - kind: planner
       seconds: 83

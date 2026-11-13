@@ -3,15 +3,36 @@ id: T-2877
 type: task
 nature: feature
 title: The work-management convention tells a story's agent in a kluster project to deploy, check, and tick before review
-status: backlog
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:26:49Z
-updated: 2026-11-10T08:26:49Z
-transitions: []
+updated: 2026-11-13T13:56:09Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:44:02Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T13:44:02Z
+    by: agent-S-0662
+  - to: done
+    at: 2026-11-13T13:56:09Z
+    by: agent-S-0662
 stream: S-0662
 tags: [template, conventions]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/workflow.md, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 727
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 157
+      cache_read: 1606013
+      cache_write: 64326
+      cost: 0.6244
 ---
 # T-2877 The work-management convention tells a story's agent in a kluster project to deploy, check, and tick before review
 

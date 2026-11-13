@@ -3,16 +3,37 @@ id: T-3174
 type: task
 nature: feature
 title: flai builds the project's layer image over the harness image with the manifest's arguments, labelled with the Dockerfile's sum and the arguments
-status: backlog
+status: done
 parent: S-0745
 owner: alex
 created: 2026-11-12T16:00:29Z
-updated: 2026-11-12T16:00:37Z
-transitions: []
+updated: 2026-11-13T13:56:44Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:45:03Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T13:45:03Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T13:56:44Z
+    by: agent-S-0745
 stream: S-0745
 tags: [cli]
-touches: [flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go]
+touches: [flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/agentimage.go]
 after: [T-3173]
+usage:
+  source: log
+  seconds: 701
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 16449
+      cache_read: 3373632
+      cache_write: 129225
+      cost: 1.7749
 ---
 # T-3174 flai builds the project's layer image over the harness image with the manifest's arguments, labelled with the Dockerfile's sum and the arguments
 

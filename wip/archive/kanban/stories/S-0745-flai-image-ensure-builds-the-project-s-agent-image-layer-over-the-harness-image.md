@@ -3,11 +3,11 @@ id: S-0745
 type: story
 nature: feature
 title: flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-13T13:16:15Z
+updated: 2026-11-13T14:36:33Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:34Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T13:16:15Z
     by: agent-S-0745
+  - to: review
+    at: 2026-11-13T14:34:53Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T14:36:33Z
+    by: orchestrator
 tags: [cli, template]
 topics: [docker, manifest]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/workitem/store_test.go, flai/internal/agentimage/agentimage.go, docs/operators/index.md, docs/operators/runbooks/install.md, template/CHANGELOG.md]
 after: [S-0740]
 agent:
   harness: claude-code
@@ -25,20 +31,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4745
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 3
+      work: 67
+  models:
+    - model: claude-opus-5-5
+      input: 372
+      output: 137084
+      cache_read: 28115440
+      cache_write: 1076947
+      cost: 14.7915
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 37
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 25
-          cache_read: 187591
-          cache_write: 26004
-          cost: 0.0612
+          input: 13
+          output: 79
+          cache_read: 366222
+          cache_write: 60553
+          cost: 0.1231
 forecast:
   duration: 40m
   delivery: 2026-11-13T14:03:00Z
@@ -59,11 +76,11 @@ After this story `flai image ensure` builds the layer over the harness image it 
 
 ## Acceptance criteria
 
-- [ ] The manifest's `agent.image` takes the layer's build arguments as S-0733's ADR names them, and `flai check` refuses a malformed one. A manifest that names a layer and no arguments builds with the Dockerfile's own `ARG` defaults
-- [ ] `flai image ensure` builds the layer image (`Manifest.LayerImage`) over the harness image, once that image is present and current, with the manifest's arguments and `BASE` set to the harness image. It runs with the step limit, the network retry, and the log of S-0740's build
-- [ ] The layer image carries the label S-0733's ADR names, recording the Dockerfile's sum and the arguments, so `flai image status` reports it stale when the Dockerfile, an argument, or its base changes
-- [ ] `flai image build --layer` builds the layer alone over the harness image on the host, as `scripts/agent-image.sh --layer` does today
-- [ ] `design/system/project-manifest.md`, the manifest rows of `docs/operators/settings.md`, `docs/users/flai.md`, `docs/operators/runbooks/agent-container.md`, and the commented `agent.image` block of `template/root/system-flow.yaml.tmpl` say how a project names its layer and its arguments, and that flai builds it
+- [x] The manifest's `agent.image` takes the layer's build arguments as S-0733's ADR names them, and `flai check` refuses a malformed one. A manifest that names a layer and no arguments builds with the Dockerfile's own `ARG` defaults
+- [x] `flai image ensure` builds the layer image (`Manifest.LayerImage`) over the harness image, once that image is present and current, with the manifest's arguments and `BASE` set to the harness image. It runs with the step limit, the network retry, and the log of S-0740's build
+- [x] The layer image carries the label S-0733's ADR names, recording the Dockerfile's sum and the arguments, so `flai image status` reports it stale when the Dockerfile, an argument, or its base changes
+- [x] `flai image build --layer` builds the layer alone over the harness image on the host, as `scripts/agent-image.sh --layer` does today
+- [x] `design/system/project-manifest.md`, the manifest rows of `docs/operators/settings.md`, `docs/users/flai.md`, `docs/operators/runbooks/agent-container.md`, and the commented `agent.image` block of `template/root/system-flow.yaml.tmpl` say how a project names its layer and its arguments, and that flai builds it
 
 ## Tasks
 - T-3173 The manifest's agent.image takes the layer's build arguments, and flai check refuses a malformed one
@@ -91,3 +108,15 @@ Proposed slice 3c of E-0036. This repository's own layer moves onto these argume
 - Tasks, in four layers, one after another: T-3173 (the key) → T-3174 (the build, which reads `LayerArgs`) → T-3175 (`ensure` and `--layer`, which call it) → T-3176 (the documents).
 - Forecast 40m: `flai forecast` gives 33m on the 13 touches the story declared when it ran (109 s per unit over 118 done large feature stories, size 18). Raised for the 19 its tasks name. Delivery is as flai gives it.
 - Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.
+
+### Accepted by the orchestrator
+
+- Verified: f5387aa7474ecb2f5044e474a2b2b12bcc452277
+- At: 2026-11-13T14:36:33Z
+
+Verdict: pass
+- 1: flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/workitem/store_test.go
+- 2: flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/agentimage/agentimage.go, flai/cmd/image.go, flai/cmd/image_test.go
+- 3: flai/internal/agentimage/layer.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/layer_test.go
+- 4: flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai-reference.md
+- 5: design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl

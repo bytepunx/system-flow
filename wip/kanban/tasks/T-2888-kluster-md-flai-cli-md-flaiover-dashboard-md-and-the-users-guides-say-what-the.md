@@ -7,12 +7,12 @@ status: backlog
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:28:04Z
-updated: 2026-11-10T08:28:04Z
+updated: 2026-11-13T13:44:01Z
 transitions: []
 stream: S-0662
 tags: [cli, dashboard]
 touches: [design/system/kluster.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md]
-after: [T-2878, T-2880, T-2881, T-2883, T-2885, T-2886]
+after: [T-2878, T-2880, T-2881, T-2883, T-2885, T-2886, T-3306]
 ---
 # T-2888 kluster.md, flai-cli.md, flaiover-dashboard.md, and the users' guides say what the move, the close-out, the review page, and the pack say of the namespace
 

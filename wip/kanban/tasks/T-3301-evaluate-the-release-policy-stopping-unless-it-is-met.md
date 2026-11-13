@@ -3,12 +3,18 @@ id: T-3301
 type: task
 nature: improvement
 title: Evaluate the release policy, stopping unless it is met
-status: backlog
+status: in-progress
 parent: S-0771
 owner: alex
 created: 2026-11-13T13:41:40Z
-updated: 2026-11-13T13:41:40Z
-transitions: []
+updated: 2026-11-13T14:36:22Z
+transitions:
+  - to: ready
+    at: 2026-11-13T14:36:22Z
+    by: agent-S-0771
+  - to: in-progress
+    at: 2026-11-13T14:36:22Z
+    by: agent-S-0771
 stream: S-0771
 tags: []
 after: [T-3300]

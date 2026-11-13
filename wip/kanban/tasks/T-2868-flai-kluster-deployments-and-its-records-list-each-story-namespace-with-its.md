@@ -3,15 +3,36 @@ id: T-2868
 type: task
 nature: feature
 title: flai kluster deployments and its records list each story namespace with its column, head, last deploy and checks run, who asked, and the count against the limit
-status: backlog
+status: done
 parent: S-0663
 owner: alex
 created: 2026-11-10T08:24:39Z
-updated: 2026-11-10T08:26:29Z
-transitions: []
+updated: 2026-11-13T14:02:19Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:42:41Z
+    by: agent-S-0663
+  - to: in-progress
+    at: 2026-11-13T13:42:41Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T14:02:19Z
+    by: agent-S-0663
 stream: S-0663
 tags: [cli]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/serve/kluster_requests.go]
+usage:
+  source: log
+  seconds: 1178
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 126
+      output: 694
+      cache_read: 8839209
+      cache_write: 198148
+      cost: 3.378
 ---
 # T-2868 flai kluster deployments and its records list each story namespace with its column, head, last deploy and checks run, who asked, and the count against the limit
 

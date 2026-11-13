@@ -3,15 +3,36 @@ id: T-2878
 type: task
 nature: feature
 title: A story's prime pack in a kluster project names the deploy and checks commands
-status: backlog
+status: done
 parent: S-0662
 owner: alex
 created: 2026-11-10T08:26:53Z
-updated: 2026-11-10T08:26:53Z
-transitions: []
+updated: 2026-11-13T13:56:21Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:44:02Z
+    by: agent-S-0662
+  - to: in-progress
+    at: 2026-11-13T13:44:02Z
+    by: agent-S-0662
+  - to: done
+    at: 2026-11-13T13:56:21Z
+    by: agent-S-0662
 stream: S-0662
 tags: [cli]
 touches: [flai/internal/context/story.go, flai/internal/context/context.go, flai/internal/context/context_test.go]
+usage:
+  source: log
+  seconds: 739
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 277
+      cache_read: 2288187
+      cache_write: 79093
+      cost: 0.8849
 ---
 # T-2878 A story's prime pack in a kluster project names the deploy and checks commands
 
