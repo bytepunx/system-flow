@@ -85,8 +85,8 @@ func FindUndone(r execx.Runner, dir, onto, oldBase string) ([]Undone, error) {
 		if out, err = r.Run(dir, "git", diffArgs(onto, "HEAD", p)...); err != nil {
 			return nil, fmt.Errorf("read what the branch in %s removes from %s against %s: %w", dir, p, onto, err)
 		}
-		_, removed := diffLines(out)
-		if lines := undoneLines(added, removed); len(lines) > 0 {
+		branchAdded, removed := diffLines(out)
+		if lines := notKept(p, undoneLines(added, removed), branchAdded); len(lines) > 0 {
 			found = append(found, Undone{Path: p, Lines: lines, OldBase: oldBase})
 		}
 	}
@@ -118,8 +118,8 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 		if err != nil {
 			return nil, fmt.Errorf("check whether %s still undoes %s's change to %s: %w; a story with no branch has nothing to undo, so delete %s", Branch(story), main, e.Path, err, UndoneRecordPath(cacheDir, story))
 		}
-		_, removed := diffLines(diff)
-		if e.Lines = undoneLines(e.Lines, removed); len(e.Lines) == 0 {
+		branchAdded, removed := diffLines(diff)
+		if e.Lines = notKept(e.Path, undoneLines(e.Lines, removed), branchAdded); len(e.Lines) == 0 {
 			continue
 		}
 		kept = append(kept, e)
@@ -295,4 +295,54 @@ func undoneLines(added, removed []string) []string {
 		}
 	}
 	return out
+}
+
+// notKept is the lines of undone, main's lines the branch removes from the
+// file at path, that no line the branch adds keeps (I-0360): in a markdown
+// file, a line of main's whose words, split on white space, the words of an
+// added line hold in the same order is kept, not undone, as when the branch
+// adds a sentence to main's one-line paragraph or table row. Each added line
+// keeps one of main's lines at most, the first it holds in undone's order. A
+// line with no words, and every line of a file that is not markdown, where a
+// line that keeps every word, such as one commented out, can still undo
+// main's change, is kept only by the multiset of whole lines (ADR-0155).
+func notKept(path string, undone, branchAdded []string) []string {
+	if len(undone) == 0 || !strings.EqualFold(filepath.Ext(path), ".md") {
+		return undone
+	}
+	used := make([]bool, len(branchAdded))
+	out := []string{}
+	for _, l := range undone {
+		if !keepOnce(strings.Fields(l), branchAdded, used) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// keepOnce marks used the first line of added, not used yet, that holds
+// words in order, and reports whether it found one; no words are never kept.
+func keepOnce(words, added []string, used []bool) bool {
+	if len(words) == 0 {
+		return false
+	}
+	for i, a := range added {
+		if !used[i] && holdsInOrder(strings.Fields(a), words) {
+			used[i] = true
+			return true
+		}
+	}
+	return false
+}
+
+// holdsInOrder reports whether words is a subsequence of line: every word of
+// it, in its order, with any words between.
+func holdsInOrder(line, words []string) bool {
+	j := 0
+	for _, w := range line {
+		if j < len(words) && w == words[j] {
+			j++
+		}
+	}
+	return j == len(words)
 }

@@ -60,6 +60,63 @@ func TestDiffLinesReadsHunksAndSkipsHeaders(t *testing.T) {
 	}
 }
 
+// I-0360: in a markdown file, main's line is kept when a line the branch adds
+// holds every word of it in order, each added line keeping one of main's at
+// most; a dropped, changed, or reordered word, a line with no words, and a
+// file that is not markdown keep the multiset of whole lines.
+func TestNotKeptLeavesMainsLinesABranchLineExtends(t *testing.T) {
+	row := "| `flai check` | Validates the repo. |"
+	cases := []struct {
+		name, path          string
+		undone, branchAdded []string
+		want                []string
+	}{
+		{"extended row", "a.md", []string{row}, []string{"| `flai check` | Validates the repo. It also checks images. |"}, []string{}},
+		{"word inserted inside", "a.md", []string{"one two three"}, []string{"one and two three"}, []string{}},
+		{"upper-case extension", "A.MD", []string{"one two"}, []string{"one two three"}, []string{}},
+		{"word dropped", "a.md", []string{"one two three"}, []string{"one three four"}, []string{"one two three"}},
+		{"word changed", "a.md", []string{"one two"}, []string{"one too"}, []string{"one two"}},
+		{"words reordered", "a.md", []string{"one two"}, []string{"two one"}, []string{"one two"}},
+		{"revert adds nothing", "a.md", []string{"one two"}, nil, []string{"one two"}},
+		{"one added line keeps one", "a.md", []string{"one two", "one two"}, []string{"one two three"}, []string{"one two"}},
+		{"each added line keeps one", "a.md", []string{"a b", "c d"}, []string{"c d e", "a b f"}, []string{}},
+		{"blank line", "a.md", []string{""}, []string{"anything"}, []string{""}},
+		{"not markdown", "a.go", []string{"x := 1"}, []string{"// x := 1"}, []string{"x := 1"}},
+	}
+	for _, c := range cases {
+		if got := notKept(c.path, c.undone, c.branchAdded); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// I-0360: FindUndone reports nothing where the branch extends main's markdown
+// line, and RecordedUndone drops a path recorded before the rule once the
+// branch's line keeps main's words.
+func TestUndoneLeavesAMarkdownLineTheBranchExtends(t *testing.T) {
+	g := undoneGit("c3", "b3", []string{"flai-cli.md", "code.go"}, []string{"flai-cli.md", "code.go"})
+	g.script("@@ -54 +54 @@\n-| `flai check` | old |\n+| `flai check` | main's |", diffArgs("b3", "c3", "flai-cli.md")...)
+	g.script("@@ -54 +54 @@\n-| `flai check` | main's |\n+| `flai check` | main's and the story's |", diffArgs("c3", "HEAD", "flai-cli.md")...)
+	g.script("@@ -1 +1 @@\n-x := 0\n+x := 1", diffArgs("b3", "c3", "code.go")...)
+	g.script("@@ -1 +1 @@\n-x := 1\n+// x := 1", diffArgs("c3", "HEAD", "code.go")...)
+	got, err := FindUndone(g, "/wt", "c3", "b3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Undone{{Path: "code.go", Lines: []string{"x := 1"}, OldBase: "b3"}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("found %+v, want %+v", got, want)
+	}
+
+	repo, rg := undoneRepo(t)
+	if err := recordUndone(repo.CacheDir(), "S-0001", []Undone{{Path: "flai-cli.md", Lines: []string{"| `flai check` | main's |"}, OldBase: "b0"}}, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	rg.script("@@ -54 +54 @@\n-| `flai check` | main's |\n+| `flai check` | main's and the story's |", diffArgs("main", "story/S-0001", "flai-cli.md")...)
+	if got, err := RecordedUndone(rg, repo, "S-0001"); err != nil || len(got) != 0 {
+		t.Errorf("recorded and extended: %+v %v; want nothing still undone", got, err)
+	}
+}
+
 // undoneGit scripts the check of the worktree wt, rebased onto the commit
 // onto from old, where main changed mainPaths between them and the branch
 // changes branchPaths against onto. It scripts no read of main's name, so a
