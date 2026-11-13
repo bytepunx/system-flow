@@ -3,10 +3,10 @@ id: S-0768
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: cancelled
 owner: alex
 created: 2026-11-13T11:43:32Z
-updated: 2026-11-13T11:43:41Z
+updated: 2026-11-13T11:45:33Z
 transitions:
   - to: ready
     at: 2026-11-13T11:43:34Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-13T11:43:41Z
     by: agent-S-0768
+  - to: cancelled
+    at: 2026-11-13T11:45:33Z
+    by: alex
 tags: []
 touches: [wip/kanban/stories/S-0768-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,31 +26,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 82
-  estimated: true
-  priced_by: estimate
+  seconds: 150
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 13
+      ceremony: 3
+      work: 17
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 244
-      cache_read: 1536851
-      cache_write: 154950
-      cost: 0.6313
+      input: 44
+      output: 8512
+      cache_read: 2797585
+      cache_write: 174206
+      cost: 2.1236
   strategic:
     - kind: orchestrator
-      seconds: 31
+      seconds: 51
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 86
-          cache_read: 388237
-          cache_write: 19229
-          cost: 0.1178
+          input: 20
+          output: 142
+          cache_read: 669284
+          cache_write: 36081
+          cost: 0.2039
+        - model: claude-sonnet-5-5
+          input: 0
+          output: 5
+          cache_read: 0
+          cache_write: 2761
+          cost: 0.0021
 formula: publish
 ---
 # S-0768 Publish what is accepted and not yet released
@@ -70,3 +78,4 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+- 2026-11-13T11:45:33Z: moved to cancelled: REDUNDANT

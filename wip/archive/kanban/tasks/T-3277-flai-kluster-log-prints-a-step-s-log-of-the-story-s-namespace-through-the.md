@@ -3,11 +3,11 @@ id: T-3277
 type: task
 nature: feature
 title: flai kluster log prints a step's log of the story's namespace through the reader the host method kluster.log uses
-status: in-progress
+status: done
 parent: S-0763
 owner: alex
 created: 2026-11-13T09:03:01Z
-updated: 2026-11-13T09:08:16Z
+updated: 2026-11-13T11:46:58Z
 transitions:
   - to: ready
     at: 2026-11-13T09:08:16Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T09:08:16Z
     by: agent-S-0763
+  - to: done
+    at: 2026-11-13T11:46:58Z
+    by: agent-S-0763
 stream: S-0763
 tags: [cli]
 touches: [flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 usage:
   source: log
-  seconds: 2335
+  seconds: 2777
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 38698
-      cache_read: 3867035
-      cache_write: 438602
-      cost: 4.0417
+      input: 86
+      output: 40771
+      cache_read: 4288366
+      cache_write: 454635
+      cost: 4.2668
   strategic:
     - kind: orchestrator
       seconds: 5

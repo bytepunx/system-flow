@@ -2,7 +2,7 @@
 id: D-0559
 title: In this repository a publish formula instance runs its steps' flai commands as scripts/flai.sh, since the installed flai on PATH can lack the flags the steps use, as 1.86.6 lacked --judged (I-0332)
 kind: decision
-sources: [S-0658, I-0332, S-0704, S-0762]
+sources: [S-0658, I-0332, S-0704, S-0762, S-0766]
 topics: [formulas, release, flai]
 paths: [design/workflows/formulas/publish.md, scripts/flai.sh, design/issues/I-0332-a-formula-step-s-bare-flai-command-resolves-to-the-installed-flai-on-path-which.md]
 date: 2026-11-10
@@ -38,4 +38,10 @@ S-0762, a later publish instance, ran the same way with flai 1.86.17 installed. 
 Layers are the formula's: T-3265, then T-3266, then T-3267, each waiting on the one before; run in the main checkout with scripts/flai.sh, as S-0646's instance did, since the installed flai (1.86.17) is behind the tree.
 ```
 
-Sources: S-0658 (`wip/archive/agents/S-0658.md`, Decisions); I-0332; S-0704 (`wip/archive/agents/S-0704.md`, Decisions); S-0762 (`wip/archive/agents/S-0762.md`, Decisions).
+S-0766, the next publish instance, did the same, with the installed flai further behind. From its Decisions (`wip/archive/agents/S-0766.md`):
+
+```text
+Formula steps run with the tree's flai, `scripts/flai.sh`, in the main checkout, as S-0729's publish did: the installed flai 1.86.17 is behind 1.88.0 in the project's history.
+```
+
+Sources: S-0658 (`wip/archive/agents/S-0658.md`, Decisions); I-0332; S-0704 (`wip/archive/agents/S-0704.md`, Decisions); S-0762 (`wip/archive/agents/S-0762.md`, Decisions); S-0766 (`wip/archive/agents/S-0766.md`, Decisions).

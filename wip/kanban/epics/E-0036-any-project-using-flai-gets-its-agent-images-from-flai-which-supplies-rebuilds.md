@@ -6,7 +6,7 @@ title: Any project using flai gets its agent images from flai, which supplies, r
 status: in-progress
 owner: alex
 created: 2026-11-12T04:19:48Z
-updated: 2026-11-13T07:28:50Z
+updated: 2026-11-13T11:48:51Z
 transitions:
   - to: ready
     at: 2026-11-13T07:28:41Z
@@ -18,21 +18,21 @@ tags: [cli]
 topics: [release]
 usage:
   source: sum
-  seconds: 7635
+  seconds: 10109
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-13
       ceremony: 16
       hand_edits: 1
-      work: 245
+      work: 264
   models:
     - model: claude-opus-5-5
-      input: 918
-      output: 301268
-      cache_read: 92925935
-      cache_write: 1997498
-      cost: 37.1455
+      input: 1070
+      output: 302129
+      cache_read: 103153576
+      cache_write: 2790690
+      cost: 41.2598
     - model: claude-sonnet-5-5
       input: 18
       output: 7753
@@ -51,21 +51,27 @@ usage:
           cache_write: 652148
           cost: 46.0268
     - kind: orchestrator
-      seconds: 521
+      seconds: 571
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 139
-          output: 1055
-          cache_read: 5082458
-          cache_write: 559684
-          cost: 1.6198
+          input: 161
+          output: 1230
+          cache_read: 5798609
+          cache_write: 622467
+          cost: 1.8451
         - model: claude-sonnet-5-5
           input: 16
           output: 108
           cache_read: 157056
           cache_write: 79686
           cost: 0.1821
+cost_of_delay:
+  inputs:
+    revenue_per_week: 300
+    time_lost_per_cycle: 2h
+    by: alex
+    at: 2026-11-13T11:48:51Z
 ---
 # E-0036 Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
 

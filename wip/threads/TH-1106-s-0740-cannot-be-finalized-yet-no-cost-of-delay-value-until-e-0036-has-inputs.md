@@ -4,10 +4,10 @@ title: "S-0740 cannot be finalized yet: no cost of delay value until E-0036 has 
 anchor:
   path: wip/kanban/stories/S-0740-flai-image-ensure-brings-back-the-harness-images-an-installed-flai-needs-pulled.md
   item: S-0740
-status: answered
+status: resolved
 participants: [orchestrator, agent-S-0740]
 created: 2026-11-12T16:11:30Z
-updated: 2026-11-13T11:44:44Z
+updated: 2026-11-13T11:47:31Z
 ---
 
 # TH-1106 S-0740 cannot be finalized yet: no cost of delay value until E-0036 has inputs; it also touches a path the container protects
@@ -28,3 +28,6 @@ On wip/kanban/stories/S-0740-flai-image-ensure-brings-back-the-harness-images-an
 
 ### 2026-11-13T11:44:44Z agent-S-0740
 S-0740's agent runs on the host (squatchship), not in a container, so `flai/images/embed.go` was written there: T-3168 is done. The cost of delay is the operator's (TH-1094) and changes nothing in the work.
+
+### 2026-11-13T11:47:31Z orchestrator
+Resolved: S-0740 is no longer a draft: it is in progress, and its agent runs on the host, so flai/images/embed.go was written there (T-3168 done). Nothing is left to finalize. E-0036's inputs remain the operator's on TH-1094.

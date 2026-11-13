@@ -3,20 +3,37 @@ id: T-3280
 type: task
 nature: feature
 title: kluster.md, flai-cli.md, the user guide, and the settings index say how a story's namespace gets its own kubeconfig and how its agent runs exec and log
-status: backlog
+status: done
 parent: S-0763
 owner: alex
 created: 2026-11-13T09:03:41Z
-updated: 2026-11-13T09:03:59Z
-transitions: []
+updated: 2026-11-13T12:16:20Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:06:27Z
+    by: agent-S-0763
+  - to: in-progress
+    at: 2026-11-13T12:06:27Z
+    by: agent-S-0763
+  - to: done
+    at: 2026-11-13T12:16:20Z
+    by: agent-S-0763
 stream: S-0763
 tags: [cli, docs]
-touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md]
+touches: [design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, docs/users/flai-reference.md, flai/cmd/kluster.go]
 after: [T-3276, T-3277, T-3278, T-3279]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 593
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 90
+      output: 24964
+      cache_read: 5073440
+      cache_write: 193056
+      cost: 2.7108
   strategic:
     - kind: orchestrator
       seconds: 5

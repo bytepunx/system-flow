@@ -1,21 +1,21 @@
 ---
 title: Active streams
-updated: 2026-11-13T11:45:34Z
+updated: 2026-11-13T12:39:39Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0740](S-0740.md) | flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries | in-progress | agent-S-0740 | 2026-11-13T11:44:32Z |
-| [S-0763](S-0763.md) | Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace | in-progress | agent-S-0763 | 2026-11-13T09:08:01Z |
-| [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | agent-S-0768 | 2026-11-13T11:45:11Z |
+| [S-0740](S-0740.md) | flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries | in-progress | agent-S-0740 | 2026-11-13T12:26:19Z |
+| [S-0767](S-0767.md) | flai stream sync reports a rebased branch undoes main's line when both changed one long markdown line and the branch keeps every word of main's | in-progress | agent-S-0767 | 2026-11-13T12:39:24Z |
+| [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | system-flow | 2026-11-13T11:46:00Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 255 | 1349.7553 USD | 158868 | 2026-11-13T09:04:56Z |
-| [orchestrator](orchestrator.md) | 3273 | 2152.1921 USD | 1556662 | 2026-11-13T11:44:12Z |
+| [planner](planner.md) | 256 | 1351.9660 USD | 159040 | 2026-11-13T11:48:52Z |
+| [orchestrator](orchestrator.md) | 3283 | 2153.8356 USD | 1556973 | 2026-11-13T11:50:34Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 175 | 268.1399 USD | 30454 | 2026-11-13T11:44:49Z |
+| [curator](curator.md) | 176 | 269.4571 USD | 30528 | 2026-11-13T11:46:33Z |

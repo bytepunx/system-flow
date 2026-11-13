@@ -3,16 +3,37 @@ id: T-3170
 type: task
 nature: feature
 title: flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries checked against the signed checksums, or from a development tree's own
-status: backlog
+status: done
 parent: S-0740
 owner: alex
 created: 2026-11-12T15:59:35Z
-updated: 2026-11-13T11:43:37Z
-transitions: []
+updated: 2026-11-13T12:25:58Z
+transitions:
+  - to: ready
+    at: 2026-11-13T11:55:44Z
+    by: agent-S-0740
+  - to: in-progress
+    at: 2026-11-13T11:55:44Z
+    by: agent-S-0740
+  - to: done
+    at: 2026-11-13T12:25:58Z
+    by: agent-S-0740
 stream: S-0740
 tags: [cli]
 touches: [flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go]
 after: [T-3168, T-3287]
+usage:
+  source: log
+  seconds: 1800
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 245
+      cache_read: 2937846
+      cache_write: 235746
+      cost: 1.1846
 ---
 # T-3170 flai builds the harness images on the host from its embedded Dockerfiles and its release's Linux binaries checked against the signed checksums, or from a development tree's own
 

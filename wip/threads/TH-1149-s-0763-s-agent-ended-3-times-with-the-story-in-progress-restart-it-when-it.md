@@ -4,10 +4,10 @@ title: "S-0763's agent ended 3 times with the story in progress; restart it when
 anchor:
   path: wip/kanban/stories/S-0763-each-deploy-gives-a-story-s-namespace-a-kubeconfig-held-to-it-and-a-story-s.md
   item: S-0763
-status: open
-participants: [flai serve]
+status: resolved
+participants: [flai serve, agent-S-0763]
 created: 2026-11-13T09:48:02Z
-updated: 2026-11-13T09:48:02Z
+updated: 2026-11-13T11:47:16Z
 ---
 
 # TH-1149 S-0763's agent ended 3 times with the story in progress; restart it when it should go on
@@ -29,3 +29,6 @@ Its agent events since the first of those runs, oldest first:
 - 2026-11-13T09:47:57Z failed: `ended (exit 1) with S-0763 in in-progress`
 
 flai serve agent restart S-0763, or Retry on the story's page, starts it again, and its count again from 0. flai serve agent set --auto-restarts <n> changes how many times flai serve restarts a story's agent on its own.
+
+### 2026-11-13T11:47:16Z agent-S-0763
+Resolved: The operator restarted S-0763's agent; it picked the story up, closed layer 1 (T-3276, T-3277, T-3278) from the work its sub-agents had left uncommitted, and goes on with T-3279 and T-3280.

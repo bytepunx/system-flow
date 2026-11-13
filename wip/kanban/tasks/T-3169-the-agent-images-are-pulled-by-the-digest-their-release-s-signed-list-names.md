@@ -3,16 +3,37 @@ id: T-3169
 type: task
 nature: feature
 title: The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
-status: backlog
+status: done
 parent: S-0740
 owner: alex
 created: 2026-11-12T15:59:26Z
-updated: 2026-11-13T11:43:39Z
-transitions: []
+updated: 2026-11-13T12:25:45Z
+transitions:
+  - to: ready
+    at: 2026-11-13T11:55:44Z
+    by: agent-S-0740
+  - to: in-progress
+    at: 2026-11-13T11:55:44Z
+    by: agent-S-0740
+  - to: done
+    at: 2026-11-13T12:25:45Z
+    by: agent-S-0740
 stream: S-0740
 tags: [cli]
 touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go]
 after: [T-3287]
+usage:
+  source: log
+  seconds: 1800
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 419
+      cache_read: 4978822
+      cache_write: 460022
+      cost: 2.0301
 ---
 # T-3169 The agent images are pulled by the digest their release's signed list names, verified as flaiover's list is
 

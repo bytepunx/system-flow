@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2152.1921
-accrued_seconds: 1556662
-tasks_completed: 3273
-last_run: 2026-11-13T11:44:12Z
+accrued_cost: 2153.8356
+accrued_seconds: 1556973
+tasks_completed: 3283
+last_run: 2026-11-13T11:50:34Z
 ---
 
 # Orchestrator activity
@@ -22945,6 +22945,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.0467 USD, estimated
+
+### 2026-11-13T11:46:07Z
+
+- Summary: review:S-0766: verifier passed the publish instance at 208eac0 (T-3284..T-3286 done), dry run showed no blockers, but alex accepted it at 11:45:13Z while my accept ran, so mine was refused (rebase found the worktree gone); nothing left to finish. release_evaluate after it: threshold not met, count 0 of 1, value 0 of 1000 (S-0768 already published S-0761 as flai 1.89.1), so no publish. ready: promote --candidates lists none; ordered ready by throughput (S-0760 32m first … S-0662 2h30m), all held on after; started the planner for new story S-0767 (plan --candidates: no touches, forecast, value, or tasks). S-0241 stays a draft (TH-0790); the 19 E-0034 drafts lack only a value pending TH-1097; S-0730 left out by flai plan; E-0036's TH-1139 judged before. thread:TH-1152 is a flai serve notice, resolved by flai serve at 11:43:34Z: left alone.
+- Items: S-0766, S-0767, S-0768, S-0241, E-0034
+- Seconds: 99
+- Cost: 0.4414 USD, estimated
+
+### 2026-11-13T11:46:31Z
+
+- Summary: All three reasons are handled, and flai serve has answered `reasons done`.
+- Items: none
+- Seconds: 24
+- Cost: 0.2169 USD, estimated
+
+### 2026-11-13T11:47:35Z
+
+- Summary: thread:TH-1106: resolved my own thread; S-0740 is in progress, not a draft, and its agent wrote flai/images/embed.go on the host (T-3168 done), so nothing is left to finalize. E-0036's inputs stay the operator's on TH-1094.
+- Items: S-0740
+- Seconds: 50
+- Cost: 0.2253 USD, estimated
+
+### 2026-11-13T11:47:44Z
+
+- Summary: ready-empty and thread:TH-1153 (a flai serve notice, left alone): promote_candidates lists none. Ready already in throughput order (S-0760 32m first … S-0662 2h30m), all 8 held on after, so nothing applied. promote --drafts: S-0241 is complete but stays a draft (TH-0790: forks not offered headless); the 19 E-0034 drafts lack only a value pending the operator's inputs on TH-1097, so no planner started. E-0036 not replanned (TH-1139 only confirms ADR-0295). S-0730 left out by flai plan; S-0767's planner is running.
+- Items: S-0241, E-0034, E-0036, S-0767
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-11-13T11:48:01Z
+
+- Summary: I acted on all three reasons. The board is still starved, and only you can unblock it.
+- Items: none
+- Seconds: 17
+- Cost: 0.0797 USD, estimated
+
+### 2026-11-13T11:48:36Z
+
+- Summary: Finalized draft S-0767 (draft false): flai promote --drafts lists it complete; its two criteria, touches (undone.go, its tests, the ADR refining ADR-0155, design and docs passages), forecast 40m, and cost of delay value 25 USD/week agree with its planning notes.
+- Items: S-0767
+- Seconds: 23
+- Cost: 0.0862 USD, estimated
+
+### 2026-11-13T11:48:55Z
+
+- Summary: I finalized the draft S-0767 (`draft: false`), so it can now be promoted to ready.
+- Items: none
+- Seconds: 19
+- Cost: 0.2065 USD, estimated
+
+### 2026-11-13T11:49:57Z
+
+- Summary: Answered TH-1154, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0767
+- Seconds: 33
+- Cost: 0.1403 USD, estimated
+
+### 2026-11-13T11:50:14Z
+
+- Summary: Approved and resolved TH-1154, the planner's plan for S-0767 (T-3291, then T-3292 and T-3293 in parallel), under plan_backlog_stories: tasks cover both criteria, touches match undone.go and the named tests, forecast 40m against flai's 23m with stated reason, value 25 USD/week from flai cod; no cost of delay input needed.
+- Items: S-0767, T-3291, T-3292, T-3293
+- Seconds: 17
+- Cost: 0.0243 USD, estimated
+
+### 2026-11-13T11:50:34Z
+
+- Summary: I approved the planner's plan for S-0767 and resolved TH-1154. Both reasons are done.
+- Items: none
+- Seconds: 20
+- Cost: 0.2229 USD, estimated
 
 ## Refusals
 

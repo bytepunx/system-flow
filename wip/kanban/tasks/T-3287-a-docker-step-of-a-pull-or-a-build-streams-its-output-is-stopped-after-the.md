@@ -3,11 +3,11 @@ id: T-3287
 type: task
 nature: feature
 title: A docker step of a pull or a build streams its output, is stopped after the stall limit, and is tried again on a network failure
-status: in-progress
+status: done
 parent: S-0740
 owner: alex
 created: 2026-11-13T11:43:30Z
-updated: 2026-11-13T11:43:55Z
+updated: 2026-11-13T11:55:01Z
 transitions:
   - to: ready
     at: 2026-11-13T11:43:55Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T11:43:55Z
     by: agent-S-0740
+  - to: done
+    at: 2026-11-13T11:55:01Z
+    by: agent-S-0740
 stream: S-0740
 tags: []
 touches: [flai/internal/agentimage/run.go, flai/internal/agentimage/run_test.go]
 usage:
   source: log
-  seconds: 36
+  seconds: 666
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 36
-      cache_read: 416404
-      cache_write: 1911
-      cost: 0.1561
+      input: 27
+      output: 198
+      cache_read: 1789194
+      cache_write: 84675
+      cost: 0.6995
 ---
 # T-3287 A docker step of a pull or a build streams its output, is stopped after the stall limit, and is tried again on a network failure
 

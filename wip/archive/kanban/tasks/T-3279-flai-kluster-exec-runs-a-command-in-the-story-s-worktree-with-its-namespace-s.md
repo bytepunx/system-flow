@@ -3,20 +3,37 @@ id: T-3279
 type: task
 nature: feature
 title: flai kluster exec runs a command in the story's worktree with its namespace's variables and its own kubeconfig while the namespace has a record
-status: backlog
+status: done
 parent: S-0763
 owner: alex
 created: 2026-11-13T09:03:28Z
-updated: 2026-11-13T09:03:28Z
-transitions: []
+updated: 2026-11-13T12:06:16Z
+transitions:
+  - to: ready
+    at: 2026-11-13T11:47:19Z
+    by: agent-S-0763
+  - to: in-progress
+    at: 2026-11-13T11:47:20Z
+    by: agent-S-0763
+  - to: done
+    at: 2026-11-13T12:06:16Z
+    by: agent-S-0763
 stream: S-0763
 tags: [cli]
 touches: [flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-3276, T-3277]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1136
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 11572
+      cache_read: 2351864
+      cache_write: 89494
+      cost: 1.2566
   strategic:
     - kind: orchestrator
       seconds: 5

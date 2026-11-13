@@ -3,11 +3,11 @@ id: T-3278
 type: task
 nature: feature
 title: flai guard lets a story's agent and its sub-agents run kluster exec and log for their own story, and refuses other namespaces, the kluster program but status, and flai's cluster kubeconfig
-status: in-progress
+status: done
 parent: S-0763
 owner: alex
 created: 2026-11-13T09:03:11Z
-updated: 2026-11-13T09:08:16Z
+updated: 2026-11-13T11:46:50Z
 transitions:
   - to: ready
     at: 2026-11-13T09:08:16Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T09:08:16Z
     by: agent-S-0763
+  - to: done
+    at: 2026-11-13T11:46:50Z
+    by: agent-S-0763
 stream: S-0763
 tags: [cli]
 touches: [flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go]
 usage:
   source: log
-  seconds: 2335
+  seconds: 2769
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 69
-      output: 33488
-      cache_read: 3345434
-      cache_write: 381186
-      cost: 3.511
+      input: 74
+      output: 34961
+      cache_read: 3644745
+      cache_write: 392575
+      cost: 3.671
   strategic:
     - kind: orchestrator
       seconds: 5

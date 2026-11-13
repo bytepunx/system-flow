@@ -3,11 +3,11 @@ id: S-0763
 type: story
 nature: feature
 title: Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-13T08:03:30Z
-updated: 2026-11-13T09:06:55Z
+updated: 2026-11-13T12:39:37Z
 transitions:
   - to: ready
     at: 2026-11-13T09:06:47Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T09:06:55Z
     by: agent-S-0763
+  - to: review
+    at: 2026-11-13T12:38:00Z
+    by: agent-S-0763
+  - to: done
+    at: 2026-11-13T12:39:37Z
+    by: orchestrator
 tags: [cli]
 topics: [kluster, deployment]
-touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0361-flai-kluster-exec-and-log-read-flai-cache-kluster-which-a-story-s-agent-in-a.md, design/issues/summary.md]
 after: [S-0660]
 agent:
   harness: claude-code
@@ -26,20 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2419
+  seconds: 5932
   priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
+      ceremony: 5
       test_runs: 1
-      work: 23
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 244
-      output: 120383
-      cache_read: 12030666
-      cache_write: 1363094
-      cost: 12.5621
+      input: 472
+      output: 183620
+      cache_read: 24882473
+      cache_write: 1852135
+      cost: 19.4289
   strategic:
     - kind: planner
       seconds: 528
@@ -86,12 +92,12 @@ A story's agent reaches its own story's kluster namespace, and nothing else in t
 
 ## Acceptance criteria
 
-- [ ] After the deploy step of a story's deploy passes, flai makes a ServiceAccount `flai-agent` in the namespace, a RoleBinding to the cluster's `edit` ClusterRole, and `.flai-cache/kluster/agents/s-nnnn.kubeconfig` with a token from `kubectl create token` valid for 24 hours; a deploy again makes a new one
-- [ ] The teardown deletes the namespace's kubeconfig
-- [ ] `flai kluster exec S-nnnn -- <command>` runs a command in the story's worktree with ADR-0254 §4's variables for its namespace, but `FLAI_KLUSTER_IMAGES`, and `KUBECONFIG` the namespace's kubeconfig, while the namespace has a record, a failed one included
-- [ ] `flai kluster log S-nnnn --step <step>` prints a step's log as the host method `kluster.log` reads it
-- [ ] `flai guard` lets a story's agent and its sub-agents run `exec` and `log` for their own story, and refuses them for another story's namespace or the default one, the `kluster` program but `status`, and a shell line naming `.flai-cache/kluster/kubeconfig`
-- [ ] `design/system/kluster.md`, `design/system/flai-cli.md`, and `docs/users/flai.md` and its reference say all of it
+- [x] After the deploy step of a story's deploy passes, flai makes a ServiceAccount `flai-agent` in the namespace, a RoleBinding to the cluster's `edit` ClusterRole, and `.flai-cache/kluster/agents/s-nnnn.kubeconfig` with a token from `kubectl create token` valid for 24 hours; a deploy again makes a new one
+- [x] The teardown deletes the namespace's kubeconfig
+- [x] `flai kluster exec S-nnnn -- <command>` runs a command in the story's worktree with ADR-0254 §4's variables for its namespace, but `FLAI_KLUSTER_IMAGES`, and `KUBECONFIG` the namespace's kubeconfig, while the namespace has a record, a failed one included
+- [x] `flai kluster log S-nnnn --step <step>` prints a step's log as the host method `kluster.log` reads it
+- [x] `flai guard` lets a story's agent and its sub-agents run `exec` and `log` for their own story, and refuses them for another story's namespace or the default one, the `kluster` program but `status`, and a shell line naming `.flai-cache/kluster/kubeconfig`
+- [x] `design/system/kluster.md`, `design/system/flai-cli.md`, and `docs/users/flai.md` and its reference say all of it
 
 ## Tasks
 - T-3276 Each passing deploy makes the namespace's own kubeconfig from a flai-agent ServiceAccount bound to edit, and the teardown deletes it
@@ -128,3 +134,16 @@ No folder touch. `flai/internal/serve` is left out: its jobs call `DeployBy` and
 Forecast: `flai forecast` gives 42m from size 23 (6 criteria, 17 touches). Raised to 1h: S-0660, the kluster story this was split from, took 1h23m of agent work for six tasks, and this one adds a kubectl step to the deploy, moves the `kluster.log` reader, adds two commands, and adds guard rules that read whole shell lines. The delivery is flai's play-out of the pull order with that duration: 31st, behind S-0661, S-0662, and S-0663, which wait for it.
 
 Cost of delay: 555.56 USD a week, as `flai cod S-0763` works it out: S-0763's share of the operator's `revenue_per_week: 1250` on E-0035, split by forecast duration between the epic's two open stories without inputs of their own, S-0763 (1h) and S-0661 (1h15m). Not adjusted: the split follows the operator's input and flai's rule.
+
+### Accepted by the orchestrator
+
+- Verified: e2f3272d0d7f2843046fc949e79fd268d930efd8
+- At: 2026-11-13T12:39:37Z
+
+Verdict: pass at e2f3272d0d7f2843046fc949e79fd268d930efd8
+- 1: flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go
+- 2: flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go
+- 3: flai/cmd/kluster.go, flai/cmd/kluster_test.go
+- 4: flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go
+- 5: flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go
+- 6: design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md

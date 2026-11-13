@@ -3,11 +3,11 @@ id: T-3276
 type: task
 nature: feature
 title: Each passing deploy makes the namespace's own kubeconfig from a flai-agent ServiceAccount bound to edit, and the teardown deletes it
-status: in-progress
+status: done
 parent: S-0763
 owner: alex
 created: 2026-11-13T09:02:45Z
-updated: 2026-11-13T09:08:16Z
+updated: 2026-11-13T11:46:42Z
 transitions:
   - to: ready
     at: 2026-11-13T09:08:16Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T09:08:16Z
     by: agent-S-0763
+  - to: done
+    at: 2026-11-13T11:46:42Z
+    by: agent-S-0763
 stream: S-0763
 tags: [cli]
 touches: [flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
 usage:
   source: log
-  seconds: 2335
+  seconds: 2761
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 31002
-      cache_read: 3096588
-      cache_write: 353794
-      cost: 3.2579
+      input: 68
+      output: 32191
+      cache_read: 3338317
+      cache_write: 362992
+      cost: 3.387
   strategic:
     - kind: orchestrator
       seconds: 6
