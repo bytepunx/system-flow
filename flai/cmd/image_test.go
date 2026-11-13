@@ -2,13 +2,18 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/agentimage"
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
@@ -176,7 +181,7 @@ func TestImageStatusStale(t *testing.T) {
 	images[imageHarnessRef] = agentimage.Info{ID: imageBaseID, Labels: map[string]string{agentimage.LabelFlai: "1.86.12"}}
 	d := &imageDocker{images: images}
 	out, code, err := runImageStatus(t, root, cfg, d)
-	if code == 0 || err == nil || !strings.Contains(err.Error(), "1 agent image is missing or stale") || !strings.Contains(err.Error(), "make agent-images") {
+	if code == 0 || err == nil || !strings.Contains(err.Error(), "1 agent image is missing or stale") || !strings.Contains(err.Error(), "make them with flai image ensure") {
 		t.Fatalf("exit %d, %v", code, err)
 	}
 	if want := "claude-code harness " + imageHarnessRef + " (default): stale: built for flai 1.86.12, not " + buildinfo.Get().Version + "\n"; !strings.HasPrefix(out, want) {
@@ -278,5 +283,169 @@ func TestImageStatusNoDocker(t *testing.T) {
 	}
 	if out != "" {
 		t.Errorf("printed %q", out)
+	}
+}
+
+// imageSteps records each docker step flai image ensure or build runs, with
+// the folder it runs in, and writes a line of output for it.
+type imageSteps struct {
+	mu   sync.Mutex
+	dirs []string
+	args [][]string
+}
+
+func (s *imageSteps) exec(_ context.Context, dir string, _ []string, out io.Writer, program string, args ...string) error {
+	s.mu.Lock()
+	s.dirs = append(s.dirs, dir)
+	s.args = append(s.args, append([]string{program}, args...))
+	s.mu.Unlock()
+	_, err := fmt.Fprintf(out, "step output %d\n", len(s.args))
+	return err
+}
+
+// useImageExec makes s run flai image ensure's and build's docker steps
+// until the test ends; a test that calls it must not run in parallel.
+func useImageExec(t *testing.T, s *imageSteps) {
+	t.Helper()
+	was := imageExec
+	imageExec = s.exec
+	t.Cleanup(func() { imageExec = was })
+}
+
+// developmentFlai skips a test that needs this flai to be a development
+// build, as a test binary is unless its version is stamped.
+func developmentFlai(t *testing.T) string {
+	t.Helper()
+	v := buildinfo.Get().Version
+	if !buildinfo.Development(v) {
+		t.Skipf("this flai is %s, not a development build", v)
+	}
+	return v
+}
+
+// runImageMake runs flai image with args in root, with the config file
+// cfgPath, docker d, and the clock at now, and returns its output, its exit
+// code as run gives it, and its error.
+func runImageMake(t *testing.T, root, cfgPath string, d *imageDocker, now time.Time, args ...string) (string, int, error) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	a := &app{configPath: cfgPath, cwd: root, runner: d, out: &out, errOut: &errOut, clock: func() time.Time { return now }}
+	c := newRootCmdWith(a)
+	c.SetArgs(append([]string{"image"}, args...))
+	err := c.Execute()
+	code := 0
+	var ee *exitError
+	switch {
+	case errors.As(err, &ee):
+		code = ee.code
+	case err != nil:
+		code = 1
+	}
+	return out.String(), code, err
+}
+
+// writeTreeDockerfiles writes bedrock's and claude-code's Dockerfiles where
+// a development tree at root holds them.
+func writeTreeDockerfiles(t *testing.T, root string) {
+	t.Helper()
+	for _, image := range []string{"bedrock", "claude-code"} {
+		path := filepath.Join(root, "flai", "images", image, "Dockerfile")
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("FROM scratch\n# "+image+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// In a development tree, flai image build builds bedrock and then the
+// claude-code harness image from the tree's own Dockerfiles, with the
+// tree as the context, tags the harness image with the name a start runs it
+// by and flai-agent-claude-code:<version>, streams each step's output to the
+// output and to the log under .flai-cache/agent-images/ it names first and
+// last, and exits 0 once the image is current.
+func TestImageBuildInADevelopmentTree(t *testing.T) {
+	version := developmentFlai(t)
+	root, cfg := imageProject(t, "")
+	writeTreeDockerfiles(t, root)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := mainRootOf(repo)
+	steps := &imageSteps{}
+	useImageExec(t, steps)
+	d := &imageDocker{images: map[string]agentimage.Info{
+		agentimage.BedrockTag(version): {ID: "sha256:bedrock"},
+		imageHarnessRef:                {ID: imageBaseID, Labels: map[string]string{agentimage.LabelFlai: version}},
+	}}
+	now := time.Date(2026, 11, 13, 10, 0, 0, 0, time.UTC)
+	out, code, err := runImageMake(t, root, cfg, d, now, "build")
+	if code != 0 || err != nil {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	if len(steps.args) != 2 {
+		t.Fatalf("docker steps %v", steps.args)
+	}
+	bedrockFile := filepath.Join(main, "flai", "images", "bedrock", "Dockerfile")
+	innerFile := filepath.Join(main, "flai", "images", "claude-code", "Dockerfile")
+	if got := steps.args[0][:6]; !reflect.DeepEqual(got, []string{"docker", "build", "-f", bedrockFile, "--target", "tree"}) {
+		t.Errorf("bedrock step %v", steps.args[0])
+	}
+	if got := steps.args[1][:4]; !reflect.DeepEqual(got, []string{"docker", "build", "-f", innerFile}) {
+		t.Errorf("harness step %v", steps.args[1])
+	}
+	harnessArgs := strings.Join(steps.args[1], " ")
+	if !strings.Contains(harnessArgs, "-t "+imageHarnessRef+" -t flai-agent-claude-code:"+version+" .") || !strings.Contains(harnessArgs, "BASE="+agentimage.BedrockTag(version)) {
+		t.Errorf("harness step %v", steps.args[1])
+	}
+	for i, dir := range steps.dirs {
+		if dir != main {
+			t.Errorf("step %d ran in %s, not the tree %s", i, dir, main)
+		}
+	}
+	logPath := agentimage.LogPath(main, now)
+	if !strings.HasPrefix(logPath, filepath.Join(main, ".flai-cache", "agent-images")+string(filepath.Separator)) {
+		t.Errorf("log %s is not under .flai-cache/agent-images", logPath)
+	}
+	named := "agent image: log " + logPath + "\n"
+	if !strings.HasPrefix(out, named) || !strings.HasSuffix(out, named) {
+		t.Errorf("output does not name the log first and last:\n%s", out)
+	}
+	for _, want := range []string{"step output 1\n", "step output 2\n", "built from the development tree " + main, "claude-code harness " + imageHarnessRef + " (default): current\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	logged, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(logged) != out {
+		t.Errorf("log =\n%s\nwant the output\n%s", logged, out)
+	}
+}
+
+// With a development flai and a main checkout that holds no Dockerfiles of
+// its own, flai image ensure has nothing to pull or build from: it fails
+// naming why and the Dockerfiles a tree must hold, runs no docker step,
+// and still prints the images' status and names its log.
+func TestImageEnsureRefusesADevelopmentFlaiWithNoTree(t *testing.T) {
+	t.Parallel()
+	developmentFlai(t)
+	root, cfg := imageProject(t, imageLayerYAML)
+	now := time.Date(2026, 11, 13, 11, 0, 0, 0, time.UTC)
+	out, code, err := runImageMake(t, root, cfg, &imageDocker{}, now, "ensure")
+	if code == 0 || err == nil || !strings.Contains(err.Error(), "a development flai has no release") || !strings.Contains(err.Error(), "flai/images/bedrock/Dockerfile and flai/images/claude-code/Dockerfile") {
+		t.Fatalf("exit %d, %v\n%s", code, err, out)
+	}
+	for _, want := range []string{"claude-code harness " + imageHarnessRef + " (default): missing\n", "agent image: log "} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "step output") {
+		t.Errorf("a docker step ran:\n%s", out)
 	}
 }

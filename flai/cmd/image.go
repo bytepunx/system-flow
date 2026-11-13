@@ -1,11 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"maps"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/images"
 	"github.com/bytepunx/system-flow/flai/internal/agentimage"
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
@@ -24,7 +31,10 @@ host's own when flai serve agent harness container --image <inner>=<image>
 names one, else flai's default, and the project's layer over it when
 system-flow.yaml names agent.image.layer (ADR-0295). flai image status says
 which images the project's agents need and whether each is on this host and
-current for the project's flai.`,
+current for the project's flai. flai image ensure makes each harness image
+that is missing or stale, pulling it by the digest its release's signed list
+names, else building it on this host; flai image build builds them without the
+pull.`,
 		Args: cobra.NoArgs,
 	}
 	c.AddCommand(&cobra.Command{
@@ -50,7 +60,216 @@ It exits non-zero when any image is missing or stale, after the list.`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error { return a.imageStatus() },
 	})
+	c.AddCommand(&cobra.Command{
+		Use:   "ensure",
+		Short: "Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host",
+		Long: `flai image ensure makes each harness image the agents of the project in the
+working directory need, as flai image status lists them, that is missing or
+stale for the project's flai. It takes one of three ways, and says which:
+
+  pulled     by the index digest the signed digest list of the flai release
+             names (flai-agent-<inner>_<version>.digests on the release
+             flai v<version>), verified with the release key; a list or an
+             image that does not verify is refused, and nothing is built in
+             its place
+  built      on this host, when the registry or the release cannot be reached
+             or the pull fails, from the Dockerfiles this flai carries and the
+             release's Linux flai and pilot, checked against its signed
+             checksums.txt
+  tree       for a development flai, from the development tree's own
+             flai/images/bedrock/Dockerfile and flai/images/<inner>/Dockerfile
+             and source, never pulled for
+
+Each harness image is tagged with the name a start runs it by and with
+flai-agent-<inner>:<version>. A current image is left as it is, the operator's
+own image (--image) is never touched, and the project's layer
+(agent.image.layer) is not built: the project's own build makes it.
+
+Every docker step's output streams here and to a log file under
+.flai-cache/agent-images/ in the main checkout, which the first and last lines
+name. A step that writes nothing for 10 minutes is stopped; a step that fails
+on the network (a connection reset, a timeout, a DNS or TLS failure, a
+registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the
+images' status is printed as flai image status prints it, and it exits
+non-zero when a harness image flai makes is still missing or stale.`,
+		Example: `  flai image ensure`,
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return a.imageMake(cmd.Context(), agentimage.ModeEnsure)
+		},
+	})
+	c.AddCommand(&cobra.Command{
+		Use:   "build",
+		Short: "Build the harness images on this host, current or not, without the pull",
+		Long: `flai image build builds on this host, without the pull, each harness image of
+flai's default the agents of the project in the working directory need, or,
+when they need none, the default image of each inner harness the host names
+no image of its own for (claude-code's), current or not.
+
+A released flai builds them from the Dockerfiles it carries and its release's
+Linux flai and pilot, checked against the release's signed checksums.txt; a
+development flai builds them from the development tree's own
+flai/images/bedrock/Dockerfile and flai/images/<inner>/Dockerfile and source,
+when the main checkout holds them. It tags, logs, stops, and retries as flai
+image ensure does, prints the images' status after it, and does not build the
+project's layer.`,
+		Example: `  flai image build`,
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return a.imageMake(cmd.Context(), agentimage.ModeBuild)
+		},
+	})
 	return c
+}
+
+// imageExec runs each docker step of flai image ensure and build; tests
+// that replace it restore it and do not run in parallel.
+var imageExec agentimage.Exec = agentimage.SystemExec
+
+// imageMake is flai image ensure, with agentimage.ModeEnsure, and flai image
+// build, with agentimage.ModeBuild: it makes the harness images of the
+// project in the working directory as mode asks, writing what it does to
+// the output and to a log under the main checkout's .flai-cache, prints
+// their status after it, and fails when one flai makes is still missing or
+// stale.
+func (a *app) imageMake(ctx context.Context, mode agentimage.Mode) (err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	root := mainRootOf(repo)
+	agents, err := projectAgents(repo)
+	if err != nil {
+		return err
+	}
+	host := a.harnessHost(cfg.Agent.ForProject(root), harness.Container)
+	program := host.Program
+	if program == "" {
+		program = "docker"
+	}
+	needed := agentimage.Needed(repo.Manifest, agents, host.Images)
+	if mode == agentimage.ModeBuild {
+		needed = buildImages(needed, host.Images)
+	}
+
+	logPath := agentimage.LogPath(root, a.now())
+	if err := os.MkdirAll(filepath.Dir(logPath), 0o755); err != nil {
+		return fmt.Errorf("make the folder of the agent image log %s: %w; check that the project's .flai-cache can be written", logPath, err)
+	}
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		return fmt.Errorf("open the agent image log %s: %w; check that the project's .flai-cache can be written", logPath, err)
+	}
+	w := io.MultiWriter(a.out, logFile)
+	_, _ = fmt.Fprintf(w, "agent image: log %s\n", logPath)
+	defer func() {
+		if err != nil {
+			_, _ = fmt.Fprintf(logFile, "agent image: failed: %v\n", err)
+		}
+		_, _ = fmt.Fprintf(w, "agent image: log %s\n", logPath)
+		if cerr := logFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close the agent image log %s: %w; check that the project's .flai-cache can be written", logPath, cerr)
+		}
+	}()
+
+	if len(needed) == 0 {
+		printImageStatus(w, nil)
+		return nil
+	}
+	version, err := agentimage.ProjectFlai(root, repo.Manifest, a.runner, buildinfo.Get().Version)
+	if err != nil {
+		return err
+	}
+	flai := func() (string, error) { return version, nil }
+	inspect := agentimage.Docker(a.runner, program)
+	statuses, err := agentimage.Check(root, needed, inspect, flai)
+	if err != nil {
+		return err
+	}
+	src := a.imageSource(root, version)
+	runner := agentimage.Runner{Program: program, Exec: imageExec, Out: w}
+	releases := a.dashboardReleases()
+	releases.Token = a.githubToken()
+	puller := agentimage.Puller{Releases: releases, CacheDir: string(a.serveDir()), Run: runner, Inspect: inspect}
+	builder := agentimage.Builder{Releases: releases, Run: runner, Inspect: inspect, Arch: agentimage.EngineArch(a.runner, program)}
+	ensurer := agentimage.Ensurer{Pull: puller.Pull, Build: builder.Build, Out: w}
+	_, ensureErr := ensurer.Ensure(ctx, mode, statuses, src)
+
+	after, checkErr := agentimage.Check(root, needed, inspect, flai)
+	if checkErr == nil {
+		printImageStatus(w, after)
+	}
+	switch {
+	case ensureErr != nil:
+		return ensureErr
+	case checkErr != nil:
+		return checkErr
+	}
+	bad := 0
+	for _, s := range after {
+		if s.Kind == agentimage.KindHarness && s.Source == agentimage.SourceDefault && (s.State == agentimage.StateMissing || s.State == agentimage.StateStale) {
+			bad++
+		}
+	}
+	if bad == 0 {
+		return nil
+	}
+	noun := "harness images flai makes are"
+	if bad == 1 {
+		noun = "harness image flai makes is"
+	}
+	return &exitError{code: 1, msg: fmt.Sprintf("%d %s still missing or stale after flai image %s: read why in the log %s, then run it again", bad, noun, mode, logPath)}
+}
+
+// buildImages are the images flai image build makes of needed, what the
+// project's agents need: needed itself when it holds a harness image of
+// flai's default, else needed and the harness image of each inner harness
+// of harness.DefaultImages that hostImages names no image of its own for.
+func buildImages(needed []agentimage.Image, hostImages map[string]string) []agentimage.Image {
+	for _, img := range needed {
+		if img.Kind == agentimage.KindHarness && img.Source == agentimage.SourceDefault {
+			return needed
+		}
+	}
+	out := slices.Clone(needed)
+	for _, inner := range slices.Sorted(maps.Keys(harness.DefaultImages)) {
+		if hostImages[inner] == "" {
+			out = append(out, agentimage.Harness(hostImages, inner))
+		}
+	}
+	return out
+}
+
+// imageSource is what the harness images of flai version are made from:
+// for a development version, the development tree at root when it holds
+// bedrock's and claude-code's Dockerfiles, with its commit and that
+// commit's date as git gives them ("" when git cannot); otherwise the
+// release version.
+func (a *app) imageSource(root, version string) agentimage.BuildSource {
+	src := agentimage.BuildSource{Version: version}
+	if !buildinfo.Development(version) {
+		return src
+	}
+	for _, image := range []string{images.Bedrock, harness.ClaudeCode} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(images.Path(image)))); err != nil {
+			return src
+		}
+	}
+	src.Tree = root
+	if out, err := a.runner.Run(root, "git", "rev-parse", "--short", "HEAD"); err == nil {
+		src.Commit = strings.TrimSpace(out)
+	}
+	if out, err := a.runner.Run(root, "git", "log", "-1", "--format=%cI"); err == nil {
+		src.Date = strings.TrimSpace(out)
+	}
+	return src
 }
 
 // imageStatusReport is what flai image status --json prints: the flai
@@ -82,7 +301,7 @@ func (a *app) imageStatus() error {
 	// (ADR-0261): its images as the operator names them, before the defaults,
 	// which agentimage.Harness fills in, and its docker client
 	host := a.harnessHost(cfg.Agent.ForProject(root), harness.Container)
-	images := agentimage.Needed(repo.Manifest, agents, host.Images)
+	needed := agentimage.Needed(repo.Manifest, agents, host.Images)
 	program := host.Program
 	if program == "" {
 		program = "docker"
@@ -93,7 +312,7 @@ func (a *app) imageStatus() error {
 		want = v
 		return v, err
 	}
-	statuses, err := agentimage.Check(root, images, agentimage.Docker(a.runner, program), flai)
+	statuses, err := agentimage.Check(root, needed, agentimage.Docker(a.runner, program), flai)
 	if err != nil {
 		return err
 	}
@@ -108,7 +327,7 @@ func (a *app) imageStatus() error {
 			return err
 		}
 	} else {
-		printImageStatus(a, statuses)
+		printImageStatus(a.out, statuses)
 	}
 	if bad == 0 {
 		return nil
@@ -117,7 +336,7 @@ func (a *app) imageStatus() error {
 	if bad == 1 {
 		noun = "agent image is"
 	}
-	return &exitError{code: 1, msg: fmt.Sprintf("%d %s missing or stale: build them with make agent-images in the system-flow repository, or name another with flai serve agent harness container --image <inner>=<image>", bad, noun)}
+	return &exitError{code: 1, msg: fmt.Sprintf("%d %s missing or stale: make them with flai image ensure, or name another with flai serve agent harness container --image <inner>=<image>", bad, noun)}
 }
 
 // projectAgents is every agent the project's manifest starts, then the
@@ -141,11 +360,11 @@ func projectAgents(repo *workitem.Repo) ([]*manifest.Agent, error) {
 	return agents, nil
 }
 
-// printImageStatus prints one line per image in statuses, or, with none,
-// that the project's agents need no image.
-func printImageStatus(a *app, statuses []agentimage.Status) {
+// printImageStatus prints to w one line per image in statuses, or, with
+// none, that the project's agents need no image.
+func printImageStatus(w io.Writer, statuses []agentimage.Status) {
 	if len(statuses) == 0 {
-		_, _ = fmt.Fprintf(a.out, "the project's agents need no image: no agent runs on the container harness and %s names no agent.image.layer\n", manifest.File)
+		_, _ = fmt.Fprintf(w, "the project's agents need no image: no agent runs on the container harness and %s names no agent.image.layer\n", manifest.File)
 		return
 	}
 	for _, s := range statuses {
@@ -153,7 +372,7 @@ func printImageStatus(a *app, statuses []agentimage.Status) {
 		if s.Dockerfile != "" {
 			from += " from " + s.Dockerfile
 		}
-		_, _ = fmt.Fprintf(a.out, "%s %s %s (%s): %s\n", s.Inner, s.Kind, s.Ref, from, imageState(s))
+		_, _ = fmt.Fprintf(w, "%s %s %s (%s): %s\n", s.Inner, s.Kind, s.Ref, from, imageState(s))
 	}
 }
 
