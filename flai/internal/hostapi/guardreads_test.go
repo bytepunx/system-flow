@@ -48,6 +48,9 @@ var hostAPIWrites = []string{
 	"host.status",              // host-level, not a guard read
 	"host.upgrade",             // change the host's processes or its flai
 	"host.versions",            // host-level, not a guard read
+	"images.ensure",            // asks flai serve for an image job
+	"images.get",               // runs docker and the project's flai.command, not checked as reads
+	"images.log",               // reads flai serve's state, which no agent's flai hostapi has
 	"issue.bump",               // write issues and stories
 	"issue.close",              // write issues and stories
 	"issue.new",                // write issues and stories

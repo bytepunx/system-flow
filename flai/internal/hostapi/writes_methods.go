@@ -21,6 +21,7 @@ func writeMethods(run Runner, now func() time.Time, host Host) map[string]channe
 	out := methodsFrom(specs(), run, now, host)
 	maps.Copy(out, methodsFrom(componentSpecs(), run, now, host))
 	maps.Copy(out, methodsFrom(klusterSpecs(), run, now, host))
+	maps.Copy(out, methodsFrom(imageSpecs(), run, now, host))
 	maps.Copy(out, methodsFrom(queueSpecs(now, systemGit), run, now, host))
 	return out
 }

@@ -171,6 +171,10 @@ export const REQUIRED_METHODS = [
 	'kluster.forward.stop',
 	// S-0595: a step's log read from an offset, the Deployments page's live feed (ADR-0263)
 	'kluster.log',
+	// S-0757: the project's agent images and flai serve's image jobs, a job's log, and a new job behind the agent host action
+	'images.get',
+	'images.log',
+	'images.ensure',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',

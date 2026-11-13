@@ -322,6 +322,10 @@ type Host struct {
 	// own process (S-0580, ADR-0254). Nil when nothing runs them here:
 	// kluster.status reports no job, and kluster.up and kluster.down refuse.
 	Kluster *KlusterJobs
+	// Images reads flai serve's image jobs and the project's agent images,
+	// and starts a job (S-0757). Nil when nothing runs them here: the images
+	// methods refuse.
+	Images ImageJobs
 }
 
 // Entry is one host action asked for, whatever became of it.

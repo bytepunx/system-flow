@@ -1,12 +1,14 @@
 package serve
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,7 +18,11 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/agentimage"
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // The image job (ADR-0295 §5): flai serve's host job that pulls or builds the
@@ -128,6 +134,10 @@ type imageJob struct {
 	log  string
 
 	rec imageJobRecord
+	// doing is, while it runs, its log's last "agent image:" line without
+	// that prefix: what it says it does. The runner's to change, under its
+	// lock.
+	doing string
 
 	done   chan struct{}
 	result imageJobResult
@@ -219,6 +229,29 @@ func (r *imageJobRunner) request(need imageNeed) *imageJob {
 		r.o.Logger.Info("image job joined", "component", "serve", "root", need.Root, "project", need.Key, "job_id", j.id, "images", strings.Join(refs, ","))
 		return j
 	}
+	return r.queued(need, refs)
+}
+
+// start is a new job that makes need's images, queued as request queues
+// one, and how many jobs wait or run before it, for the operator's ask
+// (S-0757); while a running or queued job of need's project makes them all,
+// it queues none and is a *hostapi.ImageJobBusy naming that job.
+func (r *imageJobRunner) start(need imageNeed) (*imageJob, int, error) {
+	need.Root = filepath.Clean(need.Root)
+	refs := imageJobRefs(need.Images)
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if j := r.covering(need.Root, refs); j != nil {
+		return nil, 0, &hostapi.ImageJobBusy{Job: r.view(j)}
+	}
+	j := r.queued(need, refs)
+	return j, r.ahead(j), nil
+}
+
+// queued is a new job that makes need's images, refs, recorded and queued
+// behind those asked for before it, or ended stopped once flai serve has
+// stopped. The lock is held.
+func (r *imageJobRunner) queued(need imageNeed, refs []string) *imageJob {
 	at := r.o.Now().UTC()
 	id := r.newID(at)
 	j := &imageJob{id: id, need: need, refs: refs, log: r.path(id, imageJobLogSuffix), done: make(chan struct{})}
@@ -232,6 +265,188 @@ func (r *imageJobRunner) request(need imageNeed) *imageJob {
 	r.o.Logger.Info("image job queued", "component", "serve", "root", need.Root, "project", need.Key, "job_id", id, "images", strings.Join(refs, ","), "ahead", len(r.queue)-1, "running", r.running != nil)
 	r.next()
 	return j
+}
+
+// ahead is how many jobs wait or run before j: none once it runs or has
+// ended. The lock is held.
+func (r *imageJobRunner) ahead(j *imageJob) int {
+	i := slices.Index(r.queue, j)
+	switch {
+	case i < 0:
+		return 0
+	case r.running != nil:
+		return i + 1
+	}
+	return i
+}
+
+// view is j as the host API shows it, with what it does while it runs. The
+// lock is held.
+func (r *imageJobRunner) view(j *imageJob) hostapi.ImageJob {
+	return imageJobView(j.rec, j.doing)
+}
+
+// jobsOf is what the runner keeps of the jobs of the project at root, as
+// the host API shows them: the one that runs, nil when none of its does,
+// those queued, in order, and the last ended of each set of images, newest
+// first. The ended are read from the records in the runner's folder, so that
+// a job that ended before flai serve started again is among them, with the
+// last the runner ended itself, in case its record was not written.
+func (r *imageJobRunner) jobsOf(root string) (running *hostapi.ImageJob, queued, ended []hostapi.ImageJob) {
+	root = filepath.Clean(root)
+	r.mu.Lock()
+	if j := r.running; j != nil && j.need.Root == root {
+		v := r.view(j)
+		running = &v
+	}
+	queued = []hostapi.ImageJob{}
+	for _, j := range r.queue {
+		if j.need.Root == root {
+			queued = append(queued, r.view(j))
+		}
+	}
+	last, lastOK := r.last[root]
+	r.mu.Unlock()
+	recs := r.endedRecords(root)
+	if lastOK {
+		recs = append(recs, last)
+	}
+	newest := map[string]imageJobRecord{}
+	for _, rec := range recs {
+		set := strings.Join(rec.Images, "\n")
+		if was, ok := newest[set]; !ok || imageJobNewer(rec, was) {
+			newest[set] = rec
+		}
+	}
+	keep := slices.Collect(maps.Values(newest))
+	slices.SortFunc(keep, func(a, b imageJobRecord) int {
+		if imageJobNewer(a, b) {
+			return -1
+		}
+		if imageJobNewer(b, a) {
+			return 1
+		}
+		return 0
+	})
+	ended = make([]hostapi.ImageJob, 0, len(keep))
+	for _, rec := range keep {
+		ended = append(ended, imageJobView(rec, ""))
+	}
+	return running, queued, ended
+}
+
+// endedRecords are the records in the runner's folder of the jobs of the
+// project at root that ended; a record that cannot be read is logged and
+// left out.
+func (r *imageJobRunner) endedRecords(root string) []imageJobRecord {
+	entries, err := os.ReadDir(r.o.Dir)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			r.o.Logger.Warn("image jobs' records not read", "component", "serve", "root", root, "path", r.o.Dir, "err", err.Error())
+		}
+		return nil
+	}
+	var out []imageJobRecord
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), imageJobSuffix) {
+			continue
+		}
+		rec, err := readImageJobRecord(filepath.Join(r.o.Dir, e.Name()))
+		if err != nil {
+			r.o.Logger.Warn("image job's record not read", "component", "serve", "root", root, "path", filepath.Join(r.o.Dir, e.Name()), "err", err.Error())
+			continue
+		}
+		if rec.Root == root && !rec.Ended.IsZero() {
+			out = append(out, rec)
+		}
+	}
+	return out
+}
+
+// jobLog is job id of the project at root as the host API shows it, and its
+// log's path: the runner's own while it waits, runs, or was the last to end,
+// else its record in the runner's folder; false when the project has no
+// such job.
+func (r *imageJobRunner) jobLog(root, id string) (hostapi.ImageJob, string, bool) {
+	root = filepath.Clean(root)
+	if id == "" || filepath.Base(id) != id {
+		return hostapi.ImageJob{}, "", false
+	}
+	r.mu.Lock()
+	jobs := r.queue
+	if r.running != nil {
+		jobs = append([]*imageJob{r.running}, jobs...)
+	}
+	for _, j := range jobs {
+		if j.id == id && j.need.Root == root {
+			v := r.view(j)
+			r.mu.Unlock()
+			return v, j.log, true
+		}
+	}
+	last, ok := r.last[root]
+	r.mu.Unlock()
+	if !ok || last.ID != id {
+		rec, err := readImageJobRecord(r.path(id, imageJobSuffix))
+		if err != nil || rec.Root != root {
+			return hostapi.ImageJob{}, "", false
+		}
+		last = rec
+	}
+	return imageJobView(last, ""), last.Log, true
+}
+
+// readImageJobRecord reads the image job's record at path.
+func readImageJobRecord(path string) (imageJobRecord, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return imageJobRecord{}, err
+	}
+	var rec imageJobRecord
+	if err := json.Unmarshal(data, &rec); err != nil {
+		return imageJobRecord{}, fmt.Errorf("parse the image job's record %s: %w", path, err)
+	}
+	return rec, nil
+}
+
+// imageJobNewer reports whether the ended job a ended after b, or, ended at
+// once, was issued after it.
+func imageJobNewer(a, b imageJobRecord) bool {
+	if !a.Ended.Equal(b.Ended) {
+		return a.Ended.After(b.Ended)
+	}
+	return a.ID > b.ID
+}
+
+// imageJobView is the job of rec as the host API shows it: ended once it has
+// an end, running once it has a start, and queued before; its step what it
+// does, doing, while it runs, and the step that failed once it has ended;
+// and its log's size as the log is now.
+func imageJobView(rec imageJobRecord, doing string) hostapi.ImageJob {
+	v := hostapi.ImageJob{ID: rec.ID, Images: slices.Clone(rec.Images), State: hostapi.ImageJobQueued, Ways: []hostapi.ImageWay{},
+		Requested: imageJobTime(rec.Requested), Started: imageJobTime(rec.Started), Ended: imageJobTime(rec.Ended),
+		Outcome: rec.Outcome, Cause: rec.Cause, DurationMS: rec.DurationMS}
+	switch {
+	case !rec.Ended.IsZero():
+		v.State, v.Step = hostapi.ImageJobEnded, rec.Step
+	case !rec.Started.IsZero():
+		v.State, v.Step = hostapi.ImageJobRunning, doing
+	}
+	for _, w := range rec.Ways {
+		v.Ways = append(v.Ways, hostapi.ImageWay{Image: w.Image, Way: string(w.Way)})
+	}
+	if info, err := os.Stat(rec.Log); err == nil {
+		v.LogSize = info.Size()
+	}
+	return v
+}
+
+// imageJobTime is at as the host API says a time, "" for none.
+func imageJobTime(at time.Time) string {
+	if at.IsZero() {
+		return ""
+	}
+	return at.UTC().Format(time.RFC3339)
 }
 
 // lastJob is the record of the last job of the project at root that ended, if any.
@@ -324,7 +539,7 @@ func (r *imageJobRunner) ensure(j *imageJob) ([]agentimage.Outcome, error) {
 		return nil, fmt.Errorf("create the image job's log %s: %w; check that flai serve's state folder can be written", j.log, err)
 	}
 	_, _ = fmt.Fprintf(f, "image job %s: making %s for %s\n", j.id, strings.Join(j.refs, ", "), j.need.Root)
-	outcomes, err := r.o.Ensure(r.ctx, j.need.Root, slices.Clone(j.need.Images), f)
+	outcomes, err := r.o.Ensure(r.ctx, j.need.Root, slices.Clone(j.need.Images), &imageJobProgress{r: r, j: j, w: f})
 	if err != nil {
 		_, _ = fmt.Fprintf(f, "image job %s: failed: %v\n", j.id, err)
 	} else {
@@ -407,6 +622,57 @@ func (r *imageJobRunner) write(j *imageJob) {
 	}
 }
 
+// imageJobProgressPrefix starts each line flai image ensure writes of what it
+// does, as agentimage writes them.
+const imageJobProgressPrefix = "agent image: "
+
+// imageJobLineMax is the most of one line of a job's output that
+// imageJobProgress keeps to read: a line of what it does is far shorter.
+const imageJobLineMax = 4 << 10
+
+// imageJobProgress writes a job's output to its log, w, and keeps the last
+// line that starts with imageJobProgressPrefix as what the job does.
+type imageJobProgress struct {
+	r *imageJobRunner
+	j *imageJob
+	w io.Writer
+
+	mu   sync.Mutex
+	line []byte // the line being written, its first imageJobLineMax bytes
+}
+
+// Write writes b to the log and reads the lines it ends.
+func (p *imageJobProgress) Write(b []byte) (int, error) {
+	n, err := p.w.Write(b)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for rest := b[:n]; len(rest) > 0; {
+		i := bytes.IndexByte(rest, '\n')
+		part := rest
+		if i >= 0 {
+			part = rest[:i]
+		}
+		p.line = append(p.line, part[:min(len(part), imageJobLineMax-len(p.line))]...)
+		if i < 0 {
+			break
+		}
+		p.seen()
+		p.line, rest = p.line[:0], rest[i+1:]
+	}
+	return n, err
+}
+
+// seen takes the line just ended as what the job does when it says so. p.mu is held.
+func (p *imageJobProgress) seen() {
+	said, ok := strings.CutPrefix(strings.TrimSpace(string(p.line)), imageJobProgressPrefix)
+	if !ok || said == "" {
+		return
+	}
+	p.r.mu.Lock()
+	defer p.r.mu.Unlock()
+	p.j.doing = said
+}
+
 // journal records an image job entry of j in the host journal.
 func (r *imageJobRunner) journal(j *imageJob, e hostapi.Entry) {
 	if r.o.Record == nil {
@@ -468,4 +734,118 @@ func failedStep(err error) string {
 		return stall.Step
 	}
 	return ""
+}
+
+// imageJobsHost is flai serve's image jobs as the host API's images methods
+// read and start them (hostapi.ImageJobs, S-0757): the runner's jobs, and
+// the project's agent images as judge tells them.
+type imageJobsHost struct {
+	runner *imageJobRunner
+	judge  func(root string) (projectImages, error)
+}
+
+// newImageJobsHost is the host API's view of runner's jobs, judging each
+// project's agent images as flai image status does, with the container
+// harness agent says for it and the docker client docker runs.
+func newImageJobsHost(runner *imageJobRunner, agent func(root string) AgentConfig, docker execx.Runner) *imageJobsHost {
+	return &imageJobsHost{runner: runner, judge: func(root string) (projectImages, error) {
+		return judgeProjectImages(root, agent, docker)
+	}}
+}
+
+// projectImages is what a judge tells of a project's agent images: every
+// image its agents need, each one's status, nil when they could not be
+// judged, the flai version they must hold, "" when none was asked, and why
+// they could not be judged.
+type projectImages struct {
+	images   []agentimage.Image
+	statuses []agentimage.Status
+	flai     string
+	unjudged error
+}
+
+// Images is the project's agent images with their state, unjudged with why
+// when they could not be listed or judged, and its image jobs.
+func (h *imageJobsHost) Images(root string) hostapi.ImagesState {
+	var st hostapi.ImagesState
+	got, err := h.judge(root)
+	switch {
+	case err != nil:
+		st.Unjudged = err.Error()
+	case got.unjudged != nil:
+		st.Flai, st.Unjudged = got.flai, got.unjudged.Error()
+		for _, img := range got.images {
+			st.Images = append(st.Images, agentimage.Status{Image: img})
+		}
+	default:
+		st.Flai, st.Images = got.flai, got.statuses
+	}
+	st.Running, st.Queued, st.Ended = h.runner.jobsOf(root)
+	return st
+}
+
+// JobLog is the project's job id and its log's path; false when it has none.
+func (h *imageJobsHost) JobLog(root, id string) (hostapi.ImageJob, string, bool) {
+	return h.runner.jobLog(root, id)
+}
+
+// Ensure queues a new job that makes every agent image the project's agents
+// need, as a start does for its own (containerAllowed), so that a layer is
+// built over the harness image the job makes: hostapi.ErrNoImages when none
+// is flai's to make, and a *hostapi.ImageJobBusy while a job of the project
+// that makes them all waits or runs.
+func (h *imageJobsHost) Ensure(key, root string) (hostapi.ImageStarted, error) {
+	got, err := h.judge(root)
+	if err != nil {
+		return hostapi.ImageStarted{}, err
+	}
+	if !slices.ContainsFunc(got.images, func(img agentimage.Image) bool { return img.Source != agentimage.SourceHost }) {
+		return hostapi.ImageStarted{}, hostapi.ErrNoImages
+	}
+	j, ahead, err := h.runner.start(imageNeed{Key: key, Root: root, Images: got.images})
+	if err != nil {
+		return hostapi.ImageStarted{}, err
+	}
+	h.runner.mu.Lock()
+	defer h.runner.mu.Unlock()
+	return hostapi.ImageStarted{ImageJob: h.runner.view(j), Ahead: ahead}, nil
+}
+
+// judgeProjectImages tells of the agent images of the project at root what
+// flai image status does: every image needed by the agents its manifest
+// starts and those of its stories ready, in progress, or in review, as flai
+// serve starts them, on the container harness agent says for it; and their
+// state through the docker client docker runs, against the flai version the
+// project's flai.command prints, else this flai's. It fails when the
+// project's stories cannot be read; docker not saying is unjudged.
+func judgeProjectImages(root string, agent func(root string) AgentConfig, docker execx.Runner) (projectImages, error) {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return projectImages{}, fmt.Errorf("open the project at %s for the agents that need an image: %w; mend what flai check names, then look again", root, err)
+	}
+	items, err := repo.List(false)
+	if err != nil {
+		return projectImages{}, fmt.Errorf("list the stories of the project at %s for the agents that need an image: %w; mend what flai check names, then look again", root, err)
+	}
+	var cfg AgentConfig
+	if agent != nil {
+		cfg = agent(root)
+	}
+	agents := agentimage.Agents(repo.Manifest)
+	for _, it := range items {
+		if it.Type == workitem.Story && (it.Status == workitem.Ready || it.Status == workitem.InProgress || it.Status == workitem.Review) {
+			agents = append(agents, cfg.storyAgent(repo, it))
+		}
+	}
+	out := projectImages{images: agentimage.Needed(repo.Manifest, agents, cfg.host(harness.Container).Images)}
+	if len(out.images) == 0 {
+		return out, nil
+	}
+	flai := func() (string, error) {
+		v, err := agentimage.ProjectFlai(root, repo.Manifest, docker, buildinfo.Get().Version)
+		out.flai = v
+		return v, err
+	}
+	out.statuses, out.unjudged = agentimage.Check(root, out.images, agentimage.Docker(docker, containerProgram(cfg)), flai)
+	return out, nil
 }

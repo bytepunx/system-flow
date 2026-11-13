@@ -483,3 +483,235 @@ func TestImageJobJournalsItsStartAndEnd(t *testing.T) {
 		t.Errorf("failed job's end %v, want its step and outcome at warn", end)
 	}
 }
+
+// S-0757: the job that runs shows what it says it does last, its log's last
+// "agent image:" line, and once it has failed, the docker step that failed.
+func TestImageJobShowsItsCurrentStepWhileItRunsAndTheFailedStepAfter(t *testing.T) {
+	lab := newImageJobLab(t)
+	j := lab.runner.request(imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0"))
+	call := lab.nextCall()
+	_, _ = fmt.Fprint(call.log, "agent image: flai-agent-claude-code:1.0.0 is missing; pulling claude-code of flai 1.0.0\nlayer 1/3 ")
+	_, _ = fmt.Fprint(call.log, "done\nagent image: the pull of flai-agent-claude-code:1.0.0 failed (no route); building it on this host instead\n")
+	running, queued, ended := lab.runner.jobsOf("/p/one")
+	if running == nil || running.ID != j.ID() || running.State != hostapi.ImageJobRunning || running.Started == "" || running.Ended != "" {
+		t.Fatalf("running: %+v, want job %s running", running, j.ID())
+	}
+	if want := "the pull of flai-agent-claude-code:1.0.0 failed (no route); building it on this host instead"; running.Step != want {
+		t.Errorf("the running job's step is %q, want %q", running.Step, want)
+	}
+	if running.LogSize == 0 || len(queued) != 0 || len(ended) != 0 {
+		t.Errorf("log size %d, queued %+v, ended %+v: want a log, nothing queued, nothing ended", running.LogSize, queued, ended)
+	}
+	step := "build flai-agent-claude-code:1.0.0"
+	call.answer <- imageJobAnswer{err: &agentimage.StepError{Step: step, Tries: 1, Said: "no space left on device", Err: errors.New("exit status 1")}}
+	if _, err := imageJobWait(t, j); err == nil {
+		t.Fatal("the job passed, want it failed")
+	}
+	running, _, ended = lab.runner.jobsOf("/p/one")
+	if running != nil || len(ended) != 1 {
+		t.Fatalf("running %+v, ended %+v: want the job ended", running, ended)
+	}
+	if e := ended[0]; e.ID != j.ID() || e.State != hostapi.ImageJobEnded || e.Outcome != imageJobFailed || e.Step != step || !strings.Contains(e.Cause, "no space left on device") || e.Ended == "" {
+		t.Errorf("the ended job: %+v, want it failed at %s with its cause", e, step)
+	}
+}
+
+// S-0757 criterion 2: a start by the operator's ask is refused, naming the
+// job, while a job of the project that makes the same images waits or runs,
+// and queues a new job otherwise.
+func TestImageJobStartIsRefusedWhileAJobForTheSameImagesRuns(t *testing.T) {
+	lab := newImageJobLab(t)
+	first, ahead, err := lab.runner.start(imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0", "p-layer:abc"))
+	if err != nil || ahead != 0 {
+		t.Fatalf("the first start: %v, %d ahead, want a job with none ahead", err, ahead)
+	}
+	call := lab.nextCall()
+	for _, refs := range [][]string{{"p-layer:abc", "flai-agent-claude-code:1.0.0"}, {"flai-agent-claude-code:1.0.0"}} {
+		j, _, err := lab.runner.start(imageJobNeed("/p/one", refs...))
+		var busy *hostapi.ImageJobBusy
+		if !errors.As(err, &busy) || j != nil {
+			t.Fatalf("a start of %v while job %s runs: %v, want it refused", refs, first.ID(), err)
+		}
+		if busy.Job.ID != first.ID() || busy.Job.State != hostapi.ImageJobRunning || !strings.Contains(err.Error(), first.ID()) {
+			t.Errorf("the refusal %q, job %+v, does not name the running job %s", err, busy.Job, first.ID())
+		}
+	}
+	other, ahead, err := lab.runner.start(imageJobNeed("/p/two", "flai-agent-claude-code:1.0.0"))
+	if err != nil || ahead != 1 {
+		t.Fatalf("a start of another project's images: %v, %d ahead, want it queued behind the running job", err, ahead)
+	}
+	if _, _, err := lab.runner.start(imageJobNeed("/p/two", "flai-agent-claude-code:1.0.0")); err == nil {
+		t.Error("a start of the images of a job that waits its turn was queued again")
+	}
+	_, queued, _ := lab.runner.jobsOf("/p/two")
+	if len(queued) != 1 || queued[0].ID != other.ID() || queued[0].State != hostapi.ImageJobQueued || queued[0].Started != "" || queued[0].Requested == "" {
+		t.Errorf("queued of /p/two: %+v, want job %s waiting", queued, other.ID())
+	}
+	call.pass(agentimage.WayPulled)
+	if _, err := imageJobWait(t, first); err != nil {
+		t.Fatal(err)
+	}
+	lab.nextCall().pass(agentimage.WayCurrent)
+	if _, err := imageJobWait(t, other); err != nil {
+		t.Fatal(err)
+	}
+	again, _, err := lab.runner.start(imageJobNeed("/p/one", "flai-agent-claude-code:1.0.0", "p-layer:abc"))
+	if err != nil || again.ID() == first.ID() {
+		t.Fatalf("a start once the job ended: %v, want a new job", err)
+	}
+	lab.nextCall().pass(agentimage.WayCurrent)
+	if _, err := imageJobWait(t, again); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0757 criterion 1: the ended jobs are the last of each set of images of
+// the project, newest first, read from the records, so that those a runner
+// before flai serve's restart ended are among them; another project's are not.
+func TestImageJobsOfKeepTheLastEndedOfEachSetOfImages(t *testing.T) {
+	lab := newImageJobLab(t)
+	run := func(root string, way agentimage.Way, refs ...string) *imageJob {
+		t.Helper()
+		j := lab.runner.request(imageJobNeed(root, refs...))
+		lab.nextCall().pass(way)
+		if _, err := imageJobWait(t, j); err != nil {
+			t.Fatal(err)
+		}
+		return j
+	}
+	run("/p/one", agentimage.WayPulled, "a:1")
+	both := run("/p/one", agentimage.WayBuilt, "a:1", "l:1")
+	harness := run("/p/one", agentimage.WayCurrent, "a:1")
+	run("/p/two", agentimage.WayPulled, "a:1")
+
+	_, _, ended := lab.runner.jobsOf("/p/one")
+	if len(ended) != 2 || ended[0].ID != harness.ID() || ended[1].ID != both.ID() {
+		t.Fatalf("ended: %+v, want %s then %s", ended, harness.ID(), both.ID())
+	}
+	if e := ended[1]; e.Outcome != imageJobPassed || len(e.Ways) != 2 || e.Ways[0].Way != string(agentimage.WayBuilt) || e.LogSize == 0 || e.DurationMS == 0 {
+		t.Errorf("the ended job of both images: %+v", e)
+	}
+
+	again := newImageJobRunner(context.Background(), imageJobOptions{Dir: lab.dir, Ensure: nil})
+	running, queued, after := again.jobsOf("/p/one/")
+	if running != nil || len(queued) != 0 || len(after) != 2 || after[0].ID != harness.ID() || after[1].ID != both.ID() {
+		t.Errorf("after a restart: running %+v, queued %+v, ended %+v; want the same two ended", running, queued, after)
+	}
+	if _, _, none := again.jobsOf("/p/three"); len(none) != 0 {
+		t.Errorf("a project with no job: %+v", none)
+	}
+}
+
+// S-0757 criterion 1: a job's log is found by its id, the project's own
+// alone, while it runs and after a restart.
+func TestImageJobLogIsTheProjectsOwnJob(t *testing.T) {
+	lab := newImageJobLab(t)
+	j := lab.runner.request(imageJobNeed("/p/one", "a:1"))
+	call := lab.nextCall()
+	got, path, ok := lab.runner.jobLog("/p/one", j.ID())
+	if !ok || got.State != hostapi.ImageJobRunning || path != j.Log() {
+		t.Fatalf("the running job's log: %+v %q %v, want job %s running with its log %s", got, path, ok, j.ID(), j.Log())
+	}
+	if _, _, ok := lab.runner.jobLog("/p/two", j.ID()); ok {
+		t.Error("another project read the job's log")
+	}
+	call.pass(agentimage.WayPulled)
+	if _, err := imageJobWait(t, j); err != nil {
+		t.Fatal(err)
+	}
+	again := newImageJobRunner(context.Background(), imageJobOptions{Dir: lab.dir})
+	got, path, ok = again.jobLog("/p/one", j.ID())
+	if !ok || got.State != hostapi.ImageJobEnded || got.Outcome != imageJobPassed || path != j.Log() {
+		t.Errorf("the ended job's log after a restart: %+v %q %v", got, path, ok)
+	}
+	for _, id := range []string{"20261113T093000Z-999", "../" + j.ID(), ""} {
+		if _, _, ok := again.jobLog("/p/one", id); ok {
+			t.Errorf("job %q found", id)
+		}
+	}
+}
+
+// S-0757: the host API's view of the jobs answers the images as judged, or
+// unjudged with why, and starts a job of every image the agents need, unless
+// none is flai's to make.
+func TestImageJobsHostAnswersTheImagesAndStartsAJob(t *testing.T) {
+	lab := newImageJobLab(t)
+	harness := agentimage.Image{Kind: agentimage.KindHarness, Inner: "claude-code", Ref: "a:1", Source: agentimage.SourceDefault}
+	layer := agentimage.Image{Kind: agentimage.KindLayer, Inner: "claude-code", Ref: "l:1", Source: agentimage.SourceLayer, Dockerfile: "agent.Dockerfile"}
+	judged := projectImages{images: []agentimage.Image{harness, layer}, flai: "1.0.0",
+		statuses: []agentimage.Status{{Image: harness, State: agentimage.StateCurrent}, {Image: layer, State: agentimage.StateMissing}}}
+	var judgeErr error
+	h := &imageJobsHost{runner: lab.runner, judge: func(string) (projectImages, error) { return judged, judgeErr }}
+
+	st := h.Images("/p/one")
+	if st.Flai != "1.0.0" || len(st.Images) != 2 || st.Images[1].State != agentimage.StateMissing || st.Unjudged != "" || st.Running != nil || len(st.Queued) != 0 || len(st.Ended) != 0 {
+		t.Errorf("the images with no job: %+v", st)
+	}
+
+	started, err := h.Ensure("one", "/p/one")
+	if err != nil || started.Ahead != 0 || strings.Join(started.Images, ",") != "a:1,l:1" {
+		t.Fatalf("a start: %+v %v, want a job of both images", started, err)
+	}
+	call := lab.nextCall()
+	if len(call.images) != 2 || call.root != "/p/one" {
+		t.Errorf("the job makes %v for %s, want both images of /p/one", call.images, call.root)
+	}
+	if _, err := h.Ensure("one", "/p/one"); !errors.As(err, new(*hostapi.ImageJobBusy)) {
+		t.Errorf("a second start while it runs: %v, want it refused", err)
+	}
+	if st := h.Images("/p/one"); st.Running == nil || st.Running.ID != started.ID {
+		t.Errorf("the images while the job runs: %+v", st)
+	}
+	call.pass(agentimage.WayLayered)
+
+	judged.unjudged, judged.statuses = errors.New("docker is not on PATH"), nil
+	st = h.Images("/p/one")
+	if st.Unjudged != "docker is not on PATH" || len(st.Images) != 2 || st.Images[0].Ref != "a:1" || st.Images[0].State != "" {
+		t.Errorf("unjudged images: %+v", st)
+	}
+
+	judgeErr = errors.New("no manifest")
+	if st := h.Images("/p/one"); st.Unjudged != "no manifest" || len(st.Images) != 0 {
+		t.Errorf("images that cannot be listed: %+v", st)
+	}
+	if _, err := h.Ensure("one", "/p/one"); err == nil || err.Error() != "no manifest" {
+		t.Errorf("a start of images that cannot be listed: %v", err)
+	}
+
+	judgeErr = nil
+	for _, images := range [][]agentimage.Image{nil, {{Kind: agentimage.KindHarness, Inner: "claude-code", Ref: "mine:1", Source: agentimage.SourceHost}}} {
+		judged.images = images
+		if _, err := h.Ensure("one", "/p/one"); !errors.Is(err, hostapi.ErrNoImages) {
+			t.Errorf("a start with the images %v: %v, want ErrNoImages", images, err)
+		}
+	}
+}
+
+// judgeProjectImages lists the images the agents of a project on the
+// container harness need and judges them through docker.
+func TestJudgeProjectImagesListsWhatTheAgentsNeed(t *testing.T) {
+	root := t.TempDir()
+	manifestOn := func(harnessName string) {
+		t.Helper()
+		m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nagent:\n  harness: " + harnessName + "\n"
+		if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifestOn("claude-code")
+	got, err := judgeProjectImages(root, nil, imageDocker{})
+	if err != nil || len(got.images) != 0 || got.statuses != nil {
+		t.Fatalf("a project with no agent on the container harness: %+v %v, want no image", got, err)
+	}
+	manifestOn("container")
+	got, err = judgeProjectImages(root, nil, imageDocker{})
+	if err != nil || len(got.images) != 1 || got.images[0].Inner != "claude-code" || got.unjudged != nil {
+		t.Fatalf("a project on the container harness: %+v %v, want its harness image judged", got, err)
+	}
+	if len(got.statuses) != 1 || got.statuses[0].State != agentimage.StateMissing {
+		t.Errorf("statuses: %+v, want the image missing", got.statuses)
+	}
+	if _, err := judgeProjectImages(t.TempDir(), nil, imageDocker{}); err == nil {
+		t.Error("a folder that is no project was judged")
+	}
+}

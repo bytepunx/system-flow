@@ -545,6 +545,8 @@ func Run(ctx context.Context, o Options) error {
 	if o.ImageEnsure != nil {
 		o.imageJobs = newImageJobRunner(ctx, imageJobOptions{Dir: o.Dir.imageJobsDir(), Ensure: o.ImageEnsure, Now: o.Now, Logger: o.Logger, Record: o.Host.Record})
 		defer o.imageJobs.drain()
+		// the dashboard reads the jobs and asks for one (S-0757)
+		o.Host.Images = newImageJobsHost(o.imageJobs, o.Agent, dockerOf(o))
 	}
 	// A change of the host's budget state is sent through the reminder
 	// channel, read at each change (S-0534, ADR-0205).
