@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -270,4 +271,166 @@ func TestWaitForEventsHoldsAStorysAgentWhileItsKlusterJobRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.endsAtOnce(t, d)
+}
+
+// checksKlusterJob is S-0001's checks job in its namespace s-0001, ended with
+// outcome when it is not empty, with the checks unit and e2e, e2e failing
+// with exit code 3 when outcome is failed.
+func checksKlusterJob(started bool, outcome string) kluster.AskedJob {
+	j := askedKlusterJob(kluster.KindChecks, started, outcome)
+	j.Namespace = "s-0001"
+	if outcome == "" {
+		return j
+	}
+	const log = "serve/checks/S-0001.log"
+	zero, three := 0, 3
+	j.Log = log
+	j.Checks = &kluster.ChecksResult{Outcome: outcome, Commit: j.Commit, Log: log, Checks: []kluster.Check{
+		{Name: "unit", Outcome: kluster.OutcomePassed, ExitCode: &zero, Log: log},
+		{Name: "e2e", Outcome: kluster.OutcomePassed, ExitCode: &zero, Log: log},
+	}}
+	if outcome == kluster.OutcomeFailed {
+		j.Checks.Checks[1].Outcome, j.Checks.Checks[1].ExitCode = kluster.OutcomeFailed, &three
+		j.FailedStep, j.ExitCode, j.Error = "e2e", &three, "the checks run against the namespace ended failed, at e2e"
+	}
+	return j
+}
+
+// jobChecks is the checks of the job in a kluster tool's answer, each as its
+// name, outcome, exit code, and log, joined by spaces.
+func jobChecks(out map[string]any) []string {
+	job, _ := out["job"].(map[string]any)
+	checks, _ := job["checks"].(map[string]any)
+	list, _ := checks["checks"].([]any)
+	var got []string
+	for _, c := range list {
+		m, _ := c.(map[string]any)
+		got = append(got, strings.Join([]string{fmt.Sprint(m["name"]), fmt.Sprint(m["outcome"]), fmt.Sprint(m["exit_code"]), fmt.Sprint(m["log"])}, " "))
+	}
+	return got
+}
+
+// S-0661 criteria 1 and 2, ADR-0292 §1, §5: kluster_checks is listed, saying
+// what it answers, the refusals, deploying first among them, and what to wait
+// for; it asks flai serve for the checks of the session's own story and
+// answers the job's id, the jobs ahead, and where the log goes.
+func TestKlusterChecksAsksFlaiServeForTheOwnStory(t *testing.T) {
+	t.Parallel()
+	f := klusterFixture(t, nil)
+	res, err := f.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listed := false
+	for _, tool := range res.Tools {
+		if tool.Name != "kluster_checks" {
+			continue
+		}
+		listed = true
+		for _, want := range []string{"run the project's checks against the session's own story's kluster namespace", "at the story branch's head", "as flai checks run S-nnnn --job does", "for its own story alone",
+			"It answers at once", "ahead, the jobs of the queue before it", "wait_seconds, 0 to 45", "more than 45 is refused", "each check's name, outcome, exit_code, and log",
+			"hold wait_for_events for the kluster event", "not deployed at the story branch's head", "saying to deploy it first with kluster_deploy", "for another story",
+			"while the checks host action is off", "no checks are named", "while the kluster host action is off", "uncommitted changes", "When flai serve is not running"} {
+			if !strings.Contains(tool.Description, want) {
+				t.Errorf("kluster_checks's description does not say %q: %s", want, tool.Description)
+			}
+		}
+	}
+	if !listed {
+		t.Fatal("the tool kluster_checks is not listed")
+	}
+
+	running := checksKlusterJob(false, "")
+	got := takeKluster(t, projectRoot(f.repo), f.story.ID, kluster.KindChecks, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: running.ID, Kind: r.Kind, Story: r.Story, Ahead: 1, Started: true, Log: "serve/checks"}
+	}, running)
+	out, failed := f.call(t, "kluster_checks", map[string]any{"story": "s-1"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	ans, _ := out["answer"].(map[string]any)
+	if ans["job"] != running.ID || ans["kind"] != kluster.KindChecks || ans["ahead"] != float64(1) || ans["started"] != true || ans["log"] != "serve/checks" || out["job"] != nil || out["ended"] != nil {
+		t.Errorf("the checks queued: %v", out)
+	}
+	if req := <-got; req.Story != f.story.ID || req.Kind != kluster.KindChecks || req.By != "claude" {
+		t.Errorf("the request flai serve read: %+v", req)
+	}
+}
+
+// S-0661 criterion 1, ADR-0292 §5: with wait_seconds kluster_checks answers
+// a passing run's job with each check's result and log, and a failing one's
+// with the check it failed at, its exit code, and its log, ended true; a run
+// that outlasts the wait is answered running, ended false.
+func TestKlusterChecksWaitsForTheRun(t *testing.T) {
+	t.Parallel()
+	f := klusterFixture(t, nil)
+	root := projectRoot(f.repo)
+	running := checksKlusterJob(true, "")
+	answer := func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: running.ID, Kind: r.Kind, Story: r.Story, Started: true}
+	}
+	const log = "serve/checks/S-0001.log"
+
+	takeKluster(t, root, f.story.ID, kluster.KindChecks, answer, running, checksKlusterJob(true, kluster.OutcomePassed))
+	out, failed := f.call(t, "kluster_checks", map[string]any{"wait_seconds": 5})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	job, _ := out["job"].(map[string]any)
+	if out["ended"] != true || job["outcome"] != kluster.OutcomePassed || job["namespace"] != "s-0001" || job["log"] != log ||
+		strings.Join(jobChecks(out), "; ") != "unit passed 0 "+log+"; e2e passed 0 "+log {
+		t.Errorf("a passing run: %v", out)
+	}
+
+	takeKluster(t, root, f.story.ID, kluster.KindChecks, answer, running, checksKlusterJob(true, kluster.OutcomeFailed))
+	out, failed = f.call(t, "kluster_checks", map[string]any{"wait_seconds": 5})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	job, _ = out["job"].(map[string]any)
+	if out["ended"] != true || job["outcome"] != kluster.OutcomeFailed || job["failed_step"] != "e2e" || job["exit_code"] != float64(3) || job["log"] != log ||
+		!strings.Contains(fmt.Sprint(job["error"]), "ended failed, at e2e") || strings.Join(jobChecks(out), "; ") != "unit passed 0 "+log+"; e2e failed 3 "+log {
+		t.Errorf("a failing run: %v", out)
+	}
+
+	takeKluster(t, root, f.story.ID, kluster.KindChecks, answer, running)
+	out, failed = f.call(t, "kluster_checks", map[string]any{"wait_seconds": 1})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if job, _ := out["job"].(map[string]any); out["ended"] != false || job["id"] != running.ID || job["outcome"] != nil || job["checks"] != nil {
+		t.Errorf("a run that outlasts the wait: %v", out)
+	}
+}
+
+// S-0661 criterion 2, ADR-0292 §1: flai serve's refusal of a namespace not
+// deployed at the head is the call's error, saying to deploy first; another
+// story than the session's own and a wait over 45 seconds are refused before
+// any request is written.
+func TestKlusterChecksRefusals(t *testing.T) {
+	t.Parallel()
+	f := klusterFixture(t, nil)
+	for _, c := range []struct {
+		args map[string]any
+		want string
+	}{
+		{map[string]any{"story": "S-0002"}, "this session works S-0001"},
+		{map[string]any{"story": "S-2"}, "own story's kluster checks alone"},
+		{map[string]any{"wait_seconds": 46}, "wait_seconds 46 is not 0 to 45"},
+	} {
+		if _, failed := f.call(t, "kluster_checks", c.args); !strings.Contains(failed, c.want) {
+			t.Errorf("kluster_checks %v: %q, want %q", c.args, failed, c.want)
+		}
+	}
+	if _, err := os.Stat(kluster.RequestsDir(projectRoot(f.repo))); !os.IsNotExist(err) {
+		t.Errorf("a refusal wrote a request: %v", err)
+	}
+
+	reason := "S-0001's namespace s-0001 was never deployed: it has no record, so S-0001's checks have nothing deployed at its head to run against and nothing is queued: deploy it first with flai kluster deploy S-0001 --job, or the tool kluster_deploy"
+	takeKluster(t, projectRoot(f.repo), f.story.ID, kluster.KindChecks, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Kind: r.Kind, Story: r.Story, Reason: reason}
+	})
+	if _, failed := f.call(t, "kluster_checks", map[string]any{"wait_seconds": 5}); failed != reason {
+		t.Errorf("not deployed at the head: %q", failed)
+	}
 }

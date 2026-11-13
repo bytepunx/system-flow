@@ -53,12 +53,13 @@ kluster env S-nnnn prints those variables, as export lines or JSON.
 They work from your shell whatever the kluster host action says. flai guard
 refuses every agent and sub-agent up, down, deploy, teardown, and promote,
 which change shared infrastructure on your machine; status and deployments
-read, and any agent may run them. exec and log reach a story's namespace
-without changing the cluster's shared infrastructure, and flai guard lets a
-story's agent and its sub-agents run them for their own story alone
-(ADR-0292 §2). A story's agent asks flai serve for its own story's deploy or
-teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the
-MCP tools kluster_deploy and kluster_teardown, which run nothing themselves
+read, and any agent may run them. env, exec, and log reach a story's
+namespace without changing the cluster's shared infrastructure, and flai
+guard lets a story's agent and its sub-agents run them for their own story
+alone (ADR-0292 §2). A story's agent asks flai serve for its own story's
+deploy, checks run, or teardown instead, with flai kluster deploy or teardown
+S-nnnn --job, flai checks run S-nnnn --job, or the MCP tools kluster_deploy,
+kluster_checks, and kluster_teardown, which run nothing themselves
 (ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host
@@ -1013,7 +1014,7 @@ func (a *app) printKlusterJob(root string, res klusterJobResult, wait time.Durat
 		if res.Job != nil {
 			lead = fmt.Sprintf("It is still %s after %s: wait for", jobState(*res.Job), wait)
 		}
-		fmt.Fprintf(a.out, "%s its kluster event (wait_for_events), or read it later with flai kluster deployments", lead)
+		fmt.Fprintf(a.out, "%s its kluster event (wait_for_events), or read it later with %s", lead, readLater(ans))
 		if ans.Log != "" {
 			fmt.Fprintf(a.out, "; its output goes to %s", ans.Log)
 		}
@@ -1023,12 +1024,25 @@ func (a *app) printKlusterJob(root string, res klusterJobResult, wait time.Durat
 	printAskedJob(a.out, *res.Job)
 }
 
+// readLater is the command that reads the job ans names once it ended: flai
+// checks status for a checks run, flai kluster deployments for the rest.
+func readLater(ans kluster.Answer) string {
+	if ans.Kind == kluster.KindChecks {
+		return "flai checks status " + ans.Story
+	}
+	return "flai kluster deployments"
+}
+
 // printAskedJob writes an ended kluster job as a short block of lines: its
-// outcome, its commit, each step, and why it failed.
+// outcome, its commit, its namespace, each step, each check it ran, and why
+// it failed.
 func printAskedJob(w io.Writer, j kluster.AskedJob) {
 	fmt.Fprintf(w, "%s's %s job %s: %s\n", j.Story, j.Kind, j.ID, j.Outcome)
 	if j.Commit != "" {
 		fmt.Fprintf(w, "  commit  %s\n", short12(j.Commit))
+	}
+	if j.Namespace != "" {
+		fmt.Fprintf(w, "  namespace %s\n", j.Namespace)
 	}
 	for _, st := range j.Steps {
 		line := fmt.Sprintf("  %-8s %s", st.Name, st.Outcome)
@@ -1039,6 +1053,9 @@ func printAskedJob(w io.Writer, j kluster.AskedJob) {
 			line += ", log " + st.Log
 		}
 		fmt.Fprintln(w, line)
+	}
+	if j.Checks != nil {
+		printJobChecks(w, *j.Checks)
 	}
 	if j.FailedStep != "" {
 		line := "  failed at " + j.FailedStep

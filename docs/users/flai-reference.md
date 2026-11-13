@@ -588,7 +588,7 @@ Run, watch, and cancel checks for a story in review.
 Subcommands:
 
 - [cancel](#flai-checks-cancel): Stop an active run: terminate, then, if it has not gone, kill
-- [run](#flai-checks-run): Run every named check, in order, in the story's worktree; refuses a second run while one is active
+- [run](#flai-checks-run): Run every named check, in order, in the story's worktree, or with --job ask flai serve to run them against the story's namespace
 - [status](#flai-checks-status): The current or last run for a story: which check, pass or fail so far, outcome and duration once ended
 - [tail](#flai-checks-tail): New output since --from, waiting for more while the run is active
 
@@ -608,13 +608,35 @@ Flags:
 
 #### flai checks run
 
-Run every named check, in order, in the story's worktree; refuses a second run while one is active.
+Run every named check, in order, in the story's worktree, or with --job ask flai serve to run them against the story's namespace.
 
 ```text
-flai checks run <story-id>
+flai checks run <story-id> [flags]
 ```
 
 Runs each check named in flai serve checks set, or, when it names none, the manifest's checks:, in order, in the story's worktree, stopping at the first to fail. Bounded by the configured time limit (flai serve checks timeout); flai checks cancel stops it early. This blocks until the run ends, real minutes, not seconds; the outcome and duration stay with the story (flai checks status) until it is accepted.
+
+With --job it runs nothing here: it asks flai serve to run the checks against the story's kluster namespace as it is deployed, at the story branch's head, with the namespace's variables, as a job (ADR-0292), and is how a story's agent asks for its own story alone: FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn. A session with a story of its own is refused another before anything is asked; with neither, as in the operator's shell, the story given is asked for. It writes a request under .flai-cache/kluster/requests, waits at most ten seconds for flai serve to take it, and prints the answer: the job's id and the jobs ahead of it, and whether this request queued it or found a job of the story already queued or running, which queues nothing again, and where the log goes; or, for a story in review, the record's checks run, its commit, outcome, and log, with nothing queued. A refusal prints flai serve's reason and exits 1: while the namespace is not deployed at the story branch's head with a deploy that passed, saying to deploy it first with flai kluster deploy S-nnnn --job; while the checks host action or the kluster host action is off; with no checks named or no kluster.deploy set; with uncommitted changes in the worktree; or for a story not in progress. A request no flai serve takes is withdrawn, and flai says flai serve is not running and exits 1.
+
+--wait &lt;duration&gt; (default 0, with --job only) then waits that long for the run to end and prints its outcome (passed, failed, refused, or interrupted), the commit checked, the namespace, each check's name, outcome, exit code, and log, the run's log, the check it failed at with its exit code, and its error; it exits 1 unless the run passed. A run that outlasts the wait is said to be still queued or running, and flai exits 0: read it later with flai checks status S-nnnn, or hold wait\_for\_events for its kluster event, which reports the outcome, the failed check, its exit code, and the log. Interrupting the wait exits 1 and leaves the run to flai serve.
+
+--json with --job prints one object: answer, flai serve's answer (job, kind, story, ahead, started, recorded, commit, outcome, log, and reason); and with --wait, job, the job's state (id, kind, story, by, namespace, queued\_at, started\_at, ended\_at, commit, outcome, failed\_step, exit\_code, error, log, and checks: its outcome, commit, log, and each check's name, outcome, exit\_code, and log), and ended, whether it ended within the wait.
+
+Examples:
+
+```bash
+flai checks run S-0578
+flai checks run S-0578 --job
+flai checks run S-0578 --job --wait 10m
+flai checks run S-0578 --job --wait 10m --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--job` | ask flai serve for the job and print its id and the jobs ahead at once, running nothing here (the story's agent, for its own story) |
+| `--wait` duration | with --job, wait at most this long for the job to end, such as 10m, and print its outcome |
 
 #### flai checks status
 
@@ -2743,7 +2765,7 @@ flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kl
 
 flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs, which flai kluster log S-nnnn --step &lt;step&gt; prints, and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project. flai kluster exec S-nnnn -- &lt;command&gt; runs a command in the story's worktree with its namespace's variables and the namespace's own kubeconfig, while the namespace has a record, and flai kluster env S-nnnn prints those variables, as export lines or JSON.
 
-They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them. exec and log reach a story's namespace without changing the cluster's shared infrastructure, and flai guard lets a story's agent and its sub-agents run them for their own story alone (ADR-0292 §2). A story's agent asks flai serve for its own story's deploy or teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the MCP tools kluster\_deploy and kluster\_teardown, which run nothing themselves (ADR-0292).
+They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them. env, exec, and log reach a story's namespace without changing the cluster's shared infrastructure, and flai guard lets a story's agent and its sub-agents run them for their own story alone (ADR-0292 §2). A story's agent asks flai serve for its own story's deploy, checks run, or teardown instead, with flai kluster deploy or teardown S-nnnn --job, flai checks run S-nnnn --job, or the MCP tools kluster\_deploy, kluster\_checks, and kluster\_teardown, which run nothing themselves (ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host action on, from the dashboard's Features page or with flai serve enable kluster, which writes the block and a kluster.yaml for it. A block with no deploy brings the cluster up and down, and deploy and promote refuse it until kluster.deploy is set. A host without kluster on PATH is refused with how to install kluster.
 

@@ -145,10 +145,10 @@ type Options struct {
 	// CloseOutWait is how long the tool verify waits for flai serve to take
 	// and answer its request; zero is closeout's defaults.
 	CloseOutWait closeout.Wait
-	// KlusterWait is how long the tools kluster_deploy and kluster_teardown
-	// wait for flai serve to take and answer their request, and how often
-	// they read the job's state while wait_seconds runs; zero is kluster's
-	// defaults.
+	// KlusterWait is how long the tools kluster_deploy, kluster_checks, and
+	// kluster_teardown wait for flai serve to take and answer their request,
+	// and how often they read the job's state while wait_seconds runs; zero
+	// is kluster's defaults.
 	KlusterWait kluster.Wait
 	// Story is the story a story's agent's session works, as flai serve sets
 	// FLAI_STORY; "" outside one (S-0272).

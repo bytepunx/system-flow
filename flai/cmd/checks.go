@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
@@ -27,19 +29,96 @@ func newChecksCmd(a *app) *cobra.Command {
 }
 
 func newChecksRunCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var job klusterJobFlags
+	c := &cobra.Command{
 		Use:   "run <story-id>",
-		Short: "Run every named check, in order, in the story's worktree; refuses a second run while one is active",
+		Short: "Run every named check, in order, in the story's worktree, or with --job ask flai serve to run them against the story's namespace",
 		Long: `Runs each check named in flai serve checks set, or, when it names none, the
 manifest's checks:, in order, in the story's worktree, stopping at the
 first to fail. Bounded by the configured time limit (flai serve checks
 timeout); flai checks cancel stops it early. This blocks until the run
 ends, real minutes, not seconds; the outcome and duration stay with the
-story (flai checks status) until it is accepted.`,
+story (flai checks status) until it is accepted.
+
+` + checksJobHelp,
+		Example: `  flai checks run S-0578
+  flai checks run S-0578 --job
+  flai checks run S-0578 --job --wait 10m
+  flai checks run S-0578 --job --wait 10m --json`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if job.job || job.wait != 0 {
+				return a.askKlusterJob(cmd, kluster.KindChecks, args[0], job)
+			}
 			return a.runChecksRun(args[0])
 		},
+	}
+	addKlusterJobFlags(c, &job)
+	return c
+}
+
+// checksJobHelp is the part of flai checks run's help that says what --job,
+// --wait, and --json with them do (ADR-0292 §1, §2).
+const checksJobHelp = `With --job it runs nothing here: it asks flai serve to run the checks
+against the story's kluster namespace as it is deployed, at the story
+branch's head, with the namespace's variables, as a job (ADR-0292), and is
+how a story's agent asks for its own story alone: FLAI_STORY, else the story
+in an agent name of the form agent-S-nnnn. A session with a story of its own
+is refused another before anything is asked; with neither, as in the
+operator's shell, the story given is asked for. It writes a request under
+.flai-cache/kluster/requests, waits at most ten seconds for flai serve to
+take it, and prints the answer: the job's id and the jobs ahead of it, and
+whether this request queued it or found a job of the story already queued
+or running, which queues nothing again, and where the log goes; or, for a
+story in review, the record's checks run, its commit, outcome, and log, with
+nothing queued. A refusal prints flai serve's reason and exits 1: while the
+namespace is not deployed at the story branch's head with a deploy that
+passed, saying to deploy it first with flai kluster deploy S-nnnn --job;
+while the checks host action or the kluster host action is off; with no
+checks named or no kluster.deploy set; with uncommitted changes in the
+worktree; or for a story not in progress. A request no flai serve takes is
+withdrawn, and flai says flai serve is not running and exits 1.
+
+--wait <duration> (default 0, with --job only) then waits that long for the
+run to end and prints its outcome (passed, failed, refused, or interrupted),
+the commit checked, the namespace, each check's name, outcome, exit code,
+and log, the run's log, the check it failed at with its exit code, and its
+error; it exits 1 unless the run passed. A run that outlasts the wait is
+said to be still queued or running, and flai exits 0: read it later with
+flai checks status S-nnnn, or hold wait_for_events for its kluster event,
+which reports the outcome, the failed check, its exit code, and the log.
+Interrupting the wait exits 1 and leaves the run to flai serve.
+
+--json with --job prints one object: answer, flai serve's answer (job, kind,
+story, ahead, started, recorded, commit, outcome, log, and reason); and with
+--wait, job, the job's state (id, kind, story, by, namespace, queued_at,
+started_at, ended_at, commit, outcome, failed_step, exit_code, error, log,
+and checks: its outcome, commit, log, and each check's name, outcome,
+exit_code, and log), and ended, whether it ended within the wait.`
+
+// printJobChecks writes the checks run a kluster job ran against its
+// story's namespace: its outcome, the commit checked, its log, and each
+// check's name, outcome, exit code, and log.
+func printJobChecks(w io.Writer, r kluster.ChecksResult) {
+	line := "  checks  " + r.Outcome
+	if r.Commit != "" {
+		line += " at " + short12(r.Commit)
+	}
+	if r.Log != "" {
+		line += ", log " + r.Log
+	}
+	fmt.Fprintln(w, line)
+	for _, c := range r.Checks {
+		line := fmt.Sprintf("    %-8s %s", c.Name, c.Outcome)
+		if c.ExitCode == nil {
+			line += ", did not start"
+		} else {
+			line += fmt.Sprintf(", exit code %d", *c.ExitCode)
+		}
+		if c.Log != "" {
+			line += ", log " + c.Log
+		}
+		fmt.Fprintln(w, line)
 	}
 }
 

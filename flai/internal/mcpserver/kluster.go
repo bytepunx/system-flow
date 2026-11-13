@@ -34,6 +34,14 @@ func klusterJobDescription(kind, what string) string {
 		what, kind, kind, maxKlusterWait, maxKlusterWait)
 }
 
+// klusterChecksDescription is the description of the tool kluster_checks.
+var klusterChecksDescription = fmt.Sprintf("Ask flai serve to run the project's checks against the session's own story's kluster namespace as it is deployed, at the story branch's head, with the namespace's variables, as a job (ADR-0292), as flai checks run S-nnnn --job does: the tool runs nothing itself, and it is for the story's agent, for its own story alone, FLAI_STORY, else the story in an agent name of the form agent-S-nnnn. story is optional and is refused when it is not the session's own; a session with no story of its own names it. "+
+	"It answers at once with answer, flai serve's answer: job, the job's id; kind, checks; story; ahead, the jobs of the queue before it; started, true when this request queued it, false when a job of the story was already queued or running and is answered instead, queuing nothing; log, where the checks runs' logs go; and, for a story in review whose deploy and checks passed at its head, recorded true with its checks run's commit, outcome, and log, nothing queued. "+
+	"wait_seconds, 0 to %d, then waits that long for the run to end and answers job too, its state (id, namespace, outcome passed, failed, refused, or interrupted, commit, failed_step, the check it failed at, exit_code, error, log, the run's log, and checks: its outcome, commit, log, and each check's name, outcome, exit_code, and log), and ended, whether it ended in the wait; more than %d is refused. "+
+	"While the run has not ended, do the work that needs no namespace and hold wait_for_events for the kluster event of your story, which reports the job, its kind, its commit, its outcome, the failed check, its exit code, and the log, and is not told to end while the job waits or runs; flai checks status S-nnnn shows it too. A failure is yours to fix: read the check's log at the path it names, change the code, commit, deploy again with kluster_deploy, which runs the checks once the deploy passes, or ask for the checks again once the namespace is at the head. "+
+	"Refused, with the reason and nothing queued: while the namespace is not deployed at the story branch's head with a deploy that passed, as when it was never deployed, its last deploy failed, or a commit came after it, saying to deploy it first with kluster_deploy; for another story; while the checks host action is off (the operator's flai serve enable checks) or no checks are named; while the kluster host action is off, with no kluster.deploy set, while the story's worktree has uncommitted changes (commit first), and for a story not in progress. When flai serve is not running, it takes no request within ten seconds and the call says so: ask the operator.",
+	maxKlusterWait, maxKlusterWait)
+
 // KlusterJobIn asks flai serve for a kluster job of the session's own story.
 type KlusterJobIn struct {
 	Project     string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
@@ -55,6 +63,13 @@ type KlusterJobOut struct {
 // klusterDeploy asks flai serve to deploy the session's own story.
 func (s *server) klusterDeploy(ctx context.Context, _ *mcp.CallToolRequest, in KlusterJobIn) (*mcp.CallToolResult, KlusterJobOut, error) {
 	out, err := s.klusterJob(ctx, kluster.KindDeploy, in)
+	return nil, out, err
+}
+
+// klusterChecks asks flai serve to run the checks against the session's own
+// story's namespace.
+func (s *server) klusterChecks(ctx context.Context, _ *mcp.CallToolRequest, in KlusterJobIn) (*mcp.CallToolResult, KlusterJobOut, error) {
+	out, err := s.klusterJob(ctx, kluster.KindChecks, in)
 	return nil, out, err
 }
 
