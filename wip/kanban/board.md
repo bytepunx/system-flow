@@ -8,12 +8,12 @@ wip_limits:
   review: 5
 order:
   - S-0760
-  - S-0745
   - S-0759
   - S-0751
   - S-0757
   - S-0663
   - S-0662
+  - S-0770
 ---
 
 # Board

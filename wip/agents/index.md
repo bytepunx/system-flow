@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-13T13:15:50Z
+updated: 2026-11-13T13:16:46Z
 ---
 
 # Active streams
@@ -8,6 +8,7 @@ updated: 2026-11-13T13:15:50Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0661](S-0661.md) | A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables | in-progress | agent-S-0661 | 2026-11-13T13:14:14Z |
+| [S-0745](S-0745.md) | flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project | in-progress | agent-S-0745 | 2026-11-13T13:16:15Z |
 | [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | system-flow | 2026-11-13T11:46:00Z |
 
 ## Strategic agents
