@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-13T22:47:24Z
+updated: 2026-11-13T22:47:30Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0778](S-0778.md) | Publish what is accepted and not yet released | review | agent-S-0778 | 2026-11-13T20:26:40Z |
 
 ## Strategic agents
 
