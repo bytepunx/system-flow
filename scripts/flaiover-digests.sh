@@ -1,9 +1,10 @@
 #!/usr/bin/env sh
-# Print flaiover's digest list for a release on stdout, in the format of
+# Print one image's digest list for a release on stdout, in the format of
 # design/system/release-signing.md, "The digest list": the index line first, then
 # one line per platform manifest of the index (attestation manifests, platform
 # unknown/unknown, left out), sorted by kind in byte order. release-flaiover.yml
-# writes it to flaiover_<version>.digests on a flaiover/v* tag and signs it.
+# writes flaiover's to flaiover_<version>.digests on a flaiover/v* tag and signs
+# it; agent-image-digests.sh runs it once per agent image for a flai/v* tag.
 #
 # Usage: scripts/flaiover-digests.sh <image> <version> <index-digest>
 #   e.g. scripts/flaiover-digests.sh ghcr.io/bytepunx/flaiover 0.42.3 sha256:0dce07ff...

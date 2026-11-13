@@ -95,6 +95,9 @@ echo "smoke: agent-container.sh runs the manifest's layer image (I-0279)"
 echo "smoke: agent-image.sh builds with no login when the credential helper fails (I-0339)"
 "$ROOT/scripts/agent-image-test.sh"
 
+echo "smoke: agent-image-digests.sh writes the agent images' digest lists in the release format (ADR-0295)"
+"$ROOT/scripts/agent-image-digests-test.sh"
+
 echo "smoke: go build stamps a story's worktree in the agent image with the harness's safe.directory (I-0255)"
 "$ROOT/scripts/agent-vcs-test.sh"
 
