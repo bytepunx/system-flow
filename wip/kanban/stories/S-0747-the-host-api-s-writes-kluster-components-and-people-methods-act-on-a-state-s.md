@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:29Z
-updated: 2026-11-13T17:20:20Z
+updated: 2026-11-13T17:24:09Z
 transitions: []
 tags: [cli]
 topics: [cli, dashboard]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 38m
-  delivery: 2026-11-13T21:23:00Z
+  delivery: 2026-11-13T21:27:00Z
   basis: "Its own forecast of 38m; 13th in the pull order with an in-progress limit of 3, behind S-0759, S-0760, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744 and S-0746."
   by: flai
-  at: 2026-11-13T17:20:20Z
+  at: 2026-11-13T17:24:09Z
 ---
 # S-0747 The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name
 
