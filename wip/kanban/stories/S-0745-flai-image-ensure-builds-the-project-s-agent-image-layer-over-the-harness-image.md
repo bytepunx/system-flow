@@ -7,7 +7,7 @@ status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-13T07:29:42Z
+updated: 2026-11-13T07:30:41Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:34Z
@@ -38,10 +38,10 @@ usage:
           cost: 0.0314
 forecast:
   duration: 40m
-  delivery: 2026-11-13T14:08:00Z
-  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 3, behind S-0733, S-0660, S-0661, S-0662, S-0663, S-0734, S-0735 and S-0740."
+  delivery: 2026-11-13T08:41:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0660, S-0733 and S-0735."
   by: flai
-  at: 2026-11-13T07:29:42Z
+  at: 2026-11-13T07:30:41Z
 finalized:
   by: alex
   at: 2026-11-13T07:27:59Z
