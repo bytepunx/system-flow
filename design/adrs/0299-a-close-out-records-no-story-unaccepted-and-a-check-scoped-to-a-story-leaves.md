@@ -6,6 +6,7 @@ date: 2026-11-13
 supersedes: []
 superseded_by: []
 refines: [ADR-0085]
+topics: [cli, conventions, template]
 ---
 
 # ADR-0299 A close-out records no story.unaccepted, and a check scoped to a story leaves out every story.unaccepted outside it
