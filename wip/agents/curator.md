@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 282.5424
-accrued_seconds: 31328
-tasks_completed: 186
-last_run: 2026-11-13T15:23:59Z
+accrued_cost: 283.6183
+accrued_seconds: 31386
+tasks_completed: 187
+last_run: 2026-11-13T15:26:45Z
 ---
 
 # Curator activity
@@ -1499,3 +1499,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0610
 - Seconds: 78
 - Cost: 1.2399 USD, estimated
+
+### 2026-11-13T15:26:45Z
+
+- Summary: I merged S-0773's decision into D-0541. I wrote no new entries, nothing was absorbed, and `flai digest compact` compacted none. S-0773's other candidate was a plan note, and no design document changed since the last run or states D-0541 or D-0610.
+- Trigger: accepted S-0773
+- Items: D-0541
+- Seconds: 58
+- Cost: 1.0759 USD, estimated

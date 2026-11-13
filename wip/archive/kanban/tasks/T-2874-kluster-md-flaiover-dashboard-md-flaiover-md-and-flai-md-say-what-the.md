@@ -24,16 +24,16 @@ touches: [design/system/kluster.md, design/system/flaiover-dashboard.md, docs/us
 after: [T-2873]
 usage:
   source: log
-  seconds: 607
+  seconds: 613
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 654
-      cache_read: 7568149
-      cache_write: 179854
-      cost: 2.8992
+      input: 91
+      output: 32620
+      cache_read: 7694385
+      cache_write: 172099
+      cost: 3.1857
 ---
 # T-2874 kluster.md, flaiover-dashboard.md, flaiover.md, and flai.md say what the Deployments page, kluster.deployments, kluster.checks, and flai kluster deployments do for a story in progress
 

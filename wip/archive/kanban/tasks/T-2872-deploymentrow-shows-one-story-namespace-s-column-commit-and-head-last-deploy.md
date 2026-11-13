@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 544
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 427
-      cache_read: 4342069
-      cache_write: 132347
-      cost: 1.6743
+      input: 53
+      output: 18838
+      cache_read: 4443469
+      cache_write: 99386
+      cost: 1.8397
 ---
 # T-2872 DeploymentRow shows one story namespace's column, commit and head, last deploy and checks run, and who asked, with its actions and its examples
 

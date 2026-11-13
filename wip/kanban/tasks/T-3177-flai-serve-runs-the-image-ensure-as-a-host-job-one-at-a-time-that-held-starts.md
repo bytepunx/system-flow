@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go]
 usage:
   source: log
-  seconds: 795
+  seconds: 796
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 311
       cache_read: 3038304
       cache_write: 127200
-      cost: 1.1838
+      cost: 1.185
 ---
 # T-3177 flai serve runs the image ensure as a host job, one at a time, that held starts wait on and that the journal records
 

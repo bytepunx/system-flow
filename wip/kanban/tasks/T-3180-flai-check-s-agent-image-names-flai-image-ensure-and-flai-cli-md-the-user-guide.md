@@ -3,12 +3,18 @@ id: T-3180
 type: task
 nature: feature
 title: flai check's agent.image names flai image ensure, and flai-cli.md, the user guide, and the runbook describe the image job
-status: backlog
+status: in-progress
 parent: S-0751
 owner: alex
 created: 2026-11-12T16:02:48Z
-updated: 2026-11-12T16:02:48Z
-transitions: []
+updated: 2026-11-13T15:43:10Z
+transitions:
+  - to: ready
+    at: 2026-11-13T15:43:10Z
+    by: agent-S-0751
+  - to: in-progress
+    at: 2026-11-13T15:43:10Z
+    by: agent-S-0751
 stream: S-0751
 tags: [cli]
 touches: [flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md]

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1178
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 126
-      output: 694
-      cache_read: 8839209
-      cache_write: 198148
-      cost: 3.3816
+      input: 106
+      output: 38048
+      cache_read: 8974808
+      cache_write: 200738
+      cost: 3.7159
 ---
 # T-2868 flai kluster deployments and its records list each story namespace with its column, head, last deploy and checks run, who asked, and the count against the limit
 

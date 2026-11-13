@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 719
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 516
-      cache_read: 4496377
-      cache_write: 255663
-      cost: 1.7782
+      input: 56
+      output: 20007
+      cache_read: 4719170
+      cache_write: 105553
+      cost: 1.9539
 ---
 # T-2869 kluster.deployments answers each story namespace's column, head, last deploy and checks run, and who asked, the stories in progress not deployed, and the count against the limit
 

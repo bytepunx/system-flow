@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 398
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 333
-      cache_read: 3759106
-      cache_write: 131912
-      cost: 1.456
+      input: 46
+      output: 16382
+      cache_read: 3864101
+      cache_write: 86428
+      cost: 1.5999
 ---
 # T-2873 The Deployments page lists the stories in progress beside those in review, acts on them through DeploymentRow, and shows the count against the limit and the refused request
 

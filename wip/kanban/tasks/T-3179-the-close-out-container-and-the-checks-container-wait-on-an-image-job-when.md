@@ -3,16 +3,37 @@ id: T-3179
 type: task
 nature: feature
 title: The close-out container and the checks container wait on an image job when their image is missing or stale
-status: backlog
+status: done
 parent: S-0751
 owner: alex
 created: 2026-11-12T16:02:33Z
-updated: 2026-11-12T16:02:42Z
-transitions: []
+updated: 2026-11-13T15:43:00Z
+transitions:
+  - to: ready
+    at: 2026-11-13T15:33:11Z
+    by: agent-S-0751
+  - to: in-progress
+    at: 2026-11-13T15:33:12Z
+    by: agent-S-0751
+  - to: done
+    at: 2026-11-13T15:43:00Z
+    by: agent-S-0751
 stream: S-0751
 tags: [cli]
-touches: [flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go]
+touches: [flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster.go]
 after: [T-3177, T-3178]
+usage:
+  source: log
+  seconds: 588
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 354
+      cache_read: 3297120
+      cache_write: 125038
+      cost: 1.2811
 ---
 # T-3179 The close-out container and the checks container wait on an image job when their image is missing or stale
 

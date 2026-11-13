@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2160.5892
-accrued_seconds: 1558618
-tasks_completed: 3336
-last_run: 2026-11-13T15:23:30Z
+accrued_cost: 2160.9821
+accrued_seconds: 1558719
+tasks_completed: 3339
+last_run: 2026-11-13T15:26:39Z
 ---
 
 # Orchestrator activity
@@ -23386,6 +23386,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 29
 - Cost: 0.1717 USD, estimated
+
+### 2026-11-13T15:25:55Z
+
+- Summary: Accepted S-0773 (publish formula instance) at a34dfb428f53edd128cdb0518643fa25e5d0a502: close-out passed at the branch head, T-3307..T-3309 done, no blockers in the preview; it published flai 1.93.0, flaiover 0.58.9, template 1.1.38.
+- Items: S-0773
+- Seconds: 57
+- Cost: 0.2170 USD, estimated
+
+### 2026-11-13T15:26:21Z
+
+- Summary: After S-0773: release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, so no publish. ready-empty: promote_candidates lists none; ready unchanged (S-0760, S-0759, S-0757, all held on after), so no order applied. promote --drafts: S-0241 complete but stays a draft (TH-0790, forks not offered headless); the 19 E-0034 drafts lack only a value pending the operator's epic inputs (TH-1097), so no planner started for them. plan on S-0730 refused by flai: its planner ran until 2026-11-12T04:11:21Z and it has not changed since; not retried. TH-1163 is a flai serve notice, left alone.
+- Items: S-0773, S-0241, S-0730, E-0034, E-0036
+- Seconds: 26
+- Cost: 0.0882 USD, estimated
+
+### 2026-11-13T15:26:39Z
+
+- Summary: I accepted S-0773. Nothing else could move on this run: the board is still starved until you set E-0034's cost of delay inputs.
+- Items: none
+- Seconds: 18
+- Cost: 0.0877 USD, estimated
 
 ## Refusals
 

@@ -3,10 +3,10 @@ id: E-0035
 type: epic
 nature: feature
 title: A story's agent builds and deploys the story from its worktree into its kluster namespace and checks it there, so criteria that need the running system are ticked before review
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-10T08:09:06Z
-updated: 2026-11-13T08:03:30Z
+updated: 2026-11-13T15:43:20Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:54Z
@@ -14,12 +14,17 @@ transitions:
   - to: in-progress
     at: 2026-11-12T16:00:03Z
     by: agent-S-0659
+  - to: review
+    at: 2026-11-13T15:41:33Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T15:43:20Z
+    by: orchestrator
 tags: [cli, dashboard]
 usage:
   source: sum
-  seconds: 26853
-  estimated: true
-  priced_by: estimate
+  seconds: 28206
+  priced_by: harness
   turns:
     - day: 2026-11-12
       ceremony: 2
@@ -28,14 +33,14 @@ usage:
       ceremony: 18
       test_runs: 5
       hand_edits: 4
-      work: 330
+      work: 382
   models:
     - model: claude-opus-5-5
-      input: 3428
-      output: 1125611
-      cache_read: 247503582
-      cache_write: 9843379
-      cost: 129.6002
+      input: 3548
+      output: 1423892
+      cache_read: 270562186
+      cache_write: 9885664
+      cost: 140.4896
     - model: claude-sonnet-5-5
       input: 20
       output: 6933
@@ -124,3 +129,5 @@ Done when a story in a project with a kluster, such as authstar, is deployed and
 - Out of scope: a cluster per story, deploying uncommitted work, and letting an agent bring the cluster down, promote, or act on another story's namespace.
 - 2026-11-12T15:59:54Z: moved to ready: follows S-0659, which moved to ready
 - 2026-11-12T16:00:03Z: moved to in-progress: follows S-0659, which moved to in-progress
+- 2026-11-13T15:41:33Z: moved to review: follows S-0663, which moved to review
+- 2026-11-13T15:43:20Z: moved to done: follows S-0663, which moved to done

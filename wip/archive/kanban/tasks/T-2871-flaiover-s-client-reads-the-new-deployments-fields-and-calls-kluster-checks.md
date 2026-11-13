@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1183
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 290
-      cache_read: 2529004
-      cache_write: 111329
-      cost: 0.988
+      input: 31
+      output: 11116
+      cache_read: 2622079
+      cache_write: 58648
+      cost: 1.0856
 ---
 # T-2871 flaiover's client reads the new deployments fields and calls kluster.checks through a route of its own
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1171
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 132
-      output: 823
-      cache_read: 10736298
-      cache_write: 239585
-      cost: 4.1069
+      input: 129
+      output: 46209
+      cache_read: 10899895
+      cache_write: 243796
+      cost: 4.5129
 ---
 # T-2870 The operator deploys, checks, and tears down a story in progress through kluster.deploy, a new kluster.checks, and kluster.teardown, and forwards into its namespace
 

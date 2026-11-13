@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:01:16Z
-updated: 2026-11-13T15:17:55Z
+updated: 2026-11-13T15:43:00Z
 transitions:
   - to: ready
     at: 2026-11-13T07:30:13Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0751
 tags: [cli]
 topics: [docker]
-touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, flai/internal/serve/serve.go, flai/internal/serve/agents_launch.go, flai/cmd/serve.go, flai/cmd/image.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/role.go, flai/internal/serve/agents_activity.go, flai/internal/serve/stop.go, flai/internal/serve/restart.go, flai/internal/serve/plan_test.go, flai/internal/serve/checks_test.go]
+touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/verifyjob_container.go, flai/internal/serve/verifyjob_test.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/runbooks/agent-container.md, flai/internal/serve/serve.go, flai/internal/serve/agents_launch.go, flai/cmd/serve.go, flai/cmd/image.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/role.go, flai/internal/serve/agents_activity.go, flai/internal/serve/stop.go, flai/internal/serve/restart.go, flai/internal/serve/plan_test.go, flai/internal/serve/checks_test.go, flai/internal/serve/kluster.go]
 after: [S-0740, S-0745]
 agent:
   harness: claude-code
@@ -26,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 886
+  seconds: 3899
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 22
+      ceremony: 4
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 658
-      cache_read: 5512047
-      cache_write: 338834
-      cost: 2.1881
+      input: 406
+      output: 2314
+      cache_read: 35736863
+      cache_write: 875440
+      cost: 13.7054
   strategic:
     - kind: orchestrator
       seconds: 21

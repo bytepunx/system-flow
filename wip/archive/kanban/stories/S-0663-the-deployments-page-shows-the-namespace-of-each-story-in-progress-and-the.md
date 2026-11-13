@@ -3,11 +3,11 @@ id: S-0663
 type: story
 nature: feature
 title: The Deployments page shows the namespace of each story in progress, and the operator deploys, checks, and tears down from it
-status: in-progress
+status: done
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:11Z
-updated: 2026-11-13T15:19:44Z
+updated: 2026-11-13T15:43:20Z
 transitions:
   - to: ready
     at: 2026-11-13T07:26:40Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T13:41:24Z
     by: agent-S-0663
+  - to: review
+    at: 2026-11-13T15:41:33Z
+    by: agent-S-0663
+  - to: done
+    at: 2026-11-13T15:43:20Z
+    by: orchestrator
 tags: [dashboard]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, docs/users/flai-reference.md, flai/internal/hostapi/kluster.go, flai/internal/hostapi/kluster_test.go, flai/internal/hostapi/kluster_forward_test.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flaiover/src/routes/api/kluster/deployments.test.ts, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/components/DeploymentRow.svelte.test.ts, design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, docs/operators/settings.md, flai/internal/serve/kluster_requests.go, flai/internal/hostapi/guardreads_test.go]
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5876
-  estimated: true
-  priced_by: estimate
+  seconds: 7229
+  priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 2
-      work: 45
+      work: 97
   models:
     - model: claude-opus-5-5
-      input: 724
-      output: 4112
-      cache_read: 48269880
-      cache_write: 1553105
-      cost: 18.6429
+      input: 844
+      output: 302393
+      cache_read: 71328484
+      cache_write: 1595390
+      cost: 29.5323
   strategic:
     - kind: planner
       seconds: 83
@@ -146,3 +151,17 @@ Figures:
 
 - Forecast 1h30m, adjusted, and it stands. `flai forecast` gives 1h: 109 s per unit of size over 118 done large feature stories on claude-opus-5-5, times size 33 (7 criteria, 26 touches). The stories that last changed this page, its host methods, and their docs took longer than that rate gives: S-0581 38m, S-0595 64m, S-0586 2h32m. This story spans all three layers, as S-0595 and S-0586 did, so 1h30m. flai keeps the delivery from the pull order.
 - Cost of delay 5.00 USD a week, as `flai cod` gives it: the operator's own input on S-0663, `time_lost_per_cycle: 2m`, at 150 USD an hour over one 168h cycle a week. The operator set it on 2026-11-10 after confirming on TH-0981 the epic's input, `revenue_per_week: 1250` on E-0035. A story's own input takes it out of the epic's share, so S-0663 is valued apart from its siblings, which take their shares of the epic (S-0659 263.16, S-0661 986.84) or their own inputs (S-0660 1250, S-0662 30). Not adjusted: the input is the operator's, and the figure follows from it with no judgement of mine.
+
+### Accepted by the orchestrator
+
+- Verified: 6849dd9746d1f231baf3198038884c77bd82ccec
+- At: 2026-11-13T15:43:20Z
+
+Verdict: pass at 6849dd9746d1f231baf3198038884c77bd82ccec
+- 1: flaiover/src/routes/ops/deployments/+page.svelte, flaiover/src/lib/components/DeploymentRow.svelte, flaiover/src/lib/server/repo.ts, flai/internal/hostapi/kluster.go, flai/internal/kluster/deploy.go, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts, flai/internal/hostapi/kluster_test.go
+- 2: flai/internal/hostapi/kluster.go, flaiover/src/routes/api/kluster/checks/+server.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/kluster/checks/checks.test.ts, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/guardreads_test.go
+- 3: flai/internal/kluster/deploy.go, flai/internal/serve/kluster.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_test.go, flaiover/src/routes/ops/deployments/+page.svelte
+- 4: flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/kluster/deploy_test.go, docs/users/flai-reference.md, docs/users/flai.md
+- 5: flai/internal/hostapi/kluster_forward_test.go, flaiover/src/routes/api/kluster/forward/forward.test.ts, flaiover/src/routes/ops/deployments/deployments.svelte.test.ts
+- 6: design/components/flaiover/src/lib/components/DeploymentRow.examples.json, flaiover/src/lib/components/DeploymentRow.svelte
+- 7: design/system/kluster.md, design/system/flaiover-dashboard.md, docs/users/flaiover.md

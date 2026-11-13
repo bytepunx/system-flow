@@ -3,11 +3,11 @@ id: T-3178
 type: task
 nature: feature
 title: A story's or a strategic agent's start that finds its image missing or stale waits on an image job, recorded on its run, in place of refusing
-status: in-progress
+status: done
 parent: S-0751
 owner: alex
 created: 2026-11-12T16:01:44Z
-updated: 2026-11-13T15:17:55Z
+updated: 2026-11-13T15:32:51Z
 transitions:
   - to: ready
     at: 2026-11-13T14:53:02Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T14:53:03Z
     by: agent-S-0751
+  - to: done
+    at: 2026-11-13T15:32:51Z
+    by: agent-S-0751
 stream: S-0751
 tags: [cli]
 touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents.go, flai/internal/serve/serve.go, flai/internal/serve/agents_launch.go, flai/cmd/serve.go, flai/cmd/image.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/role.go, flai/internal/serve/agents_activity.go, flai/internal/serve/stop.go, flai/internal/serve/restart.go, flai/internal/serve/plan_test.go, flai/internal/serve/checks_test.go]
 after: [T-3177]
+usage:
+  source: log
+  seconds: 2388
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 240
+      output: 1262
+      cache_read: 26084584
+      cache_write: 387922
+      cost: 9.9095
 ---
 # T-3178 A story's or a strategic agent's start that finds its image missing or stale waits on an image job, recorded on its run, in place of refusing
 
