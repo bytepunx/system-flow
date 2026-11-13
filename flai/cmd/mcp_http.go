@@ -268,7 +268,7 @@ func isGateway(addr string, gateways []string) bool {
 // allows a protected write without asking only under the auto-approve host
 // action and only for the agent flai serve runs for the story (ADR-0243).
 func (a *app) mcpHTTPOptions(repo *workitem.Repo, agent string, closing <-chan struct{}, installed string) mcpserver.Options {
-	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets()}.WithSession(mcpserver.SessionFromEnv())
+	return mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, ServedAgent: a.mcpServedAgent, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: installed, PermissionHold: mcpserver.HTTPPermissionHold, MaxWait: mcpserver.HTTPLongestWait, Budgets: a.mcpBudgets(), HostAction: a.hostActionOn}.WithSession(mcpserver.SessionFromEnv())
 }
 
 // mcpServedAgent reports whether agent is the name of the run flai serve

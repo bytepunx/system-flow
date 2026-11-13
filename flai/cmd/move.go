@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -119,7 +120,9 @@ word and records it in its Notes (ADR-0254).`,
 			if err != nil {
 				return err
 			}
-			warnings := res.Warnings
+			// what the story's kluster namespace shows at its head, as
+			// item_move says it; nothing is refused (ADR-0292 §6)
+			warnings := mcpserver.ReviewWarnings(a.runner, repo, it, res.Warnings, a.hostActionOn)
 			for _, w := range warnings {
 				a.logger().Warn("workflow policy warning", "component", "workitem", "item", it.ID, "detail", w)
 			}

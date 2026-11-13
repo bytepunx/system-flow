@@ -55,7 +55,7 @@ FLAI_MCP_URL and FLAI_MCP_TOKEN, never in its arguments (S-0506).`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled(), Budgets: a.mcpBudgets()}.WithSession(mcpserver.SessionFromEnv())
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Curations: a.mcpCurate, Roles: a.mcpRoleRun, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher(), Accept: a.mcpAccepter(), RelativePaths: a.relativeWorktrees, Installed: a.mcpInstalled(), Budgets: a.mcpBudgets(), HostAction: a.hostActionOn}.WithSession(mcpserver.SessionFromEnv())
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {

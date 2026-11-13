@@ -97,6 +97,11 @@ type Options struct {
 	// story's worktree without asking the operator on a thread when it
 	// returns true (S-0257); nil asks every time.
 	AutoApprove AutoApprove
+	// HostAction reads whether a host action is on for a project, for
+	// item_move's warning of what a story's kluster namespace shows at its
+	// head as the story goes to review (ADR-0292 §6); nil reads every action
+	// as off, and item_move then says nothing of the namespace.
+	HostAction HostAction
 	// ServedAgent, when set, narrows AutoApprove to the callers it returns
 	// true for, given the project's root, the caller's name, and the story
 	// whose worktree the write is in: the server over HTTP sets it, which
@@ -252,6 +257,9 @@ type server struct {
 	version    string // the running flai's, compared with the project's newest flai tag (S-0181)
 	// autoApprove lets permission_prompt allow without asking (S-0257)
 	autoApprove AutoApprove
+	// hostAction reads the host actions item_move's kluster warning needs
+	// (ADR-0292 §6); nil reads them as off
+	hostAction HostAction
 	// servedAgent narrows autoApprove to the agents flai serve started
 	// (ADR-0243); nil narrows nothing
 	servedAgent ServedAgent
@@ -285,7 +293,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases, closeOutWait: opt.CloseOutWait, klusterWait: opt.KlusterWait}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, hostAction: opt.HostAction, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases, closeOutWait: opt.CloseOutWait, klusterWait: opt.KlusterWait}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -771,11 +779,86 @@ func (s *server) itemMove(_ context.Context, _ *mcp.CallToolRequest, in ItemMove
 	if err != nil {
 		return nil, ItemMoveOut{}, err
 	}
-	warnings := res.Warnings
+	warnings := ReviewWarnings(s.runner, s.repo, it, res.Warnings, s.hostAction)
 	if warnings == nil {
 		warnings = []string{}
 	}
 	return nil, ItemMoveOut{ID: it.ID, Status: it.Status, Warnings: warnings, Cancelled: res.Cancelled, Followed: res.Followed}, nil
+}
+
+// HostAction reports whether a host action, such as hostapi.ActionKluster,
+// is on for the project whose main checkout is root, in the host's
+// configuration; an error says the configuration could not be read.
+type HostAction func(action, root string) (bool, error)
+
+// untickedWarning is how workitem's warning of a story going to review with
+// unticked acceptance criteria goes on after the story's ID.
+const untickedWarning = " goes to review with unticked acceptance criteria ("
+
+// ReviewWarnings is warnings, those of the move that took story it to
+// review, with what its kluster namespace shows at its branch's head
+// (ADR-0292 §6), in the words flai move and item_move both say: while the
+// kluster host action is on and the manifest's kluster: block names a
+// deploy, a warning that says what stands and names the commands that deploy
+// and check it unless it was deployed and checked at the head, and the same
+// sentence added to the warning of unticked acceptance criteria. It refuses
+// nothing, as the move is made: a host action or a record it cannot read is
+// a warning too. Any other move, and a project without a kluster: block or
+// without git, keeps warnings as they are.
+func ReviewWarnings(git execx.Runner, repo *workitem.Repo, it *workitem.Item, warnings []string, on HostAction) []string {
+	if it.Type != workitem.Story || it.Status != workitem.Review || repo.Manifest.Kluster == nil || git == nil {
+		return warnings
+	}
+	e, err := reviewEvidence(git, repo, it.ID, on)
+	if err != nil {
+		return append(warnings, fmt.Sprintf("%s went to review, but what its kluster namespace shows at its head was not read: %v", it.ID, err))
+	}
+	if !e.Applies {
+		return warnings
+	}
+	out := make([]string, 0, len(warnings)+1)
+	for _, w := range warnings {
+		if strings.HasPrefix(w, it.ID+untickedWarning) {
+			w += "; " + e.Summary()
+		}
+		out = append(out, w)
+	}
+	if !e.Passed {
+		out = append(out, klusterReviewWarning(e))
+	}
+	return out
+}
+
+// reviewEvidence is story's kluster evidence in repo's main checkout, with
+// the kluster and checks host actions as on reads them; nil reads them off.
+func reviewEvidence(git execx.Runner, repo *workitem.Repo, story string, on HostAction) (kluster.Evidence, error) {
+	root := projectRoot(repo)
+	var klusterOn, checksOn bool
+	if on != nil {
+		var err error
+		if klusterOn, err = on(hostapi.ActionKluster, root); err == nil && klusterOn {
+			checksOn, err = on(hostapi.ActionChecks, root)
+		}
+		if err != nil {
+			return kluster.Evidence{}, fmt.Errorf("cannot tell whether the kluster and checks host actions are on: %w", err)
+		}
+	}
+	return kluster.ReadEvidence(git, root, repo.Manifest, story, klusterOn, checksOn)
+}
+
+// klusterReviewWarning is the warning of a story gone to review whose
+// namespace e did not pass at the head: what stands, and the commands that
+// deploy and check it.
+func klusterReviewWarning(e kluster.Evidence) string {
+	c := e.Commands
+	run := fmt.Sprintf("deploy it at the head with %s, or the MCP tool %s", c.Deploy, c.DeployTool)
+	switch {
+	case e.ChecksOn && e.Deploy != nil && e.Deploy.PassedAtHead:
+		run = fmt.Sprintf("run its checks at the head with %s, or the MCP tool %s; %s, or the MCP tool %s, deploys it again and runs them after", c.Checks, c.ChecksTool, c.Deploy, c.DeployTool)
+	case e.ChecksOn:
+		run += fmt.Sprintf(", which runs its checks once the deploy passes; %s, or the MCP tool %s, runs the checks alone", c.Checks, c.ChecksTool)
+	}
+	return fmt.Sprintf("%s; %s. The move is made all the same: the review deploys what has not passed at the head (ADR-0292)", e.Summary(), run)
 }
 
 // orchestrator says whether the caller is the orchestrator (S-0219).
