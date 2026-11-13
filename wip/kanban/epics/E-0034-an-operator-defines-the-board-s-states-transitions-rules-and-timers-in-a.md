@@ -26,15 +26,15 @@ usage:
           cache_write: 5114
           cost: 0.2699
     - kind: orchestrator
-      seconds: 317
+      seconds: 326
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 83
-          output: 373
-          cache_read: 3405366
-          cache_write: 457399
-          cost: 1.1029
+          input: 86
+          output: 398
+          cache_read: 3516288
+          cache_write: 461580
+          cost: 1.1362
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 

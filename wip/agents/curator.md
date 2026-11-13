@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 264.5503
-accrued_seconds: 30220
-tasks_completed: 173
-last_run: 2026-11-13T09:22:39Z
+accrued_cost: 266.4852
+accrued_seconds: 30323
+tasks_completed: 174
+last_run: 2026-11-13T11:41:36Z
 ---
 
 # Curator activity
@@ -1395,3 +1395,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 60
 - Cost: 1.2623 USD, estimated
+
+### 2026-11-13T11:41:36Z
+
+- Summary: I wrote D-0606, merged S-0734 into D-0468, absorbed nothing, and `flai digest compact` compacted none. D-0606 says `release-flai.yml` downloads the release's archives with `gh` and checks them with `openssl` instead of adding an artifact action, which would need a new pin. S-0734's other six notes were plan progress or are already stated in `design/tech/ci.md`, `design/tech/docker.md`, `design/system/release-signing.md`, and `design/system/flai-cli.md`.
+- Trigger: accepted S-0734
+- Items: D-0468, D-0606
+- Seconds: 103
+- Cost: 1.9349 USD, estimated

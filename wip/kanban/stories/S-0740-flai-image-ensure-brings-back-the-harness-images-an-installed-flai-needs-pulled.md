@@ -3,15 +3,18 @@ id: S-0740
 type: story
 nature: feature
 title: flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries
-status: ready
+status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T11:39:47Z
+updated: 2026-11-13T11:39:55Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:14Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T11:39:55Z
+    by: agent-S-0740
 tags: [cli]
 topics: [docker, release, security]
 touches: [flai/images/embed.go, flai/internal/agentimage/pull.go, flai/internal/agentimage/pull_test.go, flai/internal/agentimage/build.go, flai/internal/agentimage/build_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/resolve.go, flai/cmd/image.go, flai/cmd/image_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]

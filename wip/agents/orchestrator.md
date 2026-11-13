@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2151.4743
-accrued_seconds: 1556485
-tasks_completed: 3265
-last_run: 2026-11-13T10:22:57Z
+accrued_cost: 2151.7972
+accrued_seconds: 1556569
+tasks_completed: 3268
+last_run: 2026-11-13T11:41:48Z
 ---
 
 # Orchestrator activity
@@ -22889,6 +22889,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1332 USD, estimated
+
+### 2026-11-13T11:40:43Z
+
+- Summary: Ran the publish formula after S-0734's acceptance: instance S-0766 is in ready (commit 5592a34c3). Policy threshold met: count 1 at or over the count threshold of 1; value 0 USD against 1000 (S-0734 unvalued).
+- Items: S-0766, S-0734
+- Seconds: 19
+- Cost: 0.0636 USD, estimated
+
+### 2026-11-13T11:41:29Z
+
+- Summary: thread:TH-1151, a flai serve notice I leave alone: flai serve resolved it at 11:40:40Z once publish instance S-0766 could start (S-0766 now in progress). Ordered ready by throughput (S-0760 32m first … S-0662 2h30m), all held on after. promote --drafts: S-0241 is complete but stays a draft, as TH-0790 asks, until forks work headless. The 19 E-0034 drafts lack only a value and wait on the epic's inputs. S-0730's planner ran already and the story is unchanged. E-0036's TH-1139 entry is the one I judged before, so I started no planner.
+- Items: S-0766, S-0241, S-0730, E-0034, E-0036
+- Seconds: 46
+- Cost: 0.1663 USD, estimated
+
+### 2026-11-13T11:41:48Z
+
+- Summary: I started the publish formula for S-0734's release, and the board is no longer starved: the publish story S-0766 got the idle in-progress lane, and flai serve resolved TH-1151.
+- Items: none
+- Seconds: 19
+- Cost: 0.0930 USD, estimated
 
 ## Refusals
 
