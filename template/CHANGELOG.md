@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0760 The operators guide and the commented `agent.image` block of `system-flow.yaml` say that a project on the container harness gets its agent images from flai, which pulls them by their signed digests or builds them, how it names a layer and its build arguments, and the host's own build command and the switch that turns the image job off (patch, ADR-0295).
+
 ## 1.1.38 - 2026-11-13
 
 - S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first (patch).

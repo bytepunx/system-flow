@@ -44,8 +44,8 @@ agent: # the agent every new story gets a copy of; flai agent set writes it
   # provider: litellm # where the model's calls go: an entry flai serve agent provider sets on the host; unset, the harness's own
   # config: # options the harness takes, such as effort
   #   effort: high
-  # image: # the project's alone, never copied into a story; the template ships no Dockerfile
-  #   layer: images/agent/Dockerfile # a Dockerfile, from the root, adding your test tiers' tools over the harness's image; flai image ensure builds it as flai-agent-<key>-<inner>:local
+  # image: # unset, an agent on the container harness runs in the harness image flai pulls or builds; the project's alone, never copied into a story; the template ships no Dockerfile
+  #   layer: images/agent/Dockerfile # a Dockerfile, from the root, adding your test tiers' tools over the harness's image; flai builds it as flai-agent-<key>-<inner>:local, and again when the Dockerfile, an argument, or the harness image changes
   #   args: # the layer's build arguments: each overrides its ARG's default in the Dockerfile; never BASE, which flai sets to the harness's image
   #     GO_VERSION: "1.26.0" # a literal one-line value; quote one YAML would read as a number
 # providers: # this project's override of a host's provider entry: api, base_url, and models only; key_env is the host's

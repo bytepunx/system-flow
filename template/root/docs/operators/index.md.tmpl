@@ -31,3 +31,42 @@ It is shown, never silent:
 - One `warn` per connection in flai serve's log, `connection allowed unsigned`.
 
 A release of flai with the published dashboard image needs no allowance and shows none of these.
+
+## The agent images
+
+An agent on the `container` harness runs in a Docker container from an agent image. A new project gets its images from flai and needs nothing of its own. An installed flai pulls the harness images, `flai-agent-bedrock` and `flai-agent-claude-code`, by the digests its release's signed lists name. When the pull fails, it builds them on this host from the Dockerfiles it carries.
+
+| Command | What it does |
+|---------|--------------|
+| `flai image status` | Says which images the project's agents need, and whether each is on this host and current |
+| `flai image ensure` | Makes each image that is missing or stale |
+| `flai image build` | Builds them all, current or not, without the pull |
+| `flai image build --layer` | Builds the project's layer alone |
+
+`flai serve` does this itself. Before a start that needs a missing or stale image, it runs an image job and holds the start until the job ends. An upgrade of flai makes the images stale, and the same job renews them. An image you name with `flai serve agent harness container --image <inner>=<image>` is never pulled, built, or judged.
+
+### The project's layer
+
+A project whose test tiers need tools the harness image lacks names a layer in `system-flow.yaml`. The template ships none.
+
+```yaml
+agent:
+  image:
+    layer: images/agent/Dockerfile
+    args:
+      GO_VERSION: "1.26.0"
+```
+
+- `layer` is a Dockerfile, from the repository root. flai builds it over the harness image, with `BASE` set to that image, and tags it `flai-agent-{{ .project_key }}-<inner>:local`, `<inner>` being the inner harness, `claude-code` by default.
+- `args` are literal build arguments. Each overrides the default of the Dockerfile's `ARG` of that name. Never name `BASE`. Quote a value YAML would read as a number.
+
+flai labels the layer with what it was built from. A change to the Dockerfile, an argument, or the harness image makes it stale, and the image job builds it again. `flai check` warns `agent.image` on an argument no `ARG` of the Dockerfile declares.
+
+### Your own build command
+
+Two host settings change the image job for one project. They are yours, kept in the host's flai configuration, never in `system-flow.yaml`.
+
+- `flai serve agent image command --project <root> -- <program> [args...]` names a build command of your own. flai runs it in the main checkout, with no shell, in place of its own pull and build. `--clear` removes it.
+- `flai serve agent image auto off --project <root>` turns the image job off. A start that finds its image missing or stale then refuses, naming `flai image ensure`. `auto on` turns it back on.
+
+The command gets these variables: `FLAI_IMAGE_VERSION`, the flai version the images must hold; `FLAI_IMAGE_INNER`, the inner harness; `FLAI_IMAGE_BEDROCK`, `FLAI_IMAGE_HARNESS`, and `FLAI_IMAGE_LAYER`, the tags each image must have; `FLAI_IMAGE_RECIPE_BEDROCK`, `FLAI_IMAGE_RECIPE_HARNESS`, and `FLAI_IMAGE_RECIPE_LAYER`, the recipe label each must carry; and `FLAI_IMAGE_STALE`, the images to make, of `bedrock`, `harness`, and `layer`. After it, flai checks the images as `flai image status` does, and fails naming each one still missing or stale.
