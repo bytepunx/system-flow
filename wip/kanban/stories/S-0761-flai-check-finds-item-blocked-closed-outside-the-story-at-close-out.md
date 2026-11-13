@@ -24,19 +24,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 112
+  seconds: 2153
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-13
-      work: 15
+      work: 26
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 331
-      cache_read: 2144779
-      cache_write: 202118
-      cost: 0.8742
+      input: 120
+      output: 912
+      cache_read: 5824832
+      cache_write: 555353
+      cost: 2.3776
   strategic:
     - kind: planner
       seconds: 422

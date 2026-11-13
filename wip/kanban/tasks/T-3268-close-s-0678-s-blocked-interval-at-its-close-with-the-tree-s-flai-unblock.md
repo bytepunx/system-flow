@@ -23,7 +23,7 @@ tags: [flai, check]
 touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md]
 usage:
   source: log
-  seconds: 16
+  seconds: 17
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 7
       cache_read: 215714
       cache_write: 776
-      cost: 0.0806
+      cost: 0.0807
 ---
 # T-3268 Close S-0678's blocked interval at its close with the tree's flai unblock
 

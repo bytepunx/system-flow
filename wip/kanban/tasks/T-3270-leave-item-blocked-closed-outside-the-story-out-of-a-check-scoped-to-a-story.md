@@ -3,11 +3,11 @@ id: T-3270
 type: task
 nature: improvement
 title: Leave item.blocked-closed outside the story out of a check scoped to a story, with a test that reproduces I-0354
-status: in-progress
+status: done
 parent: S-0761
 owner: alex
 created: 2026-11-13T07:29:45Z
-updated: 2026-11-13T08:24:48Z
+updated: 2026-11-13T08:58:02Z
 transitions:
   - to: ready
     at: 2026-11-13T08:24:48Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-13T08:24:48Z
     by: agent-S-0761
+  - to: done
+    at: 2026-11-13T08:58:02Z
+    by: agent-S-0761
 stream: S-0761
 tags: [flai, check]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
 after: [T-3269]
+usage:
+  source: log
+  seconds: 1992
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 352
+      cache_read: 1396838
+      cache_write: 288315
+      cost: 0.628
 ---
 # T-3270 Leave item.blocked-closed outside the story out of a check scoped to a story, with a test that reproduces I-0354
 

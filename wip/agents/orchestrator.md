@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2146.4273
-accrued_seconds: 1555199
-tasks_completed: 3224
-last_run: 2026-11-13T08:29:39Z
+accrued_cost: 2147.4347
+accrued_seconds: 1555540
+tasks_completed: 3232
+last_run: 2026-11-13T09:00:03Z
 ---
 
 # Orchestrator activity
@@ -22602,6 +22602,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.0684 USD, estimated
+
+### 2026-11-13T08:54:55Z
+
+- Summary: Accepted S-0660 at d663a35 (accept_reviews): close-out passed at the branch head, verifier matched all nine criteria to changed files, dry run showed no blockers; merged, done, 7 archived.
+- Items: S-0660
+- Seconds: 85
+- Cost: 0.2297 USD, estimated
+
+### 2026-11-13T08:55:23Z
+
+- Summary: Started the publish formula after S-0660's acceptance (publish): instance S-0764 in ready, committed 631c7c498; policy threshold met, 1 pending story worth 1250 USD/week against thresholds 1000 USD/week and count 1.
+- Items: S-0764, S-0660
+- Seconds: 28
+- Cost: 0.0605 USD, estimated
+
+### 2026-11-13T08:56:12Z
+
+- Summary: ready-empty: ordered ready by throughput after S-0764 joined it (S-0760 32m first … S-0662 2h30m). Started planner-S-0763 (plan_backlog_stories): S-0660's acceptance freed it, and flai plan --candidates lists it with no forecast, value, or tasks. Started no planner for the 19 E-0034 stories (value waits on the operator's epic inputs, TH-1097) nor for E-0036 (alex's TH-1139 entry confirms ADR-0295's choices and asks no change to the plan). TH-1141 is a flai serve notice: left alone.
+- Items: S-0763, S-0764, E-0034, E-0036
+- Seconds: 49
+- Cost: 0.1246 USD, estimated
+
+### 2026-11-13T08:56:40Z
+
+- Summary: I accepted S-0660 and started publishing it. The board was starved and now has work again: S-0764, the publish instance, is in progress, and S-0763 is being planned.
+- Items: none
+- Seconds: 28
+- Cost: 0.2490 USD, estimated
+
+### 2026-11-13T08:57:55Z
+
+- Summary: Release due on S-0660 (threshold policy met: 1 story, 1250 USD/week against thresholds 1000 USD/week and count 1): ran no new publish formula, because publish instance S-0764 was made at 2026-11-13T08:55:19Z for this batch and its agent is on T-3275, the publish step. TH-1141 needs nothing: flai serve resolved it at 08:55:21Z once S-0764 could start.
+- Items: S-0660, S-0764
+- Seconds: 40
+- Cost: 0.1035 USD, estimated
+
+### 2026-11-13T08:58:50Z
+
+- Summary: Publish instance S-0764's T-3275 is blocked: flai release --pending exited 1 because another git process held the main checkout's .git/index.lock. Opened no thread of my own: the instance's thread TH-1142 already asks the operator. No retry until TH-1142 is answered or the next acceptance.
+- Items: S-0764, S-0660
+- Seconds: 55
+- Cost: 0.0400 USD, estimated
+
+### 2026-11-13T08:59:09Z
+
+- Summary: S-0660's release has not gone out: the publish step failed because another git process held the main checkout's index lock. The story that does the publishing, S-0764, now waits on you in TH-1142.
+- Items: none
+- Seconds: 19
+- Cost: 0.0640 USD, estimated
+
+### 2026-11-13T09:00:03Z
+
+- Summary: Answered TH-1142, citing design/adrs/0239-a-formula-s-instance-is-worked-by-its-story-s-agent-step-by-step-a-role-step.md § 3. A failed step
+- Items: S-0764
+- Seconds: 37
+- Cost: 0.1361 USD, estimated
 
 ## Refusals
 

@@ -23,16 +23,16 @@ tags: [flai, check, adr]
 touches: [design/adrs/README.md, design/adrs/0296-a-close-out-records-no-item-blocked-closed-and-a-check-scoped-to-a-story-leaves.md]
 usage:
   source: log
-  seconds: 16
+  seconds: 60
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 7
-      cache_read: 215714
-      cache_write: 776
-      cost: 0.0806
+      input: 14
+      output: 80
+      cache_read: 1344466
+      cache_write: 14238
+      cost: 0.5063
 ---
 # T-3269 Record in an ADR whether a close-out leaves out item.blocked-closed outside the story
 

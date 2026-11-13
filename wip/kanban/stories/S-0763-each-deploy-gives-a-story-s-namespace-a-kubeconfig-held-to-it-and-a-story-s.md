@@ -18,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 13
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 11
+          cache_read: 106201
+          cache_write: 2025
+          cost: 0.0312
 ---
 # S-0763 Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
 
