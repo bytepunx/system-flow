@@ -771,13 +771,43 @@ func TestMCPOverHTTPListensOnEveryAddress(t *testing.T) {
 		t.Fatal("the server did not stop")
 	}
 	for _, addr := range st.Addrs {
-		ln, err := net.Listen("tcp", addr)
-		if err != nil {
-			t.Errorf("a stop closes every listener, but %s is still held: %v", addr, err)
-			continue
+		if err := listenerGone(addr, 3*time.Second); err != nil {
+			t.Errorf("a stop closes every listener, but %s still accepts: %v", addr, err)
 		}
-		_ = ln.Close()
 	}
+}
+
+// listenerGone is nil once nothing listens at addr: it can be listened on,
+// or it refuses a connection. Another test's connection may hold the port as
+// its source, which refuses a connection, and another test's listener may
+// hold it for a moment, so an address that still accepts is asked again
+// until within (I-0372). A listener left open accepts every time.
+func listenerGone(addr string, within time.Duration) error {
+	deadline := time.Now().Add(within)
+	for {
+		ln, listenErr := net.Listen("tcp", addr)
+		if listenErr == nil {
+			_ = ln.Close()
+			return nil
+		}
+		if !accepts(addr) {
+			return nil // the port is held, but not by a listener
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("it cannot be listened on (%w) and still accepts a connection", listenErr)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// accepts says whether something listening at addr takes a connection.
+func accepts(addr string) bool {
+	conn, err := net.DialTimeout("tcp", addr, time.Second)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
 }
 
 // S-0732: a listen failure on any address closes those already opened and
