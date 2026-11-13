@@ -2,9 +2,9 @@
 id: D-0470
 title: Tasks that change flai/internal/guard, flai/internal/check, and flai/cmd cannot share a layer, since check imports guard and cmd imports both, so each task's flai test builds what the others change
 kind: decision
-sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678]
+sources: [S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662]
 topics: [planning, go, code, flai]
-paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone]
+paths: [flai/internal/guard, flai/internal/check, flai/cmd, flai/internal/serve, flai/internal/roles, flai/internal/workitem, flai/internal/messages, flai/internal/threads, flai/internal/components, flai/internal/itemedit, flai/internal/storygit, flai/internal/taskdone, flai/internal/preview]
 date: 2026-11-03
 status: active
 absorbed_by: ""
@@ -70,4 +70,12 @@ T-3008 runs in its own worktree from story/S-0678 (task/T-3008). flai/internal/s
 
 So a task that changes `storygit` beside one that changes `serve` runs before it or in its own task worktree.
 
-Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678.
+S-0662 met it in `flai/cmd` and `flai/internal/preview`. Its second layer held T-2880 (move warnings), T-2881 (the close-out's kluster step), T-2883 (the orchestrator's evidence), and T-3306 (the widened gate and review pass), which share no path, and its agent gave each its own task worktree (`wip/archive/agents/S-0662.md`):
+
+```text
+Layer 2 and 3 tasks ran in task worktrees (task/T-nnnn from story/S-0662) since T-2880, T-2881, and T-2883 share package cmd and T-2883 and T-3306 share package preview; their files were copied back, built, and vetted together before each close (delegation.md).
+```
+
+So tasks of one layer that change files of one package, `cmd` or `preview`, each run in a task worktree from the story branch, and their files are copied back and built and vetted together before each close.
+
+Sources: S-0553, S-0571, S-0602, S-0601, S-0654, S-0674, S-0678, S-0662.

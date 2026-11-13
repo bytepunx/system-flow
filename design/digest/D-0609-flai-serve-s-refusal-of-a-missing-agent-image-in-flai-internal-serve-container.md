@@ -9,7 +9,7 @@ date: 2026-11-13
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0751]
 ---
 
 # D-0609 flai serve's refusal of a missing agent image in flai/internal/serve/container.go still names make agent-images, left on purpose for S-0751, which replaces the refusal with a host job

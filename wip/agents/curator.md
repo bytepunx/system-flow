@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 279.5746
-accrued_seconds: 31114
-tasks_completed: 184
-last_run: 2026-11-13T14:39:46Z
+accrued_cost: 281.3025
+accrued_seconds: 31250
+tasks_completed: 185
+last_run: 2026-11-13T15:22:18Z
 ---
 
 # Curator activity
@@ -1483,3 +1483,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 47
 - Cost: 1.0866 USD, estimated
+
+### 2026-11-13T15:22:18Z
+
+- Summary: I merged S-0662's task-worktree decision into D-0470. I wrote no new entries, nothing was absorbed, and `flai digest compact` compacted none.
+- Trigger: accepted S-0662
+- Items: D-0470, D-0609
+- Seconds: 136
+- Cost: 1.7279 USD, estimated

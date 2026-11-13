@@ -3,10 +3,10 @@ id: S-0772
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T13:42:42Z
-updated: 2026-11-13T15:19:40Z
+updated: 2026-11-13T15:22:35Z
 transitions:
   - to: ready
     at: 2026-11-13T13:42:43Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T15:18:17Z
     by: agent-S-0772
+  - to: review
+    at: 2026-11-13T15:21:12Z
+    by: agent-S-0772
+  - to: done
+    at: 2026-11-13T15:22:35Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0772-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 86
-  estimated: true
-  priced_by: estimate
+  seconds: 187
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 14
+      ceremony: 3
+      work: 29
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 314
-      cache_read: 1662575
-      cache_write: 151766
-      cost: 0.679
+      input: 70
+      output: 8654
+      cache_read: 4859053
+      cache_write: 171176
+      cost: 2.5146
   strategic:
     - kind: orchestrator
       seconds: 19
@@ -58,7 +63,7 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
+- [x] Fetch the remote's branch and tags
 - [x] Evaluate the release policy, stopping unless it is met
 - [x] Publish what is accepted and not yet released (skipped: step evaluate stopped the run with exit 2)
 
@@ -72,3 +77,15 @@ Publish what is accepted and not yet released, by the project's release policy.
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
 
 Step evaluate stopped the run with exit 2; skipped T-3305.
+
+- 2026-11-13: nothing was released. S-0771, the duplicate instance TH-1161 names, had already published flai 1.92.0 and template 1.1.37. The evaluation found 0 of 1 accepted stories waiting. Nothing was tagged or pushed.
+
+### Accepted by the orchestrator
+
+- Verified: ce920472bd874c0125d6328740341d21f1b4f889
+- At: 2026-11-13T15:22:35Z
+
+Verdict: pass at ce920472bd874c0125d6328740341d21f1b4f889
+- 1: T-3303 done
+- 2: T-3304 done
+- 3: T-3305 skipped
