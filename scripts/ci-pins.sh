@@ -12,8 +12,11 @@
 #     fewer than three version parts, or an -alpine variant that names no Alpine
 #     release; an ARG's default stands for ${NAME}, and a
 #     :local image or an earlier stage is exempt
-#   - a FROM in flaiover/Dockerfile without an @sha256: digest, since a signed
-#     flaiover release builds from it
+#   - a FROM in a release Dockerfile without an @sha256: digest, since a signed
+#     release builds from it: flaiover/Dockerfile, and the agent images'
+#     flai/images/bedrock/Dockerfile and flai/images/claude-code/Dockerfile
+#     (ADR-0295); a :local image or an earlier stage is exempt here too, as the
+#     claude-code layer's ${BASE} is, which the release passes by its digest
 #   - scripts/litellm.sh's default LITELLM_IMAGE, checked as an image is
 #   - more than one lockfile under flaiover/, or a package-lock.json at the root
 # smoke.sh runs it, so CI's system-flow-check.yml and the close-out run it.
@@ -78,6 +81,11 @@ done
 for f in flaiover/Dockerfile flai/images/*/Dockerfile; do
   [ -f "$f" ] || continue
   awk -v f="$f" "$image_awk"'
+    BEGIN {
+      release["flaiover/Dockerfile"] = 1
+      release["flai/images/bedrock/Dockerfile"] = 1
+      release["flai/images/claude-code/Dockerfile"] = 1
+    }
     toupper($1) == "ARG" {
       a = $2
       if (index(a, "=") > 0) {
@@ -96,7 +104,7 @@ for f in flaiover/Dockerfile flai/images/*/Dockerfile; do
       if (ref in stage) next
       r = image_reason(ref)
       if (r != "") print f ":" NR ": " r
-      else if (f == "flaiover/Dockerfile" && ref !~ /@sha256:[0-9a-f]+$/) print f ":" NR ": image " ref " has no @sha256: digest, and a signed release builds from this file"
+      else if (f in release && ref !~ /@sha256:[0-9a-f]+$/ && ref !~ /:local$/) print f ":" NR ": image " ref " has no @sha256: digest, and a signed release builds from this file"
     }
   ' "$f" >>"$out"
 done

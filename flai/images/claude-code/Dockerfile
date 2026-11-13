@@ -2,7 +2,12 @@
 #   docker build -f flai/images/claude-code/Dockerfile -t flai-agent-claude-code:local .
 # scripts/agent-image.sh builds both in order. No login state and no key: the agent's credentials
 # reach the container when it runs, never the image. It keeps bedrock's entrypoint, pilot, which
-# starts claude through flai's claude-code adapter.
+# starts claude through flai's claude-code adapter. It carries bedrock's labels, dev.system-flow.flai
+# and dev.system-flow.commit, which tie it to its flai (ADR-0295).
+#
+# BASE is the bedrock image to build over. release-flai.yml passes the bedrock image it has just
+# pushed, by its index digest, ghcr.io/bytepunx/flai-agent-bedrock@sha256:..., so a release's
+# claude-code image builds from a pinned base; scripts/ci-pins.sh exempts the :local default.
 
 ARG BASE=flai-agent-bedrock:local
 FROM ${BASE}
