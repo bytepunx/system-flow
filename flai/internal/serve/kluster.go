@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -53,10 +54,18 @@ import (
 // once, passed or failed, is not tried again until the story returns to
 // review after a send back, so a failure is not retried every minute.
 //
-// A story that leaves review, for any column but review, is torn down when
-// its namespace has a record: teardown, then its namespace deleted (ADR-0254
-// §5), unless a send back keeps it; cancelled or accepted, it is torn down
-// all the same, and its failure threads resolved. A story accepted while the
+// A story's agent asks the pass, too, to deploy or tear down its own story's
+// namespace while the story is in progress (ADR-0292, kluster_requests.go):
+// those jobs wait in the same queue, run whatever the tried-once rule says,
+// and end with a kluster event rather than a thread. A story in review whose
+// namespace's record passed at its branch's head, its checks too while the
+// checks host action is on, is not deployed again, whoever asked for it.
+//
+// A namespace stays while its story is in progress, whoever moved it there
+// (ADR-0292 §3). A story that moves to ready or backlog is torn down when its
+// namespace has a record: teardown, then its namespace deleted (ADR-0254 §5);
+// cancelled or accepted, it is torn down all the same, and its failure
+// threads resolved. A story accepted while the
 // pass looks is torn down too, and main is
 // then promoted into the default namespace; the acceptances seen at one look,
 // or while a promotion waits, promote once, at main's newest head. An
@@ -89,13 +98,14 @@ type KlusterRunner interface {
 	Absent(ctx context.Context, root string, m manifest.Manifest) (bool, error)
 	// Up brings the cluster up and keeps its kubeconfig, its output to out.
 	Up(ctx context.Context, root string, m manifest.Manifest, out io.Writer) error
-	// Deploy deploys story, in review, from its worktree dir at commit into
-	// its namespace, and answers the namespace's record.
-	Deploy(ctx context.Context, root string, m manifest.Manifest, story, dir, commit string) (kluster.Record, error)
+	// Deploy deploys story, whose status is status, in progress or in review,
+	// from its worktree dir at commit into its namespace, for by, who asked
+	// for it, and answers the namespace's record.
+	Deploy(ctx context.Context, root string, m manifest.Manifest, by, story, status, dir, commit string) (kluster.Record, error)
 	// Teardown tears story's namespace down from dir, its worktree, or root
-	// when dir is empty, and answers the record it removed, or kept marked
-	// failed; kluster.ErrNotDeployed when it has none.
-	Teardown(ctx context.Context, root string, m manifest.Manifest, story, dir string) (kluster.Record, error)
+	// when dir is empty, for by, who asked for it, and answers the record it
+	// removed, or kept marked failed; kluster.ErrNotDeployed when it has none.
+	Teardown(ctx context.Context, root string, m manifest.Manifest, by, story, dir string) (kluster.Record, error)
 	// Promote deploys the head of the main branch branch into the default
 	// namespace, and answers its record.
 	Promote(ctx context.Context, root string, m manifest.Manifest, branch string) (kluster.Record, error)
@@ -135,21 +145,21 @@ func (SystemKluster) Up(ctx context.Context, root string, m manifest.Manifest, o
 
 // Deploy deploys story as flai kluster deploy does, its progress lines left
 // out: each step's output is in its log.
-func (SystemKluster) Deploy(ctx context.Context, root string, m manifest.Manifest, story, dir, commit string) (kluster.Record, error) {
+func (SystemKluster) Deploy(ctx context.Context, root string, m manifest.Manifest, by, story, status, dir, commit string) (kluster.Record, error) {
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
 		return kluster.Record{}, err
 	}
-	return c.Deploy(ctx, m, story, workitem.Review, dir, commit, io.Discard)
+	return c.DeployBy(ctx, m, by, story, status, dir, commit, io.Discard)
 }
 
 // Teardown tears story down as flai kluster teardown does.
-func (SystemKluster) Teardown(ctx context.Context, root string, m manifest.Manifest, story, dir string) (kluster.Record, error) {
+func (SystemKluster) Teardown(ctx context.Context, root string, m manifest.Manifest, by, story, dir string) (kluster.Record, error) {
 	c, err := kluster.New(root, m, kluster.System{})
 	if err != nil {
 		return kluster.Record{}, err
 	}
-	return c.Teardown(ctx, m, story, dir, io.Discard)
+	return c.TeardownBy(ctx, m, by, story, dir, io.Discard)
 }
 
 // Promote promotes main as flai kluster promote does.
@@ -175,11 +185,29 @@ func klusterOf(o Options) KlusterRunner {
 func klusterUpLog(root string) string { return filepath.Join(kluster.Dir(root), "up.log") }
 
 // klusterJob is one job of the pass's queue: what it does, to which story
-// (none for a promotion), at which head (a deploy's only).
+// (none for a promotion), at which head (a deploy's only). id names a story's
+// job to a request that finds it waiting or running; by is the agent that
+// asked for it, empty for a job the looks queued; queued is when it was.
 type klusterJob struct {
-	kind  string
-	story string
-	head  string
+	kind   string
+	story  string
+	head   string
+	id     string
+	by     string
+	queued time.Time
+}
+
+// asked reports whether a story's agent asked for j (ADR-0292 §1), rather
+// than a look queuing it.
+func (j klusterJob) asked() bool { return j.by != "" }
+
+// asker is who asked for j, as the record's AskedBy and the journal name it:
+// the agent, or flai serve for a job the looks queued.
+func (j klusterJob) asker() string {
+	if j.asked() {
+		return j.by
+	}
+	return forgeAuthor
 }
 
 // klusterTried is what the pass last did for a story's namespace, kept in
@@ -211,9 +239,10 @@ type klusterSentBack struct {
 
 // klusterKept is whether it stands where the send back t records put it:
 // in progress, not archived, its newest move a move to in-progress by flai at
-// or after the send back. Such a story keeps its namespace, and its agent is
-// started on the send back's thread; once it moves on, to review, cancelled,
-// or anywhere else, or someone else moves it back to in-progress, it is not.
+// or after the send back. Such a story's agent is started on the send back's
+// thread; once it moves on, to review, cancelled, or anywhere else, or
+// someone else moves it back to in-progress, it is not. Its namespace stays
+// either way while it is in progress (ADR-0292 §3).
 func klusterKept(it *workitem.Item, t klusterTried) bool {
 	if t.SentBack == nil || it.Status != workitem.InProgress || it.Archived || len(it.Transitions) == 0 {
 		return false
@@ -291,6 +320,10 @@ type klusterPass struct {
 	since  time.Time
 	seen   map[string]time.Time
 	said   map[string]bool
+
+	// swept is whether the asked-for jobs an earlier flai serve left waiting
+	// or running were ended; only the requests' loop reads and writes it.
+	swept bool
 }
 
 // newKlusterPass is the pass for project e. Acceptances before now promote
@@ -300,11 +333,23 @@ func newKlusterPass(o Options, e Entry, wg *sync.WaitGroup) *klusterPass {
 		since: o.Now().UTC().Truncate(time.Second), seen: map[string]time.Time{}, said: map[string]bool{}}
 }
 
-// start looks now and then every minute, and runs the jobs the looks queue on
-// a worker of its own, both until ctx ends: a deploy takes minutes, and
-// neither the project's other looks nor this pass's must wait for it.
+// start looks now and then every minute, takes the story agents' requests
+// every second, and runs the jobs the looks and the requests queue on a
+// worker of its own, all until ctx ends: a deploy takes minutes, and neither
+// the project's other looks nor this pass's must wait for it.
 func (p *klusterPass) start(ctx context.Context) {
-	p.wg.Add(2)
+	p.wg.Add(3)
+	go func() {
+		defer p.wg.Done()
+		for {
+			p.takeRequests(ctx)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(klusterRequestEvery):
+			}
+		}
+	}()
 	go func() {
 		defer p.wg.Done()
 		for {
@@ -374,7 +419,7 @@ func (p *klusterPass) look(ctx context.Context) {
 	deployable := klusterDeployable(repo.Manifest)
 	var queued []string
 	if deployable {
-		queued = p.lookReview(ctx, items, root)
+		queued = p.lookReview(ctx, items, root, p.checksOn(repo))
 	}
 	if ctx.Err() != nil {
 		return
@@ -393,10 +438,33 @@ func (p *klusterPass) look(ctx context.Context) {
 	}
 }
 
-// lookReview queues a deploy of each story in review whose namespace was
-// neither deployed nor tried at its branch's head, or that is back in review
-// after a send back, at whatever head, and names them.
-func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string) []string {
+// checksOn is whether a passing deploy of the project's stories is followed
+// by a checks run against the namespace: the checks host action is on and
+// names checks.
+func (p *klusterPass) checksOn(repo *workitem.Repo) bool {
+	if p.o.Checks == nil {
+		return false
+	}
+	cfg, err := p.o.Checks(repo)
+	return err == nil && cfg.Enabled && len(cfg.Commands) > 0
+}
+
+// passedAt reports whether record r says its namespace was deployed at head
+// and passed, and, while checksOn, that a checks run against it passed there
+// too: what a story entering review needs no deploy for (ADR-0292 §3).
+func passedAt(r kluster.Record, head string, checksOn bool) bool {
+	if r.Commit != head || r.Outcome != kluster.OutcomePassed {
+		return false
+	}
+	return !checksOn || r.ChecksCommit == head && r.ChecksOutcome == kluster.OutcomePassed
+}
+
+// lookReview queues a deploy of each story in review whose namespace's record
+// did not pass at its branch's head, its checks too while checksOn, and that
+// the pass did not try at that head, or that is back in review after a send
+// back, at whatever head; and names them. A deploy the agent asked for that
+// passed at the head stands as the review's.
+func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, root string, checksOn bool) []string {
 	git := gitOf(p.o)
 	var queued []string
 	for _, it := range items {
@@ -415,15 +483,13 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 			p.o.Logger.Debug("story in review has no branch to deploy", "component", "serve", "root", p.e.Root, "story", it.ID)
 			continue
 		}
+		if r, ok, _ := kluster.ReadRecord(root, ns); ok && passedAt(r, head, checksOn) {
+			continue
+		}
 		// back from a send back, it is deployed again in place, at a new head or
 		// the same one: its deploy writes what was tried afresh
-		if t, tried := readKlusterTried(root, ns); !tried || t.SentBack == nil {
-			if r, ok, _ := kluster.ReadRecord(root, ns); ok && r.Commit == head {
-				continue
-			}
-			if tried && t.Head == head {
-				continue
-			}
+		if t, tried := readKlusterTried(root, ns); tried && t.SentBack == nil && t.Head == head {
+			continue
 		}
 		if p.enqueue(klusterJob{kind: klusterDeploy, story: it.ID, head: head}) {
 			queued = append(queued, klusterDeploy+" "+it.ID)
@@ -433,10 +499,10 @@ func (p *klusterPass) lookReview(ctx context.Context, items []*workitem.Item, ro
 }
 
 // lookLeft queues a teardown of each story namespace with a record whose
-// story is no longer in review, unless a send back keeps it (klusterKept) or
+// story is neither in review nor in progress, whoever moved it there, unless
 // a teardown already failed while the story stood where it stands, and
-// forgets what the pass tried for one with no record that no send back
-// keeps; it names the teardowns queued.
+// forgets what the pass tried for one with no record whose story is neither;
+// it names the teardowns queued.
 func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 	byID := map[string]*workitem.Item{}
 	for _, it := range items {
@@ -466,18 +532,16 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 			continue
 		}
 		t, tried := readKlusterTried(root, ns)
-		if it.Status == workitem.Review && !it.Archived {
+		if klusterHolds(it) {
 			if tried && t.Teardown != "" {
-				// back in review: a teardown that failed before is tried again once it leaves
+				// back in review or in progress: a teardown that failed before is
+				// tried again once it leaves
 				t.Teardown = ""
 				if err := writeKlusterTried(root, ns, t); err != nil {
 					p.o.Logger.Warn("kluster teardown not recorded", "component", "serve", "root", p.e.Root, "story", it.ID, "err", err.Error())
 				}
 			}
 			continue
-		}
-		if tried && klusterKept(it, t) {
-			continue // sent back: its agent and the operator look at what failed
 		}
 		_, deployed, _ := kluster.ReadRecord(root, ns)
 		if !deployed {
@@ -494,6 +558,12 @@ func (p *klusterPass) lookLeft(items []*workitem.Item, root string) []string {
 		}
 	}
 	return queued
+}
+
+// klusterHolds is whether story it keeps its namespace: it is in progress or
+// in review, not archived (ADR-0292 §3).
+func klusterHolds(it *workitem.Item) bool {
+	return !it.Archived && (it.Status == workitem.InProgress || it.Status == workitem.Review)
 }
 
 // forget removes what the pass tried for namespace ns.
@@ -513,25 +583,30 @@ func (p *klusterPass) takeRepromote() bool {
 	return again
 }
 
-// enqueue adds j to the queue unless the same job runs or waits already; a
-// deploy waiting for the same story at another head takes the newer head in
-// its place. A promotion running does not keep another from waiting, since it
-// may have resolved main's head before the acceptance that queues it. It
-// reports whether the queue changed.
+// enqueue adds j, a job a look queues, to the queue unless the same job runs
+// or waits already, whoever asked for it; a deploy waiting for the same story
+// at another head takes the newer head in its place, keeping its id and who
+// asked. A promotion running does not keep another from waiting, since it may
+// have resolved main's head before the acceptance that queues it. It reports
+// whether the queue changed.
 func (p *klusterPass) enqueue(j klusterJob) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.running != nil && *p.running == j && j.kind != klusterPromote {
+	if r := p.running; r != nil && j.kind != klusterPromote && r.kind == j.kind && r.story == j.story && r.head == j.head {
 		return false
 	}
 	for i, q := range p.queue {
 		if q.kind == j.kind && q.story == j.story {
-			if q == j {
+			if q.head == j.head {
 				return false
 			}
-			p.queue[i] = j
+			p.queue[i].head = j.head
 			return true
 		}
+	}
+	j.queued = p.o.Now().UTC()
+	if j.story != "" {
+		j.id = kluster.JobID(j.story, j.kind, j.queued)
 	}
 	p.queue = append(p.queue, j)
 	return true
@@ -579,30 +654,51 @@ func (p *klusterPass) drain(ctx context.Context) {
 }
 
 // run runs one job, unless the action was turned off or the block removed
-// since it was queued, or, for a deploy or a promotion, its deploy command.
+// since it was queued, or, for a deploy or a promotion, its deploy command;
+// a job a story's agent asked for then ends refused. Its end is kept in the
+// job's state, and told in a kluster event, when the agent asked for it.
 func (p *klusterPass) run(ctx context.Context, j klusterJob) {
 	repo, err := workitem.Open(p.e.Root)
 	if err != nil {
 		p.o.Logger.Warn("kluster job not run", "component", "serve", "root", p.e.Root, "kind", j.kind, "story", j.story, "err", err.Error())
+		if j.asked() {
+			p.endAsked(nil, j, refusedEnd(fmt.Sprintf("flai serve could not read the project to run it (%v); ask again", err)))
+		}
 		return
 	}
-	if !p.on(repo.Manifest) {
-		return
+	end := p.runIn(ctx, repo, j)
+	if j.asked() {
+		p.endAsked(repo, j, end)
 	}
-	if j.kind != klusterTeardown && !klusterDeployable(repo.Manifest) {
-		return
+}
+
+// runIn runs j in the project repo and answers how it ended.
+func (p *klusterPass) runIn(ctx context.Context, repo *workitem.Repo, j klusterJob) klusterEnd {
+	switch {
+	case repo.Manifest.Kluster == nil:
+		return refusedEnd("the manifest's kluster: block was removed while the job waited; asking again is refused until flai serve enable kluster, the operator's, writes one")
+	case !p.on(repo.Manifest):
+		return refusedEnd("the kluster host action was turned off while the job waited; turning it on again with flai serve enable kluster is the operator's")
+	case j.kind != klusterTeardown && !klusterDeployable(repo.Manifest):
+		return refusedEnd("the manifest's kluster: block names no deploy command now, so deploys are not set up yet")
 	}
 	switch j.kind {
 	case klusterDeploy:
-		if it, err := repo.Get(j.story); err != nil || it.Status != workitem.Review || it.Archived {
-			return // left review since it was queued: the next look tears it down
+		it, err := repo.Get(j.story)
+		if err != nil {
+			return refusedEnd(fmt.Sprintf("flai serve could not read %s to deploy it (%v)", j.story, err))
 		}
-		p.deploy(ctx, repo, j)
+		if !klusterHolds(it) || (!j.asked() && it.Status != workitem.Review) {
+			// left review since it was queued: the next look tears it down
+			return refusedEnd(fmt.Sprintf("%s is %s now, and flai serve deploys a story only while it is in progress or in review", j.story, it.Status))
+		}
+		return p.deploy(ctx, repo, j, it.Status)
 	case klusterTeardown:
-		p.teardown(ctx, repo, j)
+		return p.teardown(ctx, repo, j)
 	case klusterPromote:
 		p.promote(ctx, repo)
 	}
+	return klusterEnd{}
 }
 
 // klusterFailure is why a job failed: the step, empty when the job was
@@ -615,37 +711,78 @@ type klusterFailure struct {
 	err  string
 }
 
-// deploy deploys j's story at j.head, bringing the cluster up first when it
-// is absent, and settles the story's failure thread.
-func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j klusterJob) {
+// klusterEnd is how a story's job ended, for its state and its kluster event:
+// its outcome, empty when flai serve stopped under it and the next start ends
+// it interrupted; the commit it built or found; why it failed or was refused;
+// and the steps and log of the namespace's record.
+type klusterEnd struct {
+	outcome string
+	commit  string
+	fail    klusterFailure
+	steps   []kluster.Step
+	log     string
+}
+
+// refusedEnd is a job that ran nothing, for why.
+func refusedEnd(why string) klusterEnd {
+	return klusterEnd{outcome: kluster.OutcomeRefused, fail: klusterFailure{exit: -1, err: why}}
+}
+
+// deploy deploys j's story, whose status is status, at j.head, bringing the
+// cluster up first when it is absent, then runs its checks; it settles the
+// story's failure thread for a job the looks queued, and opens none for one
+// its agent asked for (ADR-0292 §5).
+func (p *klusterPass) deploy(ctx context.Context, repo *workitem.Repo, j klusterJob, status string) klusterEnd {
 	root := mainCheckout(repo)
 	ns, _ := kluster.StoryNamespace(j.story)
-	p.journal("started", fmt.Sprintf("deploy of %s into %s at %s", j.story, ns, short(j.head)))
-	p.o.Logger.Info("kluster deploy started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
-	fail, err := p.deployOnce(ctx, repo, j)
-	if errors.Is(err, kluster.ErrBusy) || (err != nil && ctx.Err() != nil) {
-		// another job holds the lock, or flai serve stops: the next look queues it again
-		p.journal("failed", fmt.Sprintf("deploy of %s into %s at %s not run, and queued again at the next look: %v", j.story, ns, short(j.head), err))
+	p.startAsked(j)
+	p.journalJob(j, "started", fmt.Sprintf("deploy of %s into %s at %s", j.story, ns, short(j.head)))
+	p.o.Logger.Info("kluster deploy started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "by", j.asker())
+	r, fail, err := p.deployOnce(ctx, repo, j, status)
+	end := klusterEnd{outcome: kluster.OutcomePassed, commit: j.head, fail: klusterFailure{exit: -1}, steps: r.Steps, log: kluster.LogDir(root, ns)}
+	switch {
+	case err != nil && ctx.Err() != nil:
+		// flai serve stops: the next look queues it again, and the next start
+		// ends an asked-for one interrupted
+		p.journalJob(j, "failed", fmt.Sprintf("deploy of %s into %s at %s not run, as flai serve stops: %v", j.story, ns, short(j.head), err))
 		p.o.Logger.Info("kluster deploy not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "err", err.Error())
-		return
+		return klusterEnd{}
+	case errors.Is(err, kluster.ErrBusy):
+		// another job holds the lock: the next look queues it again, and the
+		// agent asks again
+		p.journalJob(j, "failed", fmt.Sprintf("deploy of %s into %s at %s not run, another job holding the lock: %v", j.story, ns, short(j.head), err))
+		p.o.Logger.Info("kluster deploy not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "err", err.Error())
+		return refusedEnd(err.Error())
 	}
-	tried := klusterTried{Story: j.story, Head: j.head, Outcome: kluster.OutcomePassed, At: p.o.Now().UTC()}
+	if !j.asked() {
+		tried := klusterTried{Story: j.story, Head: j.head, Outcome: kluster.OutcomePassed, At: p.o.Now().UTC()}
+		if err != nil {
+			tried.Outcome = kluster.OutcomeFailed
+		}
+		if werr := writeKlusterTried(root, ns, tried); werr != nil {
+			p.o.Logger.Warn("kluster deploy not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "err", werr.Error())
+		}
+	}
 	if err != nil {
-		tried.Outcome = kluster.OutcomeFailed
+		p.journalJob(j, "failed", fmt.Sprintf("deploy of %s into %s at %s failed %s: %s", j.story, ns, short(j.head), fail.where(), fail.err))
+		p.o.Logger.Warn("kluster deploy failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "step", fail.step, "exit_code", fail.exit, "log", fail.log, "by", j.asker())
+		if !j.asked() {
+			p.failed(repo, j, ns, fail)
+		}
+		end.outcome, end.fail, end.log = kluster.OutcomeFailed, fail, cmp.Or(fail.log, end.log)
+		return end
 	}
-	if werr := writeKlusterTried(root, ns, tried); werr != nil {
-		p.o.Logger.Warn("kluster deploy not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "err", werr.Error())
-	}
-	if err != nil {
-		p.journal("failed", fmt.Sprintf("deploy of %s into %s at %s failed %s: %s", j.story, ns, short(j.head), fail.where(), fail.err))
-		p.o.Logger.Warn("kluster deploy failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "step", fail.step, "exit_code", fail.exit, "log", fail.log)
-		p.failed(repo, j, ns, fail)
-		return
-	}
-	p.journal("done", fmt.Sprintf("deployed %s into %s at %s", j.story, ns, short(j.head)))
-	p.o.Logger.Info("kluster deploy passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
+	p.journalJob(j, "done", fmt.Sprintf("deployed %s into %s at %s", j.story, ns, short(j.head)))
+	p.o.Logger.Info("kluster deploy passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "by", j.asker())
 	p.passed(repo, j, ns)
-	p.checks(ctx, repo, j, ns)
+	if run := p.checks(ctx, repo, j, ns); run != nil && run.Outcome != kluster.OutcomePassed {
+		end.outcome, end.log = kluster.OutcomeFailed, run.Log
+		end.fail = klusterFailure{step: "checks", exit: -1, log: run.Log, err: fmt.Sprintf("the checks run against the namespace ended %s, at %s", run.Outcome, failedCheck(*run))}
+		if n := len(run.Steps); n > 0 && run.Steps[n-1].Exit != nil {
+			end.fail.exit = *run.Steps[n-1].Exit
+		}
+	}
+	return end
 }
 
 // KlusterEnv is the environment a checks run for story gets (ADR-0254 §8):
@@ -690,28 +827,30 @@ func KlusterEnv(repo *workitem.Repo, story string, git execx.Runner, enabled fun
 // project names checks. A run that ends keeps its outcome at j.head in the
 // namespace's record, which an acceptance reads (ADR-0254 §5a); one that
 // does not pass opens one thread on the story and sends it back to
-// in-progress, as a failed deploy does, and one that passes resolves it.
-func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) {
+// in-progress, as a failed deploy does, unless its agent asked for the job
+// (ADR-0292 §5), and one that passes resolves it. It answers the run, or nil
+// when none ended.
+func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j klusterJob, ns string) *ChecksRun {
 	if p.o.Checks == nil {
-		return
+		return nil
 	}
 	cfg, err := p.o.Checks(repo)
 	if err != nil {
 		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
-		return
+		return nil
 	}
 	if !cfg.Enabled || len(cfg.Commands) == 0 {
-		return
+		return nil
 	}
 	_, env, err := KlusterEnv(repo, j.story, gitOf(p.o), p.o.Host.Enabled)
 	if err != nil {
 		p.o.Logger.Warn("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
-		return
+		return nil
 	}
 	if env == nil {
-		return // the head moved since the deploy: the next look deploys it again
+		return nil // the head moved since the deploy: the next look deploys it again
 	}
-	p.journal("started", fmt.Sprintf("checks of %s against %s at %s", j.story, ns, short(j.head)))
+	p.journalJob(j, "started", fmt.Sprintf("checks of %s against %s at %s", j.story, ns, short(j.head)))
 	p.o.Logger.Info("kluster checks started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
 	agents := AgentConfig{}
 	if p.o.Agent != nil {
@@ -720,24 +859,27 @@ func (p *klusterPass) checks(ctx context.Context, repo *workitem.Repo, j kluster
 	in := ChecksContainer(repo, j.story, agents, dockerOf(p.o))
 	run, err := p.o.Dir.RunChecksIn(ctx, j.story, mainCheckout(repo), repo.WorktreePath(j.story), cfg, env, in, p.o.Now)
 	if err != nil {
-		p.journal("failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(j.head), err))
+		p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s not run: %v", j.story, ns, short(j.head), err))
 		p.o.Logger.Info("kluster checks not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
-		return
+		return nil
 	}
 	if err := kluster.RecordChecks(mainCheckout(repo), ns, j.head, run.Outcome); err != nil {
 		p.o.Logger.Warn("kluster checks outcome not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "err", err.Error())
 	}
-	if run.Outcome == "passed" {
-		p.journal("done", fmt.Sprintf("checks of %s against %s at %s passed", j.story, ns, short(j.head)))
+	if run.Outcome == kluster.OutcomePassed {
+		p.journalJob(j, "done", fmt.Sprintf("checks of %s against %s at %s passed", j.story, ns, short(j.head)))
 		p.o.Logger.Info("kluster checks passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head)
 		p.clear(repo, j.story, checksFailureTitle(j.story), fmt.Sprintf("flai serve's checks of %s against its namespace %s passed at %s.", j.story, ns, short(j.head)))
-		return
+		return &run
 	}
 	check := failedCheck(run)
-	p.journal("failed", fmt.Sprintf("checks of %s against %s at %s %s at %s", j.story, ns, short(j.head), run.Outcome, check))
+	p.journalJob(j, "failed", fmt.Sprintf("checks of %s against %s at %s %s at %s", j.story, ns, short(j.head), run.Outcome, check))
 	p.o.Logger.Warn("kluster checks failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "commit", j.head, "outcome", run.Outcome, "check", check, "log", run.Log)
-	reason := fmt.Sprintf("flai serve's checks of %s against its kluster namespace ended %s, at %s, at commit %s", j.story, run.Outcome, check, short(j.head))
-	p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(unsent string) string { return checksFailureText(j, ns, run, unsent) })
+	if !j.asked() {
+		reason := fmt.Sprintf("flai serve's checks of %s against its kluster namespace ended %s, at %s, at commit %s", j.story, run.Outcome, check, short(j.head))
+		p.sendBack(repo, j, ns, checksFailureTitle(j.story), reason, func(unsent string) string { return checksFailureText(j, ns, run, unsent) })
+	}
+	return &run
 }
 
 // failedCheck names the check a run that did not pass ended at.
@@ -775,30 +917,31 @@ func heldText(story, unsent, passes string) string {
 	return fmt.Sprintf("flai serve sent %[1]s back to in-progress, and keeps its namespace as the failure left it, so that its agent and the operator can look at what failed. The agent fixes the change or, when the cause is outside the story, says so on this thread. Once %[1]s is back in review, at a new head or the same one, flai serve deploys it again in place, and resolves this thread once %[2]s. Cancelling or accepting %[1]s tears the namespace down.", story, passes)
 }
 
-// deployOnce brings the cluster up when it is absent, then deploys j's story
-// from its worktree; on a failure it says which step failed and where its
-// log is.
-func (p *klusterPass) deployOnce(ctx context.Context, repo *workitem.Repo, j klusterJob) (klusterFailure, error) {
+// deployOnce brings the cluster up when it is absent, then deploys j's
+// story, whose status is status, from its worktree for who asked, and
+// answers the namespace's record; on a failure it says which step failed and
+// where its log is.
+func (p *klusterPass) deployOnce(ctx context.Context, repo *workitem.Repo, j klusterJob, status string) (kluster.Record, klusterFailure, error) {
 	root, m := mainCheckout(repo), repo.Manifest
 	dir := repo.WorktreePath(j.story)
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		err := fmt.Errorf("%s has no worktree at %s to build and deploy from; open it with flai stream open %s", j.story, dir, j.story)
-		return klusterFailure{exit: -1, err: err.Error()}, err
+		return kluster.Record{}, klusterFailure{exit: -1, err: err.Error()}, err
 	}
 	absent, err := p.jobs.Absent(ctx, root, m)
 	if err != nil {
-		return klusterFailure{step: "up", exit: -1, err: err.Error()}, err
+		return kluster.Record{}, klusterFailure{step: "up", exit: -1, err: err.Error()}, err
 	}
 	if absent {
 		if err := p.up(ctx, root, m); err != nil {
-			return klusterFailure{step: "up", exit: kluster.ExitCode(err), log: klusterUpLog(root), err: err.Error()}, err
+			return kluster.Record{}, klusterFailure{step: "up", exit: kluster.ExitCode(err), log: klusterUpLog(root), err: err.Error()}, err
 		}
 	}
-	r, err := p.jobs.Deploy(ctx, root, m, j.story, dir, j.head)
+	r, err := p.jobs.Deploy(ctx, root, m, j.asker(), j.story, status, dir, j.head)
 	if err == nil {
-		return klusterFailure{}, nil
+		return r, klusterFailure{exit: -1}, nil
 	}
-	return failureOf(r, err), err
+	return r, failureOf(r, err), err
 }
 
 // failureOf says where a job that answered r and err failed: the step, its
@@ -915,39 +1058,49 @@ func (p *klusterPass) passed(repo *workitem.Repo, j klusterJob, ns string) {
 }
 
 // teardown tears j's story down, from its worktree or the main checkout when
-// it is gone, unless it is back in review or a send back keeps it, and
-// settles its teardown failure thread; a story done or cancelled has its
-// deploy and checks failure threads resolved too. A failure is kept with the
-// story's column, so that it is tried again only once the story moves.
-func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klusterJob) {
+// it is gone, unless it is back in review, or back in progress for a
+// teardown a look queued, and settles its teardown failure thread; a story
+// done or cancelled has its deploy and checks failure threads resolved too. A
+// failure is kept with the story's column, so that it is tried again only
+// once the story moves; one its agent asked for opens no thread (ADR-0292
+// §5).
+func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klusterJob) klusterEnd {
 	it, err := repo.Get(j.story)
 	if err != nil {
 		p.o.Logger.Warn("kluster teardown not run", "component", "serve", "root", p.e.Root, "story", j.story, "err", err.Error())
-		return
+		return refusedEnd(fmt.Sprintf("flai serve could not read %s to tear it down (%v)", j.story, err))
 	}
 	if it.Status == workitem.Review && !it.Archived {
-		return // back in review: its deploy updates the namespace in place
+		// back in review: its deploy updates the namespace in place
+		return refusedEnd(fmt.Sprintf("%s moved to review while the teardown waited, and a namespace in review is the review's: flai serve tears it down once the story leaves review for ready or backlog, is cancelled, or is accepted", j.story))
+	}
+	if !j.asked() && klusterHolds(it) {
+		return klusterEnd{} // back in progress since it was queued: it keeps its namespace
 	}
 	root := mainCheckout(repo)
 	ns, _ := kluster.StoryNamespace(j.story)
-	if t, ok := readKlusterTried(root, ns); ok && klusterKept(it, t) {
-		return // sent back since it was queued: it keeps its namespace
-	}
 	dir := ""
 	if info, err := os.Stat(repo.WorktreePath(j.story)); err == nil && info.IsDir() {
 		dir = repo.WorktreePath(j.story)
 	}
-	p.journal("started", fmt.Sprintf("teardown of %s's namespace %s, %s", j.story, ns, it.Status))
-	p.o.Logger.Info("kluster teardown started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "status", it.Status)
-	r, err := p.jobs.Teardown(ctx, root, repo.Manifest, j.story, dir)
+	p.startAsked(j)
+	p.journalJob(j, "started", fmt.Sprintf("teardown of %s's namespace %s, %s", j.story, ns, it.Status))
+	p.o.Logger.Info("kluster teardown started", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "status", it.Status, "by", j.asker())
+	r, err := p.jobs.Teardown(ctx, root, repo.Manifest, j.asker(), j.story, dir)
+	end := klusterEnd{outcome: kluster.OutcomePassed, commit: r.Commit, fail: klusterFailure{exit: -1}, steps: r.Steps}
 	switch {
 	case errors.Is(err, kluster.ErrNotDeployed):
 		p.forget(root, ns)
-		p.journal("done", fmt.Sprintf("teardown of %s's namespace %s: nothing was deployed", j.story, ns))
+		p.journalJob(j, "done", fmt.Sprintf("teardown of %s's namespace %s: nothing was deployed", j.story, ns))
 		p.o.Logger.Info("kluster teardown found nothing deployed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns)
-	case errors.Is(err, kluster.ErrBusy) || (err != nil && ctx.Err() != nil):
-		p.journal("failed", fmt.Sprintf("teardown of %s's namespace %s not run, and queued again at the next look: %v", j.story, ns, err))
+	case err != nil && ctx.Err() != nil:
+		p.journalJob(j, "failed", fmt.Sprintf("teardown of %s's namespace %s not run, as flai serve stops: %v", j.story, ns, err))
 		p.o.Logger.Info("kluster teardown not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
+		return klusterEnd{}
+	case errors.Is(err, kluster.ErrBusy):
+		p.journalJob(j, "failed", fmt.Sprintf("teardown of %s's namespace %s not run, another job holding the lock: %v", j.story, ns, err))
+		p.o.Logger.Info("kluster teardown not run", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "err", err.Error())
+		return refusedEnd(err.Error())
 	case err != nil:
 		f := failureOf(r, err)
 		t, _ := readKlusterTried(root, ns)
@@ -955,13 +1108,16 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 		if werr := writeKlusterTried(root, ns, t); werr != nil {
 			p.o.Logger.Warn("kluster teardown not recorded", "component", "serve", "root", p.e.Root, "story", j.story, "err", werr.Error())
 		}
-		p.journal("failed", fmt.Sprintf("teardown of %s's namespace %s failed %s: %s", j.story, ns, f.where(), f.err))
-		p.o.Logger.Warn("kluster teardown failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "step", f.step, "exit_code", f.exit, "log", f.log)
-		p.report(repo, teardownAnchor(it), teardownFailureTitle(j.story), teardownFailureText(it, ns, r.Commit, f))
+		p.journalJob(j, "failed", fmt.Sprintf("teardown of %s's namespace %s failed %s: %s", j.story, ns, f.where(), f.err))
+		p.o.Logger.Warn("kluster teardown failed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "step", f.step, "exit_code", f.exit, "log", f.log, "by", j.asker())
+		if !j.asked() {
+			p.report(repo, teardownAnchor(it), teardownFailureTitle(j.story), teardownFailureText(it, ns, r.Commit, f))
+		}
+		end.outcome, end.fail, end.log = kluster.OutcomeFailed, f, f.log
 	default:
 		p.forget(root, ns)
-		p.journal("done", fmt.Sprintf("tore down %s's namespace %s", j.story, ns))
-		p.o.Logger.Info("kluster teardown passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns)
+		p.journalJob(j, "done", fmt.Sprintf("tore down %s's namespace %s", j.story, ns))
+		p.o.Logger.Info("kluster teardown passed", "component", "serve", "root", p.e.Root, "story", j.story, "namespace", ns, "by", j.asker())
 		why := fmt.Sprintf("flai serve tore down %s's namespace %s.", j.story, ns)
 		p.clear(repo, j.story, teardownFailureTitle(j.story), why)
 		p.clear(repo, manifest.File, teardownFailureTitle(j.story), why)
@@ -971,6 +1127,7 @@ func (p *klusterPass) teardown(ctx context.Context, repo *workitem.Repo, j klust
 			p.clear(repo, j.story, checksFailureTitle(j.story), why)
 		}
 	}
+	return end
 }
 
 // teardownAnchor is where a story's teardown failure thread goes: on the
@@ -1047,13 +1204,27 @@ func (p *klusterPass) clear(repo *workitem.Repo, on, title, why string) {
 	}
 }
 
-// journal keeps one entry of the pass's in the host's journal.
+// journal keeps one entry of the pass's in the host's journal, by flai serve.
 func (p *klusterPass) journal(outcome, detail string) {
+	p.journalBy(forgeAuthor, outcome, detail)
+}
+
+// journalJob keeps one entry of job j's in the host's journal: by the agent
+// that asked for it, its detail naming the agent, or by flai serve for a job
+// a look queued.
+func (p *klusterPass) journalJob(j klusterJob, outcome, detail string) {
+	if j.asked() {
+		detail += ", asked by " + j.by
+	}
+	p.journalBy(j.asker(), outcome, detail)
+}
+
+func (p *klusterPass) journalBy(by, outcome, detail string) {
 	if p.o.Host.Record == nil {
 		return
 	}
 	p.o.Host.Record(hostapi.Entry{At: p.o.Now().UTC().Format(time.RFC3339), Action: hostapi.ActionKluster, Method: klusterMethod, Project: p.e.Key, Root: p.e.Root,
-		By: forgeAuthor, Outcome: outcome, Detail: detail})
+		By: by, Outcome: outcome, Detail: detail})
 }
 
 // klusterThread is the open thread titled title that flai serve opened on

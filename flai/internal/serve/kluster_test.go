@@ -41,6 +41,7 @@ type fakeKluster struct {
 	started     chan string
 	inFlight    int
 	most        int
+	by          []string // who each deploy and teardown was for, in order
 }
 
 func (f *fakeKluster) note(call string) {
@@ -67,9 +68,10 @@ func (f *fakeKluster) Up(_ context.Context, _ string, _ manifest.Manifest, out i
 	return f.upErr
 }
 
-func (f *fakeKluster) Deploy(_ context.Context, root string, _ manifest.Manifest, story, _, commit string) (kluster.Record, error) {
+func (f *fakeKluster) Deploy(_ context.Context, root string, _ manifest.Manifest, by, story, _, _, commit string) (kluster.Record, error) {
 	f.note("deploy " + story + " " + commit)
 	f.mu.Lock()
+	f.by = append(f.by, by)
 	f.inFlight++
 	f.most = max(f.most, f.inFlight)
 	gate, started, fail := f.gate, f.started, f.fail
@@ -83,7 +85,7 @@ func (f *fakeKluster) Deploy(_ context.Context, root string, _ manifest.Manifest
 	f.mu.Lock()
 	f.inFlight--
 	f.mu.Unlock()
-	r := kluster.Record{Story: story, Commit: commit, Outcome: kluster.OutcomePassed}
+	r := kluster.Record{Story: story, Commit: commit, Outcome: kluster.OutcomePassed, AskedBy: by, StartedAt: time.Now().UTC()}
 	var err error
 	if fail != nil {
 		err = fail(story, commit)
@@ -108,8 +110,11 @@ func writeFakeRecord(root string, r kluster.Record) {
 	_ = os.WriteFile(kluster.RecordPath(root, ns), data, 0o644)
 }
 
-func (f *fakeKluster) Teardown(_ context.Context, root string, _ manifest.Manifest, story, _ string) (kluster.Record, error) {
+func (f *fakeKluster) Teardown(_ context.Context, root string, _ manifest.Manifest, by, story, _ string) (kluster.Record, error) {
 	f.note("teardown " + story)
+	f.mu.Lock()
+	f.by = append(f.by, by)
+	f.mu.Unlock()
 	ns, _ := kluster.StoryNamespace(story)
 	r, ok, err := kluster.ReadRecord(root, ns)
 	if err != nil {
@@ -164,10 +169,23 @@ func (f *fakeKluster) all() []string {
 	return append([]string(nil), f.calls...)
 }
 
-// klusterHeads answers git rev-parse of a story's branch from heads, by story.
+// klusterHeads answers git rev-parse of a story's branch from heads, by
+// story, and git status in a folder from dirty, by folder: clean when it
+// names none.
 type klusterHeads struct {
 	mu    sync.Mutex
 	heads map[string]string
+	dirty map[string]string
+}
+
+// setDirty makes git status in dir answer out.
+func (g *klusterHeads) setDirty(dir, out string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.dirty == nil {
+		g.dirty = map[string]string{}
+	}
+	g.dirty[dir] = out
 }
 
 func (g *klusterHeads) set(story, head string) {
@@ -176,9 +194,12 @@ func (g *klusterHeads) set(story, head string) {
 	g.heads[story] = head
 }
 
-func (g *klusterHeads) Run(_, name string, args ...string) (string, error) {
+func (g *klusterHeads) Run(dir, name string, args ...string) (string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	if name == "git" && len(args) > 0 && args[0] == "status" {
+		return g.dirty[dir], nil
+	}
 	if name == "git" && len(args) == 3 && args[0] == "rev-parse" && args[1] == "--abbrev-ref" && args[2] == "HEAD" {
 		return "main", nil
 	}
@@ -618,7 +639,8 @@ func TestASentBackStoryKeepsItsNamespaceUntilItIsCancelled(t *testing.T) {
 // ADR-0254 §5a: a sent back story that returns to review is deployed again
 // in place, at the same head or a new one, with no teardown between, and a
 // pass resolves the thread. Once it has passed, a move back to in-progress
-// by its agent is no send back: it is torn down.
+// by its agent keeps its namespace too (ADR-0292 §3), and a move to ready
+// tears it down.
 func TestASentBackStorysReturnToReviewDeploysAgainInPlace(t *testing.T) {
 	for _, c := range []struct{ name, head string }{{"same head", klHeadA}, {"new head", klHeadB}} {
 		t.Run(c.name, func(t *testing.T) {
@@ -658,8 +680,13 @@ func TestASentBackStorysReturnToReviewDeploysAgainInPlace(t *testing.T) {
 
 			lab.move(story, workitem.InProgress)
 			lab.round()
+			if got := lab.kluster.since(n); len(got) != 0 {
+				t.Fatalf("calls once its agent moved it back to in-progress = %v, want its namespace kept", got)
+			}
+			lab.move(story, workitem.Ready)
+			lab.round()
 			if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
-				t.Fatalf("calls once its agent moved it back to in-progress = %v, want one teardown", got)
+				t.Fatalf("calls once it moved to ready = %v, want one teardown", got)
 			}
 		})
 	}
@@ -760,9 +787,10 @@ func TestADeployedStoryThatLeftReviewIsTornDownWithNoDeploySet(t *testing.T) {
 	lab.setBlock(klusterNoDeploy)
 	n := len(lab.kluster.all())
 	lab.move(story, workitem.InProgress)
+	lab.move(story, workitem.Ready)
 	lab.round()
 	if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
-		t.Fatalf("calls after %s left review with no deploy set = %v, want one teardown", story, got)
+		t.Fatalf("calls after %s left review for ready with no deploy set = %v, want one teardown", story, got)
 	}
 }
 
@@ -814,17 +842,22 @@ func TestAnAbsentClusterIsBroughtUpBeforeTheDeploy(t *testing.T) {
 	}
 }
 
+// ADR-0292 §3: a story that leaves review keeps its namespace while it is in
+// progress, whoever moved it there, and is torn down once, when it moves on
+// to ready or is cancelled.
 func TestAStoryThatLeavesReviewIsTornDownOnce(t *testing.T) {
-	for _, to := range []string{workitem.InProgress, workitem.Cancelled} {
+	for _, to := range []string{workitem.Ready, workitem.Cancelled} {
 		t.Run(to, func(t *testing.T) {
 			lab := newKlusterLab(t, klusterBlock)
 			story := lab.inReview("Leaves", klHeadA)
 			lab.round()
 			n := len(lab.kluster.all())
 			lab.move(story, workitem.InProgress)
-			if to != workitem.InProgress {
-				lab.move(story, to)
+			lab.round()
+			if got := lab.kluster.since(n); len(got) != 0 {
+				t.Fatalf("calls after %s left review for in-progress = %v, want its namespace kept", story, got)
 			}
+			lab.move(story, to)
 			lab.round()
 			if got := lab.kluster.since(n); strings.Join(got, ";") != "teardown "+story {
 				t.Fatalf("calls after %s left review for %s = %v, want one teardown", story, to, got)
@@ -945,6 +978,7 @@ func TestAFailedTeardownOpensOneThreadAndIsNotTriedAgainUntilTheStoryMoves(t *te
 	log := kluster.LogPath(lab.root, ns, kluster.StepTeardown)
 	lab.kluster.teardownErr = &kluster.StepError{Namespace: ns, Step: kluster.StepTeardown, ExitCode: 2, Log: log, Err: errors.New("exit status 2")}
 	lab.move(story, workitem.InProgress)
+	lab.move(story, workitem.Ready)
 	lab.round()
 	ths := lab.titled(story, teardownFailureTitle(story))
 	if len(ths) != 1 {
@@ -955,8 +989,8 @@ func TestAFailedTeardownOpensOneThreadAndIsNotTriedAgainUntilTheStoryMoves(t *te
 			t.Errorf("the teardown failure thread does not name %q:\n%s", want, ths[0].Body)
 		}
 	}
-	if got := lab.status(story); got != workitem.InProgress {
-		t.Fatalf("the story is %s after a failed teardown, want it left in progress", got)
+	if got := lab.status(story); got != workitem.Ready {
+		t.Fatalf("the story is %s after a failed teardown, want it left ready", got)
 	}
 	n := len(lab.kluster.all())
 	lab.round()
