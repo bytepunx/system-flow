@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- S-0745 The commented agent.image block of system-flow.yaml names the layer's build arguments, agent.image.args, which flai image ensure builds the layer with (patch, ADR-0295).
+
 ## 1.1.36 - 2026-11-13
 
 - S-0761 flai check finds `item.blocked-closed` outside the story at close-out (patch).

@@ -61,23 +61,37 @@ GHCR makes a package created from a private repository private. A pull with no l
 
 ## Build
 
-With Docker running, the way back for a harness image that is missing or stale is:
+With Docker running, the way back for an agent image that is missing or stale, a harness image or the project's layer, is:
 
 ```bash
 flai image ensure
 ```
 
-It makes each harness image the project's agents need, as `flai image status` lists them, that is missing or stale. A released flai pulls it by the index digest its release's signed list names, and refuses a list or an image that does not verify, building nothing in its place. When the release has no list, the release or the registry cannot be reached and no list is kept, or `docker pull` fails, it builds the image on this host from the Dockerfiles flai carries and the release's Linux `flai` and `pilot`, checked against the release's signed `checksums.txt`. A development flai, such as the one `scripts/flai.sh` builds from this tree, is never pulled for: in this repository it builds from the tree's own Dockerfiles and source, and elsewhere it refuses. It says which way each image took, then prints the status lines, and exits non-zero when a harness image is still missing or stale.
+It makes each harness image the project's agents need, as `flai image status` lists them, that is missing or stale. A released flai pulls it by the index digest its release's signed list names, and refuses a list or an image that does not verify, building nothing in its place. When the release has no list, the release or the registry cannot be reached and no list is kept, or `docker pull` fails, it builds the image on this host from the Dockerfiles flai carries and the release's Linux `flai` and `pilot`, checked against the release's signed `checksums.txt`. A development flai, such as the one `scripts/flai.sh` builds from this tree, is never pulled for: in this repository it builds from the tree's own Dockerfiles and source, and elsewhere it refuses. Then, when `system-flow.yaml` names `agent.image.layer`, it builds the project's layer over the harness image, in any project, when the layer is missing or stale or its harness image was just pulled or built (S-0745). It says which way each image took, then prints the status lines, and exits non-zero when a harness image or the layer is still missing or stale.
 
-Each docker step's output goes to the terminal and to `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped and reported. A step that fails on the network, with a connection reset, a timeout, a DNS or TLS handshake failure, or a registry 5xx, is tried twice more, after 30 seconds and then 2 minutes. `flai image build` builds the images on this host without the pull, current or not. Neither builds the project's layer or touches an image you named with `--image`.
+The layer's build runs from the project's root:
 
-`make agent-images` is this repository's own build, and the way to build the project's layer. From the repository root:
+```bash
+docker build -f <layer> --build-arg BASE=<harness image> --build-arg <name>=<value>… -t flai-agent-<key>-claude-code:local .
+```
+
+flai sets `BASE` to the harness image. Each `ARG` of the Dockerfile keeps its default unless `agent.image.args` in `system-flow.yaml` names it with a literal value ([settings](../settings.md#project-manifest)). The image is labelled with its recipe, over the Dockerfile and the arguments, and with the harness image's ID, so `flai image status` says it is stale after a change to the Dockerfile, to an argument, or to the harness image under it.
+
+Each docker step's output goes to the terminal and to `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped and reported. A step that fails on the network, with a connection reset, a timeout, a DNS or TLS handshake failure, or a registry 5xx, is tried twice more, after 30 seconds and then 2 minutes. `flai image build` builds the images on this host without the pull, current or not, the layer last. Neither touches an image you named with `--image`. After a change to the layer alone, rebuild just it, over the harness image already on this host:
+
+```bash
+flai image build --layer
+```
+
+It refuses when the harness image is not on this host, naming it and `flai image ensure`, and when the manifest names no layer.
+
+`make agent-images` is this repository's own build of all three images, from its tree. From the repository root:
 
 ```bash
 make agent-images
 ```
 
-It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. When the manifest names a layer, it then builds the layer image over them and prints `built flai-agent-<key>-claude-code:local`; `scripts/agent-image.sh --layer` builds the layer alone. `scripts/agent-image.sh --tag` prints the image a story's agent runs in and builds nothing. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
+It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. When the manifest names a layer, it then builds the layer image over them and prints `built flai-agent-<key>-claude-code:local`; `scripts/agent-image.sh --layer` builds the layer alone. The script passes the layer `GO_VERSION` from `flai/go.mod` and the tool pins from `scripts/install-tools.sh`, where flai passes only `agent.image.args`, which this repository does not name yet; S-0760 moves them onto `agent.image.args`, and until then the script stays the way to build this repository's layer with those pins. `scripts/agent-image.sh --tag` prints the image a story's agent runs in and builds nothing. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
 
 Before it builds, the script asks the credential helper your Docker configuration names in `credsStore` (`$DOCKER_CONFIG/config.json`, else `~/.docker/config.json`) to list its logins, and waits ten seconds at most. Docker Desktop's helper, `desktop.exe`, cannot start from WSL while Windows interop is not answering, and a build would then stop at the first base image with `error getting credentials` ([I-0339](../../../design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md)). When the helper is not on `PATH`, fails, or does not answer, the script prints one line naming it and builds with no login, from a scratch Docker configuration that keeps your current context and links the other entries of your configuration's folder, such as `cli-plugins`, `contexts`, and `buildx`. The base images are public, so they pull anonymously. Your `config.json` is not changed, and the scratch configuration is removed when the script ends. A working helper, or none named, leaves the build as it was.
 

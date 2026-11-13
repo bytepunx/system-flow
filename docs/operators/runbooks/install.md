@@ -99,10 +99,11 @@ Only if a story's agent is to run on the `container` harness ([In a container](.
    scripts/agent-image.sh --layer     # over the flai-agent-claude-code:local already built
    ```
 
-   A project of your own that names a layer has no `make agent-images`. Build its layer from its root, over the harness image built above, with the tag `flai serve` looks for:
+   A project of your own that names a layer has no `make agent-images`. From its root, `flai image ensure` makes the harness images and then builds its layer over them, with the build arguments `agent.image.args` gives, as `flai-agent-<key>-claude-code:local`, the tag `flai serve` looks for; after a change to the layer alone, `flai image build --layer` builds just it ([Run a story's agent in a container](agent-container.md#build)):
 
    ```bash
-   docker build -f <layer> -t flai-agent-<key>-claude-code:local --build-arg BASE=flai-agent-claude-code:local .
+   flai image ensure
+   flai image build --layer
    ```
 
    `flai check` warns `agent.image` until the layer's image is built on this host.

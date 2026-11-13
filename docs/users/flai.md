@@ -498,8 +498,9 @@ An agent that names no provider is started as before: the harness uses its own d
 #### In a container: the container harness
 
 ```bash
-flai image ensure                                       # pull, else build, each harness image that is missing or stale
-flai image build                                        # build them on this host, without the pull
+flai image ensure                                       # pull, else build, each harness image that is missing or stale, then the project's layer
+flai image build                                        # build them on this host, without the pull, then the layer
+flai image build --layer                                # build only the project's layer, over the harness image already here
 make agent-images                                       # in system-flow's repository: flai-agent-claude-code:local, and the project's layer
 flai serve agent harness container --login ~/.claude    # the folder of your Claude login, mounted read-only
 flai serve agent harness container --image claude-code=flai-agent-claude-code:local --network flai-agents
@@ -540,7 +541,7 @@ The start is refused, as a start that failed, when one of these holds:
 |--------------|-----|
 | `docker` is not on `flai serve`'s `PATH` | Install Docker, or name its client with `flai serve agent harness container --program <path>` |
 | The inner harness's image is not on this host | `flai image status` says which images are missing; `flai image ensure` makes them, `make agent-images` in system-flow's repository builds them, or `flai serve agent harness container --image <inner>=<image>` names your own |
-| The project's layer image, which `agent.image.layer` names, is not on this host | `flai image status` says which images are missing; `make agent-images`, or `scripts/agent-image.sh --layer` over the harness image already built |
+| The project's layer image, which `agent.image.layer` names, is not on this host | `flai image status` says which images are missing; `flai image ensure` builds it, or `flai image build --layer` over the harness image already built; in system-flow's repository `make agent-images` or `scripts/agent-image.sh --layer` builds it too |
 | `system-flow.yaml` cannot be read | Mend it; `flai check` says what is wrong |
 | No login is set, for `claude-code` | `flai serve agent harness container --login ~/.claude` |
 | The login is not an absolute path, or is or holds your home, `~/.flai`, the project, or the Docker socket | `--login` with the folder of your login alone |
@@ -564,7 +565,7 @@ A stale image does not refuse the start: `flai serve` warns of it in its log as 
 
 The project's flai is the version `flai.command` prints when the manifest names one, else the running flai's. `--json` prints `{"flai": ..., "images": [...], "ok": ...}`. The command exits non-zero when an image is missing or stale. The labels and what is not compared yet are in [flai-cli.md](../../design/system/flai-cli.md#where-the-agent-images-come-from-adr-0295).
 
-`flai image ensure` makes each harness image of flai's default that `flai image status` lists as missing or stale (S-0740). It leaves a current image as it is. It takes one of three ways, and says which:
+`flai image ensure` makes each harness image of flai's default that `flai image status` lists as missing or stale (S-0740), then the project's layer (S-0745, below). It leaves a current image as it is. For a harness image it takes one of three ways, and says which:
 
 | Way | When | How |
 |-----|------|-----|
@@ -574,18 +575,31 @@ The project's flai is the version `flai.command` prints when the manifest names 
 
 A list that does not verify, is malformed, or is for another version or repository is refused, and so is a pulled image whose `RepoDigests` the list does not name. Nothing is built in place of a refused pull, since a build would hide tampering. Each harness image is tagged with the name the start runs it by, `flai-agent-claude-code:local` today, and with `flai-agent-<inner>:<version>`; bedrock, built under it, is tagged `flai-agent-bedrock:<version>`.
 
-`flai image build` builds the harness images on this host, without the pull, current or not: those of flai's default the project's agents need, else the default image of each inner harness you name no `--image` for. A released flai builds from the Dockerfiles it carries and its release's checked binaries; a development flai builds from its tree.
+`flai image build` builds the harness images on this host, without the pull, current or not: those of flai's default the project's agents need, else the default image of each inner harness you name no `--image` for, then the project's layer, current or not. A released flai builds from the Dockerfiles it carries and its release's checked binaries; a development flai builds from its tree. `flai image build --layer` builds only the layer, current or not, over the harness image already on this host, and pulls or builds no harness image. It refuses when that harness image is missing, naming it and `flai image ensure`, and when the manifest names no `agent.image.layer`.
 
-Neither command touches your own image (`--image`) or builds the project's layer: in system-flow's repository `make agent-images` or `scripts/agent-image.sh --layer` builds it. Each docker step's output goes to standard output and to a log, `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped and reported. A step that fails on the network, with a connection reset, a timeout, a DNS or TLS handshake failure, or a registry 5xx, is tried twice more, after 30 seconds and then 2 minutes. Afterwards both print the images' status as `flai image status` does, and exit non-zero when a harness image flai makes is still missing or stale.
+Neither command touches your own image (`--image`). Each docker step's output goes to standard output and to a log, `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped and reported. A step that fails on the network, with a connection reset, a timeout, a DNS or TLS handshake failure, or a registry 5xx, is tried twice more, after 30 seconds and then 2 minutes. Afterwards both print the images' status as `flai image status` does, and exit non-zero when an image flai makes, a harness image or the layer, is still missing or stale.
 
-The agent images hold flai, git, and the inner harness, not your project's tools. To give your agents the tools your test tiers run, name a Dockerfile under `agent.image.layer` in `system-flow.yaml`, relative to the root ([settings](../operators/settings.md#project-manifest)). It builds over the harness's image, `FROM ${BASE}`, as `flai-agent-<key>-claude-code:local`, the manifest's `key` in lower case. In system-flow's repository, `make agent-images` builds it after the two base images, and `scripts/agent-image.sh --layer` builds it alone over the harness image already built; in your own project, `docker build -f <layer> -t flai-agent-<key>-claude-code:local --build-arg BASE=flai-agent-claude-code:local .` from its root does ([install runbook](../operators/runbooks/install.md#agents-in-containers)). For your project's story agents on the `container` harness, that image wins over the one `--image` names. The key stays in the manifest: it is never copied into a story's agent, and naming one under the planner's, the orchestrator's, the analyzer's, the curator's, or a role's agent is refused. This repository's layer, `flai/images/system-flow/Dockerfile`, carries Go, golangci-lint, ShellCheck, pnpm, and, for the smoke tier's install test, curl, openssl, GoReleaser, and procps-ng's `ps` ([docker.md](../../design/tech/docker.md)); `scripts/agent-image.sh --check` fails on a build of it that lacks one, and then runs the smoke tier inside it (S-0672). The layer is yours: flai builds it on your machine only, and does not stamp or sign it ([ADR-0203](../../design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md)).
+The agent images hold flai, git, and the inner harness, not your project's tools. To give your agents the tools your test tiers run, name a Dockerfile under `agent.image.layer` in `system-flow.yaml`, relative to the root ([settings](../operators/settings.md#project-manifest)). It builds over the harness's image, `FROM ${BASE}`, as `flai-agent-<key>-claude-code:local`, the manifest's `key` in lower case. flai builds it (S-0745): `flai image ensure` when it is missing or stale or its harness image was just pulled or built, and `flai image build --layer` whenever you ask. The build is `docker build -f <layer> --build-arg BASE=<harness image> --build-arg <name>=<value>… -t flai-agent-<key>-claude-code:local .`, run from the project's root.
+
+The Dockerfile's `ARG` defaults are its pins. To override one, name it under `agent.image.args` beside `layer`, with a literal one-line value ([settings](../operators/settings.md#project-manifest)):
+
+```yaml
+agent:
+  image:
+    layer: images/agent/Dockerfile
+    args:
+      GO_VERSION: "1.26.0"   # quote a value YAML would read as a number
+```
+
+An argument you do not name keeps its default. flai sets `BASE` itself, to the harness image, so `args` refuses it, as it refuses a name that is not an `ARG` name, a value over lines, and `args` with no `layer`. The layer image is labelled with its recipe, over the Dockerfile and the arguments, and with the ID of the harness image under it, so `flai image status` says it is stale when you change the Dockerfile or an argument, or the harness image under it changes. In system-flow's repository, `make agent-images` and `scripts/agent-image.sh --layer` also build it, reading the Go version from `flai/go.mod` and the tool pins from `scripts/install-tools.sh`, until S-0760 moves those onto `agent.image.args`. For your project's story agents on the `container` harness, that image wins over the one `--image` names. The key stays in the manifest: it is never copied into a story's agent, and naming one under the planner's, the orchestrator's, the analyzer's, the curator's, or a role's agent is refused. This repository's layer, `flai/images/system-flow/Dockerfile`, carries Go, golangci-lint, ShellCheck, pnpm, and, for the smoke tier's install test, curl, openssl, GoReleaser, and procps-ng's `ps` ([docker.md](../../design/tech/docker.md)); `scripts/agent-image.sh --check` fails on a build of it that lacks one, and then runs the smoke tier inside it (S-0672). The layer is yours: flai builds it on your machine only, and does not stamp or sign it ([ADR-0203](../../design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md)).
 
 `flai check` reports `agent.image` on the manifest's `layer` line ([Check the repository](#check-the-repository)):
 
 | When | Finding |
 |------|---------|
 | The Dockerfile is not a file | A warning, which fails `--strict` |
-| An image the project's agents need, the layer's or a harness image, is not built on this host | A warning `--strict` passes over, naming `flai image status` and `make agent-images` |
+| `agent.image.args` names an argument no `ARG` of the layer's Dockerfile declares | A warning on the argument's line, which fails `--strict` |
+| An image the project's agents need, the layer's or a harness image, is not built on this host | A warning `--strict` passes over, naming `flai image status` and `flai image ensure` |
 | Such an image is stale | A warning `--strict` passes over, saying why and naming `flai image status` |
 | `docker` is not on `PATH` or cannot say, or the project's flai cannot say its version | A warning `--strict` passes over, saying the images went unchecked |
 | The manifest names no layer | Nothing |

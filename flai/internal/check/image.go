@@ -101,7 +101,7 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 	// The manifest's own check keeps layer a clean path inside the repository.
 	dockerfile := filepath.Join(repo.Root, filepath.FromSlash(layer))
 	if st, err := os.Stat(dockerfile); err != nil || st.IsDir() {
-		add(false, "agent.image.layer names "+layer+", which is not a file: fix the path in "+manifest.File+" or add the Dockerfile, then build its image with `make agent-images`")
+		add(false, "agent.image.layer names "+layer+", which is not a file: fix the path in "+manifest.File+" or add the Dockerfile, then build its image with `flai image ensure`")
 		return
 	}
 	undeclaredArgs(res, mf, layer, dockerfile, repo.Manifest.LayerArgs())
@@ -132,7 +132,7 @@ func AgentImage(res *Result, repo *workitem.Repo, probe ImageProbe) {
 	image := repo.Manifest.LayerImage(harness.ClaudeCode)
 	switch {
 	case errors.Is(inspectErr, ErrNoDocker):
-		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker is not on PATH; install Docker to check it, and build it with `make agent-images`")
+		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker is not on PATH; install Docker to check it, and build it with `flai image ensure`")
 		return
 	case inspectErr != nil:
 		add(true, "the image "+image+" of agent.image.layer "+layer+" is not checked: docker could not say whether it is built ("+firstLine(inspectErr.Error())+"); start Docker to check it")
@@ -163,17 +163,17 @@ func imageFinding(s agentimage.Status, layer string) string {
 	case agentimage.StateMissing:
 		switch {
 		case s.Kind == agentimage.KindLayer:
-			return what + " is not built on this host, so flai serve cannot run the project's agents in it: see `flai image status`, and build it with `make agent-images`, or `scripts/agent-image.sh --layer` over the harness image already built"
+			return what + " is not built on this host, so flai serve cannot run the project's agents in it: see `flai image status`, and build it with `flai image ensure`, or `flai image build --layer` over the harness image already built"
 		case s.Source == agentimage.SourceHost:
 			return what + " is not on this host: see `flai image status`, and build it, or name another with `flai serve agent harness container --image " + s.Inner + "=<image>`"
 		}
-		return what + " is not built on this host, so flai serve cannot run the project's agents in it, nor build a layer over it: see `flai image status`, and build it with `make agent-images`"
+		return what + " is not built on this host, so flai serve cannot run the project's agents in it, nor build a layer over it: see `flai image status`, and build it with `flai image ensure`"
 	case agentimage.StateStale:
 		why := make([]string, 0, len(s.Reasons))
 		for _, r := range s.Reasons {
 			why = append(why, r.Message)
 		}
-		return what + " is stale: " + strings.Join(why, "; ") + "; see `flai image status`, and rebuild it with `make agent-images`"
+		return what + " is stale: " + strings.Join(why, "; ") + "; see `flai image status`, and rebuild it with `flai image ensure`"
 	}
 	return ""
 }
