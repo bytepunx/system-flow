@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2156.7474
-accrued_seconds: 1557669
-tasks_completed: 3305
-last_run: 2026-11-13T13:18:22Z
+accrued_cost: 2157.0571
+accrued_seconds: 1557710
+tasks_completed: 3307
+last_run: 2026-11-13T13:19:18Z
 ---
 
 # Orchestrator activity
@@ -23169,6 +23169,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.0797 USD, estimated
+
+### 2026-11-13T13:18:57Z
+
+- Summary: TH-1159 (board starved) needs nothing: flai serve resolved it when S-0770 started, and in-progress is now full at 3 of 3 (S-0661, S-0745, S-0770). Every draft in flai promote --drafts still has no cost of delay value, and the threads TH-1113 to TH-1131 already ask for it, so no draft was finalized and no thread was opened.
+- Items: TH-1159
+- Seconds: 20
+- Cost: 0.0943 USD, estimated
+
+### 2026-11-13T13:19:18Z
+
+- Summary: TH-1159 needed no action from me. flai serve closed the thread itself once S-0770 started, which ended the starvation.
+- Items: none
+- Seconds: 21
+- Cost: 0.2154 USD, estimated
 
 ## Refusals
 

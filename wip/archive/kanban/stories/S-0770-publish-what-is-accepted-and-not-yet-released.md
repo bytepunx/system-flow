@@ -3,10 +3,10 @@ id: S-0770
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T13:16:45Z
-updated: 2026-11-13T13:16:53Z
+updated: 2026-11-13T13:22:23Z
 transitions:
   - to: ready
     at: 2026-11-13T13:16:46Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T13:16:53Z
     by: agent-S-0770
+  - to: review
+    at: 2026-11-13T13:19:20Z
+    by: agent-S-0770
+  - to: done
+    at: 2026-11-13T13:22:23Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0770-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,19 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 100
-  estimated: true
-  priced_by: estimate
+  seconds: 158
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 15
+      ceremony: 1
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 267
-      cache_read: 1685254
-      cache_write: 153683
-      cost: 0.6871
+      input: 54
+      output: 8513
+      cache_read: 3671532
+      cache_write: 171406
+      cost: 2.276
   strategic:
     - kind: orchestrator
       seconds: 26
@@ -57,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3297 Fetch the remote's branch and tags
@@ -69,3 +75,23 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+Every step ran in the main checkout, each `flai` step as the manifest's `flai.command`, `scripts/flai.sh`:
+
+| Step | Task | Exit | Result |
+|------|------|------|--------|
+| fetch | T-3297 | 0 | `git fetch --tags` |
+| evaluate | T-3298 | 0 | threshold met: S-0740 accepted and not yet released, count 1 of 1 |
+| publish | T-3299 | 0 | flai 1.90.0 → 1.91.0, tag `flai/v1.91.0`, branch and tag pushed |
+
+Released: `flai/v1.91.0` (minor, S-0740). T-3297's exit is recorded here, not in its own Notes: it was closed before its Notes were written, and a closed task is not edited.
+
+### Accepted by the orchestrator
+
+- Verified: 8fb630e21efe049df57bea90534d94f6f3539466
+- At: 2026-11-13T13:22:23Z
+
+Verdict: pass
+- 1: T-3297 done
+- 2: T-3298 done
+- 3: T-3299 done
