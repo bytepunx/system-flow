@@ -32,6 +32,10 @@ export type AgentRun = {
 	conversations?: string[];
 	/** The stories whose agents' replies it ended waiting on (S-0335). */
 	waits_on?: string[];
+	/** The image job its start asked for, or joined, to make its agent images (S-0751). */
+	image_job?: string;
+	/** Whether its start waits for that job: it has no process yet (S-0751). */
+	image_held?: boolean;
 };
 
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';

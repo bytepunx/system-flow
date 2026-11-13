@@ -206,6 +206,99 @@ describe('StoryAgent (S-0104)', () => {
 		);
 	});
 
+	// S-0757: a start held on, or failed after, the image job that makes its agent images links the
+	// job on the Agent images page
+	describe('an image job', () => {
+		const job = '20261113T160000Z-001';
+		const link = () =>
+			document.querySelector<HTMLAnchorElement>('[data-testid="story-agent-image-job"]');
+		const failure = `the image job ${job}, which makes flai-agent:1.94.0 for /home/me/flow, failed at docker build: the base image is not on this host; read its log /home/me/.flai/serve/image-jobs/${job}.log, mend what it names, and run flai image ensure in the project to see it again`;
+
+		it('says a held start waits for its image, not that it failed, and links the job', async () => {
+			await show(
+				{
+					'S-0104': {
+						state: 'waiting',
+						why: `waiting for its agent image: the agent images flai-agent:1.94.0 are missing: flai serve's image job ${job} makes them`,
+						run: { ...run, image_job: job, image_held: true }
+					}
+				},
+				true,
+				{ status: 'ready', writable: true }
+			);
+			expect(text()).toContain(
+				`agent waiting for its image: the image job ${job} makes its agent images, and flai serve starts the agent once it passes.`
+			);
+			expect(link()!.getAttribute('href')).toBe(`/ops/images#image-job-${job}`);
+			expect(text()).not.toContain('failed');
+			expect(document.querySelector<HTMLElement>('[data-testid="agent-dot"]')!.dataset.state).toBe(
+				'waiting'
+			);
+			// no process yet: no start to give, no stream to follow, and no Retry
+			expect(text()).not.toContain('started 2026-09-23');
+			expect(document.querySelector('[data-testid="agent-stream"]')).toBeNull();
+			expect(document.querySelector('[data-testid="story-agent-retry"]')).toBeNull();
+		});
+
+		it('gives the cause of a start the job failed, and links the job', async () => {
+			await show(
+				{
+					'S-0104': {
+						state: 'failed',
+						why: `could not be started: ${failure}`,
+						run: {
+							...run,
+							ended: '2026-09-23T18:05:00Z',
+							outcome: 'failed',
+							error: failure,
+							image_job: job
+						}
+					}
+				},
+				true,
+				{ status: 'ready', writable: true }
+			);
+			const line = document
+				.querySelector('[data-testid="story-agent-image-failed"]')!
+				.textContent!.replace(/\s+/g, ' ');
+			expect(line).toContain(`agent could not be started after the image job ${job}: ${failure}`);
+			expect(link()!.getAttribute('href')).toBe(`/ops/images#image-job-${job}`);
+			// in place of the bare refusal, and Retry still asks flai for another
+			expect(document.querySelector('[data-testid="story-agent-line"]')).toBeNull();
+			expect(document.querySelector('[data-testid="story-agent-retry"]')).not.toBeNull();
+		});
+
+		it('gives a run that failed with no image job its refusal as before', async () => {
+			const refusal = 'the harness claude-code is not on PATH';
+			await show({
+				'S-0104': {
+					state: 'failed',
+					why: `could not be started: ${refusal}`,
+					run: { ...run, ended: '2026-09-23T18:05:00Z', outcome: 'failed', error: refusal }
+				}
+			});
+			expect(text()).toContain(
+				`agent failed (claude-code, claude-haiku-4-5): could not be started: ${refusal}`
+			);
+			expect(link()).toBeNull();
+			expect(document.querySelector('[data-testid="story-agent-image-failed"]')).toBeNull();
+		});
+
+		it('gives a run that went on after its job, and then failed, its own failure', async () => {
+			await show({
+				'S-0104': {
+					state: 'failed',
+					why: 'ended (exit 1) with S-0104 in in-progress',
+					run: { ...run, ended: '2026-09-23T18:30:00Z', exit: 1, image_job: job }
+				}
+			});
+			expect(text()).toContain(
+				'agent failed (claude-code, claude-haiku-4-5): ended (exit 1) with S-0104 in in-progress'
+			);
+			expect(link()).toBeNull();
+		});
+	});
+
 	// S-0116: a story in ready or in progress whose agent dropped or failed gets a new one; S-0118:
 	// from Retry at the top right of the pane, which hides once pressed
 	describe('Retry', () => {

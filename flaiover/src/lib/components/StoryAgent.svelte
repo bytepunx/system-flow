@@ -14,7 +14,10 @@
 	// that waits on other stories' agents' replies rather than the operator names those stories, linked
 	// (S-0335). Once the agent has started, its stream, as the Activity page shows it, is below, open
 	// while the agent runs (S-0541). A refusal or a waiting reason that names a Configuration page by
-	// its /settings path links it, so the operator goes to the setting it lacks (ADR-0261).
+	// its /settings path links it, so the operator goes to the setting it lacks (ADR-0261). An agent
+	// whose start waits for the image job that makes its agent images says it waits for its image,
+	// not that it failed, and one whose start failed after that job gives flai's cause, each with the
+	// job linked on the Agent images page (S-0757).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -34,6 +37,7 @@
 	} from '$lib/activity';
 	import AgentDot from './AgentDot.svelte';
 	import AgentStream from './AgentStream.svelte';
+	import { imageJobAnchor } from './ImageJob.svelte';
 
 	let {
 		story,
@@ -95,8 +99,17 @@
 	$effect(() => {
 		onactivity?.(activity);
 	});
-	// A held story's run is flai's stand-in when it never had an agent: it has not started.
-	const started = $derived(!!activity?.run.started);
+	// The image job a start waits for, with no process yet, and one whose start failed after it,
+	// the job's cause or another's (S-0757): each is said with a link to the job.
+	const imageHeld = $derived(
+		activity?.state === 'waiting' && activity.run.image_held ? activity.run.image_job : undefined
+	);
+	const imageFailed = $derived(
+		activity?.state === 'failed' && activity.run.error ? activity.run.image_job : undefined
+	);
+	// A held story's run is flai's stand-in when it never had an agent, and one held on its image
+	// job has no process yet: neither has started.
+	const started = $derived(!!activity?.run.started && !imageHeld);
 	const live = $derived(activity?.state === 'working' || activity?.state === 'waiting');
 	// The rules are the card menu's too (S-0202); Retry hides once pressed for that run.
 	const canRetry = $derived(
@@ -145,6 +158,12 @@
 				data-testid="story-agent-settings-link">{part.text}</a
 			>{:else}{part.text}{/if}{/each}{/snippet}
 
+{#snippet imageJob(id: string)}<a
+		class="underline"
+		href="{resolve('/ops/images')}#{imageJobAnchor(id)}"
+		data-testid="story-agent-image-job">the image job {id}</a
+	>{/snippet}
+
 {#if activity}
 	<section class="rounded border border-line bg-surface p-3" data-testid="story-agent">
 		<div class="mb-2 flex items-center gap-2">
@@ -161,6 +180,17 @@
 		{#if activity.hold}
 			<p class="text-xs" data-testid="story-agent-held">
 				{@render linked(activity.hold.reason)}
+			</p>
+		{:else if imageHeld}
+			<p class="text-xs" data-testid="story-agent-image-held">
+				agent waiting for its image: {@render imageJob(imageHeld)} makes its agent images, and flai serve
+				starts the agent once it passes.
+			</p>
+		{:else if imageFailed}
+			<p class="text-xs" data-testid="story-agent-image-failed">
+				agent could not be started after {@render imageJob(imageFailed)}: {@render linked(
+					activity.run.error ?? ''
+				)}
 			</p>
 		{:else}
 			<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
