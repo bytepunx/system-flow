@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2165.2978
-accrued_seconds: 1559651
-tasks_completed: 3370
-last_run: 2026-11-13T17:22:59Z
+accrued_cost: 2166.4192
+accrued_seconds: 1559995
+tasks_completed: 3376
+last_run: 2026-11-13T19:10:47Z
 ---
 
 # Orchestrator activity
@@ -23624,6 +23624,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.1245 USD, estimated
+
+### 2026-11-13T17:24:13Z
+
+- Summary: Accepted S-0776 (publish formula instance) at 4f9055659e445cd01d17972211f96e71a3df479e under accept_reviews: close-out passed at head, T-3316/T-3317/T-3318 done; it released flai/v1.94.1 and flaiover/v0.60.0 for S-0757
+- Items: S-0776
+- Seconds: 38
+- Cost: 0.1375 USD, estimated
+
+### 2026-11-13T17:24:26Z
+
+- Summary: Did not publish after accepting S-0776: release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, nothing accepted awaits a release
+- Items: S-0776
+- Seconds: 13
+- Cost: 0.0270 USD, estimated
+
+### 2026-11-13T17:24:45Z
+
+- Summary: I accepted S-0776, the publish formula's run, at commit `4f9055659e445cd01d17972211f96e71a3df479e`. No new release was due afterwards, so I didn't publish one.
+- Items: none
+- Seconds: 19
+- Cost: 0.1920 USD, estimated
+
+### 2026-11-13T19:09:06Z
+
+- Summary: API Error: Unable to connect to API: SSL certificate hostname mismatch
+- Items: none
+- Seconds: 249
+- Cost: 0.6386 USD, estimated
+
+### 2026-11-13T19:10:31Z
+
+- Summary: TH-1170 (S-0759's agent ended 3 times, exit 1, auto-restarts used up): left for the operator. Its only entry is flai serve's notice, which answer_threads leaves out, and no permission lets the orchestrator restart a story's agent (flai serve agent restart S-0759 or Retry on the story's page).
+- Items: S-0759
+- Seconds: 9
+- Cost: 0.0504 USD, estimated
+
+### 2026-11-13T19:10:47Z
+
+- Summary: I left TH-1170 for you to decide. I didn't restart S-0759's agent and didn't reply on the thread.
+- Items: none
+- Seconds: 16
+- Cost: 0.0759 USD, estimated
 
 ## Refusals
 

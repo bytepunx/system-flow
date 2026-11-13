@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1489
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 401
-      cache_read: 3874486
-      cache_write: 196281
-      cost: 1.5254
+      input: 53
+      output: 20120
+      cache_read: 3992851
+      cache_write: 144348
+      cost: 2.0483
 ---
 # T-3191 flai serve agent image command and auto set them, flai serve settings and agent show show them, and flai guard refuses them to served agents
 

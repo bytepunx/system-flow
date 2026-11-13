@@ -18,22 +18,21 @@ tags: [cli]
 topics: [release]
 usage:
   source: sum
-  seconds: 30977
-  estimated: true
-  priced_by: estimate
+  seconds: 33079
+  priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 29
       test_runs: 1
       hand_edits: 1
-      work: 575
+      work: 592
   models:
     - model: claude-opus-5-5
-      input: 3114
-      output: 1129406
-      cache_read: 272090908
-      cache_write: 7643144
-      cost: 122.5017
+      input: 3234
+      output: 1302628
+      cache_read: 282779376
+      cache_write: 7931858
+      cost: 130.9454
     - model: claude-sonnet-5-5
       input: 18
       output: 7753
@@ -52,15 +51,15 @@ usage:
           cache_write: 652148
           cost: 46.0268
     - kind: orchestrator
-      seconds: 1127
+      seconds: 1136
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 293
-          output: 2311
-          cache_read: 10422821
-          cache_write: 1157430
-          cost: 3.3471
+          input: 299
+          output: 2352
+          cache_read: 10573857
+          cache_write: 1178713
+          cost: 3.3975
         - model: claude-sonnet-5-5
           input: 40
           output: 276

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 810
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 174
-      cache_read: 2844113
-      cache_write: 17487
-      cost: 1.0723
+      input: 37
+      output: 14143
+      cache_read: 2806805
+      cache_write: 101471
+      cost: 1.4398
 ---
 # T-3190 The host's configuration keeps, per project, the container harness's build command and whether flai serve brings images back by itself
 

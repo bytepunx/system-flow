@@ -24,16 +24,16 @@ touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go,
 after: [T-3190, T-3192]
 usage:
   source: log
-  seconds: 1428
+  seconds: 1430
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 625
-      cache_read: 7795038
-      cache_write: 157732
-      cost: 2.98
+      input: 103
+      output: 39307
+      cache_read: 7800535
+      cache_write: 282003
+      cost: 4.0015
 ---
 # T-3194 The image job runs the operator's build command when the host names one, and a start refuses a missing image when the automatic job is off
 

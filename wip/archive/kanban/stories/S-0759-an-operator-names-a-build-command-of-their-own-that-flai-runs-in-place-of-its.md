@@ -3,11 +3,11 @@ id: S-0759
 type: story
 nature: feature
 title: An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:04:53Z
-updated: 2026-11-13T17:19:35Z
+updated: 2026-11-13T19:45:12Z
 transitions:
   - to: ready
     at: 2026-11-13T07:31:00Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T16:13:20Z
     by: agent-S-0759
+  - to: review
+    at: 2026-11-13T19:44:51Z
+    by: agent-S-0759
+  - to: done
+    at: 2026-11-13T19:45:12Z
+    by: alex
 tags: [cli]
 topics: [docker, security]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/agentimage/command.go, flai/internal/agentimage/command_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/cmd/serve_agent.go, flai/cmd/serve_agent_image.go, flai/cmd/serve_agent_image_test.go, flai/cmd/serve_view.go, flai/internal/guard/guard_tables.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/checks.go]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/agentimage/command.go, flai/internal/agentimage/command_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md, flai/cmd/serve_agent.go, flai/cmd/serve_agent_image.go, flai/cmd/serve_agent_image_test.go, flai/cmd/serve_view.go, flai/internal/guard/guard_tables.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/serve/agents.go, flai/internal/serve/checks.go, flai/internal/check/image.go, flai/internal/check/image_test.go]
 after: [S-0751]
 agent:
   harness: claude-code
@@ -26,31 +32,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3975
-  estimated: true
-  priced_by: estimate
+  seconds: 6077
+  priced_by: harness
   turns:
     - day: 2026-11-13
       test_runs: 1
-      work: 54
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 338
-      output: 1732
-      cache_read: 24031502
-      cache_write: 966472
-      cost: 9.3671
+      input: 458
+      output: 174954
+      cache_read: 34719970
+      cache_write: 1255186
+      cost: 17.8108
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 30
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 30
-          cache_read: 191783
-          cache_write: 25659
-          cost: 0.0625
+          input: 10
+          output: 71
+          cache_read: 342819
+          cache_write: 46942
+          cost: 0.1129
 forecast:
   duration: 42m
   delivery: 2026-11-13T17:01:00Z
@@ -78,7 +83,7 @@ After this story the host's configuration names a build command per project, whi
 - [x] With a build command named, `flai image ensure` and the image job run it from the project's root with the `FLAI_IMAGE_*` variables ADR-0295 names: the version, the inner harness, the tags and recipes the images must have, and which are missing or stale. They treat its exit as the outcome, with its output streamed and logged as flai's own build's is, and the step limit applied to it. `flai image status` then reads the images the command made, and a missing image or other labels after it fail the run
 - [x] `flai serve agent image auto off [--project <root>]` turns the automatic image job off for the project. A start then refuses a missing or stale image, naming `flai image ensure` and the setting, and `flai image ensure` by hand still runs
 - [x] `flai guard` refuses every agent `flai serve` started either setting, as ADR-0220 refuses every command that writes the host's configuration, shown by a test
-- [ ] `docs/operators/settings.md` has a row for each setting and each flag, `docs/users/flai.md` and the generated `docs/users/flai-reference.md` describe them, `docs/operators/runbooks/agent-container.md` gains a section on substituting one's own machinery, and `design/system/flai-cli.md` marks the substitution built
+- [x] `docs/operators/settings.md` has a row for each setting and each flag, `docs/users/flai.md` and the generated `docs/users/flai-reference.md` describe them, `docs/operators/runbooks/agent-container.md` gains a section on substituting one's own machinery, and `design/system/flai-cli.md` marks the substitution built
 
 ## Tasks
 - T-3190 The host's configuration keeps, per project, the container harness's build command and whether flai serve brings images back by itself

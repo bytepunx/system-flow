@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1505
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 87
-      output: 363
-      cache_read: 5873636
-      cache_write: 343926
-      cost: 2.3298
+      input: 80
+      output: 30731
+      cache_read: 6098536
+      cache_write: 220472
+      cost: 3.1284
 ---
 # T-3192 flai image ensure runs the operator's build command in place of its own pull and build, with the image named in variables and the step limit applied
 
