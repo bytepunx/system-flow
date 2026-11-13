@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:04:53Z
-updated: 2026-11-12T21:10:09Z
+updated: 2026-11-13T07:23:13Z
 transitions: []
 tags: [cli]
 topics: [docker, security]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 42m
-  delivery: 2026-11-13T11:04:00Z
+  delivery: 2026-11-13T21:17:00Z
   basis: "Its own forecast of 42m; 33rd in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738, S-0739, S-0740, S-0741, S-0742, S-0743, S-0744, S-0745, S-0746, S-0747, S-0748, S-0749, S-0750, S-0751, S-0752, S-0753, S-0754, S-0755, S-0756, S-0757 and S-0758."
   by: flai
-  at: 2026-11-12T21:10:09Z
+  at: 2026-11-13T07:23:13Z
 ---
 # S-0759 An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai
 
