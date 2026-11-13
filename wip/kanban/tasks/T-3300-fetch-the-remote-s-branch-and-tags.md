@@ -22,7 +22,7 @@ stream: S-0771
 tags: []
 usage:
   source: log
-  seconds: 14
+  seconds: 15
   estimated: true
   priced_by: estimate
   models:

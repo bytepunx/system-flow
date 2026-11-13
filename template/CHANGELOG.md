@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.37 - 2026-11-13
+
+- S-0745 flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project (patch).
 - S-0745 The commented agent.image block of system-flow.yaml names the layer's build arguments, agent.image.args, which flai image ensure builds the layer with (patch, ADR-0295).
 
 ## 1.1.36 - 2026-11-13
