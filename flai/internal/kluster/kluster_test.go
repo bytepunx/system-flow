@@ -36,6 +36,18 @@ case "$sub" in
 esac
 `
 
+// resolvedTempDir is t.TempDir with its symlinks resolved, for a folder a
+// fake script runs in: $(pwd) prints the resolved path, which on macOS,
+// where /var is a link to /private/var, is not the one t.TempDir names.
+func resolvedTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
 type fixture struct {
 	root, log, status string
 	c                 Cluster
@@ -45,7 +57,7 @@ type fixture struct {
 // first on PATH, with nothing else on it.
 func setup(t *testing.T, config string) fixture {
 	t.Helper()
-	root, bin := t.TempDir(), t.TempDir()
+	root, bin := resolvedTempDir(t), t.TempDir()
 	if err := os.WriteFile(filepath.Join(bin, "kluster"), []byte(fakeKluster), 0o755); err != nil {
 		t.Fatal(err)
 	}

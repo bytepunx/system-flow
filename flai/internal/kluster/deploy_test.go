@@ -98,7 +98,7 @@ const fakeToken = "fake-token-1"
 // PATH, with two nodes of the cluster and one other container.
 func deploySetup(t *testing.T) deployFixture {
 	t.Helper()
-	f := deployFixture{fixture: setup(t, authstarConfig), worktree: t.TempDir(), env: t.TempDir()}
+	f := deployFixture{fixture: setup(t, authstarConfig), worktree: resolvedTempDir(t), env: t.TempDir()}
 	bin := t.TempDir()
 	for name, script := range map[string]string{"docker": fakeDocker, "kubectl": fakeKubectl} {
 		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o755); err != nil {
