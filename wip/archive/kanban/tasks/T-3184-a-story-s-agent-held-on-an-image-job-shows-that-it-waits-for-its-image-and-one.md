@@ -3,16 +3,37 @@ id: T-3184
 type: task
 nature: feature
 title: A story's agent held on an image job shows that it waits for its image, and one failed by a job shows the cause, each linked to the job
-status: backlog
+status: done
 parent: S-0757
 owner: alex
 created: 2026-11-12T16:04:02Z
-updated: 2026-11-12T16:04:02Z
-transitions: []
+updated: 2026-11-13T16:52:10Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:40:49Z
+    by: agent-S-0757
+  - to: in-progress
+    at: 2026-11-13T16:40:49Z
+    by: agent-S-0757
+  - to: done
+    at: 2026-11-13T16:52:10Z
+    by: agent-S-0757
 stream: S-0757
 tags: [dashboard]
-touches: [flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts]
+touches: [flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/activity.ts, flaiover/src/routes/ops/images/+page.svelte]
 after: [T-3181]
+usage:
+  source: log
+  seconds: 681
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 23213
+      cache_read: 3477867
+      cache_write: 130763
+      cost: 1.9254
 ---
 # T-3184 A story's agent held on an image job shows that it waits for its image, and one failed by a job shows the cause, each linked to the job
 

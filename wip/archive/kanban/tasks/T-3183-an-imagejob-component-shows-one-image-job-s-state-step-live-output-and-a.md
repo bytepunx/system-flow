@@ -3,16 +3,37 @@ id: T-3183
 type: task
 nature: feature
 title: An ImageJob component shows one image job's state, step, live output, and a failure's cause with a Retry button
-status: backlog
+status: done
 parent: S-0757
 owner: alex
 created: 2026-11-12T16:03:51Z
-updated: 2026-11-12T16:03:58Z
-transitions: []
+updated: 2026-11-13T16:51:57Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:40:48Z
+    by: agent-S-0757
+  - to: in-progress
+    at: 2026-11-13T16:40:48Z
+    by: agent-S-0757
+  - to: done
+    at: 2026-11-13T16:51:57Z
+    by: agent-S-0757
 stream: S-0757
 tags: [dashboard]
-touches: [flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json]
+touches: [flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/lib/components/LogFeed.svelte.test.ts]
 after: [T-3181]
+usage:
+  source: log
+  seconds: 669
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 29148
+      cache_read: 4367085
+      cache_write: 164197
+      cost: 2.4177
 ---
 # T-3183 An ImageJob component shows one image job's state, step, live output, and a failure's cause with a Retry button
 

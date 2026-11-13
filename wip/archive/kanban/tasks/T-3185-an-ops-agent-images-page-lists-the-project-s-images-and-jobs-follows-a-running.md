@@ -3,16 +3,37 @@ id: T-3185
 type: task
 nature: feature
 title: "An Ops › Agent images page lists the project's images and jobs, follows a running job, and retries a failed one"
-status: backlog
+status: done
 parent: S-0757
 owner: alex
 created: 2026-11-12T16:04:07Z
-updated: 2026-11-12T16:04:14Z
-transitions: []
+updated: 2026-11-13T16:59:47Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:52:54Z
+    by: agent-S-0757
+  - to: in-progress
+    at: 2026-11-13T16:52:54Z
+    by: agent-S-0757
+  - to: done
+    at: 2026-11-13T16:59:47Z
+    by: agent-S-0757
 stream: S-0757
 tags: [dashboard]
-touches: [flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts]
+touches: [flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/routes/ops/images/images.svelte.test.ts]
 after: [T-3182, T-3183]
+usage:
+  source: log
+  seconds: 413
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 21454
+      cache_read: 3214306
+      cache_write: 120854
+      cost: 1.7795
 ---
 # T-3185 An Ops › Agent images page lists the project's images and jobs, follows a running job, and retries a failed one
 

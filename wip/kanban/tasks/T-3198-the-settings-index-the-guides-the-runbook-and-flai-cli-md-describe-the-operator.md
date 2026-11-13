@@ -3,12 +3,18 @@ id: T-3198
 type: task
 nature: feature
 title: The settings index, the guides, the runbook, and flai-cli.md describe the operator's build command and the switch that turns the automatic image job off
-status: backlog
+status: in-progress
 parent: S-0759
 owner: alex
 created: 2026-11-12T16:05:58Z
-updated: 2026-11-13T16:15:49Z
-transitions: []
+updated: 2026-11-13T17:19:36Z
+transitions:
+  - to: ready
+    at: 2026-11-13T17:19:36Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T17:19:36Z
+    by: system-flow
 stream: S-0759
 tags: [cli]
 touches: [docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]

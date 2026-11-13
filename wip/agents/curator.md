@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 288.0567
-accrued_seconds: 31713
-tasks_completed: 190
-last_run: 2026-11-13T16:16:05Z
+accrued_cost: 289.2233
+accrued_seconds: 31785
+tasks_completed: 191
+last_run: 2026-11-13T16:19:15Z
 ---
 
 # Curator activity
@@ -1531,3 +1531,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0486, D-0592, D-0605, D-0609, D-0611
 - Seconds: 173
 - Cost: 1.9291 USD, estimated
+
+### 2026-11-13T16:19:15Z
+
+- Summary: I found nothing to take in. I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. S-0775's one candidate, that a formula instance's tasks are worked as the formula gives them, is already in ADR-0239 § "1. The instance's agent works the steps". No design, docs, or ADR file has changed since the last run, so no active entry could be absorbed.
+- Trigger: accepted S-0775
+- Items: none
+- Seconds: 72
+- Cost: 1.1666 USD, estimated

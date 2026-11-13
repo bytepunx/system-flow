@@ -3,11 +3,11 @@ id: T-3181
 type: task
 nature: feature
 title: The host API reads the project's agent images and image jobs, reads a job's log from an offset, and starts a new job behind the agent host action
-status: in-progress
+status: done
 parent: S-0757
 owner: alex
 created: 2026-11-12T16:03:36Z
-updated: 2026-11-13T16:14:38Z
+updated: 2026-11-13T16:35:56Z
 transitions:
   - to: ready
     at: 2026-11-13T16:14:37Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T16:14:38Z
     by: system-flow
+  - to: done
+    at: 2026-11-13T16:35:56Z
+    by: agent-S-0757
 stream: S-0757
 tags: [cli]
-touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go]
+touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/hostapi/guardreads_test.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_methods.go, flai/internal/serve/serve.go, flaiover/src/lib/server/agent.ts]
+usage:
+  source: log
+  seconds: 1278
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 142
+      output: 54472
+      cache_read: 8161210
+      cache_write: 306851
+      cost: 4.5182
 ---
 # T-3181 The host API reads the project's agent images and image jobs, reads a job's log from an offset, and starts a new job behind the agent host action
 

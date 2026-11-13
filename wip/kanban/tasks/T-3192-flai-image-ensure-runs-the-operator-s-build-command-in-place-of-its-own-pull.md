@@ -3,16 +3,37 @@ id: T-3192
 type: task
 nature: feature
 title: flai image ensure runs the operator's build command in place of its own pull and build, with the image named in variables and the step limit applied
-status: backlog
+status: done
 parent: S-0759
 owner: alex
 created: 2026-11-12T16:05:43Z
-updated: 2026-11-13T16:15:42Z
-transitions: []
+updated: 2026-11-13T16:55:18Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:30:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T16:30:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T16:55:18Z
+    by: agent-S-0759
 stream: S-0759
 tags: [cli]
 touches: [flai/internal/agentimage/command.go, flai/internal/agentimage/command_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go]
 after: [T-3190]
+usage:
+  source: log
+  seconds: 1505
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 87
+      output: 363
+      cache_read: 5873636
+      cache_write: 343926
+      cost: 2.3298
 ---
 # T-3192 flai image ensure runs the operator's build command in place of its own pull and build, with the image named in variables and the step limit applied
 

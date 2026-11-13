@@ -3,11 +3,11 @@ id: S-0757
 type: story
 nature: feature
 title: The dashboard shows each agent image job as it runs, its output, and a failure's cause, and offers the operator a retry
-status: in-progress
+status: done
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:03:25Z
-updated: 2026-11-13T16:13:31Z
+updated: 2026-11-13T17:20:19Z
 transitions:
   - to: ready
     at: 2026-11-13T07:30:43Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T16:13:31Z
     by: agent-S-0757
+  - to: review
+    at: 2026-11-13T17:18:44Z
+    by: agent-S-0757
+  - to: done
+    at: 2026-11-13T17:20:19Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [docker, dashboard]
-touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flaiover/src/routes/api/images/+server.ts, flaiover/src/routes/api/images/retry/+server.ts, flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flaiover/src/routes/api/images/+server.ts, flaiover/src/routes/api/images/retry/+server.ts, flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flai/internal/hostapi/guardreads_test.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_methods.go, flai/internal/serve/serve.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/images.ts, flaiover/src/lib/server/images.ts, flaiover/src/routes/api/images/images.test.ts, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/lib/components/LogFeed.svelte.test.ts, flaiover/src/lib/activity.ts, flaiover/src/routes/ops/images/images.svelte.test.ts]
 after: [S-0751]
 agent:
   harness: claude-code
@@ -25,20 +31,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3929
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 2
+      work: 50
+  models:
+    - model: claude-opus-5-5
+      input: 532
+      output: 203439
+      cache_read: 30480014
+      cache_write: 1146009
+      cost: 16.8742
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 34
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 19
-          cache_read: 112633
-          cache_write: 18923
-          cost: 0.0377
+          input: 12
+          output: 84
+          cache_read: 291182
+          cache_write: 56884
+          cost: 0.1009
 forecast:
   duration: 50m
   delivery: 2026-11-13T17:10:00Z
@@ -59,12 +76,12 @@ After this story the dashboard shows, under Ops, the project's agent images and 
 
 ## Acceptance criteria
 
-- [ ] A host API read gives the project's agent images with their state, and the image jobs, running and the last ended, each with its id, its images, its way, its current step, its start and end, and its outcome. A log read gives a job's output from an offset, as `kluster.log` does for a deploy's step
-- [ ] A host API write starts a new image job for the project, behind the `agent` host action. It is refused while a job for the same images runs, and it says why
-- [ ] An Ops page lists the images and the jobs, follows a running job's output live, and shows a failed job's cause, step, and output with a Retry button that calls the write
-- [ ] A story's agent held on an image job shows "waiting for its image" with a link to the job, and a run failed by a job shows the cause and a link, in place of the bare refusal
-- [ ] flaiover's tests cover the page, the component, and the held run, and the component's examples file passes `components.examples`
-- [ ] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the page, the retry, and the host action that gates it
+- [x] A host API read gives the project's agent images with their state, and the image jobs, running and the last ended, each with its id, its images, its way, its current step, its start and end, and its outcome. A log read gives a job's output from an offset, as `kluster.log` does for a deploy's step
+- [x] A host API write starts a new image job for the project, behind the `agent` host action. It is refused while a job for the same images runs, and it says why
+- [x] An Ops page lists the images and the jobs, follows a running job's output live, and shows a failed job's cause, step, and output with a Retry button that calls the write
+- [x] A story's agent held on an image job shows "waiting for its image" with a link to the job, and a run failed by a job shows the cause and a link, in place of the bare refusal
+- [x] flaiover's tests cover the page, the component, and the held run, and the component's examples file passes `components.examples`
+- [x] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the page, the retry, and the host action that gates it
 
 ## Tasks
 - T-3181 The host API reads the project's agent images and image jobs, reads a job's log from an offset, and starts a new job behind the agent host action
@@ -93,3 +110,16 @@ Proposed slice 4b of E-0036. The log read follows `kluster.log` (ADR-0263), and 
 - Tasks, in four layers: T-3181 (the host API) first; T-3182, T-3183, and T-3184 share no file and run together; T-3185 uses T-3182's route and T-3183's component; T-3186 describes the page and the held run.
 - Forecast 50m: `flai forecast` gives 40m (109 s per unit over 118 done large feature stories, size 22). Raised for six tasks across Go and flaiover, each with its own vitest and svelte-check cycle. Delivery is as flai gives it.
 - Cost of delay: not set yet. E-0036 has no inputs; TH-1094 asks the operator for them.
+
+### Accepted by the orchestrator
+
+- Verified: 9343de9b3080b1c410d65f6ff431c061fe53a2c0
+- At: 2026-11-13T17:20:19Z
+
+Verdict: meets all 6 criteria at 9343de9b3080b1c410d65f6ff431c061fe53a2c0; flai verify passed every step there.
+- 1: flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/guardreads_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/serve.go
+- 2: flai/internal/hostapi/images.go, flai/internal/hostapi/writes_actions.go, flai/internal/hostapi/writes_methods.go, flai/internal/hostapi/images_test.go, flai/internal/serve/imagejob.go
+- 3: flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/LogFeed.svelte, flaiover/src/routes/api/images/+server.ts, flaiover/src/routes/api/images/retry/+server.ts, flaiover/src/lib/images.ts, flaiover/src/lib/server/images.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/sitemenu.ts
+- 4: flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/activity.ts
+- 5: flaiover/src/routes/ops/images/images.svelte.test.ts, flaiover/src/lib/components/ImageJob.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/routes/api/images/images.test.ts, flaiover/src/lib/components/LogFeed.svelte.test.ts, flaiover/src/lib/sitemenu.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json
+- 6: design/system/flaiover-dashboard.md, docs/users/flaiover.md

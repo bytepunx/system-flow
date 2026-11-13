@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2163.7142
-accrued_seconds: 1559244
-tasks_completed: 3356
-last_run: 2026-11-13T16:15:24Z
+accrued_cost: 2164.5371
+accrued_seconds: 1559446
+tasks_completed: 3363
+last_run: 2026-11-13T17:18:33Z
 ---
 
 # Orchestrator activity
@@ -23526,6 +23526,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 23
 - Cost: 0.2308 USD, estimated
+
+### 2026-11-13T16:18:01Z
+
+- Summary: Accepted S-0775 (publish formula instance) at 017d98a96adc8aa7001865827f41c76f8254bd4b: close-out passed at the head, verifier pass, T-3313/T-3314/T-3315 done with exit 0; it tagged and pushed flai/v1.94.0 for S-0751.
+- Items: S-0775
+- Seconds: 79
+- Cost: 0.2387 USD, estimated
+
+### 2026-11-13T16:18:23Z
+
+- Summary: After S-0775: release_evaluate (threshold) not met, count 0 of 1, value 0 of 1000 USD, so no publish. Resolved TH-1110 (mine): S-0759 is in progress, no draft left to finalize; its value still waits on TH-1094. ready-empty: promote_candidates lists none; ready unchanged (S-0760, held after S-0759), so no order applied. promote --drafts: S-0241 complete but stays a draft (TH-1165); the 19 E-0034 drafts lack only a value pending the operator's epic inputs (TH-1097), so no planner started; E-0036 not replanned (TH-1158 asks no plan change). TH-1167 is a flai serve notice, left alone.
+- Items: S-0775, S-0759, S-0760, S-0241, E-0034, E-0036
+- Seconds: 22
+- Cost: 0.0852 USD, estimated
+
+### 2026-11-13T16:18:47Z
+
+- Summary: I accepted S-0775, but nothing else could move this run. The board stays starved until you set the cost of delay inputs for E-0034 and E-0036.
+- Items: none
+- Seconds: 24
+- Cost: 0.0943 USD, estimated
+
+### 2026-11-13T16:48:51Z
+
+- Summary: Resolved my thread TH-1109 on S-0757: its concern (draft not finalizable without a cost of delay value) is gone, since the operator finalized S-0757 and it is in progress; its value still waits on E-0036's inputs on TH-1094.
+- Items: S-0757, TH-1109
+- Seconds: 22
+- Cost: 0.0632 USD, estimated
+
+### 2026-11-13T16:49:06Z
+
+- Summary: I resolved my thread TH-1109 on S-0757, and that was the only reason I was started for, so the run has ended.
+- Items: none
+- Seconds: 15
+- Cost: 0.1501 USD, estimated
+
+### 2026-11-13T17:18:12Z
+
+- Summary: Left TH-1168 to the operator: its only entry is a flai serve notice (excluded from answer_threads), and it asks for a host flai upgrade, which is the operator's alone; no other action for this reason.
+- Items: TH-1168
+- Seconds: 19
+- Cost: 0.0723 USD, estimated
+
+### 2026-11-13T17:18:33Z
+
+- Summary: I took no action on TH-1168 and left it for you. It is a `flai serve` notice, and the rules leave those out of thread answering. It also asks for a flai upgrade on the host, and that decision is yours alone.
+- Items: none
+- Seconds: 21
+- Cost: 0.1191 USD, estimated
 
 ## Refusals
 

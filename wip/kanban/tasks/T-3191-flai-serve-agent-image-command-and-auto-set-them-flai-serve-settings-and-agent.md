@@ -3,16 +3,37 @@ id: T-3191
 type: task
 nature: feature
 title: flai serve agent image command and auto set them, flai serve settings and agent show show them, and flai guard refuses them to served agents
-status: backlog
+status: done
 parent: S-0759
 owner: alex
 created: 2026-11-12T16:05:38Z
-updated: 2026-11-13T16:15:36Z
-transitions: []
+updated: 2026-11-13T16:55:02Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:30:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T16:30:13Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T16:55:02Z
+    by: agent-S-0759
 stream: S-0759
 tags: [cli]
-touches: [flai/cmd/serve_agent.go, flai/cmd/serve_agent_image.go, flai/cmd/serve_agent_image_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go]
+touches: [flai/cmd/serve_agent.go, flai/cmd/serve_agent_image.go, flai/cmd/serve_agent_image_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve_view.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/guard/guard_tables.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-3190]
+usage:
+  source: log
+  seconds: 1489
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 401
+      cache_read: 3874486
+      cache_write: 196281
+      cost: 1.5254
 ---
 # T-3191 flai serve agent image command and auto set them, flai serve settings and agent show show them, and flai guard refuses them to served agents
 

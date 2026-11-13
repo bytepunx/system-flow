@@ -3,16 +3,37 @@ id: T-3194
 type: task
 nature: feature
 title: The image job runs the operator's build command when the host names one, and a start refuses a missing image when the automatic job is off
-status: backlog
+status: done
 parent: S-0759
 owner: alex
 created: 2026-11-12T16:05:51Z
-updated: 2026-11-13T16:15:46Z
-transitions: []
+updated: 2026-11-13T17:19:28Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:55:38Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T16:55:38Z
+    by: system-flow
+  - to: done
+    at: 2026-11-13T17:19:28Z
+    by: agent-S-0759
 stream: S-0759
 tags: [cli]
-touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go]
+touches: [flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/cmd/image_test.go, flai/cmd/serve_agent.go, flai/cmd/serve_agent_image_test.go, flai/internal/serve/agents.go, flai/internal/serve/checks.go]
 after: [T-3190, T-3192]
+usage:
+  source: log
+  seconds: 1428
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 625
+      cache_read: 7795038
+      cache_write: 157732
+      cost: 2.98
 ---
 # T-3194 The image job runs the operator's build command when the host names one, and a start refuses a missing image when the automatic job is off
 
