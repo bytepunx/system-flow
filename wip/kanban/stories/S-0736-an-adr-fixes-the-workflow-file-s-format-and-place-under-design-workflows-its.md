@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-13T20:58:02Z
+updated: 2026-11-13T22:46:12Z
 transitions: []
 tags: [cli]
 topics: [cli, template, conventions]
@@ -51,10 +51,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T21:49:00Z
-  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0779 and S-0241."
+  delivery: 2026-11-13T23:37:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0241."
   by: flai
-  at: 2026-11-13T20:58:02Z
+  at: 2026-11-13T22:46:12Z
 ---
 # S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
 
