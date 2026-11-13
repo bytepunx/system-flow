@@ -2,7 +2,8 @@
 // and keeps each verified list beside flai serve's state, so that flai
 // dashboard runs a release's image by digest and a dial trusts only an image
 // a verified list names (ADR-0070, design/system/release-signing.md § The
-// digest list).
+// digest list). The same parser, verifier, and cache serve the lists a flai
+// release publishes of its agent images (ADR-0295), through a Product.
 package dashboard
 
 import (
@@ -42,10 +43,35 @@ type List struct {
 	Entries    []Entry
 }
 
-// ListName is the release asset name of version's digest list; its
+// Product is an image whose releases publish a signed digest list per
+// version: the name that begins each list's asset name, and the product of
+// the release that publishes it, as messages name them.
+type Product struct {
+	Name    string // flaiover, flai-agent-bedrock, flai-agent-claude-code
+	Release string // flaiover, or flai for the agent images
+}
+
+// Flaiover is flai dashboard's image, whose lists each flaiover release publishes.
+var Flaiover = Product{Name: "flaiover", Release: "flaiover"}
+
+// orFlaiover is p, or Flaiover for the zero Product.
+func (p Product) orFlaiover() Product {
+	if p == (Product{}) {
+		return Flaiover
+	}
+	return p
+}
+
+// ListName is the release asset name of version's digest list of p,
+// <name>_<version>.digests; its signature adds ".sig".
+func (p Product) ListName(version string) string {
+	return p.orFlaiover().Name + "_" + version + listExt
+}
+
+// ListName is the release asset name of version's flaiover digest list; its
 // signature is ListName(version)+".sig".
 func ListName(version string) string {
-	return "flaiover_" + version + ".digests"
+	return Flaiover.ListName(version)
 }
 
 // Index is the image index's digest, the one flai dashboard pulls by.
@@ -87,9 +113,16 @@ func (l List) Matches(repoDigest string) bool {
 	return ok && repo == l.Repository && l.Has(digest)
 }
 
-// Parse reads a digest list in the format release-flaiover.yml writes,
-// refusing any other shape with an error naming the line.
+// Parse reads a flaiover digest list in the format release-flaiover.yml
+// writes, refusing any other shape with an error naming the line.
 func Parse(data []byte) (List, error) {
+	return Flaiover.Parse(data)
+}
+
+// Parse reads a digest list of p in the format of flaiover's, refusing any
+// other shape with an error naming the line.
+func (p Product) Parse(data []byte) (List, error) {
+	malformed := p.orFlaiover().malformed
 	if len(data) == 0 {
 		return List{}, malformed(0, "it is empty")
 	}
@@ -120,13 +153,20 @@ func Parse(data []byte) (List, error) {
 	return l, nil
 }
 
-// Verify checks sig, the list's signature as its release publishes it,
-// against keys, then parses the list; a list it does not verify is refused.
+// Verify checks sig, a flaiover list's signature as its release publishes
+// it, against keys, then parses the list; a list it does not verify is refused.
 func Verify(data, sig []byte, keys []*ecdsa.PublicKey) (List, error) {
+	return Flaiover.Verify(data, sig, keys)
+}
+
+// Verify checks sig, the signature of a list of p as its release publishes
+// it, against keys, then parses the list; a list it does not verify is refused.
+func (p Product) Verify(data, sig []byte, keys []*ecdsa.PublicKey) (List, error) {
+	p = p.orFlaiover()
 	if !selfupgrade.VerifyBlob(data, sig, keys) {
-		return List{}, errors.New("the flaiover digest list's signature does not verify against a key this flai trusts; it may have been altered, so fetch it again from its flaiover release and run no image it names until it verifies")
+		return List{}, fmt.Errorf("the %s digest list's signature does not verify against a key this flai trusts; it may have been altered, so fetch it again from its %s release and run no image it names until it verifies", p.Name, p.Release)
 	}
-	return Parse(data)
+	return p.Parse(data)
 }
 
 // parseLine splits a line into its three fields and checks each one's shape.
@@ -185,11 +225,11 @@ func checkKind(n int, kind string, before []Entry, kindLine map[string]int) erro
 	return nil
 }
 
-// malformed refuses a digest list at line n, or the whole list when n is 0.
-func malformed(n int, reason string) error {
+// malformed refuses a digest list of p at line n, or the whole list when n is 0.
+func (p Product) malformed(n int, reason string) error {
 	at := "it"
 	if n > 0 {
 		at = fmt.Sprintf("line %d", n)
 	}
-	return fmt.Errorf("reading the flaiover digest list failed at %s: %s; it is not in the format release-flaiover.yml writes, so fetch it again from its flaiover release and run no image it names", at, reason)
+	return fmt.Errorf("reading the %s digest list failed at %s: %s; it is not in the format release-%s.yml writes, so fetch it again from its %s release and run no image it names", p.Name, at, reason, p.Release, p.Release)
 }

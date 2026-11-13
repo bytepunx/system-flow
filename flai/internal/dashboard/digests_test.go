@@ -198,3 +198,38 @@ func TestVerifyRefusesASignedListThatDoesNotParse(t *testing.T) {
 		t.Fatalf("err %v, want a refusal naming line 3", err)
 	}
 }
+
+// agentImage is a product other than flaiover, as a flai release publishes
+// its agent images' lists (ADR-0295).
+var agentImage = Product{Name: "flai-agent-claude-code", Release: "flai"}
+
+// S-0740: one parser and one verifier serve flaiover's lists and another
+// product's, whose messages name that product's list and release.
+func TestAnotherProductsListIsNamedAndReadByTheSameCode(t *testing.T) {
+	if got := agentImage.ListName("1.2.3"); got != "flai-agent-claude-code_1.2.3.digests" {
+		t.Errorf("ListName = %q", got)
+	}
+	if got := (Product{}).ListName(goodV); got != ListName(goodV) {
+		t.Errorf("the zero Product's ListName = %q, want flaiover's %q", got, ListName(goodV))
+	}
+	key := newKey(t)
+	keys := []*ecdsa.PublicKey{&key.PublicKey}
+	data := []byte(goodList)
+	if l, err := agentImage.Verify(data, sign(t, key, data), keys); err != nil || l.Index() != index {
+		t.Fatalf("Verify = %+v, %v", l, err)
+	}
+	for _, c := range []struct {
+		p    Product
+		err  error
+		says string
+	}{
+		{Flaiover, func() error { _, err := Verify(data, sign(t, newKey(t), data), keys); return err }(), "the flaiover digest list's signature does not verify against a key this flai trusts; it may have been altered, so fetch it again from its flaiover release"},
+		{agentImage, func() error { _, err := agentImage.Verify(data, sign(t, newKey(t), data), keys); return err }(), "the flai-agent-claude-code digest list's signature does not verify against a key this flai trusts; it may have been altered, so fetch it again from its flai release"},
+		{Flaiover, func() error { _, err := Parse([]byte("x\n")); return err }(), "reading the flaiover digest list failed at line 1: it has 1 fields separated by spaces, not 3 (digest, reference, kind) separated by one space each; it is not in the format release-flaiover.yml writes, so fetch it again from its flaiover release"},
+		{agentImage, func() error { _, err := agentImage.Parse(nil); return err }(), "reading the flai-agent-claude-code digest list failed at it: it is empty; it is not in the format release-flai.yml writes, so fetch it again from its flai release"},
+	} {
+		if c.err == nil || !strings.Contains(c.err.Error(), c.says) {
+			t.Errorf("%s: err %v, want one saying %q", c.p.Name, c.err, c.says)
+		}
+	}
+}

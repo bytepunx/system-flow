@@ -326,3 +326,59 @@ func TestUnreachableReleasesWithNothingUsableCachedFail(t *testing.T) {
 		}
 	}
 }
+
+// S-0740: another product's list is fetched from its release by its own
+// name, and its refusals say the image is not pulled, with advice of its own.
+func TestAnotherProductsListIsFetchedAndRefusedAsItsOwn(t *testing.T) {
+	trusted := newKey(t)
+	name := agentImage.ListName(goodV)
+	data := []byte(goodList)
+	rel := fakeRelease{tag: selfupgrade.TagPrefix + goodV, assets: map[string][]byte{name: data, name + ".sig": sign(t, trusted, data)}}
+	g := newGitHub(t, rel, fakeRelease{tag: selfupgrade.TagPrefix + "0.42.4", assets: map[string][]byte{}})
+	opt := selfupgrade.Options{Repo: "o/r", APIBase: g.srv.URL, Client: g.srv.Client()}
+	published, err := selfupgrade.List(context.Background(), opt, selfupgrade.TagPrefix)
+	if err != nil || len(published) != 2 {
+		t.Fatalf("List: %v %v", published, err)
+	}
+	keys := []*ecdsa.PublicKey{&trusted.PublicKey}
+	l, _, _, err := agentImage.FetchList(context.Background(), opt, published[1], keys)
+	if err != nil || l.Index() != index {
+		t.Fatalf("FetchList = %+v, %v", l, err)
+	}
+	_, _, _, err = agentImage.FetchList(context.Background(), opt, published[0], keys)
+	var refused *Refusal
+	if !errors.As(err, &refused) || refused.Kind != RefusalMissing || refused.Product != agentImage {
+		t.Fatalf("FetchList of a release with no list = %v, want a missing refusal of the product", err)
+	}
+	if msg := err.Error(); !strings.HasPrefix(msg, "flai-agent-claude-code 0.42.4 is not pulled: the digest list flai-agent-claude-code_0.42.4.digests of release flai/v0.42.4 cannot be verified: it publishes no "+agentImage.ListName("0.42.4")) || !strings.Contains(msg, "install a flai release that publishes it") {
+		t.Errorf("message %q", msg)
+	}
+}
+
+// S-0740: each refusal kind of another product says the image is not pulled
+// and what to do, and an unlisted image is refused for flaiover too.
+func TestEachRefusalKindAdvises(t *testing.T) {
+	for _, c := range []struct {
+		p    Product
+		kind RefusalKind
+		says string
+	}{
+		{agentImage, RefusalNotAVersion, "only a release version X.Y.Z is pulled"},
+		{agentImage, RefusalNoRelease, "only the images of a published flai release are pulled"},
+		{agentImage, RefusalMissing, "install a flai release that publishes it"},
+		{agentImage, RefusalBad, "the list may have been altered since it was signed"},
+		{agentImage, RefusalUnknownKey, "upgrade flai first (flai self-upgrade), then run it again"},
+		{agentImage, RefusalMalformed, "is not pulled: found"},
+		{agentImage, RefusalVersion, "the release is mislabelled"},
+		{agentImage, RefusalRepository, "the release lists another image than the one this flai pulls"},
+		{agentImage, RefusalUnlisted, "run no such image, remove it (docker image rm)"},
+		{Product{}, RefusalUnlisted, "flaiover 1.0.0 is not started: found; the engine or a proxy"},
+		{Product{}, RefusalRepository, "set dashboard.image"},
+	} {
+		msg := (&Refusal{Version: "1.0.0", Kind: c.kind, Reason: "found", Product: c.p}).Error()
+		head := c.p.orFlaiover().Name + " 1.0.0 is not "
+		if !strings.HasPrefix(msg, head) || !strings.Contains(msg, c.says) {
+			t.Errorf("%s %s: %q, want it to start %q and say %q", c.p.Name, c.kind, msg, head, c.says)
+		}
+	}
+}

@@ -224,3 +224,25 @@ func write(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
+
+// S-0740: a cache of another product's lists keeps them in its own folder
+// and names that product in its messages.
+func TestACacheOfAnotherProductNamesIt(t *testing.T) {
+	key := newKey(t)
+	c := Cache{Dir: filepath.Join(t.TempDir(), "agent-image-digests", "claude-code"), Keys: []*ecdsa.PublicKey{&key.PublicKey}, Product: agentImage}
+	put(t, c, key, goodV, []byte(goodList))
+	if l, ok, err := c.Get(goodV); err != nil || !ok || l.Index() != index {
+		t.Fatalf("Get: %+v ok %v err %v", l, ok, err)
+	}
+	if _, err := os.Stat(filepath.Join(c.Dir, "0.42.3.digests")); err != nil {
+		t.Fatal(err)
+	}
+	data := []byte(goodList)
+	if err := c.Put("0.42.4", data, sign(t, key, data)); err == nil || !strings.Contains(err.Error(), "caching the digest list as flai-agent-claude-code 0.42.4 refused: it lists version 0.42.3; fetch the list from the flai v0.42.4 release") {
+		t.Errorf("Put of another version: %v", err)
+	}
+	write(t, filepath.Join(c.Dir, "0.42.3.digests.sig"), string(sign(t, newKey(t), data)))
+	if _, _, err := c.Get(goodV); err == nil || !strings.Contains(err.Error(), "reading the cached flai-agent-claude-code digest list") {
+		t.Errorf("Get of a tampered list: %v", err)
+	}
+}

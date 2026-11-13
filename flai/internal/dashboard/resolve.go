@@ -44,18 +44,27 @@ const (
 	RefusalVersion RefusalKind = "version"
 	// RefusalRepository: the list verifies but names another image repository.
 	RefusalRepository RefusalKind = "repository"
+	// RefusalUnlisted: an image pulled by the list's digest carries no digest the list names.
+	RefusalUnlisted RefusalKind = "unlisted"
 )
 
-// Refusal is why a flaiover release's image is not started; nothing is
-// cached for it.
+// Refusal is why a release's image is not run: for flaiover, not started;
+// for another product, such as a flai release's agent image, not pulled.
+// Nothing is cached for it.
 type Refusal struct {
 	Version string      // the release, X.Y.Z, or the tag as configured when it names none
 	Kind    RefusalKind // why it is refused
 	Reason  string      // what was found
+	// Product is whose release is refused; flaiover when zero.
+	Product Product
 }
 
-// Error names the release, why it is not started, and what to do.
+// Error names the release, why its image is not run, and what to do.
 func (e *Refusal) Error() string {
+	p := e.Product.orFlaiover()
+	if p != Flaiover {
+		return e.imageError(p)
+	}
 	head := fmt.Sprintf("flaiover %s is not started: %s", e.Version, e.Reason)
 	switch e.Kind {
 	case RefusalNotAVersion:
@@ -69,11 +78,45 @@ func (e *Refusal) Error() string {
 	case RefusalMalformed:
 		return head
 	case RefusalVersion:
-		return head + "; the release is mislabelled: run no image it names, and report it to the repository's maintainers"
+		return head + mislabelled
 	case RefusalRepository:
 		return head + "; set dashboard.image to the repository the release lists, or run the configured one unsigned with --image"
+	case RefusalUnlisted:
+		return head + unlistedAdvice
 	}
-	return head + "; the list may have been altered since it was signed: run no image it names, and report the release to the repository's maintainers"
+	return head + alteredAdvice
+}
+
+// The advice of a refusal that flaiover and the agent images share.
+const (
+	unlistedAdvice = "; the engine or a proxy between it and the registry answered another image than the one asked for: run no such image, remove it (docker image rm), fetch the list again by running this again, and report the release to the repository's maintainers if it is refused again"
+	alteredAdvice  = "; the list may have been altered since it was signed: run no image it names, and report the release to the repository's maintainers"
+	mislabelled    = "; the release is mislabelled: run no image it names, and report it to the repository's maintainers"
+)
+
+// imageError is Error for a release of p, another product than flaiover,
+// whose image is pulled by its release's signed list.
+func (e *Refusal) imageError(p Product) string {
+	head := fmt.Sprintf("%s %s is not pulled: %s", p.Name, e.Version, e.Reason)
+	switch e.Kind {
+	case RefusalNotAVersion:
+		return head + "; only a release version X.Y.Z is pulled, by its signed digest list"
+	case RefusalNoRelease:
+		return fmt.Sprintf("%s; only the images of a published %s release are pulled, by their signed digest lists: install one (flai self-upgrade), or build the image on this host", head, p.Release)
+	case RefusalMissing:
+		return fmt.Sprintf("%s, so its image cannot be verified (a release from before its images were published has none); install a %s release that publishes it (flai self-upgrade), or build the image on this host", head, p.Release)
+	case RefusalUnknownKey:
+		return head + ", which this flai does not know (the release key may have changed since this flai was built); upgrade flai first (flai self-upgrade), then run it again"
+	case RefusalMalformed:
+		return head
+	case RefusalVersion:
+		return head + mislabelled
+	case RefusalRepository:
+		return head + "; the release lists another image than the one this flai pulls: run no image it names, and report the release to the repository's maintainers"
+	case RefusalUnlisted:
+		return head + unlistedAdvice
+	}
+	return head + alteredAdvice
 }
 
 // Resolver resolves dashboard.tag to a flaiover release's verified image,
@@ -174,27 +217,36 @@ func pick(published []selfupgrade.Release, want, repo string) (selfupgrade.Relea
 	return selfupgrade.Release{}, &Refusal{Version: want, Kind: RefusalNoRelease, Reason: fmt.Sprintf("%s has no published release tagged %s%s (drafts and prereleases are not published); published are %s", repo, selfupgrade.DashboardTagPrefix, want, selfupgrade.VersionList(published))}
 }
 
-// FetchList answers rel's digest list, parsed, with the list and its
-// signature as published, once the signature verifies against one of keys.
-// A list rel does not publish, whose signature does not verify, that does
-// not parse, or that is for another release is a *Refusal; a failed
-// download is answered as one, not as a refusal.
+// FetchList answers rel's flaiover digest list as Flaiover.FetchList does.
 func FetchList(ctx context.Context, opt selfupgrade.Options, rel selfupgrade.Release, keys []*ecdsa.PublicKey) (l List, data, sig []byte, err error) {
-	name := ListName(rel.Version)
+	return Flaiover.FetchList(ctx, opt, rel, keys)
+}
+
+// FetchList answers rel's digest list of p, p.ListName(rel.Version), parsed,
+// with the list and its signature as published, once the signature verifies
+// against one of keys. A list rel does not publish, whose signature does not
+// verify, that does not parse, or that is for another release is a *Refusal
+// of p; a failed download is answered as one, not as a refusal.
+func (p Product) FetchList(ctx context.Context, opt selfupgrade.Options, rel selfupgrade.Release, keys []*ecdsa.PublicKey) (l List, data, sig []byte, err error) {
+	p = p.orFlaiover()
+	refuse := func(kind RefusalKind, reason string) error {
+		return &Refusal{Version: rel.Version, Kind: kind, Reason: reason, Product: p}
+	}
+	name := p.ListName(rel.Version)
 	data, sig, err = selfupgrade.VerifySigned(ctx, opt, rel, name, keys)
 	var unverified *selfupgrade.SignatureError
 	if errors.As(err, &unverified) {
-		return List{}, nil, nil, &Refusal{Version: rel.Version, Kind: RefusalKind(unverified.Kind), Reason: fmt.Sprintf("the digest list %s of release %s cannot be verified: %s", name, rel.Tag, unverified.Reason)}
+		return List{}, nil, nil, refuse(RefusalKind(unverified.Kind), fmt.Sprintf("the digest list %s of release %s cannot be verified: %s", name, rel.Tag, unverified.Reason))
 	}
 	if err != nil {
 		return List{}, nil, nil, err
 	}
-	l, err = Parse(data)
+	l, err = p.Parse(data)
 	if err != nil {
-		return List{}, nil, nil, &Refusal{Version: rel.Version, Kind: RefusalMalformed, Reason: fmt.Sprintf("%s of release %s verifies, but %v", name, rel.Tag, err)}
+		return List{}, nil, nil, refuse(RefusalMalformed, fmt.Sprintf("%s of release %s verifies, but %v", name, rel.Tag, err))
 	}
 	if l.Version != rel.Version {
-		return List{}, nil, nil, &Refusal{Version: rel.Version, Kind: RefusalVersion, Reason: fmt.Sprintf("%s of release %s verifies, but it lists flaiover %s", name, rel.Tag, l.Version)}
+		return List{}, nil, nil, refuse(RefusalVersion, fmt.Sprintf("%s of release %s verifies, but it lists %s %s", name, rel.Tag, p.Name, l.Version))
 	}
 	return l, data, sig, nil
 }

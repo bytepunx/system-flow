@@ -320,11 +320,11 @@ func (f *fakeRunner) LookPath(name string) (string, error) {
 	return "", errors.New("not found")
 }
 
-// S-0735: Docker reads an image's ID and labels from one docker image
-// inspect, says a missing image is missing, and says when docker is not on
-// PATH or could not say.
+// S-0735, S-0740: Docker reads an image's ID, labels, and RepoDigests from
+// one docker image inspect, says a missing image is missing, and says when
+// docker is not on PATH or could not say.
 func TestDockerInspectsAnImage(t *testing.T) {
-	inspected := `{"Id":"sha256:abc","Config":{"Labels":{"dev.system-flow.flai":"dev","dev.system-flow.commit":"1234"}}}`
+	inspected := `{"Id":"sha256:abc","RepoDigests":["ghcr.io/bytepunx/flai-agent-bedrock@sha256:def"],"Config":{"Labels":{"dev.system-flow.flai":"dev","dev.system-flow.commit":"1234"}}}`
 	for _, c := range []struct {
 		name        string
 		r           *fakeRunner
@@ -351,7 +351,7 @@ func TestDockerInspectsAnImage(t *testing.T) {
 				t.Errorf("docker ran though not on PATH: %v", c.r.runs)
 			}
 			if c.wantPresent {
-				if info.ID != "sha256:abc" || info.Labels[LabelFlai] != "dev" || info.Labels[LabelCommit] != "1234" {
+				if info.ID != "sha256:abc" || info.Labels[LabelFlai] != "dev" || info.Labels[LabelCommit] != "1234" || !reflect.DeepEqual(info.RepoDigests, []string{"ghcr.io/bytepunx/flai-agent-bedrock@sha256:def"}) {
 					t.Errorf("Info = %+v", info)
 				}
 				want := []string{"", "docker", "image", "inspect", "--format", "{{json .}}", "x:1"}

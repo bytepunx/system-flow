@@ -16,10 +16,13 @@ import (
 // ErrNoDocker is an Inspector's answer when the docker client is not on PATH.
 var ErrNoDocker = errors.New("docker is not on PATH")
 
-// Info is what docker says of an image on this host: its ID and its labels.
+// Info is what docker says of an image on this host: its ID, its labels,
+// and its RepoDigests, each <repository>@sha256:… of a registry it was
+// pulled from or pushed to.
 type Info struct {
-	ID     string
-	Labels map[string]string
+	ID          string
+	Labels      map[string]string
+	RepoDigests []string
 }
 
 // Inspector reports whether the image ref is on this host and, when it is,
@@ -48,8 +51,9 @@ func Docker(r execx.Runner, program string) Inspector {
 			return Info{}, false, fmt.Errorf("%s could not say whether the agent image %s is on this host (%s): start Docker, then ask again", program, ref, said)
 		}
 		var got struct {
-			ID     string `json:"Id"`
-			Config struct {
+			ID          string   `json:"Id"`
+			RepoDigests []string `json:"RepoDigests"`
+			Config      struct {
 				Labels map[string]string `json:"Labels"`
 			} `json:"Config"`
 		}
@@ -60,7 +64,7 @@ func Docker(r execx.Runner, program string) Inspector {
 		if !ok {
 			return Info{}, false, fmt.Errorf("%s image inspect printed no image for the agent image %s (%s): check that %s is a docker client, then ask again", program, ref, firstLine(out), program)
 		}
-		return Info{ID: got.ID, Labels: got.Config.Labels}, true, nil
+		return Info{ID: got.ID, Labels: got.Config.Labels, RepoDigests: got.RepoDigests}, true, nil
 	}
 }
 
