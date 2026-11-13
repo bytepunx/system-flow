@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:59:12Z
-updated: 2026-11-13T07:24:20Z
+updated: 2026-11-13T07:29:13Z
 transitions: []
 tags: [cli]
 topics: [docker, release, security]
@@ -33,13 +33,15 @@ usage:
           cache_read: 93148
           cache_write: 17093
           cost: 0.0314
-draft: true
 forecast:
   duration: 1h
   delivery: 2026-11-13T15:41:00Z
   basis: "Its own forecast of 1h; 14th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730, S-0733, S-0734, S-0735, S-0736, S-0737, S-0738 and S-0739."
   by: flai
   at: 2026-11-13T07:24:20Z
+finalized:
+  by: alex
+  at: 2026-11-13T07:29:13Z
 ---
 # S-0740 flai image ensure brings back the harness images an installed flai needs, pulled by a signed digest or built on the host from the Dockerfiles flai carries
 
