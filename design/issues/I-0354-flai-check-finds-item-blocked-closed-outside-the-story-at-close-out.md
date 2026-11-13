@@ -2,11 +2,11 @@
 id: I-0354
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 5
 first_reported: 2026-11-12T17:07:15Z
 last_reported: 2026-11-13T08:08:40Z
-updated: 2026-11-13T08:08:40Z
+updated: 2026-11-13T09:05:57Z
 ---
 
 # I-0354 flai check finds `item.blocked-closed` outside the story at close-out
@@ -44,3 +44,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0761 remediates this issue, created from it at 2026-11-13T07:23:41Z.
+Closed 2026-11-13T09:05:57Z: S-0761: S-0678's blocked interval, the one every instance names, was closed at its close with the tree's flai unblock S-0678 in the main checkout; and a check scoped to a story now leaves out every item.blocked-closed outside it, so a close-out records none (ADR-0296, flai/internal/check/scope.go, with TestScopedCheckLeavesOutBlockedClosedOutsideTheStory and TestCheckRecordIssuesLeavesOutBlockedClosedOutsideTheStory reproducing it). The main checkout's check still reports one.
