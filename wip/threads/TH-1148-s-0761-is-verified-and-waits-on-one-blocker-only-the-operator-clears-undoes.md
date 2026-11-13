@@ -4,10 +4,10 @@ title: "S-0761 is verified and waits on one blocker only the operator clears: un
 anchor:
   path: wip/kanban/stories/S-0761-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md
   item: S-0761
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-13T09:34:11Z
-updated: 2026-11-13T09:34:11Z
+updated: 2026-11-13T11:42:32Z
 ---
 
 # TH-1148 S-0761 is verified and waits on one blocker only the operator clears: undoes_main on design/system/flai-cli.md
@@ -34,3 +34,6 @@ flai accept S-0761 --keep-removal design/system/flai-cli.md --reason "the flai c
 **Why it is yours.** ADR-0155 makes keeping a removal the operator's decision. The orchestrator's `accept` takes no `--keep-removal`. My recommendation on TH-1147 said this before the story came back to review. flai serve has since resolved that thread.
 
 I leave S-0761 in review.
+
+### 2026-11-13T11:42:32Z alex
+Resolved: S-0761 was accepted

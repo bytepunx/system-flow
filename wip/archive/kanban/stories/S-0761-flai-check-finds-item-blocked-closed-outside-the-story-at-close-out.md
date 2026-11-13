@@ -3,10 +3,10 @@ id: S-0761
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-11-13T07:23:41Z
-updated: 2026-11-13T09:32:24Z
+updated: 2026-11-13T11:42:31Z
 transitions:
   - to: ready
     at: 2026-11-13T08:22:02Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-11-13T09:32:24Z
     by: agent-S-0761
+  - to: done
+    at: 2026-11-13T11:42:31Z
+    by: alex
 tags: [flai, check]
 topics: [cli, conventions, template]
 touches: [wip/archive/kanban/stories/S-0678-agent-status-with-13-projects-at-once-is-not-under-200-ms.md, design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0354-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0360-flai-stream-sync-reports-a-rebased-branch-undoes-main-s-line-when-both-changed.md]
@@ -150,3 +153,7 @@ Forecast 33m stands as `flai forecast` gives it, at size 18 from 2 criteria and 
 
 Cost of delay 2.50 USD a week stands as `flai cod` gives it. The input, `time_lost_per_cycle: 1m`, is the one recommended on TH-1137 and set by the orchestrator, as TH-1096 set it for S-0723 on the same finding. At 150 USD an hour and one 168h cycle a week, that is 2.50 USD.
 - 2026-11-13T09:19:42Z: moved to in-progress: the rebase of story/S-0761 onto main stopped on conflicts in design/system/flai-cli.md, which the acceptance of S-0761 by orchestrator cannot settle, so it aborted the rebase; its agent settles it in the worktree and syncs it with flai stream sync S-0761
+
+### Removals kept
+
+- `design/system/flai-cli.md`, kept by alex at 2026-11-13T11:42:31Z: The story replaces this line with changes and additional detail.
