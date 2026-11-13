@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"text/tabwriter"
@@ -42,15 +44,20 @@ promote deploys main's head into the default namespace; flai kluster
 deployments lists what each namespace holds. Each job logs its steps under
 .flai-cache/kluster/logs, which flai kluster log S-nnnn --step <step>
 prints, and records its outcome under .flai-cache/kluster/deployments, and
-one job runs at a time per project.
+one job runs at a time per project. flai kluster exec S-nnnn -- <command>
+runs a command in the story's worktree with its namespace's variables and
+the namespace's own kubeconfig, while the namespace has a record.
 
 They work from your shell whatever the kluster host action says. flai guard
 refuses every agent and sub-agent up, down, deploy, teardown, and promote,
-which change shared infrastructure on your machine; status, deployments,
-and log read, and any agent may run them. A story's agent asks flai serve for its
-own story's deploy or teardown instead, with flai kluster deploy or teardown
-S-nnnn --job, or the MCP tools kluster_deploy and kluster_teardown, which run
-nothing themselves (ADR-0292).
+which change shared infrastructure on your machine; status and deployments
+read, and any agent may run them. exec and log reach a story's namespace
+without changing the cluster's shared infrastructure, and flai guard lets a
+story's agent and its sub-agents run them for their own story alone
+(ADR-0292 §2). A story's agent asks flai serve for its own story's deploy or
+teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the
+MCP tools kluster_deploy and kluster_teardown, which run nothing themselves
+(ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host
 action on, from the dashboard's Features page or with flai serve enable
@@ -64,13 +71,14 @@ how to install kluster.`,
   flai kluster deploy S-0578
   flai kluster deployments
   flai kluster log S-0578 --step deploy
+  flai kluster exec S-0578 -- kubectl get pods
   flai kluster teardown S-0578 --yes
   flai kluster promote
   flai kluster down --yes`,
 		Args: cobra.NoArgs,
 	}
 	c.AddCommand(newKlusterUpCmd(a), newKlusterDownCmd(a), newKlusterStatusCmd(a),
-		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a), newKlusterLogCmd(a))
+		newKlusterDeployCmd(a), newKlusterTeardownCmd(a), newKlusterPromoteCmd(a), newKlusterDeploymentsCmd(a), newKlusterLogCmd(a), newKlusterExecCmd(a))
 	return c
 }
 
@@ -589,6 +597,148 @@ and outcome, the step's outcome in the namespace's record.`,
 	}
 	c.Flags().StringVar(&step, "step", "", "the step whose log to print: build, build-<name>, load, deploy, or teardown")
 	return c
+}
+
+func newKlusterExecCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "exec S-nnnn -- <command> [args...]",
+		Short: "Run a command in a story's worktree with its namespace's variables and kubeconfig",
+		Long: `Runs a command in a story's worktree, .flai-cache/worktrees/S-nnnn of the
+main checkout, with the variables of the story's namespace, s-nnnn, as its
+deploy gives them (design/system/kluster.md, ADR-0254 §4): FLAI_STORY,
+FLAI_KLUSTER_NAME, FLAI_KLUSTER_NAMESPACE, FLAI_KLUSTER_PREFIX,
+FLAI_KLUSTER_COMMIT and FLAI_KLUSTER_TAG at the commit the namespace's record
+names, FLAI_KLUSTER_STATE, and FLAI_KLUSTER_CONTEXT, but FLAI_KLUSTER_IMAGES
+and FLAI_KLUSTER_COMPONENT, which only a build gets. KUBECONFIG is not flai's
+kubeconfig for the cluster but the namespace's own,
+.flai-cache/kluster/agents/s-nnnn.kubeconfig, which each deploy writes once
+its deploy step passes, so the API server refuses the command anything
+outside the namespace (ADR-0292 §2). The rest of the environment is this
+shell's, with any KUBECONFIG and FLAI_KLUSTER_ variable of its own replaced
+or dropped. Standard input, output, and error are the command's, and flai
+exits with its exit code.
+
+It runs while the namespace has a record under
+.flai-cache/kluster/deployments, a failed one included, for diagnosis: a
+deploy that failed before its kubeconfig was written is said to have none,
+and the command still runs. A story with no record is refused, saying to
+deploy it first with flai kluster deploy S-nnnn --job; a story with no
+worktree is refused, saying to open it with flai stream open S-nnnn.
+
+It reads the kluster: block for the cluster's name and the record for the
+commit, and runs neither kluster nor flai serve, so it needs no kluster on
+PATH. A session with a story of its own, FLAI_STORY, else the story in an
+agent name of the form agent-S-nnnn, is refused another story's namespace,
+as deploy --job is. The command goes after --, and with none it is refused.`,
+		Example: `  flai kluster exec S-0578 -- kubectl get pods
+  flai kluster exec S-0578 -- kubectl logs deploy/api --tail 50
+  flai kluster exec S-0578 -- make integration-test
+  flai kluster exec S-0578 -- sh -c 'echo $FLAI_KLUSTER_TAG'`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			dash := cmd.ArgsLenAtDash()
+			switch {
+			case dash < 0 && len(args) == 0, dash == 0:
+				return fmt.Errorf("give the story's ID, then -- and the command to run, such as flai kluster exec S-0578 -- kubectl get pods")
+			case dash < 0 || dash == len(args):
+				return fmt.Errorf("no command to run: give it after --, such as flai kluster exec %s -- kubectl get pods", workitem.CanonicalID(args[0]))
+			case dash > 1:
+				return fmt.Errorf("one story at a time, then -- and the command, such as flai kluster exec %s -- kubectl get pods", workitem.CanonicalID(args[0]))
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			story := workitem.CanonicalID(args[0])
+			ns, err := kluster.StoryNamespace(story)
+			if err != nil {
+				return err
+			}
+			if own := sessionStory(); own != "" && workitem.CanonicalID(own) != story {
+				return fmt.Errorf("this session works %s, and a story's agent runs commands against its own story's namespace alone (ADR-0292), so nothing was run for %s; run them for %s, or leave %s's namespace to its own agent", workitem.CanonicalID(own), story, workitem.CanonicalID(own), story)
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			c, err := kluster.New(mainRootOf(repo), repo.Manifest, kluster.System{})
+			if err != nil {
+				return err
+			}
+			vars, err := c.AgentEnv(story)
+			if errors.Is(err, kluster.ErrNotDeployed) {
+				return fmt.Errorf("%s's namespace %s has no record under .flai-cache/kluster/deployments, so there are no variables or kubeconfig to run with; deploy it first with flai kluster deploy %s --job", story, ns, story)
+			}
+			if err != nil {
+				return err
+			}
+			wt := repo.WorktreePath(story)
+			if !dirExists(wt) {
+				return fmt.Errorf("%s has no worktree at %s to run in; open it with flai stream open %s, then run again", story, wt, story)
+			}
+			if kc := kluster.AgentKubeconfigPath(c.Root, story); !fileExists(kc) {
+				fmt.Fprintf(a.errOut, "flai: %s's namespace %s has no kubeconfig at %s yet, as its deploy step has not passed; KUBECONFIG names it all the same\n", story, ns, kc)
+			}
+			return a.execIn(cmd, wt, klusterExecEnv(os.Environ(), vars), args[1:])
+		},
+	}
+}
+
+// klusterExecEnv is environ with vars in place of its own KUBECONFIG and
+// FLAI_KLUSTER_ variables, and of any other it shares with vars.
+func klusterExecEnv(environ, vars []string) []string {
+	set := map[string]bool{"KUBECONFIG": true}
+	for _, v := range vars {
+		k, _, _ := strings.Cut(v, "=")
+		set[k] = true
+	}
+	env := make([]string, 0, len(environ)+len(vars))
+	for _, v := range environ {
+		if k, _, _ := strings.Cut(v, "="); !set[k] && !strings.HasPrefix(k, "FLAI_KLUSTER_") {
+			env = append(env, v)
+		}
+	}
+	return append(env, vars...)
+}
+
+// fileExists says whether path is a file.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
+}
+
+// execIn runs argv in dir with env, PWD dir, with the command's standard
+// input, output, and error, and passes an interrupt or a termination on to it rather than
+// ending flai first; a non-zero exit is an exitError of its code, 128 and the
+// signal's number for a command a signal ended.
+func (a *app) execIn(cmd *cobra.Command, dir string, env, argv []string) error {
+	x := exec.Command(argv[0], argv[1:]...)
+	x.Dir, x.Env = dir, append(slices.DeleteFunc(env, func(v string) bool { return strings.HasPrefix(v, "PWD=") }), "PWD="+dir)
+	x.Stdin, x.Stdout, x.Stderr = cmd.InOrStdin(), a.out, a.errOut
+	if err := x.Start(); err != nil {
+		return fmt.Errorf("run %s in %s: %w", argv[0], dir, err)
+	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigs)
+	done := make(chan error, 1)
+	go func() { done <- x.Wait() }()
+	for {
+		select {
+		case s := <-sigs:
+			_ = x.Process.Signal(s)
+		case err := <-done:
+			var ee *exec.ExitError
+			if !errors.As(err, &ee) {
+				if err != nil {
+					return fmt.Errorf("run %s in %s: %w", argv[0], dir, err)
+				}
+				return nil
+			}
+			if ws, ok := ee.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+				return &exitError{code: 128 + int(ws.Signal())}
+			}
+			return &exitError{code: ee.ExitCode()}
+		}
+	}
 }
 
 // readWholeLog reads namespace ns's step log under root from 0 to its end in

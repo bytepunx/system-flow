@@ -3,8 +3,10 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -803,5 +805,171 @@ func TestKlusterLogRefusals(t *testing.T) {
 	var got kluster.LogPart
 	if code == 0 || json.Unmarshal([]byte(out), &got) != nil || got.Exists || got.Text != "" {
 		t.Errorf("an absent log --json prints exists false and exits 1: %d %s", code, out)
+	}
+}
+
+// execProject is a deployProject whose session is the agent of S-0007, with
+// no kluster on PATH, a KUBECONFIG and build variables of its own, and a
+// record of S-0007's namespace at klusterHead with outcome, with the
+// namespace's kubeconfig written when kubeconfig is true. It returns the
+// root and S-0007's worktree.
+func execProject(t *testing.T, outcome string, kubeconfig bool) (root, wt string) {
+	t.Helper()
+	root, _ = deployProject(t, "in-progress")
+	bin := strings.SplitN(os.Getenv("PATH"), string(os.PathListSeparator), 2)[0]
+	if err := os.Remove(filepath.Join(bin, "kluster")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FLAI_STORY", "")
+	t.Setenv("FLAI_AGENT", "agent-S-0007")
+	t.Setenv("KUBECONFIG", "/elsewhere/kubeconfig")
+	t.Setenv("FLAI_KLUSTER_IMAGES", "/elsewhere/images")
+	t.Setenv("FLAI_KLUSTER_COMPONENT", "api")
+	r := kluster.Record{Story: "S-0007", Namespace: "s-0007", Commit: klusterHead, Outcome: outcome, StartedAt: queuedAt}
+	b, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{".flai-cache/kluster/deployments/s-0007.json": string(b)}
+	if kubeconfig {
+		files[".flai-cache/kluster/agents/s-0007.kubeconfig"] = "apiVersion: v1\n"
+	}
+	writeFiles(t, root, files)
+	return root, filepath.Join(root, ".flai-cache", "worktrees", "S-0007")
+}
+
+// runKlusterExit runs the CLI in dir as runKluster does, exiting with an
+// exitError's code as run does.
+func runKlusterExit(t *testing.T, dir string, args ...string) (string, string, int) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	a := &app{configPath: configOf(t), out: &out, errOut: &errOut, cwd: dir, clock: func() time.Time { return time.Date(2026, 11, 7, 1, 0, 0, 0, time.UTC) }}
+	terminal := false
+	a.stdinIsTerminal = &terminal
+	root := testRoot(t, a)
+	root.SetArgs(args)
+	root.SetIn(strings.NewReader("from stdin\n"))
+	code := 0
+	if err := root.Execute(); err != nil {
+		var ee *exitError
+		if code = 1; errors.As(err, &ee) {
+			code = ee.code
+		}
+		if ee == nil || ee.msg != "" {
+			a.fail(err)
+		}
+	}
+	return out.String(), errOut.String(), code
+}
+
+// S-0763 criterion 3, ADR-0292 §2: flai kluster exec runs the command in the
+// story's worktree with ADR-0254 §4's variables at the record's commit, but
+// the build's, and KUBECONFIG the namespace's own in place of the shell's,
+// with no kluster on PATH; standard input reaches it, and its exit code is
+// flai's.
+func TestKlusterExecRunsInTheWorktreeWithTheNamespacesVariables(t *testing.T) {
+	root, wt := execProject(t, kluster.OutcomePassed, true)
+	out, errOut, code := runKlusterExit(t, root, "kluster", "exec", "S-7", "--", "sh", "-c", "pwd; env; cat")
+	if code != 0 {
+		t.Fatalf("exec: %d %s %s", code, out, errOut)
+	}
+	lines := strings.Split(out, "\n")
+	if lines[0] != wt {
+		t.Errorf("the command runs in the worktree %s: %q", wt, lines[0])
+	}
+	for _, want := range []string{
+		"FLAI_STORY=S-0007",
+		"FLAI_KLUSTER_NAME=demo-integration",
+		"FLAI_KLUSTER_NAMESPACE=s-0007",
+		"FLAI_KLUSTER_PREFIX=s0007_",
+		"FLAI_KLUSTER_COMMIT=" + klusterHead,
+		"FLAI_KLUSTER_TAG=s-0007-0123456789ab",
+		"FLAI_KLUSTER_STATE=" + kluster.StatePath(root, "s-0007"),
+		"FLAI_KLUSTER_CONTEXT=k3d-demo-integration",
+		"KUBECONFIG=" + kluster.AgentKubeconfigPath(root, "S-0007"),
+		"PWD=" + wt,
+		"FAKE_HEAD=" + klusterHead,
+		"from stdin",
+	} {
+		if !slices.Contains(lines, want) {
+			t.Errorf("the command gets %q:\n%s", want, out)
+		}
+	}
+	for _, not := range []string{"FLAI_KLUSTER_IMAGES=", "FLAI_KLUSTER_COMPONENT=", "/elsewhere", "KUBECONFIG=" + kluster.KubeconfigPath(root)} {
+		if strings.Contains(out, not) {
+			t.Errorf("the command does not get %q:\n%s", not, out)
+		}
+	}
+	if strings.Contains(errOut, "has no kubeconfig") {
+		t.Errorf("a namespace with its kubeconfig says nothing of it: %s", errOut)
+	}
+	out, errOut, code = runKlusterExit(t, root, "kluster", "exec", "S-0007", "--", "sh", "-c", "echo out; echo err >&2; exit 7")
+	if code != 7 || out != "out\n" || !strings.Contains(errOut, "err\n") {
+		t.Errorf("the command's exit code and output are flai's: %d %q %q", code, out, errOut)
+	}
+	t.Setenv("FLAI_AGENT", "alex")
+	if out, errOut, code := runKlusterExit(t, root, "kluster", "exec", "S-0007", "--", "sh", "-c", "echo $FLAI_KLUSTER_NAMESPACE"); code != 0 || out != "s-0007\n" {
+		t.Errorf("the operator's shell runs for the story given: %d %q %s", code, out, errOut)
+	}
+}
+
+// S-0763 criterion 3: a namespace whose record failed still runs the
+// command, for diagnosis, and a namespace with no kubeconfig yet is said to
+// have none.
+func TestKlusterExecRunsForAFailedRecord(t *testing.T) {
+	root, _ := execProject(t, kluster.OutcomeFailed, false)
+	out, errOut, code := runKlusterExit(t, root, "kluster", "exec", "S-0007", "--", "sh", "-c", "echo $KUBECONFIG")
+	if code != 0 || out != kluster.AgentKubeconfigPath(root, "S-0007")+"\n" {
+		t.Fatalf("a failed record runs: %d %q %s", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "S-0007's namespace s-0007 has no kubeconfig at "+kluster.AgentKubeconfigPath(root, "S-0007")) {
+		t.Errorf("a missing kubeconfig is said: %s", errOut)
+	}
+}
+
+// S-0763 criterion 3, ADR-0292 §2: no record, another story than the
+// session's, no worktree, and no command are refused, and nothing runs.
+func TestKlusterExecRefusals(t *testing.T) {
+	root, wt := execProject(t, kluster.OutcomePassed, true)
+	marker := filepath.Join(t.TempDir(), "ran")
+	touch := []string{"--", "touch", marker}
+	cases := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{"another story", append([]string{"S-0008"}, touch...), []string{"this session works S-0007", "nothing was run for S-0008"}},
+		{"no command", []string{"S-0007", "--"}, []string{"no command to run: give it after --"}},
+		{"no dash", []string{"S-0007", "touch"}, []string{"no command to run: give it after --"}},
+		{"no story", []string{"--", "touch", marker}, []string{"give the story's ID, then -- and the command"}},
+		{"nothing", nil, []string{"give the story's ID, then -- and the command"}},
+		{"two stories", append([]string{"S-0007", "S-0008"}, touch...), []string{"one story at a time"}},
+		{"an epic", append([]string{"E-0001"}, touch...), []string{"is not a story ID"}},
+	}
+	for _, c := range cases {
+		out, errOut, code := runKlusterExit(t, root, append([]string{"kluster", "exec"}, c.args...)...)
+		if code == 0 || out != "" {
+			t.Errorf("%s: %d %q %s", c.name, code, out, errOut)
+		}
+		for _, w := range c.want {
+			if !strings.Contains(errOut, w) {
+				t.Errorf("%s says %q: %s", c.name, w, errOut)
+			}
+		}
+	}
+	if err := os.RemoveAll(wt); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runKlusterExit(t, root, append([]string{"kluster", "exec", "S-0007"}, touch...)...); code == 0 || !strings.Contains(errOut, "S-0007 has no worktree at "+wt) || !strings.Contains(errOut, "flai stream open S-0007") {
+		t.Errorf("no worktree: %d %s", code, errOut)
+	}
+	if err := os.Remove(kluster.RecordPath(root, "s-0007")); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runKlusterExit(t, root, append([]string{"kluster", "exec", "S-0007"}, touch...)...); code == 0 || !strings.Contains(errOut, "S-0007's namespace s-0007 has no record") || !strings.Contains(errOut, "flai kluster deploy S-0007 --job") {
+		t.Errorf("no record: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Errorf("a refusal runs nothing")
 	}
 }
