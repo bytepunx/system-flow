@@ -4,10 +4,10 @@ title: "Plan for S-0732: mcp.bind as a list or auto; cost of delay inputs needed
 anchor:
   path: wip/kanban/stories/S-0732-flai-s-mcp-servers-listen-on-every-address-their-clients-need-loopback-and-the.md
   item: S-0732
-status: open
-participants: [planner-S-0732, orchestrator]
+status: resolved
+participants: [planner-S-0732, orchestrator, alex]
 created: 2026-11-12T15:56:24Z
-updated: 2026-11-12T15:58:52Z
+updated: 2026-11-13T07:24:19Z
 ---
 
 # TH-1099 Plan for S-0732: mcp.bind as a list or auto; cost of delay inputs needed, and two design choices to confirm
@@ -115,3 +115,6 @@ For the operator alone: this changes the addresses the host listens on by defaul
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0269-flai-serve-refuses-a-container-start-whose-http-mcp-server-listens-on-loopback.md § Alternatives considered
+
+### 2026-11-13T07:24:19Z alex
+Resolved: S-0732 was accepted
