@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2161.7909
-accrued_seconds: 1558853
-tasks_completed: 3342
-last_run: 2026-11-13T15:44:29Z
+accrued_cost: 2162.5053
+accrued_seconds: 1558979
+tasks_completed: 3346
+last_run: 2026-11-13T15:47:03Z
 ---
 
 # Orchestrator activity
@@ -23428,6 +23428,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 34
 - Cost: 0.4873 USD, estimated
+
+### 2026-11-13T15:45:18Z
+
+- Summary: Release due on S-0663 (threshold: count 1 at or over 1; value 5 USD of 1000): no second publish run, since publish formula instance S-0774 is already in progress for it (T-3310 done). TH-1163 resolved by flai serve; TH-1164 is a flai serve notice, left alone. No promote candidates; S-0241 is the only complete draft but is blocked and its Notes forbid ready until headless forks exist, so left a draft and opened TH-1165; E-0034 drafts wait on TH-1097's inputs.
+- Items: S-0663, S-0774, S-0241
+- Seconds: 42
+- Cost: 0.2124 USD, estimated
+
+### 2026-11-13T15:45:36Z
+
+- Summary: I started no second release, because one is already running. S-0774, the publish run for S-0663, is in progress, and its agent is on the last step (T-3312, the publish itself). Nothing in the backlog can go to ready, so the board stays starved.
+- Items: none
+- Seconds: 18
+- Cost: 0.1908 USD, estimated
+
+### 2026-11-13T15:46:44Z
+
+- Summary: thread:TH-1164 is a flai serve notice (last entry flai serve), left alone. promote_candidates lists none. Ready column unchanged (S-0760, S-0759, S-0757, all held on after S-0751), so no order applied. promote --drafts: no draft complete; the 19 E-0034 drafts lack only a cost of delay value, pending the operator's epic inputs on TH-1097 (operator_only recommendation), so I started no planner for them and opened no thread (TH-1113 to TH-1131 already ask). S-0241 stays a draft (TH-1165). S-0730 is held on no touches and its planner ran with no change since. E-0036 not replanned: alex's TH-1158 entry only resolves S-0740's acceptance.
+- Items: E-0034, E-0036, S-0241, S-0730
+- Seconds: 47
+- Cost: 0.2047 USD, estimated
+
+### 2026-11-13T15:47:03Z
+
+- Summary: The board is still starved, and only your answer on TH-1097 can unblock it. Nothing could move on this run.
+- Items: none
+- Seconds: 19
+- Cost: 0.1065 USD, estimated
 
 ## Refusals
 

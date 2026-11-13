@@ -3,10 +3,10 @@ id: S-0774
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T15:43:49Z
-updated: 2026-11-13T15:44:00Z
+updated: 2026-11-13T15:47:57Z
 transitions:
   - to: ready
     at: 2026-11-13T15:43:50Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T15:44:00Z
     by: agent-S-0774
+  - to: review
+    at: 2026-11-13T15:46:08Z
+    by: agent-S-0774
+  - to: done
+    at: 2026-11-13T15:47:57Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0774-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,30 +29,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 74
-  estimated: true
-  priced_by: estimate
+  seconds: 140
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 16
+      ceremony: 2
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 343
-      cache_read: 1908677
-      cache_write: 149585
-      cost: 0.7706
+      input: 58
+      output: 7032
+      cache_read: 3975331
+      cache_write: 163462
+      cost: 2.2436
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 25
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 30
-          cache_read: 106489
-          cache_write: 519
-          cost: 0.0312
+          input: 8
+          output: 64
+          cache_read: 324579
+          cache_write: 25405
+          cost: 0.102
 formula: publish
 ---
 # S-0774 Publish what is accepted and not yet released
@@ -57,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3310 Fetch the remote's branch and tags
@@ -69,3 +75,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: 855eccae0ac86b09d4c90c6e4f7476c357c73e3b
+- At: 2026-11-13T15:47:57Z
+
+Verdict: S-0774 meets all three criteria; close-out passed at 855eccae0ac86b09d4c90c6e4f7476c357c73e3b.
+- 1: T-3310 done
+- 2: T-3311 done
+- 3: T-3312 done
