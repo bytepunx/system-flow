@@ -781,10 +781,33 @@ func TestMCPOverHTTPListensOnEveryAddress(t *testing.T) {
 }
 
 // S-0732: a listen failure on any address closes those already opened and
-// names the address that failed.
+// names the address that failed. It listens on real addresses, so it keeps
+// what listenMCP does with the operating system covered. The test holds
+// 127.0.0.1:<port> and nothing at 127.0.0.2:<port>, which another test's
+// connection may take as its source before listenMCP opens it or after it
+// closes it (I-0372): such a try is lost, not failed, and the test tries
+// again on a new port. A listener listenMCP did not close fails every try.
 func TestMCPListenFailureClosesWhatItOpened(t *testing.T) {
 	t.Parallel()
 	needSecondLoopback(t)
+	const tries = 20
+	var lost []string
+	for try := 0; try < tries; try++ {
+		why, ok := listenFailureClosesWhatItOpened(t)
+		if ok {
+			return
+		}
+		lost = append(lost, why)
+	}
+	t.Fatalf("every one of %d tries lost 127.0.0.2 at its port, or found it still held after the failure:\n%s", tries, strings.Join(lost, "\n"))
+}
+
+// listenFailureClosesWhatItOpened is one try of
+// TestMCPListenFailureClosesWhatItOpened: ok when it showed the failure
+// named and the address opened before it closed again, else why the try was
+// lost. A failure that names the wrong thing fails the test.
+func listenFailureClosesWhatItOpened(t *testing.T) (string, bool) {
+	t.Helper()
 	held, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -797,14 +820,18 @@ func TestMCPListenFailureClosesWhatItOpened(t *testing.T) {
 		closeListeners(lns)
 		t.Fatal("a held address is a failure")
 	}
+	if strings.Contains(err.Error(), first) {
+		return fmt.Sprintf("%s was taken before listenMCP opened it: %v", first, err), false
+	}
 	if !strings.Contains(err.Error(), taken) || !strings.Contains(err.Error(), "--addr") {
-		t.Errorf("the failure names the address and what to do: %v", err)
+		t.Fatalf("the failure names the address and what to do: %v", err)
 	}
 	ln, err := net.Listen("tcp", first)
 	if err != nil {
-		t.Fatalf("the address opened before the failure is closed again: %v", err)
+		return fmt.Sprintf("%s was held after the failure: %v", first, err), false
 	}
 	_ = ln.Close()
+	return "", true
 }
 
 // S-0732: the server listens on one port, so addresses whose ports differ
