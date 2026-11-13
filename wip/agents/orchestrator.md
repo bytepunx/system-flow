@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2149.3041
-accrued_seconds: 1556023
-tasks_completed: 3247
-last_run: 2026-11-13T09:18:51Z
+accrued_cost: 2149.8650
+accrued_seconds: 1556118
+tasks_completed: 3250
+last_run: 2026-11-13T09:20:31Z
 ---
 
 # Orchestrator activity
@@ -22763,6 +22763,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.0888 USD, estimated
+
+### 2026-11-13T09:19:45Z
+
+- Summary: Verified S-0761 at 22931435e (close-out passed, verifier pass on both criteria, dry run no blockers); accept sent it back to in-progress: rebase conflicts in design/system/flai-cli.md, its agent resolves them on TH-1147. Nothing more done for it.
+- Items: S-0761
+- Seconds: 49
+- Cost: 0.2717 USD, estimated
+
+### 2026-11-13T09:20:03Z
+
+- Summary: Release reason for S-0735: release_evaluate (threshold) now not met, count 0 of 1, value 0 of 1000 USD; the publish instance S-0765 is already in progress for it, so no new publish run started. TH-1145 already resolved by flai serve; TH-1146 is flai serve's starvation notice (ready stories all held on after, drafts await E-0034/E-0036 inputs), left alone.
+- Items: S-0735, S-0765
+- Seconds: 18
+- Cost: 0.0559 USD, estimated
+
+### 2026-11-13T09:20:31Z
+
+- Summary: I acted on all four reasons. The only story I tried to accept, S-0761, did not land, because merging it onto main hit a conflict.
+- Items: none
+- Seconds: 28
+- Cost: 0.2333 USD, estimated
 
 ## Refusals
 

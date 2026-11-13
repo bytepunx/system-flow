@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 261.5935
-accrued_seconds: 30018
-tasks_completed: 171
-last_run: 2026-11-13T09:06:20Z
+accrued_cost: 263.2880
+accrued_seconds: 30160
+tasks_completed: 172
+last_run: 2026-11-13T09:19:34Z
 ---
 
 # Curator activity
@@ -1379,3 +1379,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0603
 - Seconds: 156
 - Cost: 1.7473 USD, estimated
+
+### 2026-11-13T09:19:34Z
+
+- Summary: D-0604 and D-0605 written from S-0735, nothing merged, nothing absorbed, `flai digest compact` compacted nothing; the other 11 S-0735 decisions are already in `design/system/flai-cli.md` or `docs/users/flai.md`, or record only progress.
+- Trigger: accepted S-0735
+- Items: D-0604, D-0605
+- Seconds: 142
+- Cost: 1.6945 USD, estimated
