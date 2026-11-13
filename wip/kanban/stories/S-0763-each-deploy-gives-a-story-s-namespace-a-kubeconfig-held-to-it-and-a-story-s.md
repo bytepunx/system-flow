@@ -3,12 +3,15 @@ id: S-0763
 type: story
 nature: feature
 title: Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
-status: backlog
+status: ready
 parent: E-0035
 owner: alex
 created: 2026-11-13T08:03:30Z
-updated: 2026-11-13T09:03:36Z
-transitions: []
+updated: 2026-11-13T09:06:51Z
+transitions:
+  - to: ready
+    at: 2026-11-13T09:06:47Z
+    by: orchestrator
 tags: [cli]
 topics: [kluster, deployment]
 touches: [flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/agentconfig.go, flai/internal/kluster/agentconfig_test.go, flai/internal/kluster/log.go, flai/internal/kluster/log_test.go, flai/internal/hostapi/kluster.go, flai/cmd/kluster.go, flai/cmd/kluster_test.go, flai/internal/guard/guard_rules.go, flai/internal/guard/call.go, flai/internal/guard/kluster_test.go, design/system/kluster.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
@@ -23,22 +26,42 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 528
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 72
+          output: 23419
+          cache_read: 2900832
+          cache_write: 120148
+          cost: 0.1556
+        - model: claude-opus-5-5
+          input: 90
+          output: 27856
+          cache_read: 9459441
+          cache_write: 273897
+          cost: 4.6405
     - kind: orchestrator
-      seconds: 13
+      seconds: 72
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 11
-          cache_read: 106201
-          cache_write: 2025
-          cost: 0.0312
+          input: 17
+          output: 126
+          cache_read: 615140
+          cache_write: 67351
+          cost: 0.1967
+cost_of_delay:
+  value: 555.56
+  by: planner-S-0763
+  at: 2026-11-13T09:04:24Z
 forecast:
   duration: 1h
-  delivery: 2026-11-13T21:04:00Z
-  basis: "Its own forecast of 1h; 31st in the pull order with an in-progress limit of 3, behind S-0735, S-0761, S-0760, S-0745, S-0759, S-0751, S-0757, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756 and S-0758."
+  delivery: 2026-11-13T11:53:00Z
+  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0735, S-0761, S-0760, S-0745, S-0759, S-0751, S-0757 and S-0740."
   by: flai
-  at: 2026-11-13T09:03:36Z
+  at: 2026-11-13T09:06:51Z
 ---
 # S-0763 Each deploy gives a story's namespace a kubeconfig held to it, and a story's agent runs flai kluster exec and log against its own namespace
 
@@ -60,8 +83,33 @@ A story's agent reaches its own story's kluster namespace, and nothing else in t
 - T-3277 flai kluster log prints a step's log of the story's namespace through the reader the host method kluster.log uses
 - T-3278 flai guard lets a story's agent and its sub-agents run kluster exec and log for their own story, and refuses other namespaces, the kluster program but status, and flai's cluster kubeconfig
 - T-3279 flai kluster exec runs a command in the story's worktree with its namespace's variables and its own kubeconfig while the namespace has a record
+- T-3280 kluster.md, flai-cli.md, the user guide, and the settings index say how a story's namespace gets its own kubeconfig and how its agent runs exec and log
 
 ## Notes
 
 - Split out of S-0660 on TH-1138: the operator confirmed the orchestrator's recommendation that S-0660 keep to its nine criteria, and that this story build the namespace's kubeconfig, `exec`, and `log`. `flai kluster env` is S-0661's (its T-2865), and S-0661 waits for this story, since what `env` gives includes the namespace's `KUBECONFIG`.
 - `after`: S-0660, whose deploy and teardown requests and job queue this story's kubeconfig step joins.
+
+### Planning
+
+Touches, by where each came from:
+
+| Touch | From |
+|-------|------|
+| `flai/internal/kluster/deploy.go`, `deploy_test.go` | Declared; the layout: `runDeploy` is where the deploy step passes, and the teardown removes the record, state, and logs there |
+| `flai/internal/kluster/agentconfig.go`, `agentconfig_test.go` | Layout: a new file for the kubeconfig step, its path, and `Cluster.AgentEnv` (T-3276) |
+| `flai/internal/kluster/log.go`, `log_test.go` | Layout: the `kluster.log` reader moves out of the host API so `flai kluster log` reads as it does (T-3277) |
+| `flai/internal/hostapi/kluster.go` | Layout: `klusterLogIn` and `klusterLogDo` read the log there today, unexported |
+| `flai/cmd/kluster.go`, `kluster_test.go` | Declared; the layout: the `flai kluster` commands |
+| `flai/internal/guard/guard_rules.go`, `kluster_test.go` | Declared; the layout: `klustering`, `klusterWrite`, and `ownStory` |
+| `flai/internal/guard/call.go` | Layout: where the Bash call reaches `klusterWrite`, for the two line rules |
+| `design/system/kluster.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md` | Declared; criterion 6 |
+| `docs/operators/settings.md` | Co-change (21% of the commits that change the declared paths) and the layout: `scripts/flai-reference.sh` writes its flag index with the reference, and its row of the kluster variables names the commands that give them |
+
+No folder touch. `flai/internal/serve` is left out: its jobs call `DeployBy` and `TeardownBy`, which T-3276 changes. `flai/internal/mcpserver` is left out: the criteria name no MCP tool for `exec` or `log`.
+
+`after`: S-0660, done. T-3276 builds on its `DeployBy` and `TeardownBy` in `flai/internal/kluster/deploy.go`, which name who asked, and on the deploys its requests queue, which the kubeconfig step joins. T-3277 and T-3279 build on its `sessionStory` in `flai/cmd/kluster.go`, and T-3278 on its `ownStory` and request rules in `flai/internal/guard/guard_rules.go`.
+
+Forecast: `flai forecast` gives 42m from size 23 (6 criteria, 17 touches). Raised to 1h: S-0660, the kluster story this was split from, took 1h23m of agent work for six tasks, and this one adds a kubectl step to the deploy, moves the `kluster.log` reader, adds two commands, and adds guard rules that read whole shell lines. The delivery is flai's play-out of the pull order with that duration: 31st, behind S-0661, S-0662, and S-0663, which wait for it.
+
+Cost of delay: 555.56 USD a week, as `flai cod S-0763` works it out: S-0763's share of the operator's `revenue_per_week: 1250` on E-0035, split by forecast duration between the epic's two open stories without inputs of their own, S-0763 (1h) and S-0661 (1h15m). Not adjusted: the split follows the operator's input and flai's rule.

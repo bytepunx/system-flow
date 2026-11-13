@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-13T09:03:36Z
+updated: 2026-11-13T09:06:51Z
 transitions: []
 tags: [cli]
 topics: [cli, analysis]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 1h
-  delivery: 2026-11-13T18:46:00Z
-  basis: "Its own forecast of 1h; 24th in the pull order with an in-progress limit of 3, behind S-0735, S-0761, S-0760, S-0745, S-0759, S-0751, S-0757, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748 and S-0749."
+  delivery: 2026-11-13T19:59:00Z
+  basis: "Its own forecast of 1h; 25th in the pull order with an in-progress limit of 3, behind S-0735, S-0761, S-0760, S-0745, S-0759, S-0751, S-0757, S-0740, S-0763, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748 and S-0749."
   by: flai
-  at: 2026-11-13T09:03:36Z
+  at: 2026-11-13T09:06:51Z
 ---
 # S-0750 flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
 
