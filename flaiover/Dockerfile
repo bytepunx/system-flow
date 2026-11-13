@@ -14,7 +14,7 @@
 # Runs on the build platform for every target (S-0119): the build output and the
 # production node_modules are plain JavaScript, so only the runtime stage runs
 # emulated when CI builds linux/arm64 on an amd64 runner.
-FROM --platform=$BUILDPLATFORM node:24.22.2-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS build
+FROM --platform=$BUILDPLATFORM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS build
 ARG FLAI_COMMIT=unknown
 WORKDIR /src/flaiover
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -25,7 +25,7 @@ COPY flaiover/ ./
 RUN pnpm build && pnpm prune --prod
 
 # ---- runtime ---------------------------------------------------------------
-FROM node:24.22.2-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8
+FROM node:26.13.0-alpine3.24@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
 ARG FLAI_COMMIT=unknown
 ARG FLAIOVER_VERSION=0.0.0
 # The flai of the commit this image was built from: the one it was tested against, not one it holds.
