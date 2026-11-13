@@ -3,12 +3,15 @@ id: S-0759
 type: story
 nature: feature
 title: An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:04:53Z
-updated: 2026-11-13T07:30:41Z
-transitions: []
+updated: 2026-11-13T07:32:52Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:31:00Z
+    by: alex
 tags: [cli]
 topics: [docker, security]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_harness.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/internal/guard/hostconfig.go, flai/internal/guard/hostconfig_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/internal/agentimage/command.go, flai/internal/agentimage/command_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, design/system/flai-cli.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0314
 forecast:
   duration: 42m
-  delivery: 2026-11-13T21:54:00Z
-  basis: "Its own forecast of 42m; 31st in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0735, S-0745, S-0734, S-0751, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756, S-0757 and S-0758."
+  delivery: 2026-11-13T09:34:00Z
+  basis: "Its own forecast of 42m; 4th in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0760, S-0735 and S-0745."
   by: flai
-  at: 2026-11-13T07:30:41Z
+  at: 2026-11-13T07:32:52Z
 finalized:
   by: alex
   at: 2026-11-13T07:28:25Z

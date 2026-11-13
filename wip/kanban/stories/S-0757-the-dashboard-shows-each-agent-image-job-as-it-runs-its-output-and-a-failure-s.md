@@ -3,12 +3,15 @@ id: S-0757
 type: story
 nature: feature
 title: The dashboard shows each agent image job as it runs, its output, and a failure's cause, and offers the operator a retry
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:03:25Z
-updated: 2026-11-13T07:30:41Z
-transitions: []
+updated: 2026-11-13T07:32:52Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:30:43Z
+    by: alex
 tags: [cli, dashboard]
 topics: [docker, dashboard]
 touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flaiover/src/routes/api/images/+server.ts, flaiover/src/routes/api/images/retry/+server.ts, flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0208
 forecast:
   duration: 50m
-  delivery: 2026-11-13T21:14:00Z
-  basis: "Its own forecast of 50m; 29th in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0735, S-0745, S-0734, S-0751, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755 and S-0756."
+  delivery: 2026-11-13T11:23:00Z
+  basis: "Its own forecast of 50m; 7th in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0760, S-0735, S-0745, S-0759, S-0734 and S-0751."
   by: flai
-  at: 2026-11-13T07:30:41Z
+  at: 2026-11-13T07:32:52Z
 finalized:
   by: alex
   at: 2026-11-13T07:28:14Z

@@ -3,12 +3,15 @@ id: S-0760
 type: story
 nature: improvement
 title: This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images
-status: backlog
+status: ready
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:06:26Z
-updated: 2026-11-13T07:31:18Z
-transitions: []
+updated: 2026-11-13T07:32:52Z
+transitions:
+  - to: ready
+    at: 2026-11-13T07:31:21Z
+    by: alex
 tags: [cli, template]
 topics: [docker, template]
 touches: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, system-flow.yaml, flai/images/system-flow/Dockerfile, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0208
 forecast:
   duration: 32m
-  delivery: 2026-11-13T22:40:00Z
-  basis: "Its own forecast of 32m; 32nd in the pull order with an in-progress limit of 3, behind S-0660, S-0733, S-0735, S-0745, S-0734, S-0751, S-0740, S-0661, S-0663, S-0662, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756, S-0757, S-0758 and S-0759."
+  delivery: 2026-11-13T08:19:00Z
+  basis: "Its own forecast of 32m; 1st in the pull order with an in-progress limit of 3, behind S-0660 and S-0733."
   by: flai
-  at: 2026-11-13T07:30:41Z
+  at: 2026-11-13T07:32:52Z
 finalized:
   by: alex
   at: 2026-11-13T07:31:18Z
