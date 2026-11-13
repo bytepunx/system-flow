@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -137,7 +136,8 @@ type Status struct {
 // operator's own when present and named by the host, and otherwise stale
 // when a label is not what it must hold (ADR-0295 §2, §3): its flai label,
 // a development version when flai is one, else the same version, a leading
-// v aside; a layer's recipe label, Recipe over its Dockerfile; and a
+// v aside; a layer's recipe label, Recipe over its Dockerfile and its build
+// arguments, so that a change to either makes it stale; and a
 // layer's base label, the ID of the harness image of its inner harness among
 // images, which is stale when that image is missing. A harness image's
 // recipe and base are not compared yet.
@@ -189,18 +189,17 @@ func Check(root string, images []Image, inspect Inspector, flai func() (string, 
 	return out, nil
 }
 
-// judgeLayer compares the layer image s's recipe label with its Dockerfile's
-// recipe under root, and its base label with the ID of the harness image of
+// judgeLayer compares the layer image s's recipe label with the recipe of
+// its Dockerfile under root and its build arguments, and its base label with the ID of the harness image of
 // its inner harness among all.
 func (s *Status) judgeLayer(root string, all []Status) error {
-	path := filepath.Join(root, filepath.FromSlash(s.Dockerfile))
-	data, err := os.ReadFile(path)
+	data, err := layerDockerfile(root, s.Image, "for the recipe its image "+s.Ref+" must carry")
 	if err != nil {
-		return fmt.Errorf("read %s, the Dockerfile agent.image.layer names, for the recipe its image %s must carry: %w; fix agent.image.layer in %s or add the Dockerfile", path, s.Ref, err, manifest.File)
+		return err
 	}
-	s.Want.Recipe = Recipe(data, "", nil)
+	s.Want.Recipe = Recipe(data, "", s.Args)
 	if s.Labels.Recipe != s.Want.Recipe {
-		s.stale(ReasonRecipe, LabelRecipe, s.Labels.Recipe, "built from another Dockerfile than "+s.Dockerfile+": its recipe is "+s.Labels.Recipe+", not "+s.Want.Recipe)
+		s.stale(ReasonRecipe, LabelRecipe, s.Labels.Recipe, "built from another Dockerfile or other build arguments than "+s.Dockerfile+" and agent.image.args now give: its recipe is "+s.Labels.Recipe+", not "+s.Want.Recipe)
 	}
 	for _, h := range all {
 		if h.Kind != KindHarness || h.Inner != s.Inner {

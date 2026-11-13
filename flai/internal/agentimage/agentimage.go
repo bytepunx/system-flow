@@ -56,13 +56,15 @@ const (
 
 // Image is one image the agents of an inner harness need: its kind, the
 // inner harness, its name, where the name came from, and for a layer the
-// Dockerfile, from the repository root, it is built from.
+// Dockerfile, from the repository root, it is built from and the build
+// arguments agent.image.args gives it, nil for none.
 type Image struct {
-	Kind       Kind   `json:"kind"`
-	Inner      string `json:"inner"`
-	Ref        string `json:"ref"`
-	Source     Source `json:"source"`
-	Dockerfile string `json:"dockerfile,omitempty"`
+	Kind       Kind              `json:"kind"`
+	Inner      string            `json:"inner"`
+	Ref        string            `json:"ref"`
+	Source     Source            `json:"source"`
+	Dockerfile string            `json:"dockerfile,omitempty"`
+	Args       map[string]string `json:"args,omitempty"`
 }
 
 // Harness is the image the inner harness inner runs in under no layer: the
@@ -81,12 +83,12 @@ func Harness(hostImages map[string]string, inner string) Image {
 
 // For is the image an agent whose inner harness is inner runs in, for a
 // project with manifest m on a host whose container harness names
-// hostImages: the project's layer image (Kind KindLayer) when m names
-// agent.image.layer and inner has a default image, which the layer is built
-// over, else Harness. Its Ref is "" for an inner harness with no image.
+// hostImages: the project's layer image (Kind KindLayer), with the build
+// arguments agent.image.args gives it, when m names agent.image.layer and
+// inner has a default image, which the layer is built over, else Harness. Its Ref is "" for an inner harness with no image.
 func For(m manifest.Manifest, hostImages map[string]string, inner string) Image {
 	if layer := m.Layer(); layer != "" && harness.DefaultImages[inner] != "" {
-		return Image{Kind: KindLayer, Inner: inner, Ref: m.LayerImage(inner), Source: SourceLayer, Dockerfile: layer}
+		return Image{Kind: KindLayer, Inner: inner, Ref: m.LayerImage(inner), Source: SourceLayer, Dockerfile: layer, Args: m.LayerArgs()}
 	}
 	return Harness(hostImages, inner)
 }

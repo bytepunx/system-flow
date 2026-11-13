@@ -48,13 +48,34 @@ func TestForDecidesTheImageAnInnerHarnessRunsIn(t *testing.T) {
 		{"no default image but the host's", layered(), map[string]string{harness.Command: "mine:1"}, harness.Command, Image{Kind: KindHarness, Inner: harness.Command, Ref: "mine:1", Source: SourceHost}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			if got := For(c.m, c.host, c.inner); got != c.want {
+			if got := For(c.m, c.host, c.inner); !reflect.DeepEqual(got, c.want) {
 				t.Errorf("For = %+v, want %+v", got, c.want)
 			}
 		})
 	}
 	if len(host) != 1 || host[harness.ClaudeCode] != hostImage {
 		t.Errorf("the host's images were changed: %v", host)
+	}
+}
+
+// S-0745, ADR-0295 §4: the layer image carries the build arguments
+// agent.image.args gives it, as a copy, and none without them.
+func TestForCarriesTheLayersBuildArguments(t *testing.T) {
+	m := layered()
+	m.Agent.Image.Args = map[string]string{"GO_VERSION": "1.26.0"}
+	got := For(m, nil, harness.ClaudeCode)
+	if !reflect.DeepEqual(got.Args, map[string]string{"GO_VERSION": "1.26.0"}) {
+		t.Fatalf("For's Args = %v, want GO_VERSION=1.26.0", got.Args)
+	}
+	got.Args["GO_VERSION"] = "changed"
+	if m.Agent.Image.Args["GO_VERSION"] != "1.26.0" {
+		t.Error("changing the image's Args changed the manifest's")
+	}
+	if got := For(layered(), nil, harness.ClaudeCode); got.Args != nil {
+		t.Errorf("a layer with no args has Args %v", got.Args)
+	}
+	if got := For(m, nil, harness.Command); got.Args != nil {
+		t.Errorf("a harness image has Args %v", got.Args)
 	}
 }
 
@@ -245,12 +266,72 @@ func TestCheckJudgesEachImageByItsLabels(t *testing.T) {
 					}
 					kinds = append(kinds, r.Kind)
 				}
-				if s.Image != c.images[i] || s.State != w.state || !reflect.DeepEqual(kinds, w.reasons) {
+				if !reflect.DeepEqual(s.Image, c.images[i]) || s.State != w.state || !reflect.DeepEqual(kinds, w.reasons) {
 					t.Errorf("status %d = %+v, want %s with %v", i, s, w.state, w.reasons)
 				}
 				if s.Kind == KindLayer && s.Present && s.Want.Recipe != recipe {
 					t.Errorf("the layer's wanted recipe is %q, not %q", s.Want.Recipe, recipe)
 				}
+			}
+		})
+	}
+}
+
+// S-0745, ADR-0295 §2, §4: a layer image is stale when its Dockerfile, an
+// argument agent.image.args gives it, or the harness image under it changes,
+// and current when its recipe is that of its Dockerfile and arguments now.
+func TestCheckJudgesALayerByItsDockerfileArgumentsAndBase(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "images", "agent"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file := []byte("ARG BASE\nFROM ${BASE}\nARG GO_VERSION=1.26.0\n")
+	if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(dockerfile)), file, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	args := map[string]string{"GO_VERSION": "1.26.1", "PNPM_VERSION": "10.34.5"}
+	def := Image{Kind: KindHarness, Inner: harness.ClaudeCode, Ref: defaultImage, Source: SourceDefault}
+	harnessInfo := Info{ID: "sha256:h", Labels: labels("1.2.3", "", "")}
+	layer := func(args map[string]string) Image {
+		return Image{Kind: KindLayer, Inner: harness.ClaudeCode, Ref: layerImage, Source: SourceLayer, Dockerfile: dockerfile, Args: args}
+	}
+	for _, c := range []struct {
+		name    string
+		layer   Image
+		recipe  string
+		base    string
+		reasons []ReasonKind
+	}{
+		{"current with arguments", layer(args), Recipe(file, "", args), "sha256:h", nil},
+		{"current with no arguments", layer(nil), Recipe(file, "", nil), "sha256:h", nil},
+		{"an argument changed", layer(map[string]string{"GO_VERSION": "1.27.0", "PNPM_VERSION": "10.34.5"}), Recipe(file, "", args), "sha256:h", []ReasonKind{ReasonRecipe}},
+		{"an argument added", layer(args), Recipe(file, "", map[string]string{"GO_VERSION": "1.26.1"}), "sha256:h", []ReasonKind{ReasonRecipe}},
+		{"the arguments removed", layer(nil), Recipe(file, "", args), "sha256:h", []ReasonKind{ReasonRecipe}},
+		{"the Dockerfile changed", layer(args), Recipe([]byte("FROM other\n"), "", args), "sha256:h", []ReasonKind{ReasonRecipe}},
+		{"the harness image changed", layer(args), Recipe(file, "", args), "sha256:old", []ReasonKind{ReasonBase}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			present := map[string]Info{defaultImage: harnessInfo, layerImage: {ID: "sha256:l", Labels: labels("1.2.3", c.recipe, c.base)}}
+			got, err := Check(root, []Image{def, c.layer}, (&fakeImages{images: present}).inspect, (&counter{version: "1.2.3"}).flai)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := got[1]
+			var kinds []ReasonKind
+			for _, r := range s.Reasons {
+				kinds = append(kinds, r.Kind)
+			}
+			if !reflect.DeepEqual(kinds, c.reasons) {
+				t.Errorf("the layer's reasons are %+v, want %v", s.Reasons, c.reasons)
+			}
+			if want := Recipe(file, "", c.layer.Args); s.Want.Recipe != want {
+				t.Errorf("the layer's wanted recipe is %s, not %s", s.Want.Recipe, want)
+			}
+			if c.reasons == nil && s.State != StateCurrent || c.reasons != nil && s.State != StateStale {
+				t.Errorf("the layer is %s with %+v", s.State, s.Reasons)
+			}
+			if len(c.reasons) > 0 && c.reasons[0] == ReasonRecipe && !strings.Contains(s.Reasons[0].Message, "build arguments") {
+				t.Errorf("the reason %q does not say the Dockerfile or its arguments changed", s.Reasons[0].Message)
 			}
 		})
 	}
