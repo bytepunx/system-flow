@@ -114,8 +114,10 @@ func deny(why string) Verdict {
 }
 
 // Decide decides on c under g's policy: the shared paths, flai forge push,
-// the flai kluster commands that write (S-0577), and the commands that write
-// the host configuration (ADR-0220) for every
+// the flai kluster commands that write (S-0577) and exec and log for another
+// story's namespace, the kluster program but kluster status, and a line
+// naming flai's kubeconfig for the cluster (ADR-0292 §2), and the commands
+// that write the host configuration (ADR-0220) for every
 // caller, then the rules of a sub-agent, or of the session's own
 // role, each role's from its role file, and the author a served agent writes
 // as. A session with no role, or a story's or a verifier's, never publishes.
@@ -130,6 +132,9 @@ func Decide(g Guard, c Call) Verdict {
 		return v
 	}
 	if v := g.klusterWrite(c); v.Outcome != Allow {
+		return v
+	}
+	if v := g.klusterLine(c); v.Outcome != Allow {
 		return v
 	}
 	if v := g.hostConfig(c); v.Outcome != Allow {
@@ -245,7 +250,9 @@ func (g Guard) asSubAgent(c Call) Verdict {
 		return deny(fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items, threads, and conversations with other stories or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, c.Tool))
 	case Shell:
 		readOnly := g.ReadOnly != nil && g.ReadOnly(c.Agent)
-		r := subAgent(readOnly)
+		// flai kluster exec and log reach here only for the sub-agent's own
+		// story's namespace (klusterWrite)
+		r := reachOpen(subAgent(readOnly))
 		for _, s := range parse(c.Command) {
 			run := strings.Join(s.words, " ")
 			if why, _ := g.refuse(s.args, r); why != "" {
@@ -254,7 +261,11 @@ func (g Guard) asSubAgent(c Call) Verdict {
 			if !readOnly {
 				continue
 			}
-			if file := written(s); file != "" {
+			file := written(s)
+			if ran, ok := klusterExecCommand(s.args); ok && file == "" {
+				file = written(simple{args: ran})
+			}
+			if file != "" {
 				return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: it reads, and it writes no file but under the temporary folder (ADR-0141); this writes %s. Put the correction in your final message; the story's agent makes it.", who, run, file))
 			}
 		}

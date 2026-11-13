@@ -294,3 +294,262 @@ func TestNoFlagFormMakesAKlusterWriteARequest(t *testing.T) {
 		}
 	}
 }
+
+// ADR-0292 §2: a story's agent and its sub-agents run flai kluster exec and
+// log for their own story's namespace, however the line runs flai; another
+// story's, the default one, none, one not written plainly, and one flai could
+// read as another subcommand are refused them, with the form to write
+// instead. The operator's own session runs them all.
+func TestAStorysAgentReachesItsOwnNamespace(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "kluster")
+	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "task"; return e }
+	agents := []struct {
+		name  string
+		guard Guard
+		sub   bool
+		who   string
+	}{
+		{"served", Guard{Commands: commands, Story: "S-0001", Served: true}, false, "the story's agent cannot"},
+		{"not served", Guard{Commands: commands, Story: "S-0001"}, false, "the story's agent cannot"},
+		{"named agent-S-0001", Guard{Commands: commands, Agent: "agent-S-0001", Served: true}, false, "the story's agent cannot"},
+		{"named agent-S-1, not served", Guard{Commands: commands, Agent: "agent-S-1"}, false, "the story's agent cannot"},
+		{"served's sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true}, true, "a sub-agent (task) cannot"},
+		{"named's sub-agent", Guard{Commands: commands, Agent: "agent-S-0001"}, true, "a sub-agent (task) cannot"},
+		{"read-only sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true, ReadOnly: func(string) bool { return true }}, true, "a sub-agent (task) cannot"},
+	}
+	own := []string{
+		"flai kluster exec S-0001 -- kubectl get pods",
+		"flai kluster exec s-1 -- kubectl logs deploy/api",
+		"scripts/flai.sh kluster exec S-0001 -- kubectl get svc",
+		"flai --config c.json kluster exec S-0001 -- sh -c 'kubectl get pods -n $FLAI_KLUSTER_NAMESPACE'",
+		"cd /w && /home/alex/.flai/bin/flai kluster exec S-0001 -- kubectl get deploy 2>&1",
+		"flai kluster exec S-0001 -- kluster status",
+		"flai kluster log S-0001 --step deploy",
+		"flai kluster log --step checks S-0001",
+		"flai kluster log S-0001 --step=build --json",
+		"bash -c 'flai kluster log S-0001 --step deploy'",
+		"KUBECONFIG=.flai-cache/kluster/agents/s-0001.kubeconfig kubectl get pods",
+	}
+	others := []struct{ line, names string }{
+		{"flai kluster exec S-0002 -- kubectl get pods", "names S-0002, not this story's namespace"},
+		{"flai kluster exec default -- kubectl get pods", "names default, not this story's namespace"},
+		{"flai kluster exec -- kubectl get pods", "names no single namespace"},
+		{"flai kluster log S-0002 --step deploy", "names S-0002"},
+		{"flai kluster log --step S-0001 S-0002", "names S-0002"},
+		{"flai kluster log S-0001 S-0002 --step deploy", "names no single namespace"},
+		{"flai kluster exec S-0001 -- true; flai kluster exec S-0002 -- true", "names S-0002"},
+		{"flai kluster exec S-0001 -- flai kluster exec S-0002 -- true", "names S-0002"},
+		{"bash -c 'flai kluster log S-0002 --step deploy'", "names S-0002"},
+		{"flai kluster exec $FLAI_STORY -- ls", "written plainly"},
+		{"flai kluster log \"$S\" --step deploy", "written plainly"},
+		{"flai kluster exec S-0001 --wait `echo 1 S-0002` -- ls", "written plainly"},
+		{"flai kluster --config exec log S-0001 --step deploy", "another subcommand"},
+	}
+	for _, a := range agents {
+		as := func(e Event) Event {
+			if a.sub {
+				return sub(e)
+			}
+			return e
+		}
+		for _, line := range own {
+			if why := a.guard.Check(as(bash("", line))); why != "" {
+				t.Errorf("%s: %q refused: %s", a.name, line, why)
+			}
+		}
+		for _, o := range others {
+			why := a.guard.Check(as(bash("", o.line)))
+			for _, want := range []string{a.who, "a story's agent's and its sub-agents', for their own story's namespace alone", "ADR-0292", o.names, "Write it as flai kluster "} {
+				if !strings.Contains(why, want) {
+					t.Errorf("%s: %q: %q wants %q", a.name, o.line, why, want)
+				}
+			}
+		}
+	}
+	// the form to write names the session's own story and the command
+	why := agents[0].guard.Check(bash("", "flai kluster log S-0002 --step deploy"))
+	if !strings.Contains(why, "Write it as flai kluster log S-0001 --step <step>") {
+		t.Errorf("log: %q", why)
+	}
+	why = agents[0].guard.Check(bash("", "flai kluster exec S-0002 -- ls"))
+	if !strings.Contains(why, "Write it as flai kluster exec S-0001 -- <command>") {
+		t.Errorf("exec: %q", why)
+	}
+	// a read-only sub-agent's exec writes no file but under the temporary
+	// folder, as its other commands do (ADR-0141)
+	readOnly := agents[len(agents)-1].guard
+	for _, line := range []string{"flai kluster exec S-0001 -- rm -rf build", "flai kluster exec S-0001 -- bash -c 'touch x'"} {
+		if why := readOnly.Check(sub(bash("", line))); !strings.Contains(why, "writes no file but under the temporary folder") {
+			t.Errorf("read-only sub-agent: %q: %q", line, why)
+		}
+	}
+	// a session with no story of its own is refused them all, its own
+	// sub-agents too, whichever story they name
+	none := []struct {
+		name  string
+		guard Guard
+		sub   bool
+		who   string
+		ask   string
+	}{
+		{"planner", Guard{Commands: commands, Role: RolePlan}, false, "the planner cannot", "thread_open"},
+		{"orchestrator", Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, false, "the orchestrator cannot", "thread_open"},
+		{"analyzer", Guard{Commands: commands, Role: RoleAnalyze}, false, "the analyzer cannot", "thread_open"},
+		{"session flai serve started", Guard{Commands: commands, Served: true}, false, "a session flai serve started cannot", "thread_open"},
+		{"planner's sub-agent", Guard{Commands: commands, Role: RolePlan}, true, "a sub-agent (task) cannot", "final message"},
+		{"operator's sub-agent", Guard{Commands: commands}, true, "a sub-agent (task) cannot", "final message"},
+	}
+	for _, n := range none {
+		for _, line := range []string{"flai kluster exec S-0001 -- kubectl get pods", "flai kluster log S-0001 --step deploy", "flai kluster exec default -- ls"} {
+			e := bash("", line)
+			if n.sub {
+				e = sub(e)
+			}
+			why := n.guard.Check(e)
+			for _, want := range []string{n.who, "for their own story's namespace alone", "no story of its own", n.ask} {
+				if !strings.Contains(why, want) {
+					t.Errorf("%s: %q: %q wants %q", n.name, line, why, want)
+				}
+			}
+		}
+	}
+	operator := Guard{Commands: commands}
+	for _, line := range own {
+		if why := operator.Check(bash("", line)); why != "" {
+			t.Errorf("the operator's session: %q refused: %s", line, why)
+		}
+	}
+	for _, o := range others {
+		if why := operator.Check(bash("", o.line)); why != "" {
+			t.Errorf("the operator's session: %q refused: %s", o.line, why)
+		}
+	}
+}
+
+// ADR-0292 §2: every agent and sub-agent is refused the kluster program but
+// kluster status, in every form a line runs it, and a line naming flai's
+// kubeconfig for the cluster, whole or as the end of a path, each with what to
+// run instead; flai kluster, a word naming kluster that runs nothing, and the
+// namespace's own kubeconfig pass. The operator's own session runs them all.
+func TestNoAgentRunsTheKlusterProgramOrFlaisKubeconfig(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "kluster")
+	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "task"; return e }
+	programs := []string{
+		"kluster up",
+		"kluster",
+		"kluster --json status",
+		"kluster delete flai",
+		"/usr/local/bin/kluster down",
+		"cd /w && kluster list",
+		"flai board; kluster up",
+		"bash -c 'kluster up'",
+		"eval kluster down",
+		"KUBECONFIG=x kluster up",
+		"sudo -u alex kluster up",
+		"timeout 5 kluster stop",
+		"echo flai | xargs kluster up",
+		"flai kluster exec S-0001 -- kluster up",
+		"flai kluster exec S-0001 -- bash -c 'kluster down'",
+	}
+	kubeconfig := []string{
+		"cat .flai-cache/kluster/kubeconfig",
+		"KUBECONFIG=.flai-cache/kluster/kubeconfig kubectl get pods -A",
+		"kubectl --kubeconfig=/home/alex/p/.flai-cache/kluster/kubeconfig get ns",
+		"kubectl --kubeconfig \"/home/alex/p/.flai-cache/kluster/kubeconfig\" get ns",
+		"export KUBECONFIG=$PWD/.flai-cache/kluster/kubeconfig",
+		"KUBECONFIG=a.yaml:.flai-cache/kluster/kubeconfig kubectl get ns",
+		"cp ./.flai-cache/kluster/kubeconfig /tmp/k",
+		"cat .flai-cache/kluster/agents/../kubeconfig",
+		"bash -c 'cat .flai-cache//kluster/kubeconfig | head'",
+		"kubectl get ns > /tmp/x 2>.flai-cache/kluster/kubeconfig",
+		"flai kluster exec S-0001 -- kubectl --kubeconfig .flai-cache/kluster/kubeconfig get ns",
+	}
+	pass := []string{
+		"kluster status",
+		"kluster status --json",
+		"flai kluster status",
+		"scripts/flai.sh kluster status --json",
+		"cat design/system/kluster.md",
+		"ls .flai-cache/kluster",
+		"grep -n kluster flai/cmd/kluster.go",
+		"echo kluster up",
+		"cat .flai-cache/kluster/agents/s-0001.kubeconfig",
+		"ls .flai-cache/kluster/agents/",
+	}
+	sessions := []struct {
+		name  string
+		guard Guard
+		sub   bool
+		who   string
+		story string // the story the refusal's exec names
+	}{
+		{"story's agent", Guard{Commands: commands, Story: "S-0001", Served: true}, false, "the story's agent cannot", "S-0001"},
+		{"story's agent, not served", Guard{Commands: commands, Story: "S-0001"}, false, "the story's agent cannot", "S-0001"},
+		{"named agent-S-0001, not served", Guard{Commands: commands, Agent: "agent-S-0001"}, false, "the story's agent cannot", "S-0001"},
+		{"story's agent's sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true}, true, "a sub-agent (task) cannot", "S-0001"},
+		{"planner", Guard{Commands: commands, Role: RolePlan}, false, "the planner cannot", "S-nnnn"},
+		{"orchestrator", Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, false, "the orchestrator cannot", "S-nnnn"},
+		{"session flai serve started", Guard{Commands: commands, Served: true}, false, "a session flai serve started cannot", "S-nnnn"},
+		{"operator's sub-agent", Guard{Commands: commands}, true, "a sub-agent (task) cannot", "S-nnnn"},
+	}
+	for _, s := range sessions {
+		as := func(e Event) Event {
+			if s.sub {
+				return sub(e)
+			}
+			return e
+		}
+		// a session with no story of its own is refused flai kluster exec
+		// before what it runs is read
+		reason := func(line string, wants ...string) []string {
+			if s.story == "S-nnnn" && strings.HasPrefix(line, "flai kluster exec") {
+				return []string{s.who, "no story of its own"}
+			}
+			return append([]string{s.who}, wants...)
+		}
+		for _, line := range programs {
+			why := s.guard.Check(as(bash("", line)))
+			for _, want := range reason(line, "the project's cluster is flai's", "only as kluster status", "flai kluster status", "flai kluster exec "+s.story+" -- <command>", "ADR-0292") {
+				if !strings.Contains(why, want) {
+					t.Errorf("%s: %q: %q wants %q", s.name, line, why, want)
+				}
+			}
+		}
+		for _, line := range kubeconfig {
+			why := s.guard.Check(as(bash("", line)))
+			for _, want := range reason(line, "is flai's kubeconfig for the whole cluster", "flai kluster exec "+s.story+" -- <command>", "namespace's own kubeconfig", "ADR-0292") {
+				if !strings.Contains(why, want) {
+					t.Errorf("%s: %q: %q wants %q", s.name, line, why, want)
+				}
+			}
+		}
+	}
+	// the story's agents and their sub-agents run the rest
+	for _, s := range sessions[:4] {
+		for _, line := range pass {
+			e := bash("", line)
+			if s.sub {
+				e = sub(e)
+			}
+			if why := s.guard.Check(e); strings.Contains(why, "flai's kubeconfig") || strings.Contains(why, "only as kluster status") {
+				t.Errorf("%s: %q refused: %s", s.name, line, why)
+			}
+		}
+	}
+	for _, line := range pass {
+		if why := sessions[0].guard.Check(bash("", line)); why != "" {
+			t.Errorf("the story's agent: %q refused: %s", line, why)
+		}
+	}
+	// the orchestrator's refusal names the call, so that its activity
+	// document logs it
+	if r := (Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}).Decide(bash("", "flai board; kluster up")); r.Call != "kluster up" {
+		t.Errorf("the orchestrator's refusal: %+v", r)
+	}
+	operator := Guard{Commands: commands}
+	for _, line := range append(append(append([]string{}, programs...), kubeconfig...), pass...) {
+		if why := operator.Check(bash("", line)); why != "" {
+			t.Errorf("the operator's session: %q refused: %s", line, why)
+		}
+	}
+}
