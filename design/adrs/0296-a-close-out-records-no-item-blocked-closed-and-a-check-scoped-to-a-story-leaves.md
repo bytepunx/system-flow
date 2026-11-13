@@ -6,6 +6,7 @@ date: 2026-11-13
 supersedes: []
 superseded_by: []
 refines: [ADR-0085]
+topics: [cli, conventions, template]
 ---
 
 # ADR-0296 A close-out records no item.blocked-closed, and a check scoped to a story leaves out every item.blocked-closed outside it
