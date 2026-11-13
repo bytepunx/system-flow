@@ -646,6 +646,9 @@ func (c Cluster) builds(k *manifest.Kluster, t Target) []build {
 }
 
 // steps runs the builds, the load, and deploy for t, recording each in r.
+// For a story's namespace the deploy step, once its command passes, also
+// writes the namespace's own kubeconfig, so that a failure to write it fails
+// the deploy step, in its log (ADR-0292 §2).
 func (c Cluster) steps(ctx context.Context, k *manifest.Kluster, t Target, r *Record, out io.Writer) error {
 	env := c.Env(t)
 	if bs := c.builds(k, t); len(bs) > 0 {
@@ -677,7 +680,13 @@ func (c Cluster) steps(ctx context.Context, k *manifest.Kluster, t Target, r *Re
 		}
 	}
 	return c.step(ctx, r, t, StepDeploy, out, func(log io.Writer) error {
-		return c.Exec.Command(ctx, Cmd{Dir: t.Dir, Env: env, Out: log, Name: k.Deploy[0], Args: k.Deploy[1:]})
+		if err := c.Exec.Command(ctx, Cmd{Dir: t.Dir, Env: env, Out: log, Name: k.Deploy[0], Args: k.Deploy[1:]}); err != nil {
+			return err
+		}
+		if t.Story == "" {
+			return nil
+		}
+		return c.writeAgentKubeconfig(ctx, t, log)
 	})
 }
 
@@ -826,12 +835,12 @@ var ErrNotDeployed = errors.New("no deployment is recorded for it, so there is n
 // record names, then kubectl delete namespace, which passes over a namespace
 // already gone, both logged to the namespace's teardown log. dir is the
 // story's worktree, or the main checkout when the worktree is gone; empty
-// means the main checkout. On success the record, the state folder, and the
-// logs are removed, and the record as it was is returned. A failure keeps the
-// record, marked failed at the teardown step, and is a StepError. A story
-// with no record is ErrNotDeployed and runs nothing. It runs while no other
-// kluster job runs for the project. Neither its job nor a record it keeps
-// says who asked; TeardownBy's do.
+// means the main checkout. On success the record, the state folder, the
+// logs, and the namespace's kubeconfig are removed, and the record as it was
+// is returned. A failure keeps them, the record marked failed at the teardown
+// step, and is a StepError. A story with no record is ErrNotDeployed and
+// runs nothing. It runs while no other kluster job runs for the project.
+// Neither its job nor a record it keeps says who asked; TeardownBy's do.
 func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir string, out io.Writer) (Record, error) {
 	return c.TeardownBy(ctx, m, "", story, dir, out)
 }
@@ -889,7 +898,7 @@ func (c Cluster) TeardownBy(ctx context.Context, m manifest.Manifest, by, story,
 		}
 		return kept, err
 	}
-	for _, p := range []string{RecordPath(c.Root, t.Namespace), StatePath(c.Root, t.Namespace), LogDir(c.Root, t.Namespace)} {
+	for _, p := range []string{RecordPath(c.Root, t.Namespace), StatePath(c.Root, t.Namespace), LogDir(c.Root, t.Namespace), AgentKubeconfigPath(c.Root, t.Story)} {
 		if err := os.RemoveAll(p); err != nil {
 			return r, fmt.Errorf("remove %s, left by the namespace %s once it was torn down: %w; remove it by hand", p, t.Namespace, err)
 		}

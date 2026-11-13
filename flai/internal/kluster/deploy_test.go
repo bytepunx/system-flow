@@ -58,15 +58,52 @@ const (
 	commitB = "fedcba9876543210fedcba9876543210fedcba98"
 )
 
+// clusterKubeconfig is flai's kubeconfig of a cluster that is up: another
+// cluster's context first and current, then authstar-integration's, whose
+// cluster has a server and a certificate authority, and an admin user of
+// fake credentials.
+const clusterKubeconfig = `apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://10.0.0.9:6443
+  name: k3d-other
+- cluster:
+    certificate-authority-data: RkFLRS1DQQ==
+    server: https://0.0.0.0:6550
+  name: k3d-authstar-integration
+contexts:
+- context:
+    cluster: k3d-other
+    user: admin@k3d-other
+  name: k3d-other
+- context:
+    cluster: k3d-authstar-integration
+    user: admin@k3d-authstar-integration
+  name: k3d-authstar-integration
+current-context: k3d-other
+users:
+- name: admin@k3d-authstar-integration
+  user:
+    client-certificate-data: RkFLRS1DRVJU
+    client-key-data: RkFLRS1LRVk=
+`
+
+// fakeToken is the token the fake kubectl gives create token, unless a test
+// sets $FAKE_TOKEN to another; neither is a real token.
+const fakeToken = "fake-token-1"
+
 // deploySetup makes a project with a cluster that is up, a story's worktree
-// with build and deploy scripts, and a fake docker first on PATH, with two
-// nodes of the cluster and one other container.
+// with build and deploy scripts, and a fake docker and kubectl first on
+// PATH, with two nodes of the cluster and one other container.
 func deploySetup(t *testing.T) deployFixture {
 	t.Helper()
 	f := deployFixture{fixture: setup(t, authstarConfig), worktree: t.TempDir(), env: t.TempDir()}
 	bin := t.TempDir()
-	if err := os.WriteFile(filepath.Join(bin, "docker"), []byte(fakeDocker), 0o755); err != nil {
-		t.Fatal(err)
+	for name, script := range map[string]string{"docker": fakeDocker, "kubectl": fakeKubectl} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	if err := os.MkdirAll(filepath.Join(f.worktree, "scripts"), 0o755); err != nil {
@@ -80,10 +117,12 @@ func deploySetup(t *testing.T) deployFixture {
 	if err := os.MkdirAll(filepath.Dir(KubeconfigPath(f.root)), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(KubeconfigPath(f.root), []byte("apiVersion: v1\n"), 0o600); err != nil {
+	if err := os.WriteFile(KubeconfigPath(f.root), []byte(clusterKubeconfig), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("FAKE_ENV", f.env)
+	t.Setenv("FAKE_KUBECTL_FAIL", "")
+	t.Setenv("FAKE_TOKEN", fakeToken)
 	t.Setenv("FAKE_NODES", `k3d-authstar-integration-server-0 server\nk3d-authstar-integration-agent-0 agent\nk3d-authstar-integration-serverlb loadbalancer\n`)
 	t.Setenv("FAKE_IMAGES_OUT", `authstar/tower:s-0578-0123456789ab\n\nauthstar/gate:s-0578-0123456789ab\n`)
 	t.Setenv("FAKE_DOCKER_FAIL", "")
@@ -125,10 +164,12 @@ func TestDeployBuildsLoadsAndDeploysIntoTheStorysNamespace(t *testing.T) {
 		"docker save authstar/gate:s-0578-0123456789ab",
 		"docker exec k3d-authstar-integration-server-0 tar of authstar/gate:s-0578-0123456789ab <- ctr -n k8s.io images import -",
 		"docker exec k3d-authstar-integration-agent-0 tar of authstar/gate:s-0578-0123456789ab <- ctr -n k8s.io images import -",
-		"deploy " + f.worktree,
+		"deploy " + f.worktree + " ", // no longer the last line, so its arguments' space is kept
+		applyS0578 + KubeconfigPath(f.root),
+		tokenS0578 + KubeconfigPath(f.root),
 	}
 	if got := f.calls(t); !slices.Equal(got, want) {
-		t.Errorf("build, then each image into each node, then deploy, in the worktree:\n got %q\nwant %q", got, want)
+		t.Errorf("build, then each image into each node, then deploy, in the worktree, then the namespace's kubeconfig made:\n got %q\nwant %q", got, want)
 	}
 	env := f.envOf(t, "deploy")
 	wantEnv := map[string]string{
@@ -345,8 +386,8 @@ func TestADeployWithoutABuildLoadsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := f.calls(t); !slices.Equal(got, []string{"deploy " + f.worktree}) {
-		t.Errorf("only deploy runs: %q", got)
+	if got := f.calls(t); !slices.Equal(got, []string{"deploy " + f.worktree + " ", applyS0578 + KubeconfigPath(f.root), tokenS0578 + KubeconfigPath(f.root)}) {
+		t.Errorf("only deploy runs, then the namespace's kubeconfig is made: %q", got)
 	}
 	if len(r.Images) != 0 || r.Steps[0].Outcome != OutcomeSkipped || r.Steps[1].Outcome != OutcomeSkipped || r.Steps[2].Outcome != OutcomePassed {
 		t.Errorf("build and load are skipped, and no image is recorded: %+v", r)
@@ -675,12 +716,25 @@ func TestTargets(t *testing.T) {
 }
 
 // fakeKubectl is a kubectl on PATH that logs its arguments and the
-// KUBECONFIG it got to $FAKE_LOG, and exits 5 when $FAKE_KUBECTL_FAIL is set.
+// KUBECONFIG it got to $FAKE_LOG; exits 5 when $FAKE_KUBECTL_FAIL is set;
+// copies what an apply reads on its standard input to $FAKE_ENV/kubectl.apply;
+// and answers create token with $FAKE_TOKEN.
 const fakeKubectl = `#!/bin/sh
 echo "kubectl $* KUBECONFIG=$KUBECONFIG" >> "$FAKE_LOG"
 if [ -n "$FAKE_KUBECTL_FAIL" ]; then echo "kubectl broke" >&2; exit 5; fi
-echo "namespace deleted"
+case "$*" in
+  *" apply -f -") cat > "$FAKE_ENV/kubectl.apply"; echo "serviceaccount/flai-agent configured" ;;
+  *" create token "*) echo "$FAKE_TOKEN" ;;
+  *) echo "namespace deleted" ;;
+esac
 `
+
+// The kubectl calls that make a namespace's kubeconfig, each followed by the
+// KUBECONFIG it got.
+const (
+	applyS0578 = "kubectl --context k3d-authstar-integration --namespace s-0578 apply -f - KUBECONFIG="
+	tokenS0578 = "kubectl --context k3d-authstar-integration --namespace s-0578 create token flai-agent --duration 24h KUBECONFIG="
+)
 
 // fakeGit is a git on PATH that logs its directory and arguments to
 // $FAKE_LOG; answers rev-parse with $FAKE_HEAD, or fails it when
@@ -694,22 +748,19 @@ case "$1" in
 esac
 `
 
-// teardownSetup is deploySetup with fake kubectl and git on PATH and a
-// teardown script in the story's worktree.
+// teardownSetup is deploySetup with a fake git on PATH and a teardown
+// script in the story's worktree.
 func teardownSetup(t *testing.T) deployFixture {
 	t.Helper()
 	f := deploySetup(t)
 	bin := t.TempDir()
-	for name, script := range map[string]string{"kubectl": fakeKubectl, "git": fakeGit} {
-		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0o755); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(fakeGit), 0o755); err != nil {
+		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(f.worktree, "scripts", "teardown.sh"), []byte(fakeStep), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("FAKE_KUBECTL_FAIL", "")
 	t.Setenv("FAKE_GIT_FAIL", "")
 	t.Setenv("FAKE_HEAD", commitA)
 	t.Setenv("FAKE_SCRIPTS", filepath.Join(f.worktree, "scripts"))
@@ -736,6 +787,9 @@ const deleteS0578 = "kubectl --context k3d-authstar-integration delete namespace
 func TestATeardownRunsTheTeardownCommandThenDeletesTheNamespace(t *testing.T) {
 	f := teardownSetup(t)
 	f.deployed(t, "S-0578")
+	if _, err := os.Stat(AgentKubeconfigPath(f.root, "S-0578")); err != nil {
+		t.Fatalf("the deploy wrote the namespace's kubeconfig: %v", err)
+	}
 	f.reset(t)
 	f.m.Kluster.Teardown = []string{"scripts/teardown.sh", "--purge"}
 	r, err := f.c.Teardown(context.Background(), f.m, "S-0578", f.worktree, &bytes.Buffer{})
@@ -753,7 +807,7 @@ func TestATeardownRunsTheTeardownCommandThenDeletesTheNamespace(t *testing.T) {
 	if r.Namespace != "s-0578" || r.Commit != commitA {
 		t.Errorf("the record torn down is returned: %+v", r)
 	}
-	for _, p := range []string{RecordPath(f.root, "s-0578"), StatePath(f.root, "s-0578"), LogDir(f.root, "s-0578")} {
+	for _, p := range []string{RecordPath(f.root, "s-0578"), StatePath(f.root, "s-0578"), LogDir(f.root, "s-0578"), AgentKubeconfigPath(f.root, "S-0578")} {
 		if _, err := os.Stat(p); !errors.Is(err, os.ErrNotExist) {
 			t.Errorf("%s is removed once the namespace is torn down: %v", p, err)
 		}
@@ -826,6 +880,9 @@ func TestATeardownThatFailsKeepsTheRecord(t *testing.T) {
 			if _, err := os.Stat(StatePath(f.root, "s-0578")); err != nil {
 				t.Errorf("the state folder stays: %v", err)
 			}
+			if _, err := os.Stat(AgentKubeconfigPath(f.root, "S-0578")); err != nil {
+				t.Errorf("the namespace's kubeconfig stays: %v", err)
+			}
 		})
 	}
 }
@@ -853,6 +910,14 @@ func TestPromoteDeploysMainsHeadIntoTheDefaultNamespace(t *testing.T) {
 	}
 	if r.Outcome != OutcomePassed || r.Story != "" || r.Namespace != "authstar" || r.Checkout != wt || r.Commit != commitA {
 		t.Errorf("the promotion is recorded under the default namespace: %+v", r)
+	}
+	for _, c := range calls {
+		if strings.HasPrefix(c, "kubectl ") {
+			t.Errorf("a promotion makes no kubeconfig for the default namespace: %q", c)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(Dir(f.root), "agents")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a promotion writes no namespace's kubeconfig: %v", err)
 	}
 
 	f.reset(t)
