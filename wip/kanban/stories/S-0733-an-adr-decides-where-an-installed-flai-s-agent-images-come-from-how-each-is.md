@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:54:40Z
-updated: 2026-11-13T07:23:41Z
+updated: 2026-11-13T07:28:33Z
 transitions: []
 tags: [cli]
 topics: [release, docker, security]
@@ -17,13 +17,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 25m
   delivery: 2026-11-13T13:17:00Z
   basis: "Its own forecast of 25m; 7th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663 and S-0730."
   by: flai
   at: 2026-11-13T07:23:41Z
+finalized:
+  by: alex
+  at: 2026-11-13T07:28:33Z
 ---
 # S-0733 An ADR decides where an installed flai's agent images come from, how each is tied to the flai that runs it, and how flai brings back a missing one or hands the build to the operator's own machinery
 
