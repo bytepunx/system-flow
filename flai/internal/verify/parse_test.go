@@ -208,6 +208,44 @@ func TestGoTestPlacesATimedOutTestAtItsPackageWhenNoStackShowsIt(t *testing.T) {
 	}
 }
 
+// A test binary that died mid-test, recorded from go1.26.0 with -p 1: a
+// goroutine's panic in a subtest, a fatal error, and an os.Exit(3). go test
+// -json writes each crash as output of the running test, sends it no fail,
+// and prints no exit status (I-0365).
+func TestGoTestNamesTheTestRunningWhenTheTestBinaryCrashes(t *testing.T) {
+	got := parseGoTest(fixture(t, "go-test-crash.json"), "", env{root: fixtureRoot, dir: "fx", fsys: fixtureFS()})
+	want := []Finding{
+		{Name: "TestCrash/inner", Path: "fx/calc/calc_test.go", Line: 11, Message: "panic: boom"},
+		{Name: "TestUnlock", Path: "fx/fatal/fatal_test.go", Line: 10, Message: "fatal error: sync: unlock of unlocked mutex"},
+		{Name: "TestQuit", Path: "fx/quit", Message: "the test binary exited before the test ended"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %s", show(got))
+	}
+}
+
+func TestGoTestReadsAPackageWholeOutputWhenNoTestWasRunning(t *testing.T) {
+	out := strings.Join([]string{
+		`{"Action":"run","Package":"example.com/fx/calc","Test":"TestAdd"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"--- PASS: TestAdd (0.00s)\n"}`,
+		`{"Action":"pass","Package":"example.com/fx/calc","Test":"TestAdd"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"panic: late\n"}`,
+		`{"Action":"output","Package":"example.com/fx/calc","Output":"FAIL\texample.com/fx/calc\t0.01s\n"}`,
+		`{"Action":"fail","Package":"example.com/fx/calc"}`,
+		`{"Action":"output","Package":"example.com/fx/boom","Output":"FAIL\texample.com/fx/boom\t0.01s\n"}`,
+		`{"Action":"fail","Package":"example.com/fx/boom"}`,
+	}, "\n")
+	got := parseGoTest(out, "", env{root: fixtureRoot, dir: "fx", fsys: fixtureFS()})
+	want := []Finding{
+		{Name: "example.com/fx/calc", Path: "fx/calc", Message: "panic: late"},
+		{Name: "example.com/fx/boom", Path: "fx/boom", Message: "the test binary failed with no output"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %s", show(got))
+	}
+}
+
 func TestGoTestReadsBuildErrorsFromStderrWhenAnOlderGoPrintsThemThere(t *testing.T) {
 	stdout := `{"Action":"output","Package":"example.com/fx/broken","Output":"FAIL\texample.com/fx/broken [build failed]\n"}
 {"Action":"fail","Package":"example.com/fx/broken"}`

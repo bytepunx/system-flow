@@ -1,0 +1,45 @@
+{"Time":"2026-11-13T15:58:34.994963646-07:00","Action":"start","Package":"example.com/fx/calc"}
+{"Time":"2026-11-13T15:58:34.999270438-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestAdd"}
+{"Time":"2026-11-13T15:58:34.999370443-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}
+{"Time":"2026-11-13T15:58:34.999482069-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestAdd","Output":"--- PASS: TestAdd (0.00s)\n"}
+{"Time":"2026-11-13T15:58:34.9995085-07:00","Action":"pass","Package":"example.com/fx/calc","Test":"TestAdd","Elapsed":0}
+{"Time":"2026-11-13T15:58:34.999523791-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestCrash"}
+{"Time":"2026-11-13T15:58:34.999532321-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash","Output":"=== RUN   TestCrash\n"}
+{"Time":"2026-11-13T15:58:34.999536481-07:00","Action":"run","Package":"example.com/fx/calc","Test":"TestCrash/inner"}
+{"Time":"2026-11-13T15:58:34.999539402-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"=== RUN   TestCrash/inner\n"}
+{"Time":"2026-11-13T15:58:35.001536214-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"panic: boom\n"}
+{"Time":"2026-11-13T15:58:35.001561066-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"\n"}
+{"Time":"2026-11-13T15:58:35.001569386-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"goroutine 10 [running]:\n"}
+{"Time":"2026-11-13T15:58:35.001576846-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"example.com/fx/calc.TestCrash.func1.1()\n"}
+{"Time":"2026-11-13T15:58:35.001582827-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"\t/home/dev/proj/fx/calc/calc_test.go:11 +0x25\n"}
+{"Time":"2026-11-13T15:58:35.001585797-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"created by example.com/fx/calc.TestCrash.func1 in goroutine 9\n"}
+{"Time":"2026-11-13T15:58:35.001589727-07:00","Action":"output","Package":"example.com/fx/calc","Test":"TestCrash/inner","Output":"\t/home/dev/proj/fx/calc/calc_test.go:10 +0x2d\n"}
+{"Time":"2026-11-13T15:58:35.00245188-07:00","Action":"output","Package":"example.com/fx/calc","Output":"FAIL\texample.com/fx/calc\t0.007s\n"}
+{"Time":"2026-11-13T15:58:35.002489012-07:00","Action":"fail","Package":"example.com/fx/calc","Elapsed":0.008}
+{"Time":"2026-11-13T15:58:35.165393037-07:00","Action":"start","Package":"example.com/fx/fatal"}
+{"Time":"2026-11-13T15:58:35.168654894-07:00","Action":"run","Package":"example.com/fx/fatal","Test":"TestUnlock"}
+{"Time":"2026-11-13T15:58:35.168719378-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"=== RUN   TestUnlock\n"}
+{"Time":"2026-11-13T15:58:35.168752129-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"fatal error: sync: unlock of unlocked mutex\n"}
+{"Time":"2026-11-13T15:58:35.170875863-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\n"}
+{"Time":"2026-11-13T15:58:35.170924475-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"goroutine 21 [running]:\n"}
+{"Time":"2026-11-13T15:58:35.170930496-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"internal/sync.fatal({0x58c21d?, 0x567300?})\n"}
+{"Time":"2026-11-13T15:58:35.170934486-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/runtime/panic.go:1191 +0x18\n"}
+{"Time":"2026-11-13T15:58:35.170952757-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"internal/sync.(*Mutex).unlockSlow(0x2b4cc83a60b8, 0xffffffff)\n"}
+{"Time":"2026-11-13T15:58:35.170981558-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/internal/sync/mutex.go:204 +0x35\n"}
+{"Time":"2026-11-13T15:58:35.170984958-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"internal/sync.(*Mutex).Unlock(...)\n"}
+{"Time":"2026-11-13T15:58:35.170987588-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/internal/sync/mutex.go:198\n"}
+{"Time":"2026-11-13T15:58:35.170990179-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"sync.(*Mutex).Unlock(...)\n"}
+{"Time":"2026-11-13T15:58:35.170992669-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/sync/mutex.go:65\n"}
+{"Time":"2026-11-13T15:58:35.170995269-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"example.com/fx/fatal.TestUnlock(0x2b4cc83e8248?)\n"}
+{"Time":"2026-11-13T15:58:35.170997919-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/home/dev/proj/fx/fatal/fatal_test.go:10 +0x2e\n"}
+{"Time":"2026-11-13T15:58:35.171000689-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"testing.tRunner(0x2b4cc83e8248, 0x592ce0)\n"}
+{"Time":"2026-11-13T15:58:35.171003179-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/testing/testing.go:2036 +0xea\n"}
+{"Time":"2026-11-13T15:58:35.171005789-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"created by testing.(*T).Run in goroutine 1\n"}
+{"Time":"2026-11-13T15:58:35.171008289-07:00","Action":"output","Package":"example.com/fx/fatal","Test":"TestUnlock","Output":"\t/usr/local/go/src/testing/testing.go:2101 +0x4c5\n"}
+{"Time":"2026-11-13T15:58:35.171921191-07:00","Action":"output","Package":"example.com/fx/fatal","Output":"FAIL\texample.com/fx/fatal\t0.006s\n"}
+{"Time":"2026-11-13T15:58:35.171974873-07:00","Action":"fail","Package":"example.com/fx/fatal","Elapsed":0.007}
+{"Time":"2026-11-13T15:58:35.323090098-07:00","Action":"start","Package":"example.com/fx/quit"}
+{"Time":"2026-11-13T15:58:35.326816688-07:00","Action":"run","Package":"example.com/fx/quit","Test":"TestQuit"}
+{"Time":"2026-11-13T15:58:35.326882181-07:00","Action":"output","Package":"example.com/fx/quit","Test":"TestQuit","Output":"=== RUN   TestQuit\n"}
+{"Time":"2026-11-13T15:58:35.328032402-07:00","Action":"output","Package":"example.com/fx/quit","Output":"FAIL\texample.com/fx/quit\t0.005s\n"}
+{"Time":"2026-11-13T15:58:35.328117996-07:00","Action":"fail","Package":"example.com/fx/quit","Elapsed":0.005}

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -39,6 +40,7 @@ type goTest struct {
 	output  map[string][]string // a test's or a package's output lines
 	all     map[string][]string // a package's output lines, its tests' included, in order
 	failed  map[string][]string // each package's failed tests
+	running map[string][]string // each package's tests started and not yet ended or paused, in order
 	current string              // the package whose build output is being read
 	last    int                 // the build finding a continuation line adds to, or -1
 }
@@ -50,7 +52,8 @@ type goTest struct {
 func parseGoTest(stdout, stderr string, e env) []Finding {
 	g := &goTest{
 		e: e, module: modulePath(e), built: map[string]bool{},
-		output: map[string][]string{}, all: map[string][]string{}, failed: map[string][]string{}, last: -1,
+		output: map[string][]string{}, all: map[string][]string{}, failed: map[string][]string{},
+		running: map[string][]string{}, last: -1,
 	}
 	if !strings.Contains(stdout, `"Action":"build-output"`) {
 		// a go before build output came as events printed it on stderr
@@ -78,9 +81,16 @@ func (g *goTest) event(ev goEvent) {
 		line := strings.TrimRight(ev.Output, "\n")
 		g.output[key] = append(g.output[key], line)
 		g.all[ev.Package] = append(g.all[ev.Package], line)
+	case "run", "cont":
+		if ev.Test != "" && !slices.Contains(g.running[ev.Package], ev.Test) {
+			g.running[ev.Package] = append(g.running[ev.Package], ev.Test)
+		}
+	case "pause", "pass", "skip":
+		g.stopped(ev.Package, ev.Test)
 	case "fail":
 		switch {
 		case ev.Test != "":
+			g.stopped(ev.Package, ev.Test)
 			g.testFailed(ev.Package, ev.Test, g.output[key])
 		case ev.FailedBuild != "" || buildFailed(g.output[key]):
 			if pkg := cmp.Or(ev.FailedBuild, ev.Package); !g.built[bare(pkg)] {
@@ -92,10 +102,65 @@ func (g *goTest) event(ev goEvent) {
 				g.got = append(g.got, running...)
 				break
 			}
+			if running := g.crashed(ev.Package); len(running) > 0 {
+				g.got = append(g.got, running...)
+				break
+			}
 			dir, _ := g.packageDir(ev.Package)
-			g.got = append(g.got, Finding{Name: ev.Package, Path: dir, Message: packageMessage(g.output[key])})
+			msg := cmp.Or(packageMessage(g.all[ev.Package]), "the test binary failed with no output")
+			g.got = append(g.got, Finding{Name: ev.Package, Path: dir, Message: msg})
 		}
 	}
+}
+
+// stopped takes a test out of its package's running tests.
+func (g *goTest) stopped(pkg, test string) {
+	if i := slices.Index(g.running[pkg], test); i >= 0 {
+		g.running[pkg] = slices.Delete(g.running[pkg], i, i+1)
+	}
+}
+
+// crashed is a finding for each test still running when the package's test
+// binary died, as when a goroutine panics, the runtime throws a fatal error,
+// or a test calls os.Exit; none when no test was running. go test -json
+// writes the crash as output of the running test and sends that test no
+// fail, so only the package fails (I-0365). A test whose subtest is running
+// is left to the subtest. Each is placed by its own function's frame in the
+// crash's stacks, else by their first frame below the root, else at the
+// package's directory.
+func (g *goTest) crashed(pkg string) []Finding {
+	tests := g.running[pkg]
+	lines := g.all[pkg]
+	start, msg := crashLine(lines)
+	if start < 0 {
+		start, msg = 0, "the test binary exited before the test ended"
+	}
+	dir, _ := g.packageDir(pkg)
+	var out []Finding
+	for _, t := range tests {
+		if slices.ContainsFunc(tests, func(o string) bool { return strings.HasPrefix(o, t+"/") }) {
+			continue
+		}
+		f := Finding{Name: t, Path: dir, Message: msg}
+		if loc, line := g.testFrame(bare(pkg), t, lines[start:]); loc != "" {
+			f.Path, f.Line = loc, line
+		} else if loc, line := g.frame(lines[start:]); loc != "" {
+			f.Path, f.Line = loc, line
+		}
+		out = append(out, f)
+	}
+	return out
+}
+
+// crashLine is the index and text of the first panic or fatal error in
+// lines, -1 when they hold none.
+func crashLine(lines []string) (int, string) {
+	for i, l := range lines {
+		if t := strings.TrimSpace(l); strings.HasPrefix(t, "panic: ") || strings.HasPrefix(t, "fatal error: ") {
+			return i, t
+		}
+	}
+	return -1, ""
 }
 
 // runningLine is a test the timeout panic's "running tests:" list names,
@@ -349,7 +414,7 @@ func panicLine(lines []string) string {
 func packageMessage(lines []string) string {
 	var keep []string
 	for _, l := range lines {
-		if t := strings.TrimSpace(l); t != "" && !framing(t) && t != "FAIL" && !strings.HasPrefix(t, "FAIL\t") {
+		if t := strings.TrimSpace(l); t != "" && !framing(t) && t != "FAIL" && t != "PASS" && !strings.HasPrefix(t, "FAIL\t") {
 			keep = append(keep, t)
 		}
 	}
