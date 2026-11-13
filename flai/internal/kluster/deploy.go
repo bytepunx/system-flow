@@ -218,6 +218,10 @@ type Record struct {
 	// clears them (ADR-0254 §5a, §8).
 	ChecksCommit  string `json:"checks_commit,omitempty"`
 	ChecksOutcome string `json:"checks_outcome,omitempty"`
+	// AskedBy is who asked for the record's last job: the story's agent that
+	// asked flai serve, or flai serve for the review pass; empty for a job run
+	// in a shell, and in a record written before it was kept (ADR-0292 §6).
+	AskedBy string `json:"asked_by,omitempty"`
 }
 
 // ReadRecord reads namespace ns's deployment record; ok is false when there
@@ -416,6 +420,9 @@ type Job struct {
 	Namespace string    `json:"namespace"`
 	StartedAt time.Time `json:"started_at"`
 	PID       int       `json:"pid"`
+	// By is who asked for the job, as the record's AskedBy; empty for a job
+	// run in a shell, and in a job file written before it was kept.
+	By string `json:"by,omitempty"`
 }
 
 // ErrBusy says another job holds the project's kluster lock.
@@ -484,8 +491,16 @@ func Running(root string) (Job, bool) {
 // design/system/kluster.md § The steps and their variables describes, each
 // step logged, the outcome recorded, and progress lines written to out. It
 // refuses a story that is not in progress or in review, and runs while no
-// other kluster job runs for the project.
+// other kluster job runs for the project. Neither its record nor its job says
+// who asked; DeployBy's do.
 func (c Cluster) Deploy(ctx context.Context, m manifest.Manifest, story, status, dir, commit string, out io.Writer) (Record, error) {
+	return c.DeployBy(ctx, m, "", story, status, dir, commit, out)
+}
+
+// DeployBy deploys as Deploy does, for by, who asked for it: the story's
+// agent, or flai serve for the review pass. The record's AskedBy and the
+// running job's By name by; empty names no one, as Deploy does.
+func (c Cluster) DeployBy(ctx context.Context, m manifest.Manifest, by, story, status, dir, commit string, out io.Writer) (Record, error) {
 	if status != "in-progress" && status != "review" {
 		return Record{}, fmt.Errorf("%s is %s, and flai deploys only a story in progress or in review into its namespace; move it to in-progress or review first", story, status)
 	}
@@ -493,7 +508,7 @@ func (c Cluster) Deploy(ctx context.Context, m manifest.Manifest, story, status,
 	if err != nil {
 		return Record{}, err
 	}
-	return c.deploy(ctx, m, "deploy", t, out)
+	return c.deploy(ctx, m, "deploy", by, t, out)
 }
 
 // ready says why a job cannot run for the project: no kluster: block, no
@@ -525,27 +540,28 @@ func withTimeout(ctx context.Context, m manifest.Manifest) (context.Context, con
 	return context.WithCancel(ctx)
 }
 
-// deploy runs a deploy of t under the project's lock, recorded as kind.
-func (c Cluster) deploy(ctx context.Context, m manifest.Manifest, kind string, t Target, out io.Writer) (Record, error) {
+// deploy runs a deploy of t under the project's lock, recorded as kind and
+// asked for by by.
+func (c Cluster) deploy(ctx context.Context, m manifest.Manifest, kind, by string, t Target, out io.Writer) (Record, error) {
 	if err := c.ready(m, true); err != nil {
 		return Record{}, err
 	}
 	if !hexCommit.MatchString(t.Commit) {
 		return Record{}, fmt.Errorf("%q is not a commit's whole hash; give the head of the checkout %s", t.Commit, t.Dir)
 	}
-	release, err := acquire(c.Root, Job{Kind: kind, Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid()})
+	release, err := acquire(c.Root, Job{Kind: kind, Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid(), By: by})
 	if err != nil {
 		return Record{}, err
 	}
 	defer release()
 	ctx, cancel := withTimeout(ctx, m)
 	defer cancel()
-	return c.runDeploy(ctx, m, t, out)
+	return c.runDeploy(ctx, m, by, t, out)
 }
 
-// runDeploy deploys t, its logs cleared first and its record written as it
-// goes; the caller holds the project's lock and bounds ctx.
-func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, t Target, out io.Writer) (Record, error) {
+// runDeploy deploys t for by, its logs cleared first and its record written
+// as it goes; the caller holds the project's lock and bounds ctx.
+func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, by string, t Target, out io.Writer) (Record, error) {
 	if err := os.RemoveAll(LogDir(c.Root, t.Namespace)); err != nil {
 		return Record{}, fmt.Errorf("clear the logs of %s's last job: %w", t.Namespace, err)
 	}
@@ -554,7 +570,7 @@ func (c Cluster) runDeploy(ctx context.Context, m manifest.Manifest, t Target, o
 			return Record{}, fmt.Errorf("make the folder %s for the namespace %s: %w", d, t.Namespace, err)
 		}
 	}
-	r := Record{Story: t.Story, Namespace: t.Namespace, Commit: t.Commit, Tag: t.Tag(), Checkout: t.Dir, Images: []string{}, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Steps: plan(m.Kluster, time.Now().UTC())}
+	r := Record{Story: t.Story, Namespace: t.Namespace, Commit: t.Commit, Tag: t.Tag(), Checkout: t.Dir, Images: []string{}, StartedAt: time.Now().UTC(), Outcome: OutcomeRunning, Steps: plan(m.Kluster, time.Now().UTC()), AskedBy: by}
 	if err := writeRecord(c.Root, r); err != nil {
 		return r, err
 	}
@@ -814,8 +830,16 @@ var ErrNotDeployed = errors.New("no deployment is recorded for it, so there is n
 // logs are removed, and the record as it was is returned. A failure keeps the
 // record, marked failed at the teardown step, and is a StepError. A story
 // with no record is ErrNotDeployed and runs nothing. It runs while no other
-// kluster job runs for the project.
+// kluster job runs for the project. Neither its job nor a record it keeps
+// says who asked; TeardownBy's do.
 func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir string, out io.Writer) (Record, error) {
+	return c.TeardownBy(ctx, m, "", story, dir, out)
+}
+
+// TeardownBy tears down as Teardown does, for by, who asked for it. The
+// running job's By names by, and so does the AskedBy of a record a failed
+// teardown keeps, whose last job it is; empty names no one, as Teardown does.
+func (c Cluster) TeardownBy(ctx context.Context, m manifest.Manifest, by, story, dir string, out io.Writer) (Record, error) {
 	if err := c.ready(m, false); err != nil {
 		return Record{}, err
 	}
@@ -826,7 +850,7 @@ func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir s
 	if t.Dir == "" {
 		t.Dir = c.Root
 	}
-	release, err := acquire(c.Root, Job{Kind: "teardown", Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid()})
+	release, err := acquire(c.Root, Job{Kind: "teardown", Story: t.Story, Namespace: t.Namespace, StartedAt: time.Now().UTC(), PID: os.Getpid(), By: by})
 	if err != nil {
 		return Record{}, err
 	}
@@ -845,6 +869,7 @@ func (c Cluster) Teardown(ctx context.Context, m manifest.Manifest, story, dir s
 		return r, fmt.Errorf("make the folder %s for the namespace %s: %w", LogDir(c.Root, t.Namespace), t.Namespace, err)
 	}
 	kept := r
+	kept.AskedBy = by
 	kept.Steps = append(slices.Clone(r.Steps), Step{Name: StepTeardown, Outcome: OutcomePending})
 	if err := writeRecord(c.Root, kept); err != nil {
 		return r, err
@@ -920,7 +945,7 @@ func (c Cluster) Promote(ctx context.Context, m manifest.Manifest, branch string
 	if err != nil {
 		return Record{}, err
 	}
-	return c.runDeploy(ctx, m, t, out)
+	return c.runDeploy(ctx, m, "", t, out)
 }
 
 // checkoutMain resolves branch's head in the main checkout and puts the

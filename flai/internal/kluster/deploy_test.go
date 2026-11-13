@@ -957,3 +957,94 @@ func TestDeploymentsListsTheDefaultNamespaceFirst(t *testing.T) {
 		}
 	}
 }
+
+// jobSeen is the lock's job as the step step saw it while it ran, which the
+// fake step copied from $FAKE_RECORD.
+func (f deployFixture) jobSeen(t *testing.T, step string) (Job, string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(f.env, step+".record"))
+	if err != nil {
+		t.Fatalf("%s saw no job file: %v", step, err)
+	}
+	var j Job
+	if err := json.Unmarshal(data, &j); err != nil {
+		t.Fatal(err)
+	}
+	return j, string(data)
+}
+
+// ADR-0292 §6: a deploy asked for by an agent names it in the namespace's
+// record and in the running job; one run in a shell names no one, and leaves
+// the keys out.
+func TestARecordAndItsRunningJobNameWhoAsked(t *testing.T) {
+	f := deploySetup(t)
+	t.Setenv("FAKE_RECORD", jobPath(f.root))
+	r, err := f.c.DeployBy(context.Background(), f.m, "agent-S-0578", "S-0578", "in-progress", f.worktree, commitA, &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if j, _ := f.jobSeen(t, "build"); j.By != "agent-S-0578" || j.Kind != "deploy" || j.Namespace != "s-0578" {
+		t.Errorf("the running job names who asked: %+v", j)
+	}
+	kept, ok, err := ReadRecord(f.root, "s-0578")
+	if err != nil || !ok || kept.AskedBy != "agent-S-0578" || r.AskedBy != "agent-S-0578" {
+		t.Errorf("the record names who asked: %+v %+v %v %v", kept, r, ok, err)
+	}
+	if data, _ := os.ReadFile(RecordPath(f.root, "s-0578")); !strings.Contains(string(data), `"asked_by": "agent-S-0578"`) {
+		t.Errorf("the record's JSON has asked_by:\n%s", data)
+	}
+
+	if _, err := f.c.Deploy(context.Background(), f.m, "S-0578", "review", f.worktree, commitB, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if j, data := f.jobSeen(t, "build"); j.By != "" || strings.Contains(data, `"by"`) {
+		t.Errorf("a job run in a shell names no one: %s", data)
+	}
+	data, err := os.ReadFile(RecordPath(f.root, "s-0578"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kept, _, _ := ReadRecord(f.root, "s-0578"); kept.AskedBy != "" || strings.Contains(string(data), "asked_by") {
+		t.Errorf("a deploy run in a shell names no one:\n%s", data)
+	}
+}
+
+// A record and a job file written before who asked was kept read with no one.
+func TestARecordAndAJobWrittenBeforeNameNoOne(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Dir(RecordPath(root, "s-0001")), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(RecordPath(root, "s-0001"), []byte(`{"story":"S-0001","namespace":"s-0001","commit":"`+commitA+`","outcome":"passed","steps":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if r, ok, err := ReadRecord(root, "s-0001"); err != nil || !ok || r.AskedBy != "" || r.Outcome != OutcomePassed {
+		t.Errorf("a record written before: %+v %v %v", r, ok, err)
+	}
+	if err := os.WriteFile(jobPath(root), []byte(`{"kind":"deploy","story":"S-0001","namespace":"s-0001","pid":42}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if j, ok := readJob(root); !ok || j.By != "" || j.PID != 42 {
+		t.Errorf("a job file written before: %+v %v", j, ok)
+	}
+}
+
+// A teardown asked for names who asked in its running job, and in the record
+// a failed teardown keeps, whose last job it is.
+func TestATeardownNamesWhoAsked(t *testing.T) {
+	f := teardownSetup(t)
+	f.deployed(t, "S-0578")
+	f.reset(t)
+	f.m.Kluster.Teardown = []string{"scripts/teardown.sh"}
+	t.Setenv("FAKE_RECORD", jobPath(f.root))
+	t.Setenv("FAKE_FAIL", "teardown")
+	if _, err := f.c.TeardownBy(context.Background(), f.m, "agent-S-0578", "S-0578", f.worktree, &bytes.Buffer{}); err == nil {
+		t.Fatal("the teardown was to fail")
+	}
+	if j, _ := f.jobSeen(t, "teardown"); j.By != "agent-S-0578" || j.Kind != "teardown" {
+		t.Errorf("the running teardown names who asked: %+v", j)
+	}
+	if kept, _, _ := ReadRecord(f.root, "s-0578"); kept.AskedBy != "agent-S-0578" || kept.FailedStep != StepTeardown {
+		t.Errorf("the record a failed teardown keeps names who asked: %+v", kept)
+	}
+}

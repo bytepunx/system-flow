@@ -570,7 +570,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 	// its own moves.
 	// A close-out's end is news to its story's agent and to readers with no
 	// story of their own, the orchestrator among them, never to another
-	// story's agent (ADR-0229 §4).
+	// story's agent (ADR-0229 §4); so is a kluster job's (ADR-0292 §5).
 	own := r.Own
 	if own == "" {
 		own = story
@@ -579,7 +579,7 @@ func CatchUp(repo *workitem.Repo, r Reader, story string, operator bool, now tim
 		if l.Kind == Agent && l.By == agent {
 			continue
 		}
-		if l.Kind == KindVerified && own != "" && workitem.CanonicalID(l.ID) != workitem.CanonicalID(own) {
+		if (l.Kind == KindVerified || l.Kind == KindKluster) && own != "" && workitem.CanonicalID(l.ID) != workitem.CanonicalID(own) {
 			continue
 		}
 		c := l.Change()
@@ -671,7 +671,7 @@ func Describe(c workitem.Change) string {
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	case Message:
 		return describeMessage(c, false)
-	case Planned, ReadyEmpty, ReleaseDue, Agent, KindVerified:
+	case Planned, ReadyEmpty, ReleaseDue, Agent, KindVerified, KindKluster:
 		return describeLogged(c, nil)
 	case Thread:
 		return describeThread(c)

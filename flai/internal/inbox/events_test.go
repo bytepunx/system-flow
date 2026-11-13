@@ -193,3 +193,30 @@ func TestAVerifiedEventSaysTheCloseOutsVerdict(t *testing.T) {
 		t.Errorf("Describe without fields: %q, want %q", got, want)
 	}
 }
+
+// ADR-0292 §5: a kluster event says whose job of which kind ended how, at
+// which step with which exit code, at which commit, its job, its log, and
+// where the record is; from the change alone, whose job ended how.
+func TestAKlusterEventSaysHowTheJobEnded(t *testing.T) {
+	t.Parallel()
+	code := 3
+	failed := KlusterEvent("S-0660", "Deploy me", "flai serve", KlusterOutcome{Job: "S-0660-deploy-20261113T073353Z", Kind: "deploy", Commit: "0123456789abcdef", Outcome: "failed", FailedStep: "build", ExitCode: &code, Log: "/p/.flai-cache/kluster/logs/s-0660/build.log"})
+	passed := KlusterEvent("S-0660", "Deploy me", "flai serve", KlusterOutcome{Job: "S-0660-teardown-20261113T080000Z", Kind: "teardown", Commit: "0123456789abcdef", Outcome: "passed"})
+	for _, tc := range []struct {
+		e    LoggedEvent
+		want string
+	}{
+		{failed, "S-0660 Deploy me's kluster deploy failed at the build step with exit code 3 at 0123456789ab (job S-0660-deploy-20261113T073353Z); its log is /p/.flai-cache/kluster/logs/s-0660/build.log. flai kluster deployments shows the namespace's record"},
+		{passed, "S-0660 Deploy me's kluster teardown passed at 0123456789ab (job S-0660-teardown-20261113T080000Z). flai kluster deployments shows the namespace's record"},
+	} {
+		if got := describeLogged(tc.e.Change(), tc.e.Fields); got != tc.want {
+			t.Errorf("describeLogged:\n got %s\nwant %s", got, tc.want)
+		}
+	}
+	if failed.To != "failed" || failed.Type != workitem.Story || failed.Fields[FieldExitCode] != "3" || failed.Fields[FieldKind] != "deploy" || passed.Fields[FieldExitCode] != "" || passed.Fields[FieldJob] != "S-0660-teardown-20261113T080000Z" {
+		t.Errorf("the events: %+v %+v", failed, passed)
+	}
+	if got, want := Describe(failed.Change()), "S-0660 Deploy me's kluster job failed. flai kluster deployments shows the namespace's record"; got != want {
+		t.Errorf("Describe without fields: %q, want %q", got, want)
+	}
+}

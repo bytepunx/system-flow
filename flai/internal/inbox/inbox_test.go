@@ -827,3 +827,60 @@ func TestAVerifiedEventIsToldToItsStorysAgentAndToReadersWithNoStory(t *testing.
 		}
 	}
 }
+
+// ADR-0292 §5: a kluster event is news, as a verified event is, to the agent
+// of its story and to readers with no story of their own; never to another
+// story's agent. It comes with its summary and its fields.
+func TestAKlusterEventIsToldToItsStorysAgentAndToReadersWithNoStory(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs"}, workitem.Ready, workitem.InProgress)
+	type reader struct {
+		r     Reader
+		story string
+		want  []string
+	}
+	readers := []reader{
+		{Reader{Agent: "agent-own", Own: f.story.ID}, "", []string{f.story.ID}},
+		{Reader{Agent: "agent-given"}, other.ID, []string{other.ID}},
+		{Reader{Agent: "orchestrator"}, "", []string{f.story.ID, other.ID}},
+	}
+	catchUp := func(rd reader) []Event {
+		t.Helper()
+		items, err := f.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		events, _, err := CatchUp(f.repo, rd.r, rd.story, false, f.clock, items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return events
+	}
+	for _, rd := range readers {
+		catchUp(rd) // the first look sets the cursor
+	}
+	f.clock = t0.Add(10 * time.Minute)
+	at := t0.Add(5 * time.Minute)
+	f.appendAt(t, KlusterEvent(f.story.ID, "Story", "flai serve", KlusterOutcome{Job: f.story.ID + "-deploy-20260918T090500Z", Kind: "deploy", Commit: "0123456789abcdef", Outcome: "passed"}), at)
+	f.appendAt(t, KlusterEvent(other.ID, "Other", "flai serve", KlusterOutcome{Kind: "teardown", Outcome: "interrupted"}), at.Add(time.Second))
+	for _, rd := range readers {
+		var got []string
+		for _, e := range catchUp(rd) {
+			if e.Kind != KindKluster {
+				continue
+			}
+			got = append(got, e.ID)
+			if e.ID == f.story.ID {
+				if want := f.story.ID + " Story's kluster deploy passed at 0123456789ab (job " + f.story.ID + "-deploy-20260918T090500Z). flai kluster deployments shows the namespace's record"; e.Summary != want {
+					t.Errorf("%s was told %q, want %q", rd.r.Agent, e.Summary, want)
+				}
+				if e.Fields[FieldOutcome] != "passed" || e.Fields[FieldKind] != "deploy" {
+					t.Errorf("%s was told the fields %v", rd.r.Agent, e.Fields)
+				}
+			}
+		}
+		if strings.Join(got, ",") != strings.Join(rd.want, ",") {
+			t.Errorf("%s with story %q was told of %v, want %v", rd.r.Agent, rd.story, got, rd.want)
+		}
+	}
+}

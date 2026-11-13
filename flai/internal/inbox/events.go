@@ -50,7 +50,50 @@ const (
 	FieldStoppedAt = "stopped_at" // verified: the step a stopped close-out stopped at
 	FieldDuration  = "duration"   // verified: how long the job ran, a Go duration; "" when nothing was timed
 	FieldRecorded  = "recorded"   // verified: "true" when answered from the record, else "false"
+	// The kluster event's own; it shares FieldJob, the job's id, and
+	// FieldCommit, the head it built or ran against.
+	FieldKind       = "kind"        // kluster: deploy, checks, or teardown
+	FieldOutcome    = "outcome"     // kluster: passed, failed, refused, or interrupted
+	FieldFailedStep = "failed_step" // kluster: the step a failed job failed at
+	FieldExitCode   = "exit_code"   // kluster: that step's exit code, -1 when its program gave none; "" when none failed
+	FieldLog        = "log"         // kluster: where the job's log is
 )
+
+// KindKluster is the kind of the event that a kluster job a story's agent
+// asked flai serve for ended (ADR-0292 §5): ID, Type, and Title are the
+// story, To is the job's outcome, By is flai serve, and Fields hold FieldJob,
+// FieldKind, FieldCommit, FieldOutcome, FieldFailedStep, FieldExitCode, and
+// FieldLog. The inbox reports it, as it does KindVerified, to the agent of its
+// story and to readers with no story of their own.
+const KindKluster = "kluster"
+
+// KlusterOutcome is what a kluster event says of the job that ended.
+type KlusterOutcome struct {
+	// Job is the job's id and Kind deploy, checks, or teardown.
+	Job, Kind string
+	// Commit is the head the job built or ran against.
+	Commit string
+	// Outcome is passed, failed, refused, or interrupted.
+	Outcome string
+	// FailedStep and ExitCode say where a failed job failed: ExitCode is nil
+	// when no step failed, and -1 when its program gave no exit code.
+	FailedStep string
+	ExitCode   *int
+	// Log is where the job's log is.
+	Log string
+}
+
+// KlusterEvent is the kluster event, told by by, of the job of the story id
+// with title that ended as k says.
+func KlusterEvent(id, title, by string, k KlusterOutcome) LoggedEvent {
+	code := ""
+	if k.ExitCode != nil {
+		code = strconv.Itoa(*k.ExitCode)
+	}
+	return LoggedEvent{Kind: KindKluster, ID: id, Type: workitem.Story, Title: title, To: k.Outcome, By: by,
+		Fields: map[string]string{FieldJob: k.Job, FieldKind: k.Kind, FieldCommit: k.Commit, FieldOutcome: k.Outcome,
+			FieldFailedStep: k.FailedStep, FieldExitCode: code, FieldLog: k.Log}}
+}
 
 // Verification is what a verified event says of a close-out.
 type Verification struct {
@@ -216,8 +259,45 @@ func describeLogged(c workitem.Change, fields map[string]string) string {
 		return describeAgent(c, fields)
 	case KindVerified:
 		return describeVerified(c, fields)
+	case KindKluster:
+		return describeKluster(c, fields)
 	}
 	return c.ID + " " + c.Kind
+}
+
+// describeKluster says a kluster event in one sentence: whose job of which
+// kind ended how, at which step with which exit code, at which commit, its
+// id, and where its log is, as far as fields say, and where its record is.
+func describeKluster(c workitem.Change, fields map[string]string) string {
+	whose := c.ID
+	if c.Title != "" {
+		whose += " " + c.Title
+	}
+	kind := fields[FieldKind]
+	if kind == "" {
+		kind = "job"
+	}
+	outcome := c.To
+	if outcome == "" {
+		outcome = "ended"
+	}
+	s := whose + "'s kluster " + kind + " " + outcome
+	if step := fields[FieldFailedStep]; step != "" {
+		s += " at the " + step + " step"
+	}
+	if code := fields[FieldExitCode]; code != "" && code != "-1" {
+		s += " with exit code " + code
+	}
+	if commit := fields[FieldCommit]; commit != "" {
+		s += " at " + commit[:min(len(commit), 12)]
+	}
+	if job := fields[FieldJob]; job != "" {
+		s += " (job " + job + ")"
+	}
+	if log := fields[FieldLog]; log != "" {
+		s += "; its log is " + log
+	}
+	return s + ". flai kluster deployments shows the namespace's record"
 }
 
 // describeVerified says a verified event: whose close-out, its verdict and
