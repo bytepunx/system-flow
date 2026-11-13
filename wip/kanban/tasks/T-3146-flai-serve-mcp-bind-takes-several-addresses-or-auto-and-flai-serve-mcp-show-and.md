@@ -3,16 +3,37 @@ id: T-3146
 type: task
 nature: improvement
 title: flai serve mcp bind takes several addresses or auto, and flai serve mcp show and flai serve settings print them
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:54:33Z
-updated: 2026-11-12T15:54:53Z
-transitions: []
+updated: 2026-11-12T17:55:43Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:42:09Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:42:09Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T17:55:43Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
-touches: [flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve_view.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve_view.go, flai/cmd/serve_actions_test.go, docs/users/flai-reference.md, flai/internal/config/config.go, flai/internal/config/config_test.go]
 after: [T-3144, T-3145]
+usage:
+  source: log
+  seconds: 814
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 33216
+      cache_read: 4910226
+      cache_write: 180011
+      cost: 2.7119
 ---
 # T-3146 flai serve mcp bind takes several addresses or auto, and flai serve mcp show and flai serve settings print them
 

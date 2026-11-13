@@ -3,16 +3,37 @@ id: T-3150
 type: task
 nature: improvement
 title: A container start passes when the server listens on an address the container reaches, and the refusal names flai serve mcp bind auto first
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:55:05Z
-updated: 2026-11-12T15:55:05Z
-transitions: []
+updated: 2026-11-12T18:22:52Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:56:25Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:56:25Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T18:22:52Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
 touches: [flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go]
 after: [T-3145, T-3147]
+usage:
+  source: log
+  seconds: 1587
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 15614
+      cache_read: 2308239
+      cache_write: 84621
+      cost: 1.2749
 ---
 # T-3150 A container start passes when the server listens on an address the container reaches, and the refusal names flai serve mcp bind auto first
 

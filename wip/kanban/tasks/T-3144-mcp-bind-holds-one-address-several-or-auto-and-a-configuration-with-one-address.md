@@ -3,15 +3,36 @@ id: T-3144
 type: task
 nature: improvement
 title: mcp.bind holds one address, several, or auto, and a configuration with one address reads as before
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:54:16Z
-updated: 2026-11-12T15:54:16Z
-transitions: []
+updated: 2026-11-12T17:41:20Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:19:40Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:19:40Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T17:41:20Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_actions_test.go]
+usage:
+  source: log
+  seconds: 1300
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 16463
+      cache_read: 2433697
+      cache_write: 89221
+      cost: 1.3441
 ---
 # T-3144 mcp.bind holds one address, several, or auto, and a configuration with one address reads as before
 

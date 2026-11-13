@@ -3,15 +3,36 @@ id: T-3141
 type: task
 nature: remediation
 title: A move to done or cancelled closes the item's open blocked interval at the move
-status: backlog
+status: done
 parent: S-0723
 owner: alex
 created: 2026-11-12T15:53:22Z
-updated: 2026-11-12T15:53:22Z
-transitions: []
+updated: 2026-11-12T16:54:29Z
+transitions:
+  - to: ready
+    at: 2026-11-12T16:46:50Z
+    by: agent-S-0723
+  - to: in-progress
+    at: 2026-11-12T16:46:50Z
+    by: agent-S-0723
+  - to: done
+    at: 2026-11-12T16:54:29Z
+    by: agent-S-0723
 stream: S-0723
 tags: [cli]
 touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go]
+usage:
+  source: log
+  seconds: 459
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2627
+      cache_read: 1068776
+      cache_write: 25250
+      cost: 0.4683
 ---
 # T-3141 A move to done or cancelled closes the item's open blocked interval at the move
 

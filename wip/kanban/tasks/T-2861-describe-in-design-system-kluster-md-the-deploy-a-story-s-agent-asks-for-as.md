@@ -3,16 +3,37 @@ id: T-2861
 type: task
 nature: feature
 title: Describe in design/system/kluster.md the deploy a story's agent asks for as decided, marking each part not yet built
-status: backlog
+status: done
 parent: S-0659
 owner: alex
 created: 2026-11-10T08:21:00Z
-updated: 2026-11-12T15:54:10Z
-transitions: []
+updated: 2026-11-12T16:07:44Z
+transitions:
+  - to: ready
+    at: 2026-11-12T16:06:00Z
+    by: agent-S-0659
+  - to: in-progress
+    at: 2026-11-12T16:06:01Z
+    by: agent-S-0659
+  - to: done
+    at: 2026-11-12T16:07:44Z
+    by: agent-S-0659
 stream: S-0659
 tags: [cli]
 touches: [design/system/kluster.md]
 after: [T-2860]
+usage:
+  source: log
+  seconds: 103
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 9540
+      cache_read: 1983803
+      cache_write: 76165
+      cost: 1.1969
 ---
 # T-2861 Describe in design/system/kluster.md the deploy a story's agent asks for as decided, marking each part not yet built
 

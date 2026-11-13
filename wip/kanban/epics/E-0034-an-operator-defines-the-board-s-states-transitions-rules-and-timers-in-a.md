@@ -15,16 +15,26 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 45
+    - kind: planner
+      seconds: 46
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 53
-          cache_read: 458306
-          cache_write: 23465
-          cost: 0.1366
+          input: 5
+          output: 1590
+          cache_read: 985891
+          cache_write: 5114
+          cost: 0.2699
+    - kind: orchestrator
+      seconds: 298
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 80
+          output: 361
+          cache_read: 3242823
+          cache_write: 454137
+          cost: 1.0551
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 

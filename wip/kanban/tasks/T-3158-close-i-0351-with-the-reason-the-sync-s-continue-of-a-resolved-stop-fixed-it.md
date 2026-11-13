@@ -3,16 +3,37 @@ id: T-3158
 type: task
 nature: remediation
 title: Close I-0351 with the reason the sync's continue of a resolved stop fixed it
-status: backlog
+status: done
 parent: S-0726
 owner: alex
 created: 2026-11-12T15:57:01Z
-updated: 2026-11-12T15:57:01Z
-transitions: []
+updated: 2026-11-12T19:26:43Z
+transitions:
+  - to: ready
+    at: 2026-11-12T19:26:36Z
+    by: agent-S-0726
+  - to: in-progress
+    at: 2026-11-12T19:26:36Z
+    by: agent-S-0726
+  - to: done
+    at: 2026-11-12T19:26:43Z
+    by: agent-S-0726
 stream: S-0726
 tags: [flai]
 touches: [design/issues/I-0351-a-git-rebase-continue-run-by-hand-after-a-sync-s-stop-meets-later-stops-on.md, design/issues/summary.md]
 after: [T-3156, T-3157]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 1604
+      cache_read: 310935
+      cache_write: 14963
+      cost: 0.1817
 ---
 # T-3158 Close I-0351 with the reason the sync's continue of a resolved stop fixed it
 

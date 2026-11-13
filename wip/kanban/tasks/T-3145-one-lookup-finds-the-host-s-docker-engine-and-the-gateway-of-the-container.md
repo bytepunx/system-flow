@@ -3,15 +3,36 @@ id: T-3145
 type: task
 nature: improvement
 title: One lookup finds the host's Docker engine and the gateway of the container harness's network, for the automatic value and the container check alike
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:54:20Z
-updated: 2026-11-12T15:54:20Z
-transitions: []
+updated: 2026-11-12T17:41:33Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:19:40Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:19:40Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T17:41:33Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
 touches: [flai/internal/serve/mcpbind.go, flai/internal/serve/mcpbind_test.go, flai/internal/serve/container.go]
+usage:
+  source: log
+  seconds: 1313
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 19363
+      cache_read: 2862312
+      cache_write: 104934
+      cost: 1.5809
 ---
 # T-3145 One lookup finds the host's Docker engine and the gateway of the container harness's network, for the automatic value and the container check alike
 

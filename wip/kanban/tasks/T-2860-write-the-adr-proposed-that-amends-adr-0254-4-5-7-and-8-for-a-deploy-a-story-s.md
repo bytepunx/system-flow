@@ -3,11 +3,11 @@ id: T-2860
 type: task
 nature: feature
 title: "Write the ADR, proposed, that amends ADR-0254 §4, §5, §7, and §8 for a deploy a story's agent asks for while its story is in progress"
-status: in-progress
+status: done
 parent: S-0659
 owner: alex
 created: 2026-11-10T08:20:31Z
-updated: 2026-11-12T16:03:58Z
+updated: 2026-11-12T16:05:37Z
 transitions:
   - to: ready
     at: 2026-11-12T16:03:58Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-12T16:03:58Z
     by: agent-S-0659
+  - to: done
+    at: 2026-11-12T16:05:37Z
+    by: agent-S-0659
 stream: S-0659
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
+usage:
+  source: log
+  seconds: 99
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 6324
+      cache_read: 1315016
+      cache_write: 50488
+      cost: 0.7934
 ---
 # T-2860 Write the ADR, proposed, that amends ADR-0254 §4, §5, §7, and §8 for a deploy a story's agent asks for while its story is in progress
 

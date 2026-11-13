@@ -7,7 +7,7 @@ status: backlog
 parent: E-0036
 owner: alex
 created: 2026-11-12T15:57:16Z
-updated: 2026-11-12T21:10:09Z
+updated: 2026-11-13T07:23:13Z
 transitions: []
 tags: [cli, ci]
 topics: [release, docker, security]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-13T03:55:00Z
+  delivery: 2026-11-13T14:08:00Z
   basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 3, behind S-0659, S-0241, S-0660, S-0661, S-0662, S-0663, S-0730 and S-0733."
   by: flai
-  at: 2026-11-12T21:10:09Z
+  at: 2026-11-13T07:23:13Z
 ---
 # S-0734 Each flai release builds, signs, and publishes the bedrock and claude-code agent images with a signed digest list, and ships pilot for Linux
 

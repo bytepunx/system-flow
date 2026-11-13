@@ -6,7 +6,7 @@ title: Any project using flai gets its agent images from flai, which supplies, r
 status: backlog
 owner: alex
 created: 2026-11-12T04:19:48Z
-updated: 2026-11-12T16:04:53Z
+updated: 2026-11-12T16:06:26Z
 transitions: []
 tags: [cli]
 topics: [release]
@@ -15,16 +15,26 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 33
+    - kind: planner
+      seconds: 5945
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 58
-          cache_read: 305797
-          cache_write: 24859
-          cost: 0.094
+          input: 907
+          output: 108243
+          cache_read: 177333136
+          cache_write: 652148
+          cost: 46.0268
+    - kind: orchestrator
+      seconds: 154
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 33
+          output: 214
+          cache_read: 1665554
+          cache_write: 202110
+          cost: 0.5327
 ---
 # E-0036 Any project using flai gets its agent images from flai, which supplies, rebuilds, and keeps them current, and an operator can customize them or substitute their own machinery
 
@@ -41,6 +51,7 @@ A project made from the template runs its agents on the `container` harness with
 - S-0751 flai serve brings a missing or stale agent image back as a host job that holds the start, in place of refusing it
 - S-0757 The dashboard shows each agent image job as it runs, its output, and a failure's cause, and offers the operator a retry
 - S-0759 An operator names a build command of their own that flai runs in place of its image build, or turns the automatic image job off and manages the images outside flai
+- S-0760 This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images
 
 ## Notes
 

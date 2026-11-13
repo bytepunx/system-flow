@@ -1,0 +1,35 @@
+---
+id: MS-0540
+title: T-3154 of S-0726 changed paths S-0683's claim covers
+from: S-0726
+to: S-0683
+about: [design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/accept.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+status: closed
+participants: [agent-S-0726, alex]
+created: 2026-11-12T18:42:38Z
+updated: 2026-11-13T07:23:12Z
+---
+
+# MS-0540 T-3154 of S-0726 changed paths S-0683's claim covers
+
+Between S-0726 and S-0683, about `design/system/flai-cli.md`, `design/system/workflow.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, `flai/cmd/accept.go`, `flai/internal/verify/story.go`, `flai/internal/verify/story_test.go`.
+
+## Entries
+
+### 2026-11-12T18:42:38Z agent-S-0726 S-0726 (notice)
+T-3154 of S-0726 changed paths S-0683's claim covers.
+
+T-3154, Record in an ADR and the design that flai stream sync continues a rebase whose stop the agent resolved, committed c0ccdb2 on story/S-0726, `docs: [S-0726] say in the design that flai stream sync continues a resolved stop`, changing `design/system/flai-cli.md`, `design/system/workflow.md`. It reaches the main branch when S-0726 is accepted; `git show c0ccdb2` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-12T18:57:51Z agent-S-0726 S-0726 (notice)
+T-3157 of S-0726 changed paths S-0683's claim covers.
+
+T-3157, The user docs and the git and work-management conventions, here and in the template, say to git add a resolved stop and run flai stream sync again, committed bd015b0 on story/S-0726, `docs: [S-0726] say to git add a resolved stop and run flai stream sync again`, changing `docs/users/flai.md`. It reaches the main branch when S-0726 is accepted; `git show bd015b0` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-12T19:26:14Z agent-S-0726 S-0726 (notice)
+T-3156 of S-0726 changed paths S-0683's claim covers.
+
+T-3156, flai stream sync's help and report, and every other git rebase --continue advice after a sync's stop, say to git add and run flai stream sync again, committed e673d5d on story/S-0726, `fix: [S-0726] task done continues a resolved stop, and no advice says git rebase --continue`, changing `docs/users/flai-reference.md`, `flai/cmd/accept.go`, `flai/internal/verify/story.go`, `flai/internal/verify/story_test.go`. It reaches the main branch when S-0726 is accepted; `git show e673d5d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-13T07:23:12Z alex
+Closed: S-0683 was accepted

@@ -3,25 +3,42 @@ id: S-0723
 type: story
 nature: improvement
 title: "flai check finds `item.blocked-closed` outside the story at close-out"
-status: ready
+status: review
 owner: alex
 created: 2026-11-11T07:23:14Z
-updated: 2026-11-12T16:04:53Z
+updated: 2026-11-12T17:16:55Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:55Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-12T16:44:55Z
+    by: agent-S-0723
+  - to: review
+    at: 2026-11-12T17:16:55Z
+    by: agent-S-0723
 tags: []
-touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, design/system/workflow.md, docs/users/flai.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, design/system/workflow.md, docs/users/flai.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1932
+  priced_by: harness
+  turns:
+    - day: 2026-11-12
+      ceremony: 2
+      work: 47
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 26099
+      cache_read: 10619560
+      cache_write: 250886
+      cost: 4.6534
   strategic:
     - kind: planner
       seconds: 14
@@ -34,15 +51,15 @@ usage:
           cache_write: 7026
           cost: 0.2625
     - kind: orchestrator
-      seconds: 49
+      seconds: 73
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 9
-          output: 95
-          cache_read: 590720
-          cache_write: 21200
-          cost: 0.1741
+          input: 21
+          output: 193
+          cache_read: 929158
+          cache_write: 70743
+          cost: 0.2851
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
@@ -68,8 +85,8 @@ finalized:
 This story remediates [I-0347](../../../design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md), "flai check finds `item.blocked-closed` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0347 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0347 is closed with `flai issue close I-0347 --reason` saying what fixed it
+- [x] The cause I-0347 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0347 is closed with `flai issue close I-0347 --reason` saying what fixed it
 
 ## Tasks
 - T-3141 A move to done or cancelled closes the item's open blocked interval at the move

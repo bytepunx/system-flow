@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 252.1577
-accrued_seconds: 29095
-tasks_completed: 163
-last_run: 2026-11-12T03:51:40Z
+accrued_cost: 252.8945
+accrued_seconds: 29164
+tasks_completed: 164
+last_run: 2026-11-12T16:06:07Z
 ---
 
 # Curator activity
@@ -1315,3 +1315,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 101
 - Cost: 1.2944 USD, estimated
+
+### 2026-11-12T16:06:07Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none (it updated the citers on one entry). The four candidates from S-0725 and I-0350 were plan notes, a choice not to use sub-agents, and doc corrections that `design/system/agent-adapters.md` and `docs/operators/index.md` § Strategic agents in a container (S-0509) now state.
+- Trigger: accepted S-0725
+- Items: D-0590
+- Seconds: 69
+- Cost: 0.7368 USD, estimated

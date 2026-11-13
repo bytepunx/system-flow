@@ -9,7 +9,7 @@ date: 2026-11-11
 status: absorbed
 absorbed_by: "design/system/workflow.md#branches-and-collisions-adr-0019"
 asked_again: []
-cited: [S-0712]
+cited: [S-0709, S-0712, TH-1091, TH-1101]
 ---
 
 # D-0590 S-0712 plan: take main's head once as a commit in storygit.Rebase and check undoes_main against it, four tasks in three layers; proposes merging S-0709: Recommended: merge the two stories into…

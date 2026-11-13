@@ -3,15 +3,36 @@ id: T-3154
 type: task
 nature: improvement
 title: Record in an ADR and the design that flai stream sync continues a rebase whose stop the agent resolved
-status: backlog
+status: done
 parent: S-0726
 owner: alex
 created: 2026-11-12T15:56:17Z
-updated: 2026-11-12T15:56:17Z
-transitions: []
+updated: 2026-11-12T18:42:40Z
+transitions:
+  - to: ready
+    at: 2026-11-12T18:42:31Z
+    by: agent-S-0726
+  - to: in-progress
+    at: 2026-11-12T18:42:31Z
+    by: agent-S-0726
+  - to: done
+    at: 2026-11-12T18:42:40Z
+    by: agent-S-0726
 stream: S-0726
 tags: [flai]
-touches: [design/adrs/0291-flai-stream-sync-continues-a-rebase-whose-stop-the-agent-resolved.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md]
+touches: [design/adrs/0294-flai-stream-sync-continues-a-rebase-whose-stop-the-agent-resolved-and-staged.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md]
+usage:
+  source: log
+  seconds: 9
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1349
+      cache_read: 261535
+      cache_write: 12586
+      cost: 0.1529
 ---
 # T-3154 Record in an ADR and the design that flai stream sync continues a rebase whose stop the agent resolved
 

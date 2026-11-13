@@ -3,16 +3,37 @@ id: T-2862
 type: task
 nature: feature
 title: Ask the operator to confirm the ADR's decisions on a thread, and accept it with their answer
-status: backlog
+status: ready
 parent: S-0659
 owner: alex
 created: 2026-11-10T08:21:19Z
-updated: 2026-11-10T08:21:19Z
-transitions: []
+updated: 2026-11-12T16:08:36Z
+transitions:
+  - to: ready
+    at: 2026-11-12T16:07:59Z
+    by: agent-S-0659
+  - to: in-progress
+    at: 2026-11-12T16:07:59Z
+    by: agent-S-0659
+  - to: ready
+    at: 2026-11-12T16:08:36Z
+    by: agent-S-0659
 stream: S-0659
 tags: [cli]
 touches: [design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md]
 after: [T-2861]
+usage:
+  source: log
+  seconds: 37
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 4261
+      cache_read: 886098
+      cache_write: 34020
+      cost: 0.5346
 ---
 # T-2862 Ask the operator to confirm the ADR's decisions on a thread, and accept it with their answer
 
@@ -29,3 +50,4 @@ On the answer, change the ADR and `design/system/kluster.md` where it differs, t
 - ADR-0254 names it in `superseded_by`, or the ADR names the sections of ADR-0254 it amends.
 
 ## Notes
+- 2026-11-12T16:08:36Z: moved to ready: waiting for the operator's answer on TH-1103

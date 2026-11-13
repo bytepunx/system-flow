@@ -3,16 +3,37 @@ id: T-3155
 type: task
 nature: improvement
 title: storygit's sync continues a rebase whose stop the agent resolved and settles the stops after it, with a real-git test of I-0351
-status: backlog
+status: done
 parent: S-0726
 owner: alex
 created: 2026-11-12T15:56:30Z
-updated: 2026-11-12T15:56:30Z
-transitions: []
+updated: 2026-11-12T18:57:35Z
+transitions:
+  - to: ready
+    at: 2026-11-12T18:43:08Z
+    by: agent-S-0726
+  - to: in-progress
+    at: 2026-11-12T18:43:09Z
+    by: agent-S-0726
+  - to: done
+    at: 2026-11-12T18:57:35Z
+    by: agent-S-0726
 stream: S-0726
 tags: [flai]
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
 after: [T-3154]
+usage:
+  source: log
+  seconds: 866
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 17695
+      cache_read: 3430379
+      cache_write: 165082
+      cost: 2.0051
 ---
 # T-3155 storygit's sync continues a rebase whose stop the agent resolved and settles the stops after it, with a real-git test of I-0351
 
@@ -42,3 +63,10 @@ Waits for T-3154, whose ADR decides the behaviour and how the old base is recove
 - The new tests pass with `flai test flai/internal/storygit`, and the I-0351 test fails without the change.
 
 ## Notes
+
+Settled by ADR-0294 at the story's review of the plan:
+
+- Only `Sync` resumes. Add `Resume bool` to `SyncOptions`; `Sync` sets it before it calls `Rebase`. `Rebase` called alone, as `flai accept` and the merge queue call it, still refuses a rebase in progress with `StopRebaseInProgress`.
+- A stop is resolved when no path is unmerged, `git diff --cached --check` finds no conflict marker, nothing tracked is changed and unstaged, and the rebase state's `head-name` is `refs/heads/story/S-nnnn`. Otherwise refuse as now, naming the unmerged, marked, or unstaged paths.
+- Read `onto` and `orig-head` from the rebase state (`rebase-merge/` or `rebase-apply/`, via `git rev-parse --git-path`) before the continue. Old base is `git merge-base onto orig-head`. The steps after a clean rebase run against that `onto`, not main's head now. A state missing either file is refused, naming `git rebase --abort` and a fresh sync.
+- Add `Resumed bool` (`json:"resumed"`) to `SyncResult`.

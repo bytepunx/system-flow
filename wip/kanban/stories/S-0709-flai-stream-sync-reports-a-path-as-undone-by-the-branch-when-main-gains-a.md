@@ -3,10 +3,10 @@ id: S-0709
 type: story
 nature: improvement
 title: flai stream sync reports a path as undone by the branch when main gains a commit to it while the sync runs
-status: in-progress
+status: cancelled
 owner: alex
 created: 2026-11-10T09:55:57Z
-updated: 2026-11-12T16:04:39Z
+updated: 2026-11-12T21:10:08Z
 transitions:
   - to: ready
     at: 2026-11-12T15:50:00Z
@@ -14,11 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-12T15:50:09Z
     by: agent-S-0709
+  - to: cancelled
+    at: 2026-11-12T21:10:07Z
+    by: alex
 blocked:
   - from: 2026-11-12T15:58:45Z
     until: 2026-11-12T16:03:43Z
     reason: awaiting the operator on TH-1091
   - from: 2026-11-12T16:04:39Z
+    until: 2026-11-12T21:10:08Z
     reason: awaiting the operator on TH-1101
 tags: [cli]
 topics: [git]
@@ -60,15 +64,15 @@ usage:
           cache_write: 3123026
           cost: 11.0893
     - kind: orchestrator
-      seconds: 124
+      seconds: 138
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 25
-          output: 194
-          cache_read: 961423
-          cache_write: 99480
-          cost: 0.3011
+          input: 35
+          output: 269
+          cache_read: 1173256
+          cache_write: 163275
+          cost: 0.3801
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -126,3 +130,4 @@ Figures:
 - Cost of delay: 7.50 USD a week, as `flai cod` gives it from the 3m a cycle flai set from I-0335. It stands. Merged with S-0712, I-0338's 3m a cycle would double it, which is the operator's input to give.
 
 No `after`: the story reads no other open story's output.
+- 2026-11-12T21:10:07Z: moved to cancelled: Duplicate story

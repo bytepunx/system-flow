@@ -3,16 +3,37 @@ id: T-3153
 type: task
 nature: improvement
 title: An ADR records the automatic value and whether it is the default, and the operator docs and flai-cli.md say what mcp.bind holds
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:55:17Z
-updated: 2026-11-12T15:55:17Z
-transitions: []
+updated: 2026-11-12T18:28:40Z
+transitions:
+  - to: ready
+    at: 2026-11-12T18:23:06Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T18:23:06Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T18:28:40Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli, docs]
-touches: [design/adrs/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, design/system/flai-cli.md, design/tech/docker.md, design/adrs/0293-mcp-bind-holds-one-address-or-several-or-auto-the-default-which-flai-host.md, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md]
 after: [T-3148, T-3150]
+usage:
+  source: log
+  seconds: 334
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 33441
+      cache_read: 4943432
+      cache_write: 181229
+      cost: 2.7303
 ---
 # T-3153 An ADR records the automatic value and whether it is the default, and the operator docs and flai-cli.md say what mcp.bind holds
 

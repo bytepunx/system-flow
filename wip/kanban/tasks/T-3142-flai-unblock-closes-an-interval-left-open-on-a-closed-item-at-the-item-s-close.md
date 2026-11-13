@@ -3,16 +3,37 @@ id: T-3142
 type: task
 nature: improvement
 title: flai unblock closes an interval left open on a closed item at the item's close, archived items included, and item.blocked-closed names that fix
-status: backlog
+status: done
 parent: S-0723
 owner: alex
 created: 2026-11-12T15:53:47Z
-updated: 2026-11-12T15:53:47Z
-transitions: []
+updated: 2026-11-12T17:05:31Z
+transitions:
+  - to: ready
+    at: 2026-11-12T16:54:47Z
+    by: agent-S-0723
+  - to: in-progress
+    at: 2026-11-12T16:54:47Z
+    by: agent-S-0723
+  - to: done
+    at: 2026-11-12T17:05:31Z
+    by: agent-S-0723
 stream: S-0723
 tags: [cli]
-touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go]
+touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/cmd/move.go, flai/cmd/move_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, docs/users/flai-reference.md]
 after: [T-3141]
+usage:
+  source: log
+  seconds: 644
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 7909
+      cache_read: 3218033
+      cache_write: 76026
+      cost: 1.4101
 ---
 # T-3142 flai unblock closes an interval left open on a closed item at the item's close, archived items included, and item.blocked-closed names that fix
 

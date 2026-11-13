@@ -3,16 +3,37 @@ id: T-3148
 type: task
 nature: improvement
 title: flai host starts each project's MCP server on every address mcp.bind gives, resolving auto at each start, on a port free on all of them
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:54:59Z
-updated: 2026-11-12T15:54:59Z
-transitions: []
+updated: 2026-11-12T18:22:34Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:56:24Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:56:24Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T18:22:34Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
-touches: [flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go]
+touches: [flai/cmd/host.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go]
 after: [T-3146, T-3147]
+usage:
+  source: log
+  seconds: 1570
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 22417
+      cache_read: 3313765
+      cache_write: 121484
+      cost: 1.8302
 ---
 # T-3148 flai host starts each project's MCP server on every address mcp.bind gives, resolving auto at each start, on a port free on all of them
 

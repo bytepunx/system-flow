@@ -3,16 +3,37 @@ id: T-3143
 type: task
 nature: improvement
 title: The design and the users guide say a closing move ends a block and flai unblock repairs a closed item, and I-0347 is closed
-status: backlog
+status: done
 parent: S-0723
 owner: alex
 created: 2026-11-12T15:53:59Z
-updated: 2026-11-12T15:53:59Z
-transitions: []
+updated: 2026-11-12T17:06:33Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:05:47Z
+    by: agent-S-0723
+  - to: in-progress
+    at: 2026-11-12T17:05:47Z
+    by: agent-S-0723
+  - to: done
+    at: 2026-11-12T17:06:33Z
+    by: agent-S-0723
 stream: S-0723
 tags: [docs]
 touches: [design/system/workflow.md, docs/users/flai.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-3141, T-3142]
+usage:
+  source: log
+  seconds: 46
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 3030
+      cache_read: 1232738
+      cache_write: 29123
+      cost: 0.5402
 ---
 # T-3143 The design and the users guide say a closing move ends a block and flai unblock repairs a closed item, and I-0347 is closed
 

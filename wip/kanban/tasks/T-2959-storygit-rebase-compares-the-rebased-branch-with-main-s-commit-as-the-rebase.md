@@ -3,12 +3,15 @@ id: T-2959
 type: task
 nature: remediation
 title: storygit.Rebase compares the rebased branch with main's commit as the rebase took it, not with main's name read again after it
-status: backlog
+status: cancelled
 parent: S-0709
 owner: alex
 created: 2026-11-10T10:27:23Z
-updated: 2026-11-10T10:27:23Z
-transitions: []
+updated: 2026-11-12T21:10:07Z
+transitions:
+  - to: cancelled
+    at: 2026-11-12T21:10:07Z
+    by: alex
 stream: S-0709
 tags: [cli]
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/undone_test.go]
@@ -30,3 +33,4 @@ Waits for nothing: it is the first layer.
 - The sync's JSON output names main by its branch name in `base`, as before.
 
 ## Notes
+- 2026-11-12T21:10:07Z: moved to cancelled: S-0709 cancelled: Duplicate story

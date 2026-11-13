@@ -3,16 +3,37 @@ id: T-3147
 type: task
 nature: improvement
 title: flai mcp http listens on several addresses on one port, records each in its state, and warns only of an address beyond loopback and the container gateways
-status: backlog
+status: done
 parent: S-0732
 owner: alex
 created: 2026-11-12T15:54:39Z
-updated: 2026-11-12T15:54:39Z
-transitions: []
+updated: 2026-11-12T17:55:55Z
+transitions:
+  - to: ready
+    at: 2026-11-12T17:42:10Z
+    by: agent-S-0732
+  - to: in-progress
+    at: 2026-11-12T17:42:10Z
+    by: agent-S-0732
+  - to: done
+    at: 2026-11-12T17:55:55Z
+    by: agent-S-0732
 stream: S-0732
 tags: [cli]
 touches: [flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go]
 after: [T-3145]
+usage:
+  source: log
+  seconds: 825
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 27724
+      cache_read: 4098312
+      cache_write: 150246
+      cost: 2.2635
 ---
 # T-3147 flai mcp http listens on several addresses on one port, records each in its state, and warns only of an address beyond loopback and the container gateways
 

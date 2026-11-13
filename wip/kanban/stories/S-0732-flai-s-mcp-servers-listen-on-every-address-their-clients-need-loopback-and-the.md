@@ -3,26 +3,43 @@ id: S-0732
 type: story
 nature: improvement
 title: flai's MCP servers listen on every address their clients need, loopback and the container engine's gateway together, set as a list or found by flai for the host's engine
-status: ready
+status: review
 owner: alex
 created: 2026-11-12T08:00:53Z
-updated: 2026-11-12T16:04:53Z
+updated: 2026-11-12T18:38:53Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:55Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-11-12T17:17:05Z
+    by: agent-S-0732
+  - to: review
+    at: 2026-11-12T18:38:53Z
+    by: agent-S-0732
 tags: [cli]
 topics: [mcp, docker]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/mcpbind.go, flai/internal/serve/mcpbind_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve_view.go, flai/cmd/serve_actions_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, flai/cmd/host_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, design/adrs/README.md, design/adrs]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/serve/mcpbind.go, flai/internal/serve/mcpbind_test.go, flai/internal/serve/container.go, flai/internal/serve/container_test.go, flai/internal/serve/agents_start.go, flai/cmd/serve_mcp.go, flai/cmd/serve_mcp_test.go, flai/cmd/serve_settings.go, flai/cmd/serve_settings_test.go, flai/cmd/serve_view.go, flai/cmd/serve_actions_test.go, flai/cmd/mcp_http.go, flai/cmd/mcp_http_test.go, flai/cmd/host.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/index.md, design/system/flai-cli.md, design/adrs/README.md, design/adrs, design/tech/docker.md, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, design/issues/I-0347-flai-check-finds-item-blocked-closed-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4942
+  priced_by: harness
+  turns:
+    - day: 2026-11-12
+      ceremony: 2
+      work: 67
+  models:
+    - model: claude-opus-5-5
+      input: 532
+      output: 215127
+      cache_read: 31801527
+      cache_write: 1165860
+      cost: 17.5641
   strategic:
     - kind: planner
       seconds: 14
@@ -35,15 +52,15 @@ usage:
           cache_write: 11511
           cost: 0.2776
     - kind: orchestrator
-      seconds: 38
+      seconds: 74
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 47
-          cache_read: 426213
-          cache_write: 12890
-          cost: 0.125
+          input: 18
+          output: 131
+          cache_read: 770611
+          cache_write: 64345
+          cost: 0.2383
 cost_of_delay:
   inputs:
     penalty_per_week: 20
@@ -71,12 +88,12 @@ finalized:
 After this story the servers listen on more than one address at once, so that loopback clients and containers are both served, and the operator either names the addresses or lets flai find them for the engine it runs on.
 
 ## Acceptance criteria
-- [ ] `mcp.bind` holds one address or several, and `flai host` starts each project's MCP server listening on all of them; `flai serve mcp bind` takes several, `flai serve mcp show` prints them, and a configuration with one address reads as before
-- [ ] A value that leaves the choice to flai, such as `auto`, listens on 127.0.0.1 and, when the host's Docker engine routes `host.docker.internal` to a network's gateway rather than to loopback, on the gateway of the network the container harness runs on; on an engine that reaches loopback, or with no Docker, it listens on 127.0.0.1 alone
-- [ ] With loopback and the gateway both listened on, a container's agent on a native engine starts and reaches the server with neither `flai serve mcp bind 172.17.0.1` nor `--network host`, and a client on the host still reaches it on 127.0.0.1, shown by a test
-- [ ] The refusal in `flai/internal/serve/container.go` names the new way first, and is still given when the addresses listened on do not include one the container reaches
-- [ ] The warning for listening beyond this machine is still logged for an address that is neither loopback nor a container network's gateway
-- [ ] `docs/operators/` (the settings table and the MCP server section), `design/system/flai-cli.md`, and the command help say what `mcp.bind` holds and what the automatic value does; an ADR records whether the automatic value becomes the default
+- [x] `mcp.bind` holds one address or several, and `flai host` starts each project's MCP server listening on all of them; `flai serve mcp bind` takes several, `flai serve mcp show` prints them, and a configuration with one address reads as before
+- [x] A value that leaves the choice to flai, such as `auto`, listens on 127.0.0.1 and, when the host's Docker engine routes `host.docker.internal` to a network's gateway rather than to loopback, on the gateway of the network the container harness runs on; on an engine that reaches loopback, or with no Docker, it listens on 127.0.0.1 alone
+- [x] With loopback and the gateway both listened on, a container's agent on a native engine starts and reaches the server with neither `flai serve mcp bind 172.17.0.1` nor `--network host`, and a client on the host still reaches it on 127.0.0.1, shown by a test
+- [x] The refusal in `flai/internal/serve/container.go` names the new way first, and is still given when the addresses listened on do not include one the container reaches
+- [x] The warning for listening beyond this machine is still logged for an address that is neither loopback nor a container network's gateway
+- [x] `docs/operators/` (the settings table and the MCP server section), `design/system/flai-cli.md`, and the command help say what `mcp.bind` holds and what the automatic value does; an ADR records whether the automatic value becomes the default
 
 ## Tasks
 - T-3144 mcp.bind holds one address, several, or auto, and a configuration with one address reads as before

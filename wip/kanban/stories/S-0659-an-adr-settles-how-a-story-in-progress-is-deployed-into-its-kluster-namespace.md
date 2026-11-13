@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0035
 owner: alex
 created: 2026-11-10T08:09:07Z
-updated: 2026-11-12T16:00:03Z
+updated: 2026-11-12T16:09:00Z
 transitions:
   - to: ready
     at: 2026-11-12T15:59:54Z
@@ -15,18 +15,32 @@ transitions:
   - to: in-progress
     at: 2026-11-12T16:00:03Z
     by: agent-S-0659
+blocked:
+  - from: 2026-11-12T16:09:00Z
+    reason: awaiting the operator on TH-1103
 tags: [cli]
 topics: [kluster, deployment]
-touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md]
+touches: [design/system/kluster.md, design/adrs/README.md, design/adrs/0254-flai-runs-one-kluster-per-project-from-the-config-its-manifest-s-kluster-block.md, design/adrs/0292-a-story-s-agent-asks-flai-serve-to-deploy-check-and-tear-down-its-own-story-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 540
+  priced_by: harness
+  turns:
+    - day: 2026-11-12
+      ceremony: 2
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 37173
+      cache_read: 7730094
+      cache_write: 296783
+      cost: 4.664
   strategic:
     - kind: planner
       seconds: 81
@@ -45,15 +59,15 @@ usage:
           cache_write: 92398
           cost: 1.6379
     - kind: orchestrator
-      seconds: 311
+      seconds: 394
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 64
-          output: 416
-          cache_read: 2528536
-          cache_write: 293407
-          cost: 0.7832
+          input: 88
+          output: 584
+          cache_read: 3441484
+          cache_write: 386173
+          cost: 1.0699
 cost_of_delay:
   value: 263.16
   by: planner-S-0659
@@ -82,7 +96,7 @@ An ADR settles how a story in progress is deployed into its kluster namespace at
 - [ ] It sets how many story namespaces may live at once, where the project sets it, and what a request over the limit gets
 - [ ] It says how the agent waits for a job behind the queue, what it is told on a failure, and when a failure reaches the operator
 - [ ] It says what is recorded of a deploy and a checks run before review, and where the move to review, the close-out, and an acceptance read it
-- [ ] ADR-0254 names it in `superseded_by` or the new ADR names the sections it amends, as `design/conventions/decisions.md` has it, and `design/system/kluster.md` describes the design as decided and marks each part not yet built
+- [x] ADR-0254 names it in `superseded_by` or the new ADR names the sections it amends, as `design/conventions/decisions.md` has it, and `design/system/kluster.md` describes the design as decided and marks each part not yet built
 
 ## Tasks
 - T-2860 Write the ADR, proposed, that amends ADR-0254 §4, §5, §7, and §8 for a deploy a story's agent asks for while its story is in progress

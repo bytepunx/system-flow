@@ -3,12 +3,15 @@ id: T-2960
 type: task
 nature: remediation
 title: Say in docs/users/flai.md that sync compares with main as its rebase took it, and close I-0335
-status: backlog
+status: cancelled
 parent: S-0709
 owner: alex
 created: 2026-11-10T10:27:35Z
-updated: 2026-11-10T10:27:35Z
-transitions: []
+updated: 2026-11-12T21:10:07Z
+transitions:
+  - to: cancelled
+    at: 2026-11-12T21:10:07Z
+    by: alex
 stream: S-0709
 tags: [cli]
 touches: [docs/users/flai.md, design/issues/I-0335-flai-stream-sync-reports-a-path-as-undone-by-the-branch-when-main-gains-a.md, design/issues/summary.md]
@@ -29,3 +32,4 @@ Waits for T-2959: the paragraph describes its behaviour, and the reason names it
 - `flai check --strict` is clean.
 
 ## Notes
+- 2026-11-12T21:10:07Z: moved to cancelled: S-0709 cancelled: Duplicate story
