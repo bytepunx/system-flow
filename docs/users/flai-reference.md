@@ -2378,11 +2378,66 @@ Flags:
 
 The agent images a project's container agents run in.
 
-An agent on the container harness runs in an image: its inner harness's, the host's own when flai serve agent harness container --image &lt;inner&gt;=&lt;image&gt; names one, else flai's default, and the project's layer over it when system-flow.yaml names agent.image.layer (ADR-0295). flai image status says which images the project's agents need and whether each is on this host and current for the project's flai.
+An agent on the container harness runs in an image: its inner harness's, the host's own when flai serve agent harness container --image &lt;inner&gt;=&lt;image&gt; names one, else flai's default, and the project's layer over it when system-flow.yaml names agent.image.layer (ADR-0295). flai image status says which images the project's agents need and whether each is on this host and current for the project's flai. flai image ensure makes each harness image that is missing or stale, pulling it by the digest its release's signed list names, else building it on this host; flai image build builds them without the pull.
 
 Subcommands:
 
+- [build](#flai-image-build): Build the harness images on this host, current or not, without the pull
+- [ensure](#flai-image-ensure): Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host
 - [status](#flai-image-status): Say which agent images the project's agents need, and whether each is on this host and current for its flai
+
+#### flai image build
+
+Build the harness images on this host, current or not, without the pull.
+
+```text
+flai image build
+```
+
+flai image build builds on this host, without the pull, each harness image of flai's default the agents of the project in the working directory need, or, when they need none, the default image of each inner harness the host names no image of its own for (claude-code's), current or not.
+
+A released flai builds them from the Dockerfiles it carries and its release's Linux flai and pilot, checked against the release's signed checksums.txt; a development flai builds them from the development tree's own flai/images/bedrock/Dockerfile and flai/images/&lt;inner&gt;/Dockerfile and source, when the main checkout holds them. It tags, logs, stops, and retries as flai image ensure does, prints the images' status after it, and does not build the project's layer.
+
+Examples:
+
+```bash
+flai image build
+```
+
+#### flai image ensure
+
+Make each harness image the project's agents need that is missing or stale: pull it by its signed digest, else build it on this host.
+
+```text
+flai image ensure
+```
+
+flai image ensure makes each harness image the agents of the project in the working directory need, as flai image status lists them, that is missing or stale for the project's flai. It takes one of three ways, and says which:
+
+```text
+pulled     by the index digest the signed digest list of the flai release
+           names (flai-agent-<inner>_<version>.digests on the release
+           flai v<version>), verified with the release key; a list or an
+           image that does not verify is refused, and nothing is built in
+           its place
+built      on this host, when the registry or the release cannot be reached
+           or the pull fails, from the Dockerfiles this flai carries and the
+           release's Linux flai and pilot, checked against its signed
+           checksums.txt
+tree       for a development flai, from the development tree's own
+           flai/images/bedrock/Dockerfile and flai/images/<inner>/Dockerfile
+           and source, never pulled for
+```
+
+Each harness image is tagged with the name a start runs it by and with flai-agent-&lt;inner&gt;:&lt;version&gt;. A current image is left as it is, the operator's own image (--image) is never touched, and the project's layer (agent.image.layer) is not built: the project's own build makes it.
+
+Every docker step's output streams here and to a log file under .flai-cache/agent-images/ in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped; a step that fails on the network (a connection reset, a timeout, a DNS or TLS failure, a registry 5xx) is tried twice more, after 30 s and then 2 min. After it, the images' status is printed as flai image status prints it, and it exits non-zero when a harness image flai makes is still missing or stale.
+
+Examples:
+
+```bash
+flai image ensure
+```
 
 #### flai image status
 

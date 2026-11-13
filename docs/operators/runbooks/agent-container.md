@@ -57,11 +57,21 @@ The same commands with `claude-code` in place of `bedrock` check the other image
 
 GHCR makes a package created from a private repository private. A pull with no login needs both packages public, so after the first flai release that publishes them, set each one's visibility to public: on GitHub, Packages, `flai-agent-bedrock`, then Package settings, Change visibility; then the same for `flai-agent-claude-code`. Once a package is public it stays so for every later release.
 
-flai does not pull these images yet. The container harness, and the scripts below, still run the `:local` images built on this machine, until `flai image ensure` (S-0740) pulls the published ones by the digests a verified list names.
+`flai image ensure` pulls these images by the digests a verified list names (S-0740). The container harness still runs the image by the name the start uses, `flai-agent-claude-code:local`, and `flai image ensure` tags the image it pulls or builds with that name and with `flai-agent-claude-code:X.Y.Z`. The scripts below run the `:local` images too.
 
 ## Build
 
-From the repository root, with Docker running:
+With Docker running, the way back for a harness image that is missing or stale is:
+
+```bash
+flai image ensure
+```
+
+It makes each harness image the project's agents need, as `flai image status` lists them, that is missing or stale. A released flai pulls it by the index digest its release's signed list names, and refuses a list or an image that does not verify, building nothing in its place. When the release has no list, the release or the registry cannot be reached and no list is kept, or `docker pull` fails, it builds the image on this host from the Dockerfiles flai carries and the release's Linux `flai` and `pilot`, checked against the release's signed `checksums.txt`. A development flai, such as the one `scripts/flai.sh` builds from this tree, is never pulled for: in this repository it builds from the tree's own Dockerfiles and source, and elsewhere it refuses. It says which way each image took, then prints the status lines, and exits non-zero when a harness image is still missing or stale.
+
+Each docker step's output goes to the terminal and to `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, which the first and last lines name. A step that writes nothing for 10 minutes is stopped and reported. A step that fails on the network, with a connection reset, a timeout, a DNS or TLS handshake failure, or a registry 5xx, is tried twice more, after 30 seconds and then 2 minutes. `flai image build` builds the images on this host without the pull, current or not. Neither builds the project's layer or touches an image you named with `--image`.
+
+`make agent-images` is this repository's own build, and the way to build the project's layer. From the repository root:
 
 ```bash
 make agent-images
@@ -74,7 +84,7 @@ Before it builds, the script asks the credential helper your Docker configuratio
 ## What the run needs on the host
 
 - Docker. S-0505 ran on Docker Desktop with WSL2 integration; a native Docker Engine host was not tried. There the MCP server must also listen on the bridge's gateway, since the engine routes `host.docker.internal` to it. `mcp.bind`'s default, `auto`, does so at each server start, and `flai serve` refuses its own container starts while the server does not ([ADR-0293](../../../design/adrs/0293-mcp-bind-holds-one-address-or-several-or-auto-the-default-which-flai-host.md)), but this script makes no such check.
-- The images, built as above.
+- The images, made as above.
 - The story started, so that its worktree exists: `flai story start S-nnnn`.
 - The project's HTTP MCP server running: `flai host` runs one for every project `flai serve` serves, or start it with `flai mcp start` ([MCP over HTTP](../index.md#mcp-over-http)). `flai mcp status` says where it listens.
 - `flai mcp token` answering the server's bearer token. The script reads it with the installed `flai` on `PATH`, not this tree's `bin/flai`; set `FLAI_BIN` to use another.
