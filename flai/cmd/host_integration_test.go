@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -22,17 +23,39 @@ import (
 // S-0106, end to end with a real flai built from this tree: flai host starts
 // flai serve, keeps the MCP server of the project flai serve serves, restarts
 // serve when asked, and when it is killed outright, its children go with it.
+// The host and the project's server are given ports the test took from the
+// kernel and closed, since they are other processes; another process may
+// take one first (I-0372), so a try that loses one is tried again on new
+// ports, and only a test that loses every try fails on that.
 func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("builds flai and runs real processes")
 	}
-	tmp := t.TempDir()
-	exe := filepath.Join(tmp, "flai")
+	exe := filepath.Join(t.TempDir(), "flai")
 	build := exec.Command("go", "build", "-o", exe, "..")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
+	const tries = 5
+	var lost []string
+	for try := 0; try < tries; try++ {
+		why, ok := hostRunsServeAndTheMCPServers(t, exe)
+		if ok {
+			return
+		}
+		lost = append(lost, why)
+	}
+	t.Fatalf("every one of %d tries lost a port it gave away:\n%s", tries, strings.Join(lost, "\n"))
+}
+
+// hostRunsServeAndTheMCPServers is one try of
+// TestHostRunsServeAndTheMCPServersAndTakesThemWithIt on fresh ports: ok when
+// it showed everything, else why the try lost a port to another process.
+// Any other failure fails the test.
+func hostRunsServeAndTheMCPServers(t *testing.T, exe string) (string, bool) {
+	t.Helper()
+	tmp := t.TempDir()
 	cfg := filepath.Join(tmp, "config", "config.json")
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -71,22 +94,40 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 	if err := sdir.Register(serve.Entry{Key: "t", Name: "T", Root: root, URL: "http://127.0.0.1:1", KeyFile: keyFile}); err != nil {
 		t.Fatal(err)
 	}
-	flai := func(args ...string) []byte {
-		t.Helper()
+	run := func(args ...string) ([]byte, []byte, error) {
 		c := exec.Command(exe, append(args, "--config", cfg)...)
 		c.Env, c.Dir = env, root
 		out, err := c.Output()
+		var stderr []byte
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			stderr = ee.Stderr
+		}
+		return out, stderr, err
+	}
+	flai := func(args ...string) []byte {
+		t.Helper()
+		out, stderr, err := run(args...)
 		if err != nil {
-			var stderr []byte
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				stderr = ee.Stderr
-			}
 			t.Fatalf("flai %v: %v\n%s\n%s", args, err, out, stderr)
 		}
 		return out
 	}
 	hdir := host.DirFor(cfg)
+	// startHost starts the host, answering why when another process holds
+	// its port, as another host or as anything the host cannot listen beside
+	startHost := func() string {
+		t.Helper()
+		out, stderr, err := run("host", "start")
+		if err == nil {
+			return ""
+		}
+		if strings.Contains(string(stderr), "already runs on this machine") || strings.Contains(readFile(hdir.Log()), "address already in use") {
+			return fmt.Sprintf("the host's %s was taken: %s", addr, strings.TrimSpace(string(stderr)))
+		}
+		t.Fatalf("flai host start: %v\n%s\n%s\nhost log:\n%s", err, out, stderr, readFile(hdir.Log()))
+		return ""
+	}
 	t.Cleanup(func() {
 		if st, ok := hdir.ReadStatus(time.Now()); ok {
 			_ = syscall.Kill(st.PID, syscall.SIGKILL)
@@ -124,7 +165,9 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 		return childOf(st, host.Serve).State == "running" && childOf(st, host.MCP).State == "running"
 	}
 
-	flai("host", "start")
+	if why := startHost(); why != "" {
+		return why, false
+	}
 	st := until("serve and the project's MCP server running", running)
 	servePID, mcpPID := childOf(st, host.Serve).PID, childOf(st, host.MCP).PID
 	if childOf(st, host.MCP).Root != root {
@@ -140,6 +183,11 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 		return fmt.Sprintf("after %s: last state %+v (fresh and alive: %v), want pid %d; host status %+v\nmcp log:\n%s", time.Since(start).Round(time.Millisecond), mcpSt, mcpOK, mcpPID, status(), readFile(mcpFile(repo, mcpLogFile)))
 	})
 	if mcpSt.Addr != mcpAddr {
+		// the host moves a project off a port another process holds (I-0271)
+		if strings.Contains(readFile(hdir.Log()), "mcp address moved: another process holds it") {
+			flai("host", "stop")
+			return fmt.Sprintf("the project's %s was taken, and the host moved it to %s", mcpAddr, mcpSt.Addr), false
+		}
 		t.Errorf("the MCP server listens at %s, want the port the project remembers, %s", mcpSt.Addr, mcpAddr)
 	}
 
@@ -160,13 +208,17 @@ func TestHostRunsServeAndTheMCPServersAndTakesThemWithIt(t *testing.T) {
 	}
 	waitUntil(t, "serve and the MCP server gone with the host", func() bool { return !serve.Alive(servePID) && !serve.Alive(mcpPID) })
 
-	flai("host", "start")
+	// the host's port was free between the kill and this start
+	if why := startHost(); why != "" {
+		return why, false
+	}
 	st = until("everything back", running)
 	servePID, mcpPID = childOf(st, host.Serve).PID, childOf(st, host.MCP).PID
 	flai("host", "stop")
 	if serve.Alive(servePID) || serve.Alive(mcpPID) || serve.Alive(st.PID) {
 		t.Errorf("after flai host stop: host %v, serve %v, mcp %v", serve.Alive(st.PID), serve.Alive(servePID), serve.Alive(mcpPID))
 	}
+	return "", true
 }
 
 func withoutEnv(env []string, names ...string) []string {
