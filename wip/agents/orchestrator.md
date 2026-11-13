@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2160.0334
-accrued_seconds: 1558497
-tasks_completed: 3333
-last_run: 2026-11-13T15:21:16Z
+accrued_cost: 2160.4175
+accrued_seconds: 1558589
+tasks_completed: 3335
+last_run: 2026-11-13T15:23:01Z
 ---
 
 # Orchestrator activity
@@ -23365,6 +23365,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1660 USD, estimated
+
+### 2026-11-13T15:22:41Z
+
+- Summary: Resolved TH-1161 (its concern, a wasted duplicate run, was gone: S-0772 stopped cleanly at evaluate, exit 2, nothing pushed) and accepted S-0772 at ce920472bd874c0125d6328740341d21f1b4f889 under accept_reviews, evidence T-3303 done, T-3304 done, T-3305 skipped; empty diff, verify passed at head.
+- Items: S-0772, TH-1161
+- Seconds: 72
+- Cost: 0.3522 USD, estimated
+
+### 2026-11-13T15:23:01Z
+
+- Summary: Release due for S-0662 (threshold met: count 1 of 1, value 30 of 1000 USD/week), but did not run the publish formula: S-0773, a publish instance made by system-flow at 15:20:30Z after S-0662's acceptance, is in progress for that batch, and a second instance would duplicate it as S-0772 did S-0771 (TH-1161).
+- Items: S-0662, S-0773
+- Seconds: 20
+- Cost: 0.0319 USD, estimated
 
 ## Refusals
 

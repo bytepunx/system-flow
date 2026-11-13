@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.38 - 2026-11-13
+
+- S-0662 The move to review, the close-out, and the review page say what was deployed and checked in the story's namespace and at which commit, and agents are told to verify there first (patch).
 - S-0662 `strategic-agents.md` and the orchestrator's role let its evidence name a story's kluster record for a criterion, `- <n>: kluster deploy and checks passed at <commit>`, which `flai accept --by orchestrator` takes only when the namespace's deploy and, while the checks host action is on, its checks run passed at the verified head and the commit is the record's or at that head, and otherwise refuses with `criterion_unevidenced`, naming the criterion and what the record says (minor, ADR-0292).
 - S-0662 `work-management.md` tells a story's agent in a project whose `kluster:` block names a `deploy` to deploy its story at the branch's head with `flai kluster deploy S-nnnn --job`, run the checks with `flai checks run S-nnnn --job`, run its own commands with `flai kluster exec`, and tick each criterion it verified there before the close-out and the move to review, leaving unticked only what it could not verify, with the reason (minor, ADR-0292).
 

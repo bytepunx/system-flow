@@ -3,12 +3,18 @@ id: T-3309
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0773
 owner: alex
 created: 2026-11-13T15:20:30Z
-updated: 2026-11-13T15:20:30Z
-transitions: []
+updated: 2026-11-13T15:23:18Z
+transitions:
+  - to: ready
+    at: 2026-11-13T15:23:18Z
+    by: agent-S-0773
+  - to: in-progress
+    at: 2026-11-13T15:23:18Z
+    by: agent-S-0773
 stream: S-0773
 tags: []
 after: [T-3308]
