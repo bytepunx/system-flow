@@ -16,31 +16,31 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 46
+      seconds: 77
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 1590
-          cache_read: 985891
-          cache_write: 5114
-          cost: 0.2699
+          input: 10
+          output: 2167
+          cache_read: 1176131
+          cache_write: 9411
+          cost: 0.3539
     - kind: orchestrator
-      seconds: 447
+      seconds: 629
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 123
-          output: 618
-          cache_read: 4998510
-          cache_write: 566770
-          cost: 1.5988
+          input: 165
+          output: 910
+          cache_read: 6581652
+          cache_write: 792194
+          cost: 2.1305
         - model: claude-sonnet-5-5
-          input: 3
-          output: 277
-          cache_read: 41158
-          cache_write: 16364
-          cost: 0.0449
+          input: 6
+          output: 297
+          cache_read: 50528
+          cache_write: 37494
+          cost: 0.0687
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 633
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 97
-      cache_read: 2829403
-      cache_write: 17684
-      cost: 1.0684
+      input: 23
+      output: 3367
+      cache_read: 2825292
+      cache_write: 27053
+      cost: 0.8349
 ---
 # T-3320 flai guard refuses a Write that replaces a work item file with content that is not that item
 

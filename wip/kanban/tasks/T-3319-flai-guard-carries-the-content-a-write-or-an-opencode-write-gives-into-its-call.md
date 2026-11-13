@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 466
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 36
-      cache_read: 917717
-      cache_write: 11065
-      cost: 0.3485
+      output: 1098
+      cache_read: 921673
+      cache_write: 8825
+      cost: 0.2723
 ---
 # T-3319 flai guard carries the content a Write or an OpenCode write gives into its Call
 

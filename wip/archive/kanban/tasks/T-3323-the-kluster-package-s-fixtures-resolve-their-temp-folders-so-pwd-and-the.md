@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 568
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 81
-      cache_read: 568158
-      cache_write: 40638
-      cost: 0.2285
+      input: 6
+      output: 1134
+      cache_read: 599707
+      cache_write: 12159
+      cost: 0.2287
 ---
 # T-3323 The kluster package's fixtures resolve their temp folders, so pwd and the expected lines agree on macOS
 

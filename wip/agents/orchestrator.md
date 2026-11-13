@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2171.7160
-accrued_seconds: 1560987
-tasks_completed: 3410
-last_run: 2026-11-13T20:24:49Z
+accrued_cost: 2174.2065
+accrued_seconds: 1561609
+tasks_completed: 3427
+last_run: 2026-11-13T20:47:32Z
 ---
 
 # Orchestrator activity
@@ -23904,6 +23904,125 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 24
 - Cost: 0.2054 USD, estimated
+
+### 2026-11-13T20:28:36Z
+
+- Summary: Started the planner for S-0736, first story flai plan --candidates lists (no cost of delay value), under plan_backlog_stories, to unstarve the empty ready column; the image refusal of TH-1083 is resolved. Did not replan E-0034: alex's entry on TH-1083 ("Resolved.") asks no change to the plan.
+- Items: S-0736, E-0034
+- Seconds: 45
+- Cost: 0.1382 USD, estimated
+
+### 2026-11-13T20:29:02Z
+
+- Summary: S-0778 in review: its verify record names 9dfb707, not the branch head c675a40, so asked flai serve for its close-out (job S-0778-20261113T202814Z); left in review for the verdict. promote_candidates lists none (every backlog story a draft or without a value), so nothing promoted or ordered. TH-1179 left alone: its last entry is flai serve's notice.
+- Items: S-0778
+- Seconds: 26
+- Cost: 0.0300 USD, estimated
+
+### 2026-11-13T20:29:48Z
+
+- Summary: S-0778 left in review: the accept dry run's blocker is verify_behind_main, and the close-out asked again (job S-0778-20261113T202929Z) stopped at sync, 1 commit behind main on design/issues paths. Opened TH-1180 on S-0778 asking for flai stream sync and a fresh close-out.
+- Items: S-0778
+- Seconds: 46
+- Cost: 0.2192 USD, estimated
+
+### 2026-11-13T20:30:07Z
+
+- Summary: S-0778 is still in review because its branch is one commit behind main. Nothing could go to ready this run. I started the planner for S-0736 to begin getting the board unstuck.
+- Items: none
+- Seconds: 19
+- Cost: 0.0808 USD, estimated
+
+### 2026-11-13T20:31:18Z
+
+- Summary: Recommended an answer on TH-1181, citing design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+- Items: S-0736
+- Seconds: 46
+- Cost: 0.1551 USD, estimated
+
+### 2026-11-13T20:31:53Z
+
+- Summary: TH-1181 (planner-S-0736): plan fits S-0736 (3 tasks, 3 layers, 6 touches, 45m forecast); recommended, operator_only, the epic input time_lost_per_cycle 2h on E-0034 as on TH-1097, since an epic's input needs the operator under ADR-0224; thread left open. Draft S-0736 edited: flai promote --drafts lists it incomplete, lacking only a cost of delay value; TH-1113 says so already, so no new thread and no finalize. TH-1179 is flai serve's notice: left alone; the starvation waits on TH-1097.
+- Items: S-0736, E-0034, TH-1181, TH-1179
+- Seconds: 35
+- Cost: 0.0364 USD, estimated
+
+### 2026-11-13T20:32:40Z
+
+- Summary: S-0736 is still a draft, and the board stays starved until you set E-0034's cost of delay input. I recommended setting it on TH-1097, which is still waiting for you.
+- Items: none
+- Seconds: 47
+- Cost: 0.2859 USD, estimated
+
+### 2026-11-13T20:35:33Z
+
+- Summary: Answered TH-1182, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0779
+- Seconds: 28
+- Cost: 0.1121 USD, estimated
+
+### 2026-11-13T20:36:00Z
+
+- Summary: Approved S-0779's plan on TH-1182 (5 tasks, 3 layers, 4 touches, forecast 45m) and set its first cost of delay input time_lost_per_cycle 2h as the planner recommended; resolved TH-1182
+- Items: S-0779, TH-1182
+- Seconds: 27
+- Cost: 0.0628 USD, estimated
+
+### 2026-11-13T20:37:07Z
+
+- Summary: Finalized draft S-0779: flai promote --drafts lists it complete; 5 criteria, 4 touches, forecast 45m, cost of delay value 300 USD/week, consistent
+- Items: S-0779
+- Seconds: 67
+- Cost: 0.0993 USD, estimated
+
+### 2026-11-13T20:37:43Z
+
+- Summary: Promoted S-0779 to ready (flai promote --candidates rank 1, throughput figure 0.75h, ready 0 of 10) and applied flai order --by throughput: S-0779 first. This clears the starvation TH-1179 reports; flai serve resolves that thread itself
+- Items: S-0779
+- Seconds: 36
+- Cost: 0.1044 USD, estimated
+
+### 2026-11-13T20:38:11Z
+
+- Summary: S-0779 is now in progress: I approved its plan, set its cost of delay input, finalized the draft, and moved it to ready. Its agent started at 20:37:49Z, so the in-progress lane that stood idle is now in use.
+- Items: none
+- Seconds: 28
+- Cost: 0.2563 USD, estimated
+
+### 2026-11-13T20:38:49Z
+
+- Summary: Nothing to do: TH-1179 resolved by flai serve once S-0779 could start; S-0779's plan approved on TH-1182 (resolved), finalized, promoted, and now in progress under agent-S-0779; ready column empty, in-progress full (3 of 3).
+- Items: S-0779
+- Seconds: 20
+- Cost: 0.1270 USD, estimated
+
+### 2026-11-13T20:39:07Z
+
+- Summary: I had nothing left to do this run: my previous run had already handled all three reasons.
+- Items: none
+- Seconds: 18
+- Cost: 0.2079 USD, estimated
+
+### 2026-11-13T20:46:42Z
+
+- Summary: ready-empty and thread:TH-1183: promote_candidates (throughput) lists none, so nothing promoted and no order applied (ready is empty). promote --drafts: S-0241 is complete but stays a draft (TH-1165); the 19 E-0034 drafts lack only a cost of delay value, which waits on the operator's epic inputs (TH-1097, operator_only recommendation pending), and TH-1113 to TH-1131 say so already. Started no planner for S-0737..S-0758: each is held after S-0736 directly or transitively, and a planner cannot supply the epic's inputs. E-0034 not replanned: alex's TH-1083 entry ("Resolved.") asks no plan change. TH-1183 is flai serve's notice: left alone.
+- Items: E-0034, S-0736, S-0241
+- Seconds: 84
+- Cost: 0.3386 USD, estimated
+
+### 2026-11-13T20:47:09Z
+
+- Summary: review:S-0730: the last passing verify is at fc786c0, but the branch head is 5ae2777 (the close-out commit, which adds I-0368 and edits summary.md), so I asked flai serve for the close-out at the head: job S-0730-20261113T204550Z is still running. The verifier passed the diff at 5ae2777: criterion 1 is met by flai/internal/guard/{call,claudecode,opencode,items}.go and items_test.go, and criterion 2 by design/issues/I-0352. The story stays in review until a later run reads the job's verdict and accepts it. I opened no thread because nothing blocks it yet.
+- Items: S-0730
+- Seconds: 27
+- Cost: 0.1599 USD, estimated
+
+### 2026-11-13T20:47:32Z
+
+- Summary: I haven't accepted S-0730 yet, and the board stays starved until you set E-0034's cost of delay input.
+- Items: none
+- Seconds: 23
+- Cost: 0.0766 USD, estimated
 
 ## Refusals
 

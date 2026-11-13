@@ -3,10 +3,10 @@ id: S-0778
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-13T20:23:36Z
-updated: 2026-11-13T20:25:52Z
+updated: 2026-11-13T20:27:15Z
 transitions:
   - to: ready
     at: 2026-11-13T20:23:37Z
@@ -14,6 +14,9 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:23:45Z
     by: agent-S-0778
+  - to: review
+    at: 2026-11-13T20:27:15Z
+    by: system-flow
 tags: []
 touches: [wip/kanban/stories/S-0778-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,32 +26,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 121
-  estimated: true
-  priced_by: estimate
+  seconds: 236
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      hand_edits: 2
-      work: 15
+      ceremony: 4
+      hand_edits: 3
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 373
-      cache_read: 2172562
-      cache_write: 150140
-      cost: 0.8719
+      input: 66
+      output: 7476
+      cache_read: 4565226
+      cache_write: 159669
+      cost: 2.3402
   strategic:
     - kind: orchestrator
-      seconds: 23
+      seconds: 95
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 78
-          cache_read: 225848
-          cache_write: 91586
-          cost: 0.0933
+          input: 26
+          output: 224
+          cache_read: 1065657
+          cache_write: 100098
+          cost: 0.3425
 formula: publish
 ---
 # S-0778 Publish what is accepted and not yet released
@@ -61,7 +63,7 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 - [x] Fetch the remote's branch and tags
 - [x] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3326 Fetch the remote's branch and tags

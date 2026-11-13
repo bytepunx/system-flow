@@ -3,10 +3,10 @@ id: S-0777
 type: story
 nature: remediation
 title: flai's kluster tests pass on macOS, where the temp dir is a symlink
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T19:58:46Z
-updated: 2026-11-13T20:17:55Z
+updated: 2026-11-13T20:51:16Z
 transitions:
   - to: ready
     at: 2026-11-13T20:07:08Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:07:22Z
     by: agent-S-0777
+  - to: review
+    at: 2026-11-13T20:49:25Z
+    by: agent-S-0777
+  - to: done
+    at: 2026-11-13T20:51:16Z
+    by: orchestrator
 tags: [flai]
-touches: [flai/cmd/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster_test.go]
+touches: [flai/cmd/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster_test.go, design/issues/I-0369-testcontainerstrategicstartunderalayerwaitsfortheharnessimagealone-fails-under.md, design/issues/summary.md, design/issues/I-0370-scripts-flai-test-sh-s-repository-check-fails-on-this-host-while-story-s-0001-s.md, design/issues/I-0371-flai-check-finds-story-unaccepted-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,20 +29,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 637
-  estimated: true
-  priced_by: estimate
+  seconds: 2544
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      ceremony: 1
-      work: 10
+      ceremony: 3
+      test_runs: 7
+      hand_edits: 2
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 282
-      cache_read: 1866118
-      cache_write: 267119
-      cost: 0.8005
+      input: 194
+      output: 34359
+      cache_read: 18167923
+      cache_write: 368356
+      cost: 6.9295
   strategic:
     - kind: planner
       seconds: 305
@@ -97,10 +104,10 @@ want "build /var/folders/.../005 --all"
 The tests are wrong, not flai: nothing in the log shows flai misbehaving on macOS. This is the defect S-0180 fixed elsewhere (I-0045, closed), come back in tests written since.
 
 ## Acceptance criteria
-- [ ] The eight tests above pass on macOS: both sides of each path comparison are resolved, or neither is
-- [ ] No other test under `flai/` compares a `$(pwd)` a fake script logged with an unresolved temp path; those found are fixed the same way
-- [ ] The `test (macos-latest)` job of the `flai` workflow passes on the story's branch, or, where the branch cannot run it, the narrative says how the fix was verified without a macOS host
-- [ ] The tests still pass on Linux, with `scripts/flai-test.sh`
+- [x] The eight tests above pass on macOS: both sides of each path comparison are resolved, or neither is
+- [x] No other test under `flai/` compares a `$(pwd)` a fake script logged with an unresolved temp path; those found are fixed the same way
+- [x] The `test (macos-latest)` job of the `flai` workflow passes on the story's branch, or, where the branch cannot run it, the narrative says how the fix was verified without a macOS host
+- [x] The tests still pass on Linux, with `scripts/flai-test.sh`
 
 ## Tasks
 - T-3323 The kluster package's fixtures resolve their temp folders, so pwd and the expected lines agree on macOS
@@ -114,6 +121,8 @@ The tests are wrong, not flai: nothing in the log shows flai misbehaving on macO
 - Not confirmed: why `pwd` resolves for these steps and not for others. Go sets `PWD` for a child only when `cmd.Env` is nil, and the kluster steps pass an environment of their own, which would explain it. The fix does not depend on it.
 - The failing job's log: `gh api repos/bytepunx/system-flow/actions/jobs/132126294410/logs`.
 - No change to flai's behaviour, so no design or user documentation changes.
+- Criteria 1 and 3 were verified on Linux with a symlinked `TMPDIR`, which reproduces macOS's link; the narrative's `## Decisions` gives the runs. The `test (macos-latest)` job has not run on the branch, which is not pushed before acceptance.
+- Criterion 4: `scripts/flai-test.sh` ran twice on Linux. Every test passed but one load flake in `flai/internal/serve`, which this story does not touch (I-0369). The script's last step, the unscoped `flai check --strict`, fails on this host on four `story.unaccepted` warnings: S-0001, S-0002, S-0003, and S-0005 are archived, but their branches are still checked out in worktrees and were never merged (I-0370). Only the operator clears them. The close-out at `fa936242c` passed every tier, integration and smoke included.
 
 ### Planning
 
@@ -138,3 +147,14 @@ Tasks, in two layers:
 
 1. T-3323 (kluster package fixtures) and T-3324 (`flai/cmd` fixtures), together: no `after` between them and no path in common.
 2. T-3325, after both: the whole suite under a symlinked `TMPDIR`, `scripts/flai-test.sh`, and the narrative's account of how the macOS criterion was verified.
+
+### Accepted by the orchestrator
+
+- Verified: fa936242cd153c62b90d211aadb66a6b6f80b276
+- At: 2026-11-13T20:51:16Z
+
+Verdict: pass
+- 1: flai/internal/kluster/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster_test.go
+- 2: flai/internal/kluster/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster_test.go
+- 3: flai/internal/kluster/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster_test.go
+- 4: flai/internal/kluster/kluster_test.go, flai/internal/kluster/deploy_test.go, flai/cmd/kluster_test.go

@@ -24,16 +24,16 @@ touches: [design/issues/I-0352-a-story-s-agent-can-overwrite-a-work-item-file-wh
 after: [T-3320]
 usage:
   source: log
-  seconds: 204
+  seconds: 218
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 38
-      cache_read: 557237
-      cache_write: 9087
-      cost: 0.2125
+      input: 7
+      output: 1014
+      cache_read: 850879
+      cache_write: 8147
+      cost: 0.2514
 ---
 # T-3322 I-0352 is closed with the guard rule that fixed it
 

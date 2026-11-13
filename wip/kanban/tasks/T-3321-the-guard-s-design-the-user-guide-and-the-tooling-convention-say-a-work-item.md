@@ -24,16 +24,16 @@ touches: [design/system/agent-adapters.md, docs/users/flai.md, design/convention
 after: [T-3320]
 usage:
   source: log
-  seconds: 204
+  seconds: 206
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 307
-      cache_read: 1653956
-      cache_write: 74168
-      cost: 0.6486
+      input: 14
+      output: 2044
+      cache_read: 1714929
+      cache_write: 16421
+      cost: 0.5068
 ---
 # T-3321 The guard's design, the user guide, and the tooling convention say a work item file is never replaced whole by a Write
 

@@ -3,16 +3,19 @@ id: S-0730
 type: story
 nature: improvement
 title: A story's agent can overwrite a work item file whole with Write, front matter included, and nothing refuses it
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-12T03:43:39Z
-updated: 2026-11-13T20:22:04Z
+updated: 2026-11-13T20:44:41Z
 transitions:
   - to: ready
     at: 2026-11-13T19:57:17Z
     by: orchestrator
   - to: in-progress
     at: 2026-11-13T19:57:25Z
+    by: agent-S-0730
+  - to: review
+    at: 2026-11-13T20:44:41Z
     by: agent-S-0730
 tags: [flai, template]
 topics: [guard]
@@ -24,19 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1462
-  estimated: true
-  priced_by: estimate
+  seconds: 2859
+  priced_by: harness
   turns:
     - day: 2026-11-13
-      work: 34
+      ceremony: 1
+      work: 133
   models:
     - model: claude-opus-5-5
-      input: 122
-      output: 647
-      cache_read: 8006941
-      cache_write: 337504
-      cost: 3.1316
+      input: 326
+      output: 46955
+      cache_read: 39400527
+      cache_write: 377275
+      cost: 11.6426
   strategic:
     - kind: planner
       seconds: 278
@@ -55,15 +58,21 @@ usage:
           cache_write: 110414
           cost: 1.6564
     - kind: orchestrator
-      seconds: 219
+      seconds: 246
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 60
-          output: 446
-          cache_read: 2685533
-          cache_write: 197897
-          cost: 0.8418
+          input: 66
+          output: 466
+          cache_read: 2997883
+          cache_write: 201155
+          cost: 0.9347
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 860
+          cache_read: 73863
+          cache_write: 11380
+          cost: 0.067
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m

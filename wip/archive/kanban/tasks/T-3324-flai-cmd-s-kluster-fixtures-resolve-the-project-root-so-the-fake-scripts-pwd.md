@@ -23,16 +23,16 @@ tags: [flai]
 touches: [flai/cmd/kluster_test.go]
 usage:
   source: log
-  seconds: 567
+  seconds: 572
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 140
-      cache_read: 713476
-      cache_write: 42918
-      cost: 0.2839
+      input: 8
+      output: 1409
+      cache_read: 745105
+      cache_write: 15107
+      cost: 0.2842
 ---
 # T-3324 flai/cmd's kluster fixtures resolve the project root, so the fake scripts' pwd lines match on macOS
 

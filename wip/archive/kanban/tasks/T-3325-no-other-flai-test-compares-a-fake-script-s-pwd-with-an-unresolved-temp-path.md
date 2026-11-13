@@ -3,11 +3,11 @@ id: T-3325
 type: task
 nature: remediation
 title: No other flai test compares a fake script's pwd with an unresolved temp path, checked under a symlinked TMPDIR and on Linux
-status: in-progress
+status: done
 parent: S-0777
 owner: alex
 created: 2026-11-13T20:02:41Z
-updated: 2026-11-13T20:24:00Z
+updated: 2026-11-13T20:39:29Z
 transitions:
   - to: ready
     at: 2026-11-13T20:24:00Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:24:00Z
     by: agent-S-0777
+  - to: done
+    at: 2026-11-13T20:39:29Z
+    by: agent-S-0777
 stream: S-0777
 tags: [flai]
 after: [T-3323, T-3324]
+usage:
+  source: log
+  seconds: 929
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 10361
+      cache_read: 5478618
+      cache_write: 111079
+      cost: 2.0896
 ---
 # T-3325 No other flai test compares a fake script's pwd with an unresolved temp path, checked under a symlinked TMPDIR and on Linux
 
@@ -37,3 +52,6 @@ Waits for T-3323 and T-3324: the suite under a symlinked `TMPDIR` judges what is
 - The narrative's `## Decisions` names how the macOS criterion was verified and what each run gave.
 
 ## Notes
+
+- The whole short suite from `flai/` (`go test -short -count=1 -p 6 -skip '^TestGateway' ./...`) passed with 0 failures with `TMPDIR` a symlink under `/tmp`, and with 0 failures with a plain `TMPDIR`. No other test needed a fix, so this task touches no Go file. A first run, with the symlink inside the worktree, was discarded: there every temp folder sits in a git repository under a `system-flow.yaml`, and about 150 tests that expect neither failed for that alone.
+- `scripts/flai-test.sh` ran twice. The first run failed on one test of `flai/internal/serve`, which S-0777 does not touch, under load in the race run; it passed 10 of 10 alone under `-race` (I-0369). The second run passed every Go tier, the lint, and the template smoke. Its repository check then failed on four `story.unaccepted` warnings: the branches of S-0001, S-0002, S-0003, and S-0005 are still checked out in worktrees and were never merged. That is the host's state, not this change (I-0370).

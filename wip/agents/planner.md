@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1356.5871
-accrued_seconds: 159623
-tasks_completed: 258
-last_run: 2026-11-13T20:05:34Z
+accrued_cost: 1361.1003
+accrued_seconds: 160034
+tasks_completed: 260
+last_run: 2026-11-13T20:37:12Z
 ---
 
 # Planner activity
@@ -2058,3 +2058,19 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0777, T-3323, T-3324, T-3325
 - Seconds: 305
 - Cost: 2.9382 USD, estimated
+
+### 2026-11-13T20:36:41Z
+
+- Summary: I planned S-0779. It now has five draft tasks in three layers (T-3329, T-3330 and T-3332, then T-3331, then T-3333), a 45m forecast with delivery at 2026-11-14T03:37Z, a cost of delay of 300 USD a week, and its four declared touches kept. The orchestrator approved the plan and set the 2h input on TH-1182; there were no existing tasks to revisit.
+- Trigger: asked
+- Items: S-0779, T-3329, T-3330, T-3331, T-3332, T-3333
+- Seconds: 380
+- Cost: 4.4292 USD, estimated
+
+### 2026-11-13T20:37:12Z
+
+- Summary: S-0736's plan is finished. Only the cost of delay is still open: it needs the operator's answer on TH-1097, which has been open since 2026-11-12. The orchestrator says the planner's next run will write each story's value once that answer comes, so I'm ending this run here instead of waiting with nothing else to do.
+- Trigger: orchestrator
+- Items: S-0736
+- Seconds: 31
+- Cost: 0.0840 USD, estimated
