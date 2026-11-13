@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-13T15:47:58Z
+updated: 2026-11-13T16:13:06Z
 transitions: []
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 53m
-  delivery: 2026-11-13T21:01:00Z
-  basis: "Its own forecast of 53m; 16th in the pull order with an in-progress limit of 3, behind S-0751, S-0760, S-0759, S-0757, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746 and S-0747."
+  delivery: 2026-11-13T21:26:00Z
+  basis: "Its own forecast of 53m; 16th in the pull order with an in-progress limit of 3, behind S-0760, S-0759, S-0757, S-0241, S-0730, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746 and S-0747."
   by: flai
-  at: 2026-11-13T15:47:58Z
+  at: 2026-11-13T16:13:06Z
 ---
 # S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
 

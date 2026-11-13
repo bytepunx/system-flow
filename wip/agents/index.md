@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-11-13T15:47:58Z
+updated: 2026-11-13T16:13:06Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0751](S-0751.md) | flai serve brings a missing or stale agent image back as a host job that holds the start, in place of refusing it | in-progress | agent-S-0751 | 2026-11-13T15:43:00Z |
 | [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | system-flow | 2026-11-13T11:46:00Z |
 
 ## Strategic agents
@@ -15,6 +14,6 @@ updated: 2026-11-13T15:47:58Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 256 | 1351.9660 USD | 159040 | 2026-11-13T11:48:52Z |
-| [orchestrator](orchestrator.md) | 3346 | 2162.5053 USD | 1558979 | 2026-11-13T15:47:03Z |
+| [orchestrator](orchestrator.md) | 3349 | 2162.8868 USD | 1559056 | 2026-11-13T15:48:37Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 188 | 285.0079 USD | 31489 | 2026-11-13T15:45:09Z |
+| [curator](curator.md) | 189 | 286.1276 USD | 31540 | 2026-11-13T15:48:56Z |
