@@ -3,15 +3,21 @@ id: T-3173
 type: task
 nature: feature
 title: The manifest's agent.image takes the layer's build arguments, and flai check refuses a malformed one
-status: backlog
+status: in-progress
 parent: S-0745
 owner: alex
 created: 2026-11-12T16:00:24Z
-updated: 2026-11-12T16:00:24Z
-transitions: []
+updated: 2026-11-13T13:17:52Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:17:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T13:17:52Z
+    by: system-flow
 stream: S-0745
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go]
 ---
 # T-3173 The manifest's agent.image takes the layer's build arguments, and flai check refuses a malformed one
 

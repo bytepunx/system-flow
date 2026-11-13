@@ -2,9 +2,9 @@
 id: D-0587
 title: "A story that changes the agent layer's Dockerfile does not rebuild the image under its :local tag, which running agents use; it checks the change on the built image with the environment overridden"
 kind: decision
-sources: [S-0686]
-topics: [docker, harness]
-paths: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh]
+sources: [S-0686, S-0740]
+topics: [docker, harness, release]
+paths: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh, flai/internal/agentimage/build.go, flai/cmd/image.go]
 date: 2026-11-11
 status: active
 absorbed_by: ""
@@ -24,4 +24,12 @@ The reason: `scripts/agent-image.sh` tags the layer `flai-agent-sf-claude-code:l
 
 S-0686 also put its Docker-needing test in a script of its own, `scripts/agent-vcs-test.sh`, run by `scripts/smoke.sh`. It did not extend `scripts/agent-container-test.sh`, which runs with no Docker. The new script skips when Docker or the layer image is missing.
 
-Sources: S-0686.
+S-0740 held to the same rule for `flai image ensure` and `flai image build`, which tag the harness image `flai-agent-claude-code:local`, the name the start runs. From S-0740's Decisions (`wip/archive/agents/S-0740.md`):
+
+```text
+Criteria ticked on test evidence over a fake docker and an httptest release; a real pull and build were not run here: no published release holds the agent image lists yet (S-0734 is accepted, not released), and a real build replaces the image the running agents use, which is the operator's to choose.
+```
+
+So a story that changes how the images are pulled or built proves it over a fake docker and a test release, and leaves the real run on the host to the operator.
+
+Sources: S-0686, S-0740.

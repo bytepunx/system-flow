@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-13T13:16:46Z
+updated: 2026-11-13T13:18:40Z
 ---
 
 # Active streams
@@ -8,14 +8,15 @@ updated: 2026-11-13T13:16:46Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0661](S-0661.md) | A story's agent runs the project's checks against its story's kluster namespace before review, and its own commands with the namespace's variables | in-progress | agent-S-0661 | 2026-11-13T13:14:14Z |
-| [S-0745](S-0745.md) | flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project | in-progress | agent-S-0745 | 2026-11-13T13:16:15Z |
+| [S-0745](S-0745.md) | flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project | in-progress | agent-S-0745 | 2026-11-13T13:17:59Z |
 | [S-0768](S-0768.md) | Publish what is accepted and not yet released | cancelled | system-flow | 2026-11-13T11:46:00Z |
+| [S-0770](S-0770.md) | Publish what is accepted and not yet released | in-progress | agent-S-0770 | 2026-11-13T13:18:38Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 256 | 1351.9660 USD | 159040 | 2026-11-13T11:48:52Z |
-| [orchestrator](orchestrator.md) | 3302 | 2156.2962 USD | 1557554 | 2026-11-13T13:11:45Z |
+| [orchestrator](orchestrator.md) | 3305 | 2156.7474 USD | 1557669 | 2026-11-13T13:18:22Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 179 | 273.1176 USD | 30707 | 2026-11-13T12:57:26Z |
+| [curator](curator.md) | 180 | 274.7691 USD | 30823 | 2026-11-13T13:17:56Z |

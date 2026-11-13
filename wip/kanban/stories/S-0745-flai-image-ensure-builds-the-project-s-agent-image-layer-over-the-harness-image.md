@@ -3,15 +3,18 @@ id: S-0745
 type: story
 nature: feature
 title: flai image ensure builds the project's agent.image.layer over the harness image itself, with build arguments the manifest gives in any project
-status: ready
+status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:00:12Z
-updated: 2026-11-13T13:15:50Z
+updated: 2026-11-13T13:16:15Z
 transitions:
   - to: ready
     at: 2026-11-13T07:29:34Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T13:16:15Z
+    by: agent-S-0745
 tags: [cli, template]
 topics: [docker, manifest]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/agentimage/layer.go, flai/internal/agentimage/layer_test.go, flai/internal/agentimage/status.go, flai/internal/agentimage/status_test.go, flai/internal/agentimage/ensure.go, flai/internal/agentimage/ensure_test.go, flai/cmd/image.go, flai/cmd/image_test.go, flai/internal/check/image.go, flai/internal/check/image_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/agent-container.md, template/root/system-flow.yaml.tmpl]

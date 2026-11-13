@@ -3,15 +3,36 @@ id: T-3298
 type: task
 nature: improvement
 title: Evaluate the release policy, stopping unless it is met
-status: backlog
+status: done
 parent: S-0770
 owner: alex
 created: 2026-11-13T13:16:45Z
-updated: 2026-11-13T13:16:45Z
-transitions: []
+updated: 2026-11-13T13:18:31Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:18:19Z
+    by: agent-S-0770
+  - to: in-progress
+    at: 2026-11-13T13:18:19Z
+    by: agent-S-0770
+  - to: done
+    at: 2026-11-13T13:18:31Z
+    by: agent-S-0770
 stream: S-0770
 tags: []
 after: [T-3297]
+usage:
+  source: log
+  seconds: 12
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 6
+      cache_read: 166924
+      cache_write: 892
+      cost: 0.0627
 ---
 # T-3298 Evaluate the release policy, stopping unless it is met
 
@@ -24,3 +45,5 @@ Run `flai release --evaluate --require-met --judged ""` from the project's main 
 `flai release --evaluate --require-met --judged ""` exits 0 in the main checkout, or exits 2, which stops the run: record it with `flai formula stop S-0770 --step evaluate --exit 2`, giving it the step's output.
 
 ## Notes
+
+- 2026-11-13: ran as `scripts/flai.sh release --evaluate --require-met --judged ""` (the manifest's `flai.command`) in the main checkout; exited 0. The threshold policy is met: 1 accepted story not yet released (S-0740, no value), count 1 of 1, value 0 of 1000 USD/week.

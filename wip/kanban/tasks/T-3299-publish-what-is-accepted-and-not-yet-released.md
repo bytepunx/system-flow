@@ -3,12 +3,18 @@ id: T-3299
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0770
 owner: alex
 created: 2026-11-13T13:16:45Z
-updated: 2026-11-13T13:16:45Z
-transitions: []
+updated: 2026-11-13T13:18:40Z
+transitions:
+  - to: ready
+    at: 2026-11-13T13:18:40Z
+    by: agent-S-0770
+  - to: in-progress
+    at: 2026-11-13T13:18:40Z
+    by: agent-S-0770
 stream: S-0770
 tags: []
 after: [T-3298]

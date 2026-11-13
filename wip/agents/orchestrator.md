@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2156.2962
-accrued_seconds: 1557554
-tasks_completed: 3302
-last_run: 2026-11-13T13:11:45Z
+accrued_cost: 2156.7474
+accrued_seconds: 1557669
+tasks_completed: 3305
+last_run: 2026-11-13T13:18:22Z
 ---
 
 # Orchestrator activity
@@ -23148,6 +23148,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.2950 USD, estimated
+
+### 2026-11-13T13:16:49Z
+
+- Summary: Ran flai formula run publish --ready --autocommit for S-0740's release: instance S-0770 made and moved to ready (commit 2a897a5a9). Policy threshold met: count 1 at or over threshold 1; value 0 under 1000, S-0740 unvalued.
+- Items: S-0770, S-0740
+- Seconds: 22
+- Cost: 0.0993 USD, estimated
+
+### 2026-11-13T13:18:04Z
+
+- Summary: thread:TH-1159, a flai serve notice, left alone; publish instance S-0770 has started, so the in-progress lanes are full (S-0661, S-0745, S-0770). Ordered ready by throughput: S-0760 (32m) first through S-0662 (2h30m), all held on after. promote_candidates lists none. S-0241 is complete but stays a draft (TH-0790). The 19 E-0034 drafts lack only a value and wait on the operator's epic inputs (TH-1097), so no planner started. E-0036 not replanned: alex's TH-1158 entry only resolves S-0740's acceptance. S-0730 left out by flai plan.
+- Items: S-0770, S-0241, S-0730, E-0034, E-0036
+- Seconds: 75
+- Cost: 0.2722 USD, estimated
+
+### 2026-11-13T13:18:22Z
+
+- Summary: I started the release for S-0740 as publish instance S-0770. I left the starved-board thread TH-1159 alone because it is a `flai serve` notice.
+- Items: none
+- Seconds: 18
+- Cost: 0.0797 USD, estimated
 
 ## Refusals
 
