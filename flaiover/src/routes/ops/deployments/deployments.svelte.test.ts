@@ -8,10 +8,16 @@
 // are not set up yet in place of Deploy and Promote. S-0595 (ADR-0263 §5): the page groups them in
 // its own rail, Overview, Build, Logs, Access, and Setup, kept in the hash; Build shows one panel per
 // component build with its status; with no deploy set, a link opens Setup in place of a call flai
-// refuses; and Setup holds the deploy settings, so no one edits system-flow.yaml.
+// refuses; and Setup holds the deploy settings, so no one edits system-flow.yaml. S-0663: the
+// stories in progress are listed beside those in review, each story namespace through DeploymentRow
+// with its column, head, last deploy and checks run, and who asked; the page deploys, runs the
+// checks of, and tears down a story in progress through /api/kluster/deploy, /checks, and
+// /teardown; it counts the story namespaces against the limit and names the request refused for
+// it; and a port-forward into a story in progress's namespace starts and stops as one in review's.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { KlusterDeployment, KlusterDeployments, KlusterJob } from '$lib/server/repo';
+import { localTime } from '$lib/localtime';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -201,9 +207,9 @@ describe('Deployments page (S-0581)', () => {
 		const who = all('deployment-who').map((w) => w.textContent!.replace(/\s+/g, ' ').trim());
 		expect(who).toEqual([
 			'main',
-			'S-0581 Story S-0581',
-			'S-0583 Story S-0583',
-			'S-0584 Not yet deployed'
+			'S-0581 Story S-0581 in review',
+			'S-0583 Story S-0583 in review',
+			'S-0584 Not yet deployed in review'
 		]);
 		const link = rowOf('S-0581').querySelector('a')!;
 		expect(link.getAttribute('href')).toBe('/items/S-0581');
@@ -711,5 +717,233 @@ describe('Deployments page (S-0581)', () => {
 		reads = [answer({ error: 'the host flai is too old to show the deployments' }, 501)];
 		await show();
 		expect(q('deployments-too-old')!.textContent).toContain('too old');
+	});
+
+	// S-0663: two stories in progress, one at its head and checked, one behind its head, beside one
+	// in review, and a story in progress and one in review not yet deployed, against a limit of 2,
+	// with a deploy refused for it.
+	const REASON =
+		'kluster.agent_namespaces is 2, and S-0663 and S-0664 hold a namespace; tear one down, or wait for its story to be accepted';
+	const checked = () =>
+		story('S-0663', {
+			status: 'in-progress',
+			column: 'in-progress',
+			at_head: true,
+			asked_by: 'agent-S-0663',
+			log: '.flai-cache/kluster/logs/s-0663',
+			checks_commit: HEAD,
+			checks_outcome: 'passed',
+			checks_asked_by: 'agent-S-0663',
+			checks_log: '.flai-cache/kluster/checks/s-0663.log',
+			checks_log_tail: 'checks passed\n'
+		});
+	const live = (over: Partial<KlusterDeployments> = {}) =>
+		list({
+			deployments: [
+				main(),
+				story('S-0581', { column: 'review', at_head: true }),
+				checked(),
+				story('S-0664', {
+					status: 'in-progress',
+					column: 'in-progress',
+					head: OLD,
+					at_head: false,
+					asked_by: 'agent-S-0664'
+				})
+			],
+			review: [{ story: 'S-0584', title: 'In review, not deployed', head: HEAD }],
+			undeployed: [
+				{ story: 'S-0584', title: 'In review, not deployed', head: HEAD, column: 'review' },
+				{ story: 'S-0665', title: 'In progress, not deployed', head: HEAD, column: 'in-progress' }
+			],
+			live: 2,
+			holding: ['S-0663', 'S-0664'],
+			limit: 2,
+			refusals: [
+				{
+					story: 'S-0665',
+					by: 'agent-S-0665',
+					at: '2026-11-13T07:30:00Z',
+					limit: 2,
+					reason: REASON
+				}
+			],
+			...over
+		});
+	const said = (el: Element, id: string) =>
+		el.querySelector(`[data-testid="${id}"]`)!.textContent!.replace(/\s+/g, ' ').trim();
+
+	it('lists each story in progress beside those in review, with its column, head, deploy, checks, and who asked', async () => {
+		reads = [answer(live())];
+		await show();
+		expect(all('deployment-row').map((r) => r.getAttribute('data-story'))).toEqual([
+			null,
+			'S-0581',
+			'S-0663',
+			'S-0664',
+			'S-0584',
+			'S-0665'
+		]);
+		expect(entry('overview').textContent).toContain('6');
+		const row = rowOf('S-0663');
+		expect(said(row, 'deployment-column')).toBe('in progress');
+		expect(said(row, 'deployment-commit')).toBe('0123456789ab');
+		expect(row.querySelector('[data-testid="deployment-at-head"]')).not.toBeNull();
+		expect(said(row, 'deployment-outcome')).toBe('passed');
+		expect(said(row, 'deployment-asked-by')).toContain('asked by agent-S-0663');
+		expect(said(row, 'deployment-checks-outcome')).toBe('passed');
+		expect(said(row, 'deployment-checks-asked-by')).toBe('at 0123456789ab, asked by agent-S-0663');
+		expect(said(row, 'deployment-checks-tail')).toBe('checks passed');
+		expect(buttonIn(row, 'Run checks')).toBeDefined();
+		expect(buttonIn(row, 'Deploy')).toBeUndefined();
+		expect(buttonIn(row, 'Teardown')).toBeDefined();
+		// behind its head: deployed again, not checked
+		expect(rowOf('S-0664').querySelector('[data-testid="deployment-behind"]')).not.toBeNull();
+		expect(buttonIn(rowOf('S-0664'), 'Deploy')).toBeDefined();
+		expect(buttonIn(rowOf('S-0664'), 'Run checks')).toBeUndefined();
+		expect(said(rowOf('S-0581'), 'deployment-column')).toBe('in review');
+		// not deployed yet, from undeployed rather than review
+		const waiting = rowOf('S-0665');
+		expect(said(waiting, 'deployment-column')).toBe('in progress');
+		expect(said(waiting, 'deployment-outcome')).toBe(
+			'In progress, not deployed; its head is 0123456789ab.'
+		);
+		expect(buttonIn(waiting, 'Deploy')).toBeDefined();
+		expect(buttonIn(waiting, 'Teardown')).toBeUndefined();
+		expect(said(rowOf('S-0584'), 'deployment-outcome')).toContain('In review, not deployed');
+	});
+
+	it('deploys, runs the checks of, and tears down a story in progress, each through flai', async () => {
+		reads = [answer(live())];
+		await show();
+		const body = (i: number) => {
+			const [path, init] = posts()[i];
+			return [path, JSON.parse(String((init as RequestInit).body))];
+		};
+		writes['/api/kluster/deploy'] = answer(live());
+		buttonIn(rowOf('S-0665'), 'Deploy')!.click();
+		await settle();
+		buttonIn(rowOf('S-0664'), 'Deploy')!.click();
+		await settle();
+		writes['/api/kluster/checks'] = answer(live());
+		buttonIn(rowOf('S-0663'), 'Run checks')!.click();
+		await settle();
+		writes['/api/kluster/teardown'] = answer(live({ running: job('teardown', 'S-0663') }));
+		buttonIn(rowOf('S-0663'), 'Teardown')!.click();
+		flushSync();
+		expect(posts().length).toBe(3);
+		buttonIn(rowOf('S-0663'), 'Tear it down')!.click();
+		await settle();
+		expect([0, 1, 2, 3].map(body)).toEqual([
+			['/api/kluster/deploy', { story: 'S-0665' }],
+			['/api/kluster/deploy', { story: 'S-0664' }],
+			['/api/kluster/checks', { story: 'S-0663' }],
+			['/api/kluster/teardown', { story: 'S-0663' }]
+		]);
+		expect(q('deployments-running')!.textContent).toContain('kluster teardown of S-0663');
+		expect(buttonIn(rowOf('S-0663'), 'Run checks')!.disabled).toBe(true);
+	});
+
+	it("shows flai's refusal of a checks run word for word", async () => {
+		const no =
+			'the namespace s-0663 is deployed at fedcba987654, not at the head of story/S-0663; deploy first with flai kluster deploy S-0663 --job';
+		reads = [answer(live())];
+		writes['/api/kluster/checks'] = answer({ error: no }, 400);
+		await show();
+		buttonIn(rowOf('S-0663'), 'Run checks')!.click();
+		await settle();
+		expect(q('deployments-action-error')!.textContent!.trim()).toBe(no);
+	});
+
+	it('says how many story namespaces live against the limit, and which request was refused for it', async () => {
+		reads = [answer(live())];
+		await show();
+		expect(said(document.body, 'deployments-limit')).toBe('2 of 2 story namespaces');
+		const line = q('deployments-limit-line')!;
+		expect(said(line, 'deployments-refused')).toBe(
+			`Refused for the limit: S-0665's deploy, asked by agent-S-0665 at ${localTime('2026-11-13T07:30:00Z')}.`
+		);
+		expect(said(line, 'deployments-refused-reason')).toBe(REASON);
+		expect(line.textContent!.replace(/\s+/g, ' ')).toContain(
+			'2 of 2 story namespaces live for stories in progress: S-0663, S-0664. Stories in review do not count.'
+		);
+	});
+
+	it('says deploys before review are off at a limit of 0, and nothing of the limit from an older flai', async () => {
+		reads = [answer(live({ live: 0, holding: [], limit: 0, refusals: [] }))];
+		await show();
+		expect(said(document.body, 'deployments-limit')).toBe('deploys before review off');
+		expect(said(document.body, 'deployments-limit-line')).toBe(
+			'Deploys before review are off: no story in progress may hold a namespace. Stories in review do not count.'
+		);
+		expect(q('deployments-refused')).toBeNull();
+		if (c) unmount(c);
+		document.body.innerHTML = '';
+		reads = [answer(list())];
+		await show();
+		expect(q('deployments-limit')).toBeNull();
+		expect(q('deployments-limit-line')).toBeNull();
+	});
+
+	it("starts and stops a port-forward into a story in progress's namespace, as one in review's", async () => {
+		reads = [answer(live())];
+		await show();
+		await go('access');
+		const row = () => accessOf('S-0663').querySelector('[data-testid="deployment-access"]')!;
+		const withForward = (forwards: ReturnType<typeof running>[]) =>
+			live({
+				deployments: [
+					main(),
+					{ ...checked(), access: { ...access('s-0663'), forwards } },
+					story('S-0581', { column: 'review' })
+				]
+			});
+		writes['/api/kluster/forward'] = answer(withForward([running('s-0663')]));
+		buttonIn(row(), 'Start')!.click();
+		await settle();
+		expect(JSON.parse(String((posts().at(-1)![1] as RequestInit).body))).toEqual({
+			namespace: 's-0663',
+			service: 'web',
+			port: 8080,
+			on: true
+		});
+		expect(
+			row().querySelector<HTMLAnchorElement>('[data-testid="deployment-forward-link"]')!.href
+		).toContain(':41234');
+		writes['/api/kluster/forward'] = answer(withForward([]));
+		buttonIn(row(), 'Stop')!.click();
+		await settle();
+		expect(JSON.parse(String((posts().at(-1)![1] as RequestInit).body))).toMatchObject({
+			namespace: 's-0663',
+			on: false
+		});
+		expect(buttonIn(row(), 'Start')).toBeDefined();
+	});
+
+	it("opens Logs at a deploy's failed step from its row's log link", async () => {
+		reads = [
+			answer(
+				live({
+					deployments: [
+						main(),
+						story('S-0663', {
+							column: 'in-progress',
+							outcome: 'failed',
+							failed_step: 'deploy',
+							steps: [step('build', 'passed'), step('deploy', 'failed', { exit_code: 1 })]
+						})
+					]
+				})
+			)
+		];
+		await show();
+		rowOf('S-0663').querySelector<HTMLAnchorElement>('[data-testid="deployment-logs"]')!.click();
+		await settle();
+		expect(paneShown()).toBe('logs');
+		expect(q('deployments-chosen')!.textContent).toContain('s-0663');
+		const open = all('step-panel').map(
+			(p) => p.querySelector<HTMLDetailsElement>('[data-testid="log-feed"]')!.open
+		);
+		expect(open).toEqual([false, true]);
 	});
 });

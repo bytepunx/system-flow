@@ -2,23 +2,26 @@
 	// /ops/deployments: the namespaces deployed to the project's kluster (S-0581), flai's
 	// kluster.deployments through /api/kluster/deployments, grouped in the page's own rail (S-0595,
 	// ADR-0263 §5), kept in the URL's hash as the item page keeps its panes:
-	// - Overview: main's namespace first, then each story's, as flai orders them, then the stories in
-	//   review with no deployment, each with the story and its title linking its item page, the
-	//   namespace, the commit, when it was deployed, the outcome, and a badge per step. It deploys a
-	//   story in review that is not deployed or is deployed at an older commit, tears a story's
-	//   namespace down once the operator confirms, and promotes main, through flai's kluster.deploy,
-	//   kluster.teardown, and kluster.promote. With a block that names no deploy, which kluster.status
-	//   says (deployable), Deploy and Promote give way to a link that opens Setup, never a call flai
-	//   refuses.
+	// - Overview: main's namespace first, then each story's, in progress and in review alike, as flai
+	//   orders them, each through DeploymentRow (S-0663), then the stories in progress or in review
+	//   with no deployment, each with its column. It deploys a story that is not deployed, or is
+	//   deployed at another commit than its head, runs a story's checks against its namespace, tears a
+	//   story's namespace down once the operator confirms on its row, and promotes main, through
+	//   flai's kluster.deploy, kluster.checks, kluster.teardown, and kluster.promote. With a block that
+	//   names no deploy, which kluster.status says (deployable), Deploy and Promote give way to a link
+	//   that opens Setup, never a call flai refuses. It says how many story namespaces stories in
+	//   progress hold against kluster.agent_namespaces, and the newest deploy refused for it; the
+	//   status badges above the rail carry the count.
 	// - Build: for the namespace chosen, the running job's by default, else main's, one panel per build
 	//   step of its record, build or build-<component>, each with its status and its log followed live
 	//   (LogFeed), then the load.
 	// - Logs: the same namespace's every step, each with its log followed live, and the end of the log
-	//   of the job that runs or last ran.
+	//   of the job that runs or last ran. A row's step badge or log link opens Build or Logs at its
+	//   step, that step's log open.
 	// - Access: how to reach each namespace for a demo, through a port-forward as ADR-0254 decides,
 	//   started and stopped through flai's kluster.forward.start and kluster.forward.stop (S-0586),
-	//   bound to 0.0.0.0 as the operator chose on TH-0861, linked once it runs; the page names no
-	//   command.
+	//   bound to 0.0.0.0 as the operator chose on TH-0861, linked once it runs, for a story in
+	//   progress's namespace as for one in review's; the page names no command.
 	// - Setup: the block's namespace, components, build, deploy, teardown, and timeout (DeploySettings),
 	//   saved through settings.manifest, so no one edits system-flow.yaml; the cluster and its config
 	//   file stay on the Klusters page.
@@ -31,9 +34,9 @@
 		KlusterDeployments,
 		KlusterForward,
 		KlusterJob,
-		KlusterReview,
 		KlusterStatus,
-		KlusterStep
+		KlusterStep,
+		KlusterUndeployed
 	} from '$lib/server/repo';
 	import type { SidebarEntry } from '$lib/pagesidebar.svelte';
 	import { api } from '$lib/api';
@@ -43,6 +46,7 @@
 	import PageSidebar from '$lib/components/PageSidebar.svelte';
 	import LogFeed from '$lib/components/LogFeed.svelte';
 	import DeploySettings from '$lib/components/DeploySettings.svelte';
+	import DeploymentRow from '$lib/components/DeploymentRow.svelte';
 
 	// How often the page asks again while a deploy, a teardown, or a promotion runs; each takes minutes.
 	const POLL_MS = 3000;
@@ -60,14 +64,14 @@
 	// flai's refusal or error for the last action, word for word.
 	let actionError = $state<string | null>(null);
 	let busy = $state(false);
-	// The story whose teardown awaits the operator's confirmation.
-	let confirming = $state<string | null>(null);
 	// flai's refusal or error for a port-forward's start or stop, beside its row, by forwardKey.
 	let forwardSaid = $state<Record<string, string>>({});
 	// The pane shown, bound to the rail, so a link on a pane can open another.
 	let shown = $state<string>();
 	// The namespace the Build and Logs panes show, as the reader picked it; the default otherwise.
 	let picked = $state<string>();
+	// The step whose log Build or Logs opens at, from a row's step badge or its log link.
+	let stepAt = $state<string>();
 
 	// Whether the block names a deploy, as kluster.status says; undefined from a flai older than
 	// S-0586, or when it could not be read, and then Deploy and Promote are offered as before.
@@ -82,7 +86,23 @@
 	);
 	const main = $derived(data?.deployments.find((d) => d.default));
 	const disabled = $derived(busy || runs || !!off);
-	const nothing = $derived(!!data && data.deployments.length === 0 && data.review.length === 0);
+	// The stories in progress or in review with no deployment: undeployed from a flai of S-0663 or
+	// later, else the stories in review an older flai lists.
+	const pending = $derived<KlusterUndeployed[]>(
+		data?.undeployed ?? (data?.review ?? []).map((r) => ({ ...r, column: 'review' }))
+	);
+	const nothing = $derived(!!data && data.deployments.length === 0 && pending.length === 0);
+	// The story namespaces of stories in progress against kluster.agent_namespaces, and the newest
+	// request refused for it; absent from a flai older than S-0663.
+	const holding = $derived(data?.holding ?? []);
+	const limitBadge = $derived(
+		data?.limit === undefined
+			? undefined
+			: data.limit === 0
+				? 'deploys before review off'
+				: `${data.live ?? holding.length} of ${data.limit} story namespaces`
+	);
+	const refusal = $derived(data?.refusals?.[0]);
 	const forwards = $derived(
 		(data?.deployments ?? []).reduce(
 			(n, d) => n + (d.access.forwards?.filter((f) => f.running).length ?? 0),
@@ -115,7 +135,7 @@
 			id: 'overview',
 			label: 'Overview',
 			mode: 'pane',
-			count: data ? data.deployments.length + data.review.length : undefined
+			count: data ? data.deployments.length + pending.length : undefined
 		},
 		{ id: 'build', label: 'Build', mode: 'pane', count: builds.length || undefined },
 		{ id: 'logs', label: 'Logs', mode: 'pane' },
@@ -147,11 +167,13 @@
 					: 'bg-surface text-muted';
 	// a step's name as the page shows it: a component's build by the component
 	const stepLabel = (s: KlusterStep) => (s.name.startsWith('build-') ? s.name.slice(6) : s.name);
-	const whoOf = (d: KlusterDeployment) => (d.default ? 'main' : d.story);
-	// a story's namespace may be deployed again when its branch moved on, or its deploy did not pass
-	const redeployable = (d: KlusterDeployment) =>
-		d.status === 'review' &&
-		((!!d.head && d.head !== d.commit) || d.outcome === 'failed' || d.outcome === 'interrupted');
+	// a story's column as the page says it, and its badge's tone, as DeploymentRow shows them
+	const columnText = (c: string) =>
+		c === 'in-progress' ? 'in progress' : c === 'review' ? 'in review' : c;
+	const columnTone = (c: string) =>
+		c === 'in-progress'
+			? 'ml-1 rounded bg-info-soft px-2 py-0.5 text-xs text-info'
+			: 'ml-1 rounded bg-surface px-2 py-0.5 text-xs text-muted';
 	const forwardKey = (ns: string, service: string, port: number) => `${ns}/${service}/${port}`;
 	const forwardOf = (d: KlusterDeployment, service: string, port: number) =>
 		d.access.forwards?.find((f) => f.service === service && f.port === port);
@@ -173,9 +195,10 @@
 			.join(', ');
 	};
 
-	/** Opens a pane, and for Build and Logs the namespace given. */
-	function open(pane: string, ns?: string) {
+	/** Opens a pane, and for Build and Logs the namespace given, at the step given. */
+	function open(pane: string, ns?: string, step?: string) {
 		if (ns) picked = ns;
+		stepAt = step;
 		shown = pane;
 	}
 
@@ -209,9 +232,9 @@
 		}
 	}
 
-	/** Deploys, tears down, or promotes through flai, taking the deployments the host answers. */
-	async function act(action: 'deploy' | 'teardown' | 'promote', story?: string) {
-		confirming = null;
+	/** Deploys, checks, tears down, or promotes through flai, taking the deployments the host
+	 * answers. */
+	async function act(action: 'deploy' | 'checks' | 'teardown' | 'promote', story?: string) {
 		busy = true;
 		actionError = null;
 		try {
@@ -363,6 +386,7 @@
 		namespace={d.namespace}
 		step={s.name}
 		{label}
+		open={s.name === stepAt}
 		outcome={s.outcome}
 		startedAt={s.started_at ?? ''}
 		endedAt={s.ended_at ?? ''}
@@ -449,29 +473,11 @@
 	</li>
 {/snippet}
 
-{#snippet deployed(d: KlusterDeployment)}
+{#snippet mainRow(d: KlusterDeployment)}
 	<li class="rounded border border-line p-3" data-testid="deployment-row">
 		<div class="flex flex-wrap items-baseline justify-between gap-2">
-			<p class="text-sm" data-testid="deployment-who">
-				{#if d.default}
-					<span class="font-medium">main</span>
-				{:else}
-					{@render storyLink(d.story, d.title)}
-				{/if}
-			</p>
-			<div class="flex flex-wrap gap-2">
-				{#if d.default}
-					{@render promoteButton()}
-				{:else}
-					{#if redeployable(d)}{@render deployButton(d.story)}{/if}
-					<button
-						type="button"
-						class="{button} bg-danger text-on-primary"
-						disabled={disabled || confirming === d.story}
-						onclick={() => (confirming = d.story)}>Teardown</button
-					>
-				{/if}
-			</div>
+			<p class="text-sm" data-testid="deployment-who"><span class="font-medium">main</span></p>
+			<div class="flex flex-wrap gap-2">{@render promoteButton()}</div>
 		</div>
 		<dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
 			<dt class="text-muted">Namespace</dt>
@@ -503,35 +509,10 @@
 				kluster {d.job.kind} runs against it, since {localTime(d.job.started_at)}.
 			</p>
 		{/if}
-		{#if confirming === d.story}
-			<div
-				class="mt-2 rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
-				role="alertdialog"
-				aria-label="Tear down {d.story}'s namespace"
-				data-testid="deployment-confirm-teardown"
-			>
-				<p>
-					Tear down {d.story}'s namespace {d.namespace}? The project's teardown removes what its
-					deploy made, and flai deletes the namespace.
-				</p>
-				<div class="mt-2 flex gap-2">
-					<button
-						type="button"
-						class="{button} bg-danger text-on-primary"
-						onclick={() => act('teardown', d.story)}>Tear it down</button
-					>
-					<button
-						type="button"
-						class="{button} border border-line"
-						onclick={() => (confirming = null)}>Keep it</button
-					>
-				</div>
-			</div>
-		{/if}
 		{#if d.steps.length}
 			<ul
 				class="mt-3 flex flex-wrap gap-1 text-xs"
-				aria-label="{whoOf(d)}'s steps"
+				aria-label="main's steps"
 				data-testid="deployment-steps"
 			>
 				{#each d.steps as s, i (`${i}-${s.name}`)}
@@ -542,7 +523,7 @@
 							data-testid="deployment-step"
 							data-step={s.name}
 							data-outcome={s.outcome}
-							onclick={() => open(isBuild(s) ? 'build' : 'logs', d.namespace)}
+							onclick={() => open(isBuild(s) ? 'build' : 'logs', d.namespace, s.name)}
 							>{stepLabel(s)} · {s.outcome}</a
 						>
 					</li>
@@ -552,18 +533,49 @@
 	</li>
 {/snippet}
 
-{#snippet waiting(r: KlusterReview)}
-	<li class="rounded border border-line p-3" data-testid="deployment-row">
+{#snippet waiting(r: KlusterUndeployed)}
+	<li class="rounded border border-line p-3" data-testid="deployment-row" data-story={r.story}>
 		<div class="flex flex-wrap items-baseline justify-between gap-2">
-			<p class="text-sm" data-testid="deployment-who">{@render storyLink(r.story, r.title)}</p>
+			<p class="text-sm" data-testid="deployment-who">
+				{@render storyLink(r.story, r.title)}
+				<span class={columnTone(r.column)} data-testid="deployment-column"
+					>{columnText(r.column)}</span
+				>
+			</p>
 			<div class="flex gap-2">{@render deployButton(r.story)}</div>
 		</div>
 		<p class="mt-2 text-sm text-muted" data-testid="deployment-outcome">
-			In review, not deployed{#if r.head}; its head is <code class="font-mono">{short(r.head)}</code
-				>{/if}.
+			{r.column === 'in-progress' ? 'In progress' : 'In review'}, not deployed{#if r.head}; its head
+				is <code class="font-mono">{short(r.head)}</code>{/if}.
 		</p>
 		{#if r.head_error}<p class="mt-1 text-sm text-muted">{r.head_error}</p>{/if}
 	</li>
+{/snippet}
+
+{#snippet limitNotice()}
+	{#if data?.limit !== undefined}
+		<div class="mt-4 rounded border border-line p-3 text-sm" data-testid="deployments-limit-line">
+			<p>
+				{#if data.limit === 0}
+					Deploys before review are off: no story in progress may hold a namespace.
+				{:else}
+					{limitBadge} live for stories in progress{holding.length
+						? `: ${holding.join(', ')}`
+						: ''}.
+				{/if}
+				Stories in review do not count.
+			</p>
+			{#if refusal}
+				<p class="mt-2 text-warn" data-testid="deployments-refused">
+					Refused for the limit: {refusal.story}'s deploy, asked by {refusal.by || 'a shell'} at
+					{localTime(refusal.at)}.
+				</p>
+				<p class="mt-1 text-xs text-muted" data-testid="deployments-refused-reason">
+					{refusal.reason}
+				</p>
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 {#snippet overview()}
@@ -583,7 +595,7 @@
 	{#if nothing}
 		<p class="mt-4 text-sm text-muted" data-testid="deployments-empty">
 			Nothing is deployed to the cluster{data?.cluster ? ` ${data.cluster}` : ''}, and no story is
-			in review.
+			in progress or in review.
 		</p>
 	{/if}
 	{#if !main}
@@ -596,12 +608,27 @@
 			{@render promoteButton()}
 		</div>
 	{/if}
+	{@render limitNotice()}
 	{#if data && !nothing}
 		<ul class="mt-4 space-y-3" aria-label="Deployments">
 			{#each data.deployments as d (d.namespace)}
-				{@render deployed(d)}
+				{#if d.default}
+					{@render mainRow(d)}
+				{:else}
+					<DeploymentRow
+						deployment={d}
+						deployable={!undeployable}
+						busy={disabled}
+						onDeploy={(id) => act('deploy', id)}
+						onChecks={(id) => act('checks', id)}
+						onTeardown={(id) => act('teardown', id)}
+						onSetup={() => open('setup')}
+						onLogs={(ns, step) => open('logs', ns, step)}
+						onBuild={(ns, step) => open('build', ns, step)}
+					/>
+				{/if}
 			{/each}
-			{#each data.review as r (r.story)}
+			{#each pending as r (r.story)}
 				{@render waiting(r)}
 			{/each}
 		</ul>
@@ -796,6 +823,14 @@
 		{#if data.cluster}
 			<li class="rounded bg-surface px-2 py-0.5 text-muted">cluster {data.cluster}</li>
 		{/if}
+		{#if limitBadge}
+			<li
+				class="rounded px-2 py-0.5 {refusal ? 'bg-warn-soft text-warn' : 'bg-surface text-muted'}"
+				data-testid="deployments-limit"
+			>
+				{limitBadge}
+			</li>
+		{/if}
 		{#if deployable !== undefined}
 			<li
 				class="rounded px-2 py-0.5 {deployable
@@ -825,7 +860,10 @@
 			role="status"
 			data-testid="deployments-off"
 		>
-			<p>The kluster host action is off, so the dashboard cannot deploy, tear down, or promote.</p>
+			<p>
+				The kluster host action is off, so the dashboard cannot deploy, run checks, tear down, or
+				promote.
+			</p>
 			<p class="mt-1">Turn it on from the {@render setup("Klusters page's setup")}.</p>
 		</div>
 	{/if}
