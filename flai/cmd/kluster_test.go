@@ -472,3 +472,235 @@ func TestKlusterDeployCommandsListedAndRefused(t *testing.T) {
 		}
 	}
 }
+
+// jobProject is a project whose session is the agent of S-0007, by its name
+// alone, with --job's waits shortened; it returns the root.
+func jobProject(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_STORY", "")
+	t.Setenv("FLAI_AGENT", "agent-S-0007")
+	was := klusterJobWait
+	klusterJobWait = kluster.Wait{Take: 3 * time.Second, Answer: 3 * time.Second, Poll: 5 * time.Millisecond}
+	t.Cleanup(func() { klusterJobWait = was })
+	return tempProject(t)
+}
+
+// serveKluster stands in for flai serve: it takes story's request of kind in
+// root's requests folder, writes jobs[0] as the story's job state, answers
+// with what answer makes of the request, and writes each later job state
+// 30ms after the one before. The request arrives on the channel, which is
+// closed when none came within five seconds.
+func serveKluster(t *testing.T, root, story, kind string, answer func(kluster.Request) kluster.Answer, jobs ...kluster.AskedJob) <-chan kluster.Request {
+	t.Helper()
+	got := make(chan kluster.Request, 1)
+	go func() {
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			req, ok, err := kluster.Take(root, story, kind)
+			if err != nil {
+				t.Errorf("take the request: %v", err)
+				break
+			}
+			if !ok {
+				time.Sleep(2 * time.Millisecond)
+				continue
+			}
+			got <- req
+			if len(jobs) > 0 {
+				if err := kluster.WriteAskedJob(root, jobs[0]); err != nil {
+					t.Errorf("the job state: %v", err)
+				}
+			}
+			if err := kluster.WriteAnswer(root, answer(req)); err != nil {
+				t.Errorf("the answer: %v", err)
+			}
+			for _, j := range jobs[min(1, len(jobs)):] {
+				time.Sleep(30 * time.Millisecond)
+				if err := kluster.WriteAskedJob(root, j); err != nil {
+					t.Errorf("the job state: %v", err)
+				}
+			}
+			return
+		}
+		close(got)
+	}()
+	return got
+}
+
+// queuedAt is when the jobs of the --job tests were queued.
+var queuedAt = time.Date(2026, 11, 13, 7, 33, 53, 0, time.UTC)
+
+// askedJob is S-0007's job of kind, queued, running once started, and ended
+// with outcome once outcome is not empty.
+func askedJob(kind string, started bool, outcome string) kluster.AskedJob {
+	j := kluster.AskedJob{ID: kluster.JobID("S-0007", kind, queuedAt), Kind: kind, Story: "S-0007", By: "agent-S-0007", QueuedAt: queuedAt}
+	if started {
+		j.StartedAt = queuedAt.Add(time.Second)
+	}
+	if outcome != "" {
+		j.EndedAt, j.Outcome, j.Commit = queuedAt.Add(time.Minute), outcome, klusterHead
+	}
+	return j
+}
+
+// S-0660 criterion 1, ADR-0292 §1: flai kluster deploy --job runs nothing
+// here: it asks flai serve as the session's agent and prints the job's id,
+// its kind, and the jobs ahead, and what to wait for; teardown --job asks
+// without --yes, and a job of the story found running is said to be so.
+func TestKlusterJobAsksFlaiServeForTheOwnStory(t *testing.T) {
+	root := jobProject(t)
+	deploy := askedJob(kluster.KindDeploy, false, "")
+	log := filepath.Join(kluster.Dir(root), "logs", "s-0007")
+	got := serveKluster(t, root, "S-0007", kluster.KindDeploy, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: deploy.ID, Kind: r.Kind, Story: r.Story, Ahead: 2, Started: true, Log: log}
+	}, deploy)
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-7", "--job")
+	if code != 0 {
+		t.Fatalf("deploy --job: %d %s %s", code, out, errOut)
+	}
+	for _, want := range []string{"kluster deploy job " + deploy.ID + " queued for S-0007, 2 jobs ahead of it", "Wait for its kluster event (wait_for_events), or read it later with flai kluster deployments", "its output goes to " + log} {
+		if !strings.Contains(out, want) {
+			t.Errorf("deploy --job prints %q: %s", want, out)
+		}
+	}
+	if req := <-got; req.Story != "S-0007" || req.Kind != kluster.KindDeploy || req.By != "agent-S-0007" || req.At.IsZero() {
+		t.Errorf("the request flai serve read: %+v", req)
+	}
+
+	teardown := askedJob(kluster.KindTeardown, true, "")
+	serveKluster(t, root, "S-0007", kluster.KindTeardown, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: teardown.ID, Kind: r.Kind, Story: r.Story}
+	}, teardown)
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--job")
+	if code != 0 || !strings.Contains(out, "kluster teardown job "+teardown.ID+" of S-0007 was already running, so nothing more was queued; no job ahead of it") {
+		t.Errorf("teardown --job without --yes, found running: %d %s %s", code, out, errOut)
+	}
+}
+
+// S-0660 criterion 3, ADR-0292 §1: a session with a story of its own is
+// refused another story's job before any request is written; a shell with no
+// session story asks for the story given; --wait goes with --job alone.
+func TestKlusterJobRefusesAnotherStory(t *testing.T) {
+	root := jobProject(t)
+	t.Setenv("FLAI_STORY", "S-0007")
+	for _, sub := range []string{"deploy", "teardown"} {
+		_, errOut, code := runKluster(t, root, false, "", "kluster", sub, "S-0008", "--job")
+		if code == 0 || !strings.Contains(errOut, "this session works S-0007") || !strings.Contains(errOut, "nothing was asked for S-0008") {
+			t.Errorf("%s --job for another story: %d %s", sub, code, errOut)
+		}
+	}
+	if _, err := os.Stat(kluster.RequestsDir(root)); !os.IsNotExist(err) {
+		t.Errorf("a refusal wrote a request: %v", err)
+	}
+	_, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--wait", "1m")
+	if code == 0 || !strings.Contains(errOut, "--wait waits for the job flai serve runs, so it goes with --job") {
+		t.Errorf("--wait without --job: %d %s", code, errOut)
+	}
+
+	t.Setenv("FLAI_STORY", "")
+	t.Setenv("FLAI_AGENT", "alex")
+	got := serveKluster(t, root, "S-0008", kluster.KindDeploy, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: kluster.JobID(r.Story, r.Kind, queuedAt), Kind: r.Kind, Story: r.Story, Started: true}
+	})
+	if out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-8", "--job"); code != 0 || !strings.Contains(out, "queued for S-0008") {
+		t.Errorf("the operator's shell asks for the story given: %d %s %s", code, out, errOut)
+	}
+	if req := <-got; req.Story != "S-0008" || req.By != "alex" {
+		t.Errorf("the request: %+v", req)
+	}
+}
+
+// ADR-0292 §1: a refusal from flai serve prints its reason and exits 1, its
+// answer with --json; a request no flai serve takes is withdrawn, saying so.
+func TestKlusterJobRefusedOrNotTaken(t *testing.T) {
+	root := jobProject(t)
+	reason := "the kluster host action is off for this project; the operator turns it on with flai serve enable kluster"
+	refuse := func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Kind: r.Kind, Story: r.Story, Reason: reason}
+	}
+	serveKluster(t, root, "S-0007", kluster.KindDeploy, refuse)
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--job")
+	if code == 0 || !strings.Contains(errOut, reason) || out != "" {
+		t.Errorf("a refusal: %d %q %s", code, out, errOut)
+	}
+	serveKluster(t, root, "S-0007", kluster.KindTeardown, refuse)
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--job", "--json")
+	var res map[string]map[string]any
+	if code == 0 || json.Unmarshal([]byte(out), &res) != nil || res["answer"]["reason"] != reason || res["answer"]["kind"] != kluster.KindTeardown {
+		t.Errorf("a refusal --json prints the answer and exits 1: %d %s %s", code, out, errOut)
+	}
+
+	klusterJobWait = kluster.Wait{Take: 50 * time.Millisecond, Poll: 5 * time.Millisecond}
+	_, errOut, code = runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--job")
+	if code == 0 || !strings.Contains(errOut, "flai serve is not running") {
+		t.Errorf("no flai serve: %d %s", code, errOut)
+	}
+	if _, err := os.Stat(kluster.RequestFile(root, "S-0007", kluster.KindDeploy, kluster.RequestSuffix)); !os.IsNotExist(err) {
+		t.Errorf("the request was not withdrawn: %v", err)
+	}
+}
+
+// S-0660 criterion 2, ADR-0292 §5: --wait waits for the job's end and
+// prints its outcome, commit, steps with their exit codes and logs, and
+// error, exiting 1 on a failure; a job that outlasts the wait is said to be
+// still running, with how to read it later, and exits 0.
+func TestKlusterJobWaits(t *testing.T) {
+	root := jobProject(t)
+	running := askedJob(kluster.KindDeploy, true, "")
+	failed := askedJob(kluster.KindDeploy, true, kluster.OutcomeFailed)
+	code4 := 4
+	buildLog, deployLog := kluster.LogPath(root, "s-0007", "build"), kluster.LogPath(root, "s-0007", "deploy")
+	failed.FailedStep, failed.ExitCode, failed.Error, failed.Log = "deploy", &code4, "the deploy step failed with exit code 4", deployLog
+	failed.Steps = []kluster.Step{{Name: "build", Outcome: kluster.OutcomePassed, Log: buildLog}, {Name: "deploy", Outcome: kluster.OutcomeFailed, ExitCode: 4, Log: deployLog}}
+	answer := func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: running.ID, Kind: r.Kind, Story: r.Story, Started: true}
+	}
+	serveKluster(t, root, "S-0007", kluster.KindDeploy, answer, running, failed)
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--job", "--wait", "5s")
+	for _, want := range []string{"queued for S-0007", "S-0007's deploy job " + running.ID + ": failed", "commit  0123456789ab\n", "build    passed, log " + buildLog, "deploy   failed, exit code 4, log " + deployLog, "failed at deploy, exit code 4", "error   the deploy step failed with exit code 4"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("--wait prints %q: %s", want, out)
+		}
+	}
+	if code == 0 {
+		t.Errorf("a failed job exits 1: %s %s", out, errOut)
+	}
+
+	serveKluster(t, root, "S-0007", kluster.KindDeploy, answer, running)
+	out, errOut, code = runKluster(t, root, false, "", "kluster", "deploy", "S-0007", "--job", "--wait", "100ms")
+	if code != 0 || !strings.Contains(out, "It is still running after 100ms: wait for its kluster event (wait_for_events), or read it later with flai kluster deployments") {
+		t.Errorf("a job that outlasts the wait: %d %s %s", code, out, errOut)
+	}
+}
+
+// S-0660 criterion 2: --json prints the answer and, with --wait, the job's
+// state and whether it ended, as one object.
+func TestKlusterJobJSON(t *testing.T) {
+	root := jobProject(t)
+	running := askedJob(kluster.KindTeardown, true, "")
+	passed := askedJob(kluster.KindTeardown, true, kluster.OutcomePassed)
+	serveKluster(t, root, "S-0007", kluster.KindTeardown, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: running.ID, Kind: r.Kind, Story: r.Story, Ahead: 1, Started: true}
+	}, running, passed)
+	out, errOut, code := runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--job", "--wait", "5s", "--json")
+	var res struct {
+		Answer kluster.Answer    `json:"answer"`
+		Job    *kluster.AskedJob `json:"job"`
+		Ended  *bool             `json:"ended"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &res) != nil {
+		t.Fatalf("--job --wait --json: %d %s %s", code, out, errOut)
+	}
+	if res.Answer.Job != running.ID || res.Answer.Ahead != 1 || !res.Answer.Started || res.Job == nil || res.Job.Outcome != kluster.OutcomePassed || res.Job.Commit != klusterHead || res.Ended == nil || !*res.Ended {
+		t.Errorf("--json: %s", out)
+	}
+
+	serveKluster(t, root, "S-0007", kluster.KindTeardown, func(r kluster.Request) kluster.Answer {
+		return kluster.Answer{Job: running.ID, Kind: r.Kind, Story: r.Story, Started: true}
+	})
+	out, _, code = runKluster(t, root, false, "", "kluster", "teardown", "S-0007", "--job", "--json")
+	var bare map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &bare) != nil || bare["job"] != nil || bare["ended"] != nil || bare["answer"] == nil {
+		t.Errorf("--json without --wait prints the answer alone: %d %s", code, out)
+	}
+}

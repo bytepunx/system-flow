@@ -425,3 +425,11 @@ func (j AskedJob) state() string {
 	}
 	return "queued"
 }
+
+// HasAskedJob reports whether story's kept job state is the job id, one its
+// agent asked for, which Await can wait on; a review deploy flai serve queued
+// itself keeps none.
+func HasAskedJob(root, story, id string) bool {
+	j, ok, err := ReadAskedJob(root, story)
+	return err == nil && ok && j.ID == id
+}

@@ -256,3 +256,21 @@ func TestAwaitWaitsForTheJobToEnd(t *testing.T) {
 		t.Error("a story with no job is an error")
 	}
 }
+
+func TestHasAskedJobNamesOnlyTheJobKeptForTheStory(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if HasAskedJob(root, "S-0660", "S-0660-deploy-x") {
+		t.Error("a story with no job state has no asked job")
+	}
+	j := AskedJob{ID: "S-0660-deploy-x", Kind: KindDeploy, Story: "S-0660", By: "agent-S-0660", QueuedAt: time.Now().UTC()}
+	if err := WriteAskedJob(root, j); err != nil {
+		t.Fatal(err)
+	}
+	if !HasAskedJob(root, "S-0660", j.ID) {
+		t.Error("the kept job is the asked job")
+	}
+	if HasAskedJob(root, "S-0660", "S-0660-deploy-review") {
+		t.Error("a review job's id is not the kept asked job")
+	}
+}

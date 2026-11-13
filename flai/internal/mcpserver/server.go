@@ -29,6 +29,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -144,6 +145,11 @@ type Options struct {
 	// CloseOutWait is how long the tool verify waits for flai serve to take
 	// and answer its request; zero is closeout's defaults.
 	CloseOutWait closeout.Wait
+	// KlusterWait is how long the tools kluster_deploy and kluster_teardown
+	// wait for flai serve to take and answer their request, and how often
+	// they read the job's state while wait_seconds runs; zero is kluster's
+	// defaults.
+	KlusterWait kluster.Wait
 	// Story is the story a story's agent's session works, as flai serve sets
 	// FLAI_STORY; "" outside one (S-0272).
 	Story string
@@ -262,14 +268,15 @@ type server struct {
 	permissionHold time.Duration
 	// budgets reads the host's budget state for the inbox (S-0534)
 	budgets BudgetRead
-	// permPoll, flaiExe, subprojectEnv, releases, and closeOutWait are
-	// Options' PermissionPoll, FlaiExecutable, SubprojectEnv, Releases, and
-	// CloseOutWait
+	// permPoll, flaiExe, subprojectEnv, releases, closeOutWait, and
+	// klusterWait are Options' PermissionPoll, FlaiExecutable,
+	// SubprojectEnv, Releases, CloseOutWait, and KlusterWait
 	permPoll      time.Duration
 	flaiExe       string
 	subprojectEnv []string
 	releases      *Releases
 	closeOutWait  closeout.Wait
+	klusterWait   kluster.Wait
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -278,7 +285,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases, closeOutWait: opt.CloseOutWait}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, curations: opt.Curations, roles: opt.Roles, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, servedAgent: opt.ServedAgent, publish: opt.Publish, accepter: opt.Accept, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed, permissionHold: permissionHoldOf(opt), budgets: opt.Budgets, permPoll: opt.PermissionPoll, flaiExe: opt.FlaiExecutable, subprojectEnv: opt.SubprojectEnv, releases: opt.Releases, closeOutWait: opt.CloseOutWait, klusterWait: opt.KlusterWait}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}
@@ -1122,8 +1129,10 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 // (FLAI_STORY, no role), a thread on its story or one of its tasks awaits an
 // answer to its own question or a conversation of its story awaits the other
 // story's reply (S-0335), no conversation of its story awaits its own reply,
-// no task of the story is in progress, and no close-out job of the story
-// runs, whose verified event the agent waits for (ADR-0229 §4). It is
+// no task of the story is in progress, no close-out job of the story runs,
+// whose verified event the agent waits for (ADR-0229 §4), and no kluster job
+// of the story waits or runs, whose kluster event it waits for (ADR-0292
+// §5). It is
 // serve's rule for an agent it starts again on the answer or the reply
 // (internal/serve/agents_restart.go), so an agent told to end is one serve restarts.
 // Anything it cannot read keeps the hold. The orchestrator flai serve
@@ -1161,6 +1170,9 @@ func (s *server) endWhy() string {
 		}
 	}
 	if job, ok, err := closeout.ReadJob(s.repo.CacheDir(), workitem.CanonicalID(s.story)); err != nil || ok && job.Running() {
+		return ""
+	}
+	if job, ok, err := kluster.ReadAskedJob(projectRoot(s.repo), workitem.CanonicalID(s.story)); err != nil || ok && !job.Ended() {
 		return ""
 	}
 	var pending []string

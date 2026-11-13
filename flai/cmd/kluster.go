@@ -46,7 +46,10 @@ deployments lists what each namespace holds. Each job logs its steps under
 They work from your shell whatever the kluster host action says. flai guard
 refuses every agent and sub-agent up, down, deploy, teardown, and promote,
 which change shared infrastructure on your machine; status and deployments
-read, and any agent may run them.
+read, and any agent may run them. A story's agent asks flai serve for its
+own story's deploy or teardown instead, with flai kluster deploy or teardown
+S-nnnn --job, or the MCP tools kluster_deploy and kluster_teardown, which run
+nothing themselves (ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host
 action on, from the dashboard's Features page or with flai serve enable
@@ -233,7 +236,8 @@ func (a *app) progressOut() io.Writer {
 }
 
 func newKlusterDeployCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var job klusterJobFlags
+	c := &cobra.Command{
 		Use:   "deploy S-nnnn",
 		Short: "Build a story's images, load them into the cluster, and deploy it into its namespace",
 		Long: `Deploys a story in progress or in review into its own namespace, its ID in
@@ -257,11 +261,18 @@ again at a new commit updates the namespace and replaces its record.
 It refuses a story with no worktree, a story not in progress or in review,
 a cluster with no kubeconfig (run flai kluster up), and a second job while
 one runs for the project. --json prints the record, and the step lines go to
-standard error.`,
+standard error.
+
+` + klusterJobHelp("deploy", "build, load, and deploy the story at its branch's head"),
 		Example: `  flai kluster deploy S-0578
-  flai kluster deploy S-0578 --json`,
+  flai kluster deploy S-0578 --json
+  flai kluster deploy S-0578 --job
+  flai kluster deploy S-0578 --job --wait 10m --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if job.job || job.wait != 0 {
+				return a.askKlusterJob(cmd, kluster.KindDeploy, args[0], job)
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -290,6 +301,8 @@ standard error.`,
 			return a.reportRecord(r, err)
 		},
 	}
+	addKlusterJobFlags(c, &job)
+	return c
 }
 
 // reportRecord prints a job's record, as text or JSON, whenever the job made
@@ -332,7 +345,8 @@ func printKlusterRecord(w io.Writer, r kluster.Record) {
 }
 
 func newKlusterTeardownCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var job klusterJobFlags
+	c := &cobra.Command{
 		Use:   "teardown S-nnnn",
 		Short: "Remove a story's deployment: the teardown command, then its namespace",
 		Long: `Tears a story's namespace down: runs the block's teardown command, when it
@@ -346,11 +360,18 @@ A story never deployed has no record: flai says so, asks nothing, and runs
 nothing, and exits 0. Otherwise flai asks first on
 a terminal, and --yes answers it; without a terminal it needs --yes. A
 teardown that fails keeps the record, marked failed, and exits 1. --json
-prints the record removed, or {"story": ..., "deployed": false}.`,
+prints the record removed, or {"story": ..., "deployed": false}.
+
+` + klusterJobHelp("teardown", "tear the story's namespace down") + ` A teardown
+asked with --job needs no --yes: it asks nothing on the terminal.`,
 		Example: `  flai kluster teardown S-0578
-  flai kluster teardown S-0578 --yes --json`,
+  flai kluster teardown S-0578 --yes --json
+  flai kluster teardown S-0578 --job --wait 5m`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if job.job || job.wait != 0 {
+				return a.askKlusterJob(cmd, kluster.KindTeardown, args[0], job)
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -407,6 +428,8 @@ prints the record removed, or {"story": ..., "deployed": false}.`,
 			return nil
 		},
 	}
+	addKlusterJobFlags(c, &job)
+	return c
 }
 
 func newKlusterPromoteCmd(a *app) *cobra.Command {
@@ -495,13 +518,238 @@ reads, so any agent may run it.`,
 				if !d.EndedAt.IsZero() {
 					ended = d.EndedAt.UTC().Format(time.RFC3339)
 				}
-				commit := d.Commit
-				if len(commit) > 12 {
-					commit = commit[:12]
-				}
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", d.Namespace, story, commit, outcome, ended)
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", d.Namespace, story, short12(d.Commit), outcome, ended)
 			}
 			return tw.Flush()
 		},
 	}
+}
+
+// klusterJobWait is how long flai kluster deploy and teardown --job wait for
+// flai serve to take and answer the request, and how often --wait reads the
+// job's state; zero fields are kluster's defaults, and tests shorten them.
+var klusterJobWait = kluster.Wait{}
+
+// klusterJobFlags are deploy's and teardown's --job and --wait.
+type klusterJobFlags struct {
+	job  bool
+	wait time.Duration
+}
+
+// addKlusterJobFlags adds --job and --wait to deploy or teardown c.
+func addKlusterJobFlags(c *cobra.Command, f *klusterJobFlags) {
+	c.Flags().BoolVar(&f.job, "job", false, "ask flai serve for the job and print its id and the jobs ahead at once, running nothing here (the story's agent, for its own story)")
+	c.Flags().DurationVar(&f.wait, "wait", 0, "with --job, wait at most this long for the job to end, such as 10m, and print its outcome")
+}
+
+// klusterJobHelp is the part of deploy's or teardown's help that says what
+// --job, --wait, and --json with them do; what is the job, in words.
+func klusterJobHelp(kind, what string) string {
+	return fmt.Sprintf(`With --job it runs nothing here: it asks flai serve to %s
+as a job (ADR-0292), and is how a story's agent asks for its own story alone:
+FLAI_STORY, else the story in an agent name of the form agent-S-nnnn. A
+session with a story of its own is refused another before anything is asked;
+with neither, as in the operator's shell, the story given is asked for. It
+writes a request under .flai-cache/kluster/requests, waits at most ten
+seconds for flai serve to take it, and prints the answer: the job's id, its
+kind, and the jobs ahead of it, and whether this request queued it or found
+a %s job of the story already queued or running, which queues nothing
+again; or, for a story in review whose deploy passed at its head, the
+record's commit and outcome, with nothing queued. A refusal prints flai
+serve's reason and exits 1, as while the kluster host action is off, with no
+kluster.deploy set, over kluster.agent_namespaces, with uncommitted changes in
+the worktree, or for a story not in progress. A request no flai serve takes
+is withdrawn, and flai says flai serve is not running and exits 1.
+
+--wait <duration> (default 0, with --job only) then waits that long for the
+job to end and prints its outcome (passed, failed, refused, or interrupted),
+its commit, each step with its outcome, exit code, and log, and its error;
+it exits 1 unless the job passed. A job that outlasts the wait is said to be
+still queued or running, and flai exits 0: read it later with flai kluster
+deployments, or hold wait_for_events for its kluster event, which reports
+the outcome, the failed step, its exit code, and the log. Interrupting the
+wait exits 1 and leaves the job to flai serve.
+
+--json with --job prints one object: answer, flai serve's answer (job, kind,
+story, ahead, started, recorded, commit, outcome, log, and reason); and with
+--wait, job, the job's state (id, kind, story, by, queued_at, started_at,
+ended_at, commit, outcome, failed_step, exit_code, error, steps, and log),
+and ended, whether it ended within the wait.`, what, kind)
+}
+
+// klusterJobResult is what flai kluster deploy and teardown --job print with
+// --json: flai serve's answer and, with --wait, the job's state and whether
+// it ended within the wait.
+type klusterJobResult struct {
+	Answer kluster.Answer    `json:"answer"`
+	Job    *kluster.AskedJob `json:"job,omitempty"`
+	Ended  *bool             `json:"ended,omitempty"`
+}
+
+// sessionStory is the story of this session, when it is a story's agent's:
+// FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn; "" with
+// neither.
+func sessionStory() string {
+	return recordingStory("", os.Getenv, func() string { return "" })
+}
+
+// askKlusterJob asks flai serve for the kluster job of kind for story, in
+// place of running it here (ADR-0292 §1), and prints its answer; with
+// f.wait above 0, it then waits for the job to end and prints its outcome.
+func (a *app) askKlusterJob(cmd *cobra.Command, kind, story string, f klusterJobFlags) error {
+	switch {
+	case !f.job:
+		return fmt.Errorf("--wait waits for the job flai serve runs, so it goes with --job; add --job, or drop --wait")
+	case f.wait < 0:
+		return fmt.Errorf("--wait %s is not a time to wait; give 0 or more, such as 10m", f.wait)
+	}
+	story = workitem.CanonicalID(story)
+	if own := sessionStory(); own != "" && workitem.CanonicalID(own) != story {
+		return fmt.Errorf("this session works %s, and a story's agent asks flai serve for its own story's kluster %s alone (ADR-0292 §1), so nothing was asked for %s; ask for %s, or leave %s's namespace to its own agent", workitem.CanonicalID(own), kind, story, workitem.CanonicalID(own), story)
+	}
+	repo, err := a.project()
+	if err != nil {
+		return err
+	}
+	root := mainRootOf(repo)
+	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ans, err := kluster.Ask(ctx, root, kluster.Request{Story: story, Kind: kind, By: a.writer()}, klusterJobWait)
+	if err != nil {
+		return err
+	}
+	a.logger().Debug("kluster job asked", "component", "cmd", "story", ans.Story, "kind", kind, "job_id", ans.Job, "started", ans.Started, "recorded", ans.Recorded, "refused", ans.Refused())
+	res := klusterJobResult{Answer: ans}
+	var waitErr error
+	// A story in review may be answered with the review's own deploy, which
+	// keeps no job state to wait on: its record is read with flai kluster
+	// deployments instead.
+	if f.wait > 0 && ans.Job != "" && !ans.Refused() && !ans.Recorded && kluster.HasAskedJob(root, ans.Story, ans.Job) {
+		j, ended, err := kluster.Await(ctx, root, ans.Story, ans.Job, f.wait, klusterJobWait.Poll)
+		waitErr = err
+		if j.ID != "" {
+			res.Job, res.Ended = &j, &ended
+		}
+	}
+	if a.jsonOut {
+		if err := a.printJSON(res); err != nil {
+			return err
+		}
+	} else {
+		a.printKlusterJob(root, res, f.wait)
+	}
+	switch {
+	case waitErr != nil:
+		return waitErr
+	case ans.Refused() && a.jsonOut:
+		return &exitError{code: 1}
+	case ans.Refused():
+		return errors.New(ans.Reason)
+	case ans.Recorded && ans.Outcome != kluster.OutcomePassed:
+		return &exitError{code: 1}
+	case res.Ended != nil && *res.Ended && res.Job.Outcome != kluster.OutcomePassed:
+		return &exitError{code: 1}
+	}
+	return nil
+}
+
+// printKlusterJob writes flai serve's answer to a kluster request and, once
+// --wait read it, the job's state, as lines; a refusal is left to the error.
+func (a *app) printKlusterJob(root string, res klusterJobResult, wait time.Duration) {
+	ans := res.Answer
+	switch {
+	case ans.Refused():
+		return
+	case ans.Recorded:
+		fmt.Fprintf(a.out, "%s's %s is answered from its namespace's record, which %s at %s; nothing was queued\n", ans.Story, ans.Kind, ans.Outcome, short12(ans.Commit))
+		if ans.Log != "" {
+			fmt.Fprintf(a.out, "  log     %s\n", ans.Log)
+		}
+		return
+	case ans.Started:
+		fmt.Fprintf(a.out, "kluster %s job %s queued for %s, %s ahead of it\n", ans.Kind, ans.Job, ans.Story, jobsAhead(ans.Ahead))
+	default:
+		fmt.Fprintf(a.out, "kluster %s job %s of %s was already %s, so nothing more was queued; %s ahead of it\n", ans.Kind, ans.Job, ans.Story, foundState(root, ans), jobsAhead(ans.Ahead))
+	}
+	if res.Job == nil || !*res.Ended {
+		lead := "Wait for"
+		if res.Job != nil {
+			lead = fmt.Sprintf("It is still %s after %s: wait for", jobState(*res.Job), wait)
+		}
+		fmt.Fprintf(a.out, "%s its kluster event (wait_for_events), or read it later with flai kluster deployments", lead)
+		if ans.Log != "" {
+			fmt.Fprintf(a.out, "; its output goes to %s", ans.Log)
+		}
+		fmt.Fprintln(a.out)
+		return
+	}
+	printAskedJob(a.out, *res.Job)
+}
+
+// printAskedJob writes an ended kluster job as a short block of lines: its
+// outcome, its commit, each step, and why it failed.
+func printAskedJob(w io.Writer, j kluster.AskedJob) {
+	fmt.Fprintf(w, "%s's %s job %s: %s\n", j.Story, j.Kind, j.ID, j.Outcome)
+	if j.Commit != "" {
+		fmt.Fprintf(w, "  commit  %s\n", short12(j.Commit))
+	}
+	for _, st := range j.Steps {
+		line := fmt.Sprintf("  %-8s %s", st.Name, st.Outcome)
+		if st.Outcome == kluster.OutcomeFailed {
+			line += fmt.Sprintf(", exit code %d", st.ExitCode)
+		}
+		if st.Log != "" {
+			line += ", log " + st.Log
+		}
+		fmt.Fprintln(w, line)
+	}
+	if j.FailedStep != "" {
+		line := "  failed at " + j.FailedStep
+		if j.ExitCode != nil {
+			line += fmt.Sprintf(", exit code %d", *j.ExitCode)
+		}
+		fmt.Fprintln(w, line)
+	}
+	if j.Error != "" {
+		fmt.Fprintf(w, "  error   %s\n", j.Error)
+	}
+	if j.Log != "" {
+		fmt.Fprintf(w, "  log     %s\n", j.Log)
+	}
+}
+
+// foundState says whether the job ans found of its story waits or runs, as
+// its state file has it; "queued or running" when that cannot be read.
+func foundState(root string, ans kluster.Answer) string {
+	if j, ok, err := kluster.ReadAskedJob(root, ans.Story); err == nil && ok && j.ID == ans.Job && !j.Ended() {
+		return jobState(j)
+	}
+	return "queued or running"
+}
+
+// jobState says in a word whether j waits or runs.
+func jobState(j kluster.AskedJob) string {
+	if j.Running() {
+		return "running"
+	}
+	return "queued"
+}
+
+// jobsAhead is n jobs, in words.
+func jobsAhead(n int) string {
+	switch n {
+	case 0:
+		return "no job"
+	case 1:
+		return "1 job"
+	}
+	return fmt.Sprintf("%d jobs", n)
+}
+
+// short12 is a commit's first twelve characters, as kluster tags name it.
+func short12(commit string) string {
+	if len(commit) > 12 {
+		return commit[:12]
+	}
+	return commit
 }

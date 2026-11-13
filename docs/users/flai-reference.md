@@ -2647,7 +2647,7 @@ flai kluster up brings the cluster up and keeps its kubeconfig in .flai-cache/kl
 
 flai kluster deploy S-nnnn builds a story's images in its worktree, loads them into the cluster, and runs the deploy command in the story's own namespace, s-nnnn; flai kluster teardown S-nnnn removes it; flai kluster promote deploys main's head into the default namespace; flai kluster deployments lists what each namespace holds. Each job logs its steps under .flai-cache/kluster/logs and records its outcome under .flai-cache/kluster/deployments, and one job runs at a time per project.
 
-They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them.
+They work from your shell whatever the kluster host action says. flai guard refuses every agent and sub-agent up, down, deploy, teardown, and promote, which change shared infrastructure on your machine; status and deployments read, and any agent may run them. A story's agent asks flai serve for its own story's deploy or teardown instead, with flai kluster deploy or teardown S-nnnn --job, or the MCP tools kluster\_deploy and kluster\_teardown, which run nothing themselves (ADR-0292).
 
 A project with no kluster: block is refused, saying to turn the kluster host action on, from the dashboard's Features page or with flai serve enable kluster, which writes the block and a kluster.yaml for it. A block with no deploy brings the cluster up and down, and deploy and promote refuse it until kluster.deploy is set. A host without kluster on PATH is refused with how to install kluster.
 
@@ -2679,7 +2679,7 @@ Subcommands:
 Build a story's images, load them into the cluster, and deploy it into its namespace.
 
 ```text
-flai kluster deploy S-nnnn
+flai kluster deploy S-nnnn [flags]
 ```
 
 Deploys a story in progress or in review into its own namespace, its ID in lower case such as s-0578, from its worktree at the worktree's head:
@@ -2696,12 +2696,27 @@ Every command gets the namespace's variables, FLAI\_STORY, FLAI\_KLUSTER\_NAMESP
 
 It refuses a story with no worktree, a story not in progress or in review, a cluster with no kubeconfig (run flai kluster up), and a second job while one runs for the project. --json prints the record, and the step lines go to standard error.
 
+With --job it runs nothing here: it asks flai serve to build, load, and deploy the story at its branch's head as a job (ADR-0292), and is how a story's agent asks for its own story alone: FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn. A session with a story of its own is refused another before anything is asked; with neither, as in the operator's shell, the story given is asked for. It writes a request under .flai-cache/kluster/requests, waits at most ten seconds for flai serve to take it, and prints the answer: the job's id, its kind, and the jobs ahead of it, and whether this request queued it or found a deploy job of the story already queued or running, which queues nothing again; or, for a story in review whose deploy passed at its head, the record's commit and outcome, with nothing queued. A refusal prints flai serve's reason and exits 1, as while the kluster host action is off, with no kluster.deploy set, over kluster.agent\_namespaces, with uncommitted changes in the worktree, or for a story not in progress. A request no flai serve takes is withdrawn, and flai says flai serve is not running and exits 1.
+
+--wait &lt;duration&gt; (default 0, with --job only) then waits that long for the job to end and prints its outcome (passed, failed, refused, or interrupted), its commit, each step with its outcome, exit code, and log, and its error; it exits 1 unless the job passed. A job that outlasts the wait is said to be still queued or running, and flai exits 0: read it later with flai kluster deployments, or hold wait\_for\_events for its kluster event, which reports the outcome, the failed step, its exit code, and the log. Interrupting the wait exits 1 and leaves the job to flai serve.
+
+--json with --job prints one object: answer, flai serve's answer (job, kind, story, ahead, started, recorded, commit, outcome, log, and reason); and with --wait, job, the job's state (id, kind, story, by, queued\_at, started\_at, ended\_at, commit, outcome, failed\_step, exit\_code, error, steps, and log), and ended, whether it ended within the wait.
+
 Examples:
 
 ```bash
 flai kluster deploy S-0578
 flai kluster deploy S-0578 --json
+flai kluster deploy S-0578 --job
+flai kluster deploy S-0578 --job --wait 10m --json
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--job` | ask flai serve for the job and print its id and the jobs ahead at once, running nothing here (the story's agent, for its own story) |
+| `--wait` duration | with --job, wait at most this long for the job to end, such as 10m, and print its outcome |
 
 #### flai kluster deployments
 
@@ -2776,19 +2791,33 @@ flai kluster status --json
 Remove a story's deployment: the teardown command, then its namespace.
 
 ```text
-flai kluster teardown S-nnnn
+flai kluster teardown S-nnnn [flags]
 ```
 
 Tears a story's namespace down: runs the block's teardown command, when it names one, with the namespace's variables at the commit its record names, in the story's worktree or the main checkout when the worktree is gone; then deletes the namespace with kubectl delete namespace --wait, which passes over a namespace already gone. Both are logged to the namespace's teardown log. Then the record, the namespace's state folder, and its logs are removed.
 
 A story never deployed has no record: flai says so, asks nothing, and runs nothing, and exits 0. Otherwise flai asks first on a terminal, and --yes answers it; without a terminal it needs --yes. A teardown that fails keeps the record, marked failed, and exits 1. --json prints the record removed, or {"story": ..., "deployed": false}.
 
+With --job it runs nothing here: it asks flai serve to tear the story's namespace down as a job (ADR-0292), and is how a story's agent asks for its own story alone: FLAI\_STORY, else the story in an agent name of the form agent-S-nnnn. A session with a story of its own is refused another before anything is asked; with neither, as in the operator's shell, the story given is asked for. It writes a request under .flai-cache/kluster/requests, waits at most ten seconds for flai serve to take it, and prints the answer: the job's id, its kind, and the jobs ahead of it, and whether this request queued it or found a teardown job of the story already queued or running, which queues nothing again; or, for a story in review whose deploy passed at its head, the record's commit and outcome, with nothing queued. A refusal prints flai serve's reason and exits 1, as while the kluster host action is off, with no kluster.deploy set, over kluster.agent\_namespaces, with uncommitted changes in the worktree, or for a story not in progress. A request no flai serve takes is withdrawn, and flai says flai serve is not running and exits 1.
+
+--wait &lt;duration&gt; (default 0, with --job only) then waits that long for the job to end and prints its outcome (passed, failed, refused, or interrupted), its commit, each step with its outcome, exit code, and log, and its error; it exits 1 unless the job passed. A job that outlasts the wait is said to be still queued or running, and flai exits 0: read it later with flai kluster deployments, or hold wait\_for\_events for its kluster event, which reports the outcome, the failed step, its exit code, and the log. Interrupting the wait exits 1 and leaves the job to flai serve.
+
+--json with --job prints one object: answer, flai serve's answer (job, kind, story, ahead, started, recorded, commit, outcome, log, and reason); and with --wait, job, the job's state (id, kind, story, by, queued\_at, started\_at, ended\_at, commit, outcome, failed\_step, exit\_code, error, steps, and log), and ended, whether it ended within the wait. A teardown asked with --job needs no --yes: it asks nothing on the terminal.
+
 Examples:
 
 ```bash
 flai kluster teardown S-0578
 flai kluster teardown S-0578 --yes --json
+flai kluster teardown S-0578 --job --wait 5m
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--job` | ask flai serve for the job and print its id and the jobs ahead at once, running nothing here (the story's agent, for its own story) |
+| `--wait` duration | with --job, wait at most this long for the job to end, such as 10m, and print its outcome |
 
 #### flai kluster up
 
