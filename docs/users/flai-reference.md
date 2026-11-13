@@ -41,6 +41,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [guard](#flai-guard) | Refuse a sub-agent's writes, hold every strategic role, the planner, the orchestrator, the analyzer, the curator, and any a project defines, to its role file, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
+| [image](#flai-image) | The agent images a project's container agents run in |
 | [import](#flai-import) | Bring an existing repository under the system-flow standard |
 | [issue](#flai-issue) | Record recurring friction in design/issues with counts and cost |
 | [kluster](#flai-kluster) | Run the project's kluster and deploy stories and main into it |
@@ -125,6 +126,7 @@ Subcommands:
 - [guard](#flai-guard): Refuse a sub-agent's writes, hold every strategic role, the planner, the orchestrator, the analyzer, the curator, and any a project defines, to its role file, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
+- [image](#flai-image): The agent images a project's container agents run in
 - [import](#flai-import): Bring an existing repository under the system-flow standard
 - [issue](#flai-issue): Record recurring friction in design/issues with counts and cost
 - [kluster](#flai-kluster): Run the project's kluster and deploy stories and main into it
@@ -2371,6 +2373,45 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--timing` | log the request's duration and phases on stderr, as flai serve times it |
+
+### flai image
+
+The agent images a project's container agents run in.
+
+An agent on the container harness runs in an image: its inner harness's, the host's own when flai serve agent harness container --image &lt;inner&gt;=&lt;image&gt; names one, else flai's default, and the project's layer over it when system-flow.yaml names agent.image.layer (ADR-0295). flai image status says which images the project's agents need and whether each is on this host and current for the project's flai.
+
+Subcommands:
+
+- [status](#flai-image-status): Say which agent images the project's agents need, and whether each is on this host and current for its flai
+
+#### flai image status
+
+Say which agent images the project's agents need, and whether each is on this host and current for its flai.
+
+```text
+flai image status
+```
+
+flai image status lists the images the agents of the project in the working directory need: those of its default agent, its roles' agents, and its open stories' agents (ready, in progress, in review) on the container harness, and the project's layer when system-flow.yaml names agent.image.layer. For each it asks docker whether the image is on this host and reads its labels:
+
+```text
+missing   the image is not on this host
+current   its labels are those it must carry: its flai label the project's
+          flai (flai.command's when the manifest names one, else this
+          flai), and for a layer its recipe, over its Dockerfile, and its
+          base, the harness image now under it
+stale     a label is other than it must be; the line says which and why
+own       the operator's own image (--image), which is never judged
+```
+
+It exits non-zero when any image is missing or stale, after the list.
+
+Examples:
+
+```bash
+flai image status
+flai image status --json
+```
 
 ### flai import
 
