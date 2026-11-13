@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:15Z
-updated: 2026-11-13T20:51:17Z
+updated: 2026-11-13T20:58:02Z
 transitions: []
 tags: [cli, template]
 topics: [cli, template, conventions]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 47m
-  delivery: 2026-11-14T02:49:00Z
+  delivery: 2026-11-14T02:56:00Z
   basis: "Its own forecast of 47m; 18th in the pull order with an in-progress limit of 3, behind S-0779, S-0241, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753 and S-0754."
   by: flai
-  at: 2026-11-13T20:51:17Z
+  at: 2026-11-13T20:58:02Z
 ---
 # S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
 

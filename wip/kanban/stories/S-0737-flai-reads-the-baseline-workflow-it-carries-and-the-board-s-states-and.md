@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:44Z
-updated: 2026-11-13T20:51:17Z
+updated: 2026-11-13T20:58:02Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 33m
-  delivery: 2026-11-13T22:19:00Z
+  delivery: 2026-11-13T22:26:00Z
   basis: "Its own forecast of 33m; 3rd in the pull order with an in-progress limit of 3, behind S-0779, S-0241 and S-0736."
   by: flai
-  at: 2026-11-13T20:51:17Z
+  at: 2026-11-13T20:58:02Z
 ---
 # S-0737 flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed
 

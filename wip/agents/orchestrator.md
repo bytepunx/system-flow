@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2175.2043
-accrued_seconds: 1561810
-tasks_completed: 3433
-last_run: 2026-11-13T20:53:39Z
+accrued_cost: 2175.3339
+accrued_seconds: 1561851
+tasks_completed: 3434
+last_run: 2026-11-13T20:57:03Z
 ---
 
 # Orchestrator activity
@@ -24065,6 +24065,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.2942 USD, estimated
+
+### 2026-11-13T20:57:03Z
+
+- Summary: S-0780 (publish formula instance, flai/v1.95.2) in review: last verify record is at 45dc1a8, not branch head 5ff06e6, so asked flai serve for its close-out (job S-0780-20261113T205657Z); left in review until a later run reads the verdict. No publish evaluation: no acceptance this run.
+- Items: S-0780
+- Seconds: 41
+- Cost: 0.1296 USD, estimated
 
 ## Refusals
 

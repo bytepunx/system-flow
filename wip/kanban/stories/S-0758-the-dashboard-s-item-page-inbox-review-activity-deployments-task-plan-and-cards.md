@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:04:18Z
-updated: 2026-11-13T20:51:17Z
+updated: 2026-11-13T20:58:02Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 44m
-  delivery: 2026-11-14T03:32:00Z
+  delivery: 2026-11-14T03:39:00Z
   basis: "Its own forecast of 44m; 20th in the pull order with an in-progress limit of 3, behind S-0779, S-0241, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755 and S-0756."
   by: flai
-  at: 2026-11-13T20:51:17Z
+  at: 2026-11-13T20:58:02Z
 ---
 # S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name
 
