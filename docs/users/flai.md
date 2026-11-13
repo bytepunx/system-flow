@@ -507,6 +507,8 @@ flai serve agent harness container --image claude-code=flai-agent-claude-code:lo
 flai agent set --harness container --config inner=claude-code
 flai edit S-0007 --harness container
 flai image status                                       # the images the project's agents need, and whether each is current
+flai serve agent image command -- scripts/agent-image.sh  # your build command, in place of flai's pull and build
+flai serve agent image auto off                         # flai serve makes no image for the project; a start refuses a missing or stale one
 ```
 
 The harness `container` runs a story's agent in a Docker container from flai's agent images (S-0508, [ADR-0203](../../design/adrs/0203-flai-may-run-a-story-s-agent-in-a-container-from-a-baseline-image-it-builds.md), [ADR-0212](../../design/adrs/0212-the-agent-images-are-layered-a-bedrock-layer-and-one-layer-per-inner-harness.md)). The image's entrypoint, pilot, runs the inner harness the agent's `config.inner` names: `claude-code` when it names none, and the only one today. An `inner` of `container`, `command`, or a harness flai has no adapter for is refused before the start. The agent's model and options are the inner harness's, checked as for it on the host. The inner harness also says what the agent can do, and pilot relays its log unchanged, so `flai serve agent stream` and the usage read it as they read Claude Code's on the host. The image, the network, and the login are set on the host; their keys are in the [settings index](../operators/settings.md#flai-configuration).
@@ -542,6 +544,7 @@ The start is refused, as a start that failed, when one of these holds:
 | `docker` is not on `flai serve`'s `PATH` | Install Docker, or name its client with `flai serve agent harness container --program <path>` |
 | The image you named with `--image` is not on this host | Pull or build it yourself, or name another with `flai serve agent harness container --image <inner>=<image>`; flai never makes or judges your own image |
 | An image of flai's, the inner harness's or the project's layer, is not on this host, and no image job can make it: a start outside `flai serve`'s run, such as one by hand | `flai image ensure` in the project; `flai image status` says which images are missing |
+| An image of flai's is missing or stale under `flai serve`, and you turned the project's image job off with `flai serve agent image auto off` | `flai image ensure` in the project, or `flai serve agent image auto on` so that the job makes it |
 | `system-flow.yaml` cannot be read | Mend it; `flai check` says what is wrong |
 | No login is set, for `claude-code` | `flai serve agent harness container --login ~/.claude` |
 | The login is not an absolute path, or is or holds your home, `~/.flai`, the project, or the Docker socket | `--login` with the folder of your login alone |
@@ -552,7 +555,7 @@ The start is refused, as a start that failed, when one of these holds:
 | The project is not a git repository, so the story has no worktree | Run its agent on another harness |
 | The worktree's `.git` file, its registration `.git/worktrees/<story>`, or the registration's `commondir` is missing; the message names the path | `git worktree repair <worktree>` from the main checkout, or `git worktree prune` and `flai stream open <story>` to make it again |
 
-An image of flai's that is missing or stale does not refuse a start in `flai serve`: it holds the start and makes the image (S-0751, [ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)):
+An image of flai's that is missing or stale does not refuse a start in `flai serve`: it holds the start and makes the image (S-0751, [ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md)), unless you turned the job off for the project ([Your own images](#your-own-images-and-the-automatic-job), below):
 
 | When | What happens |
 |------|--------------|
@@ -634,6 +637,17 @@ What it does not do yet:
 
 [Run a story's agent in a container](../operators/runbooks/agent-container.md) runs one by hand with `scripts/agent-container.sh`.
 
+##### Your own images and the automatic job
+
+Two settings of the host, each for one project, change how its images are made (S-0759, [ADR-0295](../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md) point 7). Both are kept in the host's configuration under `agent.projects.<root>.image`, never in the manifest, and no agent `flai serve` starts may change them ([settings](../operators/settings.md#flai-configuration)).
+
+| Setting | What it does |
+|---------|--------------|
+| `flai serve agent image command [--project <root>] -- <program> [args...]`, `--clear` to remove it | Names your build command. `flai image ensure`, `flai image build`, and `flai serve`'s image job run it in place of flai's pull and build: as you, in the main checkout, with no shell, once per inner harness with an image to make. It gets the `FLAI_IMAGE_*` variables: the flai version, the inner harness, the tags and recipe labels the images must have, and in `FLAI_IMAGE_STALE` the images to make. Its output is logged as a docker step's is, and a command silent for 10 minutes is stopped. It is never run again on a failure. A non-zero exit fails the run, and so does an image still missing or with other labels after it |
+| `flai serve agent image auto on\|off [--project <root>]` | Off, `flai serve` makes no image for the project. A story's agent, a strategic agent, the close-out's container, and the checks' containers refuse a missing or stale image, naming it, `flai image ensure`, and `flai serve agent image auto on`. `flai image ensure` by hand still runs. On is the default |
+
+Bare, each prints its setting; `flai serve agent image` prints both. Your command never makes an image you set with `--image`, which flai never pulls, builds, or judges. The variables, the labels flai checks after, and what each failure does are in the runbook's [Your own images](../operators/runbooks/agent-container.md#your-own-images).
+
 ##### A container story's close-out and checks
 
 The story's worktree is its container's to write, so `flai serve` runs nothing from it on the host for a story whose agent runs on `container` (S-0628, [ADR-0274](../../design/adrs/0274-the-close-out-of-a-story-whose-agent-runs-in-a-container-runs-its-verify-in.md)). The close-out job and the operator's checks of such a story run in containers of their own, from the image the agent's start would use, with the first seven mounts of the table above, in a container named for what it runs:
@@ -649,6 +663,7 @@ Neither mounts the login or the cache folder, nor gets the MCP server's URL or t
 |------|--------------|
 | `docker` is not on `PATH` | The close-out ends `failed`, and each check fails, naming the fix the start's refusal names; nothing runs on the host instead |
 | The image is missing or stale, under `flai serve` | The close-out and each check ask for the image job, as a start does, and join the one running for the project. Their output says they wait for it, naming the job and its log. The close-out's verdict comes after the job. A failed job fails the close-out at its container check, and each check, with the job's error |
+| The image is missing or stale, under `flai serve`, with `flai serve agent image auto off` | The close-out and each check ask for no job and fail, naming the image, `flai image ensure`, and `flai serve agent image auto on` |
 | The image is not on this host, outside `flai serve`, as for `flai checks` in your shell | Each check fails, naming `flai image ensure`; nothing runs on the host instead |
 | The worktree's `.git` file, or its registration's `commondir`, no longer points at the main checkout | The close-out is refused, naming `git worktree repair` |
 | The check is cancelled or runs out of time | `docker stop` on its container's name, then the run ends |

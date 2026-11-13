@@ -76,7 +76,7 @@ func TestAgentImage(t *testing.T) {
 		{name: "no layer"},
 		{name: "current", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current, image: layered("sha256:harness")}},
 		{name: "not built", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current},
-			want: [][]string{{image, layer, "not built", "flai serve builds it itself at the next start that needs it", "flai image status", "flai image ensure", "flai image build --layer"}}, advisory: true},
+			want: [][]string{{image, layer, "not built", "flai serve builds it itself at the next start that needs it", "unless `flai serve agent image auto off` turned its image job off", "flai image status", "flai image ensure", "flai image build --layer"}}, advisory: true},
 		{name: "stale layer", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: current, image: {ID: "sha256:layer", Labels: map[string]string{agentimage.LabelFlai: "dev", agentimage.LabelRecipe: "sha256:other", agentimage.LabelBase: "sha256:harness"}}},
 			want: [][]string{{image, layer, "is stale", "built from another Dockerfile", "flai serve renews it itself at the next start that needs it", "renew it now with `flai image ensure`", "flai image status"}}, advisory: true},
 		{name: "stale harness image", layer: layer, dockerfile: true, images: map[string]agentimage.Info{harnessImage: {ID: "sha256:harness", Labels: map[string]string{agentimage.LabelFlai: "1.2.3"}}, image: layered("sha256:harness")},

@@ -165,17 +165,17 @@ func imageFinding(s agentimage.Status, layer string) string {
 	case agentimage.StateMissing:
 		switch {
 		case s.Kind == agentimage.KindLayer:
-			return what + " is not built on this host: flai serve builds it itself at the next start that needs it, or build it now with `flai image ensure`, or `flai image build --layer` over the harness image already built; see `flai image status`"
+			return what + " is not built on this host: flai serve builds it itself at the next start that needs it, unless `flai serve agent image auto off` turned its image job off, or build it now with `flai image ensure`, or `flai image build --layer` over the harness image already built; see `flai image status`"
 		case s.Source == agentimage.SourceHost:
 			return what + " is not on this host: see `flai image status`, and build it, or name another with `flai serve agent harness container --image " + s.Inner + "=<image>`"
 		}
-		return what + " is not built on this host: flai serve pulls or builds it itself at the next start that needs it, or make it now with `flai image ensure`; see `flai image status`"
+		return what + " is not built on this host: flai serve pulls or builds it itself at the next start that needs it, unless `flai serve agent image auto off` turned its image job off, or make it now with `flai image ensure`; see `flai image status`"
 	case agentimage.StateStale:
 		why := make([]string, 0, len(s.Reasons))
 		for _, r := range s.Reasons {
 			why = append(why, r.Message)
 		}
-		return what + " is stale: " + strings.Join(why, "; ") + "; flai serve renews it itself at the next start that needs it, or renew it now with `flai image ensure`; see `flai image status`"
+		return what + " is stale: " + strings.Join(why, "; ") + "; flai serve renews it itself at the next start that needs it, unless `flai serve agent image auto off` turned its image job off, or renew it now with `flai image ensure`; see `flai image status`"
 	}
 	return ""
 }

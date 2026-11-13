@@ -61,7 +61,7 @@ GHCR makes a package created from a private repository private. A pull with no l
 
 ## Build
 
-`flai serve` brings an agent image back by itself (S-0751). A start that finds a harness image or the project's layer missing or stale is held while `flai serve`'s image job makes it on the host. That holds for a story's agent, a strategic agent, the close-out's container, and the checks' container. One job runs at a time, and it does what `flai image ensure` does, below. Each job keeps its record and its log, `<id>.job.json` and `<id>.log`, in `~/.flai/serve/image-jobs/`. The host journal records its start and its end as action `image`, and a held run's `image_job` in `~/.flai/serve/agents.json` names it. When the job fails, each held start fails once, naming the cause, the failing step, and the log; the next start asks for a new job. The user guide has the rest ([In a container](../../users/flai.md#in-a-container-the-container-harness)).
+`flai serve` brings an agent image back by itself (S-0751). A start that finds a harness image or the project's layer missing or stale is held while `flai serve`'s image job makes it on the host. That holds for a story's agent, a strategic agent, the close-out's container, and the checks' container. One job runs at a time, and it does what `flai image ensure` does, below. Each job keeps its record and its log, `<id>.job.json` and `<id>.log`, in `~/.flai/serve/image-jobs/`. The host journal records its start and its end as action `image`, and a held run's `image_job` in `~/.flai/serve/agents.json` names it. When the job fails, each held start fails once, naming the cause, the failing step, and the log; the next start asks for a new job. The user guide has the rest ([In a container](../../users/flai.md#in-a-container-the-container-harness)). To make the images with a command of your own, or to turn the job off, see [Your own images](#your-own-images).
 
 Run `flai image ensure` yourself, with Docker running, when:
 
@@ -100,6 +100,77 @@ make agent-images
 It runs `scripts/agent-image.sh`, which builds `flai-agent-bedrock:local` and then `flai-agent-claude-code:local` on top of it, and prints `built flai-agent-bedrock:local and flai-agent-claude-code:local`. When the manifest names a layer, it then builds the layer image over them and prints `built flai-agent-<key>-claude-code:local`; `scripts/agent-image.sh --layer` builds the layer alone. The script passes the layer `GO_VERSION` from `flai/go.mod` and the tool pins from `scripts/install-tools.sh`, where flai passes only `agent.image.args`, which this repository does not name yet; S-0760 moves them onto `agent.image.args`, and until then the script stays the way to build this repository's layer with those pins. `scripts/agent-image.sh --tag` prints the image a story's agent runs in and builds nothing. The flai inside is built from the checked-out tree, labelled with the last `flai/v*` tag and the commit. An unchanged tree rebuilds from Docker's cache. Build again after a change to flai that the agent should have, or to move Claude Code to another version.
 
 Before it builds, the script asks the credential helper your Docker configuration names in `credsStore` (`$DOCKER_CONFIG/config.json`, else `~/.docker/config.json`) to list its logins, and waits ten seconds at most. Docker Desktop's helper, `desktop.exe`, cannot start from WSL while Windows interop is not answering, and a build would then stop at the first base image with `error getting credentials` ([I-0339](../../../design/issues/I-0339-make-agent-images-fails-at-the-first-base-image-when-docker-desktop-s.md)). When the helper is not on `PATH`, fails, or does not answer, the script prints one line naming it and builds with no login, from a scratch Docker configuration that keeps your current context and links the other entries of your configuration's folder, such as `cli-plugins`, `contexts`, and `buildx`. The base images are public, so they pull anonymously. Your `config.json` is not changed, and the scratch configuration is removed when the script ends. A working helper, or none named, leaves the build as it was.
+
+## Your own images
+
+flai's pull and build may not suit you: you keep the images in your own registry or mirror, your build needs steps flai does not take, or your flai is a development build whose images your own script makes. Then name a build command of your own for the project. flai runs it in place of its pull and build (S-0759, [ADR-0295](../../../design/adrs/0295-an-installed-flai-pulls-its-agent-images-by-the-digests-a-signed-list-on-its.md) point 7).
+
+```bash
+flai serve agent image command -- scripts/agent-image.sh            # name it for the project here
+flai serve agent image command --project /home/me/src/other -- /home/me/bin/build-images --push
+flai serve agent image command                                      # print it
+flai serve agent image command --clear                              # flai's own pull and build again
+flai serve agent image                                              # the command and the automatic job
+```
+
+The command is an argument list after `--`: the program, then its arguments. It is kept in the host's configuration as `agent.projects.<root>.image.command`, for that project only. There is no `--all-projects`, and a manifest never names it, since a command there would run on the host with your rights from whatever a branch says. `flai guard` refuses every agent `flai serve` starts, and every sub-agent, the forms that write it; the bare forms are reads ([ADR-0220](../../../design/adrs/0220-flai-guard-refuses-every-sub-agent-and-every-session-flai-serve-started-the.md)).
+
+### How it runs
+
+flai runs the command as you, in the project's main checkout, with no shell. It runs it once for each inner harness that has an image to make, with the environment it inherits and the variables below.
+
+| Who runs it | When |
+|-------------|------|
+| `flai image ensure` | An image the project's agents need is missing or stale; a current one runs nothing |
+| `flai image build` | Always, with `FLAI_IMAGE_STALE` naming every image flai would build |
+| `flai image build --layer` | Always, with `FLAI_IMAGE_STALE` naming the layer alone |
+| `flai serve`'s image job | As `flai image ensure` does, for a start that needs an image; it reads the command again at each job |
+
+| Variable | Holds |
+|----------|-------|
+| `FLAI_IMAGE_VERSION` | The flai version the images must hold, without a `v` |
+| `FLAI_IMAGE_INNER` | The inner harness, such as `claude-code` |
+| `FLAI_IMAGE_BEDROCK` | The tag the bedrock image must have |
+| `FLAI_IMAGE_HARNESS` | The tag the harness image must have: the name a start runs it by, such as `flai-agent-claude-code:local` |
+| `FLAI_IMAGE_LAYER` | The tag the project's layer must have; empty when the manifest names no `agent.image.layer` |
+| `FLAI_IMAGE_RECIPE_BEDROCK` | The `dev.system-flow.recipe` label the bedrock image must carry |
+| `FLAI_IMAGE_RECIPE_HARNESS` | The `dev.system-flow.recipe` label the harness image must carry |
+| `FLAI_IMAGE_RECIPE_LAYER` | The `dev.system-flow.recipe` label the layer must carry, over its Dockerfile and `agent.image.args` |
+| `FLAI_IMAGE_STALE` | The images to make, of `bedrock`, `harness`, and `layer`, in that order, separated by spaces |
+
+The recipes are the ones flai's own build would label. A released flai gives those of the Dockerfiles it carries; a development flai whose main checkout holds flai's tree, as this repository's does, gives those of the tree's Dockerfiles; any other development flai gives none, so both are empty. Under `flai image ensure`, `FLAI_IMAGE_STALE` names `bedrock harness` when the harness image is missing or stale, and `layer` when the layer is missing or stale or its harness image is to be made. An image you set with `flai serve agent harness container --image` is never asked for: `FLAI_IMAGE_HARNESS` holds its tag, the one the layer builds over, and `FLAI_IMAGE_BEDROCK` and the bedrock and harness recipes are empty.
+
+### Its output and its outcome
+
+Its output streams as a docker step's does: to the terminal and to `.flai-cache/agent-images/<UTC stamp>.log` in the main checkout, or, under the image job, to the job's log `~/.flai/serve/image-jobs/<id>.log`. Before its output, a line names the command, the folder, and every variable with its value.
+
+| When | What happens |
+|------|--------------|
+| It exits non-zero | The run fails, naming the command and the last line of its output. Under `flai serve`, the job fails at the step `the build command <command>`, and each start held for it fails once |
+| It writes nothing for 10 minutes | It is stopped, and the run fails, as a silent docker step does |
+| Its output names a network failure | Nothing more: flai cannot tell what failed inside your command, so it never runs it again |
+| It exits 0, but an image it was asked for is missing or carries other labels | The run fails, naming the command and each image with why, and asks for each image built with the tag and the labels its variables name |
+| It exits 0, and every image is current | The run says `made by the operator's build command <command>` for each image it made |
+
+After it, flai judges the images again with the check `flai image status` makes. The harness image must carry `dev.system-flow.flai`, the version in `FLAI_IMAGE_VERSION`; a development flai accepts any development version. The layer must carry that label too, `dev.system-flow.recipe` set to `FLAI_IMAGE_RECIPE_LAYER`, and `dev.system-flow.base` set to the ID of the harness image under it. Check the result yourself with:
+
+```bash
+flai image status
+```
+
+### Turning the automatic job off
+
+```bash
+flai serve agent image auto off     # flai serve makes no image for the project
+flai serve agent image auto on      # the default: the image job makes them
+flai serve agent image auto         # print on or off
+```
+
+It is kept as `agent.projects.<root>.image.auto`: `off` stores `false`, and `on` removes the key. With it off, `flai serve` asks for no image job for the project. A story's agent, a strategic agent, the close-out's container, and the checks' containers that find their image missing or stale refuse. The refusal names each image and its state, `flai image ensure`, `flai image status`, and `flai serve agent image auto on --project <root>`. `flai serve` reads the setting at each start. `flai image ensure` by hand still runs, with your command when you named one.
+
+### Your command and `--image`
+
+They are not the same thing. Your command makes the images flai would make, with the tags and labels flai names, and flai judges them after. An image you set with `flai serve agent harness container --image <inner>=<image>` is yours alone: flai never pulls, builds, or judges it, and your command is never asked to make it.
 
 ## What the run needs on the host
 
