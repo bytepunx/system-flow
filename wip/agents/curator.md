@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 270.7347
-accrued_seconds: 30591
-tasks_completed: 177
-last_run: 2026-11-13T12:40:49Z
+accrued_cost: 272.0073
+accrued_seconds: 30658
+tasks_completed: 178
+last_run: 2026-11-13T12:55:05Z
 ---
 
 # Curator activity
@@ -1427,3 +1427,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0591
 - Seconds: 63
 - Cost: 1.2776 USD, estimated
+
+### 2026-11-13T12:55:05Z
+
+- Summary: I merged one candidate into D-0591, wrote no entries, absorbed none, and `flai digest compact` compacted none. All eight candidates came from S-0767. One of them, that a story amends its own ADR in place (title included) while the ADR is not yet on main, went into D-0591 with S-0767 as a second source. Of the other seven, four restate the undone-lines rule that ADR-0297 now records, and three are plan and progress notes. The only design that changed since the last run is S-0767's, and no active entry states its fact.
+- Trigger: accepted S-0767
+- Items: D-0591
+- Seconds: 67
+- Cost: 1.2726 USD, estimated
