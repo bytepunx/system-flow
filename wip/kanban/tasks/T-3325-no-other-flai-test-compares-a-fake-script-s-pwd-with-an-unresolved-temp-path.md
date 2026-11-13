@@ -3,12 +3,18 @@ id: T-3325
 type: task
 nature: remediation
 title: No other flai test compares a fake script's pwd with an unresolved temp path, checked under a symlinked TMPDIR and on Linux
-status: backlog
+status: in-progress
 parent: S-0777
 owner: alex
 created: 2026-11-13T20:02:41Z
-updated: 2026-11-13T20:02:41Z
-transitions: []
+updated: 2026-11-13T20:24:00Z
+transitions:
+  - to: ready
+    at: 2026-11-13T20:24:00Z
+    by: agent-S-0777
+  - to: in-progress
+    at: 2026-11-13T20:24:00Z
+    by: agent-S-0777
 stream: S-0777
 tags: [flai]
 after: [T-3323, T-3324]

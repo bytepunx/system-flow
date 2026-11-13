@@ -6,8 +6,8 @@ sources: [S-0759]
 topics: [docker, cli, code, release]
 paths: [flai/internal/agentimage/ensure.go, flai/internal/serve/imagejob.go, scripts/agent-image.sh, design/system/flai-cli.md]
 date: 2026-11-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/flai-cli.md#where-the-agent-images-come-from-adr-0295"
 asked_again: []
 cited: []
 ---

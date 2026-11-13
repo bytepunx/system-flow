@@ -2,14 +2,14 @@
 id: D-0587
 title: "A story that changes the agent layer's Dockerfile does not rebuild the image under its :local tag, which running agents use; it checks the change on the built image with the environment overridden"
 kind: decision
-sources: [S-0686, S-0740]
+sources: [S-0686, S-0740, S-0760]
 topics: [docker, harness, release]
 paths: [flai/images/system-flow/Dockerfile, scripts/agent-image.sh, flai/internal/agentimage/build.go, flai/cmd/image.go]
 date: 2026-11-11
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0760]
 ---
 
 # D-0587 A story that changes the agent layer's Dockerfile does not rebuild the image under its :local tag, which running agents use; it checks the change on the built image with the environment overridden
@@ -32,4 +32,10 @@ Criteria ticked on test evidence over a fake docker and an httptest release; a r
 
 So a story that changes how the images are pulled or built proves it over a fake docker and a test release, and leaves the real run on the host to the operator.
 
-Sources: S-0686, S-0740.
+S-0760, which changed `scripts/agent-image.sh` to build and label the images, held to it too. From its Decisions (`wip/archive/agents/S-0760.md`):
+
+```text
+No real image build in this story: rebuilding the :local images changes what running agents use, which is the operator's to choose (D-0587). The script is tested over a fake docker.
+```
+
+Sources: S-0686, S-0740, S-0760.

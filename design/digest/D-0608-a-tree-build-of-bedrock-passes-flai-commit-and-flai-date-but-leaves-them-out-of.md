@@ -9,7 +9,7 @@ date: 2026-11-13
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0760]
 ---
 
 # D-0608 A tree build of bedrock passes FLAI_COMMIT and FLAI_DATE but leaves them out of the image's recipe, since ADR-0295 does not compare a development image's commit and the commit has a label of its own

@@ -3,12 +3,18 @@ id: T-3328
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0778
 owner: alex
 created: 2026-11-13T20:23:36Z
-updated: 2026-11-13T20:23:36Z
-transitions: []
+updated: 2026-11-13T20:25:57Z
+transitions:
+  - to: ready
+    at: 2026-11-13T20:25:56Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T20:25:57Z
+    by: system-flow
 stream: S-0778
 tags: []
 after: [T-3327]

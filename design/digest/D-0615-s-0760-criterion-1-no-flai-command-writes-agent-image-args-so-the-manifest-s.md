@@ -2,12 +2,12 @@
 id: D-0615
 title: "S-0760 criterion 1: no flai command writes agent.image.args, so the manifest's key can only be written by hand: Recommended: take agent-S-0760's hand edit and keep S-0760's scope"
 kind: answer
-sources: [TH-1172]
+sources: [TH-1172, S-0760]
 topics: [docker, template, release, flai, cli, go, conventions, code, all]
-paths: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, system-flow.yaml, flai/images/system-flow/Dockerfile, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+paths: [scripts/agent-image.sh, scripts/agent-image-test.sh, Makefile, system-flow.yaml, flai/images/system-flow/Dockerfile, docs/operators/runbooks/agent-container.md, docs/operators/runbooks/install.md, docs/operators/index.md, docs/users/flai.md, design/system/agent-adapters.md, design/tech/docker.md, template/root/docs/operators/index.md.tmpl, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/system/project-manifest.md, design/system/flai-cli.md, design/issues/I-0364-no-flai-command-writes-agent-image-args-so-a-project-s-layer-build-arguments.md]
 date: 2026-11-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: design/system/project-manifest.md
 asked_again: []
 cited: []
 ---
@@ -43,4 +43,12 @@ The answer:
 Source: design/system/project-manifest.md § Project manifest
 ```
 
-Source: TH-1172.
+S-0760 took the recommendation. From its Decisions (`wip/archive/agents/S-0760.md`):
+
+```text
+agent.image.args written by hand: no flai command writes it (flai manifest set lists no agent key; flai agent set keeps agent.image as the file has it). Asked on TH-1172, recommending the hand edit and an issue for the missing command.
+```
+
+The missing command is I-0364. `design/system/project-manifest.md` and `design/system/flai-cli.md` now say the five `args` are written by hand, since no flai command writes them. The same hand-edit exception holds for the `tests` tiers (D-0449) and `projects[].install` (D-0593).
+
+Sources: TH-1172, S-0760.

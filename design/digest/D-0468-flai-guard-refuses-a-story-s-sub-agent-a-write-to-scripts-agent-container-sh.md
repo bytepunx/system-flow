@@ -2,7 +2,7 @@
 id: D-0468
 title: flai guard refuses a story's sub-agent a write to scripts/agent-container.sh, scripts/agent-image.sh, or flai/images/ while auto-approve is off, so the story's agent writes those files from the content its sub-agent returns
 kind: decision
-sources: [S-0517, S-0510, S-0520, S-0670, S-0672, S-0713, S-0734]
+sources: [S-0517, S-0510, S-0520, S-0670, S-0672, S-0713, S-0734, S-0760]
 topics: [harness, docker, planning]
 paths: [scripts/agent-container.sh, scripts/agent-image.sh, flai/images, flai/internal/protected/protected.go, flai/internal/guard/call.go]
 date: 2026-11-02
@@ -60,4 +60,12 @@ S-0734, which changed the bedrock and claude-code Dockerfiles for the release's 
 T-3159, T-3160, and T-3162 are mine: flai/images/ is protected from sub-agents (D-0468), and the other two are short or need this session's ADR context. T-3161 and T-3163 go to task sub-agents.
 ```
 
-Sources: S-0517, S-0510, S-0520, S-0670, S-0672, S-0713, S-0734.
+S-0760 handed the change to `scripts/agent-image.sh` to a task sub-agent, and the guard refused it, as this entry says. From its Decisions (`wip/archive/agents/S-0760.md`):
+
+```text
+T-3209's sub-agent could not write scripts/agent-image.sh (a protected path, flai guard refused it); it left the script in a scratch file, and the story's agent reviewed its diff and wrote it in.
+```
+
+So a sub-agent may still draft a protected file, in a scratch file or its final message, while the story's agent reviews and writes it.
+
+Sources: S-0517, S-0510, S-0520, S-0670, S-0672, S-0713, S-0734, S-0760.

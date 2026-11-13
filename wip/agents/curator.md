@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 293.1370
-accrued_seconds: 32170
-tasks_completed: 194
-last_run: 2026-11-13T19:47:33Z
+accrued_cost: 294.1558
+accrued_seconds: 32332
+tasks_completed: 195
+last_run: 2026-11-13T20:25:41Z
 ---
 
 # Curator activity
@@ -1563,3 +1563,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0614
 - Seconds: 133
 - Cost: 1.2321 USD, estimated
+
+### 2026-11-13T20:25:41Z
+
+- Summary: I wrote no new entries. I merged S-0760 into D-0605, D-0615, D-0468 and D-0587, and marked D-0605, D-0614 and D-0615 absorbed now that `design/system/flai-cli.md` § "Where the agent images come from (ADR-0295)" and `design/system/project-manifest.md` state their facts. `flai digest compact` compacted none.
+- Trigger: accepted S-0760
+- Items: D-0449, D-0468, D-0587, D-0593, D-0605, D-0608, D-0614, D-0615
+- Seconds: 162
+- Cost: 1.0188 USD, estimated

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.39 - 2026-11-13
+
+- S-0760 This repository builds its agent images through flai's general path, with scripts/agent-image.sh as its own build command, and the documents and the template say how any project gets its images (patch).
 - S-0760 The operators guide and the commented `agent.image` block of `system-flow.yaml` say that a project on the container harness gets its agent images from flai, which pulls them by their signed digests or builds them, how it names a layer and its build arguments, and the host's own build command and the switch that turns the image job off (patch, ADR-0295).
 
 ## 1.1.38 - 2026-11-13
