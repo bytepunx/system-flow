@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -443,19 +444,58 @@ func berth(t *testing.T, c *fakeCluster) (channel.Project, map[string]string) {
 		"refs/heads/story/S-0002":   strings.Repeat("c", 40),
 		repo.WorktreePath("S-0001"): strings.Repeat("b", 40),
 	}
-	wasHead, wasBranch := klusterHead, klusterMainBranch
-	t.Cleanup(func() { klusterHead, klusterMainBranch = wasHead, wasBranch })
-	klusterHead = func(_ context.Context, dir, rev string) (string, error) {
-		if rev == "HEAD" {
-			rev = dir
-		}
-		if h, ok := heads[rev]; ok {
-			return h, nil
-		}
-		return "", fmt.Errorf("git rev-parse %s: exit status 1", rev)
-	}
+	wasGit, wasBranch := klusterGit, klusterMainBranch
+	t.Cleanup(func() { klusterGit, klusterMainBranch = wasGit, wasBranch })
+	klusterGit = func() execx.Runner { return headsGit(heads) }
 	klusterMainBranch = func(context.Context, string) (string, error) { return "main", nil }
 	return p, heads
+}
+
+// headsGit answers git rev-parse --verify --quiet <rev>^{commit} from the
+// heads it holds by ref, and HEAD of a folder by the folder.
+type headsGit map[string]string
+
+func (g headsGit) Run(dir, name string, args ...string) (string, error) {
+	if name != "git" || len(args) != 4 || args[0] != "rev-parse" || !strings.HasSuffix(args[3], "^{commit}") {
+		return "", fmt.Errorf("unexpected %s %v", name, args)
+	}
+	rev := strings.TrimSuffix(args[3], "^{commit}")
+	if rev == "HEAD" {
+		rev = dir
+	}
+	if h, ok := g[rev]; ok {
+		return h + "\n", nil
+	}
+	return "", errors.New("exit status 1")
+}
+
+func (g headsGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (g headsGit) LookPath(name string) (string, error) { return name, nil }
+
+// inProgress adds to berth's project the story title under E-0001, moved to
+// in-progress, and answers its ID.
+func inProgress(t *testing.T, root, title string) string {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Parent: "E-0001", Owner: "olive", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(it.Path)
+	_ = os.WriteFile(it.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] works\n", 1)), 0o644)
+	for i, to := range []string{workitem.Ready, workitem.InProgress} {
+		it, _ = repo.Get(it.ID)
+		if _, err := repo.Transition(it, to, "olive", "", t0.Add(time.Duration(i+1)*time.Minute)); err != nil {
+			t.Fatalf("%s to %s: %v", it.ID, to, err)
+		}
+	}
+	return it.ID
 }
 
 // recordAt writes r as its namespace's record under root, with a log for
@@ -562,6 +602,18 @@ func TestKlusterDeploymentsListsMainFirstThenEachStoryWithItsLogsAndAccess(t *te
 		if len(got.Review) != 1 || got.Review[0] != (KlusterReview{Story: "S-0002", Title: "Bollards", Head: heads["refs/heads/story/S-0002"]}) {
 			t.Errorf("the story in review with no deployment: %+v", got.Review)
 		}
+		if !main.AtHead || main.Column != "" || main.Log != ".flai-cache/kluster/logs/harbour/deploy.log" {
+			t.Errorf("main's namespace at main's head, its log the failed step's: %+v", main.Deployment)
+		}
+		if story.AtHead || story.Column != workitem.Review || story.Log != ".flai-cache/kluster/logs/s-0001" {
+			t.Errorf("the story's namespace in its column, not at its head, its log its folder: %+v", story.Deployment)
+		}
+		if len(got.Undeployed) != 1 || got.Undeployed[0] != (KlusterUndeployed{KlusterReview: got.Review[0], Column: workitem.Review}) {
+			t.Errorf("the story in review with no deployment, with its column: %+v", got.Undeployed)
+		}
+		if got.Live != 0 || got.Limit != manifest.DefaultKlusterAgentNamespaces || got.Holding == nil || len(got.Holding) != 0 || got.Refusals == nil || len(got.Refusals) != 0 {
+			t.Errorf("no story in progress holds a namespace, against the default limit: %+v %+v %+v %+v", got.Live, got.Limit, got.Holding, got.Refusals)
+		}
 	}
 	if c.listedTimes != 2 {
 		t.Errorf("one kubectl call per list, for every namespace at once: %d", c.listedTimes)
@@ -583,8 +635,98 @@ func TestKlusterDeploymentsOfAnEmptyClusterListsTheStoriesInReview(t *testing.T)
 	if len(got.Review) != 2 || got.Review[0] != want[0] || got.Review[1] != want[1] {
 		t.Errorf("both stories in review can be deployed: %+v", got.Review)
 	}
+	if len(got.Undeployed) != 2 || got.Undeployed[0] != (KlusterUndeployed{KlusterReview: want[0], Column: workitem.Review}) || got.Undeployed[1] != (KlusterUndeployed{KlusterReview: want[1], Column: workitem.Review}) {
+		t.Errorf("both stories in review are undeployed: %+v", got.Undeployed)
+	}
 	if c.listedTimes != 0 {
 		t.Errorf("no namespace, no kubectl: %d", c.listedTimes)
+	}
+}
+
+func TestKlusterDeploymentsListsAStoryInProgressWithItsColumnHeadChecksAndWhoAsked(t *testing.T) {
+	c := &fakeCluster{name: "harbour"}
+	p, heads := berth(t, c)
+	kubeconfigAt(t, p.Root)
+	capstan, winch := inProgress(t, p.Root, "Capstan"), inProgress(t, p.Root, "Winch")
+	head := strings.Repeat("d", 40)
+	heads["refs/heads/story/"+capstan] = head
+	checksLog := filepath.Join(p.Root, ".flai-cache", "serve", "checks", capstan+"-20260920T081000Z.log")
+	if err := os.MkdirAll(filepath.Dir(checksLog), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(checksLog, []byte("check web passed\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	recordAt(t, p.Root, kluster.Record{Story: capstan, Namespace: "s-0004", Commit: head, Tag: "s-0004-dddddddddddd", Checkout: filepath.Join(p.Root, ".flai-cache", "worktrees", capstan), Images: []string{}, StartedAt: t0, EndedAt: t0.Add(3 * time.Minute), Outcome: kluster.OutcomePassed, Steps: passedSteps(kluster.StepBuild, kluster.StepLoad, kluster.StepDeploy),
+		AskedBy: "agent-" + capstan, ChecksCommit: head, ChecksOutcome: kluster.OutcomePassed, ChecksLog: checksLog, ChecksAskedBy: "flai serve"})
+	reason := winch + " has no namespace yet, and 1 story in progress hold one already, the most kluster.agent_namespaces allows (1): " + capstan + ", deployed at dddddddddddd, started 2026-09-20T08:00:00Z."
+	for i, by := range []string{"agent-" + winch, "agent-" + winch + "-again"} {
+		if err := kluster.KeepRefusal(p.Root, kluster.Refusal{Story: winch, By: by, At: t0.Add(time.Duration(i) * time.Hour), Limit: 1, Reason: reason}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	on, journal := true, []Entry{}
+	var got KlusterDeployments
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.deployments", `{}`, &got); e != nil {
+		t.Fatal(e)
+	}
+	if len(got.Deployments) != 1 {
+		t.Fatalf("the story in progress's namespace: %+v", got.Deployments)
+	}
+	d := got.Deployments[0]
+	if d.Story != capstan || d.Title != "Capstan" || d.Column != workitem.InProgress || d.Status != workitem.InProgress || d.Commit != head || d.Head != head || !d.AtHead || d.HeadError != "" {
+		t.Errorf("the namespace with its story's column, at its branch's head: %+v", d.Deployment)
+	}
+	if d.Outcome != kluster.OutcomePassed || d.AskedBy != "agent-"+capstan || d.Log != ".flai-cache/kluster/logs/s-0004" || len(d.Steps) != 3 || d.Steps[2].Log != ".flai-cache/kluster/logs/s-0004/deploy.log" || d.Steps[2].LogTail != "deploy of s-0004\n" {
+		t.Errorf("its last deploy, its logs, and who asked: %+v", d)
+	}
+	wantLog := ".flai-cache/serve/checks/" + capstan + "-20260920T081000Z.log"
+	if d.ChecksOutcome != kluster.OutcomePassed || d.ChecksCommit != head || d.ChecksLog != wantLog || d.ChecksLogTail != "check web passed\n" || d.ChecksAskedBy != "flai serve" {
+		t.Errorf("its last checks run, its log, and who asked: %+v", d)
+	}
+	if len(got.Review) != 2 || got.Review[0].Story != "S-0001" || got.Review[1].Story != "S-0002" {
+		t.Errorf("review keeps only the stories in review: %+v", got.Review)
+	}
+	if len(got.Undeployed) != 3 || got.Undeployed[0].Story != "S-0001" || got.Undeployed[1].Story != "S-0002" || got.Undeployed[2].Column != workitem.InProgress {
+		t.Fatalf("the stories in progress or in review with no record, in ID order: %+v", got.Undeployed)
+	}
+	if u := got.Undeployed[2]; u.Story != winch || u.Title != "Winch" || u.Head != "" || !strings.Contains(u.HeadError, "refs/heads/story/"+winch) {
+		t.Errorf("the story in progress with no record, its branch not there: %+v", u)
+	}
+	if got.Live != 1 || len(got.Holding) != 1 || got.Holding[0] != capstan || got.Limit != manifest.DefaultKlusterAgentNamespaces {
+		t.Errorf("one story in progress holds a namespace, of the default limit: %d %v of %d", got.Live, got.Holding, got.Limit)
+	}
+	if len(got.Refusals) != 2 || got.Refusals[0].By != "agent-"+winch+"-again" || !got.Refusals[0].At.Equal(t0.Add(time.Hour)) || got.Refusals[1].By != "agent-"+winch ||
+		got.Refusals[0].Story != winch || got.Refusals[0].Limit != 1 || got.Refusals[0].Reason != reason {
+		t.Errorf("the requests refused for the limit, newest first: %+v", got.Refusals)
+	}
+
+	// the field names flaiover reads
+	var raw struct {
+		Deployments []map[string]any `json:"deployments"`
+		Undeployed  []map[string]any `json:"undeployed"`
+	}
+	var whole map[string]any
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.deployments", `{}`, &whole); e != nil {
+		t.Fatal(e)
+	}
+	for _, k := range []string{"live", "holding", "limit", "refusals", "undeployed", "review"} {
+		if _, ok := whole[k]; !ok {
+			t.Errorf("kluster.deployments answers %s: %v", k, whole)
+		}
+	}
+	if e := ask(t, klusterHost(&on, &journal, nil), p, "kluster.deployments", `{}`, &raw); e != nil {
+		t.Fatal(e)
+	}
+	for _, k := range []string{"column", "head", "at_head", "log", "asked_by", "checks_outcome", "checks_log", "checks_log_tail", "checks_commit", "checks_asked_by"} {
+		if _, ok := raw.Deployments[0][k]; !ok {
+			t.Errorf("a namespace's row has %s: %v", k, raw.Deployments[0])
+		}
+	}
+	for _, k := range []string{"story", "title", "column", "head_error"} {
+		if _, ok := raw.Undeployed[2][k]; !ok {
+			t.Errorf("an undeployed row has %s: %v", k, raw.Undeployed[2])
+		}
 	}
 }
 

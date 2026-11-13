@@ -19,6 +19,13 @@ package hostapi
 // kluster.teardown, and kluster.promote, writes under the same host action,
 // run what flai kluster deploy, teardown, and promote run, in the background
 // under kluster's own lock, and answer the job at once.
+//
+// Story namespaces (S-0663): kluster.deployments answers each namespace as
+// kluster.List lists it, with its story's column, whether its commit is its
+// branch's head, and its last checks run and who asked for each; the stories
+// in progress or in review with no record; and the stories in progress that
+// hold a namespace against kluster.agent_namespaces, with the deploy
+// requests refused for it.
 
 import (
 	"context"
@@ -933,14 +940,12 @@ type KlusterDeployment struct {
 	Checkout string        `json:"checkout"`
 	Error    string        `json:"error,omitempty"`
 	Steps    []KlusterStep `json:"steps"`
+	// ChecksLogTail is the end of the last checks run's log, at most 4 KB,
+	// cut to whole lines; empty with no run or no log to read.
+	ChecksLogTail string `json:"checks_log_tail,omitempty"`
 	// Title and Status are the story's, for a story's namespace.
 	Title  string `json:"title,omitempty"`
 	Status string `json:"status,omitempty"`
-	// Head is the story branch's head now, or main's for the default
-	// namespace, so that a deployment at an older commit shows; HeadError
-	// says why it could not be read.
-	Head      string `json:"head,omitempty"`
-	HeadError string `json:"head_error,omitempty"`
 	// Access is how to reach the namespace for a demo.
 	Access KlusterAccess `json:"access"`
 }
@@ -951,6 +956,13 @@ type KlusterReview struct {
 	Title     string `json:"title"`
 	Head      string `json:"head,omitempty"`
 	HeadError string `json:"head_error,omitempty"`
+}
+
+// KlusterUndeployed is a story in progress or in review with no deployment
+// recorded, with its column (S-0663).
+type KlusterUndeployed struct {
+	KlusterReview
+	Column string `json:"column"`
 }
 
 // KlusterDeployments is what kluster.deployments answers.
@@ -967,10 +979,23 @@ type KlusterDeployments struct {
 	Cluster          string `json:"cluster,omitempty"`
 	DefaultNamespace string `json:"default_namespace,omitempty"`
 	// Deployments are the namespaces' records, the default namespace's first,
-	// then the stories' by number.
+	// then the stories' by number, as kluster.List lists them. Head is the
+	// story branch's head now, or main's for the default namespace, and
+	// AtHead whether the record's commit is it.
 	Deployments []KlusterDeployment `json:"deployments"`
-	// Review are the stories in review with no deployment recorded.
+	// Review are the stories in review with no deployment recorded, as an
+	// older dashboard reads them.
 	Review []KlusterReview `json:"review"`
+	// Undeployed are the stories in progress or in review with no deployment
+	// recorded, in ID order (S-0663).
+	Undeployed []KlusterUndeployed `json:"undeployed"`
+	// Live is how many stories in progress hold a namespace, Holding which,
+	// against Limit, kluster.agent_namespaces (0 with no block); Refusals are
+	// the deploy requests refused for the limit, newest first (S-0663).
+	Live     int               `json:"live"`
+	Holding  []string          `json:"holding"`
+	Limit    int               `json:"limit"`
+	Refusals []kluster.Refusal `json:"refusals"`
 	// Running is the deploy, teardown, or promotion that runs now, whoever
 	// started it; its log only when this flai serve did.
 	Running *KlusterJob `json:"running,omitempty"`
@@ -978,9 +1003,13 @@ type KlusterDeployments struct {
 	Last *KlusterJob `json:"last,omitempty"`
 }
 
-// klusterHead resolves rev to a commit in dir with git; tests replace it.
-var klusterHead = func(ctx context.Context, dir, rev string) (string, error) {
-	out, err := execx.Timed(ctx, execx.System{}).Run(dir, "git", "rev-parse", "--verify", "--quiet", rev+"^{commit}")
+// klusterGit is the git the kluster methods resolve heads with; tests
+// replace it.
+var klusterGit = func() execx.Runner { return execx.System{} }
+
+// klusterHead resolves rev to a commit in dir with git.
+func klusterHead(ctx context.Context, dir, rev string) (string, error) {
+	out, err := execx.Timed(ctx, klusterGit()).Run(dir, "git", "rev-parse", "--verify", "--quiet", rev+"^{commit}")
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse %s: %w", rev, err)
 	}
@@ -1034,9 +1063,11 @@ func klusterAccess(context, ns string, services []KlusterService, servicesErr st
 }
 
 // klusterDeployments answers kluster.deployments: each namespace's record,
-// the stories in review with none, and the deploy that runs.
+// the stories in progress or in review with none, the count against
+// kluster.agent_namespaces, and the deploy that runs.
 func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ json.RawMessage) (any, *channel.Error) {
-	out := KlusterDeployments{Enabled: host.enabled(ActionKluster, p.Root), Enable: EnableCommand(ActionKluster), Deployments: []KlusterDeployment{}, Review: []KlusterReview{}}
+	out := KlusterDeployments{Enabled: host.enabled(ActionKluster, p.Root), Enable: EnableCommand(ActionKluster), Deployments: []KlusterDeployment{}, Review: []KlusterReview{},
+		Undeployed: []KlusterUndeployed{}, Holding: []string{}, Refusals: []kluster.Refusal{}}
 	if host.Kluster != nil {
 		running, last := host.Kluster.DeployState(p.Root)
 		out.Running, out.Last = withTail(p.Root, running), withTail(p.Root, last)
@@ -1045,17 +1076,18 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	if e != nil {
 		return nil, e
 	}
+	out.Limit = m.KlusterAgentNamespaces()
 	repo, err := workitem.Open(p.Root)
 	if err != nil {
 		return nil, failed(fmt.Errorf("cannot read the project's work items to list its deployments: %s", hostRelative(p.Root, err.Error())))
 	}
-	review, err := reviewStories(repo)
+	open, err := openStories(repo)
 	if err != nil {
-		return nil, failed(fmt.Errorf("cannot list the stories in review: %s", hostRelative(p.Root, err.Error())))
+		return nil, failed(fmt.Errorf("cannot list the stories in progress and in review: %s", hostRelative(p.Root, err.Error())))
 	}
 	if m.Kluster == nil {
 		out.NoBlock = kluster.ErrNoBlock.Error()
-		out.Review = reviewRows(ctx, p.Root, review, nil)
+		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, nil)
 		return out, nil
 	}
 	out.Block = true
@@ -1063,7 +1095,7 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	c, err := openKluster(p.Root, m)
 	if err != nil {
 		out.StatusError = klusterRelative(p.Root, err.Error())
-		out.Review = reviewRows(ctx, p.Root, review, nil)
+		out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, nil)
 		return out, nil
 	}
 	named := c.Named()
@@ -1073,9 +1105,17 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 			out.Running = &KlusterJob{Action: j.Kind, Cluster: named.Name, Story: j.Story, Namespace: j.Namespace, StartedAt: j.StartedAt.UTC().Format(time.RFC3339)}
 		}
 	}
-	list, err := kluster.Deployments(p.Root, out.DefaultNamespace)
+	listing, err := kluster.List(p.Root, kluster.ListOptions{DefaultNamespace: out.DefaultNamespace, Limit: out.Limit, Column: storyColumn(repo), Git: execx.Timed(ctx, klusterGit())})
 	if err != nil {
 		return nil, failed(errors.New(klusterRelative(p.Root, err.Error())))
+	}
+	list := listing.Deployments
+	out.Live, out.Limit = listing.Live, listing.Limit
+	if listing.Holding != nil {
+		out.Holding = listing.Holding
+	}
+	if listing.Refusals != nil {
+		out.Refusals = listing.Refusals
 	}
 	var services []KlusterService
 	servicesErr := ""
@@ -1094,7 +1134,22 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 	deployed := map[string]bool{}
 	mainHead, mainErr := "", ""
 	for _, d := range list {
-		row := KlusterDeployment{Deployment: d, Checkout: klusterRel(p.Root, d.Checkout), Error: klusterRelative(p.Root, d.Error), Steps: make([]KlusterStep, 0, len(d.Steps))}
+		checksTail := ""
+		if d.ChecksLog != "" {
+			checksTail = tail(d.ChecksLog, klusterLogTail)
+			d.ChecksLog = klusterRel(p.Root, d.ChecksLog)
+		}
+		if d.Log != "" {
+			d.Log = klusterRel(p.Root, d.Log)
+		}
+		d.HeadError = klusterRelative(p.Root, d.HeadError)
+		if d.Default {
+			if mainHead == "" && mainErr == "" {
+				mainHead, mainErr = defaultHead(ctx, p.Root)
+			}
+			d.Head, d.HeadError, d.AtHead = mainHead, mainErr, mainHead != "" && mainHead == d.Commit
+		}
+		row := KlusterDeployment{Deployment: d, Checkout: klusterRel(p.Root, d.Checkout), Error: klusterRelative(p.Root, d.Error), Steps: make([]KlusterStep, 0, len(d.Steps)), ChecksLogTail: checksTail}
 		for _, st := range d.Steps {
 			step := KlusterStep{Step: st}
 			if st.Log != "" {
@@ -1103,18 +1158,11 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 			}
 			row.Steps = append(row.Steps, step)
 		}
-		switch {
-		case d.Story != "":
-			deployed[d.Story] = true
+		if d.Story != "" {
+			deployed[workitem.CanonicalID(d.Story)] = true
 			if it, err := repo.Get(d.Story); err == nil {
 				row.Title, row.Status = it.Title, it.Status
 			}
-			row.Head, row.HeadError = storyHead(ctx, p.Root, d.Story)
-		case d.Default:
-			if mainHead == "" && mainErr == "" {
-				mainHead, mainErr = defaultHead(ctx, p.Root)
-			}
-			row.Head, row.HeadError = mainHead, mainErr
 		}
 		row.Access = klusterAccess(named.Context, d.Namespace, services, servicesErr)
 		if host.Kluster != nil {
@@ -1122,8 +1170,19 @@ func klusterDeployments(ctx context.Context, host Host, p channel.Project, _ jso
 		}
 		out.Deployments = append(out.Deployments, row)
 	}
-	out.Review = reviewRows(ctx, p.Root, review, deployed)
+	out.Review, out.Undeployed = undeployedRows(ctx, p.Root, open, deployed)
 	return out, nil
+}
+
+// storyColumn is the column of a story repo holds, as kluster.List asks it;
+// empty for one it does not.
+func storyColumn(repo *workitem.Repo) func(story string) string {
+	return func(story string) string {
+		if it, err := repo.Get(story); err == nil {
+			return it.Status
+		}
+		return ""
+	}
 }
 
 // klusterLogRead is the most of a step's log one kluster.log answers.
@@ -1172,33 +1231,39 @@ func klusterLogDo(_ context.Context, _ Host, p channel.Project, raw json.RawMess
 	return out, nil
 }
 
-// reviewStories are the project's stories in review, in ID order.
-func reviewStories(repo *workitem.Repo) ([]*workitem.Item, error) {
+// openStories are the project's stories in progress or in review, in ID
+// order.
+func openStories(repo *workitem.Repo) ([]*workitem.Item, error) {
 	all, err := repo.List(false)
 	if err != nil {
 		return nil, err
 	}
 	var out []*workitem.Item
 	for _, it := range all {
-		if it.Type == workitem.Story && it.Status == workitem.Review {
+		if it.Type == workitem.Story && (it.Status == workitem.InProgress || it.Status == workitem.Review) {
 			out = append(out, it)
 		}
 	}
 	return out, nil
 }
 
-// reviewRows are the stories in review deployed does not name, each with its
-// branch's head.
-func reviewRows(ctx context.Context, root string, stories []*workitem.Item, deployed map[string]bool) []KlusterReview {
-	out := []KlusterReview{}
+// undeployedRows are the stories deployed does not name, each with its
+// branch's head: review those in review, as an older dashboard reads them,
+// and undeployed every one, with its column.
+func undeployedRows(ctx context.Context, root string, stories []*workitem.Item, deployed map[string]bool) (review []KlusterReview, undeployed []KlusterUndeployed) {
+	review, undeployed = []KlusterReview{}, []KlusterUndeployed{}
 	for _, it := range stories {
 		if deployed[it.ID] {
 			continue
 		}
 		head, headErr := storyHead(ctx, root, it.ID)
-		out = append(out, KlusterReview{Story: it.ID, Title: it.Title, Head: head, HeadError: headErr})
+		row := KlusterReview{Story: it.ID, Title: it.Title, Head: head, HeadError: headErr}
+		if it.Status == workitem.Review {
+			review = append(review, row)
+		}
+		undeployed = append(undeployed, KlusterUndeployed{KlusterReview: row, Column: it.Status})
 	}
-	return out
+	return review, undeployed
 }
 
 // storyHead is the head of story's branch in the project's main checkout,
@@ -1412,7 +1477,8 @@ func klusterSpecs() map[string]spec {
 		// kluster.down: kluster down of the project's cluster, started.
 		"kluster.down": {action: ActionKluster, describe: describeKlusterJob, build: none, do: klusterStart(KlusterDown)},
 		// kluster.deployments: each namespace's deployment, main's first, the
-		// stories in review with none, and the deploy that runs (S-0581).
+		// stories in progress or in review with none, the count against
+		// kluster.agent_namespaces, and the deploy that runs (S-0581, S-0663).
 		"kluster.deployments": {reads: true, build: none, do: klusterDeployments},
 		// kluster.workloads: the cluster's nodes and each namespace's pods
 		// (S-0586).
