@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0760
-  - S-0775
 ---
 
 # Board

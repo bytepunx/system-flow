@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2162.8868
-accrued_seconds: 1559056
-tasks_completed: 3349
-last_run: 2026-11-13T15:48:37Z
+accrued_cost: 2163.4834
+accrued_seconds: 1559221
+tasks_completed: 3355
+last_run: 2026-11-13T16:15:01Z
 ---
 
 # Orchestrator activity
@@ -23477,6 +23477,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1903 USD, estimated
+
+### 2026-11-13T16:13:20Z
+
+- Summary: Accepted S-0751 at a11bf9744d43e017df31b42f30c596e43fe282f8 under accept_reviews: close-out passed at the branch head, verifier matched all 7 criteria to changed files, dry run had no blockers; merged and archived.
+- Items: S-0751
+- Seconds: 74
+- Cost: 0.2815 USD, estimated
+
+### 2026-11-13T16:13:41Z
+
+- Summary: Release due after S-0751's acceptance (threshold policy: count 1 at or over threshold 1, value 0 of 1000, S-0751 unvalued, nothing held by epic); ran flai formula run publish --ready --autocommit, instance S-0775 in ready, committed b3026824f.
+- Items: S-0775, S-0751
+- Seconds: 21
+- Cost: 0.0486 USD, estimated
+
+### 2026-11-13T16:14:04Z
+
+- Summary: Ordered the ready column by throughput after S-0775 passed through it: S-0760 first (forecast 32m), the only ready story.
+- Items: S-0760
+- Seconds: 23
+- Cost: 0.0507 USD, estimated
+
+### 2026-11-13T16:14:21Z
+
+- Summary: I accepted S-0751 and started a release, which is now running as story S-0775.
+- Items: none
+- Seconds: 17
+- Cost: 0.1342 USD, estimated
+
+### 2026-11-13T16:14:50Z
+
+- Summary: Release due on S-0751 (threshold policy met: count 1 of 1, value 0 of 1000 USD): started no second publish run, since publish formula instance S-0775 was made at 16:13:36Z after S-0751's acceptance and is in progress for this batch.
+- Items: S-0751, S-0775
+- Seconds: 19
+- Cost: 0.0816 USD, estimated
+
+### 2026-11-13T16:15:01Z
+
+- Summary: TH-1166 (board starved) needs nothing: flai serve resolved it at 16:13:37Z once S-0775 could start, and its entries are flai serve's notices, which are not mine to answer.
+- Items: S-0775
+- Seconds: 11
+- Cost: 0.0000 USD
 
 ## Refusals
 

@@ -3,15 +3,18 @@ id: S-0757
 type: story
 nature: feature
 title: The dashboard shows each agent image job as it runs, its output, and a failure's cause, and offers the operator a retry
-status: ready
+status: in-progress
 parent: E-0036
 owner: alex
 created: 2026-11-12T16:03:25Z
-updated: 2026-11-13T16:13:06Z
+updated: 2026-11-13T16:13:31Z
 transitions:
   - to: ready
     at: 2026-11-13T07:30:43Z
     by: alex
+  - to: in-progress
+    at: 2026-11-13T16:13:31Z
+    by: agent-S-0757
 tags: [cli, dashboard]
 topics: [docker, dashboard]
 touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go, flaiover/src/routes/api/images/+server.ts, flaiover/src/routes/api/images/retry/+server.ts, flaiover/src/routes/ops/images/+page.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/ImageJob.svelte, flaiover/src/lib/components/ImageJob.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/components/flaiover/src/lib/components/ImageJob.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

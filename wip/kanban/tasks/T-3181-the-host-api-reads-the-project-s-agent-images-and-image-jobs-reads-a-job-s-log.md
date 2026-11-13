@@ -3,12 +3,18 @@ id: T-3181
 type: task
 nature: feature
 title: The host API reads the project's agent images and image jobs, reads a job's log from an offset, and starts a new job behind the agent host action
-status: backlog
+status: in-progress
 parent: S-0757
 owner: alex
 created: 2026-11-12T16:03:36Z
-updated: 2026-11-12T16:03:42Z
-transitions: []
+updated: 2026-11-13T16:14:38Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:14:37Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-13T16:14:38Z
+    by: system-flow
 stream: S-0757
 tags: [cli]
 touches: [flai/internal/hostapi/images.go, flai/internal/hostapi/images_test.go, flai/internal/hostapi/contract_test.go, flai/internal/serve/imagejob.go, flai/internal/serve/imagejob_test.go]

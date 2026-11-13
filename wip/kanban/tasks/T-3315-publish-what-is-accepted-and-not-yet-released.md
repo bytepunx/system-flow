@@ -3,12 +3,18 @@ id: T-3315
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0775
 owner: alex
 created: 2026-11-13T16:13:36Z
-updated: 2026-11-13T16:13:36Z
-transitions: []
+updated: 2026-11-13T16:15:26Z
+transitions:
+  - to: ready
+    at: 2026-11-13T16:15:26Z
+    by: agent-S-0775
+  - to: in-progress
+    at: 2026-11-13T16:15:26Z
+    by: agent-S-0775
 stream: S-0775
 tags: []
 after: [T-3314]
