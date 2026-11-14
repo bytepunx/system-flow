@@ -3,11 +3,17 @@ id: S-0788
 type: story
 nature: improvement
 title: Stories in review that cannot be merged need an action
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-14T18:02:48Z
-updated: 2026-11-14T18:02:48Z
-transitions: []
+updated: 2026-11-14T18:03:27Z
+transitions:
+  - to: ready
+    at: 2026-11-14T18:02:49Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-14T18:03:27Z
+    by: agent-S-0788
 tags: [dashboard]
 touches: [flaiover/src]
 agent:

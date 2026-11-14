@@ -3,11 +3,11 @@ id: S-0736
 type: story
 nature: feature
 title: An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
-status: in-progress
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-14T17:58:41Z
+updated: 2026-11-14T18:03:13Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -20,6 +20,9 @@ transitions:
     by: agent-S-0736
   - to: in-progress
     at: 2026-11-14T17:58:41Z
+    by: alex
+  - to: review
+    at: 2026-11-14T18:03:13Z
     by: alex
 blocked:
   - from: 2026-11-14T17:48:02Z
