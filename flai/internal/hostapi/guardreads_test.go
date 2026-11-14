@@ -15,6 +15,7 @@ import (
 // ImportMethods' import.preview and import.run are not here: flai serve adds
 // them, and flai hostapi's table, MethodsFor's, has neither.
 var hostAPIWrites = []string{
+	"accept.resolve",           // sends a story back to its agent: moves it, opens a thread
 	"accept.run",               // accepts a story: merges, archives, commits
 	"adr.accept",               // write ADRs
 	"adr.new",                  // write ADRs

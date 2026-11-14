@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-11-13
+updated: 2026-11-14
 status: active
 ---
 
@@ -525,6 +525,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--require-met` | [flai release](../users/flai-reference.md#flai-release) |
 | `--require-pending` | [flai release](../users/flai-reference.md#flai-release) |
 | `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness), [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider), [flai serve forge](../users/flai-reference.md#flai-serve-forge) |
+| `--resolve` | [flai accept](../users/flai-reference.md#flai-accept) |
 | `--revenue-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--role` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--role-config` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |

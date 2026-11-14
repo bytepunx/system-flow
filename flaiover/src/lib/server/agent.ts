@@ -107,6 +107,8 @@ export const REQUIRED_METHODS = [
 	'story.start',
 	'accept.preview',
 	'accept.run',
+	// S-0788: the operator's Rebase and resolve, sending a review story back to its agent (ADR-0302)
+	'accept.resolve',
 	'stream.diff',
 	'stream.log',
 	'stream.answer',

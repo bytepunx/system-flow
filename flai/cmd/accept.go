@@ -63,6 +63,7 @@ type acceptOptions struct {
 
 func newAcceptCmd(a *app) *cobra.Command {
 	var o acceptOptions
+	var resolve bool
 	c := &cobra.Command{
 		Use:   "accept <id>",
 		Short: "Accept an item: merge its branch, move to done, archive, commit",
@@ -303,7 +304,20 @@ orchestrator_blockers for --by orchestrator, and kluster_why says why.
 outside the merge queue, and writes, with the commit, why the gate held it,
 who accepted, and when under ### Accepted without the kluster gate in its
 Notes. It is refused with --by orchestrator and with --batch, and changes
-nothing while the action is off or the gate passes.`,
+nothing while the action is off or the gate passes.
+
+--resolve accepts nothing (ADR-0302): it is the operator's request that the
+agent of a story in review rebase its branch onto the main branch and resolve
+what holds its acceptance. It runs the preview --dry-run runs and, when that
+lists a blocker, moves the story back to in-progress as flai and opens the
+send-back thread of ADR-0248 on it, or writes on the one still open, listing
+each blocker; flai serve starts the story's agent on that thread and resolves
+it once the story is back in review. With --json it prints {"id", "reason",
+"sent_back", "branch", "base", "conflicts", "thread", "blockers"}. A story not
+in review, or one nothing holds, is refused with exit 4, with --json as
+{"refused": {"id", "reason"}}. It is the operator's alone: refused with
+--dry-run, --yes, --batch, --by orchestrator, under FLAI_ROLE=orchestrate,
+and with the flags of an acceptance.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
@@ -311,7 +325,8 @@ nothing while the action is off or the gate passes.`,
   flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
   flai accept S-031 --by orchestrator --batch 20261019-041200
   flai accept S-031 --by alex --without-queue-tiers
-  flai accept S-031 --by alex --without-kluster`,
+  flai accept S-031 --by alex --without-kluster
+  flai accept S-031 --by alex --resolve`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -321,6 +336,9 @@ nothing while the action is off or the gate passes.`,
 			it, err := repo.Get(args[0])
 			if err != nil {
 				return err
+			}
+			if resolve {
+				return a.resolveAccept(cmd, repo, it, o)
 			}
 			res, err := a.acceptItem(repo, it, o)
 			if err != nil {
@@ -332,6 +350,7 @@ nothing while the action is off or the gate passes.`,
 	addAcceptFlags(c, &o)
 	c.Flags().BoolVar(&o.dryRun, "dry-run", false, "show what would block acceptance and change nothing")
 	c.Flags().StringVar(&o.batch, "batch", "", "the merge queue batch whose verification the acceptance takes, as flai serve lands it (ADR-0176)")
+	c.Flags().BoolVar(&resolve, "resolve", false, "accept nothing: send a review story its acceptance blockers hold back to its agent, to rebase onto the main branch and resolve them (ADR-0302)")
 	return c
 }
 
@@ -729,6 +748,9 @@ type sentBack struct {
 	Base      string   `json:"base"`
 	Conflicts []string `json:"conflicts"`
 	Thread    string   `json:"thread"`
+	// Blockers are what held the acceptance when the operator asked its
+	// agent to resolve them with flai accept --resolve (ADR-0302).
+	Blockers []string `json:"blockers,omitempty"`
 }
 
 // Error is the send back's text.
@@ -797,7 +819,13 @@ func acceptanceBy(story, by string) string {
 // its branch by who over stop (ADR-0248), or adds the same words to the one
 // still open from an earlier send back.
 func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop *syncStopped) (*threads.Thread, error) {
-	text := sentBackText(story, branch, who, stop)
+	return a.sendBackThread(repo, story, storygit.SentBackTitle(branch, stop.Base, stop.Conflicts), sentBackText(story, branch, who, stop))
+}
+
+// sendBackThread opens the send back's thread on story, by flai, titled
+// title and saying text, or adds text to the one still open from an earlier
+// send back, which flai serve starts story's agent on (ADR-0248).
+func (a *app) sendBackThread(repo *workitem.Repo, story, title, text string) (*threads.Thread, error) {
 	all, err := threads.For(repo, story)
 	if err != nil {
 		return nil, err
@@ -807,7 +835,7 @@ func (a *app) openSentBack(repo *workitem.Repo, story, branch, who string, stop 
 			return threads.Reply(repo, th.ID, storygit.SentBackAuthor, text, a.now())
 		}
 	}
-	return threads.New(repo, threads.NewOptions{Title: storygit.SentBackTitle(branch, stop.Base, stop.Conflicts), On: story, Author: storygit.SentBackAuthor, Text: text, Now: a.now()})
+	return threads.New(repo, threads.NewOptions{Title: title, On: story, Author: storygit.SentBackAuthor, Text: text, Now: a.now()})
 }
 
 // sentBackText is what the send back's thread tells story's agent: what

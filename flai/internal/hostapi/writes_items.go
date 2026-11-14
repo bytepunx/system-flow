@@ -780,5 +780,26 @@ func itemWriteSpecs() map[string]spec {
 			}
 			return args, stdin, nil
 		}},
+
+		// accept.resolve is the operator's request, the dashboard's Rebase and
+		// resolve, that the agent of a story in review rebase it onto the
+		// main branch and resolve what holds its acceptance (ADR-0302): flai
+		// accept --resolve sends it back through the acceptance's send back
+		// (ADR-0248) and accepts nothing. Its refusal of a story not in
+		// review, or one nothing holds (exit 4), is Refused with the refused
+		// object as data. It merges nothing and reaches no forge, so no host
+		// action gates it.
+		"accept.resolve": {exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"accept", in.ID, "--resolve", "--by=" + owner(p)}, "", nil
+		}},
 	}
 }
