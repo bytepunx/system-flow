@@ -86,8 +86,16 @@
 	};
 	/** A path the branch undoes of main's change, as flai's preview and refusal give it (ADR-0155). */
 	type Undone = { path: string; lines: string[]; old_base: string };
-	/** A send back for a rebase that stopped, as flai's refusal gives it (ADR-0248): the story is in-progress again. */
-	type SentBack = { reason: string; branch?: string; conflicts: string[]; thread?: string };
+	/** A send back for a rebase that stopped, as flai's refusal gives it (ADR-0248), or for Rebase and
+	 * resolve, as accept.resolve answers it (ADR-0302): the story is in-progress again. */
+	type SentBack = {
+		reason: string;
+		branch?: string;
+		conflicts: string[];
+		thread?: string;
+		/** What held the acceptance, for its agent to resolve: only Rebase and resolve sends them. */
+		blockers: string[];
+	};
 	/** A forge blocker as flai's preview gives it: name is a check's or a reviewer's, url its page (ADR-0169). */
 	type ForgeBlocker = { code: string; message: string; name?: string; url?: string };
 	/** A file of the story's diff, as /diff gives it and DiffView shows it. */
@@ -147,6 +155,12 @@
 
 	let sendingBack = $state(false);
 	let reason = $state('');
+
+	// Rebase and resolve (ADR-0302): flai's accept.resolve sends a story that cannot be accepted
+	// back to its agent, which rebases, takes each blocker's action, and moves it to review again.
+	// Its answer is a send back, shown as sentBack is; a refusal is flai's reason.
+	let resolving = $state(false);
+	let resolveError = $state<string | null>(null);
 
 	// Paths the branch undoes of main's change (S-0388, ADR-0155): a card each, from the preview or
 	// a refusal. Each is restored, and drops out when the preview runs again; or kept with a reason,
@@ -242,6 +256,17 @@
 			!preview.worktree_uncommitted?.length &&
 			!unresolved.length &&
 			!unsaved.length
+	);
+	// Rebase and resolve is offered once, beside the first of what holds the acceptance: the
+	// blockers, then a refused acceptance's text, then the merge queue's refusal.
+	const resolveAt = $derived.by((): 'blockers' | 'failure' | 'queue' | null => {
+		if (!writable || !inReview || result || sentBack) return null;
+		if (blockers.length) return 'blockers';
+		if (failure && !findings.length) return 'failure';
+		return queueRefusal ? 'queue' : null;
+	});
+	const resolveLine = $derived(
+		`Sends ${id} back to its agent, which rebases ${preview?.branch ?? `story/${id}`} onto main, takes the actions above, closes out again, and moves it to review.`
 	);
 	const enqueuedAs = $derived(queueState?.enqueued?.find((e) => e.story === id));
 	const queueOffered = $derived(
@@ -369,13 +394,15 @@
 			branch?: unknown;
 			conflicts?: unknown;
 			thread?: unknown;
+			blockers?: unknown;
 		};
 		if (d.sent_back !== true) return null;
 		return {
 			reason: typeof d.reason === 'string' && d.reason ? d.reason : fallback,
 			branch: typeof d.branch === 'string' ? d.branch : undefined,
 			conflicts: Array.isArray(d.conflicts) ? d.conflicts.map(String) : [],
-			thread: typeof d.thread === 'string' && d.thread ? d.thread : undefined
+			thread: typeof d.thread === 'string' && d.thread ? d.thread : undefined,
+			blockers: Array.isArray(d.blockers) ? d.blockers.map(String) : []
 		};
 	}
 
@@ -409,6 +436,7 @@
 		findings = [];
 		saved = [];
 		sentBack = null;
+		resolveError = null;
 		issues = [];
 		issuesError = null;
 		made = [];
@@ -844,6 +872,36 @@
 		if (result && !failure && toMake.length) await createStories(toMake);
 	}
 
+	// flai's accept.resolve (ADR-0302): the story goes back to its agent with what holds it, and the
+	// page shows the send back as an acceptance's is shown, with the story as it is now.
+	async function resolveBlockers() {
+		resolving = true;
+		resolveError = null;
+		try {
+			const r = await api(`/api/items/${id}/resolve`, { method: 'POST' });
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				resolveError = data.error ?? r.statusText;
+				return;
+			}
+			const back = sentBackOf(data, `${id} was sent back to in-progress for its agent to resolve`);
+			if (!back) {
+				await load(id);
+				return;
+			}
+			failure = null;
+			findings = [];
+			queueRefusal = null;
+			sentBack = back;
+			const fresh = await get<{ item: Item }>(`/api/items/${id}`).catch(() => null);
+			if (fresh) item = fresh.item;
+		} catch (e) {
+			resolveError = e instanceof Error ? e.message : String(e);
+		} finally {
+			resolving = false;
+		}
+	}
+
 	async function sendBack() {
 		if (!reason.trim()) return;
 		failure = null;
@@ -861,6 +919,25 @@
 		}
 	}
 </script>
+
+<!-- Rebase and resolve (ADR-0302), beside what holds the acceptance. -->
+{#snippet resolveOffer(storyId: string)}
+	<div class="mt-2" data-testid="resolve-offer">
+		<button
+			type="button"
+			class="rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
+			data-testid="resolve"
+			disabled={resolving || running}
+			onclick={resolveBlockers}>{resolving ? 'Sending back…' : 'Rebase and resolve'}</button
+		>
+		<p class="mt-1 text-xs">{resolveLine}</p>
+		{#if resolveError}
+			<p class="mt-1" data-testid="resolve-error">
+				{storyId} was not sent back. flai said: {resolveError}
+			</p>
+		{/if}
+	</div>
+{/snippet}
 
 <!-- A refusal's text, each file it names a control that opens the editor at its line (S-0378). -->
 {#snippet linked(segments: LinkSegment[])}
@@ -1516,6 +1593,7 @@
 						<ul class="mt-1 ml-4 list-disc">
 							{#each blockers as b (b)}<li>{b}</li>{/each}
 						</ul>
+						{#if resolveAt === 'blockers'}{@render resolveOffer(item.id)}{/if}
 					</div>
 				{/if}
 				{#if preview.worktree_uncommitted?.length}
@@ -1594,6 +1672,12 @@
 							{#each sentBack.conflicts as p (p)}<li>{p}</li>{/each}
 						</ul>
 					{/if}
+					{#if sentBack.blockers.length}
+						<p class="mt-1 text-muted">Its agent resolves:</p>
+						<ul class="mt-1 ml-4 list-disc" data-testid="sent-back-blockers">
+							{#each sentBack.blockers as b (b)}<li>{b}</li>{/each}
+						</ul>
+					{/if}
 					{#if sentBack.thread}
 						<p class="mt-1">
 							<!-- eslint-disable svelte/no-navigation-without-resolve -- the page is resolve()d; the rule does not follow the thread added to it -->
@@ -1613,6 +1697,7 @@
 				<div class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 					<p class="font-medium">Not accepted. {item.id} is {item.status}. flai said:</p>
 					<pre class="mt-1 font-mono text-xs whitespace-pre-wrap">{@render linked(refusal)}</pre>
+					{#if resolveAt === 'failure'}{@render resolveOffer(item.id)}{/if}
 				</div>
 			{/if}
 
@@ -1663,6 +1748,7 @@
 								{/each}
 							</ul>
 						{/if}
+						{#if resolveAt === 'queue'}{@render resolveOffer(item.id)}{/if}
 					</div>
 				{/if}
 				{#if sendingBack}

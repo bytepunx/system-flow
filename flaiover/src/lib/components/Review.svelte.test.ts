@@ -72,6 +72,8 @@ function backend(over: {
 	restore?: () => unknown;
 	thread?: () => unknown;
 	move?: () => unknown;
+	/** Rebase and resolve, POST /api/items/[id]/resolve (ADR-0302). */
+	resolve?: () => unknown;
 	diff?: () => unknown;
 	checksStatuses?: unknown[];
 	checksRun?: () => unknown;
@@ -131,6 +133,8 @@ function backend(over: {
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
+		if (url.endsWith('/resolve') && init?.method === 'POST')
+			return over.resolve ? over.resolve() : json({ error: 'no resolve' }, 500);
 		if (url.endsWith('/restore') && init?.method === 'POST')
 			return over.restore ? over.restore() : json({ restored: true });
 		if (url === '/api/threads' && init?.method === 'POST')
@@ -752,6 +756,135 @@ describe('Review', () => {
 		expect(document.body.textContent).not.toContain('Not accepted');
 		expect(document.body.textContent).toContain('S-0041 is in-progress, not in review');
 		expect(document.querySelector('[data-testid="accept-findings"]')).toBeNull();
+	});
+
+	// ADR-0302 (S-0788): a story that cannot be accepted goes back to its agent from the page, which
+	// rebases it and takes each blocker's action; the answer is a send back, shown as one.
+	describe('Rebase and resolve', () => {
+		const BEHIND = 'story/S-0041 is 2 commits behind main: rebase it onto main';
+		const held = {
+			branch: 'story/S-0041',
+			blockers: [BEHIND],
+			plan: { level: 'none', commits: [], steps: [] }
+		};
+		const reason =
+			'S-0041 was sent back to in-progress: alex asked its agent to rebase story/S-0041 onto main and resolve 1 blocker, on TH-0042 (ADR-0302)';
+		const sentBack = () =>
+			json({
+				id: 'S-0041',
+				reason,
+				sent_back: true,
+				branch: 'story/S-0041',
+				base: 'main',
+				conflicts: [],
+				thread: 'TH-0042',
+				blockers: [BEHIND]
+			});
+		const offer = () => document.querySelector<HTMLButtonElement>('[data-testid="resolve"]');
+
+		it('is offered under the blockers while one holds Accept, and not when nothing blocks', async () => {
+			backend({ preview: held });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(offer()?.textContent?.trim()).toBe('Rebase and resolve');
+			const box = offer()!.closest('[role=alert]')!;
+			expect(box.textContent).toContain('This cannot be accepted from here yet');
+			expect(box.textContent?.replace(/\s+/g, ' ')).toContain(
+				'Sends S-0041 back to its agent, which rebases story/S-0041 onto main'
+			);
+			expect(button('Accept').disabled).toBe(true);
+			unmount(c);
+			document.body.innerHTML = '';
+			backend({});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(button('Accept').disabled).toBe(false);
+			expect(offer()).toBeNull();
+		});
+
+		it('sends the story back and shows the notice with the thread and what its agent resolves', async () => {
+			backend({ preview: held, resolve: sentBack });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			// once sent back, the story reads as in-progress
+			backend({ preview: held, resolve: sentBack, item: { ...STORY, status: 'in-progress' } });
+			offer()!.click();
+			await settle();
+			expect(calls('/api/items/S-0041/resolve')).toHaveLength(1);
+			const notice = document.querySelector('[data-testid="accept-sent-back"]')!;
+			expect(notice.getAttribute('role')).toBe('status');
+			expect(notice.textContent).toContain('Sent back to in-progress');
+			expect(notice.textContent).toContain(reason);
+			expect(notice.textContent).not.toContain('stopped on');
+			expect(notice.textContent).toContain('Its agent resolves:');
+			expect(
+				[...notice.querySelectorAll('[data-testid="sent-back-blockers"] li')].map(
+					(li) => li.textContent
+				)
+			).toEqual([BEHIND]);
+			const link = notice.querySelector('a')!;
+			expect(link.textContent).toBe('TH-0042');
+			expect(link.getAttribute('href')).toBe('/threads?thread=TH-0042');
+			expect(document.body.textContent).toContain('S-0041 is in-progress, not in review');
+			expect(offer()).toBeNull();
+		});
+
+		it('shows flai’s reason when it refuses, and keeps the story in review', async () => {
+			const why =
+				"nothing holds S-0041's acceptance, so its agent has nothing to resolve: accept it with flai accept S-0041";
+			backend({
+				preview: held,
+				resolve: () => json({ error: why, refused: { id: 'S-0041', reason: why } }, 422)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			offer()!.click();
+			await settle();
+			const error = document.querySelector('[data-testid="resolve-error"]')!;
+			expect(error.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+				`S-0041 was not sent back. flai said: ${why}`
+			);
+			expect(document.querySelector('[data-testid="accept-sent-back"]')).toBeNull();
+			expect(offer()?.disabled).toBe(false);
+		});
+
+		it('is offered with a refused acceptance’s text', async () => {
+			const message = 'rebase of story/S-0041 onto main stopped: main has moved on';
+			backend({ accept: () => ndjson([{ event: 'error', status: 422, error: message }]) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(offer()).toBeNull();
+			button('Accept').click();
+			await settle();
+			const box = offer()!.closest('[role=alert]')!;
+			expect(box.textContent).toContain('Not accepted.');
+			expect(box.textContent).toContain(message);
+		});
+
+		it('is offered with the merge queue’s refusal', async () => {
+			backend({
+				queue: () =>
+					json({
+						enabled: true,
+						queue: { mode: 'local', eligible: [], ineligible: [], enqueued: [], outcomes: [] }
+					}),
+				queueWrite: () =>
+					json(
+						{
+							error: 'S-0041 is not enqueued: it cannot be merged',
+							text: 'S-0041 is not enqueued: it cannot be merged',
+							reasons: [{ kind: 'conflicts', text: 'story/S-0041 conflicts with main' }]
+						},
+						422
+					)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Enqueue').click();
+			await settle();
+			const box = offer()!.closest('[data-testid="queue-refusal"]');
+			expect(box).not.toBeNull();
+		});
 	});
 
 	// ADR-0106: a branch that changes paths Claude Code protects is accepted by the operator only;
