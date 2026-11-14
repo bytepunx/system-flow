@@ -8,10 +8,14 @@
 	// giving way to Set up deploys when the block names no deploy; Run checks, once the namespace
 	// is deployed at its head with a deploy that passed; and Teardown, which the row asks the
 	// operator to confirm before it calls the page. A checks run has no step log for kluster.log
-	// to read, so the row shows the end of its log itself.
+	// to read, so the row shows the end of its log itself. Each log file it names, the checks run's
+	// and the failed step's, links the log page, and a log path in its error does too (S-0785); the
+	// folder of a deploy's step logs is no file, so Its log opens Logs, which links each step's.
 	import type { KlusterDeployment, KlusterStep } from '$lib/server/repo';
 	import { localTime } from '$lib/localtime';
 	import { resolve } from '$app/paths';
+	import LogLink from './LogLink.svelte';
+	import LogText from './LogText.svelte';
 
 	let {
 		deployment,
@@ -50,6 +54,8 @@
 	let confirming = $state(false);
 
 	const d = $derived(deployment);
+	// the last job's log is its failed step's when it is a file, else its steps' logs' folder
+	const failedLog = $derived(d.log?.endsWith('.log') ? d.log : undefined);
 	const href = $derived(resolve('/items/[id]', { id: deployment.story }));
 	// the story's column; a flai older than S-0663 sends the story's status alone
 	const column = $derived(d.column ?? d.status);
@@ -173,11 +179,15 @@
 				<a
 					class="underline"
 					href="#logs"
-					title={d.log}
 					data-testid="deployment-logs"
 					onclick={() => onLogs?.(d.namespace, d.failed_step)}>Its log</a
 				>
 			</p>
+			{#if failedLog}
+				<p data-testid="deployment-failed-log">
+					Its {d.failed_step ?? 'failed'} step's log: <LogLink path={failedLog} />
+				</p>
+			{/if}
 		</dd>
 		<dt class="text-muted">Last checks</dt>
 		<dd data-testid="deployment-checks">
@@ -190,7 +200,7 @@
 					<details data-testid="deployment-checks-log">
 						<summary class="cursor-pointer underline">Its log</summary>
 						{#if d.checks_log}
-							<p class="mt-1 font-mono text-xs text-muted">{d.checks_log}</p>
+							<p class="mt-1 text-xs text-muted"><LogLink path={d.checks_log} /></p>
 						{/if}
 						{#if d.checks_log_tail}
 							<pre
@@ -205,7 +215,9 @@
 		</dd>
 	</dl>
 	{#if d.error}
-		<p class="mt-2 text-sm text-danger" data-testid="deployment-error">{d.error}</p>
+		<p class="mt-2 text-sm text-danger" data-testid="deployment-error">
+			<LogText text={d.error} />
+		</p>
 	{/if}
 	{#if d.job}
 		<p class="mt-2 text-sm" role="status" data-testid="deployment-job">

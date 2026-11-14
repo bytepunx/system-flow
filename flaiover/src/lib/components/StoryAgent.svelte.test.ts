@@ -199,11 +199,43 @@ describe('StoryAgent (S-0104)', () => {
 		const failed = document
 			.querySelector('[data-testid="story-agent-failed"]')!
 			.textContent!.replace(/\s+/g, ' ');
-		expect(failed).toContain('flow-S-0104.log');
+		// S-0785: its output is a link to the log page, not a path to open on the host
+		expect(failed).toContain('Its output: /home/me/.flai/serve/agents/flow-S-0104.log.');
+		expect(failed).not.toContain('on the host');
+		const log = document.querySelector<HTMLAnchorElement>(
+			'[data-testid="story-agent-failed"] [data-testid="log-link"]'
+		)!;
+		expect(log.textContent).toBe('/home/me/.flai/serve/agents/flow-S-0104.log');
+		const href = new URL(log.getAttribute('href')!, 'http://x');
+		expect(href.pathname).toBe('/ops/log');
+		expect(href.searchParams.get('path')).toBe('/home/me/.flai/serve/agents/flow-S-0104.log');
 		// S-0116: either way to have flai start another
 		expect(failed).toContain(
 			'Moving the story back to ready starts another, and so does changing its agent while it is in ready.'
 		);
+	});
+
+	it("links a log its why names whole, a story's ID in the log's name kept in its path (S-0785)", async () => {
+		const log = '/home/me/.flai/serve/agents/flow-S-0104-20260923T180000Z.log';
+		await show({
+			'S-0104': {
+				state: 'failed',
+				why: `ended (exit 1) with S-0104 in in-progress; read ${log}`,
+				run: { ...run, ended: '2026-09-23T18:30:00Z', exit: 1 }
+			}
+		});
+		const line = document.querySelector<HTMLElement>('[data-testid="story-agent-line"]')!;
+		expect(line.textContent).toBe(
+			`agent failed (claude-code, claude-haiku-4-5): ended (exit 1) with S-0104 in in-progress; read ${log}`
+		);
+		const links = [...line.querySelectorAll<HTMLAnchorElement>('[data-testid="log-link"]')];
+		expect(links.map((a) => a.dataset.path)).toEqual([log]);
+		// the story it names outside the path is linked, and the path holds no link of its own
+		expect([...line.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
+			'/items/S-0104',
+			links[0].getAttribute('href')
+		]);
+		expect(links[0].querySelector('a')).toBeNull();
 	});
 
 	// S-0757: a start held on, or failed after, the image job that makes its agent images links the
@@ -263,6 +295,11 @@ describe('StoryAgent (S-0104)', () => {
 				.textContent!.replace(/\s+/g, ' ');
 			expect(line).toContain(`agent could not be started after the image job ${job}: ${failure}`);
 			expect(link()!.getAttribute('href')).toBe(`/ops/images#image-job-${job}`);
+			// S-0785: the job's log the cause names links the log page
+			const log = document.querySelector<HTMLAnchorElement>(
+				'[data-testid="story-agent-image-failed"] [data-testid="log-link"]'
+			)!;
+			expect(log.dataset.path).toBe(`/home/me/.flai/serve/image-jobs/${job}.log`);
 			// in place of the bare refusal, and Retry still asks flai for another
 			expect(document.querySelector('[data-testid="story-agent-line"]')).toBeNull();
 			expect(document.querySelector('[data-testid="story-agent-retry"]')).not.toBeNull();

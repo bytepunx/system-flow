@@ -423,7 +423,7 @@
 					'plan',
 					{},
 					(run: Partial<PlanRun>) =>
-						`planner started for ${id} (pid ${run.pid})${run.log ? `; its output is in ${run.log} on the host` : ''}`
+						`planner started for ${id} (pid ${run.pid})${run.log ? `; its output: ${run.log}` : ''}`
 				);
 				return loadAgents();
 			case 'cancel':

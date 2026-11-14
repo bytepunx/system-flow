@@ -491,6 +491,31 @@ describe('Klusters page (S-0580, S-0586)', () => {
 		);
 	});
 
+	it("links the job's output and a log its error names to the log page (S-0785)", async () => {
+		const failed = '.flai-cache/kluster/logs/up-k3d.log';
+		reads = [
+			answer(
+				status({
+					last: job('up', {
+						ended_at: '2026-11-07T01:01:00Z',
+						outcome: 'failed',
+						error: `k3d cluster create exited 1; read ${failed}`
+					})
+				})
+			)
+		];
+		await show();
+		const link = (id: string) =>
+			q(id)!.querySelector<HTMLAnchorElement>('[data-testid="log-link"]')!;
+		const output = link('kluster-job-log');
+		expect(output.dataset.path).toBe('.flai-cache/kluster/up.log');
+		expect(new URL(output.href).pathname).toBe('/ops/log');
+		expect(q('kluster-job-log')!.textContent!.trim()).toBe(
+			'Its output: .flai-cache/kluster/up.log'
+		);
+		expect(link('kluster-last-error').dataset.path).toBe(failed);
+	});
+
 	it("shows flai's refusal word for word", async () => {
 		reads = [answer(status({ cluster: { ...status().cluster!, running: false } }))];
 		await show();

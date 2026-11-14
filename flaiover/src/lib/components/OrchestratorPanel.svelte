@@ -15,6 +15,7 @@
 		type OrchestratorView
 	} from '$lib/strategic';
 	import type { Snippet } from 'svelte';
+	import LogText from './LogText.svelte';
 	import RolePage, { roleWithRuns } from './RolePage.svelte';
 	import { enableCommand } from './StrategicAgentPanel.svelte';
 
@@ -113,7 +114,7 @@
 		</p>
 	{/if}
 	{#if said}
-		<p class="mt-2" role="status" data-testid="orchestrator-said">{said}</p>
+		<p class="mt-2" role="status" data-testid="orchestrator-said"><LogText text={said} /></p>
 	{/if}
 {/snippet}
 

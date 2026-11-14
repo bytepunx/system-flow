@@ -17,6 +17,7 @@
 		type AnalyzerView
 	} from '$lib/strategic';
 	import type { Snippet } from 'svelte';
+	import LogText from './LogText.svelte';
 	import RolePage, { roleWithRuns } from './RolePage.svelte';
 	import { enableCommand } from './StrategicAgentPanel.svelte';
 
@@ -81,7 +82,7 @@
 			};
 			// as flai's journal words it (hostapi describeAnalyze)
 			said = r.ok
-				? `started ${data.command} to analyze, focus ${data.focus}, as ${data.agent} (pid ${data.pid})${data.log ? `; its output is in ${data.log} on the host` : ''}`
+				? `started ${data.command} to analyze, focus ${data.focus}, as ${data.agent} (pid ${data.pid})${data.log ? `; its output: ${data.log}` : ''}`
 				: `refused: ${data.error ?? r.statusText}`;
 		} catch (err) {
 			said = `refused: ${err instanceof Error ? err.message : String(err)}`;
@@ -149,7 +150,7 @@
 		</p>
 	{/if}
 	{#if said}
-		<p class="mt-2" role="status" data-testid="analyzer-said">{said}</p>
+		<p class="mt-2" role="status" data-testid="analyzer-said"><LogText text={said} /></p>
 	{/if}
 {/snippet}
 

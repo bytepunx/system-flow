@@ -42,6 +42,8 @@ function render(props: Record<string, unknown>) {
 	flushSync();
 }
 const q = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+const logLink = (within: ParentNode) =>
+	within.querySelector<HTMLAnchorElement>('[data-testid="log-link"]')!;
 const text = (id: string) => q(id)?.textContent?.replace(/\s+/g, ' ').trim();
 const buttonNamed = (label: string, within: ParentNode = document) =>
 	Array.from(within.querySelectorAll('button')).find((b) => b.textContent?.trim() === label);
@@ -76,6 +78,16 @@ describe('DeploymentRow examples', () => {
 		expect(text('deployment-checks-asked-by')).toBe('at bb8cec4f4d2e, asked by agent-S-0663');
 		const log = '.flai-cache/serve/checks/S-0663-20261113T091700Z.log';
 		expect(text('deployment-checks-log')).toContain(log);
+		// S-0785: the checks run's log is a link to the log page, not a path to copy
+		const checks = logLink(q('deployment-checks-log')!);
+		expect(checks.textContent).toBe(log);
+		expect(new URL(checks.href).pathname).toBe('/ops/log');
+		expect(new URL(checks.href).searchParams.get('path')).toBe(log);
+		// the last deploy's log is the folder of its steps' logs: Its log opens Logs, and no
+		// folder is linked as a log
+		expect(q('deployment-logs')!.getAttribute('title')).toBeNull();
+		expect(q('deployment-failed-log')).toBeNull();
+		expect(document.querySelectorAll('[data-testid="log-link"]')).toHaveLength(1);
 		expect(q('deployment-checks-tail')!.textContent).toContain('check api passed');
 		expect(buttonNamed('Deploy')).toBeUndefined();
 		expect(buttonNamed('Run checks')).toBeDefined();
@@ -101,6 +113,11 @@ describe('DeploymentRow examples', () => {
 		expect(text('deployment-outcome')).toBe('failed, at its deploy step');
 		expect(q('deployment-outcome')!.className).toContain('text-danger');
 		expect(text('deployment-error')).toContain('the deploy step exited 1');
+		// S-0785: the failed step's log, in its error and beside Its log, links the log page
+		const log = '.flai-cache/kluster/logs/s-0586/deploy.log';
+		expect(logLink(q('deployment-error')!).dataset.path).toBe(log);
+		expect(text('deployment-failed-log')).toBe(`Its deploy step's log: ${log}`);
+		expect(logLink(q('deployment-failed-log')!).dataset.path).toBe(log);
 		expect(text('deployment-asked-by')).toContain('asked by a shell');
 		expect(buttonNamed('Deploy')).toBeDefined();
 		expect(buttonNamed('Run checks')).toBeUndefined();

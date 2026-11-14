@@ -4,6 +4,7 @@
 // hold (S-0129), and so is a story in progress that this host has had no agent for, with where it was
 // begun (S-0177).
 
+import { splitLogPaths } from '$lib/logs';
 import { settingsPage, type SettingsPageSlug } from '$lib/settingspages';
 
 export type AgentRun = {
@@ -249,16 +250,27 @@ export function shareTitle(s: Share): string {
 }
 
 /** A part of a reason: text, a story ID to link, or a Configuration page's slug to link. */
-export type ReasonPart = { text: string; id?: string; page?: SettingsPageSlug };
+export type ReasonPart = { text: string; id?: string; page?: SettingsPageSlug; log?: string };
 
 /**
- * A hold's reason, a refusal, or a waiting reason cut into text, the story IDs in it, and the
- * /settings/<page> paths in it that name a Configuration page (ADR-0261), so each can be a link. A
- * path naming no page stays text, and a comma or full stop after a path is not part of it.
+ * A hold's reason, a refusal, or a waiting reason cut into text, the story IDs in it, the
+ * /settings/<page> paths in it that name a Configuration page (ADR-0261), and the log paths in it
+ * (S-0785, splitLogPaths), so each can be a link. A path naming no page stays text, and a comma or
+ * full stop after a path is not part of it. Log paths are cut out first, so a story ID in a log's
+ * name stays in its path.
  */
 export function reasonParts(reason: string): ReasonPart[] {
 	const parts: ReasonPart[] = [];
-	const pieces = reason.split(/\b(S-\d+)\b|(?<![\w/.])(\/settings\/[a-z][a-z-]*[a-z])/);
+	for (const seg of splitLogPaths(reason)) {
+		if ('path' in seg) push(parts, { text: seg.path, log: seg.path });
+		else textParts(parts, seg.text);
+	}
+	return parts;
+}
+
+/** Adds the story IDs and settings pages of text, which names no log, to parts. */
+function textParts(parts: ReasonPart[], text: string) {
+	const pieces = text.split(/\b(S-\d+)\b|(?<![\w/.])(\/settings\/[a-z][a-z-]*[a-z])/);
 	for (let i = 0; i < pieces.length; i += 3) {
 		push(parts, { text: pieces[i] ?? '' });
 		const id = pieces[i + 1];
@@ -269,14 +281,14 @@ export function reasonParts(reason: string): ReasonPart[] {
 			push(parts, page ? { text: path, page } : { text: path });
 		}
 	}
-	return parts;
 }
 
 /** Adds part to parts, joining text to the text before it. */
 function push(parts: ReasonPart[], part: ReasonPart) {
 	if (!part.text) return;
 	const last = parts.at(-1);
-	if (last && !last.id && !last.page && !part.id && !part.page) last.text += part.text;
+	const plain = (p: ReasonPart) => !p.id && !p.page && !p.log;
+	if (last && plain(last) && plain(part)) last.text += part.text;
 	else parts.push(part);
 }
 

@@ -10,6 +10,7 @@
 	import type { PlanRun } from '$lib/activity';
 	import type { PlannerView } from '$lib/planner';
 	import type { Snippet } from 'svelte';
+	import LogText from './LogText.svelte';
 	import RolePage, { roleWithRuns } from './RolePage.svelte';
 	import { enableCommand } from './StrategicAgentPanel.svelte';
 
@@ -59,7 +60,7 @@
 			const r = await api(`/api/items/${of}/plan`, { method: 'POST' });
 			const data = (await r.json().catch(() => ({}))) as Partial<PlanRun> & { error?: string };
 			said = r.ok
-				? `planner started for ${of} (pid ${data.pid})${data.log ? `; its output is in ${data.log} on the host` : ''}`
+				? `planner started for ${of} (pid ${data.pid})${data.log ? `; its output: ${data.log}` : ''}`
 				: `refused: ${data.error ?? r.statusText}`;
 		} catch (err) {
 			said = `refused: ${err instanceof Error ? err.message : String(err)}`;
@@ -103,7 +104,7 @@
 			</p>
 		{/if}
 		{#if said}
-			<p class="mt-2" role="status" data-testid="planner-said">{said}</p>
+			<p class="mt-2" role="status" data-testid="planner-said"><LogText text={said} /></p>
 		{/if}
 	</section>
 </RolePage>

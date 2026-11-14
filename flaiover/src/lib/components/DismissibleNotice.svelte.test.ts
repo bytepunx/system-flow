@@ -58,6 +58,22 @@ describe('DismissibleNotice (S-0151)', () => {
 		});
 	});
 
+	it('links each log path it names to the log page, beside the files it opens (S-0785)', () => {
+		const log = '/home/op/.flai/serve/agents/flow-S-0378-20261003T100000Z.log';
+		const text = `S-0378: agent could not be started; read ${log}, and docs/users/flai.md:12`;
+		c = mount(DismissibleNotice, {
+			target: document.body,
+			props: { text, ondismiss: () => {}, testid: 'said', links: { story: 'S-0378' } }
+		});
+		flushSync();
+		const said = document.querySelector('[data-testid="said"]')!;
+		expect(said.textContent).toBe(text);
+		const link = said.querySelector<HTMLAnchorElement>('[data-testid="log-link"]')!;
+		expect(link.dataset.path).toBe(log);
+		expect(new URL(link.href).pathname).toBe('/ops/log');
+		expect(said.querySelector('button')!.textContent).toBe('docs/users/flai.md:12');
+	});
+
 	it('takes the alert role for a refusal', () => {
 		c = mount(DismissibleNotice, {
 			target: document.body,

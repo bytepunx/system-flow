@@ -17,7 +17,8 @@
 	// its /settings path links it, so the operator goes to the setting it lacks (ADR-0261). An agent
 	// whose start waits for the image job that makes its agent images says it waits for its image,
 	// not that it failed, and one whose start failed after that job gives flai's cause, each with the
-	// job linked on the Agent images page (S-0757).
+	// job linked on the Agent images page (S-0757). Each log path flai names, the failed run's
+	// output among them, links the log page, so the operator reads it here (S-0785).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -38,6 +39,7 @@
 	import AgentDot from './AgentDot.svelte';
 	import AgentStream from './AgentStream.svelte';
 	import { imageJobAnchor } from './ImageJob.svelte';
+	import LogLink from './LogLink.svelte';
 
 	let {
 		story,
@@ -156,7 +158,7 @@
 				class="underline"
 				href={resolve('/settings/[page]', { page: part.page })}
 				data-testid="story-agent-settings-link">{part.text}</a
-			>{:else}{part.text}{/if}{/each}{/snippet}
+			>{:else if part.log}<LogLink path={part.log} />{:else}{part.text}{/if}{/each}{/snippet}
 
 {#snippet imageJob(id: string)}<a
 		class="underline"
@@ -193,7 +195,9 @@
 				)}
 			</p>
 		{:else}
-			<p class="text-xs" data-testid="story-agent-line">{activityLine(activity)}</p>
+			<p class="text-xs" data-testid="story-agent-line">
+				{@render linked(activityLine(activity))}
+			</p>
 		{/if}
 		{#if started}
 			<p class="mt-1 text-xs text-muted">
@@ -220,8 +224,7 @@
 		{/if}
 		{#if activity.state === 'failed'}
 			<p class="mt-1 text-xs text-muted" data-testid="story-agent-failed">
-				{#if activity.run.log}Its output is in <code class="break-all">{activity.run.log}</code> on the
-					host.{/if}
+				{#if activity.run.log}Its output: <LogLink path={activity.run.log} />.{/if}
 				Moving the story back to ready starts another, and so does changing its agent while it is in ready.
 			</p>
 		{/if}
@@ -252,7 +255,7 @@
 			</p>
 		{/if}
 		{#if started}
-			<AgentStream {story} started={activity.run.started} open={live} />
+			<AgentStream {story} started={activity.run.started} open={live} log={activity.run.log} />
 		{/if}
 	</section>
 {:else if canStart || actError?.action === 'start'}

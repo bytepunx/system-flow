@@ -258,6 +258,12 @@ describe('Deployments page (S-0581)', () => {
 		const panels = all('step-panel');
 		expect(panels.map((p) => p.getAttribute('data-step'))).toEqual(['build', 'deploy']);
 		expect(panels[0].textContent).toContain('.flai-cache/kluster/logs/s-0581/build.log');
+		// S-0785: each step's log is a link to the log page
+		const link = panels[0].querySelector<HTMLAnchorElement>(
+			'[data-testid="step-log"] [data-testid="log-link"]'
+		)!;
+		expect(link.dataset.path).toBe('.flai-cache/kluster/logs/s-0581/build.log');
+		expect(new URL(link.href).pathname).toBe('/ops/log');
 		expect(panels[0].querySelector('[data-testid="log-feed-status"]')!.textContent).toBe('passed');
 	});
 

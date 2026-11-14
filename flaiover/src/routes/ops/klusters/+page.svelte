@@ -9,7 +9,8 @@
 	// reports, turning the action off, and a link to Deployments. Every write goes through flai;
 	// flai's refusals and errors are shown word for word. The block's and the config's writes need
 	// the settings host action, which only the operator turns on, on the host (ADR-0039): with it off,
-	// the page says so once, in one place, with what to run there.
+	// the page says so once, in one place, with what to run there. A job's output log, and each log
+	// path in flai's refusals and errors, links the log page (S-0785).
 	import type {
 		KlusterJob,
 		KlusterSetting,
@@ -22,6 +23,8 @@
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import DeploySettings from '$lib/components/DeploySettings.svelte';
+	import LogLink from '$lib/components/LogLink.svelte';
+	import LogText from '$lib/components/LogText.svelte';
 
 	// How often the page asks again while an up or down runs; either takes minutes.
 	const POLL_MS = 3000;
@@ -320,10 +323,12 @@
 				at {j.ended_at}.
 			</p>
 			{#if j.error}
-				<p class="mt-1 text-danger" data-testid="kluster-last-error">{j.error}</p>
+				<p class="mt-1 text-danger" data-testid="kluster-last-error"><LogText text={j.error} /></p>
 			{/if}
 		{/if}
-		<p class="mt-1 text-xs text-muted">Its output: <code class="font-mono">{j.log}</code></p>
+		<p class="mt-1 text-xs text-muted" data-testid="kluster-job-log">
+			Its output: <LogLink path={j.log} />
+		</p>
 		{#if j.log_tail}
 			<pre
 				class="mt-2 max-h-64 overflow-auto rounded bg-surface p-2 font-mono text-xs"
@@ -648,7 +653,7 @@
 					role="alert"
 					data-testid="kluster-status-error"
 				>
-					{status.status_error}
+					<LogText text={status.status_error} />
 				</p>
 			{/if}
 			{#if status.findings?.length}
@@ -721,7 +726,7 @@
 					role="alert"
 					data-testid="kluster-action-error"
 				>
-					{actionError}
+					<LogText text={actionError} />
 				</p>
 			{/if}
 			{#if running}

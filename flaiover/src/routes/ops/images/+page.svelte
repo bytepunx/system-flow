@@ -12,10 +12,12 @@
 	// word; a 403 says the agent host action is off with the command that turns it on, and disables
 	// Retry; a 501 says to upgrade flai on the host in place of the page. A link to a job's card,
 	// /ops/images#image-job-<id> as a story's agent gives it, scrolls to it once the jobs are drawn.
+	// A log path in a refusal or an error links the log page (S-0785).
 	import type { AgentImage, ImageJob as ImageJobRecord, ImageLog, ImagesState } from '$lib/images';
 	import { api } from '$lib/api';
 	import { onMount, tick } from 'svelte';
 	import ImageJob from '$lib/components/ImageJob.svelte';
+	import LogText from '$lib/components/LogText.svelte';
 
 	// How often the page asks again while a job runs or waits; a job takes minutes.
 	const POLL_MS = 3000;
@@ -157,7 +159,7 @@
 
 {#if error}
 	<p class="mt-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
-		{error}
+		<LogText text={error} />
 	</p>
 {/if}
 {#if tooOld}
@@ -257,7 +259,7 @@
 				>
 				{#if makeError}
 					<p class="text-xs text-danger" role="alert" data-testid="images-make-error">
-						{makeError}
+						<LogText text={makeError} />
 					</p>
 				{/if}
 			</div>

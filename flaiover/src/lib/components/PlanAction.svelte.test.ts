@@ -116,7 +116,7 @@ describe('PlanAction (S-0208)', () => {
 		await settle();
 		expect(api).toHaveBeenCalledWith('/api/items/E-0016/plan', { method: 'POST' });
 		expect(said).toEqual([
-			'planner started for E-0016 (pid 42); its output is in /home/op/.flai/serve/plan-E-0016.log on the host'
+			'planner started for E-0016 (pid 42); its output: /home/op/.flai/serve/plan-E-0016.log'
 		]);
 		expect(running()).not.toBeNull();
 	});

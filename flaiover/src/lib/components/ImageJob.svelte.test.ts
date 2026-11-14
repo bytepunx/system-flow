@@ -227,6 +227,28 @@ describe('ImageJob', () => {
 		expect((q('image-job-retry') as HTMLButtonElement).disabled).toBe(true);
 	});
 
+	it('links the log a cause or a refusal names to the log page (S-0785)', async () => {
+		readLog.mockResolvedValue(log({ state: 'ended', outcome: 'failed' }));
+		const ownLog = '/home/op/.flai/serve/image-jobs/ij-0001.log';
+		const busyLog = '/home/op/.flai/serve/image-jobs/ij-0002.log';
+		const cause = `docker build exited with status 1; read its log ${ownLog}, mend what it names`;
+		const onretry = vi.fn(async () => {
+			throw new Error(`the image job ij-0002 runs; its log is ${busyLog}`);
+		});
+		show({ job: job({ state: 'ended', outcome: 'failed', cause, log_size: 1 }), onretry });
+		await settle();
+		const links = (id: string) =>
+			[...q(id)!.querySelectorAll<HTMLAnchorElement>('[data-testid="log-link"]')].map((a) => ({
+				path: a.dataset.path,
+				page: new URL(a.href).pathname
+			}));
+		expect(q('image-job-cause')!.textContent).toBe(cause);
+		expect(links('image-job-cause')).toEqual([{ path: ownLog, page: '/ops/log' }]);
+		(q('image-job-retry') as HTMLButtonElement).click();
+		await settle();
+		expect(links('image-job-retry-error')).toEqual([{ path: busyLog, page: '/ops/log' }]);
+	});
+
 	it("shows a failed job's log read refused word for word", async () => {
 		readLog.mockRejectedValueOnce(new Error('images.log: no image job "ij-0001"'));
 		show({ job: job({ state: 'ended', outcome: 'failed', log_size: 10 }) });

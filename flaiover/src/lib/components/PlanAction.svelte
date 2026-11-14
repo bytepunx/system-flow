@@ -51,7 +51,7 @@
 			if (!r.ok) onresult(`refused: ${data.error ?? r.statusText}`);
 			else
 				onresult(
-					`planner started for ${id} (pid ${data.pid})${data.log ? `; its output is in ${data.log} on the host` : ''}`
+					`planner started for ${id} (pid ${data.pid})${data.log ? `; its output: ${data.log}` : ''}`
 				);
 		} catch (e) {
 			onresult(`refused: ${e instanceof Error ? e.message : String(e)}`);

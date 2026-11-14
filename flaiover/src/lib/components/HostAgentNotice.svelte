@@ -8,11 +8,13 @@
 	// The caret beside its bold title collapses it to that title (S-0150). The collapse is kept per
 	// browser against what the notice says, so a reload keeps it and any change to it opens it again.
 	// A waiting reason or a failed start links each story and Configuration page it names by its
-	// /settings path, so the operator goes to the setting it lacks (ADR-0261).
+	// /settings path, so the operator goes to the setting it lacks (ADR-0261), and each log path it
+	// names links the log page (S-0785).
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { reasonParts, type HostAgent } from '$lib/activity';
 	import { localTime } from '$lib/localtime';
+	import LogLink from './LogLink.svelte';
 
 	let { refresh = 0, status: given }: { refresh?: number; status?: HostAgent | null } = $props();
 	let asked = $state<HostAgent | null>(null);
@@ -74,7 +76,7 @@
 				class="underline"
 				href={resolve('/settings/[page]', { page: part.page })}
 				data-testid="host-agent-settings-link">{part.text}</a
-			>{:else}{part.text}{/if}{/each}{/snippet}
+			>{:else if part.log}<LogLink path={part.log} />{:else}{part.text}{/if}{/each}{/snippet}
 
 {#snippet title(text: string)}
 	<button

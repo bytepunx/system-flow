@@ -6,7 +6,7 @@ import type { StoryActivity } from '$lib/activity';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) =>
+	resolve: (route: string, params: Record<string, string> = {}) =>
 		route.replace('[id]', params.id ?? '').replace('[...path]', params.path ?? '')
 }));
 

@@ -142,6 +142,16 @@ describe('a held story (S-0129)', () => {
 			{ text: '.' }
 		]);
 	});
+	it("cuts out each log path whole, a story's ID in its name kept in it (S-0785)", () => {
+		const log = '/home/op/.flai/serve/agents/flow-S-0042-20261003T100000Z.log';
+		expect(reasonParts(`S-0042 failed; read ${log}, then /settings/agents`)).toEqual([
+			{ text: 'S-0042', id: 'S-0042' },
+			{ text: ' failed; read ' },
+			{ text: log, log },
+			{ text: ', then ' },
+			{ text: '/settings/agents', page: 'agents' }
+		]);
+	});
 	it('leaves a /settings path that names no page as text', () => {
 		expect(reasonParts('see /settings/nowhere or https://host/settings/agents')).toEqual([
 			{ text: 'see /settings/nowhere or https://host/settings/agents' }

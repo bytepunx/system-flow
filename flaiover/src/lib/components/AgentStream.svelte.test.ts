@@ -42,13 +42,38 @@ describe('AgentStream (S-0142)', () => {
 		vi.useRealTimers();
 		document.body.innerHTML = '';
 	});
-	const show = async (props: { started?: string; open?: boolean } = {}) => {
+	const show = async (props: { started?: string; open?: boolean; log?: string } = {}) => {
 		c = mount(AgentStream, {
 			target: document.body,
 			props: { story: 'S-0142', started: '2026-09-29T05:42:53Z', ...props }
 		});
 		await settle();
 	};
+
+	it("links the run's log for the entries it no longer keeps, and a log flai's refusal names (S-0785)", async () => {
+		const log = '/home/op/.flai/serve/agents/flow-S-0142-20260929T054253Z.log';
+		api.mockResolvedValueOnce(
+			answer(read({ from: 4000, running: false, entries: [{ kind: 'text', text: 'Done.' }] }))
+		);
+		await show({ log });
+		expect(lines()[0]).toBe("… earlier entries are in the agent's log");
+		const link = box().querySelector<HTMLAnchorElement>(
+			'[data-testid="agent-stream-earlier"] [data-testid="log-link"]'
+		)!;
+		expect(link.textContent).toBe("the agent's log");
+		expect(new URL(link.href).pathname).toBe('/ops/log');
+		expect(new URL(link.href).searchParams.get('path')).toBe(log);
+		unmount(c!);
+		c = undefined;
+		document.body.innerHTML = '';
+		api.mockResolvedValueOnce(refusal(404, `no stream: the log ${log} is gone`));
+		await show({ log });
+		const alert = document.querySelector<HTMLElement>('[role="alert"]')!;
+		expect(alert.textContent).toBe(`no stream: the log ${log} is gone`);
+		expect(alert.querySelector<HTMLAnchorElement>('[data-testid="log-link"]')!.dataset.path).toBe(
+			log
+		);
+	});
 
 	it('shows what the agent said and did, and reads on from where it stopped while it runs', async () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });

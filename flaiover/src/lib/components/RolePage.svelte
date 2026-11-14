@@ -48,6 +48,7 @@
 	import { theme } from '$lib/viz/palette';
 	import { hours, normalise, roleByDay, type Report, type RoleMeasure } from '$lib/viz/charts';
 	import Chart from './Chart.svelte';
+	import LogText from './LogText.svelte';
 	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let {
@@ -162,7 +163,7 @@
 		if (action === 'start')
 			return `lifted the hold and started ${run.command ?? `the ${role.name}`} as ${agent}${pid}`;
 		const onItem = a.item ? ` on ${a.item}` : '';
-		const log = a.log ? `; its output is in ${a.log} on the host` : '';
+		const log = a.log ? `; its output: ${a.log}` : '';
 		return `started ${run.command ?? `the ${role.name}`} to run the ${role.name}${onItem} as ${agent}${pid}${log}`;
 	}
 
@@ -241,7 +242,7 @@
 		{/if}
 	{/if}
 	{#if said}
-		<p class="mt-2" role="status" data-testid="{role.name}-said">{said}</p>
+		<p class="mt-2" role="status" data-testid="{role.name}-said"><LogText text={said} /></p>
 	{/if}
 {/snippet}
 

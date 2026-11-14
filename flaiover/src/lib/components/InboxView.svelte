@@ -3,13 +3,14 @@
 	// document (S-0173). A hand-written open question (kind "question") has no thread of its own to
 	// reply to, so it is answered right here (S-0090) as well as on its story's page. A thread's
 	// recommendation awaiting the designer is shown with its source and confirmed right here too
-	// (ADR-0090).
+	// (ADR-0090). A log path in an entry's detail or in flai's refusal links the log page (S-0785).
 	import type { Inbox, InboxEntry } from '$lib/inbox.svelte';
 	import { inboxState } from '$lib/inbox.svelte';
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import { slug } from '$lib/markdown';
 	import { localTime } from '$lib/localtime';
+	import LogText from './LogText.svelte';
 	import QuestionAnswer from './QuestionAnswer.svelte';
 
 	let { inbox, writable = false }: { inbox: Inbox; writable?: boolean } = $props();
@@ -62,14 +63,16 @@
 					<li class="rounded border border-line bg-surface px-3 py-2 text-sm">
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the server builds these dashboard paths -->
 						<a class="underline" href={e.href}>{e.title}</a>
-						{#if e.detail}<span class="block text-xs text-muted">{e.detail}</span>{/if}
+						{#if e.detail}
+							<span class="block text-xs text-muted"><LogText text={e.detail} /></span>
+						{/if}
 						{#if e.at}<span class="block text-xs text-muted">{localTime(e.at)}</span>{/if}
 						{#if e.recommendation}
 							{@const rec = e.recommendation}
 							<div class="mt-2 border-l-2 border-info pl-2 text-xs" data-recommendation={e.key}>
 								<span class="text-[10px] text-info uppercase">recommendation</span>
 								{rec.author}
-								<p class="mt-0.5 line-clamp-4 whitespace-pre-line text-ink">{rec.text}</p>
+								<p class="mt-0.5 line-clamp-4 whitespace-pre-line text-ink"><LogText text={rec.text} /></p>
 								{#if rec.source}
 									<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the heading added to it -->
 									<p class="mt-0.5 text-muted" data-source>
@@ -91,7 +94,7 @@
 									>
 								{/if}
 								{#if refused[e.key]}
-									<p class="mt-1 text-danger" role="alert">{refused[e.key]}</p>
+									<p class="mt-1 text-danger" role="alert"><LogText text={refused[e.key]} /></p>
 								{/if}
 							</div>
 						{/if}

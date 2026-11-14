@@ -35,6 +35,7 @@
 	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
 	import { linkSegments, type LinkSegment } from '$lib/filelinks';
+	import LogText from './LogText.svelte';
 	import { changedComponents, componentFile, diffPaths } from '$lib/explorer/changed';
 	import type { Component, ComponentsCatalogue } from '$lib/server/repo';
 	import { tick } from 'svelte';
@@ -1123,7 +1124,7 @@
 					role="alert"
 					data-testid="checks-error"
 				>
-					{checksError}
+					<LogText text={checksError} />
 				</p>
 			{/if}
 			{#if checksRun?.started}
@@ -1200,7 +1201,7 @@
 				<span class="text-xs font-normal text-muted">the last flai verify of the story</span>
 			</h2>
 			{#if verifyError}
-				<p class="text-muted" data-testid="verify-error">{verifyError}</p>
+				<p class="text-muted" data-testid="verify-error"><LogText text={verifyError} /></p>
 			{:else if verify}
 				<p data-testid="verify-summary">
 					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}

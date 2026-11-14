@@ -11,8 +11,10 @@
 	// more when it ends (ADR-0263 §4). A failed job shows its cause and its failed step in the error
 	// style, and Retry, which calls the page's onretry and shows its refusal word for word. The
 	// card's element id is imageJobAnchor(job.id), image-job-<id>, so a story's agent can link to it.
+	// A log path in its cause or in the refusal links the log page (S-0785).
 	import { untrack } from 'svelte';
 	import LogFeed, { type LogPart } from '$lib/components/LogFeed.svelte';
+	import LogText from '$lib/components/LogText.svelte';
 	import type { ImageJob, ImageLog } from '$lib/images';
 	import { localTime } from '$lib/localtime';
 
@@ -152,7 +154,7 @@
 			role="alert"
 			data-testid="image-job-failure"
 		>
-			{#if job.cause}<p data-testid="image-job-cause">{job.cause}</p>{/if}
+			{#if job.cause}<p data-testid="image-job-cause"><LogText text={job.cause} /></p>{/if}
 			{#if failed && job.step}
 				<p class="mt-1">
 					At its step <code class="font-mono" data-testid="image-job-failed-step">{job.step}</code>
@@ -171,7 +173,7 @@
 			>
 			{#if retryError}
 				<p class="text-xs text-danger" role="alert" data-testid="image-job-retry-error">
-					{retryError}
+					<LogText text={retryError} />
 				</p>
 			{/if}
 		</div>

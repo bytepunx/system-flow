@@ -2,9 +2,10 @@
 	import type { AgentRun } from '$lib/activity';
 	import type { RunSpan } from '$lib/strategic';
 
+	type StrategicFields = Pick<AgentRun, 'agent' | 'command' | 'harness' | 'model' | 'why' | 'log'>;
+
 	/** What the panel reads of a strategic agent's run, whichever agent's it is. */
-	export type StrategicRun = RunSpan &
-		Pick<AgentRun, 'agent' | 'command' | 'harness' | 'model' | 'why'> & { trigger?: string };
+	export type StrategicRun = RunSpan & StrategicFields & { trigger?: string };
 
 	/** The words and the command that turn a host action on, for a line that says it is off. */
 	export { enableCommand };
@@ -18,6 +19,7 @@
 	// the state and the actions of its host action, its settings right under them so the operator
 	// reaches them without scrolling past what changes (S-0533), the fields of its runs, what an entry
 	// shows besides its items, duration, and cost, and sections before the log and after the runs.
+	// A log path in an entry, a run's why, or the run's stream note links the log page (S-0785).
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { localTime } from '$lib/localtime';
@@ -33,6 +35,7 @@
 		type StreamRole
 	} from '$lib/strategic';
 	import AgentStream from './AgentStream.svelte';
+	import LogText from './LogText.svelte';
 
 	let {
 		kind,
@@ -138,7 +141,13 @@
 					<dd data-testid="{kind}-current-trigger">{current.trigger}</dd>
 				{/if}
 			</dl>
-			<AgentStream story={read.story} plan={read.plan} role={read.role} started={current.started} />
+			<AgentStream
+				story={read.story}
+				plan={read.plan}
+				role={read.role}
+				started={current.started}
+				log={current.log}
+			/>
 		{:else}
 			<p class="mt-1 text-muted" data-testid="{kind}-current-none">No {kind} is running.</p>
 		{/if}
@@ -168,7 +177,7 @@
 					<li class="rounded border border-line p-2" data-testid="{kind}-entry">
 						<p>
 							<span class="font-mono text-xs text-muted">{localTime(e.at)}</span>
-							<span data-testid="{kind}-entry-summary">{e.summary}</span>
+							<span data-testid="{kind}-entry-summary"><LogText text={e.summary} /></span>
 						</p>
 						<p class="text-xs text-muted" data-testid="{kind}-entry-details">
 							{#if e.trigger}<span data-testid="{kind}-entry-trigger">trigger {e.trigger}</span>;
@@ -216,7 +225,9 @@
 							<td class="py-1 pr-4" data-testid="{kind}-run-cost"
 								>{c.count ? cost(c.cost, c.estimated) : '—'}</td
 							>
-							<td class="py-1 text-danger" data-testid="{kind}-run-why">{run.why || run.error}</td>
+							<td class="py-1 text-danger" data-testid="{kind}-run-why"
+								><LogText text={run.why || run.error || ''} /></td
+							>
 						</tr>
 					{/each}
 				</tbody>

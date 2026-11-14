@@ -273,8 +273,13 @@ describe('a card’s menu (S-0202)', () => {
 		await pick('plan');
 		expect(posts).toEqual([{ url: '/api/items/S-0002/plan', body: {} }]);
 		expect(notice()).toContain(
-			'planner started for S-0002 (pid 42); its output is in /home/op/.flai/serve/plan-S-0002.log on the host'
+			'planner started for S-0002 (pid 42); its output: /home/op/.flai/serve/plan-S-0002.log'
 		);
+		// S-0785: the notice links the log page for the planner's log
+		const log = document.querySelector<HTMLAnchorElement>(
+			'[data-testid="board-notice"] [data-testid="log-link"]'
+		)!;
+		expect(log.dataset.path).toBe('/home/op/.flai/serve/plan-S-0002.log');
 		expect(api.mock.calls.filter(([u]) => u === '/api/host-agent').length).toBe(asked + 1);
 	});
 

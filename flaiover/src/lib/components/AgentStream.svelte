@@ -10,11 +10,14 @@
 	// as flai serve reads it from the planner's log (S-0259), and with `orchestrator` the project's
 	// newest orchestrator run, whatever `story` names (S-0218). With `role` it follows the project's
 	// newest run of that strategic role, the orchestrator's or the analyzer's, whatever `story` names
-	// (S-0228).
+	// (S-0228). Given the run's log, the note on earlier entries links it, on the log page (S-0785),
+	// and a read flai refused names each log path it gives as a link there too.
 	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import type { AgentStreamEntry, AgentStreamRead } from '$lib/activity';
 	import type { StreamRole } from '$lib/strategic';
+	import LogLink from './LogLink.svelte';
+	import LogText from './LogText.svelte';
 
 	let {
 		story,
@@ -22,7 +25,8 @@
 		open = true,
 		plan = false,
 		orchestrator = false,
-		role
+		role,
+		log
 	}: {
 		/** The story whose agent it follows, or with `plan` the epic or story the planner plans. */
 		story: string;
@@ -35,6 +39,8 @@
 		orchestrator?: boolean;
 		/** Follows the project's newest run of a strategic role rather than a story's agent (S-0228). */
 		role?: StreamRole;
+		/** The run's log on the host, as flai names it, for the entries the page no longer keeps. */
+		log?: string;
 	} = $props();
 
 	// The page passes these from objects it makes anew on every reload. Derived, they change only
@@ -56,7 +62,7 @@
 					: 'agent'
 	);
 
-	/** Entries kept on the page; older ones are in the log on the host. */
+	/** Entries kept on the page; older ones are in the run's log. */
 	const KEEP = 500;
 	const EVERY = 2000;
 	const AFTER_ERROR = 10000;
@@ -197,7 +203,7 @@
 		stream{#if running}<span class="text-good">&nbsp;· live</span>{/if}
 	</summary>
 	{#if error}
-		<p class="mt-1 text-xs text-danger" role="alert">{error}</p>
+		<p class="mt-1 text-xs text-danger" role="alert"><LogText text={error} /></p>
 	{/if}
 	<ol
 		bind:this={box}
@@ -209,8 +215,12 @@
 				: `what the ${whose} said and did`}
 	>
 		{#if earlier}
-			<li class="text-muted">
-				… earlier entries are in the {whose}'s log on the host
+			<li class="text-muted" data-testid="agent-stream-earlier">
+				{#if log}
+					… earlier entries are in <LogLink path={log} label="the {whose}'s log" />
+				{:else}
+					… earlier entries are in the {whose}'s log on the host
+				{/if}
 			</li>
 		{/if}
 		{#each entries as e, i (i)}

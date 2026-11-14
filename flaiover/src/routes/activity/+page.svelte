@@ -2,13 +2,15 @@
 	// /activity: who is working on what (S-0042), and what each agent flai started is saying and
 	// doing (S-0142), the project's orchestrator among them (S-0218). What flai knows of agents is asked
 	// again when a work item or a thread changes, when flai serve says an agent started or ended, and
-	// while one runs now and then, since an agent ends without changing a file.
+	// while one runs now and then, since an agent ends without changing a file. A log path in the
+	// orchestrator's why links the log page, as its stream's note on earlier entries does (S-0785).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { debounced, follow, listen } from '$lib/events';
 	import { localTime } from '$lib/localtime';
 	import ActivityView from '$lib/components/ActivityView.svelte';
 	import AgentStream from '$lib/components/AgentStream.svelte';
+	import LogText from '$lib/components/LogText.svelte';
 	import { anyRunning, orchestratorLine, orchestratorRunning, type HostAgent } from '$lib/activity';
 
 	let streams = $state<never[] | null>(null);
@@ -87,7 +89,7 @@
 	page keeps its length and the operator their place in it (S-0178) -->
 {#if error}
 	<p class="mb-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
-		{error}
+		<LogText text={error} />
 	</p>
 {/if}
 {#if streams === null}
@@ -101,7 +103,7 @@
 			<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 				<span class="font-medium">Orchestrator</span>
 				<span class="min-w-0 flex-1 text-xs text-muted" data-testid="orchestrator-line"
-					>{orchestratorLine(orchestrator)}</span
+					><LogText text={orchestratorLine(orchestrator)} /></span
 				>
 			</div>
 			<dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
@@ -125,6 +127,7 @@
 					story="orchestrator"
 					started={orchestrator.started}
 					open={orchestratorRunning(orchestrator)}
+					log={orchestrator.log}
 				/>
 			{/if}
 		</section>

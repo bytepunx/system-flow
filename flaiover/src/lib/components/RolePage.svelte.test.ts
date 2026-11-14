@@ -17,7 +17,8 @@ import { CATEGORICAL } from '$lib/viz/palette';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id ?? '')
+	resolve: (route: string, params: Record<string, string> = {}) =>
+		route.replace('[id]', params.id ?? '')
 }));
 const at = vi.hoisted(() => ({ params: { role: 'reviewer' } as Record<string, string> }));
 vi.mock('$app/state', () => ({

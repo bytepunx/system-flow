@@ -17,7 +17,8 @@
 	//   (LogFeed), then the load.
 	// - Logs: the same namespace's every step, each with its log followed live, and the end of the log
 	//   of the job that runs or last ran. A row's step badge or log link opens Build or Logs at its
-	//   step, that step's log open.
+	//   step, that step's log open. Each step's log file and the job's progress log link the log page
+	//   (S-0785); the folder of the steps' logs is no file, so it is named, not linked.
 	// - Access: how to reach each namespace for a demo, through a port-forward as ADR-0254 decides,
 	//   started and stopped through flai's kluster.forward.start and kluster.forward.stop (S-0586),
 	//   bound to 0.0.0.0 as the operator chose on TH-0861, linked once it runs, for a story in
@@ -45,6 +46,8 @@
 	import { resolve } from '$app/paths';
 	import PageSidebar from '$lib/components/PageSidebar.svelte';
 	import LogFeed from '$lib/components/LogFeed.svelte';
+	import LogLink from '$lib/components/LogLink.svelte';
+	import LogText from '$lib/components/LogText.svelte';
 	import DeploySettings from '$lib/components/DeploySettings.svelte';
 	import DeploymentRow from '$lib/components/DeploymentRow.svelte';
 
@@ -406,7 +409,7 @@
 		<div class="mt-2" data-testid="deployment-access">
 			{#if d.access.services_error}
 				<p class="mt-2 text-danger" data-testid="deployment-services-error">
-					{d.access.services_error}
+					<LogText text={d.access.services_error} />
 				</p>
 			{/if}
 			{#if d.access.services.length}
@@ -502,7 +505,9 @@
 			</dd>
 		</dl>
 		{#if d.error}
-			<p class="mt-2 text-sm text-danger" data-testid="deployment-error">{d.error}</p>
+			<p class="mt-2 text-sm text-danger" data-testid="deployment-error">
+				<LogText text={d.error} />
+			</p>
 		{/if}
 		{#if d.job}
 			<p class="mt-2 text-sm" role="status" data-testid="deployment-job">
@@ -692,7 +697,9 @@
 					<li class="rounded border border-line p-2" data-testid="step-panel" data-step={s.name}>
 						{@render feed(chosen, s, s.name)}
 						{#if s.log}
-							<p class="mt-1 text-xs text-muted"><code class="font-mono">{s.log}</code></p>
+							<p class="mt-1 text-xs text-muted" data-testid="step-log">
+								Its log: <LogLink path={s.log} />
+							</p>
 						{/if}
 					</li>
 				{/each}
@@ -706,9 +713,9 @@
 		<div class="rounded border border-line p-3 text-sm" data-testid="deployments-job-log">
 			<p>{jobLine(j)}{j.outcome ? `, ${j.outcome}` : ', running'}</p>
 			{#if j.log}
-				<p class="mt-1 text-xs text-muted">
-					Its progress: <code class="font-mono">{j.log}</code>{#if j.logs}; its steps' logs:
-						<code class="font-mono">{j.logs}</code>{/if}
+				<p class="mt-1 text-xs text-muted" data-testid="deployments-job-log-path">
+					Its progress: <LogLink path={j.log} />{#if j.logs}; its steps' logs are in the folder
+						<code class="font-mono">{j.logs}</code>, each linked with its step{/if}
 				</p>
 			{/if}
 			{#if j.log_tail}
@@ -851,7 +858,7 @@
 			role="alert"
 			data-testid="deployments-status-error"
 		>
-			{data.status_error}
+			<LogText text={data.status_error} />
 		</p>
 	{/if}
 	{#if off}
@@ -873,7 +880,7 @@
 			role="alert"
 			data-testid="deployments-action-error"
 		>
-			{actionError}
+			<LogText text={actionError} />
 		</p>
 	{/if}
 	{#if data.running}
@@ -904,7 +911,9 @@
 				at {data.last.ended_at ? localTime(data.last.ended_at) : '—'}.
 			</p>
 			{#if data.last.error}
-				<p class="mt-1 text-danger" data-testid="deployments-last-error">{data.last.error}</p>
+				<p class="mt-1 text-danger" data-testid="deployments-last-error">
+					<LogText text={data.last.error} />
+				</p>
 			{/if}
 		</div>
 	{/if}

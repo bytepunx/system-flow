@@ -9,7 +9,8 @@ import type { PlannerView } from '$lib/planner';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id ?? '')
+	resolve: (route: string, params: Record<string, string> = {}) =>
+		route.replace('[id]', params.id ?? '')
 }));
 
 import PlannerPanel from './PlannerPanel.svelte';
@@ -257,8 +258,12 @@ describe('the planner panel (S-0259)', () => {
 		await settle();
 		expect(api).toHaveBeenCalledWith('/api/items/E-0016/plan', { method: 'POST' });
 		expect(text(one('planner-said'))).toBe(
-			'planner started for E-0016 (pid 42); its output is in /home/op/.flai/serve/plan-E-0016.log on the host'
+			'planner started for E-0016 (pid 42); its output: /home/op/.flai/serve/plan-E-0016.log'
 		);
+		// S-0785: the log is a link to the log page, not a path to open on the host
+		const log = one('planner-said')!.querySelector<HTMLAnchorElement>('[data-testid="log-link"]')!;
+		expect(log.textContent).toBe('/home/op/.flai/serve/plan-E-0016.log');
+		expect(new URL(log.href).searchParams.get('path')).toBe('/home/op/.flai/serve/plan-E-0016.log');
 		expect(one('planner-said')!.getAttribute('role')).toBe('status');
 		expect(planned).toBe(1);
 	});

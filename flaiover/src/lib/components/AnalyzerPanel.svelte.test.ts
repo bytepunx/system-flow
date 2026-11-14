@@ -10,7 +10,7 @@ import type { AnalyzerRun, AnalyzerView } from '$lib/strategic';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) =>
+	resolve: (route: string, params: Record<string, string> = {}) =>
 		route.replace('[id]', params.id ?? '').replace('[...path]', params.path ?? '')
 }));
 
@@ -313,8 +313,11 @@ describe('the analyzer panel (S-0228)', () => {
 			await settle();
 			expect(posted()).toEqual([{ method: 'POST', body: {} }]);
 			expect(text(one('analyzer-said'))).toBe(
-				'started claude to analyze, focus all, as analyzer (pid 88); its output is in .flai-cache/serve/sf-analyzer-1.log on the host'
+				'started claude to analyze, focus all, as analyzer (pid 88); its output: .flai-cache/serve/sf-analyzer-1.log'
 			);
+			// S-0785: the log is a link to the log page
+			const log = one('analyzer-said')!.querySelector<HTMLElement>('[data-testid="log-link"]');
+			expect(log!.dataset.path).toBe('.flai-cache/serve/sf-analyzer-1.log');
 			expect(one('analyzer-said')!.getAttribute('role')).toBe('status');
 			expect(changed).toBe(1);
 		});

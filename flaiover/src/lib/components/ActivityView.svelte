@@ -5,7 +5,8 @@
 	// its own. Since S-0170 each agent that runs, or waits for an answer, has Stop, which says what
 	// stopping does and has flai stop it once the operator confirms. Since S-0669 (I-0278) a story's
 	// agent that failed or was stopped has Retry there instead, under the rule the story page and the
-	// card's menu share, which hides once pressed for that run until flai refuses.
+	// card's menu share, which hides once pressed for that run until flai refuses. A log path in an
+	// agent's why or in flai's refusal links the log page (S-0785).
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { age } from '$lib/age';
@@ -14,6 +15,7 @@
 	import AgentDot from './AgentDot.svelte';
 	import AgentStopConfirm from './AgentStopConfirm.svelte';
 	import AgentStream from './AgentStream.svelte';
+	import LogText from './LogText.svelte';
 
 	type Stream = {
 		stream: string;
@@ -161,7 +163,8 @@
 			{#if ran(agents[s.stream])}
 				{@const a = agents[s.stream]}
 				<p class="mt-2 flex items-center gap-2 text-xs">
-					<AgentDot activity={a} /><span class="text-muted">{activityLine(a)}</span>
+					<AgentDot activity={a} />
+					<span class="text-muted"><LogText text={activityLine(a)} /></span>
 					{#if canStop && stoppable(a)}{@render stopButton(
 							s.stream
 						)}{:else if canRetry(s, a)}<button
@@ -173,10 +176,10 @@
 				</p>
 				{#if retryErrors[s.stream]}
 					<p class="mt-1 text-xs text-warn" data-testid="agent-retry-error">
-						{retryErrors[s.stream]}
+						<LogText text={retryErrors[s.stream]} />
 					</p>
 				{/if}
-				<AgentStream story={s.stream} started={a.run.started} open={live(a)} />
+				<AgentStream story={s.stream} started={a.run.started} open={live(a)} log={a.run.log} />
 			{/if}
 		</li>
 	{/each}
@@ -187,10 +190,11 @@
 				<span class="min-w-0 flex-1 text-muted">no narrative yet</span>
 			</div>
 			<p class="mt-2 flex items-center gap-2 text-xs">
-				<AgentDot activity={a} /><span class="text-muted">{activityLine(a)} · {a.run.agent}</span>
+				<AgentDot activity={a} />
+				<span class="text-muted"><LogText text={activityLine(a)} /> · {a.run.agent}</span>
 				{#if canStop && stoppable(a)}{@render stopButton(id)}{/if}
 			</p>
-			<AgentStream story={id} started={a.run.started} />
+			<AgentStream story={id} started={a.run.started} log={a.run.log} />
 		</li>
 	{/each}
 </ul>
