@@ -2,11 +2,11 @@
 id: I-0371
 title: "flai check finds `story.unaccepted` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 10
 first_reported: 2026-11-13T20:26:48Z
 last_reported: 2026-11-14T17:34:32Z
-updated: 2026-11-14T17:34:32Z
+updated: 2026-11-14T17:44:54Z
 ---
 
 # I-0371 flai check finds `story.unaccepted` outside the story at close-out
@@ -99,3 +99,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0781 remediates this issue, created from it at 2026-11-13T22:46:13Z.
+Closed 2026-11-14T17:44:54Z: S-0781. Cause: S-0777 ran the Go tests with TMPDIR inside its worktree, so a temp project with no git init of its own let git walk up into that worktree, and flai story start leaked story/S-0001, S-0002, S-0003, and S-0005 into the main repository. Fixes: the TestMain of flai/cmd and flai/internal/mcpserver set GIT_CEILING_DIRECTORIES to the temporary folder, with TestStoryStartInATemporaryFolderInsideARepositoryMakesNoBranch reproducing the leak (T-3343); the four branches were deleted and their worktrees pruned on the operator's word on TH-1190 (T-3345); and a check scoped to a story now leaves out every story.unaccepted outside it, so a close-out neither notes nor records one (ADR-0299, T-3348, T-3349).
