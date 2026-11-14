@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-14T07:11:09Z
+updated: 2026-11-14T17:31:41Z
 transitions: []
 tags: [cli]
 topics: [cli, template, conventions]
@@ -33,15 +33,15 @@ usage:
           cache_write: 4297
           cost: 0.084
     - kind: orchestrator
-      seconds: 142
+      seconds: 154
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 226
-          cache_read: 1314554
-          cache_write: 200625
-          cost: 0.4447
+          input: 40
+          output: 250
+          cache_read: 1468687
+          cache_write: 225420
+          cost: 0.4977
         - model: claude-sonnet-5-5
           input: 1
           output: 10
@@ -51,10 +51,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-11-14T08:02:00Z
+  delivery: 2026-11-14T18:23:00Z
   basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0781 and S-0241."
   by: flai
-  at: 2026-11-14T07:11:09Z
+  at: 2026-11-14T17:31:41Z
 ---
 # S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
 
