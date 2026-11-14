@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:44:56Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -33,13 +33,19 @@ usage:
           cache_read: 108314
           cache_write: 18020
           cost: 0.0361
-draft: true
+cost_of_delay:
+  value: 51.66
+  by: system-flow
+  at: 2026-11-14T17:44:04Z
 forecast:
   duration: 29m
   delivery: 2026-11-14T19:35:00Z
   basis: "Its own forecast of 29m; 5th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241 and S-0739."
   by: flai
   at: 2026-11-14T17:41:59Z
+finalized:
+  by: alex
+  at: 2026-11-14T17:44:56Z
 ---
 # S-0741 flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
 
@@ -76,4 +82,4 @@ forecast:
 - `after`: S-0738. The rule finding checks names against the vocabulary S-0738 adds, and the findings read the parser and the workflow S-0737 gives, which S-0738 builds on.
 - Tasks: T-3204 (the findings) and T-3205 (the item rules) together, no path in common; then T-3211 (the documents), which lists T-3204's codes.
 - Forecast 29m, as `flai forecast` gives it for size 16. `check_roles.go` is a close model for the findings.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 51.66 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 29m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
