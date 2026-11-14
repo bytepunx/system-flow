@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -255,11 +254,9 @@ func imagesLogDo(_ context.Context, host Host, p channel.Project, raw json.RawMe
 // readImageLog reads at most imageLogChunk bytes of the log at path from
 // offset, ending on a whole character; a log not there is none, read from 0.
 func readImageLog(path string, offset int64) (ImageLog, error) {
-	out := ImageLog{Offset: offset, Next: offset}
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
-		out.Offset, out.Next, out.Reset = 0, 0, offset > 0
-		return out, nil
+		return imageLogOf(absentLog(offset)), nil
 	}
 	if err != nil {
 		return ImageLog{}, err
@@ -269,18 +266,17 @@ func readImageLog(path string, offset int64) (ImageLog, error) {
 	if err != nil {
 		return ImageLog{}, err
 	}
-	out.Exists, out.Size = true, st.Size()
-	if offset > out.Size {
-		out.Offset, out.Reset = 0, true
-	}
-	buf := make([]byte, min(out.Size-out.Offset, imageLogChunk))
-	n, err := f.ReadAt(buf, out.Offset)
-	if err != nil && !errors.Is(err, io.EOF) {
+	part, err := readOpenLog(f, st.Size(), offset)
+	if err != nil {
 		return ImageLog{}, err
 	}
-	buf = wholeChars(buf[:n])
-	out.Text, out.Next = string(buf), out.Offset+int64(len(buf))
-	return out, nil
+	return imageLogOf(part), nil
+}
+
+// imageLogOf is a part of a job's log as images.log answers it, without the
+// job's id and state.
+func imageLogOf(part LogRead) ImageLog {
+	return ImageLog{Exists: part.Exists, Offset: part.Offset, Next: part.Next, Size: part.Size, Text: part.Text, Reset: part.Reset}
 }
 
 // wholeChars is b without a character cut short at its end, so the next

@@ -175,6 +175,8 @@ export const REQUIRED_METHODS = [
 	'images.get',
 	'images.log',
 	'images.ensure',
+	// S-0785: a log flai wrote for the project, read from an offset, the log viewer's feed
+	'log.read',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',

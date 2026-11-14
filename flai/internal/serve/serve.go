@@ -538,6 +538,10 @@ func Run(ctx context.Context, o Options) error {
 	if o.Logger == nil {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
+	// the dashboard reads the logs flai serve writes here (S-0785)
+	if o.Host.ServeDir == "" {
+		o.Host.ServeDir = string(o.Dir)
+	}
 	// One image job runs at a time for every project served, since builds
 	// compete for the engine and the network (ADR-0295 §5); a job running
 	// when flai serve stops is waited for, last, once its ensure has

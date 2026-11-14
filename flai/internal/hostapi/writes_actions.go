@@ -326,6 +326,12 @@ type Host struct {
 	// and starts a job (S-0757). Nil when nothing runs them here: the images
 	// methods refuse.
 	Images ImageJobs
+	// ServeDir is flai serve's state folder, the serve folder beside its
+	// config file, whose logs log.read reads (S-0785): serve.log, the
+	// project's agent runs, image jobs, and checks runs, and the host's
+	// host.log in the host folder beside it. Empty where no flai serve
+	// answers: log.read then reads the project's .flai-cache alone.
+	ServeDir string
 }
 
 // Entry is one host action asked for, whatever became of it.

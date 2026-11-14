@@ -75,6 +75,7 @@ var hostAPIWrites = []string{
 	"kluster.teardown",         // change the cluster
 	"kluster.up",               // change the cluster or start a port-forward
 	"kluster.workloads",        // reach the cluster with kubectl, not checked as reads
+	"log.read",                 // reads flai serve's logs for the dashboard, kept from agents as images.log is
 	"orchestrate.start",        // start or stop a strategic agent
 	"orchestrate.stop",         // start or stop a strategic agent
 	"plan.run",                 // start an agent
