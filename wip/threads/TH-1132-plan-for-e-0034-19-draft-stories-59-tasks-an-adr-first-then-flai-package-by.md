@@ -4,10 +4,10 @@ title: "Plan for E-0034: 19 draft stories, 59 tasks, an ADR first, then flai pac
 anchor:
   path: wip/kanban/epics/E-0034-an-operator-defines-the-board-s-states-transitions-rules-and-timers-in-a.md
   item: E-0034
-status: open
-participants: [planner-E-0034, orchestrator]
+status: answered
+participants: [planner-E-0034, orchestrator, flai serve]
 created: 2026-11-12T16:18:06Z
-updated: 2026-11-12T16:20:29Z
+updated: 2026-11-14T16:21:22Z
 ---
 
 # TH-1132 Plan for E-0034: 19 draft stories, 59 tasks, an ADR first, then flai package by package, the timers, the dashboard, and an end-to-end test
@@ -74,5 +74,10 @@ Correction to the title: the plan has 69 tasks, not 59.
 - **The `after` hub on S-0737** (10 stories) is justified. Each of those stories reads its parser, kinds, or transition check on main, as "As the planner" in `strategic-agents.md` requires of an `after`.
 
 **What approval does not do:** the drafts stay drafts. Each still needs a cost of delay value before it can be finalized or promoted. That waits on your answer to TH-1097, the epic's inputs, which is yours alone.
+
+Source: design/conventions/strategic-agents.md
+
+### 2026-11-14T16:21:22Z flai serve
+Confirmed the recommendation of 2026-11-12T16:20:29Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/strategic-agents.md

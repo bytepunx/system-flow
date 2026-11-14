@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1366.6051
-accrued_seconds: 160524
-tasks_completed: 262
-last_run: 2026-11-13T22:58:28Z
+accrued_cost: 1368.8222
+accrued_seconds: 160990
+tasks_completed: 263
+last_run: 2026-11-14T10:31:53Z
 ---
 
 # Planner activity
@@ -2090,3 +2090,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0781, T-3343, T-3345, T-3347, T-3348, T-3349, T-3350
 - Seconds: 280
 - Cost: 2.8544 USD, estimated
+
+### 2026-11-14T10:31:53Z
+
+- Summary: S-0785 planned: created T-3357; widened the touches of T-3354, T-3355, and T-3356; set 42 touches, a forecast of 1h23m, and a cost of delay of 12.50 USD a week on the story; plan in thread TH-1193.
+- Trigger: asked
+- Items: S-0785, T-3354, T-3355, T-3356, T-3357
+- Seconds: 466
+- Cost: 2.2171 USD, estimated

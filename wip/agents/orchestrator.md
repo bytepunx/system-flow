@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2181.0621
-accrued_seconds: 1562938
-tasks_completed: 3471
-last_run: 2026-11-14T07:07:40Z
+accrued_cost: 2183.1402
+accrued_seconds: 1563305
+tasks_completed: 3484
+last_run: 2026-11-14T16:22:54Z
 ---
 
 # Orchestrator activity
@@ -24331,6 +24331,98 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 22
 - Cost: 0.2257 USD, estimated
+
+### 2026-11-14T07:11:14Z
+
+- Summary: Accepted S-0784 (publish formula instance, released flai/v1.95.4) at 0ce7e92 after its close-out passed at the head and the verifier matched criteria 1-3 to T-3351, T-3352, T-3353 done; merged and archived 4 items.
+- Items: S-0784
+- Seconds: 91
+- Cost: 0.2442 USD, estimated
+
+### 2026-11-14T07:11:29Z
+
+- Summary: Did not publish after accepting S-0784: release_evaluate under threshold is not met (count 0 of 1, value 0 of 1000 USD; nothing accepted awaits a release).
+- Items: S-0784
+- Seconds: 15
+- Cost: 0.0000 USD
+
+### 2026-11-14T07:11:48Z
+
+- Summary: I accepted S-0784, the publish formula's instance that released `flai/v1.95.4`. No further release is due.
+- Items: none
+- Seconds: 19
+- Cost: 0.1520 USD, estimated
+
+### 2026-11-14T10:25:20Z
+
+- Summary: TH-1191 (resolved by flai serve when S-0785 went to ready) and TH-1192 (board starved; flai serve's notice, left alone under answer_threads autonomous). promote_candidates (throughput) lists none, so nothing to promote or order. promote --drafts finds no complete draft: the 19 E-0034 drafts lack only a cost of delay value, which waits on the operator's E-0034 inputs (TH-1097, operator_only recommendation pending since 2026-11-12). S-0241 stays a draft, blocked (TH-1165). No planner started: plan --candidates lists the E-0034 stories, but a planner run cannot supply the epic's inputs, and alex's TH-1083 entry ("Resolved.") asks no change to E-0034's plan. Nothing in review. In progress: S-0781 (blocked) and S-0785, limit 3. Every other thread awaiting the operator ends with my entry or flai serve's.
+- Items: E-0034, S-0736, S-0241, S-0785
+- Seconds: 49
+- Cost: 0.2119 USD, estimated
+
+### 2026-11-14T10:25:47Z
+
+- Summary: I made no changes this run. The backlog stays stuck until you decide E-0034's cost of delay inputs.
+- Items: none
+- Seconds: 27
+- Cost: 0.2252 USD, estimated
+
+### 2026-11-14T10:33:12Z
+
+- Summary: Answered TH-1193, citing design/adrs/0188-a-task-takes-no-folder-touch-the-planner-s-folder-touch-on-a-story-needs-the.md § Decision
+- Items: S-0785
+- Seconds: 44
+- Cost: 0.2306 USD, estimated
+
+### 2026-11-14T10:33:27Z
+
+- Summary: Approved and resolved S-0785's plan thread TH-1193 under plan_backlog_stories: T-3354 to T-3357 in two layers fit the criteria; forecast 1h23m and value 12.50 USD/week (flai cod, from the operator's 5m input) stand; left the flai/cmd folder touch to the story's agent to narrow (ADR-0188).
+- Items: S-0785, T-3354, T-3355, T-3356, T-3357
+- Seconds: 15
+- Cost: 0.0316 USD, estimated
+
+### 2026-11-14T10:33:46Z
+
+- Summary: I approved the planner's plan for S-0785 and resolved its plan thread, TH-1193. That handles both reasons for this run, so I'm ending.
+- Items: none
+- Seconds: 19
+- Cost: 0.1934 USD, estimated
+
+### 2026-11-14T11:37:03Z
+
+- Summary: S-0785 in review: last verify passed at b79392b but story/S-0785 head is 3dd91ab (verify_stale); asked flai serve for its close-out, job S-0785-20261114T113658Z started; story left in review for a later run to read the verdict and accept under accept_reviews.
+- Items: S-0785
+- Seconds: 20
+- Cost: 0.1094 USD, estimated
+
+### 2026-11-14T11:37:28Z
+
+- Summary: I haven't accepted S-0785 yet. Its last passing check is older than the newest commit on its branch, so I asked flai serve to re-run the close-out, and that run is still going.
+- Items: none
+- Seconds: 25
+- Cost: 0.3175 USD, estimated
+
+### 2026-11-14T16:21:22Z
+
+- Summary: flai serve confirmed the orchestrator's recommendation of 2026-11-12T16:20:29Z on TH-1132 after 48h with no answer from the operator (orchestration.permissions.confirm_after)
+- Trigger: orchestration.permissions.confirm_after
+- Items: TH-1132, E-0034
+- Seconds: 0
+- Cost: 0.0000 USD
+
+### 2026-11-14T16:22:34Z
+
+- Summary: TH-1132: flai serve confirmed my recommendation (approve E-0034's plan as drafted, 19 stories, keep S-0758, S-0742 whole, S-0752 apart). The confirmation changes nothing in the plan, so no planner run. I leave the thread open: its opener is planner-E-0034, an epic's planner, so it is not mine to resolve. The drafts still wait on TH-1097, E-0034's cost of delay inputs, which are the operator's alone.
+- Items: E-0034
+- Seconds: 23
+- Cost: 0.0940 USD, estimated
+
+### 2026-11-14T16:22:54Z
+
+- Summary: The E-0034 plan is approved: flai serve confirmed my recommendation on TH-1132 after 48 hours with no answer from you. I changed nothing in the plan.
+- Items: none
+- Seconds: 20
+- Cost: 0.2683 USD, estimated
 
 ## Refusals
 
