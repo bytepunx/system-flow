@@ -3,10 +3,10 @@ id: S-0786
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-14T17:32:28Z
-updated: 2026-11-14T17:32:37Z
+updated: 2026-11-14T17:36:11Z
 transitions:
   - to: ready
     at: 2026-11-14T17:32:29Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-11-14T17:32:37Z
     by: agent-S-0786
+  - to: review
+    at: 2026-11-14T17:34:39Z
+    by: agent-S-0786
+  - to: done
+    at: 2026-11-14T17:36:11Z
+    by: orchestrator
 tags: []
 touches: [wip/kanban/stories/S-0786-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -23,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 82
-  estimated: true
-  priced_by: estimate
+  seconds: 130
+  priced_by: harness
   turns:
     - day: 2026-11-14
-      ceremony: 1
-      work: 16
+      ceremony: 2
+      work: 26
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 333
-      cache_read: 2036265
-      cache_write: 155456
-      cost: 0.8244
+      input: 62
+      output: 7171
+      cache_read: 4119618
+      cache_write: 164332
+      cost: 2.2822
   strategic:
     - kind: orchestrator
       seconds: 9
@@ -58,9 +63,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3358 Fetch the remote's branch and tags
@@ -70,3 +75,13 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+### Accepted by the orchestrator
+
+- Verified: 13c53d75acee2072c7f59e39b97041a8e687f93a
+- At: 2026-11-14T17:36:11Z
+
+Verdict: S-0786 meets all three criteria; the publish step released flai/v1.95.5 and flaiover/v0.61.0, verified at 13c53d75acee2072c7f59e39b97041a8e687f93a.
+- 1: T-3358 done
+- 2: T-3359 done
+- 3: T-3360 done
