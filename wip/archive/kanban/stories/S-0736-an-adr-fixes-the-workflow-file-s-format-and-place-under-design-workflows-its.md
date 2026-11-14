@@ -3,11 +3,11 @@ id: S-0736
 type: story
 nature: feature
 title: An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-14T18:03:13Z
+updated: 2026-11-14T23:14:05Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -23,6 +23,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-11-14T18:03:13Z
+    by: alex
+  - to: done
+    at: 2026-11-14T23:14:05Z
     by: alex
 blocked:
   - from: 2026-11-14T17:48:02Z
@@ -63,15 +66,15 @@ usage:
           cache_write: 4297
           cost: 0.084
     - kind: orchestrator
-      seconds: 386
+      seconds: 466
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 93
-          output: 605
-          cache_read: 4039786
-          cache_write: 513027
-          cost: 1.3482
+          input: 110
+          output: 731
+          cache_read: 4993724
+          cache_write: 550593
+          cost: 1.6439
         - model: claude-sonnet-5-5
           input: 7
           output: 54

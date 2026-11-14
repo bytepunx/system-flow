@@ -3,10 +3,10 @@ id: TH-1200
 title: "The board is starved: nothing in ready can start and no backlog story can be promoted"
 anchor:
   path: wip/kanban/board.md
-status: open
+status: resolved
 participants: [flai serve]
 created: 2026-11-14T18:03:28Z
-updated: 2026-11-14T18:03:28Z
+updated: 2026-11-14T23:14:05Z
 ---
 
 # TH-1200 The board is starved: nothing in ready can start and no backlog story can be promoted
@@ -33,3 +33,6 @@ Each backlog story, in the pull order, and the decision it waits on:
 - S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board: held by `after`; the root of its chain is S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board (review).
 - S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts: held by `after`; the root of its chain is S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board (review).
 - S-0758 The dashboard's item page, inbox, review, activity, deployments, task plan, and cards read a state's kind from flai instead of comparing its name: held by `after`; the root of its chain is S-0736 An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board (review).
+
+### 2026-11-14T23:14:05Z flai serve
+Resolved: S-0737 flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed in ready can start, so the board is no longer starved.

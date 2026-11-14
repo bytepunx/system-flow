@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 306.1895
-accrued_seconds: 33263
-tasks_completed: 205
-last_run: 2026-11-14T18:00:25Z
+accrued_cost: 307.1313
+accrued_seconds: 33293
+tasks_completed: 206
+last_run: 2026-11-14T18:04:38Z
 ---
 
 # Curator activity
@@ -1651,3 +1651,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0617, D-0622, D-0623, D-0624
 - Seconds: 121
 - Cost: 0.8545 USD, estimated
+
+### 2026-11-14T18:04:38Z
+
+- Summary: I found nothing to take in: I wrote, merged, and absorbed no entries, and `flai digest compact` compacted none. The one candidate was S-0787's note that its tasks are the publish formula's steps. That is progress, and ADR-0238 already covers it. No design document, convention, or ADR has changed on main since the last run, so the 227 active entries stay active, D-0626 included, because ADR-0301 is still in review under S-0736.
+- Trigger: accepted S-0787
+- Items: none
+- Seconds: 30
+- Cost: 0.9418 USD, estimated

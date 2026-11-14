@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2189.3652
-accrued_seconds: 1564426
-tasks_completed: 3523
-last_run: 2026-11-14T18:02:06Z
+accrued_cost: 2190.6939
+accrued_seconds: 1564678
+tasks_completed: 3533
+last_run: 2026-11-14T19:55:48Z
 ---
 
 # Orchestrator activity
@@ -24696,6 +24696,76 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1485 USD, estimated
+
+### 2026-11-14T18:04:09Z
+
+- Summary: Accepted S-0787, the publish formula's instance, at 9d2500190057 under accept_reviews: close-out passed at the head, no blockers, T-3361, T-3362, T-3363 done (S-0781 released as flai/v1.95.6, template 1.1.41)
+- Items: S-0787
+- Seconds: 45
+- Cost: 0.2584 USD, estimated
+
+### 2026-11-14T18:04:29Z
+
+- Summary: Did not publish after accepting S-0787: release_evaluate under threshold finds nothing pending (count 0 of 1, value 0 of 1000 USD)
+- Items: S-0787
+- Seconds: 20
+- Cost: 0.0351 USD, estimated
+
+### 2026-11-14T18:04:47Z
+
+- Summary: S-0736: verifier matched all 9 criteria at 73b11e7, but accept's preview blocks on verify_behind_main (main brought 27 paths that send back the markdown tier); asked flai serve for its close-out again, job S-0736-20261114T180443Z
+- Items: S-0736
+- Seconds: 18
+- Cost: 0.1083 USD, estimated
+
+### 2026-11-14T18:05:24Z
+
+- Summary: Left S-0736 in review: its close-out job stopped at sync (branch 12 commits behind main; accept blocks on verify_behind_main); opened TH-1201 asking for flai stream sync S-0736 and a new close-out. All 9 criteria matched at 73b11e7
+- Items: S-0736, TH-1201
+- Seconds: 37
+- Cost: 0.1148 USD, estimated
+
+### 2026-11-14T18:05:42Z
+
+- Summary: ready-empty and TH-1199: promoted nothing, since promote_candidates (throughput) lists no candidates: S-0241 is a draft held per TH-1165, and every E-0034 backlog story is held by after on S-0736 (review, TH-1201). TH-1199 was already resolved by flai serve; TH-1200 is flai serve's notice, left alone. Ready column unchanged, so no reorder
+- Items: S-0736
+- Seconds: 18
+- Cost: 0.0399 USD, estimated
+
+### 2026-11-14T18:06:05Z
+
+- Summary: I accepted S-0787. S-0736 cannot be accepted yet: its branch must first be synced onto main. That sync is waiting on you on TH-1201.
+- Items: none
+- Seconds: 23
+- Cost: 0.2045 USD, estimated
+
+### 2026-11-14T18:06:45Z
+
+- Summary: TH-1200 (board starved): nothing to act on. promote_candidates lists no candidate: every E-0034 backlog story is held by `after` on S-0736. S-0241 stays a draft (TH-1165). S-0736 in review still fails verify at sync (73b11e7, 12 commits behind main); TH-1201 already asks the operator to sync it. E-0034 not replanned: alex's TH-1198 entry confirms the ADR choices and changes no story, task, or figure. TH-1200 is flai serve's notice, so I leave it unanswered.
+- Items: E-0034, S-0736, S-0241
+- Seconds: 21
+- Cost: 0.0980 USD, estimated
+
+### 2026-11-14T18:07:04Z
+
+- Summary: I could not unblock the board on TH-1200. Every path forward waits on S-0736, which is stuck in review until its branch is synced onto main.
+- Items: none
+- Seconds: 19
+- Cost: 0.1354 USD, estimated
+
+### 2026-11-14T19:55:31Z
+
+- Summary: TH-1202: S-0788's three agent runs all failed on 'API Error: Unable to connect to API: SSL certificate hostname mismatch', a transient host network fault, not the story. Restarting an agent is outside my permissions and TH-1202 is a flai serve notice I do not answer, so I opened TH-1203 on S-0788 recommending the operator run flai serve agent restart S-0788 (close-out passed at a2a1652).
+- Items: S-0788, TH-1202, TH-1203
+- Seconds: 34
+- Cost: 0.1117 USD, estimated
+
+### 2026-11-14T19:55:48Z
+
+- Summary: S-0788's agent needs a restart, and only you can do that. All three of its runs failed on a network error between the host and the API, not on the story's work.
+- Items: none
+- Seconds: 17
+- Cost: 0.2226 USD, estimated
 
 ## Refusals
 
