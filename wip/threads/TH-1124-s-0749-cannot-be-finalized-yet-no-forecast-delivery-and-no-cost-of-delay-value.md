@@ -4,10 +4,10 @@ title: "S-0749 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0749-the-guard-messages-between-stories-forecasts-prime-packs-the-release-evaluation.md
   item: S-0749
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:34Z
-updated: 2026-11-12T16:13:34Z
+updated: 2026-11-14T17:47:18Z
 ---
 
 # TH-1124 S-0749 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0749-the-guard-messages-between-stories-forecasts-prime-
 
 - S-0749 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 17 touches, the 42m forecast, and `after` S-0737 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:18Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0749 is valued and finalized.

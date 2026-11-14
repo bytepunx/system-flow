@@ -3,16 +3,43 @@ id: T-3193
 type: task
 nature: feature
 title: Settle the ADR's open choices with the operator, accept it, and mark ADR-0003 and ADR-0004 superseded or refined by it
-status: backlog
+status: done
 parent: S-0736
 owner: alex
 created: 2026-11-12T16:05:47Z
-updated: 2026-11-12T16:05:47Z
-transitions: []
+updated: 2026-11-14T17:55:24Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:28Z
+    by: agent-S-0736
+  - to: in-progress
+    at: 2026-11-14T17:47:28Z
+    by: agent-S-0736
+  - to: ready
+    at: 2026-11-14T17:47:44Z
+    by: agent-S-0736
+  - to: in-progress
+    at: 2026-11-14T17:55:13Z
+    by: agent-S-0736
+  - to: done
+    at: 2026-11-14T17:55:24Z
+    by: agent-S-0736
 stream: S-0736
 tags: [cli]
-touches: [design/adrs/README.md, design/adrs/0003-work-item-hierarchy.md, design/adrs/0004-workflow-states-and-transitions.md]
+touches: [design/adrs/README.md, design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md]
 after: [T-3187]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 3016
+      cache_read: 810963
+      cache_write: 20778
+      cost: 0.3779
 ---
 # T-3193 Settle the ADR's open choices with the operator, accept it, and mark ADR-0003 and ADR-0004 superseded or refined by it
 

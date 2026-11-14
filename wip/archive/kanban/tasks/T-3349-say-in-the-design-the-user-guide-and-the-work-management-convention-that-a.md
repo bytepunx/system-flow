@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 12440
-      cache_read: 2073462
-      cache_write: 92535
-      cost: 1.25
+      input: 23
+      output: 4957
+      cache_read: 2089949
+      cache_write: 51191
+      cost: 0.8718
 ---
 # T-3349 Say in the design, the user guide, and the work-management convention that a close-out leaves out story.unaccepted
 

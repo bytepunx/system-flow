@@ -4,10 +4,10 @@ title: "S-0755 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0755-flai-reads-a-project-s-own-workflow-file-in-place-of-the-baseline-the-template.md
   item: S-0755
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:46Z
-updated: 2026-11-12T16:13:46Z
+updated: 2026-11-14T17:47:22Z
 ---
 
 # TH-1129 S-0755 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0755-flai-reads-a-project-s-own-workflow-file-in-place-o
 
 - S-0755 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 17 touches, the 47m forecast, and `after` S-0741 (the workflow findings it runs on the project's file) fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:22Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0755 is valued and finalized.

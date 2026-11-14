@@ -4,10 +4,10 @@ title: "S-0737 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0737-flai-reads-the-baseline-workflow-it-carries-and-the-board-s-states-and.md
   item: S-0737
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-12T16:13:10Z
-updated: 2026-11-12T16:13:10Z
+updated: 2026-11-14T17:41:54Z
 ---
 
 # TH-1114 S-0737 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -25,3 +25,9 @@ On wip/kanban/stories/S-0737-flai-reads-the-baseline-workflow-it-carries-and-the
 - The criteria, the 11 touches, the 33m forecast, and `after` S-0736 fit the goal.
 
 **One inconsistency, minor:** its Notes say the template ships the baseline workflow file in "S-0750's work". S-0755 does that, not S-0750 (S-0755's second criterion). The planner can correct the reference on its next run. It does not stop the draft being finalized.
+
+### 2026-11-14T17:40:42Z alex
+the epic now has a 10h penalty associated with it
+
+### 2026-11-14T17:41:54Z orchestrator
+Resolved: The operator set E-0034's input, time_lost_per_cycle 10h, and moved S-0737 to ready. Nothing is left to finalize.

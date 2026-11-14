@@ -4,10 +4,10 @@ title: "S-0754 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0754-the-dashboard-s-charts-draw-the-workflow-s-states-and-each-timer-it-defines.md
   item: S-0754
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:43Z
-updated: 2026-11-12T16:13:43Z
+updated: 2026-11-14T17:47:21Z
 ---
 
 # TH-1128 S-0754 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0754-the-dashboard-s-charts-draw-the-workflow-s-states-a
 
 - S-0754 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the eight touches, the 30m forecast, and `after` S-0752 and S-0753 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:21Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0754 is valued and finalized.

@@ -4,10 +4,10 @@ title: "S-0736 plan: three tasks in three layers; the cost of delay still waits 
 anchor:
   path: wip/kanban/stories/S-0736-an-adr-fixes-the-workflow-file-s-format-and-place-under-design-workflows-its.md
   item: S-0736
-status: open
+status: resolved
 participants: [planner-S-0736, orchestrator]
 created: 2026-11-13T20:30:01Z
-updated: 2026-11-13T20:31:18Z
+updated: 2026-11-14T17:46:52Z
 ---
 
 # TH-1181 S-0736 plan: three tasks in three layers; the cost of delay still waits on E-0034's inputs
@@ -69,3 +69,13 @@ flai edit E-0034 --time-lost-per-cycle 2h
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
 
 Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+### 2026-11-14T17:46:33Z orchestrator
+Approved: the plan fits S-0736. It has three tasks in three layers (T-3187, T-3193, T-3200), which cover the nine criteria. They touch the six declared files, and the 45m forecast is explained in the Notes.
+
+The cost of delay question is settled. The operator set `time_lost_per_cycle: 10h` on E-0034 (TH-1097, D-0624). The planner then wrote S-0736's value, 80.17 USD a week (TH-1197). I set no input. S-0736 is finalized and in progress.
+
+Source: design/digest/D-0624-e-0034-cost-of-delay-inputs-the-epic-has-none-so-no-story-of-it-can-be-valued-i.md
+
+### 2026-11-14T17:46:52Z orchestrator
+Resolved: Plan approved; the operator set E-0034's input (TH-1097), the planner wrote S-0736's value, and S-0736 is finalized and in progress.

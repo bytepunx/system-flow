@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 12326
-      cache_read: 2054454
-      cache_write: 91687
-      cost: 1.2385
+      input: 23
+      output: 4912
+      cache_read: 2070789
+      cache_write: 50722
+      cost: 0.8638
 ---
 # T-3343 Stop a test's git from walking up out of its temp folder into the repository that holds it
 

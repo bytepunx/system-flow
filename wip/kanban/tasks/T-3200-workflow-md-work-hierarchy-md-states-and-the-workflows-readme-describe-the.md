@@ -3,16 +3,37 @@ id: T-3200
 type: task
 nature: feature
 title: "workflow.md, work-hierarchy.md § States, and the workflows README describe the workflow file and link the accepted ADR"
-status: backlog
+status: done
 parent: S-0736
 owner: alex
 created: 2026-11-12T16:06:06Z
-updated: 2026-11-12T16:06:06Z
-transitions: []
+updated: 2026-11-14T17:56:23Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:55:35Z
+    by: agent-S-0736
+  - to: in-progress
+    at: 2026-11-14T17:55:36Z
+    by: agent-S-0736
+  - to: done
+    at: 2026-11-14T17:56:23Z
+    by: agent-S-0736
 stream: S-0736
 tags: [cli]
 touches: [design/system/workflow.md, design/system/work-hierarchy.md, design/workflows/README.md]
 after: [T-3193]
+usage:
+  source: log
+  seconds: 47
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 4596
+      cache_read: 1235849
+      cache_write: 31664
+      cost: 0.5759
 ---
 # T-3200 workflow.md, work-hierarchy.md § States, and the workflows README describe the workflow file and link the accepted ADR
 

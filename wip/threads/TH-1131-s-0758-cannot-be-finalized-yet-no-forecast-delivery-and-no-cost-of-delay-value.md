@@ -4,10 +4,10 @@ title: "S-0758 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0758-the-dashboard-s-item-page-inbox-review-activity-deployments-task-plan-and-cards.md
   item: S-0758
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:51Z
-updated: 2026-11-12T16:13:51Z
+updated: 2026-11-14T17:47:23Z
 ---
 
 # TH-1131 S-0758 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0758-the-dashboard-s-item-page-inbox-review-activity-dep
 
 - S-0758 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 18 touches, the 44m forecast, and `after` S-0753 (the columns and transitions `board.get` answers) fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:23Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0758 is valued and finalized.

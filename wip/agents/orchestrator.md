@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2183.8224
-accrued_seconds: 1563398
-tasks_completed: 3488
-last_run: 2026-11-14T17:34:09Z
+accrued_cost: 2188.1527
+accrued_seconds: 1564184
+tasks_completed: 3516
+last_run: 2026-11-14T17:55:58Z
 ---
 
 # Orchestrator activity
@@ -24451,6 +24451,202 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1819 USD, estimated
+
+### 2026-11-14T17:36:15Z
+
+- Summary: Accepted S-0786 (publish formula instance) at 13c53d75acee after a fresh close-out passed at the head; evidence T-3358, T-3359, T-3360 done; it published S-0785 as flai/v1.95.5 and flaiover/v0.61.0.
+- Items: S-0786
+- Seconds: 59
+- Cost: 0.2435 USD, estimated
+
+### 2026-11-14T17:36:31Z
+
+- Summary: Did not publish after S-0786's acceptance: threshold policy not met, 0 accepted stories pending (count threshold 1), value 0 USD (threshold 1000).
+- Items: S-0786
+- Seconds: 16
+- Cost: 0.0327 USD, estimated
+
+### 2026-11-14T17:36:49Z
+
+- Summary: I accepted S-0786, and there is nothing new to publish.
+- Items: none
+- Seconds: 18
+- Cost: 0.2034 USD, estimated
+
+### 2026-11-14T17:40:02Z
+
+- Summary: TH-1194/TH-1195 (flai serve starvation notices, not mine to answer): TH-1194 resolved when the operator moved S-0736 to ready; TH-1195 stays open because every backlog story waits on one decision, E-0034's cost of delay inputs (TH-1097, operator_only, pending since 2026-11-12). promote_candidates: none. promote --drafts: S-0241 is the only complete draft, and TH-1165 keeps it a draft. Not starting story planners for S-0737..S-0758: each lacks only a value, which needs E-0034's inputs. E-0034 replan skipped: the operator's TH-1083 entry was 'Resolved.' and changes no plan.
+- Items: E-0034, S-0736, S-0737, S-0241
+- Seconds: 65
+- Cost: 0.2529 USD, estimated
+
+### 2026-11-14T17:40:24Z
+
+- Summary: Nothing I'm allowed to do would unstarve the board this run, so I made no changes and ended. The only thing holding it back is the cost of delay inputs on epic E-0034, which are yours to set.
+- Items: none
+- Seconds: 22
+- Cost: 0.1188 USD, estimated
+
+### 2026-11-14T17:42:02Z
+
+- Summary: Started E-0034's planner (flai plan --candidates listed it, planned before, TH-1115): the operator set time_lost_per_cycle 10h on the epic, a changed figure, so the planner writes the 16 drafts' cost of delay values. Resolved my TH-1114 and TH-1115: the operator finalized S-0737 and S-0738 and moved them to ready. Ordered ready by throughput: S-0738 29m, S-0737 33m. promote --candidates lists none: every backlog draft lacks a value and is held by after. TH-1195 left alone: flai serve's notice; the board waits on S-0736 in progress.
+- Items: E-0034, S-0737, S-0738
+- Seconds: 44
+- Cost: 0.2391 USD, estimated
+
+### 2026-11-14T17:42:25Z
+
+- Summary: I've handled both reasons. E-0034's planner is now running to give the 16 remaining drafts their cost of delay values.
+- Items: none
+- Seconds: 23
+- Cost: 0.2170 USD, estimated
+
+### 2026-11-14T17:43:09Z
+
+- Summary: Ordered ready by throughput after the pull order changed: S-0738 (29m forecast) first, S-0737 (33m) second; S-0738 stays held after S-0737, which is held after S-0736 in progress.
+- Items: S-0738, S-0737
+- Seconds: 29
+- Cost: 0.1427 USD, estimated
+
+### 2026-11-14T17:43:26Z
+
+- Summary: Answered TH-1097, citing design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+- Items: none
+- Seconds: 17
+- Cost: 0.0000 USD
+
+### 2026-11-14T17:43:41Z
+
+- Summary: TH-1097: operator set E-0034 time_lost_per_cycle 10h themselves, so nothing to set under set_cost_of_delay; replied that the running E-0034 planner writes the drafts' values. TH-1115 already resolved; TH-1195 is flai serve's notice, left alone. promote --drafts: 16 E-0034 drafts still lack a value, S-0241 complete but blocked (TH-1165), so nothing finalized or promoted.
+- Items: E-0034, S-0738
+- Seconds: 15
+- Cost: 0.0317 USD, estimated
+
+### 2026-11-14T17:43:59Z
+
+- Summary: I finished all four reasons. No drafts were finalized and nothing was promoted: the E-0034 drafts still have no cost of delay value.
+- Items: none
+- Seconds: 18
+- Cost: 0.2425 USD, estimated
+
+### 2026-11-14T17:44:40Z
+
+- Summary: Finalized draft S-0739 under finalize_drafts: flai promote --drafts listed it complete (45m forecast, rank 9 under throughput; value 80.17 USD/week), criteria, touches, and after S-0737 consistent. Resolved my TH-1116, whose concern (no value, no delivery) is gone. Not promoted: promote --candidates lists it held after S-0737, so the ready column is unchanged and needs no ordering.
+- Items: S-0739, TH-1116
+- Seconds: 28
+- Cost: 0.1638 USD, estimated
+
+### 2026-11-14T17:44:50Z
+
+- Summary: TH-1190: the operator confirmed my recommendation (delete story/S-0001, S-0002, S-0003, S-0005 and prune their worktrees). Nothing left for me: the deletion is agent-S-0781's under T-3345, and the thread is its opener's to resolve.
+- Items: TH-1190, T-3345, S-0781
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-11-14T17:45:16Z
+
+- Summary: I acted on both reasons and nothing is left for me to do on either.
+- Items: none
+- Seconds: 26
+- Cost: 0.2657 USD, estimated
+
+### 2026-11-14T17:46:06Z
+
+- Summary: Finalized 14 E-0034 drafts under finalize_drafts: flai promote --drafts lists each complete, now valued from the epic's 10h per cycle (TH-1197), with criteria, touches, and forecasts consistent; forecasts 30m to 1h20m, values 53.44 to 142.52 USD/week. S-0741 was already finalized by alex; S-0241 stays a draft (TH-1165).
+- Items: S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756, S-0758
+- Seconds: 45
+- Cost: 0.2452 USD, estimated
+
+### 2026-11-14T17:46:33Z
+
+- Summary: Answered TH-1181, citing design/digest/D-0624-e-0034-cost-of-delay-inputs-the-epic-has-none-so-no-story-of-it-can-be-valued-i.md
+- Items: S-0736
+- Seconds: 27
+- Cost: 0.1044 USD, estimated
+
+### 2026-11-14T17:46:57Z
+
+- Summary: Answered TH-1197, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: none
+- Seconds: 24
+- Cost: 0.1093 USD, estimated
+
+### 2026-11-14T17:47:31Z
+
+- Summary: Settled E-0034's threads. Under plan_backlog_stories I approved and resolved TH-1181, planner-S-0736's plan, whose cost of delay the operator settled on TH-1097 (D-0624). Under answer_threads autonomous I answered TH-1197, the planner's replan, saying the drafts are finalized and held by after. I resolved my 16 threads TH-1113 and TH-1117 to TH-1131, whose concern is gone. promote_candidates lists no candidate: every finalized story is held by after, on the chain S-0736, then S-0737 and S-0738. The ready column is unchanged, so there was nothing to order. I left TH-1196, flai serve's starved-board notice, alone.
+- Items: E-0034, S-0736, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756, S-0758
+- Seconds: 34
+- Cost: 0.1153 USD, estimated
+
+### 2026-11-14T17:48:02Z
+
+- Summary: Ordered ready by throughput (order_ready) after alex moved S-0739, S-0741, S-0742 (and S-0743) to ready: S-0738 29m, S-0741 29m, S-0737 33m, S-0739 45m, S-0743 45m, S-0742 1h20m. All still held by after on S-0736 (in progress).
+- Items: S-0738, S-0741, S-0737, S-0739, S-0743, S-0742
+- Seconds: 31
+- Cost: 0.1204 USD, estimated
+
+### 2026-11-14T17:48:33Z
+
+- Summary: I finalized all 14 remaining E-0034 drafts. None can start yet: every E-0034 story waits on S-0736, which is in progress.
+- Items: none
+- Seconds: 31
+- Cost: 0.3207 USD, estimated
+
+### 2026-11-14T17:49:32Z
+
+- Summary: Ordered ready by throughput after the operator's reorder: S-0738 29m, S-0741 29m, S-0737 33m, S-0746 42m, S-0739 45m, S-0743 45m, S-0744 1h, S-0742 1h20m. No promote candidates; TH-1196 is a flai serve notice, left alone.
+- Items: S-0738, S-0741, S-0737, S-0746, S-0739, S-0743, S-0744, S-0742
+- Seconds: 41
+- Cost: 0.1640 USD, estimated
+
+### 2026-11-14T17:50:19Z
+
+- Summary: Recommended an answer on TH-1198, citing design/adrs/0004-workflow-states-and-transitions.md
+- Items: S-0736
+- Seconds: 47
+- Cost: 0.2676 USD, estimated
+
+### 2026-11-14T17:50:43Z
+
+- Summary: Recommended on TH-1198 (S-0736, ADR-0301): all nine choices as the ADR recommends. This is an undecided design choice, so it went to the operator as a recommendation under answer_threads autonomous, with source ADR-0004. S-0736 blocks the whole E-0034 chain.
+- Items: S-0736
+- Seconds: 24
+- Cost: 0.0000 USD
+
+### 2026-11-14T17:51:11Z
+
+- Summary: I handled all three reasons. The board stays stalled until you answer TH-1198, because every other story on it waits on S-0736.
+- Items: none
+- Seconds: 28
+- Cost: 0.3132 USD, estimated
+
+### 2026-11-14T17:51:50Z
+
+- Summary: Reordered reason: the ready column already matches flai order --by throughput (S-0738 29m, S-0741 29m, S-0737 33m, S-0746 42m, S-0739 45m, S-0743 45m, S-0744 1h, S-0742 1h20m), so nothing applied; promote --candidates lists none (every backlog story held by after on the S-0736 chain, S-0241 a draft).
+- Items: S-0738, S-0741, S-0737, S-0746, S-0739, S-0743, S-0744, S-0742
+- Seconds: 16
+- Cost: 0.0896 USD, estimated
+
+### 2026-11-14T17:52:07Z
+
+- Summary: I changed nothing: the ready column was already in the throughput policy's order.
+- Items: none
+- Seconds: 17
+- Cost: 0.1414 USD, estimated
+
+### 2026-11-14T17:55:39Z
+
+- Summary: TH-1198: no action. The operator confirmed my recommendation (all nine choices as recommended, D-0626), and agent-S-0736 was restarted on it and is amending S-0736. Nothing on the thread is owed by the orchestrator.
+- Items: S-0736
+- Seconds: 12
+- Cost: 0.0684 USD, estimated
+
+### 2026-11-14T17:55:58Z
+
+- Summary: I took no action on TH-1198, because nothing on it was mine to do.
+- Items: none
+- Seconds: 19
+- Cost: 0.1170 USD, estimated
 
 ## Refusals
 

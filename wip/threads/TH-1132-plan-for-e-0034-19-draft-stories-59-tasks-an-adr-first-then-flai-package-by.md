@@ -4,10 +4,10 @@ title: "Plan for E-0034: 19 draft stories, 59 tasks, an ADR first, then flai pac
 anchor:
   path: wip/kanban/epics/E-0034-an-operator-defines-the-board-s-states-transitions-rules-and-timers-in-a.md
   item: E-0034
-status: answered
-participants: [planner-E-0034, orchestrator, flai serve]
+status: resolved
+participants: [planner-E-0034, orchestrator, flai serve, alex]
 created: 2026-11-12T16:18:06Z
-updated: 2026-11-14T16:21:22Z
+updated: 2026-11-14T17:42:56Z
 ---
 
 # TH-1132 Plan for E-0034: 19 draft stories, 59 tasks, an ADR first, then flai package by package, the timers, the dashboard, and an end-to-end test
@@ -81,3 +81,6 @@ Source: design/conventions/strategic-agents.md
 Confirmed the recommendation of 2026-11-12T16:20:29Z orchestrator after 48h with no answer from the operator (orchestration.permissions.confirm_after).
 
 Source: design/conventions/strategic-agents.md
+
+### 2026-11-14T17:42:56Z alex
+Resolved.

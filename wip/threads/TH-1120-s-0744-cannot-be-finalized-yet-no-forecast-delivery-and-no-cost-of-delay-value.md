@@ -4,10 +4,10 @@ title: "S-0744 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0744-flai-move-flai-accept-the-formula-commands-and-the-acceptance-preview-act-on-a.md
   item: S-0744
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:24Z
-updated: 2026-11-12T16:13:24Z
+updated: 2026-11-14T17:47:15Z
 ---
 
 # TH-1120 S-0744 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0744-flai-move-flai-accept-the-formula-commands-and-the-
 
 - S-0744 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 26 touches, the 1h forecast, and `after` S-0737 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:15Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0744 is valued and finalized.

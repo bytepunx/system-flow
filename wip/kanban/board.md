@@ -6,7 +6,15 @@ wip_limits:
   ready: 10
   in-progress: 3
   review: 5
-order: []
+order:
+  - S-0738
+  - S-0741
+  - S-0737
+  - S-0746
+  - S-0739
+  - S-0743
+  - S-0744
+  - S-0742
 ---
 
 # Board

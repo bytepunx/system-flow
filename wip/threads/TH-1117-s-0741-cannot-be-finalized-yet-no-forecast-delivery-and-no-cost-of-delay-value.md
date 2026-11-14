@@ -4,10 +4,10 @@ title: "S-0741 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0741-flai-check-validates-the-workflow-and-the-items-against-it-and-its-item-rules.md
   item: S-0741
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:17Z
-updated: 2026-11-12T16:13:17Z
+updated: 2026-11-14T17:47:13Z
 ---
 
 # TH-1117 S-0741 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0741-flai-check-validates-the-workflow-and-the-items-aga
 
 - S-0741 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 10 touches, the 29m forecast, and `after` S-0738 (the rule vocabulary its unknown-rule finding reads) fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:13Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0741 is valued and finalized.

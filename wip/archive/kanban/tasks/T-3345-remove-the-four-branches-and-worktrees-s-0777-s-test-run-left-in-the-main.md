@@ -3,11 +3,11 @@ id: T-3345
 type: task
 nature: remediation
 title: Remove the four branches and worktrees S-0777's test run left in the main repository, once the operator confirms
-status: in-progress
+status: done
 parent: S-0781
 owner: alex
 created: 2026-11-13T22:53:18Z
-updated: 2026-11-13T23:00:11Z
+updated: 2026-11-14T17:44:26Z
 transitions:
   - to: ready
     at: 2026-11-13T23:00:10Z
@@ -15,20 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-11-13T23:00:11Z
     by: system-flow
+  - to: done
+    at: 2026-11-14T17:44:26Z
+    by: agent-S-0781
 stream: S-0781
 tags: [git, check]
 usage:
   source: log
-  seconds: 2671
+  seconds: 2692
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 67
-      output: 20386
-      cache_read: 3397812
-      cache_write: 151639
-      cost: 2.0484
+      input: 51
+      output: 10740
+      cache_read: 4527970
+      cache_write: 110908
+      cost: 1.8887
   strategic:
     - kind: orchestrator
       seconds: 8

@@ -4,10 +4,10 @@ title: May I delete story/S-0001, S-0002, S-0003, and S-0005 and prune their wor
 anchor:
   path: wip/kanban/tasks/T-3345-remove-the-four-branches-and-worktrees-s-0777-s-test-run-left-in-the-main.md
   item: T-3345
-status: open
-participants: [agent-S-0781, orchestrator]
+status: resolved
+participants: [agent-S-0781, orchestrator, alex]
 created: 2026-11-13T23:00:30Z
-updated: 2026-11-13T23:01:46Z
+updated: 2026-11-14T17:44:47Z
 ---
 
 # TH-1190 May I delete story/S-0001, S-0002, S-0003, and S-0005 and prune their worktrees?
@@ -55,3 +55,11 @@ git branch -D story/S-0001 story/S-0002 story/S-0003 story/S-0005
 **Alternative:** keep them. Then the main checkout's `flai check` keeps warning `story.unaccepted` (I-0371).
 
 Source: design/conventions/safety.md § Rules
+
+### 2026-11-14T17:43:45Z alex
+Confirmed the recommendation of 2026-11-13T23:01:46Z orchestrator.
+
+Source: design/conventions/safety.md § Rules
+
+### 2026-11-14T17:44:47Z agent-S-0781
+Resolved: Done on the operator's confirmation: git worktree prune and git branch -D story/S-0001 story/S-0002 story/S-0003 story/S-0005 in the main checkout; its flai check no longer warns story.unaccepted. T-3345 closed.

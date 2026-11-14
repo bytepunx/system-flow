@@ -3,10 +3,10 @@ id: S-0781
 type: story
 nature: improvement
 title: "flai check finds `story.unaccepted` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-11-13T22:46:13Z
-updated: 2026-11-13T23:45:09Z
+updated: 2026-11-14T17:58:09Z
 transitions:
   - to: ready
     at: 2026-11-13T22:58:27Z
@@ -14,8 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-13T22:58:54Z
     by: agent-S-0781
+  - to: review
+    at: 2026-11-14T17:57:31Z
+    by: system-flow
+  - to: done
+    at: 2026-11-14T17:58:09Z
+    by: alex
 blocked:
   - from: 2026-11-13T23:45:09Z
+    until: 2026-11-14T17:37:03Z
     reason: awaiting the operator on TH-1190
 tags: [flai, check]
 topics: [cli, conventions, template, testing]
@@ -27,20 +34,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2754
+  seconds: 3568
   priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 2
       test_runs: 1
       work: 35
+    - day: 2026-11-14
+      ceremony: 3
+      hand_edits: 1
+      work: 72
   models:
     - model: claude-opus-5-5
-      input: 262
-      output: 79201
-      cache_read: 13200979
-      cache_write: 589139
-      cost: 7.9584
+      input: 418
+      output: 88342
+      cache_read: 37243334
+      cache_write: 912236
+      cost: 15.535
   strategic:
     - kind: planner
       seconds: 280
@@ -88,7 +99,7 @@ This story remediates [I-0371](../../../design/issues/I-0371-flai-check-finds-st
 
 ## Acceptance criteria
 - [x] The cause I-0371 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0371 is closed with `flai issue close I-0371 --reason` saying what fixed it
+- [x] I-0371 is closed with `flai issue close I-0371 --reason` saying what fixed it
 
 ## Tasks
 - T-3343 Stop a test's git from walking up out of its temp folder into the repository that holds it

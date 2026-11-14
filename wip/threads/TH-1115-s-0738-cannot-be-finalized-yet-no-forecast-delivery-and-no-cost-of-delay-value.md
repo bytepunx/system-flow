@@ -4,10 +4,10 @@ title: "S-0738 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0738-the-rules-repo-move-enforces-are-named-rules-from-a-vocabulary-flai-implements.md
   item: S-0738
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-12T16:13:12Z
-updated: 2026-11-12T16:13:12Z
+updated: 2026-11-14T17:41:55Z
 ---
 
 # TH-1115 S-0738 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,9 @@ On wip/kanban/stories/S-0738-the-rules-repo-move-enforces-are-named-rules-from-a
 
 - S-0738 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 10 touches, the 29m forecast, and `after` S-0737 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:41:13Z alex
+the epic has a 10h per cycle CoD
+
+### 2026-11-14T17:41:55Z orchestrator
+Resolved: The operator set E-0034's input, time_lost_per_cycle 10h, and moved S-0738 to ready. Nothing is left to finalize.

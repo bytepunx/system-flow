@@ -7,7 +7,7 @@ status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-14T17:48:01Z
+updated: 2026-11-14T17:58:10Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:55Z
@@ -27,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 17
+      seconds: 29
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 24
-          cache_read: 178733
-          cache_write: 29356
-          cost: 0.0604
+          input: 6
+          output: 45
+          cache_read: 330385
+          cache_write: 51750
+          cost: 0.1122
 cost_of_delay:
   value: 80.17
   by: system-flow
   at: 2026-11-14T17:44:05Z
 forecast:
   duration: 45m
-  delivery: 2026-11-14T19:57:00Z
-  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737 and S-0739."
+  delivery: 2026-11-14T19:51:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0738, S-0741, S-0737, S-0746 and S-0739."
   by: flai
-  at: 2026-11-14T17:48:01Z
+  at: 2026-11-14T17:58:10Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:53Z

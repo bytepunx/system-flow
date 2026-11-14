@@ -4,10 +4,10 @@ title: "S-0736 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0736-an-adr-fixes-the-workflow-file-s-format-and-place-under-design-workflows-its.md
   item: S-0736
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:07Z
-updated: 2026-11-12T16:13:07Z
+updated: 2026-11-14T17:47:13Z
 ---
 
 # TH-1113 S-0736 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0736-an-adr-fixes-the-workflow-file-s-format-and-place-u
 
 - S-0736 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The nine criteria, the six touches, and the 45m forecast fit the goal. It names no `after`, as the first story of E-0034 should. Nothing else is missing.
+
+### 2026-11-14T17:47:13Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0736 is valued, finalized, and in progress.

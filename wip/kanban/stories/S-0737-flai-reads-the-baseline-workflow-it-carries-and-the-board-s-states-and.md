@@ -7,7 +7,7 @@ status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:44Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:58:10Z
 transitions:
   - to: ready
     at: 2026-11-14T17:40:45Z
@@ -27,21 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 28
+      seconds: 69
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 36
-          cache_read: 299363
-          cache_write: 40008
-          cost: 0.0993
+          input: 24
+          output: 127
+          cache_read: 891037
+          cache_write: 130977
+          cost: 0.3021
+cost_of_delay:
+  value: 58.79
+  by: system-flow
+  at: 2026-11-14T17:44:02Z
 forecast:
   duration: 33m
-  delivery: 2026-11-14T19:07:00Z
-  basis: "Its own forecast of 33m; 2nd in the pull order with an in-progress limit of 3, behind S-0736, S-0781 and S-0738."
+  delivery: 2026-11-14T18:36:00Z
+  basis: "Its own forecast of 33m; 3rd in the pull order with an in-progress limit of 3, behind S-0738 and S-0741."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:58:10Z
 finalized:
   by: alex
   at: 2026-11-14T17:38:38Z
@@ -84,4 +88,4 @@ flai holds the board as data. A new package parses a workflow file in the format
 - `after`: S-0736. This story parses the format S-0736's ADR fixes, its fields and allowed values, and writes the baseline that ADR states.
 - Tasks: T-3188 (the parser and its lookups, the mover check included); then T-3195 (the baseline) and T-3196 (`flai-cli.md`) together; then T-3201 (`workitem` reads it, and the test hook later stories use). T-3196 and T-3195 share no path.
 - Forecast 33m, as `flai forecast` gives it for size 18. The change to `workitem` is a swap of a map's source behind the same functions, and the baseline test makes it checkable.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 58.79 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 33m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

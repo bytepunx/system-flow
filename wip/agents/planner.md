@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1368.8222
-accrued_seconds: 160990
-tasks_completed: 263
-last_run: 2026-11-14T10:31:53Z
+accrued_cost: 1370.1130
+accrued_seconds: 161161
+tasks_completed: 264
+last_run: 2026-11-14T17:44:45Z
 ---
 
 # Planner activity
@@ -2098,3 +2098,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0785, T-3354, T-3355, T-3356, T-3357
 - Seconds: 466
 - Cost: 2.2171 USD, estimated
+
+### 2026-11-14T17:44:45Z
+
+- Summary: I wrote cost-of-delay values (E-0034's 1500 USD/week from its 10h per cycle, split by forecast) and updated the Planning notes on revisited stories S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756 and S-0758; I created no stories or tasks, all 16 drafts now pass `flai promote --drafts`, and the summary is on TH-1197.
+- Trigger: orchestrator; TH-1115
+- Items: E-0034, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754, S-0755, S-0756, S-0758
+- Seconds: 171
+- Cost: 1.2908 USD, estimated

@@ -3,15 +3,36 @@ id: T-3187
 type: task
 nature: feature
 title: Write the ADR, proposed, that fixes the workflow file's format, kinds, effects, rules, timers, and migration
-status: backlog
+status: done
 parent: S-0736
 owner: alex
 created: 2026-11-12T16:05:15Z
-updated: 2026-11-12T16:05:15Z
-transitions: []
+updated: 2026-11-14T17:47:20Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:39:45Z
+    by: agent-S-0736
+  - to: in-progress
+    at: 2026-11-14T17:39:45Z
+    by: agent-S-0736
+  - to: done
+    at: 2026-11-14T17:47:20Z
+    by: agent-S-0736
 stream: S-0736
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md]
+usage:
+  source: log
+  seconds: 455
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 28221
+      cache_read: 7588148
+      cache_write: 194416
+      cost: 3.5359
 ---
 # T-3187 Write the ADR, proposed, that fixes the workflow file's format, kinds, effects, rules, timers, and migration
 

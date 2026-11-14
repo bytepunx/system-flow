@@ -4,10 +4,10 @@ title: "S-0753 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0753-the-dashboard-s-board-draws-the-columns-their-kinds-and-the-moves-between-them.md
   item: S-0753
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:41Z
-updated: 2026-11-12T16:13:41Z
+updated: 2026-11-14T17:47:20Z
 ---
 
 # TH-1127 S-0753 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0753-the-dashboard-s-board-draws-the-columns-their-kinds
 
 - S-0753 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 17 touches, the 42m forecast, and `after` S-0739 (the board view's columns) fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:20Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0753 is valued and finalized.

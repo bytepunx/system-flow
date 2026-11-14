@@ -4,10 +4,10 @@ title: "S-0748 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0748-a-role-file-s-to-review-and-to-backlog-conditions-become-one-condition-that.md
   item: S-0748
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:32Z
-updated: 2026-11-12T16:13:32Z
+updated: 2026-11-14T17:47:18Z
 ---
 
 # TH-1123 S-0748 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -25,3 +25,6 @@ On wip/kanban/stories/S-0748-a-role-file-s-to-review-and-to-backlog-conditions-b
 - The criteria, the 20 touches, the 53m forecast, and `after` S-0737 fit the goal.
 
 **One thing to know before it runs:** it changes the baseline role files, `flai/internal/roles/baseline/` and `design/workflows/roles/`, which are code you run (ADR-0207 §7). Its Notes say so, and its acceptance is yours to weigh for that. It does not stop the draft being finalized.
+
+### 2026-11-14T17:47:18Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0748 is valued and finalized.

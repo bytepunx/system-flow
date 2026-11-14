@@ -4,10 +4,10 @@ title: "S-0752 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0752-flai-stats-reports-each-timer-a-workflow-defines-beside-the-baseline-s-figures.md
   item: S-0752
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:39Z
-updated: 2026-11-12T16:13:39Z
+updated: 2026-11-14T17:47:20Z
 ---
 
 # TH-1126 S-0752 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0752-flai-stats-reports-each-timer-a-workflow-defines-be
 
 - S-0752 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 11 touches, the 33m forecast, and `after` S-0750 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:20Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0752 is valued and finalized.

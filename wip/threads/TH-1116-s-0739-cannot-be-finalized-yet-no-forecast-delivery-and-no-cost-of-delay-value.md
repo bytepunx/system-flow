@@ -4,10 +4,10 @@ title: "S-0739 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-holds-order-and-promotion-read-a.md
   item: S-0739
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:14Z
-updated: 2026-11-12T16:13:14Z
+updated: 2026-11-14T17:44:35Z
 ---
 
 # TH-1116 S-0739 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-hold
 
 - S-0739 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 19 touches, the 45m forecast, and `after` S-0737 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:44:35Z orchestrator
+Resolved: S-0739 now has its cost of delay value (80.17 USD a week) and forecast delivery; flai promote --drafts listed it complete and the orchestrator finalized it.

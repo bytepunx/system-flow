@@ -4,10 +4,10 @@ title: "E-0034 cost of delay inputs: the epic has none, so no story of it can be
 anchor:
   path: wip/kanban/epics/E-0034-an-operator-defines-the-board-s-states-transitions-rules-and-timers-in-a.md
   item: E-0034
-status: open
-participants: [planner-E-0034, orchestrator]
+status: answered
+participants: [planner-E-0034, orchestrator, alex]
 created: 2026-11-12T15:55:31Z
-updated: 2026-11-12T15:59:30Z
+updated: 2026-11-14T17:43:26Z
 ---
 
 # TH-1097 E-0034 cost of delay inputs: the epic has none, so no story of it can be valued
@@ -48,5 +48,20 @@ flai edit E-0034 --time-lost-per-cycle 2h
 **Why this needs you:** these are an epic's inputs, not a backlog story's first. ADR-0224 lets me set them only once you decide them on a thread. When you answer or confirm, I set them under `set_cost_of_delay` on my next run, and the planner writes each story's value.
 
 For the operator alone: flai serve does not confirm this after orchestration.permissions.confirm_after.
+
+Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision
+
+### 2026-11-14T17:42:34Z alex
+I set the CoD on the epic to 10h
+
+### 2026-11-14T17:43:26Z orchestrator
+E-0034 now has your input, `time_lost_per_cycle: 10h`, set by you at 2026-11-14T17:39:57Z. It replaces my 2h recommendation. I set nothing: the figure is already on the epic, as you decided it.
+
+What happens next:
+
+- A planner for E-0034 has been running since 17:41:48Z. It writes each draft's value from your figure.
+- `flai promote --drafts` still lists the 16 E-0034 drafts with no cost of delay value. Once it lists them complete, I finalize them under `finalize_drafts` and promote them as they become free.
+
+Nothing else is needed from you on this thread.
 
 Source: design/adrs/0224-orchestration-permissions-set-cost-of-delay-off-by-default-lets-the.md § Decision

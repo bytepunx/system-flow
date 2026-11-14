@@ -3,12 +3,15 @@ id: S-0739
 type: story
 nature: feature
 title: workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:07Z
-updated: 2026-11-14T17:41:59Z
-transitions: []
+updated: 2026-11-14T17:58:10Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:28Z
+    by: alex
 tags: [cli]
 topics: [cli, planning]
 touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go]
@@ -24,22 +27,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 52
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 14
-          cache_read: 108314
-          cache_write: 18020
-          cost: 0.0361
-draft: true
+          input: 20
+          output: 175
+          cache_read: 724642
+          cache_write: 126815
+          cost: 0.2517
+cost_of_delay:
+  value: 80.17
+  by: system-flow
+  at: 2026-11-14T17:43:24Z
 forecast:
   duration: 45m
-  delivery: 2026-11-14T19:57:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737 and S-0241."
+  delivery: 2026-11-14T19:26:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0738, S-0741, S-0737 and S-0746."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:58:10Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:44:31Z
 ---
 # S-0739 workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
 
@@ -73,4 +82,4 @@ The `workitem` package stops naming states. An epic follows its stories (ADR-007
 - `after`: S-0737. This story reads the kinds, WIP limits, and order from the workflow `Repo` carries from S-0737 on, and its tests open a repository with another workflow through S-0737's test hook.
 - Tasks: T-3203 (the board view and the shared fixture) first; then T-3206, T-3208, and T-3210 together, since each uses the fixture and none shares a path with another.
 - Forecast 45m, as `flai forecast`'s rate gives it for size 25 once the touches were settled (it gave 44m for 24). The rewrite is mechanical, but `follow.go` and `taskplan.go` carry logic that must give the same epics and layers.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

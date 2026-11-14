@@ -4,10 +4,10 @@ title: "S-0742 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-again-and-finds-its-reasons.md
   item: S-0742
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:20Z
-updated: 2026-11-12T16:13:20Z
+updated: 2026-11-14T17:47:14Z
 ---
 
 # TH-1118 S-0742 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0742-flai-serve-starts-restarts-and-stops-agents-plans-a
 
 - S-0742 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 30 touches, the 1h20m forecast, and `after` S-0737 fit the goal. Its touches share `serve/orchestrate_reasons.go` and `serve/replan.go` with S-0748, which its Notes name; the trial merge judges that overlap. Nothing else is missing.
+
+### 2026-11-14T17:47:14Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0742 is valued and finalized.

@@ -4,10 +4,10 @@ title: "S-0743 cannot be finalized yet: no forecast delivery and no cost of dela
 anchor:
   path: wip/kanban/stories/S-0743-flai-serve-s-kluster-deploys-forge-pass-and-merge-queue-act-on-a-state-s-kind.md
   item: S-0743
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-12T16:13:22Z
-updated: 2026-11-12T16:13:22Z
+updated: 2026-11-14T17:47:15Z
 ---
 
 # TH-1119 S-0743 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs
@@ -23,3 +23,6 @@ On wip/kanban/stories/S-0743-flai-serve-s-kluster-deploys-forge-pass-and-merge-q
 
 - S-0743 has no inputs of its own, and E-0034 has none yet, so `flai cod` cannot work out its share.
 - The criteria, the 17 touches, the 45m forecast, and `after` S-0737 fit the goal. Nothing else is missing.
+
+### 2026-11-14T17:47:15Z orchestrator
+Resolved: E-0034 has the operator's input (TH-1097); S-0743 is valued and finalized.

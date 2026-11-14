@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 3453
-      cache_read: 575541
-      cache_write: 25685
-      cost: 0.347
+      input: 7
+      output: 1376
+      cache_read: 580117
+      cache_write: 14209
+      cost: 0.242
 ---
 # T-3347 Record in an ADR whether a close-out leaves out story.unaccepted outside the story
 

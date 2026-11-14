@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 22246
-      cache_read: 3707903
-      cache_write: 165478
-      cost: 2.2353
+      input: 42
+      output: 8865
+      cache_read: 3737385
+      cache_write: 91543
+      cost: 1.5589
 ---
 # T-3348 Leave story.unaccepted outside the story out of a check scoped to a story, with a test that reproduces I-0371
 
