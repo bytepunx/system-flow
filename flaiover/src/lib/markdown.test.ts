@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { openEditor } = vi.hoisted(() => ({ openEditor: vi.fn() }));
 vi.mock('./editor.svelte', () => ({ openEditor }));
 
 import { enhance, markdownInto, render, rewriteLink, resolveRelative } from './markdown';
+import { projectState } from './project.svelte';
 
 describe('links', () => {
 	it('resolves relative paths against the document folder', () => {
@@ -166,5 +167,111 @@ describe('edit controls', () => {
 			line: undefined,
 			story: 'S-0001'
 		});
+	});
+});
+
+describe('log paths (S-0785)', () => {
+	afterEach(() => {
+		projectState.current = null;
+	});
+
+	function shown(markdown: string) {
+		const root = document.createElement('div');
+		root.innerHTML = render(markdown, '');
+		return root;
+	}
+	const logLinks = (root: HTMLElement) =>
+		[...root.querySelectorAll<HTMLAnchorElement>('a[data-path]')].map((a) => ({
+			path: a.dataset.path,
+			href: a.getAttribute('href'),
+			code: a.querySelector('code')?.textContent ?? null
+		}));
+	const href = (path: string) => `/ops/log?${new URLSearchParams({ path })}`;
+
+	it('links an absolute, a ~/, and a .flai-cache/ log path in text to the log page', () => {
+		const root = shown(
+			'Deploy failed: see /home/op/.flai/serve/kluster/s-0785.log, ~/.flai/serve/flai-serve.log and .flai-cache/kluster/logs/s-0785/build-api.log.\n'
+		);
+		expect(logLinks(root)).toEqual([
+			{
+				path: '/home/op/.flai/serve/kluster/s-0785.log',
+				href: href('/home/op/.flai/serve/kluster/s-0785.log'),
+				code: null
+			},
+			{
+				path: '~/.flai/serve/flai-serve.log',
+				href: href('~/.flai/serve/flai-serve.log'),
+				code: null
+			},
+			{
+				path: '.flai-cache/kluster/logs/s-0785/build-api.log',
+				href: href('.flai-cache/kluster/logs/s-0785/build-api.log'),
+				code: null
+			}
+		]);
+		expect(root.textContent!.trim()).toBe(
+			'Deploy failed: see /home/op/.flai/serve/kluster/s-0785.log, ~/.flai/serve/flai-serve.log and .flai-cache/kluster/logs/s-0785/build-api.log.'
+		);
+	});
+
+	it('links a log path in backticks with its code element inside the link', () => {
+		const root = shown(
+			'deploy of S-0785 failed at build-api; its log is `/home/op/a.log`, `~/b.log`, and `.flai-cache/c.log`\n'
+		);
+		expect(logLinks(root)).toEqual([
+			{ path: '/home/op/a.log', href: href('/home/op/a.log'), code: '/home/op/a.log' },
+			{ path: '~/b.log', href: href('~/b.log'), code: '~/b.log' },
+			{ path: '.flai-cache/c.log', href: href('.flai-cache/c.log'), code: '.flai-cache/c.log' }
+		]);
+		expect(root.querySelector('a[data-path] > code')).not.toBeNull();
+		expect(root.querySelector('a[data-path]')!.getAttribute('title')).toBe('Show /home/op/a.log');
+	});
+
+	it('links only the log path in a code span that says more, the rest staying code', () => {
+		const root = shown('Run `tail -f /tmp/x.log` to follow it.\n');
+		expect(logLinks(root)).toEqual([
+			{ path: '/tmp/x.log', href: href('/tmp/x.log'), code: '/tmp/x.log' }
+		]);
+		expect([...root.querySelectorAll('code')].map((c) => c.textContent)).toEqual([
+			'tail -f ',
+			'/tmp/x.log'
+		]);
+	});
+
+	it('keeps the project this tab views on the link', () => {
+		projectState.current = 'shop';
+		const [link] = logLinks(shown('see `/tmp/x.log`\n'));
+		expect(link.href).toBe(`${href('/tmp/x.log')}&project=shop`);
+	});
+
+	it('leaves a fenced block, a path not ending in .log, a URL, and a markdown link as they are', () => {
+		const root = shown(
+			[
+				'```',
+				'/home/op/.flai/serve/kluster/s-0785.log',
+				'```',
+				'',
+				'    /tmp/indented.log',
+				'',
+				'see /home/op/a.log.bak, `~/b.txt`, https://example.com/logs/c.log and [the ADR](design/adrs/0001-x.md)',
+				''
+			].join('\n')
+		);
+		expect(logLinks(root)).toEqual([]);
+		expect(root.querySelector('pre')!.textContent).toBe(
+			'/home/op/.flai/serve/kluster/s-0785.log\n'
+		);
+		expect([...root.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
+			'https://example.com/logs/c.log',
+			'/docs/design/adrs/0001-x.md'
+		]);
+	});
+
+	it('leaves a log path that is the text of a link to that link', () => {
+		const root = shown(
+			'[the log](https://example.com/a) and [/tmp/x.log](https://example.com/x)\n'
+		);
+		expect(logLinks(root)).toEqual([]);
+		expect(root.querySelectorAll('a')).toHaveLength(2);
 	});
 });

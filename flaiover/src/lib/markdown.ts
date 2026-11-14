@@ -5,8 +5,11 @@
 import MarkdownIt from 'markdown-it';
 import anchor from 'markdown-it-anchor';
 import taskLists from 'markdown-it-task-lists';
+import type { StateCore, Token } from 'markdown-it';
 import type { Attachment } from 'svelte/attachments';
 import { editLink, fileRef, type EditLink, type LinkOptions } from './filelinks';
+import { logHref, splitLogPaths } from './logs';
+import { projectState } from './project.svelte';
 
 /** The id a heading gets, markdown-it-anchor's own rule: what a link to a document's heading ends with. */
 export const slug = (heading: string): string =>
@@ -33,6 +36,45 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
 	}
 	return defaultFence(tokens, idx, options, env, self);
 };
+
+// A log path in text or in an inline code span links to the log page, with the project this tab
+// views, as LogLink does (S-0785): flai serve names a failure's log on threads and messages, often
+// in backticks, and the operator reads it there rather than in a shell. A code span keeps its code
+// element inside the link. Fenced and indented code, and text already inside a link, stay as they are.
+function logLink(state: StateCore, path: string, inner: Token): Token[] {
+	const open = new state.Token('link_open', 'a', 1);
+	open.attrs = [
+		['href', logHref(path, projectState.current)],
+		['title', `Show ${path}`],
+		['data-path', path]
+	];
+	return [open, inner, new state.Token('link_close', 'a', -1)];
+}
+
+function leaf(state: StateCore, like: Token, content: string): Token {
+	const t = new state.Token(like.type, like.tag, 0);
+	t.content = content;
+	t.markup = like.markup;
+	return t;
+}
+
+function linkLogPaths(state: StateCore): void {
+	for (const block of state.tokens) {
+		if (block.type !== 'inline' || !block.children) continue;
+		let inLink = 0;
+		block.children = block.children.flatMap((t) => {
+			if (t.type === 'link_open') inLink++;
+			if (t.type === 'link_close') inLink--;
+			if (inLink > 0 || (t.type !== 'text' && t.type !== 'code_inline')) return [t];
+			const parts = splitLogPaths(t.content);
+			if (!parts.some((p) => 'path' in p)) return [t];
+			return parts.flatMap((p) =>
+				'path' in p ? logLink(state, p.path, leaf(state, t, p.path)) : [leaf(state, t, p.text)]
+			);
+		});
+	}
+}
+md.core.ruler.push('log_links', linkLogPaths);
 
 /** Resolve a relative link against the directory of the current document. */
 export function resolveRelative(docPath: string, href: string): string {

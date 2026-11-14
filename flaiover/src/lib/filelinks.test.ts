@@ -36,6 +36,21 @@ describe('parseFileRefs', () => {
 			expect(parseFileRefs(text), text).toEqual([{ text }]);
 	});
 
+	it('leaves log paths, which link to the log page instead (S-0785), as text', () => {
+		for (const text of [
+			'/home/op/.flai/serve/kluster/s-0785.log',
+			'~/.flai/serve/flai-serve.log',
+			'.flai-cache/kluster/logs/s-0785/build-api.log',
+			'design/system/a.log',
+			'.flai-cache/worktrees/S-0785/design/a.md'
+		])
+			expect(parseFileRefs(text), text).toEqual([{ text }]);
+		expect(parseFileRefs('see /tmp/x.log and design/a.md:3')).toEqual([
+			{ text: 'see /tmp/x.log and ' },
+			{ text: 'design/a.md:3', ref: { path: 'design/a.md', line: 3 } }
+		]);
+	});
+
 	it('takes the folders from the layout it is given', () => {
 		const layout = { design: 'spec/', docs: 'manual', wip: 'work' };
 		expect(fileRef('spec/a.md:2', layout)).toEqual({ path: 'spec/a.md', line: 2 });
