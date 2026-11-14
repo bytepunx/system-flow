@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 305.3350
-accrued_seconds: 33142
-tasks_completed: 204
-last_run: 2026-11-14T17:36:46Z
+accrued_cost: 306.1895
+accrued_seconds: 33263
+tasks_completed: 205
+last_run: 2026-11-14T18:00:25Z
 ---
 
 # Curator activity
@@ -1643,3 +1643,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 29
 - Cost: 0.9280 USD, estimated
+
+### 2026-11-14T18:00:25Z
+
+- Summary: I wrote no new entries. I merged TH-1115 (D-0623) and TH-1097 (D-0624) into D-0622, which now records that E-0034's cost of delay is `time_lost_per_cycle: 10h`, and merged I-0371's cause and fix (S-0781) into D-0617. I absorbed nothing: ADR-0301 is not on main yet, so D-0626 stays active. `flai digest compact` compacted none; I left out S-0781's narrative decisions as progress.
+- Trigger: accepted S-0781
+- Items: D-0617, D-0622, D-0623, D-0624
+- Seconds: 121
+- Cost: 0.8545 USD, estimated

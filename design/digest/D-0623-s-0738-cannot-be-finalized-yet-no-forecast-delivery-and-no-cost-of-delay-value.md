@@ -14,18 +14,6 @@ cited: []
 
 # D-0623 S-0738 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs: the epic has a 10h per cycle CoD
 
-The operator, alex, answered TH-1115 at 2026-11-14T17:41:13Z.
-
-What was asked:
-
-```text
-**Recommended:** answer or confirm my recommendation on TH-1097, the inputs for E-0034. I then set them under `set_cost_of_delay`, the planner's next run writes S-0738's value and its forecast delivery, and I finalize the draft once `flai promote --drafts` lists it complete.
-```
-
-The answer:
-
-```text
-the epic has a 10h per cycle CoD
-```
+Merged into D-0622: E-0034's cost of delay input is `time_lost_per_cycle: 10h`, the operator's answer here on TH-1115 at 2026-11-14T17:41:13Z ("the epic has a 10h per cycle CoD"). Read D-0622 for the whole fact.
 
 Source: TH-1115.

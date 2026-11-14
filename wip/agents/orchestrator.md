@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2188.1527
-accrued_seconds: 1564184
-tasks_completed: 3516
-last_run: 2026-11-14T17:55:58Z
+accrued_cost: 2189.2167
+accrued_seconds: 1564407
+tasks_completed: 3522
+last_run: 2026-11-14T18:01:47Z
 ---
 
 # Orchestrator activity
@@ -24647,6 +24647,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1170 USD, estimated
+
+### 2026-11-14T17:59:14Z
+
+- Summary: S-0736 not accepted: the verifier found all 9 criteria met at 73b11e7 (close-out passed there), but alex moved it back to in-progress at 17:58:41Z ("Rebase needed") before the dry run, so accept refused it as not in review. Nothing more to do until its agent rebases and moves it to review again. TH-1196 left alone: its last entry is flai serve's notice, and accepting S-0736 is what clears it.
+- Items: S-0736, TH-1196
+- Seconds: 109
+- Cost: 0.3197 USD, estimated
+
+### 2026-11-14T17:59:33Z
+
+- Summary: I didn't accept S-0736: you moved it back to in-progress at 17:58:41Z ("Rebase needed") before my acceptance preview ran.
+- Items: none
+- Seconds: 19
+- Cost: 0.1896 USD, estimated
+
+### 2026-11-14T18:00:24Z
+
+- Summary: Started the publish formula: instance S-0787 (ready, commit ccd18d44e) after alex's acceptance of S-0781; policy threshold met, count 1 at or over threshold 1, value 2.5 USD/week of 1000.
+- Items: S-0787, S-0781
+- Seconds: 30
+- Cost: 0.1984 USD, estimated
+
+### 2026-11-14T18:00:50Z
+
+- Summary: Applied flai order --by throughput after S-0787 entered ready (it was pulled to in-progress at once); order unchanged, S-0738 first at 29m. Left TH-1196 alone: its last entry is flai serve's notice, and its stories are held by after on S-0736 (in progress). S-0781 needed no review: alex accepted it at 17:58:09Z.
+- Items: S-0738, S-0787, S-0781
+- Seconds: 26
+- Cost: 0.1096 USD, estimated
+
+### 2026-11-14T18:01:09Z
+
+- Summary: I started the release, and nothing in this run needs you.
+- Items: none
+- Seconds: 19
+- Cost: 0.1142 USD, estimated
+
+### 2026-11-14T18:01:47Z
+
+- Summary: TH-1196 (resolved) and TH-1199 are flai serve starvation notices, left alone as answer_threads requires; promote_candidates lists none: every E-0034 backlog story is held by after on the S-0736 chain (in progress), S-0241 stays a draft on TH-1165; ready holds 8 of 10, all held by after. Nothing to promote, finalize, accept, or publish.
+- Items: S-0736, S-0737, S-0241
+- Seconds: 20
+- Cost: 0.1325 USD, estimated
 
 ## Refusals
 

@@ -2,9 +2,9 @@
 id: D-0622
 title: "S-0737 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs: the epic now has a 10h penalty associated with it"
 kind: answer
-sources: [TH-1114]
-topics: [cli, template, flai, go, code, all]
-paths: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/baseline_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workitem/item.go, flai/internal/workitem/rules.go, flai/internal/workitem/transition.go, flai/internal/workitem/repo.go, flai/internal/workitem/rules_test.go, design/system/flai-cli.md]
+sources: [TH-1114, TH-1115, TH-1097]
+topics: [cli, template, flai, go, flaiover, dashboard, sveltekit, conventions, code, all]
+paths: [wip/kanban/epics]
 date: 2026-11-14
 status: active
 absorbed_by: ""
@@ -14,18 +14,21 @@ cited: []
 
 # D-0622 S-0737 cannot be finalized yet: no forecast delivery and no cost of delay value until E-0034 has inputs: the epic now has a 10h penalty associated with it
 
-The operator, alex, answered TH-1114 at 2026-11-14T17:40:42Z.
+E-0034's cost of delay input is `time_lost_per_cycle: 10h`, set on the epic by the operator, alex. It overrules the planner's recommended 2h. flai shares the epic's value out to its stories by their forecasts, so no story of E-0034 needs inputs of its own.
 
-What was asked:
+The planner asked on TH-1097, recommending 2h, because E-0034 and its stories had no inputs and `flai cod` could value none of them. The operator answered at 2026-11-14T17:42:34Z:
 
 ```text
-**Recommended:** answer or confirm my recommendation on TH-1097, the inputs for E-0034. I then set them under `set_cost_of_delay`, the planner's next run writes S-0737's value and its forecast delivery, and I finalize the draft once `flai promote --drafts` lists it complete.
+I set the CoD on the epic to 10h
 ```
 
-The answer:
+The orchestrator could not finalize S-0737 (TH-1114) or S-0738 (TH-1115) while the epic had no inputs. The operator answered both the same way:
 
 ```text
 the epic now has a 10h penalty associated with it
+the epic has a 10h per cycle CoD
 ```
 
-Source: TH-1114.
+E-0034's front matter holds `time_lost_per_cycle: 10h`. The operator called it a penalty on TH-1114, but the input is time lost per cycle, not `penalty_per_week`. A later story of E-0034 takes its value from this input, and nobody asks the operator again.
+
+Sources: TH-1097, TH-1114, TH-1115. D-0623 and D-0624 recorded the same answers and are merged here.

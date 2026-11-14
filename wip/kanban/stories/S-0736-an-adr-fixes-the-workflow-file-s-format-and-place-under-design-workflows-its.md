@@ -3,11 +3,11 @@ id: S-0736
 type: story
 nature: feature
 title: An ADR fixes the workflow file's format and place under design/workflows, its state kinds, transition effects, rules, and timers, and how a workflow changes with items on the board
-status: review
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:31Z
-updated: 2026-11-14T17:56:47Z
+updated: 2026-11-14T17:58:41Z
 transitions:
   - to: ready
     at: 2026-11-14T17:38:24Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-14T17:56:47Z
     by: agent-S-0736
+  - to: in-progress
+    at: 2026-11-14T17:58:41Z
+    by: alex
 blocked:
   - from: 2026-11-14T17:48:02Z
     until: 2026-11-14T17:54:50Z
@@ -57,21 +60,21 @@ usage:
           cache_write: 4297
           cost: 0.084
     - kind: orchestrator
-      seconds: 270
+      seconds: 386
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 73
-          output: 460
-          cache_read: 3172341
-          cache_write: 360960
-          cost: 1.0445
+          input: 93
+          output: 605
+          cache_read: 4039786
+          cache_write: 513027
+          cost: 1.3482
         - model: claude-sonnet-5-5
-          input: 1
-          output: 10
-          cache_read: 4685
-          cache_write: 10565
-          cost: 0.0119
+          input: 7
+          output: 54
+          cache_read: 46400
+          cache_write: 45995
+          cost: 0.0721
 cost_of_delay:
   value: 80.17
   by: system-flow
@@ -127,3 +130,4 @@ Before any code reads a workflow file, one accepted ADR settles what the file is
 - Tasks: T-3187 (the ADR, proposed), then T-3193 (the operator's answers, the acceptance, ADR-0003 and ADR-0004), then T-3200 (the design). One task per layer: each reads the one before. All three still fit the outcome, so none was changed.
 - Forecast 45m, kept over the 28m `flai forecast` gives for size 15 (110 s per unit, 131 done feature stories). The ADR settles as much as ADR-0207 did (32 KB, eight decisions), and T-3193 waits on the operator in the middle. The wait is wall time, not agent time, but rewriting the ADR after the answers is agent time. The delivery is the one flai's replan writes from the pull order.
 - Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+- 2026-11-14T17:58:41Z: moved to in-progress: Rebase needed

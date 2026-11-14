@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.1.41 - 2026-11-14
+
+- S-0781 flai check finds `story.unaccepted` outside the story at close-out (patch).
 - S-0781 A close-out records no `story.unaccepted` outside the story (patch, ADR-0299, I-0371): the close-out rule in `work-management.md` says that a `story.unaccepted` outside the story, a done story never accepted or one whose `story/S-nnnn` branch was never merged, is left out of a close-out's check and recorded in no issue, since only `flai accept`, or the operator's merge or deletion of the branch, in the main checkout clears it, and the main checkout's check still reports it.
 
 ## 1.1.40 - 2026-11-13
