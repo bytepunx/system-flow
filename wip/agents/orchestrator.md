@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2190.6939
-accrued_seconds: 1564678
-tasks_completed: 3533
-last_run: 2026-11-14T19:55:48Z
+accrued_cost: 2191.1370
+accrued_seconds: 1564768
+tasks_completed: 3536
+last_run: 2026-11-14T23:16:11Z
 ---
 
 # Orchestrator activity
@@ -24766,6 +24766,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 17
 - Cost: 0.2226 USD, estimated
+
+### 2026-11-14T23:15:23Z
+
+- Summary: S-0788 in review: verifier passed both criteria at a2a1652, but accept dry-run blocked on verify_behind_main (main moved to include ADR-0301 paths since 5f08637); asked flai serve for a fresh close-out, job S-0788-20261114T231516Z, and left the story in review for a later run. TH-1204 is a flai serve notice, left alone; promote_candidates lists none (all held by after on S-0737, S-0241 a draft blocked per TH-1165).
+- Items: S-0788
+- Seconds: 42
+- Cost: 0.1975 USD, estimated
+
+### 2026-11-14T23:15:50Z
+
+- Summary: S-0788 left in review: fresh close-out job S-0788-20261114T231516Z stopped at sync (branch 5 commits behind main, S-0736's ADR-0301 paths incl. design/adrs/README.md); opened TH-1205 on S-0788 asking its agent to run flai stream sync and verify again; I accept once it passes at the head.
+- Items: S-0788
+- Seconds: 27
+- Cost: 0.1473 USD, estimated
+
+### 2026-11-14T23:16:11Z
+
+- Summary: I didn't accept S-0788, and nothing else changed this run.
+- Items: none
+- Seconds: 21
+- Cost: 0.0983 USD, estimated
 
 ## Refusals
 

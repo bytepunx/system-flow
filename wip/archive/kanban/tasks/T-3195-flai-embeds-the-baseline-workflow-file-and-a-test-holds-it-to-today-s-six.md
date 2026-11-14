@@ -3,16 +3,37 @@ id: T-3195
 type: task
 nature: feature
 title: flai embeds the baseline workflow file, and a test holds it to today's six states and transition map pair by pair
-status: backlog
+status: done
 parent: S-0737
 owner: alex
 created: 2026-11-12T16:05:51Z
-updated: 2026-11-12T16:05:51Z
-transitions: []
+updated: 2026-11-14T23:23:25Z
+transitions:
+  - to: ready
+    at: 2026-11-14T23:21:37Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-11-14T23:21:38Z
+    by: system-flow
+  - to: done
+    at: 2026-11-14T23:23:25Z
+    by: agent-S-0737
 stream: S-0737
 tags: [cli]
 touches: [flai/internal/workflow/baseline.go, flai/internal/workflow/baseline_test.go, flai/internal/workflow/baseline/board.md]
 after: [T-3188]
+usage:
+  source: log
+  seconds: 107
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 8952
+      cache_read: 2179497
+      cache_write: 50150
+      cost: 0.9839
 ---
 # T-3195 flai embeds the baseline workflow file, and a test holds it to today's six states and transition map pair by pair
 

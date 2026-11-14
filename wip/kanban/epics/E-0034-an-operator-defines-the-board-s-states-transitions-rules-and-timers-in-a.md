@@ -18,19 +18,19 @@ tags: [cli, dashboard, template]
 topics: [cli, template]
 usage:
   source: sum
-  seconds: 692
+  seconds: 2711
   priced_by: harness
   turns:
     - day: 2026-11-14
-      ceremony: 3
-      work: 36
+      ceremony: 6
+      work: 76
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 54553
-      cache_read: 14668132
-      cache_write: 375812
-      cost: 6.8349
+      input: 282
+      output: 126027
+      cache_read: 32068749
+      cache_write: 776201
+      cost: 14.6903
   strategic:
     - kind: planner
       seconds: 248

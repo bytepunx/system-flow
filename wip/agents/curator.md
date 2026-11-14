@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 307.1313
-accrued_seconds: 33293
-tasks_completed: 206
-last_run: 2026-11-14T18:04:38Z
+accrued_cost: 307.8871
+accrued_seconds: 33346
+tasks_completed: 207
+last_run: 2026-11-14T23:15:04Z
 ---
 
 # Curator activity
@@ -1659,3 +1659,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 30
 - Cost: 0.9418 USD, estimated
+
+### 2026-11-14T23:15:04Z
+
+- Summary: Curator run: no new entries; merged S-0736 into D-0626; absorbed D-0626 (ADR-0301 § Choices for the operator); `flai digest compact` compacted none.
+- Trigger: accepted S-0736
+- Items: D-0626
+- Seconds: 53
+- Cost: 0.7558 USD, estimated

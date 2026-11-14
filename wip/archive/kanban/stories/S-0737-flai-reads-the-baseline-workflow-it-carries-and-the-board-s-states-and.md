@@ -3,18 +3,27 @@ id: S-0737
 type: story
 nature: feature
 title: flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed
-status: ready
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:44Z
-updated: 2026-11-14T23:14:06Z
+updated: 2026-11-14T23:48:53Z
 transitions:
   - to: ready
     at: 2026-11-14T17:40:45Z
     by: alex
+  - to: in-progress
+    at: 2026-11-14T23:14:13Z
+    by: agent-S-0737
+  - to: review
+    at: 2026-11-14T23:47:40Z
+    by: system-flow
+  - to: done
+    at: 2026-11-14T23:48:53Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/baseline_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workitem/item.go, flai/internal/workitem/rules.go, flai/internal/workitem/transition.go, flai/internal/workitem/repo.go, flai/internal/workitem/rules_test.go, design/system/flai-cli.md]
+touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/baseline_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workitem/item.go, flai/internal/workitem/rules.go, flai/internal/workitem/repo.go, flai/internal/workitem/rules_test.go, design/system/flai-cli.md]
 after: [S-0736]
 agent:
   harness: claude-code
@@ -22,9 +31,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2019
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      ceremony: 3
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 144
+      output: 71474
+      cache_read: 17400617
+      cache_write: 400389
+      cost: 7.8554
   strategic:
     - kind: orchestrator
       seconds: 76
@@ -58,13 +78,13 @@ flai holds the board as data. A new package parses a workflow file in the format
 
 ## Acceptance criteria
 
-- [ ] A package `flai/internal/workflow` parses a workflow file into its states (name, kind, item types, WIP limit, order), its transitions (from, to, who may make it, reason, rules, effects), and its timers, and refuses a file that does not parse, naming the field and the line
-- [ ] flai embeds its baseline workflow file, which gives today's six states, today's transitions, and the baseline timers as the ADR states them
-- [ ] `workitem.States`, the check that a status is a state, `allowed`, `Follows`, and `allowedFor` read the baseline workflow; the six state constants stay as the baseline's names for the code later stories move
-- [ ] A test compares the baseline's states and transition map with today's, pair by pair, for every item type, so a change to the baseline that alters the board fails
-- [ ] A test opens a repository with a workflow other than the baseline, so later stories can test their packages against renamed and added states
-- [ ] `flai/internal/workflow` imports nothing of `workitem`, and every existing test passes unchanged
-- [ ] `design/system/flai-cli.md` § Internal structure names the package and what it holds
+- [x] A package `flai/internal/workflow` parses a workflow file into its states (name, kind, item types, WIP limit, order), its transitions (from, to, who may make it, reason, rules, effects), and its timers, and refuses a file that does not parse, naming the field and the line
+- [x] flai embeds its baseline workflow file, which gives today's six states, today's transitions, and the baseline timers as the ADR states them
+- [x] `workitem.States`, the check that a status is a state, `allowed`, `Follows`, and `allowedFor` read the baseline workflow; the six state constants stay as the baseline's names for the code later stories move
+- [x] A test compares the baseline's states and transition map with today's, pair by pair, for every item type, so a change to the baseline that alters the board fails
+- [x] A test opens a repository with a workflow other than the baseline, so later stories can test their packages against renamed and added states
+- [x] `flai/internal/workflow` imports nothing of `workitem`, and every existing test passes unchanged
+- [x] `design/system/flai-cli.md` § Internal structure names the package and what it holds
 
 ## Tasks
 
@@ -89,3 +109,17 @@ flai holds the board as data. A new package parses a workflow file in the format
 - Tasks: T-3188 (the parser and its lookups, the mover check included); then T-3195 (the baseline) and T-3196 (`flai-cli.md`) together; then T-3201 (`workitem` reads it, and the test hook later stories use). T-3196 and T-3195 share no path.
 - Forecast 33m, as `flai forecast` gives it for size 18. The change to `workitem` is a swap of a map's source behind the same functions, and the baseline test makes it checkable.
 - Cost of delay: 58.79 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 33m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: acd3a02f97e3f85a971cf9784e8606018a3c117d
+- At: 2026-11-14T23:48:53Z
+
+Verdict: pass. All 7 criteria are met at commit acd3a02f97e3f85a971cf9784e8606018a3c117d; the close-out passed every step there.
+- 1: flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go
+- 2: flai/internal/workflow/baseline.go, flai/internal/workflow/baseline/board.md
+- 3: flai/internal/workitem/item.go, flai/internal/workitem/rules.go, flai/internal/workitem/repo.go
+- 4: flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules_test.go
+- 5: flai/internal/workitem/rules_test.go
+- 6: flai/internal/workflow/workflow.go, flai/internal/workitem/rules_test.go
+- 7: design/system/flai-cli.md

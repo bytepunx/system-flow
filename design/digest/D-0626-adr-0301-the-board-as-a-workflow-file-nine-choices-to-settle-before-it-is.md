@@ -2,12 +2,12 @@
 id: D-0626
 title: "ADR-0301 (the board as a workflow file): nine choices to settle before it is accepted: Recommended: all as recommended"
 kind: answer
-sources: [TH-1198]
+sources: [TH-1198, S-0736]
 topics: [cli, template, conventions, flai, go, code, all]
 paths: [design/adrs/README.md, design/adrs/0003-work-item-hierarchy.md, design/adrs/0004-workflow-states-and-transitions.md, design/system/workflow.md, design/system/work-hierarchy.md, design/workflows/README.md, design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md]
 date: 2026-11-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md#choices-for-the-operator"
 asked_again: []
 cited: []
 ---
