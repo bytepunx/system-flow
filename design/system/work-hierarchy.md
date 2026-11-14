@@ -1,6 +1,6 @@
 ---
 title: Work item hierarchy and schema
-updated: 2026-11-11
+updated: 2026-11-14
 status: active
 topics: [all]
 ---
@@ -89,7 +89,7 @@ A story may carry `formula`, the name of the formula under `design/workflows/for
 
 ## States
 
-One state machine for all three levels:
+One state machine for all three levels. These are the states of the baseline workflow, the board flai carries and a project with no workflow file runs ([ADR-0301](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)). A project's own `design/workflows/board.md` may name other states; flai then reads each by its kind, never by its name, and the types a state and a transition take say where epics, stories, and tasks differ. Today flai's own code holds the baseline: S-0737 makes flai read it as a file, and S-0755 a project's own ([workflow.md](workflow.md#the-workflow-file-adr-0301)).
 
 ```mermaid
 stateDiagram-v2
@@ -108,14 +108,14 @@ stateDiagram-v2
     cancelled --> [*]
 ```
 
-| State | Meaning | Clock |
-|-------|---------|-------|
-| `backlog` | Captured, not committed, may be one paragraph | Lead time starts at `created` |
-| `ready` | Refined enough to start: goal and acceptance criteria present. Tasks are written by the agent that starts the story, or drafted by the planner when the operator asks it to plan the story (S-0255) | Queue time |
-| `in-progress` | Being worked | Cycle time starts on first entry |
-| `review` | Work complete, awaiting verification or human acceptance | Review time |
-| `done` | Accepted | Cycle and lead time end |
-| `cancelled` | Will not be done, reason recorded | Terminal |
+| State | Kind | Meaning | Clock |
+|-------|------|---------|-------|
+| `backlog` | `queue`, initial | Captured, not committed, may be one paragraph | Lead time starts at `created` |
+| `ready` | `queue` | Refined enough to start: goal and acceptance criteria present. Tasks are written by the agent that starts the story, or drafted by the planner when the operator asks it to plan the story (S-0255) | Queue time |
+| `in-progress` | `active` | Being worked | Cycle time starts on first entry |
+| `review` | `waiting` | Work complete, awaiting verification or human acceptance | Review time |
+| `done` | `accepted` | Accepted | Cycle and lead time end |
+| `cancelled` | `cancelled` | Will not be done, reason recorded | Terminal |
 
 Tasks may go straight from `in-progress` to `done`: review is the human acceptance step and happens at story level, so a task-level review column would only add ceremony. Stories and epics must pass through `review`.
 

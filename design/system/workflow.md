@@ -1,13 +1,13 @@
 ---
 title: Workflow and board policies
-updated: 2026-11-13
+updated: 2026-11-14
 status: active
 topics: [all]
 ---
 
 # Workflow and board policies
 
-This is the Lean part. The board is `wip/kanban`, the columns are the states in [work-hierarchy.md](work-hierarchy.md), and the policies below are what keeps flow visible and measurable. `wip/kanban/board.md` in each project records that project's WIP limits and any local policy; the defaults are here.
+This is the Lean part. The board is `wip/kanban`, the columns are the states of the project's workflow ([below](#the-workflow-file-adr-0301)), today the baseline's in [work-hierarchy.md](work-hierarchy.md#states), and the policies below are what keeps flow visible and measurable. `wip/kanban/board.md` in each project records that project's WIP limits and any local policy; the defaults are here.
 
 ## Columns and WIP limits
 
@@ -20,6 +20,18 @@ This is the Lean part. The board is `wip/kanban`, the columns are the states in 
 | done | none; a story reaches done only by acceptance, which archives it | all |
 
 Limits apply to stories. Tasks inherit their story's column budget. Epics are not limited; there should rarely be more than a handful open. `flai check` warns when a limit is exceeded. It does not block, because an agent finishing a story is more valuable than a hard stop, but the warning is recorded in the narrative. `flai check --strict` fails on ready or in-progress over its limit, but passes over review over its limit: only an acceptance clears it, the operator's or the orchestrator's ([What waits on an acceptance](#what-waits-on-an-acceptance-s-0296)), so it must not stop a story's close-out. It counts in the result's `advisory` and the summary line says so. A full review holds the pull instead (S-0243, [ADR-0073](../adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). `--strict` passes over `epic.lags-stories` for the same reason: an epic behind its stories is the operator's to move, not a story's agent's (S-0200, [An epic follows its stories](#an-epic-follows-its-stories)). The summary line counts them, with `narrative.state` (S-0271): `(N that --strict passes over: review over its limit, an epic behind its stories, and a built-in role file the project lacks, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte, or the project's image layer not built or left unchecked for want of docker, which only building it clears, or a story in progress keeping a folder touch or a story three or more open stories name in after, which only their stories clear, or two stories in progress whose claims overlap, which the trial merge judged (ADR-0230))`. A check scoped to a story leaves the image layer's findings out unless the story changes `system-flow.yaml` or the layer's Dockerfile (S-0582, [ADR-0255](../adrs/0255-a-check-scoped-to-a-story-leaves-out-the-agent-image-findings-only-the-host.md)).
+
+## The workflow file ([ADR-0301](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md))
+
+The board is data a project holds, as a strategic role is ([ADR-0207](../adrs/0207-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-whose-front.md)). The workflow file, `design/workflows/board.md`, names in its front matter:
+
+- **states**, in board order, each with a kind: `queue`, `active`, `waiting`, `accepted`, or `cancelled`. The kind tells flai what the state means, so code, the check, and the charts read a state's kind, never its name. Exactly one state is initial, one is accepted, and one is cancelled. A state may take a WIP limit (`limit: true`), whose value `wip/kanban/board.md` keeps, as `flai board limit` and the lane menu set it;
+- **transitions**, each with the item types it takes, who may make it (`by`: `anyone`, `operator`, `agent`, `flai`, `acceptance`, or `cascade`), the rules it passes, and its effects: `commit`, `pull`, `accept`, `send-back`, `cancel`, `reopen`. Stories have exactly one pull and one acceptance;
+- **timers**, each the time between two points of an item's recorded transitions or the sum of its time in the states it names. The baseline's are lead, cycle, queue, and review time.
+
+A rule is one of a vocabulary flai implements in Go, as a role file's conditions are, each refusing or warning by default; a transition may set its severity. A file names rules and cannot define one. A renamed or removed state keeps its old name in the `aliases` of the state its items go to: flai reads statuses and history through the alias and rewrites nothing.
+
+A project with no workflow file runs the baseline flai carries, which is the board this document describes: the states in [work-hierarchy.md](work-hierarchy.md#states) and the transitions and rules below. The file is code the operator runs: it changes only through a story the operator alone accepts, no role's `files` may name it, and `flai upgrade` adds the baseline to a project that lacks it and never changes it afterwards. The field tables, the rule vocabulary, the baseline file, and which story builds each part are in ADR-0301. Until those stories land, flai's own code is the baseline: S-0737 makes flai read the baseline as a file, S-0738 the rules, S-0750 the timers, and S-0755 a project's own file.
 
 ## Pull policy
 
