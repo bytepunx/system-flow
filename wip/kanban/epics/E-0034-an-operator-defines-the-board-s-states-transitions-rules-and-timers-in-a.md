@@ -3,11 +3,17 @@ id: E-0034
 type: epic
 nature: feature
 title: An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-11-10T07:55:17Z
-updated: 2026-11-12T16:04:18Z
-transitions: []
+updated: 2026-11-14T17:39:57Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:38:24Z
+    by: alex
+  - to: in-progress
+    at: 2026-11-14T17:38:32Z
+    by: agent-S-0736
 tags: [cli, dashboard, template]
 topics: [cli, template]
 usage:
@@ -41,6 +47,11 @@ usage:
           cache_read: 50528
           cache_write: 37494
           cost: 0.0687
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 10h
+    by: alex
+    at: 2026-11-14T17:39:57Z
 ---
 # E-0034 An operator defines the board's states, transitions, rules, and timers in a workflow file that flai interprets and enforces, starting from a baseline that is today's board
 
@@ -105,3 +116,5 @@ Done when an operator adds a state between `in-progress` and `review` with a rul
   7. A project's own workflow file: `flai check` validates it, `flai upgrade` keeps it, the template ships the baseline, and the operators' and users' guides say how to change it.
   8. The epic's closing story makes the change in Outcome's last paragraph in a project made from the template, end to end.
 - Out of scope: more than one workflow in a project, a workflow per epic, and a workflow editor in the dashboard. Epics and tasks keep following the one workflow, with the item types each state and transition takes saying where they differ, as a task's move from `in-progress` to `done` does today.
+- 2026-11-14T17:38:24Z: moved to ready: follows S-0736, which moved to ready
+- 2026-11-14T17:38:32Z: moved to in-progress: follows S-0736, which moved to in-progress
