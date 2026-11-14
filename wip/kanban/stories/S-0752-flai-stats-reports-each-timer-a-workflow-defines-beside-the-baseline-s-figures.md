@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-13T22:52:07Z
+updated: 2026-11-14T07:04:30Z
 transitions: []
 tags: [cli]
 topics: [cli, analysis]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 33m
-  delivery: 2026-11-14T04:35:00Z
-  basis: "Its own forecast of 33m; 15th in the pull order with an in-progress limit of 3, behind S-0241, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749 and S-0750."
+  delivery: 2026-11-14T12:47:00Z
+  basis: "Its own forecast of 33m; 15th in the pull order with an in-progress limit of 3, behind S-0781, S-0241, S-0736, S-0737, S-0738, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749 and S-0750."
   by: flai
-  at: 2026-11-13T22:52:07Z
+  at: 2026-11-14T07:04:30Z
 ---
 # S-0752 flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
 
