@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 300.1570
-accrued_seconds: 32781
-tasks_completed: 200
-last_run: 2026-11-13T22:52:56Z
+accrued_cost: 301.5881
+accrued_seconds: 32911
+tasks_completed: 201
+last_run: 2026-11-14T07:06:47Z
 ---
 
 # Curator activity
@@ -1611,3 +1611,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 40
 - Cost: 0.9107 USD, estimated
+
+### 2026-11-14T07:06:47Z
+
+- Summary: I wrote one new digest entry, D-0619; nothing was merged or absorbed, and `flai digest compact` compacted D-0309, D-0313 and D-0314.
+- Trigger: accepted S-0782
+- Items: D-0309, D-0313, D-0314, D-0619
+- Seconds: 130
+- Cost: 1.4311 USD, estimated

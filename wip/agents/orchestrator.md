@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2180.2230
-accrued_seconds: 1562810
-tasks_completed: 3467
-last_run: 2026-11-13T23:20:46Z
+accrued_cost: 2180.8364
+accrued_seconds: 1562916
+tasks_completed: 3470
+last_run: 2026-11-14T07:07:18Z
 ---
 
 # Orchestrator activity
@@ -24303,6 +24303,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 27
 - Cost: 0.1726 USD, estimated
+
+### 2026-11-14T07:05:40Z
+
+- Summary: Ran the publish formula: instance S-0784 in ready, committed aac7443e8. Policy threshold met: 1 accepted unreleased story (S-0782, value 15 USD) against count threshold 1 (value threshold 1000).
+- Items: S-0784, S-0782
+- Seconds: 32
+- Cost: 0.0984 USD, estimated
+
+### 2026-11-14T07:06:06Z
+
+- Summary: I started the release S-0782's acceptance made due: the publish formula's story, S-0784, is now in progress.
+- Items: none
+- Seconds: 26
+- Cost: 0.2837 USD, estimated
+
+### 2026-11-14T07:07:18Z
+
+- Summary: TH-1189 (resolved by flai serve) and TH-1191 (board starved; flai serve's notice, left alone under answer_threads autonomous). promote_candidates (throughput) lists none, so nothing to promote or order. promote --drafts finds no complete draft: the 19 E-0034 drafts lack only a cost of delay value, which waits on the operator's E-0034 inputs (TH-1097, operator_only recommendation pending), and TH-1113..TH-1131 already say so. S-0241 stays a draft, blocked (TH-1165). No planner started: a planner run cannot supply the epic's inputs, and alex's TH-1083 entry ("Resolved.") asks no change to E-0034's plan. S-0784, the publish instance for S-0782, is in progress.
+- Items: E-0034, S-0736, S-0241, S-0784
+- Seconds: 48
+- Cost: 0.2313 USD, estimated
 
 ## Refusals
 

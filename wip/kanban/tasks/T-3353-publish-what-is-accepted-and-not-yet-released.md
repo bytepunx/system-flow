@@ -3,12 +3,18 @@ id: T-3353
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: backlog
+status: in-progress
 parent: S-0784
 owner: alex
 created: 2026-11-14T07:05:35Z
-updated: 2026-11-14T07:05:35Z
-transitions: []
+updated: 2026-11-14T07:07:49Z
+transitions:
+  - to: ready
+    at: 2026-11-14T07:07:48Z
+    by: agent-S-0784
+  - to: in-progress
+    at: 2026-11-14T07:07:49Z
+    by: agent-S-0784
 stream: S-0784
 tags: []
 after: [T-3352]

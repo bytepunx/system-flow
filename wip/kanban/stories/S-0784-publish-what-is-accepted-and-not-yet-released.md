@@ -3,14 +3,17 @@ id: S-0784
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: ready
+status: in-progress
 owner: alex
 created: 2026-11-14T07:05:35Z
-updated: 2026-11-14T07:05:37Z
+updated: 2026-11-14T07:05:55Z
 transitions:
   - to: ready
     at: 2026-11-14T07:05:37Z
     by: system-flow
+  - to: in-progress
+    at: 2026-11-14T07:05:55Z
+    by: agent-S-0784
 tags: []
 touches: [wip/kanban/stories/S-0784-publish-what-is-accepted-and-not-yet-released.md]
 agent:
@@ -18,6 +21,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 117
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-14
+      ceremony: 1
+      hand_edits: 1
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 298
+      cache_read: 2193358
+      cache_write: 156270
+      cost: 0.8832
+  strategic:
+    - kind: orchestrator
+      seconds: 28
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 10
+          output: 82
+          cache_read: 308067
+          cache_write: 53713
+          cost: 0.107
 formula: publish
 ---
 # S-0784 Publish what is accepted and not yet released
