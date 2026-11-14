@@ -3,12 +3,15 @@ id: S-0738
 type: story
 nature: feature
 title: The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:55Z
-updated: 2026-11-14T17:40:51Z
-transitions: []
+updated: 2026-11-14T17:41:59Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:41:18Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workitem_test.go, flai/internal/workitem/worktree_test.go, design/system/workflow.md]
@@ -35,10 +38,10 @@ usage:
           cost: 0.0361
 forecast:
   duration: 29m
-  delivery: 2026-11-14T19:37:00Z
-  basis: "Its own forecast of 29m; 4th in the pull order with an in-progress limit of 3, behind S-0781, S-0241, S-0736 and S-0737."
+  delivery: 2026-11-14T18:15:00Z
+  basis: "Its own forecast of 29m; 1st in the pull order with an in-progress limit of 3, behind S-0736 and S-0781."
   by: flai
-  at: 2026-11-14T17:36:12Z
+  at: 2026-11-14T17:41:59Z
 finalized:
   by: alex
   at: 2026-11-14T17:40:51Z

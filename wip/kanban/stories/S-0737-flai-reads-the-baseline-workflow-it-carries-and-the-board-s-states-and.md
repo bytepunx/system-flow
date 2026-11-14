@@ -3,12 +3,15 @@ id: S-0737
 type: story
 nature: feature
 title: flai reads the baseline workflow it carries, and the board's states and transition map come from it with nothing else changed
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:44Z
-updated: 2026-11-14T17:38:38Z
-transitions: []
+updated: 2026-11-14T17:41:59Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:40:45Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/workflow/baseline.go, flai/internal/workflow/baseline_test.go, flai/internal/workflow/baseline/board.md, flai/internal/workitem/item.go, flai/internal/workitem/rules.go, flai/internal/workitem/transition.go, flai/internal/workitem/repo.go, flai/internal/workitem/rules_test.go, design/system/flai-cli.md]
@@ -24,21 +27,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 28
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 16
-          cache_read: 108315
-          cache_write: 18020
-          cost: 0.0361
+          input: 8
+          output: 36
+          cache_read: 299363
+          cache_write: 40008
+          cost: 0.0993
 forecast:
   duration: 33m
-  delivery: 2026-11-14T19:04:00Z
-  basis: "Its own forecast of 33m; 3rd in the pull order with an in-progress limit of 3, behind S-0781, S-0241 and S-0736."
+  delivery: 2026-11-14T19:07:00Z
+  basis: "Its own forecast of 33m; 2nd in the pull order with an in-progress limit of 3, behind S-0736, S-0781 and S-0738."
   by: flai
-  at: 2026-11-14T17:36:12Z
+  at: 2026-11-14T17:41:59Z
 finalized:
   by: alex
   at: 2026-11-14T17:38:38Z
