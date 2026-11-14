@@ -1,7 +1,7 @@
 ---
 id: ADR-0301
 title: "The board is a workflow file, design/workflows/board.md, whose front matter names its states with a kind each, its transitions with who may make them, the rules they pass from a vocabulary flai implements, and the effects flai gives them, and its timers; a project with no file runs the baseline flai carries, which is today's board"
-status: proposed
+status: accepted
 date: 2026-11-14
 supersedes: []
 superseded_by: []
@@ -37,7 +37,7 @@ Every move into a state with a WIP limit warns when it takes the column of stori
 
 ### Choices for the operator
 
-Each is decided below as recommended. The operator's answer may change it before this ADR is accepted.
+Each is decided below as recommended. The operator confirmed all nine as recommended on TH-1198, 2026-11-14.
 
 1. **Where the file lives.** Recommended: `design/workflows/board.md`, beside `roles/` and `formulas/`. Alternative: `design/workflows/workflow.md`, which does not share a name with `wip/kanban/board.md`.
 2. **Where the WIP limits' values live.** Recommended: they stay in `wip/kanban/board.md`, where `flai board limit` and the board's lane menu set them without a story; the workflow file says only which states take one, and a state whose limit `wip/kanban/board.md` does not set has none, as today. Alternative: the values move into the workflow file, and a limit changes only through a story.
