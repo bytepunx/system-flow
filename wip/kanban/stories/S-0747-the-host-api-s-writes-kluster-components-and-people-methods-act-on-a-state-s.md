@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:29Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:49:23Z
 transitions: []
 tags: [cli]
 topics: [cli, dashboard]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 16
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108313
-          cache_write: 18018
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 24
+          cache_read: 178732
+          cache_write: 29353
+          cost: 0.0604
+cost_of_delay:
+  value: 67.7
+  by: system-flow
+  at: 2026-11-14T17:44:08Z
 forecast:
   duration: 38m
-  delivery: 2026-11-14T21:34:00Z
-  basis: "Its own forecast of 38m; 10th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744 and S-0746."
+  delivery: 2026-11-14T21:31:00Z
+  basis: "Its own forecast of 38m; 10th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0746, S-0739, S-0743, S-0744, S-0742 and S-0241."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:49:23Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:55Z
 ---
 # S-0747 The host API's writes, kluster, components, and people methods act on a state's kind and who may make a transition instead of a state's name
 
@@ -76,4 +82,4 @@ What the dashboard asks of flai on the host follows the workflow. A move from th
 - `after`: S-0737. The writes read who may make each transition, through S-0737's mover check, and the kinds from the workflow S-0737 gives; the tests use its test hook.
 - Tasks: T-3228 (moves and acceptance) and T-3229 (the reads) together; T-3230 (descriptions) after T-3228, since both change `writes_test.go` and the descriptions name the moves T-3228 allows.
 - Forecast 38m, `flai forecast`'s rate for size 21, up from its 37m for the first draft's 20.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 67.70 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 38m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

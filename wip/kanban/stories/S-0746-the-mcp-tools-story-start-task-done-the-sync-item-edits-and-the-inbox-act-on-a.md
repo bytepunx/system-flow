@@ -3,12 +3,15 @@ id: S-0746
 type: story
 nature: feature
 title: The MCP tools, story start, task done, the sync, item edits, and the inbox act on a state's kind and who may make a transition instead of a state's name
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:16Z
-updated: 2026-11-14T17:48:01Z
-transitions: []
+updated: 2026-11-14T17:49:23Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:48:03Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/mcpserver/work.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/storystart/start.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/storygit/sync.go, flai/internal/itemedit/itemedit.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/covers.go, flai/internal/inbox/inbox.go]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-11-14T17:44:07Z
 forecast:
   duration: 42m
-  delivery: 2026-11-14T21:14:00Z
-  basis: "Its own forecast of 42m; 9th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744 and S-0241."
+  delivery: 2026-11-14T19:54:00Z
+  basis: "Its own forecast of 42m; 4th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741 and S-0737."
   by: flai
-  at: 2026-11-14T17:48:01Z
+  at: 2026-11-14T17:49:23Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:54Z
