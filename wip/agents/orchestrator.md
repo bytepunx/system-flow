@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2183.1402
-accrued_seconds: 1563305
-tasks_completed: 3484
-last_run: 2026-11-14T16:22:54Z
+accrued_cost: 2183.6405
+accrued_seconds: 1563379
+tasks_completed: 3487
+last_run: 2026-11-14T17:33:50Z
 ---
 
 # Orchestrator activity
@@ -24423,6 +24423,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 20
 - Cost: 0.2683 USD, estimated
+
+### 2026-11-14T17:32:35Z
+
+- Summary: Release due after S-0785's acceptance: release_evaluate met under threshold (count 1 >= 1, value 12.5 USD < 1000); ran flai formula run publish --ready --autocommit, which made publish instance S-0786 (T-3358..T-3360) and moved it to ready (commit 45fcca158); ordered ready by throughput, S-0786 first (no forecast duration).
+- Items: S-0785, S-0786
+- Seconds: 18
+- Cost: 0.0990 USD, estimated
+
+### 2026-11-14T17:32:56Z
+
+- Summary: A release was due after S-0785 was accepted, and the publish formula is now running it as story S-0786.
+- Items: none
+- Seconds: 21
+- Cost: 0.2921 USD, estimated
+
+### 2026-11-14T17:33:50Z
+
+- Summary: TH-1192 is resolved (S-0786 started) and TH-1194 is flai serve's notice, so neither gets a reply. Nothing to promote: promote_candidates lists none. promote --drafts lists S-0241 alone as complete, and it stays a draft while blocked (TH-1165). The 19 E-0034 drafts lack a cost of delay value until the operator decides TH-1097 (operator_only). No planner started: S-0736's planner already ran (TH-1181) and waits on the same input.
+- Items: TH-1192, TH-1194, TH-1097, S-0241, S-0736, E-0034
+- Seconds: 35
+- Cost: 0.1092 USD, estimated
 
 ## Refusals
 
