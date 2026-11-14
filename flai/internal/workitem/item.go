@@ -25,7 +25,9 @@ const (
 	Task  = "task"
 )
 
-// States.
+// States, the baseline workflow's names (ADR-0301). The code that compares
+// a state's name keeps them until E-0034's later stories read a state's kind
+// or a transition's effect in its place.
 const (
 	Backlog    = "backlog"
 	Ready      = "ready"
@@ -35,10 +37,11 @@ const (
 	Cancelled  = "cancelled"
 )
 
-// Types, States, and Natures are the closed lists from ADR-0003 and ADR-0004.
+// Types and Natures are the closed lists from ADR-0003; States are the
+// baseline workflow's states in board order (ADR-0004, ADR-0301).
 var (
 	Types   = []string{Epic, Story, Task}
-	States  = []string{Backlog, Ready, InProgress, Review, Done, Cancelled}
+	States  = baselineFlow.Names()
 	Natures = []string{"feature", "improvement", "remediation", "research", "experiment"}
 )
 
@@ -187,7 +190,7 @@ func (it *Item) Validate() error {
 	if !contains(Natures, it.Nature) {
 		errs = append(errs, fmt.Sprintf("nature %q must be one of %s", it.Nature, strings.Join(Natures, ", ")))
 	}
-	if !contains(States, it.Status) {
+	if !isState(it.Status) {
 		errs = append(errs, fmt.Sprintf("status %q must be one of %s", it.Status, strings.Join(States, ", ")))
 	}
 	if it.Title == "" {
@@ -238,7 +241,7 @@ func (it *Item) Validate() error {
 	for i, tr := range it.Transitions {
 		// Creation is backlog and is not recorded; backlog is entered again only
 		// by a move back (ADR-0055).
-		if !contains(States, tr.To) || (i == 0 && tr.To == Backlog) {
+		if !isState(tr.To) || (i == 0 && tr.To == Backlog) {
 			errs = append(errs, fmt.Sprintf("transitions[%d].to %q is not a state that can be entered", i, tr.To))
 		}
 		if _, err := time.Parse(TimeFormat, tr.At); err != nil {

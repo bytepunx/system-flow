@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // storyInProgress makes S-0001 with criteria as its acceptance criteria and
@@ -260,6 +262,116 @@ func TestMoveToReadyOnOverlapAloneDoesNotWarn(t *testing.T) {
 	for _, w := range readyCandidate(t, r, nil, []string{"a.go"}) {
 		if strings.Contains(w, "goes to ready") {
 			t.Errorf("an overlap alone warned: %q", w)
+		}
+	}
+}
+
+// otherWorkflow is a board unlike the baseline: review is renamed
+// acceptance-review, keeping review as its alias, and testing sits between
+// in-progress and it (ADR-0301 §6).
+const otherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// repoWithWorkflow is a new project that runs the workflow file text in place
+// of the baseline, for tests of what a board with renamed and added states
+// does (ADR-0301).
+func repoWithWorkflow(t *testing.T, text string) *Repo {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", text)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	r := newProject(t)
+	r.Workflow = &w
+	return r
+}
+
+// S-0737: a repository given another workflow moves a story through the
+// states that workflow has and the baseline lacks, records each move under
+// the state's current name when the move names an alias, and refuses a move
+// that workflow has no transition for, naming the moves it has; the
+// baseline refuses the added state as no state at all.
+func TestMoveFollowsTheRepositorysWorkflow(t *testing.T) {
+	r := repoWithWorkflow(t, otherWorkflow)
+	s := storyInProgress(t, r, "- [x] one\n")
+	mustMove(t, r, s, "testing", "")
+	mustMove(t, r, s, Review, "")
+	got, err := r.Get(s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tos []string
+	for _, tr := range got.Transitions {
+		tos = append(tos, tr.To)
+	}
+	if want := []string{Ready, InProgress, "testing", "acceptance-review"}; got.Status != "acceptance-review" || !slices.Equal(tos, want) {
+		t.Errorf("status %q, transitions %v; want acceptance-review and %v", got.Status, tos, want)
+	}
+
+	other := mustCreate(t, r, Story, "S2", "E-0001")
+	other.Body = strings.Replace(other.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] one\n", 1)
+	if err := r.Save(other); err != nil {
+		t.Fatal(err)
+	}
+	mustMove(t, r, other, Ready, "")
+	mustMove(t, r, other, InProgress, "")
+	items, _ := r.List(false)
+	_, err = r.Move(other, Review, MoveOptions{Now: t0, Items: items})
+	if want := "rule: S-0002 cannot go from in-progress to acceptance-review (allowed: testing, ready, cancelled)"; err == nil || err.Error() != want {
+		t.Errorf("in-progress to review under the other workflow: %v; want %q", err, want)
+	}
+
+	base := newProject(t)
+	b := storyInProgress(t, base, "- [x] one\n")
+	items, _ = base.List(false)
+	if _, err := base.Move(b, "testing", MoveOptions{Now: t0, Items: items}); err == nil || !strings.Contains(err.Error(), `"testing" is not a state; use one of backlog, ready, in-progress, review, done, cancelled`) {
+		t.Errorf("the baseline moved a story to testing: %v", err)
+	}
+}
+
+// S-0737: Follows reads the baseline, a cascade-only move included: review
+// to cancelled is no move of its own, only a cancellation's.
+func TestFollowsReadsTheBaseline(t *testing.T) {
+	for _, tc := range []struct {
+		typ, from, to string
+		want          bool
+	}{
+		{Story, Backlog, Ready, true},
+		{Story, InProgress, Done, false},
+		{Task, InProgress, Done, true},
+		{Story, Review, Done, true},
+		{Task, Review, Cancelled, false},
+		{Story, Done, Review, false},
+		{Story, InProgress, "testing", false},
+	} {
+		if got := Follows(tc.typ, tc.from, tc.to); got != tc.want {
+			t.Errorf("Follows(%s, %s, %s) = %v, want %v", tc.typ, tc.from, tc.to, got, tc.want)
 		}
 	}
 }

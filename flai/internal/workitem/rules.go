@@ -4,21 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
-)
 
-// allowed lists the transitions from each state (ADR-0004, workflow.md).
-// Tasks may also go straight from in-progress to done: review is the
-// human acceptance step and happens at story level. Every state but done
-// has a way back a column (ADR-0055): done is acceptance, and final.
-var allowed = map[string][]string{
-	Backlog:    {Ready, Cancelled},
-	Ready:      {InProgress, Backlog, Cancelled},
-	InProgress: {Review, Ready, Cancelled},
-	Review:     {Done, InProgress},
-	Cancelled:  {Backlog},
-}
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
+)
 
 // MoveOptions parameterise a transition.
 type MoveOptions struct {
@@ -41,9 +32,13 @@ type MoveOptions struct {
 // Move validates and applies a state transition. Warnings are non-fatal
 // policy breaches such as an exceeded WIP limit.
 func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, err error) {
-	if !contains(States, to) {
-		return nil, fmt.Errorf("%q is not a state; use one of %s", to, strings.Join(States, ", "))
+	wf := r.Flow()
+	st, known := wf.State(to)
+	if !known {
+		return nil, fmt.Errorf("%q is not a state; use one of %s", to, strings.Join(wf.Names(), ", "))
 	}
+	// A move names the state's current name, never an alias (ADR-0301 §6).
+	to = st.Name
 	if it.Archived {
 		return nil, fmt.Errorf("%s is archived and cannot be moved", it.ID)
 	}
@@ -51,9 +46,13 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	if from == to {
 		return nil, fmt.Errorf("%s is already %s", it.ID, to)
 	}
-	ok := Follows(it.Type, from, to) || (opt.Cascade && to == Cancelled && from == Review)
+	ok := follows(wf, it.Type, from, to)
+	if !ok && opt.Cascade {
+		t, found := wf.Find(it.Type, from, to)
+		ok = found && t.Allows(workflow.ByCascade)
+	}
 	if !ok {
-		return nil, fmt.Errorf("rule: %s cannot go from %s to %s (allowed: %s)", it.ID, from, to, strings.Join(allowedFor(it, from), ", "))
+		return nil, fmt.Errorf("rule: %s cannot go from %s to %s (allowed: %s)", it.ID, from, to, strings.Join(allowedFor(wf, it, from), ", "))
 	}
 	if (to == Cancelled || (from == Review && to == InProgress)) && strings.TrimSpace(opt.Reason) == "" {
 		return nil, fmt.Errorf("rule: moving %s to %s needs --reason", it.ID, to)
@@ -189,15 +188,32 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 }
 
 // Follows reports whether an item of type typ may move from one state to the
-// other, as Move allows it before its other rules.
+// other in the baseline workflow, as Move allows it before its other rules.
 func Follows(typ, from, to string) bool {
-	return contains(allowed[from], to) || (typ == Task && from == InProgress && to == Done)
+	return follows(baselineFlow, typ, from, to)
 }
 
-func allowedFor(it *Item, from string) []string {
-	out := append([]string{}, allowed[from]...)
-	if it.Type == Task && from == InProgress {
-		out = append(out, Done)
+// follows reports whether wf has a transition for typ from one state to the
+// other that is not made only as a parent's cancellation takes the item
+// along: that move needs MoveOptions.Cascade (ADR-0028).
+func follows(wf workflow.Workflow, typ, from, to string) bool {
+	t, ok := wf.Find(typ, from, to)
+	return ok && !cascadeOnly(t)
+}
+
+// cascadeOnly reports whether only a parent's cancellation makes t.
+func cascadeOnly(t workflow.Transition) bool {
+	return len(t.By) == 1 && t.By[0] == workflow.ByCascade
+}
+
+// allowedFor are the states an item of its type may move to from from in wf,
+// in the file's order, leaving out the moves only a cascade makes.
+func allowedFor(wf workflow.Workflow, it *Item, from string) []string {
+	var out []string
+	for _, t := range wf.From(it.Type, from) {
+		if !cascadeOnly(t) && !slices.Contains(out, t.To) {
+			out = append(out, t.To)
+		}
 	}
 	if len(out) == 0 {
 		return []string{"none, " + from + " is terminal"}

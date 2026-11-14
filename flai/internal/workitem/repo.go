@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/template"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Repo is a conforming project opened for work item operations.
@@ -40,6 +41,29 @@ type Repo struct {
 	// (S-0551), as Repo.Holds applies it. Nil leaves the overlap hold as it
 	// was.
 	Trial TrialJudge
+	// Workflow is the workflow the repository runs (ADR-0301). Nil runs the
+	// baseline flai carries, workflow.Baseline(); a test sets it to open a
+	// repository with another workflow.
+	Workflow *workflow.Workflow
+}
+
+// baselineFlow is the baseline workflow, read once and never changed: every
+// Repo without a Workflow of its own shares it.
+var baselineFlow = workflow.Baseline()
+
+// Flow is the workflow the repository runs: its Workflow, else the baseline.
+func (r *Repo) Flow() workflow.Workflow {
+	if r.Workflow != nil {
+		return *r.Workflow
+	}
+	return baselineFlow
+}
+
+// isState reports whether name is a state of the baseline workflow, or an
+// alias of one.
+func isState(name string) bool {
+	_, ok := baselineFlow.State(name)
+	return ok
 }
 
 // Open finds the manifest above start and returns a Repo.
