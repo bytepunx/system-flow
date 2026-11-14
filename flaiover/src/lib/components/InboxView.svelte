@@ -72,7 +72,9 @@
 							<div class="mt-2 border-l-2 border-info pl-2 text-xs" data-recommendation={e.key}>
 								<span class="text-[10px] text-info uppercase">recommendation</span>
 								{rec.author}
-								<p class="mt-0.5 line-clamp-4 whitespace-pre-line text-ink"><LogText text={rec.text} /></p>
+								<p class="mt-0.5 line-clamp-4 whitespace-pre-line text-ink">
+									<LogText text={rec.text} />
+								</p>
 								{#if rec.source}
 									<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the heading added to it -->
 									<p class="mt-0.5 text-muted" data-source>
