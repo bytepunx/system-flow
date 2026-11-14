@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 299.2463
-accrued_seconds: 32741
-tasks_completed: 199
-last_run: 2026-11-13T22:50:11Z
+accrued_cost: 300.1570
+accrued_seconds: 32781
+tasks_completed: 200
+last_run: 2026-11-13T22:52:56Z
 ---
 
 # Curator activity
@@ -1603,3 +1603,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 55
 - Cost: 1.0164 USD, estimated
+
+### 2026-11-13T22:52:56Z
+
+- Summary: I found nothing to take in, so I wrote no entries and merged none. `flai digest harvest --since 2026-11-13T22:50:11Z` listed two candidates from S-0783, the publish run: one is the order its formula ran the steps in, and the other says the run stopped cleanly when the evaluate step exited 2 and published nothing. Both are a record of progress, and ADR-0271 already describes a formula stopping cleanly. I absorbed no entries, because no design document, convention or ADR changed after the last run. `flai digest compact` compacted none.
+- Trigger: accepted S-0783
+- Items: none
+- Seconds: 40
+- Cost: 0.9107 USD, estimated
