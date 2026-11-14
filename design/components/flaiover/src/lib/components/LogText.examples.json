@@ -1,0 +1,22 @@
+{
+  "examples": [
+    {
+      "name": "A status naming the log of a started agent",
+      "props": {
+        "text": "planner started for S-0785 (pid 4242); its output is in /home/op/.flai/serve/agents/planner-S-0785.log on the host"
+      }
+    },
+    {
+      "name": "An error naming two logs, one in backticks",
+      "props": {
+        "text": "the build of api failed: see `.flai-cache/kluster/logs/s-0595/build-api.log`, and ~/.flai/serve/flai-serve.log for flai serve."
+      }
+    },
+    {
+      "name": "Text with no log path",
+      "props": {
+        "text": "the catalog is up to date"
+      }
+    }
+  ]
+}

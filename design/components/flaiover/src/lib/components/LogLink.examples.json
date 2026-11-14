@@ -1,0 +1,17 @@
+{
+  "examples": [
+    {
+      "name": "A kluster step's log, by its path from the project's root",
+      "props": {
+        "path": ".flai-cache/kluster/logs/s-0595/build-api.log"
+      }
+    },
+    {
+      "name": "An agent's output under the home folder, with a label",
+      "props": {
+        "path": "~/.flai/serve/agents/planner.log",
+        "label": "the planner's output"
+      }
+    }
+  ]
+}

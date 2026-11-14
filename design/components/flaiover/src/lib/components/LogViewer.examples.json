@@ -1,0 +1,60 @@
+{
+  "examples": [
+    {
+      "name": "A kluster step's log",
+      "props": {
+        "path": ".flai-cache/kluster/logs/s-0595/build-api.log"
+      },
+      "answers": [
+        {
+          "path": "/api/log",
+          "method": "GET",
+          "body": {
+            "path": ".flai-cache/kluster/logs/s-0595/build-api.log",
+            "exists": true,
+            "offset": 0,
+            "next": 96,
+            "size": 96,
+            "text": "#1 [internal] load build definition from Dockerfile\n#2 [build 1/4] FROM golang:1.26-alpine\n#3 [build 2/4] COPY . .\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "A log that is not there yet",
+      "props": {
+        "path": "~/.flai/serve/agents/planner-S-0785.log"
+      },
+      "answers": [
+        {
+          "path": "/api/log",
+          "method": "GET",
+          "body": {
+            "path": "~/.flai/serve/agents/planner-S-0785.log",
+            "exists": false,
+            "offset": 0,
+            "next": 0,
+            "size": 0,
+            "text": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "A path flai does not read",
+      "props": {
+        "path": "/etc/passwd.log"
+      },
+      "answers": [
+        {
+          "path": "/api/log",
+          "method": "GET",
+          "status": 400,
+          "body": {
+            "error": "log.read reads a log under the project root, ~/.flai, or the story worktrees, not /etc/passwd.log"
+          }
+        }
+      ]
+    }
+  ]
+}

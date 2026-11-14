@@ -15,7 +15,8 @@
 	// end unless the reader scrolled up. A read that answers from another offset than asked is passed
 	// over, but a reset, when a new job cleared the log, starts the text over. Closed or gone, it
 	// reads nothing. A read flai refused or could not answer is shown word for word, and tried again
-	// while the step runs.
+	// while the step runs. Given follow, it reads a log that may grow at any time, such as one a
+	// message names (S-0785), as it reads a running step's, with no badge unless given an outcome.
 	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
@@ -29,7 +30,8 @@
 		endedAt = '',
 		exitCode,
 		open = $bindable(false),
-		read
+		read,
+		follow = false
 	}: {
 		/** The namespace whose job ran the step, such as s-0595 or the default namespace; none with read. */
 		namespace?: string;
@@ -50,6 +52,8 @@
 		open?: boolean;
 		/** Reads the log from an offset in place of kluster.log; throws a refusal's words. */
 		read?: (offset: number) => Promise<LogPart>;
+		/** Whether to read the log again about every second whatever the outcome, as a running step's. */
+		follow?: boolean;
 	} = $props();
 
 	/** How often a running step's log is read again. */
@@ -62,7 +66,7 @@
 	const where = $derived(namespace);
 	const which = $derived(step);
 	const opened = $derived(open);
-	const live = $derived(outcome === 'running');
+	const live = $derived(outcome === 'running' || follow);
 	// what the log is called to a screen reader: a kluster step's in its namespace, or what read reads
 	const named = $derived(
 		namespace ? `the log of the ${label || step} step in ${namespace}` : `the log of ${step}`
@@ -93,7 +97,7 @@
 		void which;
 		void live;
 		if (!opened) return;
-		return untrack(follow);
+		return untrack(poll);
 	});
 
 	async function readStep(offset: number): Promise<LogPart> {
@@ -127,7 +131,7 @@
 		if (atEnd && box) box.scrollTop = box.scrollHeight;
 	}
 
-	function follow() {
+	function poll() {
 		let stopped = false;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		const later = (ms: number) => {
@@ -185,9 +189,10 @@
 <details bind:open data-testid="log-feed" data-step={step} data-outcome={outcome}>
 	<summary class="flex cursor-pointer flex-wrap items-center gap-2 text-sm select-none">
 		<span class="font-medium">{label || step}</span>
-		<span class="rounded px-2 py-0.5 text-xs {badge(outcome)}" data-testid="log-feed-status"
-			>{outcome || 'not run'}</span
-		>
+		{#if outcome || !follow}<span
+				class="rounded px-2 py-0.5 text-xs {badge(outcome)}"
+				data-testid="log-feed-status">{outcome || 'not run'}</span
+			>{/if}
 		{#if duration}<span class="text-xs text-muted" data-testid="log-feed-duration">{duration}</span
 			>{/if}
 		{#if exitCode}<span class="text-xs text-muted">exit code {exitCode}</span>{/if}
@@ -208,7 +213,9 @@
 				? `${namespace ? 'This step' : 'It'} has not started yet.`
 				: exists
 					? 'Nothing written yet.'
-					: `${namespace ? 'The step' : 'It'} has no log.`}
+					: follow
+						? 'There is no log at this path on the host yet; it shows here once it is written.'
+						: `${namespace ? 'The step' : 'It'} has no log.`}
 		</p>
 	{/if}
 </details>

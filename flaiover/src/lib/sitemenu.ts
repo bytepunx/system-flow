@@ -283,7 +283,8 @@ export const SITE_MENU: MenuGroup[] = [
 				href: resolve('/ops/images')
 			}
 		],
-		// The group's own path, which has no page of its own.
+		// The group's own path, which has no page of its own, and the pages below it the rail does
+		// not list, such as the log page, /ops/log, which a log path in a message links (S-0785).
 		also: ['/ops']
 	},
 	{
