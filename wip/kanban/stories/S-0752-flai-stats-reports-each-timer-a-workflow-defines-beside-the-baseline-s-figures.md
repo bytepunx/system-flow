@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:24Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli]
 topics: [cli, analysis]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 13
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 15
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 5
+          output: 25
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 58.79
+  by: system-flow
+  at: 2026-11-14T17:44:12Z
 forecast:
   duration: 33m
-  delivery: 2026-11-14T23:14:00Z
-  basis: "Its own forecast of 33m; 14th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749 and S-0750."
+  delivery: 2026-11-14T23:36:00Z
+  basis: "Its own forecast of 33m; 14th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748, S-0749 and S-0750."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:57Z
 ---
 # S-0752 flai stats reports each timer a workflow defines beside the baseline's figures, for every item and over the window, past items included
 
@@ -77,4 +83,4 @@ An operator adds a timer to the workflow, such as the time from the first move t
 - `after`: S-0750. This story reads the timer evaluation S-0750 adds to `flai/internal/workflow` and the section name and definitions S-0750's ADR gives.
 - Tasks: T-3243 (the section) first; then T-3247 (the command and `stats.get`) and T-3248 (the documents) together.
 - Forecast 33m, as `flai forecast` gives it for size 18. The evaluation is S-0750's; this story reports it.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 58.79 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 33m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

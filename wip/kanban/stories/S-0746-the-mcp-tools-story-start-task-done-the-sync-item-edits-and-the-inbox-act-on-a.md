@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:16Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 16
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108313
-          cache_write: 18019
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 24
+          cache_read: 178732
+          cache_write: 29354
+          cost: 0.0604
+cost_of_delay:
+  value: 74.82
+  by: system-flow
+  at: 2026-11-14T17:44:07Z
 forecast:
   duration: 42m
-  delivery: 2026-11-14T21:24:00Z
-  basis: "Its own forecast of 42m; 9th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743 and S-0744."
+  delivery: 2026-11-14T21:14:00Z
+  basis: "Its own forecast of 42m; 9th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744 and S-0241."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:54Z
 ---
 # S-0746 The MCP tools, story start, task done, the sync, item edits, and the inbox act on a state's kind and who may make a transition instead of a state's name
 
@@ -75,4 +81,4 @@ An agent's tools follow the workflow. `item_move` lets the agent make only the t
 - `after`: S-0737. `item_move` and `story_start` read who may make each transition and the pull effect from the workflow S-0737 gives, through its mover check, and the tests use its test hook. The second criterion's uncommitted-worktree refusal stays as today whether S-0738 has landed or not, so this story does not wait for it.
 - Tasks: T-3224 (`item_move` and the server), T-3225 (story start), and T-3226 (task done, sync, edits, inbox), one layer: no two share a path.
 - Forecast 42m, `flai forecast`'s rate for size 23, up from its 39m for the first draft's 21.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 74.82 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 42m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

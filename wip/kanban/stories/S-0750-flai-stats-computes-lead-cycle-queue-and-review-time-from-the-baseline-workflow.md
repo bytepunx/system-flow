@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli]
 topics: [cli, analysis]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 13
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 15
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 5
+          output: 25
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 106.89
+  by: system-flow
+  at: 2026-11-14T17:44:11Z
 forecast:
   duration: 1h
-  delivery: 2026-11-14T22:37:00Z
-  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748 and S-0749."
+  delivery: 2026-11-14T22:59:00Z
+  basis: "Its own forecast of 1h; 13th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748 and S-0749."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:56Z
 ---
 # S-0750 flai stats computes lead, cycle, queue, and review time from the baseline workflow's timers, and the metrics read a state's kind, with every figure byte for byte as today
 
@@ -81,4 +87,4 @@ Time tracking reads the workflow. The metrics definitions are the contract betwe
 - `after`: S-0737. The timers are evaluated over the parser's `Timer` type and written into the baseline S-0737 embeds, and the metrics read kinds from the workflow it gives.
 - Tasks: T-3236 (the ADR) and T-3237 (kinds in the other metrics) together, no path in common; T-3241 (timer evaluation) and T-3242 (`metrics.md`) after T-3236; T-3246 (`Derive` from timers) after T-3241.
 - Forecast 1h, up from the 44m `flai forecast`'s rate gives for size 24. The story writes an ADR the operator answers, as S-0736 does, and the byte-for-byte rule on the fixtures leaves no room for a near miss in `Derive`.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 106.89 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 1h over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

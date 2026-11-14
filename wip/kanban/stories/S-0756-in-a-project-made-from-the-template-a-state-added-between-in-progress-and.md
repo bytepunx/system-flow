@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:34Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, dashboard, template]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 10
+      seconds: 15
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 14
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 2
+          output: 23
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 80.17
+  by: system-flow
+  at: 2026-11-14T17:44:16Z
 forecast:
   duration: 45m
-  delivery: 2026-11-15T00:38:00Z
-  basis: "Its own forecast of 45m; 18th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754 and S-0755."
+  delivery: 2026-11-15T01:00:00Z
+  basis: "Its own forecast of 45m; 18th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753, S-0754 and S-0755."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:59Z
 ---
 # S-0756 In a project made from the template, a state added between in-progress and review with a rule and a timer of its own, in the workflow file alone, is followed by the board, the moves, the check, the pull, the acceptance, and the charts
 
@@ -93,4 +99,4 @@ The epic's outcome is shown end to end. In a project rendered from the template,
 - `flai check` may advise `wip.after-hub` on S-0737 or S-0755, which several stories name; it is advisory, and each `after` reads that story's output.
 - Tasks: T-3261 (the Go test) first; T-3263 (the flaiover test) after it, using its fixture; T-3264 (recording what did not follow) after both.
 - Forecast 45m, up from the 24m `flai forecast`'s rate gives for size 13. The test drives every surface of flai and flaiover, and each failure it finds is diagnosed here before it is recorded.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

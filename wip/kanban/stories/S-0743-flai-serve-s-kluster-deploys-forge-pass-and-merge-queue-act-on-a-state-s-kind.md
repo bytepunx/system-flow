@@ -3,12 +3,15 @@ id: S-0743
 type: story
 nature: feature
 title: flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-14T17:41:59Z
-transitions: []
+updated: 2026-11-14T17:48:01Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:55Z
+    by: alex
 tags: [cli]
 topics: [cli, kluster]
 touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/forge/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
@@ -24,22 +27,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108314
-          cache_write: 18020
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 24
+          cache_read: 178733
+          cache_write: 29356
+          cost: 0.0604
+cost_of_delay:
+  value: 80.17
+  by: system-flow
+  at: 2026-11-14T17:44:05Z
 forecast:
   duration: 45m
-  delivery: 2026-11-14T20:42:00Z
-  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741 and S-0742."
+  delivery: 2026-11-14T19:57:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737 and S-0739."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:53Z
 ---
 # S-0743 flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
 
@@ -75,4 +84,4 @@ What flai serve does around review follows the workflow. A story is deployed int
 - `after`: S-0737. The deploy, push, eligibility, and send back read the acceptance and send-back transitions and the kinds from the workflow S-0737 gives, and the tests use its test hook.
 - Tasks: T-3218 (kluster), T-3219 (forge), and T-3220 (merge queue), one layer: no two share a path.
 - Forecast 45m, `flai forecast`'s rate for size 25, up from its 40m for the first draft's 22 once the co-change tests were added.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 80.17 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 45m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

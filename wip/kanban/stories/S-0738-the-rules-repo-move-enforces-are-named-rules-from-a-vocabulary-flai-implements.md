@@ -7,7 +7,7 @@ status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:55Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions:
   - to: ready
     at: 2026-11-14T17:41:18Z
@@ -27,21 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 48
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 15
-          cache_read: 108315
-          cache_write: 18020
-          cost: 0.0361
+          input: 16
+          output: 98
+          cache_read: 600918
+          cache_write: 87380
+          cost: 0.203
+cost_of_delay:
+  value: 51.66
+  by: system-flow
+  at: 2026-11-14T17:44:03Z
 forecast:
   duration: 29m
-  delivery: 2026-11-14T18:15:00Z
+  delivery: 2026-11-14T18:21:00Z
   basis: "Its own forecast of 29m; 1st in the pull order with an in-progress limit of 3, behind S-0736 and S-0781."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
 finalized:
   by: alex
   at: 2026-11-14T17:40:51Z
@@ -82,4 +86,4 @@ The checks `Repo.Move` makes in code today become named rules that the workflow'
 - `after`: S-0737. This story adds rules to the parser and baseline S-0737 writes, and `Repo.Move` reads them through the workflow `Repo` carries from S-0737 on.
 - Tasks: T-3189 (the vocabulary); then T-3197 (the baseline lists the rules) and T-3199 (`workflow.md`) together; then T-3202 (`Repo.Move` runs them). T-3199 shares no path with T-3197.
 - Forecast 29m, as `flai forecast` gives it for size 16. The rules keep their code and their words; only how they are chosen changes.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 51.66 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 29m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

@@ -3,12 +3,15 @@ id: S-0741
 type: story
 nature: feature
 title: flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-14T17:44:56Z
-transitions: []
+updated: 2026-11-14T17:48:01Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:34Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, flai/internal/check/sequence_test.go, flai/internal/check/vocabulary_test.go, design/system/flai-cli.md, docs/users/flai.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 13
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 14
-          cache_read: 108314
-          cache_write: 18020
-          cost: 0.0361
+          input: 4
+          output: 19
+          cache_read: 130256
+          cache_write: 18901
+          cost: 0.0429
 cost_of_delay:
   value: 51.66
   by: system-flow
   at: 2026-11-14T17:44:04Z
 forecast:
   duration: 29m
-  delivery: 2026-11-14T19:35:00Z
-  basis: "Its own forecast of 29m; 5th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241 and S-0739."
+  delivery: 2026-11-14T18:54:00Z
+  basis: "Its own forecast of 29m; 2nd in the pull order with an in-progress limit of 3, behind S-0736, S-0781 and S-0738."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
 finalized:
   by: alex
   at: 2026-11-14T17:44:56Z

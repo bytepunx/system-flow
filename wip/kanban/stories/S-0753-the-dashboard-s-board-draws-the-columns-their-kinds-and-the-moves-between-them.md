@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:41Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [dashboard, cli]
 topics: [dashboard, cli]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 13
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 15
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 5
+          output: 25
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 74.82
+  by: system-flow
+  at: 2026-11-14T17:44:13Z
 forecast:
   duration: 42m
-  delivery: 2026-11-14T22:52:00Z
-  basis: "Its own forecast of 42m; 15th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750 and S-0752."
+  delivery: 2026-11-14T22:59:00Z
+  basis: "Its own forecast of 42m; 15th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748, S-0749, S-0750 and S-0752."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:57Z
 ---
 # S-0753 The dashboard's board draws the columns, their kinds, and the moves between them from what flai gives, and holds no list of states of its own
 
@@ -77,4 +83,4 @@ The dashboard draws whatever board the workflow defines. `board.get` gives the c
 - `after`: S-0739. `board.get` adds the transitions beside the columns, kinds, and WIP limits S-0739's board view gives.
 - Tasks: T-3244 (`board.get`) first; then T-3249 (the board) and T-3250 (the documents) together.
 - Forecast 42m, as `flai forecast` gives it for size 23.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 74.82 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 42m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

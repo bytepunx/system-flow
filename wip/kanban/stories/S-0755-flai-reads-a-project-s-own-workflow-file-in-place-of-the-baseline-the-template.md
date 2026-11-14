@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:15Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli, template]
 topics: [cli, template, conventions]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 10
+      seconds: 15
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 14
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 3
+          output: 23
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 83.73
+  by: system-flow
+  at: 2026-11-14T17:44:15Z
 forecast:
   duration: 47m
-  delivery: 2026-11-14T23:39:00Z
-  basis: "Its own forecast of 47m; 17th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753 and S-0754."
+  delivery: 2026-11-14T23:47:00Z
+  basis: "Its own forecast of 47m; 17th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752, S-0753 and S-0754."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:58Z
 ---
 # S-0755 flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
 
@@ -80,4 +86,4 @@ An operator changes the board by editing a file in their project. flai reads the
 - `after`: S-0741. A project's own file is checked by the `workflow.` findings S-0741 adds before anything acts on it, and the first criterion stops on them.
 - Tasks: T-3253 (the load) first; then T-3259 (the check on the project's file) and T-3260 (template and upgrade) together; then T-3262 (the runbook and documents), which describes the file as T-3260 ships it.
 - Forecast 47m, `flai forecast`'s rate for size 26, up from its 42m for the first draft's 23 once the runbook and the template version were added.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 83.73 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 47m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

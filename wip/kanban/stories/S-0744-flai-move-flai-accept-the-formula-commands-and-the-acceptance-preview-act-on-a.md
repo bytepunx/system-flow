@@ -3,12 +3,15 @@ id: S-0744
 type: story
 nature: feature
 title: flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:04Z
-updated: 2026-11-14T17:41:59Z
-transitions: []
+updated: 2026-11-14T17:48:01Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:59Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/cmd/move.go, flai/cmd/move_test.go, flai/cmd/move_cancel.go, flai/cmd/move_cancel_test.go, flai/cmd/move_by_test.go, flai/internal/workitem/transition.go, flai/cmd/accept.go, flai/cmd/accept_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/cancel.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/cmd/formula.go, flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/role.go, flai/cmd/analyze.go, flai/cmd/curate.go, flai/cmd/forge.go, flai/cmd/kluster.go, flai/cmd/serve_agent_run.go]
@@ -24,22 +27,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108314
-          cache_write: 18019
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 24
+          cache_read: 178733
+          cache_write: 29354
+          cost: 0.0604
+cost_of_delay:
+  value: 106.89
+  by: system-flow
+  at: 2026-11-14T17:44:06Z
 forecast:
   duration: 1h
-  delivery: 2026-11-14T21:19:00Z
-  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742 and S-0743."
+  delivery: 2026-11-14T20:59:00Z
+  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743 and S-0742."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:54Z
 ---
 # S-0744 flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
 
@@ -77,4 +86,4 @@ The command line follows the workflow. `flai move` refuses a move its transition
 - `after`: S-0737. `flai move` and `flai accept` read who may make each transition and the acceptance effect from the workflow S-0737 gives, through its mover check, and the tests use its test hook.
 - Tasks: T-3221 (move), T-3222 (formula stop), and T-3223 (the other commands) in the first layer; T-3227 (accept and the preview) after T-3221, whose helper in `transition.go` it calls.
 - Forecast 1h, as `flai forecast` gives it for size 33; 34 with `move_cancel_test.go` added rounds the same.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 106.89 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 1h over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

@@ -3,12 +3,15 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-14T17:41:59Z
-transitions: []
+updated: 2026-11-14T17:48:01Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:47:40Z
+    by: alex
 tags: [cli]
 topics: [cli, orchestration, planning]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/start_test.go, flai/internal/serve/stop_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/budget.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/checks.go, flai/internal/serve/verifyjob.go, flai/internal/serve/upgrade.go]
@@ -24,22 +27,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108314
-          cache_write: 18020
-          cost: 0.0361
-draft: true
+          input: 5
+          output: 24
+          cache_read: 178734
+          cache_write: 29356
+          cost: 0.0604
+cost_of_delay:
+  value: 142.52
+  by: system-flow
+  at: 2026-11-14T17:44:04Z
 forecast:
   duration: 1h20m
-  delivery: 2026-11-14T21:02:00Z
-  basis: "Its own forecast of 1h20m; 6th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739 and S-0741."
+  delivery: 2026-11-14T20:37:00Z
+  basis: "Its own forecast of 1h20m; 6th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739 and S-0743."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:53Z
 ---
 # S-0742 flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
 
@@ -76,4 +85,4 @@ flai serve runs a story's agent when the story makes the transition whose effect
 - `after`: S-0737. Every change here reads a state's kind, the pull transition, and the WIP limits from the workflow `Repo` carries from S-0737 on, and the tests use its test hook.
 - Tasks: T-3213 (agents), T-3215 (ready-empty and replanning), T-3216 (strategic roles), and T-3217 (the rest), all in one layer: no two share a path.
 - Forecast 1h20m, `flai forecast`'s 109 s per unit of size for size 43, up from its 1h4m for the first draft's 35 once the test files and `agents.go` were added. The work is wide but mechanical, and the four tasks can run at once.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 142.52 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 1h20m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

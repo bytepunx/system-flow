@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:59Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, analysis]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 12
+      seconds: 17
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 15
-          cache_read: 121381
-          cache_write: 20507
-          cost: 0.0405
-draft: true
+          input: 5
+          output: 25
+          cache_read: 191799
+          cache_write: 31841
+          cost: 0.0648
+cost_of_delay:
+  value: 53.44
+  by: system-flow
+  at: 2026-11-14T17:44:14Z
 forecast:
   duration: 30m
-  delivery: 2026-11-14T23:48:00Z
-  basis: "Its own forecast of 30m; 16th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752 and S-0753."
+  delivery: 2026-11-15T00:10:00Z
+  basis: "Its own forecast of 30m; 16th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747, S-0748, S-0749, S-0750, S-0752 and S-0753."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:58Z
 ---
 # S-0754 The dashboard's charts draw the workflow's states and each timer it defines from what flai gives, and an operator's own timer gets a chart beside lead and cycle time
 
@@ -76,4 +82,4 @@ Every chart follows the workflow. Time in state, cumulative flow, and the cost o
 - `after`: S-0752 and S-0753. The timer charts read the section S-0752 adds to `stats.get`, and the stacked charts read the columns and kinds S-0753 adds to `board.get`.
 - Tasks: T-3245 (stacked charts), then T-3251 (timer charts), since both change `charts.ts`, then T-3254 (the documents), which describe T-3251's chart.
 - Forecast 30m, up from the 24m `flai forecast` gave for the first draft's size 13; size 15 now gives 27m, and a new chart kind on the catalogue has taken more than its size in earlier dashboard stories.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 53.44 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 30m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

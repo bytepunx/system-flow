@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 16
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108313
-          cache_write: 18018
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 23
+          cache_read: 178731
+          cache_write: 29352
+          cost: 0.0604
+cost_of_delay:
+  value: 94.42
+  by: system-flow
+  at: 2026-11-14T17:44:09Z
 forecast:
   duration: 53m
-  delivery: 2026-11-14T22:11:00Z
-  basis: "Its own forecast of 53m; 11th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746 and S-0747."
+  delivery: 2026-11-14T22:08:00Z
+  basis: "Its own forecast of 53m; 11th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746 and S-0747."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:55Z
 ---
 # S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
 
@@ -78,4 +84,4 @@ A role file names the state a move goes to with one condition that takes any sta
 - `after`: S-0737. The condition refuses a state the workflow lacks, read from the workflow S-0737 gives. The condition's name is S-0736's ADR's, which S-0737 already waits for.
 - Tasks: T-3231 (the condition) first; then T-3238 (the guard and serve), T-3239 (the role files), and T-3240 (the documents) together, each reading T-3231's condition and sharing no path with another.
 - Forecast 53m, `flai forecast`'s rate for size 29, up from its 46m for the first draft's 25 once the template version and the guides were added.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 94.42 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 53m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.

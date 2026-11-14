@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:56Z
-updated: 2026-11-14T17:41:59Z
+updated: 2026-11-14T17:48:01Z
 transitions: []
 tags: [cli]
 topics: [cli, planning]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 11
+      seconds: 16
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 13
-          cache_read: 108313
-          cache_write: 18018
-          cost: 0.0361
-draft: true
+          input: 4
+          output: 23
+          cache_read: 178731
+          cache_write: 29352
+          cost: 0.0604
+cost_of_delay:
+  value: 74.82
+  by: system-flow
+  at: 2026-11-14T17:44:10Z
 forecast:
   duration: 42m
-  delivery: 2026-11-14T22:06:00Z
-  basis: "Its own forecast of 42m; 12th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0737, S-0241, S-0739, S-0741, S-0742, S-0743, S-0744, S-0746, S-0747 and S-0748."
+  delivery: 2026-11-14T22:17:00Z
+  basis: "Its own forecast of 42m; 12th in the pull order with an in-progress limit of 3, behind S-0736, S-0781, S-0738, S-0741, S-0737, S-0739, S-0743, S-0742, S-0744, S-0241, S-0746, S-0747 and S-0748."
   by: flai
-  at: 2026-11-14T17:41:59Z
+  at: 2026-11-14T17:48:01Z
+finalized:
+  by: orchestrator
+  at: 2026-11-14T17:45:56Z
 ---
 # S-0749 The guard, messages between stories, forecasts, prime packs, the release evaluation, the digest, and turn counts read a state's kind instead of its name
 
@@ -75,4 +81,4 @@ The rest of flai's packages that name a state follow the workflow. The guard tel
 - `after`: S-0737. The guard reads who may make each transition through S-0737's mover check, and the others read kinds and WIP limits from the workflow S-0737 gives.
 - Tasks: T-3232 (guard), T-3233 (messages), T-3234 (forecast), and T-3235 (the rest), one layer: no two share a path.
 - Forecast 42m, `flai forecast`'s rate for size 23, up from its 40m for the first draft's 22.
-- Cost of delay: not set yet, pending TH-1097, as on S-0736.
+- Cost of delay: 74.82 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 42m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
