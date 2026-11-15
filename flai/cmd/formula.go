@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -338,7 +339,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		return undo(err)
 	}
 	ids := map[string]string{}
-	run := formulaRunResult{Story: story.Item.ID, Path: story.Path, Status: workitem.Backlog, Tasks: []formulaTask{}, Formula: f.Name, Inputs: values}
+	run := formulaRunResult{Story: story.Item.ID, Path: story.Path, Status: story.Item.Status, Tasks: []formulaTask{}, Formula: f.Name, Inputs: values}
 	after := map[string][]string{}
 	for _, s := range creationOrder(filled) {
 		for _, step := range s.After {
@@ -388,7 +389,7 @@ func (a *app) formulaRun(name string, given map[string]string, epic string, opt 
 		}
 		fmt.Fprintln(a.out, line)
 	}
-	if run.Status == workitem.Ready {
+	if opt.ready {
 		fmt.Fprintf(a.out, "  %s → %s\n", run.Story, run.Status)
 		a.printFollowed(run.Followed)
 	}
@@ -453,7 +454,12 @@ func (a *app) formulaReady(repo *workitem.Repo, id string, run *formulaRunResult
 	board, index := filepath.Join(repo.KanbanDir(), workitem.BoardFile), filepath.Join(repo.AgentsDir(), "index.md")
 	boardWas, boardErr := os.ReadFile(board)
 	indexWas, indexErr := os.ReadFile(index)
-	res, err := repo.TransitionAll(it, workitem.Ready, a.movedBy(""), "", a.now(), false)
+	// ready is where the workflow's commit transition takes a story (ADR-0301)
+	commit, ok := repo.Flow().WithEffect(workitem.Story, workflow.EffectCommit)
+	if !ok {
+		return nil, fmt.Errorf("the workflow has no transition with the commit effect for a story, so %s has no state to be ready in", id)
+	}
+	res, err := repo.TransitionAll(it, commit.To, a.movedBy(""), "", a.now(), false)
 	if err != nil {
 		for _, f := range []struct {
 			path string

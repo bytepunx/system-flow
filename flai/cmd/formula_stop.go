@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/formulas"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -114,7 +115,10 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 	if story.Type != workitem.Story || story.Formula == "" {
 		return fmt.Errorf("rule: %s is no formula's instance (it names no formula), so it has no step to stop: a step that exits other than 0 fails it, as for any task", story.ID)
 	}
-	if story.Status != workitem.InProgress {
+	// in progress is a state of the active kind (ADR-0301): the workflow's
+	// kinds, never a state's name, say what a step's move is
+	wf := repo.Flow()
+	if !workitem.IsKind(wf, story.Status, workflow.KindActive) {
 		return fmt.Errorf("rule: %s is %s, not in progress: a step stops the run of an instance being worked", story.ID, story.Status)
 	}
 	if err := servedStopsOwn(story.ID); err != nil {
@@ -155,7 +159,7 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 		return fmt.Errorf("rule: %s has %d acceptance criteria, not one per step of the formula %s (%d), so the steps' criteria cannot be told apart; put them back as flai formula run wrote them", story.ID, len(criteria), f.Name, len(f.Steps))
 	}
 	task := tasks[step]
-	if task.Status != workitem.InProgress {
+	if !workitem.IsKind(wf, task.Status, workflow.KindActive) {
 		return fmt.Errorf("rule: %s, the task of step %s, is %s, not in progress: stop the run from the step being run", task.ID, step, task.Status)
 	}
 	byID := map[string]*workitem.Item{}
@@ -163,9 +167,14 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 		byID[t.ID] = t
 	}
 	for _, after := range task.After {
-		if t := byID[workitem.CanonicalID(after)]; t == nil || t.Status != workitem.Done {
+		if t := byID[workitem.CanonicalID(after)]; t == nil || !workitem.IsKind(wf, t.Status, workflow.KindAccepted) {
 			return fmt.Errorf("rule: %s, the task of step %s, waits for %s, which is not done: run the steps in their layers", task.ID, step, workitem.CanonicalID(after))
 		}
+	}
+	m := workflow.Mover{Who: mover()}
+	done := stopTarget(wf, task.Status, workflow.KindAccepted, m)
+	if done == "" {
+		return fmt.Errorf("rule: %s, the task of step %s, is %s, and the workflow has no move you may make from it to a state of the accepted kind, so the run was not stopped", task.ID, step, task.Status)
 	}
 	layer := map[string]int{}
 	for i, l := range formulas.Layers(f) {
@@ -174,16 +183,21 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 		}
 	}
 	var skip []formulas.Step
+	cancelTo := map[string]string{}
 	for _, other := range f.Steps {
 		t := tasks[other.ID]
+		accepted := workitem.IsKind(wf, t.Status, workflow.KindAccepted)
 		switch {
 		case other.ID == step:
-		case t.Status == workitem.Done && layer[other.ID] > layer[step]:
-			return fmt.Errorf("rule: %s, the task of step %s, is done, and its layer comes after step %s's: the run went on past step %s, so it cannot stop there", t.ID, other.ID, step, step)
-		case t.Status == workitem.Done, t.Status == workitem.Cancelled:
-		case !workitem.Follows(workitem.Task, t.Status, workitem.Cancelled):
-			return fmt.Errorf("rule: %s, the task of step %s, is %s and cannot be cancelled", t.ID, other.ID, t.Status)
+		case accepted && layer[other.ID] > layer[step]:
+			return fmt.Errorf("rule: %s, the task of step %s, is %s, and its layer comes after step %s's: the run went on past step %s, so it cannot stop there", t.ID, other.ID, t.Status, step, step)
+		case accepted, workitem.IsKind(wf, t.Status, workflow.KindCancelled):
 		default:
+			to := stopTarget(wf, t.Status, workflow.KindCancelled, m)
+			if to == "" {
+				return fmt.Errorf("rule: %s, the task of step %s, is %s and cannot be cancelled", t.ID, other.ID, t.Status)
+			}
+			cancelTo[t.ID] = to
 			skip = append(skip, other)
 		}
 	}
@@ -200,15 +214,15 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 		}
 	}
 	task.Body = appendNotes(task.Body, fmt.Sprintf("Stopped the run with exit %d:\n\n%s", exit, fenced(lastLines(output, stopOutputLines))))
-	if _, err := repo.TransitionAll(task, workitem.Done, by, "", now, false); err != nil {
-		return fmt.Errorf("moving %s, the task of step %s, to done: %w", task.ID, step, err)
+	if _, err := repo.TransitionAll(task, done, by, "", now, false); err != nil {
+		return fmt.Errorf("moving %s, the task of step %s, to %s: %w", task.ID, step, done, err)
 	}
 	res := formulaStopResult{Story: story.ID, Step: step, Exit: exit, Done: task.ID, Cancelled: []string{}, Ticked: []int{at + 1}, Skipped: []int{}}
 	suffixes := map[int]string{}
 	for _, other := range skip {
 		t := tasks[other.ID]
-		if _, err := repo.TransitionAll(t, workitem.Cancelled, by, reason, now, false); err != nil {
-			return fmt.Errorf("moving %s, the task of step %s, to cancelled, after %s went to done: %w; cancel the rest by hand with the reason %q", t.ID, other.ID, task.ID, err, reason)
+		if _, err := repo.TransitionAll(t, cancelTo[t.ID], by, reason, now, false); err != nil {
+			return fmt.Errorf("moving %s, the task of step %s, to %s, after %s went to %s: %w; cancel the rest by hand with the reason %q", t.ID, other.ID, cancelTo[t.ID], task.ID, done, err, reason)
 		}
 		n := slices.IndexFunc(f.Steps, func(s formulas.Step) bool { return s.ID == other.ID }) + 1
 		res.Cancelled = append(res.Cancelled, t.ID)
@@ -246,14 +260,29 @@ func (a *app) formulaStop(id, step string, exit int, output string) error {
 	if a.jsonOut {
 		return a.printJSON(res)
 	}
-	fmt.Fprintf(a.out, "%s %s\n  %s → done (step %s, exit %d)\n", story.ID, line, task.ID, step, exit)
+	fmt.Fprintf(a.out, "%s %s\n  %s → %s (step %s, exit %d)\n", story.ID, line, task.ID, done, step, exit)
 	for _, t := range res.Cancelled {
-		fmt.Fprintf(a.out, "  %s → cancelled: %s\n", t, reason)
+		fmt.Fprintf(a.out, "  %s → %s: %s\n", t, cancelTo[t], reason)
 	}
 	if !logged {
 		fmt.Fprintf(a.out, "  not logged: %s has no narrative\n", story.ID)
 	}
 	return nil
+}
+
+// stopTarget is the state of kind a task in the state from moves to in wf,
+// along the first transition out of from into a state of that kind that m
+// may make, empty when there is none (ADR-0301 §3). On the baseline, an
+// in-progress task's is done for the accepted kind and cancelled for the
+// cancelled kind, and a task in review has no cancelled one: only its
+// parent's cancellation takes it there.
+func stopTarget(wf workflow.Workflow, from, kind string, m workflow.Mover) string {
+	for _, t := range wf.From(workitem.Task, from) {
+		if workitem.IsKind(wf, t.To, kind) && t.Permits(m) == nil {
+			return t.To
+		}
+	}
+	return ""
 }
 
 // servedStopsOwn says why the session may not stop the run of the instance
