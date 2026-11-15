@@ -3,15 +3,37 @@ id: T-3218
 type: task
 nature: feature
 title: A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
-status: backlog
+status: done
 parent: S-0743
 owner: alex
 created: 2026-11-12T16:07:12Z
-updated: 2026-11-12T16:07:12Z
-transitions: []
+updated: 2026-11-15T01:43:49Z
+transitions:
+  - to: ready
+    at: 2026-11-15T01:07:31Z
+    by: agent-S-0743
+  - to: in-progress
+    at: 2026-11-15T01:07:31Z
+    by: agent-S-0743
+  - to: done
+    at: 2026-11-15T01:43:49Z
+    by: agent-S-0743
 stream: S-0743
 tags: [cli]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/kluster/kluster.go]
+after: [T-3369]
+usage:
+  source: log
+  seconds: 2178
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 525
+      cache_read: 5785999
+      cache_write: 608638
+      cost: 2.4106
 ---
 # T-3218 A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
 

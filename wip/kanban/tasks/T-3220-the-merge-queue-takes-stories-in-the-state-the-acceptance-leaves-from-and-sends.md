@@ -3,15 +3,37 @@ id: T-3220
 type: task
 nature: feature
 title: The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
-status: backlog
+status: done
 parent: S-0743
 owner: alex
 created: 2026-11-12T16:07:20Z
-updated: 2026-11-12T16:07:20Z
-transitions: []
+updated: 2026-11-15T01:44:19Z
+transitions:
+  - to: ready
+    at: 2026-11-15T01:07:35Z
+    by: agent-S-0743
+  - to: in-progress
+    at: 2026-11-15T01:07:35Z
+    by: agent-S-0743
+  - to: done
+    at: 2026-11-15T01:44:19Z
+    by: agent-S-0743
 stream: S-0743
 tags: [cli]
-touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
+touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go]
+after: [T-3369]
+usage:
+  source: log
+  seconds: 2204
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 161
+      output: 895
+      cache_read: 9996758
+      cache_write: 485302
+      cost: 3.9515
 ---
 # T-3220 The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
 

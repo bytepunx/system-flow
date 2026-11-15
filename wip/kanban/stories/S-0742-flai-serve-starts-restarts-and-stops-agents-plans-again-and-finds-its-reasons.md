@@ -3,18 +3,21 @@ id: S-0742
 type: story
 nature: feature
 title: flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:30Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T01:55:53Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:40Z
     by: alex
+  - to: in-progress
+    at: 2026-11-15T01:15:51Z
+    by: agent-S-0742
 tags: [cli]
 topics: [cli, orchestration, planning]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_start.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/start_test.go, flai/internal/serve/stop_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/analyze.go, flai/internal/serve/curate.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/formula_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/budget.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/checks.go, flai/internal/serve/verifyjob.go, flai/internal/serve/upgrade.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_launch.go, flai/internal/serve/agents_restart.go, flai/internal/serve/agents_activity.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart_test.go, flai/internal/serve/readyempty.go, flai/internal/serve/readyempty_test.go, flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, flai/internal/serve/plan.go, flai/internal/serve/plan_test.go, flai/internal/serve/role.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/curate_schedule.go, flai/internal/serve/usage.go, flai/internal/serve/confirm.go, flai/internal/serve/remind.go, flai/internal/serve/remind_test.go, flai/internal/serve/commit.go, flai/internal/serve/claudecheck.go, flai/internal/serve/components.go, flai/internal/serve/flow.go, flai/internal/serve/kinds.go, flai/internal/serve/kinds_test.go, flai/internal/serve/serve.go, flai/internal/serve/role_events.go, flai/internal/serve/imagejob.go, design/system/workflow.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2402
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      test_runs: 4
+      work: 75
+  models:
+    - model: claude-opus-5-5
+      input: 542
+      output: 3069
+      cache_read: 40774991
+      cache_write: 1461183
+      cost: 15.9217
   strategic:
     - kind: orchestrator
       seconds: 29
@@ -70,6 +86,8 @@ flai serve runs a story's agent when the story makes the transition whose effect
 - T-3215 The ready-empty event, the starved-board thread, the replanner, and the planner's starts count by kind and WIP limit
 - T-3216 The strategic roles' starts and the orchestrator's reasons and hold read a state's kind and a transition's effect
 - T-3217 flai serve's usage, budget, confirmations, reminders, commits, checks, and upgrades read a state's kind
+- T-3370 flai serve carries the workflow its passes read, and names the pull, the active-work room, and the kinds they read it by
+- T-3372 workflow.md says how flai serve reads the workflow's kinds and the pull
 
 ## Notes
 

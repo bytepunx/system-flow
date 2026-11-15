@@ -3,18 +3,24 @@ id: S-0738
 type: story
 nature: feature
 title: The rules Repo.Move enforces are named rules from a vocabulary flai implements, listed on the baseline's transitions, each refusing or warning
-status: ready
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:58:55Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T00:50:57Z
 transitions:
   - to: ready
     at: 2026-11-14T17:41:18Z
     by: alex
+  - to: in-progress
+    at: 2026-11-14T23:49:15Z
+    by: agent-S-0738
+  - to: review
+    at: 2026-11-15T00:50:57Z
+    by: agent-S-0738
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workitem_test.go, flai/internal/workitem/worktree_test.go, design/system/workflow.md]
+touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go, flai/internal/workflow/baseline_test.go, flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, design/system/workflow.md, design/issues/I-0374-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,20 +28,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3738
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      work: 18
+    - day: 2026-11-15
+      ceremony: 2
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 206
+      output: 71015
+      cache_read: 17243500
+      cache_write: 539567
+      cost: 8.3755
   strategic:
     - kind: orchestrator
-      seconds: 71
+      seconds: 121
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 125
-          cache_read: 874373
-          cache_write: 110543
-          cost: 0.2913
+          input: 36
+          output: 202
+          cache_read: 1350316
+          cache_write: 184804
+          cost: 0.4557
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 46
+          cache_read: 46716
+          cache_write: 42844
+          cost: 0.0702
 cost_of_delay:
   value: 51.66
   by: system-flow
@@ -58,12 +83,12 @@ The checks `Repo.Move` makes in code today become named rules that the workflow'
 
 ## Acceptance criteria
 
-- [ ] `flai/internal/workflow` names the rule vocabulary the ADR fixes: acceptance criteria present, not a draft, at least one task, no open question in the narrative, nothing uncommitted in the worktree, every criterion ticked, every child closed, and a reason, each refusing or warning as the ADR says
-- [ ] The baseline's transitions list those rules where `Repo.Move` applies them today: to `ready`, to `review`, to `done`, to `cancelled`, and `review` back to `in-progress`
-- [ ] `Repo.Move` runs the rules the transition lists, in their order, and each refusal and warning keeps today's text word for word
-- [ ] A workflow whose transition names a rule the vocabulary lacks is refused when it is parsed, naming the rule and the transition
-- [ ] Tests cover each rule refusing and, where it warns, warning, the uncommitted-worktree rule and the every-child-closed rule included, which have no `workitem` test today
-- [ ] `design/system/workflow.md` § Transitions and who makes them lists the baseline's rules by name
+- [x] `flai/internal/workflow` names the rule vocabulary the ADR fixes: acceptance criteria present, not a draft, at least one task, no open question in the narrative, nothing uncommitted in the worktree, every criterion ticked, every child closed, and a reason, each refusing or warning as the ADR says
+- [x] The baseline's transitions list those rules where `Repo.Move` applies them today: to `ready`, to `review`, to `done`, to `cancelled`, and `review` back to `in-progress`
+- [x] `Repo.Move` runs the rules the transition lists, in their order, and each refusal and warning keeps today's text word for word
+- [x] A workflow whose transition names a rule the vocabulary lacks is refused when it is parsed, naming the rule and the transition
+- [x] Tests cover each rule refusing and, where it warns, warning, the uncommitted-worktree rule and the every-child-closed rule included, which have no `workitem` test today
+- [x] `design/system/workflow.md` § Transitions and who makes them lists the baseline's rules by name
 
 ## Tasks
 

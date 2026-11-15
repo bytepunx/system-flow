@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2191.1370
-accrued_seconds: 1564768
-tasks_completed: 3536
-last_run: 2026-11-14T23:16:11Z
+accrued_cost: 2193.6485
+accrued_seconds: 1565423
+tasks_completed: 3549
+last_run: 2026-11-15T01:49:04Z
 ---
 
 # Orchestrator activity
@@ -24787,6 +24787,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 21
 - Cost: 0.0983 USD, estimated
+
+### 2026-11-14T23:49:15Z
+
+- Summary: Accepted S-0737 at acd3a02 under accept_reviews: close-out passed at the branch head, verifier matched all 7 criteria to changed files, dry run showed no blocker. Clears the after-hold on S-0738, S-0739, S-0742, S-0743, S-0744, S-0746 (TH-1204).
+- Items: S-0737
+- Seconds: 47
+- Cost: 0.1876 USD, estimated
+
+### 2026-11-14T23:49:48Z
+
+- Summary: Started the publish formula after S-0737's acceptance: instance S-0789 (ready, committed 449ee65da). Policy threshold met: 1 accepted unreleased story, count 1 at threshold 1; value 58.79 USD of 1000.
+- Items: S-0789, S-0737
+- Seconds: 33
+- Cost: 0.0343 USD, estimated
+
+### 2026-11-14T23:54:24Z
+
+- Summary: API Error: Unable to connect to API: SSL certificate hostname mismatch
+- Items: none
+- Seconds: 276
+- Cost: 0.1399 USD, estimated
+
+### 2026-11-14T23:56:10Z
+
+- Summary: Reasons already settled by the previous run: S-0737 accepted at acd3a02; TH-1204 resolved by flai serve once S-0738 could start; release under threshold (count 1 of 1, 58.79 of 1000 USD) has publish instance S-0789 in ready, so I did not start the formula again. Ready column already in throughput order (S-0741 29m, S-0743 45m, S-0744 1h, S-0742 1h20m, S-0789 no forecast), nothing applied.
+- Items: S-0737, S-0789
+- Seconds: 24
+- Cost: 0.1662 USD, estimated
+
+### 2026-11-14T23:56:32Z
+
+- Summary: My previous run had already handled all three reasons, so this run changed nothing.
+- Items: none
+- Seconds: 22
+- Cost: 0.1970 USD, estimated
+
+### 2026-11-15T00:52:22Z
+
+- Summary: S-0738 verified at 66323bb (close-out passed, verifier met all 6 criteria, dry run no blockers), but accept refused: uncommitted design/digest/D-0627 on main has MD028 (blank line inside blockquote) at line 20 that the markdown fix cannot fix. Left in review; thread opened to the operator.
+- Items: S-0738
+- Seconds: 50
+- Cost: 0.2346 USD, estimated
+
+### 2026-11-15T00:52:42Z
+
+- Summary: I couldn't accept S-0738. The story is ready to accept, but the acceptance was refused because of a lint error in an uncommitted file on main that has nothing to do with S-0738. It stays in review.
+- Items: none
+- Seconds: 20
+- Cost: 0.2222 USD, estimated
+
+### 2026-11-15T00:57:40Z
+
+- Summary: S-0746 in review: last verify passed at d1aac54, but the branch head is 367457c (close-out commit), so asked flai serve for its close-out; it started job S-0746-20261115T005735Z instead of answering from the record. Left in review for a later run to read the verdict and accept under accept_reviews.
+- Items: S-0746
+- Seconds: 20
+- Cost: 0.1270 USD, estimated
+
+### 2026-11-15T00:58:01Z
+
+- Summary: I haven't accepted S-0746 yet. It stays in review until a fresh close-out at its branch head finishes.
+- Items: none
+- Seconds: 21
+- Cost: 0.1811 USD, estimated
+
+### 2026-11-15T01:17:13Z
+
+- Summary: S-0739 verified at 9f905b8 (close-out passed, verifier: all 5 criteria met, dry run no blocker), but accept refused: uncommitted D-0627 on main fails MD028 lint, as for S-0738 on TH-1206; left in review and opened TH-1207 for the operator
+- Items: S-0739, TH-1207
+- Seconds: 53
+- Cost: 0.2245 USD, estimated
+
+### 2026-11-15T01:17:33Z
+
+- Summary: S-0739 is still in review: it passes every check, but flai refused to accept it because of a file on main that has nothing to do with the story.
+- Items: none
+- Seconds: 20
+- Cost: 0.2942 USD, estimated
+
+### 2026-11-15T01:48:47Z
+
+- Summary: S-0744: verified at 18bbb55 (close-out passed, verifier met all 7 criteria, dry run no blocker); accept refused on uncommitted D-0627 MD028 lint on main, as TH-1206/TH-1207; opened a thread on S-0744 and left it in review (value 106.89/week, forecast 1h)
+- Items: S-0744
+- Seconds: 52
+- Cost: 0.4079 USD, estimated
+
+### 2026-11-15T01:49:04Z
+
+- Summary: S-0744 is still in review: flai refused the acceptance because of a file on main that the story doesn't touch.
+- Items: none
+- Seconds: 17
+- Cost: 0.0950 USD, estimated
 
 ## Refusals
 

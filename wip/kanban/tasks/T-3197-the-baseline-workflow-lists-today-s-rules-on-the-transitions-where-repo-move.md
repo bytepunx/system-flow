@@ -3,16 +3,37 @@ id: T-3197
 type: task
 nature: feature
 title: The baseline workflow lists today's rules on the transitions where Repo.Move applies them
-status: backlog
+status: done
 parent: S-0738
 owner: alex
 created: 2026-11-12T16:05:57Z
-updated: 2026-11-12T16:05:57Z
-transitions: []
+updated: 2026-11-15T00:10:10Z
+transitions:
+  - to: ready
+    at: 2026-11-15T00:04:17Z
+    by: agent-S-0738
+  - to: in-progress
+    at: 2026-11-15T00:04:17Z
+    by: agent-S-0738
+  - to: done
+    at: 2026-11-15T00:10:10Z
+    by: agent-S-0738
 stream: S-0738
 tags: [cli]
-touches: [flai/internal/workflow/baseline/board.md, flai/internal/workflow/baseline_test.go]
+touches: [flai/internal/workflow/baseline_test.go]
 after: [T-3189]
+usage:
+  source: log
+  seconds: 353
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 3849
+      cache_read: 934689
+      cache_write: 29247
+      cost: 0.454
 ---
 # T-3197 The baseline workflow lists today's rules on the transitions where Repo.Move applies them
 

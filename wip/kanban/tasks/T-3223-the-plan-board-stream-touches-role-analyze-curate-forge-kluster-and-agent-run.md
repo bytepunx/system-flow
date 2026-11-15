@@ -3,15 +3,37 @@ id: T-3223
 type: task
 nature: feature
 title: The plan, board, stream, touches, role, analyze, curate, forge, kluster, and agent-run commands read a state's kind
-status: backlog
+status: done
 parent: S-0744
 owner: alex
 created: 2026-11-12T16:07:38Z
-updated: 2026-11-12T16:07:38Z
-transitions: []
+updated: 2026-11-15T01:35:58Z
+transitions:
+  - to: ready
+    at: 2026-11-15T00:59:28Z
+    by: agent-S-0744
+  - to: in-progress
+    at: 2026-11-15T01:10:13Z
+    by: agent-S-0744
+  - to: done
+    at: 2026-11-15T01:35:58Z
+    by: agent-S-0744
 stream: S-0744
 tags: [cli]
-touches: [flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/role.go, flai/cmd/analyze.go, flai/cmd/curate.go, flai/cmd/forge.go, flai/cmd/kluster.go, flai/cmd/serve_agent_run.go]
+touches: [flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/forge.go, flai/cmd/kluster.go, flai/cmd/commands_workflow_test.go]
+after: [T-3221]
+usage:
+  source: log
+  seconds: 1545
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 11481
+      cache_read: 2955507
+      cache_write: 72871
+      cost: 1.2842
 ---
 # T-3223 The plan, board, stream, touches, role, analyze, curate, forge, kluster, and agent-run commands read a state's kind
 

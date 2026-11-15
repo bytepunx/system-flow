@@ -3,18 +3,24 @@ id: S-0739
 type: story
 nature: feature
 title: workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name
-status: ready
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:07Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T01:15:44Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:28Z
     by: alex
+  - to: in-progress
+    at: 2026-11-14T23:49:15Z
+    by: agent-S-0739
+  - to: review
+    at: 2026-11-15T01:15:44Z
+    by: agent-S-0739
 tags: [cli]
 topics: [cli, planning]
-touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go]
+touches: [flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/board.go, flai/internal/workitem/workflow_fixture_test.go, flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/taskplan.go, flai/internal/workitem/taskplan_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/order.go, flai/internal/workitem/plancandidates.go, flai/internal/workitem/promote.go, flai/internal/workitem/promote_test.go, flai/internal/workitem/promotable.go, flai/internal/workitem/finalizable.go, flai/internal/workitem/changes.go, flai/internal/workitem/share.go, flai/internal/workitem/policy.go, flai/internal/workitem/narrative.go, flai/internal/workitem/flow.go, design/system/flai-cli.md, flai/internal/workitem/order_test.go, flai/internal/workitem/plancandidates_test.go, flai/internal/workitem/changes_test.go, flai/internal/workitem/share_test.go, flai/internal/workitem/policy_test.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/finalizable_test.go, design/issues/I-0376-flai-guard-counts-a-sub-agent-that-ended-on-an-api-error-as-still-running-and.md, design/issues/summary.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,20 +28,40 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5214
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      work: 25
+    - day: 2026-11-15
+      ceremony: 1
+      test_runs: 1
+      work: 42
+  models:
+    - model: claude-opus-5-5
+      input: 450
+      output: 188971
+      cache_read: 20606326
+      cache_write: 1256593
+      cost: 15.2142
   strategic:
     - kind: orchestrator
-      seconds: 52
+      seconds: 105
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 175
-          cache_read: 724642
-          cache_write: 126815
-          cost: 0.2517
+          input: 34
+          output: 272
+          cache_read: 1188047
+          cache_write: 198519
+          cost: 0.4117
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 42
+          cache_read: 47864
+          cache_write: 34421
+          cost: 0.0645
 cost_of_delay:
   value: 80.17
   by: system-flow
@@ -58,11 +84,11 @@ The `workitem` package stops naming states. An epic follows its stories (ADR-007
 
 ## Acceptance criteria
 
-- [ ] `follow.go`, `boardview.go`, `board.go`, `taskplan.go`, `hold.go`, `order.go`, `plancandidates.go`, `promote.go`, `promotable.go`, `finalizable.go`, `changes.go`, `share.go`, `policy.go`, and `narrative.go` name no state: each reads a state's kind, WIP limit, or order from the workflow
-- [ ] The board view gives its columns in the workflow's order, with each column's kind and WIP limit, so a reader of the view needs no list of its own
-- [ ] An epic follows its stories by kind: to the first queue state with the first story, to active work with the first started, to the wait state with the last open one, and to accepted when that one is accepted
-- [ ] Tests run each of these against a workflow with a state renamed and a state added between `in-progress` and `review`, and give the same result as the baseline wherever the kinds agree
-- [ ] With the baseline, every existing `workitem` test passes unchanged
+- [x] `follow.go`, `boardview.go`, `board.go`, `taskplan.go`, `hold.go`, `order.go`, `plancandidates.go`, `promote.go`, `promotable.go`, `finalizable.go`, `changes.go`, `share.go`, `policy.go`, and `narrative.go` name no state: each reads a state's kind, WIP limit, or order from the workflow
+- [x] The board view gives its columns in the workflow's order, with each column's kind and WIP limit, so a reader of the view needs no list of its own
+- [x] An epic follows its stories by kind: to the first queue state with the first story, to active work with the first started, to the wait state with the last open one, and to accepted when that one is accepted
+- [x] Tests run each of these against a workflow with a state renamed and a state added between `in-progress` and `review`, and give the same result as the baseline wherever the kinds agree
+- [x] With the baseline, every existing `workitem` test passes unchanged
 
 ## Tasks
 

@@ -3,15 +3,36 @@ id: T-3189
 type: task
 nature: feature
 title: The workflow package names the rule vocabulary, each rule refusing or warning, and refuses a transition naming a rule it lacks
-status: backlog
+status: done
 parent: S-0738
 owner: alex
 created: 2026-11-12T16:05:23Z
-updated: 2026-11-12T16:05:23Z
-transitions: []
+updated: 2026-11-15T00:03:38Z
+transitions:
+  - to: ready
+    at: 2026-11-14T23:56:31Z
+    by: agent-S-0738
+  - to: in-progress
+    at: 2026-11-14T23:56:31Z
+    by: agent-S-0738
+  - to: done
+    at: 2026-11-15T00:03:38Z
+    by: agent-S-0738
 stream: S-0738
 tags: [cli]
 touches: [flai/internal/workflow/rules.go, flai/internal/workflow/rules_test.go, flai/internal/workflow/workflow.go]
+usage:
+  source: log
+  seconds: 427
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 1013
+      cache_read: 245961
+      cache_write: 7696
+      cost: 0.1195
 ---
 # T-3189 The workflow package names the rule vocabulary, each rule refusing or warning, and refuses a transition naming a rule it lacks
 

@@ -3,16 +3,37 @@ id: T-3227
 type: task
 nature: feature
 title: flai accept makes the transition with the acceptance effect, and the acceptance preview lists the blockers its rules give
-status: backlog
+status: done
 parent: S-0744
 owner: alex
 created: 2026-11-12T16:07:58Z
-updated: 2026-11-12T16:11:00Z
-transitions: []
+updated: 2026-11-15T01:36:39Z
+transitions:
+  - to: ready
+    at: 2026-11-15T00:59:28Z
+    by: agent-S-0744
+  - to: in-progress
+    at: 2026-11-15T01:10:14Z
+    by: agent-S-0744
+  - to: done
+    at: 2026-11-15T01:36:39Z
+    by: agent-S-0744
 stream: S-0744
 tags: [cli]
-touches: [flai/cmd/accept.go, flai/cmd/accept_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/cancel.go]
+touches: [flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_workflow_test.go, flai/internal/preview/accept_workflow_test.go, docs/users/flai.md, design/system/workflow.md]
 after: [T-3221]
+usage:
+  source: log
+  seconds: 1585
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 37004
+      cache_read: 9525744
+      cache_write: 234868
+      cost: 4.1391
 ---
 # T-3227 flai accept makes the transition with the acceptance effect, and the acceptance preview lists the blockers its rules give
 

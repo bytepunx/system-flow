@@ -3,16 +3,37 @@ id: T-3206
 type: task
 nature: feature
 title: An epic follows its stories by the kinds of their states
-status: backlog
+status: done
 parent: S-0739
 owner: alex
 created: 2026-11-12T16:06:38Z
-updated: 2026-11-12T16:06:38Z
-transitions: []
+updated: 2026-11-15T00:54:49Z
+transitions:
+  - to: ready
+    at: 2026-11-14T23:56:42Z
+    by: agent-S-0739
+  - to: in-progress
+    at: 2026-11-15T00:26:04Z
+    by: agent-S-0739
+  - to: done
+    at: 2026-11-15T00:54:49Z
+    by: agent-S-0739
 stream: S-0739
 tags: [cli]
-touches: [flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go]
+touches: [flai/internal/workitem/follow.go, flai/internal/workitem/follow_test.go, flai/internal/workitem/boardview.go]
 after: [T-3203]
+usage:
+  source: log
+  seconds: 1725
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 14882
+      cache_read: 1594882
+      cache_write: 86639
+      cost: 1.0924
 ---
 # T-3206 An epic follows its stories by the kinds of their states
 

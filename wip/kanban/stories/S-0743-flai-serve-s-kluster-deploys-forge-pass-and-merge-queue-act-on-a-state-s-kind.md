@@ -3,18 +3,21 @@ id: S-0743
 type: story
 nature: feature
 title: flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done
-status: ready
+status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:52Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T01:51:11Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:55Z
     by: alex
+  - to: in-progress
+    at: 2026-11-15T00:51:05Z
+    by: agent-S-0743
 tags: [cli]
 topics: [cli, kluster]
-touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/forge/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
+touches: [flai/internal/serve/kluster.go, flai/internal/serve/kluster_test.go, flai/internal/kluster/deploy.go, flai/internal/kluster/deploy_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgemerge.go, flai/internal/forge/state.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/flow.go, flai/internal/serve/flow_test.go, flai/internal/serve/serve.go, flai/internal/workflow/review.go, flai/internal/workflow/review_test.go, flai/internal/kluster/kluster.go, flai/internal/mergequeue/preflight.go, flai/internal/serve/kluster_requests.go, flai/internal/serve/kluster_requests_test.go, design/system/workflow.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3565
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 1
+      work: 67
+  models:
+    - model: claude-opus-5-5
+      input: 454
+      output: 2622
+      cache_read: 34292156
+      cache_write: 1661731
+      cost: 13.5535
   strategic:
     - kind: orchestrator
       seconds: 29
@@ -69,6 +84,8 @@ What flai serve does around review follows the workflow. A story is deployed int
 - T-3218 A story's kluster namespace is deployed in the state the acceptance leaves from and torn down on acceptance or cancellation, by effect
 - T-3219 The forge pass pushes, reads, and sends back a story by the state the acceptance leaves from and the send-back effect
 - T-3220 The merge queue takes stories in the state the acceptance leaves from and sends a bisected one back by the send-back effect
+- T-3369 The workflow names the states the acceptance leaves from, the send-back out of a state, and the closed kinds, and flai serve opens its repositories with the workflow its options give
+- T-3371 An agent's own kluster deploy request and the merge queue's preflight read the workflow, not a state's name
 
 ## Notes
 

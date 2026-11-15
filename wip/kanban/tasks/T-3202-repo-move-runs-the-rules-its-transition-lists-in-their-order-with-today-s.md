@@ -3,16 +3,37 @@ id: T-3202
 type: task
 nature: feature
 title: Repo.Move runs the rules its transition lists, in their order, with today's refusals and warnings word for word, and each rule is tested
-status: backlog
+status: done
 parent: S-0738
 owner: alex
 created: 2026-11-12T16:06:14Z
-updated: 2026-11-12T16:06:14Z
-transitions: []
+updated: 2026-11-15T00:29:53Z
+transitions:
+  - to: ready
+    at: 2026-11-15T00:10:24Z
+    by: agent-S-0738
+  - to: in-progress
+    at: 2026-11-15T00:10:24Z
+    by: agent-S-0738
+  - to: done
+    at: 2026-11-15T00:29:53Z
+    by: agent-S-0738
 stream: S-0738
 tags: [cli]
-touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go, flai/internal/workitem/workitem_test.go, flai/internal/workitem/worktree_test.go]
+touches: [flai/internal/workitem/rules.go, flai/internal/workitem/rules_test.go]
 after: [T-3197]
+usage:
+  source: log
+  seconds: 1169
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 18874
+      cache_read: 4582862
+      cache_write: 143403
+      cost: 2.226
 ---
 # T-3202 Repo.Move runs the rules its transition lists, in their order, with today's refusals and warnings word for word, and each rule is tested
 

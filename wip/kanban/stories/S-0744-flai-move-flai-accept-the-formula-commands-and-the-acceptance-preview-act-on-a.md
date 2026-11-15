@@ -3,18 +3,24 @@ id: S-0744
 type: story
 nature: feature
 title: flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name
-status: ready
+status: review
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:04Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T01:47:19Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:59Z
     by: alex
+  - to: in-progress
+    at: 2026-11-15T00:56:52Z
+    by: agent-S-0744
+  - to: review
+    at: 2026-11-15T01:47:19Z
+    by: agent-S-0744
 tags: [cli]
 topics: [cli]
-touches: [flai/cmd/move.go, flai/cmd/move_test.go, flai/cmd/move_cancel.go, flai/cmd/move_cancel_test.go, flai/cmd/move_by_test.go, flai/internal/workitem/transition.go, flai/cmd/accept.go, flai/cmd/accept_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/internal/preview/orchestrator.go, flai/internal/preview/cancel.go, flai/cmd/formula_stop.go, flai/cmd/formula_stop_test.go, flai/cmd/formula.go, flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/role.go, flai/cmd/analyze.go, flai/cmd/curate.go, flai/cmd/forge.go, flai/cmd/kluster.go, flai/cmd/serve_agent_run.go]
+touches: [flai/cmd/move.go, flai/cmd/move_cancel.go, flai/internal/workitem/transition.go, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/internal/preview/cancel.go, flai/cmd/formula_stop.go, flai/cmd/formula.go, flai/cmd/plan.go, flai/cmd/board.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_restore.go, flai/cmd/touches.go, flai/cmd/forge.go, flai/cmd/kluster.go, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/move_workflow_test.go, flai/cmd/project.go, flai/cmd/formula_stop_workflow_test.go, flai/cmd/commands_workflow_test.go, design/system/workflow.md, flai/cmd/accept_workflow_test.go, flai/internal/preview/accept_workflow_test.go, design/issues/I-0377-workitem-s-item-closed-and-planarchive-read-the-baseline-s-done-and-cancelled.md, design/issues/summary.md]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -22,20 +28,39 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3045
+  priced_by: harness
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      test_runs: 2
+      hand_edits: 1
+      work: 79
+  models:
+    - model: claude-opus-5-5
+      input: 400
+      output: 134097
+      cache_read: 34519633
+      cache_write: 851121
+      cost: 14.9994
   strategic:
     - kind: orchestrator
-      seconds: 24
+      seconds: 76
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 38
-          cache_read: 263426
-          cache_write: 51194
-          cost: 0.0921
+          input: 30
+          output: 274
+          cache_read: 1124161
+          cache_write: 129996
+          cost: 0.3732
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 910
+          cache_read: 121542
+          cache_write: 39220
+          cost: 0.1268
 cost_of_delay:
   value: 106.89
   by: system-flow
@@ -58,13 +83,13 @@ The command line follows the workflow. `flai move` refuses a move its transition
 
 ## Acceptance criteria
 
-- [ ] The files of `flai/cmd` that move, accept, stop a formula, plan, show the board, and sync or restore a stream, and `flai/internal/preview`, name no state: each reads a state's kind or a transition's effect and who may make it from the workflow
-- [ ] `flai move` refuses a transition the mover may not make, naming the transition, who may make it, and the command that does; the move to done stays the acceptance's, as today
-- [ ] `flai accept` makes the transition with the acceptance effect, from the state it leaves, and refuses a story in any other state with today's words and that state's name
-- [ ] `flai formula stop` closes the stopped step's task and cancels the steps after it along the workflow's transitions
-- [ ] The acceptance preview names the blockers the acceptance transition's rules give, word for word as today with the baseline
-- [ ] Tests run move, accept, formula stop, and the preview against a workflow with a state renamed and one added between `in-progress` and `review`
-- [ ] With the baseline, every existing `cmd` and `preview` test passes unchanged
+- [x] The files of `flai/cmd` that move, accept, stop a formula, plan, show the board, and sync or restore a stream, and `flai/internal/preview`, name no state: each reads a state's kind or a transition's effect and who may make it from the workflow
+- [x] `flai move` refuses a transition the mover may not make, naming the transition, who may make it, and the command that does; the move to done stays the acceptance's, as today
+- [x] `flai accept` makes the transition with the acceptance effect, from the state it leaves, and refuses a story in any other state with today's words and that state's name
+- [x] `flai formula stop` closes the stopped step's task and cancels the steps after it along the workflow's transitions
+- [x] The acceptance preview names the blockers the acceptance transition's rules give, word for word as today with the baseline
+- [x] Tests run move, accept, formula stop, and the preview against a workflow with a state renamed and one added between `in-progress` and `review`
+- [x] With the baseline, every existing `cmd` and `preview` test passes unchanged
 
 ## Tasks
 
@@ -76,6 +101,8 @@ The command line follows the workflow. `flai move` refuses a move its transition
 ## Notes
 
 - `cmd` holds about 43 references to a state's name in 18 files (`formula_stop.go` 10, `accept.go` 7, `move.go` 4), `preview` 17 (`accept.go` 12). Who may make each transition is a field the workflow gives from S-0737 on; today it is spread over `cmd/move.go`, `item_move`, and the guard.
+- Criterion 3 is verified as written: on a board whose accepted state is `shipped`, `flai accept` walks the story to `shipped` from the state the acceptance leaves and refuses a story in `testing` with today's words. The acceptance's next step, the archive, still stops there, since `workitem`'s `Item.Closed` and `PlanArchive` read the names `done` and `cancelled`, outside this story's files. I-0377 records it. On a board that keeps the name `done`, the whole acceptance runs.
+- Prose in the commands' help and in a few messages still names the baseline's states, such as "stays in review" and "done and archived". Criterion 1 is about the code's reads, and every comparison with a state's name is gone from the story's files.
 
 ### Planning
 
