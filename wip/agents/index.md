@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-15T01:56:42Z
+updated: 2026-11-15T01:57:09Z
 ---
 
 # Active streams
@@ -12,7 +12,7 @@ updated: 2026-11-15T01:56:42Z
 | [S-0742](S-0742.md) | flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name | in-progress | agent-S-0742 | 2026-11-15T01:56:11Z |
 | [S-0743](S-0743.md) | flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done | in-progress | agent-S-0743 | 2026-11-15T01:51:22Z |
 | [S-0744](S-0744.md) | flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name | review | agent-S-0744 | 2026-11-15T01:47:16Z |
-| [S-0788](S-0788.md) | Stories in review that cannot be merged need an action | review | agent-S-0788 | 2026-11-14T23:13:55Z |
+| [S-0789](S-0789.md) | Publish what is accepted and not yet released | in-progress | agent-S-0789 | 2026-11-15T01:56:58Z |
 
 ## Strategic agents
 
