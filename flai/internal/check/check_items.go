@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -155,8 +156,8 @@ func (c *checker) oneItem(it *workitem.Item) {
 		default:
 			// Cancelling a parent cancels what is open under it (ADR-0028); a tree
 			// cancelled by an older flai, or edited by hand, is caught here.
-			if parent.Status == workitem.Cancelled && !it.Closed() {
-				c.add(Error, "item.parent-cancelled", p, keyLine(p, "status"), "%s is %s under %s, which is cancelled; cancel it (flai move %s cancelled --reason \"%s cancelled\") or give it another parent", it.ID, it.Status, parent.ID, it.ID, parent.ID)
+			if c.inKind(parent.Status, workflow.KindCancelled) && !it.Closed() {
+				c.add(Error, "item.parent-cancelled", p, keyLine(p, "status"), "%s is %s under %s, which is %s; cancel it (flai move %s %s --reason \"%s cancelled\") or give it another parent", it.ID, it.Status, parent.ID, parent.Status, it.ID, workitem.CancelledState(c.repo.Flow()), parent.ID)
 			}
 			if !strings.Contains(parent.Body, "- "+it.ID+" ") && !strings.Contains(parent.Body, it.ID+"\n") {
 				c.add(Warning, "item.parent-list", parent.Path, headingLine(parent.Path, map[string]string{workitem.Story: "## Stories", workitem.Task: "## Tasks"}[it.Type]), "%s does not list child %s", parent.ID, it.ID)
@@ -176,27 +177,30 @@ func (c *checker) oneItem(it *workitem.Item) {
 	c.itemStates(it)
 	children := c.childrenOf(it.ID)
 	// Tasks are written by the agent that pulls the story, once it is in
-	// progress, and are required from review onwards (ADR-0021).
-	if it.Type == workitem.Story && (it.Status == workitem.Review || it.Status == workitem.Done) && len(children) == 0 {
+	// progress, and are required once it waits, in review on the baseline,
+	// onwards (ADR-0021).
+	if it.Type == workitem.Story && c.inKind(it.Status, workflow.KindWaiting, workflow.KindAccepted) && len(children) == 0 {
 		c.add(Error, "story.tasks", p, keyLine(p, "status"), "a %s story needs at least one task", it.Status)
 	}
-	if it.Type == workitem.Story && it.Status != workitem.Backlog && it.Status != workitem.Cancelled && !hasCriteria(it.Body) {
+	committed := !c.beforeCommit(it.Status) && !c.inKind(it.Status, workflow.KindCancelled)
+	if it.Type == workitem.Story && committed && !hasCriteria(it.Body) {
 		c.add(Error, "story.criteria", p, headingLine(p, "## Acceptance criteria"), "a %s story needs acceptance criteria with at least one checkbox", it.Status)
 	}
-	// A draft is finalized before it is ready (S-0199); one past backlog was
-	// moved by an older flai or edited by hand. The archive is not edited and
-	// is not reported.
-	if it.Type == workitem.Story && it.Draft && !it.Archived && it.Status != workitem.Backlog && it.Status != workitem.Cancelled {
-		c.add(Warning, "story.draft", p, keyLine(p, "draft"), "%s is a draft in %s; finalize it (flai edit %s --no-draft) or move it back to backlog", it.ID, it.Status, it.ID)
+	// A draft is finalized before it is committed, ready on the baseline
+	// (S-0199); one past backlog was moved by an older flai or edited by hand.
+	// The archive is not edited and is not reported.
+	if it.Type == workitem.Story && it.Draft && !it.Archived && committed {
+		initial, _ := c.repo.Flow().Initial()
+		c.add(Warning, "story.draft", p, keyLine(p, "draft"), "%s is a draft in %s; finalize it (flai edit %s --no-draft) or move it back to %s", it.ID, it.Status, it.ID, initial.Name)
 	}
-	if it.Status == workitem.Done {
+	if c.inKind(it.Status, workflow.KindAccepted) {
 		for _, ch := range children {
 			if !ch.Closed() {
-				c.add(Error, "item.done-children", p, keyLine(p, "status"), "%s is done but %s is %s", it.ID, ch.ID, ch.Status)
+				c.add(Error, "item.done-children", p, keyLine(p, "status"), "%s is %s but %s is %s", it.ID, it.Status, ch.ID, ch.Status)
 			}
 		}
 		if it.Type == workitem.Story && hasUnchecked(it.Body) {
-			c.add(Error, "story.unchecked", p, headingLine(p, "## Acceptance criteria"), "done story has unchecked acceptance criteria")
+			c.add(Error, "story.unchecked", p, headingLine(p, "## Acceptance criteria"), "%s story has unchecked acceptance criteria", it.Status)
 		}
 	}
 	if it.Closed() && it.IsBlocked() {
@@ -213,7 +217,12 @@ func (c *checker) history(it *workitem.Item) {
 	p := it.Path
 	created, errC := time.Parse(workitem.TimeFormat, it.Created)
 	updated, errU := time.Parse(workitem.TimeFormat, it.Updated)
-	prevState := workitem.Backlog
+	flow := c.repo.Flow()
+	initial, _ := flow.Initial()
+	prevState := initial.Name
+	// The state an acceptance leaves, review on the baseline: what an item
+	// of a type that is accepted waits in before it is.
+	via := workitem.AcceptSource(flow, it.Type)
 	prevAt := created
 	for i, tr := range it.Transitions {
 		at, err := time.Parse(workitem.TimeFormat, tr.At)
@@ -224,12 +233,15 @@ func (c *checker) history(it *workitem.Item) {
 			c.add(Error, "item.chronology", p, keyLine(p, "transitions"), "transitions[%d] at %s is before %s", i, tr.At, prevAt.Format(workitem.TimeFormat))
 		}
 		prevAt = at
-		// A parent's cancellation takes an item out of review; nothing else does (ADR-0028).
-		cascaded := tr.To == workitem.Cancelled && prevState == workitem.Review && workitem.CancelledWith(c.byID, it, tr.At) != ""
-		// The transitions flai move allows, back moves included (ADR-0055), from the one table.
-		if tr.To == workitem.Done && prevState == workitem.InProgress && it.Type != workitem.Task {
-			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: a %s must go through review before done", i, it.Type)
-		} else if !workitem.Follows(it.Type, prevState, tr.To) && !cascaded {
+		// The transitions the workflow allows, back moves included (ADR-0055),
+		// leaving out those only a parent's cancellation makes: it takes an
+		// item out of review on the baseline, and nothing else does (ADR-0028).
+		t, found := flow.Find(it.Type, prevState, tr.To)
+		follows := found && !slices.Equal(t.By, []string{workflow.ByCascade})
+		cascaded := found && t.Allows(workflow.ByCascade) && workitem.CancelledWith(c.byID, it, tr.At) != ""
+		if !follows && via != "" && flow.Kind(tr.To) == workflow.KindAccepted && flow.Kind(prevState) == workflow.KindActive {
+			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: a %s must go through %s before %s", i, it.Type, via, tr.To)
+		} else if !follows && !cascaded {
 			c.add(Error, "item.sequence", p, keyLine(p, "transitions"), "transitions[%d]: %s cannot follow %s", i, tr.To, prevState)
 		}
 		prevState = tr.To
@@ -249,47 +261,92 @@ func (c *checker) history(it *workitem.Item) {
 // accepted; flai accept <id> completes them.
 func (c *checker) unaccepted() {
 	for _, it := range c.items {
-		if it.Type != workitem.Story || it.Status != workitem.Done {
+		if it.Type != workitem.Story || !c.inKind(it.Status, workflow.KindAccepted) {
 			continue
 		}
 		switch {
 		case !it.Archived:
-			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is done but was never accepted (not archived, not released); run flai accept %s", it.ID, it.ID)
+			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is %s but was never accepted (not archived, not released); run flai accept %s", it.ID, it.Status, it.ID)
 		case storyBranchExists(c.repo.MainRoot, it.ID):
-			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is done but its branch story/%s was never merged; merge or delete it", it.ID, it.ID)
+			c.add(Warning, "story.unaccepted", it.Path, keyLine(it.Path, "status"), "%s is %s but its branch story/%s was never merged; merge or delete it", it.ID, it.Status, it.ID)
 		}
 	}
 }
 
-// boardRank orders the states along the board; cancelled has no place in it.
-var boardRank = map[string]int{workitem.Backlog: 0, workitem.Ready: 1, workitem.InProgress: 2, workitem.Review: 3, workitem.Done: 4}
+// inKind reports whether status names, by its name or an alias, a state of
+// one of kinds in the workflow the repository runs (ADR-0301 §2).
+func (c *checker) inKind(status string, kinds ...string) bool {
+	k := c.repo.Flow().Kind(status)
+	return k != "" && slices.Contains(kinds, k)
+}
+
+// beforeCommit reports whether status names a state a story is in before it
+// is committed (ADR-0301 §3): the initial state, or one the transition that
+// gives stories the commit effect leaves; backlog on the baseline.
+func (c *checker) beforeCommit(status string) bool {
+	return c.leftBy(status, workflow.EffectCommit, true)
+}
+
+// leftBy reports whether status names a state the transition that gives
+// stories effect leaves, or, with initial, the initial state.
+func (c *checker) leftBy(status, effect string, initial bool) bool {
+	flow := c.repo.Flow()
+	s, ok := flow.State(status)
+	if !ok {
+		return false
+	}
+	if initial && s.Initial {
+		return true
+	}
+	t, ok := flow.WithEffect(workflow.TypeStory, effect)
+	return ok && slices.Contains(t.From, s.Name)
+}
+
+// rankOf orders w's states along the board, by name and alias, as their
+// board order gives them; a cancelled state has no place in it.
+func rankOf(w workflow.Workflow) map[string]int {
+	rank := map[string]int{}
+	for i, s := range w.States {
+		if s.Kind == workflow.KindCancelled {
+			continue
+		}
+		rank[s.Name] = i
+		for _, a := range s.Aliases {
+			rank[a] = i
+		}
+	}
+	return rank
+}
 
 // epicLags warns about each open epic that its stories put further along the
 // board than its status (S-0200), naming the moves that catch it up. It is
 // advisory: the epic is the operator's to move, not a story's agent's, so it
 // must not stop every close-out. An epic ahead of its stories is not warned.
 func (c *checker) epicLags() {
+	flow := c.repo.Flow()
+	rank := rankOf(flow)
 	for _, it := range c.items {
 		if it.Type != workitem.Epic || it.Archived || it.Closed() {
 			continue
 		}
-		target, ok := workitem.EpicFollows(c.items, it.ID)
-		if !ok || boardRank[target] <= boardRank[it.Status] {
+		follows, ok := workitem.EpicFollows(c.items, it.ID)
+		target, known := flow.State(follows)
+		if !ok || !known || rank[target.Name] <= rank[it.Status] {
 			continue
 		}
 		why := "an epic follows its stories since S-0200, and this one was moved before that, or by hand"
-		if target == workitem.Done {
-			c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories are all done; accept it with flai accept %s, which moves it to done and archives it (%s)", it.ID, it.Status, it.ID, why)
+		if target.Kind == workflow.KindAccepted {
+			c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories are all %s; accept it with flai accept %s, which moves it to %s and archives it (%s)", it.ID, it.Status, target.Name, it.ID, target.Name, why)
 			continue
 		}
 		var moves []string
-		for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
-			if boardRank[st] > boardRank[it.Status] && boardRank[st] <= boardRank[target] {
-				moves = append(moves, st)
+		for i, st := range flow.States {
+			if i > rank[it.Status] && i <= rank[target.Name] {
+				moves = append(moves, st.Name)
 			}
 		}
 		moves[0] = "flai move " + it.ID + " " + moves[0]
-		c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories put it in %s; catch it up with %s (%s)", it.ID, it.Status, target, strings.Join(moves, ", then "), why)
+		c.advise("epic.lags-stories", it.Path, keyLine(it.Path, "status"), "%s is %s but its stories put it in %s; catch it up with %s (%s)", it.ID, it.Status, target.Name, strings.Join(moves, ", then "), why)
 	}
 }
 
@@ -322,7 +379,7 @@ func (c *checker) overlap() {
 	}
 	var stories []open
 	for _, it := range c.items {
-		if !it.Archived && it.Type == workitem.Story && it.Status == workitem.InProgress {
+		if !it.Archived && it.Type == workitem.Story && c.inKind(it.Status, workflow.KindActive) {
 			stories = append(stories, open{it, holds.Claim(it)})
 		}
 	}
@@ -470,12 +527,12 @@ func (c *checker) touchesFolder() {
 	var holds *workitem.Holds
 	var ready []readyClaim
 	for _, it := range c.items {
-		if it.Archived || it.Type != workitem.Story || it.Status != workitem.InProgress {
+		if it.Archived || it.Type != workitem.Story || !c.inKind(it.Status, workflow.KindActive) {
 			continue
 		}
 		if holds == nil {
 			holds = c.repo.Holds(c.items)
-			ready = readyClaims(holds, c.items)
+			ready = c.readyClaims(holds)
 		}
 		for _, p := range holds.Claim(it) {
 			n, ok := workitem.FolderTouch(c.repo.Root, c.repo.Manifest.Projects, shared, p)
@@ -502,12 +559,12 @@ type readyClaim struct {
 	claim   []string
 }
 
-// readyClaims is the ready stories among items that holds holds, in ID
-// order.
-func readyClaims(holds *workitem.Holds, items []*workitem.Item) []readyClaim {
+// readyClaims is the ready stories, those in a state the pull leaves (ready
+// on the baseline), among the checker's items that holds holds, in ID order.
+func (c *checker) readyClaims(holds *workitem.Holds) []readyClaim {
 	var out []readyClaim
-	for _, it := range items {
-		if it.Archived || it.Type != workitem.Story || it.Status != workitem.Ready {
+	for _, it := range c.items {
+		if it.Archived || it.Type != workitem.Story || !c.leftBy(it.Status, workflow.EffectPull, false) {
 			continue
 		}
 		if over := holds.OverlapsBy(it); over != nil {
@@ -559,7 +616,7 @@ const afterHubAt = 3
 func (c *checker) afterHub() {
 	waiting := map[string][]string{}
 	for _, it := range c.items {
-		if it.Archived || it.Type != workitem.Story || (it.Status != workitem.Backlog && it.Status != workitem.Ready && it.Status != workitem.InProgress) {
+		if it.Archived || it.Type != workitem.Story || !c.inKind(it.Status, workflow.KindQueue, workflow.KindActive) {
 			continue
 		}
 		seen := map[string]bool{}
@@ -668,7 +725,7 @@ func (c *checker) narratives() {
 	dir := c.repo.AgentsDir()
 	active := map[string]bool{}
 	for _, it := range c.items {
-		if it.Type == workitem.Story && !it.Archived && (it.Status == workitem.InProgress || it.Status == workitem.Review) && c.write.story(it.ID) {
+		if it.Type == workitem.Story && !it.Archived && c.inKind(it.Status, workflow.KindActive, workflow.KindWaiting) && c.write.story(it.ID) {
 			if _, err := os.Stat(c.repo.NarrativePath(it.ID)); err != nil {
 				c.add(Error, "narrative.missing", it.Path, keyLine(it.Path, "status"), "%s is %s but has no narrative; run flai stream open %s", it.ID, it.Status, it.ID)
 			}
@@ -712,7 +769,7 @@ func (c *checker) narratives() {
 				c.add(Warning, "narrative.section", path, 1, "missing %q section", "## "+sec)
 			}
 		}
-		if ok && !story.Archived && (story.Status == workitem.InProgress || story.Status == workitem.Review) {
+		if ok && !story.Archived && c.inKind(story.Status, workflow.KindActive, workflow.KindWaiting) {
 			c.narrativeState(path, story)
 		}
 	}
@@ -777,24 +834,25 @@ func (c *checker) board() {
 		c.add(Error, "board.front-matter", filepath.Join(c.repo.KanbanDir(), workitem.BoardFile), 1, "%v", err)
 		return
 	}
+	flow := c.repo.Flow()
 	counts := map[string]int{}
 	for _, it := range c.items {
-		if it.Type == workitem.Story && !it.Archived {
-			counts[it.Status]++
-		}
-	}
-	for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
-		limit := b.WIPLimits[st]
-		if limit <= 0 || counts[st] <= limit {
+		if it.Type != workitem.Story || it.Archived {
 			continue
 		}
-		line := keyLine(b.Path, "wip_limits")
-		if st == workitem.Review {
-			// Review over its limit waits on the operator's acceptance, so it
-			// warns without failing --strict; ready and in-progress do (S-0243).
-			c.advise("board.wip-limit", b.Path, line, "%d stories in %s, limit %d", counts[st], st, limit)
-		} else {
-			c.add(Warning, "board.wip-limit", b.Path, line, "%d stories in %s, limit %d", counts[st], st, limit)
+		if s, ok := flow.State(it.Status); ok {
+			counts[s.Name]++
+		}
+	}
+	// The states that read in the pull order, the one nearest the pull first:
+	// ready and backlog on the baseline.
+	var ordered []string
+	for _, s := range flow.States {
+		if s.Limit {
+			c.wipLimit(b, s, counts[s.Name])
+		}
+		if s.Order {
+			ordered = append([]string{s.Name}, ordered...)
 		}
 	}
 	for _, id := range b.Order {
@@ -804,8 +862,32 @@ func (c *checker) board() {
 		}
 		if !ok || it.Archived {
 			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is not on the board", id)
-		} else if it.Status != workitem.Ready && it.Status != workitem.Backlog {
-			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is %s; only ready and backlog stories belong in the pull order", id, it.Status)
+		} else if s, known := flow.State(it.Status); !known || !s.Order {
+			c.add(Warning, "board.order", b.Path, keyLine(b.Path, "order"), "order lists %s which is %s; only %s stories belong in the pull order", id, it.Status, andList(ordered))
 		}
+	}
+}
+
+// wipLimit reports board.wip-limit when count stories in state s, a state
+// with a limit, are more than the board's wip_limits give it, by its name or
+// an alias. A waiting state over its limit, review on the baseline, waits on
+// the operator's acceptance, so it warns without failing --strict; the others
+// do (S-0243).
+func (c *checker) wipLimit(b *workitem.Board, s workflow.State, count int) {
+	limit := 0
+	for _, name := range append([]string{s.Name}, s.Aliases...) {
+		if l, ok := b.WIPLimits[name]; ok {
+			limit = l
+			break
+		}
+	}
+	if limit <= 0 || count <= limit {
+		return
+	}
+	line := keyLine(b.Path, "wip_limits")
+	if s.Kind == workflow.KindWaiting {
+		c.advise("board.wip-limit", b.Path, line, "%d stories in %s, limit %d", count, s.Name, limit)
+	} else {
+		c.add(Warning, "board.wip-limit", b.Path, line, "%d stories in %s, limit %d", count, s.Name, limit)
 	}
 }

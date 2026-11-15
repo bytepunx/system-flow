@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -235,5 +236,188 @@ func TestBlockedClosedNamesFlaiUnblockAndUnblockClearsIt(t *testing.T) {
 	}
 	if got := findings(t, repo, "item.blocked-closed"); len(got) != 0 {
 		t.Errorf("after flai unblock, still %+v", got)
+	}
+}
+
+// kindsRenamedFlow is the baseline with review renamed waiting-on-operator,
+// review kept among its aliases, so that items' history and the board's
+// wip_limits that name review still read.
+func kindsRenamedFlow() *workflow.Workflow {
+	w := workflow.Baseline()
+	rename := func(s string) string {
+		if s == workitem.Review {
+			return "waiting-on-operator"
+		}
+		return s
+	}
+	for i := range w.States {
+		if w.States[i].Name == workitem.Review {
+			w.States[i].Name, w.States[i].Aliases = "waiting-on-operator", []string{workitem.Review}
+		}
+	}
+	for i := range w.Transitions {
+		tr := &w.Transitions[i]
+		for j := range tr.From {
+			tr.From[j] = rename(tr.From[j])
+		}
+		tr.To = rename(tr.To)
+	}
+	for i := range w.Timers {
+		for j := range w.Timers[i].Sum {
+			w.Timers[i].Sum[j] = rename(w.Timers[i].Sum[j])
+		}
+	}
+	return &w
+}
+
+// kindsVerifyFlow is the baseline with verify, a waiting state with a limit,
+// added between in-progress and review: in progress moves to verify, which
+// moves on to review or back to in-progress, and a parent's cancellation
+// takes an item out of it as out of review.
+func kindsVerifyFlow() *workflow.Workflow {
+	w := workflow.Baseline()
+	all := slices.Clone(workflow.Types)
+	anyone := []string{workflow.ByAnyone}
+	w.States = slices.Insert(w.States, 3, workflow.State{Name: "verify", Kind: workflow.KindWaiting, Title: "Verify", Types: all, Limit: true, Aliases: []string{}})
+	for i := range w.Transitions {
+		tr := &w.Transitions[i]
+		if slices.Equal(tr.From, []string{workitem.InProgress}) && tr.To == workitem.Review {
+			tr.To = "verify"
+		}
+		if tr.To == workitem.Cancelled && tr.Allows(workflow.ByCascade) {
+			tr.From = append(tr.From, "verify")
+		}
+	}
+	w.Transitions = append(w.Transitions,
+		workflow.Transition{From: []string{"verify"}, To: workitem.Review, Types: all, By: anyone, Rules: []workflow.RuleRef{}, Effects: []string{}},
+		workflow.Transition{From: []string{"verify"}, To: workitem.InProgress, Types: all, By: anyone, Rules: []workflow.RuleRef{}, Effects: []string{}})
+	return &w
+}
+
+// kindsStory saves a story under epic, with its criteria ticked, in status,
+// having moved through history an hour apart, and with a task unless bare.
+func kindsStory(t *testing.T, repo *workitem.Repo, epic, title, status string, history []string, bare bool) *workitem.Item {
+	t.Helper()
+	s := mustItem(t, repo, workitem.Story, title, epic)
+	if !bare {
+		mustItem(t, repo, workitem.Task, "Task of "+title, s.ID)
+	}
+	s, err := repo.Get(s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] works\n", 1)
+	if body == s.Body {
+		t.Fatalf("%s's body has no empty criterion to tick:\n%s", s.ID, s.Body)
+	}
+	s.Body, s.Status = body, status
+	for i, to := range history {
+		at := now.Add(time.Duration(i+1) * time.Hour).Format(workitem.TimeFormat)
+		s.Transitions = append(s.Transitions, workitem.Transition{To: to, At: at, By: "t"})
+		s.Updated = at
+	}
+	if err := repo.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// kindsRules are the rules that read a state's kind or a transition's
+// effect in the scenario of TestItemRulesReadKindsNotNames, and the
+// workflow's own rules, which find nothing in a workflow it runs.
+var kindsRules = []string{"story.tasks", "story.criteria", "story.draft", "story.unchecked", "story.unaccepted", "item.done-children", "item.sequence", "item.parent-cancelled", "narrative.missing", "board.wip-limit", "board.order"}
+
+// S-0741: the item rules read a state's kind and a transition's effects from
+// the workflow the repository runs, never a state's name. The same stories,
+// in the states of the same kinds, get the same findings on the baseline, on
+// the baseline with review renamed waiting-on-operator, and on the baseline
+// with verify, a waiting state, added between in-progress and review: a
+// story waiting with no task gets story.tasks, a story waiting or in progress
+// has its narrative required, two stories waiting over the limit of the wait
+// state are an advisory board.wip-limit, read by an alias in the renamed
+// workflow, a waiting story in the pull order is board.order, a story done
+// straight from in progress must go through the state the acceptance leaves,
+// and is done with an open task and never accepted. Each finding prints the
+// state's name as the workflow gives it. History reads by the workflow's
+// transitions: review, an alias, follows in-progress in the renamed workflow,
+// and with verify added a story moved from in-progress to review skipped it.
+// openNarratives counts the narratives of the stories waiting and in
+// progress as open, and not the done one's.
+func TestItemRulesReadKindsNotNames(t *testing.T) {
+	cases := []struct {
+		name string
+		flow *workflow.Workflow
+		// wait is the waiting state the stories wait in, alias the name the
+		// second one's history gives it, via the state the acceptance
+		// leaves, and limit the wip_limits key the board gives wait.
+		wait, alias, via, limit string
+		// skipped is the item.sequence the story moved from in-progress to
+		// review gets, empty when that move follows.
+		skipped string
+	}{
+		{"the baseline", nil, workitem.Review, workitem.Review, workitem.Review, workitem.Review, ""},
+		{"review renamed waiting-on-operator", kindsRenamedFlow(), "waiting-on-operator", workitem.Review, "waiting-on-operator", workitem.Review, ""},
+		{"verify added before review", kindsVerifyFlow(), "verify", "verify", workitem.Review, "verify", "transitions[2]: review cannot follow in-progress"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := overlapProject(t)
+			repo.Workflow = tc.flow
+			epic := mustItem(t, repo, workitem.Epic, "E", "")
+			waiting := kindsStory(t, repo, epic.ID, "Waiting", tc.wait, []string{workitem.Ready, workitem.InProgress, tc.wait}, true)
+			second := kindsStory(t, repo, epic.ID, "Second", tc.wait, []string{workitem.Ready, workitem.InProgress, tc.alias}, false)
+			straight := kindsStory(t, repo, epic.ID, "Straight", workitem.Done, []string{workitem.Ready, workitem.InProgress, workitem.Done}, false)
+			back := kindsStory(t, repo, epic.ID, "Back", workitem.InProgress, []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.InProgress}, false)
+			writeFile(t, filepath.Join(repo.KanbanDir(), workitem.BoardFile), "---\ntitle: Board\nupdated: 2026-09-01\nstatus: active\nwip_limits:\n  "+tc.limit+": 1\norder:\n  - "+second.ID+"\n---\n\n# Board\n")
+
+			res, err := Run(repo, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for _, f := range res.Findings {
+				if !slices.Contains(kindsRules, f.Rule) && !strings.HasPrefix(f.Rule, "workflow.") {
+					continue
+				}
+				on := fileID(f.Path)
+				if on == "" {
+					on = filepath.Base(f.Path)
+				}
+				line := f.Level + " " + f.Rule + " " + on + ": " + f.Message
+				if f.advisory {
+					line += " (advisory)"
+				}
+				got = append(got, line)
+			}
+			want := []string{
+				"warning board.order board.md: order lists " + second.ID + " which is " + tc.wait + "; only ready and backlog stories belong in the pull order",
+				"warning board.wip-limit board.md: 2 stories in " + tc.wait + ", limit 1 (advisory)",
+				"error item.done-children " + straight.ID + ": " + straight.ID + " is done but T-0002 is backlog",
+				"error item.sequence " + straight.ID + ": transitions[2]: a story must go through " + tc.via + " before done",
+				"error narrative.missing " + waiting.ID + ": " + waiting.ID + " is " + tc.wait + " but has no narrative; run flai stream open " + waiting.ID,
+				"error narrative.missing " + second.ID + ": " + second.ID + " is " + tc.wait + " but has no narrative; run flai stream open " + second.ID,
+				"error narrative.missing " + back.ID + ": " + back.ID + " is in-progress but has no narrative; run flai stream open " + back.ID,
+				"error story.tasks " + waiting.ID + ": a " + tc.wait + " story needs at least one task",
+				"warning story.unaccepted " + straight.ID + ": " + straight.ID + " is done but was never accepted (not archived, not released); run flai accept " + straight.ID,
+			}
+			if tc.skipped != "" {
+				want = append(want, "error item.sequence "+back.ID+": "+tc.skipped)
+			}
+			slices.Sort(got)
+			slices.Sort(want)
+			if !slices.Equal(got, want) {
+				t.Errorf("findings:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+			}
+
+			open, err := openNarratives(repo, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, s := range []*workitem.Item{waiting, second, back, straight} {
+				if want := s != straight; open[filepath.Clean(repo.NarrativePath(s.ID))] != want {
+					t.Errorf("openNarratives counts %s's narrative open: %v, want %v", s.ID, !want, want)
+				}
+			}
+		})
 	}
 }

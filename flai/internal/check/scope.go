@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -283,8 +284,8 @@ func (r *Result) drop(f Finding) {
 }
 
 // openNarratives is the cleaned paths of the narratives of the stories other
-// than stories whose status is neither done nor cancelled (ADR-0123,
-// ADR-0125).
+// than stories whose state is of neither the accepted nor the cancelled kind,
+// done or cancelled on the baseline (ADR-0123, ADR-0125, ADR-0301 §2).
 func openNarratives(repo *workitem.Repo, stories []string) (map[string]bool, error) {
 	items, err := repo.List(true)
 	if err != nil {
@@ -294,9 +295,10 @@ func openNarratives(repo *workitem.Repo, stories []string) (map[string]bool, err
 	for _, story := range stories {
 		scoped[workitem.CanonicalID(story)] = true
 	}
+	flow := repo.Flow()
 	open := map[string]bool{}
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status == workitem.Done || it.Status == workitem.Cancelled ||
+		if k := flow.Kind(it.Status); it.Type != workitem.Story || k == workflow.KindAccepted || k == workflow.KindCancelled ||
 			scoped[workitem.CanonicalID(it.ID)] {
 			continue
 		}

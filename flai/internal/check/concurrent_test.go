@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -99,10 +100,11 @@ func everyRuleProject(t *testing.T) *workitem.Repo {
 	w("web/src/lib/Card.svelte", "")
 	w("web/src/lib/Panel.svelte", "")
 	w("api/main.go", "package main\n")
+	rank := rankOf(workflow.Baseline())
 	story := func(id, parent, status, touches, after string) string {
 		moves := ""
 		for _, to := range []string{workitem.InProgress, workitem.Review, workitem.Done} {
-			if boardRank[to] > boardRank[status] {
+			if rank[to] > rank[status] {
 				break
 			}
 			moves += "  - to: " + to + "\n    at: 2026-08-02T10:00:00Z\n    by: a\n"
