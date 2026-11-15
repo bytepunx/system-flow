@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 314.1018
-accrued_seconds: 34089
-tasks_completed: 211
-last_run: 2026-11-15T07:20:28Z
+accrued_cost: 315.7215
+accrued_seconds: 34200
+tasks_completed: 212
+last_run: 2026-11-15T18:53:52Z
 ---
 
 # Curator activity
@@ -1699,3 +1699,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0470, D-0627, D-0628, D-0629, D-0631, D-0632
 - Seconds: 141
 - Cost: 1.7174 USD, estimated
+
+### 2026-11-15T18:53:52Z
+
+- Summary: I wrote D-0633, merged nothing, absorbed nothing, and `flai digest compact` compacted nothing (it recorded the citers of all 633 entries). D-0633 says that until a flai release carries S-0792, the installed flai's ADR-0291 gate still sends review stories back for digest or docs commits on main, and the fix is to sync and close out again with no code change (sources S-0792, TH-1220, I-0378); ADR-0303 already states the other four candidates, or they are progress notes.
+- Trigger: accepted S-0792
+- Items: D-0470, D-0627, D-0628, D-0629, D-0631, D-0632, D-0633
+- Seconds: 111
+- Cost: 1.6197 USD, estimated

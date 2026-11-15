@@ -9,7 +9,7 @@ date: 2026-11-14
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0738, S-0739, S-0742, S-0743, S-0744, S-0747, S-0789, TH-1206, TH-1207, TH-1208, TH-1209, TH-1210, TH-1211, TH-1212, TH-1213, TH-1214, TH-1215]
+cited: [S-0738, TH-1206, TH-1207, TH-1208, TH-1209, TH-1210, TH-1211, TH-1212, TH-1213, TH-1214, TH-1215, TH-1218, TH-1219, TH-1220]
 ---
 
 # D-0627 A workitem Repo whose Workflow is nil runs the one baseline workflow every such Repo shares read-only, and a test opens a repository with another workflow through rules_test.go's repoWithWorkflow

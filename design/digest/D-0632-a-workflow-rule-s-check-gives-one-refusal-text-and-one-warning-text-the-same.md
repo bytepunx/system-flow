@@ -9,7 +9,7 @@ date: 2026-11-15
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1218, TH-1219, TH-1220]
 ---
 
 # D-0632 A workflow rule's check gives one refusal text and one warning text, the same words on any transition that lists it, and the transition's severity picks which; criteria-ticked alone keeps two of its own

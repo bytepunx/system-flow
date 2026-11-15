@@ -9,7 +9,7 @@ date: 2026-11-15
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-1208, TH-1209, TH-1210, TH-1211, TH-1212, TH-1218, TH-1219]
 ---
 
 # D-0631 A workflow rule's name, types, and default severity live in flai/internal/workflow/rules.go and its check in flai/internal/workitem/rules.go, so the workflow package reads no work item

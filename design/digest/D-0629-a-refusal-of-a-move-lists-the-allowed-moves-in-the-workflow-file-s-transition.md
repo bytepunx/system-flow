@@ -9,7 +9,7 @@ date: 2026-11-14
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-1206, TH-1214]
+cited: [TH-1206, TH-1208, TH-1209, TH-1210, TH-1211, TH-1212, TH-1214, TH-1218, TH-1219]
 ---
 
 # D-0629 A refusal of a move lists the allowed moves in the workflow file's transition order, so a task in in-progress lists review, done, ready, cancelled
