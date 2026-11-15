@@ -19,6 +19,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -30,7 +31,7 @@ import (
 // event and whose host action is on, flai serve reads the inbox's events
 // since the role's last look as the role, under a cursor of its own
 // (roleCursor), and queues those its triggers match as reasons, by the
-// orchestrator's matching (reasonOf). A thread event is the role's when the
+// orchestrator's matching (reasonIn). A thread event is the role's when the
 // thread awaits one of its agents: the role's name for a role that takes no
 // item, and the role's name and the thread's item (harness.RoleAgent) for a
 // role that takes items, which is how its runs write. What the role's own
@@ -117,7 +118,7 @@ func (r *roleEvents) look(ctx context.Context) {
 		cfg = r.o.Agent(r.e.Root)
 	}
 	now := r.o.Now().UTC()
-	repo, err := workitem.Open(r.e.Root)
+	repo, err := openRepo(r.o, r.e.Root)
 	if err != nil {
 		r.warnOnce("role events could not read the project", err)
 		return
@@ -217,7 +218,7 @@ func (r *roleEvents) gather(repo *workitem.Repo, cfg AgentConfig, evented []role
 				continue
 			}
 			slices.SortStableFunc(events, func(a, b inbox.Event) int { return strings.Compare(a.At, b.At) })
-			queued[f.Name] = q.queue(f, events, byID, now)
+			queued[f.Name] = q.queue(repo.Flow(), f, events, byID, now)
 			qs[f.Name] = q
 		}
 	})
@@ -239,8 +240,9 @@ func (r *roleEvents) gather(repo *workitem.Repo, cfg AgentConfig, evented []role
 // queue queues, at now, each of events that f's triggers match as a reason
 // on the item f's run would take for it, and returns how many it queued.
 // What f's own agents changed is no reason, nor is an event on no item f
-// takes. byID are the project's items.
-func (q *roleQueue) queue(f roles.Role, events []inbox.Event, byID map[string]*workitem.Item, now time.Time) int {
+// takes. byID are the project's items, and wf the workflow whose kinds a
+// move's state is read by.
+func (q *roleQueue) queue(wf workflow.Workflow, f roles.Role, events []inbox.Event, byID map[string]*workitem.Item, now time.Time) int {
 	n := 0
 	for _, e := range events {
 		if roleAgentOf(f, e.By) {
@@ -250,7 +252,7 @@ func (q *roleQueue) queue(f roles.Role, events []inbox.Event, byID map[string]*w
 		if !ok {
 			continue
 		}
-		reason, ok := reasonOf(e, f.Trigger, byID, func(awaits string) bool { return roleAgentOf(f, awaits) })
+		reason, ok := reasonIn(wf, e, f.Trigger, byID, func(awaits string) bool { return roleAgentOf(f, awaits) })
 		if !ok {
 			continue
 		}

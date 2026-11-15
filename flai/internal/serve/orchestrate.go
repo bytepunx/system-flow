@@ -151,7 +151,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	run := r.o.Dir.AgentStates()[r.e.Root].Orchestrator
 	r.notice(run)
 	now := r.o.Now().UTC()
-	repo, err := workitem.Open(r.e.Root)
+	repo, err := openRepo(r.o, r.e.Root)
 	if err != nil {
 		r.warnOnce("orchestrator could not read the project", err)
 	}
@@ -228,7 +228,7 @@ func (r *orchestrator) gather(repo *workitem.Repo, now time.Time) reasonQueue {
 			queued = q.add(now, askedReason(askedTurnedOn, now))
 			return
 		}
-		queued = q.add(now, reasonsOf(events, triggers, items)...)
+		queued = q.add(now, reasonsOf(repo.Flow(), events, triggers, items)...)
 		if due {
 			queued += q.add(now, scheduleReason(sched, now))
 		}
@@ -521,7 +521,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		return refuse(err)
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue, Reasons: reasonLines(reasons), PrimeReasons: primeReasons(reasons)})
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue, Reasons: reasonLines(reasons), PrimeReasons: primeReasons(Options{Workflow: l.flow}.flow(), reasons)})
 	if w := (*imageWait)(nil); errors.As(err, &w) {
 		// held for its image job, with what started it, and made again once
 		// the job ends (holdImage, S-0751): no failure is recorded

@@ -457,14 +457,14 @@ func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
 		ev(reordered, "board", "board", "", nil),
 	}
 	var ids []string
-	for _, r := range reasonsOf(events, builtinTriggers, nil) {
+	for _, r := range reasonsOf(workflow.Baseline(), events, builtinTriggers, nil) {
 		ids = append(ids, r.ID)
 	}
 	if got := strings.Join(ids, " "); got != "S-0001 S-0002 TH-0001 TH-0002 board" {
 		t.Errorf("built-in reasons: %s", got)
 	}
 	ids = nil
-	for _, r := range reasonsOf(events, file.Trigger, nil) {
+	for _, r := range reasonsOf(workflow.Baseline(), events, file.Trigger, nil) {
 		ids = append(ids, r.ID)
 		if r.Title != "T wo" {
 			t.Errorf("title %q, want it on one line", r.Title)
@@ -474,7 +474,7 @@ func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
 		t.Errorf("the file's reasons: %s", got)
 	}
 	legacy := []roles.Trigger{{Kind: roles.TriggerEvent, Event: "review"}}
-	if got := reasonsOf(events, legacy, nil); len(got) != 1 || got[0].ID != "S-0001" {
+	if got := reasonsOf(workflow.Baseline(), events, legacy, nil); len(got) != 1 || got[0].ID != "S-0001" {
 		t.Errorf("{event: review}: %+v", got)
 	}
 }
@@ -634,7 +634,7 @@ func TestEachReasonHasTheFormPrimeTakes(t *testing.T) {
 		{orchestrateReason{Kind: inbox.Edited, ID: "E-0016", Type: workitem.Epic, To: "title"}, ""},
 		{orchestrateReason{Kind: "agent", ID: "S-0123"}, ""},
 	} {
-		got := c.r.prime()
+		got := c.r.prime(workflow.Baseline())
 		if got != c.want {
 			t.Errorf("%s: prime %q, want %q", c.r.line(), got, c.want)
 		}
@@ -655,13 +655,119 @@ func TestPrimeReasonsAreNoneWhenAnyReasonHasNoForm(t *testing.T) {
 	review := orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: workitem.Review}
 	empty := orchestrateReason{Kind: inbox.ReadyEmpty, ID: "board", Type: "board", To: "1"}
 	order := orchestrateReason{Kind: reordered, ID: "board"}
-	if got, want := primeReasons([]orchestrateReason{review, empty, order}), []string{"review:S-0123", "ready", "ready"}; !slices.Equal(got, want) {
+	if got, want := primeReasons(workflow.Baseline(), []orchestrateReason{review, empty, order}), []string{"review:S-0123", "ready", "ready"}; !slices.Equal(got, want) {
 		t.Errorf("primeReasons %q, want %q", got, want)
 	}
-	if got := primeReasons([]orchestrateReason{review, askedReason(askedTurnedOn, time.Now())}); got != nil {
+	if got := primeReasons(workflow.Baseline(), []orchestrateReason{review, askedReason(askedTurnedOn, time.Now())}); got != nil {
 		t.Errorf("with asked, primeReasons %q, want none", got)
 	}
-	if got := primeReasons(nil); got != nil {
+	if got := primeReasons(workflow.Baseline(), nil); got != nil {
 		t.Errorf("with no reasons, primeReasons %q, want none", got)
+	}
+}
+
+// t3216Moves are a story's moves, S-0001 to the first of states, S-0002 to
+// the second, and so on, as the inbox gives them.
+func t3216Moves(states ...string) []inbox.Event {
+	var out []inbox.Event
+	for i, to := range states {
+		out = append(out, inbox.Event{Change: workitem.Change{Kind: workitem.Moved, Type: workitem.Story, ID: "S-000" + strconv.Itoa(i+1), Title: "T", To: to}, Summary: "s"})
+	}
+	return out
+}
+
+// t3216Reasons are the reasons triggers find among events read in wf, each
+// as its ID and the form prime takes it in, joined by spaces.
+func t3216Reasons(wf workflow.Workflow, events []inbox.Event, triggers []roles.Trigger) string {
+	var out []string
+	for _, r := range reasonsOf(wf, events, triggers, nil) {
+		out = append(out, r.ID+"="+r.prime(wf))
+	}
+	return strings.Join(out, " ")
+}
+
+// S-0742 criterion 4: the orchestrator's reasons read a moved story's state
+// by its kind. On a board where review is awaiting and in-progress doing,
+// with testing, of the active kind, between them, a story's move to
+// awaiting is the reason a move to review is on the baseline, with the same
+// form for prime; a move to doing or testing is none that a move to review
+// would be; and the moves to backlog, ready, done, and cancelled are what
+// they are on the baseline, under the built-in triggers, a role file's
+// condition, and each event name ADR-0207 gives a move.
+func TestTheReasonsReadAMovedStatesKind(t *testing.T) {
+	kinds := *kindsWorkflow(t)
+	base := workflow.Baseline()
+	baseMoves := t3216Moves(workitem.Review, workitem.InProgress, workitem.InProgress, workitem.Backlog, workitem.Ready, workitem.Done, workitem.Cancelled)
+	kindsMoves := t3216Moves("awaiting", "doing", "testing", "backlog", "ready", "done", "cancelled")
+	ev := func(event, when string) []roles.Trigger {
+		return []roles.Trigger{{Kind: roles.TriggerEvent, Event: event, When: when}}
+	}
+	for _, c := range []struct {
+		name     string
+		triggers []roles.Trigger
+		want     string
+	}{
+		{"built-in", builtinTriggers, "S-0001=review:S-0001 S-0004=draft:S-0004"},
+		{"to-review", ev(workitem.Moved, "to-review"), "S-0001=review:S-0001"},
+		{"to-backlog", ev(workitem.Moved, "to-backlog"), "S-0004=draft:S-0004"},
+		{"review", ev(eventReview, ""), "S-0001=review:S-0001"},
+		{"ready", ev(eventReady, ""), "S-0005="},
+		{"accepted", ev(eventAccepted, ""), "S-0006="},
+		{"cancelled", ev(eventCancelled, ""), "S-0007="},
+	} {
+		if got := t3216Reasons(base, baseMoves, c.triggers); got != c.want {
+			t.Errorf("%s on the baseline: %q, want %q", c.name, got, c.want)
+		}
+		if got := t3216Reasons(kinds, kindsMoves, c.triggers); got != c.want {
+			t.Errorf("%s on the other board: %q, want %q, as on the baseline", c.name, got, c.want)
+		}
+	}
+	// Read in the baseline, a move to awaiting is a move to a state the
+	// baseline has not: it is no review.
+	if got := t3216Reasons(base, t3216Moves("awaiting"), builtinTriggers); got != "" {
+		t.Errorf("the baseline reads a move to awaiting as %q, want no reason", got)
+	}
+	for _, to := range []string{"doing", "testing"} {
+		r := orchestrateReason{Kind: workitem.Moved, ID: "S-0123", Type: workitem.Story, To: to}
+		if got := r.prime(kinds); got != "" {
+			t.Errorf("a move to %s has the form %q, want none", to, got)
+		}
+		if names := eventNames(kinds, t3216Moves(to)[0]); !slices.Equal(names, []string{workitem.Moved}) {
+			t.Errorf("a move to %s is the events %v, want moved alone", to, names)
+		}
+	}
+	// An epic's move to awaiting is a review event with no form for prime,
+	// and its move to done no acceptance, as on the baseline.
+	epic := t3216Moves("awaiting")[0]
+	epic.Type, epic.ID = workitem.Epic, "E-0001"
+	if names := eventNames(kinds, epic); !slices.Equal(names, []string{workitem.Moved, eventReview}) {
+		t.Errorf("an epic's move to awaiting is the events %v, want moved and review", names)
+	}
+	if got := (orchestrateReason{Kind: workitem.Moved, ID: "E-0001", Type: workitem.Epic, To: "awaiting"}).prime(kinds); got != "" {
+		t.Errorf("an epic's move to awaiting has the form %q, want none", got)
+	}
+	epic.To = "done"
+	if names := eventNames(kinds, epic); !slices.Equal(names, []string{workitem.Moved}) {
+		t.Errorf("an epic's move to done is the events %v, want moved alone", names)
+	}
+}
+
+// S-0742: the curator's acceptances are the stories' moves into a state of
+// the accepted kind, on the other board as on the baseline: a move to
+// awaiting, or to cancelled, is none, and a task's or an epic's move to done
+// is none.
+func TestTheCuratorsAcceptancesReadTheAcceptedKind(t *testing.T) {
+	changes := []workitem.Change{
+		{ID: "S-0003", Type: workitem.Story, Kind: workitem.Moved, To: "done"},
+		{ID: "S-0001", Type: workitem.Story, Kind: workitem.Moved, To: "awaiting"},
+		{ID: "S-0002", Type: workitem.Story, Kind: workitem.Moved, To: "cancelled"},
+		{ID: "T-0001", Type: workitem.Task, Kind: workitem.Moved, To: "done"},
+		{ID: "E-0001", Type: workitem.Epic, Kind: workitem.Moved, To: "done"},
+	}
+	if got := acceptedIn(*kindsWorkflow(t), nil, changes); !slices.Equal(got, []string{"S-0003"}) {
+		t.Errorf("acceptedIn = %v, want S-0003 alone", got)
+	}
+	if o := acceptance(); o.Event != eventAccepted || o.To != workitem.Done {
+		t.Errorf("an acceptance is %+v, want accepted into the baseline's done", o)
 	}
 }

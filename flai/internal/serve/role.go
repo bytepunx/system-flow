@@ -158,7 +158,7 @@ type roleStart struct {
 // project e, and returns what it is started with. A refusal is a *Refused;
 // a project, a role file folder, or an item that cannot be read is an error.
 func roleCheck(o Options, e Entry, name, item string) (roleStart, error) {
-	repo, err := workitem.Open(e.Root)
+	repo, err := openRepo(o, e.Root)
 	if err != nil {
 		return roleStart{}, err
 	}
@@ -232,7 +232,7 @@ func definedRole(repo *workitem.Repo, name string) (roles.Role, error) {
 // run on no item. A file that takes no item refuses one; a file that takes
 // items refuses a run on none, since every run of such a role is on one of
 // them (ADR-0207 §2, §3), and an item of a kind it does not take, or that is
-// archived, done, or cancelled.
+// archived, or closed: in a state of the accepted or the cancelled kind.
 func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 	switch {
 	case item == "" && len(f.Item) == 0:
@@ -253,7 +253,7 @@ func roleItem(repo *workitem.Repo, f roles.Role, item string) (string, error) {
 	switch {
 	case it.Archived:
 		return "", refused("%s is archived; the role %s runs on an item still on the board", it.ID, f.Name)
-	case it.Status == workitem.Done || it.Status == workitem.Cancelled:
+	case isClosed(repo.Flow(), it.Status):
 		return "", refused("%s is %s; the role %s runs on an item still open", it.ID, it.Status, f.Name)
 	}
 	return it.ID, nil

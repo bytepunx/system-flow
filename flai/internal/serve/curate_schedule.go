@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -124,7 +125,7 @@ func (s *curateScheduler) look(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.o.Now().UTC()
-	repo, err := workitem.Open(s.e.Root)
+	repo, err := openRepo(s.o, s.e.Root)
 	if err != nil {
 		s.warnOnce("curate scheduler could not read the project", err)
 		return
@@ -147,8 +148,8 @@ func (s *curateScheduler) look(ctx context.Context) {
 		s.pending, s.heldDue = nil, ""
 		return
 	}
-	if servedPlainly(curator.Trigger, roles.Occurrence{Event: "accepted", To: workitem.Done}) {
-		s.pending = accepted(s.pending, changes)
+	if servedPlainly(curator.Trigger, acceptance()) {
+		s.pending = acceptedIn(repo.Flow(), s.pending, changes)
 	}
 	due := s.heldDue
 	for _, setting := range scheduleSettings(curator) {
@@ -249,11 +250,27 @@ func retryTrigger(trigger string, pending []string) string {
 	}
 }
 
-// accepted is pending with the stories changes move to done added, each
-// once, in ID order.
+// acceptance is a story's acceptance as package roles matches a trigger
+// against it: the event accepted, into the state the baseline's acceptance
+// closes a story in, since roles' conditions name the baseline's states
+// until S-0748. The curator serves only an entry with no condition, which
+// To does not change.
+func acceptance() roles.Occurrence {
+	t, _ := baselineFlow.WithEffect(workflow.TypeStory, workflow.EffectAccept)
+	return roles.Occurrence{Event: eventAccepted, To: t.To}
+}
+
+// accepted is acceptedIn with the baseline workflow, for kluster.go, whose
+// kind reads are S-0743's.
 func accepted(pending []string, changes []workitem.Change) []string {
+	return acceptedIn(baselineFlow, pending, changes)
+}
+
+// acceptedIn is pending with the stories changes move into a state of wf's
+// accepted kind, their acceptances, added, each once, in ID order.
+func acceptedIn(wf workflow.Workflow, pending []string, changes []workitem.Change) []string {
 	for _, c := range changes {
-		if c.Type == workitem.Story && c.Kind == workitem.Moved && c.To == workitem.Done && !slices.Contains(pending, c.ID) {
+		if c.Type == workitem.Story && c.Kind == workitem.Moved && isAccepted(wf, c.To) && !slices.Contains(pending, c.ID) {
 			pending = append(pending, c.ID)
 		}
 	}

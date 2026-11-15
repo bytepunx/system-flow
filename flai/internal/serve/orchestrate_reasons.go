@@ -10,6 +10,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/cron"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -139,8 +140,10 @@ func reasonLines(rs []orchestrateReason) []string {
 }
 
 // prime is the reason in the form flai prime --reason and MCP prime's
-// reasons take (ADR-0217 §1, §6), built from ctxpack's kinds: a story's move
-// to review is review:S-nnnn; a story's move to backlog and a story's edit,
+// reasons take (ADR-0217 §1, §6), built from ctxpack's kinds, with wf the
+// workflow the move's state is read in: a story's move into a state of the
+// waiting kind, where it waits for its acceptance, is review:S-nnnn; a
+// story's move into the state items are created in and a story's edit,
 // which the trigger takes only for a draft, are draft:S-nnnn; a plan is
 // planned:<id>; a thread is thread:TH-nnnn; a release due is release; the
 // ready column draining and the order changing are ready. It is "" for a
@@ -148,12 +151,12 @@ func reasonLines(rs []orchestrateReason) []string {
 // any other event a project's trigger may name, and a form flai prime would
 // refuse, such as a move of an epic, so that the run primes with the general
 // pack rather than be refused.
-func (r orchestrateReason) prime() string {
+func (r orchestrateReason) prime(wf workflow.Workflow) string {
 	var p ctxpack.Reason
 	switch {
-	case r.Kind == workitem.Moved && r.Type == workitem.Story && r.To == workitem.Review:
+	case r.Kind == workitem.Moved && r.Type == workitem.Story && isWaiting(wf, r.To):
 		p = ctxpack.Reason{Kind: ctxpack.ReasonReview, ID: r.ID}
-	case r.Kind == workitem.Moved && r.Type == workitem.Story && r.To == workitem.Backlog,
+	case r.Kind == workitem.Moved && r.Type == workitem.Story && isCreatedIn(wf, r.To),
 		r.Kind == inbox.Edited && r.Type == workitem.Story:
 		p = ctxpack.Reason{Kind: ctxpack.ReasonDraft, ID: r.ID}
 	case r.Kind == inbox.Planned:
@@ -173,18 +176,18 @@ func (r orchestrateReason) prime() string {
 	return p.String()
 }
 
-// primeReasons are the reasons' forms for prime, one for each reason in
-// turn, so that the start prompt writes each beside its line, and the
+// primeReasons are the reasons' forms for prime, read in wf, one for each
+// reason in turn, so that the start prompt writes each beside its line, and the
 // harness drops a form given twice when it names them as flags. They are
 // nil when any reason has no form, since such a run looks at the whole
 // project and primes with the general pack (ADR-0217 §6).
-func primeReasons(rs []orchestrateReason) []string {
+func primeReasons(wf workflow.Workflow, rs []orchestrateReason) []string {
 	if len(rs) == 0 {
 		return nil
 	}
 	out := make([]string, len(rs))
 	for i, r := range rs {
-		if out[i] = r.prime(); out[i] == "" {
+		if out[i] = r.prime(wf); out[i] == "" {
 			return nil
 		}
 	}
@@ -355,13 +358,13 @@ func scheduled(triggers []roles.Trigger) bool {
 // cancellation with its parent, which the story's or the parent's own move
 // tells; nor is the replan's forecast edit by flai, which changes no draft
 // (ADR-0209 §1). items are the project's, for whether an edited story
-// is a draft.
-func reasonsOf(events []inbox.Event, triggers []roles.Trigger, items []*workitem.Item) []orchestrateReason {
+// is a draft, and wf the workflow it runs, which a move's state is read in.
+func reasonsOf(wf workflow.Workflow, events []inbox.Event, triggers []roles.Trigger, items []*workitem.Item) []orchestrateReason {
 	byID := itemsByID(items)
 	orchestrator := func(awaits string) bool { return awaits == workitem.ActivityOrchestrator }
 	var out []orchestrateReason
 	for _, e := range events {
-		if r, ok := reasonOf(e, triggers, byID, orchestrator); ok {
+		if r, ok := reasonIn(wf, e, triggers, byID, orchestrator); ok {
 			out = append(out, r)
 		}
 	}
@@ -377,25 +380,26 @@ func itemsByID(items []*workitem.Item) map[string]*workitem.Item {
 	return byID
 }
 
-// reasonOf is e as a reason, and whether a trigger among triggers matches
-// it, read by the reader you says a thread's awaits names; reasonsOf says
-// which events are never reasons. byID are the project's items, for whether
-// an edited story is a draft. A defined role's events are matched here too,
-// with its own agents as the reader (S-0418).
-func reasonOf(e inbox.Event, triggers []roles.Trigger, byID map[string]*workitem.Item, you func(awaits string) bool) (orchestrateReason, bool) {
+// reasonIn is e as a reason, and whether a trigger among triggers matches
+// it, read by the reader you says a thread's awaits names, with a move's
+// state read in wf; reasonsOf says which events are never reasons. byID are
+// the project's items, for whether an edited story is a draft. A defined
+// role's events are matched here too, with its own agents as the reader
+// (S-0418).
+func reasonIn(wf workflow.Workflow, e inbox.Event, triggers []roles.Trigger, byID map[string]*workitem.Item, you func(awaits string) bool) (orchestrateReason, bool) {
 	if e.Type == workitem.Task || e.Follows != "" || (e.Kind == workitem.Moved && e.Cause != "") {
 		return orchestrateReason{}, false
 	}
-	if !matched(triggers, e, occurrenceOf(e, byID, you)) {
+	if !matched(wf, triggers, e, occurrenceOf(wf, e, byID, you)) {
 		return orchestrateReason{}, false
 	}
 	return orchestrateReason{Kind: e.Kind, ID: e.ID, Type: e.Type, Title: oneLine(e.Title), To: e.To, Summary: oneLine(e.Summary), At: e.At}, true
 }
 
 // matched says whether a trigger among triggers matches e, as o, under any
-// of its names.
-func matched(triggers []roles.Trigger, e inbox.Event, o roles.Occurrence) bool {
-	for _, name := range eventNames(e) {
+// of its names in wf.
+func matched(wf workflow.Workflow, triggers []roles.Trigger, e inbox.Event, o roles.Occurrence) bool {
+	for _, name := range eventNames(wf, e) {
 		o.Event = name
 		if triggered(triggers, o) {
 			return true
@@ -404,18 +408,35 @@ func matched(triggers []roles.Trigger, e inbox.Event, o roles.Occurrence) bool {
 	return false
 }
 
+// The names ADR-0207 gives a move beside moved, as package roles' Events
+// lists them. They name events, not states: a move earns one by the kind of
+// the state it enters, or by the pull's taking from it, whatever its name.
+const (
+	eventAccepted  = "accepted"
+	eventCancelled = "cancelled"
+	eventReady     = "ready"
+	eventReview    = "review"
+)
+
 // eventNames are the trigger events an inbox event is, in roles' terms: its
 // kind for the kinds ADR-0211 names, and, for a move, ADR-0207's name for
-// the state it moved to beside it; none for another kind.
-func eventNames(e inbox.Event) []string {
+// what the state it moved to is in wf beside it: accepted for a story's move
+// into a state of the accepted kind, cancelled for a move into one of the
+// cancelled kind, ready for a move into a state the pull takes from, and
+// review for a move into one of the waiting kind; none for another kind.
+func eventNames(wf workflow.Workflow, e inbox.Event) []string {
 	switch e.Kind {
 	case workitem.Moved:
 		names := []string{workitem.Moved}
 		switch {
-		case e.To == workitem.Done && e.Type == workitem.Story:
-			names = append(names, "accepted")
-		case e.To == workitem.Cancelled, e.To == workitem.Ready, e.To == workitem.Review:
-			names = append(names, e.To)
+		case e.Type == workitem.Story && isAccepted(wf, e.To):
+			names = append(names, eventAccepted)
+		case wf.Kind(e.To) == workflow.KindCancelled:
+			names = append(names, eventCancelled)
+		case isPullable(wf, e.To):
+			names = append(names, eventReady)
+		case isWaiting(wf, e.To):
+			names = append(names, eventReview)
 		}
 		return names
 	case inbox.Edited, inbox.Thread, inbox.Planned, inbox.ReadyEmpty, inbox.ReleaseDue, reordered:
@@ -428,14 +449,14 @@ func eventNames(e inbox.Event) []string {
 const replanBy = "flai"
 
 // occurrenceOf is e in roles' terms, without its event's name: the state a
-// move went to, whether an edited item is a story that is a draft after the
-// edit, and whom a thread awaits, "you" for the reader, whose names you
-// says, or "operator".
-func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item, you func(awaits string) bool) roles.Occurrence {
+// move went to, as conditionState reads it in wf, whether an edited item is
+// a story that is a draft after the edit, and whom a thread awaits, "you"
+// for the reader, whose names you says, or "operator".
+func occurrenceOf(wf workflow.Workflow, e inbox.Event, byID map[string]*workitem.Item, you func(awaits string) bool) roles.Occurrence {
 	var o roles.Occurrence
 	switch e.Kind {
 	case workitem.Moved:
-		o.To = e.To
+		o.To = conditionState(wf, e.To)
 	case inbox.Edited:
 		it := byID[e.ID]
 		o.Draft = it != nil && it.Type == workitem.Story && it.Draft && (e.By != replanBy || e.To != "forecast")
@@ -448,6 +469,32 @@ func occurrenceOf(e inbox.Event, byID map[string]*workitem.Item, you func(awaits
 		}
 	}
 	return o
+}
+
+// conditionState is state, a state of wf, as package roles' conditions
+// read a move's To until S-0748 has them read kinds: they name the
+// baseline's states (to-review, to-backlog), so a state of the waiting kind
+// is the baseline's waiting state, and the state items are created in the
+// baseline's; any other is state as it is.
+func conditionState(wf workflow.Workflow, state string) string {
+	switch {
+	case isWaiting(wf, state):
+		if ws := baselineFlow.OfKind(workflow.KindWaiting); len(ws) > 0 {
+			return ws[0].Name
+		}
+	case isCreatedIn(wf, state):
+		if s, ok := baselineFlow.Initial(); ok {
+			return s.Name
+		}
+	}
+	return state
+}
+
+// isCreatedIn reports whether state is the one wf creates items in, where a
+// story is a draft until it is committed: wf's initial state.
+func isCreatedIn(wf workflow.Workflow, state string) bool {
+	s, ok := wf.Initial()
+	return ok && s.Name == stateName(wf, state)
 }
 
 // triggered says whether an event trigger among triggers matches o: its
