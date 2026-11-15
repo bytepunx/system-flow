@@ -1,7 +1,9 @@
 package guard
 
 import (
+	"bytes"
 	"cmp"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,8 +11,10 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // g knows flai's commands as the cmd package gives them.
@@ -1672,5 +1676,160 @@ func TestFlaiForgePushIsTheOperators(t *testing.T) {
 	}
 	if r := (Guard{Commands: commands, Story: "S-0001", Served: true}).Decide(bash("", "flai forge push S-0001")); r.Call != "" {
 		t.Errorf("a story's agent's refusal is logged as the orchestrator's: %+v", r)
+	}
+}
+
+// guardOtherWorkflow is a board unlike the baseline: review is renamed
+// acceptance-review, keeping review as its alias, and testing, of kind
+// active, sits between in-progress and it (ADR-0301 §6).
+const guardOtherWorkflow = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review}
+  - {from: acceptance-review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: acceptance-review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// guardWorkflow is content parsed as a project's workflow file.
+func guardWorkflow(t *testing.T, content string) *workflow.Workflow {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", content)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	return &w
+}
+
+// S-0749: under a board with review renamed and testing added, the planner
+// and the orchestrator are refused a move into either, in the baseline's
+// words, and allowed the moves the workflow's transitions give them: the
+// initial state, the state a commit moves an item into, and a story's
+// acceptance.
+func TestTheMoveRefusalsFollowTheWorkflow(t *testing.T) {
+	w := guardWorkflow(t, guardOtherWorkflow)
+	pg := planGuard
+	pg.Workflow = w
+	orch := orchestrator(allOn)
+	orch.Workflow = w
+	for _, to := range []string{"testing", "acceptance-review", "review", "in-progress", "done"} {
+		if why, want := pg.Check(mcp("item_move", to)), "the planner cannot move S-0001 to "+to+": "+planner; why != want {
+			t.Errorf("the planner's item_move to %s:\n got %q\nwant %q", to, why, want)
+		}
+		c := "flai move S-0001 " + to
+		if why, want := pg.Check(bash("", c)), fmt.Sprintf("the planner cannot run %q: it moves an item to backlog and no further; %s", c, planner); why != want {
+			t.Errorf("the planner's %q:\n got %q\nwant %q", c, why, want)
+		}
+		if to == "done" {
+			continue
+		}
+		r := orch.Decide(itemOf("item_move", "S-0001", to))
+		if want := fmt.Sprintf("the orchestrator cannot move S-0001 to %s: %s. %s", to, nevers("it moves an item to ready and no further"), askOperator); r.Why != want || r.Needs != "" {
+			t.Errorf("the orchestrator's item_move to %s:\n got %+v\nwant %q", to, r, want)
+		}
+		c += " --by orchestrator"
+		if r := orch.Decide(bash("", c)); r.Why != fmt.Sprintf("the orchestrator cannot run %q: %s. %s", c, nevers(movesTo), askOperator) || r.Needs != "" {
+			t.Errorf("the orchestrator's %q: %+v", c, r)
+		}
+	}
+	for _, e := range []Event{mcp("item_move", "backlog"), bash("", "flai move S-0001 backlog")} {
+		if why := pg.Check(e); why != "" {
+			t.Errorf("the planner's move to backlog refused: %s", why)
+		}
+	}
+	for _, e := range []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move S-0001 done --by orchestrator")} {
+		if r := orch.Decide(e); r.Why != "" {
+			t.Errorf("the orchestrator's %s %q refused: %s", e.ToolName, e.ToolInput.Command, r.Why)
+		}
+	}
+	r := orch.Decide(itemOf("item_move", "S-0001", "done"))
+	if want := fmt.Sprintf("the orchestrator cannot move S-0001 to done: %s. %s", nevers(acceptsWithFlai), askOperator); r.Why != want {
+		t.Errorf("the orchestrator's item_move to done:\n got %q\nwant %q", r.Why, want)
+	}
+}
+
+// S-0749: the guard's own rules read a move's target from the workflow, not
+// its name: on a board whose ready is committed and whose done is accepted,
+// they let the orchestrator promote into committed and accept a story into
+// accepted, and refuse it ready and done, which are no state there.
+func TestTheGuardsRulesReadTheTransitionNotTheName(t *testing.T) {
+	renamed := strings.NewReplacer("ready", "committed", "done", "accepted").Replace(guardOtherWorkflow)
+	w := *guardWorkflow(t, renamed)
+	for _, c := range []struct {
+		args         []string
+		needs, never string
+	}{
+		{[]string{"move", "S-0001", "committed"}, manifest.PermitPromoteToReady, ""},
+		{[]string{"move", "S-0001", "accepted", "--by", "orchestrator"}, manifest.PermitAcceptReviews, ""},
+		{[]string{"move", "T-0001", "accepted"}, "", movesTo},
+		{[]string{"move", "S-0001", "ready"}, "", movesTo},
+		{[]string{"move", "S-0001", "done"}, "", movesTo},
+		{[]string{"move", "S-0001", "testing"}, "", movesTo},
+	} {
+		if needs, never := orchestrated(w, c.args[0], "", c.args, allOn); needs != c.needs || never != c.never {
+			t.Errorf("%v: needs %q never %q", c.args, needs, never)
+		}
+	}
+	orch := orchestrator(allOn)
+	orch.Workflow = &w
+	for to, want := range map[string]string{"committed": "", "accepted": nevers(acceptsWithFlai), "done": nevers("it moves an item to ready and no further"), "ready": nevers("it moves an item to ready and no further")} {
+		v := orch.orchestrate(Call{Kind: FlaiTool, Tool: "item_move", Args: Args{ID: "S-0001", To: to}})
+		if want == "" && v.Reason != "" || want != "" && !strings.Contains(v.Reason, want) {
+			t.Errorf("item_move to %s: %q", to, v.Reason)
+		}
+	}
+	pg := planGuard
+	pg.Workflow = &w
+	if why := pg.plan(Call{Kind: FlaiTool, Tool: "item_move", Args: Args{ID: "S-0001", To: "committed"}}); !strings.Contains(why, "the planner cannot move S-0001 to committed") {
+		t.Errorf("the planner's item_move to committed: %q", why)
+	}
+}
+
+// S-0749: a protected write is asked for in a story of any active state, such
+// as testing, and refused in a story waiting in acceptance-review in the
+// baseline's words.
+func TestHoldAsksInAnyActiveState(t *testing.T) {
+	repo, story, asker := holdFixture(t)
+	repo.Workflow = guardWorkflow(t, guardOtherWorkflow)
+	at := time.Date(2026, 10, 12, 10, 0, 0, 0, time.UTC)
+	if _, err := repo.Transition(story, "testing", "alex", "", at); err != nil {
+		t.Fatal(err)
+	}
+	gd := Guard{Commands: g.Commands, Story: story.ID, Served: true, Workflow: repo.Workflow}
+	r := holder{path: filepath.Join(repo.WorktreePath(story.ID), ".claude", "settings.json")}
+	h, err := r.Read(nil, gd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	if code := r.Answer(Hold(context.Background(), gd, asker, h.Call, 50*time.Millisecond), &stderr); code != 1 || !strings.Contains(stderr.String(), "No answer on ") {
+		t.Errorf("testing: exit %d, stderr %q", code, stderr.String())
+	}
+	if _, err := repo.Transition(story, "acceptance-review", "alex", "", at); err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf("%s is acceptance-review, not in progress, so .claude/settings.json was not written: a path flai protects is asked for only in an in-progress story's worktree", story.ID)
+	if v := Hold(context.Background(), gd, asker, h.Call, 50*time.Millisecond); v.Outcome != Deny || v.Reason != want {
+		t.Errorf("acceptance-review: %+v", v)
 	}
 }

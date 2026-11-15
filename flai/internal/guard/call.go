@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -229,7 +230,7 @@ func Hold(ctx context.Context, g Guard, a ask.Asker, c Call, bound time.Duration
 	if err != nil {
 		return deny(fmt.Sprintf("could not read %s for its owner, so %s was not written: %v", c.Story, rel, err))
 	}
-	if story.Status != workitem.InProgress {
+	if a.Repo.Flow().Kind(story.Status) != workflow.KindActive {
 		return deny(fmt.Sprintf("%s is %s, not in progress, so %s was not written: a path flai protects is asked for only in an in-progress story's worktree", story.ID, story.Status, rel))
 	}
 	req := ask.Request{Story: story.ID, Owner: story.Owner, Agent: g.selves(c)[0], Tool: c.Name, Path: rel, Why: askedWhy, Change: askedChange}

@@ -205,6 +205,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -276,6 +277,10 @@ import (
 // are matched against; nil when not given. Design is the design folder,
 // relative to Root and slash separated, for {design} in the file's files;
 // while it is "", the parent of Reports stands for it when Reports is given.
+// Workflow is the workflow the project runs (ADR-0301), from which the guard
+// reads a move's target: the initial state the planner moves an item to, the
+// state a commit moves it into, and the state only an acceptance moves a
+// story into. Nil runs the baseline.
 type Guard struct {
 	Commands        []string
 	Role            string
@@ -297,6 +302,7 @@ type Guard struct {
 	RolePermissions manifest.Permissions
 	Subcommands     map[string][]string
 	Design          string
+	Workflow        *workflow.Workflow
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -441,28 +447,31 @@ func subAgent(readOnly bool) rules {
 }
 
 // planning are the planner's rules: flai's reads and its planning commands,
-// and git's reads.
-var planning = rules{
-	flai: func(cmd, sub string, rest []string) (string, string) {
-		switch {
-		case reads(cmd, sub, rest):
-			return "", ""
-		case cmd == "move":
-			if args := positionals(rest, moveValues); len(args) > 2 && args[2] == Backlog {
+// and git's reads; it moves an item only to the workflow's initial state.
+func (g Guard) planning() rules {
+	w := g.flow()
+	return rules{
+		flai: func(cmd, sub string, rest []string) (string, string) {
+			switch {
+			case reads(cmd, sub, rest):
+				return "", ""
+			case cmd == "move":
+				if args := positionals(rest, moveValues); len(args) > 2 && initial(w, args[2]) {
+					return "", ""
+				}
+				return "it moves an item to backlog and no further", ""
+			case cmd == "edit" && slices.ContainsFunc(rest, finalizes):
+				return "finalizing a draft is the operator's", ""
+			case cmd == "story" && sub == "new" && !drafted(rest):
+				return drafts, ""
+			}
+			if subs, ok := cliPlans[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
 				return "", ""
 			}
-			return "it moves an item to backlog and no further", ""
-		case cmd == "edit" && slices.ContainsFunc(rest, finalizes):
-			return "finalizing a draft is the operator's", ""
-		case cmd == "story" && sub == "new" && !drafted(rest):
-			return drafts, ""
-		}
-		if subs, ok := cliPlans[cmd]; ok && (subs == nil || slices.Contains(subs, sub)) {
-			return "", ""
-		}
-		return "of flai's commands that write, it runs only story new with --draft, epic new, task new, edit, touches, thread new and reply, issue new and bump, and move to backlog", ""
-	},
-	git: func(string) string { return "it runs only git's reads" },
+			return "of flai's commands that write, it runs only story new with --draft, epic new, task new, edit, touches, thread new and reply, issue new and bump, and move to backlog", ""
+		},
+		git: func(string) string { return "it runs only git's reads" },
+	}
 }
 
 // orchestration are the orchestrator's rules under its permissions: flai's
@@ -474,7 +483,7 @@ func (g Guard) orchestration() rules {
 			if cmd == "thread" && slices.Contains([]string{"reply", "resolve", "confirm"}, sub) {
 				return g.thread(cliThread(sub, rest))
 			}
-			needs, never := orchestrated(cmd, sub, rest, g.Permissions)
+			needs, never := orchestrated(g.flow(), cmd, sub, rest, g.Permissions)
 			switch {
 			case never != "":
 				return nevers(never), ""
@@ -500,8 +509,9 @@ func (g Guard) orchestration() rules {
 // orchestrated says what the orchestrator needs to run a flai command: the
 // permission that allows it, or why it never runs it; both "" when it runs
 // it whatever its permissions. Its permissions p pick the one cost of delay
-// inputs need (costNeeds).
-func orchestrated(cmd, sub string, rest []string, p manifest.Permissions) (needs, never string) {
+// inputs need (costNeeds); w is the workflow whose transitions say which
+// moves it promotes and which it accepts.
+func orchestrated(w workflow.Workflow, cmd, sub string, rest []string, p manifest.Permissions) (needs, never string) {
 	if reads(cmd, sub, rest) {
 		return "", ""
 	}
@@ -529,9 +539,9 @@ func orchestrated(cmd, sub string, rest []string, p manifest.Permissions) (needs
 	case "move":
 		args := positionals(rest, moveValues)
 		switch {
-		case len(args) > 2 && args[2] == Ready:
+		case len(args) > 2 && commits(w, args[2]):
 			return manifest.PermitPromoteToReady, ""
-		case len(args) > 2 && args[2] == workitem.Done && isStory(args[1]):
+		case len(args) > 2 && isStory(args[1]) && accepts(w, workflow.TypeStory, args[2]):
 			// the done transition of a story it accepts (ADR-0093); the
 			// orchestration rules hold it to --by orchestrator
 			return manifest.PermitAcceptReviews, ""

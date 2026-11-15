@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
-	"github.com/bytepunx/system-flow/flai/internal/workitem"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
@@ -96,10 +96,10 @@ func (g Guard) orchestrate(c Call) Verdict {
 			}
 		case tool == "item_move":
 			what = fmt.Sprintf("move %s to %s", in.ID, in.To)
-			switch in.To {
-			case Ready:
+			switch w := g.flow(); {
+			case commits(w, in.To):
 				needs = manifest.PermitPromoteToReady
-			case workitem.Done:
+			case w.Kind(in.To) == workflow.KindAccepted:
 				never = acceptsWithFlai
 			default:
 				never = "it moves an item to ready and no further"
@@ -173,7 +173,7 @@ func (g Guard) plan(c Call) string {
 			return fmt.Sprintf("the planner cannot create a story that is not a draft: %s; %s", drafts, planner)
 		case slices.Contains(MCPReads, tool), slices.Contains(MCPPlans, tool):
 			return ""
-		case tool == "item_move" && in.To == Backlog:
+		case tool == "item_move" && initial(g.flow(), in.To):
 			return ""
 		case tool == "item_move":
 			return fmt.Sprintf("the planner cannot move %s to %s: %s", in.ID, in.To, planner)
@@ -181,7 +181,7 @@ func (g Guard) plan(c Call) string {
 		return fmt.Sprintf("the planner cannot call %s: %s", c.Tool, planner)
 	case Shell:
 		for _, words := range arguments(c.Command) {
-			if why, _ := g.refuse(words, planning); why != "" {
+			if why, _ := g.refuse(words, g.planning()); why != "" {
 				return fmt.Sprintf("the planner cannot run %q: %s; %s", strings.Join(words, " "), why, planner)
 			}
 		}

@@ -9,13 +9,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // RolePlan is the planner's role, as flai serve sets it in FLAI_ROLE.
 const RolePlan = "plan"
 
-// Backlog is the one state the planner may move an item to.
+// Backlog is the baseline's initial state, the one state the planner may
+// move an item to there, as the role file's to-backlog condition reads it;
+// the guard's own rules read the workflow's initial state (initial).
 const Backlog = "backlog"
 
 // MCPPlans are flai's MCP tools the planner's baseline role file lists
@@ -36,6 +39,45 @@ var cliPlans = map[string][]string{
 	"touches": nil,
 }
 
+// flow is the workflow g reads a move's target from: the project's, or the
+// baseline while g has none.
+func (g Guard) flow() workflow.Workflow {
+	if g.Workflow != nil {
+		return *g.Workflow
+	}
+	return workflow.Baseline()
+}
+
+// initial says whether to names w's initial state, the one the planner moves
+// an item to: backlog on the baseline.
+func initial(w workflow.Workflow, to string) bool {
+	s, ok := w.State(to)
+	first, has := w.Initial()
+	return ok && has && s.Name == first.Name
+}
+
+// commits says whether to names a state a transition of w that commits to an
+// item moves it into, as the orchestrator's promote_to_ready does: ready on
+// the baseline.
+func commits(w workflow.Workflow, to string) bool {
+	s, ok := w.State(to)
+	return ok && slices.ContainsFunc(w.Transitions, func(t workflow.Transition) bool {
+		return t.To == s.Name && t.HasEffect(workflow.EffectCommit)
+	})
+}
+
+// accepts says whether to names a state an item of type typ moves into by a
+// transition of w that a role, as the orchestrator is, may make only as an
+// acceptance: done for a story on the baseline.
+func accepts(w workflow.Workflow, typ, to string) bool {
+	s, ok := w.State(to)
+	return ok && slices.ContainsFunc(w.Transitions, func(t workflow.Transition) bool {
+		return t.To == s.Name && t.Takes(typ) &&
+			t.Permits(workflow.Mover{Who: workflow.MoverRole}) != nil &&
+			t.Permits(workflow.Mover{Who: workflow.MoverRole, Acceptance: true}) == nil
+	})
+}
+
 // moveValues are the flags of flai move, flai's own among them, that take
 // a value.
 var moveValues = map[string]bool{"--by": true, "--config": true, "--reason": true}
@@ -51,8 +93,10 @@ const drafts = "the stories it writes are drafts for the operator to finalize, s
 // FLAI_ROLE.
 const RoleOrchestrate = "orchestrate"
 
-// Ready is the one state the orchestrator may move an item to, with
-// promote_to_ready.
+// Ready is the baseline's state a commit moves an item into, the one state
+// the orchestrator may move an item to there, with promote_to_ready, as the
+// role file's to-ready condition reads it; the guard's own rules read the
+// workflow's commit transition (commits).
 const Ready = "ready"
 
 // MCPOrchestrates are flai's MCP tools the orchestrator may call besides
