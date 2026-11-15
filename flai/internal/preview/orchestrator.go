@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -118,8 +119,9 @@ var (
 	// a stop skipped: its cancelled task, "T-nnnn skipped" (ADR-0271 §4)
 	stepSkipped = regexp.MustCompile("^`?([Tt]-\\d+)`?\\s+skipped\\b")
 	// stopCancel is the line flai formula stop leaves in the Notes of each
-	// step task it cancels (ADR-0271 §2), with the stopping step and the exit
-	stopCancel = regexp.MustCompile(`moved to cancelled: step (\S+) stopped the run with exit (\d+)`)
+	// step task it cancels (ADR-0271 §2), with the stopping step and the exit;
+	// the state it names is the workflow's cancelled one
+	stopCancel = regexp.MustCompile(`moved to [^\s:]+: step (\S+) stopped the run with exit (\d+)`)
 	// klusterLine is evidence for a criterion that the story's namespace
 	// shows it, in place of files: "kluster deploy and checks passed at
 	// <commit>", or "kluster deploy passed at <commit>" while the checks host
@@ -318,7 +320,7 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	case it.Formula != "" && listErr != nil:
 		add(BlockCriterionUnevidenced, "cannot list the tasks of %s to check the evidence against its steps: %v", it.ID, listErr)
 	case it.Formula != "":
-		blockers = append(blockers, stepsUndone(it, criteria, opts.Evidence, tasks)...)
+		blockers = append(blockers, stepsUndoneIn(repo.Flow(), it, criteria, opts.Evidence, tasks)...)
 	case diff != nil:
 		at := verified
 		if opts.Batch != "" {
@@ -505,8 +507,15 @@ func klusterRecordWhy(r execx.Runner, root string, m manifest.Manifest, ev klust
 // tasks or is not done: a step's evidence is its task's done transition, not
 // a changed file, since a step may change nothing (S-0422). A step a stop
 // skipped is evidenced by its task cancelled by that stop, "- <n>: T-nnnn
-// skipped", as stopSkipped checks it (ADR-0271 §4).
+// skipped", as stopSkipped checks it (ADR-0271 §4). It reads the states of
+// the baseline workflow; stepsUndoneIn reads a project's.
 func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence, tasks map[string]*workitem.Item) []Blocker {
+	return stepsUndoneIn(workflow.Baseline(), it, criteria, ev, tasks)
+}
+
+// stepsUndoneIn is stepsUndone in w, whose accepted kind is a task's done
+// and whose cancelled kind a skipped step's.
+func stepsUndoneIn(w workflow.Workflow, it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence, tasks map[string]*workitem.Item) []Blocker {
 	said := evidenceItems(ev.Text)
 	var out []Blocker
 	block := func(format string, args ...any) {
@@ -519,7 +528,7 @@ func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence,
 			continue
 		}
 		if m := stepSkipped.FindStringSubmatch(text); m != nil {
-			if why := stopSkipped(it, workitem.CanonicalID(m[1]), tasks); why != "" {
+			if why := stopSkipped(w, it, workitem.CanonicalID(m[1]), tasks); why != "" {
 				block("the evidence for acceptance criterion %d (%s) names %s skipped, but %s", c.N, c.Text, workitem.CanonicalID(m[1]), why)
 			}
 			continue
@@ -533,8 +542,8 @@ func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence,
 		switch task := tasks[id]; {
 		case task == nil:
 			block("the evidence for acceptance criterion %d (%s) names %s, which is not a task of %s", c.N, c.Text, id, it.ID)
-		case task.Status != workitem.Done:
-			block("the evidence for acceptance criterion %d (%s) names %s, which is %s, not done: its step has not passed", c.N, c.Text, id, task.Status)
+		case !workitem.IsKind(w, task.Status, workflow.KindAccepted):
+			block("the evidence for acceptance criterion %d (%s) names %s, which is %s, not %s: its step has not passed", c.N, c.Text, id, task.Status, workitem.AcceptTarget(w, workitem.Task))
 		}
 	}
 	return out
@@ -546,15 +555,16 @@ func stepsUndone(it *workitem.Item, criteria []itemedit.Criterion, ev *Evidence,
 // cancelled: step <id> stopped the run with exit <n>", and a task of it is
 // done with that stop's record, "Stopped the run with exit <n>:", in its
 // Notes: the stopping step's task, which flai formula stop moved to done.
-// The record names the stopping step's task, so the formula's file, which
-// may have changed since the run, is not read.
-func stopSkipped(it *workitem.Item, id string, tasks map[string]*workitem.Item) string {
+// Cancelled and done are w's cancelled and accepted kinds. The record names
+// the stopping step's task, so the formula's file, which may have changed
+// since the run, is not read.
+func stopSkipped(w workflow.Workflow, it *workitem.Item, id string, tasks map[string]*workitem.Item) string {
 	task := tasks[id]
 	switch {
 	case task == nil:
 		return fmt.Sprintf("%s is not a task of %s", id, it.ID)
-	case task.Status != workitem.Cancelled:
-		return fmt.Sprintf("%s is %s, not cancelled: a skipped step's task is cancelled by flai formula stop", id, task.Status)
+	case !workitem.IsKind(w, task.Status, workflow.KindCancelled):
+		return fmt.Sprintf("%s is %s, not %s: a skipped step's task is cancelled by flai formula stop", id, task.Status, workitem.CancelledState(w))
 	}
 	m := stopCancel.FindStringSubmatch(task.Body)
 	if m == nil {
@@ -562,7 +572,7 @@ func stopSkipped(it *workitem.Item, id string, tasks map[string]*workitem.Item) 
 	}
 	record := "Stopped the run with exit " + m[2] + ":"
 	for _, t := range tasks {
-		if t.Status == workitem.Done && strings.Contains(t.Body, record) {
+		if workitem.IsKind(w, t.Status, workflow.KindAccepted) && strings.Contains(t.Body, record) {
 			return ""
 		}
 	}

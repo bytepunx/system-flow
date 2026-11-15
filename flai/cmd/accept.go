@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -408,6 +409,9 @@ type accepted struct {
 	// fix passed, which the fixes before its commits pass over while they are
 	// unchanged (S-0609).
 	linted lintedFiles
+	// flow is the project's workflow, whose accepted kind says whether the
+	// epic that followed the story was archived with it, for the text output.
+	flow workflow.Workflow
 }
 
 // acceptQueued is the merge queue's hold on a story the operator accepted
@@ -430,14 +434,15 @@ type acceptQueued struct {
 
 // queuesInstead reports whether the acceptance of it with o, given opts, is
 // the operator's that the merge queue takes in place of a landing by hand
-// (S-0552): a story in review, accepted by neither the orchestrator nor the
-// queue's landing, while the queue batches, not as a dry run, and without
+// (S-0552): a story in the state w's acceptance leaves from, accepted by
+// neither the orchestrator nor the queue's landing, while the queue batches, not as a dry run, and without
 // --without-queue-tiers, --without-kluster, or --keep-removal, which land it
 // by hand, outside the queue, as before: the queue's landing waits for the
 // story's deploy, which --without-kluster lands it without (ADR-0254 §5a).
 // Whether the queue is held is read after.
-func queuesInstead(it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) bool {
-	return it.Type == workitem.Story && it.Status == workitem.Review && opts.QueueBatches && !opts.Orchestrator &&
+func queuesInstead(w workflow.Workflow, it *workitem.Item, o acceptOptions, opts preview.AcceptOptions) bool {
+	accepts := workitem.Accepts(w, it.Type, it.Status, workitem.AcceptTarget(w, it.Type))
+	return it.Type == workitem.Story && accepts && opts.QueueBatches && !opts.Orchestrator &&
 		o.batch == "" && !o.dryRun && !o.withoutQueueTiers && !o.withoutKluster && len(opts.Keep) == 0
 }
 
@@ -471,7 +476,7 @@ func (a *app) enqueueAccepted(repo *workitem.Repo, it *workitem.Item, by string)
 		q.Position = slices.IndexFunc(st.Enqueued, func(x mergequeue.Enqueued) bool { return x.Story == e.Story }) + 1
 	}
 	a.acceptStep(it, "enqueued", it.ID+" left to the merge queue, which lands it once its batch passes")
-	return &accepted{Acceptance: &preview.Acceptance{ID: it.ID, Status: it.Status}, Queue: q}, nil
+	return &accepted{Acceptance: &preview.Acceptance{ID: it.ID, Status: it.Status}, Queue: q, flow: repo.Flow()}, nil
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
@@ -482,7 +487,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	// while the queue batches and is not held, it lands what the operator
 	// accepts (S-0552)
-	if queuesInstead(it, o, opts) {
+	if queuesInstead(repo.Flow(), it, o, opts) {
 		if acc, err := a.enqueueAccepted(repo, it, orDefault(o.by, a.author())); acc != nil || err != nil {
 			return acc, err
 		}
@@ -494,7 +499,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if opts.Orchestrator && res.Resumed && !workitem.IsOrchestrator(res.DoneBy) {
 		return nil, notOrchestratorsToResume(it.ID, res)
 	}
-	acc := &accepted{Acceptance: res, wip: strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/"}
+	acc := &accepted{Acceptance: res, wip: strings.TrimSuffix(repo.Manifest.Layout["wip"], "/") + "/", flow: repo.Flow()}
 	messagesToClose(repo, it, acc)
 	res.DryRun = o.dryRun
 	if !o.dryRun {
@@ -605,7 +610,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	from := it.Status
 	if !res.Resumed {
-		for _, st := range preview.StepsToDone(it.Status) {
+		for _, st := range preview.StepsToAccept(repo.Flow(), it.Type, it.Status) {
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
 				return nil, err
 			}
@@ -642,7 +647,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	res.Status = it.Status
-	a.acceptStep(it, "done", it.ID+" moved to done")
+	a.acceptStep(it, "done", it.ID+" moved to "+it.Status)
 	// 1a. the story's epic follows it, to done with its last open story
 	// (S-0200); the story's roll-up has already summed the epic's usage
 	if it.Type == workitem.Story && !res.Resumed {
@@ -652,7 +657,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	// 2. archive
 	items, _ = repo.List(false)
-	ap, err := repo.PlanArchive(items, preview.ArchivedWith(items, it.ID, res.Epic))
+	ap, err := repo.PlanArchive(items, preview.ArchivedIn(repo.Flow(), items, it.ID, res.Epic))
 	if err != nil {
 		return nil, err
 	}
@@ -776,7 +781,7 @@ func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by strin
 	if !errors.As(err, &stop) || !stop.RebaseInProgress {
 		return err
 	}
-	branch, who := storyBranch(it.ID), acceptanceBy(it.ID, by)
+	branch, who, back := storyBranch(it.ID), acceptanceBy(it.ID, by), sendBackTarget(repo.Flow(), it)
 	stopped := fmt.Sprintf("the rebase of %s onto %s stopped", branch, stop.Base)
 	if stop.Found {
 		stopped = fmt.Sprintf("a rebase of %s was already in progress in %s", branch, stop.Worktree)
@@ -788,15 +793,15 @@ func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by strin
 	if stop.Found {
 		did = "it left that rebase as it found it"
 	} else if aerr := storygit.AbortRebase(a.runner, repo.WorktreePath(it.ID), branch); aerr != nil {
-		return fmt.Errorf("%w; %s could not send %s back to in-progress, since %w", err, who, it.ID, aerr)
+		return fmt.Errorf("%w; %s could not send %s back to %s, since %w", err, who, it.ID, back, aerr)
 	}
 	reason := fmt.Sprintf("%s, which %s cannot settle, so %s; its agent settles it in the worktree and syncs it with flai stream sync %s", stopped, who, did, it.ID)
-	if _, merr := repo.Transition(it, workitem.InProgress, storygit.SentBackAuthor, reason, a.now()); merr != nil {
-		return fmt.Errorf("%s, and %s could not move %s back to in-progress: %w; the operator moves it with flai move %s in-progress --reason %q", stopped, who, it.ID, merr, it.ID, reason)
+	if _, merr := repo.Transition(it, back, storygit.SentBackAuthor, reason, a.now()); merr != nil {
+		return fmt.Errorf("%s, and %s could not move %s back to %s: %w; the operator moves it with flai move %s %s --reason %q", stopped, who, it.ID, back, merr, it.ID, back, reason)
 	}
 	th, terr := a.openSentBack(repo, it.ID, branch, who, stop)
 	if terr != nil {
-		return fmt.Errorf("%s was sent back to in-progress: %s, and %s; but its thread could not be opened: %w; tell its agent with flai thread new --on %s", it.ID, stopped, did, terr, it.ID)
+		return fmt.Errorf("%s was sent back to %s: %s, and %s; but its thread could not be opened: %w; tell its agent with flai thread new --on %s", it.ID, back, stopped, did, terr, it.ID)
 	}
 	a.logger().Info("story sent back from its acceptance", "component", "accept", "item", it.ID, "by", by, "branch", branch, "paths", stop.Conflicts, "found", stop.Found, "thread", th.ID)
 	state := fmt.Sprintf("flai aborted the rebase, so %s and %s are as they were", branch, stop.Base)
@@ -805,9 +810,21 @@ func (a *app) sendBackUnsettled(repo *workitem.Repo, it *workitem.Item, by strin
 	}
 	return &sentBack{
 		ID: it.ID, SentBack: true, Branch: branch, Base: stop.Base, Conflicts: nonNil(stop.Conflicts), Thread: th.ID,
-		Reason: fmt.Sprintf("%s was sent back to in-progress: %s, which %s cannot settle; %s, and its agent resolves them on %s (ADR-0248)",
-			it.ID, stopped, who, state, th.ID),
+		Reason: fmt.Sprintf("%s was sent back to %s: %s, which %s cannot settle; %s, and its agent resolves them on %s (ADR-0248)",
+			it.ID, back, stopped, who, state, th.ID),
 	}
+}
+
+// sendBackTarget is the state w's transition with the send-back effect takes
+// it to out of its state, else w's first state of the active kind: on the
+// baseline, in-progress.
+func sendBackTarget(w workflow.Workflow, it *workitem.Item) string {
+	for _, t := range w.From(it.Type, it.Status) {
+		if t.HasEffect(workflow.EffectSendBack) {
+			return t.To
+		}
+	}
+	return workitem.FirstOfKind(w, workflow.KindActive)
 }
 
 // acceptanceBy names the acceptance of story by by, as the send back's words
@@ -1121,7 +1138,7 @@ func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *prev
 	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, addArgs(left)...); err != nil {
 		return notCommitted(it.ID, res, "not yet staged", err)
 	}
-	msg := acceptSubject(it.ID, res.Epic)
+	msg := acceptSubject(it.ID, preview.ArchivesEpic(repo.Flow(), res.Epic), res.Epic)
 	for _, t := range trailers {
 		msg += "\n\n" + t
 	}
@@ -1171,10 +1188,10 @@ func (a *app) releaseDue(repo *workitem.Repo, it *workitem.Item, before *release
 }
 
 // acceptSubject is the subject of the acceptance commit of id, naming the
-// epic that followed it to done.
-func acceptSubject(id string, epic *workitem.Followed) string {
+// epic that followed it to done when archived says it did.
+func acceptSubject(id string, archived bool, epic *workitem.Followed) string {
 	subject := fmt.Sprintf("chore: [%s] accept and archive", id)
-	if epic != nil && epic.To == workitem.Done {
+	if archived {
 		subject += ", with " + epic.ID
 	}
 	return subject
@@ -1287,7 +1304,7 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// while the queue batches, it lands what the orchestrator would accept;
 	// a dry run changes nothing and previews what an enqueue vouches for, and
 	// a story done already, whose acceptance stopped, is never batched
-	resume := it.Status == workitem.Done
+	resume := workitem.IsKind(repo.Flow(), it.Status, workflow.KindAccepted)
 	if o.batch == "" && !o.dryRun && !resume && a.queueBatches(mainRootOf(repo)) {
 		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the merge-queue host action is on and the queue batches, so the merge queue lands %s, not the orchestrator: %s, and flai serve lands it as the orchestrator once its batch passes (ADR-0176)", it.ID, enqueueInstead(it.ID))
 	}
@@ -1673,10 +1690,10 @@ func (a *app) printAccept(acc *accepted) error {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
 		}
 		if res.CommitOnly {
-			fmt.Fprintf(a.out, "would commit the acceptance of %s, done and archived but not committed: %s\n", res.ID, acceptSubject(res.ID, res.Epic))
+			fmt.Fprintf(a.out, "would commit the acceptance of %s, done and archived but not committed: %s\n", res.ID, acceptSubject(res.ID, preview.ArchivesEpic(acc.flow, res.Epic), res.Epic))
 		} else if e := res.Epic; e != nil {
 			fmt.Fprintf(a.out, "would also move %s %s from %s to %s, following %s", e.ID, e.Title, e.From, e.To, e.Story)
-			if e.To == workitem.Done {
+			if preview.ArchivesEpic(acc.flow, e) {
 				fmt.Fprint(a.out, ", and archive it")
 			}
 			fmt.Fprintln(a.out)
@@ -1695,9 +1712,9 @@ func (a *app) printAccept(acc *accepted) error {
 		verb = "completed the acceptance of"
 	}
 	if res.CommitOnly {
-		fmt.Fprintf(a.out, "%s %s: done and archived already, committed", verb, res.ID)
+		fmt.Fprintf(a.out, "%s %s: %s and archived already, committed", verb, res.ID, res.Status)
 	} else {
-		fmt.Fprintf(a.out, "%s %s: done, %d items archived, committed", verb, res.ID, res.Archived)
+		fmt.Fprintf(a.out, "%s %s: %s, %d items archived, committed", verb, res.ID, res.Status, res.Archived)
 	}
 	remote := res.Remote != nil && res.Remote.Outcome != ""
 	switch {
@@ -1723,7 +1740,7 @@ func (a *app) printAccept(acc *accepted) error {
 	}
 	if e := res.Epic; e != nil {
 		fmt.Fprintf(a.out, "%s followed it from %s to %s", e.ID, e.From, e.To)
-		if e.To == workitem.Done {
+		if preview.ArchivesEpic(acc.flow, e) {
 			fmt.Fprint(a.out, ", archived")
 		}
 		fmt.Fprintln(a.out)

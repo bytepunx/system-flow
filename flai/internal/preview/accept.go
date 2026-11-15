@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -263,23 +264,27 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	// the main checkout's git status is read once, for every question the
 	// preview asks of it (S-0609)
 	dirty := &mainStatus{r: r, root: repo.MainRoot}
+	// the states are the workflow's: the acceptance is its transition with
+	// the accept effect, and done is its accepted kind (ADR-0301 §2, §3)
+	wf := repo.Flow()
+	accepted := workitem.IsKind(wf, it.Status, workflow.KindAccepted)
 	switch {
-	case it.Status == workitem.Done && !it.Archived:
+	case accepted && !it.Archived:
 		// Done without acceptance: finish the job rather than refuse it.
 		res.Resumed = true
-	case it.Status == workitem.Done && useGit && dirty.has(it.Path):
+	case accepted && useGit && dirty.has(it.Path):
 		// Done and archived, its archived file not committed: its acceptance
 		// commit failed (I-0100), so the commit is finished. The item's own
 		// file decides, not the wip folder, where flai leaves other changes
 		// uncommitted that an old item's subject must not take in.
 		res.Resumed, res.CommitOnly = true, true
-	case it.Closed():
+	case accepted || workitem.IsKind(wf, it.Status, workflow.KindCancelled):
 		return nil, fmt.Errorf("%s is already %s", it.ID, it.Status)
-	case it.Type == workitem.Story && it.Status != workitem.Review:
-		return nil, fmt.Errorf("%s is %s; a story is accepted from review", it.ID, it.Status)
+	case it.Type == workitem.Story && !workitem.Accepts(wf, it.Type, it.Status, workitem.AcceptTarget(wf, it.Type)):
+		return nil, fmt.Errorf("%s is %s; a story is accepted from %s", it.ID, it.Status, workitem.AcceptSource(wf, it.Type))
 	}
 	if res.Resumed {
-		res.DoneBy = doneBy(it)
+		res.DoneBy = doneBy(wf, it)
 	}
 	if useGit {
 		// the shared set is committed, the rest left as it is (ADR-0248);
@@ -312,13 +317,19 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	// The workflow's own rules for done (open tasks, unticked criteria) are
 	// checked on a copy before the branch is merged: a story that cannot be
 	// done must not have its branch merged and its worktree removed first,
-	// which is what happened until S-0041 found it from the review page.
+	// which is what happened until S-0041 found it from the review page. The
+	// acceptance's transition names the rules it passes (ADR-0301 §4).
 	if !res.Resumed {
 		if items, err := repo.List(false); err == nil {
 			probe := *it
 			probe.Transitions = append([]workitem.Transition(nil), it.Transitions...)
 			walked := true
-			for _, st := range StepsToDone(it.Status) {
+			for _, st := range StepsToAccept(wf, it.Type, it.Status) {
+				if b := acceptRuleBlocker(wf, &probe, st, items); b != "" {
+					res.Blockers = append(res.Blockers, b)
+					walked = false
+					break
+				}
 				if _, err := repo.Move(&probe, st, workitem.MoveOptions{By: by, Now: now, Items: items}); err != nil {
 					res.Blockers = append(res.Blockers, strings.TrimPrefix(err.Error(), "rule: "))
 					walked = false
@@ -713,11 +724,11 @@ func KlusterBlocker(id, why string) Blocker {
 	return Blocker{Code: BlockKluster, Message: fmt.Sprintf("the kluster host action is on, so %s is accepted only once its namespace was deployed at its head and, while the checks host action is on, the checks run against it passed there: %s; wait for flai serve to deploy it and run its checks, which flai kluster status shows, deploy it with flai kluster deploy %s in a shell on the host, or, as the operator in a shell, accept it with flai accept %s --without-kluster (ADR-0254)", id, why, id, id)}
 }
 
-// doneBy is who made it's last move to done, as its transitions record it;
-// "" when none records one.
-func doneBy(it *workitem.Item) string {
+// doneBy is who made it's last move to a state of w's accepted kind, as its
+// transitions record it; "" when none records one.
+func doneBy(w workflow.Workflow, it *workitem.Item) string {
 	for i := len(it.Transitions) - 1; i >= 0; i-- {
-		if it.Transitions[i].To == workitem.Done {
+		if workitem.IsKind(w, it.Transitions[i].To, workflow.KindAccepted) {
 			return it.Transitions[i].By
 		}
 	}
@@ -935,22 +946,25 @@ func archivedEpic(repo *workitem.Repo, story *workitem.Item, dirty *mainStatus) 
 		return nil
 	}
 	epic, err := repo.Get(story.Parent)
-	if err != nil || epic.Type != workitem.Epic || epic.Status != workitem.Done || !epic.Archived || !dirty.has(epic.Path) {
+	wf := repo.Flow()
+	if err != nil || epic.Type != workitem.Epic || !workitem.IsKind(wf, epic.Status, workflow.KindAccepted) || !epic.Archived || !dirty.has(epic.Path) {
 		return nil
 	}
-	return &workitem.Followed{ID: epic.ID, Type: epic.Type, Title: epic.Title, From: walkedFrom(epic.Transitions), To: workitem.Done, Story: story.ID}
+	return &workitem.Followed{ID: epic.ID, Type: epic.Type, Title: epic.Title, From: walkedFrom(wf, epic.Transitions), To: epic.Status, Story: story.ID}
 }
 
 // walkedFrom is the state an item was in before its last walk: the
 // transitions made at the time of the last one are one walk, as a follow
-// makes them; backlog when there is nothing before them.
-func walkedFrom(ts []workitem.Transition) string {
+// makes them; w's initial state, where items are created, when there is
+// nothing before them.
+func walkedFrom(w workflow.Workflow, ts []workitem.Transition) string {
 	i := len(ts) - 1
 	for i >= 0 && ts[i].At == ts[len(ts)-1].At {
 		i--
 	}
 	if i < 0 {
-		return workitem.Backlog
+		initial, _ := w.Initial()
+		return initial.Name
 	}
 	return ts[i].To
 }
@@ -1058,7 +1072,8 @@ func epicAccepted(repo *workitem.Repo, res *Acceptance, probe *workitem.Item, fr
 		return []string{err.Error()}
 	}
 	res.Epic = followed
-	if followed == nil || followed.To != workitem.Done {
+	wf := repo.Flow()
+	if !ArchivesEpic(wf, followed) {
 		return nil
 	}
 	var open []*workitem.Item
@@ -1067,8 +1082,8 @@ func epicAccepted(repo *workitem.Repo, res *Acceptance, probe *workitem.Item, fr
 			open = append(open, x)
 		}
 	}
-	if _, err := repo.PlanArchive(open, ArchivedWith(open, probe.ID, followed)); err != nil {
-		return []string{fmt.Sprintf("%s would follow %s to done but cannot be archived with it: %v", followed.ID, probe.ID, err)}
+	if _, err := repo.PlanArchive(open, ArchivedIn(wf, open, probe.ID, followed)); err != nil {
+		return []string{fmt.Sprintf("%s would follow %s to %s but cannot be archived with it: %v", followed.ID, probe.ID, followed.To, err)}
 	}
 	return nil
 }
@@ -1095,12 +1110,24 @@ func EpicWalk(repo *workitem.Repo, probe *workitem.Item, from, by string, now ti
 	return all, followed, err
 }
 
-// ArchivedWith is what accepting story archives: the story, and when its
-// epic followed it to done, the epic's other stories still on the board
-// (cancelled ones) and then the epic, so that nothing of it is left there.
+// ArchivedWith is ArchivedIn on the baseline workflow.
 func ArchivedWith(items []*workitem.Item, story string, epic *workitem.Followed) []string {
+	return ArchivedIn(workflow.Baseline(), items, story, epic)
+}
+
+// ArchivesEpic reports whether the walk epic took with a story's acceptance
+// reached a state of w's accepted kind, which archives the epic with it.
+func ArchivesEpic(w workflow.Workflow, epic *workitem.Followed) bool {
+	return epic != nil && workitem.IsKind(w, epic.To, workflow.KindAccepted)
+}
+
+// ArchivedIn is what accepting story archives in w: the story, and when its
+// epic followed it to done, w's accepted kind, the epic's other stories still
+// on the board (cancelled ones) and then the epic, so that nothing of it is
+// left there.
+func ArchivedIn(w workflow.Workflow, items []*workitem.Item, story string, epic *workitem.Followed) []string {
 	ids := []string{story}
-	if epic == nil || epic.To != workitem.Done {
+	if !ArchivesEpic(w, epic) {
 		return ids
 	}
 	for _, c := range workitem.Children(items, epic.ID) {
@@ -1141,16 +1168,91 @@ func resultsBlocker(r execx.Runner, repo *workitem.Repo, it *workitem.Item, useG
 	return ""
 }
 
-// StepsToDone is the walk from a state to done, one transition at a time.
+// StepsToDone is a story's StepsToAccept on the baseline workflow.
 func StepsToDone(status string) []string {
-	path := []string{workitem.Ready, workitem.InProgress, workitem.Review, workitem.Done}
-	if status == workitem.Backlog {
-		return path
+	return StepsToAccept(workflow.Baseline(), workitem.Story, status)
+}
+
+// StepsToAccept is the walk of an item of type typ in w from status to the
+// state its acceptance reaches, one transition at a time: the fewest moves
+// along w's transitions that go forward, none cancelling, sending back,
+// reopening, or made only as a parent's cancellation. A status with no such
+// walk, or the target itself, is that state alone, which the move refuses
+// in its own words.
+func StepsToAccept(w workflow.Workflow, typ, status string) []string {
+	target := workitem.AcceptTarget(w, typ)
+	start := status
+	if s, ok := w.State(status); ok {
+		start = s.Name
 	}
-	for i, st := range path {
-		if st == status {
-			return path[i+1:]
+	prev := map[string]string{start: ""}
+	for queue := []string{start}; len(queue) > 0 && queue[0] != target; queue = queue[1:] {
+		for _, t := range w.From(typ, queue[0]) {
+			if _, seen := prev[t.To]; seen || !forward(t) {
+				continue
+			}
+			prev[t.To] = queue[0]
+			queue = append(queue, t.To)
 		}
 	}
-	return []string{workitem.Done}
+	if _, ok := prev[target]; !ok || start == target {
+		return []string{target}
+	}
+	var path []string
+	for st := target; st != start; st = prev[st] {
+		path = append(path, st)
+	}
+	slices.Reverse(path)
+	return path
+}
+
+// forward reports whether t is a move along the board toward acceptance:
+// it cancels, sends back, and reopens nothing, and not only a parent's
+// cancellation makes it.
+func forward(t workflow.Transition) bool {
+	for _, e := range []string{workflow.EffectCancel, workflow.EffectSendBack, workflow.EffectReopen} {
+		if t.HasEffect(e) {
+			return false
+		}
+	}
+	return !slices.Equal(t.By, []string{workflow.ByCascade})
+}
+
+// The rules of ADR-0301 §4 whose refusal the acceptance preview reports by
+// name, in the words flai move gives them today.
+const (
+	ruleChildrenClosed = "children-closed"
+	ruleCriteriaTicked = "criteria-ticked"
+)
+
+// acceptRuleBlocker is what the first rule that refuses of the transition
+// with the accept effect moving probe to st in w says, the rule's word
+// without its "rule: " prefix, as a blocker; "" when the move is no
+// acceptance, or no rule it lists refuses: children-closed for a child not
+// in an accepted or cancelled state of items, criteria-ticked for a story's
+// unticked acceptance criterion. A rule a transition lists as a warning
+// does not block.
+func acceptRuleBlocker(w workflow.Workflow, probe *workitem.Item, st string, items []*workitem.Item) string {
+	t, ok := w.Find(probe.Type, probe.Status, st)
+	if !ok || !t.HasEffect(workflow.EffectAccept) {
+		return ""
+	}
+	for _, r := range t.Rules {
+		if r.Severity == workflow.SeverityWarn {
+			continue
+		}
+		switch r.Rule {
+		case ruleChildrenClosed:
+			for _, c := range workitem.Children(items, probe.ID) {
+				if !workitem.IsKind(w, c.Status, workflow.KindAccepted) && !workitem.IsKind(w, c.Status, workflow.KindCancelled) {
+					return fmt.Sprintf("%s cannot be %s while %s is %s", probe.ID, t.To, c.ID, c.Status)
+				}
+			}
+		case ruleCriteriaTicked:
+			if probe.Type == workitem.Story && slices.ContainsFunc(itemedit.Criteria(probe.Body), func(c itemedit.Criterion) bool { return !c.Ticked }) {
+				return probe.ID + " has unchecked acceptance criteria"
+			}
+		}
+	}
+	return ""
 }
