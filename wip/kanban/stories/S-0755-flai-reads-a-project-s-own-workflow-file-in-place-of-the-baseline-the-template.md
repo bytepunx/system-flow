@@ -3,12 +3,15 @@ id: S-0755
 type: story
 nature: feature
 title: flai reads a project's own workflow file in place of the baseline, the template ships the baseline, flai upgrade keeps the project's file, and the guides say how to change the board
-status: backlog
+status: ready
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:02:15Z
-updated: 2026-11-15T21:16:20Z
-transitions: []
+updated: 2026-11-15T21:46:10Z
+transitions:
+  - to: ready
+    at: 2026-11-15T21:35:42Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, template, conventions]
 touches: [flai/internal/workflow/load.go, flai/internal/workflow/load_test.go, flai/internal/workitem/repo.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, template/root/design/workflows/board.md, flai/internal/workflow/baseline_test.go, flai/internal/upgrade/upgrade.go, flai/internal/upgrade/upgrade_test.go, template/CHANGELOG.md, template/template.yaml, docs/operators/runbooks/change-the-board.md, docs/operators/runbooks/README.md, docs/operators/index.md, docs/users/flai.md, docs/users/conventions.md, design/system/workflow.md, design/system/template.md, design/workflows/README.md, template/root/design/workflows/README.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 33
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 23
-          cache_read: 191799
-          cache_write: 31841
-          cost: 0.0648
+          input: 5
+          output: 39
+          cache_read: 284434
+          cache_write: 32571
+          cost: 0.0931
 cost_of_delay:
   value: 83.73
   by: system-flow
   at: 2026-11-14T17:44:15Z
 forecast:
   duration: 47m
-  delivery: 2026-11-15T23:50:00Z
-  basis: "Its own forecast of 47m; 6th in the pull order with an in-progress limit of 3, behind S-0748, S-0750, S-0790, S-0241, S-0752, S-0753 and S-0754."
+  delivery: 2026-11-15T22:42:00Z
+  basis: "Its own forecast of 47m; 1st in the pull order with an in-progress limit of 3, behind S-0750 and S-0790."
   by: flai
-  at: 2026-11-15T21:16:20Z
+  at: 2026-11-15T21:46:10Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:58Z
