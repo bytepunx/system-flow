@@ -631,13 +631,16 @@ func TestStepsUndoneTakesATaskAStopCancelled(t *testing.T) {
 	}
 }
 
-// ADR-0291, I-0229: a story whose last passing flai verify ran go-test over a
-// main that has since reworded flai/internal/roles, which go-test selects, is
-// refused with verify_behind_main by the operator's acceptance, the orchestrator's,
-// and a hand acceptance while the queue batches, among the acceptance's
-// blockers and not the orchestrator's own; not by the queue's landing, nor
-// when main brought in only wip paths, nor when the verify did not pass. A
-// main whose paths cannot be listed is the blocker too.
+// ADR-0291, ADR-0303, I-0229, S-0792: a story whose last passing flai verify
+// ran go-test over a main that has since reworded flai/internal/roles, which
+// go-test selects and the story's guard test imports, is refused with
+// verify_behind_main by the operator's acceptance, the orchestrator's, and a
+// hand acceptance while the queue batches, among the acceptance's blockers and
+// not the orchestrator's own; not by the queue's landing, nor when main
+// brought in only wip paths, nor only paths that do not overlap the story's
+// change set, nor when the verify did not pass. Only the overlapping paths
+// send tiers back. A report that recorded no change set counts every path of
+// main's. A main whose paths cannot be listed is the blocker too.
 func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 	at := time.Date(2026, 11, 12, 16, 0, 0, 0, time.UTC)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -652,6 +655,20 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
+	for rel, src := range map[string]string{
+		"flai/go.mod":                       "module github.com/bytepunx/system-flow/flai\n",
+		"flai/internal/roles/conditions.go": "package roles\n",
+		"flai/internal/guard/roles_test.go": "package guard\n\nimport _ \"github.com/bytepunx/system-flow/flai/internal/roles\"\n",
+		"flai/internal/metrics/m.go":        "package metrics\n\nimport _ \"strings\"\n",
+	} {
+		p := filepath.Join(repo.MainRoot, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	diff := "diff --no-renames --name-only " + forgeOther + " main"
 	answers := gitAnswers{
 		"rev-parse --is-inside-work-tree":                        "true",
@@ -661,9 +678,10 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 		diff:                                                     "flai/internal/roles/conditions.go\nwip/kanban/stories/S-0099.md",
 	}
 	git := withGit{answers}
+	changed := []string{"flai/internal/guard/roles_test.go"}
 	report := func(passed bool) {
 		t.Helper()
-		rep := verify.Report{Story: s.ID, Commit: forgeHead, MergeBase: forgeOther, Passed: passed, Paths: []string{"flai/internal/guard/roles_test.go"}, Steps: []verify.Step{
+		rep := verify.Report{Story: s.ID, Commit: forgeHead, MergeBase: forgeOther, Passed: passed, Paths: changed, Steps: []verify.Step{
 			{Name: "go-test", Tier: true, State: verify.Passed},
 			{Name: "markdown", Tier: true, State: verify.Passed},
 		}}
@@ -672,7 +690,7 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 		}
 	}
 	report(true)
-	want := s.ID + "'s verify does not cover the main branch it would land on: its last flai verify, at abc1234, ran over main at 0123456, and the 1 path main brought in since send back go-test, which that verify ran: flai/internal/roles/conditions.go; ask for its close-out again"
+	want := s.ID + "'s verify does not cover the main branch it would land on: its last flai verify, at abc1234, ran over main at 0123456, and 1 of the 1 path main brought in since overlap its change set and send back go-test, which that verify ran: flai/internal/roles/conditions.go; ask for its close-out again"
 	for name, opts := range map[string]AcceptOptions{
 		"the operator's acceptance":        {},
 		"the orchestrator's acceptance":    {Orchestrator: true},
@@ -704,7 +722,25 @@ func TestAnAcceptanceWaitsForAVerifyOverMainsNewPaths(t *testing.T) {
 	stale("the queue's landing", AcceptOptions{QueueBatches: true, Batch: "20261112-160000"})
 	answers[diff] = "wip/kanban/stories/S-0099.md"
 	stale("a main that brought in only wip paths", AcceptOptions{})
+	answers[diff] = "flai/internal/metrics/m.go\ndesign/notes.md"
+	stale("a main that brought in only paths that do not overlap the change set", AcceptOptions{})
+	answers[diff] = "flai/internal/metrics/m.go\ndesign/notes.md\nflai/internal/roles/conditions.go"
+	behind := func(name, want string) {
+		t.Helper()
+		res, err := AcceptWith(git, repo, s, "alex", at, log, AcceptOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b := res.VerifyBehindMainBlocker; b == nil || !strings.Contains(b.Message, want) || !strings.HasSuffix(b.Message, "(ADR-0291, ADR-0303)") || !slices.Equal(res.StaleTiers, []string{"go-test"}) {
+			t.Errorf("%s must send go-test back alone, naming %q: %+v %q", name, want, b, res.StaleTiers)
+		}
+	}
+	behind("only the overlapping path of main's three", "and 1 of the 3 paths main brought in since overlap its change set and send back go-test, which that verify ran: flai/internal/roles/conditions.go;")
+	changed = nil
+	report(true)
 	answers[diff] = "flai/internal/roles/conditions.go"
+	behind("a report that recorded no change set", "and 1 of the 1 path main brought in since overlap its change set and send back go-test, which that verify ran: flai/internal/roles/conditions.go;")
+	changed = []string{"flai/internal/guard/roles_test.go"}
 	report(false)
 	stale("a verify that did not pass", AcceptOptions{})
 

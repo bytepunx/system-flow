@@ -130,10 +130,11 @@ type Acceptance struct {
 	KlusterWhy     string   `json:"kluster_why,omitempty"`
 	KlusterBlocker *Blocker `json:"kluster_blocker,omitempty"`
 	// StaleTiers are the tiers the story's last passing flai verify ran that
-	// the paths the main branch brought in since send back, and
-	// VerifyBehindMainBlocker the blocker verify_behind_main they bring, also in
-	// Blockers, in every acceptance but the merge queue's landing (ADR-0291);
-	// empty and nil when main brought in nothing they select.
+	// the paths the main branch brought in since and that overlap the story's
+	// change set send back, and VerifyBehindMainBlocker the blocker
+	// verify_behind_main they bring, also in Blockers, in every acceptance but
+	// the merge queue's landing (ADR-0291, ADR-0303); empty and nil when no
+	// such path selects one.
 	StaleTiers              []string `json:"stale_tiers,omitempty"`
 	VerifyBehindMainBlocker *Blocker `json:"verify_behind_main_blocker,omitempty"`
 }
@@ -186,7 +187,8 @@ const BlockQueueTiers = "queue_tiers"
 
 // BlockVerifyBehindMain is the code of the blocker of every acceptance but the
 // merge queue's landing for a story whose last passing flai verify ran over a
-// main that has since brought in paths sending back a tier it ran (ADR-0291).
+// main that has since brought in paths overlapping its change set and sending
+// back a tier it ran (ADR-0291, ADR-0303).
 const BlockVerifyBehindMain = "verify_behind_main"
 
 // BlockKluster is the code of the blocker of every acceptance of a story,
@@ -529,12 +531,13 @@ func QueueTiersBlocker(id, why string) Blocker {
 }
 
 // verifyBehindMainGate sets on res the tiers story it's last passing flai verify
-// ran that the paths the main branch brought in since send back, and the
-// blocker verify_behind_main they bring (ADR-0291). It gates a story with a branch,
-// not done already, in every acceptance but the merge queue's landing, whose
-// batch ran every tier over the main it lands on. The blocker is among the
-// acceptance's blockers, not the orchestrator's own: the orchestrator's
-// enqueue vouches with those alone, and the batch runs every tier.
+// ran that the main paths overlapping its change set, brought in since, send
+// back, and the blocker verify_behind_main they bring (ADR-0291, ADR-0303). It
+// gates a story with a branch, not done already, in every acceptance but the
+// merge queue's landing, whose batch ran every tier over the main it lands on.
+// The blocker is among the acceptance's blockers, not the orchestrator's own:
+// the orchestrator's enqueue vouches with those alone, and the batch runs
+// every tier.
 func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item, res *Acceptance, opts AcceptOptions) {
 	if it.Type != workitem.Story || res.Branch == "" || res.Resumed || opts.Batch != "" {
 		return
@@ -550,13 +553,14 @@ func verifyBehindMainGate(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 }
 
 // verifyBehindMain is, for story id's last flai verify report, the tiers it ran
-// that the paths the main branch brought in since its merge base send back,
-// with the tiers its worktree's manifest declares, or the main checkout's when
-// it has no worktree, selected over the main checkout, and why they are stale,
-// as a sentence fragment; nothing when there is no report, the report did not
-// pass, or main brought in nothing that sends a tier back. A report, a main,
-// or tiers that cannot be read is why, naming the error, so the gate never
-// opens unread.
+// that the paths the main branch brought in since its merge base and that
+// overlap the story's change set send back (ADR-0303), with the tiers its
+// worktree's manifest declares, or the main checkout's when it has no
+// worktree, selected over the main checkout, and why they are stale, as a
+// sentence fragment; nothing when there is no report, the report did not
+// pass, or nothing main brought in overlaps the change set and sends a tier
+// back. A report, a main, or tiers that cannot be read is why, naming the
+// error, so the gate never opens unread.
 func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string) ([]string, string) {
 	rep, ok, err := verify.LastReport(repo, id)
 	if err != nil {
@@ -565,43 +569,79 @@ func verifyBehindMain(r execx.Runner, repo *workitem.Repo, id string) ([]string,
 	if !ok || !rep.Passed {
 		return nil, ""
 	}
-	main, err := storygit.MainBranch(r, repo.MainRoot)
-	if err != nil {
-		return nil, fmt.Sprintf("cannot find the main branch to tell what it brought in since its last flai verify: %v", err)
+	main, paths, why := mainPathsSinceVerify(r, repo, rep)
+	if why != "" || len(paths) == 0 {
+		return nil, why
 	}
-	wip, err := filepath.Rel(repo.MainRoot, repo.WipDir())
-	if err != nil {
-		return nil, fmt.Sprintf("cannot tell which paths are under the wip folder %s: %v", repo.WipDir(), err)
-	}
-	paths, err := verify.MainPathsSince(r, repo.MainRoot, rep, main, filepath.ToSlash(wip)+"/")
-	if err != nil {
-		return nil, fmt.Sprintf("cannot %v", err)
-	}
-	if len(paths) == 0 {
+	root := storyRoot(repo, id)
+	overlap := overlappingMainPaths(repo, root, rep, paths)
+	if len(overlap) == 0 {
 		return nil, ""
-	}
-	root := repo.WorktreePath(id)
-	if _, err := os.Stat(root); err != nil {
-		root = repo.MainRoot
 	}
 	tiers, err := verify.CheckoutTiers(root)
 	if err != nil {
 		return nil, fmt.Sprintf("cannot read the tiers of %s: %v", rel(repo.MainRoot, root), err)
 	}
-	names := verify.StaleTiers(os.DirFS(repo.MainRoot), tiers, rep, paths)
+	names := verify.StaleTiers(os.DirFS(repo.MainRoot), tiers, rep, overlap)
 	if len(names) == 0 {
 		return nil, ""
 	}
+	return names, verifyBehindMainWhy(rep, main, names, overlap, len(paths))
+}
+
+// mainPathsSinceVerify is the main branch and the paths it brought in since
+// rep's merge base, the wip folder's left out, or why they cannot be listed.
+func mainPathsSinceVerify(r execx.Runner, repo *workitem.Repo, rep verify.Report) (string, []string, string) {
+	main, err := storygit.MainBranch(r, repo.MainRoot)
+	if err != nil {
+		return "", nil, fmt.Sprintf("cannot find the main branch to tell what it brought in since its last flai verify: %v", err)
+	}
+	wip, err := filepath.Rel(repo.MainRoot, repo.WipDir())
+	if err != nil {
+		return "", nil, fmt.Sprintf("cannot tell which paths are under the wip folder %s: %v", repo.WipDir(), err)
+	}
+	paths, err := verify.MainPathsSince(r, repo.MainRoot, rep, main, filepath.ToSlash(wip)+"/")
+	if err != nil {
+		return "", nil, fmt.Sprintf("cannot %v", err)
+	}
+	return main, paths, ""
+}
+
+// storyRoot is story id's worktree when it has one, else the main checkout.
+func storyRoot(repo *workitem.Repo, id string) string {
+	root := repo.WorktreePath(id)
+	if _, err := os.Stat(root); err != nil {
+		return repo.MainRoot
+	}
+	return root
+}
+
+// overlappingMainPaths are the paths of main's that overlap the change set
+// rep recorded, read in the main checkout and in the story's checkout at
+// root (ADR-0303).
+func overlappingMainPaths(repo *workitem.Repo, root string, rep verify.Report, paths []string) []string {
+	// A report from before the change set was recorded cannot tell what
+	// overlaps it: every path counts, so the gate never opens unread.
+	if len(rep.Paths) == 0 {
+		return paths
+	}
+	return verify.OverlappingPaths(os.DirFS(repo.MainRoot), os.DirFS(root), rep.Paths, paths)
+}
+
+// verifyBehindMainWhy is why the tiers names of rep are stale, as a sentence
+// fragment: how many of the brought paths main brought in overlap the
+// story's change set, and the first of them.
+func verifyBehindMainWhy(rep verify.Report, main string, names, overlap []string, brought int) string {
 	from := rep.MergeBase
 	if from == "" {
 		from = rep.BaseCommit
 	}
-	n := fmt.Sprintf("%d paths", len(paths))
-	if len(paths) == 1 {
-		n = "1 path"
+	noun := "paths"
+	if brought == 1 {
+		noun = "path"
 	}
-	return names, fmt.Sprintf("its last flai verify, at %s, ran over %s at %s, and the %s %s brought in since send back %s, which that verify ran: %s",
-		shortSHA(rep.Commit), main, shortSHA(from), n, main, strings.Join(names, ", "), firstPaths(paths, 3))
+	return fmt.Sprintf("its last flai verify, at %s, ran over %s at %s, and %d of the %d %s %s brought in since overlap its change set and send back %s, which that verify ran: %s",
+		shortSHA(rep.Commit), main, shortSHA(from), len(overlap), brought, noun, main, strings.Join(names, ", "), firstPaths(overlap, 3))
 }
 
 // firstPaths is the first n of paths joined, and how many more there are.
@@ -613,11 +653,11 @@ func firstPaths(paths []string, n int) string {
 }
 
 // VerifyBehindMainBlocker is why story id cannot be accepted while the main branch
-// has brought in, since its last passing flai verify, paths that send back a
-// tier that verify ran, for the reason why gives, naming the way out
-// (ADR-0291).
+// has brought in, since its last passing flai verify, paths that overlap its
+// change set and send back a tier that verify ran, for the reason why gives,
+// naming the way out (ADR-0291, ADR-0303).
 func VerifyBehindMainBlocker(id, why string) Blocker {
-	return Blocker{Code: BlockVerifyBehindMain, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291)", id, why, id, id)}
+	return Blocker{Code: BlockVerifyBehindMain, Message: fmt.Sprintf("%s's verify does not cover the main branch it would land on: %s; ask for its close-out again, with the MCP tool verify or flai verify %s --job, which syncs story/%s onto the main branch and runs again only the tiers its new paths send back, and accept it once that passes (ADR-0291, ADR-0303)", id, why, id, id)}
 }
 
 // klusterGate sets on res why story it is not accepted yet while the kluster

@@ -22,7 +22,7 @@ The case ADR-0291 was written for must stay blocked ([I-0229](../issues/I-0229-t
 
 `verify_behind_main` judges only the main paths that overlap the story's change set.
 
-1. **The change set.** The paths the story's last passing verify recorded, its report's `Paths`: the files the branch changed against its base.
+1. **The change set.** The paths the story's last passing verify recorded, its report's `Paths`: the files the branch changed against its base. A report that recorded none, from before flai kept them, cannot tell what overlaps it, so every path main brought in counts, as under ADR-0291, and the gate never opens unread.
 2. **Main's paths.** As ADR-0291 §2 lists them, from the report's merge base to the main branch's head, with the `wip` paths the branch does not change left out.
 3. **Overlap.** A path of main's overlaps the change set when any one of these holds:
    - it is a path the change set holds;

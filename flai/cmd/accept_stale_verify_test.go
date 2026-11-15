@@ -58,13 +58,14 @@ func dryRunAccept(t *testing.T, root string) accepted {
 	return res
 }
 
-// I-0229, ADR-0291: a story whose close-out passed over an older main, while
-// main has since changed a file its go-test tier selects, as S-0535 reworded
-// a condition S-0416's guard test copied, is not accepted: flai accept
-// refuses it with verify_behind_main, naming the tier and the path, before
-// anything is merged, so main is not left red. A main that brought in only
-// wip paths does not hold it, and once a close-out passes over the new main
-// it lands.
+// I-0229, ADR-0291, ADR-0303, S-0792: a story whose close-out passed over an
+// older main, while main has since changed a file of the story's Go package
+// that its go-test tier selects, as S-0535 reworded a condition S-0416's
+// guard test copied, is not accepted: flai accept refuses it with
+// verify_behind_main, naming the tier and the path, before anything is
+// merged, so main is not left red. A main that brought in only wip paths, or
+// only a path go-test selects that does not overlap the story's change set,
+// does not hold it, and once a close-out passes over the new main it lands.
 func TestAnAcceptanceIsRefusedWhileMainOutranTheStorysVerify(t *testing.T) {
 	t.Parallel()
 	root, _ := orchestratedStoryInReview(t, false)
@@ -73,6 +74,7 @@ func TestAnAcceptanceIsRefusedWhileMainOutranTheStorysVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	commitOnMain(t, root, "system-flow.yaml", string(m)+"tests:\n  - name: go-test\n    command: [\"true\"]\n    paths: [\"cli/**\"]\n", "chore: the go-test tier")
+	commitOnMain(t, root, "go.mod", "module example.com/fixture\n", "chore: the Go module")
 	base := commitOnMain(t, root, "cli/conditions.go", "package cli\n\nconst Condition = \"the old words\"\n", "feat: a condition")
 	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
 	gitIn(t, wt, "rebase", "-q", "main")
@@ -84,10 +86,15 @@ func TestAnAcceptanceIsRefusedWhileMainOutranTheStorysVerify(t *testing.T) {
 		t.Errorf("a main that brought in only wip paths must not hold the acceptance: %+v %q %q", res.VerifyBehindMainBlocker, res.StaleTiers, res.Blockers)
 	}
 
+	commitOnMain(t, root, "cli/other/other.go", "package other\n", "feat: another package")
+	if res := dryRunAccept(t, root); res.VerifyBehindMainBlocker != nil || len(res.StaleTiers) > 0 || len(res.Blockers) > 0 {
+		t.Errorf("a main that brought in only a path that does not overlap the story's change set must not hold the acceptance: %+v %q %q", res.VerifyBehindMainBlocker, res.StaleTiers, res.Blockers)
+	}
+
 	mainBefore := commitOnMain(t, root, "cli/conditions.go", "package cli\n\nconst Condition = \"the new words\"\n", "feat: reword the condition")
-	want := "S-0001 cannot be accepted yet: S-0001's verify does not cover the main branch it would land on: its last flai verify, at " + head[:7] + ", ran over main at " + base[:7] + ", and the 1 path main brought in since send back go-test, which that verify ran: cli/conditions.go; ask for its close-out again"
+	want := "S-0001 cannot be accepted yet: S-0001's verify does not cover the main branch it would land on: its last flai verify, at " + head[:7] + ", ran over main at " + base[:7] + ", and 1 of the 2 paths main brought in since overlap its change set and send back go-test, which that verify ran: cli/conditions.go; ask for its close-out again"
 	_, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "alex")
-	if code == 0 || !strings.Contains(errOut, want) || !strings.Contains(errOut, "flai verify S-0001 --job") || !strings.Contains(errOut, "(ADR-0291)") {
+	if code == 0 || !strings.Contains(errOut, want) || !strings.Contains(errOut, "flai verify S-0001 --job") || !strings.Contains(errOut, "(ADR-0291, ADR-0303)") {
 		t.Fatalf("an acceptance over a main its verify did not cover must be refused with %q: %d\n%s", want, code, errOut)
 	}
 	assertNothingAccepted(t, root, mainBefore)
