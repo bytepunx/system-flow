@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-11-11
+updated: 2026-11-15
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -11,27 +11,30 @@ Everything the dashboard charts is derived from work item front matter. This doc
 
 ## Derived timestamps per item
 
+An item's figures are readings of its history: its `created` and its recorded transitions ([ADR-0004](../adrs/0004-workflow-states-and-transitions.md)), read against the project's workflow, the baseline's unless it has its own ([ADR-0301](../adrs/0301-the-board-is-a-workflow-file-design-workflows-board-md-whose-front-matter-names.md)). Lead, cycle, queue, and review time are the values of the workflow's timers of those names, and time in state a sum per state, as [ADR-0305](../adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md) defines them. The state names below are the baseline's.
+
 | Value | Definition |
 |-------|------------|
 | `created` | Front matter `created` |
-| `committed` | `at` of the first transition to `ready` |
-| `started` | `at` of the first transition to `in-progress` |
-| `completed` | `at` of the last transition, while the item is `done` or `cancelled`; none while it is open, so an item moved back out of `cancelled` is not completed until it closes again ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)) |
-| `state_intervals` | For each transition, the interval from its `at` to the next transition's `at` (or now), labelled with the state entered |
+| `committed` | `at` of the first transition into the state the workflow's `commit` transition moves to, `ready` |
+| `started` | `at` of the first transition into the state the workflow's `pull` transition moves to, `in-progress` |
+| `completed` | The timer point `completed`: `at` of the last transition, while the item's state is of kind `accepted` or `cancelled` (`done`, `cancelled`); none while it is open, so an item moved back out of `cancelled` is not completed until it closes again ([ADR-0055](../adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md)) |
+| `state_intervals` | The workflow's initial state, `backlog`, from `created` to the first transition; then, for each transition, the interval from its `at` to the next transition's `at`, labelled with the state entered. The last runs to now, and is left out while the item's state is of kind `accepted` or `cancelled` (ADR-0305 §1) |
 | `blocked_total` | Sum of `blocked` intervals, open intervals end at now |
 
 ## Per item durations
 
-| Metric | Formula | Answers |
-|--------|---------|---------|
-| Lead time | `completed - created` | How long from idea to delivered |
-| Cycle time | `completed - started` | How long once someone started |
-| Queue time | Sum of the `ready` intervals in `state_intervals` that end at or before `started`; `started - committed` for an item never moved out of `ready` but to `in-progress` ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)) | How long ready work waits, leaving out a stretch back in backlog. Reported at p50 and p85 as the ready wait ([Concurrency and the ready wait](#concurrency-and-the-ready-wait-s-0551)) |
-| Time in state | Sum of `state_intervals` per state | Where the process spends time |
-| Blocked time | `blocked_total` | How much of cycle time was waiting |
-| Estimate error | `(cycle time - estimate) / estimate` | How good estimates are, when present |
+| Metric | Timer on the baseline | Formula | Answers |
+|--------|-----------------------|---------|---------|
+| Lead time | `lead`: `from: created`, `to: completed` | `completed - created` | How long from idea to delivered |
+| Cycle time | `cycle`: `from: {first: in-progress}`, `to: completed` | `completed - started`; a state added between `in-progress` and `review` is inside it | How long once someone started |
+| Queue time | `queue`: `sum: [ready]`, `until: {first: in-progress}` | Sum of the `ready` intervals in `state_intervals` that end at or before `started`, with no value unless the item was in `ready` before `started`; `started - committed` for an item never moved out of `ready` but to `in-progress` ([ADR-0190](../adrs/0190-an-item-s-queue-time-is-the-seconds-it-spent-in-ready-before-it-started-so-a.md)) | How long ready work waits, leaving out a stretch back in backlog. Reported at p50 and p85 as the ready wait ([Concurrency and the ready wait](#concurrency-and-the-ready-wait-s-0551)) |
+| Review time | `review`: `sum: [review]` | Sum of the `review` intervals, the open one up to now; reported as `wait_review_seconds` ([Waiting](#waiting)) | How long finished work waits for acceptance |
+| Time in state | `sum: [<state>]` for each state of the workflow, not a timer of the file | Sum of `state_intervals` per state, keyed by the state's name | Where the process spends time |
+| Blocked time | None: a figure for every item | `blocked_total` | How much of cycle time was waiting |
+| Estimate error | None | `(cycle time - estimate) / estimate` | How good estimates are, when present |
 
-Cancelled items are excluded from lead and cycle time aggregates but included in the cancellation rate.
+A timer between two points has no value while either point is none; a sum has none for an item never in its states (ADR-0305 §3). A timer's `counts` says which completed items its aggregates take: `accepted`, the baseline's for all four, leaves cancelled items out of the lead, cycle, and queue time aggregates, which count them in the cancellation rate instead. A workflow that renames a state names the new one in its timers, and the figures follow. The field names in `flai stats --json` stay the same on every workflow.
 
 ## Aggregates
 
