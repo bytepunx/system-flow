@@ -232,6 +232,29 @@ func TestToOnAStateTheWorkflowLacksIsAFinding(t *testing.T) {
 	}
 }
 
+// S-0755 (ADR-0307 §1): a to condition naming a state the project's own
+// workflow file adds passes flai check, as the role is judged against the
+// board the project runs, not the baseline.
+func TestToOnAStateOfTheProjectsWorkflowFileIsClean(t *testing.T) {
+	repo := rolesProject(t, map[string]string{"reviewer.md": roleFile("reviewer", map[string]string{
+		"trigger": "trigger: [asked, {event: moved, when: {to: qa}}]",
+	})})
+	if got := roleFindings(repo); len(got) != 1 || !strings.Contains(got[0].Message, `state "qa" is none of the workflow's states`) {
+		t.Fatalf("on the baseline, a to on qa: %+v, want the one roles.file finding", got)
+	}
+	board := filepath.Join(repo.Root, "design", "workflows", "board.md")
+	if err := os.WriteFile(board, []byte(qaBoard(t)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := workitem.Open(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := roleFindings(reopened); len(got) != 0 {
+		t.Errorf("with the project's file adding qa, a to on qa: %+v, want none", got)
+	}
+}
+
 // S-0536 (ADR-0209 §1): continuous, alone or beside other entries, is a
 // roles.file error on its entry's line.
 func TestContinuousTriggerIsAFinding(t *testing.T) {

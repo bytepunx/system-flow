@@ -109,7 +109,7 @@ func (g Guard) roleHeld(role string) held {
 		h.problem = fmt.Sprintf("no role file defines the role %s; run flai check", role)
 	default:
 		h.file, h.banned = *file, map[int]bool{}
-		for _, p := range roles.Validate([]roles.Role{h.file}, g.Design, roles.Vocabulary{}) {
+		for _, p := range roles.Validate([]roles.Role{h.file}, g.Design, roles.Vocabulary{Workflow: g.Workflow}) {
 			if p.Code == roles.CodeGrant {
 				h.banned[p.Line] = true
 			}

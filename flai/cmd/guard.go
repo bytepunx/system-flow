@@ -355,6 +355,8 @@ neither is set, a file edit does not run it.`,
 					a.logger().Warn("project unreadable, the orchestrator's permissions are taken as off", "component", "guard", "err", err.Error())
 				} else {
 					g.Permissions = repo.Manifest.Orchestration.Permissions
+					flow := repo.Flow()
+					g.Workflow = &flow
 				}
 			}
 			if guard.HeldByFile(g.Role) && !call.Subagent {
@@ -436,7 +438,10 @@ func (a *app) guardRole(g *guard.Guard, root *cobra.Command) {
 		return
 	}
 	design := repo.Manifest.Layout["design"]
-	g.Root, g.Design, g.Opener = repo.Root, design, guard.ThreadOpener(repo)
+	// a move's target and a role file's to conditions name the project's
+	// states, its own workflow file's when it has one (ADR-0307)
+	flow := repo.Flow()
+	g.Root, g.Design, g.Opener, g.Workflow = repo.Root, design, guard.ThreadOpener(repo), &flow
 	if g.Role == guard.RoleAnalyze {
 		g.Reports = analysis.Dir(repo.Manifest)
 	}

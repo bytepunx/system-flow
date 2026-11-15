@@ -88,7 +88,11 @@ func (c *checker) roles() {
 	}
 	c.missingBaselineRoles(design)
 	c.agentCopies(design)
-	for _, p := range append(problems, roles.Validate(list, design, RolesVocabulary())...) {
+	// a to condition names a state of the workflow the project runs, its own
+	// file's when it has one (ADR-0307)
+	vocab, flow := RolesVocabulary(), c.repo.Flow()
+	vocab.Workflow = &flow
+	for _, p := range append(problems, roles.Validate(list, design, vocab)...) {
 		c.add(Error, p.Code, filepath.Join(c.repo.Root, filepath.FromSlash(p.Path)), p.Line, "%s", p.Message)
 	}
 	if len(problems) > 0 {
