@@ -600,19 +600,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	answered := a.answerRelease(repo, it, useGit)
 
 	// 1. done (epics: walk through review if needed)
-	items, err := repo.List(false)
-	if err != nil {
-		return nil, err
-	}
-	board, err := repo.LoadBoard()
-	if err != nil {
-		return nil, err
-	}
 	from := it.Status
-	if !res.Resumed {
+	done := func(items []*workitem.Item, board *workitem.Board) error {
 		for _, st := range preview.StepsToAccept(repo.Flow(), it.Type, it.Status) {
 			if _, err := repo.Move(it, st, workitem.MoveOptions{By: orDefault(o.by, a.author()), Now: a.now(), Items: items, Board: board}); err != nil {
-				return nil, err
+				return err
 			}
 		}
 		// the orchestrator's evidence goes into the acceptance commit with
@@ -635,15 +627,32 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			it.Body = withNotesSection(it.Body, withoutKlusterNotes(res, a.now()))
 		}
 		if err := repo.Save(it); err != nil {
-			return nil, err
+			return err
 		}
-		if _, err := repo.RollUp(it); err != nil {
-			return nil, err
-		}
+		_, err := repo.RollUp(it)
+		return err
+	}
+	if !res.Resumed {
 		if it.Type == workitem.Story {
-			if err := board.Save(a.now().Format("2006-01-02")); err != nil {
-				return nil, err
+			// a story moves on the board and the items read inside the board
+			// lock, and the board, normalised, is written before the lock
+			// goes, so an acceptance does not write back a board read before
+			// another write (ADR-0306); the saves inside take only the items
+			// lock, and the lock is let go before the epic follows
+			err = repo.UpdateBoard(a.now().Format("2006-01-02"), func(b *workitem.Board, items []*workitem.Item) error {
+				return done(items, b)
+			})
+		} else {
+			// an epic's acceptance moves no story and writes no board, so it
+			// reads no board and takes no board lock: a move reads the board
+			// only for a story
+			var items []*workitem.Item
+			if items, err = repo.List(false); err == nil {
+				err = done(items, nil)
 			}
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	res.Status = it.Status
@@ -656,7 +665,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 	}
 	// 2. archive
-	items, _ = repo.List(false)
+	items, _ := repo.List(false)
 	ap, err := repo.PlanArchive(items, preview.ArchivedIn(repo.Flow(), items, it.ID, res.Epic))
 	if err != nil {
 		return nil, err

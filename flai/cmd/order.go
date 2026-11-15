@@ -85,20 +85,19 @@ board.md.`,
 			if err != nil {
 				return err
 			}
-			items, err := repo.List(false)
-			if err != nil {
-				return err
-			}
-			board, err := repo.LoadBoard()
-			if err != nil {
-				return err
-			}
 			id := args[0]
-			if err := board.Place(items, id, p); err != nil {
-				return err
-			}
-			board.RecordPlacement(id, a.placedBy(placedBy), a.now())
-			if err := board.Save(a.now().Format("2006-01-02")); err != nil {
+			// placed on the board and items read inside the board lock
+			// (ADR-0306); what is printed is the board as written
+			var board *workitem.Board
+			var items []*workitem.Item
+			if err := repo.UpdateBoard(a.now().Format("2006-01-02"), func(b *workitem.Board, listed []*workitem.Item) error {
+				if err := b.Place(listed, id, p); err != nil {
+					return err
+				}
+				b.RecordPlacement(id, a.placedBy(placedBy), a.now())
+				board, items = b, listed
+				return nil
+			}); err != nil {
 				return err
 			}
 			it, err := repo.Get(id)
@@ -149,17 +148,14 @@ func orderBy(a *app, policy string, apply bool, keep time.Duration) error {
 			return fmt.Errorf("rule: %w", err)
 		}
 	}
-	got, board, items, err := repo.ReadyOrderKeeping(policy, keep, a.now())
+	var got workitem.ReadyOrder
+	if apply {
+		got, err = applyOrderBy(repo, policy, keep, a.now())
+	} else {
+		got, _, _, err = repo.ReadyOrderKeeping(policy, keep, a.now())
+	}
 	if err != nil {
 		return err
-	}
-	if apply {
-		if err := got.Apply(board, items); err != nil {
-			return err
-		}
-		if err := board.Save(a.now().Format("2006-01-02")); err != nil {
-			return err
-		}
 	}
 	if a.jsonOut {
 		return a.printJSON(got)
@@ -189,4 +185,33 @@ func orderBy(a *app, policy string, apply bool, keep time.Duration) error {
 		fmt.Fprintln(a.out, "board.md's ready order is now this one")
 	}
 	return nil
+}
+
+// applyOrderBy computes the ready column's order by a policy and writes it
+// to board.md under the board lock: the order is worked out from the board
+// and the items read inside the lock, so a story that left ready while it
+// waited is not written back into the order (ADR-0306 §3). The order it
+// returns holds the board's pull order as written.
+func applyOrderBy(repo *workitem.Repo, policy string, keep time.Duration, now time.Time) (workitem.ReadyOrder, error) {
+	var got workitem.ReadyOrder
+	var written *workitem.Board
+	err := repo.UpdateBoard(now.Format("2006-01-02"), func(b *workitem.Board, _ []*workitem.Item) error {
+		// ReadyOrderKeeping reads the items and the board again, inside the
+		// lock, so its board is b as read; the order goes onto b, the copy
+		// UpdateBoard writes
+		ordered, _, items, err := repo.ReadyOrderKeeping(policy, keep, now)
+		if err != nil {
+			return err
+		}
+		if err := ordered.Apply(b, items); err != nil {
+			return err
+		}
+		got, written = ordered, b
+		return nil
+	})
+	if err != nil {
+		return workitem.ReadyOrder{}, err
+	}
+	got.Order = written.Order
+	return got, nil
 }

@@ -124,14 +124,12 @@ the one place flai, flai serve, flai check, and the dashboard read it from.
 			if err != nil {
 				return err
 			}
-			board, err := repo.LoadBoard()
-			if err != nil {
-				return err
-			}
-			if err := board.SetLimit(args[0], n); err != nil {
-				return err
-			}
-			if err := board.Save(a.now().Format("2006-01-02")); err != nil {
+			// set on the board read inside the board lock (ADR-0306)
+			var board *workitem.Board
+			if err := repo.UpdateBoard(a.now().Format("2006-01-02"), func(b *workitem.Board, _ []*workitem.Item) error {
+				board = b
+				return b.SetLimit(args[0], n)
+			}); err != nil {
 				return err
 			}
 			if a.jsonOut {

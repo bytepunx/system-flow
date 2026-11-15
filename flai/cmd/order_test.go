@@ -230,6 +230,103 @@ func TestOrderByCommand(t *testing.T) {
 	}
 }
 
+// I-0375, ADR-0306: flai order --by --apply waits for the board lock and
+// works its order out from the board and the items read inside it, so a
+// story that moved to in-progress while it waited, with board.md's order
+// left naming it as a lost update leaves it, is not written back into the
+// order.
+func TestOrderByApplyReadsTheBoardInsideTheLock(t *testing.T) {
+	t.Parallel()
+	useConfig(t, filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	run := func(args ...string) string {
+		t.Helper()
+		out, errOut, code := runIn(t, root, args...)
+		if code != 0 {
+			t.Fatalf("flai %v: %s", args, errOut)
+		}
+		return out
+	}
+	run("epic", "new", "Epic")
+	for i, title := range []string{"One", "Two", "Three"} {
+		run("story", "new", title, "--epic", "E-0001")
+		id := fmt.Sprintf("S-%04d", i+1)
+		file, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories", id+"-*.md"))
+		s, _ := os.ReadFile(file[0])
+		_ = os.WriteFile(file[0], []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
+		run("move", id, "ready")
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	boardOrder := func() []string {
+		t.Helper()
+		b, err := repo.LoadBoard()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b.Order
+	}
+	if got, want := boardOrder(), []string{"S-0001", "S-0002", "S-0003"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("the ready stories are in the order: got %v want %v", got, want)
+	}
+
+	// another writer holds the board lock while --apply starts
+	unlock, err := repo.LockBoard()
+	if err != nil {
+		t.Fatal(err)
+	}
+	type result struct {
+		out, errOut string
+		code        int
+	}
+	applied := make(chan result, 1)
+	go func() {
+		out, errOut, code := runIn(t, root, "order", "--by", "fifo", "--apply", "--json")
+		applied <- result{out, errOut, code}
+	}()
+	select {
+	case r := <-applied:
+		unlock()
+		t.Fatalf("--apply finished while another writer held the board lock: code %d, stdout %q, stderr %q", r.code, r.out, r.errOut)
+	case <-time.After(time.Second):
+	}
+	// that writer moves S-0002 to in-progress, and its write of the board
+	// is lost: board.md still names S-0002
+	it, err := repo.Get("S-0002")
+	if err != nil {
+		unlock()
+		t.Fatal(err)
+	}
+	it.Status = workitem.InProgress
+	if err := repo.Save(it); err != nil {
+		unlock()
+		t.Fatal(err)
+	}
+	unlock()
+
+	r := <-applied
+	if r.code != 0 {
+		t.Fatalf("flai order --by fifo --apply: %s", r.errOut)
+	}
+	var got workitem.ReadyOrder
+	if err := json.Unmarshal([]byte(r.out), &got); err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, s := range got.Stories {
+		ids = append(ids, s.ID)
+	}
+	want := []string{"S-0001", "S-0003"}
+	if !got.Applied || !reflect.DeepEqual(ids, want) || !reflect.DeepEqual(got.Order, want) {
+		t.Errorf("--apply orders the ready column as read inside the lock: applied %v, stories %v, order %v, want %v", got.Applied, ids, got.Order, want)
+	}
+	if got := boardOrder(); !reflect.DeepEqual(got, want) {
+		t.Errorf("board.md's order leaves out the story that went in progress: got %v want %v", got, want)
+	}
+}
+
 // S-0219: flai order records who placed a story and when, flai move out of
 // the column drops the record, and --by --apply keeps the place of a story
 // placed by hand within --keep-placed and orders the others around it.

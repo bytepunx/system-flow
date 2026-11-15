@@ -106,7 +106,8 @@ func (r *Repo) UpdateBoard(today string, change func(b *Board, items []*Item) er
 
 // NormalizeOrder drops from the pull order each name that is not an active
 // story in a state flow orders, ready and backlog on the baseline, and its
-// placement with it, and keeps the other names in their order (ADR-0306 §4).
+// placement with it, and every other placement of a name that is not such a
+// story, and keeps the other names in their order (ADR-0306 §4).
 // A name in unparsed, a story whose file the list left out because it did
 // not read or parse, is kept, since its state cannot be told. A name the
 // order repeats is kept once, where it first comes.
@@ -134,6 +135,13 @@ func (b *Board) NormalizeOrder(flow workflow.Workflow, items []*Item, unparsed m
 		delete(b.Placed, id)
 	}
 	b.Order = out
+	// A placement a rewrite of the list has already dropped the name of,
+	// as Place drops a stale one, goes too.
+	for id := range b.Placed {
+		if !ordered[id] && !unparsed[CanonicalID(id)] {
+			delete(b.Placed, id)
+		}
+	}
 }
 
 // unparsedStories is the IDs, by their file names, of the active story files

@@ -128,6 +128,7 @@ func TestUpdateBoardDropsStaleNamesFromTheOrder(t *testing.T) {
 	board.Order = []string{"S-0002", "S-0003", "S-0001", "S-0099", "S-0005", backlog.ID}
 	board.RecordPlacement("S-0003", "alex", t0)
 	board.RecordPlacement("S-0099", "alex", t0)
+	board.RecordPlacement("S-0098", "alex", t0) // placed, not in the order
 	board.RecordPlacement("S-0001", "alex", t0)
 	if err := board.Save("2026-09-15"); err != nil {
 		t.Fatal(err)
@@ -155,6 +156,9 @@ func TestUpdateBoardDropsStaleNamesFromTheOrder(t *testing.T) {
 	}
 	if _, ok := board.Placed["S-0099"]; ok {
 		t.Errorf("the placement of a name with no item stayed: %v", board.Placed)
+	}
+	if _, ok := board.Placed["S-0098"]; ok {
+		t.Errorf("a placement of a name the order no longer holds stayed: %v", board.Placed)
 	}
 	if _, ok := board.Placed["S-0001"]; !ok {
 		t.Errorf("the ready story's placement went: %v", board.Placed)
