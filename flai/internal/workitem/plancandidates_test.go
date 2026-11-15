@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -179,5 +180,83 @@ func TestPlanCandidatesAskedAgain(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got.LeftOut, left) {
 		t.Errorf("left out\n%+v\nwant\n%+v", got.LeftOut, left)
+	}
+}
+
+// S-0739, ADR-0301 §2: the candidates read each state by its kind, or as the
+// initial state, so they are the same under the fixture, an epic or a story
+// in doing judged as one in-progress is; under the fixture an epic in
+// testing is open, a story in testing is pulled and not asked again, and a
+// task in testing counts as a task.
+func TestPlanKindCandidatesUnderBothFlows(t *testing.T) {
+	value := 900.0
+	epic := func(id, status string) *Item { return &Item{ID: id, Type: Epic, Status: status, Title: "Epic " + id} }
+	story := func(id, parent, status string) *Item {
+		return &Item{ID: id, Type: Story, Status: status, Parent: parent, Title: "Story " + id}
+	}
+	planned := func(id, status string) *Item {
+		s := story(id, "", status)
+		s.Touches, s.Forecast, s.CostOfDelay = []string{"flai/cmd"}, &Forecast{Duration: "6h"}, &CostOfDelay{Value: &value}
+		return s
+	}
+	task := func(id, story, status string) *Item { return &Item{ID: id, Type: Task, Status: status, Parent: story} }
+	asked := map[string]PlanAsked{}
+	for _, id := range []string{"E-0003", "E-0004", "S-0005", "S-0006", "S-0008", "S-0009"} {
+		asked[id] = PlanAsked{Thread: "TH-0001", Reason: "asked again (" + id + ")"}
+	}
+	results := map[string]PlanCandidates{}
+	for _, f := range planKindFlows(t) {
+		t.Run(f.name, func(t *testing.T) {
+			st := f.state
+			items := []*Item{
+				epic("E-0001", st(Backlog)),    // no stories: a candidate
+				epic("E-0002", st(InProgress)), // every story closed, one accepted: a candidate
+				story("S-0001", "E-0002", st(Done)), story("S-0002", "E-0002", st(Cancelled)),
+				epic("E-0003", st(InProgress)), // an open story, asked: a candidate
+				story("S-0003", "E-0003", st(InProgress)),
+				epic("E-0004", st(Done)),       // accepted, asked: not one
+				planned("S-0004", st(Backlog)), // its one task cancelled: a candidate without tasks
+				task("T-0004", "S-0004", st(Cancelled)),
+				planned("S-0005", st(Ready)), // a plan, asked, in a queue: a candidate
+				task("T-0005", "S-0005", st(InProgress)),
+				planned("S-0006", st(InProgress)), // pulled, asked: not one
+				task("T-0006", "S-0006", st(Review)),
+			}
+			if f.name == "fixture" {
+				items = append(items,
+					epic("E-0005", fixtureTesting), // open, every story closed: a candidate
+					story("S-0007", "E-0005", st(Done)),
+					planned("S-0008", fixtureTesting), // pulled, asked: not one
+					planned("S-0009", st(Backlog)),    // a task in testing: planned, asked: a candidate
+					task("T-0009", "S-0009", fixtureTesting),
+				)
+			}
+			got := PlanCandidatesIn(f.w, items, map[string]string{"E-0001": "a planner runs for it now"}, asked)
+			results[f.name] = got
+			var ids []string
+			for _, c := range got.Candidates {
+				ids = append(ids, c.ID+": "+c.Reason)
+			}
+			want := []string{
+				"E-0002: every story done or cancelled (1 done, 1 cancelled) while the epic is " + st(InProgress) + ": the planner drafts what its outcome still lacks",
+				"S-0004: in the backlog without a plan: no tasks",
+				"E-0003: asked again (E-0003)",
+				"S-0005: asked again (S-0005)",
+			}
+			if f.name == "fixture" {
+				want = slices.Insert(want, 1, "E-0005: every story done or cancelled (1 done, 0 cancelled) while the epic is testing: the planner drafts what its outcome still lacks")
+				want = append(want, "S-0009: asked again (S-0009)")
+			}
+			if !reflect.DeepEqual(ids, want) {
+				t.Errorf("candidates\n%s\nwant\n%s", strings.Join(ids, "\n"), strings.Join(want, "\n"))
+			}
+			if len(got.LeftOut) != 1 || got.LeftOut[0].ID != "E-0001" || got.LeftOut[0].Reason != "a planner runs for it now" {
+				t.Errorf("left out: %+v", got.LeftOut)
+			}
+		})
+	}
+	if base, fix := results["baseline"], results["fixture"]; len(base.Candidates) != 4 || len(fix.Candidates) != 6 ||
+		!reflect.DeepEqual(base.LeftOut, fix.LeftOut) {
+		t.Errorf("baseline %+v\nfixture %+v", base, fix)
 	}
 }

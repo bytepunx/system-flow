@@ -884,3 +884,94 @@ func TestRepoHoldsApplyTheTrial(t *testing.T) {
 		t.Errorf("calls = %v", trial.calls)
 	}
 }
+
+// S-0739, ADR-0301 §2: the holds read each state by its kind, so a story
+// waiting for the pull is held the same under the fixture: by an overlap
+// with a story in an active state, doing as in-progress is, not by a story in
+// a waiting, a queue, or a closed state, and by after: naming a story not in
+// the accepted state; an active story's open task widens its claim and its
+// closed task does not. The reasons name each state as the workflow has it.
+func TestHoldKindUnderBothFlows(t *testing.T) {
+	for _, f := range planKindFlows(t) {
+		t.Run(f.name, func(t *testing.T) {
+			st := f.state
+			active, actives := "in progress", "in progress"
+			if f.name == "fixture" {
+				active, actives = fixtureDoing, "doing or testing"
+			}
+			after := func(names ...string) *Item {
+				s := claimed("S-0009", st(Ready), "flai/cmd")
+				s.After = names
+				return s
+			}
+			cases := []struct {
+				name  string
+				open  []*Item
+				ready *Item
+				code  string // empty: not held
+				why   string
+			}{
+				{"an overlap with an active story",
+					[]*Item{claimed("S-0001", st(InProgress), "flai/cmd")}, claimed("S-0009", st(Ready), "flai/cmd/serve"),
+					HoldOverlap, "held (overlap): touches flai/cmd/serve, inside flai/cmd which S-0001 (" + active + ") touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
+				{"a story in a waiting state holds nothing",
+					[]*Item{claimed("S-0001", st(Review), "docs")}, claimed("S-0009", st(Ready), "docs"),
+					"", ""},
+				{"queue and closed stories hold nothing",
+					[]*Item{claimed("S-0001", st(Backlog), "flai"), claimed("S-0002", st(Done), "flai"), claimed("S-0003", st(Ready), "flai"), claimed("S-0004", st(Cancelled), "flai")}, claimed("S-0009", st(Ready), "flai"),
+					"", ""},
+				{"an open task widens the active story's claim",
+					[]*Item{claimed("S-0001", st(InProgress), "docs"), claimTask("T-0001", "S-0001", st(InProgress), "dashboard")}, claimed("S-0009", st(Ready), "flaiover/src"),
+					HoldOverlap, "held (overlap): touches flaiover/src, inside flaiover which S-0001 (" + active + ") touches; starts when S-0001 moves to review, is cancelled, or is sent back"},
+				{"a closed task does not",
+					[]*Item{claimed("S-0001", st(InProgress), "docs"), claimTask("T-0001", "S-0001", st(Done), "dashboard"), claimTask("T-0002", "S-0001", st(Cancelled), "flai")}, claimed("S-0009", st(Ready), "flaiover/src", "flai/cmd"),
+					"", ""},
+				{"no touches",
+					[]*Item{claimed("S-0001", st(InProgress), "flai"), claimed("S-0002", st(Review), "docs")}, claimed("S-0009", st(Ready)),
+					HoldNoTouches, "held (no-touches): declares no touches, so it may change what S-0001 (" + active + ") changes; starts when it declares touches that overlap no story's " + actives + ", or when S-0001 moves to review, is cancelled, or is sent back"},
+				{"after: a story not accepted",
+					[]*Item{claimed("S-0001", st(Backlog), "docs"), claimed("S-0002", st(Done), "docs"), claimed("S-0004", st(Cancelled), "docs"), claimed("S-0005", st(Review), "docs"), claimed("S-0006", st(InProgress), "docs")},
+					after("S-0001", "S-0002", "S-0004", "S-0005", "S-0006"),
+					HoldAfter, "held (after): waits for S-0001 (in backlog), S-0004 (cancelled), S-0005 (in review) and S-0006 (" + active + "); starts when S-0001, S-0004, S-0005 and S-0006 are done; S-0004 was cancelled, so drop it from after: if S-0009 no longer needs it"},
+			}
+			for _, c := range cases {
+				t.Run(c.name, func(t *testing.T) {
+					h := NewHoldsIn(f.w, append(c.open, c.ready), holdProjects).Of(c.ready)
+					switch {
+					case c.code == "" && h != nil:
+						t.Fatalf("held: %s", h.Reason)
+					case c.code == "":
+					case h == nil:
+						t.Fatal("not held")
+					case h.Code != c.code || h.Reason != c.why:
+						t.Errorf("hold = %s: %s\nwant   %s: %s", h.Code, h.Reason, c.code, c.why)
+					}
+				})
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: under the fixture a story in testing, an active state
+// the baseline lacks, holds a story waiting for the pull by overlap and by
+// after: as one in doing does, and a repository's holds read its workflow.
+func TestHoldKindTestingHoldsAndRepoReadsItsFlow(t *testing.T) {
+	w := *testFlow(t)
+	inTesting := claimed("S-0001", fixtureTesting, "flai")
+	ready := claimed("S-0009", Ready, "flai/cmd")
+	ready.After = []string{"S-0001"}
+	want := "held (after): waits for S-0001 (testing); starts when S-0001 is done; also held (overlap): touches flai/cmd, inside flai which S-0001 (testing) touches; starts when S-0001 moves to review, is cancelled, or is sent back"
+	if h := NewHoldsIn(w, []*Item{inTesting, ready}, holdProjects).Of(ready); h == nil || h.Code != HoldAfter || h.Reason != want {
+		t.Errorf("hold = %+v\nwant reason %s", h, want)
+	}
+
+	r := withTestFlow(t, newProject(t))
+	doing, next := claimed("S-0001", fixtureDoing, "flai"), claimed("S-0009", Ready, "flai/cmd")
+	want = "held (overlap): touches flai/cmd, inside flai which S-0001 (doing) touches; starts when S-0001 moves to review, is cancelled, or is sent back"
+	if h := r.HoldsFrom([]*Item{doing, next}, nil, nil).Of(next); h == nil || h.Code != HoldOverlap || h.Reason != want {
+		t.Errorf("repo hold = %+v\nwant reason %s", h, want)
+	}
+	if h := NewHolds([]*Item{doing, next}, holdProjects).Of(next); h != nil {
+		t.Errorf("the baseline has no state doing, so it holds nothing: %+v", h)
+	}
+}

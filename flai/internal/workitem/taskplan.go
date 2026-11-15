@@ -3,6 +3,8 @@ package workitem
 import (
 	"fmt"
 	"sort"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // A story's task plan (S-0176): what each task waits for, read from its
@@ -12,13 +14,15 @@ import (
 // board's cards are built here and a package that imported workitem could
 // not be called from them.
 
-// Task states in a plan.
+// Task states in a plan: the plan's own words, which flai show, the board,
+// and the host give as they are, read from the kind of the state each task
+// is in (ADR-0301 §2), not from its name.
 const (
-	PlanReady      = "ready"       // not started, and waits for no task that is open
-	PlanWaiting    = "waiting"     // not started, and a task in its after: is open
-	PlanInProgress = "in-progress" // in progress or in review
-	PlanDone       = "done"
-	PlanCancelled  = "cancelled"
+	PlanReady      = "ready"       // in a queue state, and waits for no task that is open
+	PlanWaiting    = "waiting"     // in a queue state, and a task in its after: is open
+	PlanInProgress = "in-progress" // in an active or a waiting state
+	PlanDone       = "done"        // in the accepted state
+	PlanCancelled  = "cancelled"   // in the cancelled state
 )
 
 // PlanTask is one task of a plan: its state, its after: as written, and
@@ -50,10 +54,17 @@ type TaskSummary struct {
 	Layers     int `json:"layers"`
 }
 
-// PlanOf is the plan of story's tasks among items, or nil when it has none.
-// An after: entry that names no task of the story is left out of both the
-// waiting and the layers: flai check reports it.
+// PlanOf is PlanOfIn under the baseline workflow, for a caller that has no
+// repository's workflow to hand.
 func PlanOf(items []*Item, story string) *Plan {
+	return PlanOfIn(baselineFlow, items, story)
+}
+
+// PlanOfIn is the plan of story's tasks among items, or nil when it has none,
+// each task's state read from the kind w gives its status (ADR-0301 §2). An
+// after: entry that names no task of the story is left out of both the
+// waiting and the layers: flai check reports it.
+func PlanOfIn(w workflow.Workflow, items []*Item, story string) *Plan {
 	var tasks []*Item
 	for _, it := range items {
 		if it.Type == Task && it.Parent == story {
@@ -71,39 +82,43 @@ func PlanOf(items []*Item, story string) *Plan {
 	p := &Plan{Tasks: make([]PlanTask, 0, len(tasks)), Layers: [][]string{}}
 	for _, t := range tasks {
 		pt := PlanTask{ID: t.ID, After: t.After}
-		pt.State, pt.WaitingFor = taskState(t, byID)
+		pt.State, pt.WaitingFor = taskState(w, t, byID)
 		p.Tasks = append(p.Tasks, pt)
 	}
-	p.Layers = layers(tasks, byID)
+	p.Layers = layers(w, tasks, byID)
 	return p
 }
 
-// taskState is a task's state in its story's plan, and the tasks it waits
-// for when it waits.
-func taskState(t *Item, byID map[string]*Item) (string, []string) {
-	switch t.Status {
-	case Done:
+// taskState is a task's state in its story's plan, read from the kind of its
+// status in w, and the tasks it waits for when it waits: a task in the
+// accepted state is done, one in the cancelled state cancelled, one in an
+// active or a waiting state in progress, and any other has not started
+// (ADR-0301 §2).
+func taskState(w workflow.Workflow, t *Item, byID map[string]*Item) (string, []string) {
+	switch kind := w.Kind(t.Status); {
+	case kind == workflow.KindAccepted:
 		return PlanDone, nil
-	case Cancelled:
+	case kind == workflow.KindCancelled:
 		return PlanCancelled, nil
-	case InProgress, Review:
+	case underwayKind(kind):
 		return PlanInProgress, nil
 	}
-	if waits := openAfter(t, byID); len(waits) > 0 {
+	if waits := openAfter(w, t, byID); len(waits) > 0 {
 		return PlanWaiting, waits
 	}
 	return PlanReady, nil
 }
 
-// openAfter is the tasks of t's story named in its after: that are neither
-// done nor cancelled, in the order after: names them.
-func openAfter(t *Item, byID map[string]*Item) []string {
+// openAfter is the tasks of t's story named in its after: that are in no
+// state of a kind that closes an item, accepted or cancelled (ADR-0301 §2),
+// in the order after: names them.
+func openAfter(w workflow.Workflow, t *Item, byID map[string]*Item) []string {
 	var out []string
 	seen := map[string]bool{}
 	for _, e := range t.After {
 		id := CanonicalID(e)
 		other, ok := byID[id]
-		if !ok || id == t.ID || seen[id] || other.Closed() {
+		if !ok || id == t.ID || seen[id] || closedKind(w.Kind(other.Status)) {
 			continue
 		}
 		seen[id] = true
@@ -112,9 +127,11 @@ func openAfter(t *Item, byID map[string]*Item) []string {
 	return out
 }
 
-// layers groups the tasks that are not cancelled by the longest chain of
-// after: steps before each. A task on a cycle, or after one, has no depth.
-func layers(tasks []*Item, byID map[string]*Item) [][]string {
+// layers groups the tasks that are in no state of the cancelled kind in w by
+// the longest chain of after: steps before each. A task on a cycle, or after
+// one, has no depth.
+func layers(w workflow.Workflow, tasks []*Item, byID map[string]*Item) [][]string {
+	cancelled := func(t *Item) bool { return w.Kind(t.Status) == workflow.KindCancelled }
 	const visiting, cyclic = -1, -2
 	depth := map[string]int{}
 	var walk func(t *Item) int
@@ -129,7 +146,7 @@ func layers(tasks []*Item, byID map[string]*Item) [][]string {
 		d := 0
 		for _, e := range t.After {
 			other, ok := byID[CanonicalID(e)]
-			if !ok || other.Status == Cancelled {
+			if !ok || cancelled(other) {
 				continue
 			}
 			od := walk(other)
@@ -144,7 +161,7 @@ func layers(tasks []*Item, byID map[string]*Item) [][]string {
 	}
 	out := [][]string{}
 	for _, t := range tasks {
-		if t.Status == Cancelled {
+		if cancelled(t) {
 			continue
 		}
 		d := walk(t)
@@ -190,7 +207,8 @@ func (p *Plan) Waits(task string) string {
 	return ""
 }
 
-// labelled is each of ids with its state in the plan: T-0002 (in progress).
+// labelled is each of ids with its state in the plan, the plan's in-progress
+// read as two words: T-0002 (in progress).
 func (p *Plan) labelled(ids []string) []string {
 	state := map[string]string{}
 	for _, t := range p.Tasks {

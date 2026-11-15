@@ -2,17 +2,30 @@ package workitem
 
 import (
 	"fmt"
+	"slices"
 	"sort"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // The pull order (S-0057). The board's order list names stories in the order
-// they should be pulled: ready stories first, then backlog stories in the
-// order they should be refined. Only those two columns have an order. A
-// story the list does not name comes after the ones it does, by ID, so a
-// backlog nobody has prioritised still has one reading.
+// they should be pulled: the stories of the pull's source first, then those
+// of each state before it that reads in the pull order, in the order they
+// should be refined, nearest the pull first (ADR-0301 §2). Only the states
+// the workflow gives an order have one. A story the list does not name comes
+// after the ones it does, by ID, so a queue nobody has prioritised still has
+// one reading.
 
-// Ordered reports whether a state's column has a pull order.
-func Ordered(state string) bool { return state == Ready || state == Backlog }
+// Ordered reports whether a state's column has a pull order in the baseline
+// workflow, as OrderedIn says.
+func Ordered(state string) bool { return OrderedIn(baselineFlow, state) }
+
+// OrderedIn reports whether the state of w named state, or that an alias
+// names, reads in the pull order (ADR-0301 §2).
+func OrderedIn(w workflow.Workflow, state string) bool {
+	s, ok := w.State(state)
+	return ok && s.Order
+}
 
 // PullSequence is the active stories of a state in pull order: those the list
 // names first, in its order, then the rest by ID.
@@ -60,11 +73,13 @@ func (p Placement) validate() error {
 	return nil
 }
 
-// Place puts a ready or backlog story at a position in its column's pull
-// order and rewrites the list: ready stories, then backlog stories, and
-// nothing else. Backlog stories that were never placed and still come last by
-// ID stay unnamed, so one placement does not make the list name the whole
-// backlog. Ready stories are always named, as Move names them.
+// Place puts a story of a state that reads in the pull order at a position in
+// its column's pull order and rewrites the list: the stories of each such
+// state, nearest the pull first, and nothing else (ADR-0301 §2). Stories of a
+// state other than the pull's source that were never placed and still come
+// last by ID stay unnamed, so one placement does not make the list name the
+// whole queue. The pull's source's stories are always named, as Move names
+// them.
 // Refusals are rule errors, like Move's, so the dashboard shows them as the
 // reason and not as a failure.
 func (b *Board) Place(items []*Item, id string, p Placement) error {
@@ -84,8 +99,9 @@ func (b *Board) Place(items []*Item, id string, p Placement) error {
 	if it.Type != Story {
 		return fmt.Errorf("rule: %s is a %s; only stories are in the pull order", id, it.Type)
 	}
-	if !Ordered(it.Status) {
-		return fmt.Errorf("rule: %s is %s; only backlog and ready stories have a pull order", id, it.Status)
+	w := b.Flow()
+	if !OrderedIn(w, it.Status) {
+		return fmt.Errorf("rule: %s is %s; only %s stories have a pull order", id, it.Status, and(orderedStates(w)))
 	}
 	ref := p.Before + p.After
 	if ref != "" {
@@ -128,42 +144,59 @@ func (b *Board) Place(items []*Item, id string, p Placement) error {
 	}
 	seq = append(seq[:at], append([]string{id}, seq[at:]...)...)
 
-	ready, backlog := seq, PullSequence(b.Order, items, Backlog)
-	if it.Status == Backlog {
-		ready, backlog = PullSequence(b.Order, items, Ready), seq
+	source := pullSource(w)
+	states := orderedStates(w)
+	slices.Reverse(states) // nearest the pull first
+	order := []string{}
+	for _, st := range states {
+		col := seq
+		if st != it.Status {
+			col = PullSequence(b.Order, items, st)
+		}
+		if st != source {
+			col = col[:orderNamedEnd(col, named)]
+		}
+		order = append(order, col...)
 	}
-	// Leave the unplaced tail of the backlog unnamed: reading the list back
-	// puts unnamed stories last by ID, which is where they already are.
-	end := len(backlog)
+	b.Order = order
+	return nil
+}
+
+// orderNamedEnd is where the unplaced tail of col, a column's pull sequence,
+// starts: the stories after the last one named, that still come by ID. They
+// are left unnamed, since reading the list back puts unnamed stories last by
+// ID, which is where they already are.
+func orderNamedEnd(col []string, named map[string]bool) int {
+	end := len(col)
 	for end > 0 {
-		x := backlog[end-1]
-		if named[x] || (end < len(backlog) && !lessID(x, backlog[end])) {
+		x := col[end-1]
+		if named[x] || (end < len(col) && !lessID(x, col[end])) {
 			break
 		}
 		end--
 	}
-	b.Order = append(append([]string{}, ready...), backlog[:end]...)
-	return nil
+	return end
 }
 
-// PlaceReadyLast names a story that has just become ready after the ready
-// stories the list already names and before any backlog story, wherever the
-// list had it before.
+// PlaceReadyLast names a story that has just entered the pull's source after
+// the stories of that state the list already names and before any story of
+// another state, wherever the list had it before (ADR-0301 §2).
 func (b *Board) PlaceReadyLast(id string, items []*Item) {
 	if items == nil {
 		b.AppendToOrder(id)
 		return
 	}
 	b.RemoveFromOrder(id)
-	ready := map[string]bool{}
+	source := pullSource(b.Flow())
+	queued := map[string]bool{}
 	for _, it := range items {
-		if !it.Archived && it.Type == Story && it.Status == Ready && it.ID != id {
-			ready[it.ID] = true
+		if !it.Archived && it.Type == Story && it.Status == source && it.ID != id {
+			queued[it.ID] = true
 		}
 	}
 	at := 0
 	for i, x := range b.Order {
-		if ready[x] {
+		if queued[x] {
 			at = i + 1
 		}
 	}

@@ -5,26 +5,30 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // Planning candidates (S-0219). An epic is a candidate for the planner when
-// it is in the backlog with no story, for the planner to draft its stories,
-// or when it is not done or cancelled and every story under it is done or
-// cancelled with at least one done, for the planner to draft what its
-// outcome still lacks. Stories in the archive count. An epic is not a draft
-// (only a story can be), so no epic is left out for being one. A story is a
-// candidate when it is in the backlog, not archived, and lacks a plan: it
-// has no touches, no forecast duration, no cost of delay value, or no task
-// that is not cancelled, archived tasks counting (S-0328, ADR-0119); a draft
-// is planned as a finalized story is. A third kind is an item planned
-// before, asked again (S-0524, ADR-0222): an epic not done or cancelled, or a
-// story in the backlog or ready, that neither other kind lists, on which the
+// it is in the initial state with no story, for the planner to draft its
+// stories, or when it is not closed and every story under it is closed, in
+// the accepted or the cancelled state, with at least one accepted, for the
+// planner to draft what its outcome still lacks. Stories in the archive
+// count. An epic is not a draft (only a story can be), so no epic is left out
+// for being one. A story is a candidate when it is in the initial state, not
+// archived, and lacks a plan: it has no touches, no forecast duration, no
+// cost of delay value, or no task that is not cancelled, archived tasks
+// counting (S-0328, ADR-0119); a draft is planned as a finalized story is. A
+// third kind is an item planned before, asked again (S-0524, ADR-0222): an
+// epic not closed, or a story in a queue state, not yet pulled, that neither
+// other kind lists, on which the
 // operator has written since its newest planner run ended, which the caller
 // judges from flai serve's runs and the threads and names, with the reason
 // and the thread. The caller names the items to leave out, with why: those a
 // planner runs for now, and those whose planner asked a question the
 // operator has not answered, which flai serve's runs record and the work
-// items do not.
+// items do not. Each state is read by its kind, or as the initial state, and
+// the reasons name the states the workflow gives those roles (ADR-0301 §2).
 
 // PlanCandidates are the epics and the stories the planner should plan, and
 // those that would be but are left out, with why.
@@ -56,19 +60,27 @@ type PlanAsked struct {
 	Reason string
 }
 
-// PlanCandidatesOf judges the epics among items, archived stories included,
-// in ID order, then the stories, archived tasks included, in ID order, then
-// the epics and the stories in asked, by ID, that neither lists, in the same
-// order, with the reason and the thread asked gives. An item in leave, by
-// ID, is listed as left out with the reason leave gives, when it would
-// otherwise be a candidate. Archived epics and stories are never judged.
+// PlanCandidatesOf is PlanCandidatesIn under the baseline workflow.
 func PlanCandidatesOf(items []*Item, leave map[string]string, asked map[string]PlanAsked) PlanCandidates {
+	return PlanCandidatesIn(baselineFlow, items, leave, asked)
+}
+
+// PlanCandidatesIn judges, under w, the epics among items, archived stories
+// included, in ID order, then the stories, archived tasks included, in ID
+// order, then the epics and the stories in asked, by ID, that neither lists,
+// in the same order, with the reason and the thread asked gives. An item in
+// leave, by ID, is listed as left out with the reason leave gives, when it
+// would otherwise be a candidate. Archived epics and stories are never
+// judged.
+func PlanCandidatesIn(w workflow.Workflow, items []*Item, leave map[string]string, asked map[string]PlanAsked) PlanCandidates {
+	initial, accepted, cancelled := initialState(w), acceptedState(w), cancelledState(w)
+	closed := func(it *Item) bool { return closedKind(w.Kind(it.Status)) }
 	out := PlanCandidates{Candidates: []PlanCandidate{}, LeftOut: []PlanCandidate{}}
 	type tally struct{ stories, done, cancelled int }
 	under := map[string]*tally{}
 	tasked := map[string]bool{}
 	for _, it := range items {
-		if it.Type == Task && it.Status != Cancelled {
+		if it.Type == Task && w.Kind(it.Status) != workflow.KindCancelled {
 			tasked[it.Parent] = true
 		}
 		if it.Type != Story {
@@ -80,10 +92,10 @@ func PlanCandidatesOf(items []*Item, leave map[string]string, asked map[string]P
 			under[it.Parent] = n
 		}
 		n.stories++
-		switch it.Status {
-		case Done:
+		switch w.Kind(it.Status) {
+		case workflow.KindAccepted:
 			n.done++
-		case Cancelled:
+		case workflow.KindCancelled:
 			n.cancelled++
 		}
 	}
@@ -117,31 +129,31 @@ func PlanCandidatesOf(items []*Item, leave map[string]string, asked map[string]P
 		}
 		var reason string
 		switch {
-		case epic.Status == Done || epic.Status == Cancelled:
+		case closed(epic):
 			continue
-		case n.stories == 0 && epic.Status == Backlog:
-			reason = "in the backlog with no stories: the planner drafts them"
+		case n.stories == 0 && epic.Status == initial:
+			reason = "in the " + initial + " with no stories: the planner drafts them"
 		case n.stories > 0 && n.done > 0 && n.done+n.cancelled == n.stories:
-			reason = fmt.Sprintf("every story done or cancelled (%d done, %d cancelled) while the epic is %s: the planner drafts what its outcome still lacks", n.done, n.cancelled, epic.Status)
+			reason = fmt.Sprintf("every story %s or %s (%d %s, %d %s) while the epic is %s: the planner drafts what its outcome still lacks", accepted, cancelled, n.done, accepted, n.cancelled, cancelled, epic.Status)
 		default:
 			continue
 		}
 		judged(epic, reason, "")
 	}
 	for _, story := range stories {
-		if story.Status != Backlog {
+		if story.Status != initial {
 			continue
 		}
 		if lacks := storyPlanLacks(story, tasked[story.ID]); len(lacks) > 0 {
-			judged(story, "in the backlog without a plan: "+strings.Join(lacks, "; "), "")
+			judged(story, "in the "+initial+" without a plan: "+strings.Join(lacks, "; "), "")
 		}
 	}
 	for _, it := range slices.Concat(epics, stories) {
 		again, ok := asked[it.ID]
 		switch {
 		case !ok || listed[it.ID]:
-		case it.Type == Epic && (it.Status == Done || it.Status == Cancelled):
-		case it.Type == Story && it.Status != Backlog && it.Status != Ready:
+		case it.Type == Epic && closed(it):
+		case it.Type == Story && w.Kind(it.Status) != workflow.KindQueue:
 		default:
 			judged(it, again.Reason, again.Thread)
 		}

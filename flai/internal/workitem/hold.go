@@ -11,53 +11,57 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
-// Holds on ready stories (S-0128, ADR-0046). A story's claim is its touches,
-// each folder among them narrowed to the touches its tasks name inside it,
-// and the touches of its open tasks outside them (ADR-0096). A ready story whose
-// claim overlaps the claim of a story in progress is held, and so is one that
-// names in after: a story that is not done (S-0130): flai serve does not start
-// its agent and wait_for_work does not offer it. A story in review holds
-// nothing (S-0295, ADR-0096): its branch is finished and synced, and the
-// notice at acceptance tells an overlapping story what changed. An overlap
-// that lies wholly inside a pattern of the manifest's claims.shared holds
-// nothing either (ADR-0096): many stories change those paths in separate
-// sections or new files. An overlap between a ready story and the story in
-// progress that holds it, on paths that story's agent shared with it in their
-// conversation, holds nothing while the share is in force (ADR-0134, share.go).
-// A hold on overlap alone names each holding story whose agent flai asked
-// about it in their open conversation since the ready story last entered
-// ready (S-0338). With a trial judge (TrialJudge, ADR-0046 as S-0551 refines
-// it), an overlap between a ready story and a story in progress holds only
-// when a trial merge of the holder's branch at the ready story's base
-// conflicts, and the reason names the conflicting paths; a clean trial holds
-// nothing, and a trial that cannot run holds as an overlap does without one,
-// saying why. A no-touches hold never asks the judge. The operator's own
-// moves only warn.
+// Holds on the stories in the pull's source (S-0128, ADR-0046), each state
+// read by its kind in the workflow, never by its name (ADR-0301 §2). A
+// story's claim is its touches, each folder among them narrowed to the
+// touches its tasks name inside it, and the touches of its open tasks outside
+// them (ADR-0096). A story waiting for the pull whose claim overlaps the
+// claim of a story in an active state is held, and so is one that names in
+// after: a story that is not in the accepted state (S-0130): flai serve does
+// not start its agent and wait_for_work does not offer it. A story in a
+// waiting state holds nothing (S-0295, ADR-0096): its branch is finished and
+// synced, and the notice at acceptance tells an overlapping story what
+// changed; nor does one in a queue state, nobody being on it. An overlap that
+// lies wholly inside a pattern of the manifest's claims.shared holds nothing
+// either (ADR-0096): many stories change those paths in separate sections or
+// new files. An overlap between a story waiting for the pull and the active
+// story that holds it, on paths that story's agent shared with it in their
+// conversation, holds nothing while the share is in force (ADR-0134,
+// share.go). A hold on overlap alone names each holding story whose agent
+// flai asked about it in their open conversation since the held story last
+// entered the pull's source (S-0338). With a trial judge (TrialJudge,
+// ADR-0046 as S-0551 refines it), an overlap between a story waiting for the
+// pull and an active story holds only when a trial merge of the holder's
+// branch at the held story's base conflicts, and the reason names the
+// conflicting paths; a clean trial holds nothing, and a trial that cannot run
+// holds as an overlap does without one, saying why. A no-touches hold never
+// asks the judge. The operator's own moves only warn.
 
 // Hold reason codes.
 const (
 	HoldOverlap   = "overlap"    // its claim overlaps an open story's
 	HoldNoTouches = "no-touches" // its claim or an open story's is empty
-	HoldAfter     = "after"      // a story it names in after: is not done (S-0130)
+	HoldAfter     = "after"      // a story it names in after: is not accepted (S-0130)
 )
 
-// Hold is why a ready story waits: a reason code, and one line with the
-// evidence and what clears it.
+// Hold is why a story in the pull's source waits: a reason code, and one
+// line with the evidence and what clears it.
 type Hold struct {
 	Code   string `json:"code"`
 	Reason string `json:"reason"`
 	// Asked is, on a hold on overlap alone, each holding story whose agent
-	// flai asked about the hold since the story last entered ready, in ID
-	// order (S-0338).
+	// flai asked about the hold since the story last entered the pull's
+	// source, in ID order (S-0338).
 	Asked []HoldAsk `json:"asked,omitempty"`
 }
 
 // HoldAsk is the newest message by flai that asked a holding story's agent
 // about a hold (S-0338).
 type HoldAsk struct {
-	By           string `json:"by"`           // the story in progress whose agent was asked
+	By           string `json:"by"`           // the active story whose agent was asked
 	Conversation string `json:"conversation"` // the conversation it was asked in
 	At           string `json:"at"`           // when, in TimeFormat
 }
@@ -73,8 +77,8 @@ type trialVerdict struct {
 	err   error
 }
 
-// Holds judges ready stories against the stories open at one reading of the
-// repository.
+// Holds judges the stories waiting for the pull against the stories open at
+// one reading of the repository.
 type Holds struct {
 	projects []manifest.Project
 	shared   manifest.Claims    // an overlap wholly inside these holds nothing
@@ -89,6 +93,18 @@ type Holds struct {
 	memo   *HoldsMemo
 	trial  TrialJudge                 // a trial merge clears an overlap, when set (S-0551)
 	trials map[[2]string]trialVerdict // what trial answered, by held and holder
+	// wf is the workflow the stories' states are read in (ADR-0301 §2); the
+	// zero value is the baseline, as holdsFlow gives it.
+	wf workflow.Workflow
+}
+
+// holdsFlow is the workflow h reads states in: the one it was made with, else
+// the baseline.
+func (h *Holds) holdsFlow() workflow.Workflow {
+	if len(h.wf.States) == 0 {
+		return baselineFlow
+	}
+	return h.wf
 }
 
 // HoldsMemo remembers, for the Holds that share it, the claim of each story,
@@ -100,7 +116,7 @@ type Holds struct {
 type HoldsMemo struct {
 	claims  map[string][]memoClaim // by story ID, one per story item
 	covered map[string]bool        // whether the shared paths cover a path
-	pairs   map[claimPair]pairHold // how a ready story's claim is held by an open one's
+	pairs   map[claimPair]pairHold // how a held story's claim is held by an open one's
 	last    int                    // the number of the last claim worked out
 }
 
@@ -110,7 +126,7 @@ type memoClaim struct {
 	n     int // its number, from 1, a new one each time a claim is worked out
 }
 
-// claimPair is a ready story's claim and an open story's, by number, and how
+// claimPair is a held story's claim and an open story's, by number, and how
 // the open one is named.
 type claimPair struct {
 	held, holder int
@@ -133,30 +149,36 @@ func (m *HoldsMemo) Forget(id string) {
 }
 
 // NewHolds is NewHolds with the Holds remembering what they work out in m,
-// the claims of the stories in progress among items too.
+// the claims of the active stories among items too.
 func (m *HoldsMemo) NewHolds(items []*Item, projects []manifest.Project) *Holds {
-	return newHolds(items, projects, m)
+	return newHolds(baselineFlow, items, projects, m)
 }
 
 type openClaim struct {
 	id    string
-	label string // how the reason names its state: in progress, its agent started
+	label string // how the reason names its state: its state's label, or its agent started
 	paths []string
 	n     int // the claim's number in the memo, 0 without one
 }
 
-// NewHolds reads from items the claims of the stories in progress, the only
-// stories that hold (ADR-0096); projects are the manifest's sub-projects,
-// whose names and tags a claim reads as their paths.
+// NewHolds is NewHoldsIn under the baseline workflow.
 func NewHolds(items []*Item, projects []manifest.Project) *Holds {
-	return newHolds(items, projects, nil)
+	return newHolds(baselineFlow, items, projects, nil)
 }
 
-// newHolds is NewHolds with memo, if any.
-func newHolds(items []*Item, projects []manifest.Project, memo *HoldsMemo) *Holds {
-	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}, memo: memo}
+// NewHoldsIn reads from items the claims of the stories in an active state of
+// w, the only stories that hold (ADR-0096, ADR-0301 §2); projects are the
+// manifest's sub-projects, whose names and tags a claim reads as their paths.
+// The Holds read every state the stories and tasks are in by its kind in w.
+func NewHoldsIn(w workflow.Workflow, items []*Item, projects []manifest.Project) *Holds {
+	return newHolds(w, items, projects, nil)
+}
+
+// newHolds is NewHoldsIn with memo, if any.
+func newHolds(w workflow.Workflow, items []*Item, projects []manifest.Project, memo *HoldsMemo) *Holds {
+	h := &Holds{projects: projects, tasks: map[string][]*Item{}, stories: map[string]*Item{}, memo: memo, wf: w}
 	for _, it := range items {
-		if !it.Archived && it.Type == Task && it.Status != Cancelled {
+		if !it.Archived && it.Type == Task && w.Kind(it.Status) != workflow.KindCancelled {
 			h.tasks[it.Parent] = append(h.tasks[it.Parent], it)
 		}
 		if it.Type == Story {
@@ -164,18 +186,19 @@ func newHolds(items []*Item, projects []manifest.Project, memo *HoldsMemo) *Hold
 		}
 	}
 	for _, it := range items {
-		if !it.Archived && it.Type == Story && it.Status == InProgress {
-			h.Open(it, "in progress")
+		if !it.Archived && it.Type == Story && w.Kind(it.Status) == workflow.KindActive {
+			h.Open(it, holdStateLabel(w, it.Status))
 		}
 	}
 	return h
 }
 
-// Holds judges ready stories against items, as NewHolds does, with the
-// manifest's shared paths as SharedClaims reads them, and the shares in force
-// of the open conversations (ADR-0134) and their asks about a hold (S-0338),
-// as Conversations reads them, and finds a story named in after: or in a
-// share in the archive when items do not hold it.
+// Holds judges the stories waiting for the pull against items, as NewHoldsIn
+// does with the repository's workflow, with the manifest's shared paths as
+// SharedClaims reads them, and the shares in force of the open conversations
+// (ADR-0134) and their asks about a hold (S-0338), as Conversations reads
+// them, and finds a story named in after: or in a share in the archive when
+// items do not hold it.
 func (r *Repo) Holds(items []*Item) *Holds {
 	shares, asks := r.Conversations()
 	return r.HoldsFrom(items, shares, asks)
@@ -185,7 +208,7 @@ func (r *Repo) Holds(items []*Item) *Holds {
 // has read already, as SharesAndAsks gives them, so that the conversations
 // are not read again (S-0603).
 func (r *Repo) HoldsFrom(items []*Item, shares []Share, asks []Ask) *Holds {
-	h := NewHolds(items, r.Manifest.Projects).WithShared(r.SharedClaims())
+	h := NewHoldsIn(r.Flow(), items, r.Manifest.Projects).WithShared(r.SharedClaims())
 	h.lookup = func(id string) *Item {
 		if it, err := r.Get(id); err == nil && it.Type == Story {
 			return it
@@ -215,8 +238,9 @@ func (h *Holds) WithShared(claims manifest.Claims) *Holds {
 	return h
 }
 
-// WithTrial has h hold a ready story on overlap only when j finds that a
-// trial merge conflicts (S-0551), nil for the overlap alone, and returns h.
+// WithTrial has h hold a story waiting for the pull on overlap only when j
+// finds that a trial merge conflicts (S-0551), nil for the overlap alone, and
+// returns h.
 func (h *Holds) WithTrial(j TrialJudge) *Holds {
 	h.trial = j
 	h.trials = map[[2]string]trialVerdict{}
@@ -288,7 +312,7 @@ func narrower(a, b string) string {
 
 // Open counts story as open from now on, named with label: flai serve's
 // launcher opens a story whose agent it has started before the agent moves
-// it to in progress, so that one look does not start two that overlap.
+// it to an active state, so that one look does not start two that overlap.
 func (h *Holds) Open(story *Item, label string) {
 	paths, n := h.claimOf(story)
 	h.open = append(h.open, openClaim{id: story.ID, label: label, paths: paths, n: n})
@@ -340,7 +364,7 @@ func (h *Holds) claim(story *Item) []string {
 		for _, e := range t.Touches {
 			p := h.path(e)
 			theirs = append(theirs, p)
-			if !t.Closed() {
+			if !closedKind(h.holdsFlow().Kind(t.Status)) {
 				open = append(open, p)
 			}
 		}
@@ -639,9 +663,12 @@ func (h *Holds) of(story *Item) *Hold {
 }
 
 // after is why story waits for the stories it names in after:, or nil when
-// each of them is done. One that was cancelled keeps the hold, and so does
-// one that does not exist: flai check reports it, and the operator decides.
+// each of them is in the accepted state (ADR-0301 §2). One that was cancelled
+// keeps the hold, and so does one that does not exist: flai check reports it,
+// and the operator decides. The reason names each state by its label and the
+// accepted state by its name.
 func (h *Holds) after(story *Item) *Hold {
+	w := h.holdsFlow()
 	var waits, ids, notes []string
 	seen := map[string]bool{}
 	for _, e := range story.After {
@@ -655,20 +682,20 @@ func (h *Holds) after(story *Item) *Hold {
 		case it == nil:
 			waits = append(waits, id+" (no such story)")
 			notes = append(notes, id+" names no story, so fix after:")
-		case it.Status == Done:
+		case w.Kind(it.Status) == workflow.KindAccepted:
 			continue
-		case it.Status == Cancelled:
-			waits = append(waits, id+" (cancelled)")
+		case w.Kind(it.Status) == workflow.KindCancelled:
+			waits = append(waits, id+" ("+holdStateLabel(w, it.Status)+")")
 			notes = append(notes, id+" was cancelled, so drop it from after: if "+story.ID+" no longer needs it")
 		default:
-			waits = append(waits, id+" ("+stateLabel(it.Status)+")")
+			waits = append(waits, id+" ("+holdStateLabel(w, it.Status)+")")
 		}
 		ids = append(ids, id)
 	}
 	if len(waits) == 0 {
 		return nil
 	}
-	reason := fmt.Sprintf("held (after): waits for %s; starts when %s %s done", and(waits), and(ids), oneOrMany(len(ids), "is", "are"))
+	reason := fmt.Sprintf("held (after): waits for %s; starts when %s %s %s", and(waits), and(ids), oneOrMany(len(ids), "is", "are"), acceptedState(w))
 	if len(notes) > 0 {
 		reason += "; " + strings.Join(notes, "; ")
 	}
@@ -688,17 +715,36 @@ func (h *Holds) story(id string) *Item {
 	return it
 }
 
-// stateLabel is how a reason names a story's state.
-func stateLabel(status string) string {
-	switch status {
-	case Backlog:
-		return "in backlog"
-	case InProgress:
-		return "in progress"
-	case Review:
-		return "in review"
+// holdStateLabel is how a reason names the state of w a story's status is,
+// by the state's kind (ADR-0301 §2): its name with each hyphen a space, after
+// "in" for the initial state and a waiting state, where a story sits, and
+// alone for any other. A status that names no state of w is given as it is.
+func holdStateLabel(w workflow.Workflow, status string) string {
+	s, ok := w.State(status)
+	if !ok {
+		return status
 	}
-	return status
+	label := strings.ReplaceAll(s.Name, "-", " ")
+	if s.Initial || s.Kind == workflow.KindWaiting {
+		return "in " + label
+	}
+	return label
+}
+
+// holdActiveLabels are the labels of w's active states, in board order, as
+// one phrase: in progress, or doing or testing.
+func holdActiveLabels(w workflow.Workflow) string {
+	var labels []string
+	for _, s := range w.OfKind(workflow.KindActive) {
+		labels = append(labels, holdStateLabel(w, s.Name))
+	}
+	switch len(labels) {
+	case 0:
+		return ""
+	case 1:
+		return labels[0]
+	}
+	return strings.Join(labels[:len(labels)-1], ", ") + " or " + labels[len(labels)-1]
 }
 
 // overlap is why story's claim is held by the open stories', or nil.
@@ -718,7 +764,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 		for _, o := range others {
 			named = append(named, o.id+" ("+o.label+")")
 		}
-		return &Hold{Code: HoldNoTouches, Reason: fmt.Sprintf("held (no-touches): declares no touches, so it may change what %s %s; starts when it declares touches that overlap no story's in progress, or when %s", and(named), oneOrMany(len(others), "changes", "change"), clears(others))}
+		return &Hold{Code: HoldNoTouches, Reason: fmt.Sprintf("held (no-touches): declares no touches, so it may change what %s %s; starts when it declares touches that overlap no story's %s, or when %s", and(named), oneOrMany(len(others), "changes", "change"), holdActiveLabels(h.holdsFlow()), h.clears(others))}
 	}
 	var code string
 	var parts []string
@@ -737,7 +783,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 	if len(parts) == 0 {
 		return nil
 	}
-	return &Hold{Code: code, Reason: fmt.Sprintf("held (%s): %s; starts when %s", code, strings.Join(parts, "; "), clears(by))}
+	return &Hold{Code: code, Reason: fmt.Sprintf("held (%s): %s; starts when %s", code, strings.Join(parts, "; "), h.clears(by))}
 }
 
 // heldBy is holdBy, remembered in the memo for claim, numbered n, and o's
@@ -819,16 +865,19 @@ func (h *Holds) firstHolding(held string, claim []string, o openClaim) (string, 
 	return "", "", false
 }
 
-// clears says what ends a hold by these stories: each leaving in progress.
-func clears(by []openClaim) string {
+// clears says what ends a hold by these stories: each leaving the active
+// states, to the first waiting state, whose claim holds nothing (ADR-0301 §2),
+// to the cancelled state, or back to a queue.
+func (h *Holds) clears(by []openClaim) string {
 	ids := make([]string, len(by))
 	for i, o := range by {
 		ids[i] = o.id
 	}
+	waiting := firstOfKind(h.holdsFlow(), workflow.KindWaiting)
 	if len(ids) == 1 {
-		return ids[0] + " moves to review, is cancelled, or is sent back"
+		return ids[0] + " moves to " + waiting + ", is cancelled, or is sent back"
 	}
-	return and(ids) + " move to review, are cancelled, or are sent back"
+	return and(ids) + " move to " + waiting + ", are cancelled, or are sent back"
 }
 
 // PathsOverlap says whether two touches entries cover a common path: equal,

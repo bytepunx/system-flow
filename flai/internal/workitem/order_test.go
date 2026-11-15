@@ -178,3 +178,83 @@ func TestBoardViewColumnsReadInPullOrder(t *testing.T) {
 		t.Errorf("with epics: got %v want %v", got, want)
 	}
 }
+
+// S-0739, ADR-0301 §2: the pull order is read from the states the workflow
+// gives an order and from the pull's source, never from their names, so
+// placing a story, naming one that has just entered the pull's source, the
+// refusals, and the board's columns are the same under the fixture, whose
+// story in doing has no order as one in-progress has none, nor one in
+// testing.
+func TestOrderKindUnderBothFlows(t *testing.T) {
+	for _, f := range planKindFlows(t) {
+		t.Run(f.name, func(t *testing.T) {
+			w := f.w
+			board := func() (*Board, []*Item) {
+				b, items := orderFixture()
+				for _, it := range items {
+					it.Status = f.state(it.Status)
+				}
+				b.Workflow = &w
+				return b, items
+			}
+			for _, name := range w.Names() {
+				if got, want := OrderedIn(w, name), name == Backlog || name == Ready; got != want {
+					t.Errorf("%s ordered: %v, want %v", name, got, want)
+				}
+			}
+			for _, c := range []struct {
+				id   string
+				p    Placement
+				want []string
+			}{
+				{"S-0001", Placement{Top: true}, []string{"S-0001", "S-0002", "S-0005"}},
+				{"S-0006", Placement{Before: "S-0004"}, []string{"S-0002", "S-0001", "S-0005", "S-0003", "S-0006"}},
+				{"S-0005", Placement{Bottom: true}, []string{"S-0002", "S-0001", "S-0003", "S-0004", "S-0006", "S-0005"}},
+			} {
+				b, items := board()
+				if err := b.Place(items, c.id, c.p); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(b.Order, c.want) {
+					t.Errorf("place %s %+v: got %v want %v", c.id, c.p, b.Order, c.want)
+				}
+			}
+			b, items := board()
+			unordered := []*Item{items[6] /* S-0007, active */, story("S-0010", f.state(Review)), story("S-0011", f.state(Done))}
+			if f.name == "fixture" {
+				unordered = append(unordered, story("S-0012", fixtureTesting))
+			}
+			items = append(items, unordered[1:]...)
+			for _, it := range unordered {
+				want := "rule: " + it.ID + " is " + it.Status + "; only backlog and ready stories have a pull order"
+				if err := b.Place(items, it.ID, Placement{Top: true}); err == nil || err.Error() != want {
+					t.Errorf("got %v, want %s", err, want)
+				}
+			}
+			b.PlaceReadyLast("S-0005", items)
+			if want := []string{"S-0002", "S-0001", "S-0005"}; !reflect.DeepEqual(b.Order, want) {
+				t.Errorf("ready last: got %v want %v", b.Order, want)
+			}
+
+			b, items = board()
+			items = append(items, &Item{ID: "T-0002", Type: Task, Parent: "S-0007", Status: f.state(InProgress)}, &Item{ID: "T-0003", Type: Task, Parent: "S-0007", Status: f.state(Ready), After: []string{"T-0002"}})
+			v := NewBoardView(items, b, time.Date(2026, 11, 14, 0, 0, 0, 0, time.UTC), false, nil, nil)
+			var ready, backlog []string
+			for _, c := range v.Columns[Ready] {
+				ready = append(ready, c.ID)
+			}
+			for _, c := range v.Columns[Backlog] {
+				backlog = append(backlog, c.ID)
+			}
+			if want := []string{"S-0002", "S-0001"}; !reflect.DeepEqual(ready, want) {
+				t.Errorf("ready column: got %v want %v", ready, want)
+			}
+			if want := []string{"S-0005", "S-0003", "S-0004", "S-0006"}; !reflect.DeepEqual(backlog, want) {
+				t.Errorf("backlog column: got %v want %v", backlog, want)
+			}
+			if cards := v.Columns[f.state(InProgress)]; len(cards) != 1 || cards[0].Tasks == nil || *cards[0].Tasks != (TaskSummary{Waiting: 1, InProgress: 1, Layers: 2}) {
+				t.Errorf("the active story's task plan: %+v", cards)
+			}
+		})
+	}
+}
