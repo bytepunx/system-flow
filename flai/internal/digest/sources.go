@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -95,9 +96,11 @@ func Lookup(repo *workitem.Repo) ItemLookup {
 }
 
 // Decisions lists each top-level bullet under "## Decisions" in the
-// narrative of every done story completed at or after since, a zero since
-// being every one: the narratives in the archive, and those in the agents
-// folder whose story is done and not yet archived. They come in story order,
+// narrative of every story accepted, in a state of the repository's
+// workflow of the accepted kind, done on the baseline, and completed at or
+// after since, a zero since being every one: the narratives in the archive,
+// and those in the agents folder whose story is accepted and not yet
+// archived. They come in story order,
 // each narrative's bullets in the order written. A nil lookup is Lookup(repo).
 func Decisions(repo *workitem.Repo, since time.Time, lookup ItemLookup) ([]Candidate, error) {
 	if lookup == nil {
@@ -122,12 +125,13 @@ func Decisions(repo *workitem.Repo, since time.Time, lookup ItemLookup) ([]Candi
 	}
 	slices.Sort(numbers)
 
+	flow := repo.Flow()
 	out := []Candidate{}
 	for _, n := range numbers {
 		file := files[n]
 		id := fmt.Sprintf("S-%0*d", workitem.IDWidth, n)
 		story, err := repo.Get(id)
-		if err != nil || story.Status != workitem.Done {
+		if err != nil || !workitem.IsKind(flow, story.Status, workflow.KindAccepted) {
 			continue // a narrative whose story is open, cancelled, or gone records nothing learned
 		}
 		at := story.CompletedAt()

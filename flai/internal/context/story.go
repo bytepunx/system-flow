@@ -10,6 +10,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -216,8 +217,9 @@ func sourcesIn(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item
 // name or tag as its path, without duplicates.
 func storyClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item) []string {
 	touches := slices.Clone(story.Touches)
+	flow := repo.Flow()
 	for _, it := range items {
-		if it.Type == workitem.Task && it.Parent == story.ID && it.Status != workitem.Cancelled {
+		if it.Type == workitem.Task && it.Parent == story.ID && !workitem.IsKind(flow, it.Status, workflow.KindCancelled) {
 			touches = append(touches, it.Touches...)
 		}
 	}

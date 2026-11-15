@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -146,7 +147,7 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 		return nil, opt, fmt.Errorf("cannot project the ready column's cost of delay: %w", err)
 	}
 	opt.Activities, opt.Roles, opt.Threads, opt.Issues = activities, roles, threadList, issueList
-	opt.WIPLimit, opt.Order = board.WIPLimits[workitem.InProgress], board.Order
+	opt.WIPLimit, opt.Order = board.WIPLimits[pulledInto(repo.Flow())], board.Order
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
 	opt.Commits, opt.FlaiFolders = commits, storygit.FlaiFolders(repo.Manifest)
@@ -318,4 +319,15 @@ func conversations(repo *workitem.Repo, log *slog.Logger) []*messages.Conversati
 			"detail", "coordination leaves them out; run flai check to see what is wrong with each")
 	}
 	return out
+}
+
+// pulledInto is the state a story's pull moves it into in flow, whose WIP
+// limit is the one the metrics' puller fills, in-progress on the baseline:
+// the transition with the pull effect's target, else flow's first state of
+// the active kind (ADR-0301 §2, §3).
+func pulledInto(flow workflow.Workflow) string {
+	if t, ok := flow.WithEffect(workitem.Story, workflow.EffectPull); ok {
+		return t.To
+	}
+	return workitem.FirstOfKind(flow, workflow.KindActive)
 }

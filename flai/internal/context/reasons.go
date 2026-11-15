@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/digest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -443,8 +444,9 @@ func loadPlanned(l *reasonLoad, r Reason) error {
 			return fmt.Errorf("%s --reason %s: listing the items under %s: %w", l.cmd, r, it.ID, err)
 		}
 	}
+	flow := l.repo.Flow()
 	for _, child := range workitem.Children(l.all, it.ID) {
-		if child.Status == workitem.Cancelled {
+		if workitem.IsKind(flow, child.Status, workflow.KindCancelled) {
 			continue
 		}
 		if err := l.workItem(child, r); err != nil {

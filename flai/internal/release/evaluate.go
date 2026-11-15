@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -87,7 +88,7 @@ func EvaluateRepoJudged(r execx.Runner, root string, m manifest.Manifest, repo *
 	if err != nil {
 		return Evaluation{}, err
 	}
-	return EvaluateJudged(m, items, b.IDs(), judged), nil
+	return EvaluateJudgedIn(repo.Flow(), m, items, b.IDs(), judged), nil
 }
 
 // Evaluate says whether m's orchestration.release is met by items, of which
@@ -109,13 +110,20 @@ func Evaluate(m manifest.Manifest, items []*workitem.Item, pending map[string]bo
 // yet released, and whole_epics holds nothing back; an empty one is none.
 // Under threshold and theme it changes nothing.
 func EvaluateJudged(m manifest.Manifest, items []*workitem.Item, pending map[string]bool, judged string) Evaluation {
+	return EvaluateJudgedIn(workflow.Baseline(), m, items, pending, judged)
+}
+
+// EvaluateJudgedIn is EvaluateJudged under flow, which says by a state's
+// kind which stories are accepted and cancelled, and which epics are in
+// review or done for whole_epics (ADR-0301 §2).
+func EvaluateJudgedIn(flow workflow.Workflow, m manifest.Manifest, items []*workitem.Item, pending map[string]bool, judged string) Evaluation {
 	rel := m.Orchestration.Release
 	ev := Evaluation{Policy: rel.PolicyOrDefault(), Currency: m.Planning.CurrencyCode(), Pending: []EvaluatedStory{}, Judged: strings.TrimSpace(judged)}
 	for _, it := range items {
 		if it.Type != workitem.Story || !pending[it.ID] {
 			continue
 		}
-		s := story(it, pending)
+		s := story(flow, it, pending)
 		ev.Pending = append(ev.Pending, s)
 		ev.Count++
 		if s.Value == nil {
@@ -130,14 +138,14 @@ func EvaluateJudged(m manifest.Manifest, items []*workitem.Item, pending map[str
 		ev.threshold()
 	case manifest.ReleaseTheme:
 		ev.Epic, ev.Tag = strings.TrimSpace(rel.Epic), strings.TrimSpace(rel.Tag)
-		ev.theme(items, pending)
+		ev.theme(flow, items, pending)
 	case manifest.ReleaseJudgement:
 		ev.judgement()
 	default:
 		ev.Reason = fmt.Sprintf("%q is not a release policy, so it is never met; write judgement, threshold, or theme", rel.Policy)
 	}
 	if rel.WholeEpics {
-		ev.holdByEpic(items, pending)
+		ev.holdByEpic(flow, items, pending)
 	}
 	return ev
 }
@@ -156,11 +164,12 @@ func (ev *Evaluation) judgement() {
 	}
 }
 
-// holdByEpic sets HeldByEpic to the pending stories whose epic is in neither
-// review nor done, and, when there is one, unmeets the policy and says which
-// epics hold the batch back. A story with no epic is never held; one whose
-// epic is not found is, as nothing says the epic is in review or done.
-func (ev *Evaluation) holdByEpic(items []*workitem.Item, pending map[string]bool) {
+// holdByEpic sets HeldByEpic to the pending stories whose epic is in no
+// state of flow's waiting or accepted kinds, review or done on the
+// baseline, and, when there is one, unmeets the policy and says which epics
+// hold the batch back. A story with no epic is never held; one whose epic is
+// not found is, as nothing says the epic is in review or done.
+func (ev *Evaluation) holdByEpic(flow workflow.Workflow, items []*workitem.Item, pending map[string]bool) {
 	epics := map[string]*workitem.Item{}
 	for _, it := range items {
 		if it.Type == workitem.Epic {
@@ -178,7 +187,7 @@ func (ev *Evaluation) holdByEpic(items []*workitem.Item, pending map[string]bool
 		if e := epics[h.Epic]; e != nil {
 			h.Epic, h.EpicStatus = e.ID, e.Status
 		}
-		if h.EpicStatus == workitem.Review || h.EpicStatus == workitem.Done {
+		if epicReleasable(flow, h.EpicStatus) {
 			continue
 		}
 		ev.HeldByEpic = append(ev.HeldByEpic, h)
@@ -207,11 +216,35 @@ func (ev *Evaluation) holdByEpic(items []*workitem.Item, pending map[string]bool
 	if len(order) > 1 {
 		whose = "their epics are"
 	}
-	ev.Reason += fmt.Sprintf("; whole_epics holds the batch back until %s in review or done: %s", whose, strings.Join(held, "; "))
+	ev.Reason += fmt.Sprintf("; whole_epics holds the batch back until %s in %s: %s", whose, releasableStates(flow), strings.Join(held, "; "))
 }
 
-func story(it *workitem.Item, pending map[string]bool) EvaluatedStory {
-	s := EvaluatedStory{ID: it.ID, Title: it.Title, Status: it.Status, Accepted: it.Status == workitem.Done}
+// epicReleasable reports whether an epic in state lets whole_epics release
+// its stories: state is of flow's waiting or accepted kind.
+func epicReleasable(flow workflow.Workflow, state string) bool {
+	k := flow.Kind(state)
+	return k == workflow.KindWaiting || k == workflow.KindAccepted
+}
+
+// releasableStates names the states an epic may be in for whole_epics to
+// release its stories, in board order, as "review or done" on the baseline.
+func releasableStates(flow workflow.Workflow) string {
+	var names []string
+	for _, s := range flow.States {
+		if s.Takes(workitem.Epic) && epicReleasable(flow, s.Name) {
+			names = append(names, s.Name)
+		}
+	}
+	if len(names) < 2 {
+		return strings.Join(names, "")
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " or " + names[len(names)-1]
+}
+
+// story is it as an Evaluation weighs it, accepted when its state is of
+// flow's accepted kind.
+func story(flow workflow.Workflow, it *workitem.Item, pending map[string]bool) EvaluatedStory {
+	s := EvaluatedStory{ID: it.ID, Title: it.Title, Status: it.Status, Accepted: workitem.IsKind(flow, it.Status, workflow.KindAccepted)}
 	s.Released = s.Accepted && !pending[it.ID]
 	if c := it.CostOfDelay; c != nil && c.Value != nil {
 		v := *c.Value
@@ -324,7 +357,7 @@ func (ev *Evaluation) threshold() {
 	ev.Reason = head + ", and " + strings.Join(short, ", and ")
 }
 
-func (ev *Evaluation) theme(items []*workitem.Item, pending map[string]bool) {
+func (ev *Evaluation) theme(flow workflow.Workflow, items []*workitem.Item, pending map[string]bool) {
 	if ev.Epic == "" && ev.Tag == "" {
 		ev.Reason = "the theme names neither epic nor tag, so it is never met; write one under orchestration.release"
 		return
@@ -338,10 +371,10 @@ func (ev *Evaluation) theme(items []*workitem.Item, pending map[string]bool) {
 	}
 	unreleased := 0
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status == workitem.Cancelled || !match(it) {
+		if it.Type != workitem.Story || workitem.IsKind(flow, it.Status, workflow.KindCancelled) || !match(it) {
 			continue
 		}
-		s := story(it, pending)
+		s := story(flow, it, pending)
 		ev.Theme = append(ev.Theme, s)
 		switch {
 		case !s.Accepted:

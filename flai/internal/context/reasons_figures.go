@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -92,7 +93,7 @@ func loadReady(l *reasonLoad, r Reason) error {
 	}
 	pending := release.PendingIDs(execx.System{}, l.repo.Root, l.repo.Manifest, l.repo)
 	view := workitem.NewBoardView(items, board, time.Now(), false, pending, l.repo.Holds(items))
-	l.add(Item{Path: FigureBoard, Title: "the board's stories, WIP limits, pull order, and holds, as board and flai board give them", Text: boardText(view)}, r)
+	l.add(Item{Path: FigureBoard, Title: "the board's stories, WIP limits, pull order, and holds, as board and flai board give them", Text: boardText(l.repo.Flow(), view)}, r)
 	got, err := l.repo.PromotionCandidates(0)
 	if err != nil {
 		return fmt.Errorf("%s --reason %s: ranking the promotion candidates: %w", l.cmd, r, err)
@@ -101,20 +102,22 @@ func loadReady(l *reasonLoad, r Reason) error {
 	return nil
 }
 
-// boardText is the board as flai board prints it, the backlog as a count:
-// each column with its stories in it of its WIP limit, each story with its
-// nature, its age in the column, whether it is blocked or held, its touches,
-// and why it is held; then whether a story may be pulled, the pull order,
-// the limits broken, and what is accepted and not yet published.
-func boardText(v workitem.BoardView) string {
+// boardText is the board as flai board prints it, flow's columns in its
+// order, the one items are created in, the backlog on the baseline, as a
+// count: each column with its stories in it of its WIP limit, each story with
+// its nature, its age in the column, whether it is blocked or held, its
+// touches, and why it is held; then whether a story may be pulled, the pull
+// order, the limits broken, and what is accepted and not yet published.
+func boardText(flow workflow.Workflow, v workitem.BoardView) string {
 	var b strings.Builder
-	for _, st := range workitem.States {
+	initial, _ := flow.Initial()
+	for _, st := range flow.Names() {
 		limit := ""
 		if l, ok := v.WIPLimits[st]; ok && l > 0 {
 			limit = fmt.Sprintf(" (%d/%d)", v.Counts[st], l)
 		}
 		cards := v.Columns[st]
-		if st == workitem.Backlog {
+		if st == initial.Name {
 			fmt.Fprintf(&b, "%s%s: stories %d, each under promote_candidates\n", st, limit, len(cards))
 			continue
 		}
