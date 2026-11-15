@@ -32,6 +32,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -530,12 +531,12 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if !itemType[in.Type] {
 				return nil, bad("type must be epic, story, or task, not %q", in.Type)
 			}
-			if in.Status != "" && !isState(in.Status) {
-				return nil, bad("%q is not a state", in.Status)
-			}
 			repo, e := open(ctx, p)
 			if e != nil {
 				return nil, e
+			}
+			if in.Status != "" && !isState(repo.Flow(), in.Status) {
+				return nil, bad("%q is not a state", in.Status)
 			}
 			done := perf.Track(ctx, "repo.list")
 			items, err := repo.List(in.Archived)
@@ -749,11 +750,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 	return table
 }
 
-func isState(s string) bool {
-	for _, st := range workitem.States {
-		if st == s {
-			return true
-		}
-	}
-	return false
+// isState reports whether s is a state of wf, or an alias of one.
+func isState(wf workflow.Workflow, s string) bool {
+	_, ok := wf.State(s)
+	return ok
 }

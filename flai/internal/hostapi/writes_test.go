@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -4181,5 +4182,123 @@ func TestTheActionsARoleNamesAreTheProjectsToo(t *testing.T) {
 	}
 	if _, e := m["settings.action"](context.Background(), withDocs(t), json.RawMessage(`{"action":"review","on":true,`+rid+`}`)); e == nil || e.Code != channel.CodeInvalidParams {
 		t.Errorf("settings.action, review, where no role names it: %+v", e)
+	}
+}
+
+// testingWorkflow is a board unlike the baseline: testing sits between
+// in-progress and review, which only the story's agent leaves it for; review
+// is renamed acceptance-review, keeping review as its alias; and done and
+// cancelled are renamed shipped and dropped (ADR-0301 §6).
+const testingWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: acceptance-review, kind: waiting, limit: true, aliases: [review]}
+  - {name: shipped, kind: accepted}
+  - {name: dropped, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit]}
+  - {from: ready, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: acceptance-review, by: [agent]}
+  - {from: acceptance-review, to: shipped, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: acceptance-review, to: shipped, types: [task]}
+  - {from: in-progress, to: shipped, types: [task]}
+  - {from: acceptance-review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, testing], to: dropped, effects: [cancel]}
+  - {from: acceptance-review, to: dropped, by: [cascade], effects: [cancel]}
+  - {from: dropped, to: backlog, effects: [reopen]}
+---
+`
+
+// withWorkflow makes every repository openRepo opens run the workflow file
+// text in place of its own until the test ends, for tests of a board with
+// renamed and added states (ADR-0301).
+func withWorkflow(t *testing.T, text string) {
+	t.Helper()
+	w, p := workflow.Parse("design/workflows/board.md", text)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	before := testFlow
+	testFlow = &w
+	t.Cleanup(func() { testFlow = before })
+}
+
+// S-0747: item.move follows the project's workflow. A move to a state the
+// workflow adds builds flai move's command line naming it; a move whose
+// transition the operator may not make is refused as a rule before flai
+// runs, naming the transition and who may make it; the acceptance
+// transition, into the accepted state under its new name, goes through as
+// the operator's acceptance with --yes for the uncommitted files; and the
+// dry run of a cancellation and a draft's finalizing name the states the
+// workflow's cancel and commit go to. The baseline has no such state.
+func TestItemMoveFollowsTheProjectsWorkflow(t *testing.T) {
+	p := harbour(t)
+	rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0001"}`)}}
+	m := writeMethods(rec.run, time.Now, Host{})
+	n := 0
+	move := func(params string) (string, *channel.Error) {
+		n++
+		before := len(rec.runs)
+		_, e := m["item.move"](context.Background(), p, json.RawMessage(strings.Replace(params, "{", fmt.Sprintf(`{"request_id":"req-%08d",`, n), 1)))
+		if len(rec.runs) == before {
+			return "", e
+		}
+		return strings.Join(rec.runs[len(rec.runs)-1].Args, " "), e
+	}
+	if _, e := move(`{"id":"S-0001","to":"testing"}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != `"testing" is not a state` {
+		t.Fatalf("the baseline has no testing state: %+v", e)
+	}
+
+	withWorkflow(t, testingWorkflow)
+	repo, err := openRepo(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story, err := repo.Get("S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	to := func(state string) {
+		t.Helper()
+		if _, err := repo.Transition(story, state, "olive", "", t0); err != nil {
+			t.Fatalf("S-0001 to %s: %v", state, err)
+		}
+	}
+	to("in-progress")
+	if args, e := move(`{"id":"S-0001","to":"testing"}`); e != nil || args != "move S-0001 testing --by=olive --json" {
+		t.Errorf("a move the workflow lets the operator make: %+v %s", e, args)
+	}
+
+	to("testing")
+	runs := len(rec.runs)
+	_, e := move(`{"id":"S-0001","to":"review"}`)
+	if e == nil || e.Code != Rule || e.Message != "S-0001: only the story's agent may move an item from testing to acceptance-review: ask the story's agent to make it" {
+		t.Errorf("a move only the story's agent makes: %+v", e)
+	}
+	if len(rec.runs) != runs {
+		t.Errorf("a refused move ran flai: %+v", rec.runs[runs:])
+	}
+
+	to("acceptance-review")
+	if args, e := move(`{"id":"S-0001","to":"shipped","include_uncommitted":true}`); e != nil || args != "move S-0001 shipped --by=olive --yes --json" {
+		t.Errorf("the acceptance transition: %+v %s", e, args)
+	}
+	if args, e := move(`{"id":"S-0002","to":"dropped","dry_run":true}`); e != nil || args != "move S-0002 dropped --by=olive --reason=preview --dry-run --json" {
+		t.Errorf("the dry run of a cancellation: %+v %s", e, args)
+	}
+	if args, e := move(`{"id":"S-0002","to":"ready","finalize":true}`); e != nil || args != "move S-0002 ready --by=olive --yes --json" {
+		t.Errorf("finalizing a draft: %+v %s", e, args)
+	}
+	if args, _ := move(`{"id":"S-0002","to":"dropped","include_uncommitted":true}`); strings.Contains(args, "--yes") {
+		t.Errorf("a move that is not an acceptance takes no --yes: %s", args)
 	}
 }

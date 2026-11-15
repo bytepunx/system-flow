@@ -2,6 +2,7 @@ package hostapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -38,11 +40,25 @@ func moveArgs(p channel.Project, raw json.RawMessage) ([]string, string, *channe
 	if e := needID(in.ID); e != nil {
 		return nil, "", e
 	}
-	if !isState(in.To) {
+	wf, it := moving(p.Root, in.ID)
+	if !isState(wf, in.To) {
 		return nil, "", bad("%q is not a state", in.To)
 	}
+	typ := workitem.TypeOfID(workitem.CanonicalID(in.ID))
+	if it != nil {
+		typ = it.Type
+		if t, ok := wf.Find(it.Type, it.Status, in.To); ok && !cascadeOnly(t) {
+			// the workflow's by says who makes the move (ADR-0301 §3): the
+			// operator's move along an acceptance transition is the
+			// acceptance; a move only a cascade makes is flai move's to
+			// refuse, in its words
+			if err := t.Permits(workflow.Mover{Who: workflow.MoverOperator, Acceptance: t.HasEffect(workflow.EffectAccept)}); err != nil {
+				return nil, "", &channel.Error{Code: Rule, Message: fmt.Sprintf("%s: %v", it.ID, err)}
+			}
+		}
+	}
 	args := []string{"move", in.ID, in.To, "--by=" + owner(p)}
-	preview := in.DryRun && in.To == workitem.Cancelled
+	preview := in.DryRun && intoEffect(wf, typ, workflow.EffectCancel, in.To)
 	switch {
 	case text(in.Reason) != "":
 		args = append(args, "--reason="+text(in.Reason))
@@ -53,15 +69,69 @@ func moveArgs(p channel.Project, raw json.RawMessage) ([]string, string, *channe
 		args = append(args, "--dry-run")
 	}
 	// --yes is the designer's choice, in the acceptance confirmation, to include uncommitted files.
-	if in.IncludeUncommitted && in.To == workitem.Done {
+	if in.IncludeUncommitted && acceptance(wf, it, in.To) {
 		args = append(args, "--yes")
 	}
-	// and, on a move to ready, the designer's say that a draft story is
-	// finished (S-0199); without it flai refuses a draft as a rule
-	if in.Finalize && in.To == workitem.Ready {
+	// and, on a move to the state an item commits to, ready on the baseline,
+	// the designer's say that a draft story is finished (S-0199); without it
+	// flai refuses a draft as a rule
+	if in.Finalize && intoEffect(wf, typ, workflow.EffectCommit, in.To) {
 		args = append(args, "--yes")
 	}
 	return args, "", nil
+}
+
+// moving is the workflow the project at root runs and the item id names, for
+// a move: the baseline when flai cannot open the project here, and no item
+// when it cannot read it. Either is flai move's to report, as it runs.
+func moving(root, id string) (workflow.Workflow, *workitem.Item) {
+	repo, err := openRepo(root)
+	if err != nil {
+		return workflow.Baseline(), nil
+	}
+	it, err := repo.Get(id)
+	if err != nil {
+		return repo.Flow(), nil
+	}
+	return repo.Flow(), it
+}
+
+// acceptance reports whether moving it to the state to names, or an alias of
+// it names, is an acceptance in wf (ADR-0301 §3): the transition from its
+// state gives the accept effect, or, when wf has none from its state there or
+// it is nil, a transition into that state does, one of its type when it is
+// known. On the baseline, an epic's or a story's move to done.
+func acceptance(wf workflow.Workflow, it *workitem.Item, to string) bool {
+	if it != nil {
+		if t, ok := wf.Find(it.Type, it.Status, to); ok {
+			return t.HasEffect(workflow.EffectAccept)
+		}
+	}
+	st, ok := wf.State(to)
+	if !ok {
+		return false
+	}
+	for _, t := range wf.Transitions {
+		if t.To == st.Name && (it == nil || t.Takes(it.Type)) && t.HasEffect(workflow.EffectAccept) {
+			return true
+		}
+	}
+	return false
+}
+
+// intoEffect reports whether the state to names, or an alias of it names, is
+// where the transition of an item of type typ that gives effect goes in wf
+// (ADR-0301 §3): ready for the commit effect and cancelled for the cancel
+// effect on the baseline.
+func intoEffect(wf workflow.Workflow, typ, effect, to string) bool {
+	t, ok := wf.WithEffect(typ, effect)
+	st, known := wf.State(to)
+	return ok && known && st.Name == t.To
+}
+
+// cascadeOnly reports whether only a parent's cancellation makes t.
+func cascadeOnly(t workflow.Transition) bool {
+	return len(t.By) == 1 && t.By[0] == workflow.ByCascade
 }
 
 // itemWriteSpecs are the writes to work items, the board, issues, and acceptance.
