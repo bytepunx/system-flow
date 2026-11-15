@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/kluster"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -53,7 +54,7 @@ func (p *klusterPass) takeRequests(ctx context.Context) {
 	if len(pending) == 0 {
 		return
 	}
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		// left where they are: the asker withdraws them and says flai serve is not taking them
 		p.o.Logger.Warn("kluster requests not taken", "component", "serve", "root", p.e.Root, "err", err.Error())
@@ -129,12 +130,14 @@ func (p *klusterPass) answerRequest(repo *workitem.Repo, file, req kluster.Reque
 	if err != nil {
 		return refuse("flai serve could not read %s's namespace's record (%v), so nothing is queued: ask again, and say so on a thread on %s if it goes on", story, err, story)
 	}
+	flow := p.o.flow()
+	review := flow.AwaitsAcceptance(it.Type, it.Status)
 	switch {
-	case it.Archived || (it.Status != workitem.InProgress && it.Status != workitem.Review):
-		return refuse("%s is %s, and a story's agent asks for its namespace only while the story is in progress: move it to in-progress first", story, it.Status)
-	case it.Status == workitem.Review && kind == kluster.KindTeardown:
-		return refuse("%s is in review, and its namespace is the review's evidence for its acceptance: flai serve tears it down once the story is accepted, cancelled, or moved back to ready or backlog", story)
-	case it.Status == workitem.Review:
+	case it.Archived || !flow.Underway(it.Status):
+		return refuse("%s is %s, and a story's agent asks for its namespace only while the story is in progress: move it to %s first", story, it.Status, activeState(flow))
+	case review && kind == kluster.KindTeardown:
+		return refuse("%s is in %s, and its namespace is the review's evidence for its acceptance: flai serve tears it down once the story is accepted, cancelled, or moved back to ready or backlog", story, it.Status)
+	case review:
 		return p.answerReview(repo, file, record, recorded), false
 	case kind == kluster.KindDeploy && m.KlusterAgentNamespaces() == 0:
 		return refuse("deploys before review are off for this project (kluster.agent_namespaces is 0), so flai serve deploys %s only once it is in review. Say in its Notes which criteria you could not verify against a running system, and why: the review's deploy checks them", story)
@@ -281,10 +284,11 @@ func (p *klusterPass) queueAsked(j klusterJob) (klusterJob, int) {
 	return j, len(p.queue) - 1 + p.runningCount()
 }
 
-// holders names each story in progress but story that holds a namespace, its
-// record's commit and when its deploy started, or a deploy its agent asked
+// holders names each story in progress, in a state of the workflow's active
+// kind, but story that holds a namespace, its record's commit and when its
+// deploy started, or a deploy its agent asked
 // for that waits or runs, which will make one (ADR-0292 §4). Stories in
-// review never count.
+// review, the waiting kind, never count.
 func (p *klusterPass) holders(repo *workitem.Repo, root, story string) []string {
 	items, err := repo.List(false)
 	if err != nil {
@@ -294,7 +298,7 @@ func (p *klusterPass) holders(repo *workitem.Repo, root, story string) []string 
 	asked := p.askedDeploys()
 	var out []string
 	for _, it := range items {
-		if it.Type != workitem.Story || it.Status != workitem.InProgress || it.Archived || it.ID == story {
+		if it.Type != workitem.Story || p.o.flow().Kind(it.Status) != workflow.KindActive || it.Archived || it.ID == story {
 			continue
 		}
 		ns, err := kluster.StoryNamespace(it.ID)
@@ -445,7 +449,7 @@ func (p *klusterPass) sweepAsked() bool {
 	if len(left) == 0 {
 		return true
 	}
-	repo, err := workitem.Open(p.e.Root)
+	repo, err := openRepo(p.o, p.e.Root)
 	if err != nil {
 		p.o.Logger.Warn("interrupted kluster jobs not ended", "component", "serve", "root", p.e.Root, "jobs", len(left), "err", err.Error())
 		return false
@@ -476,4 +480,13 @@ func (p *klusterPass) announceKluster(repo *workitem.Repo, s kluster.AskedJob) {
 	if err := inbox.AppendEvent(repo, ev); err != nil {
 		p.o.Logger.Warn("kluster event not logged", "component", "serve", "root", p.e.Root, "story", s.Story, "job_id", s.ID, "err", err.Error())
 	}
+}
+
+// activeState names the state of flow's active kind a story's agent works
+// its story in, in-progress in the baseline: the first in board order.
+func activeState(flow workflow.Workflow) string {
+	if states := flow.OfKind(workflow.KindActive); len(states) > 0 {
+		return states[0].Name
+	}
+	return "a state of the active kind"
 }

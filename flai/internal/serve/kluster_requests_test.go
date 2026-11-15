@@ -810,3 +810,39 @@ func TestAChecksRequestForAStoryInReviewIsAnsweredFromTheRecord(t *testing.T) {
 		t.Fatalf("a checks request in review queued %d jobs", n)
 	}
 }
+
+// S-0743: under a workflow with in-progress and review renamed and a state
+// of the active kind between them, an agent's request is taken in either
+// active state and counted against kluster.agent_namespaces, refused in a
+// queue state naming the active state to move to, and answered as the
+// review's in the state the acceptance leaves from.
+func TestAKlusterRequestFollowsTheWorkflowsKinds(t *testing.T) {
+	lab := klRenamedLab(t)
+	doing := lab.klStory("Doing", klHeadA, "ready", "doing")
+	inTesting := lab.klStory("Testing", klHeadB, "ready", "doing", "testing")
+	for _, s := range []string{doing, inTesting} {
+		if a := lab.ask(s, kluster.KindDeploy, "agent-"+s); !a.Started {
+			t.Fatalf("a request for %s in an active state = %+v, want it started", s, a)
+		}
+	}
+	lab.drain()
+
+	third := lab.klStory("Third", klHeadC, "ready", "doing")
+	a := lab.ask(third, kluster.KindDeploy, "agent-"+third)
+	if !a.Refused() || !strings.Contains(a.Reason, doing) || !strings.Contains(a.Reason, inTesting) {
+		t.Fatalf("a third story's answer = %+v, want a refusal for the limit naming %s and %s", a, doing, inTesting)
+	}
+
+	queued := lab.klStory("Queued", klHeadC, "ready")
+	if q := lab.ask(queued, kluster.KindDeploy, "agent-"+queued); !q.Refused() || !strings.Contains(q.Reason, "is ready") || !strings.Contains(q.Reason, "move it to doing first") {
+		t.Fatalf("a request for a ready story = %+v, want a refusal naming doing", q)
+	}
+
+	lab.move(inTesting, "awaiting")
+	if b := lab.ask(third, kluster.KindDeploy, "agent-"+third); !b.Started {
+		t.Fatalf("a story awaiting its acceptance counted against the limit: %+v", b)
+	}
+	if td := lab.ask(inTesting, kluster.KindTeardown, "agent-"+inTesting); !td.Refused() || !strings.Contains(td.Reason, "is in awaiting") {
+		t.Fatalf("a teardown for a story awaiting its acceptance = %+v, want the review's refusal", td)
+	}
+}

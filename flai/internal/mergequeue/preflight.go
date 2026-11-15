@@ -224,6 +224,7 @@ func preflightCheck(repo *workitem.Repo, now time.Time, left []string) ([]verify
 		if main, err = workitem.Open(repo.MainRoot); err != nil {
 			return nil, fmt.Errorf("run the merge queue's preflight: open the main checkout %s for flai check: %w", repo.MainRoot, err)
 		}
+		main.Workflow = repo.Workflow // the main checkout runs the queue's board
 	}
 	res, err := check.Run(main, now)
 	if err != nil {
