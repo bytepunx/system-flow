@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 1082
-      cache_read: 465117
-      cache_write: 19390
-      cost: 0.2698
+      output: 922
+      cache_read: 472440
+      cache_write: 12068
+      cost: 0.2095
 ---
 # T-3384 Fetch the remote's branch and tags
 

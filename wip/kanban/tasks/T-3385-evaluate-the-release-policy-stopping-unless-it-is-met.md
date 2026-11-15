@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 1108
-      cache_read: 476184
-      cache_write: 19852
-      cost: 0.2762
+      output: 944
+      cache_read: 483682
+      cache_write: 12355
+      cost: 0.2145
 ---
 # T-3385 Evaluate the release policy, stopping unless it is met
 

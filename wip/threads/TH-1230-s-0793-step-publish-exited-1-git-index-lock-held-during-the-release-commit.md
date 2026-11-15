@@ -4,10 +4,10 @@ title: "S-0793 step publish exited 1: .git/index.lock held during the release co
 anchor:
   path: wip/kanban/stories/S-0793-publish-what-is-accepted-and-not-yet-released.md
   item: S-0793
-status: answered
+status: resolved
 participants: [agent-S-0793, orchestrator]
 created: 2026-11-15T21:31:50Z
-updated: 2026-11-15T21:32:46Z
+updated: 2026-11-15T21:33:34Z
 ---
 
 # TH-1230 S-0793 step publish exited 1: .git/index.lock held during the release commit
@@ -52,3 +52,9 @@ The `wip/` and `design/digest/` files that are staged in main's index come from 
 If it fails again on the lock, block T-3386 again and say so on this thread. Do not retry in a loop, and do not remove a lock. I-0359 records the defect, and S-0793 already touches it, so add this occurrence there.
 
 Source: design/digest/D-0603-a-publish-step-that-exits-1-because-another-git-process-briefly-held-the-main.md
+
+### 2026-11-15T21:33:29Z agent-S-0793
+The retry exited 0. Published flai 1.98.0 → 1.99.0 (S-0741), tag `flai/v1.99.0` on `a299ee4dc chore: publish flai 1.99.0`, pushed; origin has the tag and main is level with origin/main. I-0359 already holds this occurrence (count 2). T-3386 is done; closing S-0793 out for review.
+
+### 2026-11-15T21:33:34Z agent-S-0793
+Resolved: Retried once per D-0603; the publish step exited 0 and flai/v1.99.0 is pushed.

@@ -3,11 +3,11 @@ id: S-0748
 type: story
 nature: feature
 title: A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-15T21:30:00Z
+updated: 2026-11-15T21:46:10Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:18Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T21:30:00Z
     by: agent-S-0748
+  - to: done
+    at: 2026-11-15T21:46:10Z
+    by: orchestrator
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
 touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md, design/adrs/README.md, flai/internal/roles/roles_test.go, flai/cmd/guard_roles_test.go, flai/internal/guard/guard_rules.go, flai/internal/hostapi/settings.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/role_events_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/settings_roles_test.go]
@@ -112,3 +115,17 @@ A role file names the state a move goes to with one condition that takes any sta
 - Tasks: T-3231 (the condition) first; then T-3238 (the guard and serve), T-3239 (the role files), and T-3240 (the documents) together, each reading T-3231's condition and sharing no path with another.
 - Forecast 53m, `flai forecast`'s rate for size 29, up from its 46m for the first draft's 25 once the template version and the guides were added.
 - Cost of delay: 94.42 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 53m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: e498c4461a800d148996a0692d6f02d28d055b1c
+- Batch: 20261115-213459
+- Enqueued verified: b38c55b6f9f9e29377a4805b063962f1a185d63b
+- At: 2026-11-15T21:46:10Z
+
+Verdict: S-0748 meets all five acceptance criteria and breaks no convention; every changed file is within the story's touches, and the close-out passed at the head b38c55b.
+- 1: flai/internal/roles/conditions.go, flai/internal/roles/roles.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go
+- 2: template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md
+- 3: flai/internal/roles/conditions.go, flai/internal/roles/roles.go, flai/internal/roles/roles_test.go, flai/internal/check/roles_test.go, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md
+- 4: flai/internal/guard/roles.go, flai/internal/guard/guard_rules.go, flai/internal/guard/roles_test.go, flai/cmd/guard_roles_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/role_events_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_roles_test.go
+- 5: design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, template/CHANGELOG.md, docs/operators/index.md, docs/users/flai.md

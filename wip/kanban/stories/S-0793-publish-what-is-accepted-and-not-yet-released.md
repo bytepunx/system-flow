@@ -3,16 +3,19 @@ id: S-0793
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-15T21:17:19Z
-updated: 2026-11-15T21:32:46Z
+updated: 2026-11-15T21:34:05Z
 transitions:
   - to: ready
     at: 2026-11-15T21:17:21Z
     by: system-flow
   - to: in-progress
     at: 2026-11-15T21:30:08Z
+    by: agent-S-0793
+  - to: review
+    at: 2026-11-15T21:34:05Z
     by: agent-S-0793
 blocked:
   - from: 2026-11-15T21:32:20Z
@@ -27,30 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 134
+  seconds: 214
   priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 1
-      work: 26
+      ceremony: 3
+      hand_edits: 1
+      work: 39
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 9084
-      cache_read: 3904607
-      cache_write: 162779
-      cost: 2.2651
+      input: 98
+      output: 13866
+      cache_read: 7102648
+      cache_write: 181424
+      cost: 3.1496
   strategic:
     - kind: orchestrator
-      seconds: 49
+      seconds: 103
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 138
-          cache_read: 637950
-          cache_write: 89797
-          cost: 0.2202
+          input: 42
+          output: 344
+          cache_read: 1261980
+          cache_write: 212274
+          cost: 0.4462
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 30
+          cache_read: 20402
+          cache_write: 25113
+          cost: 0.036
 formula: publish
 ---
 # S-0793 Publish what is accepted and not yet released
@@ -63,7 +73,7 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 - [x] Fetch the remote's branch and tags
 - [x] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3384 Fetch the remote's branch and tags
@@ -73,3 +83,5 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+Published on the retry TH-1230 asked for (D-0603): flai 1.98.0 → 1.99.0, a minor bump from S-0741, tag `flai/v1.99.0` on the release commit `a299ee4dc chore: publish flai 1.99.0`, pushed with the branch. The first run had exited 1 on a briefly held `.git/index.lock`, recorded in I-0359.

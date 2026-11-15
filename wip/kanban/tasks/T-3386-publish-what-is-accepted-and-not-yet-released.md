@@ -3,17 +3,20 @@ id: T-3386
 type: task
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: done
 parent: S-0793
 owner: alex
 created: 2026-11-15T21:17:19Z
-updated: 2026-11-15T21:32:57Z
+updated: 2026-11-15T21:33:18Z
 transitions:
   - to: ready
     at: 2026-11-15T21:31:22Z
     by: agent-S-0793
   - to: in-progress
     at: 2026-11-15T21:31:22Z
+    by: agent-S-0793
+  - to: done
+    at: 2026-11-15T21:33:18Z
     by: agent-S-0793
 blocked:
   - from: 2026-11-15T21:31:38Z
@@ -24,16 +27,16 @@ tags: []
 after: [T-3385]
 usage:
   source: log
-  seconds: 58
+  seconds: 85
   estimated: true
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 4648
-      cache_read: 1997861
-      cache_write: 83289
-      cost: 1.159
+      input: 43
+      output: 6044
+      cache_read: 3096013
+      cache_write: 79082
+      cost: 1.3729
 ---
 # T-3386 Publish what is accepted and not yet released
 
@@ -47,11 +50,13 @@ Run `scripts/flai.sh release --pending --require-pending --json` from the projec
 
 ## Notes
 
-- 2026-11-15T21:31:24Z: ran in the main checkout and exited 1. The formula's stop lists only exit 2, so the step failed. The task is blocked and the question is on a thread on S-0793.
+- 2026-11-15T21:31:24Z: ran in the main checkout and exited 1. The formula's stop lists only exit 2, so the step failed. The task was blocked and the question asked on TH-1230.
 - Output (the whole of it, one line):
 
   ```text
   {"ts":"2026-11-15T21:31:24.165Z","level":"FATAL","msg":"command failed","component":"cmd","err":"git commit -q -m chore: publish flai 1.99.0: exit status 128\nfatal: Unable to create '/home/alex/git/bytepunx/system-flow/.git/index.lock': File exists.\n\nAnother git process seems to be running in this repository, e.g.\nan editor opened by 'git commit'. Please make sure all processes\nare terminated then try again. If it still fails, a git process\nmay have crashed in this repository earlier:\nremove the file manually to continue."}
   ```
 
-- State found afterwards, read-only: `.git/index.lock` no longer exists, so another git process held it only briefly. No tag `flai/v1.99.0` exists (the newest is `flai/v1.98.0`), HEAD is still `2fd4f33d4`, and nothing was pushed. The main checkout's `wip/` and `design/digest/` changes are now staged in the index, not committed.
+- State found afterwards, read-only: `.git/index.lock` no longer existed, so another git process held it only briefly. No tag `flai/v1.99.0` existed (the newest was `flai/v1.98.0`), HEAD was still `2fd4f33d4`, and nothing was pushed. The main checkout's `wip/` and `design/digest/` changes were left staged in the index, not committed.
+- TH-1230 answered (orchestrator, citing D-0603): retry once. Unblocked and ran again; it exited 0.
+- Retry result: flai 1.98.0 → 1.99.0 (minor, from S-0741), tag `flai/v1.99.0`, release commit `a299ee4dc chore: publish flai 1.99.0`. `pushed: true`, and `git ls-remote` shows `refs/tags/flai/v1.99.0` on origin. main is level with origin/main.
