@@ -118,7 +118,7 @@ func curatorRanLast(t *testing.T) []*workitem.Activity {
 // the stories completed, their ratio, the repeats, and the curator's runs,
 // with the entries counted by status and the curator's runs in all.
 func TestDigestCountsEachValuePerWeek(t *testing.T) {
-	got := digestSection(digestItems(), digestThreads(), digestEntries(), curatorRanLast(t), digestOwner, coordStart, coordNow)
+	got := digestSection(baselineFlow, digestItems(), digestThreads(), digestEntries(), curatorRanLast(t), digestOwner, coordStart, coordNow)
 	want := &Digest{
 		Weeks: []DigestWeek{
 			{Week: "2026-W35", Start: "2026-08-24", AskedAgain: again(0)},
@@ -148,7 +148,7 @@ func TestDigestLeavesTheRateOutOfAWeekWithNoCompletedStory(t *testing.T) {
 		openedThread("TH-0001", "open", "2026-09-01T08:00:00Z", "agent"),
 		openedThread("TH-0002", "open", "2026-09-08T08:00:00Z", "agent"),
 	}
-	got := digestSection(items, ths, nil, nil, digestOwner, coordStart, coordNow)
+	got := digestSection(baselineFlow, items, ths, nil, nil, digestOwner, coordStart, coordNow)
 	if pr := got.Weeks[1].PerStory; pr == nil || *pr != 1.0/3 {
 		t.Errorf("week 36 per_story = %v, want 1/3 unrounded", pr)
 	}
@@ -169,7 +169,7 @@ func TestDigestLeavesTheRateOutOfAWeekWithNoCompletedStory(t *testing.T) {
 // entry count 0 and, in each week a curator run has reached, no repeat, so
 // the weeks before the digest are measured too.
 func TestDigestWithoutEntriesCountsTheWeeks(t *testing.T) {
-	got := digestSection(digestItems(), digestThreads(), nil, curatorRanLast(t), digestOwner, coordStart, coordNow)
+	got := digestSection(baselineFlow, digestItems(), digestThreads(), nil, curatorRanLast(t), digestOwner, coordStart, coordNow)
 	if got.Entries != (DigestEntries{}) {
 		t.Errorf("entries = %+v, want all 0", got.Entries)
 	}
@@ -217,7 +217,7 @@ func TestDigestLeavesAskedAgainOutWithoutACuratorRunOfI0207(t *testing.T) {
 		{ID: "D-0002", Status: "compacted", Date: "2026-09-02"},
 	}
 	docs := []*workitem.Activity{activityDoc(t, workitem.ActivityPlanner, "2026-09-15T05:00:00Z", "2026-09-15T05:00:00Z")}
-	got := digestSection(digestItems(), digestThreads(), entries, docs, digestOwner, coordStart, coordNow)
+	got := digestSection(baselineFlow, digestItems(), digestThreads(), entries, docs, digestOwner, coordStart, coordNow)
 	if got.Curator != (DigestCurator{}) {
 		t.Errorf("curator = %+v, want no run and no last_run", got.Curator)
 	}
@@ -254,7 +254,7 @@ func TestDigestCountsTheCuratorsRunsAndTheWeeksTheyReached(t *testing.T) {
 		// later than the newest entry, on Thursday of week 37
 		activityDoc(t, workitem.ActivityCurator, "2026-09-10T05:00:00Z", "2026-08-20T05:00:00Z", "2026-09-02T05:00:00Z", "2026-09-08T05:00:00Z"),
 	}
-	got := digestSection(digestItems(), digestThreads(), digestEntries(), docs, digestOwner, coordStart, coordNow)
+	got := digestSection(baselineFlow, digestItems(), digestThreads(), digestEntries(), docs, digestOwner, coordStart, coordNow)
 	if want := (DigestCurator{Runs: 3, LastRun: "2026-09-10T05:00:00Z"}); got.Curator != want {
 		t.Errorf("curator = %+v, want %+v", got.Curator, want)
 	}
@@ -279,7 +279,7 @@ func TestDigestCountsTheCuratorsRunsAndTheWeeksTheyReached(t *testing.T) {
 	}
 	// a run that ended at a Monday's midnight reaches that week
 	docs = []*workitem.Activity{activityDoc(t, workitem.ActivityCurator, "", "2026-09-14T00:00:00Z")}
-	got = digestSection(digestItems(), digestThreads(), digestEntries(), docs, digestOwner, coordStart, coordNow)
+	got = digestSection(baselineFlow, digestItems(), digestThreads(), digestEntries(), docs, digestOwner, coordStart, coordNow)
 	if wk := got.Weeks[3]; !reflect.DeepEqual(wk.AskedAgain, again(0)) || wk.CuratorRuns != 1 || got.Curator.LastRun != "2026-09-14T00:00:00Z" {
 		t.Errorf("a run at week 38's Monday: week 38 = %+v, curator = %+v", wk, got.Curator)
 	}

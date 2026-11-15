@@ -127,7 +127,7 @@ func coordConflicts() []storygit.Conflict {
 // S-0337: each value of coordination, per ISO week of the window, from the
 // conversations, the conflict log, and the transitions.
 func TestCoordinationCountsEachValuePerWeek(t *testing.T) {
-	got := coordination(coordItems(), coordConversations(), coordConflicts(), true, coordStart, coordNow)
+	got := coordination(baselineFlow, coordItems(), coordConversations(), coordConflicts(), true, coordStart, coordNow)
 	want := Coordination{Logged: true, Weeks: []CoordinationWeek{
 		{
 			Week: "2026-W35", Start: "2026-08-24",
@@ -164,7 +164,7 @@ func TestCoordinationCountsEachValuePerWeek(t *testing.T) {
 // S-0337: the JSON names are those of metrics.md § Coordination, which the
 // dashboard charts.
 func TestCoordinationJSONNames(t *testing.T) {
-	c := coordination(nil, nil, nil, true, coordNow.Add(-time.Hour), coordNow)
+	c := coordination(baselineFlow, nil, nil, nil, true, coordNow.Add(-time.Hour), coordNow)
 	got, err := json.Marshal(c)
 	if err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestCoordinationJSONNames(t *testing.T) {
 // S-0337: a window with nothing in it, and a missing conflict log, which
 // means no conflicts: every week is present with every count 0.
 func TestCoordinationOfAnEmptyWindowAndAMissingLog(t *testing.T) {
-	got := coordination(coordItems(), nil, nil, true, coordStart, coordNow)
+	got := coordination(baselineFlow, coordItems(), nil, nil, true, coordStart, coordNow)
 	if !got.Logged || len(got.Weeks) != 4 || got.Weeks[0].Week != "2026-W35" || got.Weeks[3].Week != "2026-W38" {
 		t.Fatalf("weeks of an empty window: %+v", got)
 	}
@@ -195,7 +195,7 @@ func TestCoordinationOfAnEmptyWindowAndAMissingLog(t *testing.T) {
 // S-0337: a conflict log that could not be read leaves logged false and the
 // weeks without conflicts, and the rest is still counted.
 func TestCoordinationWithAnUnreadableLog(t *testing.T) {
-	got := coordination(coordItems(), coordConversations(), coordConflicts(), false, coordStart, coordNow)
+	got := coordination(baselineFlow, coordItems(), coordConversations(), coordConflicts(), false, coordStart, coordNow)
 	if got.Logged {
 		t.Error("logged is true for a log that could not be read")
 	}

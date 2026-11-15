@@ -495,7 +495,7 @@ func TestClaimsDaysSweepAgreesWithStateAt(t *testing.T) {
 					end := d.Add(24*time.Hour - time.Second)
 					want := 0
 					for _, it := range items {
-						if stateAt(it, end) == workitem.InProgress {
+						if stateAt(baselineFlow, it, end) == workitem.InProgress {
 							want++
 						}
 					}

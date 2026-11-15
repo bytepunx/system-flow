@@ -281,16 +281,16 @@ func costOfDelayReference(items []*workitem.Item, start, now time.Time) CostOfDe
 	for d := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC); !d.After(now); d = d.AddDate(0, 0, 1) {
 		end := d.Add(24*time.Hour - time.Second)
 		p := CostDay{Date: d.Format("2006-01-02"), Outstanding: map[string]float64{}, WithoutValue: map[string]int{}}
-		for _, col := range costColumns {
+		for _, col := range costColumns(baselineFlow) {
 			p.Outstanding[col], p.WithoutValue[col] = 0, 0
 		}
 		for _, it := range valued {
-			if st := stateAt(it, end); slices.Contains(costColumns, st) {
+			if st := stateAt(baselineFlow, it, end); slices.Contains(costColumns(baselineFlow), st) {
 				p.Outstanding[st] += *costValue(it)
 			}
 		}
 		for _, it := range unvalued {
-			if st := stateAt(it, end); slices.Contains(costColumns, st) {
+			if st := stateAt(baselineFlow, it, end); slices.Contains(costColumns(baselineFlow), st) {
 				p.WithoutValue[st]++
 			}
 		}
@@ -326,7 +326,7 @@ func TestCostOfDelaySweepMatchesTheReference(t *testing.T) {
 						}
 					}
 					start := at.Add(-since)
-					got, err := json.Marshal(costOfDelay(items, newTimelines(items), start, at))
+					got, err := json.Marshal(costOfDelay(baselineFlow, items, newTimelines(items), start, at))
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -355,7 +355,7 @@ func TestCostOfDelayBeforeTheFirstItemIsZero(t *testing.T) {
 		if d.Date >= "2026-08-20" {
 			break
 		}
-		for _, col := range costColumns {
+		for _, col := range costColumns(baselineFlow) {
 			if d.Outstanding[col] != 0 || d.WithoutValue[col] != 0 || d.Incurred != 0 {
 				t.Fatalf("%s before the first item = %+v, want zero", d.Date, d)
 			}
