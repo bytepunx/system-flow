@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/lock"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -25,8 +26,9 @@ const (
 	Add      = "add"      // template has it, project does not
 	Merge    = "merge"    // both carry the baseline marker: template above, project below
 	Replace  = "replace"  // project file unchanged since applied (hash matches the lock)
-	Same     = "same"     // identical already
+	Same     = "same"     // identical already, or the project's own workflow file while the template's baseline is unchanged
 	Conflict = "conflict" // project changed it and it is not a marker file
+	Keep     = "keep"     // the project's own workflow file, never written, when the template's baseline changed since the lock (ADR-0307 §4)
 )
 
 // Change is the plan for one path.
@@ -82,6 +84,7 @@ func Compute(root string, m template.Manifest, src template.Source, opt template
 	if _, err := template.Render(m, src.Dir, root, opt); err != nil {
 		return nil, err
 	}
+	keptPath := kept(m, opt)
 	for _, c := range rendered {
 		existing, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(c.Path)))
 		switch {
@@ -89,6 +92,11 @@ func Compute(root string, m template.Manifest, src template.Source, opt template
 			c.Class = Add
 		case err != nil:
 			return nil, err
+		case c.Path == keptPath:
+			c.Class = Same
+			if was := recordedHash(lk, c.Path); was != "" && was != c.NewHash && !bytes.Equal(existing, c.content) {
+				c.Class = Keep
+			}
 		case bytes.Equal(existing, c.content):
 			c.Class = Same
 		case hasMarker(existing) && hasMarker(c.content):
@@ -106,6 +114,34 @@ func Compute(root string, m template.Manifest, src template.Source, opt template
 	}
 	sort.Slice(plan.Changes, func(i, j int) bool { return plan.Changes[i].Path < plan.Changes[j].Path })
 	return plan, nil
+}
+
+// kept is the one rendered path upgrade adds when the project lacks it and
+// never writes once the project has it, whatever its content and the lock:
+// the board's workflow file under the design folder the layout chooses
+// (ADR-0307 §4). Once the project has it, it is Same while the template's
+// baseline is the one the lock recorded, the lock has none, or the project
+// already holds the template's; otherwise Keep, so upgrade says the
+// template's baseline changed, and the new lock records the new hash, so it
+// says so once per change.
+func kept(m template.Manifest, opt template.Options) string {
+	design := m.Layout["design"]
+	if v := opt.Layout["design"]; v != "" {
+		design = v
+	}
+	if design == "" {
+		design = "design"
+	}
+	return workflow.Rel(design)
+}
+
+// recordedHash is the hash the lock recorded for path: empty with no lock
+// or no entry.
+func recordedHash(lk *lock.Lock, path string) string {
+	if lk == nil {
+		return ""
+	}
+	return lk.Files[path]
 }
 
 func hasMarker(b []byte) bool { return bytes.Contains(b, []byte(conventions.Marker)) }
@@ -181,7 +217,7 @@ func Apply(root string, plan *Plan, policy Policy) ([]string, error) {
 	var written []string
 	for _, c := range plan.Changes {
 		switch c.Class {
-		case Same:
+		case Same, Keep:
 			continue
 		case Conflict:
 			if policy[c.Path] != "replace" {
@@ -219,14 +255,21 @@ func NewLock(plan *Plan, src template.Source, version string, now time.Time) *lo
 
 // Relock hashes the current project files for every template path without
 // changing them, so a hand-assembled project can start upgrading. The
-// topics recorded are the template's, so a project's own stay its own.
+// topics recorded are the template's, so a project's own stay its own. For
+// the workflow file upgrade keeps it records the template's hash when the
+// project has the file, since upgrade compares the template's baseline with
+// it, not the project's file (ADR-0307 §4).
 func Relock(root string, m template.Manifest, src template.Source, opt template.Options, now time.Time) (*lock.Lock, error) {
 	l := &lock.Lock{Template: lock.Template{Repo: src.Repo, Ref: src.Ref, Version: m.Version, Applied: now.UTC().Format("2006-01-02T15:04:05Z")}, Files: map[string]string{}, Topics: map[string][]string{}}
+	keptPath := kept(m, opt)
 	opt.Collect = func(rel string, content []byte, mode fs.FileMode) {
 		if owned(rel) {
 			return
 		}
 		if h, err := lock.HashFile(filepath.Join(root, filepath.FromSlash(rel))); err == nil {
+			if rel == keptPath {
+				h = lock.Hash(content)
+			}
 			l.Files[rel] = h
 		}
 		if t := Topics(content); t != nil {
@@ -239,8 +282,16 @@ func Relock(root string, m template.Manifest, src template.Source, opt template.
 	return l, nil
 }
 
-// Describe renders a one-line summary.
+// Describe renders a one-line summary. When the template's baseline
+// workflow changed, it says the project's file is kept and that the
+// operator carries the change over in a story (ADR-0307 §4).
 func Describe(plan *Plan) string {
-	return fmt.Sprintf("%s -> %s: %d add, %d merge, %d replace, %d conflict, %d unchanged", plan.From, plan.To,
+	s := fmt.Sprintf("%s -> %s: %d add, %d merge, %d replace, %d conflict, %d unchanged", plan.From, plan.To,
 		plan.Count(Add), plan.Count(Merge), plan.Count(Replace), plan.Count(Conflict), plan.Count(Same))
+	for _, c := range plan.Changes {
+		if c.Class == Keep {
+			s += fmt.Sprintf("; the template's baseline %s changed: the project's file is kept, carry the change over to it in a story", c.Path)
+		}
+	}
+	return s
 }

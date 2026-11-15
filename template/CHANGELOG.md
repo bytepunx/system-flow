@@ -6,6 +6,7 @@
 
 - S-0748 A role file's to-review and to-backlog conditions become one condition that names any state the workflow has, and the baseline role files use it (patch).
 - S-0748 The baseline orchestrator and planner role files write the state a move goes to as `when: {to: <state>}`, `{event: moved, when: {to: review}}`, `{event: moved, when: {to: backlog}}`, and `{call: item_move, when: {to: backlog}}` and `{call: flai move, when: {to: backlog}}`, with the same triggers and grants as before; a project's role file that names `to-review` or `to-backlog` keeps working, read as `{to: review}` and `{to: backlog}` (patch, ADR-0304).
+- S-0755 The template ships the board's workflow file, `design/workflows/board.md`, the baseline flai carries byte for byte; flai reads a project's own file in place of the baseline and refuses one it cannot run, and `flai upgrade` adds the file to a project that lacks it and never changes it afterwards, saying when the template's baseline changed so that the operator carries the change over in a story (minor, ADR-0301, ADR-0307).
 
 ## 1.1.41 - 2026-11-14
 

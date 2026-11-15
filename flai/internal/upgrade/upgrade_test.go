@@ -3,6 +3,7 @@ package upgrade
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -387,4 +388,195 @@ func TestUpgradeKeepsNarrowedConventionTopics(t *testing.T) {
 	if err != nil || strings.Join(rl.Topics["design/conventions/code-quality.md"], ",") != "all" {
 		t.Errorf("relock must record the template's topics: %v %v", rl.Topics, err)
 	}
+}
+
+// boardTemplate copies the fixture and ships body as its workflow file.
+func boardTemplate(t *testing.T, body string) (template.Manifest, template.Source) {
+	t.Helper()
+	dst := t.TempDir()
+	err := filepath.WalkDir(mini, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(mini, path)
+		if d.IsDir() {
+			return os.MkdirAll(filepath.Join(dst, rel), 0o755)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dst, rel), b, 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	board := filepath.Join(dst, "root", "design", "workflows", "board.md")
+	if err := os.MkdirAll(filepath.Dir(board), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(board, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := template.LoadManifest(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m, template.Source{Repo: dst, Local: true, Dir: dst}
+}
+
+// boardPlan computes the upgrade to the template shipping body, and returns
+// the plan and the workflow file's change in it.
+func boardPlan(t *testing.T, root, body string, lk *lock.Lock) (*Plan, Change, template.Source, template.Manifest) {
+	t.Helper()
+	m, src := boardTemplate(t, body)
+	plan, err := Compute(root, m, src, template.Options{Vars: vars(), Source: src}, lk, "9.9.9")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range plan.Changes {
+		if c.Path == "design/workflows/board.md" {
+			return plan, c, src, m
+		}
+	}
+	t.Fatalf("the plan has no design/workflows/board.md: %s", Describe(plan))
+	return nil, Change{}, src, m
+}
+
+// S-0755: flai upgrade adds the board's workflow file to a project that
+// lacks it, and never writes the project's file afterwards, whatever its
+// content and the lock; when the template's baseline changed since the lock
+// recorded it, the plan says so once, and the new lock records the new hash
+// (ADR-0307 §4).
+func TestUpgradeAddsTheWorkflowFileAndKeepsTheProjects(t *testing.T) {
+	const board = "design/workflows/board.md"
+	const v1, v2, own = "---\ntitle: Board\n---\n\nv1\n", "---\ntitle: Board\n---\n\nv2\n", "---\ntitle: Board\n---\n\nthe project's own\n"
+	notice := "the template's baseline " + board + " changed"
+
+	t.Run("absent is added", func(t *testing.T) {
+		root, lk := render(t)
+		plan, c, _, _ := boardPlan(t, root, v1, lk)
+		if c.Class != Add {
+			t.Fatalf("class %s, want add", c.Class)
+		}
+		if _, err := Apply(root, plan, Policy{}); err != nil {
+			t.Fatal(err)
+		}
+		if b, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(board))); string(b) != v1 {
+			t.Errorf("added %q, want the template's", b)
+		}
+	})
+
+	// project is a rendered project holding its own workflow file, with the
+	// lock recording was for it, or no entry when was is empty.
+	project := func(t *testing.T, was string) (string, *lock.Lock) {
+		root, lk := render(t)
+		p := filepath.Join(root, filepath.FromSlash(board))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(own), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if was != "" {
+			lk.Files[board] = lock.Hash([]byte(was))
+		}
+		return root, lk
+	}
+	untouched := func(t *testing.T, root string) {
+		t.Helper()
+		if b, _ := os.ReadFile(filepath.Join(root, filepath.FromSlash(board))); string(b) != own {
+			t.Errorf("the project's file was written: %q", b)
+		}
+	}
+
+	t.Run("edited by the project, template unchanged, is kept silently", func(t *testing.T) {
+		root, lk := project(t, v1)
+		plan, c, _, _ := boardPlan(t, root, v1, lk)
+		if c.Class != Same || len(plan.Conflicts()) != 0 || strings.Contains(Describe(plan), notice) {
+			t.Fatalf("class %s, conflicts %v: %s", c.Class, plan.Conflicts(), Describe(plan))
+		}
+		if _, err := Apply(root, plan, Policy{board: "replace"}); err != nil {
+			t.Fatal(err)
+		}
+		untouched(t, root)
+	})
+
+	t.Run("template changed since the lock is kept and named once", func(t *testing.T) {
+		root, lk := project(t, v1)
+		plan, c, src, m := boardPlan(t, root, v2, lk)
+		if c.Class != Keep || len(plan.Conflicts()) != 0 || !strings.Contains(Describe(plan), notice) {
+			t.Fatalf("class %s, conflicts %v: %s", c.Class, plan.Conflicts(), Describe(plan))
+		}
+		written, err := Apply(root, plan, Policy{board: "replace"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if slices.Contains(written, board) {
+			t.Errorf("written %v", written)
+		}
+		untouched(t, root)
+		nl := NewLock(plan, src, m.Version, time.Now())
+		if nl.Files[board] != lock.Hash([]byte(v2)) {
+			t.Errorf("the new lock records %s, want the template's new hash", nl.Files[board])
+		}
+		again, err := Compute(root, m, src, template.Options{Vars: vars(), Source: src}, nl, m.Version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if again.Count(Keep) != 0 || strings.Contains(Describe(again), notice) {
+			t.Errorf("the second upgrade names the change again: %s", Describe(again))
+		}
+	})
+
+	t.Run("no lock entry or no lock is kept silently", func(t *testing.T) {
+		root, lk := project(t, "")
+		for name, l := range map[string]*lock.Lock{"no entry": lk, "no lock": nil} {
+			plan, c, _, _ := boardPlan(t, root, v2, l)
+			if c.Class != Same || slices.Contains(plan.Conflicts(), board) || strings.Contains(Describe(plan), notice) {
+				t.Errorf("%s: class %s: %s", name, c.Class, Describe(plan))
+			}
+			if _, err := Apply(root, plan, Policy{board: "replace"}); err != nil {
+				t.Fatal(err)
+			}
+			untouched(t, root)
+		}
+	})
+
+	t.Run("relock records the template's hash", func(t *testing.T) {
+		root, _ := project(t, "")
+		m, src := boardTemplate(t, v1)
+		rl, err := Relock(root, m, src, template.Options{Vars: vars(), Source: src}, time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rl.Files[board] != lock.Hash([]byte(v1)) {
+			t.Errorf("relock records %s for the workflow file, want the template's hash", rl.Files[board])
+		}
+	})
+
+	t.Run("under the design folder the layout chooses", func(t *testing.T) {
+		root, lk := render(t)
+		moved := "plans/workflows/board.md"
+		p := filepath.Join(root, filepath.FromSlash(moved))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(own), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		lk.Files[moved] = lock.Hash([]byte(v1))
+		m, src := boardTemplate(t, v2)
+		plan, err := Compute(root, m, src, template.Options{Vars: vars(), Source: src, Layout: map[string]string{"design": "plans"}}, lk, "9.9.9")
+		if err != nil {
+			t.Fatal(err)
+		}
+		classes := map[string]string{}
+		for _, c := range plan.Changes {
+			classes[c.Path] = c.Class
+		}
+		if classes[moved] != Keep {
+			t.Errorf("%s: class %q, want keep: %s", moved, classes[moved], Describe(plan))
+		}
+	})
 }

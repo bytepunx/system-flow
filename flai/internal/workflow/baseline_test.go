@@ -2,9 +2,29 @@ package workflow
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 )
+
+// templateBoard is the workflow file the template ships, relative to this
+// package.
+var templateBoard = filepath.Join("..", "..", "..", "template", "root", "design", filepath.FromSlash(File))
+
+// S-0755: the template ships the baseline flai carries as its
+// design/workflows/board.md, byte for byte, front matter and body
+// (ADR-0301 §7), so a project made from it runs what a project without it
+// runs.
+func TestBaselineIsTheTemplatesBoard(t *testing.T) {
+	shipped, err := os.ReadFile(templateBoard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(shipped) != baselineFile {
+		t.Errorf("the template's %s is not the embedded baseline, front matter and body; run: cp flai/internal/workflow/baseline/board.md template/root/design/%s", File, File)
+	}
+}
 
 // todaysMoves is the transition map workitem enforced before the board was
 // data (rules.go's allowed, S-0737), for every item type: a task also goes
