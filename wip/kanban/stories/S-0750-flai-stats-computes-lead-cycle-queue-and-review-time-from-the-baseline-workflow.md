@@ -7,7 +7,7 @@ status: backlog
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-14T23:48:54Z
+updated: 2026-11-15T01:56:42Z
 transitions: []
 tags: [cli]
 topics: [cli, analysis]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-11-14T17:44:11Z
 forecast:
   duration: 1h
-  delivery: 2026-11-15T04:18:00Z
-  basis: "Its own forecast of 1h; 12th in the pull order with an in-progress limit of 3, behind S-0738, S-0741, S-0746, S-0739, S-0743, S-0744, S-0742, S-0241, S-0747, S-0748 and S-0749."
+  delivery: 2026-11-15T04:37:00Z
+  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0742, S-0743, S-0741, S-0789, S-0241, S-0747, S-0748 and S-0749."
   by: flai
-  at: 2026-11-14T23:48:54Z
+  at: 2026-11-15T01:56:42Z
 finalized:
   by: orchestrator
   at: 2026-11-14T17:45:56Z
