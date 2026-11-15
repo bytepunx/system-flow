@@ -128,6 +128,66 @@ func TestBaselineByAndEffects(t *testing.T) {
 	}
 }
 
+// S-0738: each transition lists the rules Repo.Move applies on it today, in
+// the order it applies them, as ADR-0301 §3's table names them, each one the
+// vocabulary has, with the severity it gives. A rule written as name:warn
+// sets warn; one written bare takes its rule's default.
+func TestBaselineRulesAreTodays(t *testing.T) {
+	w := Baseline()
+	cases := []struct {
+		typ, from, to string
+		rules         []string
+	}{
+		{TypeStory, "backlog", "ready", []string{"criteria-present", "not-draft", "after-done"}},
+		{TypeStory, "ready", "in-progress", []string{"not-blocked", "not-held", "task-after"}},
+		{TypeStory, "in-progress", "review", []string{"has-task", "no-open-question", "clean-worktree", "criteria-ticked:warn", "kluster-verified"}},
+		{TypeEpic, "review", "done", []string{"children-closed", "criteria-ticked"}},
+		{TypeStory, "review", "done", []string{"children-closed", "criteria-ticked"}},
+		{TypeTask, "review", "done", []string{"children-closed"}},
+		{TypeTask, "in-progress", "done", []string{"children-closed"}},
+		{TypeStory, "review", "in-progress", []string{"reason-given", "not-blocked", "task-after"}},
+		{TypeStory, "in-progress", "ready", []string{"criteria-present", "not-draft", "after-done"}},
+		{TypeStory, "ready", "backlog", nil},
+		{TypeStory, "backlog", "cancelled", []string{"reason-given"}},
+		{TypeTask, "ready", "cancelled", []string{"reason-given"}},
+		{TypeEpic, "in-progress", "cancelled", []string{"reason-given"}},
+		{TypeStory, "review", "cancelled", []string{"reason-given"}},
+		{TypeStory, "cancelled", "backlog", []string{"parent-open"}},
+	}
+	for _, c := range cases {
+		tr, ok := w.Find(c.typ, c.from, c.to)
+		if !ok {
+			t.Errorf("%s %s to %s: no transition", c.typ, c.from, c.to)
+			continue
+		}
+		var got []string
+		for _, r := range tr.Rules {
+			if _, known := LookupRule(r.Rule); !known {
+				t.Errorf("%s %s to %s: rule %s is not in the vocabulary", c.typ, c.from, c.to, r.Rule)
+			}
+			name := r.Rule
+			if r.Severity != "" {
+				name += ":" + r.Severity
+			}
+			got = append(got, name)
+		}
+		if !slices.Equal(got, c.rules) {
+			t.Errorf("%s %s to %s: rules %v, want %v", c.typ, c.from, c.to, got, c.rules)
+		}
+	}
+	tr, _ := w.Find(TypeStory, "in-progress", "review")
+	if sev := tr.Rules[3].SeverityOf(); sev != SeverityWarn {
+		t.Errorf("criteria-ticked to review is %s, want warn", sev)
+	}
+	if sev := tr.Rules[4].SeverityOf(); sev != SeverityWarn {
+		t.Errorf("kluster-verified to review is %s, want its default, warn", sev)
+	}
+	tr, _ = w.Find(TypeStory, "review", "done")
+	if sev := tr.Rules[1].SeverityOf(); sev != SeverityRefuse {
+		t.Errorf("criteria-ticked to done is %s, want its default, refuse", sev)
+	}
+}
+
 // S-0737: the baseline's timers are today's lead, cycle, queue, and review
 // time, in ADR-0301 §5's forms.
 func TestBaselineTimersAreTodays(t *testing.T) {
