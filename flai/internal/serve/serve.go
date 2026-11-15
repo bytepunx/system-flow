@@ -30,6 +30,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/watch"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -313,6 +314,11 @@ type Options struct {
 	// project it serves; nil runs none, and such a start is refused, naming
 	// flai image ensure, as outside flai serve's run.
 	ImageEnsure ImageEnsure
+	// Workflow is the workflow the served projects run, which the kluster,
+	// forge, and merge queue passes read a state's kind and a transition's
+	// effect from (ADR-0301); nil runs the baseline flai carries. A test sets
+	// it to serve a board with renamed and added states.
+	Workflow *workflow.Workflow
 
 	// imageJobs runs the image jobs ImageEnsure does, one at a time across
 	// every served project, which a container start asks for and waits on
