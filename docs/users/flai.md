@@ -2247,6 +2247,22 @@ A front-matter field flai does not know, on a work item, a thread, a conversatio
 
 A work item file that does not parse, or cannot be read, is one error, `item.unreadable`, on its path, line 1: `does not parse: <error>; flai leaves it out of every list of items until it parses: fix its front matter or remove it`, or `cannot be read: …; … make it readable or remove it` (S-0716, I-0344). flai lists and checks every other item. The check leaves out what follows only from the file's absence: `item.parent-missing`, a `story.after` or `task.after` entry that does not exist, `narrative.orphan`, `board.order` on its ID, and the markdown lint's findings on the file. `markdown.conflict-marker` stays. Scoped to a story, the file is the story's when its branch changes the file, or the file is named for the story or a task its body lists. Otherwise it is outside, a note that does not stop the close-out, and `--record-issues` checks it again under the checked-write lock and records it only if it still does not parse ([Work item hierarchy and schema](../../design/system/work-hierarchy.md#front-matter-schema)).
 
+`flai check` checks the board's workflow too (S-0741): your `design/workflows/board.md` when you have one, else the baseline flai carries, which passes every check. Each finding names the state, transition, timer, or item and says what to change in the file.
+
+| Code | Means | What clears it |
+|------|-------|----------------|
+| `workflow.file` | The file has no front matter, misses a required field, or gives a value outside the allowed ones | Fix the field the finding names, such as `states[2].kind` |
+| `workflow.rule` | A transition names a rule flai does not implement | Name one of the rules the finding lists, or ask for a story that adds yours |
+| `workflow.timer` | A timer names a state the file lacks | Name a state of the file, or add the state |
+| `workflow.state` | The file lacks exactly one initial state, one `accepted` state, or one `cancelled` state, or a transition leaves the accepted state | Mark one queue state `initial: true`, give one state each of the two closing kinds, and take the accepted state out of every `from` |
+| `workflow.unreachable` | No chain of moves from the initial state reaches a state (a warning) | Add a transition into it, or remove it and list its name in the `aliases` of the state its items go to |
+| `workflow.dead-end` | No chain of moves leads from a state to the accepted or the cancelled state, so an item there can never close | Add a transition out of it that leads there |
+| `workflow.no-pull` | No transition, or more than one, gives stories the `pull` effect, or it does not go from a queue state to an active one | Give exactly one story move from a queue state to an active one `effects: [pull]` |
+| `workflow.no-accept` | No transition, or more than one, gives stories the `accept` effect, or it does not go from a waiting state to the accepted one by `[acceptance]` | Give exactly one story move from a waiting state to the accepted one `by: [acceptance]` and `effects: [accept]` |
+| `workflow.item` | An item's `status`, or a state in its history, is neither a state of the workflow nor an alias of one | Add the state back, or add its name to the `aliases` of the state its items go to |
+
+Every finding is an error but `workflow.unreachable`, which is a warning; `--strict` fails on both. The rules on items read what kind of state an item is in, not its name: a story in a state of kind `waiting` needs tasks as one in review does, and the WIP limits and the pull order follow the states that take them ([Workflow and board policies](../../design/system/workflow.md)).
+
 ## Run the tests for what changed
 
 `flai test` runs the project's test and lint tiers for the files and folders you give it, and answers pass or the first findings (S-0273). It runs in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder.
