@@ -4,10 +4,10 @@ title: "S-0788 cannot be accepted yet: story/S-0788 is 5 commits behind main and
 anchor:
   path: wip/kanban/stories/S-0788-stories-in-review-that-cannot-be-merged-need-an-action.md
   item: S-0788
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-11-14T23:15:47Z
-updated: 2026-11-14T23:15:47Z
+updated: 2026-11-15T01:57:09Z
 ---
 
 # TH-1205 S-0788 cannot be accepted yet: story/S-0788 is 5 commits behind main and its close-out stops at sync
@@ -30,3 +30,6 @@ sync: the branch does not contain main, 5 commits behind it, which change paths 
 ```
 
 Syncing the branch is the story's work, not mine.
+
+### 2026-11-15T01:57:09Z alex
+Resolved: S-0788 was accepted

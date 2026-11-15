@@ -4,10 +4,10 @@ title: T-3203 of S-0739 changed paths S-0788's claim covers
 from: S-0739
 to: S-0788
 about: [design/system/flai-cli.md]
-status: open
-participants: [agent-S-0739]
+status: closed
+participants: [agent-S-0739, alex]
 created: 2026-11-15T00:25:41Z
-updated: 2026-11-15T00:25:41Z
+updated: 2026-11-15T01:57:09Z
 ---
 
 # MS-0565 T-3203 of S-0739 changed paths S-0788's claim covers
@@ -20,3 +20,6 @@ Between S-0739 and S-0788, about `design/system/flai-cli.md`.
 T-3203 of S-0739 changed paths S-0788's claim covers.
 
 T-3203, The board view gives the workflow's columns in order with each one's kind and WIP limit, with a shared test workflow that renames a state and adds one, committed 691d744 on story/S-0739, `feat: [S-0739] the board view gives the workflow's columns in order with each one's kind and WIP limit`, changing `design/system/flai-cli.md`. It reaches the main branch when S-0739 is accepted; `git show 691d744` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-15T01:57:09Z alex
+Closed: S-0788 was accepted

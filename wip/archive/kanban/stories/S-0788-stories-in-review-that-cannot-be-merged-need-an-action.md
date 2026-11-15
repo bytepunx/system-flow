@@ -3,10 +3,10 @@ id: S-0788
 type: story
 nature: improvement
 title: Stories in review that cannot be merged need an action
-status: review
+status: done
 owner: alex
 created: 2026-11-14T18:02:48Z
-updated: 2026-11-14T23:14:06Z
+updated: 2026-11-15T01:57:09Z
 transitions:
   - to: ready
     at: 2026-11-14T18:02:49Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-14T23:14:06Z
     by: agent-S-0788
+  - to: done
+    at: 2026-11-15T01:57:09Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src, design/adrs/0302-the-operator-sends-a-review-story-that-cannot-be-accepted-back-to-its-agent-to.md, design/adrs/README.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/accept.go, flai/cmd/accept_resolve.go, flai/cmd/accept_resolve_test.go, flai/internal/hostapi/guardreads_test.go, flai/internal/hostapi/writes_items.go, flai/internal/hostapi/writes_items_test.go, flai/internal/hostapi/writes_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 agent:

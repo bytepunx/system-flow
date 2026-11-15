@@ -4,10 +4,10 @@ title: T-3221 of S-0744 changed paths S-0788's claim covers
 from: S-0744
 to: S-0788
 about: [docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/accept.go]
-status: open
-participants: [agent-S-0744, flai]
+status: closed
+participants: [agent-S-0744, flai, alex]
 created: 2026-11-15T01:09:54Z
-updated: 2026-11-15T01:36:36Z
+updated: 2026-11-15T01:57:09Z
 ---
 
 # MS-0566 T-3221 of S-0744 changed paths S-0788's claim covers
@@ -37,3 +37,6 @@ S-0744 adds one paragraph to flai move's help, so its line in docs/users/flai-re
 T-3227 of S-0744 changed paths S-0788's claim covers.
 
 T-3227, flai accept makes the transition with the acceptance effect, and the acceptance preview lists the blockers its rules give, committed 7f2fb5c on story/S-0744, `feat: [S-0744] flai accept makes the transition with the accept effect and its preview lists the blockers its rules give`, changing `docs/users/flai.md`, `flai/cmd/accept.go`. It reaches the main branch when S-0744 is accepted; `git show 7f2fb5c` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-15T01:57:09Z alex
+Closed: S-0788 was accepted
