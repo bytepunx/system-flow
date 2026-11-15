@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-11-15T07:18:50Z
+updated: 2026-11-15T07:47:13Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0739](S-0739.md) | workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name | review | agent-S-0739 | 2026-11-15T01:15:41Z |
+| [S-0739](S-0739.md) | workitem's epic following, board view, task plan, holds, order, and promotion read a state's kind instead of its name | review | agent-S-0739 | 2026-11-15T07:42:39Z |
 | [S-0742](S-0742.md) | flai serve starts, restarts, and stops agents, plans again, and finds its reasons by a state's kind and a transition's effect instead of a state's name | review | agent-S-0742 | 2026-11-15T02:21:13Z |
 | [S-0743](S-0743.md) | flai serve's kluster deploys, forge pass, and merge queue act on a state's kind and a transition's effect instead of review and done | review | agent-S-0743 | 2026-11-15T02:20:26Z |
 | [S-0744](S-0744.md) | flai move, flai accept, the formula commands, and the acceptance preview act on a transition's effect and who may make it instead of a state's name | review | agent-S-0744 | 2026-11-15T01:47:16Z |
@@ -18,7 +18,7 @@ updated: 2026-11-15T07:18:50Z
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 264 | 1370.1130 USD | 161161 | 2026-11-14T17:44:45Z |
-| [orchestrator](orchestrator.md) | 3570 | 2197.8637 USD | 1566182 | 2026-11-15T07:18:24Z |
+| [planner](planner.md) | 265 | 1372.3815 USD | 161541 | 2026-11-15T07:44:09Z |
+| [orchestrator](orchestrator.md) | 3580 | 2199.4106 USD | 1566537 | 2026-11-15T07:46:55Z |
 | [analyzer](analyzer.md) | 2 | 20.4997 USD | 1247 | 2026-11-07T08:18:10Z |
-| [curator](curator.md) | 210 | 312.3844 USD | 33948 | 2026-11-15T01:59:56Z |
+| [curator](curator.md) | 211 | 314.1018 USD | 34089 | 2026-11-15T07:20:28Z |
