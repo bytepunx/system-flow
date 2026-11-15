@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/check/roles_test.go, flai/internal/roles/roles_test.go]
 usage:
   source: log
-  seconds: 1431
+  seconds: 1433
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 389
       cache_read: 5679342
       cache_write: 472409
-      cost: 2.3253
+      cost: 2.3262
 ---
 # T-3231 The roles package has one condition naming the state a move goes to, and treats to-review and to-backlog as the ADR decides
 

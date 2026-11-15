@@ -3,11 +3,11 @@ id: T-3240
 type: task
 nature: feature
 title: strategic-agents.md, the roles READMEs, and the operators' and users' guides list the move condition in place of to-review and to-backlog
-status: in-progress
+status: done
 parent: S-0748
 owner: alex
 created: 2026-11-12T16:08:54Z
-updated: 2026-11-15T20:40:52Z
+updated: 2026-11-15T21:04:39Z
 transitions:
   - to: ready
     at: 2026-11-15T20:40:52Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-15T20:40:52Z
     by: agent-S-0748
+  - to: done
+    at: 2026-11-15T21:04:39Z
+    by: agent-S-0748
 stream: S-0748
 tags: [cli, template]
-touches: [design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
 after: [T-3231]
+usage:
+  source: log
+  seconds: 1393
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 155
+      cache_read: 1286856
+      cache_write: 118316
+      cost: 0.5314
 ---
 # T-3240 strategic-agents.md, the roles READMEs, and the operators' and users' guides list the move condition in place of to-review and to-backlog
 

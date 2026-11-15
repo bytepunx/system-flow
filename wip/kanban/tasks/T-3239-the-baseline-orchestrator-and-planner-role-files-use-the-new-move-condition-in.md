@@ -3,11 +3,11 @@ id: T-3239
 type: task
 nature: feature
 title: The baseline orchestrator and planner role files use the new move condition in the template, in flai's embedded copies, and in this project
-status: in-progress
+status: done
 parent: S-0748
 owner: alex
 created: 2026-11-12T16:08:51Z
-updated: 2026-11-15T20:40:52Z
+updated: 2026-11-15T21:04:26Z
 transitions:
   - to: ready
     at: 2026-11-15T20:40:51Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-15T20:40:52Z
     by: agent-S-0748
+  - to: done
+    at: 2026-11-15T21:04:26Z
+    by: agent-S-0748
 stream: S-0748
 tags: [cli, template]
-touches: [template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml]
+touches: [template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md]
 after: [T-3231]
+usage:
+  source: log
+  seconds: 1393
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 92
+      cache_read: 750605
+      cache_write: 77031
+      cost: 0.313
 ---
 # T-3239 The baseline orchestrator and planner role files use the new move condition in the template, in flai's embedded copies, and in this project
 

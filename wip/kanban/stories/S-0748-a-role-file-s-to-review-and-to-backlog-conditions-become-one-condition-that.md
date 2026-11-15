@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:00:44Z
-updated: 2026-11-15T20:40:27Z
+updated: 2026-11-15T21:11:42Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:18Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0748
 tags: [cli, template]
 topics: [cli, template, orchestration, conventions]
-touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, flai/internal/serve/replan.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, template/template.yaml, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/settings.md, docs/operators/index.md, docs/users/flai.md, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md, design/adrs/README.md, flai/internal/roles/roles_test.go]
+touches: [flai/internal/roles/conditions.go, flai/internal/roles/conditions_test.go, flai/internal/roles/roles.go, flai/internal/check/roles_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/serve/orchestrate_reasons.go, template/root/design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/planner.md, flai/internal/roles/baseline/orchestrator.md, flai/internal/roles/baseline/planner.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, template/CHANGELOG.md, design/system/strategic-agents.md, design/workflows/roles/README.md, template/root/design/workflows/roles/README.md, docs/operators/index.md, docs/users/flai.md, design/adrs/0304-a-role-file-names-the-state-a-move-goes-to-with-one-condition-to-written-when.md, design/adrs/README.md, flai/internal/roles/roles_test.go, flai/cmd/guard_roles_test.go, flai/internal/guard/guard_rules.go, flai/internal/hostapi/settings.go, flai/internal/serve/orchestrate_reasons_test.go, flai/internal/serve/role_events_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/settings_roles_test.go]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -26,21 +26,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1677
+  seconds: 3098
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-15
-      ceremony: 2
+      ceremony: 3
       test_runs: 1
-      work: 27
+      work: 32
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 659
-      cache_read: 10052103
-      cache_write: 724901
-      cost: 4.0736
+      input: 274
+      output: 1367
+      cache_read: 15360462
+      cache_write: 1173920
+      cost: 6.2523
   strategic:
     - kind: orchestrator
       seconds: 25
@@ -74,11 +74,11 @@ A role file names the state a move goes to with one condition that takes any sta
 
 ## Acceptance criteria
 
-- [ ] `flai/internal/roles/conditions.go` has one condition, as the ADR names it, that qualifies a `moved` event and the `item_move` and `flai move` calls with the state the move goes to, and refuses at load a state the workflow lacks
-- [ ] The baseline role files in `template/` and in `flai/internal/roles/baseline/`, byte for byte, and this project's own under `design/workflows/roles/`, use the new condition, and the orchestrator's and the planner's triggers and grants are what they are today
-- [ ] A role file naming `to-review` or `to-backlog` either works as before or gets a `roles.file` finding naming the condition to write instead, as the ADR decides
-- [ ] `flai guard` and flai serve's triggers read the new condition, and a test shows a role started on a move into a state added between `in-progress` and `review`
-- [ ] `design/system/strategic-agents.md` § Role files and `design/workflows/roles/README.md`, here and in the template, list the condition, and `template/CHANGELOG.md` records the change
+- [x] `flai/internal/roles/conditions.go` has one condition, as the ADR names it, that qualifies a `moved` event and the `item_move` and `flai move` calls with the state the move goes to, and refuses at load a state the workflow lacks
+- [x] The baseline role files in `template/` and in `flai/internal/roles/baseline/`, byte for byte, and this project's own under `design/workflows/roles/`, use the new condition, and the orchestrator's and the planner's triggers and grants are what they are today
+- [x] A role file naming `to-review` or `to-backlog` either works as before or gets a `roles.file` finding naming the condition to write instead, as the ADR decides
+- [x] `flai guard` and flai serve's triggers read the new condition, and a test shows a role started on a move into a state added between `in-progress` and `review`
+- [x] `design/system/strategic-agents.md` § Role files and `design/workflows/roles/README.md`, here and in the template, list the condition, and `template/CHANGELOG.md` records the change
 
 ## Tasks
 

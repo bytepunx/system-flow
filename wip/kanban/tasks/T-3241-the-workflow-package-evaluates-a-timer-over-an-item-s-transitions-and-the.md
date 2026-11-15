@@ -32,7 +32,7 @@ usage:
       output: 249
       cache_read: 2091259
       cache_write: 184848
-      cost: 0.8604
+      cost: 0.8608
 ---
 # T-3241 The workflow package evaluates a timer over an item's transitions, and the baseline names lead, cycle, queue, and review time
 

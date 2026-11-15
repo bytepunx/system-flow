@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2204.9104
-accrued_seconds: 1567565
-tasks_completed: 3615
-last_run: 2026-11-15T21:00:42Z
+accrued_cost: 2207.5937
+accrued_seconds: 1568134
+tasks_completed: 3632
+last_run: 2026-11-15T21:14:47Z
 ---
 
 # Orchestrator activity
@@ -25340,6 +25340,125 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0741
 - Seconds: 54
 - Cost: 0.2402 USD, estimated
+
+### 2026-11-15T21:01:03Z
+
+- Summary: S-0741 passed review and is now first in the merge queue. The queue will land it as the orchestrator.
+- Items: none
+- Seconds: 21
+- Cost: 0.2664 USD, estimated
+
+### 2026-11-15T21:03:31Z
+
+- Summary: Ready column empty and no promote candidate (TH-1224): started the planner for S-0790, which flai plan --candidates lists as a story without a plan (no touches, forecast, cost of delay, or tasks). Left E-0034 alone: alex's entry on TH-1201 confirms S-0736's acceptance and asks for no change to the plan. S-0241 stays a draft per TH-1165. TH-1224's last entry is flai serve's notice, so I left it alone.
+- Items: S-0790
+- Seconds: 61
+- Cost: 0.1765 USD, estimated
+
+### 2026-11-15T21:03:54Z
+
+- Summary: Enqueued S-0791, the publish formula instance, at 93f1951. Its close-out passed at the branch head, and the verifier matched criteria 1-3 to T-3373, T-3374, and T-3375, all done. It is second in the queue, after S-0741, whose batch 20261115-210346 is running. Policy throughput: S-0791's forecast is "now".
+- Items: S-0791
+- Seconds: 23
+- Cost: 0.0628 USD, estimated
+
+### 2026-11-15T21:04:19Z
+
+- Summary: I've handled all three reasons. I enqueued S-0791 in the merge queue, and I started the planner for S-0790 because nothing could go to ready.
+- Items: none
+- Seconds: 25
+- Cost: 0.3215 USD, estimated
+
+### 2026-11-15T21:05:40Z
+
+- Summary: Answered TH-1225, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0790
+- Seconds: 24
+- Cost: 0.0998 USD, estimated
+
+### 2026-11-15T21:05:57Z
+
+- Summary: Set S-0790's first cost of delay input, time_lost_per_cycle 2m (planner's recommended figure, about 5 USD/week), under plan_backlog_stories; replied on TH-1225 and resolved it. Left TH-1224 alone: its last entry is flai serve's notice.
+- Items: S-0790, TH-1225, TH-1224
+- Seconds: 17
+- Cost: 0.0265 USD, estimated
+
+### 2026-11-15T21:06:20Z
+
+- Summary: I've dealt with both reasons this run was started for, and the run is over.
+- Items: none
+- Seconds: 23
+- Cost: 0.1992 USD, estimated
+
+### 2026-11-15T21:08:12Z
+
+- Summary: TH-1224 (board starved; review full 5 of 5): asked flai serve for fresh close-outs of S-0739, S-0742, and S-0747. Each passed at its branch head, but the accept dry run blocks on verify_behind_main (ADR-0291), so I left all three in review for a later run to verify and enqueue. S-0741 and S-0791 are already in the merge queue. S-0790's planner is running. S-0241 stays a draft (TH-1165). TH-1224's last entry is a flai serve notice, so I did not reply on it.
+- Items: S-0739, S-0742, S-0747
+- Seconds: 74
+- Cost: 0.2623 USD, estimated
+
+### 2026-11-15T21:09:51Z
+
+- Summary: S-0739, S-0742, and S-0747 are left in review. Each fresh close-out stopped at sync, with branches 37, 51, and 51 commits behind main. The verifier matched every criterion at da74987, 7a2dfc7, and be8fafb. queue_add refused all three: "verify_failed ... at its step sync". I opened TH-1226, TH-1227, and TH-1228, recommending flai stream sync and a new close-out, then an enqueue. Policy throughput; no figure applied, since nothing was enqueued.
+- Items: S-0739, S-0742, S-0747
+- Seconds: 99
+- Cost: 0.3268 USD, estimated
+
+### 2026-11-15T21:10:20Z
+
+- Summary: The board is still starved. Three of the five stories in review (S-0739, S-0742, S-0747) can't move until each is rebased onto main.
+- Items: none
+- Seconds: 29
+- Cost: 0.1576 USD, estimated
+
+### 2026-11-15T21:11:50Z
+
+- Summary: Finalized draft S-0790 under finalize_drafts: flai promote --drafts lists it complete (forecast 1h, value 5 from time_lost_per_cycle 2m), and its touches fit I-0375's instances
+- Items: S-0790
+- Seconds: 27
+- Cost: 0.1594 USD, estimated
+
+### 2026-11-15T21:12:07Z
+
+- Summary: Promoted S-0790 to ready under promote_to_ready: flai promote --candidates ranks it 1 of 1 under throughput (forecast 1h), and ready had room (0 of 10)
+- Items: S-0790
+- Seconds: 17
+- Cost: 0.0283 USD, estimated
+
+### 2026-11-15T21:12:24Z
+
+- Summary: Ordered the ready column under order_ready with flai order --by throughput --apply: S-0790 (1h) is the only ready story
+- Items: S-0790
+- Seconds: 17
+- Cost: 0.0000 USD
+
+### 2026-11-15T21:13:05Z
+
+- Summary: I finalized S-0790, moved it to ready, and it is now the first story in the pull order.
+- Items: none
+- Seconds: 41
+- Cost: 0.1819 USD, estimated
+
+### 2026-11-15T21:14:08Z
+
+- Summary: Answered TH-1229, citing design/system/workflow.md § The pull order (S-0057)
+- Items: S-0790
+- Seconds: 32
+- Cost: 0.1447 USD, estimated
+
+### 2026-11-15T21:14:25Z
+
+- Summary: Approved and resolved TH-1229, planner-S-0790's plan (T-3380 to T-3383, 4 layers, 12 file touches, forecast 1h, value 5 USD/week), under plan_backlog_stories: the tasks cover both criteria and the figures state their basis. S-0790 is already ready, first in the order; it waits on review (5 of 5).
+- Items: S-0790, T-3380, T-3381, T-3382, T-3383, TH-1229
+- Seconds: 17
+- Cost: 0.0323 USD, estimated
+
+### 2026-11-15T21:14:47Z
+
+- Summary: I approved the S-0790 plan and resolved TH-1229, its plan thread. That settles both reasons this run was started for.
+- Items: none
+- Seconds: 22
+- Cost: 0.2373 USD, estimated
 
 ## Refusals
 

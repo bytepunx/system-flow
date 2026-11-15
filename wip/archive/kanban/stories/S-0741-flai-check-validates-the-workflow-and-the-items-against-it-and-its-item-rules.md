@@ -3,11 +3,11 @@ id: S-0741
 type: story
 nature: feature
 title: flai check validates the workflow and the items against it, and its item rules read a state's kind instead of its name
-status: review
+status: done
 parent: E-0034
 owner: alex
 created: 2026-11-12T15:59:17Z
-updated: 2026-11-15T20:59:12Z
+updated: 2026-11-15T21:16:20Z
 transitions:
   - to: ready
     at: 2026-11-14T17:47:34Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-15T20:59:12Z
     by: agent-S-0741
+  - to: done
+    at: 2026-11-15T21:16:20Z
+    by: orchestrator
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_workflow.go, flai/internal/check/workflow_test.go, flai/internal/check/check_items.go, flai/internal/check/items_test.go, flai/internal/check/scope.go, design/system/flai-cli.md, docs/users/flai.md, flai/internal/workflow/workflow.go, flai/internal/workflow/workflow_test.go, flai/internal/check/concurrent_test.go, flai/internal/check/itemwrite.go]
@@ -109,3 +112,18 @@ finalized:
 - Tasks: T-3204 (the findings) and T-3205 (the item rules) together, no path in common; then T-3211 (the documents), which lists T-3204's codes.
 - Forecast 29m, as `flai forecast` gives it for size 16. `check_roles.go` is a close model for the findings.
 - Cost of delay: 51.66 USD a week, as `flai cod` gives it: this story's share of E-0034's 1500.00 USD a week, the operator's `time_lost_per_cycle: 10h` (TH-1115) at 150 USD an hour, by its forecast of 29m over the 14h2m of the epic's 19 open stories. Kept: the epic's outcome needs every story, so a share by size is the split that fits.
+
+### Accepted by the orchestrator
+
+- Verified: a1074b83c7839e72cf35ce41097b283cbd3182fc
+- Batch: 20261115-210346
+- Enqueued verified: d01467199d13f8bf3553efa9063e2491e58d1c64
+- At: 2026-11-15T21:16:20Z
+
+Verdict: pass at d01467199d13f8bf3553efa9063e2491e58d1c64
+- 1: flai/internal/check/check_workflow.go, flai/internal/check/check.go, flai/internal/workflow/workflow.go
+- 2: flai/internal/check/workflow_test.go
+- 3: flai/internal/check/check_items.go, flai/internal/check/scope.go
+- 4: flai/internal/check/workflow_test.go, flai/internal/check/items_test.go, flai/internal/workflow/workflow_test.go
+- 5: flai/internal/check/concurrent_test.go, flai/internal/check/items_test.go
+- 6: design/system/flai-cli.md, docs/users/flai.md

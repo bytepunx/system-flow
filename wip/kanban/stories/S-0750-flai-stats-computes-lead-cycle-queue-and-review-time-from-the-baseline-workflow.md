@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0034
 owner: alex
 created: 2026-11-12T16:01:11Z
-updated: 2026-11-15T20:56:18Z
+updated: 2026-11-15T21:12:43Z
 transitions:
   - to: ready
     at: 2026-11-15T02:00:20Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0750
 tags: [cli]
 topics: [cli, analysis]
-touches: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md, flai/internal/metrics/claims_test.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/digest_test.go]
+touches: [design/adrs/README.md, design/system/metrics.md, flai/internal/workflow/timers.go, flai/internal/workflow/timers_test.go, flai/internal/workflow/baseline/board.md, flai/internal/metrics/metrics.go, flai/internal/metrics/metrics_test.go, flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go, design/adrs/0305-lead-cycle-queue-and-review-time-and-time-in-state-are-readings-of-the-workflow.md, flai/internal/metrics/claims_test.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/costofdelay_test.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/concurrency.go, flai/internal/metrics/reopen_test.go, flai/internal/metrics/stats_golden_test.go, flai/internal/metrics/testdata/good.stats.golden.json]
 after: [S-0737]
 agent:
   harness: claude-code
@@ -26,19 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1615
+  seconds: 2598
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-11-15
-      work: 29
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 190
-      output: 1100
-      cache_read: 11819517
-      cache_write: 747624
-      cost: 4.7504
+      input: 310
+      output: 1726
+      cache_read: 20257492
+      cache_write: 1023184
+      cost: 8.0477
   strategic:
     - kind: orchestrator
       seconds: 78
@@ -73,11 +73,11 @@ Time tracking reads the workflow. The metrics definitions are the contract betwe
 ## Acceptance criteria
 
 - [ ] An accepted ADR changes `metrics.md`'s definitions of lead, cycle, queue, and review time, and time in state, to readings of the workflow's timers, and says how a timer reads an item's transitions: its start and end points, or the sum of the time in the states it names, and how a reopened or cancelled item counts
-- [ ] `flai/internal/workflow` evaluates a timer over an item's transitions, and the baseline workflow names lead, cycle, queue, and review time as the ADR gives them
-- [ ] `flai/internal/metrics` computes each per item value and aggregate from the baseline's timers, and its other figures, claims, waiting, coordination, cost of delay, and close-outs included, read a state's kind instead of its name
+- [x] `flai/internal/workflow` evaluates a timer over an item's transitions, and the baseline workflow names lead, cycle, queue, and review time as the ADR gives them
+- [x] `flai/internal/metrics` computes each per item value and aggregate from the baseline's timers, and its other figures, claims, waiting, coordination, cost of delay, and close-outs included, read a state's kind instead of its name
 - [ ] `flai stats --json` gives the same bytes as before on `flai/internal/metrics/testdata/good` and on `testdata/windows.golden.json`, which this story does not change, and flaiover's tests on those fixtures pass unchanged
-- [ ] Tests compute the timers against a workflow with a state renamed and one added between `in-progress` and `review`, and show cycle time spanning the added state
-- [ ] `design/system/metrics.md` defines each figure from its timer and links the ADR
+- [x] Tests compute the timers against a workflow with a state renamed and one added between `in-progress` and `review`, and show cycle time spanning the added state
+- [x] `design/system/metrics.md` defines each figure from its timer and links the ADR
 
 ## Tasks
 

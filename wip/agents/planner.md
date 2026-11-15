@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 1372.3815
-accrued_seconds: 161541
-tasks_completed: 265
-last_run: 2026-11-15T07:44:09Z
+accrued_cost: 1376.3404
+accrued_seconds: 162109
+tasks_completed: 266
+last_run: 2026-11-15T21:12:55Z
 ---
 
 # Planner activity
@@ -2114,3 +2114,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0792, T-3376, T-3377, T-3378, T-3379
 - Seconds: 380
 - Cost: 2.2685 USD, estimated
+
+### 2026-11-15T21:12:55Z
+
+- Summary: I planned S-0790 and created tasks T-3380, T-3381, T-3382 and T-3383, revising none, with touches, a 1h forecast (flai said 26m), 5 USD/week cost of delay and plan thread TH-1229; the cause is three agent starts at 23:49:15Z whose unlocked `board.md` saves left S-0738 in the pull order.
+- Trigger: orchestrator
+- Items: S-0790, T-3380, T-3381, T-3382, T-3383
+- Seconds: 568
+- Cost: 3.9589 USD, estimated

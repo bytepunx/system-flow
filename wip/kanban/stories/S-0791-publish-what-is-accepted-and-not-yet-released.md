@@ -3,16 +3,19 @@ id: S-0791
 type: story
 nature: improvement
 title: Publish what is accepted and not yet released
-status: in-progress
+status: review
 owner: alex
 created: 2026-11-15T07:18:49Z
-updated: 2026-11-15T20:59:23Z
+updated: 2026-11-15T21:01:55Z
 transitions:
   - to: ready
     at: 2026-11-15T07:18:50Z
     by: system-flow
   - to: in-progress
     at: 2026-11-15T20:59:23Z
+    by: agent-S-0791
+  - to: review
+    at: 2026-11-15T21:01:55Z
     by: agent-S-0791
 tags: []
 touches: [wip/kanban/stories/S-0791-publish-what-is-accepted-and-not-yet-released.md]
@@ -23,31 +26,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 94
-  estimated: true
-  priced_by: estimate
+  seconds: 162
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 1
-      work: 14
+      ceremony: 2
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 310
-      cache_read: 1725233
-      cache_write: 152456
-      cost: 0.71
+      input: 58
+      output: 8566
+      cache_read: 4002407
+      cache_write: 165733
+      cost: 2.2979
   strategic:
     - kind: orchestrator
-      seconds: 76
+      seconds: 99
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 24
-          output: 142
-          cache_read: 929169
-          cache_write: 90690
-          cost: 0.3071
+          input: 28
+          output: 190
+          cache_read: 1135219
+          cache_write: 92760
+          cost: 0.3699
 formula: publish
 ---
 # S-0791 Publish what is accepted and not yet released
@@ -58,9 +60,9 @@ Publish what is accepted and not yet released, by the project's release policy.
 
 ## Acceptance criteria
 
-- [ ] Fetch the remote's branch and tags
-- [ ] Evaluate the release policy, stopping unless it is met
-- [ ] Publish what is accepted and not yet released
+- [x] Fetch the remote's branch and tags
+- [x] Evaluate the release policy, stopping unless it is met
+- [x] Publish what is accepted and not yet released
 
 ## Tasks
 - T-3373 Fetch the remote's branch and tags
@@ -70,3 +72,5 @@ Publish what is accepted and not yet released, by the project's release policy.
 ## Notes
 
 Made by `flai formula run publish` from `design/workflows/formulas/publish.md`, with the inputs `judgement=`.
+
+Published on 2026-11-15: flai 1.97.0 → 1.98.0 (minor), tag `flai/v1.98.0`, with S-0743, S-0744, and S-0749. The tag and the branch were pushed.

@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/waiting.go, flai/internal/metrics/coordination.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/costorder.go, flai/internal/metrics/forecast.go, flai/internal/metrics/digest.go, flai/internal/metrics/usage.go, flai/internal/metrics/strategic.go, flai/internal/metrics/spend.go, flai/internal/metrics/metrics.go]
 usage:
   source: log
-  seconds: 1443
+  seconds: 1453
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 525
-      cache_read: 5524627
-      cache_write: 317433
-      cost: 2.2083
+      input: 95
+      output: 527
+      cache_read: 5662429
+      cache_write: 320367
+      cost: 2.2625
 ---
 # T-3237 The metrics' claims, waiting, coordination, cost of delay, close-outs, and spend read a state's kind instead of its name
 
