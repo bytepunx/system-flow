@@ -1,6 +1,8 @@
 package workitem
 
 import (
+	"errors"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -373,5 +375,478 @@ func TestFollowsReadsTheBaseline(t *testing.T) {
 		if got := Follows(tc.typ, tc.from, tc.to); got != tc.want {
 			t.Errorf("Follows(%s, %s, %s) = %v, want %v", tc.typ, tc.from, tc.to, got, tc.want)
 		}
+	}
+}
+
+// S-0738: the tests below hold Repo.Move to the rules its workflow lists,
+// in their order, each with today's words.
+
+// statusRunner answers every git command with out and err, as git status in
+// a story's worktree would.
+type statusRunner struct {
+	out string
+	err error
+}
+
+func (s statusRunner) Run(string, string, ...string) (string, error) { return s.out, s.err }
+
+func (s statusRunner) RunInput(string, string, string, ...string) (string, error) {
+	return s.out, s.err
+}
+
+func (s statusRunner) LookPath(name string) (string, error) { return name, nil }
+
+// dirtyWorktree gives the story a worktree whose git status answers out and
+// err.
+func dirtyWorktree(t *testing.T, r *Repo, id, out string, err error) {
+	t.Helper()
+	if e := os.MkdirAll(r.WorktreePath(id), 0o755); e != nil {
+		t.Fatal(e)
+	}
+	r.Git = statusRunner{out: out, err: err}
+}
+
+// ruleStory makes a story under E-0001 with criteria as its acceptance
+// criteria and touches, in backlog.
+func ruleStory(t *testing.T, r *Repo, criteria string, touches ...string) *Item {
+	t.Helper()
+	s := mustCreate(t, r, Story, "S", "E-0001")
+	s.Body = strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n"+criteria, 1)
+	s.Touches = touches
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// moveWith is r.Move of it to to at t0, with the repository's items as they
+// are and opt's other fields.
+func moveWith(t *testing.T, r *Repo, it *Item, to string, opt MoveOptions) ([]string, error) {
+	t.Helper()
+	items, err := r.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opt.Now, opt.Items = t0, items
+	return r.Move(it, to, opt)
+}
+
+// refused fails the test unless err is the refusal want, word for word.
+func refused(t *testing.T, err error, want string) {
+	t.Helper()
+	if err == nil || err.Error() != want {
+		t.Errorf("refusal:\n got %v\nwant %s", err, want)
+	}
+}
+
+// letThrough fails the test unless the move went through with the warnings
+// want, in their order.
+func letThrough(t *testing.T, warnings []string, err error, want ...string) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("the move was refused: %v", err)
+	}
+	if !slices.Equal(warnings, want) {
+		t.Errorf("warnings:\n got %q\nwant %q", warnings, want)
+	}
+}
+
+// writeNarrative writes the story's narrative with body below its front
+// matter.
+func writeNarrative(t *testing.T, r *Repo, id, body string) {
+	t.Helper()
+	text := "---\nstream: " + id + "\ntitle: S\n---\n\n" + body
+	if err := os.WriteFile(r.NarrativePath(id), []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+const reviewWithUnticked = "S-0001 goes to review with unticked acceptance criteria (1 of 2): tick each one verified with flai criteria tick S-0001 <n>, and say in its notes why any other is left unticked"
+
+// Each rule the baseline refuses with refuses its move, in today's words.
+func TestBaselineRulesRefuse(t *testing.T) {
+	t.Run("criteria-present at backlog to ready", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := mustCreate(t, r, Story, "S", "E-0001")
+		_, err := moveWith(t, r, s, Ready, MoveOptions{})
+		refused(t, err, "rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+	})
+	t.Run("criteria-present at in-progress to ready", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [ ] one\n")
+		s.Body = strings.Replace(s.Body, "- [ ] one\n", "", 1)
+		_, err := moveWith(t, r, s, Ready, MoveOptions{})
+		refused(t, err, "rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+	})
+	t.Run("not-draft, and Finalize lets it through", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [ ] one\n")
+		s.Draft = true
+		_, err := moveWith(t, r, s, Ready, MoveOptions{})
+		refused(t, err, "rule: S-0001 is a draft: finalize it first (flai edit S-0001 --no-draft, or flai move S-0001 ready --yes)")
+		w, err := moveWith(t, r, s, Ready, MoveOptions{Finalize: true, By: "operator"})
+		letThrough(t, w, err)
+		if s.Draft || s.Status != Ready || s.Finalized == nil || s.Finalized.By != "operator" {
+			t.Errorf("finalized move: draft %v, status %s, finalized %+v", s.Draft, s.Status, s.Finalized)
+		}
+	})
+	t.Run("has-task", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [x] one\n")
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		_, err := moveWith(t, r, s, Review, MoveOptions{})
+		refused(t, err, `rule: a story needs at least one task before it goes to review (flai task new --story S-0001 "...")`)
+	})
+	t.Run("no-open-question", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		writeNarrative(t, r, s.ID, "## Open questions\n- Which way?\n")
+		_, err := moveWith(t, r, s, Review, MoveOptions{})
+		refused(t, err, `rule: S-0001 has an open question in its narrative (`+r.NarrativePath(s.ID)+`): "Which way?"; it needs an answer before review (the operator answers it from the dashboard's inbox, or: flai stream answer S-0001 "Which way?" "<answer>")`)
+	})
+	t.Run("clean-worktree", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		dirtyWorktree(t, r, s.ID, " M flai/x.go\n?? docs/y.md\n", nil)
+		_, err := moveWith(t, r, s, Review, MoveOptions{})
+		want := "rule: the worktree .flai-cache/worktrees/S-0001 has uncommitted changes (flai/x.go, docs/y.md); commit them on story/S-0001, or discard them, before it goes to review"
+		refused(t, err, want)
+		if got := "rule: " + r.UncommittedRule(s.ID, []string{"flai/x.go", "docs/y.md"}, "it goes to review"); got != want {
+			t.Errorf("the refusal is not UncommittedRule's text: %q", got)
+		}
+	})
+	t.Run("criteria-ticked at done", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [ ] one\n- [x] two\n")
+		mustMove(t, r, s, Review, "")
+		tk, _ := r.Get("T-0001")
+		mustMove(t, r, tk, Cancelled, "not needed")
+		_, err := moveWith(t, r, s, Done, MoveOptions{})
+		refused(t, err, "rule: S-0001 has unchecked acceptance criteria")
+	})
+	t.Run("children-closed, a story's open task", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		mustMove(t, r, s, Review, "")
+		_, err := moveWith(t, r, s, Done, MoveOptions{})
+		refused(t, err, "rule: S-0001 cannot be done while T-0001 is backlog")
+	})
+	t.Run("children-closed, an epic's open story", func(t *testing.T) {
+		r := newProject(t)
+		e := mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [x] one\n")
+		done := ruleStory(t, r, "- [x] one\n")
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		done.Status = Done
+		if err := r.Save(done); err != nil {
+			t.Fatal(err)
+		}
+		mustMove(t, r, e, Ready, "")
+		mustMove(t, r, e, InProgress, "")
+		mustMove(t, r, e, Review, "")
+		_, err := moveWith(t, r, e, Done, MoveOptions{})
+		refused(t, err, "rule: E-0001 cannot be done while S-0001 is in-progress")
+		mustMove(t, r, s, Cancelled, "dropped")
+		w, err := moveWith(t, r, e, Done, MoveOptions{})
+		letThrough(t, w, err) // a done story and a cancelled one are closed
+	})
+	t.Run("reason-given", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		tk, _ := r.Get("T-0001")
+		_, err := moveWith(t, r, tk, Cancelled, MoveOptions{})
+		refused(t, err, "rule: moving T-0001 to cancelled needs --reason")
+		_, err = moveWith(t, r, s, Cancelled, MoveOptions{Reason: "  "})
+		refused(t, err, "rule: moving S-0001 to cancelled needs --reason")
+		mustMove(t, r, s, Review, "")
+		_, err = moveWith(t, r, s, InProgress, MoveOptions{})
+		refused(t, err, "rule: moving S-0001 to in-progress needs --reason")
+	})
+	t.Run("parent-open", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		tk, _ := r.Get("T-0001")
+		mustMove(t, r, tk, Cancelled, "gone")
+		mustMove(t, r, s, Cancelled, "gone")
+		_, err := moveWith(t, r, tk, Backlog, MoveOptions{})
+		refused(t, err, "rule: T-0001 cannot go back to backlog while its parent S-0001 is cancelled; move S-0001 back first")
+	})
+}
+
+// Each rule the baseline warns with lets its move through and says why.
+func TestBaselineRulesWarn(t *testing.T) {
+	t.Run("clean-worktree unread", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		dirtyWorktree(t, r, s.ID, "", errors.New("exit status 128"))
+		w, err := moveWith(t, r, s, Review, MoveOptions{})
+		letThrough(t, w, err, "S-0001's worktree was not checked for uncommitted changes: git status in .flai-cache/worktrees/S-0001: exit status 128")
+	})
+	t.Run("not-blocked at ready to in-progress", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [ ] one\n")
+		mustMove(t, r, s, Ready, "")
+		if err := BlockItem(s, "waiting", t0); err != nil {
+			t.Fatal(err)
+		}
+		w, err := moveWith(t, r, s, InProgress, MoveOptions{})
+		letThrough(t, w, err, "S-0001 has an open blocked interval")
+	})
+	t.Run("not-blocked at review to in-progress", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [x] one\n")
+		mustMove(t, r, s, Review, "")
+		if err := BlockItem(s, "waiting", t0); err != nil {
+			t.Fatal(err)
+		}
+		w, err := moveWith(t, r, s, InProgress, MoveOptions{Reason: "redo"})
+		letThrough(t, w, err, "S-0001 has an open blocked interval")
+	})
+	t.Run("not-blocked on a task", func(t *testing.T) {
+		r := newProject(t)
+		storyInProgress(t, r, "- [x] one\n")
+		tk, _ := r.Get("T-0001")
+		mustMove(t, r, tk, Ready, "")
+		if err := BlockItem(tk, "waiting", t0); err != nil {
+			t.Fatal(err)
+		}
+		w, err := moveWith(t, r, tk, InProgress, MoveOptions{})
+		letThrough(t, w, err, "T-0001 has an open blocked interval")
+	})
+	t.Run("not-held", func(t *testing.T) {
+		r := newProject(t)
+		first := storyInProgress(t, r, "- [ ] one\n")
+		first.Touches = []string{"a.go"}
+		if err := r.Save(first); err != nil {
+			t.Fatal(err)
+		}
+		s := ruleStory(t, r, "- [ ] one\n", "a.go")
+		mustMove(t, r, s, Ready, "")
+		w, err := moveWith(t, r, s, InProgress, MoveOptions{})
+		letThrough(t, w, err, "S-0002 is held (overlap): touches a.go, which S-0001 (in progress) touches too; starts when S-0001 moves to review, is cancelled, or is sent back")
+	})
+	t.Run("after-done at in-progress to ready", func(t *testing.T) {
+		r := newProject(t)
+		first := storyInProgress(t, r, "- [ ] one\n")
+		first.Touches = []string{"a.go"}
+		if err := r.Save(first); err != nil {
+			t.Fatal(err)
+		}
+		s := ruleStory(t, r, "- [ ] one\n", "b.go")
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		s.After = []string{"S-0001"}
+		if err := r.Save(s); err != nil {
+			t.Fatal(err)
+		}
+		w, err := moveWith(t, r, s, Ready, MoveOptions{})
+		letThrough(t, w, err, "S-0002 goes to ready held (after): waits for S-0001 (in progress); starts when S-0001 is done; flai serve starts no agent for it until then")
+	})
+	t.Run("task-after", func(t *testing.T) {
+		r := newProject(t)
+		storyInProgress(t, r, "- [ ] one\n")
+		tk := mustCreate(t, r, Task, "T2", "S-0001")
+		tk.After = []string{"T-0001"}
+		if err := r.Save(tk); err != nil {
+			t.Fatal(err)
+		}
+		mustMove(t, r, tk, Ready, "")
+		w, err := moveWith(t, r, tk, InProgress, MoveOptions{})
+		letThrough(t, w, err, "T-0002 is waiting (after): waits for T-0001 (ready); ready to start when T-0001 is done or cancelled")
+	})
+}
+
+// The rules run in the order the transition lists them: the first that
+// refuses stops the move, and warnings come in the listed order, the WIP
+// limit's last.
+func TestMoveRunsTheRulesInTheirOrder(t *testing.T) {
+	t.Run("refusals at in-progress to review", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [x] one\n")
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		writeNarrative(t, r, s.ID, "## Open questions\n- Which way?\n")
+		dirtyWorktree(t, r, s.ID, " M a.go\n", nil)
+		_, err := moveWith(t, r, s, Review, MoveOptions{})
+		refused(t, err, `rule: a story needs at least one task before it goes to review (flai task new --story S-0001 "...")`)
+		mustCreate(t, r, Task, "T", s.ID)
+		_, err = moveWith(t, r, s, Review, MoveOptions{})
+		if err == nil || !strings.HasPrefix(err.Error(), "rule: S-0001 has an open question in its narrative") {
+			t.Errorf("no-open-question comes before clean-worktree: %v", err)
+		}
+		writeNarrative(t, r, s.ID, "## Open questions\n")
+		_, err = moveWith(t, r, s, Review, MoveOptions{})
+		refused(t, err, "rule: the worktree .flai-cache/worktrees/S-0001 has uncommitted changes (a.go); commit them on story/S-0001, or discard them, before it goes to review")
+		r.Git = statusRunner{}
+		w, err := moveWith(t, r, s, Review, MoveOptions{})
+		letThrough(t, w, err)
+	})
+	t.Run("refusals at backlog to ready", func(t *testing.T) {
+		r := newProject(t)
+		mustCreate(t, r, Epic, "E", "")
+		s := mustCreate(t, r, Story, "S", "E-0001")
+		s.Draft = true
+		_, err := moveWith(t, r, s, Ready, MoveOptions{})
+		refused(t, err, "rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+	})
+	t.Run("refusals at review to done", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [ ] one\n")
+		mustMove(t, r, s, Review, "")
+		_, err := moveWith(t, r, s, Done, MoveOptions{})
+		refused(t, err, "rule: S-0001 cannot be done while T-0001 is backlog")
+	})
+	t.Run("warnings at ready to in-progress, the WIP limit last", func(t *testing.T) {
+		r := newProject(t)
+		first := storyInProgress(t, r, "- [ ] one\n")
+		first.Touches = []string{"a.go"}
+		if err := r.Save(first); err != nil {
+			t.Fatal(err)
+		}
+		s := ruleStory(t, r, "- [ ] one\n", "a.go")
+		mustMove(t, r, s, Ready, "")
+		if err := BlockItem(s, "waiting", t0); err != nil {
+			t.Fatal(err)
+		}
+		board, err := r.LoadBoard()
+		if err != nil {
+			t.Fatal(err)
+		}
+		board.WIPLimits[InProgress] = 1
+		w, err := moveWith(t, r, s, InProgress, MoveOptions{Board: board})
+		letThrough(t, w, err,
+			"S-0002 has an open blocked interval",
+			"S-0002 is held (overlap): touches a.go, which S-0001 (in progress) touches too; starts when S-0001 moves to review, is cancelled, or is sent back",
+			"WIP limit for in-progress is 1, this makes 2")
+	})
+	t.Run("warnings at in-progress to review", func(t *testing.T) {
+		r := newProject(t)
+		s := storyInProgress(t, r, "- [ ] one\n- [x] two\n")
+		dirtyWorktree(t, r, s.ID, "", errors.New("exit status 128"))
+		w, err := moveWith(t, r, s, Review, MoveOptions{})
+		letThrough(t, w, err,
+			"S-0001's worktree was not checked for uncommitted changes: git status in .flai-cache/worktrees/S-0001: exit status 128",
+			reviewWithUnticked)
+	})
+}
+
+// ownWorkflow is a board of the operator's own: not-blocked refuses where
+// the baseline warns, has-task and criteria-ticked warn where it refuses,
+// ready to backlog lists rules for stories that a task's move skips, and the
+// moves the baseline gives reason-given, parent-open, and children-closed
+// list none.
+const ownWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit], rules: [criteria-present]}
+  - {from: ready, to: in-progress, effects: [pull], rules: [{rule: not-blocked, severity: refuse}]}
+  - {from: in-progress, to: review, rules: [{rule: has-task, severity: warn}]}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept], rules: [{rule: criteria-ticked, severity: warn}]}
+  - {from: review, to: done, types: [task]}
+  - {from: in-progress, to: done, types: [task]}
+  - {from: review, to: in-progress, effects: [send-back]}
+  - {from: in-progress, to: ready}
+  - {from: ready, to: backlog, rules: [has-task, criteria-present]}
+  - {from: [backlog, ready, in-progress], to: cancelled, effects: [cancel]}
+  - {from: review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// S-0738: a workflow of the operator's own sets each rule's severity, skips
+// a rule for a type it does not apply to, and runs no rule a transition
+// does not list.
+func TestMoveRunsTheRepositorysOwnRules(t *testing.T) {
+	t.Run("a warning rule set to refuse refuses with its warning", func(t *testing.T) {
+		r := repoWithWorkflow(t, ownWorkflow)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [ ] one\n")
+		mustMove(t, r, s, Ready, "")
+		if err := BlockItem(s, "waiting", t0); err != nil {
+			t.Fatal(err)
+		}
+		_, err := moveWith(t, r, s, InProgress, MoveOptions{})
+		refused(t, err, "rule: S-0001 has an open blocked interval")
+	})
+	t.Run("a refusing rule set to warn lets the move through", func(t *testing.T) {
+		r := repoWithWorkflow(t, ownWorkflow)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [ ] one\n- [x] two\n")
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		w, err := moveWith(t, r, s, Review, MoveOptions{})
+		letThrough(t, w, err, `a story needs at least one task before it goes to review (flai task new --story S-0001 "...")`)
+		w, err = moveWith(t, r, s, Done, MoveOptions{})
+		letThrough(t, w, err, reviewWithUnticked)
+	})
+	t.Run("a rule is skipped for a type it does not apply to", func(t *testing.T) {
+		r := repoWithWorkflow(t, ownWorkflow)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [ ] one\n")
+		tk := mustCreate(t, r, Task, "T", s.ID)
+		mustMove(t, r, tk, Ready, "")
+		w, err := moveWith(t, r, tk, Backlog, MoveOptions{})
+		letThrough(t, w, err) // has-task and criteria-present check stories alone
+		lone := ruleStory(t, r, "- [ ] one\n")
+		mustMove(t, r, lone, Ready, "")
+		_, err = moveWith(t, r, lone, Backlog, MoveOptions{})
+		refused(t, err, `rule: a story needs at least one task before it goes to review (flai task new --story S-0002 "...")`)
+	})
+	t.Run("a transition with no rules lets through what the baseline refuses", func(t *testing.T) {
+		r := repoWithWorkflow(t, ownWorkflow)
+		mustCreate(t, r, Epic, "E", "")
+		s := ruleStory(t, r, "- [x] one\n")
+		mustCreate(t, r, Task, "T", s.ID)
+		mustMove(t, r, s, Ready, "")
+		mustMove(t, r, s, InProgress, "")
+		mustMove(t, r, s, Review, "")
+		w, err := moveWith(t, r, s, InProgress, MoveOptions{})
+		letThrough(t, w, err) // reason-given
+		mustMove(t, r, s, Review, "")
+		w, err = moveWith(t, r, s, Done, MoveOptions{})
+		letThrough(t, w, err) // children-closed: T-0001 is in backlog
+		other := ruleStory(t, r, "- [ ] one\n")
+		tk := mustCreate(t, r, Task, "T2", other.ID)
+		w, err = moveWith(t, r, tk, Cancelled, MoveOptions{})
+		letThrough(t, w, err) // reason-given
+		if err := r.Save(tk); err != nil {
+			t.Fatal(err)
+		}
+		mustMove(t, r, other, Cancelled, "")
+		w, err = moveWith(t, r, tk, Backlog, MoveOptions{})
+		letThrough(t, w, err) // parent-open: S-0002 is cancelled
+	})
+}
+
+// Every rule of the vocabulary has its check, and nothing else has one.
+func TestEveryRuleHasACheck(t *testing.T) {
+	for _, rule := range workflow.Vocabulary {
+		if ruleChecks[rule.Name] == nil {
+			t.Errorf("rule %s has no check in ruleChecks", rule.Name)
+		}
+	}
+	for name := range ruleChecks {
+		if _, ok := workflow.LookupRule(name); !ok {
+			t.Errorf("ruleChecks has %s, which workflow.Vocabulary lacks", name)
+		}
+	}
+	if len(ruleChecks) != len(workflow.Vocabulary) {
+		t.Errorf("ruleChecks has %d checks for %d rules", len(ruleChecks), len(workflow.Vocabulary))
 	}
 }

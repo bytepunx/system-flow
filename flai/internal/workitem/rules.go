@@ -54,92 +54,24 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 	if !ok {
 		return nil, fmt.Errorf("rule: %s cannot go from %s to %s (allowed: %s)", it.ID, from, to, strings.Join(allowedFor(wf, it, from), ", "))
 	}
-	if (to == Cancelled || (from == Review && to == InProgress)) && strings.TrimSpace(opt.Reason) == "" {
-		return nil, fmt.Errorf("rule: moving %s to %s needs --reason", it.ID, to)
-	}
-	// Nothing open lives under a cancelled parent (ADR-0028), so an item comes
-	// back from cancelled only after its parent has.
-	if from == Cancelled && it.Parent != "" {
-		for _, p := range opt.Items {
-			if p.ID == it.Parent && p.Status == Cancelled {
-				return nil, fmt.Errorf("rule: %s cannot go back to %s while its parent %s is cancelled; move %s back first", it.ID, to, p.ID, p.ID)
-			}
+	// The rules the transition lists run in its order: the first refusal
+	// stops the move, and warnings come in the order of the rules that gave
+	// them (ADR-0301 §4).
+	t, _ := wf.Find(it.Type, from, to)
+	c := &moveCheck{r: r, wf: wf, it: it, to: to, opt: opt}
+	for _, ref := range t.Rules {
+		if rule, _ := workflow.LookupRule(ref.Rule); !rule.Applies(it.Type) {
+			continue
 		}
-	}
-	children := Children(opt.Items, it.ID)
-	switch to {
-	case Ready:
-		// Tasks are not part of ready: the agent that pulls the story
-		// writes them once it is in progress (ADR-0021).
-		if it.Type == Story && !hasCriteria(it.Body) {
-			return nil, fmt.Errorf("rule: a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
-		}
-		if it.Type == Story && it.Draft && !opt.Finalize {
-			return nil, fmt.Errorf("rule: %s is a draft: finalize it first (flai edit %s --no-draft, or flai move %s ready --yes)", it.ID, it.ID, it.ID)
-		}
-	case Review:
-		if it.Type == Story && len(children) == 0 {
-			return nil, fmt.Errorf("rule: a story needs at least one task before it goes to review (flai task new --story %s \"...\")", it.ID)
-		}
-		if it.Type == Story {
-			if n, err := ReadNarrative(r.NarrativePath(it.ID)); err == nil {
-				if qs := OpenQuestions(n.Body); len(qs) > 0 {
-					return nil, fmt.Errorf("rule: %s has an open question in its narrative (%s): %q; it needs an answer before review (the operator answers it from the dashboard's inbox, or: flai stream answer %s %q \"<answer>\")", it.ID, n.Path, qs[0], it.ID, qs[0])
-				}
-			}
-		}
-		// Work left uncommitted in the worktree stops the acceptance later,
-		// when its agent has gone (S-0140). A worktree git cannot read here
-		// (I-0017) is not a reason to refuse: say so and move.
-		if it.Type == Story {
-			dirty, err := r.Uncommitted(it.ID)
-			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("%s's worktree was not checked for uncommitted changes: %v", it.ID, err))
-			} else if len(dirty) > 0 {
-				return nil, fmt.Errorf("rule: %s", r.UncommittedRule(it.ID, dirty, "it goes to review"))
-			}
-		}
-		// The operator reads the ticks as what the agent verified (S-0282), so
-		// an unticked box warns here and refuses only at done.
-		if it.Type == Story {
-			if open := uncheckedCount(it.Body); open > 0 {
-				warnings = append(warnings, fmt.Sprintf("%s goes to review with unticked acceptance criteria (%d of %d): tick each one verified with flai criteria tick %s <n>, and say in its notes why any other is left unticked", it.ID, open, CriteriaCount(it.Body), it.ID))
-			}
-		}
-	case Done:
-		for _, c := range children {
-			if !c.Closed() {
-				return nil, fmt.Errorf("rule: %s cannot be done while %s is %s", it.ID, c.ID, c.Status)
-			}
-		}
-		if it.Type == Story && hasUnchecked(it.Body) {
-			return nil, fmt.Errorf("rule: %s has unchecked acceptance criteria", it.ID)
-		}
-	}
-	if to == InProgress && it.IsBlocked() {
-		warnings = append(warnings, fmt.Sprintf("%s has an open blocked interval", it.ID))
-	}
-	// A hold stops flai serve and wait_for_work, not a move (S-0128, ADR-0046).
-	if to == InProgress && from == Ready && it.Type == Story {
-		if h := r.Holds(opt.Items).Of(it); h != nil {
-			warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, h.Reason))
-		}
-	}
-	// A story moved to ready while a story it names in after: is not done
-	// waits there until that one is accepted; the move is the operator's, so
-	// it warns rather than refuses (ADR-0279). An overlap alone does not warn:
-	// a trial merge may clear it at the next look.
-	if to == Ready && it.Type == Story {
-		if h := r.Holds(opt.Items).Of(it); h != nil && h.Code == HoldAfter {
-			warnings = append(warnings, fmt.Sprintf("%s goes to ready %s; flai serve starts no agent for it until then", it.ID, h.Reason))
-		}
-	}
-	// A task's after: is the story's agent's plan, so it warns too (S-0176).
-	if to == InProgress && it.Type == Task {
-		if p := PlanOf(opt.Items, it.Parent); p != nil {
-			if why := p.Waits(it.ID); why != "" {
-				warnings = append(warnings, fmt.Sprintf("%s is %s", it.ID, why))
-			}
+		f := ruleChecks[ref.Rule](c)
+		switch {
+		case f == nil:
+		case f.unchecked:
+			warnings = append(warnings, f.warning)
+		case ref.SeverityOf() == workflow.SeverityRefuse:
+			return nil, fmt.Errorf("rule: %s", f.refusal)
+		default:
+			warnings = append(warnings, f.warning)
 		}
 	}
 	if it.Type == Story && opt.Board != nil {
@@ -185,6 +117,171 @@ func (r *Repo) Move(it *Item, to string, opt MoveOptions) (warnings []string, er
 		}
 	}
 	return warnings, nil
+}
+
+// moveCheck is the move a rule's check reads: the item, the state it goes
+// to, and the move's options, in the repository's workflow.
+type moveCheck struct {
+	r     *Repo
+	wf    workflow.Workflow
+	it    *Item
+	to    string
+	opt   MoveOptions
+	holds *Holds
+}
+
+// heldBy is why the story is held, or nil, reading the holds once a move.
+func (c *moveCheck) heldBy() *Hold {
+	if c.holds == nil {
+		c.holds = c.r.Holds(c.opt.Items)
+	}
+	return c.holds.Of(c.it)
+}
+
+// finding is what a rule's check found against a move: refusal is what a
+// refusal says after "rule: ", warning what a warning says.
+type finding struct {
+	refusal, warning string
+	// unchecked marks a check that could not be made: it warns and lets the
+	// move through, whatever the rule's severity.
+	unchecked bool
+}
+
+// found is a finding that a refusal and a warning say alike.
+func found(format string, args ...any) *finding {
+	text := fmt.Sprintf(format, args...)
+	return &finding{refusal: text, warning: text}
+}
+
+// ruleChecks is the check of each rule of workflow.Vocabulary, by its name:
+// what the rule finds against a move, or nil when the move keeps it. Move
+// runs only the rules that apply to the item's type.
+var ruleChecks = map[string]func(c *moveCheck) *finding{
+	// Tasks are not part of ready: the agent that pulls the story writes them
+	// once it is in progress (ADR-0021).
+	workflow.RuleCriteriaPresent: func(c *moveCheck) *finding {
+		if hasCriteria(c.it.Body) {
+			return nil
+		}
+		return found("a story needs an '## Acceptance criteria' section with at least one checkbox before it is ready")
+	},
+	workflow.RuleNotDraft: func(c *moveCheck) *finding {
+		if !c.it.Draft || c.opt.Finalize {
+			return nil
+		}
+		return found("%s is a draft: finalize it first (flai edit %s --no-draft, or flai move %s ready --yes)", c.it.ID, c.it.ID, c.it.ID)
+	},
+	workflow.RuleHasTask: func(c *moveCheck) *finding {
+		if len(Children(c.opt.Items, c.it.ID)) > 0 {
+			return nil
+		}
+		return found("a story needs at least one task before it goes to review (flai task new --story %s \"...\")", c.it.ID)
+	},
+	workflow.RuleNoOpenQuestion: func(c *moveCheck) *finding {
+		n, err := ReadNarrative(c.r.NarrativePath(c.it.ID))
+		if err != nil {
+			return nil
+		}
+		qs := OpenQuestions(n.Body)
+		if len(qs) == 0 {
+			return nil
+		}
+		return found("%s has an open question in its narrative (%s): %q; it needs an answer before review (the operator answers it from the dashboard's inbox, or: flai stream answer %s %q \"<answer>\")", c.it.ID, n.Path, qs[0], c.it.ID, qs[0])
+	},
+	// Work left uncommitted in the worktree stops the acceptance later, when
+	// its agent has gone (S-0140). A worktree git cannot read here (I-0017)
+	// is not a reason to refuse: say so and move.
+	workflow.RuleCleanWorktree: func(c *moveCheck) *finding {
+		dirty, err := c.r.Uncommitted(c.it.ID)
+		if err != nil {
+			return &finding{warning: fmt.Sprintf("%s's worktree was not checked for uncommitted changes: %v", c.it.ID, err), unchecked: true}
+		}
+		if len(dirty) == 0 {
+			return nil
+		}
+		return found("%s", c.r.UncommittedRule(c.it.ID, dirty, "it goes to review"))
+	},
+	// The operator reads the ticks as what the agent verified (S-0282), so
+	// the baseline warns of an unticked box at review and refuses it at done.
+	workflow.RuleCriteriaTicked: func(c *moveCheck) *finding {
+		open := uncheckedCount(c.it.Body)
+		if open == 0 {
+			return nil
+		}
+		return &finding{
+			refusal: fmt.Sprintf("%s has unchecked acceptance criteria", c.it.ID),
+			warning: fmt.Sprintf("%s goes to review with unticked acceptance criteria (%d of %d): tick each one verified with flai criteria tick %s <n>, and say in its notes why any other is left unticked", c.it.ID, open, CriteriaCount(c.it.Body), c.it.ID),
+		}
+	},
+	// The namespace's record is the host's, not the repository's: flai move
+	// and item_move check this rule through mcpserver.ReviewWarnings, so
+	// Move finds nothing of it.
+	workflow.RuleKlusterVerified: func(*moveCheck) *finding { return nil },
+	workflow.RuleChildrenClosed: func(c *moveCheck) *finding {
+		for _, ch := range Children(c.opt.Items, c.it.ID) {
+			if k := c.wf.Kind(ch.Status); k != workflow.KindAccepted && k != workflow.KindCancelled {
+				return found("%s cannot be done while %s is %s", c.it.ID, ch.ID, ch.Status)
+			}
+		}
+		return nil
+	},
+	workflow.RuleReasonGiven: func(c *moveCheck) *finding {
+		if strings.TrimSpace(c.opt.Reason) != "" {
+			return nil
+		}
+		return found("moving %s to %s needs --reason", c.it.ID, c.to)
+	},
+	// Nothing open lives under a cancelled parent (ADR-0028), so an item
+	// comes back from cancelled only after its parent has.
+	workflow.RuleParentOpen: func(c *moveCheck) *finding {
+		if c.it.Parent == "" {
+			return nil
+		}
+		for _, p := range c.opt.Items {
+			if p.ID == c.it.Parent && c.wf.Kind(p.Status) == workflow.KindCancelled {
+				return found("%s cannot go back to %s while its parent %s is cancelled; move %s back first", c.it.ID, c.to, p.ID, p.ID)
+			}
+		}
+		return nil
+	},
+	workflow.RuleNotBlocked: func(c *moveCheck) *finding {
+		if !c.it.IsBlocked() {
+			return nil
+		}
+		return found("%s has an open blocked interval", c.it.ID)
+	},
+	// A hold stops flai serve and wait_for_work, not a move (S-0128,
+	// ADR-0046).
+	workflow.RuleNotHeld: func(c *moveCheck) *finding {
+		h := c.heldBy()
+		if h == nil {
+			return nil
+		}
+		return found("%s is %s", c.it.ID, h.Reason)
+	},
+	// A story moved to ready while a story it names in after: is not done
+	// waits there until that one is accepted; the move is the operator's, so
+	// it warns rather than refuses (ADR-0279). An overlap alone does not
+	// warn: a trial merge may clear it at the next look.
+	workflow.RuleAfterDone: func(c *moveCheck) *finding {
+		h := c.heldBy()
+		if h == nil || h.Code != HoldAfter {
+			return nil
+		}
+		return found("%s goes to ready %s; flai serve starts no agent for it until then", c.it.ID, h.Reason)
+	},
+	// A task's after: is the story's agent's plan, so it warns too (S-0176).
+	workflow.RuleTaskAfter: func(c *moveCheck) *finding {
+		p := PlanOf(c.opt.Items, c.it.Parent)
+		if p == nil {
+			return nil
+		}
+		why := p.Waits(c.it.ID)
+		if why == "" {
+			return nil
+		}
+		return found("%s is %s", c.it.ID, why)
+	},
 }
 
 // Follows reports whether an item of type typ may move from one state to the
@@ -284,10 +381,6 @@ func criteriaSection(body string) string {
 
 func hasCriteria(body string) bool {
 	return checkbox.MatchString(criteriaSection(body))
-}
-
-func hasUnchecked(body string) bool {
-	return unchecked.MatchString(criteriaSection(body))
 }
 
 // uncheckedCount is the number of unticked checkbox lines in a body's
