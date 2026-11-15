@@ -124,7 +124,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 	}
 	source := pullSource(w)
 	if holds == nil {
-		holds = NewHolds(items, nil)
+		holds = NewHoldsIn(w, items, nil)
 	}
 	for id, ok := range pendingPublish {
 		if ok {
@@ -161,7 +161,7 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 			card.Shared = holds.SharesWith(it.ID)
 		}
 		if it.Type == Story {
-			if p := PlanOf(tasks[it.ID], it.ID); p != nil {
+			if p := PlanOfIn(w, tasks[it.ID], it.ID); p != nil {
 				card.Tasks = p.Summary()
 			}
 		}

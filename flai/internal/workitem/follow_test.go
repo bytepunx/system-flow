@@ -1,9 +1,12 @@
 package workitem
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 )
 
 // t1 is when the moves under test happen, after the setup's moves at t0.
@@ -388,5 +391,346 @@ func TestAStoryInBacklogGivenAnotherEpicMovesNeither(t *testing.T) {
 	story.Parent = other.ID
 	if _, walks, err := r.FollowParent(all, story, "E-0001", "alex", t1); err != nil || len(walks) != 0 {
 		t.Errorf("walks %+v err %v", walks, err)
+	}
+}
+
+// followKindFlow is one workflow the epic-following cases run under: how to
+// open a repository that runs it, and its name for each baseline state.
+type followKindFlow struct {
+	name  string
+	open  func(*testing.T) *Repo
+	state func(string) string
+}
+
+// followKindFlows are the baseline and the fixture, with in-progress renamed
+// doing and testing added between it and review, for the cases that must
+// give the same result under each wherever their kinds agree (S-0739).
+func followKindFlows() []followKindFlow {
+	return []followKindFlow{
+		{"baseline", newProject, func(s string) string { return s }},
+		{"fixture", func(t *testing.T) *Repo { return withTestFlow(t, newProject(t)) }, inTestFlow},
+	}
+}
+
+// followKindWalk is the path a new item takes to state, a baseline name or
+// fixtureTesting, in f's names: walkTo's, with testing reached through doing.
+func followKindWalk(f followKindFlow, state string) []string {
+	if state == fixtureTesting {
+		return []string{f.state(Ready), fixtureDoing, fixtureTesting}
+	}
+	var out []string
+	for _, s := range walkTo[state] {
+		out = append(out, f.state(s))
+	}
+	return out
+}
+
+// followKindProject is followProject under f: an epic E-0001 in epicState
+// with one story under it per entry of states, S-0001 onwards, each with a
+// task, moved there without the epic following. States are baseline names,
+// or fixtureTesting under the fixture.
+func followKindProject(t *testing.T, f followKindFlow, epicState string, states ...string) *Repo {
+	t.Helper()
+	r := f.open(t)
+	e := mustCreate(t, r, Epic, "E", "")
+	for _, state := range states {
+		s := mustCreate(t, r, Story, "in "+state, "E-0001")
+		s.Body = strings.Replace(s.Body, "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] works\n", 1)
+		if err := r.Save(s); err != nil {
+			t.Fatal(err)
+		}
+		task := mustCreate(t, r, Task, "under "+state, s.ID)
+		if state == Done {
+			for _, to := range []string{Ready, InProgress, Done} {
+				mustMove(t, r, task, f.state(to), "")
+			}
+		}
+		for _, to := range followKindWalk(f, state) {
+			mustMove(t, r, s, to, "setup")
+		}
+	}
+	for _, to := range followKindWalk(f, epicState) {
+		mustMove(t, r, e, to, "setup")
+	}
+	return r
+}
+
+// followKindSteps are the states the epic entered at t1, in order: its walk
+// for the moves under test.
+func followKindSteps(t *testing.T, r *Repo) []string {
+	t.Helper()
+	e, err := r.Get("E-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, tr := range e.Transitions {
+		if tr.At == t1.Format(TimeFormat) {
+			out = append(out, tr.To)
+		}
+	}
+	return out
+}
+
+// S-0739, ADR-0301 §2: an epic goes to the pull's source with its first
+// story there, under either workflow.
+func TestFollowKindTheFirstStoryReadyMakesTheEpicReady(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := followKindProject(t, f, Backlog, Backlog, Backlog)
+			res := move(t, r, "S-0001", f.state(Ready), "")
+			want := Followed{ID: "E-0001", Type: Epic, Title: "E", From: f.state(Backlog), To: f.state(Ready), Story: "S-0001"}
+			if res.Followed == nil || *res.Followed != want {
+				t.Fatalf("followed %+v, want %+v", res.Followed, want)
+			}
+			if res := move(t, r, "S-0002", f.state(Ready), ""); res.Followed != nil || epicStatus(t, r) != f.state(Ready) {
+				t.Errorf("the second story moved the epic: %+v, %s", res.Followed, epicStatus(t, r))
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: an epic goes to the pull's target with its first
+// story started, walking from the initial state one transition at a time.
+func TestFollowKindTheFirstStoryStartedStartsTheEpic(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := followKindProject(t, f, Backlog, Ready)
+			res := move(t, r, "S-0001", f.state(InProgress), "")
+			if res.Followed == nil || res.Followed.From != f.state(Backlog) || res.Followed.To != f.state(InProgress) {
+				t.Fatalf("followed %+v", res.Followed)
+			}
+			if got, want := followKindSteps(t, r), []string{f.state(Ready), f.state(InProgress)}; !slices.Equal(got, want) {
+				t.Errorf("the epic walked %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+// S-0739: under the fixture, a story in the added active state has started
+// too, so it starts its epic and holds it there; a move between the two
+// active states leaves the epic where it is.
+func TestFollowKindAStoryInTheAddedActiveStateHasStarted(t *testing.T) {
+	f := followKindFlows()[1]
+	if got, ok := EpicFollowsIn(*testFlow(t), inMemory(Backlog, Backlog, fixtureTesting), "E-0001"); got != fixtureDoing || !ok {
+		t.Errorf("a story in testing puts the epic in %q %v, want doing", got, ok)
+	}
+	r := followKindProject(t, f, Ready, Ready)
+	move(t, r, "S-0001", fixtureDoing, "")
+	if res := move(t, r, "S-0001", fixtureTesting, ""); res.Followed != nil || epicStatus(t, r) != fixtureDoing {
+		t.Errorf("a move from doing to testing moved the epic: %+v, %s", res.Followed, epicStatus(t, r))
+	}
+	r = followKindProject(t, f, InProgress, fixtureTesting, InProgress)
+	if res := move(t, r, "S-0002", Ready, ""); res.Followed != nil || epicStatus(t, r) != fixtureDoing {
+		t.Errorf("a story in testing does not hold the epic: %+v, %s", res.Followed, epicStatus(t, r))
+	}
+}
+
+// S-0739, ADR-0301 §2: an epic goes to the acceptance's source with its last
+// open story, and under the fixture walks there through testing, one
+// transition at a time; a story in testing moving on takes it the same way.
+func TestFollowKindTheLastOpenStoryInReviewTakesTheEpicToReview(t *testing.T) {
+	for _, f := range followKindFlows() {
+		for _, last := range []string{InProgress, fixtureTesting} {
+			if last == fixtureTesting && f.name == "baseline" {
+				continue
+			}
+			t.Run(f.name+" from "+last, func(t *testing.T) {
+				r := followKindProject(t, f, InProgress, Review, last, Done)
+				res := move(t, r, "S-0002", Review, "")
+				if res.Followed == nil || res.Followed.From != f.state(InProgress) || res.Followed.To != Review {
+					t.Fatalf("followed %+v", res.Followed)
+				}
+				want := []string{Review}
+				if f.name == "fixture" {
+					want = []string{fixtureTesting, Review}
+				}
+				if got := followKindSteps(t, r); !slices.Equal(got, want) {
+					t.Errorf("the epic walked %v, want %v", got, want)
+				}
+			})
+		}
+	}
+}
+
+// S-0739, ADR-0301 §2: the last story accepted takes the epic to the
+// accepted state only with the acceptance, else to the acceptance's source.
+func TestFollowKindTheLastStoryAcceptedAcceptsTheEpic(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := f.open(t)
+			items := inMemory(f.state(InProgress), Done, Done)
+			without, _, err := r.Follow(items, items[2], Review, "alex", t1, false)
+			if err != nil || without == nil || without.Status != Review {
+				t.Fatalf("without accept: epic %+v err %v", without, err)
+			}
+			items = inMemory(f.state(InProgress), Done, Done)
+			epic, followed, err := r.Follow(items, items[2], Review, "alex", t1, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if epic.Status != Done || followed.From != f.state(InProgress) || followed.To != Done {
+				t.Errorf("epic %s followed %+v", epic.Status, followed)
+			}
+			want := []string{Review, Done}
+			if f.name == "fixture" {
+				want = []string{fixtureTesting, Review, Done}
+			}
+			var got []string
+			for _, tr := range epic.Transitions {
+				got = append(got, tr.To)
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("the epic walked %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: a move back takes the epic back only when no story
+// holds it, along a transition that leads back: from review straight to the
+// pull's target under the fixture, which has none into testing.
+func TestFollowKindBackMovesTakeTheEpicBack(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := followKindProject(t, f, Review, Review, Review)
+			res := move(t, r, "S-0001", f.state(InProgress), "found a gap")
+			if res.Followed == nil || res.Followed.From != Review || res.Followed.To != f.state(InProgress) {
+				t.Fatalf("followed %+v", res.Followed)
+			}
+			if got, want := followKindSteps(t, r), []string{f.state(InProgress)}; !slices.Equal(got, want) {
+				t.Errorf("the epic walked %v, want %v", got, want)
+			}
+			r = followKindProject(t, f, InProgress, InProgress, InProgress)
+			if res := move(t, r, "S-0001", Ready, ""); res.Followed != nil || epicStatus(t, r) != f.state(InProgress) {
+				t.Errorf("another started story holds the epic: %+v, %s", res.Followed, epicStatus(t, r))
+			}
+			if res := move(t, r, "S-0002", Ready, ""); res.Followed == nil || epicStatus(t, r) != Ready {
+				t.Errorf("no story holds the epic: %+v, %s", res.Followed, epicStatus(t, r))
+			}
+			r = followKindProject(t, f, Ready, Ready, Ready)
+			if res := move(t, r, "S-0001", Backlog, ""); res.Followed != nil || epicStatus(t, r) != Ready {
+				t.Errorf("another ready story holds the epic: %+v, %s", res.Followed, epicStatus(t, r))
+			}
+			if res := move(t, r, "S-0002", Backlog, ""); res.Followed == nil || epicStatus(t, r) != Backlog {
+				t.Errorf("no story holds the epic: %+v, %s", res.Followed, epicStatus(t, r))
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: a story in the cancelled state does not count, a
+// cancellation takes the epic forward short of the accepted state, and a
+// story back from the cancelled state takes it back.
+func TestFollowKindCancellationsUnderEitherWorkflow(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := followKindProject(t, f, InProgress, Done, Done, InProgress)
+			if res := move(t, r, "S-0003", Cancelled, "not needed"); res.Followed == nil || res.Followed.To != Review {
+				t.Errorf("followed %+v", res.Followed)
+			}
+			want := []string{Review}
+			if f.name == "fixture" {
+				want = []string{fixtureTesting, Review}
+			}
+			if got := followKindSteps(t, r); !slices.Equal(got, want) || epicStatus(t, r) != Review {
+				t.Errorf("the epic walked %v to %s, want %v to review", got, epicStatus(t, r), want)
+			}
+			r = followKindProject(t, f, InProgress, InProgress, Cancelled)
+			if res := move(t, r, "S-0001", Review, ""); res.Followed == nil || epicStatus(t, r) != Review {
+				t.Errorf("followed %+v, epic %s", res.Followed, epicStatus(t, r))
+			}
+			r = followKindProject(t, f, Review, Review, Cancelled)
+			res := move(t, r, "S-0002", Backlog, "")
+			if res.Followed == nil || res.Followed.From != Review || res.Followed.To != f.state(InProgress) {
+				t.Errorf("followed %+v", res.Followed)
+			}
+			for _, tc := range []struct {
+				states []string
+				want   string
+				ok     bool
+			}{
+				{[]string{Cancelled}, "", false},
+				{[]string{Backlog, Cancelled}, Backlog, true},
+				{[]string{Review, Done, Cancelled}, Review, true},
+				{[]string{Done, Done, Cancelled}, Done, true},
+			} {
+				got, ok := EpicFollowsIn(r.Flow(), inMemory(Backlog, tc.states...), "E-0001")
+				if got != tc.want || ok != tc.ok {
+					t.Errorf("%v: got %q %v, want %q %v", tc.states, got, ok, tc.want, tc.ok)
+				}
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: a story given another epic takes the one it left as
+// though cancelled out of it and the one it joined as though from the
+// initial state, under either workflow.
+func TestFollowKindAStoryGivenAnotherEpicMovesBoth(t *testing.T) {
+	for _, f := range followKindFlows() {
+		t.Run(f.name, func(t *testing.T) {
+			r := followKindProject(t, f, InProgress, InProgress, Review)
+			other := mustCreate(t, r, Epic, "Other", "")
+			all, err := r.List(true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			story, err := r.Get("S-0001")
+			if err != nil {
+				t.Fatal(err)
+			}
+			story.Parent = other.ID
+			epics, walks, err := r.FollowParent(all, story, "E-0001", "alex", t1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(walks) != 2 {
+				t.Fatalf("walks %+v", walks)
+			}
+			if w := walks[0]; w.ID != "E-0001" || w.From != f.state(InProgress) || w.To != Review || epics[0].Status != Review {
+				t.Errorf("the epic it left: %+v", w)
+			}
+			if w := walks[1]; w.ID != other.ID || w.From != Backlog || w.To != f.state(InProgress) || epics[1].Status != f.state(InProgress) {
+				t.Errorf("the epic it joined: %+v", w)
+			}
+		})
+	}
+}
+
+// S-0739, ADR-0301 §2: the baseline's EpicFollows and EpicFollowsIn under
+// either workflow agree on every mix of stories, in each one's names.
+func TestFollowKindEpicFollowsAgreesUnderEitherWorkflow(t *testing.T) {
+	for _, tc := range []struct {
+		states []string
+		want   string
+	}{
+		{[]string{Backlog}, Backlog},
+		{[]string{Backlog, Ready}, Ready},
+		{[]string{Ready, InProgress}, InProgress},
+		{[]string{Ready, Done}, InProgress},
+		{[]string{Review, InProgress}, InProgress},
+		{[]string{Review, Done}, Review},
+		{[]string{Done}, Done},
+	} {
+		for _, f := range []struct {
+			name string
+			w    workflow.Workflow
+			st   func(string) string
+		}{{"baseline", workflow.Baseline(), func(s string) string { return s }}, {"fixture", *testFlow(t), inTestFlow}} {
+			var states []string
+			for _, s := range tc.states {
+				states = append(states, f.st(s))
+			}
+			got, ok := EpicFollowsIn(f.w, inMemory(f.st(Backlog), states...), "E-0001")
+			if !ok || got != f.st(tc.want) {
+				t.Errorf("%s %v: got %q %v, want %q", f.name, states, got, ok, f.st(tc.want))
+			}
+			if f.name == "baseline" {
+				if base, _ := EpicFollows(inMemory(Backlog, states...), "E-0001"); base != got {
+					t.Errorf("%v: EpicFollows %q, EpicFollowsIn %q", states, base, got)
+				}
+			}
+		}
 	}
 }
