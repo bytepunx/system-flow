@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 14882
-      cache_read: 1594882
-      cache_write: 86639
-      cost: 1.0924
+      input: 31
+      output: 12541
+      cache_read: 1591923
+      cache_write: 84753
+      cost: 1.0676
 ---
 # T-3206 An epic follows its stories by the kinds of their states
 

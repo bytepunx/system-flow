@@ -4,10 +4,10 @@ title: "S-0744 cannot be accepted: uncommitted digest entry D-0627 on main fails
 anchor:
   path: wip/kanban/stories/S-0744-flai-move-flai-accept-the-formula-commands-and-the-acceptance-preview-act-on-a.md
   item: S-0744
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-15T01:48:46Z
-updated: 2026-11-15T01:48:46Z
+updated: 2026-11-15T18:43:16Z
 ---
 
 # TH-1208 S-0744 cannot be accepted: uncommitted digest entry D-0627 on main fails markdown lint (MD028), as on TH-1206
@@ -30,3 +30,6 @@ correct them in the main checkout and run flai accept S-0744 again
 ```
 
 **Alternative:** fix the file, then accept it yourself with `flai accept S-0744 --by alex`.
+
+### 2026-11-15T18:43:16Z orchestrator
+Resolved: D-0627 is committed on main (19b4036a5), so the acceptance no longer brings it in uncommitted. The other uncommitted digest entries (D-0470, D-0628, D-0629, D-0631) have no blank line between blockquotes.

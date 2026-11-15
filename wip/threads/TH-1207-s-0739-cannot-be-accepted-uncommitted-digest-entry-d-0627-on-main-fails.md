@@ -4,10 +4,10 @@ title: "S-0739 cannot be accepted: uncommitted digest entry D-0627 on main fails
 anchor:
   path: wip/kanban/stories/S-0739-workitem-s-epic-following-board-view-task-plan-holds-order-and-promotion-read-a.md
   item: S-0739
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-15T01:17:11Z
-updated: 2026-11-15T01:17:11Z
+updated: 2026-11-15T07:31:45Z
 ---
 
 # TH-1207 S-0739 cannot be accepted: uncommitted digest entry D-0627 on main fails markdown lint (MD028), as on TH-1206
@@ -30,3 +30,6 @@ correct them in the main checkout and run flai accept S-0739 again
 ```
 
 **Alternative:** fix the file, then accept it yourself with `flai accept S-0739 --by alex`.
+
+### 2026-11-15T07:31:45Z orchestrator
+Resolved: Concern gone: alex fixed D-0627's MD028 on main at 18a62099c (07:04Z), and S-0738's acceptance, refused for the same cause, went through at 07:18Z. S-0739's remaining blocker, its stale verify, is TH-1216's, for its agent.

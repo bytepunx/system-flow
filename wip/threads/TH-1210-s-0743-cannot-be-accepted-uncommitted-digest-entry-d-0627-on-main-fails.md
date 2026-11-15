@@ -4,10 +4,10 @@ title: "S-0743 cannot be accepted: uncommitted digest entry D-0627 on main fails
 anchor:
   path: wip/kanban/stories/S-0743-flai-serve-s-kluster-deploys-forge-pass-and-merge-queue-act-on-a-state-s-kind.md
   item: S-0743
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-15T02:22:04Z
-updated: 2026-11-15T02:22:04Z
+updated: 2026-11-15T18:43:18Z
 ---
 
 # TH-1210 S-0743 cannot be accepted: uncommitted digest entry D-0627 on main fails markdown lint (MD028), as on TH-1206
@@ -30,3 +30,6 @@ correct them in the main checkout and run flai accept S-0743 again
 ```
 
 **Alternative:** fix the file, then accept it yourself with `flai accept S-0743 --by alex`.
+
+### 2026-11-15T18:43:18Z orchestrator
+Resolved: D-0627 is committed on main (19b4036a5), so the acceptance no longer brings it in uncommitted. The other uncommitted digest entries (D-0470, D-0628, D-0629, D-0631) have no blank line between blockquotes.

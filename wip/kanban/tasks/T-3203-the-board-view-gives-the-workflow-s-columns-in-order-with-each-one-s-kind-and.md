@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 38934
-      cache_read: 4172345
-      cache_write: 226654
-      cost: 2.8579
+      input: 82
+      output: 32807
+      cache_read: 4164605
+      cache_write: 221722
+      cost: 2.7929
 ---
 # T-3203 The board view gives the workflow's columns in order with each one's kind and WIP limit, with a shared test workflow that renames a state and adds one
 

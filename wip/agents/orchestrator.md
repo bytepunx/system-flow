@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 2197.5362
-accrued_seconds: 1566099
-tasks_completed: 3569
-last_run: 2026-11-15T07:08:41Z
+accrued_cost: 2201.3982
+accrued_seconds: 1566841
+tasks_completed: 3591
+last_run: 2026-11-15T18:43:44Z
 ---
 
 # Orchestrator activity
@@ -25018,6 +25018,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 19
 - Cost: 0.1677 USD, estimated
+
+### 2026-11-15T07:18:24Z
+
+- Summary: Resolved my TH-1214 (D-0627 now committed on main at 18a62099c, so the acceptance no longer lints it; uncommitted digest files lint clean) and accepted S-0738 at 443eb76 under accept_reviews: close-out passed over main 18a62099c, verifier matched all six criteria, dry run's only blocker was TH-1214. Value 51.66 USD/week, forecast 29m.
+- Items: S-0738, TH-1214
+- Seconds: 83
+- Cost: 0.3275 USD, estimated
+
+### 2026-11-15T07:18:55Z
+
+- Summary: Release threshold met after S-0738's acceptance (policy threshold: count 1 of 1; value 51.66 of 1000 USD/week): ran flai formula run publish --ready --autocommit, which made publish instance S-0791 in ready (commit 1b8e3ebd1).
+- Items: S-0791, S-0738
+- Seconds: 31
+- Cost: 0.0637 USD, estimated
+
+### 2026-11-15T07:19:14Z
+
+- Summary: Ordered the ready column by throughput after S-0791 entered it: S-0741 (29m), S-0749 (42m), S-0748 (53m), S-0750 (1h), S-0791 (no forecast duration, last).
+- Items: S-0741, S-0749, S-0748, S-0750, S-0791
+- Seconds: 19
+- Cost: 0.0644 USD, estimated
+
+### 2026-11-15T07:19:37Z
+
+- Summary: I accepted S-0738 at its branch head `443eb76`. The publish formula's new story, S-0791, is now in ready.
+- Items: none
+- Seconds: 23
+- Cost: 0.1599 USD, estimated
+
+### 2026-11-15T07:20:08Z
+
+- Summary: Release due after S-0738 (threshold policy: count 1 of 1, value 51.66 of 1000 USD/week, met). Did not run the publish formula: its instance S-0791 was already made at 07:18:49Z (commit 1b8e3eb) and is in ready for a story's agent, so a second run would duplicate it.
+- Items: S-0738, S-0791
+- Seconds: 18
+- Cost: 0.1025 USD, estimated
+
+### 2026-11-15T07:20:35Z
+
+- Summary: A release is due after S-0738's acceptance, but I didn't start a second publish run. The publish story S-0791 already exists and is waiting in ready for a story's agent to pick up.
+- Items: none
+- Seconds: 27
+- Cost: 0.1931 USD, estimated
+
+### 2026-11-15T07:31:52Z
+
+- Summary: TH-1216 (S-0739 sent back by alex for a stale verify): left alone, a flai notice addressed to S-0739's agent, which flai serve restarted at 07:30Z; resolved my TH-1207 on S-0739, its MD028 concern gone since alex fixed D-0627 at 18a62099c and S-0738 was accepted, so it will not block S-0739's acceptance (own_thread_open) once back in review.
+- Items: S-0739
+- Seconds: 47
+- Cost: 0.1067 USD, estimated
+
+### 2026-11-15T07:32:14Z
+
+- Summary: I didn't reply on TH-1216 and changed nothing on S-0739: the thread is addressed to S-0739's agent, not the operator.
+- Items: none
+- Seconds: 22
+- Cost: 0.2218 USD, estimated
+
+### 2026-11-15T07:45:22Z
+
+- Summary: S-0739 verified at da74987 (close-out passed over main 9fb9d24; verifier: all 5 criteria met; dry run no blocker), but accept refused: uncommitted digest entries D-0627 and D-0632 on main fail MD028 at line 20. Left in review; opened TH-1218 asking the operator to fix them.
+- Items: S-0739, TH-1218
+- Seconds: 92
+- Cost: 0.2840 USD, estimated
+
+### 2026-11-15T07:45:41Z
+
+- Summary: S-0739 is not accepted yet. It passes every check, but flai refused the acceptance because two digest files in the main checkout fail markdown lint. It stays in review.
+- Items: none
+- Seconds: 19
+- Cost: 0.2030 USD, estimated
+
+### 2026-11-15T07:46:55Z
+
+- Summary: Answered TH-1217, citing design/adrs/0291-every-acceptance-but-the-merge-queue-s-landing-waits-for-a-flai-verify-over.md § Decision
+- Items: S-0792
+- Seconds: 57
+- Cost: 0.1478 USD, estimated
+
+### 2026-11-15T07:47:18Z
+
+- Summary: Approved and resolved the planner's TH-1217 under plan_backlog_stories: S-0792's four tasks in four layers, touches, 1h30m forecast, and 1800 USD/week value (from the operator's 12h per cycle) fit the story; asked agent-S-0792 to count the import closure both ways in T-3376's ADR and T-3377 (source ADR-0291 § Decision). Then applied the throughput order to ready after S-0792 entered it: S-0792 (1h30m) moved to 5th, ahead of S-0791 (no forecast duration).
+- Items: S-0792, T-3376, T-3377, T-3378, T-3379, TH-1217
+- Seconds: 23
+- Cost: 0.0339 USD, estimated
+
+### 2026-11-15T07:47:41Z
+
+- Summary: I approved the plan for S-0792 and closed its plan thread, TH-1217. I also asked for one change to the overlap rule. Both of this run's reasons are done.
+- Items: none
+- Seconds: 23
+- Cost: 0.3812 USD, estimated
+
+### 2026-11-15T07:48:11Z
+
+- Summary: Reordered: applied flai order --by throughput; ready order already matched (S-0741 29m, S-0749 42m, S-0748 53m, S-0750 1h, S-0792 1h30m, S-0791 no forecast, last). promote_candidates lists none: S-0241 and S-0790 drafts, the rest held by after.
+- Items: S-0741, S-0749, S-0748, S-0750, S-0792, S-0791
+- Seconds: 14
+- Cost: 0.0932 USD, estimated
+
+### 2026-11-15T07:48:29Z
+
+- Summary: I ran `flai order --by throughput --apply` and it changed nothing: the ready column was already in policy order.
+- Items: none
+- Seconds: 18
+- Cost: 0.0910 USD, estimated
+
+### 2026-11-15T17:22:18Z
+
+- Summary: Verified S-0792 at 3231fa9 (close-out passed, verifier found both criteria met, accept dry run had no blocker). flai accept refused it: uncommitted D-0627 and D-0632 on main fail MD028. Left it in review and opened TH-1219 asking the operator to fix the two digest entries. Cost of delay 1800/week.
+- Items: S-0792
+- Seconds: 66
+- Cost: 0.2558 USD, estimated
+
+### 2026-11-15T17:22:38Z
+
+- Summary: S-0792 is ready to accept, but flai refused the acceptance, so it stays in review.
+- Items: none
+- Seconds: 20
+- Cost: 0.4369 USD, estimated
+
+### 2026-11-15T18:41:29Z
+
+- Summary: TH-1220 left alone: a flai notice for S-0792's agent (rebase and close out again after main brought in D-0627 and D-0632), already restarted; answer_threads autonomous skips threads last written by flai. TH-1219 stays open: line 20 of both digest entries is still a blank line between blockquotes (MD028).
+- Items: S-0792, TH-1220, TH-1219
+- Seconds: 23
+- Cost: 0.1252 USD, estimated
+
+### 2026-11-15T18:41:58Z
+
+- Summary: Resolved TH-1219 on S-0792: its concern, uncommitted digest entries D-0627 and D-0632 failing MD028 in the acceptance, is gone now that both are committed on main (19b4036a5, 7ecfcb8c2); S-0792 is closing out again after TH-1220.
+- Items: S-0792, TH-1219
+- Seconds: 29
+- Cost: 0.0811 USD, estimated
+
+### 2026-11-15T18:42:19Z
+
+- Summary: TH-1220 needed nothing from me, and I resolved my own thread TH-1219 so it won't block S-0792's next acceptance.
+- Items: none
+- Seconds: 21
+- Cost: 0.1144 USD, estimated
+
+### 2026-11-15T18:43:25Z
+
+- Summary: TH-1219 was resolved already: D-0627 and D-0632 are committed on main (19b4036a5, 7ecfcb8c2), and S-0792 is closing out again on TH-1220. Resolved my six threads held for the same cause (TH-1208 to TH-1212, TH-1218), since their concern is gone; the other uncommitted digest entries (D-0470, D-0628, D-0629, D-0631) show no blank line between blockquotes. Accepted nothing: the six stories in review are for a later review run, which will find the ADR-0291 gate asks for a close-out again over the new main.
+- Items: S-0792, S-0739, S-0742, S-0743, S-0744, S-0747, S-0789
+- Seconds: 48
+- Cost: 0.1348 USD, estimated
+
+### 2026-11-15T18:43:44Z
+
+- Summary: I accepted nothing this run, and I've closed seven old threads about the same problem. TH-1219 was already resolved when this run started. D-0627 and D-0632 are now committed on main (19b4036a5, 7ecfcb8c2).
+- Items: none
+- Seconds: 19
+- Cost: 0.2401 USD, estimated
 
 ## Refusals
 

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 34169
-      cache_read: 3661727
-      cache_write: 198916
-      cost: 2.5081
+      input: 72
+      output: 28792
+      cache_read: 3654935
+      cache_write: 194587
+      cost: 2.4511
 ---
 # T-3208 The task plan, the holds, the pull order, and the plan candidates read a state's kind
 

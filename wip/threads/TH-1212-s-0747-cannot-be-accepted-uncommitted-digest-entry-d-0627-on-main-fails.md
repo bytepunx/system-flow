@@ -4,10 +4,10 @@ title: "S-0747 cannot be accepted: uncommitted digest entry D-0627 on main fails
 anchor:
   path: wip/kanban/stories/S-0747-the-host-api-s-writes-kluster-components-and-people-methods-act-on-a-state-s.md
   item: S-0747
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-15T02:44:56Z
-updated: 2026-11-15T02:44:56Z
+updated: 2026-11-15T18:43:20Z
 ---
 
 # TH-1212 S-0747 cannot be accepted: uncommitted digest entry D-0627 on main fails markdown lint (MD028), as on TH-1206
@@ -32,3 +32,6 @@ correct them in the main checkout and run flai accept S-0747 again
 - Review is over its limit (7 of 5), so no ready story can be pulled until stories are accepted.
 
 **Alternative:** fix the file, then accept it yourself with `flai accept S-0747 --by alex`.
+
+### 2026-11-15T18:43:20Z orchestrator
+Resolved: D-0627 is committed on main (19b4036a5), so the acceptance no longer brings it in uncommitted. The other uncommitted digest entries (D-0470, D-0628, D-0629, D-0631) have no blank line between blockquotes.

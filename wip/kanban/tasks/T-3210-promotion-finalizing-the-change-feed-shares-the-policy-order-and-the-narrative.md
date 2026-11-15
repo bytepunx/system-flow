@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 120
-      output: 51806
-      cache_read: 5551812
-      cache_write: 301591
-      cost: 3.8028
+      input: 109
+      output: 43654
+      cache_read: 5541513
+      cache_write: 295028
+      cost: 3.7163
 ---
 # T-3210 Promotion, finalizing, the change feed, shares, the policy order, and the narrative's checks read a state's kind
 

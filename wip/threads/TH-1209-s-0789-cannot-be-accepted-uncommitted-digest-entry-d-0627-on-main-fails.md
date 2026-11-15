@@ -4,10 +4,10 @@ title: "S-0789 cannot be accepted: uncommitted digest entry D-0627 on main fails
 anchor:
   path: wip/kanban/stories/S-0789-publish-what-is-accepted-and-not-yet-released.md
   item: S-0789
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-11-15T02:00:35Z
-updated: 2026-11-15T02:00:35Z
+updated: 2026-11-15T18:43:17Z
 ---
 
 # TH-1209 S-0789 cannot be accepted: uncommitted digest entry D-0627 on main fails markdown lint (MD028), as on TH-1206
@@ -31,3 +31,6 @@ correct them in the main checkout and run flai accept S-0789 again
 ```
 
 **Alternative:** fix the file, then accept it yourself with `flai accept S-0789 --by alex`.
+
+### 2026-11-15T18:43:17Z orchestrator
+Resolved: D-0627 is committed on main (19b4036a5), so the acceptance no longer brings it in uncommitted. The other uncommitted digest entries (D-0470, D-0628, D-0629, D-0631) have no blank line between blockquotes.

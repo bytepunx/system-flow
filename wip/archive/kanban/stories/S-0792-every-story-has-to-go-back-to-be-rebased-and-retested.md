@@ -3,26 +3,52 @@ id: S-0792
 type: story
 nature: remediation
 title: Every story has to go back to be rebased and retested
-status: ready
+status: done
 owner: alex
 created: 2026-11-15T07:37:37Z
-updated: 2026-11-15T07:47:13Z
+updated: 2026-11-15T18:51:49Z
 transitions:
   - to: ready
     at: 2026-11-15T07:37:38Z
     by: alex
+  - to: in-progress
+    at: 2026-11-15T16:42:04Z
+    by: agent-S-0792
+  - to: review
+    at: 2026-11-15T17:20:36Z
+    by: agent-S-0792
+  - to: in-progress
+    at: 2026-11-15T18:40:30Z
+    by: flai
+  - to: review
+    at: 2026-11-15T18:50:19Z
+    by: agent-S-0792
+  - to: done
+    at: 2026-11-15T18:51:49Z
+    by: orchestrator
 tags: []
 topics: [acceptance, verify]
-touches: [design/adrs, design/adrs/README.md, flai/internal/verify/overlap.go, flai/internal/verify/overlap_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept_stale_verify_test.go, flai/cmd/accept.go, docs/users/flai-reference.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/adrs, design/adrs/README.md, flai/internal/verify/overlap.go, flai/internal/verify/overlap_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flai/cmd/accept_stale_verify_test.go, flai/cmd/accept.go, docs/users/flai-reference.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0378-an-acceptance-sends-a-story-back-for-a-verify-that-missed-one-main-commit.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2905
+  priced_by: harness
+  turns:
+    - day: 2026-11-15
+      ceremony: 3
+      work: 58
+  models:
+    - model: claude-opus-5-5
+      input: 230
+      output: 71982
+      cache_read: 17387384
+      cache_write: 785294
+      cost: 10.5378
   strategic:
     - kind: planner
       seconds: 380
@@ -41,15 +67,21 @@ usage:
           cache_write: 165540
           cost: 2.1719
     - kind: orchestrator
-      seconds: 57
+      seconds: 207
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 72
-          cache_read: 407650
-          cache_write: 84277
-          cost: 0.1478
+          input: 49
+          output: 360
+          cache_read: 1698572
+          cache_write: 309340
+          cost: 0.6039
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 49
+          cache_read: 48472
+          cache_write: 46569
+          cost: 0.0748
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12h
@@ -76,8 +108,8 @@ Error: “verify does not cover the main branch it would land on: its last flai 
 We must correct this immediately.
 
 ## Acceptance criteria
-- [ ] Every story in review should not have to rebase and reverify for every story that is approved before it.
-- [ ] The only time we need to reverify is when changes between a story accepted overlap with the same change set any given story in review such that the behavior of the PR is undoubtedly impacted by the changes in main that will be rebased on.
+- [x] Every story in review should not have to rebase and reverify for every story that is approved before it.
+- [x] The only time we need to reverify is when changes between a story accepted overlap with the same change set any given story in review such that the behavior of the PR is undoubtedly impacted by the changes in main that will be rebased on.
 
 ## Tasks
 - T-3376 Record in an ADR that verify_behind_main sends back only the tiers main's paths overlapping the story's change set select
@@ -110,3 +142,13 @@ Figures:
 - Forecast: 1h30m, adjusted from `flai forecast`'s 6m, which counted 2 criteria and no touches. S-0683 built this gate, with an ADR, the same tests, and the same docs, in 55m of agent time. Delivery 2026-11-15T10:00Z plays the longer duration from the 6th place in the pull order that `flai forecast` gave.
 - Cost of delay: 1800 USD a week, as `flai cod` gives it from the operator's 12h lost per cycle at 150 USD an hour, one cycle a week. It stands: each send back costs a sync and a ten-minute close-out per story in review.
 - No `after`: the story reads no output of an open story.
+- 2026-11-15T18:40:30Z: moved to in-progress: alex asked its agent to rebase story/S-0792 onto main and resolve what holds its acceptance, 1 blocker: S-0792's verify does not cover the main branch it would land on: its last flai verify, at 3231fa9, ran over main at 0d2f772, and the 2 paths main brought in sin...; its agent syncs it with flai stream sync S-0792, takes each blocker's recommended action, closes out again, and moves it to review
+
+### Accepted by the orchestrator
+
+- Verified: ea2ab57ac980d2f7eda49c2cf3606bc34d2ee149
+- At: 2026-11-15T18:51:49Z
+
+Verdict: S-0792 meets both acceptance criteria and breaks no convention, verified at ea2ab57ac980d2f7eda49c2cf3606bc34d2ee149.
+- 1: flai/internal/preview/accept.go, flai/internal/verify/overlap.go, flai/internal/verify/overlap_test.go, flai/internal/preview/accept_test.go, design/adrs/0303-an-acceptance-s-verify-behind-main-sends-back-only-the-tiers-selected-by-the.md
+- 2: flai/internal/verify/overlap.go, flai/internal/verify/overlap_test.go, flai/cmd/accept_stale_verify_test.go, flai/internal/preview/accept.go, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, flai/cmd/accept.go, docs/users/flai-reference.md
