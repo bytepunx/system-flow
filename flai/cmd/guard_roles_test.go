@@ -24,7 +24,7 @@ trigger: [asked]
 item: none
 tools:
   - thread_open
-  - {call: item_move, when: to-backlog}
+  - {call: item_move, when: {to: backlog}}
 commands:
   - flai issue new
   - flai digest
@@ -88,7 +88,7 @@ func TestGuardHoldsADefinedRoleToItsFile(t *testing.T) {
 		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"ready"}}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai board --json && flai issue new x --class defect && flai digest"}}`, 0, ""},
 		{edit(filepath.Join(root, "plans", "reviews", "r.md")), 0, ""},
-		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"}}`, 2, "the role reviewer cannot move S-1 to review: it may make it only under to-backlog"},
+		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"}}`, 2, "the role reviewer cannot move S-1 to review: it may make it only under {to: backlog} (a move to backlog and nowhere else)"},
 		{`{"tool_name":"mcp__flai__release_publish","tool_input":{"reason":"r"}}`, 2, "the role reviewer cannot call release_publish: it needs roles.reviewer.permissions.publish, which is off. Ask the operator with thread_open on the item if it needs doing (plans/workflows/roles/reviewer.md, ADR-0207)."},
 		{`{"tool_name":"Bash","tool_input":{"command":"flai digest harvest"}}`, 2, `the role reviewer cannot run "flai digest harvest": its role file lists no such call`},
 		{edit(filepath.Join(root, "design", "reviews", "r.md")), 2, "the role reviewer cannot use Write on " + filepath.Join(root, "design", "reviews", "r.md") + ": it edits only a file under plans/reviews/."},

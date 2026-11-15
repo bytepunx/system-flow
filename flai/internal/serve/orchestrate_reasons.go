@@ -55,8 +55,8 @@ const (
 var builtinTriggers = []roles.Trigger{
 	{Kind: roles.TriggerAsked},
 	{Kind: roles.TriggerEvent, Event: inbox.Thread, When: "awaits-orchestrator"},
-	{Kind: roles.TriggerEvent, Event: workitem.Moved, When: "to-review"},
-	{Kind: roles.TriggerEvent, Event: workitem.Moved, When: "to-backlog"},
+	{Kind: roles.TriggerEvent, Event: workitem.Moved, When: roles.CondTo, To: workitem.Review},
+	{Kind: roles.TriggerEvent, Event: workitem.Moved, When: roles.CondTo, To: workitem.Backlog},
 	{Kind: roles.TriggerEvent, Event: inbox.Edited, When: "draft-changed"},
 	{Kind: roles.TriggerEvent, Event: inbox.Planned},
 	{Kind: roles.TriggerEvent, Event: inbox.ReleaseDue},
@@ -460,30 +460,17 @@ func triggered(triggers []roles.Trigger, o roles.Occurrence) bool {
 // matching are the entries among triggers that o meets, in their order: for
 // an event, those naming o's event; for a schedule, o.Event empty, those
 // naming the setting o.Schedule; each only when its condition, if it names
-// one, holds for o. A condition flai does not judge against an occurrence
-// matches nothing. The defined roles' launchers and the built-in roles' own
-// launchers judge their triggers by it alike (ADR-0250 §4), so a built-in
-// role's launcher can tell which entry, and so under which condition, an
-// occurrence starts its role.
+// one, holds for o, as Trigger.Holds says. A condition flai does not judge
+// against an occurrence matches nothing. The defined roles' launchers and the
+// built-in roles' own launchers judge their triggers by it alike (ADR-0250
+// §4), so a built-in role's launcher can tell which entry, and so under which
+// condition, an occurrence starts its role.
 func matching(triggers []roles.Trigger, o roles.Occurrence) []roles.Trigger {
 	var out []roles.Trigger
 	for _, t := range triggers {
-		switch {
-		case o.Event != "" && (t.Kind != roles.TriggerEvent || t.Event != o.Event):
-			continue
-		case o.Event == "" && (o.Schedule == "" || t.Kind != roles.TriggerSchedule || t.Schedule != o.Schedule):
-			continue
+		if holds, implemented := t.Holds(o); implemented && holds {
+			out = append(out, t)
 		}
-		if t.When != "" {
-			c, ok := roles.Condition(t.When)
-			if !ok {
-				continue
-			}
-			if holds, implemented := c.Matches(o); !implemented || !holds {
-				continue
-			}
-		}
-		out = append(out, t)
 	}
 	return out
 }

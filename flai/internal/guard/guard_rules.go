@@ -17,7 +17,7 @@ import (
 const RolePlan = "plan"
 
 // Backlog is the baseline's initial state, the one state the planner may
-// move an item to there, as the role file's to-backlog condition reads it;
+// move an item to there, as the role file's {to: backlog} condition names it;
 // the guard's own rules read the workflow's initial state (initial).
 const Backlog = "backlog"
 

@@ -17,7 +17,9 @@ import (
 // reviewerFile is a role a project defines: the reviewer, role review. Its
 // release_publish, story_start, flai queue *, and the orchestrator's publish
 // setting are entries flai check reports as roles.grant, which the guard
-// never grants.
+// never grants. Its item_move names the state as a role file writes it now,
+// and its flai move by the old name, to-backlog, which flai reads as the same
+// (ADR-0304 §5).
 const reviewerFile = `---
 title: Reviewer
 updated: 2026-10-28
@@ -32,7 +34,7 @@ trigger: [asked]
 item: none
 tools:
   - thread_open
-  - {call: item_move, when: to-backlog}
+  - {call: item_move, when: {to: backlog}}
   - {call: thread_reply, when: own-thread}
   - release_publish
   - story_start
@@ -127,8 +129,8 @@ func TestADefinedRoleIsHeldToItsFile(t *testing.T) {
 		refused string
 	}{
 		{roleTool("item_new", Args{Type: "story"}), "the role reviewer cannot call item_new: its role file lists no such call. Ask the operator with thread_open on the item if it needs doing (" + reviewerPath + ", ADR-0207).", "item_new"},
-		{roleTool("item_move", Args{ID: "S-0001", To: "review"}), "the role reviewer cannot move S-0001 to review: it may make it only under to-backlog (" + condAllows(t, "to-backlog") + "), or to-ready (" + condAllows(t, "to-ready") + ").", "item_move S-0001 review"},
-		{roleShell("flai board && flai move S-0001 review"), `the role reviewer cannot run "flai move S-0001 review": it may make it only under to-backlog`, "flai move S-0001 review"},
+		{roleTool("item_move", Args{ID: "S-0001", To: "review"}), "the role reviewer cannot move S-0001 to review: it may make it only under {to: backlog} (a move to backlog and nowhere else), or to-ready (" + condAllows(t, "to-ready") + ").", "item_move S-0001 review"},
+		{roleShell("flai board && flai move S-0001 review"), `the role reviewer cannot run "flai move S-0001 review": it may make it only under {to: backlog} (a move to backlog and nowhere else), or to-ready`, "flai move S-0001 review"},
 		{roleTool("thread_reply", Args{ID: "TH-0001", Recommendation: true}), "the role reviewer cannot call thread_reply: it may make it only under own-thread", "thread_reply TH-0001 recommendation"},
 		{roleTool("thread_reply", Args{ID: "TH-0002"}), "the role reviewer cannot call thread_reply: it may make it only under own-thread", "thread_reply TH-0002"},
 		{roleShell("flai epic new x"), `the role reviewer cannot run "flai epic new x": its role file lists no such call.`, "flai epic new x"},
@@ -560,6 +562,39 @@ func TestThePlannerIsHeldToTheBaselineFile(t *testing.T) {
 	} {
 		if v := Decide(planGuard, Call{Role: RolePlan, Kind: Shell, Command: c}); v.Outcome != Allow {
 			t.Errorf("%s refused: %s", c, v.Reason)
+		}
+	}
+}
+
+// S-0748, ADR-0304 §4, §5: the planner's file holds its item_move and flai
+// move to backlog with {to: backlog}, as it held them with to-backlog, which
+// it may still write: a move to backlog passes and a move to ready is
+// refused, under the one spelling as under the other.
+func TestThePlannersMoveIsHeldToTheStateItsToConditionNames(t *testing.T) {
+	const now = "when: {to: backlog}}"
+	for name, file := range map[string]*roles.Role{
+		"{to: backlog}": builtInFile(t, "planner"),
+		"to-backlog":    builtInFile(t, "planner", now, "when: to-backlog}", now, "when: to-backlog}"),
+	} {
+		if moves := slices.IndexFunc(file.Tools, func(e roles.Call) bool { return e.Call == "item_move" }); moves < 0 || file.Tools[moves].When != roles.CondTo || file.Tools[moves].To != Backlog {
+			t.Fatalf("%s: the planner's file holds item_move by no {to: backlog}: %+v", name, file.Tools)
+		}
+		pg := Guard{Commands: g.Commands, Role: RolePlan, Design: "design", RoleFile: file}
+		for _, c := range []Call{
+			{Role: RolePlan, Kind: FlaiTool, Tool: "item_move", Args: Args{ID: "S-0001", To: Backlog}},
+			{Role: RolePlan, Kind: Shell, Command: "flai move S-0001 backlog"},
+		} {
+			if v := Decide(pg, c); v.Outcome != Allow {
+				t.Errorf("%s: %+v refused: %s", name, c, v.Reason)
+			}
+		}
+		for _, c := range []Call{
+			{Role: RolePlan, Kind: FlaiTool, Tool: "item_move", Args: Args{ID: "S-0001", To: Ready}},
+			{Role: RolePlan, Kind: Shell, Command: "flai move S-0001 ready"},
+		} {
+			if v := Decide(pg, c); v.Outcome != Deny || !strings.Contains(v.Reason, "backlog") {
+				t.Errorf("%s: %+v: %+v, want refused naming backlog", name, c, v)
+			}
 		}
 	}
 }

@@ -270,11 +270,11 @@ func (h held) setting(s string) (manifest.Permissions, bool) {
 // judge says why the entries refuse a call, and the setting that would allow
 // it; both "" when one allows it. An entry that names the call, as names
 // says, allows it while its setting is on and its condition, if it names
-// one, qualifies the entry and holds, as holds says under the setting's
-// permission, perm, "" for an entry under none, and its permissions.
-func (h held) judge(es []entry, names func(string) bool, holds func(cond, perm string, p manifest.Permissions) bool) (why, needs string) {
-	var offs []string
-	var unmet []roles.Cond
+// one, qualifies the entry and holds, as holds says of the entry under the
+// setting's permission, perm, "" for an entry under none, and its
+// permissions.
+func (h held) judge(es []entry, names func(string) bool, holds func(e roles.Call, perm string, p manifest.Permissions) bool) (why, needs string) {
+	var offs, unmet []string
 	for _, e := range es {
 		if !names(e.call.Call) {
 			continue
@@ -285,27 +285,34 @@ func (h held) judge(es []entry, names func(string) bool, holds func(cond, perm s
 		}
 		p, on := h.setting(e.setting)
 		perm, _, _ := roles.ParseSetting(e.setting)
-		met := e.call.When == "" || holds(e.call.When, perm, p)
+		met := e.call.When == "" || holds(e.call, perm, p)
 		switch {
 		case met && on:
 			return "", ""
 		case met:
 			offs = append(offs, e.setting)
-		case !slices.ContainsFunc(unmet, func(u roles.Cond) bool { return u.Name == cond.Name }):
-			unmet = append(unmet, cond)
+		case !slices.Contains(unmet, underText(e.call, cond)):
+			unmet = append(unmet, underText(e.call, cond))
 		}
 	}
 	switch {
 	case len(offs) > 0:
 		return "it needs " + offs[0] + ", which is off", offs[0]
 	case len(unmet) > 0:
-		under := make([]string, len(unmet))
-		for i, u := range unmet {
-			under[i] = fmt.Sprintf("%s (%s)", u.Name, u.Allows)
-		}
-		return "it may make it only under " + strings.Join(under, ", or "), ""
+		return "it may make it only under " + strings.Join(unmet, ", or "), ""
 	}
 	return noSuchCall, ""
+}
+
+// underText is the condition cond of the call entry e as a refusal names it:
+// its when as the file writes it and what it allows, a move into the state a
+// to condition names for that one (ADR-0304 §4).
+func underText(e roles.Call, cond roles.Cond) string {
+	allows := cond.Allows
+	if cond.Name == roles.CondTo {
+		allows = "a move to " + e.To + " and nowhere else"
+	}
+	return fmt.Sprintf("%s (%s)", e.WhenText(), allows)
 }
 
 // tool says why the role's file refuses a flai tool with its arguments, and
@@ -313,19 +320,21 @@ func (h held) judge(es []entry, names func(string) bool, holds func(cond, perm s
 func (h held) tool(tool string, in Args) (why, needs string) {
 	return h.judge(h.entries(false),
 		func(call string) bool { return call == tool },
-		func(cond, perm string, p manifest.Permissions) bool { return h.toolHolds(cond, perm, p, tool, in) })
+		func(e roles.Call, perm string, p manifest.Permissions) bool { return h.toolHolds(e, perm, p, tool, in) })
 }
 
-// toolHolds says whether the condition named cond holds for a flai tool with
-// its arguments, under perm, the permission of the setting the entry stands
-// under, and p, that setting's permissions.
-func (h held) toolHolds(cond, perm string, p manifest.Permissions, tool string, in Args) bool {
+// toolHolds says whether the condition of the call entry e holds for a flai
+// tool with its arguments, under perm, the permission of the setting the
+// entry stands under, and p, that setting's permissions. {to: <state>} holds
+// for a move into the state it names (ADR-0304 §4).
+func (h held) toolHolds(e roles.Call, perm string, p manifest.Permissions, tool string, in Args) bool {
+	cond := e.When
 	tc := threadCall{verb: strings.TrimPrefix(tool, "thread_"), id: in.ID, recommendation: in.Recommendation, sourced: cites(in.Source)}
 	switch cond {
 	case "draft-only":
 		return in.Type != "story" || in.Draft
-	case "to-backlog":
-		return in.To == Backlog
+	case roles.CondTo:
+		return in.To == e.To
 	case "to-ready":
 		return in.To == Ready
 	case "ungated-edit":
@@ -360,8 +369,8 @@ func (h held) rules() rules {
 			}
 			why, needs := h.judge(es,
 				func(call string) bool { return h.names(call, cmd, sub, rest) },
-				func(cond, perm string, p manifest.Permissions) bool {
-					return h.commandHolds(cond, perm, p, cmd, sub, rest)
+				func(e roles.Call, perm string, p manifest.Permissions) bool {
+					return h.commandHolds(e, perm, p, cmd, sub, rest)
 				})
 			if why == noSuchCall && cmd == "formula" && sub == "run" {
 				why = h.formulasOnly(es)
@@ -496,11 +505,13 @@ func (h held) subcommandsOf(cmd string) []string {
 	return out
 }
 
-// commandHolds says whether the condition named cond holds for flai's
-// command cmd, with its subcommand sub and the words after flai, under perm,
-// the permission of the setting the entry stands under, and p, that
-// setting's permissions.
-func (h held) commandHolds(cond, perm string, p manifest.Permissions, cmd, sub string, rest []string) bool {
+// commandHolds says whether the condition of the call entry e holds for
+// flai's command cmd, with its subcommand sub and the words after flai, under
+// perm, the permission of the setting the entry stands under, and p, that
+// setting's permissions. {to: <state>} holds for a move into the state it
+// names (ADR-0304 §4).
+func (h held) commandHolds(e roles.Call, perm string, p manifest.Permissions, cmd, sub string, rest []string) bool {
+	cond := e.When
 	moves := positionals(rest, moveValues)
 	moveTo := ""
 	if cmd == "move" && len(moves) > 2 {
@@ -510,8 +521,8 @@ func (h held) commandHolds(cond, perm string, p manifest.Permissions, cmd, sub s
 	switch cond {
 	case "draft-only":
 		return drafted(rest)
-	case "to-backlog":
-		return moveTo == Backlog
+	case roles.CondTo:
+		return moveTo == e.To
 	case "to-ready":
 		return moveTo == Ready
 	case "ungated-edit":

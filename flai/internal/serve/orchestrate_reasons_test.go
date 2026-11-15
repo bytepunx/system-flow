@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/roles"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -427,7 +428,7 @@ func TestARunThatFailsGivesItsReasonsBack(t *testing.T) {
 }
 
 func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
-	file := roles.Role{Name: roles.Orchestrator, Trigger: []roles.Trigger{{Kind: roles.TriggerEvent, Event: workitem.Moved, When: "to-review"}}}
+	file := roles.Role{Name: roles.Orchestrator, Trigger: []roles.Trigger{{Kind: roles.TriggerEvent, Event: workitem.Moved, When: roles.CondTo, To: workitem.Review}}}
 	if got := orchestratorTriggers(nil); len(got) != len(builtinTriggers) {
 		t.Errorf("no role file: %+v", got)
 	}
@@ -475,6 +476,107 @@ func TestTheRoleFilesTriggersChooseTheReasons(t *testing.T) {
 	legacy := []roles.Trigger{{Kind: roles.TriggerEvent, Event: "review"}}
 	if got := reasonsOf(events, legacy, nil); len(got) != 1 || got[0].ID != "S-0001" {
 		t.Errorf("{event: review}: %+v", got)
+	}
+}
+
+// verifyingBoard is the baseline board's front matter with a state of the
+// project's own, verifying, between in-progress and review.
+const verifyingBoard = `---
+title: Board
+updated: 2026-11-15
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: ready, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: verifying, kind: waiting}
+  - {name: review, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: ready, effects: [commit], rules: [criteria-present, not-draft, after-done]}
+  - {from: ready, to: in-progress, effects: [pull], rules: [not-blocked, not-held, task-after]}
+  - {from: in-progress, to: verifying, rules: [has-task, clean-worktree]}
+  - {from: verifying, to: review, rules: [no-open-question, kluster-verified]}
+  - {from: verifying, to: in-progress, effects: [send-back], rules: [reason-given, not-blocked, task-after]}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept], rules: [children-closed, criteria-ticked]}
+  - {from: review, to: done, types: [task], rules: [children-closed]}
+  - {from: in-progress, to: done, types: [task], rules: [children-closed]}
+  - {from: review, to: in-progress, effects: [send-back], rules: [reason-given, not-blocked, task-after]}
+  - {from: ready, to: backlog}
+  - {from: [backlog, ready, in-progress, verifying], to: cancelled, effects: [cancel], rules: [reason-given]}
+  - {from: review, to: cancelled, by: [cascade], effects: [cancel], rules: [reason-given]}
+  - {from: cancelled, to: backlog, effects: [reopen], rules: [parent-open]}
+---
+`
+
+// gateRole is a role a project defines that starts on a story's move into
+// verifying, a state of the project's own workflow (ADR-0304 §3).
+const gateRole = `---
+title: Gate
+updated: 2026-11-15
+status: active
+name: gate
+role: gate
+definition:
+  description: Checks a story as it enters verifying, for flai serve.
+  tools: [Read, Grep]
+  model: inherit
+action: gate
+trigger:
+  - {event: moved, when: {to: verifying}}
+item: [story]
+topics: [planning]
+works_story: false
+charge: none
+tools: []
+commands: []
+files: []
+permissions: []
+---
+
+You are the gate: check the story as it enters verifying.
+
+<!-- system-flow:end-of-baseline -->
+
+## Project additions
+`
+
+// S-0748, ADR-0304 §3: a role whose trigger names a state the project's
+// workflow adds between in-progress and review is valid against that
+// workflow and starts on a move into that state, and not on a move into
+// review or any other.
+func TestARoleStartsOnAMoveIntoAStateOfTheProjectsOwn(t *testing.T) {
+	wf, wp := workflow.Parse("design/workflows/board.md", verifyingBoard)
+	if wp != nil {
+		t.Fatalf("workflow.Parse: %s", wp)
+	}
+	r, p := roles.Parse("design/workflows/roles/gate.md", gateRole)
+	if p != nil {
+		t.Fatalf("roles.Parse: %s", p)
+	}
+	if ps := roles.Validate([]roles.Role{r}, "design", roles.Vocabulary{Workflow: &wf}); len(ps) != 0 {
+		t.Fatalf("roles.Validate against the project's workflow = %v, want none", ps)
+	}
+	if ps := roles.Validate([]roles.Role{r}, "design", roles.Vocabulary{}); len(ps) != 1 || !strings.Contains(ps[0].Message, `state "verifying" is none of the workflow's states`) {
+		t.Errorf("roles.Validate against the baseline = %v, want verifying refused", ps)
+	}
+	for _, c := range []struct {
+		to   string
+		want bool
+	}{{"verifying", true}, {workitem.Review, false}, {workitem.InProgress, false}, {workitem.Backlog, false}} {
+		got := matching(r.Trigger, roles.Occurrence{Event: workitem.Moved, To: c.to})
+		if (len(got) == 1) != c.want {
+			t.Errorf("a move into %s: matching = %+v, want it to start: %t", c.to, got, c.want)
+		}
+	}
+	events := []inbox.Event{
+		{Change: workitem.Change{Kind: workitem.Moved, Type: workitem.Story, ID: "S-0001", Title: "Verify", To: "verifying"}, Summary: "s"},
+		{Change: workitem.Change{Kind: workitem.Moved, Type: workitem.Story, ID: "S-0002", Title: "Review", To: workitem.Review}, Summary: "s"},
+		{Change: workitem.Change{Kind: inbox.Edited, Type: workitem.Story, ID: "S-0003", Title: "Edit", To: "verifying"}, Summary: "s"},
+	}
+	if got := reasonsOf(events, r.Trigger, nil); len(got) != 1 || got[0].ID != "S-0001" || got[0].To != "verifying" {
+		t.Errorf("reasons = %+v, want the move of S-0001 into verifying alone", got)
 	}
 }
 

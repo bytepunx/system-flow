@@ -21,7 +21,8 @@ import (
 
 // watcherRole is a role a project defines that runs on no item, behind the
 // watch host action, started for a story moved to review, a draft's edit, a
-// planner's run that wrote items, and a thread that awaits it.
+// planner's run that wrote items, and a thread that awaits it. It names the
+// state as a role file writes it now, {to: review}.
 const watcherRole = `---
 title: Watcher
 updated: 2026-10-29
@@ -35,7 +36,7 @@ definition:
 action: watch
 trigger:
   - asked
-  - {event: moved, when: to-review}
+  - {event: moved, when: {to: review}}
   - {event: edited, when: draft-changed}
   - {event: planned}
   - {event: thread}
@@ -54,7 +55,8 @@ You are the watcher: read what changed and say what it means.
 
 // checkerRole is a role a project defines that runs on a story, behind the
 // check host action, started for a story moved to review and a thread on a
-// story that awaits its run on it.
+// story that awaits its run on it. It names the state by the old name,
+// to-review, which flai reads as {to: review} (ADR-0304 §5).
 const checkerRole = `---
 title: Checker
 updated: 2026-10-29

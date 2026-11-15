@@ -334,7 +334,7 @@ func DefinedRoleSettings(root string, m manifest.Manifest) []RoleSettings {
 			for _, c := range slices.Concat(p.Tools, p.Commands) {
 				call := c.Call
 				if c.When != "" {
-					call += " when " + c.When
+					call += " when " + c.WhenText()
 				}
 				allows[perm] = append(allows[perm], call)
 			}
