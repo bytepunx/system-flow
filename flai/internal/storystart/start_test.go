@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -700,5 +701,72 @@ func TestStartCarriesTheStorysThreadsAwaitingItsAgent(t *testing.T) {
 		if th := in.Threads[i]; th.ID != want || th.Awaiting != "you" || th.LastBy != "alex" || th.Story != s.ID {
 			t.Errorf("thread %d: %+v, want %s awaiting the agent", i, th, want)
 		}
+	}
+}
+
+// startOtherWorkflow is a board unlike the baseline: ready is renamed
+// selected, and testing, of kind active, sits between in-progress and review
+// (ADR-0301 §6). Its pull transition leaves selected.
+const startOtherWorkflow = `---
+title: Board
+updated: 2026-11-14
+status: active
+states:
+  - {name: backlog, kind: queue, initial: true, order: true}
+  - {name: selected, kind: queue, order: true, limit: true}
+  - {name: in-progress, kind: active, limit: true}
+  - {name: testing, kind: active, limit: true}
+  - {name: review, kind: waiting, limit: true}
+  - {name: done, kind: accepted}
+  - {name: cancelled, kind: cancelled}
+transitions:
+  - {from: backlog, to: selected, effects: [commit]}
+  - {from: selected, to: in-progress, effects: [pull]}
+  - {from: in-progress, to: testing}
+  - {from: testing, to: review}
+  - {from: review, to: done, types: [epic, story], by: [acceptance], effects: [accept]}
+  - {from: [review, in-progress], to: done, types: [task]}
+  - {from: [backlog, selected, in-progress, testing], to: cancelled, effects: [cancel]}
+  - {from: review, to: cancelled, by: [cascade], effects: [cancel]}
+  - {from: cancelled, to: backlog, effects: [reopen]}
+---
+`
+
+// S-0746: under a board whose queue state is renamed and with a state added
+// between in-progress and review, a story in the queue state its pull
+// transition leaves starts along that transition; one in the backlog is
+// refused in today's words with that state's name, and one in testing, a
+// state of kind active, is in progress already. The stories have no epic,
+// whose following workitem's S-0739 teaches the workflow's kinds.
+func TestStartMakesTheWorkflowsPullTransition(t *testing.T) {
+	f := newFixture(t, true)
+	w, p := workflow.Parse("design/workflows/board.md", startOtherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	f.repo.Workflow = &w
+	f.epic = &workitem.Item{}
+
+	s := f.story(t, "One", workitem.NewOptions{}, "selected")
+	res, err := Start(context.Background(), f.options(s.ID, noGit{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := f.get(t, s.ID)
+	if last := got.Transitions[len(got.Transitions)-1]; got.Status != "in-progress" || last.To != "in-progress" || res.Story.Status != "in-progress" {
+		t.Errorf("story %s, last transition %+v, result %+v", got.Status, last, res.Story)
+	}
+
+	backlog := f.story(t, "Backlog", workitem.NewOptions{})
+	_, err = Start(context.Background(), f.options(backlog.ID, noGit{}))
+	if reason := refused(t, f, backlog, err, ""); !strings.Contains(reason, "is backlog, not selected: only a selected story starts; pull the first selected story the inbox lists instead") {
+		t.Errorf("reason: %s", reason)
+	}
+
+	inTesting := f.story(t, "Testing", workitem.NewOptions{}, "selected", "in-progress", "testing")
+	_, err = Start(context.Background(), f.options(inTesting.ID, noGit{}))
+	var r *Refused
+	if reason := refused(t, f, inTesting, err, ""); !strings.Contains(reason, "in progress already") || !errors.As(err, &r) || !r.Started {
+		t.Errorf("reason: %s, started %v", reason, r != nil && r.Started)
 	}
 }

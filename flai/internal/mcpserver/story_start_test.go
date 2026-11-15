@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -489,5 +490,30 @@ func TestTheServersPullWithStoryStart(t *testing.T) {
 				t.Errorf("%s's %s does not pull with story_start: %s", name, what, text)
 			}
 		}
+	}
+}
+
+// S-0746: story_start follows the project's workflow: under a board with
+// review renamed and testing added between in-progress and it, a story in
+// testing, a state of kind active, is in progress already, with what an
+// agent wait_for_work sent does then, and a story in the backlog is refused
+// in today's words, naming the queue state its pull transition leaves.
+func TestStoryStartFollowsTheProjectsWorkflow(t *testing.T) {
+	t.Parallel()
+	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
+	w, p := workflow.Parse("design/workflows/board.md", mcpOtherWorkflow)
+	if p != nil {
+		t.Fatalf("the test's workflow does not parse: %s", p)
+	}
+	repo.Workflow = &w
+	inTesting := storyOfEpic(t, repo, epic, "Testing", []string{"docs/testing"}, workitem.Ready, workitem.InProgress, "testing")
+	backlog := storyOfEpic(t, repo, epic, "Backlog", []string{"docs/backlog"})
+	f := starter(t, repo, noGitRunner{}, nil)
+
+	if _, failed := f.call(t, "story_start", map[string]any{"story": inTesting.ID}); !strings.Contains(failed, "in progress already") || !strings.Contains(failed, "call wait_for_work again") {
+		t.Errorf("refusal of a story in testing: %q", failed)
+	}
+	if _, failed := f.call(t, "story_start", map[string]any{"story": backlog.ID}); !strings.Contains(failed, "is backlog, not ready: only a ready story starts") {
+		t.Errorf("refusal of a story in the backlog: %q", failed)
 	}
 }

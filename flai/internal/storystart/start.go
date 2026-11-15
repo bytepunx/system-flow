@@ -7,12 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/workflow"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -77,8 +79,11 @@ type Refused struct {
 	Status string
 	// Hold is the board's hold on the story, nil when it was refused for its
 	// state.
-	Hold   *workitem.Hold
-	Reason string // why, and what clears it
+	Hold *workitem.Hold
+	// Started says the story sits in a state of kind active already: another
+	// agent pulled it, or its own agent did before.
+	Started bool
+	Reason  string // why, and what clears it
 }
 
 func (e *Refused) Error() string { return e.Reason }
@@ -198,15 +203,21 @@ func encodedSize(v any) int {
 	return len(b) + 1 // the encoder's newline
 }
 
-// Begin moves story to in-progress as agent, its epic following, or refuses
-// it with a *Refused when it is not ready or the board holds it (ADR-0153).
+// Begin makes story's pull transition as agent, the transition with the pull
+// effect out of the queue state the workflow names, to in-progress on the
+// baseline, its epic following, or refuses it with a *Refused when it is not
+// in that state or the board holds it (ADR-0153, ADR-0301 §3).
 func Begin(repo *workitem.Repo, story *workitem.Item, agent string, now time.Time, log *slog.Logger) (*workitem.MoveResult, error) {
-	if err := refuse(repo, story); err != nil {
+	pull, err := pullOf(repo.Flow())
+	if err != nil {
+		return nil, fmt.Errorf("start %s: %w", story.ID, err)
+	}
+	if err := refuse(repo, story, pull); err != nil {
 		return nil, err
 	}
-	moved, err := repo.TransitionAll(story, workitem.InProgress, agent, "", now, false)
+	moved, err := repo.TransitionAll(story, pull.To, agent, "", now, false)
 	if err != nil {
-		return nil, fmt.Errorf("move %s to in-progress: %w", story.ID, err)
+		return nil, fmt.Errorf("move %s to %s: %w", story.ID, pull.To, err)
 	}
 	for _, w := range moved.Warnings {
 		log.Warn("workflow policy warning", "component", "workitem", "item", story.ID, "detail", w)
@@ -215,17 +226,33 @@ func Begin(repo *workitem.Repo, story *workitem.Item, agent string, now time.Tim
 	return moved, nil
 }
 
-// refuse says why story may not start, or nil: it is not a ready story, or
-// the board holds it, as inbox and wait_for_work judge it (S-0128).
-func refuse(repo *workitem.Repo, story *workitem.Item) error {
+// pullOf is the story's pull transition in flow: the first transition a
+// story takes that gives the pull effect, from ready to in-progress on the
+// baseline, or why there is none.
+func pullOf(flow workflow.Workflow) (workflow.Transition, error) {
+	t, ok := flow.WithEffect(workitem.Story, workflow.EffectPull)
+	if !ok || len(t.From) == 0 {
+		return workflow.Transition{}, fmt.Errorf("the workflow gives a story no transition with the %s effect, so no story starts (ADR-0301 §3)", workflow.EffectPull)
+	}
+	return t, nil
+}
+
+// refuse says why story may not start, or nil: it is not a story in the
+// queue state the pull transition leaves, ready on the baseline, or the
+// board holds it, as inbox and wait_for_work judge it (S-0128).
+func refuse(repo *workitem.Repo, story *workitem.Item, pull workflow.Transition) error {
+	flow := repo.Flow()
+	queue := pull.From[0]
+	st, _ := flow.State(story.Status)
 	r := &Refused{Story: story.ID, Status: story.Status}
 	switch {
 	case story.Type != workitem.Story:
-		r.Reason = fmt.Sprintf("%s is not a story but of type %s: flai story start starts a ready story", story.ID, story.Type)
-	case story.Status == workitem.InProgress:
+		r.Reason = fmt.Sprintf("%s is not a story but of type %s: flai story start starts a %s story", story.ID, story.Type, queue)
+	case st.Kind == workflow.KindActive:
+		r.Started = true
 		r.Reason = fmt.Sprintf("%s is in progress already, so it was not moved: take it up with flai stream open %s and flai prime --story %s", story.ID, story.ID, story.ID)
-	case story.Status != workitem.Ready:
-		r.Reason = fmt.Sprintf("%s is %s, not ready: only a ready story starts; pull the first ready story the inbox lists instead", story.ID, story.Status)
+	case !slices.Contains(pull.From, st.Name):
+		r.Reason = fmt.Sprintf("%s is %s, not %s: only a %s story starts; pull the first %s story the inbox lists instead", story.ID, story.Status, queue, queue, queue)
 	}
 	if r.Reason != "" {
 		return r
